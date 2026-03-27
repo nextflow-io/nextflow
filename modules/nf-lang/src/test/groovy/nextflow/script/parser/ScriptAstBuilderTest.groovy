@@ -345,27 +345,7 @@ class ScriptAstBuilderTest extends Specification {
 
             process hello {
                 input:
-                (id): List
-
-                script:
-                ""
-            }
-            '''
-        )
-        then:
-        errors.size() == 1
-        errors[0].getStartLine() == 5
-        errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Process tuple input must have type `Tuple<...>`"
-
-        when:
-        errors = check(
-            '''\
-            nextflow.preview.types = true
-
-            process hello {
-                input:
-                (id): Tuple<String>
+                tuple(id: String)
 
                 script:
                 ""
@@ -385,27 +365,7 @@ class ScriptAstBuilderTest extends Specification {
 
             process hello {
                 input:
-                (id, fastq): Tuple<String>
-
-                script:
-                ""
-            }
-            '''
-        )
-        then:
-        errors.size() == 1
-        errors[0].getStartLine() == 5
-        errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Process tuple input type must have 2 type arguments (one for each tuple component)"
-
-        when:
-        errors = check(
-            '''\
-            nextflow.preview.types = true
-
-            process hello {
-                input:
-                (id, fastq): Tuple<String,Path>
+                tuple(id: String, fastq: Path)
 
                 script:
                 ""
@@ -424,53 +384,10 @@ class ScriptAstBuilderTest extends Specification {
 
             process hello {
                 input:
-                sample: Map {
-                    id: String
-                    fastq: Path
-                }
-
-                script:
-                ""
-            }
-            '''
-        )
-        then:
-        errors.size() == 1
-        errors[0].getStartLine() == 5
-        errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Process record input must have type `Record`"
-
-        when:
-        errors = check(
-            '''\
-            nextflow.preview.types = true
-
-            process hello {
-                input:
-                sample: Record {}
-
-                script:
-                ""
-            }
-            '''
-        )
-        then:
-        errors.size() == 1
-        errors[0].getStartLine() == 5
-        errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Missing record body"
-
-        when:
-        errors = check(
-            '''\
-            nextflow.preview.types = true
-
-            process hello {
-                input:
-                sample: Record {
-                    id: String
-                    fastq: Path
-                }
+                record(
+                    id: String,
+                    fastq: Path,
+                )
 
                 script:
                 ""

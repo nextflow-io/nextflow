@@ -153,8 +153,6 @@ public class ProcessToGroovyVisitorV2 {
             stagers.addStatement(stager);
         }
         else if( isRecordType(cn) ) {
-            if( cn.getNameWithoutPackage().startsWith("__Record") )
-                moduleNode.addClass(cn);
             for( var fn : cn.getFields() )
                 visitProcessInputType(fn, propX(target, fn.getName()), stagers);
         }

@@ -322,6 +322,7 @@ class TowerClient implements TraceObserverV2 {
         reports.flowCreate(workflowId)
     }
 
+
     /**
      * Apply platform metadata received inline from the trace create response.
      * This avoids extra API calls to fetch user, workspace, and launch details.

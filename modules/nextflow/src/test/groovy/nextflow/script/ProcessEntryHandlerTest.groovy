@@ -16,12 +16,15 @@
 
 package nextflow.script
 
+import java.nio.file.Files
 import java.nio.file.Path
 import nextflow.Session
 import nextflow.script.params.FileInParam
-import nextflow.script.params.InParam
+import nextflow.script.params.InputsList
 import nextflow.script.params.TupleInParam
 import nextflow.script.params.ValueInParam
+import nextflow.script.params.v2.ProcessInput
+import nextflow.script.params.v2.ProcessInputsDef
 import spock.lang.Specification
 
 /**
@@ -145,8 +148,8 @@ class ProcessEntryHandlerTest extends Specification {
         def simpleInput = Mock(ValueInParam) { getName() >> 'sampleId' }
 
         then:
-        handler.getValueForInput(valInput, complexParams) == [id: 'SAMPLE_001', name: 'TestSample']
-        handler.getValueForInput(simpleInput, complexParams) == 'SIMPLE_001'
+        handler.getValueForInputV1(valInput, complexParams, [:]) == [id: 'SAMPLE_001', name: 'TestSample']
+        handler.getValueForInputV1(simpleInput, complexParams, [:]) == 'SIMPLE_001'
     }
 
     def 'should get value for path input type' () {
@@ -167,8 +170,8 @@ class ProcessEntryHandlerTest extends Specification {
         def fileInput = Mock(FileInParam) { getName() >> 'dataFile' }
 
         then:
-        def fastaResult = handler.getValueForInput(pathInput, complexParams)
-        def fileResult = handler.getValueForInput(fileInput, complexParams)
+        def fastaResult = handler.getValueForInputV1(pathInput, complexParams, [:])
+        def fileResult = handler.getValueForInputV1(fileInput, complexParams, [:])
 
         // Should convert string paths to Path objects (mocked here)
         fastaResult.toString().contains('file.fa')
@@ -190,7 +193,7 @@ class ProcessEntryHandlerTest extends Specification {
         ]
         def missingInput = Mock(ValueInParam) { getName() >> 'missing' }
         and:
-        handler.getValueForInput(missingInput, complexParams)
+        handler.getValueForInputV1(missingInput, complexParams, [:])
 
         then:
         thrown(IllegalArgumentException)
@@ -227,7 +230,7 @@ class ProcessEntryHandlerTest extends Specification {
         def tupleElements = []
 
         for( def innerParam : tupleParam.inner ) {
-            def value = handler.getValueForInput(innerParam, namedArgs)
+            def value = handler.getValueForInputV1(innerParam, namedArgs, [:])
             tupleElements.add(value)
         }
 
@@ -245,6 +248,88 @@ class ProcessEntryHandlerTest extends Specification {
         tupleElements[0].other == 'some-value'
         // tupleElements[1] should be a Path object (mocked)
         tupleElements[1].toString().contains('file.fa')
+    }
+
+    def 'should convert string parameter to type declared in module spec' () {
+        given:
+        def session = Mock(Session)
+        def script = Mock(BaseScript)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> [ 'hello' ]
+        }
+        def handler = new ProcessEntryHandler(script, session, meta)
+        def param = Mock(ValueInParam) { getName() >> NAME }
+
+        expect:
+        handler.getValueForInputV1(param, [(NAME): VALUE], [(NAME): TYPE]) == EXPECTED
+
+        where:
+        NAME    | TYPE    | VALUE   | EXPECTED
+        'flag'  | Boolean | 'true'  | Boolean.TRUE
+        'flag'  | Boolean | 'false' | Boolean.FALSE
+        'flag'  | Boolean | 'TRUE'  | Boolean.TRUE
+        'count' | Integer | '42'    | 42
+        'count' | Integer | '0'     | 0
+        'ratio' | Number  | '3.14'  | 3.14f
+    }
+
+    def 'should return string parameter unchanged when no module spec type is declared' () {
+        given:
+        def session = Mock(Session)
+        def script = Mock(BaseScript)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> [ 'hello' ]
+        }
+        def handler = new ProcessEntryHandler(script, session, meta)
+        def param = Mock(ValueInParam) { getName() >> 'name' }
+
+        expect:
+        handler.getValueForInputV1(param, [name: 'hello'], [:]) == 'hello'
+    }
+
+    def 'should throw error when parameter value cannot be converted to declared type' () {
+        given:
+        def session = Mock(Session)
+        def script = Mock(BaseScript)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> [ 'hello' ]
+        }
+        def handler = new ProcessEntryHandler(script, session, meta)
+        def param = Mock(ValueInParam) { getName() >> NAME }
+
+        when:
+        handler.getValueForInputV1(param, [(NAME): VALUE], [(NAME): TYPE])
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains(MESSAGE)
+
+        where:
+        NAME    | TYPE    | VALUE           | MESSAGE
+        'flag'  | Boolean | 'yes'           | 'boolean (true/false)'
+        'flag'  | Boolean | '1'             | 'boolean (true/false)'
+        'count' | Integer | 'not-a-number'  | 'expects an integer'
+        'count' | Integer | '3.14'          | 'expects an integer'
+        'ratio' | Number  | 'not-a-number'  | 'floating-point'
+        'meta'  | Map     | 'foo=bar'       | 'dot notation'
+    }
+
+    def 'should throw error when non-string parameter value has incompatible type' () {
+        given:
+        def session = Mock(Session)
+        def script = Mock(BaseScript)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> [ 'hello' ]
+        }
+        def handler = new ProcessEntryHandler(script, session, meta)
+        def param = Mock(ValueInParam) { getName() >> 'count' }
+
+        when:
+        handler.getValueForInputV1(param, [count: 3.14d], [count: Integer])
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('expects a Integer')
     }
 
     def 'should parse file input correctly' () {

@@ -1,5 +1,11 @@
 nf-amazon changelog
 ===================
+3.8.1 - 26 Mar 2026
+- Fix AWS Batch machine type trace for new instance families (#6952) [06e78ba0b]
+- Fix download of empty files in old minio based S3 transfers (#6944) [ccded1845]
+- Fix jackson-databind dependency in nf-amazon (#6941) [321c57f88]
+- Fix security vulnerabilities (#6938) [8b1ab40c4]
+
 3.8.0 - 17 Mar 2026
 - Add multi-arch support to arch process directive (#6897) [c7ca36902]
 

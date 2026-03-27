@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.27.1 - 26 Mar 2026
+- Fix netty and jackson vulnerabilities (#6955) [8dafdd95d]
+
 1.27.0 - 17 Mar 2026
 - Add support for latest-generation Google Cloud machine families (#6841) [27785b171]
 - Add support for GCP Ops Agent (#6608) [247a53bc0]

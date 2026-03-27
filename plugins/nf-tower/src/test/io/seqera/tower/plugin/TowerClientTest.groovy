@@ -632,6 +632,7 @@ class TowerClientTest extends Specification {
         metadata.platform.pipeline.revision == 'v1.1'
         metadata.platform.pipeline.commitId == 'abcd12345'
     }
+
     def 'should include numSpotInterruptions in task map'() {
         given:
         def client = Spy(new TowerClient())

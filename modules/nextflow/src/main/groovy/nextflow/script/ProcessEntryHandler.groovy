@@ -21,6 +21,8 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.Nextflow
+import nextflow.module.ModuleSpec
+import nextflow.module.ModuleStorage
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.FileInParam
 import nextflow.script.params.InParam
@@ -203,9 +205,13 @@ class ProcessEntryHandler {
             return []
         }
 
-        // Parse complex parameters from session.params (handles dot notation)
-        final complexParams = parseComplexParameters(params)
-        log.debug "Complex parameters: ${complexParams}"
+        // Parse parameter values from session.params (handles dot notation)
+        final paramValues = parseComplexParameters(params)
+
+        // Load parameter types from module spec (if available)
+        final paramTypes = getModuleSpecInputTypes()
+
+        log.debug "Parameter values: ${paramValues}"
 
         // Map declared inputs to command-line arguments
         List arguments = []
@@ -213,18 +219,100 @@ class ProcessEntryHandler {
             if( param instanceof TupleInParam ) {
                 List tupleElements = []
                 for( final innerParam : param.inner ) {
-                    final value = getValueForInput(innerParam, complexParams)
+                    final value = getValueForInputV1(innerParam, paramValues, paramTypes)
                     tupleElements.add(value)
                 }
                 arguments.add(tupleElements)
             }
             else {
-                final value = getValueForInput(param, complexParams)
+                final value = getValueForInputV1(param, paramValues, paramTypes)
                 arguments.add(value)
             }
         }
 
         return arguments
+    }
+
+    /**
+     * Load mapping of input types from the module spec if available. Returns null
+     * if module spec is absent or unreadable.
+     */
+    private Map<String, Class> getModuleSpecInputTypes() {
+        try {
+            final scriptPath = script.getBinding().getScriptPath()
+            final specPath = scriptPath?.resolveSibling(ModuleStorage.MODULE_MANIFEST_FILE)
+            if( specPath )
+                return ModuleSpec.loadInputTypes(specPath)
+        }
+        catch( Exception e ) {
+            log.debug "Could not load input types from module spec: ${e.message}"
+        }
+        return Collections.emptyMap()
+    }
+
+    /**
+     * Gets the appropriate value for a legacy process input.
+     *
+     * @param param Input declaration
+     * @param namedArgs Map of command-line arguments
+     * @param paramTypes Map of input types from module spec
+     * @return Properly typed value for the input
+     */
+    private Object getValueForInputV1(InParam param, Map namedArgs, Map<String,Class> paramTypes) {
+        final name = param.getName()
+        final type = paramTypes.get(name)
+        final value = namedArgs.get(name)
+
+        if( value == null ) {
+            throw new IllegalArgumentException("Missing required parameter: --${name}")
+        }
+
+        // handle file, path, env, stdin inputs
+        switch( param ) {
+            case FileInParam:
+                return parseFileInput(value.toString())
+
+            case EnvInParam:
+                throw new IllegalArgumentException("Process `env` input qualifier is not supported by implicit process entry")
+
+            case StdInParam:
+                throw new IllegalArgumentException("Process `stdin` input qualifier is not supported by implicit process entry")
+        }
+
+        // handle val inputs
+        if( value !instanceof String ) {
+            if( type != null && !type.isAssignableFrom(value.class) )
+                throw new IllegalArgumentException("Parameter '--${name}' expects a ${type.simpleName} but received: ${value} [${value.class.simpleName}]")
+            return value
+        }
+
+        final str = (String) value
+
+        if( type == Boolean ) {
+            if( str.toLowerCase() == 'true' ) return Boolean.TRUE
+            if( str.toLowerCase() == 'false' ) return Boolean.FALSE
+            throw new IllegalArgumentException("Parameter '--${name}' expects a boolean (true/false) but received: '${str}'")
+        }
+
+        if( type == Integer ) {
+            if( str.isInteger() ) return str.toInteger()
+            if( str.isLong() ) return str.toLong()
+            throw new IllegalArgumentException("Parameter '--${name}' expects an integer but received: '${str}'")
+        }
+
+        if( type == Number ) {
+            if( str.isFloat() ) return str.toFloat()
+            if( str.isDouble() ) return str.toDouble()
+            throw new IllegalArgumentException("Parameter '--${name}' expects a floating-point number but received: '${str}'")
+        }
+
+        if( type == Map ) {
+            throw new IllegalArgumentException(
+                "Parameter '--${name}' expects a map but received: '${str}'. " +
+                "Use dot notation (e.g. --${name}.key=value) to supply map properties.")
+        }
+
+        return str
     }
 
     private List getProcessArgumentsV2(ProcessConfigV2 config, Map params) {
@@ -235,8 +323,8 @@ class ProcessEntryHandler {
         }
 
         // Parse complex parameters from session.params (handles dot notation)
-        final complexParams = parseComplexParameters(params)
-        log.debug "Complex parameters: ${complexParams}"
+        final paramValues = parseComplexParameters(params)
+        log.debug "Parameter values: ${paramValues}"
 
         // Map declared inputs to command-line arguments
         List arguments = []
@@ -244,13 +332,13 @@ class ProcessEntryHandler {
             if( param instanceof ProcessTupleInput ) {
                 List tupleElements = []
                 for( final innerParam : param.getComponents() ) {
-                    final value = getValueForInput(innerParam, complexParams)
+                    final value = getValueForInputV2(innerParam, paramValues)
                     tupleElements.add(value)
                 }
                 arguments.add(tupleElements)
             }
             else {
-                final value = getValueForInput(param, complexParams)
+                final value = getValueForInputV2(param, paramValues)
                 arguments.add(value)
             }
         }
@@ -259,40 +347,21 @@ class ProcessEntryHandler {
     }
 
     /**
-     * Gets the appropriate value for an input definition, handling type conversion.
+     * Gets the appropriate value for a typed process input.
      *
      * @param param Input declaration
      * @param namedArgs Map of command-line arguments
      * @return Properly typed value for the input
      */
-    private Object getValueForInput(InParam param, Map namedArgs) {
-        final paramName = param.getName()
-        final paramValue = namedArgs.get(paramName)
+    private Object getValueForInputV2(ProcessInput param, Map namedArgs) {
+        final name = param.getName()
+        final type = param.getType()
+        final value = namedArgs.get(name)
 
-        if( paramValue == null ) {
-            throw new IllegalArgumentException("Missing required parameter: --${paramName}")
+        if( value == null ) {
+            throw new IllegalArgumentException("Missing required parameter: --${name}")
         }
 
-        if( param instanceof ProcessInput ) {
-            return getTypedValueForInput(param.type, paramValue)
-        }
-
-        switch( param ) {
-            case FileInParam:
-                return parseFileInput(paramValue.toString())
-
-            case EnvInParam:
-                throw new IllegalArgumentException("Process `env` input qualifier is not supported by implicit process entry")
-
-            case StdInParam:
-                throw new IllegalArgumentException("Process `stdin` input qualifier is not supported by implicit process entry")
-
-            default:
-                return paramValue
-        }
-    }
-
-    private Object getTypedValueForInput(Class type, Object value) {
         if( value !instanceof String )
             return value
 
