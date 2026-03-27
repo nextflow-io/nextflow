@@ -42,20 +42,20 @@ class ModuleSpec {
     Map<String, String> requires
 
     /**
-     * Load a module spec from a meta.yml file
+     * Load a module spec from a file
      *
-     * @param metaYamlPath Path to meta.yml
+     * @param path Path to module spec file
      * @return ModuleSpec instance
      */
-    static ModuleSpec load(Path metaYamlPath) {
-        if( !Files.exists(metaYamlPath) ) {
-            throw new AbortOperationException("Module spec not found: ${metaYamlPath}")
+    static ModuleSpec load(Path path) {
+        if( !Files.exists(path) ) {
+            throw new AbortOperationException("Module spec not found: ${path}")
         }
 
         try {
             def yaml = new Yaml()
             Map<String, Object> data
-            try( def stream = Files.newInputStream(metaYamlPath) ) {
+            try( def stream = Files.newInputStream(path) ) {
                 data = yaml.load(stream) as Map<String, Object>
             }
 
@@ -71,7 +71,92 @@ class ModuleSpec {
             return spec
         }
         catch( Exception e ) {
-            throw new AbortOperationException("Failed to parse module spec: ${metaYamlPath}", e)
+            throw new AbortOperationException("Failed to parse module spec: ${path}", e)
+        }
+    }
+
+    /**
+     * Load a map of input name -> declared type from a module spec.
+     *
+     * @param path Path to module spec file
+     * @return Map of input name -> type, or null if the file has no input section
+     */
+    static Map<String, Class> loadInputTypes(Path path) {
+        if( !Files.exists(path) )
+            return Collections.emptyMap()
+
+        Map<String, Object> data
+        try( final stream = Files.newInputStream(path) ) {
+            data = new Yaml().load(stream) as Map<String, Object>
+        }
+        catch( Exception e ) {
+            log.warn "Failed to parse module spec at ${path}: ${e.message}"
+            return Collections.emptyMap()
+        }
+
+        final inputSection = data?.get('input') as List
+        if( !inputSection )
+            return Collections.emptyMap()
+
+        final Map<String, Class> inputTypes = new LinkedHashMap<>()
+        for( final item : inputSection )
+            extractInputTypes(item, inputTypes)
+
+        return inputTypes
+    }
+
+    /**
+     * Recursively extract name -> type entries from a structuredParameter item.
+     *
+     * Handles:
+     * - Tuples: recursively traverse tuple components
+     * - New module spec format: {name: "...", type: "..."}
+     * - Old nf-core format: {<name>: {type: "...", ...}}
+     *
+     * @param item
+     * @param result
+     */
+    private static void extractInputTypes(Object item, Map<String, Class> result) {
+        if( item instanceof List ) {
+            // Traverse tuple components as individual params
+            for( final element : (List) item ) {
+                extractInputTypes(element, result)
+            }
+        }
+        else if( item instanceof Map ) {
+            final m = (Map) item
+            if( m.values().size() == 1 && m.values().first() instanceof Map ) {
+                // Old nf-core format: {<name>: {type: "...", description: "..."}}
+                final name = m.keySet().first()
+                final type = ((Map) m[name]).get('type')
+                if( type != null )
+                    result.put(name.toString(), inputType(type.toString()))
+            }
+            else {
+                // New paramSpec format: {name: "...", type: "..."}
+                final name = m.get('name')
+                final type = m.get('type')
+                if( name != null && type != null )
+                    result.put(name.toString(), inputType(type.toString()))
+            }
+        }
+    }
+
+    /**
+     * Return the corresponding class for a given type name.
+     *
+     * @param type
+     */
+    private static Class inputType(String type) {
+        return switch( type ) {
+            case 'boolean' -> Boolean
+            case 'file' -> Path
+            case 'directory' -> Path
+            case 'float' -> Number
+            case 'integer' -> Integer
+            case 'map' -> Map
+            case 'string' -> String
+            default -> null
         }
     }
 

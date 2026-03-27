@@ -133,6 +133,79 @@ requires:
         '1.0.0.0'       | false
     }
 
+    def 'should return empty input types when file does not exist' () {
+        expect:
+        ModuleSpec.loadInputTypes(tempDir.resolve('nonexistent.yml')) == [:]
+    }
+
+    def 'should return empty input types when no input section' () {
+        given:
+        def metaYaml = tempDir.resolve('meta.yml')
+        metaYaml.text = '''\
+            name: nf-core/fastqc
+            description: FastQC quality control
+            '''.stripIndent()
+        expect:
+        ModuleSpec.loadInputTypes(metaYaml) == [:]
+    }
+
+    def 'should load input types in new module spec format' () {
+        given:
+        def metaYaml = tempDir.resolve('meta.yml')
+        metaYaml.text = '''\
+            name: nf-core/fastqc
+            description: FastQC quality control
+            input:
+            - - name: meta
+                type: map
+                description: Sample metadata
+              - name: reads
+                type: file
+                description: Input reads
+            - name: index
+              type: directory
+              description: Index directory
+            '''.stripIndent()
+        when:
+        def types = ModuleSpec.loadInputTypes(metaYaml)
+
+        then:
+        types == [meta: Map, reads: Path, index: Path]
+    }
+
+    def 'should load input types in old nf-core format' () {
+        given:
+        def metaYaml = tempDir.resolve('meta.yml')
+        metaYaml.text = '''\
+            name: nf-core/fastqc
+            description: FastQC quality control
+            input:
+            - - meta:
+                  type: map
+                  description: Sample metadata
+              - reads:
+                  type: file
+                  description: Input reads
+            - index:
+                type: directory
+                description: Index directory
+            '''.stripIndent()
+        when:
+        def types = ModuleSpec.loadInputTypes(metaYaml)
+
+        then:
+        types == [meta: Map, reads: Path, index: Path]
+    }
+
+    def 'should return empty input types for malformed YAML' () {
+        given:
+        def metaYaml = tempDir.resolve('meta.yml')
+        metaYaml.text = ': invalid: yaml: {'
+
+        expect:
+        ModuleSpec.loadInputTypes(metaYaml) == [:]
+    }
+
     def 'should validate module name format' () {
         given:
         def spec = new ModuleSpec(

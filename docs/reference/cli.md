@@ -915,13 +915,19 @@ The `lint` command parses and analyzes the given Nextflow scripts and config fil
 **Options**
 
 `-exclude`
-: File pattern to exclude from linting. Can be specified multiple times (default: `.git, .nf-test, work`).
+: File pattern to exclude from linting (default: `.git, .lineage, .nextflow, .nf-test, nf-test.config, work`).
+: Can be specified multiple times.
 
 `-format`
 : Format scripts and config files that have no errors.
 
 `-o, -output`
 : Output mode for reporting errors: `full`, `extended`, `concise`, `json`, `markdown` (default: `full`).
+
+`-project-dir`
+: :::{versionadded} 26.04.0
+  :::
+: Path to project directory (default: `'.'`). Used to locate project-level assets such as the lib directory and modules directory.
 
 `-sort-declarations`
 : Sort script declarations in Nextflow scripts (default: `false`).
@@ -1522,6 +1528,11 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : :::{versionadded} 24.10.0
   :::
 : Directory where workflow outputs are stored.
+
+`-output-format`
+: :::{versionadded} 26.04.0
+  :::
+: Output format for printing workflow outputs. Options: `text` (default), `json`.
 
 `-params-file`
 : Load script parameters from a JSON/YAML file.

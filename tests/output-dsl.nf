@@ -16,7 +16,10 @@
  */
 nextflow.preview.types = true
 
-params.save_bam_bai = false
+params {
+  n_samples: Integer = 3
+  save_bam_bai: Boolean
+}
 
 process fastqc {
   input:
@@ -80,7 +83,7 @@ process summary {
 
 workflow {
   main:
-  ids = channel.of('alpha', 'beta', 'delta')
+  ids = channel.of(1..params.n_samples).map { i -> "sample${i}" }
   ch_fastqc = fastqc(ids)
   (ch_bam, ch_bai) = align(ids)
   ch_quant = quant(ids)

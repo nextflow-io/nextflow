@@ -85,16 +85,26 @@ class TowerClient {
     private String accessToken
 
     private TowerRetryPolicy retryPolicy
+    private Duration readTimeout = TowerConfig.DEFAULT_READ_TIMEOUT
+
+    private Duration connectTimeout = TowerConfig.DEFAULT_CONNECT_TIMEOUT
 
     TowerClient(TowerConfig config, Map env) {
         this.endpoint = checkUrl(config.endpoint)
         this.accessToken = config.accessToken
         this.retryPolicy = config.retryPolicy
+        this.readTimeout = config.httpReadTimeout
+        this.connectTimeout = config.httpConnectTimeout
         this.schema = loadSchema()
         this.generator = TowerJsonGenerator.create(schema)
         if (env)
             this.env = env
         initHttpClient()
+    }
+
+    TowerClient withRequestTimeout(Duration duration) {
+        this.readTimeout = duration
+        return this
     }
 
     @TestOnly
@@ -215,7 +225,7 @@ class TowerClient {
             .retryConfig(this.retryPolicy)
             .followRedirects(HttpClient.Redirect.NORMAL)
             .version(HttpClient.Version.HTTP_1_1)
-            .connectTimeout(java.time.Duration.ofSeconds(60))
+            .connectTimeout(java.time.Duration.ofMillis(connectTimeout.millis))
             .build()
     }
 
@@ -309,6 +319,7 @@ class TowerClient {
         final builder = HttpRequest.newBuilder(URI.create(url))
             .header('User-Agent', "Nextflow/$BuildInfo.version")
             .header('Traceparent', TraceUtils.rndTrace())
+            .timeout(java.time.Duration.ofMillis(readTimeout.millis))
 
         if( verb == 'GET' )
             return builder.GET().build()

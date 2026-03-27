@@ -103,8 +103,12 @@ class AgentLogObserverTest extends Specification {
         def statsObserver = Stub(WorkflowStatsObserver) {
             getStats() >> stats
         }
+        def session = Stub(Session) {
+            isSuccess() >> true
+        }
         def observer = new TestAgentLogObserver(output)
         observer.setStatsObserver(statsObserver)
+        observer.onFlowCreate(session)
 
         when:
         observer.onFlowComplete()
@@ -123,14 +127,42 @@ class AgentLogObserverTest extends Specification {
         def statsObserver = Stub(WorkflowStatsObserver) {
             getStats() >> stats
         }
+        def session = Stub(Session) {
+            isSuccess() >> false
+        }
         def observer = new TestAgentLogObserver(output)
         observer.setStatsObserver(statsObserver)
+        observer.onFlowCreate(session)
 
         when:
         observer.onFlowComplete()
 
         then:
         output[0] == '\n[FAILED] completed=7 failed=2 cached=0'
+    }
+
+    def 'should output failed summary when session has error but no task failures'() {
+        given:
+        def output = []
+        def stats = new WorkflowStats()
+        stats.succeededCount = 0
+        stats.failedCount = 0
+        stats.cachedCount = 0
+        def statsObserver = Stub(WorkflowStatsObserver) {
+            getStats() >> stats
+        }
+        def session = Stub(Session) {
+            isSuccess() >> false
+        }
+        def observer = new TestAgentLogObserver(output)
+        observer.setStatsObserver(statsObserver)
+        observer.onFlowCreate(session)
+
+        when:
+        observer.onFlowComplete()
+
+        then:
+        output[0] == '\n[FAILED] completed=0 failed=0 cached=0'
     }
 
     def 'should handle task complete for failed task'() {
