@@ -143,7 +143,7 @@ class TowerClient implements TraceObserverV2 {
     private Map<String,Boolean> allContainers = new ConcurrentHashMap<>()
 
     protected TowerCommonApi commonApi
-  
+
     private Duration readTimeout = TowerConfig.DEFAULT_READ_TIMEOUT
 
     private Duration connectTimeout = TowerConfig.DEFAULT_CONNECT_TIMEOUT
@@ -358,6 +358,8 @@ class TowerClient implements TraceObserverV2 {
                     revision: metadata.revision as String,
                     commitId: metadata.commitId as String
                 )
+            if( metadata.labels )
+                platform.labels = metadata.labels as List<String>
         }
         catch( Exception e ) {
             log.debug("Failed to apply platform metadata from create response", e)
