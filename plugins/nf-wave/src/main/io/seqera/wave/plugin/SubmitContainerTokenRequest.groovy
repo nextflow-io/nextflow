@@ -158,4 +158,12 @@ class SubmitContainerTokenRequest {
      */
     String buildTemplate
 
+    /**
+     * A layer holding the build context for this container request.
+     * When a container file (Dockerfile) is provided, module resources
+     * are sent as build context so they are available to COPY/ADD instructions
+     * during the image build.
+     */
+    ContainerLayer buildContext
+
 }

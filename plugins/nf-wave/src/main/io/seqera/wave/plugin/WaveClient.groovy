@@ -203,9 +203,17 @@ class WaveClient {
 
     SubmitContainerTokenRequest makeRequest(WaveAssets assets) {
         ContainerConfig containerConfig = assets.containerConfig ?: new ContainerConfig()
-        // prepend the bundle layer
+        ContainerLayer buildContext = null
+        // when a container file is provided, send module resources as build context
+        // so that they are available to COPY/ADD instructions during the image build;
+        // otherwise prepend them as container config layers for runtime overlay
         if( assets.moduleResources!=null && assets.moduleResources.hasEntries() ) {
-            containerConfig.prependLayer(makeLayer(assets.moduleResources))
+            if( assets.containerFile ) {
+                buildContext = makeLayer(assets.moduleResources)
+            }
+            else {
+                containerConfig.prependLayer(makeLayer(assets.moduleResources))
+            }
         }
         // prepend project resources bundle
         if( assets.projectResources!=null && assets.projectResources.hasEntries() ) {
@@ -255,7 +263,8 @@ class WaveClient {
                 scanMode: config.scanMode(),
                 scanLevels: config.scanAllowedLevels(),
                 buildCompression: config.buildCompression(),
-                buildTemplate: config.buildTemplate()
+                buildTemplate: config.buildTemplate(),
+                buildContext: buildContext
         )
     }
 

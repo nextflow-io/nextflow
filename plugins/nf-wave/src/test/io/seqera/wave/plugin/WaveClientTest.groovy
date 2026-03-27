@@ -463,6 +463,50 @@ class WaveClientTest extends Specification {
     }
 
 
+    def 'should create request with module resources as build context when containerFile is provided' () {
+        given:
+        def DOCKERFILE = 'FROM foo:latest\nCOPY bin/ /usr/local/bin/'
+        def MODULE_RES = Mock(ResourcesBundle) { hasEntries() >> true }
+        def MODULE_LAYER = Mock(ContainerLayer)
+        and:
+        def session = Mock(Session) { getConfig() >> [:]}
+        WaveClient wave = Spy(WaveClient, constructorArgs: [session])
+
+        when:
+        def assets = new WaveAssets(null, null, MODULE_RES, null, DOCKERFILE)
+        def req = wave.makeRequest(assets)
+        then:
+        1 * wave.makeLayer(MODULE_RES) >> MODULE_LAYER
+        and:
+        new String(req.containerFile.decodeBase64()) == DOCKERFILE
+        req.buildContext == MODULE_LAYER
+        !req.containerConfig.layers
+    }
+
+    def 'should create request with module as build context and project as layer' () {
+        given:
+        def DOCKERFILE = 'FROM foo:latest\nCOPY bin/ /usr/local/bin/'
+        def MODULE_RES = Mock(ResourcesBundle) { hasEntries() >> true }
+        def MODULE_LAYER = Mock(ContainerLayer)
+        and:
+        def PROJECT_RES = Mock(ResourcesBundle) { hasEntries() >> true }
+        def PROJECT_LAYER = Mock(ContainerLayer)
+        and:
+        def session = Mock(Session) { getConfig() >> [:]}
+        WaveClient wave = Spy(WaveClient, constructorArgs: [session])
+
+        when:
+        def assets = new WaveAssets(null, null, MODULE_RES, null, DOCKERFILE, null, PROJECT_RES)
+        def req = wave.makeRequest(assets)
+        then:
+        1 * wave.makeLayer(MODULE_RES) >> MODULE_LAYER
+        1 * wave.makeLayer(PROJECT_RES) >> PROJECT_LAYER
+        and:
+        req.buildContext == MODULE_LAYER
+        req.containerConfig.layers.size() == 1
+        req.containerConfig.layers[0] == PROJECT_LAYER
+    }
+
     def 'should create asset with image' () {
         given:
         def session = Mock(Session) { getConfig() >> [:]}
