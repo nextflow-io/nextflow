@@ -56,7 +56,7 @@ dependencies {
     api ('software.amazon.awssdk:ssooidc:2.31.64')
 
     // address security vulnerabilities
-    runtimeOnly 'io.netty:netty-codec-http:4.1.129.Final'
+    runtimeOnly 'io.netty:netty-codec-http:4.1.132.Final'
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
