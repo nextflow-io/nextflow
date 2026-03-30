@@ -532,6 +532,21 @@ class AssetManager implements Closeable {
         return strategy?.getGitRepositoryUrl() ?: provider.getCloneUrl()
     }
 
+    /**
+     * @return {@code true} when the SCM source points to a local file-system repository.
+     */
+    boolean isLocalScmSource() {
+        final repoUrl = getGitRepositoryUrl()
+        if( !repoUrl )
+            return false
+        try {
+            return new GitUrl(repoUrl).protocol == 'file'
+        }
+        catch( IllegalArgumentException e ) {
+            return false
+        }
+    }
+
     File getLocalPath() {
         return strategy?.getLocalPath()
     }

@@ -620,10 +620,11 @@ class CmdRun extends CmdBase implements HubOptions {
             if( revision )
                 manager.setRevision(revision)
             def repo = manager.getProjectWithRevision()
+            final localScm = manager.isLocalScmSource()
 
             boolean checkForUpdate = true
             if( !manager.isRunnable() || latest ) {
-                if( offline )
+                if( offline && !localScm )
                     throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
                 log.info "Pulling $repo ..."
                 def result = manager.download(revision,deep)
@@ -641,7 +642,7 @@ class CmdRun extends CmdBase implements HubOptions {
                 manager.checkout(revision)
                 manager.updateModules()
                 final scriptFile = manager.getScriptFile(mainScript)
-                if( checkForUpdate && !offline )
+                if( checkForUpdate && (!offline || localScm) )
                     manager.checkRemoteStatus(scriptFile.revisionInfo)
                 // return the script file
                 return scriptFile
