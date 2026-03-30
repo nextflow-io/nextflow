@@ -669,6 +669,29 @@ class AssetManagerTest extends Specification {
 
     }
 
+    def 'should detect local scm source from repository url' () {
+        when:
+        def manager = new AssetManager(provider: Mock(RepositoryProvider) {
+            getCloneUrl() >> 'file:///tmp/workflows/nextflow-io-socks.git'
+        })
+        then:
+        manager.isLocalScmSource()
+
+        when:
+        manager = new AssetManager(provider: Mock(RepositoryProvider) {
+            getCloneUrl() >> '/tmp/workflows/nextflow-io-socks.git'
+        })
+        then:
+        manager.isLocalScmSource()
+
+        when:
+        manager = new AssetManager(provider: Mock(RepositoryProvider) {
+            getCloneUrl() >> 'https://github.com/nextflow-io/socks.git'
+        })
+        then:
+        !manager.isLocalScmSource()
+    }
+
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
     def 'should download branch specified legacy'() {
 
