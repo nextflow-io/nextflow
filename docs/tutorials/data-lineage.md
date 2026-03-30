@@ -60,7 +60,7 @@ First, use the `list` subcommand to list the workflow runs in the lineage store:
 
 ```console
 $ nextflow lineage list
-TIMESTAMP               RUN NAME                SESSION ID                              LINEAGE ID                            
+TIMESTAMP               RUN NAME                SESSION ID                              LINEAGE ID
 2025-05-09 13:28:30 CDT peaceful_blackwell      065bdc6b-89b4-42ee-92c1-2a5af37f2c50    lid://16b31030474f2e96c55f4940bca3ab64
 ```
 
@@ -138,6 +138,10 @@ $ nextflow lineage view lid://16b31030474f2e96c55f4940bca3ab64/multiqc_report.ht
 Every output file is represented in the lineage store as a `FileOutput` record. It includes basic file information, such as the real path, checksum, file size and created/modified timestamps, as well as lineage information, such as the workflow run and task run that produced it.
 
 As this record is a workflow output, it is not linked directly to a task run. Instead, it is linked to the original task output.
+
+:::{note}
+The `labels` field is `null` because no labels were assigned to this file. Labels are set using the `label` directive in the `output` block. See {ref}`migrating-workflow-outputs` for more information.
+:::
 
 Any LID in a lineage record can be viewed, allowing you to traverse the lineage metadata interactively. Use the value of `source` to view the original task output:
 
@@ -303,10 +307,10 @@ Note the difference between the task scripts, highlighting the change that cause
 
 Workflow outputs declared in the `output` block are also recorded in the lineage store. The output of a workflow run is accessible as `lid://<WORKFLOW_RUN_HASH>#output`.
 
-For example, run the `rnaseq-nf` pipeline using the `preview-25-04` branch, which uses the `output` block to publish outputs:
+For example, run the `rnaseq-nf` pipeline with the `preview-25-04` branch, which uses the `output` block to publish outputs:
 
 ```console
-$ nextflow -r preview-25-04 -profile conda
+$ nextflow rnaseq-nf -r preview-25-04 -profile conda
 ```
 
 View the workflow output in the lineage metadata:
@@ -329,7 +333,20 @@ $ nextflow lineage view lid://9410d13abeec617640b5fe9735ba12fc#output
 
 This view can be used to traverse output files directly instead of inferring LIDs from the workflow output directory.
 
-See {ref}`workflow-output-def` for more information about the `output` block.
+When a `label` is assigned to an output, it appears in the `labels` field of each corresponding `FileOutput` record:
+
+```console
+$ nextflow lineage view lid://<WORKFLOW_RUN_HASH>/multiqc_report.html
+{
+  "version": "lineage/v1beta1",
+  "type": "FileOutput",
+  "path": "/results/multiqc_report.html",
+  ...
+  "labels": ["report"]
+}
+```
+
+Labels can be used to filter files when querying the lineage store with {ref}`channel-from-lineage`. See {ref}`migrating-workflow-outputs` for details on assigning labels in the `output` block.
 
 ## Use lineage in a Nextflow script
 
