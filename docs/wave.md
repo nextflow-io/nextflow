@@ -63,7 +63,7 @@ wave.strategy = ['dockerfile','container']
 This setting instructs Wave to prioritize the module Dockerfile over process `container` directives.
 
 :::{info}
-When building containers, Wave does not support `ADD`, `COPY`, or any other Dockerfile commands that access files in the host file system. However, you can use the module `resources/` directory to include custom scripts and files that are automatically added to the container build context by Wave. This effectively removes the need for `ADD` and `COPY` commands in most cases. See {ref}`module-binaries` for more details.
+When building containers, Wave does not support `ADD`, `COPY`, or any other Dockerfile commands that access files in the host file system. To include custom scripts or files, use the module `resources/` directory instead. Wave automatically includes its contents in the container build context. See {ref}`module-binaries` for more details.
 :::
 
 ### Build Conda based containers
