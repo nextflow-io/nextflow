@@ -278,7 +278,7 @@ This feature requires the use of a local or shared file system for the pipeline 
 :::
 
 :::{info}
-When {ref}`wave-page` is enabled, the contents of the module `resources/` directory are automatically included in the provisioned container. Wave treats the `resources/` directory as the container root, so for example `resources/some/data/file.txt` will be placed at `/some/data/file.txt` in the container.
+When {ref}`wave-page` is enabled, the contents of the module `resources/` directory are automatically included in the provisioned container. Wave treats the `resources/` directory as the container root. For example, `resources/some/data/file.txt` becomes `/some/data/file.txt` in the container.
 :::
 
 ## Sharing modules
