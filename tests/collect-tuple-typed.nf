@@ -9,7 +9,7 @@ process align {
   debug true
 
   input:
-  (barcode, seq_id): Tuple<String, String>
+  tuple(barcode: String, seq_id: String)
 
   output:
   tuple(barcode, seq_id, file('bam'), file('bai'))
@@ -29,7 +29,7 @@ process merge {
   debug true
 
   input:
-  (barcode, seq_ids, bam, bai): Tuple<String, Bag<String>, Bag<Path>, Bag<Path>>
+  tuple(barcode: String, seq_ids: Bag<String>, bam: Bag<Path>, bai: Bag<Path>)
 
   stage:
   stageAs bam, 'bam?'

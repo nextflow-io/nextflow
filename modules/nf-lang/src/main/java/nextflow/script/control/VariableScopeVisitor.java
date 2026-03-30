@@ -321,8 +321,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         visitDirectives(node.stagers, "stage directive", false);
         vsc.popScope();
 
-        if( !(node.when instanceof EmptyExpression) )
-            vsc.addParanoidWarning("Process `when` section will not be supported in a future version", node.when);
+        // deprecation warning reported during ast construction
         visit(node.when);
 
         visit(node.exec);

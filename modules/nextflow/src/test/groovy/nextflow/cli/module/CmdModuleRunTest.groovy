@@ -111,6 +111,8 @@ class CmdModuleRunTest extends Specification {
         cmd.args = ['nf-core/test-module']
         cmd.root = tempDir
         cmd.workDir = tempDir.toString()
+        cmd.outputDir = tempDir.resolve('results').toString()
+        cmd.outputFormat = 'json'
         cmd.client = mockClient
 
         when:
@@ -175,6 +177,8 @@ class CmdModuleRunTest extends Specification {
         cmd.version = '2.0.0'
         cmd.root = tempDir
         cmd.workDir = tempDir.toString()
+        cmd.outputDir = tempDir.resolve('results').toString()
+        cmd.outputFormat = 'json'
         cmd.client = mockClient
 
         when:
