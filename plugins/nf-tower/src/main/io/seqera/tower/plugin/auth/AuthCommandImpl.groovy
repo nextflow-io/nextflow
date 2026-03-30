@@ -142,7 +142,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         })
 
         // Verify login by calling /user-info
-        final userInfo = getUserInfo(accessToken, apiUrl)
+        final userInfo = commonApi.getUserInfo(createHttpClient(accessToken), apiUrl)
         println "\n\n${colorize('✔', 'green', true)} Authentication successful"
 
         // Generate PAT
