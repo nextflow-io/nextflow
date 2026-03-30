@@ -396,7 +396,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected Long getGrantedTime() {
-        final time = cachedTaskState?.getResourceAllocation()?.getTime()
+        final String time = cachedTaskState?.getResourceAllocation()?.getTime()
         return time != null ? Duration.of(time).toMillis() : task.config.getTime()?.toMillis()
     }
 

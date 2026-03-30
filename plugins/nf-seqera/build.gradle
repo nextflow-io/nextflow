@@ -51,7 +51,7 @@ dependencies {
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
     compileOnly 'org.pf4j:pf4j:3.14.1'
-    api 'io.seqera:sched-client:0.46.0-SNAPSHOT'
+    api 'io.seqera:sched-client:0.47.0-SNAPSHOT'
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation "org.apache.groovy:groovy:4.0.30"
