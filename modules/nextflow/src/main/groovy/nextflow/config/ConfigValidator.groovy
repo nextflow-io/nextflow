@@ -40,6 +40,7 @@ class ConfigValidator {
         'dumpChannels',
         'dumpHashes',
         'libDir',
+        'outputFormat',
         'poolSize',
         'preview',
         'runName',

@@ -52,7 +52,7 @@ configurations {
 dependencies {
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
-    compileOnly 'org.pf4j:pf4j:3.12.0'
+    compileOnly 'org.pf4j:pf4j:3.14.1'
     api('com.azure:azure-storage-blob:12.33.2') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
@@ -64,8 +64,11 @@ dependencies {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
 
+    // Force patched version to address GHSA-72hv-8253-57qq (jackson-core Number Length Constraint Bypass DoS)
+    runtimeOnly 'com.fasterxml.jackson.core:jackson-core:2.18.6'
+
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.apache.groovy:groovy:4.0.30"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.30"
+    testImplementation "org.apache.groovy:groovy:4.0.31"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.31"
 }

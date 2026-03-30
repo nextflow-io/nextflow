@@ -220,7 +220,8 @@ class AgentLogObserver implements TraceObserverV2, LogObserver {
         def cached = stats?.cachedCount ?: 0
         def completed = succeeded + failed
 
-        def status = failed > 0 ? 'FAILED' : 'SUCCESS'
+        def hasSessionError = session && !session.isSuccess()
+        def status = (failed > 0 || hasSessionError) ? 'FAILED' : 'SUCCESS'
         printLine("\n[${status}] completed=${completed} failed=${failed} cached=${cached}")
     }
 

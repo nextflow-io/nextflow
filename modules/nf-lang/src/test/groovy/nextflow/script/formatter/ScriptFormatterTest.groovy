@@ -207,7 +207,7 @@ class ScriptFormatterTest extends Specification {
             nextflow.preview.types=true
 
             process hello{
-            debug(true) ; input: (id,infile):Tuple<String,Path> ; index:Path ; stage: stageAs(infile,'input.txt') ; output: result=tuple(id,file('output.txt')) ; script: 'cat input.txt > output.txt'
+            debug(true) ; input: tuple(id:String,infile:Path) ; index:Path ; stage: stageAs(infile,'input.txt') ; output: result=tuple(id,file('output.txt')) ; script: 'cat input.txt > output.txt'
             }
             ''',
             '''\
@@ -217,7 +217,7 @@ class ScriptFormatterTest extends Specification {
                 debug true
 
                 input:
-                (id, infile): Tuple<String, Path>
+                tuple(id: String, infile: Path)
                 index: Path
 
                 stage:
@@ -237,7 +237,7 @@ class ScriptFormatterTest extends Specification {
             nextflow.preview.types=true
 
             process hello{
-            input: sample:Record{id:String;infile:Path} ; script: 'cat input.txt > output.txt'
+            input: record(id:String,infile:Path) ; script: 'cat input.txt > output.txt'
             }
             ''',
             '''\
@@ -245,10 +245,10 @@ class ScriptFormatterTest extends Specification {
 
             process hello {
                 input:
-                sample: Record {
-                    id: String
+                record(
+                    id: String,
                     infile: Path
-                }
+                )
 
                 script:
                 'cat input.txt > output.txt'

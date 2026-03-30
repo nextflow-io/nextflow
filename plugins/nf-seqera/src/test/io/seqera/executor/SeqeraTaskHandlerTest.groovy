@@ -583,7 +583,7 @@ class SeqeraTaskHandlerTest extends Specification {
         given:
         def handler = createHandler()
         handler.cachedTaskState = new SchedTaskState()
-            .resourceRequirement(new ResourceRequirement().time('2h'))
+            .resourceAllocation(new ResourceRequirement().time('2h'))
 
         expect:
         handler.getGrantedTime() == Duration.of('2h').toMillis()
