@@ -16,6 +16,7 @@
 
 package io.seqera.tower.plugin.auth
 
+import io.seqera.http.HxClient
 import io.seqera.platform.auth.oidc.OidcLoginFlow
 import io.seqera.tower.plugin.BaseCommandImpl
 
