@@ -55,6 +55,7 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
     compileOnly 'org.pf4j:pf4j:3.14.1'
     compileOnly 'io.seqera:lib-httpx:2.1.0'
+    api 'io.seqera:lib-platform-oidc:0.1.0'
 
     api "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.21.1"
     api "com.fasterxml.jackson.core:jackson-databind:2.21.1"
