@@ -154,13 +154,14 @@ class CmdModuleCreate extends CmdBase {
         description: A brief description of the ${namespace}/${name} module
         license: Apache-2.0
         input:
-        - name: greeting
-          type: string
-          description: A greeting string
+          - greeting:
+              type: string
+              description: A greeting string
         output:
-        - name: stdout
-          type: string
-          description: The greeting message
+          stdout:
+            - output:
+                type: string
+                description: The greeting message
         """.stripIndent()
     }
 
