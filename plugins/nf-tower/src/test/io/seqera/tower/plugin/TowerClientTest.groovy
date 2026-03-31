@@ -402,7 +402,7 @@ class TowerClientTest extends Specification {
         when:
         client.onFlowCreate(session)
         then:
-        1 * client.addPlatformMetadata(_) >> null
+        0 * client.applyPlatformMetadata(_)
         1 * client.getAccessToken() >> 'secret'
         1 * client.makeCreateReq(session) >> [runName: 'foo']
         1 * client.sendHttpMessage('https://api.cloud.seqera.io/trace/create', [runName: 'foo'], 'POST') >> new TowerClient.Response(200, '{"workflowId":"xyz123","watchUrl":"https://cloud.seqera.io/watch/xyz123"}')
@@ -587,37 +587,52 @@ class TowerClientTest extends Specification {
         request.uri().toString() == 'http://example.com/test'
     }
 
-    def 'should add platform metadata content'() {
+    def 'should apply platform metadata from trace create response'() {
+        given:
         def metadata = new WorkflowMetadata()
-        def session = Mock(Session){
+        def session = Mock(Session) {
             getWorkflowMetadata() >> metadata
         }
-
-        def config = new TowerConfig( [accessToken: 'token-1234', workspaceId: '1234'] , SysEnv.get() )
+        def config = new TowerConfig([accessToken: 'token-1234', workspaceId: '1234'], SysEnv.get())
         def towerClient = new TowerClient(session, config)
-        towerClient.env = [TOWER_WORKFLOW_ID: 'wf1234']
-        towerClient.commonApi = Mock(TowerCommonApi) {
-            getUserInfo(_, _) >> [ id: 'u1234', userName: 'user', email: 'john@acme.com', firstName: 'John', lastName: 'Smith', organization: 'ACME Inc.']
-            getUserWorkspaceDetails(_, 'u1234', _, '1234') >> [ orgId: 123, orgName: "ACME Inc.", workspaceId: 1234, workspaceName: "Workspace-Name", workspaceFullName: "Full Workspace Name", roles: ["member"]]
-            getWorkflowDetails(_, _, 'wf1234', _) >> [ id: 'wf1234', labels: [ [key: 'key1', value: 'value1'], [value: 'value2'] ] ]
-            apiGet(_, _, '/workflow/wf1234/launch', _) >> [ launch: [ id: 'l1234', computeEnv: [id: 'ce1234', name: 'ce-test', platform: 'aws-batch'], pipeline: 'test-pipeline', pipelineId: 'pipe1234', revision: 'v1.1', commitId: 'abcd12345']]
-        }
-        def workflowId = 'wf1234'
+
+        def responseMetadata = [
+            userId: 39,
+            userName: 'user',
+            userOrganization: 'ACME Inc.',
+            workspaceId: 1234,
+            workspaceName: 'Workspace-Name',
+            workspaceFullName: 'Full Workspace Name',
+            orgName: 'ACME Inc.',
+            computeEnvId: 'ce1234',
+            computeEnvName: 'ce-test',
+            computeEnvPlatform: 'aws-batch',
+            pipelineName: 'test-pipeline',
+            pipelineId: 'pipe1234',
+            revision: 'v1.1',
+            commitId: 'abcd12345'
+        ]
 
         when:
-        towerClient.addPlatformMetadata(workflowId)
+        towerClient.applyPlatformMetadata(responseMetadata)
 
         then:
-        metadata.platform.user.id == 'u1234'
+        metadata.platform.user.id == '39'
         metadata.platform.user.userName == 'user'
+        metadata.platform.user.organization == 'ACME Inc.'
         metadata.platform.workspace.id == '1234'
-        metadata.platform.workspace.name == "Workspace-Name"
-        metadata.platform.workspace.organization == "ACME Inc."
+        metadata.platform.workspace.name == 'Workspace-Name'
+        metadata.platform.workspace.fullName == 'Full Workspace Name'
+        metadata.platform.workspace.organization == 'ACME Inc.'
+        metadata.platform.computeEnv.id == 'ce1234'
+        metadata.platform.computeEnv.name == 'ce-test'
+        metadata.platform.computeEnv.platform == 'aws-batch'
         metadata.platform.pipeline.id == 'pipe1234'
         metadata.platform.pipeline.name == 'test-pipeline'
         metadata.platform.pipeline.revision == 'v1.1'
         metadata.platform.pipeline.commitId == 'abcd12345'
     }
+
     def 'should include numSpotInterruptions in task map'() {
         given:
         def client = Spy(new TowerClient())
