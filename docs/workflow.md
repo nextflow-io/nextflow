@@ -356,7 +356,7 @@ The following directives are available for each output in the output block:
   : The character used to separate values (default: `','`). Only used for CSV files.
 
 `label`
-: Specify a label to be applied to every published file. Can be specified multiple times.
+: Attach a metadata string to every file published under this output. Can be specified multiple times to attach multiple labels. Labels are stored in the `labels` field of `FileOutput` records in the {ref}`lineage store <data-lineage-page>` and can be used to query or filter output files by lineage.
 
 `path`
 : Specify the publish path relative to the output directory (default: `'.'`). Can be a path, a closure that defines a custom directory for each published value, or a closure that publishes individual files using the `>>` operator.

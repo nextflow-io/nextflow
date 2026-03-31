@@ -873,7 +873,7 @@ The above example produces:
 
 ### label
 
-The `label` directive allows the annotation of processes with mnemonic identifier of your choice. For example:
+The `label` directive allows the annotation of processes with a mnemonic identifier of your choice. For example:
 
 ```nextflow
 process hello {
@@ -886,15 +886,19 @@ process hello {
 }
 ```
 
-The same label can be applied to more than a process and multiple labels can be applied to the same process using the `label` directive more than one time.
+The same label can be applied to more than one process, and multiple labels can be applied to the same process by using the `label` directive more than once.
 
 :::{note}
 A label must consist of alphanumeric characters or `_`, must start with an alphabetic character and must end with an alphanumeric character.
 :::
 
-Labels are useful to organize workflow processes in separate groups which can be referenced in the configuration file to select and configure a subset of processes having similar computing requirements. See {ref}`config-process-selectors` for more information.
+Labels are used exclusively for **configuration targeting**: they allow you to organize processes into groups that can be selected by `withLabel` selectors in a configuration file to apply shared resource settings (e.g. CPU, memory, queue). A process label has no effect at runtime and is not recorded in execution logs, trace reports, or lineage metadata.
 
-See also: [resourceLabels](#resourcelabels)
+See {ref}`config-process-selectors` for more information.
+
+:::{note}
+`label` is for grouping processes in configuration. To attach an identifier to individual task executions for logs and traces, use [tag](#tag). To tag cloud computing resources for cost tracking, use [resourceLabels](#resourcelabels). To attach metadata labels to published output files for lineage tracking, use the `label` directive in the workflow {ref}`output block <workflow-output-def>`.
+:::
 
 (process-machinetype)=
 
@@ -1443,7 +1447,9 @@ This directive is only used by certain executors. Refer to the {ref}`executor-pa
 :::{versionadded} 22.09.1-edge
 :::
 
-The `resourceLabels` directive allows you to specify custom name-value pairs that Nextflow applies to the computing resource used to carry out the process execution. Resource labels can be specified using the syntax shown below:
+The `resourceLabels` directive allows you to specify custom name-value pairs that Nextflow applies to the cloud or cluster computing resource used to carry out the process execution. These labels are attached to the underlying infrastructure (e.g., a cloud job) and are intended for operational purposes such as cost attribution and resource tracking. They are not used for Nextflow configuration targeting and are not recorded in lineage metadata.
+
+Resource labels can be specified using the syntax shown below:
 
 ```nextflow
 process hello {
@@ -1471,7 +1477,7 @@ Resource labels are supported for Azure Batch when using automatic pool creation
 Resource labels in Azure are added to pools, rather than jobs, in order to facilitate cost analysis. A new pool will be created for each new set of resource labels, therefore it is recommended to also set `azure.batch.deletePoolsOnCompletion = true` when using process-specific resource labels.
 :::
 
-See also: [label](#label)
+See also: [label](#label) (process grouping for configuration), [tag](#tag) (per-task run identification)
 
 (process-resourcelimits)=
 
@@ -1723,7 +1729,7 @@ The `storeDir` directive should not be used to publish workflow outputs. Use the
 
 ### tag
 
-The `tag` directive allows you to associate each process execution with a custom label, so that it will be easier to identify them in the log file or in the trace execution report. For example:
+The `tag` directive allows you to associate each individual task execution with a custom string, so that it is easier to identify specific runs in the log and in the {ref}`trace execution report <trace-report>`. Unlike the [label](#label) directive — which assigns static identifiers used for configuration targeting — `tag` values are evaluated per task invocation and typically embed input data to distinguish one run from another. For example:
 
 ```nextflow
 process hello {
