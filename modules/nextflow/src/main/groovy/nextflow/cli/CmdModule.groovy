@@ -30,6 +30,7 @@ import nextflow.cli.module.CmdModulePublish
 import nextflow.cli.module.CmdModuleRemove
 import nextflow.cli.module.CmdModuleRun
 import nextflow.cli.module.CmdModuleSearch
+import nextflow.cli.module.CmdModuleValidate
 import nextflow.exception.AbortOperationException
 
 /**
@@ -57,6 +58,7 @@ class CmdModule extends CmdBase implements UsageAware {
         commands << new CmdModuleSearch()
         commands << new CmdModuleInfo()
         commands << new CmdModulePublish()
+        commands << new CmdModuleValidate()
     }
 
     protected JCommander commander() {
