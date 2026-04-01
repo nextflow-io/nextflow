@@ -139,6 +139,10 @@ Every output file is represented in the lineage store as a `FileOutput` record. 
 
 As this record is a workflow output, it is not linked directly to a task run. Instead, it is linked to the original task output.
 
+:::{note}
+The `labels` field is `null` because no labels were assigned to this file. Labels are set using the `label` directive in the `output` block. See {ref}`workflow-output-labels` for more information.
+:::
+
 Any LID in a lineage record can be viewed, allowing you to traverse the lineage metadata interactively. Use the value of `source` to view the original task output:
 
 ```console
@@ -303,10 +307,10 @@ Note the difference between the task scripts, highlighting the change that cause
 
 Workflow outputs declared in the `output` block are also recorded in the lineage store. The output of a workflow run is accessible as `lid://<WORKFLOW_RUN_HASH>#output`.
 
-For example, run the `rnaseq-nf` pipeline using the `preview-25-04` branch, which uses the `output` block to publish outputs:
+For example, run the `rnaseq-nf` pipeline with the `preview-25-04` branch, which uses the `output` block to publish outputs:
 
 ```console
-$ nextflow -r preview-25-04 -profile conda
+$ nextflow run rnaseq-nf -r preview-25-04 -profile conda
 ```
 
 View the workflow output in the lineage metadata:
@@ -337,7 +341,20 @@ The following types are used in workflow output lineage records:
 | `Map`        | object                      | `Map`, `Record` |
 | `Path`       | string with `lid://` prefix | `Path` |
 
-See {ref}`workflow-output-def` for more information about the `output` block.
+When labels are assigned to a workflow output with the `label` directive, they appear in the `labels` field of each corresponding `FileOutput` record:
+
+```console
+$ nextflow lineage view lid://9410d13abeec617640b5fe9735ba12fc/multiqc_report.html
+{
+  "version": "lineage/v1beta1",
+  "type": "FileOutput",
+  "path": "/results/multiqc_report.html",
+  ...
+  "labels": ["qc", "summary"]
+}
+```
+
+Labels can be used to filter files when querying lineage records with the `nextflow lineage find` command. See {ref}`workflow-output-labels` for details on assigning labels to workflow outputs.
 
 ## Use lineage in a Nextflow script
 

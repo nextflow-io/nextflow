@@ -337,6 +337,23 @@ Files that do not originate from the work directory are not published, but are i
 
 See [Output directives](#output-directives) for the list of available index directives.
 
+(workflow-output-labels)=
+
+### Labels
+
+You can apply labels to each workflow output using the `label` directive:
+
+```nextflow
+output {
+    multiqc_report {
+        label 'qc'
+        label 'summary'
+    }
+}
+```
+
+Labels can be used to find and filter output files across workflow runs with data lineage. They are stored in the `labels` field of each `FileOutput` record published by the workflow output in the lineage store. See {ref}`data-lineage-page` for details on how to query output files by label.
+
 ### Output directives
 
 The following directives are available for each output in the output block:
