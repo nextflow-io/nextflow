@@ -333,7 +333,15 @@ $ nextflow lineage view lid://9410d13abeec617640b5fe9735ba12fc#output
 
 This view can be used to traverse output files directly instead of inferring LIDs from the workflow output directory.
 
-When a `label` is assigned to an output, it appears in the `labels` field of each corresponding `FileOutput` record:
+The following types are used in workflow output lineage records:
+
+| Type         | JSON representation         | Nextflow type |
+| ----         | -------------------         | ------------- |
+| `Collection` | array (or index file path)  | `Bag`, `List`, `Set` |
+| `Map`        | object                      | `Map`, `Record` |
+| `Path`       | string with `lid://` prefix | `Path` |
+
+When labels are assigned to a workflow output with the `label` directive, they appear in the `labels` field of each corresponding `FileOutput` record:
 
 ```console
 $ nextflow lineage view lid://9410d13abeec617640b5fe9735ba12fc/multiqc_report.html
@@ -342,7 +350,7 @@ $ nextflow lineage view lid://9410d13abeec617640b5fe9735ba12fc/multiqc_report.ht
   "type": "FileOutput",
   "path": "/results/multiqc_report.html",
   ...
-  "labels": ["report"]
+  "labels": ["qc", "summary"]
 }
 ```
 

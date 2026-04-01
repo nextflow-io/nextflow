@@ -277,6 +277,10 @@ Those scripts will be made accessible like any other command in the task environ
 This feature requires the use of a local or shared file system for the pipeline work directory, or {ref}`wave-page` when using cloud-based executors.
 :::
 
+:::{info}
+When {ref}`wave-page` is enabled, the contents of the module `resources/` directory are automatically included in the provisioned container. Wave treats the `resources/` directory as the container root. For example, `resources/some/data/file.txt` becomes `/some/data/file.txt` in the container.
+:::
+
 ## Sharing modules
 
 Modules are designed to be easy to share and re-use across different pipelines, which helps eliminate duplicate work and spread improvements throughout the community. There are several ways to share modules:
