@@ -140,7 +140,7 @@ Every output file is represented in the lineage store as a `FileOutput` record. 
 As this record is a workflow output, it is not linked directly to a task run. Instead, it is linked to the original task output.
 
 :::{note}
-The `labels` field is `null` because no labels were assigned to this file. Labels are set using the `label` directive in the `output` block. See {ref}`workflow-output-labels` for more information.
+The `labels` field is `null` because no labels were assigned to this file. Labels are set using the `label` directive in the `output` block. See {ref}`data-lineage-workflow-outputs` for more information.
 :::
 
 Any LID in a lineage record can be viewed, allowing you to traverse the lineage metadata interactively. Use the value of `source` to view the original task output:
@@ -302,6 +302,8 @@ diff --git 862df53160e07cd823c0c3960545e747 9433dda73f2193491f9a26e3e23cd8a1
 ```
 
 Note the difference between the task scripts, highlighting the change that caused the task to be re-executed.
+
+(data-lineage-workflow-outputs)=
 
 ## Use lineage with workflow outputs
 

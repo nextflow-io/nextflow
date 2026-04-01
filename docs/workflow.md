@@ -352,7 +352,7 @@ output {
 }
 ```
 
-Labels can be used to find and filter output files across workflow runs with data lineage. They are stored in the `labels` field of each `FileOutput` record published by the workflow output in the lineage store. See {ref}`data-lineage-page` for details on how to query output files by label.
+Labels can be used to find and filter output files across workflow runs with data lineage. See {ref}`data-lineage-workflow-outputs` for details on how to query output files by label.
 
 ### Output directives
 
@@ -373,7 +373,8 @@ The following directives are available for each output in the output block:
   : The character used to separate values (default: `','`). Only used for CSV files.
 
 `label`
-: Specify a label to be applied to every published file. Can be specified multiple times.
+: Attach a label to every file published by this output. Can be specified multiple times to attach multiple labels.
+: Labels are stored in the `labels` field of `FileOutput` records in the {ref}`lineage store <data-lineage-page>`.
 
 `path`
 : Specify the publish path relative to the output directory (default: `'.'`). Can be a path, a closure that defines a custom directory for each published value, or a closure that publishes individual files using the `>>` operator.
