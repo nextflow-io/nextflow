@@ -60,7 +60,7 @@ First, use the `list` subcommand to list the workflow runs in the lineage store:
 
 ```console
 $ nextflow lineage list
-TIMESTAMP               RUN NAME                SESSION ID                              LINEAGE ID                            
+TIMESTAMP               RUN NAME                SESSION ID                              LINEAGE ID
 2025-05-09 13:28:30 CDT peaceful_blackwell      065bdc6b-89b4-42ee-92c1-2a5af37f2c50    lid://16b31030474f2e96c55f4940bca3ab64
 ```
 
@@ -328,6 +328,14 @@ $ nextflow lineage view lid://9410d13abeec617640b5fe9735ba12fc#output
 ```
 
 This view can be used to traverse output files directly instead of inferring LIDs from the workflow output directory.
+
+The following types are used in workflow output lineage records:
+
+| Type         | JSON representation         | Nextflow type |
+| ----         | -------------------         | ------------- |
+| `Collection` | array (or index file path)  | `Bag`, `List`, `Set` |
+| `Map`        | object                      | `Map`, `Record` |
+| `Path`       | string with `lid://` prefix | `Path` |
 
 See {ref}`workflow-output-def` for more information about the `output` block.
 
