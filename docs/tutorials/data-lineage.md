@@ -140,7 +140,7 @@ Every output file is represented in the lineage store as a `FileOutput` record. 
 As this record is a workflow output, it is not linked directly to a task run. Instead, it is linked to the original task output.
 
 :::{note}
-The `labels` field is `null` because no labels were assigned to this file. Labels are set using the `label` directive in the `output` block. See {ref}`migrating-workflow-outputs` for more information.
+The `labels` field is `null` because no labels were assigned to this file. Labels are set using the `label` directive in the `output` block. See {ref}`workflow-output-labels` for more information.
 :::
 
 Any LID in a lineage record can be viewed, allowing you to traverse the lineage metadata interactively. Use the value of `source` to view the original task output:
@@ -310,7 +310,7 @@ Workflow outputs declared in the `output` block are also recorded in the lineage
 For example, run the `rnaseq-nf` pipeline with the `preview-25-04` branch, which uses the `output` block to publish outputs:
 
 ```console
-$ nextflow rnaseq-nf -r preview-25-04 -profile conda
+$ nextflow run rnaseq-nf -r preview-25-04 -profile conda
 ```
 
 View the workflow output in the lineage metadata:
@@ -336,7 +336,7 @@ This view can be used to traverse output files directly instead of inferring LID
 When a `label` is assigned to an output, it appears in the `labels` field of each corresponding `FileOutput` record:
 
 ```console
-$ nextflow lineage view lid://<WORKFLOW_RUN_HASH>/multiqc_report.html
+$ nextflow lineage view lid://9410d13abeec617640b5fe9735ba12fc/multiqc_report.html
 {
   "version": "lineage/v1beta1",
   "type": "FileOutput",
@@ -346,7 +346,7 @@ $ nextflow lineage view lid://<WORKFLOW_RUN_HASH>/multiqc_report.html
 }
 ```
 
-Labels can be used to filter files when querying the lineage store with {ref}`channel-from-lineage`. See {ref}`migrating-workflow-outputs` for details on assigning labels in the `output` block.
+Labels can be used to filter files when querying lineage records with the `nextflow lineage find` command. See {ref}`workflow-output-labels` for details on assigning labels to workflow outputs.
 
 ## Use lineage in a Nextflow script
 
