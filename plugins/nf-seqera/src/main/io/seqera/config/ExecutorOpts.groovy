@@ -88,7 +88,7 @@ class ExecutorOpts implements ConfigScope {
     @ConfigOption
     @Description("""
         The resource prediction model to use for estimating task resource requirements
-        based on historical execution metrics. Supported values: `qr/v1` (quantile regression).
+        based on historical execution metrics. Supported values: `qr/v1`, `qr/v2` (quantile regression).
         When not set, no resource estimation is applied.
     """)
     final String predictionModel
@@ -122,19 +122,9 @@ class ExecutorOpts implements ConfigScope {
         this.labels = opts.labels as Map<String, String>
         this.autoLabels = opts.autoLabels as boolean ?: false
         // prediction model
-        this.predictionModel = parsePredictionModel(opts.predictionModel as String)
+        this.predictionModel = opts.predictionModel as String ?: null
         // custom task environment variables
         this.taskEnvironment = opts.taskEnvironment as Map<String, String>
-    }
-
-    private static final Set<String> VALID_PREDICTION_MODELS = Set.of('qr/v1')
-
-    private static String parsePredictionModel(String value) {
-        if( !value )
-            return null
-        if( !VALID_PREDICTION_MODELS.contains(value) )
-            throw new IllegalArgumentException("Invalid prediction model '${value}'. Supported values: ${VALID_PREDICTION_MODELS.join(', ')}")
-        return value
     }
 
     RetryOpts retryOpts() {

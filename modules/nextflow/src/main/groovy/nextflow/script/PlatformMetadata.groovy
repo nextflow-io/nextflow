@@ -120,6 +120,11 @@ class PlatformMetadata {
      */
     volatile Pipeline pipeline
 
+    /**
+     * Platform labels for current workflow execution
+     */
+    volatile List<String> labels
+
     PlatformMetadata() {}
 
     PlatformMetadata(String workflowId) {
