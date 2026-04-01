@@ -406,10 +406,10 @@ class LinObserver implements TraceObserverV2 {
         // return generic types
         if( param instanceof Path )
             return Path.simpleName
-        if (param instanceof CharSequence)
+        if( param instanceof CharSequence )
             return String.simpleName
         if( param instanceof Collection )
-            return List.simpleName
+            return Collection.simpleName
         if( param instanceof Map )
             return Map.simpleName
         if( param==null ) {

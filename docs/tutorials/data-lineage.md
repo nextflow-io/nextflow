@@ -315,7 +315,7 @@ View the workflow output in the lineage metadata:
 $ nextflow lineage view lid://9410d13abeec617640b5fe9735ba12fc#output
 [
   {
-    "type": "List",
+    "type": "Collection",
     "name": "samples",
     "value": "lid://9410d13abeec617640b5fe9735ba12fc/samples.json"
   },
@@ -328,6 +328,14 @@ $ nextflow lineage view lid://9410d13abeec617640b5fe9735ba12fc#output
 ```
 
 This view can be used to traverse output files directly instead of inferring LIDs from the workflow output directory.
+
+The following types are used in workflow output lineage records:
+
+| Type         | JSON representation         | Nextflow type |
+| ----         | -------------------         | ------------- |
+| `Collection` | array (or index file path)  | `Bag`, `List`, `Set` |
+| `Map`        | object                      | `Map`, `Record` |
+| `Path`       | string with `lid://` prefix | `Path` |
 
 See {ref}`workflow-output-def` for more information about the `output` block.
 

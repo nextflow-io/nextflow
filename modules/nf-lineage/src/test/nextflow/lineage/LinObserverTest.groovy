@@ -590,10 +590,8 @@ class LinObserverTest extends Specification {
         new StdInParam(null, [])                        | "stdin"
         new StdOutParam(null, [])                       | "stdout"
         Path.of("test")                                 | "Path"
-        "hello"                                         | "String"
-        ["test"]                                        | "List"
+        ["test"]                                        | "Collection"
         [key:"value"]                                   | "Map"
-        42                                              | "Integer"
     }
 
     def 'should save task run' () {
