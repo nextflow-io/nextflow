@@ -143,7 +143,7 @@ class TowerClient implements TraceObserverV2 {
     private Map<String,Boolean> allContainers = new ConcurrentHashMap<>()
 
     protected TowerCommonApi commonApi
-  
+
     private Duration readTimeout = TowerConfig.DEFAULT_READ_TIMEOUT
 
     private Duration connectTimeout = TowerConfig.DEFAULT_CONNECT_TIMEOUT
@@ -314,53 +314,56 @@ class TowerClient implements TraceObserverV2 {
         session.workflowMetadata.platform.workflowUrl = watchUrl
         if( ret.message )
             log.warn(ret.message.toString())
-        addPlatformMetadata(workflowId)
+        // populate platform metadata from the create response
+        if( ret.metadata )
+            applyPlatformMetadata(ret.metadata as Map)
 
         // Prepare to collect report paths if tower configuration has a 'reports' section
         reports.flowCreate(workflowId)
     }
 
-    protected void addPlatformMetadata(String workflowId) {
 
+    /**
+     * Apply platform metadata received inline from the trace create response.
+     * This avoids extra API calls to fetch user, workspace, and launch details.
+     */
+    protected void applyPlatformMetadata(Map metadata) {
         try {
-            final userInfo = commonApi.getUserInfo(this.httpClient, this.endpoint)
-            final workspaceDetails = commonApi.getUserWorkspaceDetails(this.httpClient, userInfo?.id as String, this.endpoint, this.workspaceId)
-            //Include workspace roles to user info
-            if( workspaceDetails?.roles && userInfo) {
-                final roles = (workspaceDetails as Map).remove('roles')
-                userInfo.roles = roles
-            }
-            if( userInfo )
-                session.workflowMetadata.platform.user = new PlatformMetadata.User(userInfo)
-            if( workspaceDetails )
-                session.workflowMetadata.platform.workspace = new PlatformMetadata.Workspace(workspaceDetails)
-            final queryParams = workspaceId ? [workspaceId: workspaceId.toString()] : [:]
-            final workflowLaunch = getWorkflowLaunchDetails(workflowId, queryParams)
-            if( workflowLaunch ) {
-                session.workflowMetadata.platform.computeEnv = workflowLaunch.computeEnv as PlatformMetadata.ComputeEnv
-                session.workflowMetadata.platform.pipeline = workflowLaunch?.pipeline as PlatformMetadata.Pipeline
-            }
-        } catch(Throwable e) {
-            log.debug("Exception getting platform metadata", e)
-        }
-    }
-
-
-    private Map getWorkflowLaunchDetails(String workflowId, Map queryParams) {
-        try {
-            final launch = commonApi.apiGet(this.httpClient, this.endpoint, "/workflow/${workflowId}/launch", queryParams).launch as Map
-            return [
-                computeEnv: launch.computeEnv ? new PlatformMetadata.ComputeEnv(launch.computeEnv as Map) : null,
-                pipeline  : new PlatformMetadata.Pipeline(
-                    id: launch.pipelineId as String,
-                    name: launch.pipeline as String,
-                    revision: launch.revision as String,
-                    commitId: launch.commitId as String
+            final platform = session.workflowMetadata.platform
+            // user info
+            if( metadata.userId )
+                platform.user = new PlatformMetadata.User(
+                    id: metadata.userId as String,
+                    userName: metadata.userName as String,
+                    organization: metadata.userOrganization as String
                 )
-            ]
-        } catch (Throwable e) {
-            log.debug("Exception getting workflow launch metadata", e)
-            return null
+            // workspace info
+            if( metadata.workspaceId )
+                platform.workspace = new PlatformMetadata.Workspace(
+                    workspaceId: metadata.workspaceId as String,
+                    workspaceName: metadata.workspaceName as String,
+                    workspaceFullName: metadata.workspaceFullName as String,
+                    orgName: metadata.orgName as String
+                )
+            // launch details (only present for Platform-submitted runs)
+            if( metadata.computeEnvId )
+                platform.computeEnv = new PlatformMetadata.ComputeEnv(
+                    id: metadata.computeEnvId as String,
+                    name: metadata.computeEnvName as String,
+                    platform: metadata.computeEnvPlatform as String
+                )
+            if( metadata.pipelineName )
+                platform.pipeline = new PlatformMetadata.Pipeline(
+                    id: metadata.pipelineId as String,
+                    name: metadata.pipelineName as String,
+                    revision: metadata.revision as String,
+                    commitId: metadata.commitId as String
+                )
+            if( metadata.labels )
+                platform.labels = metadata.labels as List<String>
+        }
+        catch( Exception e ) {
+            log.debug("Failed to apply platform metadata from create response", e)
         }
     }
 
