@@ -406,11 +406,11 @@ class LinObserver implements TraceObserverV2 {
         // return generic types
         if( param instanceof Path )
             return Path.simpleName
-        if (param instanceof CharSequence)
+        if( param instanceof CharSequence )
             return String.simpleName
         if( param instanceof Collection )
             return Collection.simpleName
-        if( param instanceof Map)
+        if( param instanceof Map )
             return Map.simpleName
         if( param==null ) {
             log.debug "Unexpected lineage param type null"
