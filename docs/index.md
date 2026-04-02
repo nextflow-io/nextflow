@@ -79,6 +79,7 @@ working-with-files
 process
 process-typed
 workflow
+workflow-typed
 module
 notifications
 secrets
@@ -132,6 +133,7 @@ reference/syntax
 reference/stdlib
 reference/process
 reference/channel
+reference/operator-typed
 reference/operator
 ```
 
@@ -175,6 +177,7 @@ tutorials/rnaseq-nf
 tutorials/data-lineage
 tutorials/workflow-outputs
 tutorials/static-types
+tutorials/static-types-operators
 tutorials/metrics
 tutorials/flux
 ```

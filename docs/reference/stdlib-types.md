@@ -46,7 +46,7 @@ Booleans in Nextflow can be backed by any of the following Java types: `boolean`
 
 A channel (also known as a *dataflow channel* or *queue channel*) is an asynchronous sequence of values of type `E`. It is used to facilitate dataflow logic in a workflow.
 
-See {ref}`dataflow-page` for an overview of dataflow types. See {ref}`operator-page` for the available methods for channels.
+See {ref}`dataflow-page` for an overview of dataflow types. See {ref}`operator-typed-page` for the set of operators that are recommended for use with static typing.
 
 (stdlib-types-duration)=
 
@@ -989,6 +989,12 @@ A dataflow value (also known as a *value channel*) is an asynchronous value of t
 See {ref}`dataflow-page` for an overview of dataflow types.
 
 The following methods are available for a dataflow value:
+
+`combine( right: Value ) -> Value<Tuple>`
+: Combine the dataflow value with another dataflow value into a tuple.
+
+`combine( [opts] ) -> Value<Record>`
+: Combine a record with named arguments as additional record fields. Each named argument can be a value or dataflow value.
 
 `flatMap( transform: (V) -> Iterable<R> ) -> Channel<R>`
 : Transforms the dataflow value into a collection with the given closure and emits the resulting values in a dataflow channel.
