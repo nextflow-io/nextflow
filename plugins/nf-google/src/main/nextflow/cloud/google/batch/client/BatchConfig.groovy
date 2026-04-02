@@ -27,7 +27,18 @@ import nextflow.script.dsl.Description
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 /**
- * Model Google Batch config settings
+ * Model Google Batch config settings.
+ * <p>
+ * <strong>Copy transports</strong> ({@link #stageInCopyTransport}, {@link #stageOutCopyTransport}): optional values
+ * {@code posix}, {@code gcloud}, {@code gsutil}. When unset or only {@code posix}, staging uses
+ * {@link nextflow.executor.SimpleFileCopyStrategy} with gcsfuse paths under {@code /mnt/disks}. When {@code gcloud}
+ * or {@code gsutil} is set for a direction, {@link nextflow.cloud.google.batch.GoogleBatchFileCopyStrategy} loads and
+ * generated bash uses {@code gcloud storage} / {@code gsutil} with fallbacks to POSIX copy from the mount; order is
+ * chosen per transport (see {@link nextflow.cloud.google.batch.GoogleBatchBashLib}). CLI stage-in applies when
+ * {@code process stageInMode} is {@code copy}; CLI stage-out when effective {@code stageOutMode} is {@code copy}.
+ * {@code move} / {@code rsync} / etc. keep existing POSIX behaviour. Parallelism and retries use
+ * {@link #maxParallelTransfers}, {@link #maxTransferAttempts}, {@link #delayBetweenAttempts} with {@code nxf_parallel}
+ * / {@code nxf_cp_retry} in the task script.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -100,47 +111,43 @@ class BatchConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        Path to the `gcloud` executable for `gcloud storage` transfers (default: `gcloud` on `PATH`).
+        `gcloud` executable path (default: `gcloud` on `PATH`).
     """)
     final String gcloudCli
 
     @ConfigOption
     @Description("""
-        Path to the `gsutil` executable (default: `gsutil` on `PATH`).
+        `gsutil` executable path (default: `gsutil` on `PATH`).
     """)
     final String gsutilCli
 
     @ConfigOption
     @Description("""
-        Maximum parallel object-storage transfers when using `gcloud` / `gsutil` staging (default: same as other cloud executors).
+        Max parallel CLI object copies (default: same as other cloud executors).
     """)
     final int maxParallelTransfers
 
     @ConfigOption
     @Description("""
-        Maximum retry attempts for each `gcloud` / `gsutil` transfer when using CLI-based staging.
+        Max retries per CLI copy (default: same as other cloud executors).
     """)
     final int maxTransferAttempts
 
     @ConfigOption
     @Description("""
-        Delay between retry attempts for `gcloud` / `gsutil` transfers when using CLI-based staging.
+        Delay between CLI copy retries (default: same as other cloud executors).
     """)
     final Duration delayBetweenAttempts
 
     @ConfigOption
     @Description("""
-        When neither this nor `stageOutCopyTransport` is `gcloud` or `gsutil` (including when both are unset or only `posix`), the default is POSIX staging via {@link nextflow.executor.SimpleFileCopyStrategy} with gcsfuse mounts under `/mnt/disks`.
-
-        When set to `posix`, `gcloud`, or `gsutil`, it participates in selecting **input** copy behaviour (with `stageOutCopyTransport`). `posix` uses `cp`/links from the mount. `gcloud` / `gsutil` use the respective CLI (with fallbacks) when `process stageInMode` is `copy` (paths are under the gcsfuse mount; `gs://` URIs are derived for CLI copy). Other `stageInMode` values use the mount. Buckets remain mounted for POSIX fallback.
+        Stage-in copy transport: `posix`, `gcloud`, or `gsutil`.
     """)
     final String stageInCopyTransport
 
     @ConfigOption
     @Description("""
-        When neither this nor `stageInCopyTransport` is `gcloud` or `gsutil` (including when both are unset or only `posix`), the default is POSIX staging via {@link nextflow.executor.SimpleFileCopyStrategy} with gcsfuse mounts only.
-
-        When set to `posix`, `gcloud`, or `gsutil`, it participates in selecting **output** copy behaviour (with `stageInCopyTransport`): `posix` uses POSIX from the gcsfuse mount; `gcloud` / `gsutil` use CLIs when the effective `stageOutMode` is `copy`. `move`, `rsync`, `rclone`, and `fcp` use existing wrapper behaviour (POSIX via mount). CLI-based `move` staging is not implemented.
+        Stage-out copy transport: `posix`, `gcloud`, or `gsutil`.
     """)
     final String stageOutCopyTransport
 
@@ -222,8 +229,12 @@ class BatchConfig implements ConfigScope {
         maxParallelTransfers = opts.maxParallelTransfers != null ? opts.maxParallelTransfers as int : CloudTransferOptions.MAX_TRANSFER
         maxTransferAttempts = opts.maxTransferAttempts != null ? opts.maxTransferAttempts as int : CloudTransferOptions.MAX_TRANSFER_ATTEMPTS
         delayBetweenAttempts = opts.delayBetweenAttempts ? opts.delayBetweenAttempts as Duration : CloudTransferOptions.DEFAULT_DELAY_BETWEEN_ATTEMPTS
-        stageInCopyTransport = normaliseOptionalCopyTransport(opts.stageInCopyTransport)
-        stageOutCopyTransport = normaliseOptionalCopyTransport(opts.stageOutCopyTransport)
+        stageInCopyTransport = opts.stageInCopyTransport as String
+        stageOutCopyTransport = opts.stageOutCopyTransport as String
+        for (String t in [stageInCopyTransport, stageOutCopyTransport]) {
+            if (t && t !in VALID_COPY_TRANSPORTS)
+                throw new IllegalArgumentException("Invalid google.batch copy transport: '$t' — valid values are: ${VALID_COPY_TRANSPORTS.join(', ')}")
+        }
         installGpuDrivers = opts.installGpuDrivers as boolean
         installOpsAgent = opts.installOpsAgent as boolean
         logsPath = opts.logsPath
@@ -242,20 +253,7 @@ class BatchConfig implements ConfigScope {
      * Load {@link nextflow.cloud.google.batch.GoogleBatchFileCopyStrategy} when any transport requests CLI object-storage copy.
      */
     boolean usesGoogleBatchStaging() {
-        return isCliCopyTransport(stageInCopyTransport) || isCliCopyTransport(stageOutCopyTransport)
-    }
-
-    static boolean isCliCopyTransport(String transport) {
-        return COPY_TRANSPORT_GCLOUD == transport || COPY_TRANSPORT_GSUTIL == transport
-    }
-
-    private static String normaliseOptionalCopyTransport(Object value) {
-        if( value == null )
-            return null
-        final t = value as String
-        if( !VALID_COPY_TRANSPORTS.contains(t) )
-            throw new IllegalArgumentException("Invalid google.batch copy transport: '$t' — valid values are: ${VALID_COPY_TRANSPORTS.join(', ')}")
-        return t
+        return [stageInCopyTransport, stageOutCopyTransport].any { it in [COPY_TRANSPORT_GCLOUD, COPY_TRANSPORT_GSUTIL] }
     }
 
     BatchRetryConfig getRetryConfig() { retry }

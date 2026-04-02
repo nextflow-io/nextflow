@@ -44,7 +44,7 @@ class GoogleBatchFileCopyStrategyTest extends Specification {
         def copy = new GoogleBatchFileCopyStrategy(bean, batch)
 
         expect:
-        copy.stageInputFile(path, 'in.txt') == 'downloads+=("nxf_gs_download \'gs://b/data/in.txt\' in.txt")'
+        copy.stageInputFile(path, 'in.txt') == 'downloads+=("nxf_cp_retry nxf_gs_download \'gs://b/data/in.txt\' in.txt")'
     }
 
     def 'should build gs upload unstage script' () {
@@ -65,7 +65,7 @@ class GoogleBatchFileCopyStrategyTest extends Specification {
                     uploads=()
                     IFS=$'\\n'
                     for name in $(eval "ls -1d out.txt" | sort | uniq); do
-                        uploads+=("nxf_gs_upload '$name' 'gs://foo/wd' 0")
+                        uploads+=("nxf_gs_upload '$name' 'gs://foo/wd'")
                     done
                     unset IFS
                     nxf_parallel "${uploads[@]}"

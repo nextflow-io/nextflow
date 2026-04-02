@@ -48,7 +48,7 @@ class GoogleBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      * CLI stage-in when a CLI transport is selected and {@code stageInMode=copy}.
      */
     private boolean useCliStageInCopy() {
-        return BatchConfig.isCliCopyTransport(batchConfig.stageInCopyTransport) && 'copy' == stageinMode
+        return batchConfig.stageInCopyTransport in [BatchConfig.COPY_TRANSPORT_GCLOUD, BatchConfig.COPY_TRANSPORT_GSUTIL] && 'copy' == stageinMode
     }
 
     private String effectiveStageOutMode() {
@@ -58,7 +58,7 @@ class GoogleBatchFileCopyStrategy extends SimpleFileCopyStrategy {
     private boolean shouldUseCliStageOutCopy() {
         if( effectiveStageOutMode() != 'copy' )
             return false
-        return BatchConfig.isCliCopyTransport(batchConfig.stageOutCopyTransport)
+        return batchConfig.stageOutCopyTransport in [BatchConfig.COPY_TRANSPORT_GCLOUD, BatchConfig.COPY_TRANSPORT_GSUTIL]
     }
 
     private boolean needsGoogleBatchBashLib() {
@@ -90,10 +90,7 @@ class GoogleBatchFileCopyStrategy extends SimpleFileCopyStrategy {
             return super.stageInputFile(path, targetName)
         final gsUri = gsUriForCliStageIn(path)
         if( gsUri != null ) {
-            final cmd = batchConfig.maxTransferAttempts > 1
-                    ? "downloads+=(\"nxf_cp_retry nxf_gs_download '${gsUri}' ${Escape.path(targetName)}\")"
-                    : "downloads+=(\"nxf_gs_download '${gsUri}' ${Escape.path(targetName)}\")"
-            return cmd
+            return "downloads+=(\"nxf_cp_retry nxf_gs_download '${gsUri}' ${Escape.path(targetName)}\")"
         }
         return super.stageInputFile(path, targetName)
     }
@@ -117,11 +114,11 @@ class GoogleBatchFileCopyStrategy extends SimpleFileCopyStrategy {
         if( mode == 'move' )
             return super.getUnstageOutputFilesScript(outputFiles, targetDir)
         if( mode == 'copy' && shouldUseCliStageOutCopy() )
-            return getUnstageOutputFilesScriptGcloud(outputFiles, targetDir)
+            return getUnstageOutputFilesScriptCli(outputFiles, targetDir)
         return super.getUnstageOutputFilesScript(outputFiles, targetDir)
     }
 
-    private String getUnstageOutputFilesScriptGcloud(List<String> outputFiles, Path targetDir) {
+    private String getUnstageOutputFilesScriptCli(List<String> outputFiles, Path targetDir) {
         final patterns = normalizeGlobStarPaths(outputFiles)
         log.trace "[GOOGLE BATCH] Unstaging file path (CLI transport): $patterns"
 
@@ -137,7 +134,7 @@ class GoogleBatchFileCopyStrategy extends SimpleFileCopyStrategy {
             uploads=()
             IFS=\$'\\n'
             for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
-                uploads+=("nxf_gs_upload '\$name' '${gsTarget}' 0")
+                uploads+=("nxf_gs_upload '\$name' '${gsTarget}'")
             done
             unset IFS
             nxf_parallel "\${uploads[@]}"

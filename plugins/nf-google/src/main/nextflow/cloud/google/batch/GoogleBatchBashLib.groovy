@@ -123,7 +123,8 @@ class GoogleBatchBashLib extends BashFunLib<GoogleBatchBashLib> {
             [[ -n "\$ms" ]] || return 1
             [[ -e "\$ms" || -d "\$ms" ]] || return 1
             mkdir -p "\$(dirname "\$target")"
-            cp -fRL "\$ms" "\$target"
+            cp -fRL "\$ms" "\$target" || return 1
+            return 0
         }
 
         nxf_gs_download() {
@@ -145,20 +146,17 @@ class GoogleBatchBashLib extends BashFunLib<GoogleBatchBashLib> {
                 ;;
             esac
             >&2 echo "Unable to download path: \$source"
-            exit 1
+            return 1
         }
 
         nxf_gs_upload_try_gcloud() {
             command -v "\$NXF_GCLOUD" >/dev/null 2>&1 || return 1
             local name=\$1
             local gspath=\$2
-            if [[ "\$name" == '-' ]]; then
-                return 1
-            fi
             if [[ -d "\$name" ]]; then
-                \$NXF_GCLOUD storage cp --recursive "\$name" "\$gspath/\$name"
+                \$NXF_GCLOUD storage cp --recursive "\$name" "\$gspath/\$name" || return 1
             else
-                \$NXF_GCLOUD storage cp "\$name" "\$gspath/\$name"
+                \$NXF_GCLOUD storage cp "\$name" "\$gspath/\$name" || return 1
             fi
         }
 
@@ -166,73 +164,43 @@ class GoogleBatchBashLib extends BashFunLib<GoogleBatchBashLib> {
             command -v "\$NXF_GSUTIL" >/dev/null 2>&1 || return 1
             local name=\$1
             local gspath=\$2
-            if [[ "\$name" == '-' ]]; then
-                return 1
-            fi
             if [[ -d "\$name" ]]; then
-                \$NXF_GSUTIL -m cp -r "\$name" "\$gspath/\$name"
+                \$NXF_GSUTIL -m cp -r "\$name" "\$gspath/\$name" || return 1
             else
-                \$NXF_GSUTIL cp "\$name" "\$gspath/\$name"
+                \$NXF_GSUTIL cp "\$name" "\$gspath/\$name" || return 1
             fi
         }
 
         nxf_gs_upload_try_mount() {
             local name=\$1
             local gspath=\$2
-            if [[ "\$name" == '-' ]]; then
-                return 1
-            fi
             local dest
             dest=\$(nxf_gs_uri_to_mount "\$gspath/\$name")
             [[ -n "\$dest" ]] || return 1
             mkdir -p "\$(dirname "\$dest")"
-            cp -fRL "\$name" "\$dest"
+            cp -fRL "\$name" "\$dest" || return 1
         }
 
         nxf_gs_upload() {
             local name=\$1
             local gspath=\${2%/}
-            local move=\${3:-0}
-            if [[ "\$name" == '-' ]]; then
-                if command -v "\$NXF_GCLOUD" >/dev/null 2>&1 && \$NXF_GCLOUD storage cp - "\$gspath"; then
-                    :
-                elif command -v "\$NXF_GSUTIL" >/dev/null 2>&1 && \$NXF_GSUTIL cp - "\$gspath"; then
-                    :
-                else
-                    return 1
-                fi
-            else
-                case "\${NXF_STAGE_OUT_COPY_TRANSPORT:-posix}" in
-                gsutil)
-                    if nxf_gs_upload_try_gsutil "\$name" "\$gspath"; then :;
-                    elif nxf_gs_upload_try_gcloud "\$name" "\$gspath"; then :;
-                    elif nxf_gs_upload_try_mount "\$name" "\$gspath"; then :;
-                    else
-                        >&2 echo "Unable to upload path: \$name"
-                        return 1
-                    fi
-                    ;;
-                gcloud)
-                    if nxf_gs_upload_try_gcloud "\$name" "\$gspath"; then :;
-                    elif nxf_gs_upload_try_gsutil "\$name" "\$gspath"; then :;
-                    elif nxf_gs_upload_try_mount "\$name" "\$gspath"; then :;
-                    else
-                        >&2 echo "Unable to upload path: \$name"
-                        return 1
-                    fi
-                    ;;
-                posix|*)
-                    if nxf_gs_upload_try_mount "\$name" "\$gspath"; then :;
-                    else
-                        >&2 echo "Unable to upload path: \$name"
-                        return 1
-                    fi
-                    ;;
-                esac
-            fi
-            if [[ "\$move" == "1" && "\$name" != '-' ]]; then
-                rm -rf "\$name"
-            fi
+            case "\${NXF_STAGE_OUT_COPY_TRANSPORT:-posix}" in
+            gsutil)
+                if nxf_gs_upload_try_gsutil "\$name" "\$gspath"; then return 0; fi
+                if nxf_gs_upload_try_gcloud "\$name" "\$gspath"; then return 0; fi
+                if nxf_gs_upload_try_mount "\$name" "\$gspath"; then return 0; fi
+                ;;
+            gcloud)
+                if nxf_gs_upload_try_gcloud "\$name" "\$gspath"; then return 0; fi
+                if nxf_gs_upload_try_gsutil "\$name" "\$gspath"; then return 0; fi
+                if nxf_gs_upload_try_mount "\$name" "\$gspath"; then return 0; fi
+                ;;
+            posix|*)
+                if nxf_gs_upload_try_mount "\$name" "\$gspath"; then return 0; fi
+                ;;
+            esac
+            >&2 echo "Unable to upload path: \$name"
+            return 1
         }
         """.stripIndent(true)
     }
