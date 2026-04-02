@@ -16,6 +16,8 @@
 
 package nextflow.cloud.google.batch.client
 
+import nextflow.cloud.CloudTransferOptions
+import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
 /**
@@ -37,6 +39,30 @@ class BatchConfigTest extends Specification {
         !config.bootDiskImage
         !config.bootDiskSize
         !config.logsPath
+        and:
+        config.maxParallelTransfers == CloudTransferOptions.MAX_TRANSFER
+        config.maxTransferAttempts == CloudTransferOptions.MAX_TRANSFER_ATTEMPTS
+        config.delayBetweenAttempts == CloudTransferOptions.DEFAULT_DELAY_BETWEEN_ATTEMPTS
+        !config.gcloudCli
+        !config.gsutilCli
+        and:
+        !config.stageInCopyTransport
+        !config.stageOutCopyTransport
+        !config.usesGoogleBatchStaging()
+    }
+
+    def 'should reject invalid copy transport' () {
+        when:
+        new BatchConfig([stageInCopyTransport: 'ftp'])
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def 'should detect google batch staging when cli transport set' () {
+        expect:
+        new BatchConfig([stageOutCopyTransport: 'gcloud']).usesGoogleBatchStaging()
+        new BatchConfig([stageInCopyTransport: 'gsutil']).usesGoogleBatchStaging()
+        !new BatchConfig([stageInCopyTransport: 'posix']).usesGoogleBatchStaging()
     }
 
     def 'should create batch config with custom settings' () {
@@ -49,7 +75,13 @@ class BatchConfigTest extends Specification {
             bootDiskImage: 'batch-foo',
             bootDiskSize: '100GB',
             logsPath: 'gs://my-logs-bucket/logs',
-            installOpsAgent: true
+            installOpsAgent: true,
+            stageInCopyTransport: 'gcloud',
+            stageOutCopyTransport: 'posix',
+            gcloudCli: '/opt/google/gcloud',
+            maxParallelTransfers: 8,
+            maxTransferAttempts: 3,
+            delayBetweenAttempts: '5s'
         ]
 
         when:
@@ -67,6 +99,13 @@ class BatchConfigTest extends Specification {
         config.logsPath == 'gs://my-logs-bucket/logs'
         and:
         config.installOpsAgent == true
+        and:
+        config.stageInCopyTransport == 'gcloud'
+        config.stageOutCopyTransport == 'posix'
+        config.gcloudCli == '/opt/google/gcloud'
+        config.maxParallelTransfers == 8
+        config.maxTransferAttempts == 3
+        config.delayBetweenAttempts == Duration.of('5s')
     }
 
 }

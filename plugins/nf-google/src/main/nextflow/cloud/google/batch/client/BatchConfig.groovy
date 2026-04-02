@@ -20,9 +20,11 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.cloud.CloudTransferOptions
 import nextflow.config.spec.ConfigOption
 import nextflow.config.spec.ConfigScope
 import nextflow.script.dsl.Description
+import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 /**
  * Model Google Batch config settings
@@ -32,6 +34,23 @@ import nextflow.util.MemoryUnit
 @Slf4j
 @CompileStatic
 class BatchConfig implements ConfigScope {
+
+    /**
+     * Copy via POSIX {@code cp}/links from gcsfuse paths under {@code /mnt/disks/...}.
+     */
+    static final String COPY_TRANSPORT_POSIX = 'posix'
+
+    /**
+     * Copy using {@code gcloud storage} first, then {@code gsutil}, then POSIX from the mount (see {@link nextflow.cloud.google.batch.GoogleBatchBashLib}).
+     */
+    static final String COPY_TRANSPORT_GCLOUD = 'gcloud'
+
+    /**
+     * Copy using {@code gsutil} first, then {@code gcloud storage}, then POSIX from the mount.
+     */
+    static final String COPY_TRANSPORT_GSUTIL = 'gsutil'
+
+    static final private List<String> VALID_COPY_TRANSPORTS = List.of(COPY_TRANSPORT_POSIX, COPY_TRANSPORT_GCLOUD, COPY_TRANSPORT_GSUTIL)
 
     static final private int DEFAULT_MAX_SPOT_ATTEMPTS = 0
 
@@ -78,6 +97,52 @@ class BatchConfig implements ConfigScope {
         List of custom mount options for `gcsfuse` (default: `['-o rw', '-implicit-dirs']`).
     """)
     final List<String> gcsfuseOptions
+
+    @ConfigOption
+    @Description("""
+        Path to the `gcloud` executable for `gcloud storage` transfers (default: `gcloud` on `PATH`).
+    """)
+    final String gcloudCli
+
+    @ConfigOption
+    @Description("""
+        Path to the `gsutil` executable (default: `gsutil` on `PATH`).
+    """)
+    final String gsutilCli
+
+    @ConfigOption
+    @Description("""
+        Maximum parallel object-storage transfers when using `gcloud` / `gsutil` staging (default: same as other cloud executors).
+    """)
+    final int maxParallelTransfers
+
+    @ConfigOption
+    @Description("""
+        Maximum retry attempts for each `gcloud` / `gsutil` transfer when using CLI-based staging.
+    """)
+    final int maxTransferAttempts
+
+    @ConfigOption
+    @Description("""
+        Delay between retry attempts for `gcloud` / `gsutil` transfers when using CLI-based staging.
+    """)
+    final Duration delayBetweenAttempts
+
+    @ConfigOption
+    @Description("""
+        When neither this nor `stageOutCopyTransport` is `gcloud` or `gsutil` (including when both are unset or only `posix`), the default is POSIX staging via {@link nextflow.executor.SimpleFileCopyStrategy} with gcsfuse mounts under `/mnt/disks`.
+
+        When set to `posix`, `gcloud`, or `gsutil`, it participates in selecting **input** copy behaviour (with `stageOutCopyTransport`). `posix` uses `cp`/links from the mount. `gcloud` / `gsutil` use the respective CLI (with fallbacks) when `process stageInMode` is `copy` (paths are under the gcsfuse mount; `gs://` URIs are derived for CLI copy). Other `stageInMode` values use the mount. Buckets remain mounted for POSIX fallback.
+    """)
+    final String stageInCopyTransport
+
+    @ConfigOption
+    @Description("""
+        When neither this nor `stageInCopyTransport` is `gcloud` or `gsutil` (including when both are unset or only `posix`), the default is POSIX staging via {@link nextflow.executor.SimpleFileCopyStrategy} with gcsfuse mounts only.
+
+        When set to `posix`, `gcloud`, or `gsutil`, it participates in selecting **output** copy behaviour (with `stageInCopyTransport`): `posix` uses POSIX from the gcsfuse mount; `gcloud` / `gsutil` use CLIs when the effective `stageOutMode` is `copy`. `move`, `rsync`, `rclone`, and `fcp` use existing wrapper behaviour (POSIX via mount). CLI-based `move` staging is not implemented.
+    """)
+    final String stageOutCopyTransport
 
     @ConfigOption
     @Description("""
@@ -152,6 +217,13 @@ class BatchConfig implements ConfigScope {
         bootDiskSize = opts.bootDiskSize as MemoryUnit
         cpuPlatform = opts.cpuPlatform
         gcsfuseOptions = opts.gcsfuseOptions as List<String> ?: DEFAULT_GCSFUSE_OPTS
+        gcloudCli = opts.gcloudCli as String
+        gsutilCli = opts.gsutilCli as String
+        maxParallelTransfers = opts.maxParallelTransfers != null ? opts.maxParallelTransfers as int : CloudTransferOptions.MAX_TRANSFER
+        maxTransferAttempts = opts.maxTransferAttempts != null ? opts.maxTransferAttempts as int : CloudTransferOptions.MAX_TRANSFER_ATTEMPTS
+        delayBetweenAttempts = opts.delayBetweenAttempts ? opts.delayBetweenAttempts as Duration : CloudTransferOptions.DEFAULT_DELAY_BETWEEN_ATTEMPTS
+        stageInCopyTransport = normaliseOptionalCopyTransport(opts.stageInCopyTransport)
+        stageOutCopyTransport = normaliseOptionalCopyTransport(opts.stageOutCopyTransport)
         installGpuDrivers = opts.installGpuDrivers as boolean
         installOpsAgent = opts.installOpsAgent as boolean
         logsPath = opts.logsPath
@@ -164,6 +236,26 @@ class BatchConfig implements ConfigScope {
         spot = opts.spot as boolean
         subnetwork = opts.subnetwork
         usePrivateAddress = opts.usePrivateAddress as boolean
+    }
+
+    /**
+     * Load {@link nextflow.cloud.google.batch.GoogleBatchFileCopyStrategy} when any transport requests CLI object-storage copy.
+     */
+    boolean usesGoogleBatchStaging() {
+        return isCliCopyTransport(stageInCopyTransport) || isCliCopyTransport(stageOutCopyTransport)
+    }
+
+    static boolean isCliCopyTransport(String transport) {
+        return COPY_TRANSPORT_GCLOUD == transport || COPY_TRANSPORT_GSUTIL == transport
+    }
+
+    private static String normaliseOptionalCopyTransport(Object value) {
+        if( value == null )
+            return null
+        final t = value as String
+        if( !VALID_COPY_TRANSPORTS.contains(t) )
+            throw new IllegalArgumentException("Invalid google.batch copy transport: '$t' — valid values are: ${VALID_COPY_TRANSPORTS.join(', ')}")
+        return t
     }
 
     BatchRetryConfig getRetryConfig() { retry }
