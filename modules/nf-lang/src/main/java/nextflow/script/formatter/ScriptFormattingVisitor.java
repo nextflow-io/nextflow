@@ -202,10 +202,6 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitParams(ParamBlockNode node) {
-        var alignmentWidth = options.harshilAlignment()
-            ? maxParameterWidth(node.declarations)
-            : 0;
-
         fmt.appendLeadingComments(node);
         fmt.append("params {\n");
         fmt.incIndent();
@@ -214,10 +210,6 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             fmt.appendIndent();
             fmt.append(param.getName());
             if( fmt.hasType(param) ) {
-                if( alignmentWidth > 0 ) {
-                    var padding = alignmentWidth - param.getName().length() + 1;
-                    fmt.append(" ".repeat(padding));
-                }
                 fmt.append(": ");
                 fmt.visitTypeAnnotation(param.getType());
             }
@@ -229,12 +221,6 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         }
         fmt.decIndent();
         fmt.append("}\n");
-    }
-
-    private static int maxParameterWidth(Parameter[] parameters) {
-        return Arrays.stream(parameters)
-            .map(param -> param.getName().length())
-            .max(Integer::compare).orElse(0);
     }
 
     @Override

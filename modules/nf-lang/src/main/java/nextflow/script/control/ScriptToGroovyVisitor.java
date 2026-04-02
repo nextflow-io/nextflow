@@ -42,6 +42,7 @@ import org.codehaus.groovy.ast.CodeVisitorSupport;
 import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.VariableScope;
+import org.codehaus.groovy.ast.expr.ArgumentListExpression;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
 import org.codehaus.groovy.ast.expr.DeclarationExpression;
 import org.codehaus.groovy.ast.expr.Expression;
@@ -91,6 +92,9 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         if( moduleNode == null )
             return;
 
+        if( moduleNode.isTypingEnabled() )
+            moduleNode.addStatement(stmt(callThisX("enableTyping", new ArgumentListExpression())));
+
         var declarations = moduleNode.getDeclarations();
 
         declarations.sort(Comparator.comparing(node -> node.getLineNumber()));
@@ -124,6 +128,10 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitFeatureFlag(FeatureFlagNode node) {
+        // static typing is enabled per-script rather than globally
+        if( "nextflow.preview.types".equals(node.name) )
+            return;
+
         var names = node.name.split("\\.");
         Expression target = varX(DefaultGroovyMethods.head(names));
         for( var name : DefaultGroovyMethods.tail(names) )

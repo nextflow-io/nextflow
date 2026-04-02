@@ -84,7 +84,15 @@ class ParamsDsl {
                 throw new ScriptRuntimeException("Parameter `$name` with type ${Types.getName(decl.type)} cannot be assigned to ${params[name]} [${Types.getName(actualType)}]")
         }
 
-        session.binding.setParams(params, true)
+        // propagate resolved params to all scripts for legacy compatibility
+        if( !session.binding.getScriptPath() )
+            session.binding.setParams(params, true)
+        for( final scriptPath : ScriptMeta.allScriptNames().values() ) {
+            if( !scriptPath )
+                continue
+            final script = ScriptMeta.getScriptByPath(scriptPath)
+            script.binding.setParams(params, true)
+        }
     }
 
     private Object resolveFromCli(Param decl, Object value) {

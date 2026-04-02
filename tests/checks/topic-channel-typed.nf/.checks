@@ -2,14 +2,14 @@
 # initial run
 #
 echo Initial run
-$NXF_RUN
+$NXF_RUN -o .
 
-cmp versions.txt .expected || false
+cmp versions.csv .expected || false
 
 #
 # Resumed run
 #
 echo Resumed run
-$NXF_RUN -resume
+$NXF_RUN -o . -resume
 
-cmp versions.txt .expected || false
+cmp versions.csv .expected || false

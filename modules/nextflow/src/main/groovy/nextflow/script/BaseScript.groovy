@@ -42,6 +42,8 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     private ScriptMeta meta
 
+    private boolean typingEnabled
+
     private ParamsDef paramsDef
 
     private WorkflowDef entryFlow
@@ -64,6 +66,10 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     Session getSession() {
         session
+    }
+
+    boolean isTypingEnabled() {
+        return typingEnabled
     }
 
     /**
@@ -97,6 +103,14 @@ abstract class BaseScript extends Script implements ExecutionContext {
         binding.setVariable( 'launchDir', Paths.get('./').toRealPath() )
         binding.setVariable( 'moduleDir', meta.moduleDir )
         binding.setVariable( 'secrets', SecretsLoader.secretContext() )
+    }
+
+    /**
+     * Enable static typing for the script.
+     */
+    protected void enableTyping() {
+        log.warn1 "Static typing is a preview features -- syntax and behavior may change in future releases"
+        this.typingEnabled = true
     }
 
     /**
