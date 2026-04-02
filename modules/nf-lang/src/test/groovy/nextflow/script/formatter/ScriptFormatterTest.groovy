@@ -111,7 +111,7 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
-    def 'should format a workflow definition' () {
+    def 'should format a legacy workflow definition' () {
         expect:
         checkFormat(
             '''\
@@ -151,14 +151,21 @@ class ScriptFormatterTest extends Specification {
             }
             '''
         )
+    }
 
+    def 'should format a typed workflow definition' () {
+        expect:
         checkFormat(
             '''\
+            nextflow.preview.types = true
+
             workflow hello{
             take: x:Integer ; y:Integer ; main: xy=x*y ; emit: result:Integer = xy
             }
             ''',
             '''\
+            nextflow.preview.types = true
+
             workflow hello {
                 take:
                 x: Integer
