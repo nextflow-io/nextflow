@@ -1340,6 +1340,21 @@ The `module` command provides a comprehensive system for managing registry-based
   $ nextflow module search bwa -output json
   ```
 
+`validate [options] [scope/name or path]`
+
+: Validate a module before publishing to the registry.
+: Verifies that all required files are present (`main.nf`, `meta.yml`, `README.md`) and that the module spec contains all required fields (name, version, description, license).
+
+: **Examples:**
+
+  ```console
+  # Validate module by name
+  $ nextflow module validate myorg/my-module
+
+  # Validate module by path
+  $ nextflow module validate ./modules/myorg/my-module
+  ```
+
 (cli-plugin)=
 
 ### `plugin`
