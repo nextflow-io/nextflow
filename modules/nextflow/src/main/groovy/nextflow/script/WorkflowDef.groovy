@@ -146,7 +146,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
             final targetName = emissions[i]
             if( !binding.hasVariable(targetName) )
                 throw new MissingValueException("Missing workflow output parameter: $targetName")
-            final obj = binding.getVariable(targetName)
+            final obj = DataflowTypeHelper.normalizeV1(binding.getVariable(targetName))
 
             if( CH.isChannel(obj) ) {
                 channels.put(targetName, target(i, obj))

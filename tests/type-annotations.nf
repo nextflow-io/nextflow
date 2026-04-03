@@ -15,26 +15,28 @@
  * limitations under the License.
  */
 
+nextflow.preview.types = true
+
 workflow {
-  words_ch = channel.of('one', 'two', 'three', 'four')
-  counts_vl = COUNT(words_ch)
-  counts_vl.view { counts ->
-    def even = counts.findAll { n -> isEven(n) }.size()
-    println "counts: $counts ($even are even)"
-  }
+    ch_words = channel.of('one', 'two', 'three', 'four')
+    val_counts = COUNT(ch_words)
+    val_counts.view { counts ->
+        def even = counts.findAll { n -> isEven(n) }.size()
+        println "counts: $counts ($even are even)"
+    }
 }
 
 workflow COUNT {
-  take:
-  words: Channel<String>
+    take:
+    words: Channel<String>
 
-  main:
-  counts = words.map { word -> word.length() }.collect()
+    main:
+    counts = words.map { word -> word.length() }.collect()
 
-  emit:
-  counts: Value<Integer> = counts
+    emit:
+    counts: Value<Integer> = counts
 }
 
 def isEven(n: Integer) -> Boolean {
-  return n % 2 == 0
+    return n % 2 == 0
 }

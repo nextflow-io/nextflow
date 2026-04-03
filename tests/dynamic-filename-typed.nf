@@ -17,28 +17,37 @@
 
 nextflow.preview.types = true
 
-params.prefix = 'my'
-params.names = ['alpha', 'delta', 'gamma', 'omega']
+params {
+    input: Path
+    prefix: String = 'my'
+    names: List<String> = ['alpha', 'delta', 'gamma', 'omega']
+}
 
 process foo {
-  stageInMode 'copy'
+    stageInMode 'copy'
 
-  input:
-  tuple(name: String, txt: Path)
+    input:
+    tuple(name: String, txt: Path)
+    prefix: String
 
-  stage:
-  stageAs txt, "${params.prefix}_${name}.txt"
+    stage:
+    stageAs txt, "${prefix}_${name}.txt"
 
-  output:
-  file("${params.prefix}_${name}.txt")
+    output:
+    file("${prefix}_${name}.txt")
 
-  script:
-  """
-  echo World >>  ${params.prefix}_${name}.txt
-  """
+    script:
+    """
+    echo World >> ${prefix}_${name}.txt
+    """
 }
 
 workflow {
-  names_ch = channel.fromList(params.names)
-  foo( names_ch.combine([file(params.input)]) ) | subscribe { println "~ Saving ${it.name}"; it.copyTo('.') }
+    ch_names = channel.fromList(params.names)
+    ch_inputs = ch_names.combine( channel.of(params.input) )
+    ch_foo = foo( ch_inputs, params.prefix )
+    ch_foo.subscribe { it ->
+        println "~ Saving ${it.name}"
+        it.copyTo('.')
+    }
 }
