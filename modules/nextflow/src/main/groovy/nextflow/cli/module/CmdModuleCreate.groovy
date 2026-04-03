@@ -27,7 +27,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleInfo
 
 /**
- * Module create subcommand - creates a new module skeleton
+ * Module create subcommand -- creates a new module skeleton
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -52,12 +52,12 @@ class CmdModuleCreate extends CmdBase {
             // non-interactive: namespace/name passed as argument
             final parts = args[0].tokenize('/')
             if( parts.size() != 2 || !parts[0] || !parts[1] )
-                throw new AbortOperationException("Invalid module identifier - expected format: namespace/name")
+                throw new AbortOperationException("Invalid module identifier -- expected format: namespace/name")
             namespace = parts[0]
             name = parts[1]
         }
         else if( args ) {
-            throw new AbortOperationException("Invalid arguments - usage: nextflow module create [namespace/name]")
+            throw new AbortOperationException("Invalid arguments -- usage: nextflow module create [namespace/name]")
         }
         else {
             // interactive mode
@@ -112,6 +112,10 @@ class CmdModuleCreate extends CmdBase {
         Files.createFile(moduleDir.resolve(ModuleInfo.MODULE_INFO_FILE))
 
         println "Module created successfully at path: $moduleDir"
+        println ""
+        println "To run the module:"
+        println ""
+        println "  nextflow module run $namespace/$name --greeting 'Hello world!'"
     }
 
     static private String readLine() {
@@ -139,11 +143,6 @@ class CmdModuleCreate extends CmdBase {
             echo '\${greeting}'
             \"\"\"
         }
-
-        workflow {
-            Channel.of('Hello world!') | ${name.toUpperCase()}
-            ${name.toUpperCase()}.out.view()
-        }
         """.stripIndent()
     }
 
@@ -154,14 +153,13 @@ class CmdModuleCreate extends CmdBase {
         description: A brief description of the ${namespace}/${name} module
         license: Apache-2.0
         input:
-          - greeting:
-              type: string
-              description: A greeting string
+          - name: greeting
+            type: string
+            description: A greeting string
         output:
-          stdout:
-            - output:
-                type: string
-                description: The greeting message
+          - name: stdout
+            type: string
+            description: The greeting message
         """.stripIndent()
     }
 
@@ -187,13 +185,13 @@ class CmdModuleCreate extends CmdBase {
 
         | Name       | Type   | Description       |
         |------------|--------|-------------------|
-        | greeting   | val    | A greeting string |
+        | greeting   | string | A greeting string |
 
         ### Output
 
         | Name   | Type   | Description          |
         |--------|--------|----------------------|
-        | stdout | stdout | The greeting message |
+        | stdout | string | The greeting message |
 
         ### Dependencies
 

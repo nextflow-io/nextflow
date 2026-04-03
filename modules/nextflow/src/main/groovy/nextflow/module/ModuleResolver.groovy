@@ -127,7 +127,7 @@ class ModuleResolver {
         if( storage.isInstalled(reference) ) {
             def installed = storage.getInstalledModule(reference)
 
-            // No specific version requested — use the local module as-is
+            // No specific version requested -- use the local module as-is
             if( !version ) {
                 log.debug "Module ${reference}@${installed.installedVersion} is already installed locally"
                 return installed.mainFile
@@ -138,7 +138,7 @@ class ModuleResolver {
                 return installed.mainFile
             }
 
-            // Version mismatch — check for local modifications before overwriting
+            // Version mismatch -- check for local modifications before overwriting
             def integrity = installed.integrity
             if( integrity == ModuleIntegrity.MODIFIED && !force ) {
                 throw new AbortOperationException(
@@ -156,7 +156,6 @@ class ModuleResolver {
 
         if( !version )
             version = resolveVersion(reference)
-
 
         log.info "Installing module ${reference}@${version}..."
 
