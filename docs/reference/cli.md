@@ -1152,6 +1152,10 @@ The `module` command provides a comprehensive system for managing registry-based
 
 **Subcommands**
 
+`create [scope/name]`
+
+: Create a new module with a basic `main.nf`, `meta.yml`, and `README.md`.
+
 (cli-module-info)=
 
 `info [options] [scope/name]`
