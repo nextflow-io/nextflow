@@ -17,6 +17,7 @@
 package nextflow.cli.module
 
 import nextflow.cli.Launcher
+import nextflow.module.ModuleValidator
 import spock.lang.Specification
 import spock.lang.TempDir
 
@@ -54,7 +55,7 @@ license: MIT
         cmd.args = [moduleDir.toString()]
 
         when:
-        def errors = cmd.invokeMethod('validateModuleStructure', moduleDir)
+        def errors = ModuleValidator.validateStructure(moduleDir)
 
         then:
         errors.isEmpty()
@@ -72,7 +73,7 @@ license: MIT
         def cmd = new CmdModulePublish()
 
         when:
-        def errors = cmd.invokeMethod('validateModuleStructure', moduleDir)
+        def errors = ModuleValidator.validateStructure(moduleDir)
 
         then:
         errors.size() == 2
@@ -104,7 +105,7 @@ license: MIT
         def cmd = new CmdModulePublish()
 
         when:
-        def errors = cmd.invokeMethod('validateModuleStructure', moduleDir)
+        def errors = ModuleValidator.validateStructure(moduleDir)
 
         then:
         errors.size() == 1
