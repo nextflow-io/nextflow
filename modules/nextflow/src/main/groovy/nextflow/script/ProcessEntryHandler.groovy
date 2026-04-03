@@ -129,7 +129,7 @@ class ProcessEntryHandler {
         if( output.isEmpty() )
             return Collections.emptyList()
         if( output.size() == 1 && names.isEmpty() )
-            return List.of('result')
+            return List.of('$out')
         return names
     }
 
@@ -139,7 +139,7 @@ class ProcessEntryHandler {
         if( output.isEmpty() )
             return Collections.emptyList()
         if( output.size() == 1 && (names.isEmpty() || names.first() == '$out') )
-            return List.of('result')
+            return List.of('$out')
         return names
     }
 
