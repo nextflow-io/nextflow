@@ -57,7 +57,7 @@ class WorkflowBindingTest extends Specification {
         def result = binding.invokeMethod('foo', ARGS)
         then:
         1 * binding.getComponent0('foo') >> FOO
-        1 * FOO.invoke_o(ARGS) >> 'Hello'
+        1 * FOO.invoke_a(ARGS) >> 'Hello'
         result == 'Hello'
 
         // should invoke an extension operator

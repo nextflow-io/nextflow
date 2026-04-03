@@ -1152,6 +1152,10 @@ The `module` command provides a comprehensive system for managing registry-based
 
 **Subcommands**
 
+`create [scope/name]`
+
+: Create a new module with a basic `main.nf`, `meta.yml`, and `README.md`.
+
 (cli-module-info)=
 
 `info [options] [scope/name]`
@@ -1502,6 +1506,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 
 `-dump-channels`
 : Dump channels for debugging purpose.
+: Optionally accepts a comma-separated list of tags to filter output to only channels with a matching tag.
 
 `-dump-hashes`
 : Dump task hash keys for debugging purposes.

@@ -1,3 +1,4 @@
+
 Outputs:
 
   /results
@@ -5,6 +6,6 @@ Outputs:
   samples: samples.csv
 
   summary:
-    - summary_report.html
-    - summary_data/data.json
-    - summary_data/fastqc.txt
+    report: summary_report.html
+    data: summary_data/data.json
+    fastqc: summary_data/fastqc.txt

@@ -104,8 +104,13 @@ class OutputDsl {
     }
 
     private static void printOutput(Session session, Map<String,Object> output) {
+        if( output.size() == 1 && output.keySet().first() == '$out' ) {
+            session.printConsole(output.values().first().toString())
+            return
+        }
         final outputDir = session.outputDir.toUriString()
         final sb = new StringBuilder()
+        sb.append('\n')
         sb.append("Outputs:\n")
         sb.append('\n')
         sb.append("  ${outputDir}\n")

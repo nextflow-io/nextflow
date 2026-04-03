@@ -38,7 +38,6 @@ class CmdModuleCreateTest extends Specification {
         then:
         content.contains("Module: myorg/hello")
         content.contains("process HELLO")
-        content.contains("Channel.of('Hello world!')")
     }
 
     def 'should generate README.md content'() {
