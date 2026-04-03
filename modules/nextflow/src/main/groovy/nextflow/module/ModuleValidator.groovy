@@ -18,15 +18,13 @@ package nextflow.module
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
 
 /**
- * Validates module structure, metadata schema, and cross-validates
- * meta.yml input declarations against the process definition.
+ * Validates module structure and module spec (meta.yml).
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -37,31 +35,31 @@ class ModuleValidator {
     /**
      * Run all validations on a module directory and return a list of error messages.
      * An empty list means the module is valid.
+     *
+     * @param moduleDir
      */
     static List<String> validate(Path moduleDir) {
         final errors = new ArrayList<String>()
 
-        // Level 1: structural validation
+        // Level 1: validate module structure
         errors.addAll(validateStructure(moduleDir))
         if( errors )
             return errors  // can't proceed without required files
 
-        // Level 2: meta.yml schema validation
+        // Level 2: validate module spec (meta.yml)
         final manifestPath = moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
         final spec = ModuleSpec.load(manifestPath)
         errors.addAll(spec.validate())
         if( errors )
-            return errors  // can't cross-validate with a malformed spec
-
-        // Level 3: cross-validate meta.yml inputs with process definition
-        final mainNf = moduleDir.resolve(Const.DEFAULT_MAIN_FILE_NAME)
-        errors.addAll(crossValidateInputs(mainNf, manifestPath))
+            return errors  // can't validate a malformed spec
 
         return errors
     }
 
     /**
      * Check that required files exist.
+     *
+     * @param moduleDir
      */
     static List<String> validateStructure(Path moduleDir) {
         final errors = new ArrayList<String>()
@@ -97,68 +95,5 @@ class ModuleValidator {
         }
 
         return errors
-    }
-
-    /**
-     * Cross-validate meta.yml input declarations against the process definition.
-     */
-    static List<String> crossValidateInputs(Path mainNf, Path manifestPath) {
-        final errors = new ArrayList<String>()
-
-        // load declared inputs from meta.yml
-        final metaInputs = ModuleSpec.loadInputTypes(manifestPath)
-        if( !metaInputs )
-            return errors  // no inputs declared — nothing to cross-validate
-
-        // extract process input names from script text
-        final processInputNames = extractProcessInputNames(mainNf.text)
-        if( !processInputNames )
-            return errors  // no process found or no inputs — skip
-
-        // check for inputs declared in meta.yml but not in the process
-        for( final name : metaInputs.keySet() ) {
-            if( !processInputNames.contains(name) )
-                errors << "Input '${name}' declared in meta.yml but not found in process definition".toString()
-        }
-
-        // check for inputs in the process but not declared in meta.yml
-        for( final name : processInputNames ) {
-            if( !metaInputs.containsKey(name) )
-                errors << "Input '${name}' found in process definition but not declared in meta.yml".toString()
-        }
-
-        return errors
-    }
-
-    /**
-     * Extract process input parameter names from script text.
-     *
-     * Parses input declarations such as:
-     *   val name, path name, val(name), path(name),
-     *   tuple val(name1), path(name2), env name, each name
-     */
-    static Set<String> extractProcessInputNames(String scriptText) {
-        final names = new LinkedHashSet<String>()
-
-        // find the input: block inside a process definition
-        final inputBlockPattern = Pattern.compile(
-            /(?s)process\s+\w+\s*\{.*?input:\s*\n(.*?)(?=\n\s*(?:output|script|exec|shell|stub|when):)/
-        )
-        final matcher = inputBlockPattern.matcher(scriptText)
-        if( !matcher.find() )
-            return names
-
-        final inputBlock = matcher.group(1)
-
-        // extract parameter names from input declarations
-        final paramPattern = Pattern.compile(
-            /(?:val|path|env|each)\s*\(?\s*(\w+)\s*\)?/
-        )
-        final paramMatcher = paramPattern.matcher(inputBlock)
-        while( paramMatcher.find() ) {
-            names.add(paramMatcher.group(1))
-        }
-
-        return names
     }
 }

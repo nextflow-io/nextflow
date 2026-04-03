@@ -57,9 +57,9 @@ class CmdModuleValidateTest extends Specification {
             description: A test module
             license: Apache-2.0
             input:
-              - greeting:
-                  type: string
-                  description: A greeting string
+              - name: greeting
+                type: string
+                description: A greeting string
             """.stripIndent()
 
         moduleDir.resolve('README.md').text = "# ${namespace}/${name}\n"
@@ -146,89 +146,6 @@ class CmdModuleValidateTest extends Specification {
 
         then:
         errors.any { it.contains('version') }
-    }
-
-    def 'should detect input in meta.yml missing from process'() {
-        given:
-        def moduleDir = createValidModule()
-        moduleDir.resolve('meta.yml').text = '''\
-            name: myorg/hello
-            version: 1.0.0
-            description: test
-            license: MIT
-            input:
-              - greeting:
-                  type: string
-                  description: A greeting
-              - extra_param:
-                  type: integer
-                  description: Not in process
-            '''.stripIndent()
-
-        when:
-        def errors = ModuleValidator.validate(moduleDir)
-
-        then:
-        errors.any { it.contains("extra_param") && it.contains("meta.yml") && it.contains("not found in process") }
-    }
-
-    def 'should skip cross-validation when no inputs in meta.yml'() {
-        given:
-        def moduleDir = createValidModule()
-        moduleDir.resolve('meta.yml').text = '''\
-            name: myorg/hello
-            version: 1.0.0
-            description: test
-            license: MIT
-            '''.stripIndent()
-
-        when:
-        def errors = ModuleValidator.validate(moduleDir)
-
-        then:
-        errors.isEmpty()
-    }
-
-    // --- Direct tests for extractProcessInputNames ---
-
-    def 'should extract val input name'() {
-        expect:
-        ModuleValidator.extractProcessInputNames('process FOO {\n  input:\n  val greeting\n\n  script:\n  ""\n}') == ['greeting'] as Set
-    }
-
-    def 'should extract val input with parentheses'() {
-        expect:
-        ModuleValidator.extractProcessInputNames('process FOO {\n  input:\n  val(greeting)\n\n  output:\n  stdout\n\n  script:\n  ""\n}') == ['greeting'] as Set
-    }
-
-    def 'should extract path input'() {
-        expect:
-        ModuleValidator.extractProcessInputNames('process FOO {\n  input:\n  path reads\n\n  script:\n  ""\n}') == ['reads'] as Set
-    }
-
-    def 'should extract tuple components'() {
-        expect:
-        ModuleValidator.extractProcessInputNames('process FOO {\n  input:\n  tuple val(meta), path(reads)\n\n  script:\n  ""\n}') == ['meta', 'reads'] as Set
-    }
-
-    def 'should extract env and each inputs'() {
-        expect:
-        ModuleValidator.extractProcessInputNames('process FOO {\n  input:\n  env MY_VAR\n  each mode\n\n  script:\n  ""\n}') == ['MY_VAR', 'mode'] as Set
-    }
-
-    def 'should extract multiple inputs'() {
-        expect:
-        ModuleValidator.extractProcessInputNames('process FOO {\n  input:\n  val x\n  path y\n  val z\n\n  exec:\n  true\n}') == ['x', 'y', 'z'] as Set
-    }
-
-    def 'should return empty set when no input block'() {
-        expect:
-        ModuleValidator.extractProcessInputNames('process FOO {\n  script:\n  "echo hello"\n}').isEmpty()
-    }
-
-    def 'should return empty set when no process'() {
-        expect:
-        ModuleValidator.extractProcessInputNames('workflow { println "hello" }').isEmpty()
     }
 
     def 'should fail for non-existent module directory'() {

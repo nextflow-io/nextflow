@@ -31,7 +31,7 @@ import nextflow.module.ModuleValidator
 import nextflow.util.TestOnly
 
 /**
- * Module validate subcommand - validates module structure and meta.yml consistency
+ * Module validate subcommand -- validates module structure and meta.yml consistency
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -54,7 +54,7 @@ class CmdModuleValidate extends CmdBase {
     @Override
     void run() {
         if( !args || args.size() != 1 )
-            throw new AbortOperationException("Incorrect number of arguments - usage: nextflow module validate <namespace/name>")
+            throw new AbortOperationException("Incorrect number of arguments -- usage: nextflow module validate <namespace/name>")
 
         final moduleDir = determineModuleDir(args[0])
         final errors = ModuleValidator.validate(moduleDir)

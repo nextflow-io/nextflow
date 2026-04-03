@@ -81,7 +81,7 @@ class CmdModulePublish extends CmdBase {
 
         log.info "Publishing module from: ${moduleDir}"
 
-        // Step 1: Validate module structure, schema, and input consistency
+        // Step 1: Validate module structure and spec
         def validationErrors = ModuleValidator.validate(moduleDir)
         if (!validationErrors.isEmpty()) {
             throw new AbortOperationException(
@@ -188,7 +188,7 @@ class CmdModulePublish extends CmdBase {
         }
         println ""
         println "Dry run complete. Module is ready to publish."
-        println "Run without --dry-run to publish to the registry."
+        println "Run without -dry-run to publish to the registry."
     }
 
     /**
