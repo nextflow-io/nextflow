@@ -12,6 +12,39 @@ The Nextflow plugin registry is currently available as a public preview. Plugin 
 
 See {ref}`gradle-plugin-publish` for instructions on how to publish plugins to the registry, including the {ref}`README.md requirement <gradle-plugin-readme>`.
 
+## Using a custom or local registry
+
+If your environment can't reach the public registry directly, you can point Nextflow to a custom plugin registry endpoint:
+
+```bash
+export NXF_PLUGINS_REGISTRY_URL="https://plugins.myorg.internal/api"
+```
+
+This is useful for restricted or air-gapped environments where plugin metadata and plugin archives are mirrored behind an internal URL.
+
+To reduce or eliminate runtime downloads, pre-populate the local plugin cache and point Nextflow at that directory:
+
+```bash
+export NXF_PLUGINS_DIR="/shared/nextflow/plugins"
+```
+
+In fully offline environments, enable offline mode only after the required plugin versions have already been staged in `NXF_PLUGINS_DIR`:
+
+```bash
+export NXF_OFFLINE=true
+```
+
+In offline mode, Nextflow does not contact remote project or plugin endpoints, and plugin versions must be specified explicitly.
+
+For practical air-gapped setups:
+
+1. Mirror the plugin registry behind an approved internal URL.
+2. Set `NXF_PLUGINS_REGISTRY_URL` to that internal registry.
+3. Pre-stage approved plugin versions in `NXF_PLUGINS_DIR` for the execution environment.
+4. Use `NXF_OFFLINE=true` only when workflows and required plugins are already available locally.
+
+If you continue to use the public registry, allow outbound access to `registry.nextflow.io`. If you use a custom registry URL instead, only that internal endpoint needs to be reachable for plugin metadata and downloads.
+
 (plugin-registry-claim)=
 
 ## Claiming a plugin
