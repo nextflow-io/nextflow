@@ -48,10 +48,15 @@ class ModuleValidator {
 
         // Level 2: validate module spec (meta.yml)
         final manifestPath = moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
-        final spec = ModuleSpec.load(manifestPath)
+        final spec = ModuleSpecFactory.fromYaml(manifestPath)
         errors.addAll(spec.validate())
         if( errors )
-            return errors  // can't validate a malformed spec
+            return errors
+
+        // Level 3: validate module input/output spec against process definition
+        final scriptPath = moduleDir.resolve("main.nf")
+        final sourceSpec = ModuleSpecFactory.fromScript(scriptPath)
+        errors.addAll(validateInputsOutputs(spec, sourceSpec))
 
         return errors
     }
@@ -92,6 +97,31 @@ class ModuleValidator {
             }
         } catch (Exception e) {
             log.warn "Failed to check module size: ${e.message}"
+        }
+
+        return errors
+    }
+
+    static List<String> validateInputsOutputs(ModuleSpec spec, ModuleSpec sourceSpec) {
+        final errors = new ArrayList<String>()
+
+        final specInputs = spec.inputs?.size() ?: 0
+        final sourceInputs = sourceSpec.inputs?.size() ?: 0
+        if( specInputs != sourceInputs )
+            errors << "Module spec has ${specInputs} inputs but module declares ${sourceInputs} inputs".toString()
+
+        if( spec.outputs != null ) {
+            final specOutputs = spec.outputs.size()
+            final sourceOutputs = sourceSpec.outputs?.size() ?: 0
+            if( specOutputs != sourceOutputs )
+                errors << "Module spec has ${specOutputs} outputs but module declares ${sourceOutputs} outputs".toString()
+        }
+
+        if( spec.topics != null ) {
+            final specTopics = spec.topics.size()
+            final sourceTopics = sourceSpec.topics?.size() ?: 0
+            if( specTopics != sourceTopics )
+                errors << "Module spec has ${specTopics} topic emissions but module has ${sourceTopics} topic emissions".toString()
         }
 
         return errors
