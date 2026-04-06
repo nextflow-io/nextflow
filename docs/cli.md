@@ -390,7 +390,7 @@ $ nextflow module publish myorg/my-module -dry-run
 
 Publishing requires authentication via the `NXF_REGISTRY_TOKEN` environment variable or the `registry.apiKey` config option. The module must include `main.nf`, `meta.yml`, and `README.md` files.
 
-Use `-dry-run` to validate your module structure without uploading.
+Use the {ref}`cli-module-spec` and {ref}`cli-module-validate` commands to prepare and validate a module before publishing.
 
 See {ref}`cli-module-publish` for more information.
 

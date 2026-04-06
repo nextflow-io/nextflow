@@ -28,6 +28,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleChecksum
 import nextflow.module.ModuleInfo
 import nextflow.module.ModuleSpec
+import nextflow.module.ModuleSpecFactory
 import nextflow.module.ModuleReference
 import nextflow.module.ModuleValidator
 import nextflow.module.RegistryClientFactory
@@ -91,7 +92,7 @@ class CmdModulePublish extends CmdBase {
 
         // Step 2: Load spec for publish metadata
         def manifestPath = moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
-        def spec = ModuleSpec.load(manifestPath)
+        def spec = ModuleSpecFactory.fromYaml(manifestPath)
 
         log.info "Module validated: ${spec.name}@${spec.version}"
 

@@ -123,7 +123,7 @@ class ModuleStorage {
         Map infoProps = ModuleInfo.load(moduleDir)
         installed.expectedChecksum = infoProps?.checksum
         installed.registryUrl = infoProps?.registryUrl
-        installed.installedVersion = ModuleSpec.load(installed.manifestFile).version
+        installed.installedVersion = ModuleSpecFactory.fromYaml(installed.manifestFile).version
         return installed
     }
 
