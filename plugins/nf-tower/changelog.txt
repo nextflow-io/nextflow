@@ -1,5 +1,10 @@
 nf-tower changelog
 ===================
+1.24.0 - 7 Apr 2026
+- Add resourceAllocation field to trace record (#6973) [a2742939c]
+- Replace Auth0 with Platform OIDC PKCE for auth login (#6953) [f39afea97]
+- Use inline metadata from trace create response (#6976) [58736b7cc]
+
 1.23.0 - 26 Mar 2026
 - Skip launch metadata fetch for CLI-submitted runs (#6975) [3c9875720]
 - Add platform-related metadata to WorkflowRun lineage record (#6545) [fc4d7dd6e]
