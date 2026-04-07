@@ -74,7 +74,7 @@ class CmdModuleInfoTest extends Specification {
             getLatest() >> release
         }
         def mockClient = Mock(RegistryClient) {
-            fetchModule(_) >> mockModule
+            getModule(_) >> mockModule
         }
         cmd.client = mockClient
 
@@ -120,7 +120,7 @@ class CmdModuleInfoTest extends Specification {
 
         and:
         def mockClient = Mock(RegistryClient) {
-            fetchRelease(_, _) >> release
+            getModuleRelease(_, _) >> release
         }
         cmd.client = mockClient
 
@@ -162,7 +162,7 @@ class CmdModuleInfoTest extends Specification {
             getLatest() >> release
         }
         def mockClient = Mock(RegistryClient) {
-            fetchModule(_) >> mockModule
+            getModule(_) >> mockModule
         }
         cmd.client = mockClient
 
@@ -219,7 +219,7 @@ class CmdModuleInfoTest extends Specification {
             getLatest() >> release
         }
         def mockClient = Mock(RegistryClient) {
-            fetchModule(_) >> mockModule
+            getModule(_) >> mockModule
         }
         cmd.client = mockClient
 
@@ -278,7 +278,7 @@ class CmdModuleInfoTest extends Specification {
             getLatest() >> release
         }
         def mockClient = Mock(RegistryClient) {
-            fetchModule(_) >> mockModule
+            getModule(_) >> mockModule
         }
         cmd.client = mockClient
 
@@ -336,7 +336,7 @@ class CmdModuleInfoTest extends Specification {
             getLatest() >> release
         }
         def mockClient = Mock(RegistryClient) {
-            fetchModule(_) >> mockModule
+            getModule(_) >> mockModule
         }
         cmd.client = mockClient
 
@@ -398,7 +398,7 @@ class CmdModuleInfoTest extends Specification {
             getLatest() >> release
         }
         def mockClient = Mock(RegistryClient) {
-            fetchModule(_) >> mockModule
+            getModule(_) >> mockModule
         }
         cmd.client = mockClient
 
@@ -437,7 +437,7 @@ class CmdModuleInfoTest extends Specification {
 
         and:
         def mockClient = Mock(RegistryClient) {
-            fetchRelease(_, _) >> release
+            getModuleRelease(_, _) >> release
         }
         cmd.client = mockClient
 
@@ -489,7 +489,7 @@ class CmdModuleInfoTest extends Specification {
             getLatest() >> release
         }
         def mockClient = Mock(RegistryClient) {
-            fetchModule(_) >> mockModule
+            getModule(_) >> mockModule
         }
         cmd.client = mockClient
 
@@ -562,7 +562,7 @@ class CmdModuleInfoTest extends Specification {
             getLatest() >> release
         }
         def mockClient = Mock(RegistryClient) {
-            fetchModule(_) >> mockModule
+            getModule(_) >> mockModule
         }
         cmd.client = mockClient
 
@@ -605,7 +605,7 @@ class CmdModuleInfoTest extends Specification {
             getLatest() >> release
         }
         def mockClient = Mock(RegistryClient) {
-            fetchModule(_) >> mockModule
+            getModule(_) >> mockModule
         }
         cmd.client = mockClient
 
@@ -661,7 +661,7 @@ class CmdModuleInfoTest extends Specification {
             getLatest() >> release
         }
         def mockClient = Mock(RegistryClient) {
-            fetchModule(_) >> mockModule
+            getModule(_) >> mockModule
         }
         cmd.client = mockClient
 
@@ -714,7 +714,7 @@ class CmdModuleInfoTest extends Specification {
             getLatest() >> release
         }
         def mockClient = Mock(RegistryClient) {
-            fetchModule(_) >> mockModule
+            getModule(_) >> mockModule
         }
         cmd.client = mockClient
 
@@ -789,7 +789,7 @@ class CmdModuleInfoTest extends Specification {
             getLatest() >> release
         }
         def mockClient = Mock(RegistryClient) {
-            fetchModule(_) >> mockModule
+            getModule(_) >> mockModule
         }
         cmd.client = mockClient
 

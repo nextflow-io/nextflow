@@ -108,10 +108,10 @@ class CmdModuleInfo extends CmdBase {
 
         try {
             if( version ) {
-                release = registryClient.fetchRelease(reference.fullName, version)
+                release = registryClient.getModuleRelease(reference.fullName, version)
 
             } else {
-                release = registryClient.fetchModule(reference.fullName).latest
+                release = registryClient.getModule(reference.fullName).latest
             }
         } catch( Exception e ) {
             log.warn "Failed to fetch metadata from registry: ${e.message}"
