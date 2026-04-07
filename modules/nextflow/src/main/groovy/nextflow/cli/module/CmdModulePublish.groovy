@@ -134,7 +134,7 @@ class CmdModulePublish extends CmdBase {
             final registry = registryUrl ?: registryConfig.url
             log.info "Publishing module to registry: ${registryUrl ?: registryConfig.url}"
             def registryClient = RegistryClientFactory.forConfig(registryConfig)
-            def response = registryClient.publishModule(spec.name, request, registry)
+            def response = registryClient.publishModuleRelease(spec.name, request, registry)
 
             if (useModuleReference) {
                 // If publish is performed using the module reference we should create/update the .module-info with the correct checksum

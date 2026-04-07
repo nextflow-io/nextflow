@@ -98,7 +98,7 @@ class CmdModuleSearch extends CmdBase {
 
         try {
             println "Searching for '${query}'..."
-            final results = client.search(query, limit)
+            final results = client.searchModules(query, limit)
 
             if( !results || results.totalResults == 0 || !results.results || results.results.isEmpty() ) {
                 println "No modules found"
