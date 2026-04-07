@@ -18,39 +18,21 @@ package io.seqera.tower.plugin
 
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
-import java.time.Instant
-import java.time.OffsetDateTime
-import java.time.ZoneId
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.TimeUnit
 
 import groovy.json.JsonGenerator
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
-import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import io.seqera.http.HxClient
 import io.seqera.util.trace.TraceUtils
 import nextflow.BuildInfo
-import nextflow.Session
-import nextflow.container.resolver.ContainerMeta
 import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskHandler
-import nextflow.processor.TaskId
-import nextflow.processor.TaskProcessor
-import nextflow.trace.ResourcesAggregator
-import nextflow.trace.TraceObserverV2
 import nextflow.trace.TraceRecord
-import nextflow.trace.event.FilePublishEvent
-import nextflow.trace.event.TaskEvent
 import nextflow.util.Duration
-import nextflow.util.LoggerHelper
-import nextflow.util.ProcessHelper
 import nextflow.util.TestOnly
-import nextflow.util.Threads
 /**
  * Perform HTTP call to Seqera platform.
  *
@@ -85,6 +67,7 @@ class TowerClient {
     private String accessToken
 
     private TowerRetryPolicy retryPolicy
+
     private Duration readTimeout = TowerConfig.DEFAULT_READ_TIMEOUT
 
     private Duration connectTimeout = TowerConfig.DEFAULT_CONNECT_TIMEOUT
@@ -100,11 +83,6 @@ class TowerClient {
         if (env)
             this.env = env
         initHttpClient()
-    }
-
-    TowerClient withRequestTimeout(Duration duration) {
-        this.readTimeout = duration
-        return this
     }
 
     @TestOnly

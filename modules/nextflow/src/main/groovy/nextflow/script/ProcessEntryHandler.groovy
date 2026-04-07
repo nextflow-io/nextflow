@@ -22,6 +22,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.Nextflow
 import nextflow.module.ModuleSpec
+import nextflow.module.ModuleSpecFactory
 import nextflow.module.ModuleStorage
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.FileInParam
@@ -129,7 +130,7 @@ class ProcessEntryHandler {
         if( output.isEmpty() )
             return Collections.emptyList()
         if( output.size() == 1 && names.isEmpty() )
-            return List.of('result')
+            return List.of('$out')
         return names
     }
 
@@ -139,7 +140,7 @@ class ProcessEntryHandler {
         if( output.isEmpty() )
             return Collections.emptyList()
         if( output.size() == 1 && (names.isEmpty() || names.first() == '$out') )
-            return List.of('result')
+            return List.of('$out')
         return names
     }
 
@@ -209,7 +210,8 @@ class ProcessEntryHandler {
         final paramValues = parseComplexParameters(params)
 
         // Load parameter types from module spec (if available)
-        final paramTypes = getModuleSpecInputTypes()
+        final scriptPath = script.getBinding().getScriptPath()
+        final paramTypes = getModuleSpecInputTypes(scriptPath)
 
         log.debug "Parameter values: ${paramValues}"
 
@@ -237,17 +239,43 @@ class ProcessEntryHandler {
      * Load mapping of input types from the module spec if available. Returns null
      * if module spec is absent or unreadable.
      */
-    private Map<String, Class> getModuleSpecInputTypes() {
+    private static Map<String, Class> getModuleSpecInputTypes(Path scriptPath) {
         try {
-            final scriptPath = script.getBinding().getScriptPath()
             final specPath = scriptPath?.resolveSibling(ModuleStorage.MODULE_MANIFEST_FILE)
-            if( specPath )
-                return ModuleSpec.loadInputTypes(specPath)
+            final spec = ModuleSpecFactory.fromYaml(specPath)
+            return moduleSpecInputTypes(spec)
         }
         catch( Exception e ) {
             log.debug "Could not load input types from module spec: ${e.message}"
         }
         return Collections.emptyMap()
+    }
+
+    private static Map<String, Class> moduleSpecInputTypes(ModuleSpec spec) {
+        final Map<String, Class> result = [:]
+        for( final input : spec.inputs ) {
+            if( input.isTuple() ) {
+                for( final el : input.components )
+                    result.put(el.name, inputType(el.type))
+            }
+            else {
+                result.put(input.name, inputType(input.type))
+            }
+        }
+        return result
+    }
+
+    private static Class inputType(String type) {
+        return switch( type ) {
+            case 'boolean' -> Boolean
+            case 'file' -> Path
+            case 'directory' -> Path
+            case 'float' -> Number
+            case 'integer' -> Integer
+            case 'map' -> Map
+            case 'string' -> String
+            default -> null
+        }
     }
 
     /**

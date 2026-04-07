@@ -22,6 +22,7 @@ import com.beust.jcommander.ParameterException
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.cli.module.CmdModuleCreate
 import nextflow.cli.module.CmdModuleInfo
 import nextflow.cli.module.CmdModuleInstall
 import nextflow.cli.module.CmdModuleList
@@ -29,6 +30,8 @@ import nextflow.cli.module.CmdModulePublish
 import nextflow.cli.module.CmdModuleRemove
 import nextflow.cli.module.CmdModuleRun
 import nextflow.cli.module.CmdModuleSearch
+import nextflow.cli.module.CmdModuleSpec
+import nextflow.cli.module.CmdModuleValidate
 import nextflow.exception.AbortOperationException
 
 /**
@@ -48,6 +51,7 @@ class CmdModule extends CmdBase implements UsageAware {
     static final List<CmdBase> commands = new ArrayList<>()
 
     static {
+        commands << new CmdModuleCreate()
         commands << new CmdModuleInstall()
         commands << new CmdModuleRun()
         commands << new CmdModuleList()
@@ -55,6 +59,8 @@ class CmdModule extends CmdBase implements UsageAware {
         commands << new CmdModuleSearch()
         commands << new CmdModuleInfo()
         commands << new CmdModulePublish()
+        commands << new CmdModuleSpec()
+        commands << new CmdModuleValidate()
     }
 
     protected JCommander commander() {

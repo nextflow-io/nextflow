@@ -26,6 +26,7 @@ import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.ImplicitClosureParameter;
 import nextflow.script.ast.IncludeNode;
+import nextflow.script.ast.OutputBlockNode;
 import nextflow.script.ast.OutputNode;
 import nextflow.script.ast.ParamBlockNode;
 import nextflow.script.ast.ProcessNode;
@@ -42,6 +43,7 @@ import nextflow.script.dsl.OutputDsl;
 import nextflow.script.dsl.ProcessDsl;
 import nextflow.script.dsl.ScriptDsl;
 import nextflow.script.dsl.WorkflowDsl;
+import nextflow.script.dsl.WorkflowDslV1;
 import nextflow.script.types.ParamsMap;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
@@ -87,6 +89,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
 
     private VariableScopeChecker vsc;
 
+    private boolean typingEnabled;
+
     private MethodNode currentDefinition;
 
     public VariableScopeVisitor(SourceUnit sourceUnit) {
@@ -102,6 +106,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
     public void declare() {
         var moduleNode = sourceUnit.getAST();
         if( moduleNode instanceof ScriptNode sn ) {
+            typingEnabled = sn.isTypingEnabled();
             for( var includeNode : sn.getIncludes() )
                 declareInclude(includeNode);
             declareParams(sn);
@@ -247,7 +252,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitWorkflow(WorkflowNode node) {
-        var classScope = ClassHelper.makeCached(node.isEntry() ? EntryWorkflowDsl.class : WorkflowDsl.class);
+        var classScope = workflowDsl(node.isEntry());
         if( node.isEntry() && paramsType != null ) {
             classScope = new ClassNode(classScope.getTypeClass());
             var paramsMethod = classScope.getDeclaredMethods("getParams").get(0);
@@ -275,6 +280,18 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         vsc.popScope();
     }
 
+    private ClassNode workflowDsl(boolean entry) {
+        var result = new ClassNode(entry ? EntryWorkflowDsl.class : WorkflowDsl.class);
+        if( !typingEnabled ) {
+            var v1 = ClassHelper.makeCached(WorkflowDslV1.class);
+            for( var mn : v1.getMethods() ) {
+                if( vsc.isOperator(mn) )
+                    result.addMethod(mn);
+            }
+        }
+        return result;
+    }
+
     private void copyVariableScope(VariableScope source) {
         for( var it = source.getDeclaredVariablesIterator(); it.hasNext(); ) {
             var variable = it.next();
@@ -287,19 +304,25 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         for( var stmt : asBlockStatements(outputs) ) {
             var es = (ExpressionStatement)stmt;
             var output = es.getExpression();
-            if( output instanceof AssignmentExpression assign ) {
+            VariableExpression target;
+            if( output instanceof VariableExpression ve ) {
+                target = ve;
+            }
+            else if( output instanceof AssignmentExpression assign ) {
                 visit(assign.getRightExpression());
-
-                var target = (VariableExpression)assign.getLeftExpression();
+                target = (VariableExpression)assign.getLeftExpression();
+            }
+            else {
+                visit(output);
+                target = null;
+            }
+            if( target != null ) {
                 var name = target.getName();
                 var other = declaredOutputs.get(name);
                 if( other != null )
                     vsc.addError(typeLabel + " `" + name + "` is already declared", target, "First declared here", other);
                 else
                     declaredOutputs.put(name, target);
-            }
-            else {
-                visit(output);
             }
         }
     }
@@ -321,8 +344,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         visitDirectives(node.stagers, "stage directive", false);
         vsc.popScope();
 
-        if( !(node.when instanceof EmptyExpression) )
-            vsc.addParanoidWarning("Process `when` section will not be supported in a future version", node.when);
+        // deprecation warning reported during ast construction
         visit(node.when);
 
         visit(node.exec);
@@ -470,8 +492,21 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
     }
 
     @Override
+    public void visitOutputs(OutputBlockNode node) {
+        var classScope = ClassHelper.makeCached(OutputDsl.class);
+        if( paramsType != null ) {
+            classScope = new ClassNode(classScope.getTypeClass());
+            var paramsMethod = classScope.getDeclaredMethods("getParams").get(0);
+            paramsMethod.setReturnType(paramsType);
+        }
+
+        vsc.pushScope(classScope);
+        super.visitOutputs(node);
+        vsc.popScope();
+    }
+
+    @Override
     public void visitOutput(OutputNode node) {
-        vsc.pushScope(OutputDsl.class);
         var block = (BlockStatement) node.body;
         block.setVariableScope(currentScope());
 
@@ -496,7 +531,6 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             // treat as regular directive
             super.visitMethodCallExpression(call);
         });
-        vsc.popScope();
     }
 
     // statements

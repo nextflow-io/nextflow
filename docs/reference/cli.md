@@ -1152,9 +1152,23 @@ The `module` command provides a comprehensive system for managing registry-based
 
 **Subcommands**
 
+`create [namespace/name]`
+
+: Create a new module with a basic `main.nf`, `meta.yml`, and `README.md`.
+
+: **Examples:**
+
+  ```console
+  # Create a module (it will prompt for details)
+  $ nextflow module create
+
+  # Create a module with the given name
+  $ nextflow module create myorg/my-module
+  ```
+
 (cli-module-info)=
 
-`info [options] [scope/name]`
+`info [options] [namespace/name]`
 
 : Display detailed information about a module from the registry.
 : Shows module name, version, description, and other metadata, as well as example usage.
@@ -1181,7 +1195,7 @@ The `module` command provides a comprehensive system for managing registry-based
 
 (cli-module-install)=
 
-`install [options] [scope/name]`
+`install [options] [namespace/name]`
 
 : Install a module from the registry into your project.
 : Downloaded modules are stored in the `modules/` directory.
@@ -1230,10 +1244,10 @@ The `module` command provides a comprehensive system for managing registry-based
 
 (cli-module-publish)=
 
-`publish [options] [scope/name | path]`
+`publish [options] [namespace/name | path]`
 
 : Publish a module to the registry, making it available for others to install.
-: The argument can be either a `scope/name` reference (for an already-installed module) or a local directory path containing the module files.
+: The argument can be either a `namespace/name` reference (for an already-installed module) or a local directory path containing the module files.
 : Requires authentication via the `NXF_REGISTRY_TOKEN` environment variable or the `registry.apiKey` config option.
 : The module directory must contain `main.nf`, `meta.yml`, and `README.md`.
 : The following options are available:
@@ -1261,7 +1275,7 @@ The `module` command provides a comprehensive system for managing registry-based
 
 (cli-module-remove)=
 
-`remove [options] [scope/name]`
+`remove [options] [namespace/name]`
 
 : Remove a module from your project.
 : By default, removes both local files and configuration entries. Use options to control what gets removed.
@@ -1285,7 +1299,7 @@ The `module` command provides a comprehensive system for managing registry-based
 
 (cli-module-run)=
 
-`run [options] [scope/name] [--<input_name> <input-value>]`
+`run [options] [namespace/name] [--<input_name> <input-value>]`
 
 : Execute a module directly from the registry without creating a wrapper workflow.
 : Automatically downloads the module if not already installed. Accepts all standard Nextflow run options.
@@ -1334,6 +1348,73 @@ The `module` command provides a comprehensive system for managing registry-based
 
   # Get results as JSON
   $ nextflow module search bwa -output json
+  ```
+
+(cli-module-spec)=
+
+`spec [options] <namespace/name or path>`
+
+: Generate the `meta.yml` for a local module from the source code (`main.nf`).
+: The generated file includes `TODO` placeholders for fields that were not specified.
+: If a spec file already exists, it is incorporated into the new file.
+: The following options are available:
+
+`-namespace <namespace>`
+: Module namespace, used to construct the module name. Required when the argument is a path; ignored when it is a module name.
+
+`-version <version>`
+: Module version string (e.g. `1.0.0`). Defaults to `TODO: Add version`.
+
+`-description <text>`
+: Short description of what the module does. Defaults to `TODO: Add description`.
+
+`-license <identifier>`
+: SPDX license identifier (e.g. `MIT`, `Apache-2.0`). Defaults to `TODO: Add license (e.g., MIT)`.
+
+`-author <name>`
+: Module author. Can be specified multiple times, once per author. Defaults to `[TODO: Add author]`.
+
+`-dry-run`
+: Print the generated spec to stdout without writing any file.
+
+: **Examples:**
+
+  ```console
+  # Generate spec for local module by name
+  $ nextflow module spec nf-core/fastqc
+
+  # Generate spec for local module by path (namespace required)
+  $ nextflow module spec -namespace nf-core ./modules/my-module
+
+  # Provide additional fields to avoid TODO placeholders
+  $ nextflow module spec \
+      -namespace nf-core \
+      -version 1.0.0 \
+      -description "Quality control of raw sequencing reads" \
+      -license MIT \
+      -author "@drpatelh" \
+      -author "@joseespinosa" \
+      ./modules/nf-core/fastqc
+
+  # Print module spec without saving it
+  $ nextflow module spec -dry-run -namespace nf-core ./modules/my-module
+  ```
+
+(cli-module-validate)=
+
+`validate [options] <namespace/name or path>`
+
+: Validate a module before publishing to the registry.
+: Verifies that all required files are present (`main.nf`, `meta.yml`, `README.md`) and that the module spec contains all required fields (name, version, description, license).
+
+: **Examples:**
+
+  ```console
+  # Validate module by name
+  $ nextflow module validate myorg/my-module
+
+  # Validate module by path
+  $ nextflow module validate ./modules/myorg/my-module
   ```
 
 (cli-plugin)=
@@ -1487,6 +1568,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 
 `-dump-channels`
 : Dump channels for debugging purpose.
+: Optionally accepts a comma-separated list of tags to filter output to only channels with a matching tag.
 
 `-dump-hashes`
 : Dump task hash keys for debugging purposes.

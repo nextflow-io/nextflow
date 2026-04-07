@@ -16,12 +16,19 @@
 
 package io.seqera.tower.plugin
 
+import nextflow.script.PlatformMetadata
+
+import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
 
+import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.client.WireMock
+import io.seqera.http.HxClient
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.container.DockerConfig
@@ -33,9 +40,9 @@ import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStats
 import nextflow.trace.WorkflowStatsObserver
+import nextflow.util.Duration
 import nextflow.util.ProcessHelper
 import spock.lang.Specification
-
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -156,6 +163,7 @@ class TowerObserverTest extends Specification {
     static now_instant = OffsetDateTime.ofInstant(Instant.ofEpochMilli(now_millis), ZoneId.systemDefault())
 
     def 'should fix field types' () {
+
         expect:
         TowerObserver.fixTaskField(FIELD, VALUE) == EXPECTED
 
@@ -169,6 +177,7 @@ class TowerObserverTest extends Specification {
     }
 
     def 'should create workflow json' () {
+
         given:
         def sessionId = UUID.randomUUID()
         def dir = Files.createTempDirectory('test')
@@ -224,6 +233,7 @@ class TowerObserverTest extends Specification {
         ENV                         | WORKFLOW_ID   | TOWER_LAUNCH
         [:]                         | null          | false
         [TOWER_WORKFLOW_ID: '1234'] | '1234'        | true
+
     }
 
     def 'should convert map' () {
@@ -261,6 +271,7 @@ class TowerObserverTest extends Specification {
         req.workflowId == 'x123'
         and:
         aroundNow(req.instant)
+
         and:
         observer.towerLaunch
     }
@@ -298,6 +309,7 @@ class TowerObserverTest extends Specification {
         and:
         platform.workflowId == 'xyz123'
         platform.workflowUrl == 'https://cloud.seqera.io/watch/xyz123'
+
     }
 
     def 'should set workflowUrl on platform metadata during onFlowBegin' () {
@@ -352,16 +364,34 @@ class TowerObserverTest extends Specification {
         def c1 = new ContainerMeta(requestId: '12345', sourceImage: 'ubuntu:latest', targetImage: 'wave.io/12345/ubuntu:latest')
         def c2 = new ContainerMeta(requestId: '54321', sourceImage: 'ubuntu:latest', targetImage: 'wave.io/54321/ubuntu:latest')
         and:
-        def trace1 = new TraceRecord(taskId: 1, process: 'foo', workdir: "/work/dir", cpus: 1,
-                submit: System.currentTimeMillis(), start: System.currentTimeMillis(), complete: System.currentTimeMillis())
+        def trace1 = new TraceRecord(
+                taskId: 1,
+                process: 'foo',
+                workdir: "/work/dir",
+                cpus: 1,
+                submit: System.currentTimeMillis(),
+                start: System.currentTimeMillis(),
+                complete: System.currentTimeMillis())
         trace1.containerMeta = c1
         and:
-        def trace2 = new TraceRecord(taskId: 2, process: 'foo', workdir: "/work/dir", cpus: 1,
-                submit: System.currentTimeMillis(), start: System.currentTimeMillis(), complete: System.currentTimeMillis())
+        def trace2 = new TraceRecord(
+            taskId: 2,
+            process: 'foo',
+            workdir: "/work/dir",
+            cpus: 1,
+            submit: System.currentTimeMillis(),
+            start: System.currentTimeMillis(),
+            complete: System.currentTimeMillis())
         trace2.containerMeta = c2
         and:
-        def trace3 = new TraceRecord(taskId: 3, process: 'foo', workdir: "/work/dir", cpus: 1,
-                submit: System.currentTimeMillis(), start: System.currentTimeMillis(), complete: System.currentTimeMillis())
+        def trace3 = new TraceRecord(
+            taskId: 3,
+            process: 'foo',
+            workdir: "/work/dir",
+            cpus: 1,
+            submit: System.currentTimeMillis(),
+            start: System.currentTimeMillis(),
+            complete: System.currentTimeMillis())
         trace3.containerMeta = c2
 
         expect:
@@ -391,6 +421,51 @@ class TowerObserverTest extends Specification {
         0 * towerClient.traceComplete(_, _, _)
     }
 
+    def 'should apply platform metadata from trace create response'() {
+        given:
+        def metadata = new WorkflowMetadata()
+        def session = Mock(Session) {
+            getWorkflowMetadata() >> metadata
+        }
+        def observer = new TowerObserver(session, Mock(TowerClient), '1234',  SysEnv.get())
+
+        def responseMetadata = [
+            userId: 39,
+            userName: 'user',
+            userOrganization: 'ACME Inc.',
+            workspaceId: 1234,
+            workspaceName: 'Workspace-Name',
+            workspaceFullName: 'Full Workspace Name',
+            orgName: 'ACME Inc.',
+            computeEnvId: 'ce1234',
+            computeEnvName: 'ce-test',
+            computeEnvPlatform: 'aws-batch',
+            pipelineName: 'test-pipeline',
+            pipelineId: 'pipe1234',
+            revision: 'v1.1',
+            commitId: 'abcd12345'
+        ]
+
+        when:
+        observer.applyPlatformMetadata(responseMetadata)
+
+        then:
+        metadata.platform.user.id == '39'
+        metadata.platform.user.userName == 'user'
+        metadata.platform.user.organization == 'ACME Inc.'
+        metadata.platform.workspace.id == '1234'
+        metadata.platform.workspace.name == 'Workspace-Name'
+        metadata.platform.workspace.fullName == 'Full Workspace Name'
+        metadata.platform.workspace.organization == 'ACME Inc.'
+        metadata.platform.computeEnv.id == 'ce1234'
+        metadata.platform.computeEnv.name == 'ce-test'
+        metadata.platform.computeEnv.platform == 'aws-batch'
+        metadata.platform.pipeline.id == 'pipe1234'
+        metadata.platform.pipeline.name == 'test-pipeline'
+        metadata.platform.pipeline.revision == 'v1.1'
+        metadata.platform.pipeline.commitId == 'abcd12345'
+    }
+
     def 'should include numSpotInterruptions in task map'() {
         given:
         def session = Mock(Session)
@@ -398,8 +473,15 @@ class TowerObserverTest extends Specification {
         observer.getWorkflowProgress(true) >> new WorkflowProgress()
 
         def now = System.currentTimeMillis()
-        def trace = new TraceRecord([taskId: 42, process: 'foo', workdir: "/work/dir", cpus: 1,
-                submit: now-2000, start: now-1000, complete: now])
+        def trace = new TraceRecord([
+            taskId: 42,
+            process: 'foo',
+            workdir: "/work/dir",
+            cpus: 1,
+            submit: now-2000,
+            start: now-1000,
+            complete: now
+        ])
         trace.setNumSpotInterruptions(3)
 
         when:
@@ -417,8 +499,15 @@ class TowerObserverTest extends Specification {
         observer.getWorkflowProgress(true) >> new WorkflowProgress()
 
         def now = System.currentTimeMillis()
-        def trace = new TraceRecord([taskId: 42, process: 'foo', workdir: "/work/dir", cpus: 1,
-                submit: now-2000, start: now-1000, complete: now])
+        def trace = new TraceRecord([
+            taskId: 42,
+            process: 'foo',
+            workdir: "/work/dir",
+            cpus: 1,
+            submit: now-2000,
+            start: now-1000,
+            complete: now
+        ])
         trace.setLogStreamId('arn:aws:logs:us-east-1:123456789:log-group:/ecs/task:log-stream:abc123')
 
         when:
@@ -436,9 +525,17 @@ class TowerObserverTest extends Specification {
         observer.getWorkflowProgress(true) >> new WorkflowProgress()
 
         def now = System.currentTimeMillis()
-        def trace = new TraceRecord([taskId: 42, process: 'foo', workdir: "/work/dir", cpus: 1,
-                submit: now-2000, start: now-1000, complete: now,
-                accelerator: 2, acceleratorType: 'v100'])
+        def trace = new TraceRecord([
+            taskId: 42,
+            process: 'foo',
+            workdir: "/work/dir",
+            cpus: 1,
+            submit: now-2000,
+            start: now-1000,
+            complete: now,
+            accelerator: 2,
+            acceleratorType: 'v100'
+        ])
 
         when:
         def req = observer.makeTasksReq([trace])

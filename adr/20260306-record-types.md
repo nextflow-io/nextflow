@@ -6,6 +6,12 @@
 - Date: 2026-03-06
 - Tags: lang, static-types
 
+## Updates
+
+### Version 1.1 (2026-03-23)
+
+- Replaced inline record type syntax (`Record { ... }`) with destructuring syntax (`record(...)`) for better continuity with legacy syntax and record output syntax.
+
 ## Summary
 
 Provide a way to model composite data types in the Nextflow language.
@@ -67,7 +73,7 @@ This function effectively creates an immutable map (`Map<String,?>`):
 
 - The keys are just field names
 - The values can have any type
-- The record can’t be modified -- use the `+` operator instead
+- The record can't be modified -- use the `+` operator instead
 
 Records can have arbitrary fields, unlike custom classes, which makes them easy to use with dataflow operators.
 
@@ -155,24 +161,7 @@ When a record is supplied as input to a process, the process needs to know how t
 
 Typed processes can stage inputs using the `stage:` section, but ideally the files in a record should be automatically detected and staged.
 
-A typed process can declare a record using an *inline record type*:
-
-```groovy
-process FASTQC {
-    input:
-    sample: Record {
-        id: String
-        fastq_1: Path
-        fastq_2: Path
-    }
-
-    // ...
-}
-```
-
-All record fields that are a `Path` or `Path` collection (e.g. `Set<Path>`) are automatically staged. The record itself is declared in the process body as `sample`, like any other input, and record fields are accessed as `sample.id`, `sample.fastq_1`, and so on.
-
-A typed process can also use an explicit record type to achieve the same behavior:
+A typed process can declare a record input using a record type:
 
 ```groovy
 process FASTQC {
@@ -189,7 +178,24 @@ record FastqPair {
 }
 ```
 
-The only difference between these two aprooaches is that the `FastqPair` type can be used elsewhere in pipeline code because it is declared externally.
+All record fields that are a `Path` or `Path` collection (e.g. `Set<Path>`) are automatically staged. The record itself is declared in the process body as `sample`, like any other input, and record fields are accessed as `sample.id`, `sample.fastq_1`, and so on.
+
+Alternatively, a typed process can declare a *destructured* record input:
+
+```groovy
+process FASTQC {
+    input:
+    record(
+        id: String,
+        fastq_1: Path,
+        fastq_2: Path
+    )
+
+    // ...
+}
+```
+
+This approach allows record inputs to be declared without the need for external record types. Each record field is acessed directly as `id`, `fastq_1`, and so on.
 
 ### Process outputs
 
@@ -197,12 +203,15 @@ Typed processes can declare outputs with arbitrary expressions, so no new syntax
 
 ```groovy
 process FASTQC {
-  // ...
+    // ...
 
-  output:
-  record(id: id, fastqc: file('fastqc_logs'))
+    output:
+    record(
+        id: id,
+        fastqc: file('fastqc_logs')
+    )
 
-  // ...
+    // ...
 }
 ```
 
@@ -257,6 +266,46 @@ sample2 = sample + [id: '2']
 println sample.id // -> '1'
 println sample2.id // -> '2'
 ```
+
+### Inline record input type
+
+A process can declare a destructured record input as shown above:
+
+```groovy
+process FASTQC {
+    input:
+    record(
+        id: String,
+        fastq_1: Path,
+        fastq_2: Path
+    )
+
+    // ...
+}
+```
+
+One alternative is to declare an *inline record type*:
+
+```groovy
+process FASTQC {
+    input:
+    sample: Record {
+        id: String
+        fastq_1: Path
+        fastq_2: Path
+    }
+
+    // ...
+}
+```
+
+This approach was considered because it uses the same syntax as a `record` definition, making it easy to switch between inline and external record types. The block syntax is also slightly better suited for a type definition since it doesn't require commas.
+
+However, this approach creates an asymmetry between record inputs and outputs (`Record { ... }` vs `record(...)`). It also removes the ability to destructure a record input.
+
+Declaring a record input with `record()` can be understood as a reverse constructor, mirroring the `record()` function used to construct a record output in the `output:` section.
+
+While both approaches have pros and cons, the `record()` approach was ultimately chosen for its continuity with the existing tuple syntax and its similarity with the record output syntax.
 
 ### Implicit process record output
 
@@ -348,16 +397,16 @@ process PROKKA {
     // ...
 
     input:
-    sample: Record {
-        meta: Map
+    record(
+        meta: Map,
         fasta: Path
-    }
+    )
     proteins: Path
     prodigal_tf: Path
 
     output:
     record(
-        meta: sample.meta,
+        meta: meta,
         gff: file("${prefix}/*.gff"),
         gbk: file("${prefix}/*.gbk"),
         fna: file("${prefix}/*.fna"),
@@ -376,7 +425,7 @@ process PROKKA {
     file("versions.yml")  >> 'versions'
 
     script:
-    prefix = sample.meta.id
+    prefix = meta.id
     // ...
 }
 ```
@@ -396,10 +445,10 @@ These processes would be defined as follows:
 process FOO {
 
     input:
-    sample: Record {
-        meta: Map
+    record(
+        meta: Map,
         gff: Path
-    }
+    )
 
     // ...
 }
@@ -407,12 +456,12 @@ process FOO {
 process BAR {
 
     input:
-    sample: Record {
-        meta: Map
-        fna: Path
-        faa: Path
+    record(
+        meta: Map,
+        fna: Path,
+        faa: Path,
         tbl: Path
-    }
+    )
 
     // ...
 }

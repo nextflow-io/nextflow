@@ -25,7 +25,7 @@ The language server parses scripts and config files according to the {ref}`Nextf
 :::{versionadded} 25.10.0
 :::
 
-The extension can perform static type checking. Enable it using the **Nextflow > Type Checking** extension setting. See {ref}`migrating-static-types` for more information about migrating to static types.
+The extension can perform static type checking. Enable it using the **Nextflow > Type Checking** extension setting. See {ref}`migrating-static-types` for more information about migrating to static typing.
 
 ### Hover hints
 
@@ -83,14 +83,6 @@ The DAG preview is similar to the {ref}`workflow diagram <workflow-diagram>` tha
 - The DAG preview shows all conditional processes, whereas the workflow diagram shows only the processes that were called in a specific run.
 
 To preview the DAG of a workflow, select the **Preview DAG** CodeLens above the workflow definition.
-
-### Automatic code migration
-
-The extension can automatically migrate scripts to static types. See {ref}`migrating-static-types` for details.
-
-To migrate a script, open the Command Palette, search for **Convert script to static types**, and select it.
-
-To migrate an entire pipeline, use the **Convert pipeline to static types** command.
 
 ## Troubleshooting
 

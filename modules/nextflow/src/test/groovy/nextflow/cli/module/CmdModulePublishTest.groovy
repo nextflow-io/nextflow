@@ -17,6 +17,7 @@
 package nextflow.cli.module
 
 import nextflow.cli.Launcher
+import nextflow.module.ModuleValidator
 import spock.lang.Specification
 import spock.lang.TempDir
 
@@ -41,12 +42,12 @@ class CmdModulePublishTest extends Specification {
         // Create required files
         moduleDir.resolve('main.nf').text = 'process TEST { }'
         moduleDir.resolve('README.md').text = '# Test Module'
-        moduleDir.resolve('meta.yml').text = '''
-name: test/module
-version: 1.0.0
-description: Test module
-license: MIT
-'''
+        moduleDir.resolve('meta.yml').text = '''\
+            name: test/module
+            version: 1.0.0
+            description: Test module
+            license: MIT
+            '''.stripIndent()
 
         and:
         def cmd = new CmdModulePublish()
@@ -54,7 +55,7 @@ license: MIT
         cmd.args = [moduleDir.toString()]
 
         when:
-        def errors = cmd.invokeMethod('validateModuleStructure', moduleDir)
+        def errors = ModuleValidator.validateStructure(moduleDir)
 
         then:
         errors.isEmpty()
@@ -72,7 +73,7 @@ license: MIT
         def cmd = new CmdModulePublish()
 
         when:
-        def errors = cmd.invokeMethod('validateModuleStructure', moduleDir)
+        def errors = ModuleValidator.validateStructure(moduleDir)
 
         then:
         errors.size() == 2
@@ -88,12 +89,12 @@ license: MIT
         // Create required files
         moduleDir.resolve('main.nf').text = 'process TEST { }'
         moduleDir.resolve('README.md').text = '# Test Module'
-        moduleDir.resolve('meta.yml').text = '''
-name: test/module
-version: 1.0.0
-description: Test module
-license: MIT
-'''
+        moduleDir.resolve('meta.yml').text = '''\
+            name: test/module
+            version: 1.0.0
+            description: Test module
+            license: MIT
+            '''.stripIndent()
 
         // Create a large file (>1MB)
         def largeFile = moduleDir.resolve('large-file.txt')
@@ -104,7 +105,7 @@ license: MIT
         def cmd = new CmdModulePublish()
 
         when:
-        def errors = cmd.invokeMethod('validateModuleStructure', moduleDir)
+        def errors = ModuleValidator.validateStructure(moduleDir)
 
         then:
         errors.size() == 1
@@ -117,14 +118,19 @@ license: MIT
         Files.createDirectories(moduleDir)
 
         // Create required files
-        moduleDir.resolve('main.nf').text = 'process TEST { }'
+        moduleDir.resolve('main.nf').text = '''\
+            process TEST {
+                script:
+                "echo 'hello!'"
+            }
+            '''
         moduleDir.resolve('README.md').text = '# Test Module'
-        moduleDir.resolve('meta.yml').text = '''
-name: test/module
-version: 1.0.0
-description: Test module
-license: MIT
-'''
+        moduleDir.resolve('meta.yml').text = '''\
+            name: test/module
+            version: 1.0.0
+            description: Test module
+            license: MIT
+            '''.stripIndent()
 
         and:
         def cmd = new CmdModulePublish()

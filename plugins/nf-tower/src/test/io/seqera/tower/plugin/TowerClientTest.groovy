@@ -16,6 +16,10 @@
 
 package io.seqera.tower.plugin
 
+import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.client.WireMock
+import nextflow.util.Duration
+
 import java.net.http.HttpResponse
 import java.time.Instant
 
@@ -178,12 +182,12 @@ class TowerClientTest extends Specification {
     }
 
     def 'should handle HTTP request with content'() {
-        given:
+        given: 'a TowerClient'
         def tower = new TowerClient()
         def content = '{"test": "data"}'
         def request = tower.makeRequest('http://example.com/test', content, 'POST')
 
-        expect:
+        expect: 'the request should be created with the content'
         request != null
         request.method() == 'POST'
         request.uri().toString() == 'http://example.com/test'
@@ -203,5 +207,38 @@ class TowerClientTest extends Specification {
         !resp.error
         resp.code == 200
     }
+
+    def 'should return error response on http request timeout' () {
+        given: 'a WireMock server that hangs for 5 seconds'
+        def wireMock = new WireMockServer(0)
+        wireMock.start()
+        wireMock.stubFor(
+            WireMock.post(WireMock.anyUrl())
+                .willReturn(WireMock.aResponse()
+                    .withFixedDelay(5_000)
+                    .withStatus(200)
+                    .withBody('{}'))
+        )
+
+        and: 'a TowerClient whose requests carry a 200ms timeout'
+        TowerConfig config = Mock(TowerConfig) {
+            getHttpReadTimeout() >> Duration.of('200 ms')
+            getHttpConnectTimeout() >> Duration.of('5 s')
+            getEndpoint() >> wireMock.baseUrl()
+            getAccessToken() >> 'token'
+        }
+        TowerClient client = new TowerClient(config, [:])
+
+        when:
+        def response = client.sendHttpMessage("${wireMock.baseUrl()}/trace/create", [runName: 'test'], 'POST')
+
+        then: 'a timeout produces an error response with code 0'
+        response.code == 0
+        response.message.contains('Unable to connect')
+
+        cleanup:
+        wireMock.stop()
+    }
+
 
 }

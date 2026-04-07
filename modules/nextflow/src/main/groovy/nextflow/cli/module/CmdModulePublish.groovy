@@ -21,7 +21,6 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.npr.client.RegistryClient
-import nextflow.Const
 import nextflow.cli.CmdBase
 import nextflow.config.ConfigBuilder
 import nextflow.config.RegistryConfig
@@ -29,7 +28,9 @@ import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleChecksum
 import nextflow.module.ModuleInfo
 import nextflow.module.ModuleSpec
+import nextflow.module.ModuleSpecFactory
 import nextflow.module.ModuleReference
+import nextflow.module.ModuleValidator
 import nextflow.module.RegistryClientFactory
 import nextflow.module.ModuleStorage
 import nextflow.util.TestOnly
@@ -81,24 +82,17 @@ class CmdModulePublish extends CmdBase {
 
         log.info "Publishing module from: ${moduleDir}"
 
-        // Step 1: Validate module structure
-        def validationErrors = validateModuleStructure(moduleDir)
+        // Step 1: Validate module structure and spec
+        def validationErrors = ModuleValidator.validate(moduleDir)
         if (!validationErrors.isEmpty()) {
             throw new AbortOperationException(
                 "Module validation failed:\n" + validationErrors.collect { "  - ${it}" }.join('\n')
             )
         }
 
-        // Step 2: Load and validate spec
+        // Step 2: Load spec for publish metadata
         def manifestPath = moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
-        def spec = ModuleSpec.load(manifestPath)
-
-        def manifestErrors = spec.validate()
-        if (!manifestErrors.isEmpty()) {
-            throw new AbortOperationException(
-                "Module spec validation failed:\n" + manifestErrors.collect { "  - ${it}" }.join('\n')
-            )
-        }
+        def spec = ModuleSpecFactory.fromYaml(manifestPath)
 
         log.info "Module validated: ${spec.name}@${spec.version}"
 
@@ -195,57 +189,9 @@ class CmdModulePublish extends CmdBase {
         }
         println ""
         println "Dry run complete. Module is ready to publish."
-        println "Run without --dry-run to publish to the registry."
+        println "Run without -dry-run to publish to the registry."
     }
 
-    /**
-     * Validate that the module directory has the required structure
-     *
-     * @param moduleDir The module directory path
-     * @return List of validation error messages (empty if valid)
-     */
-    private List<String> validateModuleStructure(Path moduleDir) {
-        List<String> errors = []
-
-        if (!Files.exists(moduleDir) || !Files.isDirectory(moduleDir)) {
-            errors << "Module directory does not exist: ${moduleDir}".toString()
-            return errors
-        }
-
-        // Check for required files
-        def mainNf = moduleDir.resolve(Const.DEFAULT_MAIN_FILE_NAME)
-        if (!Files.exists(mainNf)) {
-            errors << "Missing required file: $Const.DEFAULT_MAIN_FILE_NAME".toString()
-        }
-
-        def metaYaml = moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
-        if (!Files.exists(metaYaml)) {
-            errors << "Missing required file: $ModuleStorage.MODULE_MANIFEST_FILE".toString()
-        }
-
-        def readme = moduleDir.resolve(ModuleStorage.MODULE_README_FILE)
-        if (!Files.exists(readme)) {
-            errors << "Missing required file: $ModuleStorage.MODULE_README_FILE".toString()
-        }
-
-        // Check bundle size (1MB uncompressed limit)
-        try (final sizeStream = Files.walk(moduleDir)){
-            long totalSize = sizeStream
-                .filter { Files.isRegularFile(it) }
-                .mapToLong { Files.size(it) }
-                .sum()
-
-            def maxSize = 1024 * 1024 // 1MB in bytes
-            if (totalSize > maxSize) {
-                def sizeMB = totalSize / (1024 * 1024)
-                errors << "Module size exceeds 1MB limit (current: ${String.format('%.2f', sizeMB)}MB)".toString()
-            }
-        } catch (Exception e) {
-            log.warn "Failed to check module size: ${e.message}"
-        }
-
-        return errors
-    }
     /**
      * Determine if the specified module is a local path or a reference
      * @param module

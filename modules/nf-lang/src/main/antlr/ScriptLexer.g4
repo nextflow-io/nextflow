@@ -351,6 +351,7 @@ SHELL           : 'shell';
 STAGE           : 'stage';
 STUB            : 'stub';
 TOPIC           : 'topic';
+TUPLE           : 'tuple';
 WHEN            : 'when';
 
 // -- workflow definition

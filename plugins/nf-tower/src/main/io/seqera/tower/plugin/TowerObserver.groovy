@@ -25,12 +25,16 @@ import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
+import nextflow.script.PlatformMetadata
 import nextflow.trace.ResourcesAggregator
 import nextflow.trace.TraceObserverV2
 import nextflow.trace.TraceRecord
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.TaskEvent
-import nextflow.util.*
+import nextflow.util.Duration
+import nextflow.util.LoggerHelper
+import nextflow.util.ProcessHelper
+import nextflow.util.Threads
 
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -160,9 +164,57 @@ class TowerObserver implements TraceObserverV2 {
         session.workflowMetadata.platform.workflowUrl = watchUrl
         if( ret.message )
             log.warn(ret.message.toString())
+        // populate platform metadata from the create response
+        if( ret.metadata )
+            applyPlatformMetadata(ret.metadata as Map)
 
         // Prepare to collect report paths if tower configuration has a 'reports' section
         reports.flowCreate(workflowId)
+    }
+
+
+    /**
+     * Apply platform metadata received inline from the trace create response.
+     * This avoids extra API calls to fetch user, workspace, and launch details.
+     */
+    protected void applyPlatformMetadata(Map metadata) {
+        try {
+            final platform = session.workflowMetadata.platform
+            // user info
+            if( metadata.userId )
+                platform.user = new PlatformMetadata.User(
+                    id: metadata.userId as String,
+                    userName: metadata.userName as String,
+                    organization: metadata.userOrganization as String
+                )
+            // workspace info
+            if( metadata.workspaceId )
+                platform.workspace = new PlatformMetadata.Workspace(
+                    workspaceId: metadata.workspaceId as String,
+                    workspaceName: metadata.workspaceName as String,
+                    workspaceFullName: metadata.workspaceFullName as String,
+                    orgName: metadata.orgName as String
+                )
+            // launch details (only present for Platform-submitted runs)
+            if( metadata.computeEnvId )
+                platform.computeEnv = new PlatformMetadata.ComputeEnv(
+                    id: metadata.computeEnvId as String,
+                    name: metadata.computeEnvName as String,
+                    platform: metadata.computeEnvPlatform as String
+                )
+            if( metadata.pipelineName )
+                platform.pipeline = new PlatformMetadata.Pipeline(
+                    id: metadata.pipelineId as String,
+                    name: metadata.pipelineName as String,
+                    revision: metadata.revision as String,
+                    commitId: metadata.commitId as String
+                )
+            if( metadata.labels )
+                platform.labels = metadata.labels as List<String>
+        }
+        catch( Exception e ) {
+            log.debug("Failed to apply platform metadata from create response", e)
+        }
     }
 
     protected Map makeCreateReq(Session session) {
@@ -353,6 +405,10 @@ class TowerObserver implements TraceObserverV2 {
 
     protected Map makeCompleteReq(Session session) {
         def workflow = session.getWorkflowMetadata().toMap()
+        //Remove retrieved platform info
+        if( workflow.platform )
+            workflow.remove('platform')
+
         workflow.params = session.getParams()
         workflow.id = getWorkflowId()
         // render as a string
@@ -474,6 +530,18 @@ class TowerObserver implements TraceObserverV2 {
         for( int i=1; i<words.size(); i++ )
             result+=words[i].capitalize()
 
+        return result
+    }
+
+
+    protected Map<String,Integer> loadSchema() {
+        final props = new Properties()
+        props.load(this.getClass().getResourceAsStream('/tower-schema.properties'))
+        final result = new HashMap<String,Integer>(props.size())
+        for( String key : props.keySet() ) {
+            final value = props.getProperty(key)
+            result.put( key, value ? value as Integer : null )
+        }
         return result
     }
 
