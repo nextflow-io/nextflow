@@ -103,20 +103,20 @@ class CacheManager {
         if( !remoteWorkDir || !sessionUuid )
             return
 
+        // upload nextflow cache metadata
         if( !Files.exists(localCachePath) ) {
             log.debug "Local cache path does not exist: $localCachePath — skipping cache backup"
-            return
         }
-
-        // upload nextflow cache metadata
-        try {
-            log.info "Saving cache: ${localCachePath.toUriString()} => ${remoteCachePath.toUriString()}"
-            remoteCachePath.deleteDir()
-            remoteCachePath.parent.mkdirs()
-            FilesEx.copyTo(localCachePath, remoteCachePath)
-        }
-        catch (Throwable e) {
-            log.warn "Failed to backup resume metadata to remote store path: ${remoteCachePath.toUriString()} — cause: ${e}", e
+        else {
+            try {
+                log.info "Saving cache: ${localCachePath.toUriString()} => ${remoteCachePath.toUriString()}"
+                remoteCachePath.deleteDir()
+                remoteCachePath.parent.mkdirs()
+                FilesEx.copyTo(localCachePath, remoteCachePath)
+            }
+            catch (Throwable e) {
+                log.warn "Failed to backup resume metadata to remote store path: ${remoteCachePath.toUriString()} — cause: ${e}", e
+            }
         }
 
         // — upload out file
@@ -157,7 +157,7 @@ class CacheManager {
                 FileHelper.copyPath(localTowerReports, remoteTowerReports, REPLACE_EXISTING)
         }
         catch (Throwable e) {
-            log.warn "Unable to upload tower reprts file: $localTowerReports — reason: ${e.message ?: e}", e
+            log.warn "Unable to upload tower reports file: $localTowerReports — reason: ${e.message ?: e}", e
         }
     }
 
