@@ -3,7 +3,7 @@
 # Operators (legacy)
 
 :::{versionadded} 26.04.0
-See {ref}`operator-join-record` for the core set of operators that are recommended for use with static typing.
+See {ref}`operator-join-record` for the core set of operators that are recommended for use with static typing. See {ref}`migrating-static-types-operators` for a guide on how to replace each legacy operator with core operators.
 :::
 
 (operator-branch)=
