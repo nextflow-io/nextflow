@@ -50,3 +50,4 @@ plugins-prod
 /results
 /x/*
 mise.toml
+.netlify
