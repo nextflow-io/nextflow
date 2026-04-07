@@ -16,8 +16,6 @@
 
 package io.seqera.tower.plugin
 
-import nextflow.script.PlatformMetadata
-
 import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.time.Instant
@@ -696,7 +694,9 @@ class TowerClientTest extends Specification {
             cpus: 1,
             submit: now-2000,
             start: now-1000,
-            complete: now
+            complete: now,
+            accelerator: 2,
+            acceleratorType: 'v100'
         ])
         trace.setResourceAllocation([cpuShares: 2048, memoryMiB: 4096, time: '1h'])
 
@@ -705,6 +705,8 @@ class TowerClientTest extends Specification {
 
         then:
         req.tasks.size() == 1
+        req.tasks[0].accelerator == 2
+        req.tasks[0].acceleratorType == 'v100'
         req.tasks[0].resourceAllocation == [cpuShares: 2048, memoryMiB: 4096, time: '1h']
     }
 
