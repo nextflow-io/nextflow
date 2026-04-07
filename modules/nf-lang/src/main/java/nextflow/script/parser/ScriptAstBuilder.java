@@ -46,6 +46,8 @@ import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.TupleParameter;
 import nextflow.script.ast.WorkflowNode;
+import nextflow.script.types.Record;
+import nextflow.script.types.Tuple;
 import org.antlr.v4.runtime.ANTLRErrorListener;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
@@ -127,7 +129,7 @@ public class ScriptAstBuilder {
     private ScriptParser parser;
     private final GroovydocManager groovydocManager;
 
-    private boolean previewTypes;
+    private boolean typingEnabled;
 
     private Tuple2<ParserRuleContext,Exception> numberFormatError;
 
@@ -261,6 +263,7 @@ public class ScriptAstBuilder {
             var node = featureFlagDeclaration(ffac.featureFlagDeclaration());
             saveLeadingComments(node, ctx);
             moduleNode.addFeatureFlag(node);
+            this.typingEnabled = moduleNode.isTypingEnabled();
         }
 
         else if( ctx instanceof EnumDefAltContext edac ) {
@@ -353,13 +356,7 @@ public class ScriptAstBuilder {
         var result = ast( new FeatureFlagNode(name, value), ctx );
         if( !(value instanceof ConstantExpression) )
             collectSyntaxError(new SyntaxException("Feature flag value must be a literal value (number, string, true/false)", result));
-        checkPreviewTypes(result);
         return result;
-    }
-
-    private void checkPreviewTypes(FeatureFlagNode node) {
-        if( "nextflow.preview.types".equals(node.name) && node.value instanceof ConstantExpression ce )
-            previewTypes = Boolean.TRUE.equals(ce.getValue());
     }
 
     private ParamBlockNode paramsDef(ParamsDefContext ctx) {
@@ -392,6 +389,10 @@ public class ScriptAstBuilder {
     }
 
     private ParamNodeV1 paramDeclarationV1(ParamDeclarationV1Context ctx) {
+        if( typingEnabled ) {
+            collectSyntaxError(new SyntaxException("Legacy parameter is not allowed with `nextflow.preview.types = true` -- use the `params` block instead", ast(new EmptyStatement(), ctx)));
+            return null;
+        }
         Expression target = ast( varX("params"), ctx.PARAMS() );
         for( var ident : ctx.identifier() ) {
             var name = ast( constX(identifier(ident)), ident );
@@ -468,7 +469,7 @@ public class ScriptAstBuilder {
         var inputsV2 = processInputsV2(ctx.body.processInputs());
         var inputsV1 = processInputsV1(ctx.body.processInputs());
         var stagers = processStagers(ctx.body.processStage());
-        var outputs = previewTypes
+        var outputs = typingEnabled
             ? processOutputsV2(ctx.body.processOutputs())
             : processOutputsV1(ctx.body.processOutputs());
         var topics = processTopics(ctx.body.processTopics());
@@ -479,10 +480,10 @@ public class ScriptAstBuilder {
             : blockStatements(ctx.body.processExec().blockStatements());
         var stub = processStub(ctx.body.processStub());
 
-        if( !previewTypes && !stagers.isEmpty() )
+        if( !typingEnabled && !stagers.isEmpty() )
             collectSyntaxError(new SyntaxException("The `stage:` section is not supported in a legacy process", stagers));
 
-        if( !previewTypes && !topics.isEmpty() )
+        if( !typingEnabled && !topics.isEmpty() )
             collectSyntaxError(new SyntaxException("The `topic:` section is not supported in a legacy process", topics));
 
         if( ctx.body.blockStatements() != null ) {
@@ -490,7 +491,7 @@ public class ScriptAstBuilder {
                 collectSyntaxError(new SyntaxException("The `script:` or `exec:` label is required when other sections are present", exec));
         }
 
-        var result = previewTypes
+        var result = typingEnabled
             ? new ProcessNodeV2(name, directives, inputsV2, stagers, outputs, topics, when, type, exec, stub)
             : new ProcessNodeV1(name, directives, inputsV1, outputs, when, type, exec, stub);
         ast(result, ctx);
@@ -516,7 +517,7 @@ public class ScriptAstBuilder {
     }
 
     private Parameter[] processInputsV2(ProcessInputsContext ctx) {
-        if( ctx == null || !previewTypes )
+        if( ctx == null || !typingEnabled )
             return Parameter.EMPTY_ARRAY;
 
         return ctx.processInput().stream()
@@ -550,68 +551,46 @@ public class ScriptAstBuilder {
         else if( ctx.processTupleInput() != null ) {
             result = processTupleInput(ctx.processTupleInput());
         }
-        
+
         saveTrailingComment(result, ctx);
         return result;
     }
 
     private Parameter processRecordInput(ProcessRecordInputContext ctx) {
-        var name = identifier(ctx.identifier());
-        var type = type(ctx.type());
-        if( !"Record".equals(type.getUnresolvedName()) )
-            collectSyntaxError(new SyntaxException("Process record input must have type `Record`", ast( new EmptyStatement(), ctx )));
-
-        var recordNode = ast( new RecordNode(nextRecordName()), ctx );
-        if( ctx.recordBody() != null )
-            recordBody(ctx.recordBody(), recordNode);
-        else
-            collectSyntaxError(new SyntaxException("Missing record body", recordNode));
-
-        return ast( new Parameter(recordNode.getPlainNodeReference(), name), ctx );
+        var components = ctx.nameTypePair().stream()
+            .map((ntp) -> {
+                var name = identifier(ntp.identifier());
+                var fieldType = type(ntp.type());
+                var field = ast( param(fieldType, name), ntp );
+                checkInvalidVarName(field.getName(), field);
+                if( ntp.type() == null )
+                    collectWarning("Record field should have a type annotation", name, field);
+                return field;
+            })
+            .toArray(Parameter[]::new);
+        return ast( new TupleParameter(new ClassNode(Record.class), components), ctx );
     }
 
-    private static AtomicInteger nextRecordId = new AtomicInteger(1);
-
-    private static String nextRecordName() {
-        var id = nextRecordId.getAndIncrement();
-        return "__Record_" + id;
-    }
-
-    private TupleParameter processTupleInput(ProcessTupleInputContext ctx) {
-        var type = type(ctx.type());
-        var numComponents = ctx.identifier().size();
-        var componentTypes = tupleComponentTypes(type, numComponents);
-        var components = new Parameter[numComponents];
-        for( int i = 0; i < numComponents; i++ ) {
-            var ident = ctx.identifier().get(i);
-            var name = identifier(ident);
-            var componentType = componentTypes != null ? componentTypes.get(i) : ClassHelper.dynamicType();
-            var component = ast( param(componentType, name), ident );
-            checkInvalidVarName(component.getName(), component);
-            components[i] = component;
-        }
-        var result = ast( new TupleParameter(type, components), ctx );
-        if( !"Tuple".equals(type.getUnresolvedName()) )
-            collectSyntaxError(new SyntaxException("Process tuple input must have type `Tuple<...>`", result));
-        else if( numComponents == 1 )
+    private Parameter processTupleInput(ProcessTupleInputContext ctx) {
+        var components = ctx.nameTypePair().stream()
+            .map((ntp) -> {
+                var name = identifier(ntp.identifier());
+                var componentType = type(ntp.type());
+                var component = ast( param(componentType, name), ntp );
+                checkInvalidVarName(component.getName(), component);
+                if( ntp.type() == null )
+                    collectWarning("Tuple component should have a type annotation", name, component);
+                return component;
+            })
+            .toArray(Parameter[]::new);
+        var result = ast( new TupleParameter(new ClassNode(Tuple.class), components), ctx );
+        if( ctx.nameTypePair().size() == 1 )
             collectSyntaxError(new SyntaxException("Process tuple input must have more than one component", result));
-        else if( !type.isUsingGenerics() || type.getGenericsTypes().length != numComponents )
-            collectSyntaxError(new SyntaxException("Process tuple input type must have " + numComponents + " type arguments (one for each tuple component)", result));
         return result;
     }
 
-    private List<ClassNode> tupleComponentTypes(ClassNode type, int n) {
-        if( !"Tuple".equals(type.getUnresolvedName()) )
-            return null;
-        if( !type.isUsingGenerics() || type.getGenericsTypes().length != n )
-            return null;
-        return Arrays.stream(type.getGenericsTypes())
-            .map(gt -> gt.getType())
-            .toList();
-    }
-
     private Statement processInputsV1(ProcessInputsContext ctx) {
-        if( ctx == null || previewTypes )
+        if( ctx == null || typingEnabled )
             return EmptyStatement.INSTANCE;
         var statements = ctx.processInput().stream()
             .map(this::processInputV1)
@@ -869,9 +848,15 @@ public class ScriptAstBuilder {
             collectSyntaxError(new SyntaxException("Invalid workflow take", ast( new EmptyStatement(), ctx.statement() )));
             return null;
         }
+        if( !typingEnabled && ctx.type() != null ) {
+            collectSyntaxError(new SyntaxException("Typed input is not allowed in legacy workflow -- set `nextflow.preview.types = true` to use typed workflows in this script", ast(new EmptyStatement(), ctx)));
+            return null;
+        }
         var type = type(ctx.type());
         var name = identifier(ctx.identifier());
         var result = ast( param(type, name), ctx );
+        if( typingEnabled && ctx.type() == null )
+            collectWarning("Typed workflow input should have a type annotation", name, result);
         checkInvalidVarName(name, result);
         saveTrailingComment(result, ctx);
         return result;
@@ -915,6 +900,10 @@ public class ScriptAstBuilder {
         else {
             var target = nameTypePair(ctx.nameTypePair());
             result = stmt(target);
+        }
+        if( !typingEnabled && ctx.nameTypePair() != null && ctx.nameTypePair().type() != null ) {
+            collectSyntaxError(new SyntaxException("Typed output is not allowed in legacy workflow -- set `nextflow.preview.types = true` to use typed workflows in this script", result));
+            return null;
         }
         saveTrailingComment(result, ctx);
         return ast( result, ctx );

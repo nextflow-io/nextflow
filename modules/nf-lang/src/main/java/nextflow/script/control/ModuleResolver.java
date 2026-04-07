@@ -23,6 +23,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Function;
 
+import nextflow.module.spi.RemoteModuleResolverProvider;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.ScriptNode;
 import org.codehaus.groovy.control.SourceUnit;
@@ -36,9 +37,11 @@ import org.codehaus.groovy.control.SourceUnit;
 public class ModuleResolver {
 
     private Compiler compiler;
+    private Path projectDir;
 
-    public ModuleResolver(Compiler compiler) {
+    public ModuleResolver(Path projectDir, Compiler compiler) {
         this.compiler = compiler;
+        this.projectDir = projectDir;
     }
 
     /**
@@ -72,6 +75,7 @@ public class ModuleResolver {
         var source = node.source.getText();
         if( source.startsWith("plugin/") )
             return null;
+
         var uri = sourceUnit.getSource().getURI();
         var includeUri = getIncludeUri(uri, source);
         if( compiler.getSource(includeUri) != null )
@@ -86,8 +90,34 @@ public class ModuleResolver {
         return includeSource;
     }
 
-    private static URI getIncludeUri(URI uri, String source) {
-        Path includePath = Path.of(uri).getParent().resolve(source);
+    private URI getIncludeUri(URI uri, String source) {
+        if( isRemoteModule(source) ) {
+            return RemoteModuleResolverProvider.getInstance()
+                .resolve(source, projectDir)
+                .normalize()
+                .toUri();
+        }
+        else {
+            var parent = Path.of(uri).getParent();
+            return getLocalIncludeUri(parent, source);
+        }
+    }
+
+    /**
+     * Module name pattern matching the canonical format used by ModuleReference.
+     * Scope: lowercase alphanumeric with dots/underscores/hyphens.
+     * Name: one or more slash-separated segments, each lowercase alphanumeric with dots/underscores/hyphens.
+     */
+    private static final String REMOTE_MODULE_PATTERN = "^[a-z0-9][a-z0-9._\\-]*/[a-z][a-z0-9._\\-]*(/[a-z][a-z0-9._\\-]*)*$";
+
+    static boolean isRemoteModule(String source) {
+        if( source.startsWith("/") || source.startsWith("./") || source.startsWith("../") )
+            return false;
+        return source.matches(REMOTE_MODULE_PATTERN);
+    }
+
+    private static URI getLocalIncludeUri(Path parent, String source) {
+        Path includePath = parent.resolve(source);
         if( Files.isDirectory(includePath) )
             includePath = includePath.resolve("main.nf");
         else if( !source.endsWith(".nf") )

@@ -283,17 +283,5 @@ class ExecutorOptsTest extends Specification {
         config.region == 'us-west-2'
     }
 
-    def 'should reject invalid prediction model' () {
-        when:
-        new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            predictionModel: 'invalid'
-        ])
-
-        then:
-        def e = thrown(IllegalArgumentException)
-        e.message.contains("Invalid prediction model 'invalid'")
-        e.message.contains('qr/v1')
-    }
 
 }

@@ -56,6 +56,8 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     public static final String SEQERA = 'seqera'
 
+    private static final String DEFAULT_FUSION_VERSION = '2.6'
+
     private ExecutorOpts seqeraConfig
 
     private SchedClient client
@@ -66,7 +68,15 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     @Override
     protected void register() {
+        applyFusionDefaults()
         createClient()
+    }
+
+    protected void applyFusionDefaults() {
+        final fusionConfig = session.config.fusion as Map
+        if( fusionConfig!=null && !fusionConfig.containerConfigUrl ) {
+            fusionConfig.put('targetVersion', DEFAULT_FUSION_VERSION)
+        }
     }
 
     @Override

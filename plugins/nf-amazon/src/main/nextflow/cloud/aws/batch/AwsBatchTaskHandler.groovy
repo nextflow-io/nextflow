@@ -616,7 +616,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             final diskGb = task.config.getDisk()?.toGiga()?.toInteger() ?: 50
             container.ephemeralStorage( EphemeralStorage.builder().sizeInGiB(diskGb).build() )
             // check for arm64 cpu architecture
-            if( task.config.getArchitecture()?.arch == 'arm64' )
+            if( task.config.getArchitecture()?.dockerArch == 'linux/arm64' )
                 container.runtimePlatform(RuntimePlatform.builder().cpuArchitecture('ARM64').build())
         }
 

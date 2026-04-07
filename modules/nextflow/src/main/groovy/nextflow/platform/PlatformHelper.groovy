@@ -49,7 +49,9 @@ class PlatformHelper {
      *
      * @param endpoint the Platform API endpoint
      * @return the Auth0 domain, or null if not a cloud endpoint
+     * @deprecated Auth0 is no longer used for authentication. Platform OIDC is used instead.
      */
+    @Deprecated
     static String getAuthDomain(String endpoint) {
         /* Check if custom domain is set via environment variable first.
          * Note: We cannot use the env var in a switch case statement because
@@ -77,7 +79,9 @@ class PlatformHelper {
      *
      * @param endpoint the Platform API endpoint
      * @return the Auth0 client ID, or null if not a cloud endpoint
+     * @deprecated Auth0 is no longer used for authentication. Platform OIDC is used instead.
      */
+    @Deprecated
     static String getAuthClientId(String endpoint) {
         /* Check if custom client ID is set via environment variable first.
          * Note: We cannot use the env var in a switch case statement because

@@ -977,6 +977,25 @@ class WaveClientTest extends Specification {
     }
 
     @Unroll
+    def 'should get fusion default url with version override' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [fusion:[snapshots:SNAP, targetVersion:'2.6']] }
+        and:
+        def wave = Spy(new WaveClient(sess))
+
+        expect:
+        wave.defaultFusionUrl(ARCH).toURI().toString() == EXPECTED
+
+        where:
+        ARCH                | SNAP  | EXPECTED
+        'linux/amd64'       | null  | 'https://fusionfs.seqera.io/releases/v2.6-amd64.json'
+        'linux/arm64'       | null  | 'https://fusionfs.seqera.io/releases/v2.6-arm64.json'
+        and:
+        'linux/amd64'       | true  | 'https://fusionfs.seqera.io/releases/v2.6-snap_amd64.json'
+        'linux/arm64'       | true  | 'https://fusionfs.seqera.io/releases/v2.6-snap_arm64.json'
+    }
+
+    @Unroll
     def 'should get s5cmd default url' () {
         given:
         def sess = Mock(Session) {getConfig() >> [:] }
