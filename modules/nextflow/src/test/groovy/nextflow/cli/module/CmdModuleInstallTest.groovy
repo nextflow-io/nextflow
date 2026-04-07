@@ -63,11 +63,11 @@ class CmdModuleInstallTest extends Specification {
 
         // Mock registry client
         def mockClient = Mock(RegistryClient)
-        mockClient.fetchModule('nf-core/fastqc') >> new Module(
+        mockClient.getModule('nf-core/fastqc') >> new Module(
             name: 'nf-core/fastqc',
             latest: new ModuleRelease(version: '1.0.0')
         )
-        mockClient.downloadModule('nf-core/fastqc', '1.0.0', _) >> { String name, String version, Path dest ->
+        mockClient.downloadModuleRelease('nf-core/fastqc', '1.0.0', _) >> { String name, String version, Path dest ->
             Files.write(dest, modulePackage)
             return dest
         }
@@ -104,7 +104,7 @@ class CmdModuleInstallTest extends Specification {
         def modulePackage = createModulePackage('nf-core', 'fastqc', '2.0.0')
 
         def mockClient = Mock(RegistryClient)
-        mockClient.downloadModule(_, _, _) >> { String name, String version, Path dest ->
+        mockClient.downloadModuleRelease(_, _, _) >> { String name, String version, Path dest ->
             Files.write(dest, modulePackage)
             return 'http://registry.com'
         }
@@ -153,7 +153,7 @@ class CmdModuleInstallTest extends Specification {
         def modulePackage = createModulePackage('nf-core', 'fastqc', '2.0.0')
 
         def mockClient = Mock(RegistryClient)
-        mockClient.downloadModule('nf-core/fastqc', '2.0.0', _) >> { String name, String version, Path dest ->
+        mockClient.downloadModuleRelease('nf-core/fastqc', '2.0.0', _) >> { String name, String version, Path dest ->
             Files.write(dest, modulePackage)
             return 'registry'
         }
@@ -194,7 +194,7 @@ class CmdModuleInstallTest extends Specification {
         cmd.root = tempDir
 
         def mockClient = Mock(RegistryClient)
-        mockClient.fetchModule('nf-core/fastqc') >> new Module(
+        mockClient.getModule('nf-core/fastqc') >> new Module(
             name: 'nf-core/fastqc',
             latest: new ModuleRelease(version: '2.0.0')
         )
@@ -221,11 +221,11 @@ class CmdModuleInstallTest extends Specification {
         def modulePackage = createModulePackage('myorg', 'custom-module', '1.0.0')
 
         def mockClient = Mock(RegistryClient)
-        mockClient.fetchModule('myorg/custom-module') >> new Module(
+        mockClient.getModule('myorg/custom-module') >> new Module(
             name: 'myorg/custom-module',
             latest: new ModuleRelease(version: '1.0.0')
         )
-        mockClient.downloadModule('myorg/custom-module', '1.0.0', _) >> { String name, String version, Path dest ->
+        mockClient.downloadModuleRelease('myorg/custom-module', '1.0.0', _) >> { String name, String version, Path dest ->
             Files.write(dest, modulePackage)
             return dest
         }
@@ -253,11 +253,11 @@ class CmdModuleInstallTest extends Specification {
         def modulePackage = createModulePackage('nf-core', 'fastqc', '1.0.0')
 
         def mockClient = Mock(RegistryClient)
-        mockClient.fetchModule('nf-core/fastqc') >> new Module(
+        mockClient.getModule('nf-core/fastqc') >> new Module(
             name: 'nf-core/fastqc',
             latest: new ModuleRelease(version: '1.0.0')
         )
-        mockClient.downloadModule('nf-core/fastqc', '1.0.0', _) >> { String name, String version, Path dest ->
+        mockClient.downloadModuleRelease('nf-core/fastqc', '1.0.0', _) >> { String name, String version, Path dest ->
             Files.write(dest, modulePackage)
             return dest
         }
@@ -285,11 +285,11 @@ class CmdModuleInstallTest extends Specification {
         def modulePackage = createModulePackage('nf-core', 'fastqc', '1.0.0')
 
         def mockClient = Mock(RegistryClient)
-        mockClient.fetchModule('nf-core/fastqc') >> new Module(
+        mockClient.getModule('nf-core/fastqc') >> new Module(
             name: 'nf-core/fastqc',
             latest: new ModuleRelease(version: '1.0.0')
         )
-        mockClient.downloadModule('nf-core/fastqc', '1.0.0', _) >> { String name, String version, Path dest ->
+        mockClient.downloadModuleRelease('nf-core/fastqc', '1.0.0', _) >> { String name, String version, Path dest ->
             Files.write(dest, modulePackage)
             return dest
         }

@@ -77,7 +77,7 @@ class CmdModuleSearchTest extends Specification {
         assert response.results
         // Mock the registry client directly using the test field
         def mockClient = Mock(RegistryClient) {
-            search(_, _) >> response
+            searchModules(_, _) >> response
         }
         cmd.client = mockClient
 
@@ -118,7 +118,7 @@ class CmdModuleSearchTest extends Specification {
         and:
         // Mock the registry client
         def mockClient = Mock(RegistryClient)
-        mockClient.search('fastqc', 10) >> new SearchModulesResponse(
+        mockClient.searchModules('fastqc', 10) >> new SearchModulesResponse(
             query: 'fastqc',
             totalResults: 1,
             results: [result1]
@@ -154,7 +154,7 @@ class CmdModuleSearchTest extends Specification {
         and:
         // Mock empty results
         def mockClient = Mock(RegistryClient)
-        mockClient.search('nonexistent-module', 20) >> new SearchModulesResponse(
+        mockClient.searchModules('nonexistent-module', 20) >> new SearchModulesResponse(
             query: 'nonexistent-module',
             totalResults: 0,
             results: []
@@ -209,7 +209,7 @@ class CmdModuleSearchTest extends Specification {
         and:
         // Mock the client with 5 results
         def mockClient = Mock(RegistryClient)
-        mockClient.search('test', 5) >> new SearchModulesResponse(
+        mockClient.searchModules('test', 5) >> new SearchModulesResponse(
             query: 'test',
             totalResults: 5,
             results: results

@@ -107,7 +107,7 @@ class ModuleResolver {
     }
 
     String resolveVersion(ModuleReference reference) {
-        final version = registryClient.fetchModule(reference.fullName)?.latest?.version
+        final version = registryClient.getModule(reference.fullName)?.latest?.version
         if( !version ) {
             throw new AbortOperationException("Module ${reference} has no published versions")
         }
@@ -163,7 +163,7 @@ class ModuleResolver {
         Path tempFile = Files.createTempFile("nf-module-", ".tgz")
         try {
             // Download and validate integrity using server checksum
-            def downloadUrl = registryClient.downloadModule(reference.fullName, version, tempFile)
+            def downloadUrl = registryClient.downloadModuleRelease(reference.fullName, version, tempFile)
 
             // Install to modules directory (will compute directory checksum for future integrity checks)
             InstalledModule installed = storage.installModule(reference, version, tempFile, downloadUrl)
