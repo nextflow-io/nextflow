@@ -224,11 +224,50 @@ The `collectFile` operator is useful for collecting intermediate results into a 
 
 For other cases, consider the following alternatives:
 
-- Use an `exec` process to write text files (see {ref}`working-with-files`)
-- Use the `groupBy` operator to group  
-- Use `Iterable::toSorted` to sort
+- Use the `collect` and `groupBy` operators to collect and group items
+- Use `Iterable::toSorted` to sort collected items
+- Use an `exec` process to write files (see {ref}`working-with-files`)
 
 You can compose these functions and operators as needed to achieve the desired functionality.
+
+For example:
+
+```nextflow
+nextflow.preview.types = true
+
+process COLLECT_FILE {
+    input:
+    name: String
+    items: List<String>
+
+    output:
+    file(name)
+
+    exec:
+    def path = task.workDir.resolve(name)
+    items.each { item ->
+        path << item
+        path << '\n'
+    }
+}
+
+workflow {
+    val_names = channel.of('alpha', 'beta', 'gamma')
+        .collect()
+        .map { names -> names.toSorted() }
+
+    COLLECT_FILE('sample.txt', val_names)
+        .view { result -> result.text }
+}
+```
+
+Prints:
+
+```
+alpha
+beta
+gamma
+```
 
 ### concat
 
