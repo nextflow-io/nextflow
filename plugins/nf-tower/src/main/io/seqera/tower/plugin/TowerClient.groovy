@@ -737,6 +737,7 @@ class TowerClient implements TraceObserverV2 {
         record.priceModel = trace.getMachineInfo()?.priceModel?.toString()
         record.numSpotInterruptions = trace.getNumSpotInterruptions()
         record.logStreamId = trace.getLogStreamId()
+        record.resourceAllocation = trace.getResourceAllocation()
 
         return record
     }

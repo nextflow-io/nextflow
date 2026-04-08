@@ -1,5 +1,10 @@
 nf-amazon changelog
 ===================
+3.8.2 - 7 Apr 2026
+- Bump org.apache.groovy from 4.0.30 to 4.0.31 (#6985) [62a391588]
+- Bump org.pf4j:pf4j from 3.12.0 to 3.14.1 (#6983) [95aba07a3]
+- Bump io.netty:netty-codec-http2 from 4.1.129.Final to 4.1.132.Final (#6981) [d12cdc61e]
+
 3.8.1 - 26 Mar 2026
 - Fix AWS Batch machine type trace for new instance families (#6952) [06e78ba0b]
 - Fix download of empty files in old minio based S3 transfers (#6944) [ccded1845]

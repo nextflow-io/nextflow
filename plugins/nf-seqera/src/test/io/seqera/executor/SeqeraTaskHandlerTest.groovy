@@ -233,11 +233,13 @@ class SeqeraTaskHandlerTest extends Specification {
             .type('m5.large')
             .zone('us-east-1a')
             .priceModel(SchedPriceModel.SPOT)
+        def resources = new ResourceRequirement().cpuShares(2048).memoryMiB(4096)
         def attempt = new TaskAttempt()
             .index(1)
             .nativeId('arn:aws:ecs:us-east-1:123:task/abc')
             .status(SchedTaskStatus.SUCCEEDED)
             .machineInfo(machineInfo)
+            .resources(resources)
         handler.cachedTaskState = new SchedTaskState()
             .id('tsk-xyz789')
             .attempts([attempt])
@@ -252,6 +254,7 @@ class SeqeraTaskHandlerTest extends Specification {
         trace.getMachineInfo().type == 'm5.large'
         trace.getNumSpotInterruptions() == 2
         trace.getLogStreamId() == 'log-stream-xyz'
+        trace.getResourceAllocation() == [cpuShares: 2048, memoryMiB: 4096]
         trace.getExecutorName() == 'seqera/aws'
     }
 
@@ -577,6 +580,87 @@ class SeqeraTaskHandlerTest extends Specification {
 
         then:
         result == [MY_VAR: 'my_val', SHARED_KEY: 'fusion_val']
+    }
+
+    def 'should return null for getResourceAllocation when cachedTaskState is null'() {
+        given:
+        def handler = createHandler()
+
+        expect:
+        handler.getResourceAllocation() == null
+    }
+
+    def 'should return allocated resources from last task attempt'() {
+        given:
+        def handler = createHandler()
+        def resources = new ResourceRequirement()
+            .cpuShares(2048)
+            .memoryMiB(4096)
+        def attempt = new TaskAttempt()
+            .index(1)
+            .nativeId('task-1')
+            .status(SchedTaskStatus.SUCCEEDED)
+            .resources(resources)
+        handler.cachedTaskState = new SchedTaskState().attempts([attempt])
+
+        when:
+        def result = handler.getResourceAllocation()
+
+        then:
+        result != null
+        result.cpuShares == 2048
+        result.memoryMiB == 4096
+    }
+
+    def 'should use last attempt resources when multiple attempts exist'() {
+        given:
+        def handler = createHandler()
+        def resources1 = new ResourceRequirement().cpuShares(1024).memoryMiB(2048)
+        def resources2 = new ResourceRequirement().cpuShares(4096).memoryMiB(8192)
+        def attempt1 = new TaskAttempt().index(1).nativeId('task-1').status(SchedTaskStatus.FAILED).resources(resources1)
+        def attempt2 = new TaskAttempt().index(2).nativeId('task-2').status(SchedTaskStatus.SUCCEEDED).resources(resources2)
+        handler.cachedTaskState = new SchedTaskState().attempts([attempt1, attempt2])
+
+        when:
+        def result = handler.getResourceAllocation()
+
+        then:
+        result.cpuShares == 4096
+        result.memoryMiB == 8192
+    }
+
+    def 'should fallback to taskState resourceRequirement when no attempts'() {
+        given:
+        def handler = createHandler()
+        def resources = new ResourceRequirement().cpuShares(1024).memoryMiB(2048).time('1h')
+        handler.cachedTaskState = new SchedTaskState()
+            .attempts([])
+            .resourceAllocation(resources)
+
+        when:
+        def result = handler.getResourceAllocation()
+
+        then:
+        result.cpuShares == 1024
+        result.memoryMiB == 2048
+        result.time == '1h'
+    }
+
+    def 'should fallback to taskState resourceRequirement when last attempt has no resources'() {
+        given:
+        def handler = createHandler()
+        def attempt = new TaskAttempt().index(1).nativeId('task-1').status(SchedTaskStatus.SUCCEEDED)
+        def resources = new ResourceRequirement().cpuShares(512).memoryMiB(1024)
+        handler.cachedTaskState = new SchedTaskState()
+            .attempts([attempt])
+            .resourceAllocation(resources)
+
+        when:
+        def result = handler.getResourceAllocation()
+
+        then:
+        result.cpuShares == 512
+        result.memoryMiB == 1024
     }
 
     def 'should return granted time from resource requirement'() {

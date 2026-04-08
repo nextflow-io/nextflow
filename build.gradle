@@ -101,7 +101,7 @@ allprojects {
         }
 
         // JUnit Platform launcher required for Gradle 9.1+ when using useJUnitPlatform()
-        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.5'
 
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:2.4.0'
