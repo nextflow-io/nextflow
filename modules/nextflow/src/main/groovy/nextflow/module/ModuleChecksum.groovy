@@ -24,7 +24,7 @@ import java.nio.file.Path
 /**
  * Nextflow-specific checksum utility that delegates to the shared
  * {@link io.seqera.npr.client.ModuleChecksum} implementation and adds
- * convenience methods for .module-info persistence.
+ * convenience methods for .module_info persistence.
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
@@ -41,14 +41,14 @@ class ModuleChecksum {
     }
 
     /**
-     * Save a checksum to the .module-info file
+     * Save a checksum to the .module_info file
      */
     static void save(Path moduleDir, String checksum) {
         ModuleInfo.save(moduleDir, 'checksum', checksum)
     }
 
     /**
-     * Load a checksum from the .module-info file
+     * Load a checksum from the .module_info file
      */
     static String load(Path moduleDir) {
         ModuleInfo.load(moduleDir, 'checksum')

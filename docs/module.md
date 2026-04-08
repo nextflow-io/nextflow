@@ -363,10 +363,10 @@ Use the `module remove` command to uninstall a module:
 $ nextflow module remove nf-core/fastqc
 ```
 
-By default, both the module files and the `.module-info` file are removed. Use the flags below to control this behaviour:
+By default, both the module files and the `.module_info` file are removed. Use the flags below to control this behaviour:
 
-- `-keep-files`: Remove the `.module-info` file created at install but keep the rest of files
-- `-force`: Force removal even if the module has no `.module-info` file (i.e. not installed from a registry) or has local modifications
+- `-keep-files`: Remove the `.module_info` file created at install but keep the rest of files
+- `-force`: Force removal even if the module has no `.module_info` file (i.e. not installed from a registry) or has local modifications
 
 ### Viewing module information
 
@@ -433,7 +433,7 @@ Registry modules follow a standard directory structure:
 modules/
 └── scope/
     └── module-name/
-        ├── .module-info     # Integrity checksum (generated automatically)
+        ├── .module_info     # Integrity checksum (generated automatically)
         ├── README.md        # Documentation (required for publishing)
         ├── main.nf          # Module script (required)
         ├── meta.yml         # Module spec (required for publishing)

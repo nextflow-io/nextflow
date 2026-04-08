@@ -109,9 +109,9 @@ class ModuleStorageTest extends Specification {
               - fastqc
         '''.stripIndent()
 
-        // Create .module-info file
+        // Create .module_info file
         ModuleChecksum.save(moduleDir, 'abc123def456')
-        def moduleInfoFile = moduleDir.resolve('.module-info')
+        def moduleInfoFile = moduleDir.resolve('.module_info')
 
         when:
         def installed = storage.getInstalledModule(reference)
@@ -151,7 +151,7 @@ class ModuleStorageTest extends Specification {
                 version: 1.0.0
             """.stripIndent()
 
-            // Create .module-info
+            // Create .module_info
             ModuleChecksum.save(moduleDir, 'checksum')
         }
 
@@ -190,7 +190,7 @@ class ModuleStorageTest extends Specification {
                 license: MIT
             """.stripIndent()
 
-            // Create .module-info
+            // Create .module_info
             ModuleChecksum.save(moduleDir, 'checksum')
         }
 
@@ -340,13 +340,13 @@ class ModuleStorageTest extends Specification {
         !removed
     }
 
-    def 'should throw when removing module without .module-info and force is false'() {
+    def 'should throw when removing module without .module_info and force is false'() {
         given:
         def storage = new ModuleStorage(tempDir)
         def reference = new ModuleReference('nf-core', 'fastqc')
         def moduleDir = storage.getModuleDir(reference)
 
-        // Create module WITHOUT .module-info (but with required files for NO_REMOTE_MODULE integrity)
+        // Create module WITHOUT .module_info (but with required files for NO_REMOTE_MODULE integrity)
         Files.createDirectories(moduleDir)
         moduleDir.resolve('main.nf').text = 'process TEST { }'
         moduleDir.resolve('meta.yml').text = 'name: nf-core/fastqc\nversion: 1.0.0\n'
@@ -356,17 +356,17 @@ class ModuleStorageTest extends Specification {
 
         then:
         def e = thrown(AbortOperationException)
-        e.message.contains('.module-info missing')
+        e.message.contains('.module_info missing')
         Files.exists(moduleDir)
     }
 
-    def 'should force remove module without .module-info'() {
+    def 'should force remove module without .module_info'() {
         given:
         def storage = new ModuleStorage(tempDir)
         def reference = new ModuleReference('nf-core', 'fastqc')
         def moduleDir = storage.getModuleDir(reference)
 
-        // Create module WITHOUT .module-info (but with required files for NO_REMOTE_MODULE integrity)
+        // Create module WITHOUT .module_info (but with required files for NO_REMOTE_MODULE integrity)
         Files.createDirectories(moduleDir)
         moduleDir.resolve('main.nf').text = 'process TEST { }'
         moduleDir.resolve('meta.yml').text = 'name: nf-core/fastqc\nversion: 1.0.0\n'

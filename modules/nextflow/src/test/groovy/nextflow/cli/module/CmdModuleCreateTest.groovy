@@ -105,14 +105,14 @@ class CmdModuleCreateTest extends Specification {
         Files.exists(moduleDir.resolve('main.nf'))
         Files.exists(moduleDir.resolve('README.md'))
         Files.exists(moduleDir.resolve('meta.yml'))
-        Files.exists(moduleDir.resolve('.module-info'))
+        Files.exists(moduleDir.resolve('.module_info'))
         moduleDir.resolve('main.nf').text.contains('process TESTMOD')
         moduleDir.resolve('README.md').text.contains('# testorg/testmod')
         moduleDir.resolve('meta.yml').text.contains('name: testorg/testmod')
         moduleDir.resolve('meta.yml').text.contains('version: 1.0.0')
     }
 
-    def 'should create .module-info file'() {
+    def 'should create .module_info file'() {
         given:
         def cmd = Spy(CmdModuleCreate) {
             modulesBase() >> tempDir.resolve('modules')
@@ -123,6 +123,6 @@ class CmdModuleCreateTest extends Specification {
 
         then:
         def moduleDir = tempDir.resolve('modules/myorg/hello')
-        Files.exists(moduleDir.resolve('.module-info'))
+        Files.exists(moduleDir.resolve('.module_info'))
     }
 }

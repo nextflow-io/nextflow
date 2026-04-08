@@ -44,7 +44,7 @@ class CmdModuleRemove extends CmdBase {
     @Parameter(description = "<module>", required = true)
     List<String> args
 
-    @Parameter(names = ["-keep-files"], description = "Remove only .module-info keeping the local files", arity = 0)
+    @Parameter(names = ["-keep-files"], description = "Remove only .module_info keeping the local files", arity = 0)
     boolean keepFiles = false
 
     @Parameter(names = ["-force"], description = "Force remove", arity = 0)

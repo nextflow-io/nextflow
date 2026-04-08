@@ -291,7 +291,7 @@ See {ref}`cli-module-search` for more information.
 
 ### Installing modules
 
-The `module install` command downloads modules from a registry and makes them available in your workflow. Modules are stored locally in the `modules/` directory. An additional `.module-info` file is created during to store installation information such as the module checksum at installation and the registry URL.
+The `module install` command downloads modules from a registry and makes them available in your workflow. Modules are stored locally in the `modules/` directory. An additional `.module_info` file is created during to store installation information such as the module checksum at installation and the registry URL.
 
 Use this to add reusable modules to your pipeline, manage module versions, or update modules to newer versions.
 
@@ -373,7 +373,7 @@ $ nextflow module remove nf-core/fastqc
 $ nextflow module remove nf-core/fastqc -keep-files
 ```
 
-By default, both local files and configuration entries are removed. Use `-keep-files` to remove the configuration entry and `.module-info` while keeping local files.
+By default, both local files and configuration entries are removed. Use `-keep-files` to remove the configuration entry and `.module_info` while keeping local files.
 
 See {ref}`cli-module-remove` for more information.
 

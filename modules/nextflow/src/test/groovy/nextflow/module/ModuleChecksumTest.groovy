@@ -97,7 +97,7 @@ class ModuleChecksumTest extends Specification {
         checksum1 != checksum2
     }
 
-    def 'should exclude .module-info file from computation'() {
+    def 'should exclude .module_info file from computation'() {
         given:
         def moduleDir = tempDir.resolve('module')
         Files.createDirectories(moduleDir)
@@ -107,14 +107,14 @@ class ModuleChecksumTest extends Specification {
         // Compute initial checksum
         def checksum1 = ModuleChecksum.compute(moduleDir)
 
-        // Add .module-info file
+        // Add .module_info file
         ModuleChecksum.save(moduleDir, 'some-checksum-value')
 
         // Compute checksum again
         def checksum2 = ModuleChecksum.compute(moduleDir)
 
         expect:
-        checksum1 == checksum2  // Should be the same, .module-info is ignored
+        checksum1 == checksum2  // Should be the same, .module_info is ignored
     }
 
     def 'should include subdirectories in checksum'() {
@@ -139,7 +139,7 @@ class ModuleChecksumTest extends Specification {
         checksum1 != checksum2  // Checksums should differ
     }
 
-    def 'should save checksum to .module-info file'() {
+    def 'should save checksum to .module_info file'() {
         given:
         def moduleDir = tempDir.resolve('module')
         Files.createDirectories(moduleDir)
@@ -149,12 +149,12 @@ class ModuleChecksumTest extends Specification {
         ModuleChecksum.save(moduleDir, checksumValue)
 
         then:
-        def moduleInfoFile = moduleDir.resolve('.module-info')
+        def moduleInfoFile = moduleDir.resolve('.module_info')
         Files.exists(moduleInfoFile)
         ModuleChecksum.load(moduleDir) == checksumValue
     }
 
-    def 'should load checksum from .module-info file'() {
+    def 'should load checksum from .module_info file'() {
         given:
         def moduleDir = tempDir.resolve('module')
         Files.createDirectories(moduleDir)

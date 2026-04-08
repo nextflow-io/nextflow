@@ -9,7 +9,7 @@
 ## Updates
 
 ### Version 2.7 (2026-03-09)
-- **Renamed `.checksum` to `.module-info`**: Leaves room for additional properties in the future
+- **Renamed `.checksum` to `.module_info`**: Leaves room for additional properties in the future
 - **Removed `@` prefix from module scopes**: Local modules are distinguished from remote modules by presence/absence of `./` prefix
 - **Removed version pinning from config**: Installed module versions are now inferred from the `meta.yml` of each module in the `modules/` directory instead of being declared in `nextflow.config`
 
@@ -78,7 +78,7 @@ include { MY_PROCESS } from './modules/my-process.nf'
 
 **Resolution Order**:
 1. Check local `modules/scope/name/` exists
-2. Verify integrity against `.module-info` file
+2. Verify integrity against `.module_info` file
 3. Apply resolution rules (see below)
 
 **Resolution Rules**:
@@ -90,7 +90,7 @@ include { MY_PROCESS } from './modules/my-process.nf'
 | Exists, checksum mismatch | **Warn**: locally modified, will NOT replace unless `-force` is used |
 
 **Key Behaviors**:
-- **Local modification**: When the local module content was manually changed (checksum mismatch with `.module-info`), Nextflow warns and does NOT override to prevent accidental loss of local changes
+- **Local modification**: When the local module content was manually changed (checksum mismatch with `.module_info`), Nextflow warns and does NOT override to prevent accidental loss of local changes
 - **Force flag**: Use `-force` with `nextflow module install` to override locally modified modules
 
 **Resolution Timing**: Modules resolved at workflow parse time (after plugin resolution at startup).
@@ -293,12 +293,12 @@ Download and install a module to the local `modules/` directory.
 
 **Behavior**:
 1. If `-version` not specified, queries registry for the latest available version
-2. Checks if local module exists and verifies integrity against `.module-info` file
+2. Checks if local module exists and verifies integrity against `.module_info` file
 3. If local module is unmodified and version differs: replaces with requested version
 4. If local module was modified (checksum mismatch): warns and aborts unless `-force` is used
 5. Downloads the module archive from the registry
 6. Extracts to `modules/scope/name/` directory
-7. Stores `.module-info` file from registry's X-Checksum response header
+7. Stores `.module_info` file from registry's X-Checksum response header
 
 **Example**:
 ```bash
@@ -338,7 +338,7 @@ Remove a module from the local `modules/` directory.
 - `scope/name`: Module identifier to remove (required)
 
 **Options**:
-- `-keep-files`: Remove `.module-info` file but keep local files
+- `-keep-files`: Remove `.module_info` file but keep local files
 
 **Behavior**:
 1. Removes the module directory from `modules/scope/name/`
@@ -417,23 +417,23 @@ project-root/
 └── modules/                        # Local module cache
     ├── nf-core/
     │   ├── bwa-align/
-    │   │   ├── .module-info        # Cached registry checksum
+    │   │   ├── .module_info        # Cached registry checksum
     │   │   ├── meta.yml
     │   │   └── main.nf             # Required entry point
     │   └── samtools/view/
-    │       ├── .module-info
+    │       ├── .module_info
     │       ├── meta.yml
     │       └── main.nf             # Required entry point
     └── myorg/
         └── custom-process/
-            ├── .module-info
+            ├── .module_info
             ├── meta.yml
             └── main.nf             # Required entry point
 ```
 
 **Module Integrity Verification**:
-- On install: `.module-info` file created from registry's X-Checksum response header
-- On run: Local module checksum compared against `.module-info` file
+- On install: `.module_info` file created from registry's X-Checksum response header
+- On run: Local module checksum compared against `.module_info` file
 - If match: Proceed without network call
 - If mismatch: Report warning (module may have been locally modified)
 
@@ -457,15 +457,15 @@ project-root/
    a. Check local `modules/scope/name/` exists
       - If exists → read installed version from `modules/scope/name/meta.yml`
       - If missing → download latest version from registry
-   b. Verify local module integrity against `.module-info` file
+   b. Verify local module integrity against `.module_info` file
       - Checksum mismatch → warn and do NOT override (local changes detected)
-3. On download: store module to `modules/scope/name/` with `.module-info` file
+3. On download: store module to `modules/scope/name/` with `.module_info` file
 4. Read `meta.yml` file: Validates Nextflow requirement → Fail if not fulfilled
 5. Parse module's `main.nf` file → make processes available
 
 **Security**:
-- SHA-256 checksum verification on download (stored in `.module-info` file)
-- Integrity verification on run (local checksum vs `.module-info` file)
+- SHA-256 checksum verification on download (stored in `.module_info` file)
+- Integrity verification on run (local checksum vs `.module_info` file)
 - Authentication required for publishing
 - Support for private registries
 

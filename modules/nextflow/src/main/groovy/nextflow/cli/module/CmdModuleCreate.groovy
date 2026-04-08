@@ -108,7 +108,7 @@ class CmdModuleCreate extends CmdBase {
         // create meta.yml
         moduleDir.resolve('meta.yml').text = metaYml(namespace, name)
 
-        // create .module-info so it's recognised as a Nextflow managed module
+        // create .module_info so it's recognised as a Nextflow managed module
         Files.createFile(moduleDir.resolve(ModuleInfo.MODULE_INFO_FILE))
 
         println "Module created successfully at path: $moduleDir"

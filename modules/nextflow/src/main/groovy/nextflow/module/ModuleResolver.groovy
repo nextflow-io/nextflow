@@ -74,7 +74,7 @@ class ModuleResolver {
             if( integrity == ModuleIntegrity.MODIFIED ) {
                 log.warn1 "Module ${reference} has local modifications (checksum mismatch)"
             } else if( integrity == ModuleIntegrity.NO_REMOTE_MODULE ) {
-                log.warn1 "Module ${reference} has no registry origin (.module-info missing)"
+                log.warn1 "Module ${reference} has no registry origin (.module_info missing)"
             }
 
             // Check if version matches

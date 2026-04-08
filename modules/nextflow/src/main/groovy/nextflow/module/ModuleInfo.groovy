@@ -23,7 +23,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 /**
- * Utility class for managing .module-info
+ * Utility class for managing .module_info
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
@@ -31,11 +31,11 @@ import java.nio.file.Path
 @CompileStatic
 class ModuleInfo {
 
-    public static final String MODULE_INFO_FILE = ".module-info"
+    public static final String MODULE_INFO_FILE = ".module_info"
 
 
     /**
-     * Save a property to the .module-info file in the module directory
+     * Save a property to the .module_info file in the module directory
      *
      * @param moduleDir The module directory path
      * @param property The property to save
@@ -52,7 +52,7 @@ class ModuleInfo {
     }
 
     /**
-     * Save a property to the .module-info file in the module directory
+     * Save a property to the .module_info file in the module directory
      *
      * @param moduleDir The module directory path
      * @param properties Map with properties to save
@@ -73,7 +73,7 @@ class ModuleInfo {
     }
 
     /**
-     * Return the value of property from the .module-info file in the module directory
+     * Return the value of property from the .module_info file in the module directory
      *
      * @param moduleDir The module directory path
      * @param moduleDir The module directory path
@@ -91,7 +91,7 @@ class ModuleInfo {
     }
 
     /**
-     * Load all properties from the .module-info file in the module directory
+     * Load all properties from the .module_info file in the module directory
      *
      * @param moduleDir The module directory path
      * @return Map of properties, or null if file doesn't exist

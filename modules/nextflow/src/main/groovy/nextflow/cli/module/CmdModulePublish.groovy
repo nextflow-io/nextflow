@@ -64,7 +64,7 @@ class CmdModulePublish extends CmdBase {
     @TestOnly
     protected RegistryClient client
 
-    //Flag if publish is invoked from a scope/name. In this case we should create/update the .module-info with the correct checksum
+    //Flag if publish is invoked from a scope/name. In this case we should create/update the .module_info with the correct checksum
     private boolean useModuleReference = false
 
     @Override
@@ -137,7 +137,7 @@ class CmdModulePublish extends CmdBase {
             def response = registryClient.publishModuleRelease(spec.name, request, registry)
 
             if (useModuleReference) {
-                // If publish is performed using the module reference we should create/update the .module-info with the correct checksum
+                // If publish is performed using the module reference we should create/update the .module_info with the correct checksum
                 try {
                     ModuleInfo.save(moduleDir, [checksum: ModuleChecksum.compute(moduleDir), registryUrl: registry] )
                 }catch (Exception e){

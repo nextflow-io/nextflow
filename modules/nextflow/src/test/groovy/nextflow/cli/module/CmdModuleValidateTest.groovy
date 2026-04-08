@@ -63,7 +63,7 @@ class CmdModuleValidateTest extends Specification {
             """.stripIndent()
 
         moduleDir.resolve('README.md').text = "# ${namespace}/${name}\n"
-        moduleDir.resolve('.module-info').text = ''
+        moduleDir.resolve('.module_info').text = ''
 
         return moduleDir
     }

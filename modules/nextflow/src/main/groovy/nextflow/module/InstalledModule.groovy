@@ -55,7 +55,7 @@ class InstalledModule {
             return ModuleIntegrity.CORRUPTED
         }
 
-        // Check if .module-info file exists
+        // Check if .module_info file exists
         if( !Files.exists(moduleInfoFile) ) {
             return ModuleIntegrity.NO_REMOTE_MODULE
         }
@@ -85,6 +85,6 @@ class InstalledModule {
 enum ModuleIntegrity {
     VALID,              // Checksum matches
     MODIFIED,           // Checksum mismatch (local changes)
-    NO_REMOTE_MODULE,   // No .module-info file (local-only module, no registry origin)
+    NO_REMOTE_MODULE,   // No .module_info file (local-only module, no registry origin)
     CORRUPTED           // Missing required files
 }

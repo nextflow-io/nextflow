@@ -1199,7 +1199,7 @@ The `module` command provides a comprehensive system for managing registry-based
 
 : Install a module from the registry into your project.
 : Downloaded modules are stored in the `modules/` directory.
-: The `.module-info` file is created in the module directory to store additional information of the installed module.
+: The `.module_info` file is created in the module directory to store additional information of the installed module.
 : The following options are available:
 
   `-version`
@@ -1282,10 +1282,10 @@ The `module` command provides a comprehensive system for managing registry-based
 : The following options are available:
 
   `-force`
-  : Force removal even if the module has no `.module-info` file (i.e. not installed from a registry) or has local modifications.
+  : Force removal even if the module has no `.module_info` file (i.e. not installed from a registry) or has local modifications.
 
   `-keep-files`
-  : Remove the `.module-info` but keep local files in the `modules/` directory.
+  : Remove the `.module_info` but keep local files in the `modules/` directory.
 
 : **Examples:**
 

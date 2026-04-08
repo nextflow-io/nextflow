@@ -178,7 +178,7 @@ class CmdModuleListTest extends Specification {
             description: Test module
         """.stripIndent()
 
-        // Create .module-info
+        // Create .module_info
         ModuleInfo.save(moduleDir, [checksum: ModuleChecksum.compute(moduleDir), registryUrl: 'http://registry.com'])
 
         return moduleDir

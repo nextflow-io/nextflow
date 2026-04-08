@@ -50,7 +50,7 @@ class ModuleInfoTest extends Specification {
         ModuleInfo.load(moduleDir, 'checksum') == 'abc123'
     }
 
-    def 'should create .module-info file on save'() {
+    def 'should create .module_info file on save'() {
         given:
         def moduleDir = tempDir.resolve('module')
         Files.createDirectories(moduleDir)

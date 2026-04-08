@@ -300,7 +300,7 @@ class CmdModuleInstallTest extends Specification {
 
         then:
         def moduleDir = tempDir.resolve('modules/nf-core/fastqc')
-        Files.exists(moduleDir.resolve('.module-info'))
+        Files.exists(moduleDir.resolve('.module_info'))
 
         and:
         def checksum = ModuleChecksum.load(moduleDir)

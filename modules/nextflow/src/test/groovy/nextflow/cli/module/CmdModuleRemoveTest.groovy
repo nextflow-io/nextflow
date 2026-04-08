@@ -103,11 +103,11 @@ class CmdModuleRemoveTest extends Specification {
         e.message.contains('Cannot use both -keep-files and -force options')
     }
 
-    def 'should fail to remove module without .module-info when force not set'() {
+    def 'should fail to remove module without .module_info when force not set'() {
         given:
         def storage = new ModuleStorage(tempDir)
         def reference = new ModuleReference('nf-core', 'fastqc')
-        createTestModule(storage, reference)   // no .module-info created
+        createTestModule(storage, reference)   // no .module_info created
 
         and:
         def cmd = new CmdModuleRemove()
@@ -119,14 +119,14 @@ class CmdModuleRemoveTest extends Specification {
 
         then:
         def e = thrown(AbortOperationException)
-        e.message.contains('.module-info missing')
+        e.message.contains('.module_info missing')
     }
 
-    def 'should force remove module without .module-info'() {
+    def 'should force remove module without .module_info'() {
         given:
         def storage = new ModuleStorage(tempDir)
         def reference = new ModuleReference('nf-core', 'fastqc')
-        def moduleDir = createTestModule(storage, reference)   // no .module-info created
+        def moduleDir = createTestModule(storage, reference)   // no .module_info created
 
         and:
         def cmd = new CmdModuleRemove()

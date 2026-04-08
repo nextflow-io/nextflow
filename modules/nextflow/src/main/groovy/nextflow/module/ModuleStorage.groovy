@@ -128,7 +128,7 @@ class ModuleStorage {
     }
 
     /**
-     * List all installed modules by scanning for directories containing a .module-info marker file.
+     * List all installed modules by scanning for directories containing a .module_info marker file.
      *
      * @return List of InstalledModule objects
      */
@@ -411,7 +411,7 @@ class ModuleStorage {
 
         try ( def tarStream = Files.list(currentPath)) {
             tarStream.each { Path path ->
-                // Skip .module-info file when creating bundle
+                // Skip .module_info file when creating bundle
                 if (path.fileName.toString() == MODULE_INFO_FILE) {
                     return
                 }
