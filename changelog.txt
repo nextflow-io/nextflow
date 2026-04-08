@@ -1,5 +1,21 @@
 NEXTFLOW CHANGE-LOG
 ===================
+26.03.2-edge - 7 Apr 2026
+- Add `module create` subcommand (#6992) [d6639a5e0]
+- Add `module spec` command (#6859) [049e2a40e]
+- Add `module validate` subcommand (#6993) [b2fa370bd]
+- Add compute env ID and provider support to Seqera executor (#6906) [4c2eb9390]
+- Add resourceAllocation field to trace record (#6973) [a2742939c]
+- Fix NPE in GitLab/Gitea getGitCredentials when password is null but token is set (#7007) [0a202d090]
+- Fix missing version for junit-platform-launcher dependency (#7011) [9e721f205]
+- Replace Auth0 with Platform OIDC PKCE for auth login (#6953) [f39afea97]
+- Typed workflows (#6881) [a12bde35e]
+- Use inline metadata from trace create response (#6976) [58736b7cc]
+- Use npr-client API instead of custom ModuleRegistryClient (#7012) [8e06945a4]
+- Bump nf-amazon@3.8.2
+- Bump nf-seqera@0.17.0
+- Bump nf-tower@1.24.0
+
 26.03.1-edge - 26 Mar 2026
 - Add `-project-dir` option to `lint` command (#6728) [1679b9f3a]
 - Add platform-related metadata to WorkflowRun lineage record (#6545) [fc4d7dd6e]

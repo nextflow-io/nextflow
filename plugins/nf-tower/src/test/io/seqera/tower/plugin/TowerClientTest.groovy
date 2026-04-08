@@ -16,8 +16,6 @@
 
 package io.seqera.tower.plugin
 
-import nextflow.script.PlatformMetadata
-
 import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.time.Instant
@@ -683,7 +681,7 @@ class TowerClientTest extends Specification {
         req.tasks[0].logStreamId == 'arn:aws:logs:us-east-1:123456789:log-group:/ecs/task:log-stream:abc123'
     }
 
-    def 'should include accelerator request in task map'() {
+    def 'should include resourceAllocation in task map'() {
         given:
         def client = Spy(new TowerClient())
         client.getWorkflowProgress(true) >> new WorkflowProgress()
@@ -700,6 +698,7 @@ class TowerClientTest extends Specification {
             accelerator: 2,
             acceleratorType: 'v100'
         ])
+        trace.setResourceAllocation([cpuShares: 2048, memoryMiB: 4096, time: '1h'])
 
         when:
         def req = client.makeTasksReq([trace])
@@ -708,6 +707,7 @@ class TowerClientTest extends Specification {
         req.tasks.size() == 1
         req.tasks[0].accelerator == 2
         req.tasks[0].acceleratorType == 'v100'
+        req.tasks[0].resourceAllocation == [cpuShares: 2048, memoryMiB: 4096, time: '1h']
     }
 
     def 'should return error response on http request timeout' () {

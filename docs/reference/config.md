@@ -1442,7 +1442,10 @@ The following settings are available:
 : The compute backend provider type (e.g. `'aws'`, `'local'`). When specified, used together with `region` to select the matching compute environment.
 
 `seqera.executor.region`
-: The AWS region for task execution (default: `'eu-central-1'`).
+: The cloud region for task execution.
+
+`seqera.executor.computeEnvId`
+: The Seqera Platform compute environment ID. When specified, the scheduler resolves the compute environment directly by this ID instead of inferring a suitable compute environment. Used as a fallback when the workflow launch does not include a compute environment reference.
 
 `seqera.executor.autoLabels`
 : When `true`, automatically adds workflow metadata labels to the session with the `nextflow.io/` prefix (default: `false`). The following labels are added: `projectName`, `userName`, `runName`, `sessionId`, `resume`, `revision`, `commitId`, `repository`, `manifestName`, `runtimeVersion`. A `seqera.io/runId` label is also added, computed as a SipHash of the session ID and run name.

@@ -15,7 +15,9 @@
  */
 package nextflow.script.control;
 
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -31,9 +33,13 @@ import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.TupleParameter;
 import nextflow.script.ast.WorkflowNode;
+import nextflow.script.types.Record;
+import nextflow.script.types.Tuple;
+import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.DynamicVariable;
+import org.codehaus.groovy.ast.GenericsType;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
@@ -50,6 +56,9 @@ import static nextflow.script.ast.ASTUtils.*;
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 public class ScriptResolveVisitor extends ScriptVisitorSupport {
+
+    private static final ClassNode RECORD_TYPE = ClassHelper.makeCached(Record.class);
+    private static final ClassNode TUPLE_TYPE = ClassHelper.makeCached(Tuple.class);
 
     private SourceUnit sourceUnit;
 
@@ -151,6 +160,13 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
         for( var input : asFlatParams(node.inputs) ) {
             resolver.resolveOrFail(input.getType(), input);
         }
+        for( var input : node.inputs ) {
+            var type = input.getType();
+            if( input instanceof TupleParameter tp && RECORD_TYPE.equals(type) )
+                resolveRecordInput(tp);
+            if( input instanceof TupleParameter tp && TUPLE_TYPE.equals(type) )
+                resolveTupleInput(tp);
+        }
         resolver.visit(node.directives);
         resolver.visit(node.stagers);
         resolveTypedOutputs(node.outputs);
@@ -159,6 +175,22 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
         resolver.visit(node.when);
         resolver.visit(node.exec);
         resolver.visit(node.stub);
+    }
+
+    private void resolveRecordInput(TupleParameter tp) {
+        var type = tp.getType();
+        for( var param : tp.components ) {
+            var fn = new FieldNode(param.getName(), Modifier.PUBLIC, param.getType(), type, null);
+            fn.setDeclaringClass(type);
+            type.addField(fn);
+        }
+    }
+
+    private void resolveTupleInput(TupleParameter tp) {
+        var genericsTypes = Arrays.stream(tp.components)
+            .map(p -> new GenericsType(p.getType()))
+            .toArray(GenericsType[]::new);
+        tp.getType().setGenericsTypes(genericsTypes);
     }
 
     @Override
