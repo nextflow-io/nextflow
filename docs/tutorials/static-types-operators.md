@@ -216,7 +216,28 @@ ch_input_pacbio.view()
 
 ### buffer, collate
 
-These operators are {ref}`non-deterministic <cache-nondeterministic-inputs>`. Use `List::collate()` instead.
+These operators are {ref}`non-deterministic <cache-nondeterministic-inputs>`. Use `groupBy` or `List::collate()` instead.
+
+```nextflow
+// before
+channel.of(1..9)
+    .collate(3)
+    .view()
+
+// [1, 2, 3]
+// [4, 5, 6]
+// [7, 8, 9]
+
+// after
+channel.of(1..9)
+    .map { i -> tuple((i - 1).intdiv(3) + 1, i) }
+    .groupBy()
+    .view()
+
+// [1, [1, 2, 3]]
+// [2, [4, 5, 6]]
+// [3, [7, 8, 9]]
+```
 
 ### collectFile
 
