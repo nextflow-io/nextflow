@@ -34,6 +34,11 @@ class SeqeraDatasetClientTest extends Specification {
         tc.endpoint >> endpoint
         return tc
     }
+    private TowerClient spyTower(String endpoint = 'https://api.example.com') {
+        def tc = Spy(TowerClient)
+        tc.@endpoint = endpoint
+        return tc
+    }
 
     private static TowerClient.Response ok(String body) {
         new TowerClient.Response(200, body)
@@ -47,7 +52,7 @@ class SeqeraDatasetClientTest extends Specification {
 
     def "getUserInfo returns parsed user map"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest('https://api.example.com/user-info') >> ok(JsonOutput.toJson([user: [id: 42, userName: 'testuser']]))
         def client = new SeqeraDatasetClient(tc)
 
@@ -61,7 +66,7 @@ class SeqeraDatasetClientTest extends Specification {
 
     def "getUserInfo throws AbortOperationException on 401"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest(_) >> error(401)
         def client = new SeqeraDatasetClient(tc)
 
@@ -79,7 +84,7 @@ class SeqeraDatasetClientTest extends Specification {
         def body = JsonOutput.toJson([orgsAndWorkspaces: [
             [orgId: 1, orgName: 'acme', workspaceId: 10, workspaceName: 'research', workspaceFullName: 'acme/research']
         ]])
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest('https://api.example.com/user/42/workspaces') >> ok(body)
         def client = new SeqeraDatasetClient(tc)
 

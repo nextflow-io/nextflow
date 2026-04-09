@@ -23,6 +23,7 @@ import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import io.seqera.http.HxClient
 import nextflow.exception.AbortOperationException
+import nextflow.util.Duration
 import spock.lang.Specification
 /**
  *
@@ -236,6 +237,43 @@ class TowerClientTest extends Specification {
 
         cleanup:
         wireMock.stop()
+    }
+
+    def 'should build URL without query params'() {
+        given:
+        def client = new TowerClient()
+        client.@endpoint = 'https://api.cloud.seqera.io'
+
+        when:
+        def url = client.buildUrl( '/workflow/launch', [:])
+
+        then:
+        url == 'https://api.cloud.seqera.io/workflow/launch'
+    }
+
+    def 'should build URL with query params'() {
+        given:
+        def client = new TowerClient()
+        client.@endpoint = 'https://api.cloud.seqera.io'
+
+        when:
+        def url = client.buildUrl( '/workflow/launch', [workspaceId: '12345'])
+
+        then:
+        url.contains('https://api.cloud.seqera.io/workflow/launch?')
+        url.contains('workspaceId=12345')
+    }
+
+    def 'should URL encode query params'() {
+        given:
+        def client = new TowerClient()
+        client.@endpoint = 'https://api.cloud.seqera.io'
+
+        when:
+        def url = client.buildUrl( '/workflow', [name: 'test workflow'])
+
+        then:
+        url.contains('name=test+workflow')
     }
 
 }

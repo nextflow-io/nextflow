@@ -30,9 +30,9 @@ class SeqeraFileSystemTest extends Specification {
 
     private static final String ENDPOINT = 'https://api.example.com'
 
-    private TowerClient mockTower() {
-        def tc = Mock(TowerClient)
-        tc.endpoint >> ENDPOINT
+    private TowerClient spyTower() {
+        def tc = Spy(TowerClient)
+        tc.@endpoint = ENDPOINT
         return tc
     }
 
@@ -60,7 +60,7 @@ class SeqeraFileSystemTest extends Specification {
 
     def "loadOrgWorkspaceCache is called only once across multiple invocations"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         final fs = buildFs(tc)
 
         when:
@@ -74,7 +74,7 @@ class SeqeraFileSystemTest extends Specification {
 
     def "listOrgNames returns distinct org names from cache"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
         final fs = buildFs(tc)
@@ -90,7 +90,7 @@ class SeqeraFileSystemTest extends Specification {
 
     def "listWorkspaceNames returns workspace names for the given org"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
         final fs = buildFs(tc)
@@ -107,7 +107,7 @@ class SeqeraFileSystemTest extends Specification {
 
     def "resolveWorkspaceId returns correct ID for known org and workspace"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
         final fs = buildFs(tc)
@@ -121,7 +121,7 @@ class SeqeraFileSystemTest extends Specification {
 
     def "resolveWorkspaceId throws NoSuchFileException for unknown org"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
         final fs = buildFs(tc)
@@ -135,7 +135,7 @@ class SeqeraFileSystemTest extends Specification {
 
     def "resolveWorkspaceId throws NoSuchFileException for unknown workspace within known org"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
         final fs = buildFs(tc)
@@ -151,7 +151,7 @@ class SeqeraFileSystemTest extends Specification {
 
     def "resolveDatasets populates cache and returns datasets"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >>
             ok(JsonOutput.toJson([datasets: [
                 [id: 'ds-1', name: 'samples', version: 1L, mediaType: 'text/csv',
@@ -169,7 +169,7 @@ class SeqeraFileSystemTest extends Specification {
 
     def "resolveDatasets returns cached result on second call without extra API request"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         final datasetsJson = JsonOutput.toJson([datasets: [
             [id: 'ds-1', name: 'samples', version: 1L, mediaType: 'text/csv',
              dateCreated: '2024-01-01T00:00:00Z', lastUpdated: '2024-01-02T00:00:00Z']
@@ -186,7 +186,7 @@ class SeqeraFileSystemTest extends Specification {
 
     def "invalidateDatasetCache forces re-fetch on next resolveDatasets call"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         final datasetsJson = JsonOutput.toJson([datasets: [
             [id: 'ds-1', name: 'samples', version: 1L, mediaType: 'text/csv',
              dateCreated: '2024-01-01T00:00:00Z', lastUpdated: '2024-01-02T00:00:00Z']

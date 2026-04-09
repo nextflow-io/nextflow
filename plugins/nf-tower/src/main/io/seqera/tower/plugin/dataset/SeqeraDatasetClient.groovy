@@ -16,6 +16,10 @@
 
 package io.seqera.tower.plugin.dataset
 
+import io.seqera.tower.plugin.exception.ForbiddenException
+import io.seqera.tower.plugin.exception.NotFoundException
+import io.seqera.tower.plugin.exception.UnauthorizedException
+
 import java.nio.file.AccessDeniedException
 import java.nio.file.NoSuchFileException
 import java.time.OffsetDateTime
@@ -53,26 +57,34 @@ class SeqeraDatasetClient {
      * @return current user info (id, userName, etc.) from GET /user-info
      */
     Map<String, Object> getUserInfo() {
-        final url = "${endpoint}/user-info"
-        log.debug "SeqeraDatasetClient GET $url"
-        final resp = towerClient.sendApiRequest(url)
-        checkResponse(resp, url)
-        final json = new JsonSlurper().parseText(resp.message) as Map
-        return json.user as Map<String, Object>
+        try {
+             return towerClient.getUserInfo()
+        }catch( UnauthorizedException e ){
+            throw new AbortOperationException(e.getMessage())
+        }catch( ForbiddenException e){
+            throw new AccessDeniedException("${endpoint}/user-info", null, e.message)
+        }catch(NotFoundException e){
+            throw new NoSuchFileException("${endpoint}/user-info")
+        }
     }
 
     /**
      * @return all orgs and workspaces accessible to the given user from GET /user/{userId}/workspaces
      */
     List<OrgAndWorkspaceDto> listUserWorkspacesAndOrgs(long userId) {
-        final url = "${endpoint}/user/${userId}/workspaces"
-        log.debug "SeqeraDatasetClient GET $url"
-        final resp = towerClient.sendApiRequest(url)
-        checkResponse(resp, url)
-        final json = new JsonSlurper().parseText(resp.message) as Map
-        final list = json.orgsAndWorkspaces as List<Map>
-        return list.collect { m -> mapOrgAndWorkspace(m) }
+        try {
+            final list = towerClient.listUserWorkspacesAndOrgs(userId as String)
+            return list.collect { m -> mapOrgAndWorkspace(m) }
+        } catch( UnauthorizedException e ){
+            throw new AbortOperationException(e.getMessage())
+        } catch( ForbiddenException e){
+            throw new AccessDeniedException("${endpoint}/user/$userId/workspaces", null, e.message)
+        } catch(NotFoundException e){
+            throw new NoSuchFileException("${endpoint}/user/$userId/workspaces")
+        }
     }
+
+
 
     /**
      * @return all datasets in the given workspace from GET /datasets?workspaceId={workspaceId}

@@ -26,6 +26,9 @@ import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import io.seqera.http.HxClient
+import io.seqera.tower.plugin.exception.ForbiddenException
+import io.seqera.tower.plugin.exception.NotFoundException
+import io.seqera.tower.plugin.exception.UnauthorizedException
 import io.seqera.util.trace.TraceUtils
 import nextflow.BuildInfo
 import nextflow.exception.AbortOperationException
@@ -302,6 +305,9 @@ class TowerClient {
         if( verb == 'GET' )
             return builder.GET().build()
 
+        if( verb == 'DELETE' )
+            return builder.DELETE().build()
+
         assert payload, "Tower request cannot be empty"
         builder.header('Content-Type', 'application/json; charset=utf-8')
 
@@ -377,5 +383,109 @@ class TowerClient {
         }
         return result
     }
+
+    String buildUrl( String path, Map queryParams) {
+        def url = new StringBuilder(endpoint)
+        if( !path.startsWith('/') ) {
+            url.append('/')
+        }
+        url.append(path)
+
+        if( queryParams && !queryParams.isEmpty() ) {
+            url.append('?')
+            url.append(queryParams.collect { k, v -> "${URLEncoder.encode(k.toString(), 'UTF-8')}=${URLEncoder.encode(v.toString(), 'UTF-8')}" }.join('&'))
+        }
+
+        return url.toString()
+    }
+
+    Map apiGet(String path, Map queryParams = [:]) {
+        final url = buildUrl( path, queryParams)
+
+        final response = sendApiRequest(url)
+        checkResponse(response, url)
+        return new JsonSlurper().parseText(response.message) as Map
+    }
+
+    Map apiPost(String path, Map queryParams, Map payload) {
+        final url = buildUrl( path, queryParams)
+        final response= sendApiRequest(url, payload, 'POST')
+        checkResponse(response, url)
+        return response.message ? new JsonSlurper().parseText(response.message) as Map : [:]
+    }
+
+    /**
+     * @return current user info (id, userName, etc.) from GET /user-info
+     */
+    Map<String, Object> getUserInfo() {
+        final json = apiGet("/user-info")
+        return json.user as Map<String, Object>
+    }
+
+    /**
+     * Calls the Seqera Platform to retrieve the workflow information.
+     *
+     * @param workflowId Id of the workflow
+     * @return Map containing workflow information
+     * @throws RuntimeException if the API call fails
+     */
+    Map getWorkflowDetails( String workflowId, Map queryParams = [:]) {
+        final json = apiGet("/workflow/${workflowId}", queryParams)
+        return json.workflow as Map
+    }
+
+
+    List<Map> listUserWorkspacesAndOrgs(String userId) {
+        final json = apiGet("/user/${userId}/workspaces")
+        return json.orgsAndWorkspaces as List<Map>
+    }
+
+    private static void checkResponse(Response resp, String url) {
+        if (!resp.error) return
+        final code = resp.code
+        if (code == 401)
+            throw new UnauthorizedException("Seqera authentication failed — check tower.accessToken or TOWER_ACCESS_TOKEN")
+        if (code == 403)
+            throw new ForbiddenException("Forbidden — check permissions")
+        if (code == 404)
+            throw new NotFoundException("Resource $url not found")
+        throw new Exception("Seqera API error: HTTP ${code} for ${url}${resp.message ? ' - ' + resp.message :''}")
+    }
+
+    /**
+     * Calls the Seqera Platform to retrieve the user's workspaces information
+     * and select the one matching with the workspace Id.
+     *
+     * @param userId Id of the workspace user
+     * @param workspaceId Id of the workspace
+     * @return Map containing workspace information
+     * @throws RuntimeException if the API call fails
+     */
+    Map getUserWorkspaceDetails( String userId, String workspaceId) {
+        if( !userId || !workspaceId ) {
+            return null
+        }
+        try {
+            final orgsAndWorkspaces = listUserWorkspacesAndOrgs(userId)
+
+            final workspace = orgsAndWorkspaces.find { ((Map) it).workspaceId?.toString() == workspaceId }
+            if( workspace ) {
+                final ws = workspace as Map
+                return [
+                    orgName          : ws.orgName,
+                    workspaceId      : ws.workspaceId,
+                    workspaceName    : ws.workspaceName,
+                    workspaceFullName: ws.workspaceFullName,
+                    roles            : ws.roles
+                ]
+            }
+
+            return null
+        } catch( Exception e ) {
+            log.debug("Failed to get workspace details for workspace ${workspaceId}: ${e.message}", e)
+            return null
+        }
+    }
+
 
 }

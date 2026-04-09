@@ -19,6 +19,7 @@ package io.seqera.tower.plugin.auth
 import io.seqera.http.HxClient
 import io.seqera.platform.auth.oidc.OidcLoginFlow
 import io.seqera.tower.plugin.BaseCommandImpl
+import io.seqera.tower.plugin.TowerClient
 
 import java.awt.*
 import java.net.http.HttpRequest
@@ -26,9 +27,9 @@ import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
+import java.time.Duration
 import java.util.List
 
-import groovy.json.JsonBuilder
 import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
@@ -142,8 +143,8 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         })
 
         // Verify login by calling /user-info
-        final userInfo = commonApi.getUserInfo(createHttpClient(accessToken), apiUrl)
-        println "\n\n${colorize('✔', 'green', true)} Authentication successful"
+        final userInfo = createTowerClient(apiUrl, accessToken).getUserInfo()
+        println "\n\n${colorize('✔', 'green', true)} Authentication successful ($userInfo.userName)"
 
         // Generate PAT
         final pat = generatePAT(accessToken, apiUrl)
@@ -218,24 +219,17 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         final timestamp = new Date().format("yyyy-MM-dd-HH-mm")
         final tokenName = "nextflow-auth-${username}-${timestamp}"
 
-        final requestBody = new JsonBuilder([name: tokenName]).toString()
-
-        final client = createHttpClient(accessToken)
+        final client = createTowerClient(apiUrl, accessToken)
         log.debug "Platform auth API - POST ${tokensUrl}"
-        final request = HttpRequest.newBuilder()
-            .uri(URI.create(tokensUrl))
-            .header('Content-Type', 'application/json')
-            .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-            .build()
 
-        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
+        final response = client.sendApiRequest(tokensUrl, [name: tokenName], 'POST' )
 
-        if( response.statusCode() != 200 ) {
-            final error = response.body() ?: "HTTP ${response.statusCode()}"
+        if( response.code != 200 ) {
+            final error = response.message ?: "HTTP ${response.code}"
             throw new RuntimeException("Failed to generate PAT: ${error}")
         }
 
-        final json = new JsonSlurper().parseText(response.body()) as Map
+        final json = new JsonSlurper().parseText(response.message) as Map
         return json.accessKey as String
     }
 
@@ -313,7 +307,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
 
         // Validate token by calling /user-info API
         try {
-            final userInfo = commonApi.getUserInfo( createHttpClient(existingToken as String), apiUrl)
+            final userInfo = createTowerClient(apiUrl, existingToken as String).getUserInfo()
             printColored(" - Token is valid for user: $userInfo.userName", "dim")
         } catch( Exception e ) {
             printColored("Failed to validate token: ${e.message}", "red")
@@ -361,18 +355,14 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
     }
 
     private void deleteTokenViaApi(String token, String apiUrl, String tokenId) {
-        final client = createHttpClient(token)
+        final client = createTowerClient(apiUrl, token)
         final url = "${apiUrl}/tokens/${tokenId}"
         log.debug "Platform auth API - DELETE ${url}"
-        final request = HttpRequest.newBuilder()
-            .uri(URI.create(url))
-            .DELETE()
-            .build()
 
-        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
+        final response = client.sendApiRequest(url, null, 'DELETE')
 
-        if( response.statusCode() != 200 && response.statusCode() != 204 ) {
-            final error = response.body() ?: "HTTP ${response.statusCode()}"
+        if( response.code != 200 && response.code != 204 ) {
+            final error = response.message ?: "HTTP ${response.message}"
             throw new RuntimeException("Failed to delete token: ${error}")
         }
 
@@ -440,8 +430,8 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
 
         try {
             // Get user info to validate token and get user ID
-            final httpClient = createHttpClient(existingToken as String)
-            final userInfo = commonApi.getUserInfo(httpClient, endpoint as String)
+            final httpClient = createTowerClient(endpoint as String, existingToken as String)
+            final userInfo = httpClient.getUserInfo()
             printColored(" - Authenticated as: $userInfo.userName", "dim")
             println ""
 
@@ -452,7 +442,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
             configChanged |= configureEnabled(config)
 
             // Configure workspace
-            final workspaceResult = configureWorkspace(httpClient, config, endpoint as String, userInfo.id as String)
+            final workspaceResult = configureWorkspace(httpClient, config, userInfo.id as String)
             configChanged = configChanged || (workspaceResult.changed as boolean)
 
             // Configure compute environment for the workspace (always run after workspace selection)
@@ -460,7 +450,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
             def workspaceMetadata = workspaceResult.metadata as Map
             if( !workspaceMetadata && currentWorkspaceId ) {
                 // Get workspace metadata if not already available (e.g., when user kept existing workspace)
-                workspaceMetadata = commonApi.getUserWorkspaceDetails(httpClient, userInfo.id as String, endpoint as String, currentWorkspaceId)
+                workspaceMetadata = httpClient.getUserWorkspaceDetails(userInfo.id as String, currentWorkspaceId)
             }
             final computeEnvResult = configureComputeEnvironment(config as Map, existingToken as String, endpoint as String, currentWorkspaceId, workspaceMetadata)
             configChanged = configChanged || (computeEnvResult.changed as boolean)
@@ -508,11 +498,10 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
      *
      * @param client
      * @param config Configuration map to update
-     * @param endpoint Seqera Platform API endpoint
      * @param userId User ID for fetching workspaces
      * @return Map containing 'changed' (boolean) and 'metadata' (workspace info)
      */
-    private Map configureWorkspace(HxClient client, Map config, String endpoint, String userId) {
+    private Map configureWorkspace(TowerClient client, Map config, String userId) {
         // Check if TOWER_WORKFLOW_ID environment variable is set
         final envWorkspaceId = SysEnv.get('TOWER_WORKFLOW_ID')
         if( envWorkspaceId ) {
@@ -522,7 +511,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         }
 
         // Get all workspaces for the user
-        final workspaces = listUserWorkspaces(client, endpoint, userId)
+        final workspaces = listUserWorkspaces(client, userId)
 
         if( !workspaces ) {
             println "\nNo workspaces found for your account."
@@ -548,23 +537,21 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         }
     }
 
-    private String getCurrentWorkspaceName(List<Object> workspaces, currentWorkspaceId) {
+    private String getCurrentWorkspaceName(List<Map> workspaces, currentWorkspaceId) {
         final currentWorkspace = workspaces.find { ((Map) it).workspaceId.toString() == currentWorkspaceId?.toString() } as Map
         return currentWorkspace ? "${currentWorkspace.orgName} / ${currentWorkspace.workspaceName}" : "None (Personal workspace)"
     }
 
-    private Map selectWorkspaceFromAll(Map config, List workspaces, final currentWorkspaceId) {
+    private Map selectWorkspaceFromAll(Map config, List<Map> workspaces, final currentWorkspaceId) {
         println "\nAvailable workspaces:"
         final isPersonalWorkspace = !currentWorkspaceId
         final currentIndicator = isPersonalWorkspace ? colorize(' (current)', 'bold') : ''
         println "  0. ${colorize('None (Personal workspace)', 'cyan', true)} ${colorize('[no organization]', 'dim', true)}${currentIndicator}"
 
         // Sort workspaces by org name, then workspace name
-        final sortedWorkspaces = workspaces.sort { a, b ->
-            final aMap = a as Map
-            final bMap = b as Map
-            final orgCompare = (aMap.orgName as String ?: '').compareToIgnoreCase(bMap.orgName as String ?: '')
-            orgCompare != 0 ? orgCompare : (aMap.workspaceName as String ?: '').compareToIgnoreCase(bMap.workspaceName as String ?: '')
+        final sortedWorkspaces = workspaces.sort { Map a, Map b ->
+            final orgCompare = (a.orgName as String ?: '').compareToIgnoreCase(b.orgName as String ?: '')
+            orgCompare != 0 ? orgCompare : (a.workspaceName as String ?: '').compareToIgnoreCase(b.workspaceName as String ?: '')
         }
 
         sortedWorkspaces.eachWithIndex { workspace, index ->
@@ -605,9 +592,9 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
 
     private Map selectWorkspaceByOrg(Map config, Map orgWorkspaces, final currentWorkspaceId) {
         // Get current workspace info for prompts
-        final allWorkspaces = []
+        final allWorkspaces = [] as List<Map>
         orgWorkspaces.values().each { workspaceList ->
-            allWorkspaces.addAll(workspaceList as List)
+            allWorkspaces.addAll(workspaceList as List<Map>)
         }
         final currentWorkspaceDisplay = getCurrentWorkspaceName(allWorkspaces, currentWorkspaceId)
 
@@ -683,7 +670,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
     private Map configureComputeEnvironment(Map config, String accessToken, String endpoint, String workspaceId, Map workspaceMetadata) {
         try {
             // Get compute environments for the workspace
-            final computeEnvs = listComputeEnvironments(createHttpClient(accessToken), endpoint, workspaceId)
+            final computeEnvs = listComputeEnvironments(createTowerClient(endpoint, accessToken), workspaceId)
 
             // If there are zero compute environments, log a warning and provide a link
             if( computeEnvs.isEmpty() ) {
@@ -836,7 +823,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
 
         if( accessToken ) {
             try {
-                final userInfo = commonApi.getUserInfo(createHttpClient(accessToken), endpoint)
+                final userInfo = createTowerClient(endpoint, accessToken).getUserInfo()
                 final currentUser = userInfo.userName as String
                 status.table.add(['Authentication', "${colorize('✔ OK', 'green')} (user: $currentUser)".toString(), tokenSource])
             } catch( Exception e ) {
@@ -858,9 +845,9 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
             // Try to get workspace name and roles from API if we have a token
             def workspaceDetails = null
             if( accessToken ) {
-                final httpClient = createHttpClient(accessToken)
-                final userInfo = commonApi.getUserInfo(httpClient, endpoint)
-                workspaceDetails = commonApi.getUserWorkspaceDetails(httpClient, userInfo.id as String, endpoint, workspaceId)
+                final httpClient = createTowerClient(endpoint, accessToken)
+                final userInfo = httpClient.getUserInfo()
+                workspaceDetails = httpClient.getUserWorkspaceDetails(userInfo.id as String, workspaceId)
             }
 
             if( workspaceDetails ) {
@@ -883,12 +870,12 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         // Compute environment and work directory
         def computeEnv = null
         if( accessToken ) {
-            final httpClient = createHttpClient(accessToken)
+            final httpClient = createTowerClient(endpoint, accessToken)
             try {
                 if( config['tower.computeEnvId'] ) {
-                    computeEnv = getComputeEnvironment(httpClient, endpoint, config['tower.computeEnvId'] as String, workspaceId)
+                    computeEnv = getComputeEnvironment(httpClient, config['tower.computeEnvId'] as String, workspaceId)
                 } else {
-                    final computeEnvs = listComputeEnvironments(httpClient, endpoint, workspaceId)
+                    final computeEnvs = listComputeEnvironments(httpClient, workspaceId)
                     computeEnv = computeEnvs.find { ((Map) it).primary == true } as Map
                 }
             } catch( Exception e ) {
@@ -1007,7 +994,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
 
     protected boolean checkApiConnection(String endpoint) {
         try {
-            final client = createHttpClient()
+            final client = HxClient.newBuilder().connectTimeout(Duration.ofMillis(API_TIMEOUT_MS)).build()
             final url = "${endpoint}/service-info"
             log.debug "Platform auth API - GET ${url}"
             final request = HttpRequest.newBuilder()

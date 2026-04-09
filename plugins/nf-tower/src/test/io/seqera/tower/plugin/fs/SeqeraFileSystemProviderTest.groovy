@@ -35,9 +35,9 @@ class SeqeraFileSystemProviderTest extends Specification {
 
     private static final String ENDPOINT = 'https://api.example.com'
 
-    private TowerClient mockTower() {
-        def tc = Mock(TowerClient)
-        tc.endpoint >> ENDPOINT
+    private TowerClient spyTower() {
+        def tc = Spy(TowerClient)
+        tc.@endpoint = ENDPOINT
         return tc
     }
 
@@ -86,7 +86,7 @@ class SeqeraFileSystemProviderTest extends Specification {
 
     def "newInputStream resolves latest version and downloads correct content"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
         tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >> ok(datasetsJson())
@@ -108,7 +108,7 @@ class SeqeraFileSystemProviderTest extends Specification {
 
     def "newInputStream uses pinned version when @ver suffix given"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
         tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >> ok(datasetsJson())
@@ -130,7 +130,7 @@ class SeqeraFileSystemProviderTest extends Specification {
 
     def "newInputStream throws NoSuchFileException for unknown dataset"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
         tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >>
@@ -150,7 +150,7 @@ class SeqeraFileSystemProviderTest extends Specification {
 
     def "newInputStream throws NoSuchFileException for unknown pinned version"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
         tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >> ok(datasetsJson())
@@ -170,7 +170,7 @@ class SeqeraFileSystemProviderTest extends Specification {
 
     def "readAttributes returns directory attributes for depth < 4"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
 
@@ -187,7 +187,7 @@ class SeqeraFileSystemProviderTest extends Specification {
 
     def "readAttributes returns file attributes for dataset path"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
         tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >> ok(datasetsJson())
@@ -207,7 +207,7 @@ class SeqeraFileSystemProviderTest extends Specification {
 
     def "newDirectoryStream on root returns org names"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
 
@@ -224,7 +224,7 @@ class SeqeraFileSystemProviderTest extends Specification {
 
     def "newDirectoryStream on org returns workspace names"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
 
@@ -241,7 +241,7 @@ class SeqeraFileSystemProviderTest extends Specification {
 
     def "newDirectoryStream on workspace returns datasets resource type"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         final fs = buildFs(tc)
         final wsPath = new SeqeraPath(fs, 'seqera://acme/research')
 
@@ -255,7 +255,7 @@ class SeqeraFileSystemProviderTest extends Specification {
 
     def "newDirectoryStream on datasets dir returns dataset names"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
         tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >> ok(datasetsJson())
@@ -273,7 +273,7 @@ class SeqeraFileSystemProviderTest extends Specification {
 
     def "newDirectoryStream on datasets dir with empty workspace returns empty stream"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
         tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >>
@@ -291,7 +291,7 @@ class SeqeraFileSystemProviderTest extends Specification {
 
     def "newDirectoryStream filter is applied to entries"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
         tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >> ok(JsonOutput.toJson([datasets: [
@@ -317,7 +317,7 @@ class SeqeraFileSystemProviderTest extends Specification {
 
     def "readAttributes throws NoSuchFileException for unknown org"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
 
@@ -333,7 +333,7 @@ class SeqeraFileSystemProviderTest extends Specification {
 
     def "newInputStream throws NoSuchFileException containing dataset name for missing dataset"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
         tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >>
@@ -352,7 +352,7 @@ class SeqeraFileSystemProviderTest extends Specification {
 
     def "getUserInfo 401 propagates as AbortOperationException"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest("${ENDPOINT}/user-info") >> new TowerClient.Response(401, 'Unauthorized')
 
         final fs = buildFs(tc)
@@ -367,7 +367,7 @@ class SeqeraFileSystemProviderTest extends Specification {
 
     def "getUserInfo 403 propagates as AccessDeniedException"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         tc.sendApiRequest("${ENDPOINT}/user-info") >> new TowerClient.Response(403, 'Forbidden')
 
         final fs = buildFs(tc)
@@ -382,7 +382,7 @@ class SeqeraFileSystemProviderTest extends Specification {
 
     def "SeqeraPath constructor throws InvalidPathException for path with empty workspace segment"() {
         given:
-        def tc = mockTower()
+        def tc = spyTower()
         final fs = buildFs(tc)
 
         when:
