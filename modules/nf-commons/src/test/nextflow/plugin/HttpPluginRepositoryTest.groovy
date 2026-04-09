@@ -104,14 +104,26 @@ class HttpPluginRepositoryTest extends Specification {
         r1.requires == ">=24.10.0"
     }
 
-    // ------------------------------------------------------------------------
-
-    def 'handle prefetch error when metadata service is unavailable'() {
+    def 'catch prefetch exceptions'() {
         setup:
         wiremock.stop()
 
         when:
         unit.prefetch([new PluginRef("nf-fake")])
+
+        then:
+        noExceptionThrown()
+        unit.getPlugins() == [:]
+    }
+
+    // ------------------------------------------------------------------------
+
+    def 'handle fetchMetadata error when metadata service is unavailable'() {
+        setup:
+        wiremock.stop()
+
+        when:
+        unit.fetchMetadata([new PluginRef("nf-fake")])
 
         then:
         def err = thrown PluginRuntimeException
@@ -120,7 +132,7 @@ class HttpPluginRepositoryTest extends Specification {
 
     // ------------------------------------------------------------------------
 
-    def 'handle prefetch error with percent chars in error message'() {
+    def 'handle fetchMetadata error with percent chars in error message'() {
         given:
         // Test that URLs containing '%' characters (like URL-encoded values) are handled
         // correctly when an exception occurs. The '%' must be escaped to '%%' to avoid
@@ -129,7 +141,7 @@ class HttpPluginRepositoryTest extends Specification {
         wiremock.stop()
 
         when:
-        repoWithEncodedUrl.prefetch([new PluginRef("nf-fake")])
+        repoWithEncodedUrl.fetchMetadata([new PluginRef("nf-fake")])
 
         then:
         def err = thrown PluginRuntimeException
@@ -140,7 +152,7 @@ class HttpPluginRepositoryTest extends Specification {
 
     // ------------------------------------------------------------------------
 
-    def 'handle prefetch error when metadata service returns an error response'() {
+    def 'handle fetchMetadata error when metadata service returns an error response'() {
         given:
         wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))
             .willReturn(aResponse()
@@ -148,7 +160,7 @@ class HttpPluginRepositoryTest extends Specification {
                 .withBody("Server error!")))
 
         when:
-        unit.prefetch([new PluginRef("nf-fake")])
+        unit.fetchMetadata([new PluginRef("nf-fake")])
 
         then:
         def err = thrown PluginRuntimeException
@@ -177,7 +189,7 @@ class HttpPluginRepositoryTest extends Specification {
 
     // ------------------------------------------------------------------------
 
-    def 'handle prefetch error caused by nextflow sending a bad request to metadata service'() {
+    def 'handle fetchMetadata error caused by nextflow sending a bad request to metadata service'() {
         given:
         wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))
             .willReturn(aResponse()
@@ -188,7 +200,7 @@ class HttpPluginRepositoryTest extends Specification {
                 }""")))
 
         when:
-        unit.prefetch([new PluginRef("nf-fake")])
+        unit.fetchMetadata([new PluginRef("nf-fake")])
 
         then:
         def err = thrown PluginRuntimeException

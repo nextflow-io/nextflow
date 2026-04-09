@@ -83,7 +83,14 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
     @Override
     void prefetch(List<PluginRef> plugins) {
         if (plugins && !plugins.isEmpty()) {
-            this.plugins = fetchMetadata(plugins)
+            try {
+                this.plugins = fetchMetadata(plugins)
+            }
+            catch (Exception e) {
+                log.warn "Failed to prefetch plugin metadata - ${e.message}"
+                log.debug "Plugin metadata prefetch error details", e
+                this.plugins = new HashMap<>()
+            }
         }
     }
 
