@@ -49,17 +49,15 @@ class ConfigParserV2 implements ConfigParser {
 
     private boolean stripSecrets
 
-    private List<String> appliedProfiles
-
-    private Set<String> declaredProfiles = []
+    private List<String> enabledProfiles
 
     private Map<String,Object> declaredParams = [:]
 
-    private GroovyShell groovyShell
+    private Set<String> declaredProfiles = []
 
     @Override
     ConfigParserV2 setProfiles(List<String> profiles) {
-        this.appliedProfiles = profiles
+        this.enabledProfiles = profiles
         return this
     }
 
@@ -107,13 +105,13 @@ class ConfigParserV2 implements ConfigParser {
     }
 
     @Override
-    Set<String> getDeclaredProfiles() {
-        return declaredProfiles
+    Map<String,Object> getDeclaredParams() {
+        return declaredParams
     }
 
     @Override
-    Map<String,Object> getDeclaredParams() {
-        return declaredParams
+    Set<String> getDeclaredProfiles() {
+        return declaredProfiles
     }
 
     /**
@@ -140,12 +138,13 @@ class ConfigParserV2 implements ConfigParser {
             script.setStripSecrets(stripSecrets)
             script.setParams(cliParams)
             script.setConfigParams(configParams)
-            script.setProfiles(appliedProfiles)
+            script.setProfiles(enabledProfiles)
             script.run()
+            script.applyProfiles()
 
             final target = script.getTarget()
-            declaredProfiles.addAll(script.getDeclaredProfiles())
             declaredParams.putAll(script.getDeclaredParams())
+            declaredProfiles.addAll(script.getDeclaredProfiles())
             return Bolts.toConfigObject(target)
         }
         catch( CompilationFailedException e ) {

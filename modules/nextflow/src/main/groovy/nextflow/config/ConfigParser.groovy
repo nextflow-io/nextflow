@@ -33,13 +33,6 @@ interface ConfigParser {
     ConfigParser setIgnoreIncludes(boolean value)
 
     /**
-     * Toggle whether to strip secrets when rendering the config.
-     *
-     * @param value
-     */
-    ConfigParser setStripSecrets(boolean value)
-
-    /**
      * Toggle whether to render the source code of closures.
      *
      * @param value
@@ -52,6 +45,13 @@ interface ConfigParser {
      * @param value
      */
     ConfigParser setStrict(boolean value)
+
+    /**
+     * Toggle whether to strip secrets when rendering the config.
+     *
+     * @param value
+     */
+    ConfigParser setStripSecrets(boolean value)
 
     /**
      * Define variables which will be made available to the config script.
@@ -80,13 +80,13 @@ interface ConfigParser {
     ConfigObject parse(Path path)
 
     /**
-     * Get the set of declared profiles.
-     */
-    Set<String> getDeclaredProfiles()
-
-    /**
      * Get the map of declared params.
      */
     Map<String,Object> getDeclaredParams()
+
+    /**
+     * Get the set of declared profiles.
+     */
+    Set<String> getDeclaredProfiles()
 
 }

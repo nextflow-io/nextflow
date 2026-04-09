@@ -348,6 +348,59 @@ class ConfigParserV2Test extends Specification {
 
     }
 
+    def 'should apply profiles after config parsing' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def main = folder.resolve('nextflow.config')
+        def snippet = folder.resolve('snippet.config')
+
+        main.text = """\
+            profiles {
+                special {
+                    process {
+                        cpus = 8
+                        ext.args = "special"
+
+                        withLabel: example {
+                            memory = '16 GB'
+                        }
+                    }
+                }
+            }
+
+            includeConfig "$snippet"
+            """.stripIndent()
+
+        snippet.text = """\
+            process {
+                cpus = 2
+                ext.args = ""
+
+                withLabel: example {
+                    memory = '4 GB'
+                }
+            }
+            """.stripIndent()
+
+        when:
+        def config = new ConfigParserV2().parse(main)
+        then:
+        config.process.cpus == 2
+        config.process.ext.args == ''
+        config.process.'withLabel:example'.memory == '4 GB'
+
+        when:
+        config = new ConfigParserV2().setProfiles(['special']).parse(main)
+        then:
+        config.process.cpus == 8
+        config.process.ext.args == 'special'
+        config.process.'withLabel:example'.memory == '16 GB'
+
+        cleanup:
+        folder.deleteDir()
+    }
+
     def 'should return the set of declared profiles' () {
 
         given:

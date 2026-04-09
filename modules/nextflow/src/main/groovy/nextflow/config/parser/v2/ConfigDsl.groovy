@@ -22,6 +22,7 @@ import java.nio.file.Path
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.exception.ConfigParseException
@@ -49,13 +50,13 @@ class ConfigDsl extends Script {
 
     private Map cliParams
 
-    private List<String> profiles
+    private List<String> enabledProfiles
 
     private Map target = [params: [:]]
 
-    private Set<String> declaredProfiles = []
-
     private Map<String,Object> declaredParams = [:]
+
+    private Map<String,Closure> declaredProfiles = [:]
 
     void setIgnoreIncludes(boolean value) {
         this.ignoreIncludes = value
@@ -86,24 +87,24 @@ class ConfigDsl extends Script {
         (target.params as Map).putAll(params)
     }
 
-    void setProfiles(List<String> profiles) {
-        this.profiles = profiles
-    }
-
-    void declareProfile(String profile) {
-        declaredProfiles.add(profile)
-    }
-
-    Set<String> getDeclaredProfiles() {
-        return declaredProfiles
+    void setProfiles(List<String> enabledProfiles) {
+        this.enabledProfiles = enabledProfiles
     }
 
     void declareParam(String name, Object value) {
         declaredParams.put(name, value)
     }
 
+    void declareProfile(String profile, Closure closure) {
+        declaredProfiles.put(profile, closure)
+    }
+
     Map<String,Object> getDeclaredParams() {
         return declaredParams
+    }
+
+    Set<String> getDeclaredProfiles() {
+        return declaredProfiles.keySet()
     }
 
     Map getTarget() {
@@ -204,7 +205,6 @@ class ConfigDsl extends Script {
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
         cl.setDelegate(dsl)
         cl.call()
-        dsl.apply()
     }
 
     private ConfigBlockDsl blockDsl(List<String> names) {
@@ -219,7 +219,7 @@ class ConfigDsl extends Script {
             return new ProcessDsl(this, names)
 
         if( names.size() == 1 && names.first() == 'profiles' )
-            return new ProfilesDsl(this, profiles)
+            return new ProfilesDsl(this)
 
         return new ConfigBlockDsl(this, names)
     }
@@ -258,10 +258,11 @@ class ConfigDsl extends Script {
                 .setBinding(binding.getVariables())
                 .setParams(cliParams)
                 .setConfigParams(target.params as Map)
-                .setProfiles(profiles)
+                .setProfiles(enabledProfiles)
         final config = parser.parse(configText, includePath)
-        declaredProfiles.addAll(parser.getDeclaredProfiles())
         declaredParams.putAll(parser.getDeclaredParams())
+        for( final profile : parser.getDeclaredProfiles() )
+            declaredProfiles.put(profile, null)
 
         final ctx = navigate(names)
         ctx.putAll(Bolts.deepMerge(ctx, config))
@@ -284,6 +285,29 @@ class ConfigDsl extends Script {
         }
         catch (IOException e) {
             throw new IOException("Cannot read config file include: ${includePath.toUriString()}", e)
+        }
+    }
+
+    /**
+     * Apply profiles to the config.
+     */
+    @PackageScope
+    void applyProfiles() {
+        if( enabledProfiles != null ) {
+            // apply profiles in the order they were specified
+            for( final name : enabledProfiles ) {
+                final closure = declaredProfiles[name]
+                if( closure )
+                    block(Collections.emptyList(), closure)
+            }
+        }
+        else {
+            // append all profiles to the config map
+            for( final name : declaredProfiles.keySet() ) {
+                final closure = declaredProfiles[name]
+                if( closure )
+                    block(['profiles', name], closure)
+            }
         }
     }
 
@@ -314,9 +338,6 @@ class ConfigDsl extends Script {
 
         void includeConfig(String includeFile) {
             dsl.includeConfig(scope, includeFile)
-        }
-
-        void apply() {
         }
     }
 
@@ -349,12 +370,8 @@ class ConfigDsl extends Script {
     }
 
     private static class ProfilesDsl extends ConfigBlockDsl {
-        private List<String> profiles
-        private Map<String,Closure> blocks = [:]
-
-        ProfilesDsl(ConfigDsl dsl, List<String> profiles) {
+        ProfilesDsl(ConfigDsl dsl) {
             super(dsl, Collections.<String>emptyList())
-            this.profiles = profiles
         }
 
         @Override
@@ -364,32 +381,12 @@ class ConfigDsl extends Script {
 
         @Override
         void block(String name, Closure closure) {
-            blocks[name] = closure
-            dsl.declareProfile(name)
+            dsl.declareProfile(name, closure)
         }
 
         @Override
         void includeConfig(String includeFile) {
             throw new ConfigParseException("Only profile blocks are allowed in the `profiles` scope")
-        }
-
-        @Override
-        void apply() {
-            if( profiles != null ) {
-                // apply profiles in the order they were specified
-                for( final name : profiles ) {
-                    final closure = blocks[name]
-                    if( closure )
-                        dsl.block(scope, closure)
-                }
-            }
-            else {
-                // append all profiles to the config map
-                for( final name : blocks.keySet() ) {
-                    final closure = blocks[name]
-                    dsl.block(['profiles', name], closure)
-                }
-            }
         }
     }
 
