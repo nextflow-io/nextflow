@@ -16,13 +16,11 @@
 
 package io.seqera.tower.plugin
 
-import com.github.tomakehurst.wiremock.WireMockServer
-import com.github.tomakehurst.wiremock.client.WireMock
-import nextflow.util.Duration
-
 import java.net.http.HttpResponse
 import java.time.Instant
 
+import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.client.WireMock
 import io.seqera.http.HxClient
 import nextflow.exception.AbortOperationException
 import spock.lang.Specification
@@ -239,6 +237,5 @@ class TowerClientTest extends Specification {
         cleanup:
         wireMock.stop()
     }
-
 
 }
