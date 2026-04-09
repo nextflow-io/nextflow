@@ -518,7 +518,7 @@ class TowerObserverTest extends Specification {
         req.tasks[0].logStreamId == 'arn:aws:logs:us-east-1:123456789:log-group:/ecs/task:log-stream:abc123'
     }
 
-    def 'should include accelerator request in task map'() {
+    def 'should include resourceAllocation in task map'() {
         given:
         def session = Mock(Session)
         def observer = Spy(newObserver(session))
@@ -536,6 +536,7 @@ class TowerObserverTest extends Specification {
             accelerator: 2,
             acceleratorType: 'v100'
         ])
+        trace.setResourceAllocation([cpuShares: 2048, memoryMiB: 4096, time: '1h'])
 
         when:
         def req = observer.makeTasksReq([trace])
@@ -544,6 +545,7 @@ class TowerObserverTest extends Specification {
         req.tasks.size() == 1
         req.tasks[0].accelerator == 2
         req.tasks[0].acceleratorType == 'v100'
+        req.tasks[0].resourceAllocation == [cpuShares: 2048, memoryMiB: 4096, time: '1h']
     }
 
 }
