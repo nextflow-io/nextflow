@@ -61,6 +61,72 @@ When Fusion's `.fusion/trace.json` file is missing (e.g., task was killed before
 
 - **Fusion Trace File**: JSON file at `.fusion/trace.json` in the task work directory, produced by the Fusion client. Contains `proc`, `gpu`, and `cgroup` blocks with runtime metrics.
 - **GPU Metrics Block**: The `gpu` object within `trace.json`, containing fields: `name`, `mem`, `driver`, `active_time`, `pct`, `peak`, `pct_mem`, `peak_mem`, `avg_mem`, `peak_mem_used`, `avg_mem_bw_util`, `peak_mem_bw_util`.
+
+#### Example `.fusion/trace.json`
+
+```json
+{
+  "proc": {
+    "realtime": 660541,
+    "pct_cpu": 1045,
+    "cpu_name": "Intel(R) Xeon(R) Platinum 8259CL CPU @ 2.50GHz",
+    "arch": "linux/amd64",
+    "rchar": 14112539262,
+    "wchar": 12668821375,
+    "syscr": 1823378,
+    "syscw": 169293,
+    "read_bytes": 8011776,
+    "write_bytes": 102400,
+    "pct_mem": 56,
+    "vmem": 39015152,
+    "rss": 14826068,
+    "peak_vmem": 39047920,
+    "peak_rss": 15775480,
+    "vol_ctxt": 413015,
+    "inv_ctxt": 1540
+  },
+  "gpu": {
+    "name": "Tesla T4",
+    "mem": 15360,
+    "driver": "580.126.09",
+    "active_time": 651030,
+    "pct": 75,
+    "peak": 100,
+    "pct_mem": 40.11115345483025,
+    "peak_mem": 74.140625,
+    "avg_mem": 6161,
+    "peak_mem_used": 11388,
+    "avg_mem_bw_util": 43,
+    "peak_mem_bw_util": 83
+  },
+  "cgroup": {
+    "version": "v2",
+    "memory_current": 25469927424,
+    "memory_peak": 41178980352,
+    "memory_rss": 67919872,
+    "memory_peak_rss": 14783070208,
+    "cpu_usage_usec": 785302059,
+    "cpu_user_usec": 549732867,
+    "cpu_system_usec": 235569192,
+    "io_read_bytes": 8503296,
+    "io_write_bytes": 12671918080,
+    "io_read_ops": 98,
+    "io_write_ops": 97975,
+    "memory_limit": 77309411328,
+    "cpu_quota": 0,
+    "cpu_period": 0,
+    "memory_oom_kills": 0,
+    "cpu_nr_throttled": 0,
+    "cpu_throttled_usec": 0,
+    "cpu_psi_some": 582969,
+    "cpu_psi_full": 582860,
+    "memory_psi_some": 0,
+    "memory_psi_full": 0,
+    "io_psi_some": 1038270,
+    "io_psi_full": 1037514
+  }
+}
+```
 - **TraceRecord GPU field**: New transient field on `TraceRecord` that carries the GPU metrics map through the existing trace pipeline to the Tower observer, following the `resourceAllocation` pattern.
 
 ## Success Criteria *(mandatory)*
