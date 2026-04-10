@@ -36,6 +36,7 @@ import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FileMutex
 import org.pf4j.InvalidPluginDescriptorException
+import org.pf4j.ManifestPluginDescriptorFinder
 import org.pf4j.PluginDependency
 import org.pf4j.PluginRuntimeException
 import org.pf4j.PluginState
@@ -155,6 +156,11 @@ class PluginUpdater extends UpdateManager {
                 log.trace "Prefetching plugin metadata from repository: ${repo.getClass().getSimpleName()} [${repo.id}]; plugins=${plugins}"
                 repo.prefetch(plugins)
             }
+        }
+        // When remote registry an no plugins detected after prefetch, add local repo to work with downloaded plugins
+        if( !offline && getPluginsMap().isEmpty() ){
+            final localRepo = new LocalUpdateRepository('downloaded', pluginsStore)
+            this.addRepository(localRepo)
         }
     }
 
