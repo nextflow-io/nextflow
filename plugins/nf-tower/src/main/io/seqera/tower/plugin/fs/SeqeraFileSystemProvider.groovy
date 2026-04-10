@@ -23,6 +23,7 @@ import java.nio.file.CopyOption
 import java.nio.file.DirectoryStream
 import java.nio.file.FileStore
 import java.nio.file.FileSystem
+import java.nio.file.FileSystemAlreadyExistsException
 import java.nio.file.FileSystemNotFoundException
 import java.nio.file.Files
 import java.nio.file.LinkOption
@@ -77,7 +78,7 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         checkScheme(uri)
         final key = fsKey(uri, env)
         if (fileSystems.containsKey(key))
-            return fileSystems.get(key)
+            throw new FileSystemAlreadyExistsException("seqera:// filesystem already exists")
         final TowerClient towerClient = TowerFactory.client()
         if (!towerClient)
             throw new IllegalStateException("seqera:// paths require tower.accessToken to be configured")
@@ -88,7 +89,7 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
     }
 
     @Override
-    FileSystem getFileSystem(URI uri) {
+    synchronized FileSystem getFileSystem(URI uri) {
         checkScheme(uri)
         final fs = fileSystems.values().find { true }
         if (!fs) throw new FileSystemNotFoundException("No seqera:// filesystem has been created yet")
@@ -122,7 +123,7 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         final fs = sp.getFileSystem() as SeqeraFileSystem
         final workspaceId = fs.resolveWorkspaceId(sp.org, sp.workspace)
         final dataset = fs.resolveDataset(workspaceId, sp.datasetName)
-        final version = resolveVersion(fs, dataset, sp.version)
+        final version = resolveVersion(fs, dataset, sp)
         log.debug "Downloading dataset '${sp.datasetName}' version ${version.version} (${version.fileName}) from workspace $workspaceId"
         return fs.client.downloadDataset(dataset.id, String.valueOf(version.version), version.fileName, dataset.workspaceId)
     }
@@ -290,7 +291,8 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
     }
 
     private static String fsKey(URI uri, Map<String, ?> env) {
-        // Key by scheme — one filesystem per JVM (TowerClient is also a singleton per session)
+        // Key by scheme — one filesystem per JVM (TowerClient is also a singleton per session).
+        // Limitation: if different endpoints/tokens are ever needed concurrently, this will share the same FS instance.
         return uri.scheme
     }
 
@@ -307,21 +309,22 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
             throw new NoSuchFileException("seqera://${sp.org}/${sp.workspace}/${sp.resourceType}", null, "Unsupported resource type")
     }
 
-    private static DatasetVersionDto resolveVersion(SeqeraFileSystem fs, DatasetDto dataset, String pinnedVersion) throws IOException {
-        final versions = fs.client.listVersions(dataset.id, dataset.workspaceId)
+    private static DatasetVersionDto resolveVersion(SeqeraFileSystem fs, DatasetDto dataset, SeqeraPath sp) throws IOException {
+        final pinnedVersion = sp.version
+        final versions = fs.resolveVersions(dataset.id, dataset.workspaceId)
         if (versions.isEmpty())
-            throw new NoSuchFileException("seqera:///datasets/${dataset.name}", null, "No versions available for dataset '${dataset.name}'")
+            throw new NoSuchFileException(sp.toString(), null, "No versions available for dataset '${dataset.name}'")
         if (pinnedVersion) {
             final found = versions.find { DatasetVersionDto v -> String.valueOf(v.version) == pinnedVersion }
             if (!found)
-                throw new NoSuchFileException("seqera:///datasets/${dataset.name}@${pinnedVersion}", null, "Version '${pinnedVersion}' not found for dataset '${dataset.name}'")
+                throw new NoSuchFileException(sp.toString(), null, "Version '${pinnedVersion}' not found for dataset '${dataset.name}'")
             return found
         }
         // Latest non-disabled version
         final latest = versions.findAll { DatasetVersionDto v -> !v.disabled }
                                .max { DatasetVersionDto v -> v.version }
         if (!latest)
-            throw new NoSuchFileException("seqera:///datasets/${dataset.name}", null, "No enabled versions for dataset '${dataset.name}'")
+            throw new NoSuchFileException(sp.toString(), null, "No enabled versions for dataset '${dataset.name}'")
         return latest
     }
 

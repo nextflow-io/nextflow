@@ -131,20 +131,21 @@ class SeqeraDatasetClient {
      * The fileName must exactly match DatasetVersionDto.fileName from upload time.
      */
     InputStream downloadDataset(String datasetId, String version, String fileName, long workspaceId) {
-        final url = "${endpoint}/datasets/${datasetId}/v/${version}/n/${URLEncoder.encode(fileName, 'UTF-8')}?workspaceId=$workspaceId"
-        log.debug "SeqeraDatasetClient GET $url"
-        final resp = towerClient.sendApiRequest(url)
-        checkResponse(resp, url)
-        return new ByteArrayInputStream(resp.message.getBytes('UTF-8'))
-    }
-
-    /**
-     * Upload content as a new dataset version via multipart POST.
-     * POST /datasets/{datasetId}/upload?header={hasHeader}
-     * Requires direct HTTP access — to be implemented in US4.
-     */
-    DatasetVersionDto uploadDataset(String datasetId, byte[] content, String fileName, boolean hasHeader) {
-        throw new UnsupportedOperationException("uploadDataset not yet implemented")
+        final encodedName = new URI(null, null, fileName, null).rawPath
+        final url = "${endpoint}/datasets/${datasetId}/v/${version}/n/${encodedName}?workspaceId=$workspaceId"
+        log.debug "SeqeraDatasetClient GET $url (streaming)"
+        try {
+            return towerClient.sendStreamingRequest(url)
+        }
+        catch (UnauthorizedException e) {
+            throw new AbortOperationException("Seqera authentication failed — check tower.accessToken or TOWER_ACCESS_TOKEN")
+        }
+        catch (ForbiddenException e) {
+            throw new AccessDeniedException(url, null, "Forbidden — check workspace permissions")
+        }
+        catch (NotFoundException e) {
+            throw new NoSuchFileException(url)
+        }
     }
 
     // ---- private helpers ----

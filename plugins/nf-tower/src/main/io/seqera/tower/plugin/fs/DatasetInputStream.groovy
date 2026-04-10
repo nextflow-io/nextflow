@@ -58,7 +58,7 @@ class DatasetInputStream implements SeekableByteChannel {
     SeekableByteChannel position(long newPosition) { throw new UnsupportedOperationException("seek not supported") }
 
     @Override
-    long size() { -1L }
+    long size() { throw new UnsupportedOperationException("size not available for streaming dataset channel") }
 
     @Override
     SeekableByteChannel truncate(long size) { throw new UnsupportedOperationException() }

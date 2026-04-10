@@ -248,12 +248,6 @@ class TowerObserver implements TraceObserverV2 {
         log.info(LoggerHelper.STICKY, msg)
     }
 
-    String getAccessToken() {
-        if( !accessToken )
-            throw new AbortOperationException("Missing Seqera Platform access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
-        return accessToken
-    }
-
     /**
      * Send an HTTP message when the workflow is completed.
      */
@@ -533,17 +527,6 @@ class TowerObserver implements TraceObserverV2 {
         return result
     }
 
-
-    protected Map<String,Integer> loadSchema() {
-        final props = new Properties()
-        props.load(this.getClass().getResourceAsStream('/tower-schema.properties'))
-        final result = new HashMap<String,Integer>(props.size())
-        for( String key : props.keySet() ) {
-            final value = props.getProperty(key)
-            result.put( key, value ? value as Integer : null )
-        }
-        return result
-    }
 
     protected void sendTasks0(dummy) {
         final tasks = new HashMap<TaskId, TraceRecord>(TASKS_PER_REQUEST)

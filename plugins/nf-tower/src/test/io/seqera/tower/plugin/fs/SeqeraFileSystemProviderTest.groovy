@@ -18,6 +18,7 @@ package io.seqera.tower.plugin.fs
 
 import java.nio.file.AccessDeniedException
 import java.nio.file.DirectoryStream
+import java.nio.file.FileSystemAlreadyExistsException
 import java.nio.file.InvalidPathException
 import java.nio.file.NoSuchFileException
 import java.nio.file.attribute.BasicFileAttributes
@@ -92,7 +93,7 @@ class SeqeraFileSystemProviderTest extends Specification {
         tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >> ok(datasetsJson())
         tc.sendApiRequest("${ENDPOINT}/datasets/ds-1/versions?workspaceId=10") >> ok(versionsJson())
         final csvContent = 'col1,col2\n1,2\n3,4\n'
-        tc.sendApiRequest("${ENDPOINT}/datasets/ds-1/v/2/n/samples_v2.csv?workspaceId=10") >> ok(csvContent)
+        tc.sendStreamingRequest("${ENDPOINT}/datasets/ds-1/v/2/n/samples_v2.csv?workspaceId=10") >> new ByteArrayInputStream(csvContent.getBytes('UTF-8'))
 
         final fs = buildFs(tc)
         final path = new SeqeraPath(fs, 'seqera://acme/research/datasets/samples')
@@ -114,7 +115,7 @@ class SeqeraFileSystemProviderTest extends Specification {
         tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >> ok(datasetsJson())
         tc.sendApiRequest("${ENDPOINT}/datasets/ds-1/versions?workspaceId=10") >> ok(versionsJson())
         final csvContent = 'col1,col2\n1,2\n'
-        tc.sendApiRequest("${ENDPOINT}/datasets/ds-1/v/1/n/samples.csv?workspaceId=10") >> ok(csvContent)
+        tc.sendStreamingRequest("${ENDPOINT}/datasets/ds-1/v/1/n/samples.csv?workspaceId=10") >> new ByteArrayInputStream(csvContent.getBytes('UTF-8'))
 
         final fs = buildFs(tc)
         final path = new SeqeraPath(fs, 'seqera://acme/research/datasets/samples@1')
@@ -390,5 +391,21 @@ class SeqeraFileSystemProviderTest extends Specification {
 
         then:
         thrown(InvalidPathException)
+    }
+
+    // ---- newFileSystem contract ----
+
+    def "newFileSystem throws FileSystemAlreadyExistsException when filesystem exists"() {
+        given: 'a provider with an existing filesystem'
+        def tc = spyTower()
+        def provider = new SeqeraFileSystemProvider()
+        def fs = new SeqeraFileSystem(provider, new SeqeraDatasetClient(tc))
+        provider.@fileSystems.put('seqera', fs)
+
+        when:
+        provider.newFileSystem(new URI('seqera://test'), [:])
+
+        then:
+        thrown(FileSystemAlreadyExistsException)
     }
 }

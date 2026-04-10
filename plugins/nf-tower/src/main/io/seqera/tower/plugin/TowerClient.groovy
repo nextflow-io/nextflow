@@ -296,6 +296,39 @@ class TowerClient {
         sendHttpMessage(url, payload, method)
     }
 
+    /**
+     * Send a GET request and return the response body as a streaming {@link InputStream}
+     * instead of buffering the entire response into a {@link String}.
+     * Uses {@code HxClient.sendAsStream()} which goes through the same retry and
+     * auth chain as {@code sendAsString()}.
+     *
+     * Status codes are checked before returning — on error the stream is closed and
+     * the same exceptions as {@link #checkResponse} are thrown.
+     *
+     * @param url the full API URL to GET
+     * @return an InputStream over the response body
+     * @throws UnauthorizedException on 401
+     * @throws ForbiddenException on 403
+     * @throws NotFoundException on 404
+     */
+    InputStream sendStreamingRequest(String url) {
+        log.trace "HTTP streaming GET url=$url"
+        final req = makeRequest(url, null, 'GET')
+        final resp = httpClient.sendAsStream(req)
+        final status = resp.statusCode()
+        if( status >= 200 && status < 300 )
+            return resp.body()
+        // Error — close the stream and throw
+        resp.body()?.close()
+        if( status == 401 )
+            throw new UnauthorizedException("Seqera authentication failed — check tower.accessToken or TOWER_ACCESS_TOKEN")
+        if( status == 403 )
+            throw new ForbiddenException("Forbidden — check permissions")
+        if( status == 404 )
+            throw new NotFoundException("Resource $url not found")
+        throw new Exception("Seqera API error: HTTP ${status} for ${url}")
+    }
+
     protected HttpRequest makeRequest(String url, String payload, String verb) {
         final builder = HttpRequest.newBuilder(URI.create(url))
             .header('User-Agent', "Nextflow/$BuildInfo.version")

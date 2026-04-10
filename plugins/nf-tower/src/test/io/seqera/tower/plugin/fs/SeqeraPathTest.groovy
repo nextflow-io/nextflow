@@ -395,4 +395,122 @@ class SeqeraPathTest extends Specification {
         then:
         thrown(IllegalArgumentException)
     }
+
+    // ---- startsWith ----
+
+    def "startsWith - same path returns true"() {
+        given:
+        def fs = mockFs()
+        def path = new SeqeraPath(fs, 'seqera://acme/research/datasets/samples')
+
+        expect:
+        path.startsWith(new SeqeraPath(fs, 'seqera://acme/research/datasets/samples'))
+    }
+
+    def "startsWith - prefix path returns true"() {
+        given:
+        def fs = mockFs()
+        def path = new SeqeraPath(fs, 'seqera://acme/research/datasets/samples')
+
+        expect:
+        path.startsWith(new SeqeraPath(fs, 'seqera://acme'))
+        path.startsWith(new SeqeraPath(fs, 'seqera://acme/research'))
+        path.startsWith(new SeqeraPath(fs, 'seqera://'))
+    }
+
+    def "startsWith - component-wise not substring"() {
+        given:
+        def fs = mockFs()
+        def path = new SeqeraPath(fs, 'seqera://acme-corp/research/datasets/samples')
+
+        expect: 'acme is a substring prefix of acme-corp but not a component prefix'
+        !path.startsWith(new SeqeraPath(fs, 'seqera://acme'))
+    }
+
+    def "startsWith - longer path returns false"() {
+        given:
+        def fs = mockFs()
+        def path = new SeqeraPath(fs, 'seqera://acme')
+
+        expect:
+        !path.startsWith(new SeqeraPath(fs, 'seqera://acme/research'))
+    }
+
+    def "startsWith with string"() {
+        given:
+        def fs = mockFs()
+        def path = new SeqeraPath(fs, 'seqera://acme/research/datasets/samples')
+
+        expect:
+        path.startsWith('seqera://acme')
+        !path.startsWith('seqera://acm')
+    }
+
+    // ---- endsWith ----
+
+    def "endsWith - absolute path requires exact match"() {
+        given:
+        def fs = mockFs()
+        def path = new SeqeraPath(fs, 'seqera://acme/research/datasets/samples')
+
+        expect:
+        path.endsWith(new SeqeraPath(fs, 'seqera://acme/research/datasets/samples'))
+        !path.endsWith(new SeqeraPath(fs, 'seqera://acme/research'))
+    }
+
+    def "endsWith - relative path matches trailing components"() {
+        given:
+        def fs = mockFs()
+        def path = new SeqeraPath(fs, 'seqera://acme/research/datasets/samples')
+
+        expect:
+        path.endsWith(new SeqeraPath('samples'))
+        path.endsWith(new SeqeraPath('datasets/samples'))
+        !path.endsWith(new SeqeraPath('other'))
+    }
+
+    def "endsWith - component-wise not substring"() {
+        given:
+        def fs = mockFs()
+        def path = new SeqeraPath(fs, 'seqera://acme/research/datasets/my-samples')
+
+        expect: 'samples is a substring suffix of my-samples but not a component match'
+        !path.endsWith(new SeqeraPath('samples'))
+    }
+
+    // ---- iterator ----
+
+    def "iterator returns relative name components"() {
+        given:
+        def fs = mockFs()
+        def path = new SeqeraPath(fs, 'seqera://acme/research/datasets/samples')
+
+        when:
+        def parts = path.iterator().collect { it.toString() }
+
+        then:
+        parts == ['acme', 'research', 'datasets', 'samples']
+        path.iterator().every { !it.isAbsolute() }
+    }
+
+    def "iterator on root returns empty"() {
+        given:
+        def fs = mockFs()
+        def path = new SeqeraPath(fs, 'seqera://')
+
+        expect:
+        !path.iterator().hasNext()
+    }
+
+    def "iterator on org returns single element"() {
+        given:
+        def fs = mockFs()
+        def path = new SeqeraPath(fs, 'seqera://acme')
+
+        when:
+        def parts = path.iterator().collect { it.toString() }
+
+        then:
+        parts == ['acme']
+    }
 }

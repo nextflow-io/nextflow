@@ -28,6 +28,7 @@ import java.nio.file.spi.FileSystemProvider
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.tower.model.DatasetDto
+import io.seqera.tower.model.DatasetVersionDto
 import io.seqera.tower.model.OrgAndWorkspaceDto
 import io.seqera.tower.plugin.dataset.SeqeraDatasetClient
 
@@ -53,6 +54,8 @@ class SeqeraFileSystem extends FileSystem {
     private final Map<String, Long> workspaceCache = new LinkedHashMap<>()
     /** workspaceId → list of DatasetDto */
     private final Map<Long, List<DatasetDto>> datasetCache = new LinkedHashMap<>()
+    /** datasetId → list of DatasetVersionDto */
+    private final Map<String, List<DatasetVersionDto>> versionCache = new LinkedHashMap<>()
 
     private volatile boolean orgWorkspaceCacheLoaded = false
 
@@ -173,9 +176,16 @@ class SeqeraFileSystem extends FileSystem {
     }
 
     /**
-     * Invalidate the dataset cache for a workspace (call after a write operation).
+     * Invalidate the dataset and version caches for a workspace (call after a write operation).
      */
     synchronized void invalidateDatasetCache(long workspaceId) {
+        // Remove version caches for all datasets in this workspace
+        final datasets = datasetCache.get(workspaceId)
+        if (datasets) {
+            for (DatasetDto ds : datasets) {
+                versionCache.remove(ds.id)
+            }
+        }
         datasetCache.remove(workspaceId)
     }
 
@@ -183,11 +193,27 @@ class SeqeraFileSystem extends FileSystem {
      * Resolve a DatasetDto by name within a workspace.
      * @throws NoSuchFileException if no dataset with the given name exists
      */
-    DatasetDto resolveDataset(long workspaceId, String name) throws NoSuchFileException {
+    synchronized DatasetDto resolveDataset(long workspaceId, String name) throws NoSuchFileException {
         final datasets = resolveDatasets(workspaceId)
         final found = datasets.find { DatasetDto d -> d.name == name }
         if (!found)
             throw new NoSuchFileException("seqera:///datasets/${name}", null, "Dataset '${name}' not found in workspace")
         return found
     }
+
+    /**
+     * Return versions for the given dataset, populating the cache on first access.
+     * Note: the version cache is only invalidated when the workspace dataset cache is invalidated
+     * (e.g. after a write operation). Versions published externally during a pipeline run will not
+     * be visible until the cache is cleared.
+     */
+    synchronized List<DatasetVersionDto> resolveVersions(String datasetId, long workspaceId) {
+        List<DatasetVersionDto> cached = versionCache.get(datasetId)
+        if (cached == null) {
+            cached = client.listVersions(datasetId, workspaceId)
+            versionCache.put(datasetId, cached)
+        }
+        return cached
+    }
+
 }

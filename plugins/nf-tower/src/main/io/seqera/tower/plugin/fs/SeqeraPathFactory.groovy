@@ -57,7 +57,7 @@ class SeqeraPathFactory extends FileSystemPathFactory {
 
     @Override
     String getUploadCmd(String source, Path target) {
-        // No bash upload command — upload handled via NIO newOutputStream
+        // No bash upload command — seqera:// filesystem is read-only
         return null
     }
 

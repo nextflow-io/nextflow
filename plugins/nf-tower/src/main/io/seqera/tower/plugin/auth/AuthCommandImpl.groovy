@@ -362,7 +362,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         final response = client.sendApiRequest(url, null, 'DELETE')
 
         if( response.code != 200 && response.code != 204 ) {
-            final error = response.message ?: "HTTP ${response.message}"
+            final error = response.message ?: "HTTP ${response.code}"
             throw new RuntimeException("Failed to delete token: ${error}")
         }
 

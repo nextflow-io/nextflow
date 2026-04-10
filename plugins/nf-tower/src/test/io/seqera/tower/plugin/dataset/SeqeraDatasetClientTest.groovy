@@ -21,6 +21,9 @@ import java.nio.file.NoSuchFileException
 
 import groovy.json.JsonOutput
 import io.seqera.tower.plugin.TowerClient
+import io.seqera.tower.plugin.exception.ForbiddenException
+import io.seqera.tower.plugin.exception.NotFoundException
+import io.seqera.tower.plugin.exception.UnauthorizedException
 import nextflow.exception.AbortOperationException
 import spock.lang.Specification
 
@@ -163,7 +166,7 @@ class SeqeraDatasetClientTest extends Specification {
         given:
         def content = 'col1,col2\n1,2\n'
         def tc = mockTower()
-        tc.sendApiRequest('https://api.example.com/datasets/ds-1/v/1/n/samples.csv?workspaceId=1234') >> ok(content)
+        tc.sendStreamingRequest('https://api.example.com/datasets/ds-1/v/1/n/samples.csv?workspaceId=1234') >> new ByteArrayInputStream(content.getBytes('UTF-8'))
         def client = new SeqeraDatasetClient(tc)
 
         when:
@@ -182,13 +185,13 @@ class SeqeraDatasetClientTest extends Specification {
         client.downloadDataset('ds-1', '1', 'my file.csv',1234)
 
         then:
-        1 * tc.sendApiRequest('https://api.example.com/datasets/ds-1/v/1/n/my+file.csv?workspaceId=1234') >> ok('data')
+        1 * tc.sendStreamingRequest('https://api.example.com/datasets/ds-1/v/1/n/my%20file.csv?workspaceId=1234') >> new ByteArrayInputStream('data'.getBytes('UTF-8'))
     }
 
     def "downloadDataset throws NoSuchFileException on 404"() {
         given:
         def tc = mockTower()
-        tc.sendApiRequest(_) >> error(404)
+        tc.sendStreamingRequest(_) >> { throw new NotFoundException("not found") }
         def client = new SeqeraDatasetClient(tc)
 
         when:
@@ -201,7 +204,7 @@ class SeqeraDatasetClientTest extends Specification {
     def "downloadDataset throws AccessDeniedException on 403"() {
         given:
         def tc = mockTower()
-        tc.sendApiRequest(_) >> error(403)
+        tc.sendStreamingRequest(_) >> { throw new ForbiddenException("forbidden") }
         def client = new SeqeraDatasetClient(tc)
 
         when:
@@ -209,6 +212,19 @@ class SeqeraDatasetClientTest extends Specification {
 
         then:
         thrown(AccessDeniedException)
+    }
+
+    def "downloadDataset throws AbortOperationException on 401"() {
+        given:
+        def tc = mockTower()
+        tc.sendStreamingRequest(_) >> { throw new UnauthorizedException("unauthorized") }
+        def client = new SeqeraDatasetClient(tc)
+
+        when:
+        client.downloadDataset('ds-1', '1', 'file.csv', 1234)
+
+        then:
+        thrown(AbortOperationException)
     }
 
     // ---- createDataset ----

@@ -107,9 +107,12 @@ class DatasetInputStreamTest extends Specification {
         !channel.isOpen()
     }
 
-    def 'should return size -1'() {
-        expect:
-        new DatasetInputStream(new ByteArrayInputStream(new byte[0])).size() == -1L
+    def 'should throw on size'() {
+        when:
+        new DatasetInputStream(new ByteArrayInputStream(new byte[0])).size()
+
+        then:
+        thrown(UnsupportedOperationException)
     }
 
     def 'should throw on write'() {

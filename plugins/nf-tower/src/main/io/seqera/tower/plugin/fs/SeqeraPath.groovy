@@ -153,6 +153,19 @@ class SeqeraPath implements Path {
             throw new InvalidPathException(label, "Dataset name cannot contain '/'")
     }
 
+    /** Return a list of name component strings (works for both absolute and relative paths). */
+    private List<String> nameComponents() {
+        if (isAbsolute()) {
+            final d = depth()
+            final result = new ArrayList<String>(d)
+            for (int i = 0; i < d; i++)
+                result.add(getName(i).toString())
+            return result
+        }
+        if (!relPath) return Collections.<String>emptyList()
+        return relPath.split('/').toList().findAll { String s -> s } as List<String>
+    }
+
     /** Build a raw path string from the current fields, for use in exception messages. */
     private String rawPath() {
         final sb = new StringBuilder("${SCHEME}://")
@@ -241,22 +254,61 @@ class SeqeraPath implements Path {
 
     @Override
     boolean startsWith(Path other) {
-        return toString().startsWith(other.toString())
+        if (other !instanceof SeqeraPath)
+            return false
+        final that = (SeqeraPath) other
+        if (this.isAbsolute() != that.isAbsolute())
+            return false
+        final thisNames = this.nameComponents()
+        final thatNames = that.nameComponents()
+        if (thatNames.size() > thisNames.size())
+            return false
+        for (int i = 0; i < thatNames.size(); i++) {
+            if (thisNames[i] != thatNames[i])
+                return false
+        }
+        return true
     }
 
     @Override
     boolean startsWith(String other) {
-        return toString().startsWith(other)
+        if (!other) return false
+        try {
+            final Path p = SeqeraPath.isSeqeraUri(other) ? new SeqeraPath(fs, other) : new SeqeraPath(other)
+            return startsWith(p)
+        } catch (Exception ignored) {
+            return false
+        }
     }
 
     @Override
     boolean endsWith(Path other) {
-        return toString().endsWith(other.toString())
+        if (other !instanceof SeqeraPath)
+            return false
+        final that = (SeqeraPath) other
+        if (that.isAbsolute())
+            return this.equals(that)
+        final thisNames = this.nameComponents()
+        final thatNames = that.nameComponents()
+        if (thatNames.isEmpty() || thatNames.size() > thisNames.size())
+            return false
+        final offset = thisNames.size() - thatNames.size()
+        for (int i = 0; i < thatNames.size(); i++) {
+            if (thisNames[offset + i] != thatNames[i])
+                return false
+        }
+        return true
     }
 
     @Override
     boolean endsWith(String other) {
-        return toString().endsWith(other)
+        if (!other) return false
+        try {
+            final Path p = SeqeraPath.isSeqeraUri(other) ? new SeqeraPath(fs, other) : new SeqeraPath(other)
+            return endsWith(p)
+        } catch (Exception ignored) {
+            return false
+        }
     }
 
     @Override
@@ -385,11 +437,10 @@ class SeqeraPath implements Path {
     @Override
     Iterator<Path> iterator() {
         final d = depth()
-        final List<Path> parts = []
-        if (d >= 1) parts << new SeqeraPath(fs, org, null, null, null, null)
-        if (d >= 2) parts << new SeqeraPath(fs, org, workspace, null, null, null)
-        if (d >= 3) parts << new SeqeraPath(fs, org, workspace, resourceType, null, null)
-        if (d >= 4) parts << new SeqeraPath(fs, org, workspace, resourceType, datasetName, version)
+        final List<Path> parts = new ArrayList<>(d)
+        for (int i = 0; i < d; i++) {
+            parts.add(getName(i))
+        }
         return parts.iterator()
     }
 
