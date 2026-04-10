@@ -28,9 +28,9 @@
 
 **Implementation details**:
 - Field: `transient private Map<String,Object> gpuMetrics`
-- Getter: `Map<String,Object> getFusionMetrics()`
-- Setter: `void setFusionMetrics(Map<String,Object> value)`
-- In `makeTaskMap0()`: `record.gpuMetrics = trace.getFusionMetrics()`
+- Getter: `Map<String,Object> getGpuMetrics()`
+- Setter: `void setGpuMetrics(Map<String,Object> value)`
+- In `makeTaskMap0()`: `record.gpuMetrics = trace.getGpuMetrics()`
 
 ## R4: JSON parsing approach
 

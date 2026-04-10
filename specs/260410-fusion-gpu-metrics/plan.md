@@ -61,11 +61,11 @@ plugins/nf-tower/
    ```
 2. Add getter/setter after existing `resourceAllocation` getter/setter (after line 649):
    ```groovy
-   Map<String,Object> getFusionMetrics() {
+   Map<String,Object> getGpuMetrics() {
        return gpuMetrics
    }
 
-   void setFusionMetrics(Map<String,Object> value) {
+   void setGpuMetrics(Map<String,Object> value) {
        this.gpuMetrics = value
    }
    ```
@@ -124,7 +124,7 @@ if( task.processor.executor.isFusionEnabled() ) {
 **Changes**:
 In `makeTaskMap0()` method, add after `record.resourceAllocation = trace.getResourceAllocation()` (after line 476):
 ```groovy
-record.gpuMetrics = trace.getFusionMetrics()
+record.gpuMetrics = trace.getGpuMetrics()
 ```
 
 ### Task 5: Unit tests for TraceRecord
