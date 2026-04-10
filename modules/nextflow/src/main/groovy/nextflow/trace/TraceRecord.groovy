@@ -525,8 +525,7 @@ class TraceRecord implements Serializable {
     }
 
     static Map<String,Object> parseFusionTraceFile(Path file) {
-        final text = file.text
-        final json = (Map) new JsonSlurper().parseText(text)
+        final json = (Map) new JsonSlurper().parse(file)
         return (Map<String,Object>) json.get('gpu')
     }
 

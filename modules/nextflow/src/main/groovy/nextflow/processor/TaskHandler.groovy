@@ -252,9 +252,8 @@ abstract class TaskHandler {
                 log.debug "[WARN] Cannot read trace file: $file -- Cause: ${e.message}"
             }
 
-            // collect Fusion GPU metrics
             if( task.processor.executor.isFusionEnabled() ) {
-                final fusionTrace = task.workDir?.resolve('.fusion/trace.json')
+                final fusionTrace = task.workDir?.resolve(TaskRun.FUSION_TRACE)
                 try {
                     if( fusionTrace ) {
                         final gpu = TraceRecord.parseFusionTraceFile(fusionTrace)
@@ -263,7 +262,7 @@ abstract class TaskHandler {
                     }
                 }
                 catch( NoSuchFileException e ) {
-                    // ignore - Fusion trace may not exist
+                    // ignore it
                 }
                 catch( Exception e ) {
                     log.debug "[WARN] Cannot read Fusion trace file: $fusionTrace -- Cause: ${e.message}"
