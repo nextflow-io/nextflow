@@ -738,6 +738,7 @@ class TowerClient implements TraceObserverV2 {
         record.numSpotInterruptions = trace.getNumSpotInterruptions()
         record.logStreamId = trace.getLogStreamId()
         record.resourceAllocation = trace.getResourceAllocation()
+        record.gpuMetrics = trace.getGpuMetrics()
 
         return record
     }

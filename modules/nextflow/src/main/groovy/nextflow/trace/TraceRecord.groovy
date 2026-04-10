@@ -20,6 +20,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.regex.Pattern
 
+import groovy.json.JsonSlurper
 import groovy.json.StringEscapeUtils
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -126,6 +127,7 @@ class TraceRecord implements Serializable {
     transient private Integer numSpotInterruptions
     transient private String logStreamId
     transient private Map<String,Object> resourceAllocation
+    transient private Map<String,Object> gpuMetrics
 
     /**
      * Convert the given value to a string
@@ -522,6 +524,12 @@ class TraceRecord implements Serializable {
         return this
     }
 
+    static Map<String,Object> parseFusionTraceFile(Path file) {
+        final text = file.text
+        final json = (Map) new JsonSlurper().parseText(text)
+        return (Map<String,Object>) json.get('gpu')
+    }
+
     private long parseInt( String str, Path file, String row )  {
         try {
             str.toInteger()
@@ -646,5 +654,13 @@ class TraceRecord implements Serializable {
 
     void setResourceAllocation(Map<String,Object> value) {
         this.resourceAllocation = value
+    }
+
+    Map<String,Object> getGpuMetrics() {
+        return gpuMetrics
+    }
+
+    void setGpuMetrics(Map<String,Object> value) {
+        this.gpuMetrics = value
     }
 }
