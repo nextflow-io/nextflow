@@ -88,7 +88,6 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
             }
             catch (Exception e) {
                 log.warn "Failed to prefetch plugin metadata - ${e.message}"
-                log.debug "Plugin metadata prefetch error details", e
                 this.plugins = new HashMap<>()
             }
         }
