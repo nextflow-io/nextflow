@@ -15,6 +15,7 @@
  */
 package nextflow.cloud.aws.nio.util;
 
+import software.amazon.awssdk.services.s3.crt.S3CrtConnectionHealthConfiguration;
 import software.amazon.awssdk.services.s3.crt.S3CrtProxyConfiguration;
 import software.amazon.awssdk.services.s3.crt.S3CrtHttpConfiguration;
 import software.amazon.awssdk.services.s3.crt.S3CrtRetryConfiguration;
@@ -120,7 +121,13 @@ public class S3AsyncClientConfiguration extends S3ClientConfiguration{
         }
 
         if( props.containsKey("socket_timeout")) {
-            log.warn("AWS client config - 'socket_timeout' doesn't exist in AWS SDK V2 Async Client");
+            log.debug("AWS client config - 'socket_timeout' doesn't exist in CRT connection. Setting CRT health configuration with minimum throughput 1bps and timeout with value {}",props.getProperty("socket_timeout"));
+            crtHttpConfiguration().connectionHealthConfiguration(
+                S3CrtConnectionHealthConfiguration.builder()
+                    .minimumThroughputInBps(1L)
+                    .minimumThroughputTimeout(Duration.ofMillis(Long.parseLong(props.getProperty("socket_timeout"))))
+                    .build()
+            );
         }
 
         if( props.containsKey("proxy_host")) {

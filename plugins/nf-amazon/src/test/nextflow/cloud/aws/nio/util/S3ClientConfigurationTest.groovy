@@ -16,8 +16,6 @@
 package nextflow.cloud.aws.nio.util
 
 import nextflow.cloud.aws.config.AwsConfig
-import software.amazon.awssdk.auth.signer.AwsS3V4Signer
-import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption
 import software.amazon.awssdk.http.SdkHttpConfigurationOption
 import spock.lang.Specification
 
@@ -72,6 +70,9 @@ class S3ClientConfigurationTest extends Specification{
         httpConfiguration.proxyConfiguration().scheme() == 'https'
         httpConfiguration.proxyConfiguration().username() == 'user'
         httpConfiguration.proxyConfiguration().password() == 'pass'
+        //Check Timeout
+        httpConfiguration.healthConfiguration().minimumThroughputInBps() == 1
+        httpConfiguration.healthConfiguration().minimumThroughputTimeout().toMillis() == 20000
         //Check Crt Retry Configuration
         def retryConfig = clientConfig.getCrtRetryConfiguration()
         retryConfig.numRetries() == 3
