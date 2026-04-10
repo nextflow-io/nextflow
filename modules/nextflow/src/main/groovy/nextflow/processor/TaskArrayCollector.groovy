@@ -57,6 +57,7 @@ class TaskArrayCollector {
             'containerOptions',
             // only needed when using Wave
             'conda',
+            'uv',
     ]
 
     private TaskProcessor processor

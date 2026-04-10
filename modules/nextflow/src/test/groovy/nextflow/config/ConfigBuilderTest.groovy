@@ -1407,6 +1407,49 @@ class ConfigBuilderTest extends Specification {
         !config.process.spack
     }
 
+    def 'should set uv env' () {
+        given:
+        def env = [:]
+        def builder = [:] as ConfigBuilder
+
+        when:
+        def config = new ConfigObject()
+        builder.configRunOptions(config, env, new CmdRun(withUv: 'numpy pandas'))
+        then:
+        config.uv instanceof Map
+        config.uv.enabled
+        config.process.uv == 'numpy pandas'
+
+        when:
+        config = new ConfigObject()
+        config.process.uv = 'numpy'
+        builder.configRunOptions(config, env, new CmdRun(withUv: '-'))
+        then:
+        config.uv instanceof Map
+        config.uv.enabled
+        config.process.uv == 'numpy'
+    }
+
+    def 'should disable uv env' () {
+        given:
+        def file = Files.createTempFile('test','config')
+        file.deleteOnExit()
+        file.text =
+                '''
+                uv {
+                    enabled = true
+                }
+                '''
+
+        when:
+        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
+        def run = new CmdRun(withoutUv: true)
+        def config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        then:
+        !config.uv.enabled
+        !config.process.uv
+    }
+
     def 'SHOULD SET `RESUME` OPTION'() {
 
         given:

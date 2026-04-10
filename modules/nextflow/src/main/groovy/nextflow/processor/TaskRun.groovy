@@ -51,6 +51,8 @@ import nextflow.script.params.InParam
 import nextflow.script.params.OutParam
 import nextflow.script.params.ValueOutParam
 import nextflow.spack.SpackCache
+import nextflow.uv.UvCache
+import nextflow.uv.UvConfig
 import nextflow.util.ArrayBag
 /**
  * Models a task instance
@@ -689,6 +691,29 @@ class TaskRun implements Cloneable {
 
         final cache = new SpackCache(processor.session.getSpackConfig())
         cache.getCachePathFor(config.spack as String, arch)
+    }
+
+    Path getUvEnv() {
+        // note: use an explicit function instead of a closure or lambda syntax, otherwise
+        // when calling this method from a subclass it will result into a MissingMethodExeception
+        // see  https://issues.apache.org/jira/browse/GROOVY-2433
+        cache0.computeIfAbsent('uvEnv', new Function<String,Path>() {
+            @Override
+            Path apply(String it) {
+                return getUvEnv0()
+            }})
+    }
+
+    private Path getUvEnv0() {
+        if( !config.uv || !getUvConfig().isEnabled() )
+            return null
+
+        final cache = new UvCache(getUvConfig())
+        cache.getCachePathFor(config.uv as String)
+    }
+
+    UvConfig getUvConfig() {
+        return processor.session.getUvConfig()
     }
 
     protected ContainerInfo containerInfo() {

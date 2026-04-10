@@ -239,6 +239,10 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run','-with-spack', '-x') == ['run', '-with-spack','-', '-x']
         launcher.normalizeArgs('run','-with-spack', 'busybox') == ['run', '-with-spack','busybox']
 
+        launcher.normalizeArgs('run','-with-uv') == ['run', '-with-uv','-']
+        launcher.normalizeArgs('run','-with-uv', '-x') == ['run', '-with-uv','-', '-x']
+        launcher.normalizeArgs('run','-with-uv', 'numpy') == ['run', '-with-uv','numpy']
+
         launcher.normalizeArgs('run','-dump-channels') == ['run', '-dump-channels','*']
         launcher.normalizeArgs('run','-dump-channels', '-x') == ['run', '-dump-channels','*', '-x']
         launcher.normalizeArgs('run','-dump-channels', 'foo,bar') == ['run', '-dump-channels','foo,bar']

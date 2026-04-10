@@ -232,6 +232,12 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : Enable the use of Spack recipes defined by using the {ref}`process-spack` directive. (default: `false`).
 
+`NXF_UV_CACHEDIR`
+: Directory where uv virtual environments are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
+
+`NXF_UV_ENABLED`
+: Enable the use of uv environments defined by using the {ref}`process-uv` directive. (default: `false`).
+
 `NXF_SYNTAX_PARSER`
 : :::{versionadded} 25.02.0-edge
   :::

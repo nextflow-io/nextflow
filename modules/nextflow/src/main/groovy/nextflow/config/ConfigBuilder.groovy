@@ -625,6 +625,19 @@ class ConfigBuilder {
             config.spack.enabled = true
         }
 
+        if( cmdRun.withoutUv && config.uv instanceof Map ) {
+            // disable uv execution
+            log.debug "Disabling execution with uv as requested by command-line option `-without-uv`"
+            config.uv.enabled = false
+        }
+
+        // -- apply the uv environment
+        if( cmdRun.withUv ) {
+            if( cmdRun.withUv != '-' )
+                config.process.uv = cmdRun.withUv
+            config.uv.enabled = true
+        }
+
         // -- sets the resume option
         if( cmdRun.resume )
             config.resume = cmdRun.resume
