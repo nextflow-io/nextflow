@@ -35,6 +35,7 @@ module.exports = {
                 "process-typed",
                 "channel",
                 "workflow",
+                "workflow-typed",
                 "module",
                 "notifications",
                 "secrets",
@@ -97,6 +98,7 @@ module.exports = {
                 },
                 "reference/process",
                 "reference/channel",
+                "reference/operator-typed",
                 "reference/operator"
             ]
         },
@@ -175,9 +177,9 @@ module.exports = {
             items: [
                 "tutorials/rnaseq-nf",
                 "tutorials/data-lineage",
-                "tutorials/records",
                 "tutorials/workflow-outputs",
                 "tutorials/static-types",
+                "tutorials/static-types-operators",
                 "tutorials/metrics",
                 "tutorials/flux"
             ]

@@ -45,7 +45,7 @@ Booleans in Nextflow can be backed by any of the following Java types: `boolean`
 
 A channel (also known as a *dataflow channel* or *queue channel*) is an asynchronous sequence of values of type `E`. It is used to facilitate dataflow logic in a workflow.
 
-See [dataflow-page][dataflow-page] for an overview of dataflow types. See [operator-page][operator-page] for the available methods for channels.
+See [Dataflow][dataflow-page] for an overview of dataflow types. See [Operators (typed)][operator-typed-page] for the set of operators that are recommended for use with static typing.
 
 ## Duration
 
@@ -1197,6 +1197,14 @@ Prints the dataflow value to standard output.
 
 Transforms the dataflow value using the given closure and print the result to standard output.
 
+##### `combine( right: Value ) -> Value<Tuple>`
+
+Emits the combination of the dataflow value with another dataflow value.
+
+##### `combine( [opts] ) -> Value<Record>`
+
+When called on a dataflow value of records with named arguments, the named arguments are appended to each record.
+
 ## VersionNumber
 
 A VersionNumber represents a semantic or calendar version number.
@@ -1242,6 +1250,7 @@ Alternatively, the version can be postfixed with `+`, which is similar to `==` b
 [dataflow-page]: ../channel
 [channel-factory]: ./channel
 [operator-page]: ./operator
+[operator-typed-page]: ./operator-typed
 [operator-splitfasta]: ./operator#splitfasta
 [operator-splitfastq]: ./operator#splitfastq
 [operator-splitjson]: ./operator#splitjson

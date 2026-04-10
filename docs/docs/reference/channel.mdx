@@ -5,99 +5,109 @@ description: Reference for all Nextflow channel factory methods used to create c
 
 # Channel factories
 
+This page describes the channel factories that are available in the `channel` namespace.
+
 ## empty
 
-The `channel.empty` factory method, by definition, creates a channel that doesn't emit any value.
+**`empty() -> Channel`**
 
-See also: [ifEmpty][operator-ifempty].
-
-## from
-
-<DeprecatedInVersion version="19.09.0-edge">
-Use [channel.of](#of) or [channel.fromList](#fromlist) instead.
-</DeprecatedInVersion>
-
-The `channel.from` method allows you to create a channel emitting any sequence of values that are specified as the method argument, for example:
+The `channel.empty` factory creates a channel that emits nothing:
 
 ```nextflow
-ch = channel.from( 1, 3, 5, 7 )
-ch.subscribe { v -> println "value: $v" }
+channel.empty().view() // prints nothing
 ```
 
-The first line in this example creates a variable `ch` which holds a channel object. This channel emits the values specified as a parameter in the `from` method. Thus the second line will print the following:
-
-```
-value: 1
-value: 3
-value: 5
-value: 7
-```
-
-The following example shows how to create a channel from a *range* of numbers or strings:
-
-```nextflow
-zeroToNine = channel.from( 0..9 )
-strings = channel.from( 'A'..'Z' )
-```
+## fromFilePairs
 
 :::note
-When the `channel.from` argument is an object implementing the (Java) [Collection](http://docs.oracle.com/javase/7/docs/api/java/util/Collection.html) interface, the resulting channel emits the collection entries as individual items.
+As a best practice, use a samplesheet instead of matching file pairs directly with glob patterns. See [Samplesheets][static-types-samplesheet] for more information.
 :::
 
-Thus the following two declarations produce an identical result even though in the first case the items are specified as multiple arguments while in the second case as a single list object argument:
+The `channel.fromFilePairs` factory creates a channel that emits file pairs matching a [glob][glob] pattern:
 
 ```nextflow
-channel.from( 1, 3, 5, 7, 9 )
-channel.from( [1, 3, 5, 7, 9] )
+ch = channel.fromFilePairs('/my/data/SRR*_{1,2}.fastq')
+ch.view()
 ```
 
-But when more than one argument is provided, they are always managed as *single* emissions. Thus, the following example creates a channel emitting three entries each of which is a list containing two elements:
+Each file pair is emitted as a 2-tuple containing the grouping key (from the `*` wildcard) and the list of files (sorted lexicographically):
 
-```nextflow
-channel.from( [1, 2], [5,6], [7,9] )
 ```
+[SRR493366, [/my/data/SRR493366_1.fastq, /my/data/SRR493366_2.fastq]]
+[SRR493367, [/my/data/SRR493367_1.fastq, /my/data/SRR493367_2.fastq]]
+[SRR493368, [/my/data/SRR493368_1.fastq, /my/data/SRR493368_2.fastq]]
+[SRR493369, [/my/data/SRR493369_1.fastq, /my/data/SRR493369_2.fastq]]
+[SRR493370, [/my/data/SRR493370_1.fastq, /my/data/SRR493370_2.fastq]]
+[SRR493371, [/my/data/SRR493371_1.fastq, /my/data/SRR493371_2.fastq]]
+```
+
+The glob pattern must contain at least one `*` wildcard character.
+
+Available options:
+
+`checkIfExists`
+: When `true`, throws an error if the file path does not exist in the file system (default: `false`).
+
+`flat`
+: When `true`, tuples are emitted with the matching files flattened instead of as a nested list (default: `false`).
+
+`followLinks`
+: When `true`, follows symbolic links when traversing a directory tree, otherwise treats them as files (default: `true`).
+
+`hidden`
+: When `true`, matches hidden files when using a glob pattern (default: `false`).
+
+`maxDepth`
+: Maximum number of directory levels to visit with the `**` wildcard (default: no limit).
+
+`size`
+: The number of expected files for each file pair (default: `2`). Set to `-1` to allow any size.
+
+`type`
+: Whether to return only files (`'file'`), only directories (`'dir'`), or both (`'any'`) when using a glob pattern. By default, only files are returned (`'file'`).
 
 ## fromLineage
 
 <AddedInVersion version="25.04.0" />
 
-:::warning *Experimental: may change in a future release.*
+:::warning
+*Experimental: may change in a future release.*
 :::
+
+**`fromLineage( [opts] ) -> Channel<Path>`**
 
 The `channel.fromLineage` factory creates a channel that emits files from the [lineage][cli-lineage] store that match the given key-value params:
 
 ```nextflow
-channel
-    .fromLineage(workflowRun: 'lid://0d1d1622ced3e4edc690bec768919b45', label: ['alpha', 'beta'])
-    .view()
+ch = channel.fromLineage(
+    workflowRun: 'lid://0d1d1622ced3e4edc690bec768919b45',
+    label: ['alpha', 'beta']
+)
+ch.view()
 ```
 
 The above snippet emits files published by the given workflow run that are labeled as `alpha` and `beta`.
 
 Available options:
 
-##### `label`
+`label`
+: List of labels associated with the desired files.
 
-List of labels associated with the desired files.
+`taskRun`
+: LID of the task run that produced the desired files.
 
-##### `taskRun`
-
-LID of the task run that produced the desired files.
-
-##### `workflowRun`
-
-LID of the workflow run that produced the desired files.
+`workflowRun`
+: LID of the workflow run that produced the desired files.
 
 ## fromList
 
-<AddedInVersion version="19.10.0" />
+**`fromList( values: Iterable<E> ) -> Channel<E>`**
 
-The `channel.fromList` method allows you to create a channel emitting the values provided as a list of elements, for example:
+The `channel.fromList` factory creates a channel that emits each element in a collection:
 
 ```nextflow
-channel
-    .fromList( ['a', 'b', 'c', 'd'] )
-    .view { v -> "value: $v" }
+ch = channel.fromList( ['a', 'b', 'c', 'd'] )
+ch.view { v -> "value: $v" }
 ```
 
 Prints:
@@ -109,188 +119,85 @@ value: c
 value: d
 ```
 
-See also: [channel.of](#of) factory method.
+See also: [channel.of](#of)
 
 ## fromPath
 
-You can create a channel emitting one or more file paths by using the `channel.fromPath` method and specifying a path
-string as an argument. For example:
+**`fromPath( pattern: String, [opts] ) -> Channel<Path>`**
+
+The `channel.fromPath` factory creates a channel that emits file paths matching a name or [glob][glob] pattern:
 
 ```nextflow
-myFileChannel = channel.fromPath( '/data/some/bigfile.txt' )
+// match single file
+channel.fromPath('data/some/bigfile.txt')
+
+// match `txt` files in `data/bag`
+channel.fromPath('data/big/*.txt')
+
+// match `fa` files in `data` and its subdirectories
+channel.fromPath('data/**.fa')
+
+// match `fa` files with same suffix in any subdirectory of `data`
+channel.fromPath('data/**/*.fa')
+
+// match file pair (`file_1.fq` and `file_2.fq`)
+channel.fromPath('data/file_{1,2}.fq')
 ```
 
-The above line creates a channel and binds it to a [Path](http://docs.oracle.com/javase/7/docs/api/java/nio/file/Path.html)
-object for the specified file.
-
-:::note
-`channel.fromPath` does not check whether the file exists.
-:::
-
-Whenever the `channel.fromPath` argument contains a `*` or `?` wildcard character it is interpreted as a [glob][glob] path matcher.
-For example:
+By default, glob patterns do not match hidden files (i.e. files with names that start with `.`). Use a glob pattern that explicitly starts with `.` or set `hidden: true` to match hidden files:
 
 ```nextflow
-myFileChannel = channel.fromPath( '/data/big/*.txt' )
+// match hidden files in `data`
+channel.fromPath('data/.*')
+channel.fromPath('data/*', hidden: true)
+
+// match hidden files in `data` with `fa` extension
+channel.fromPath('data/.*.fa')
 ```
 
-This example creates a channel and emits as many `Path` items as there are files with `txt` extension in the `/data/big` folder.
-
-:::tip
-Two asterisks, i.e. `**`, works like `*` but crosses directory boundaries. This syntax is generally used for matching complete paths. Curly brackets specify a collection of sub-patterns.
-:::
-
-For example:
+By default, glob patterns only match regular files, not directories. Use the `type` option to control whether to match files, directories, or both:
 
 ```nextflow
-files = channel.fromPath( 'data/**.fa' )
-moreFiles = channel.fromPath( 'data/**/*.fa' )
-pairFiles = channel.fromPath( 'data/file_{1,2}.fq' )
-```
+// match only directories
+channel.fromPath('data/*', type: 'dir')
 
-The first line returns a channel emitting the files ending with the suffix `.fa` in the `data` folder *and* recursively in all its sub-folders. While the second one only emits the files which have the same suffix in *any* sub-folder in the `data` path. Finally the last example emits two files: `data/file_1.fq` and `data/file_2.fq`.
-
-:::note
-As in Linux Bash, the `*` wildcard does not catch hidden files (i.e. files whose name starts with a `.` character).
-:::
-
-Multiple paths or glob patterns can be specified using a list:
-
-```nextflow
-channel.fromPath( ['/some/path/*.fq', '/other/path/*.fastq'] )
-```
-
-In order to include hidden files, you need to start your pattern with a period character or specify the `hidden: true` option. For example:
-
-```nextflow
-expl1 = channel.fromPath( '/path/.*' )
-expl2 = channel.fromPath( '/path/.*.fa' )
-expl3 = channel.fromPath( '/path/*', hidden: true )
-```
-
-The first example returns all hidden files in the specified path. The second one returns all hidden files ending with the `.fa` suffix. Finally the last example returns all files (hidden and non-hidden) in that path.
-
-By default a [glob][glob] pattern only looks for regular file paths that match the specified criteria, i.e. it won't return directory paths.
-
-You can use the `type` option specifying the value `file`, `dir` or `any` in order to define what kind of paths you want. For example:
-
-```nextflow
-myFileChannel = channel.fromPath( '/path/*b', type: 'dir' )
-myFileChannel = channel.fromPath( '/path/a*', type: 'any' )
-```
-
-The first example will return all *directory* paths ending with the `b` suffix, while the second will return any file or directory starting with a `a` prefix.
-
-Available options:
-
-##### `checkIfExists`
-
-When `true` throws an exception of the specified path do not exist in the file system (default: `false`)
-
-##### `followLinks`
-
-When `true` it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: `true`)
-
-##### `glob`
-
-When `true` interprets characters `*`, `?`, `[]` and `{}` as glob wildcards, otherwise handles them as normal characters (default: `true`)
-
-##### `hidden`
-
-When `true` includes hidden files in the resulting paths (default: `false`)
-
-##### `maxDepth`
-
-Maximum number of directory levels to visit (default: no limit)
-
-##### `relative`
-
-When `true` returned paths are relative to the top-most common directory (default: `false`)
-
-##### `type`
-
-Type of paths returned, either `file`, `dir` or `any` (default: `file`)
-
-## fromFilePairs
-
-The `channel.fromFilePairs` method creates a channel emitting the file pairs matching a [glob][glob] pattern provided
-by the user. The matching files are emitted as tuples in which the first element is the grouping key of the matching pair and the second element is the list of files (sorted in lexicographical order). For example:
-
-```nextflow
-channel
-    .fromFilePairs('/my/data/SRR*_{1,2}.fastq')
-    .view()
-```
-
-It will produce an output similar to the following:
-
-```
-[SRR493366, [/my/data/SRR493366_1.fastq, /my/data/SRR493366_2.fastq]]
-[SRR493367, [/my/data/SRR493367_1.fastq, /my/data/SRR493367_2.fastq]]
-[SRR493368, [/my/data/SRR493368_1.fastq, /my/data/SRR493368_2.fastq]]
-[SRR493369, [/my/data/SRR493369_1.fastq, /my/data/SRR493369_2.fastq]]
-[SRR493370, [/my/data/SRR493370_1.fastq, /my/data/SRR493370_2.fastq]]
-[SRR493371, [/my/data/SRR493371_1.fastq, /my/data/SRR493371_2.fastq]]
-```
-
-:::note
-The glob pattern must contain at least one `*` wildcard character.
-:::
-
-Multiple glob patterns can be specified using a list:
-
-```nextflow
-channel.fromFilePairs( ['/some/data/SRR*_{1,2}.fastq', '/other/data/QFF*_{1,2}.fastq'] )
-```
-
-Alternatively, it is possible to implement a custom file pair grouping strategy providing a closure which, given the current file as parameter, returns the grouping key. For example:
-
-```nextflow
-channel
-    .fromFilePairs('/some/data/*', size: -1) { file -> file.extension }
-    .view { ext, files -> "Files with the extension $ext are $files" }
+// match files and directories
+channel.fromPath('data/*', type: 'any')
 ```
 
 Available options:
 
-##### `checkIfExists`
+`checkIfExists`
+: When `true`, throws an error if the file path does not exist in the file system (default: `false`).
 
-When `true` throws an exception of the specified path do not exist in the file system (default: `false`)
+`followLinks`
+: When `true`, follows symbolic links when traversing a directory tree, otherwise treats them as files (default: `true`).
 
-##### `followLinks`
+`glob`
+: When `true`, interprets the characters `*`, `?`, `[]`, and `{}` as glob wildcards, otherwise treats them as normal characters (default: `true`).
 
-When `true` it follows symbolic links during directories tree traversal, otherwise they are managed as files (default: `true`)
+`hidden`
+: When `true`, matches hidden files when using a glob pattern (default: `false`).
 
-##### `flat`
+`maxDepth`
+: Maximum number of directory levels to visit with the `**` wildcard (default: no limit).
 
-When `true` the matching files are produced as sole elements in the emitted tuples (default: `false`).
+`relative`
+: When `true`, returns file paths as relative to the top-most common directory (default: `false`).
 
-##### `hidden`
-
-When `true` includes hidden files in the resulting paths (default: `false`)
-
-##### `maxDepth`
-
-Maximum number of directory levels to visit (default: no limit)
-
-##### `size`
-
-Defines the number of files each emitted item is expected to hold (default: 2). Set to `-1` for any.
-
-##### `type`
-
-Type of paths returned, either `file`, `dir` or `any` (default: `file`)
+`type`
+: Whether to return only files (`'file'`), only directories (`'dir'`), or both (`'any'`) when using a glob pattern. By default, only files are returned (`'file'`).
 
 ## fromSRA
 
-<AddedInVersion version="19.04.0" />
+<DeprecatedInVersion version="26.04.0">
+Use the [Entrez Direct](https://www.ncbi.nlm.nih.gov/books/NBK179288/) command-line tool to query the SRA database.
+</DeprecatedInVersion>
 
-The `channel.fromSRA` method queries the [NCBI SRA](https://www.ncbi.nlm.nih.gov/sra) database and returns a channel emitting the FASTQ files matching the specified criteria i.e project or accession number(s). For example:
+The `channel.fromSRA` factory queries the [NCBI SRA](https://www.ncbi.nlm.nih.gov/sra) database and returns a channel emitting the FASTQ files matching the specified criteria i.e project or accession number(s). For example:
 
 ```nextflow
-channel
-    .fromSRA('SRP043510')
-    .view()
+channel.fromSRA('SRP043510').view()
 ```
 
 It returns:
@@ -305,13 +212,11 @@ It returns:
 (remaining omitted)
 ```
 
-Multiple accession IDs can be specified using a list object:
+Multiple accession IDs can be specified as a list:
 
 ```nextflow
 ids = ['ERR908507', 'ERR908506', 'ERR908505']
-channel
-    .fromSRA(ids)
-    .view()
+channel.fromSRA(ids).view()
 ```
 
 ```
@@ -320,9 +225,7 @@ channel
 [ERR908505, [ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908505/ERR908505_1.fastq.gz, ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908505/ERR908505_2.fastq.gz]]
 ```
 
-:::note
 Each read pair is implicitly managed and returned as a list of files.
-:::
 
 This method uses the NCBI [ESearch](https://www.ncbi.nlm.nih.gov/books/NBK25499/#chapter4.ESearch) API behind the scenes, therefore it allows the use of any query term supported by this API.
 
@@ -340,45 +243,39 @@ To access the ESearch API, you must provide your [NCBI API keys](https://ncbiins
 
 Available options:
 
-##### `apiKey`
+`apiKey`
+: NCBI user API key.
 
-NCBI user API key.
+`cache`
+: Enable/disable the caching API requests (default: `true`).
 
-##### `cache`
+`max`
+: Maximum number of entries that can be retried (default: unlimited) .
 
-Enable/disable the caching API requests (default: `true`).
+`protocol`
+: Allow choosing the protocol for the resulting remote URLs. Available choices: `ftp`, `http`, `https` (default: `ftp`).
 
-##### `max`
+`retryPolicy`
+: Set a retry policy in case the SRA request fails with a retriable error.
 
-Maximum number of entries that can be retried (default: unlimited) .
+: Available properties:
 
-##### `protocol`
+  - `delay`: Delay between attempts (default: `500ms`)
+  - `jitter`: Jitter value (default: `0.25`)
+  - `maxAttempts`: Max attempts (default: `3`)
+  - `maxDelay`: Max delay (default: `30s`)
 
-Allow choosing the protocol for the resulting remote URLs. Available choices: `ftp`, `http`, `https` (default: `ftp`).
+: For example:
 
-##### `retryPolicy`
-
-Set a retry policy in case the SRA request fails with a retriable error.
-The retry policy is set as a Map specifying the different policy properties.
-
-Available retry policy properties:
-
-| Property      | Description                                     | Default |
-| ------------- |-------------------------------------------------| ------- |
-| `delay`       | Delay when retrying failed SRA requests.        | `500ms` |
-| `jitter`      | Jitter value when retrying failed SRA requests. | `0.25`  |
-| `maxAttempts` | Max attempts when retrying failed SRA requests. | `3`     |
-| `maxDelay`    | Max delay when retrying failed SRA requests.    | `30s`   |
-
-The following code snippet shows an example for using the `channel.fromSRA` factory method with a custom `retryPolicy`.
-
-```nextflow
-channel.fromSRA(ids, retryPolicy: [delay: '250ms', maxAttempts: 5])
-```
+  ```nextflow
+  channel.fromSRA(ids, retryPolicy: [delay: '250ms', maxAttempts: 5])
+  ```
 
 ## interval
 
-The `interval` method emits an incrementing index (starting from zero) at a periodic interval. For example:
+**`interval( interval: String ) -> Channel<Integer>`**
+
+The `channel.interval` factory emits an incrementing index (starting from zero) at a periodic interval. For example:
 
 ```nextflow
 channel.interval('1s').view()
@@ -386,42 +283,29 @@ channel.interval('1s').view()
 
 The above snippet will emit 0, 1, 2, and so on, every second, forever. You can use an operator such as [take][operator-take] or [until][operator-until] to close the channel based on a stopping condition.
 
-An optional closure can be used to transform the index. Additionally, returning `channel.STOP` will close the channel. For example:
-
-```nextflow
-ch = channel.interval('1s') { i ->
-    i == 10 ? channel.STOP : i
-}
-ch.view()
-```
-
 ## of
 
-<AddedInVersion version="19.10.0" />
+**`of( values... ) -> Channel`**
 
-The `channel.of` method allows you to create a channel that emits the arguments provided to it, for example:
+The `channel.of` factory allows you to create a channel that emits each argument:
 
 ```nextflow
-ch = channel.of( 1, 3, 5, 7 )
-ch.view { v -> "value: $v" }
+ch = channel.of( 1, 3, 5, 7 ).view()
 ```
 
-The first line in this example creates a variable `ch` which holds a channel object. This channel emits the arguments
-supplied to the `of` method. Thus the second line prints the following:
+Prints:
 
 ```
-value: 1
-value: 3
-value: 5
-value: 7
+1
+3
+5
+7
 ```
 
 Ranges of values are expanded accordingly:
 
 ```nextflow
-channel
-    .of(1..23, 'X', 'Y')
-    .view()
+channel.of(1..23, 'X', 'Y').view()
 ```
 
 Prints:
@@ -437,45 +321,58 @@ X
 Y
 ```
 
-See also: [channel.fromList](#fromlist) factory method.
+See also: [channel.fromList](#fromlist)
 
 ## topic
 
-<AddedInVersion version="23.11.0-edge" />
+<AddedInVersion version="25.04.0" />
 
 :::note
-In versions of Nextflow prior to 25.04, this feature requires the `nextflow.preview.topic` feature flag to be enabled.
+This feature was previewed in versions 24.04 and 24.10 with the `nextflow.preview.topic` feature flag.
 :::
+
+**`topic( name: String ) -> Channel`**
 
 A *topic channel* is a channel that can receive values from many sources *implicitly* based on a matching *topic name*.
 
-:::tip
-You can think of it as a channel that is shared across many different processes using the same topic name.
-:::
-
-A process output can be assigned to a topic using the `topic` option on an output, for example:
+A typed process can emit values to a topic using the `topic:` section:
 
 ```nextflow
+nextflow.preview.types = true
+
 process hello {
-    output:
-    val('hello'), topic: my_topic
+    topic:
+    file('hello.txt') >> 'my-topic'
 
     // ...
 }
 
 process bye {
-    output:
-    val('bye'), topic: my_topic
+    topic:
+    file('bye.txt') >> 'my-topic'
 
     // ...
 }
 ```
 
-The `channel.topic` function returns the topic channel for the given name, which can be used as input to a process or operator, like any other channel:
+A legacy process can assign outputs in the `output:` section to a topic using the `topic` option:
+
+```nextflow
+process hello {
+    output:
+    path('hello.txt'), topic: 'my-topic'
+
+    // ...
+}
+```
+
+The `channel.topic` factory returns the topic channel for the given name:
 
 ```nextflow
 channel.topic('my-topic').view()
 ```
+
+The above example emits all values sent to the `my-topic` topic from processes such as `hello` and `bye`.
 
 This approach is a convenient way to collect related items from many different sources without explicitly connecting them (e.g. using the `mix` operator).
 
@@ -483,63 +380,60 @@ This approach is a convenient way to collect related items from many different s
 Any process that consumes a topic channel (directly or indirectly) should not send any outputs to that topic, or else the pipeline will hang forever.
 :::
 
-See also: [Options][process-additional-options] for process outputs.
+See also: [Topics][process-typed-topics] for process outputs
 
 ## value
 
-The `channel.value` function creates a dataflow value bound to the given argument. For example:
+**`value( value: V ) -> Value<V>`**
+
+The `channel.value` factory creates a dataflow value bound to the given argument:
 
 ```nextflow
-v1 = channel.value( 'Hello there' )
-v2 = channel.value( [1,2,3,4,5] )
+channel.value( 'Hello there' )
+channel.value( [1,2,3,4,5] )
 ```
 
 The first line creates a dataflow value bound to the string `'Hello there'`. The second line creates a dataflow value bound to the list `[1,2,3,4,5]`, which is treated as a single value in dataflow logic.
 
 ## watchPath
 
-The `channel.watchPath` method watches a folder for one or more files matching a specified pattern. As soon as there
-is a file that meets the specified condition, it is emitted over the channel that is returned by the `watchPath` method.
-The condition on files to watch can be specified by using `*` or `?` wildcard characters i.e. by specifying a [glob][glob] path matching criteria.
+**`watchPath( pattern: String, events: String = 'create' ) -> Channel<Path>`**
+
+The `channel.watchPath` factory creates a channel that watches a [glob][glob] pattern and emits matching files as they appear.
 
 For example:
 
 ```nextflow
-channel
-    .watchPath( '/path/*.fa' )
-    .subscribe { fa -> println "Fasta file: $fa" }
+ch = channel.watchPath('/path/*.fa')
+ch.view { fa -> "Fasta file: $fa" }
 ```
 
-By default it watches only for new files created in the specified folder. Optionally, it is possible to provide a second
-argument that specifies what event(s) to watch. The supported events are:
+The second argument specifies which filesystem events to watch as a comma-separated string:
 
-- `create`: A new file is created (default)
+```nextflow
+ch = channel.watchPath('/path/*.fa', 'create,modify')
+ch.view { fa -> "File created or modified: $fa" }
+```
+
+By default, only new files are watched. The following events are supported:
+
+- `create`: A new file is created
 - `modify`: A file is modified
 - `delete`: A file is deleted
 
-You can specify more than one of these events by using a comma separated string as shown below:
-
-```nextflow
-channel
-    .watchPath( '/path/*.fa', 'create,modify' )
-    .subscribe { fa -> println "File created or modified: $fa" }
-```
-
 :::warning
-The `channel.watchPath` factory waits endlessly for files that match the specified pattern and event(s), which means
-that it will cause your pipeline to run forever. Consider using the `take` or `until` operator to close the channel when
-a certain condition is met (e.g. after receiving 10 files, receiving a file named `DONE`).
+The `channel.watchPath` factory waits endlessly for matching files, which means that it will cause your pipeline to run forever. Consider using the `take` or `until` operator to apply a stopping condition (e.g. receiving 10 files, receiving a file named `DONE`).
 :::
 
 :::note
 The `channel.watchPath` factory only works with local and shared filesystems. It does not support object storage such as S3.
 :::
 
-See also: [channel.fromPath](#frompath) factory method.
+See also: [channel.fromPath](#frompath)
 
 [cli-lineage]: ./cli#lineage
 [glob]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
-[operator-ifempty]: ./operator#ifempty
-[process-additional-options]: ./process#options
 [operator-take]: ./operator#take
 [operator-until]: ./operator#until
+[process-typed-topics]: ../process-typed#topics
+[static-types-samplesheet]: ../tutorials/static-types#loading-a-samplesheet-input

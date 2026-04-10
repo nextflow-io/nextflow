@@ -1,9 +1,15 @@
 ---
-title: Operators
-description: Reference for all Nextflow channel operators used to transform, filter, combine, and inspect channel data.
+title: Operators (legacy)
+description: Reference for legacy Nextflow channel operators.
 ---
 
-# Operators
+# Operators (legacy)
+
+<AddedInVersion version="26.04.0">
+
+See [Operators (typed)][operator-typed] for the new typed operator reference. See [Using operators with static typing][static-types-operators] for the migration guide.
+
+</AddedInVersion>
 
 ## branch
 
@@ -113,8 +119,6 @@ Emits a new subset for every `n` items, skipping `m` items before collecting eac
 
 The `remainder` option can be used to emit any remaining items as a partial subset.
 
-See also: [collate](#collate)
-
 ## collate
 
 :::warning
@@ -161,8 +165,6 @@ Collects items into groups of `size` items using a *sliding window* that moves b
 
 You can specify `false` as the third parameter to discard any remaining items.
 
-See also: [buffer](#buffer)
-
 ## collect
 
 *Returns: dataflow value*
@@ -192,8 +194,6 @@ When `true`, nested list structures are flattened and their items are collected 
 ##### `sort`
 
 When `true`, the collected items are sorted by their natural ordering (default: `false`). Can also be a [closure][script-closure] or a [Comparator](https://docs.oracle.com/javase/8/docs/api/java/util/Comparator.html) which defines how items are compared during sorting.
-
-See also: [toList][operator-tolist], [toSortedList][operator-tosortedlist]
 
 ## collectFile
 
@@ -307,8 +307,6 @@ The `combine` operator is similar to `cross` and `join`, making them easy to con
 - `combine` with the `by` option merges and flattens each pair, whereas `cross` does not. Compare the examples for `combine` and `cross` to see this difference.
 :::
 
-See also: [cross](#cross), [join](#join)
-
 ## concat
 
 *Returns: channel*
@@ -412,8 +410,6 @@ There are two important caveats when using the `cross` operator:
 1. The operator is not *commutative*, i.e. `a.cross(b)` is not the same as `b.cross(a)`
 2. Each source channel should not emit any items with duplicate keys, i.e. each item should have a unique key.
 
-See also: [combine](#combine)
-
 ## distinct
 
 :::warning
@@ -437,8 +433,6 @@ An optional [closure][script-closure] can be used to transform each value before
 
 ```console file=../snippets/distinct-with-mapper.out
 ```
-
-See also: [unique](#unique)
 
 ## dump
 
@@ -634,20 +628,20 @@ To be more precise, the operator transforms a sequence of tuples like *(K, V1, V
 
 For example:
 
-```nextflow file=../snippets/join.nf
+```nextflow file=../snippets/join-tuple.nf
 ```
 
-```console file=../snippets/join.out
+```console file=../snippets/join-tuple.out
 ```
 
 By default, the first element of each item is used as the key. The `by` option can be used to specify a different index, or list of indices.
 
 By default, unmatched items are discarded. The `remainder` option can be used to emit them at the end:
 
-```nextflow file=../snippets/join-with-remainder.nf
+```nextflow file=../snippets/join-tuple-remainder.nf
 ```
 
-```console file=../snippets/join-with-remainder.out
+```console file=../snippets/join-tuple-remainder.out
 ```
 
 :::note
@@ -671,8 +665,6 @@ When `true`, an error is reported when the operator receives an item from one ch
 ##### `remainder`
 
 When `true`, unmatched items are emitted at the end, otherwise they are discarded (default: `false`). 
-
-See also: [combine](#combine), [cross](#cross)
 
 ## last
 
@@ -817,8 +809,6 @@ b
 3
 ```
 
-See also: [concat](#concat)
-
 ## multiMap
 
 *Returns: multiple channels*
@@ -917,8 +907,6 @@ my_channel = channel.of(10, 20, 30)
 :::tip
 As a best practice, use a standard assignment (`=`) instead of `set`. Standard assignments enable more effective [type checking][preparing-static-types].
 :::
-
-See also: [tap](#tap)
 
 ## splitCsv
 
@@ -1346,8 +1334,6 @@ The `take` operator takes the first *N* items from a source channel:
 Specifying a size of `-1` causes the operator to take all values.
 :::
 
-See also: [until](#until)
-
 ## tap
 
 *Returns: channel*
@@ -1362,30 +1348,6 @@ The `tap` operator assigns a source channel to a variable, and emits the source 
 
 :::tip
 As a best practice, use a standard assignment (`=`) instead of `tap`. Standard assignments enable more effective [type checking][preparing-static-types].
-:::
-
-## toInteger
-
-*Returns: channel*
-
-The `toInteger` operator converts string values from a source channel to integer values:
-
-```nextflow file=../snippets/tointeger.nf
-```
-
-```console file=../snippets/tointeger.out
-```
-
-:::note
-`toInteger` is equivalent to:
-
-```nextflow
-map { v -> v as Integer }
-```
-:::
-
-:::note
-You can also use `toLong`, `toFloat`, and `toDouble` to convert to other numerical types.
 :::
 
 ## toList
@@ -1412,8 +1374,6 @@ In other words, `toList` is equivalent to:
 collect(flat: false).ifEmpty([])
 ```
 :::
-
-See also: [collect](#collect)
 
 ## toSortedList
 
@@ -1442,8 +1402,6 @@ An optional [closure][script-closure] can be used to control how items are compa
 collect(flat: false, sort: true).ifEmpty([])
 ```
 :::
-
-See also: [collect](#collect)
 
 ## transpose
 
@@ -1515,8 +1473,6 @@ An optional [closure][script-closure] can be used to transform each item before 
 The difference between `unique` and `distinct` is that `unique` removes *all* duplicate values, whereas `distinct` removes only *consecutive* duplicate values.
 :::
 
-See also: [distinct](#distinct)
-
 ## until
 
 *Returns: channel*
@@ -1528,8 +1484,6 @@ The `until` operator emits each item from a source channel until a stopping cond
 
 ```console file=../snippets/until.out
 ```
-
-See also: [take](#take)
 
 ## view
 
@@ -1558,12 +1512,21 @@ Available options:
 ##### `newLine`
 Print each item to a separate line (default: `true`).
 
+##### `tag`
+
+<AddedInVersion version="25.02.0-edge" />
+
+Associate the channel with a tag. For example:
+
+```nextflow file=../snippets/view-tag.nf
+```
+
 [cache-nondeterministic-inputs]: ../cache-and-resume#non-deterministic-process-inputs
 [config-feature-flags]: ./feature-flags
+[operator-empty]: ./channel#empty
+[operator-typed]: ./operator-typed
+[preparing-static-types]: ../tutorials/static-types#preparing-for-static-typing
 [process-cache]: ./process#cache
 [script-closure]: ../script#closures
 [script-regexp]: ../script#regular-expressions
-[operator-empty]: ./channel#empty
-[operator-tolist]: ./operator#tolist
-[operator-tosortedlist]: ./operator#tosortedlist
-[preparing-static-types]: ../tutorials/static-types#preparing-for-static-types
+[static-types-operators]: ../tutorials/static-types-operators

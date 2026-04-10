@@ -27,61 +27,6 @@ workflow {
 
 ## Parameters
 
-Parameters can be declared in a Nextflow script with the `params` block or with *legacy* parameter declarations.
-
-### Typed parameters
-
-<AddedInVersion version="25.10.0" />
-
-:::note
-Typed parameters require the [strict syntax][strict-syntax-page]. Set the `NXF_SYNTAX_PARSER` environment variable to `v2` to enable:
-
-```bash
-export NXF_SYNTAX_PARSER=v2
-```
-:::
-
-A script can declare parameters using the `params` block:
-
-```nextflow
-params {
-    // Path to input data.
-    input: Path
-
-    // Whether to save intermediate files.
-    save_intermeds: Boolean
-}
-```
-
-All [standard types][stdlib-types] except for the dataflow types (`Channel` and `Value`) can be used for parameters.
-
-Parameters can be used in the entry workflow:
-
-```nextflow
-workflow {
-    analyze(params.input, params.save_intermeds)
-}
-```
-
-:::note
-As a best practice, parameters should only be referenced in the entry workflow or `output` block. Parameters can be passed to workflows and processes as explicit inputs.
-:::
-
-The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in [Pipeline parameters][cli-params]. Parameters specified on the command line are converted to the appropriate type based on the corresponding type annotation.
-
-A parameter that doesn't specify a default value is a *required* parameter. If a required parameter is not given a value at runtime, the run will fail.
-Boolean parameters that don't specify a default value default to `false`.
-
-<AddedInVersion version="26.04.0" />
-
-Parameters with a collection type (i.e., `List`, `Set`, or `Bag`) can be supplied a file path instead of a literal collection. The file must be CSV, JSON, or YAML. Nextflow will parse the file contents and assign the resuling collection to the parameter. An error is thrown if the file contents do not match the parameter type.
-
-:::note
-When supplying a CSV file to a collection parameter, the CSV file must contain a header row and must use a comma (`,`) as the column separator.
-:::
-
-### Legacy parameters
-
 Parameters can be declared by assigning a `params` property to a default value:
 
 ```nextflow
@@ -331,6 +276,21 @@ Files that do not originate from the work directory are not published, but are i
 
 See [Output directives](#output-directives) for the list of available index directives.
 
+### Labels
+
+You can apply labels to each workflow output using the `label` directive:
+
+```nextflow
+output {
+    multiqc_report {
+        label 'qc'
+        label 'summary'
+    }
+}
+```
+
+Labels can be used to find and filter output files across workflow runs with data lineage. See [Data lineage][data-lineage-workflow-outputs] for details on how to query output files by label.
+
 ### Output directives
 
 The following directives are available for each output in the output block:
@@ -355,7 +315,9 @@ The character used to separate values (default: `','`). Only used for CSV files.
 
 ##### `label`
 
-Specify a label to be applied to every published file. Can be specified multiple times.
+Attach a label to every file published by this output. Can be specified multiple times to attach multiple labels.
+
+Labels are stored in the `labels` field of `FileOutput` records in the [lineage store][data-lineage-page].
 
 ##### `path`
 
@@ -456,26 +418,6 @@ The result of the above workflow can be accessed using `my_workflow.out.my_data`
 Every output must be assigned to a name when multiple outputs are declared.
 :::
 
-<AddedInVersion version="25.10.0" />
-
-When using the [strict syntax][strict-syntax-page], workflow takes and emits can specify a type annotation:
-
-```nextflow
-workflow my_workflow {
-    take:
-    data: Channel<Path>
-
-    main:
-    ch_hello = hello(data)
-    ch_bye = bye(ch_hello.collect())
-
-    emit:
-    my_data: Value<Path> = ch_bye
-}
-```
-
-In the above example, `my_workflow` takes a channel of files (`Channel<Path>`) and emits a dataflow value with a single file (`Value<Path>`). See [Types][stdlib-types] for the list of available types.
-
 ## Dataflow
 
 Workflows consist of *dataflow* logic, in which processes are connected to each other through *dataflow channels* and *dataflow values*.
@@ -512,25 +454,25 @@ Channel operators, or *operators* for short, are functions that consume and prod
 
 Commonly used operators include:
 
+- [collect][operator-collect]: collect the channel values into a collection
+
 - [combine][operator-combine]: emit the combinations of two channels
 
-- [collect][operator-collect]: collect the values from a channel into a list
+- [filter][operator-filter]: emit only the channel values that satisfy a condition
 
-- [filter][operator-filter]: select the values in a channel that satisfy a condition
+- [flatMap][operator-flatMap]: emit multiple values for each channel value with a closure
 
-- [flatMap][operator-flatMap]: transform each value from a channel into a list and emit each list element separately
-
-- [grouptuple][operator-grouptuple]: group the values from a channel based on a grouping key
+- [grouptuple][operator-grouptuple]: group the channel values based on a grouping key
 
 - [join][operator-join]: join the values from two channels based on a matching key
 
-- [map][operator-map]: transform each value from a channel with a mapping function
+- [map][operator-map]: transform each channel value with a mapping function
 
 - [mix][operator-mix]: emit the values from multiple channels
 
-- [view][operator-view]: print each value in a channel to standard output
+- [view][operator-view]: print each channel value to standard output
 
-See [Operators][operator-page] for the full list of operators.
+See [Operators][operator-page] for the full set of operators.
 
 ### Values
 
@@ -597,7 +539,7 @@ Processes and workflows have a few extra rules for how they can be called:
 
 - Processes and workflows can only be called by workflows
 
-- A given process or workflow can only be called once in a given workflow. To use a process or workflow multiple times in the same workflow, use [Module aliases][module-aliases].
+- A given process or workflow can only be called once in a given workflow. To use a process or workflow multiple times in the same workflow, use [module aliases][module-aliases].
 
 The "return value" of a process or workflow call is the process outputs or workflow emits, respectively. The return value can be assigned to a variable or passed into another call:
 
@@ -745,7 +687,7 @@ workflow {
 }
 ```
 
-The above snippet defines a process named `greet` and invokes it with the input channel. The result is then piped to the [map][operator-map] operator, which converts each string to uppercase, and finally to the [view operator][operator-view] operator which prints it.
+The above snippet defines a process named `greet` and invokes it with the input channel. The result is then piped to the [map][operator-map] operator, which converts each string to uppercase, and finally to the [view][operator-view] operator which prints it.
 
 The same code can also be written as:
 
@@ -810,6 +752,8 @@ workflow {
 
 ### Process and workflow recursion
 
+<AddedInVersion version="22.04.0" />
+
 :::note
 This is a preview feature and requires the `nextflow.preview.recursion` feature flag to be enabled. The syntax and behavior may change in future releases.
 :::
@@ -852,34 +796,27 @@ Workflows can also be invoked recursively:
 [cli-params]: ./cli#pipeline-parameters
 [config-process-selectors]: ./config#process-selectors
 [config-workflow]: ./reference/config#workflow
+[data-lineage-page]: ./tutorials/data-lineage
+[data-lineage-workflow-outputs]: ./tutorials/data-lineage
 [dsl1-page]: ./migrations/dsl1
 [migrating-workflow-outputs]: ./tutorials/workflow-outputs
+[module-aliases]: ./module#module-aliases
 [operator-collect]: ./reference/operator#collect
 [operator-combine]: ./reference/operator#combine
 [operator-filter]: ./reference/operator#filter
 [operator-flatMap]: ./reference/operator#flatmap
 [operator-grouptuple]: ./reference/operator#grouptuple
 [operator-join]: ./reference/operator#join
-[operator-page]: ./reference/operator
-[preparing-static-types]: ./tutorials/static-types
-[process-out-singleton]: ./process#singleton-outputs
-[process-page]: ./process
-[stdlib-types]: ./reference/stdlib-types
-[stdlib-types-value]: ./reference/stdlib-types#valuev
-[workflow-outputs-second-preview]: ./migrations/24-10
-[workflow-outputs-third-preview]: ./migrations/25-04
-[module-aliases]: ./module#module-aliases
-[process-naming-outputs]: ./process#naming-outputs
 [operator-map]: ./reference/operator#map
 [operator-mix]: ./reference/operator#mix
+[operator-page]: ./reference/operator
 [operator-view]: ./reference/operator#view
+[preparing-static-types]: ./tutorials/static-types
+[process-naming-outputs]: ./process#naming-outputs
+[process-out-singleton]: ./process#singleton-outputs
+[process-page]: ./process
 [process-publishdir]: ./reference/process#publishdir
-[stdlib-types-boolean]: ./reference/stdlib-types#boolean
-[stdlib-types-float]: ./reference/stdlib-types#float
-[stdlib-types-integer]: ./reference/stdlib-types#integer
-[stdlib-types-path]: ./reference/stdlib-types#path
-[stdlib-types-string]: ./reference/stdlib-types#string
-[strict-syntax-page]: ./strict-syntax
+[stdlib-types-value]: ./reference/stdlib-types#valuev
 [workflow-outputs-first-preview]: ./migrations/24-04#workflow-outputs-first-preview
 [workflow-outputs-second-preview]: ./migrations/24-10#workflow-outputs-second-preview
 [workflow-outputs-third-preview]: ./migrations/25-04#workflow-outputs-third-preview

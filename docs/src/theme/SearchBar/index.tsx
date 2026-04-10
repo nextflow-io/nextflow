@@ -248,8 +248,7 @@ function DocSearch({
       items.filter((item) => {
         // Exclude versioned platform-enterprise docs (e.g. /platform-enterprise/25.2/...)
         try {
-          const pathname = new URL(item.url).pathname;
-          return !/\/platform-enterprise\/\d/.test(pathname);
+          return !/\/platform-enterprise\/\d/.test(new URL(item.url).pathname);
         } catch {
           return true;
         }
@@ -307,7 +306,7 @@ function DocSearch({
         }
 
         return withRelativeUrl;
-      }),
+      }) as typeof items,
   ).current;
 
   const resultsFooterComponent: DocSearchProps['resultsFooterComponent'] =

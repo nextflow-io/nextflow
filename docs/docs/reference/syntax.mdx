@@ -197,6 +197,33 @@ In order for a script to be executable, it must either define an entry workflow 
 
 Entry workflow definitions are ignored when a script is included as a module. This way, the same script can be included as a module or executed as a pipeline.
 
+### Workflow (typed)
+
+A typed workflow is a workflow that uses static typing for inputs and outputs:
+
+```nextflow
+nextflow.preview.types = true
+
+workflow greet {
+    take:
+    greetings: Channel<String>
+
+    main:
+    messages = greetings.map { v -> "$v world!" }
+
+    emit:
+    messages: Channel<String>
+}
+```
+
+Typed workflows have the following new features:
+
+- Each workflow input in the `take:` section has a name and a type.
+
+- Each named workflow output in the `emit:` section may specify a type.
+
+See [Workflows (typed)][workflow-typed-page] for more information on the semantics of typed workflows.
+
 ### Process
 
 A process consists of a name and a body. The process body consists of one or more [statements](#statements). A minimal process definition must return a string:
@@ -1035,4 +1062,5 @@ The following legacy features were excluded from this page because they are depr
 [stdlib-namespaces-global]: ./stdlib-namespaces
 [stdlib-page]: ./stdlib
 [workflow-output-def]: ../workflow#outputs
+[workflow-typed-page]: ../workflow-typed
 

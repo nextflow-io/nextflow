@@ -1222,7 +1222,11 @@ The `module` command provides a comprehensive system for managing registry-based
 
 #### Subcommands
 
-##### `info [options] [scope/name]` {#module-info}
+##### `create [namespace/name]`
+
+Create a new module with a basic `main.nf`, `meta.yml`, and `README.md`.
+
+##### `info [options] [namespace/name]` {#module-info}
 
 Display detailed information about a module from the registry.
 Shows module name, version, description, and other metadata, as well as example usage.
@@ -1237,7 +1241,7 @@ Specify the module version to query (e.g., `1.0.0`). If not specified, displays 
 
 Output mode for info results. Options: `text` (default), `json`.
 
-##### `install [options] [scope/name]` {#module-install}
+##### `install [options] [namespace/name]` {#module-install}
 
 Install a module from the registry into your project.
 Downloaded modules are stored in the `modules/` directory.
@@ -1264,10 +1268,10 @@ The following options are available:
 
 Output mode for list results. Options: `table` (default), `json`.
 
-##### `publish [options] [scope/name | path]` {#module-publish}
+##### `publish [options] [namespace/name | path]` {#module-publish}
 
 Publish a module to the registry, making it available for others to install.
-The argument can be either a `scope/name` reference (for an already-installed module) or a local directory path containing the module files.
+The argument can be either a `namespace/name` reference (for an already-installed module) or a local directory path containing the module files.
 Requires authentication via the `NXF_REGISTRY_TOKEN` environment variable or the `registry.apiKey` config option.
 The module directory must contain `main.nf`, `meta.yml`, and `README.md`.
 
@@ -1281,7 +1285,7 @@ Validate the module structure and metadata without uploading to the registry. Us
 
 Specify the registry to publish the module (default: `https://registry.nextflow.io`)
 
-##### `remove [options] [scope/name]` {#module-remove}
+##### `remove [options] [namespace/name]` {#module-remove}
 
 Remove a module from your project. By default, removes both local files and configuration entries. Use options to control what gets removed.
 
@@ -1295,7 +1299,7 @@ Force removal even if the module has no `.module-info` file (i.e. not installed 
 
 Remove the `.module-info` but keep local files in the `modules/` directory.
 
-##### `run [options] [scope/name] [--<input_name> <input-value>]` {#module-run}
+##### `run [options] [namespace/name] [--<input_name> <input-value>]` {#module-run}
 
 Execute a module directly from the registry without creating a wrapper workflow.
 Automatically downloads the module if not already installed. Accepts all standard Nextflow run options.
@@ -1322,6 +1326,46 @@ Maximum number of results to return (default: varies by registry).
 
 Output mode for search results. Options: `simple` (default), `json`.
 
+##### `spec [options] <namespace/name or path>` {#module-spec}
+
+Generate the `meta.yml` for a local module from the source code (`main.nf`).
+
+The generated file includes `TODO` placeholders for fields that were not specified.
+
+If a spec file already exists, it is incorporated into the new file.
+
+The following options are available:
+
+###### `-namespace <namespace>`
+
+Module namespace, used to construct the module name. Required when the argument is a path; ignored when it is a module name.
+
+###### `-version <version>`
+
+Module version string (e.g. `1.0.0`). Defaults to `TODO: Add version`.
+
+###### `-description <text>`
+
+Short description of what the module does. Defaults to `TODO: Add description`.
+
+###### `-license <identifier>`
+
+SPDX license identifier (e.g. `MIT`, `Apache-2.0`). Defaults to `TODO: Add license (e.g., MIT)`.
+
+###### `-author <name>`
+
+Module author. Can be specified multiple times, once per author. Defaults to `[TODO: Add author]`.
+
+###### `-dry-run`
+
+Print the generated spec to stdout without writing any file.
+
+##### `validate [options] <scope/name or path>` {#module-validate}
+
+Validate a module before publishing to the registry.
+
+Verifies that all required files are present (`main.nf`, `meta.yml`, `README.md`) and that the module spec contains all required fields (name, version, description, license).
+
 #### Examples
 
 Install the latest module version.
@@ -1336,13 +1380,13 @@ Display installed modules in formatted table.
 $ nextflow module list
 ```
 
-Validate module structure without publishing
+Validate module structure without publishing.
 
 ```console
 $ nextflow module publish myorg/my-module -dry-run
 ```
 
-Publish module to nextflow registry
+Publish module to nextflow registry.
 
 ```console
 $ export NXF_REGISTRY_TOKEN=your-token
@@ -1355,13 +1399,19 @@ Display information for latest module version.
 $ nextflow module info nf-core/fastqc
 ```
 
+Create a module.
+
+```console
+$ nextflow module create
+```
+
 Remove module completely.
 
 ```console
 $ nextflow module remove nf-core/fastqc
 ```
 
-Run module with inputs
+Run module with inputs.
 
 ```console
 $ nextflow module run nf-core/fastqc --input 'data/*.fastq.gz'
@@ -1371,6 +1421,43 @@ Search for alignment-related modules.
 
 ```console
 $ nextflow module search alignment
+```
+
+Generate spec for local module by name.
+
+```console
+$ nextflow module spec nf-core/fastqc
+```
+
+Generate spec for local module by path (namespace required)
+
+```console
+$ nextflow module spec -namespace nf-core ./modules/my-module
+```
+
+Provide additional fields to avoid TODO placeholders.
+
+```console
+$ nextflow module spec \
+    -namespace nf-core \
+    -version 1.0.0 \
+    -description "Quality control of raw sequencing reads" \
+    -license MIT \
+    -author "@drpatelh" \
+    -author "@joseespinosa" \
+    ./modules/nf-core/fastqc
+```
+
+Validate module by name.
+
+```console
+$ nextflow module validate myorg/my-module
+```
+
+Validate module by path.
+
+```console
+$ nextflow module validate ./modules/myorg/my-module
 ```
 
 ### `plugin`
@@ -1538,7 +1625,7 @@ Execute the workflow using DSL2 syntax.
 
 ##### `-dump-channels`
 
-Dump channels for debugging purpose.
+Dump channels for debugging purpose. Optionally accepts a comma-separated list of channel tags to filter which channels are printed.
 
 ##### `-dump-hashes`
 

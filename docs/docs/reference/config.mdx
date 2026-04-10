@@ -1306,7 +1306,7 @@ Available options:
 - `clientKey`
 - `clientKeyFile`
 
-##### `k8s.clientRefreshInterval` 
+##### `k8s.clientRefreshInterval`
 
 <AddedInVersion version="26.01.0-edge" />
 
@@ -1753,7 +1753,12 @@ The compute backend provider type (e.g. `'aws'`, `'local'`). When specified, use
 
 ###### `seqera.executor.region`
 
-The AWS region for task execution (default: `'eu-central-1'`).
+The cloud region for task execution.
+
+##### `seqera.executor.computeEnvId`
+
+The Seqera Platform compute environment ID. When specified, the scheduler resolves the compute environment directly by this ID instead of inferring a suitable compute environment.
+Used as a fallback when the workflow launch does not include a compute environment reference.
 
 ###### `seqera.executor.autoLabels`
 
@@ -2485,7 +2490,7 @@ Available options:
 Never overwrite existing files.
 
 ###### `true`
-  
+
 Always overwrite existing files.
 
 ######  `'deep'`

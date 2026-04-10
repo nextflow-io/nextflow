@@ -20,3 +20,8 @@
   NODE_VERSION = "22"
   # Limit Node.js memory to 2GB
   NODE_OPTIONS = "--max-old-space-size=2048"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex"

@@ -90,13 +90,26 @@ export default async function createConfigAsync() {
         typesenseSearchParameters: {
           query_by: 'content,hierarchy.lvl0,hierarchy.lvl1,hierarchy.lvl2,hierarchy.lvl3',
           group_by: 'url_without_anchor',
+          query_by_weights: '1,1,4,3,2',
+          drop_tokens_threshold: 0,
           group_limit: 1,
           num_typos: 1,
           prioritize_exact_match: true,
-          filter_by: 'docusaurus_tag:!=[default,doc_tag_doc_list,blog_posts_list,blog_tags_posts,doc_tags_list,blog_tags_list]', // TODO Remove once the scraper is updated
+          filter_by: 'docusaurus_tag:!=[default,doc_tag_doc_list,blog_posts_list,blog_tags_posts,doc_tags_list,blog_tags_list,docs-platform-enterprise-25.2,docs-platform-enterprise-25.1,docs-platform-enterprise-24.2,docs-platform-enterprise-24.1,docs-platform-enterprise-23.4,docs-platform-enterprise-23.3]', // TODO Remove once the scraper is updated
         },
         contextualSearch: false,
         placeholder: 'Search Seqera docs...',
+        productRoutes: [
+          ['/platform-enterprise/', 'Platform Enterprise', 'platform-enterprise', null],
+          ['/platform-cloud/', 'Platform Cloud', 'platform-cloud', null],
+          ['/platform-cli/', 'Platform CLI', 'platform-cli', null],
+          ['/platform-api/', 'Platform API', 'platform-api', null],
+          ['/nextflow/', 'Nextflow', null, 'docs-nextflow-current'],
+          ['/multiqc/', 'MultiQC', 'multiqc', null],
+          ['/wave/', 'Wave', 'wave', null],
+          ['/fusion/', 'Fusion', 'fusion', null],
+          ['/changelog/', 'Changelog', null, null],
+        ],
       },
       navbar: {
         items: [
