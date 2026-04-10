@@ -252,25 +252,29 @@ abstract class TaskHandler {
                 log.debug "[WARN] Cannot read trace file: $file -- Cause: ${e.message}"
             }
 
-            if( task.processor.executor.isFusionEnabled() ) {
-                final fusionTrace = task.workDir?.resolve(TaskRun.FUSION_TRACE)
-                try {
-                    if( fusionTrace ) {
-                        final gpu = TraceRecord.parseFusionTraceFile(fusionTrace)
-                        if( gpu )
-                            record.gpuMetrics = gpu
-                    }
-                }
-                catch( NoSuchFileException e ) {
-                    // ignore it
-                }
-                catch( Exception e ) {
-                    log.debug "[WARN] Cannot read Fusion trace file: $fusionTrace -- Cause: ${e.message}"
-                }
-            }
+            parseFusionTrace(record)
         }
 
         return record
+    }
+
+    protected void parseFusionTrace(TraceRecord record) {
+        if( !task.processor.executor.isFusionEnabled() )
+            return
+        final fusionTrace = task.workDir?.resolve(TaskRun.FUSION_TRACE)
+        try {
+            if( fusionTrace ) {
+                final gpu = TraceRecord.parseFusionTraceFile(fusionTrace)
+                if( gpu )
+                    record.gpuMetrics = gpu
+            }
+        }
+        catch( NoSuchFileException e ) {
+            // ignore it
+        }
+        catch( Exception e ) {
+            log.debug "[WARN] Cannot read Fusion trace file: $fusionTrace -- Cause: ${e.message}"
+        }
     }
 
     /**
