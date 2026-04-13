@@ -125,6 +125,7 @@ class TraceRecord implements Serializable {
     transient private ContainerMeta containerMeta
     transient private Integer numSpotInterruptions
     transient private String logStreamId
+    transient private Map<String,Object> resourceAllocation
 
     /**
      * Convert the given value to a string
@@ -645,5 +646,13 @@ class TraceRecord implements Serializable {
 
     void setContainerMeta(ContainerMeta meta) {
         this.containerMeta = meta
+    }
+
+    Map<String,Object> getResourceAllocation() {
+        return resourceAllocation
+    }
+
+    void setResourceAllocation(Map<String,Object> value) {
+        this.resourceAllocation = value
     }
 }

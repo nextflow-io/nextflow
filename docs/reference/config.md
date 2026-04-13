@@ -113,7 +113,7 @@ The following settings are available:
 : The AWS Batch [Execution Role](https://docs.aws.amazon.com/batch/latest/userguide/execution-IAM-role.html) ARN that needs to be used to execute the Batch Job. It is mandatory when using AWS Fargate.
 
 `aws.batch.forceGlacierTransfer`
-: :::{versionadded} 26.04.0 
+: :::{versionadded} 26.04.0
   :::
 : When `true`, add the `--force-glacier-transfer` flag to AWS CLI S3 download commands (default: `false`).
 : This option is needed when staging directories that have been restored from [S3 Glacier](https://aws.amazon.com/s3/storage-classes/glacier/). It does not restore objects from Glacier.
@@ -878,7 +878,7 @@ The following settings are available:
 
   :::{note}
   This configuration does not mount or provide access to credential files. For example, AWS credentials like `~/.aws/credentials`, `~/.aws/config`, and SSO cache files are not mounted. AWS SSO users must export credentials to environment variables:
-  
+
   ```bash
   eval "$(aws configure export-credentials --format env)"
   ```
@@ -1438,8 +1438,14 @@ The following settings are available:
 `seqera.executor.endpoint`
 : The Seqera scheduler service endpoint URL (required).
 
+`seqera.executor.provider`
+: The compute backend provider type (e.g. `'aws'`, `'local'`). When specified, used together with `region` to select the matching compute environment.
+
 `seqera.executor.region`
-: The AWS region for task execution (default: `'eu-central-1'`).
+: The cloud region for task execution.
+
+`seqera.executor.computeEnvId`
+: The Seqera Platform compute environment ID. When specified, the scheduler resolves the compute environment directly by this ID instead of inferring a suitable compute environment. Used as a fallback when the workflow launch does not include a compute environment reference.
 
 `seqera.executor.autoLabels`
 : When `true`, automatically adds workflow metadata labels to the session with the `nextflow.io/` prefix (default: `false`). The following labels are added: `projectName`, `userName`, `runName`, `sessionId`, `resume`, `revision`, `commitId`, `repository`, `manifestName`, `runtimeVersion`. A `seqera.io/runId` label is also added, computed as a SipHash of the session ID and run name.
@@ -1634,6 +1640,16 @@ The following settings are available:
 
 `tower.endpoint`
 : The endpoint of your Seqera Platform instance (default: `https://api.cloud.seqera.io`).
+
+`tower.httpConnectTimeout`
+: :::{versionadded} 26.04.0
+  :::
+: The HTTP connection timeout for Seqera Platform API requests (default: `'60s'`).
+
+`tower.httpReadTimeout`
+: :::{versionadded} 26.04.0
+  :::
+: The HTTP read timeout for Seqera Platform API requests (default: `'60s'`).
 
 `tower.workspaceId`
 : The workspace ID in Seqera Platform in which to save the run (default: the launching user's personal workspace).

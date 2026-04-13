@@ -175,7 +175,7 @@ class ScriptLoaderV2 implements ScriptLoader {
 
     private ScriptCompiler getCompiler() {
         if( !compiler )
-            compiler = new ScriptCompiler(session.debug, session.classesDir, session.getClassLoader())
+            compiler = new ScriptCompiler(session.debug, session.classesDir, session.getClassLoader(), session.baseDir)
         return compiler
     }
 

@@ -56,6 +56,8 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     public static final String SEQERA = 'seqera'
 
+    private static final String DEFAULT_FUSION_VERSION = '2.6'
+
     private ExecutorOpts seqeraConfig
 
     private SchedClient client
@@ -66,7 +68,15 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     @Override
     protected void register() {
+        applyFusionDefaults()
         createClient()
+    }
+
+    protected void applyFusionDefaults() {
+        final fusionConfig = session.config.fusion as Map
+        if( fusionConfig!=null && !fusionConfig.containerConfigUrl ) {
+            fusionConfig.put('targetVersion', DEFAULT_FUSION_VERSION)
+        }
     }
 
     @Override
@@ -101,6 +111,9 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         final towerConfig = session.config.tower as Map ?: Collections.emptyMap()
         final workflowId = session.workflowMetadata?.platform?.workflowId
         final workflowUrl = session.workflowMetadata?.platform?.workflowUrl
+        final workspaceId = PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get()) as Long
+        final computeEnvId = PlatformHelper.getComputeEnvId(towerConfig, SysEnv.get()) ?: seqeraConfig.computeEnvId
+
         final labels = new Labels()
         if( seqeraConfig.autoLabels )
             labels.withWorkflowMetadata(session.workflowMetadata)
@@ -111,13 +124,15 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
                 .workflowUrl(workflowUrl)
                 .workDir(session.workDir?.toUriString())
         final request = new CreateRunRequest()
+                .provider(seqeraConfig.provider)
                 .region(seqeraConfig.region)
                 .name(session.runName)
                 .machineRequirement(SchemaMapperUtil.toMachineRequirement(seqeraConfig.machineRequirement))
                 .labels(labels.entries)
-                .workspaceId(PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get()) as Long)
+                .workspaceId(workspaceId)
                 .pipeline(pipeline)
                 .predictionModel(predictionModel)
+                .computeEnvId(computeEnvId)
         log.debug "[SEQERA] Creating run: ${request}"
         final response = client.createRun(request)
         this.runId = response.getRunId()

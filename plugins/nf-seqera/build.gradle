@@ -20,7 +20,7 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '26.02.0-edge'
+    nextflowVersion = '26.03.2-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Integrates with Seqera Platform for comprehensive workflow monitoring, resource tracking, and cache management capabilities'
@@ -50,10 +50,10 @@ configurations {
 dependencies {
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
-    compileOnly 'org.pf4j:pf4j:3.12.0'
-    api 'io.seqera:sched-client:0.39.0-SNAPSHOT'
+    compileOnly 'org.pf4j:pf4j:3.14.1'
+    api 'io.seqera:sched-client:0.49.0'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.30"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.30"
+    testImplementation "org.apache.groovy:groovy:4.0.31"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.31"
 }

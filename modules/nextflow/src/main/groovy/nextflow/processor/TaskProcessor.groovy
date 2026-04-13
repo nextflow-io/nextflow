@@ -96,11 +96,13 @@ import nextflow.script.params.ValueOutParam
 import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessTupleInput
 import nextflow.script.types.Record
+import nextflow.script.types.Tuple
 import nextflow.script.types.Types
 import nextflow.trace.TraceRecord
 import nextflow.util.Escape
 import nextflow.util.HashBuilder
 import nextflow.util.LockManager
+import nextflow.util.RecordMap
 import nextflow.util.TestOnly
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -1777,7 +1779,9 @@ class TaskProcessor {
         for( int i = 0; i < declaredInputs.getParams().size(); i++ ) {
             final param = declaredInputs.getParams()[i]
             final value = values[i]
-            if( param instanceof ProcessTupleInput )
+            if( param instanceof ProcessTupleInput && param.getType() == Record.class )
+                assignTaskRecordInput(task, param, value, i)
+            else if( param instanceof ProcessTupleInput && param.getType() == Tuple.class )
                 assignTaskTupleInput(task, param, value, i)
             else
                 assignTaskInput(task, param, value, i)
@@ -1835,9 +1839,24 @@ class TaskProcessor {
     }
 
     @CompileStatic
+    private void assignTaskRecordInput(TaskRun task, ProcessTupleInput param, Object value, int index) {
+        if( value == null && !param.optional ) {
+            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} cannot be null")
+        }
+        if( value !instanceof RecordMap ) {
+            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} expected a record but received: ${value} [${value.class.simpleName}]")
+        }
+        final recordParams = param.getComponents()
+        final record = value as Map
+        for( final recordParam : recordParams ) {
+            assignTaskInput(task, recordParam, record[recordParam.getName()], index)
+        }
+    }
+
+    @CompileStatic
     private void assignTaskTupleInput(TaskRun task, ProcessTupleInput param, Object value, int index) {
         if( value == null && !param.optional ) {
-            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} cannot be null -- append `?` to the type annotation to mark it as nullable")
+            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} cannot be null")
         }
         if( value !instanceof List ) {
             throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} expected a tuple but received: ${value} [${value.class.simpleName}]")

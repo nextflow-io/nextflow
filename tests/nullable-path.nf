@@ -20,7 +20,7 @@ process bar {
     input: Path?
 
     stage:
-    stageAs 'input.txt', input
+    stageAs input, 'input.txt'
 
     output:
     stdout()
@@ -32,5 +32,5 @@ process bar {
 }
 
 workflow {
-    channel.of('foo') | foo | bar | view
+    bar(foo(channel.of('foo'))).view()
 }
