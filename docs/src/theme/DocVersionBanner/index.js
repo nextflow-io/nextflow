@@ -5,23 +5,23 @@ export default function DocVersionBanner() {
   const version = useDocsVersion();
 
   // Custom migration banner for current version
-  if (version.version === 'current') {
-    return (
-      <div className="max-w-3xl mx-auto md:pr-4">
-        <div className="theme-admonition theme-admonition-caution admonition_whTW alert alert--warning block shadow-none border border-gray-200">
-          <div className="admonitionContent_pDMz">
-            <p>
-              Nextflow documentation is being migrated from{' '}
-              <a href="https://nextflow.io/docs/" target="_blank" rel="noopener noreferrer">
-                <strong>https://nextflow.io/docs/</strong>
-              </a>
-              {' '}. Both sites will remain active during the migration.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  //if (version.version === 'current') {
+  //  return (
+  //    <div className="max-w-3xl mx-auto md:pr-4">
+  //      <div className="theme-admonition theme-admonition-caution admonition_whTW alert alert--warning block shadow-none border border-gray-200">
+  //        <div className="admonitionContent_pDMz">
+  //          <p>
+  //            Nextflow documentation is being migrated from{' '}
+  //            <a href="https://nextflow.io/docs/" target="_blank" rel="noopener noreferrer">
+  //              <strong>https://nextflow.io/docs/</strong>
+  //            </a>
+  //            {' '}. Both sites will remain active during the migration.
+  //          </p>
+  //        </div>
+  //      </div>
+  //    </div>
+  //  );
+  //}
 
   // Default unreleased banner
   if (version.banner === 'unreleased') {

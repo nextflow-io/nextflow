@@ -116,26 +116,32 @@ export default async function createConfigAsync() {
           {
             label: 'Cloud',
             href: '/platform-cloud/',
+            activeClassName: 'navbar__link--active',
           },
           {
             label: 'Enterprise',
             href: '/platform-enterprise/',
+            activeClassName: 'navbar__link--active',
           },
           {
             label: 'Nextflow',
             href: '/nextflow/',
+            activeClassName: 'navbar__link--active',
           },
           {
             label: 'MultiQC',
             href: '/multiqc/',
+            activeClassName: 'navbar__link--active',
           },
           {
             label: 'Wave',
             href: '/wave/',
+            activeClassName: 'navbar__link--active',
           },
           {
             label: 'Fusion',
             href: '/fusion/',
+            activeClassName: 'navbar__link--active',
           },
         ],
       },
