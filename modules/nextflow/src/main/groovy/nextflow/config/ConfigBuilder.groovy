@@ -932,6 +932,8 @@ class ConfigBuilder {
                 .setBaseDir(baseDir)
                 .buildConfigObject()
 
+        // strip params
+        config.remove('params')
         // strip secrets
         SecretHelper.hideSecrets(config)
         // compute config
