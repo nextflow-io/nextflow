@@ -1614,7 +1614,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 `-output-format`
 : :::{versionadded} 26.04.0
   :::
-: Output format for printing workflow outputs. Options: `text` (default), `json`.
+: Output format for printing workflow outputs. Options: `text` (default), `json`, `none`.
 
 `-params-file`
 : Load script parameters from a JSON/YAML file.
