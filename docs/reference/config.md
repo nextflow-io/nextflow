@@ -960,10 +960,19 @@ The following settings are available:
 `google.batch.cpuPlatform`
 : The [minimum CPU Platform](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications), e.g. `'Intel Skylake'` (default: none).
 
+`google.batch.delayBetweenAttempts`
+: Delay between transfer retry attempts (default: `10 sec`).
+
+`google.batch.gcloudCli`
+: The `gcloud` executable path used for CLI staging (default: `gcloud` from `PATH`).
+
 `google.batch.gcsfuseOptions`
 : :::{versionadded} 25.03.0-edge
   :::
 : List of custom mount options for `gcsfuse` (default: `['-o rw', '-implicit-dirs']`).
+
+`google.batch.gsutilCli`
+: The `gsutil` executable path used for CLI staging (default: `gsutil` from `PATH`).
 
 `google.batch.installOpsAgent`
 : Enables Ops Agent installation on Google Batch instances for enhanced monitoring and logging (default: `false`). See the [Google Batch documentation](https://docs.cloud.google.com/batch/docs/create-run-job-ops-agent) for details.
@@ -987,6 +996,12 @@ The following settings are available:
 : Max number of execution attempts of a job interrupted by a Compute Engine Spot reclaim event (default: `0`).
 : See also: `google.batch.autoRetryExitCodes`
 
+`google.batch.maxParallelTransfers`
+: Max parallel upload/download transfer operations per task script (default: `4`).
+
+`google.batch.maxTransferAttempts`
+: Max transfer retry attempts used by built-in transfer retry wrappers (default: `1`).
+
 `google.batch.network`
 : The URL of an existing network resource to which the VM will be attached.
 
@@ -1006,6 +1021,15 @@ The following settings are available:
 
 `google.batch.spot`
 : Enable the use of spot virtual machines (default: `false`).
+
+`google.batch.stageInCopyTransport`
+: Stage-in transport for `copy` mode. Can be `posix`, `gcloud`, or `gsutil` (default: `posix`).
+: When set to `gcloud` or `gsutil`, CLI staging is used with fallback to POSIX mount copy.
+
+`google.batch.stageOutCopyTransport`
+: Stage-out transport for `copy` mode. Can be `posix`, `gcloud`, or `gsutil` (default: `posix`).
+: When set to `gcloud` or `gsutil`, CLI staging is used with fallback to POSIX mount copy.
+: Users are responsible for ensuring the selected CLI transport is available in the task runtime/container environment.
 
 `google.batch.subnetwork`
 : The URL of an existing subnetwork resource in the network to which the VM will be attached.

@@ -88,6 +88,22 @@ Notes:
 - A container image must be specified to execute processes. You can use a different Docker image for each process using one or more {ref}`config-process-selectors`.
 - Make sure to specify the project ID, not the project name.
 - Make sure to specify a location where Google Batch is available. Refer to the [Google Batch documentation](https://cloud.google.com/batch/docs/get-started#locations) for region availability.
+- By default, Google Batch output unstaging uses `copy` when `stageOutMode` is not set, because unstaging goes from local scratch to a gcsfuse-mounted work directory and `move` can fail with overlapping outputs or symlinked paths.
+
+Optional transfer settings:
+
+```groovy
+google {
+    batch {
+        // Default is 'posix' when unset
+        stageInCopyTransport = 'gcloud'   // or 'gsutil' / 'posix'
+        stageOutCopyTransport = 'gcloud'  // or 'gsutil' / 'posix'
+    }
+}
+```
+
+When `gcloud` or `gsutil` is selected, CLI staging is used for `copy` mode with fallback to POSIX mount copy.
+Users are responsible for ensuring the selected CLI transport is available in the task container/runtime environment.
 
 Read the {ref}`Google configuration<config-google>` section to learn more about advanced configuration options.
 
