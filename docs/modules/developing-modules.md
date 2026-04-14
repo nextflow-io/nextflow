@@ -3,7 +3,7 @@
 # Developing modules
 
 Learn how to create modules for sharing through the Nextflow module registry.
-For local module syntax (inclusion, aliases, templates, and binaries), see {ref}`module-page`.
+For information about modules syntax, see {ref}`module-page`.
 
 (dev-modules-creating)=
 
@@ -39,7 +39,7 @@ Registry modules follow a standard directory structure:
 modules/
 └── myorg/
     └── my-module/
-        ├── .module-info     # Integrity checksum (generated at install)
+        ├── .module-info     # Integrity checksum (generated at install/creation)
         ├── README.md        # Documentation (required for publishing)
         ├── main.nf          # Module script (required)
         ├── meta.yml         # Module spec (required for publishing)
@@ -137,13 +137,7 @@ $ nextflow module validate myorg/my-module
 The command verifies that:
 
 - All required files are present (`main.nf`, `meta.yml`, `README.md`).
-- The module spec contains all required fields (name, version, description, license).
-
-Validate by path:
-
-```console
-$ nextflow module validate ./modules/myorg/my-module
-```
+- The module spec contains all required fields (name, version, description, and license).
 
 See {ref}`cli-module-validate` for the full command reference.
 

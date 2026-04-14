@@ -51,8 +51,8 @@ $ nextflow module install nf-core/fastqc
 include { FASTQC } from 'nf-core/fastqc'
 ```
 
-For more registry modules information:
+For more information about registry modules, see:
 
-- See {ref}`using-modules-page` for details on discovering, installing, and managing registry modules.
-- See {ref}`dev-modules-page` for details on creating and publishing your own modules.
-- See {ref}`module-registry-page` for details on namespaces, access tokens, and registry configuration.
+- {ref}`using-modules-page` for details on discovering, installing, and managing registry modules.
+- {ref}`dev-modules-page` for details on creating and publishing your own modules.
+- {ref}`module-registry-page` for details on namespaces, access tokens, and registry configuration.

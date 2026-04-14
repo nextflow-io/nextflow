@@ -65,7 +65,7 @@ To create an API access token:
 
 Once you have your token, see [Publishing modules](#publish-modules) for instructions on how to use it.
 
-## Viewing your modules
+## Viewing modules
 
 View the modules you have published in the registry:
 
@@ -88,7 +88,7 @@ Provide your registry token in one of two ways:
 **Environment variable:**
 
 ```console
-$ export NXF_REGISTRY_TOKEN=your-token
+$ export NXF_REGISTRY_TOKEN=<token>
 $ nextflow module publish myorg/my-module
 ```
 
@@ -96,7 +96,7 @@ $ nextflow module publish myorg/my-module
 
 ```groovy
 registry {
-    apiKey = 'YOUR_REGISTRY_TOKEN'
+    apiKey = '<token>'
 }
 ```
 

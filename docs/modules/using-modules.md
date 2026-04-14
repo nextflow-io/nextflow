@@ -7,7 +7,7 @@
 
 The Nextflow module system allows you to discover, install, and manage reusable modules from centralized registries.
 This page describes how to use registry modules in your pipelines.
-For local module syntax (inclusion, aliases, templates, and binaries), see {ref}`module-page`.
+For information about modules syntax, see {ref}`module-page`.
 
 ## Discovering modules
 
@@ -18,7 +18,7 @@ $ nextflow module search alignment
 $ nextflow module search "quality control" -limit 10
 ```
 
-Results include module names, versions, descriptions, and download statistics.
+Results include module names and descriptions.
 Use `-output json` for machine-readable output.
 
 See {ref}`cli-module-search` for the full command reference.
@@ -29,8 +29,13 @@ Use the `module install` command to download modules from a registry into your p
 
 ```console
 $ nextflow module install nf-core/fastqc
-$ nextflow module install nf-core/fastqc -version 1.0.0
+$ nextflow module install nf-core/fastqc -version 0.0.0-0c7146d
 ```
+
+:::{note}
+Modules mirrored from nf-core do not follow standard semantic versioning.
+Instead, they use the format `0.0.0-<hash>`, where the suffix is a short portion of the nf-core module's commit hash.
+:::
 
 Nextflow stores installed modules in the `modules/` directory and creates a `.module-info` file alongside the module to record installation metadata such as the module checksum and registry URL.
 
@@ -70,10 +75,10 @@ Use the `module info` command to view metadata and a usage template for a module
 
 ```console
 $ nextflow module info nf-core/fastqc
-$ nextflow module info nf-core/fastqc -version 1.0.0
+$ nextflow module info nf-core/fastqc -version 0.0.0-0c7146d
 ```
 
-The output includes the module's description, authors, keywords, tools, input/output channels, and a generated usage template.
+The output includes the module's version, URL, description, authors, maintainers, keywords, tools, input/output channels, and a generated usage template.
 Use `-output json` for machine-readable output.
 
 See {ref}`cli-module-info` for the full command reference.
@@ -83,22 +88,23 @@ See {ref}`cli-module-info` for the full command reference.
 For ad-hoc tasks or testing, run a module directly without creating a wrapper workflow:
 
 ```console
-$ nextflow module run nf-core/fastqc --input 'data/*.fastq.gz'
+$ nextflow module run nf-core/fastqc --meta.id=test_sample --reads sample1_R1.fastq.gz
 ```
+
+:::{tip}
+Run `nextflow module info` to see the available inputs for a module.
+:::
 
 The command automatically downloads the module if it is not already installed.
 It accepts all standard Nextflow run options (`-profile`, `-resume`, etc.):
 
 ```console
-$ nextflow module run nf-core/salmon \
-    --reads reads.fq \
-    --index salmon_index \
+$ nextflow module run nf-core/fastqc \
+    --meta.id=test_sample \
+    --reads sample1_R1.fastq.gz \
     -profile docker \
     -resume
 ```
-
-Nextflow infers command-line params (e.g., `--reads`) from the module's declared inputs.
-Run `nextflow module info` to see the available inputs for a module.
 
 See {ref}`cli-module-run` for the full command reference.
 
@@ -107,14 +113,14 @@ See {ref}`cli-module-run` for the full command reference.
 To update a module to a newer version, reinstall it with the desired version:
 
 ```console
-$ nextflow module install nf-core/fastqc -version 1.1.0
+$ nextflow module install nf-core/fastqc -version 0.0.0-c9h0bv4
 ```
 
 If you have local modifications, Nextflow warns you and prevents the update.
 Use the `-force` flag to override:
 
 ```console
-$ nextflow module install nf-core/fastqc -version 1.1.0 -force
+$ nextflow module install nf-core/fastqc -version 0.0.0-c9h0bv4 -force
 ```
 
 ## Checksum verification
@@ -133,7 +139,7 @@ $ nextflow module remove nf-core/fastqc
 ```
 
 By default, Nextflow removes both the module files and the `.module-info` file.
-Use the following flags to control this behavior:
+Use flags to control this behavior:
 
 - `-keep-files`: Remove the `.module-info` file but keep the module files in the `modules/` directory.
 - `-force`: Force removal even if the module has no `.module-info` file or has local modifications.
