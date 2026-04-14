@@ -119,7 +119,8 @@ $ nextflow module install nf-core/fastqc -version 1.1.0 -force
 
 ## Checksum verification
 
-Nextflow automatically verifies module integrity using checksums stored in the `.module-info` file. When you modify a module locally, Nextflow detects the change and prevents accidental overwrites during reinstallation.
+Nextflow automatically verifies module integrity using checksums stored in the `.module-info` file.
+When you modify a module locally, Nextflow detects the change and prevents accidental overwrites during reinstallation.
 
 Module integrity ensures that modules remain consistent with their registry versions unless you explicitly choose to override them.
 
