@@ -15,6 +15,7 @@
  */
 package nextflow.script.types;
 
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
@@ -30,15 +31,34 @@ public interface Value<V> {
 
     @Operator
     @Description("""
+        The `combine` operator combines two dataflow values.
+    """)
+    Value<Tuple> combine(Value right);
+
+    @Operator
+    @Description("""
+        When the `combine` operator is called with named arguments and the dataflow value is a record, the named arguments are appended to the record. Each named argument can be a value or dataflow value.
+    """)
+    Value<Record> combine(Map<String,?> fields);
+
+    @Operator
+    @Description("""
         Transforms the dataflow value into a collection with the given closure and emits the resulting values in a dataflow channel.
     """)
     <R> Channel<R> flatMap(Function<V,Iterable<R>> transform);
+    <R> Channel<R> flatMap();
 
     @Operator
     @Description("""
         Transforms the dataflow value into another dataflow value with the given closure.
     """)
     <R> Value<R> map(Function<V,R> transform);
+
+    @Operator
+    @Description("""
+        The `mix` operator emits the values from two source channels into a single output channel.
+    """)
+    Channel<V> mix(Channel<V> other);
 
     @Operator
     @Description("""
@@ -50,7 +70,9 @@ public interface Value<V> {
     @Description("""
         Transforms the dataflow value using the given closure and print the result to standard output.
     """)
+    Value<V> view(Map<String,?> opts, Function<V,String> transform);
     Value<V> view(Function<V,String> transform);
+    Value<V> view(Map<String,?> opts);
     Value<V> view();
 
 }

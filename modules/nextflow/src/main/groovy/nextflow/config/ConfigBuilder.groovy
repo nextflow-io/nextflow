@@ -568,6 +568,9 @@ class ConfigBuilder {
         if( cmdRun.outputDir )
             config.outputDir = cmdRun.outputDir
 
+        if( cmdRun.outputFormat )
+            config.outputFormat = cmdRun.outputFormat
+
         if( cmdRun.preview )
             config.preview = cmdRun.preview
 
@@ -929,7 +932,7 @@ class ConfigBuilder {
                 .setBaseDir(baseDir)
                 .buildConfigObject()
 
-        // strip secret
+        // strip secrets
         SecretHelper.hideSecrets(config)
         // compute config
         final result = toCanonicalString(config, false)

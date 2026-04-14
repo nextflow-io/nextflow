@@ -81,7 +81,7 @@ import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.TaskEvent
 import nextflow.trace.event.WorkflowOutputEvent
 import nextflow.util.Barrier
-import nextflow.util.ConfigHelper
+import nextflow.util.ClassLoaderFactory
 import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
@@ -149,6 +149,11 @@ class Session implements ISession {
      * The folder where workflow outputs are stored
      */
     Path outputDir
+
+    /**
+     * Output format for workflow outputs
+     */
+    String outputFormat
 
     /**
      * The folder where tasks temporary files are stored
@@ -410,6 +415,7 @@ class Session implements ISession {
 
         // -- init output dir
         this.outputDir = FileHelper.toCanonicalPath(config.outputDir ?: 'results')
+        this.outputFormat = config.outputFormat
 
         // -- init work dir
         this.workDir = FileHelper.toCanonicalPath(config.workDir ?: 'work')
@@ -603,21 +609,8 @@ class Session implements ISession {
     ScriptBinding getBinding() { binding }
 
     @Memoized
-    ClassLoader getClassLoader() { getClassLoader0() }
-
-    @PackageScope
-    ClassLoader getClassLoader0() {
-        // extend the class-loader if required
-        final gcl = new GroovyClassLoader()
-        final libraries = ConfigHelper.resolveClassPaths(getLibDir())
-
-        for( Path lib : libraries ) {
-            def path = lib.complete()
-            log.debug "Adding to the classpath library: ${path}"
-            gcl.addClasspath(path.toString())
-        }
-
-        return gcl
+    ClassLoader getClassLoader() {
+        ClassLoaderFactory.create(getLibDir())
     }
 
     Barrier getBarrier() { monitorsBarrier }
@@ -1056,7 +1049,6 @@ class Session implements ISession {
     }
 
     void notifyAfterWorkflowExecution() {
-
     }
 
     void notifyFlowBegin() {

@@ -41,7 +41,8 @@ class ExecutorOptsTest extends Specification {
 
         then:
         config.endpoint == 'https://sched.example.com'
-        config.region == 'eu-central-1'  // default
+        config.region == null
+        config.provider == null
         config.keyPairName == null
         config.batchFlushInterval == Duration.of('1 sec')
         config.machineRequirement != null
@@ -227,17 +228,60 @@ class ExecutorOptsTest extends Specification {
         config.taskEnvironment == [:]
     }
 
-    def 'should reject invalid prediction model' () {
+    def 'should create config with computeEnvId' () {
         when:
-        new ExecutorOpts([
+        def config = new ExecutorOpts([
             endpoint: 'https://sched.example.com',
-            predictionModel: 'invalid'
+            computeEnvId: 'ce-12345'
         ])
 
         then:
-        def e = thrown(IllegalArgumentException)
-        e.message.contains("Invalid prediction model 'invalid'")
-        e.message.contains('qr/v1')
+        config.computeEnvId == 'ce-12345'
     }
+
+    def 'should default computeEnvId to null' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com'
+        ])
+
+        then:
+        config.computeEnvId == null
+    }
+
+    def 'should create config with provider' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            provider: 'aws'
+        ])
+
+        then:
+        config.provider == 'aws'
+    }
+
+    def 'should default provider to null' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com'
+        ])
+
+        then:
+        config.provider == null
+    }
+
+    def 'should create config with provider and region' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            provider: 'aws',
+            region: 'us-west-2'
+        ])
+
+        then:
+        config.provider == 'aws'
+        config.region == 'us-west-2'
+    }
+
 
 }

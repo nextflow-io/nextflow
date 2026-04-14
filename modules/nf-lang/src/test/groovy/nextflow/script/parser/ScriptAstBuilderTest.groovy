@@ -337,6 +337,67 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 0
     }
 
+    def 'should report an error for invalid process tuple input' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.preview.types = true
+
+            process hello {
+                input:
+                tuple(id: String)
+
+                script:
+                ""
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 5
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Process tuple input must have more than one component"
+
+        when:
+        errors = check(
+            '''\
+            nextflow.preview.types = true
+
+            process hello {
+                input:
+                tuple(id: String, fastq: Path)
+
+                script:
+                ""
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report an error for invalid process record input' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.preview.types = true
+
+            process hello {
+                input:
+                record(
+                    id: String,
+                    fastq: Path,
+                )
+
+                script:
+                ""
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
     def 'should report error for invalid topic statement' () {
         when:
         def errors = check(
@@ -374,6 +435,34 @@ class ScriptAstBuilderTest extends Specification {
         )
         then:
         errors.size() == 0
+    }
+
+    def 'should report error for invalid record definition' () {
+        when:
+        def errors = check(
+            '''\
+            record Sample {}
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 1
+        errors[0].getOriginalMessage() == "Missing record body"
+
+        when:
+        errors = check(
+            '''\
+            record Sample {
+                id
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 2
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Missing field type"
     }
 
 }

@@ -24,5 +24,5 @@ class BaseScriptConsts {
 
     public static Object[] EMPTY_ARGS = [] as Object[]
 
-    public static List<String> PRIVATE_NAMES = ['session','meta','entryFlow', 'publisher']
+    public static List<String> PRIVATE_NAMES = ['session', 'meta', 'paramsDef', 'entryFlow', 'outputDef']
 }

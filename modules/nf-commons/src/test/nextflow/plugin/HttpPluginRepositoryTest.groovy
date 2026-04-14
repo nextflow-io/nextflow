@@ -160,26 +160,19 @@ class HttpPluginRepositoryTest extends Specification {
 
     // ------------------------------------------------------------------------
 
-    def 'handle prefetch error when metadata service sends back incorrectly formatted response'() {
+    def 'handle prefetch when registry returns empty plugins list'() {
         given:
         wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))
             .willReturn(aResponse()
                 .withStatus(200)
-                .withBody("""{
-                  "not-plugins": [
-                    {
-                      "id": "nf-fake"
-                    }
-                  ]
-                }
-                """)))
+                .withBody('{"plugins": []}')))
 
         when:
         unit.prefetch([new PluginRef("nf-fake")])
 
         then:
-        def err = thrown PluginRuntimeException
-        err.message.startsWith("Unexpected error while fetching plugin metadata from: http://localhost")
+        noExceptionThrown()
+        unit.getPlugins() == [:]
     }
 
     // ------------------------------------------------------------------------
