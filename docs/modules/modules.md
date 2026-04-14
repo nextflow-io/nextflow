@@ -4,12 +4,15 @@
 
 ## What are modules
 
-Nextflow modules are reusable units of pipeline logic -- processes, workflows, and functions -- that you can share across projects.
+Nextflow modules are reusable units of pipeline logic (i.e., processes, workflows, and functions) that you can share across projects.
 By packaging common tasks as modules, you avoid duplicating code and benefit from community improvements.
 
-There are two ways to use modules in Nextflow: local modules and registry modules.
+There are two ways to use modules in Nextflow:
 
-<h3>Local modules</h3>
+- [Local modules](#local-modules)
+- [Registry modules](#registry-modules)
+
+### Local modules
 
 Local modules are Nextflow scripts stored directly in your project. You include definitions from local modules using the `include` keyword with a relative path:
 
@@ -17,15 +20,28 @@ Local modules are Nextflow scripts stored directly in your project. You include 
 include { FASTQC } from './modules/fastqc'
 ```
 
-Local modules are well suited for project-specific logic that is not intended for reuse across projects. See {ref}`module-page` for details on module inclusion syntax, aliases, templates, and binaries.
+Local modules are well suited for project-specific logic that is not intended for reuse or sharing. See {ref}`module-page` for details on module inclusion syntax, aliases, templates, and binaries.
 
-<h3>Registry modules</h3>
+### Registry modules
 
 :::{versionadded} 26.04.0
 :::
 
-Centralized registries host registry modules, and you manage them with the `nextflow module` command.
-They follow a standard structure with metadata (`meta.yml`), documentation (`README.md`), and a module script (`main.nf`) for version management, integrity checking, and discoverability.
+The [Nextflow module registry](https://registry.nextflow.io) hosts registry modules in a centralized repository.
+You manage them with the `nextflow module` command.
+Registry modules follow a standard structure with metadata (`meta.yml`), documentation (`README.md`), and a module script (`main.nf`) for version management, integrity checking, and discoverability.
+
+Key features of registry modules:
+
+- **Discoverability**: Search for modules by keyword or name and browse available versions.
+- **Version management**: Pin specific versions or use the latest release, with automatic integrity checking via checksums.
+- **Direct execution**: Run modules as standalone workflows for ad-hoc tasks or testing without writing a wrapper script.
+- **Standard structure**: Each module includes a script (`main.nf`), metadata (`meta.yml`), and documentation (`README.md`), enabling consistent tooling and automation.
+
+:::{note}
+Modules from the [nf-core](https://nf-co.re/) community are automatically mirrored to the Nextflow module registry under the `nf-core` namespace.
+You can install and use them directly without any additional configuration.
+:::
 
 Install registry modules into your project and include them by name:
 
@@ -38,6 +54,8 @@ include { FASTQC } from 'nf-core/fastqc'
 ```
 
 See {ref}`using-modules-page` for details on discovering, installing, and managing registry modules.
+To create and publish your own modules, see {ref}`dev-modules-page`.
+To learn about the registry itself (namespaces, access tokens, and configuration), see {ref}`module-registry-page`.
 
 ## Versioning
 
