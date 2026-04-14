@@ -89,6 +89,17 @@ vscode
 
 ```{toctree}
 :hidden:
+:caption: Modules
+:maxdepth: 1
+
+modules/modules
+modules/using-modules
+modules/developing-modules
+modules/module-registry
+```
+
+```{toctree}
+:hidden:
 :caption: Software dependencies
 :maxdepth: 1
 

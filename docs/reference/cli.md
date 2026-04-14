@@ -1152,6 +1152,8 @@ The `module` command provides a comprehensive system for managing registry-based
 
 **Subcommands**
 
+(cli-module-create)=
+
 `create [namespace/name]`
 
 : Create a new module with a basic `main.nf`, `meta.yml`, and `README.md`.
