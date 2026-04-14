@@ -1,136 +1,180 @@
 # `hints` process directive for executor-specific scheduling hints
 
 - Authors: Rob Syme
-- Status: draft
+- Status: accepted
 - Deciders: Paolo Di Tommaso, Ben Sherman, Rob Syme
 - Date: 2026-03-23
 - Tags: directive, executor, scheduling
 
-Technical Story: [nextflow-io/nextflow#5917](https://github.com/nextflow-io/nextflow/issues/5917), [PR #6957](https://github.com/nextflow-io/nextflow/pull/6957)
-
 ## Summary
 
-Introduce a `hints` process directive for executor-specific scheduling hints that don't map to existing resource directives. The first use case is AWS Batch consumable resources for license-seat-aware scheduling.
+Introduce a `hints` process directive for executor-specific scheduling hints that don't map to existing directives.
 
 ## Problem Statement
 
-Users running commercially licensed software (e.g. DRAGEN, Schrodinger) need to limit concurrent job execution based on available license seats — not just within a single pipeline run (`maxForks`), but across multiple concurrent runs. AWS Batch introduced [resource-aware scheduling](https://docs.aws.amazon.com/batch/latest/userguide/resource-aware-scheduling.html) in February 2025, which models this natively via consumable resources. Nextflow has no way to pass this information to the executor.
+Many executors can be configured in various ways on a per-task basis. For example:
 
-More broadly, cloud batch systems expose scheduling knobs that don't fit neatly into Nextflow's existing resource directives (`cpus`, `memory`, `disk`, `accelerator`, `queue`). Today users must resort to `clusterOptions` (string-based, fragile) or custom `ext` attributes (no standard semantics). A structured, namespaced directive would provide a clean extension point.
+- AWS Batch jobs can use *consumable resources* to limit concurrent job execution based on non-standard resources such as software license seats.
 
-## Goals or Decision Drivers
+- Google Batch jobs can specify a *provisioning model* to control the use of spot vs on-demand VMs on a per-task basis.
 
-- Avoid a proliferation of narrow, executor-specific directives (e.g. `consumableResources`, `schedulingPolicy`, etc.)
+- Seqera Scheduler supports a variety of resource and scheduling settings, including spot/on-demand provisioning.
+
+These settings can be exposed by Nextflow as executor-specific config options, such as `google.batch.spot`, but config options are applied globally. In order to apply a setting to specific processes or tasks, it must be exposed as a process directive.
+
+Process directives in Nextflow aim to provide a common vocabulary for executing tasks in many different environments. Directives such as `cpus`, `memory`, and `time` have broadly the same meaning across most executors, making it easier for users to write portable pipelines.
+
+At the same time, many executors have custom settings not shared by other executors, and it is not practical to create a new process directive for every new setting. There are over 40 [process directives](https://docs.seqera.io/nextflow/reference/process#directives) at the time of writing, and every new directive adds cognitive load when a user is trying to find the right directive for a given situation.
+
+There exist a few generic process directives already:
+
+- The `clusterOptions` directive can be used to specify command-line arguments, primarily for HPC schedulers
+- The `ext` directive supports arbitrary key-values, but is designed primarily to customize the task script (e.g. tool arguments), not executor behavior
+- The `resourceLabels` directive also supports arbitrary key-values, but is intended for tagging and tracking resources, not controlling them
+
+A new directive is needed to support executor-specific settings at a per-task level in a structured manner, without bloating the process directives for every new custom setting.
+
+## Goals
+
+- Provide a way to apply executor-specific settings to individual processes or tasks
+
+- Avoid the proliferation of narrow, executor-specific directives (e.g. `consumableResources`, `schedulingPolicy`, etc.)
+
 - Provide a single extension point that executors can consume selectively
-- Use a structured format (not freeform strings like `clusterOptions`)
-- Keep semantics clear: hints influence scheduling/placement but do not define core resource requirements
-- Distinguish from `resourceLabels` which are metadata tags, not scheduling behavior
+
+- Allow settings to be specified as key-values, providing validation where possible
 
 ## Non-goals
 
-- Creating/managing cloud-side resources (e.g. AWS consumable resources) from within Nextflow
-- Client-side validation of hint values against cloud APIs
 - Replacing existing directives (`cpus`, `memory`, `accelerator`, `queue`) — those remain the right place for standard resources
 
-## Considered Options
+## Decision
 
-### Option 1: Dedicated `consumableResources` directive
+Introduce a `hints` process directive with namespaced keys. Executors consume the hints they understand and silently ignore the rest.
 
-```nextflow
-process runDragen {
-    consumableResources 'my-dragen-license': 1
-}
-```
-
-- Good, because it's explicit and self-documenting
-- Good, because the syntax maps cleanly to the AWS API
-- Bad, because it adds a directive for a single executor feature
-- Bad, because future executor-specific features would each need their own directive
-
-### Option 2: Overload `resourceLabels`
-
-```nextflow
-process runDragen {
-    resourceLabels 'consumable-resource:my-dragen-license': 1
-}
-```
-
-- Good, because it reuses an existing directive
-- Bad, because `resourceLabels` are metadata tags (write-only) — they should not influence scheduling behavior
-- Bad, because it conflates two different concerns (labeling vs. scheduling)
-- Bad, because `resourceLabels` uses replacement semantics in config overrides — a systems administrator setting `resourceLabels` for cost tracking in a shared compute environment would have their labels wiped out if a user sets consumable resources (and vice versa), since the entire map is replaced rather than merged
-
-### Option 3: New `hints` directive with namespaced keys
-
-```nextflow
-process runDragen {
-    hints 'consumable-resource:my-dragen-license': 1
-}
-```
-
-- Good, because it provides a single, extensible directive for all executor-specific hints
-- Good, because namespaced keys make intent clear and avoid collisions
-- Good, because it clearly signals "this influences scheduling" without overloading existing directives
-- Good, because executors can selectively consume the hints they understand and ignore the rest
-- Bad, because it introduces a new directive (though one that replaces many potential future ones)
-
-## Solution or decision outcome
-
-Introduce a `hints` process directive (Option 3) with namespaced keys. Executors consume the hints they understand and silently ignore the rest.
-
-## Rationale & discussion
+## Core Capabilities
 
 ### Syntax
 
-The directive accepts a map of namespaced key-value pairs. It is repeatable (multiple calls accumulate) and supports config overrides:
+The `hints` directive accepts a map of key-value pairs:
 
-```nextflow
-// In process DSL
+```groovy
+// process definition
 process runDragen {
-    hints 'consumable-resource:my-dragen-license': 1
-    hints 'consumable-resource:other-license': 2
     cpus 4
     memory '16 GB'
+    hints consumableResources: 'my-dragen-license=1,other-license=2'
 
     script:
     """
     dragen --ref-dir /ref ...
     """
 }
+```
 
-// In nextflow.config
+```groovy
+// process config
 process {
     withName: 'runDragen' {
-        hints = ['consumable-resource:my-dragen-license': 1]
+        hints = [
+            consumableResources: 'my-dragen-license=1,other-license=2'
+        ]
     }
 }
 ```
 
+Both keys and values are arbitrary strings. Executors are responsible for defining which hints they recognize, as well as the expected structure for a given hint value. This approach keeps the `hints` directive simple (`Map<String,String>`) while allowing executors to structure hint values however they want (as long as it's a string).
+
+In the above example, the `consumableResources` hint is given as a comma-separated string of `<name>=<count>` entries. The AWS Batch executor would parse this string into a map and supply it to each job request using `ConsumableResourceProperties`.
+
 ### Namespacing
 
-Keys use a colon-separated namespace to group related hints:
+Keys can use dot-separated scopes to namespace settings as needed:
 
-| Namespace | Key example | Value | Executor |
-|-----------|-------------|-------|----------|
-| `consumable-resource` | `consumable-resource:my-license` | Integer (quantity) | AWS Batch |
+```groovy
+hints consumableResources: 'my-dragen-license=1'
+hints 'scheduling.priority': 10
+hints 'scheduling.provisioningModel': 'spot'
+```
 
-Future namespaces could include scheduling priorities, placement constraints, or other executor-specific features without requiring new directives.
+Keys can be routed to specific executors by prefixing with the executor name and a slash (`/`):
 
-### Executor mapping
+```groovy
+hints 'awsbatch/consumableResources': 'my-dragen-license'
+hints 'seqera/scheduling.provisioningModel': 'spot'
+hints 'k8s/nodeSelector': 'gpu=true'
+```
 
-For the initial implementation, the AWS Batch executor maps `consumable-resource:*` hints to `ConsumableResourceProperties` on `RegisterJobDefinitionRequest`:
+The executor prefix gives pipeline developers the ability to target specific executors and have assurance that it won't accidentally apply to other executors (e.g. if another executor adds support for the same hint in the future).
 
-- The portion after `consumable-resource:` becomes the resource name/ARN
-- The value becomes the quantity
-- Resources are set on the job definition (not as submit-time overrides)
-- Different hint configurations produce distinct job definition hashes
+### Validation
 
-### Important caveat: FIFO queue ordering
+Nextflow should validate hints to the best of its ability, to catch errors such as typos:
 
-AWS Batch job queues use FIFO ordering by default. A job waiting for a consumable resource blocks all subsequent jobs in the same queue — even those that don't require the resource. Users should use a dedicated job queue (via the `queue` directive) or a fair-share scheduling policy.
+- **Prefixed hints** can be validated against the set of hints declared by the corresponding executor. Unrecognized hints should be reported as errors.
+
+- **Unprefixed hints** can be validated against the union of hints declared by all executors. Since unprefixed hints might be supported by executors that aren't currently loaded, unrecognized hints should be reported as warnings.
+
+### Multiple hint resolution
+
+The `hints` directive uses *replacement semantics* when specified multiple times, meaning that each `hints` setting completely replaces any previous settings:
+
+```groovy
+process {
+    // generic hint
+    hints = [provisioningModel: 'spot']
+
+    // specific hint replaces generic hint
+    withLabel: 'dragen' {
+        hints = [consumableResources: 'my-dragen-license=1']
+    }
+}
+```
+
+Within a process definition, the `hints` directive uses *accumulation semantics*, meaning that subsequent `hints` directives are accumulated:
+
+```groovy
+process runDragen {
+    // multiple separate hints
+    hints provisioningModel: 'spot'
+    hints consumableResources: 'my-dragen-license=1,other-license=2'
+
+    // equivalent to...
+    hints (
+        provisioningModel: 'spot',
+        consumableResources: 'my-dragen-license=1,other-license=2'
+    )
+
+    // ...
+}
+```
+
+This behavior is consistent with other directives such as `pod` and `resourceLabels`. In practice, this means that a given `hints` setting should specify all relevant hints for the given context.
+
+For example, the `withLabel` selector above should also specify the `provisioningModel` hint if the intention is to preserve that hint for the selected processes:
+
+```groovy
+process {
+    hints = [provisioningModel: 'spot']
+
+    withLabel: 'dragen' {
+        hints = [provisioningModel: 'spot', consumableResources: 'my-dragen-license=1']
+    }
+}
+```
+
+While this approach may lead to duplication, it gives users and developers more control over which hints are applied in a given context.
+
+### Initial hint catalog
+
+The following hints should be supported initially:
+
+| Hint name | Executors | Use case |
+|--|--|--|
+| `consumableResources` | AWS Batch | License-aware scheduling ([#5917](https://github.com/nextflow-io/nextflow/issues/5917)) |
+| `scheduling.priority` | AWS Batch | Job scheduling priority ([#6998](https://github.com/nextflow-io/nextflow/issues/6998)) |
+| `scheduling.provisioningModel` | Google Batch | Spot VM scheduling ([#3530](https://github.com/nextflow-io/nextflow/issues/3530)) |
 
 ## Links
 
-- [AWS Batch Resource-Aware Scheduling](https://docs.aws.amazon.com/batch/latest/userguide/resource-aware-scheduling.html)
-- [GitHub Issue #5917](https://github.com/nextflow-io/nextflow/issues/5917)
-- [PR #6957](https://github.com/nextflow-io/nextflow/pull/6957) — initial implementation (to be reworked)
+- [Community issue](https://github.com/nextflow-io/nextflow/issues/5917)
