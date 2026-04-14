@@ -1448,14 +1448,14 @@ $ nextflow module publish myorg/my-module -dry-run
 Publish a module to the Nextflow registry:
 
 ```console
-$ export NXF_REGISTRY_TOKEN=your-token
+$ export NXF_REGISTRY_TOKEN=<token>
 $ nextflow module publish myorg/my-module
 ```
 
 Publish a module to a custom registry:
 
 ```console
-$ export NXF_REGISTRY_TOKEN=your-token
+$ export NXF_REGISTRY_TOKEN=<token>
 $ nextflow module publish myorg/my-module -registry 'https://custom.registry.com'
 ```
 
