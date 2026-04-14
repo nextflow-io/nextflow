@@ -258,7 +258,7 @@ class BatchConfig implements ConfigScope {
     }
 
     static boolean isCliCopyTransport(String transport) {
-        return transport in CLI_COPY_TRANSPORTS
+        return transport != null && transport in CLI_COPY_TRANSPORTS
     }
 
     BatchRetryConfig getRetryConfig() { retry }

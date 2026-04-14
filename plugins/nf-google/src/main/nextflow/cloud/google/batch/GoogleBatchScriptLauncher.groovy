@@ -58,11 +58,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
     protected GoogleBatchScriptLauncher() {}
 
     GoogleBatchScriptLauncher(TaskBean bean, Path remoteBinDir, BatchConfig batchConfig) {
-        // Unstaging is cross-device on Google Batch (gcsfuse-mounted work dir).
-        // `move` can fail with overlapping outputs or symlinked paths.
-        if( bean.stageOutMode == null )
-            bean.stageOutMode = 'copy'
-        super(bean, copyStrategyFor(bean, batchConfig))
+        super(defaultStageOutMode(bean), copyStrategyFor(bean, batchConfig))
         // keep track the google storage work dir
         this.remoteWorkDir = (CloudStoragePath) bean.workDir
         this.remoteBinDir = toContainerMount(remoteBinDir)
@@ -112,6 +108,14 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         batchConfig.usesGoogleBatchStaging()
                 ? new GoogleBatchFileCopyStrategy(bean, batchConfig)
                 : new SimpleFileCopyStrategy(bean)
+    }
+
+    private static TaskBean defaultStageOutMode(TaskBean bean) {
+        // Unstaging is cross-device on Google Batch (gcsfuse-mounted work dir).
+        // `move` can fail with overlapping outputs or symlinked paths.
+        if( bean.stageOutMode == null )
+            bean.stageOutMode = 'copy'
+        return bean
     }
 
     protected String headerScript(TaskBean bean) {
