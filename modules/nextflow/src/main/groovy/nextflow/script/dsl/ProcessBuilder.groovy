@@ -59,6 +59,7 @@ class ProcessBuilder {
             'executor',
             'ext',
             'fair',
+            'hints',
             'label',
             'machineType',
             'maxErrors',
@@ -375,6 +376,25 @@ class ProcessBuilder {
         // -- merge duplicates
         allLabels += map
         config.put('resourceLabels', allLabels)
+    }
+
+    /**
+     * Implements the {@code hints} directive.
+     *
+     * This directive can be specified (invoked) multiple times in
+     * the process definition. Multiple calls accumulate entries.
+     *
+     * @param map
+     */
+    void hints(Map<String, Object> map) {
+        if( !map ) return
+
+        def allHints = (Map)config.get('hints')
+        if( !allHints ) {
+            allHints = [:]
+        }
+        allHints += map
+        config.put('hints', allHints)
     }
 
     private static final List<String> VALID_RESOURCE_LIMITS = List.of('cpus', 'memory', 'disk', 'time')

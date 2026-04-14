@@ -622,6 +622,49 @@ class TaskConfigTest extends Specification {
         config.getResourceLabelsAsString() == 'region=eu-west-1,organization=A,user=this,team=that'
     }
 
+    def 'should configure hints options'()  {
+        given:
+        def script = Mock(BaseScript)
+
+        when:
+        def process = new ProcessConfig(script)
+        def dsl = new ProcessBuilder(process)
+        dsl.hints( 'seqera/machineRequirement.arch': 'arm64', consumableResource: 'my-license' )
+
+        then:
+        process.get('hints') == ['seqera/machineRequirement.arch': 'arm64', consumableResource: 'my-license']
+
+        when:
+        def config = process.createTaskConfig()
+        then:
+        config.getHints() == ['seqera/machineRequirement.arch': 'arm64', consumableResource: 'my-license']
+    }
+
+    def 'should return empty map when no hints set'() {
+        when:
+        def config = new TaskConfig([:])
+        then:
+        config.getHints() == [:]
+    }
+
+    def 'should replace hints via config override'()  {
+        given:
+        def script = Mock(BaseScript)
+
+        when: 'set hints in process definition'
+        def process = new ProcessConfig(script)
+        def dsl = new ProcessBuilder(process)
+        dsl.hints( 'seqera/machineRequirement.arch': 'arm64', consumableResource: 'my-license' )
+        then:
+        process.getHints() == ['seqera/machineRequirement.arch': 'arm64', consumableResource: 'my-license']
+
+        when: 'config override replaces the entire map'
+        def config = process.createTaskConfig()
+        config.put('hints', ['scheduling.priority': 5])
+        then:
+        config.getHints() == ['scheduling.priority': 5]
+    }
+
     def 'should report error on negative cpus' () {
         when:
         def config = new TaskConfig([cpus:-1])

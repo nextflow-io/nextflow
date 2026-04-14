@@ -30,6 +30,7 @@ import io.seqera.sched.api.schema.v1a1.Task
 import io.seqera.sched.api.schema.v1a1.TaskState as SchedTaskState
 import io.seqera.sched.api.schema.v1a1.TaskStatus as SchedTaskStatus
 import io.seqera.sched.client.SchedClient
+import io.seqera.util.HintHelper
 import io.seqera.util.SchemaMapperUtil
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.ProcessException
@@ -113,8 +114,13 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
                 resourceReq.acceleratorName(accelerator.type)
         }
         // build machine requirement merging config settings with task arch, disk, and snapshot settings
-        final machineReq = SchemaMapperUtil.toMachineRequirement(
+        // overlay any seqera/machineRequirement.* hints on top of config-scope values (hints win)
+        final baseMachineOpts = HintHelper.overlayHints(
             executor.getSeqeraConfig().machineRequirement,
+            task.config.getHints()
+        )
+        final machineReq = SchemaMapperUtil.toMachineRequirement(
+            baseMachineOpts,
             task.getContainerPlatform(),
             task.config.getDisk(),
             fusionConfig().snapshotsEnabled()

@@ -320,6 +320,14 @@ public interface TaskConfig {
     """)
     String getQueue();
 
+    @Constant("hints")
+    @Description("""
+        The `hints` directive allows you to specify executor-specific scheduling hints as key-value pairs.
+
+        [Read more](https://nextflow.io/docs/latest/reference/process.html#hints)
+    """)
+    Map<String,Object> getHints();
+
     @Constant("resourceLabels")
     @Description("""
         The `resourceLabels` directive allows you to specify custom name-value pairs which are applied to the compute resources used for the process execution.

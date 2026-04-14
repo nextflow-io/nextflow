@@ -171,6 +171,41 @@ class ProcessBuilderTest extends Specification {
 
     }
 
+    def 'should apply hints config' () {
+        given:
+        def builder = createBuilder()
+        def config = builder.getConfig()
+        expect:
+        config.getHints() == [:]
+
+        when:
+        builder.hints 'seqera/machineRequirement.arch': 'arm64'
+        then:
+        config.getHints() == ['seqera/machineRequirement.arch': 'arm64']
+
+        when:
+        builder.hints 'seqera/machineRequirement.provisioning': 'spot', 'seqera/machineRequirement.maxSpotAttempts': 3
+        then:
+        config.getHints() == ['seqera/machineRequirement.arch': 'arm64', 'seqera/machineRequirement.provisioning': 'spot', 'seqera/machineRequirement.maxSpotAttempts': 3]
+
+        when: 'duplicate key overwrites'
+        builder.hints 'seqera/machineRequirement.arch': 'x86_64'
+        then:
+        config.getHints() == ['seqera/machineRequirement.arch': 'x86_64', 'seqera/machineRequirement.provisioning': 'spot', 'seqera/machineRequirement.maxSpotAttempts': 3]
+    }
+
+    def 'should store closure values in hints' () {
+        given:
+        def builder = createBuilder()
+        def config = builder.getConfig()
+
+        when:
+        def closure = { 'spot' }
+        builder.hints 'seqera/machineRequirement.provisioning': closure
+        then:
+        config.getHints()['seqera/machineRequirement.provisioning'].is(closure)
+    }
+
     def 'should check a valid label' () {
 
         expect:
