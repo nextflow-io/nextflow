@@ -62,6 +62,7 @@ class BatchConfig implements ConfigScope {
     static final String COPY_TRANSPORT_GSUTIL = 'gsutil'
 
     static final private List<String> VALID_COPY_TRANSPORTS = List.of(COPY_TRANSPORT_POSIX, COPY_TRANSPORT_GCLOUD, COPY_TRANSPORT_GSUTIL)
+    static final private List<String> CLI_COPY_TRANSPORTS = List.of(COPY_TRANSPORT_GCLOUD, COPY_TRANSPORT_GSUTIL)
 
     static final private int DEFAULT_MAX_SPOT_ATTEMPTS = 0
 
@@ -253,7 +254,11 @@ class BatchConfig implements ConfigScope {
      * Load {@link nextflow.cloud.google.batch.GoogleBatchFileCopyStrategy} when any transport requests CLI object-storage copy.
      */
     boolean usesGoogleBatchStaging() {
-        return [stageInCopyTransport, stageOutCopyTransport].any { it in [COPY_TRANSPORT_GCLOUD, COPY_TRANSPORT_GSUTIL] }
+        return [stageInCopyTransport, stageOutCopyTransport].any { isCliCopyTransport(it) }
+    }
+
+    static boolean isCliCopyTransport(String transport) {
+        return transport in CLI_COPY_TRANSPORTS
     }
 
     BatchRetryConfig getRetryConfig() { retry }
