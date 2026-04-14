@@ -32,6 +32,7 @@ class DatasetInputStream implements SeekableByteChannel {
     private final InputStream inputStream
     private long position0 = 0L
     private boolean open = true
+    private byte[] buf = new byte[0]
 
     DatasetInputStream(InputStream inputStream) {
         this.inputStream = inputStream
@@ -39,10 +40,12 @@ class DatasetInputStream implements SeekableByteChannel {
 
     @Override
     int read(ByteBuffer dst) throws IOException {
-        final bytes = new byte[dst.remaining()]
-        final n = inputStream.read(bytes)
+        final len = dst.remaining()
+        if (buf.length < len)
+            buf = new byte[len]
+        final n = inputStream.read(buf, 0, len)
         if (n > 0) {
-            dst.put(bytes, 0, n)
+            dst.put(buf, 0, n)
             position0 += n
         }
         return n

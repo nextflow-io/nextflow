@@ -400,7 +400,7 @@ class SeqeraFileSystemProviderTest extends Specification {
         def tc = spyTower()
         def provider = new SeqeraFileSystemProvider()
         def fs = new SeqeraFileSystem(provider, new SeqeraDatasetClient(tc))
-        provider.@fileSystems.put('seqera', fs)
+        provider.@fileSystem = fs
 
         when:
         provider.newFileSystem(new URI('seqera://test'), [:])

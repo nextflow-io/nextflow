@@ -91,21 +91,21 @@ class TowerClientTest extends Specification {
     def 'should get access token' () {
         when:
         def config = new TowerConfig([accessToken: 'abc'], [TOWER_ACCESS_TOKEN: 'xyz'])
-        def client = new TowerClient(config, [TOWER_ACCESS_TOKEN: 'xyz'])
+        def client = new TowerClient(config)
         then:
         // the token in the config overrides the one in the env
         client.getAccessToken() == 'abc'
 
         when:
         config = new TowerConfig([accessToken: 'abc'], [TOWER_ACCESS_TOKEN: 'xyz', TOWER_WORKFLOW_ID: '111222333'])
-        client = new TowerClient(config, [TOWER_ACCESS_TOKEN: 'xyz', TOWER_WORKFLOW_ID: '111222333'])
+        client = new TowerClient(config)
         then:
         // the token from the env is taken because is a tower launch aka TOWER_WORKFLOW_ID is set
         client.getAccessToken() == 'xyz'
 
         when:
         config = new TowerConfig([:], [TOWER_ACCESS_TOKEN: 'xyz'])
-        client = new TowerClient(config, [TOWER_ACCESS_TOKEN: 'xyz'])
+        client = new TowerClient(config)
         then:
         client.getAccessToken() == 'xyz'
 
@@ -226,7 +226,7 @@ class TowerClientTest extends Specification {
             getEndpoint() >> wireMock.baseUrl()
             getAccessToken() >> 'token'
         }
-        TowerClient client = new TowerClient(config, [:])
+        TowerClient client = new TowerClient(config)
 
         when:
         def response = client.sendHttpMessage("${wireMock.baseUrl()}/trace/create", [runName: 'test'], 'POST')

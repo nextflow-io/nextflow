@@ -56,9 +56,9 @@ class SeqeraDatasetClient {
     /**
      * @return current user info (id, userName, etc.) from GET /user-info
      */
-    Map<String, Object> getUserInfo() {
+    Long getUserId() {
         try {
-             return towerClient.getUserInfo()
+             return towerClient.getUserInfo()?.id as long
         }catch( UnauthorizedException e ){
             throw new AbortOperationException(e.getMessage())
         }catch( ForbiddenException e){

@@ -120,9 +120,7 @@ class SeqeraFileSystem extends FileSystem {
     synchronized void loadOrgWorkspaceCache() {
         if (orgWorkspaceCacheLoaded) return
         log.debug "Loading Seqera org/workspace cache"
-        final userInfo = client.getUserInfo()
-        final userId = (userInfo.id as long)
-        final entries = client.listUserWorkspacesAndOrgs(userId)
+        final entries = client.listUserWorkspacesAndOrgs(client.getUserId())
         for (OrgAndWorkspaceDto entry : entries) {
             if (entry.orgName)
                 orgCache.put(entry.orgName, entry.orgId)

@@ -275,15 +275,20 @@ class SeqeraPathTest extends Specification {
         restored == target
     }
 
-    def "relativize throws IllegalArgumentException when other does not start with this"() {
+    def "relativize produces '..' segments for upward traversal"() {
         given:
         def fs = mockFs()
 
-        when:
-        new SeqeraPath(fs, 'seqera://acme/research').relativize(new SeqeraPath(fs, 'seqera://other/ws'))
+        expect:
+        new SeqeraPath(fs, base).relativize(new SeqeraPath(fs, other)).toString() == expected
 
-        then:
-        thrown(IllegalArgumentException)
+        where:
+        base                                            | other                                            | expected
+        'seqera://acme/research'                        | 'seqera://acme/dev'                              | '../dev'
+        'seqera://acme/research/datasets'               | 'seqera://acme/dev'                               | '../../dev'
+        'seqera://acme'                                 | 'seqera://other'                                  | '../other'
+        'seqera://acme/ws1'                             | 'seqera://acme/ws2'                               | '../ws2'
+        'seqera://acme/research/datasets/samples'       | 'seqera://acme/research/datasets/other'            | '../other'
     }
 
     // ---- multi-segment resolve ----

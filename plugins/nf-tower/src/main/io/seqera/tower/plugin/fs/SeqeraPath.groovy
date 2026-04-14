@@ -375,14 +375,20 @@ class SeqeraPath implements Path {
         final that = (SeqeraPath) other
         if (!this.isAbsolute() || !that.isAbsolute())
             throw new IllegalArgumentException("Both paths must be absolute to relativize: ${this} vs ${other}")
-        final thisStr = this.toString()
-        final thatStr = that.toString()
-        if (thatStr == thisStr)
-            return new SeqeraPath('')
-        final prefix = thisStr.endsWith(SEPARATOR) ? thisStr : thisStr + SEPARATOR
-        if (!thatStr.startsWith(prefix))
-            throw new IllegalArgumentException("'${thatStr}' cannot be relativized against '${thisStr}'")
-        return new SeqeraPath(thatStr.substring(prefix.length()))
+        final thisNames = this.nameComponents()
+        final thatNames = that.nameComponents()
+        // Find common prefix length
+        int common = 0
+        while (common < thisNames.size() && common < thatNames.size()
+               && thisNames[common] == thatNames[common])
+            common++
+        // Build ".." for each remaining segment in this, then append remaining segments of other
+        final parts = new ArrayList<String>()
+        for (int i = common; i < thisNames.size(); i++)
+            parts.add('..')
+        for (int i = common; i < thatNames.size(); i++)
+            parts.add(thatNames[i])
+        return new SeqeraPath(parts.join(SEPARATOR))
     }
 
     @Override
@@ -390,15 +396,10 @@ class SeqeraPath implements Path {
         // Build path component for depth >= 2
         String uriPath = null
         if (workspace) {
-            final sb = new StringBuilder('/').append(workspace)
-            if (resourceType) {
-                sb.append('/').append(resourceType)
-                if (datasetName) {
-                    sb.append('/').append(datasetName)
-                    if (version) sb.append('@').append(version)
-                }
-            }
-            uriPath = sb.toString()
+            final segments = [workspace]
+            if (resourceType) segments.add(resourceType)
+            if (datasetName) segments.add(version ? "${datasetName}@${version}" as String : datasetName)
+            uriPath = '/' + segments.join('/')
         }
         // new URI(scheme, authority, path, query, fragment) avoids URI.create() pitfalls for edge cases
         return new URI(SCHEME, org ?: '', uriPath, null, null)
@@ -414,7 +415,11 @@ class SeqeraPath implements Path {
     }
 
     @Override
-    Path toAbsolutePath() { this }
+    Path toAbsolutePath() {
+        if (!isAbsolute())
+            throw new IllegalStateException("Cannot convert relative SeqeraPath to absolute — no default directory context")
+        return this
+    }
 
     @Override
     Path toRealPath(LinkOption... options) { this }

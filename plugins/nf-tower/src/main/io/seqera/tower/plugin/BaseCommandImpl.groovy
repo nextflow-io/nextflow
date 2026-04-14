@@ -38,8 +38,7 @@ class BaseCommandImpl {
      */
     @Memoized
     protected TowerClient createTowerClient(String apiUrl, String accessToken) {
-        final env = SysEnv.get()
-        return new TowerClient( new TowerConfig( [accessToken: accessToken, endpoint: apiUrl, httpConnectTimeout: Duration.of(API_TIMEOUT_MS)], env), env)
+        return new TowerClient( new TowerConfig( [accessToken: accessToken, endpoint: apiUrl, httpConnectTimeout: Duration.of(API_TIMEOUT_MS)], SysEnv.get()))
     }
 
     /**

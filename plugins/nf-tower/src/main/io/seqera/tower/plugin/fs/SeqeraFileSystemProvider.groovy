@@ -32,7 +32,6 @@ import java.nio.file.NotDirectoryException
 import java.nio.file.OpenOption
 import java.nio.file.Path
 import java.nio.file.ProviderMismatchException
-import java.nio.file.StandardCopyOption
 import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileAttribute
@@ -63,10 +62,10 @@ import io.seqera.tower.plugin.dataset.SeqeraDatasetClient
 @CompileStatic
 class SeqeraFileSystemProvider extends FileSystemProvider {
 
-    static final String SCHEME = 'seqera'
+    public static final String SCHEME = 'seqera'
 
-    /** One filesystem per (endpoint + accessToken) key */
-    private final Map<String, SeqeraFileSystem> fileSystems = new LinkedHashMap<>()
+    /** Single filesystem instance — TowerClient is a singleton per session */
+    private volatile SeqeraFileSystem fileSystem
 
     @Override
     String getScheme() { SCHEME }
@@ -76,35 +75,30 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
     @Override
     synchronized FileSystem newFileSystem(URI uri, Map<String, ?> env) throws IOException {
         checkScheme(uri)
-        final key = fsKey(uri, env)
-        if (fileSystems.containsKey(key))
+        if (fileSystem)
             throw new FileSystemAlreadyExistsException("File system `seqera://` already exists")
         final TowerClient towerClient = TowerFactory.client()
         if (!towerClient)
-            throw new IllegalStateException("File system `seqera://` requires the Seqera Platform access token to be provider - use `tower.accessToken config option or TOWER_ACCESS_TOKEN env variable")
+            throw new IllegalStateException("File system `seqera://` requires the Seqera Platform access token to be provided - use `tower.accessToken` config option or TOWER_ACCESS_TOKEN env variable")
         final client = new SeqeraDatasetClient(towerClient)
-        final seqeraFs = new SeqeraFileSystem(this, client)
-        fileSystems.put(key, seqeraFs)
-        return seqeraFs
+        fileSystem = new SeqeraFileSystem(this, client)
+        return fileSystem
     }
 
     @Override
     synchronized FileSystem getFileSystem(URI uri) {
         checkScheme(uri)
-        final fs = fileSystems.values().find { true }
-        if (!fs) throw new FileSystemNotFoundException("No seqera:// filesystem has been created yet")
-        return fs
+        if (!fileSystem) throw new FileSystemNotFoundException("No seqera:// filesystem has been created yet")
+        return fileSystem
     }
 
     synchronized SeqeraFileSystem getOrCreateFileSystem(URI uri, Map<String, ?> env) {
         checkScheme(uri)
-        final key = fsKey(uri, env)
-        SeqeraFileSystem fs = fileSystems.get(key)
-        if (!fs) {
+        if (!fileSystem) {
             final envMap = env ?: Collections.<String, Object>emptyMap()
-            fs = (SeqeraFileSystem) newFileSystem(uri, envMap as Map<String, ?>)
+            newFileSystem(uri, envMap as Map<String, ?>)
         }
-        return fs
+        return fileSystem
     }
 
     @Override
@@ -230,8 +224,8 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         if (target instanceof SeqeraPath)
             throw new UnsupportedOperationException("seqera:// filesystem is read-only")
         // cross-provider (seqera → local): stream to target
-        newInputStream(source).withCloseable { InputStream is ->
-            Files.copy(is, target, StandardCopyOption.REPLACE_EXISTING)
+        try (final InputStream is = newInputStream(source)) {
+            Files.copy(is, target, options)
         }
     }
 
@@ -288,12 +282,6 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
     private static void checkScheme(URI uri) {
         if (uri.scheme?.toLowerCase() != SCHEME)
             throw new IllegalArgumentException("Not a seqera:// URI: $uri")
-    }
-
-    private static String fsKey(URI uri, Map<String, ?> env) {
-        // Key by scheme — one filesystem per JVM (TowerClient is also a singleton per session).
-        // Limitation: if different endpoints/tokens are ever needed concurrently, this will share the same FS instance.
-        return uri.scheme
     }
 
     private static void validateDirectoryExists(SeqeraFileSystem fs, SeqeraPath sp) throws NoSuchFileException {

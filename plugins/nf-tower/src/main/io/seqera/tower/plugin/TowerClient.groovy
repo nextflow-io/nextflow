@@ -31,9 +31,8 @@ import io.seqera.tower.plugin.exception.NotFoundException
 import io.seqera.tower.plugin.exception.UnauthorizedException
 import io.seqera.util.trace.TraceUtils
 import nextflow.BuildInfo
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
-import nextflow.processor.TaskHandler
-import nextflow.trace.TraceRecord
 import nextflow.util.Duration
 import nextflow.util.TestOnly
 /**
@@ -63,8 +62,6 @@ class TowerClient {
 
     private String endpoint
 
-    protected Map<String,String> env = System.getenv()
-
     private Map<String,Integer> schema = Collections.emptyMap()
 
     private String accessToken
@@ -75,7 +72,7 @@ class TowerClient {
 
     private Duration connectTimeout = TowerConfig.DEFAULT_CONNECT_TIMEOUT
 
-    TowerClient(TowerConfig config, Map env) {
+    TowerClient(TowerConfig config) {
         this.endpoint = checkUrl(config.endpoint)
         this.accessToken = config.accessToken
         this.retryPolicy = config.retryPolicy
@@ -83,8 +80,6 @@ class TowerClient {
         this.connectTimeout = config.httpConnectTimeout
         this.schema = loadSchema()
         this.generator = TowerJsonGenerator.create(schema)
-        if (env)
-            this.env = env
         initHttpClient()
     }
 
@@ -212,7 +207,7 @@ class TowerClient {
 
     protected void setupClientAuth(HxClient.Builder config, String token) {
         // check for plain jwt token
-        final refreshToken = env.get('TOWER_REFRESH_TOKEN')
+        final refreshToken = SysEnv.get('TOWER_REFRESH_TOKEN')
         final refreshUrl = refreshToken ? "$endpoint/oauth/access_token" : null
         if( token.count('.')==2 ) {
             config.bearerToken(token)
@@ -249,13 +244,6 @@ class TowerClient {
             throw new AbortOperationException("Missing Seqera Platform access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
         return accessToken
     }
-
-    /**
-     * Send an HTTP message, when a process has started
-     *
-     * @param handler A {@link TaskHandler} object representing the task started
-     * @param trace A {@link TraceRecord} object holding the task metadata and runtime info
-     */
 
     /**
      * Little helper method that sends a HTTP POST message as JSON with

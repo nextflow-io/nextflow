@@ -51,35 +51,6 @@ class SeqeraDatasetClientTest extends Specification {
         new TowerClient.Response(code, "error $code")
     }
 
-    // ---- getUserInfo ----
-
-    def "getUserInfo returns parsed user map"() {
-        given:
-        def tc = spyTower()
-        tc.sendApiRequest('https://api.example.com/user-info') >> ok(JsonOutput.toJson([user: [id: 42, userName: 'testuser']]))
-        def client = new SeqeraDatasetClient(tc)
-
-        when:
-        def info = client.getUserInfo()
-
-        then:
-        info.id == 42
-        info.userName == 'testuser'
-    }
-
-    def "getUserInfo throws AbortOperationException on 401"() {
-        given:
-        def tc = spyTower()
-        tc.sendApiRequest(_) >> error(401)
-        def client = new SeqeraDatasetClient(tc)
-
-        when:
-        client.getUserInfo()
-
-        then:
-        thrown(AbortOperationException)
-    }
-
     // ---- listUserWorkspacesAndOrgs ----
 
     def "listUserWorkspacesAndOrgs returns parsed DTOs"() {

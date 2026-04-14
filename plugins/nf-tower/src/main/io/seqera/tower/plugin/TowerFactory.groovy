@@ -60,7 +60,7 @@ class TowerFactory implements TraceObserverFactoryV2 {
     static TowerClient client(Session session, Map env) {
         final opts = session.config.tower as Map ?: Collections.emptyMap()
         final config = new TowerConfig(opts, env)
-        final tower = new TowerClient(config, env)
+        final tower = new TowerClient(config)
         // register auth provider
         // note: this is needed to authorize access to resources via XFileSystemProvider used by NF
         // it's not needed by the tower client logic
