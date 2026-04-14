@@ -76,11 +76,13 @@ class OutputDsl {
         }
 
         // print workflow outputs on run completion
-        session.addIgniter {
+        session.workflowMetadata.onComplete {
+            if( !session.isSuccess() )
+                return
             final output = getOutput()
             if( session.outputFormat == 'json' )
                 session.printConsole(DumpHelper.prettyPrintJson(output), true)
-            else
+            else if( session.outputFormat == 'text' )
                 printOutput(session, output)
         }
     }

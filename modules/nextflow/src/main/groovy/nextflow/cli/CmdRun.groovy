@@ -116,7 +116,7 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-o', '-output-dir'], description = 'Directory where workflow outputs are stored')
     String outputDir
 
-    @Parameter(names=['-output-format'], description = 'Output format for printing workflow outputs. Options: `text` (default), `json`')
+    @Parameter(names=['-output-format'], description = 'Output format for printing workflow outputs. Options: `text` (default), `json`, `none`')
     String outputFormat = 'text'
 
     @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate result files are stored')
@@ -324,8 +324,8 @@ class CmdRun extends CmdBase implements HubOptions {
         if( offline && latest )
             throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")
 
-        if( outputFormat !in ['json', 'text'] )
-            throw new AbortOperationException("Command line option `-output-format` should be either `json` or `text`")
+        if( outputFormat !in ['text', 'json', 'none'] )
+            throw new AbortOperationException("Command line option `-output-format` should be either `text`, `json`, or `none`")
 
         checkRunName()
 
