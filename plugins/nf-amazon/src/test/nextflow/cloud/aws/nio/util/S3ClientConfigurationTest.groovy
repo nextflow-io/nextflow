@@ -42,6 +42,19 @@ class S3ClientConfigurationTest extends Specification{
         httpClientbuilder.standardOptions.get(SdkHttpConfigurationOption.MAX_CONNECTIONS) == 100
     }
 
+    def 'create S3 asynchronous client configuration with default socket timeout' (){
+        given:
+        def props = new Properties()
+        def config = new AwsConfig([client: [:]])
+        props.putAll(config.getS3LegacyProperties())
+        when:
+        def clientConfig = S3AsyncClientConfiguration.create(props)
+        then:
+        def httpConfiguration = clientConfig.getCrtHttpConfiguration()
+        httpConfiguration.healthConfiguration().minimumThroughputInBps() == 1
+        httpConfiguration.healthConfiguration().minimumThroughputTimeout().toMillis() == 30000
+    }
+
     def 'create S3 asynchronous client configuration' (){
         given:
         def props = new Properties()

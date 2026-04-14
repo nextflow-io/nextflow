@@ -32,6 +32,8 @@ import java.util.Properties;
  */
 public class S3AsyncClientConfiguration extends S3ClientConfiguration{
 
+    private static final long DEFAULT_SOCKET_TIMEOUT_MS = 30_000L;
+
     private S3CrtHttpConfiguration.Builder crtHttpConfiguration;
     private MultipartConfiguration.Builder multiPartBuilder;
     private S3CrtRetryConfiguration crtRetryConfiguration;
@@ -120,15 +122,16 @@ public class S3AsyncClientConfiguration extends S3ClientConfiguration{
             crtHttpConfiguration().connectionTimeout(Duration.ofMillis(Long.parseLong(props.getProperty("connection_timeout"))));
         }
 
-        if( props.containsKey("socket_timeout")) {
-            log.debug("AWS client config - 'socket_timeout' doesn't exist in CRT connection. Setting CRT health configuration with minimum throughput 1bps and timeout with value {}",props.getProperty("socket_timeout"));
-            crtHttpConfiguration().connectionHealthConfiguration(
-                S3CrtConnectionHealthConfiguration.builder()
-                    .minimumThroughputInBps(1L)
-                    .minimumThroughputTimeout(Duration.ofMillis(Long.parseLong(props.getProperty("socket_timeout"))))
-                    .build()
-            );
-        }
+        final long socketTimeoutMs = props.containsKey("socket_timeout")
+            ? Long.parseLong(props.getProperty("socket_timeout"))
+            : DEFAULT_SOCKET_TIMEOUT_MS;
+        log.debug("AWS client config - setting CRT health configuration with minimum throughput 1bps and timeout {}", socketTimeoutMs);
+        crtHttpConfiguration().connectionHealthConfiguration(
+            S3CrtConnectionHealthConfiguration.builder()
+                .minimumThroughputInBps(1L)
+                .minimumThroughputTimeout(Duration.ofMillis(socketTimeoutMs))
+                .build()
+        );
 
         if( props.containsKey("proxy_host")) {
             final String host = props.getProperty("proxy_host");
