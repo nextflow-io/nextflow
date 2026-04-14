@@ -58,6 +58,10 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
     protected GoogleBatchScriptLauncher() {}
 
     GoogleBatchScriptLauncher(TaskBean bean, Path remoteBinDir, BatchConfig batchConfig) {
+        // Unstaging is cross-device on Google Batch (gcsfuse-mounted work dir).
+        // `move` can fail with overlapping outputs or symlinked paths.
+        if( bean.stageOutMode == null )
+            bean.stageOutMode = 'copy'
         super(bean, copyStrategyFor(bean, batchConfig))
         // keep track the google storage work dir
         this.remoteWorkDir = (CloudStoragePath) bean.workDir
