@@ -2,8 +2,6 @@
 
 # Overview
 
-## What are modules
-
 Nextflow modules are reusable units of pipeline logic (i.e., processes, workflows, and functions) that you can share across projects.
 By packaging common tasks as modules, you avoid duplicating code and benefit from community improvements.
 
@@ -12,7 +10,7 @@ There are two ways to use modules in Nextflow:
 - [Local modules](#local-modules)
 - [Registry modules](#registry-modules)
 
-### Local modules
+## Local modules
 
 Local modules are Nextflow scripts stored directly in your project. You include definitions from local modules using the `include` keyword with a relative path:
 
@@ -22,7 +20,7 @@ include { FASTQC } from './modules/fastqc'
 
 Local modules are well suited for project-specific logic that is not intended for reuse or sharing. See {ref}`module-page` for details on module inclusion syntax, aliases, templates, and binaries.
 
-### Registry modules
+## Registry modules
 
 :::{versionadded} 26.04.0
 :::
@@ -53,24 +51,8 @@ $ nextflow module install nf-core/fastqc
 include { FASTQC } from 'nf-core/fastqc'
 ```
 
-For more registry information:
+For more registry modules information:
 
 - See {ref}`using-modules-page` for details on discovering, installing, and managing registry modules.
 - See {ref}`dev-modules-page` for details on creating and publishing your own modules.
 - See {ref}`module-registry-page` for details on namespaces, access tokens, and registry configuration.
-
-## Versioning
-
-Registry modules use version strings to identify releases. Many modules use [Semantic Versioning](https://semver.org/):
-
-* MAJOR: Increment for backward-incompatible changes.
-* MINOR: Increment for backward-compatible feature additions.
-* PATCH: Increment for backward-compatible bug fixes.
-
-When installing a module, you can pin a specific version or let Nextflow use the latest available version:
-
-```console
-$ nextflow module install nf-core/fastqc -version 1.0.0
-```
-
-See {ref}`cli-module-install` for more information.
