@@ -370,7 +370,7 @@ class SeqeraPath implements Path {
 
     @Override
     Path relativize(Path other) {
-        if (!(other instanceof SeqeraPath))
+        if (other !instanceof SeqeraPath)
             throw new ProviderMismatchException()
         final that = (SeqeraPath) other
         if (!this.isAbsolute() || !that.isAbsolute())

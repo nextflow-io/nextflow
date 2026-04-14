@@ -78,10 +78,10 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         checkScheme(uri)
         final key = fsKey(uri, env)
         if (fileSystems.containsKey(key))
-            throw new FileSystemAlreadyExistsException("seqera:// filesystem already exists")
+            throw new FileSystemAlreadyExistsException("File system `seqera://` already exists")
         final TowerClient towerClient = TowerFactory.client()
         if (!towerClient)
-            throw new IllegalStateException("seqera:// paths require tower.accessToken to be configured")
+            throw new IllegalStateException("File system `seqera://` requires the Seqera Platform access token to be provider - use `tower.accessToken config option or TOWER_ACCESS_TOKEN env variable")
         final client = new SeqeraDatasetClient(towerClient)
         final seqeraFs = new SeqeraFileSystem(this, client)
         fileSystems.put(key, seqeraFs)
@@ -119,7 +119,7 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
     InputStream newInputStream(Path path, OpenOption... options) throws IOException {
         final sp = toSeqeraPath(path)
         if (sp.depth() != 4)
-            throw new IllegalArgumentException("newInputStream requires a dataset path (depth 4): $path")
+            throw new IllegalArgumentException("Operation `newInputStream` requires a dataset path (depth 4): $path")
         final fs = sp.getFileSystem() as SeqeraFileSystem
         final workspaceId = fs.resolveWorkspaceId(sp.org, sp.workspace)
         final dataset = fs.resolveDataset(workspaceId, sp.datasetName)
@@ -131,7 +131,7 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
     @Override
     SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
         if (options?.contains(StandardOpenOption.WRITE) || options?.contains(StandardOpenOption.APPEND))
-            throw new UnsupportedOperationException("seqera:// filesystem is read-only")
+            throw new UnsupportedOperationException("File system `seqera://` is read-only")
         final inputStream = newInputStream(path)
         return new DatasetInputStream(inputStream)
     }
@@ -158,7 +158,7 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
 
     @Override
     Map<String, Object> readAttributes(Path path, String attributes, LinkOption... options) throws IOException {
-        throw new UnsupportedOperationException("readAttributes(String) not supported by seqera:// filesystem")
+        throw new UnsupportedOperationException("Operation `readAttributes(String)` not supported by `seqera://` file system")
     }
 
     // ---- Access check ----
