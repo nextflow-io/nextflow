@@ -48,7 +48,7 @@ class GoogleBatchFileCopyStrategy extends SimpleFileCopyStrategy {
      * CLI stage-in when a CLI transport is selected and {@code stageInMode=copy}.
      */
     private boolean useCliStageInCopy() {
-        return batchConfig.stageInCopyTransport in [BatchConfig.COPY_TRANSPORT_GCLOUD, BatchConfig.COPY_TRANSPORT_GSUTIL] && 'copy' == stageinMode
+        return BatchConfig.isCliCopyTransport(batchConfig.stageInCopyTransport) && 'copy' == stageinMode
     }
 
     private String effectiveStageOutMode() {
@@ -58,7 +58,7 @@ class GoogleBatchFileCopyStrategy extends SimpleFileCopyStrategy {
     private boolean shouldUseCliStageOutCopy() {
         if( effectiveStageOutMode() != 'copy' )
             return false
-        return batchConfig.stageOutCopyTransport in [BatchConfig.COPY_TRANSPORT_GCLOUD, BatchConfig.COPY_TRANSPORT_GSUTIL]
+        return BatchConfig.isCliCopyTransport(batchConfig.stageOutCopyTransport)
     }
 
     private boolean needsGoogleBatchBashLib() {
@@ -90,7 +90,9 @@ class GoogleBatchFileCopyStrategy extends SimpleFileCopyStrategy {
             return super.stageInputFile(path, targetName)
         final gsUri = gsUriForCliStageIn(path)
         if( gsUri != null ) {
-            return "downloads+=(\"nxf_cp_retry nxf_gs_download '${gsUri}' ${Escape.path(targetName)}\")"
+            return batchConfig.maxTransferAttempts > 1
+                    ? "downloads+=(\"nxf_cp_retry nxf_gs_download '${gsUri}' ${Escape.path(targetName)}\")"
+                    : "downloads+=(\"nxf_gs_download '${gsUri}' ${Escape.path(targetName)}\")"
         }
         return super.stageInputFile(path, targetName)
     }

@@ -44,6 +44,24 @@ class GoogleBatchFileCopyStrategyTest extends Specification {
         def copy = new GoogleBatchFileCopyStrategy(bean, batch)
 
         expect:
+        copy.stageInputFile(path, 'in.txt') == 'downloads+=("nxf_gs_download \'gs://b/data/in.txt\' in.txt")'
+    }
+
+    def 'should build gs download staging line with retry when maxTransferAttempts > 1' () {
+        given:
+        def batch = new BatchConfig([
+            stageInCopyTransport: 'gcloud',
+            maxTransferAttempts: 3
+        ])
+        def bean = Mock(TaskBean) {
+            getWorkDir() >> Paths.get('/mnt/disks/w/x')
+            getTargetDir() >> Paths.get('/mnt/disks/w/x')
+            getStageInMode() >> 'copy'
+        }
+        def path = Paths.get('/mnt/disks/b/data/in.txt')
+        def copy = new GoogleBatchFileCopyStrategy(bean, batch)
+
+        expect:
         copy.stageInputFile(path, 'in.txt') == 'downloads+=("nxf_cp_retry nxf_gs_download \'gs://b/data/in.txt\' in.txt")'
     }
 
