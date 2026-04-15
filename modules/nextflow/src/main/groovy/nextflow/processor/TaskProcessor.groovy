@@ -822,8 +822,8 @@ class TaskProcessor {
                 // if the task execution failed or was aborted, increment the
                 // try count so that any subsequent successful execution
                 // can be recovered
-                if( entry.trace.isFailed() ) task.failCount += 1
-                if( entry.trace.isAborted() ) task.abortedCount += 1
+                if( entry?.trace?.isFailed() ) task.failCount += 1
+                if( entry?.trace?.isAborted() ) task.abortedCount += 1
             }
             catch (Throwable t) {
                 log.warn1("[${safeTaskName(task)}] Unable to resume cached task -- See log file for details", causedBy: t)
@@ -1062,7 +1062,7 @@ class TaskProcessor {
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Execution is retried"
                 else
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
-                task.failCount+=1
+                task.failCount += 1
                 final taskCopy = task.makeCopy()
                 session.getExecService().submit {
                     try {
@@ -1075,8 +1075,8 @@ class TaskProcessor {
                     }
                 }
                 task.failed = true
-                task.errorAction = RETRY
-                return RETRY
+                task.errorAction = ErrorStrategy.RETRY
+                return ErrorStrategy.RETRY
             }
 
             final submitTimeout = error.cause instanceof ProcessSubmitTimeoutException
