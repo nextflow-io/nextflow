@@ -20,7 +20,7 @@ The HTTP client in SDK v2 does not support overriding certain advanced HTTP opti
 
 The `aws.client.connectionTimeout` option continues to work as before, controlling the timeout for establishing new connections.
 
-The `aws.client.socketTimeout` option behaves differently depending on the HTTP client. For synchronous connections, it applies directly as a socket timeout with a default of `30000` ms. For S3 transfers using the CRT client, no default is applied; when explicitly set, this value is translated into a CRT connection health check that enforces a minimum throughput of 1 byte per second within the specified timeout period. This allows Nextflow to detect and close stalled CRT connections that are no longer making progress.
+The `aws.client.socketTimeout` option behaves differently depending on the HTTP client. For synchronous connections, it applies directly as a socket timeout. For S3 transfers using the CRT client, no default is applied; when explicitly set, this value is translated into a CRT connection health check that enforces a minimum throughput of 1 byte per second within the specified timeout period. This allows Nextflow to detect and close stalled CRT connections that are no longer making progress.
 
 ## Parallel S3 operations
 
