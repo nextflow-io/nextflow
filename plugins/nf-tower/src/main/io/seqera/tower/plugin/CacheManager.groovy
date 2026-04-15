@@ -83,8 +83,8 @@ class CacheManager {
         if( !remoteWorkDir || !sessionUuid )
             return
 
-        if(!Files.exists(remoteCachePath)) {
-            log.debug "Remote cache path does not exist: $remoteCachePath - skipping cache restore"
+        if( !Files.exists(remoteCachePath) ) {
+            log.debug "Remote cache path does not exist: $remoteCachePath -- skipping cache restore"
             return
         }
 
@@ -95,7 +95,7 @@ class CacheManager {
             FileHelper.copyPath(remoteCachePath, localCachePath, REPLACE_EXISTING)
         }
         catch (NoSuchFileException e) {
-            log.info "Remote cache restore ignored — reason: ${e.message ?: e}"
+            log.info "Remote cache restore ignored -- reason: ${e.message ?: e}"
         }
     }
 
@@ -103,61 +103,61 @@ class CacheManager {
         if( !remoteWorkDir || !sessionUuid )
             return
 
-        // upload nextflow cache metadata
-        if( !Files.exists(localCachePath) ) {
-            log.debug "Local cache path does not exist: $localCachePath — skipping cache backup"
-        }
-        else {
-            try {
+        // -- upload nextflow metadata cache
+        try {
+            if( localCachePath?.exists() ) {
                 log.info "Saving cache: ${localCachePath.toUriString()} => ${remoteCachePath.toUriString()}"
                 remoteCachePath.deleteDir()
                 remoteCachePath.parent.mkdirs()
                 FilesEx.copyTo(localCachePath, remoteCachePath)
             }
-            catch (Throwable e) {
-                log.warn "Failed to backup resume metadata to remote store path: ${remoteCachePath.toUriString()} — cause: ${e}", e
+            else {
+                log.debug "Local cache path does not exist: $localCachePath -- skipping cache backup"
             }
         }
+        catch (Throwable e) {
+            log.warn "Failed to backup resume metadata to remote store path: ${remoteCachePath.toUriString()} -- cause: ${e}", e
+        }
 
-        // — upload out file
+        // -- upload out file
         try {
             if( localOutFile?.exists() )
                 FileHelper.copyPath(localOutFile, remoteOutFile, REPLACE_EXISTING)
         }
         catch (Throwable e) {
-            log.warn "Unable to upload nextflow out file: $localOutFile — reason: ${e.message ?: e}", e
+            log.warn "Unable to upload nextflow out file: $localOutFile -- reason: ${e.message ?: e}", e
         }
-        // — upload log file
+        // -- upload log file
         try {
             if( localLogFile?.exists() )
                 FileHelper.copyPath(localLogFile, remoteLogFile, REPLACE_EXISTING)
         }
         catch (Throwable e) {
-            log.warn "Unable to upload nextflow log file: $localLogFile — reason: ${e.message ?: e}", e
+            log.warn "Unable to upload nextflow log file: $localLogFile -- reason: ${e.message ?: e}", e
         }
-        // — upload timeline file
+        // -- upload timeline file
         try {
             if( localTimelineFile?.exists() )
                 FileHelper.copyPath(localTimelineFile, remoteTimelineFile, REPLACE_EXISTING)
         }
         catch (Throwable e) {
-            log.warn "Unable to upload nextflow timeline file: $localTimelineFile — reason: ${e.message ?: e}", e
+            log.warn "Unable to upload nextflow timeline file: $localTimelineFile -- reason: ${e.message ?: e}", e
         }
-        // — upload tower config file
+        // -- upload tower config file
         try {
             if( localTowerConfig?.exists() )
                 FileHelper.copyPath(localTowerConfig, remoteTowerConfig, REPLACE_EXISTING)
         }
         catch (Throwable e) {
-            log.warn "Unable to upload tower config file: $localTowerConfig — reason: ${e.message ?: e}", e
+            log.warn "Unable to upload tower config file: $localTowerConfig -- reason: ${e.message ?: e}", e
         }
-        // — upload tower reports file
+        // -- upload tower reports file
         try {
             if( localTowerReports?.exists() )
                 FileHelper.copyPath(localTowerReports, remoteTowerReports, REPLACE_EXISTING)
         }
         catch (Throwable e) {
-            log.warn "Unable to upload tower reports file: $localTowerReports — reason: ${e.message ?: e}", e
+            log.warn "Unable to upload tower reports file: $localTowerReports -- reason: ${e.message ?: e}", e
         }
     }
 

@@ -150,7 +150,7 @@ class CacheManagerTest extends Specification {
         def uuid = UUID.randomUUID().toString()
         and:
         def ENV = [
-                NXF_UUID:uuid,
+                NXF_UUID: uuid,
                 NXF_WORK: remote.toString(),
                 NXF_OUT_FILE: outFile.toString(),
                 NXF_LOG_FILE: logFile.toString(),
@@ -164,7 +164,7 @@ class CacheManagerTest extends Specification {
         // do NOT create localCachePath — simulates K8s where cache may not exist locally
         tower.saveCacheFiles()
         then:
-        // cache metadata is not copied
+        // metadata cache is not copied
         !tower.remoteCachePath.exists()
         and:
         // log files are still copied
