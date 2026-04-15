@@ -16,50 +16,43 @@
  */
 
 process LONG_SLEEP {
-	tag "long-sleep"
+    tag "long-sleep"
 
-	input:
-	val x
+    output:
+    stdout
 
-	output:
-	stdout
-
-	script:
-	'''
-	echo "LONG_SLEEP start"
-	sleep 30
-	echo "LONG_SLEEP done"
-	'''
+    script:
+    '''
+    echo "LONG_SLEEP start"
+    sleep 30
+    echo "LONG_SLEEP done"
+    '''
 }
 
 process SMALL_SLEEP_RETRY {
-	tag "small-sleep-retry"
+    tag "small-sleep-retry"
 
-	errorStrategy 'retry'
-	maxRetries 1
+    errorStrategy 'retry'
+    maxRetries 1
 
-	input:
-	val x
+    output:
+    stdout
 
-	output:
-	stdout
+    script:
+    """
+    echo "SMALL_SLEEP_RETRY attempt: ${task.attempt}"
+    sleep 7
 
-	script:
-	"""
-	echo "SMALL_SLEEP_RETRY attempt: ${task.attempt}"
-	sleep 7
+    if [[ ${task.attempt} -eq 1 ]]; then
+      echo "Failing first attempt on purpose"
+      exit 1
+    fi
 
-	if [[ ${task.attempt} -eq 1 ]]; then
-	  echo "Failing first attempt on purpose"
-	  exit 1
-	fi
-
-	echo "Second attempt succeeded"
-	"""
+    echo "Second attempt succeeded"
+    """
 }
 
 workflow {
-	ch = Channel.of(1)
-    LONG_SLEEP(ch)
-	SMALL_SLEEP_RETRY(ch)
+    LONG_SLEEP()
+    SMALL_SLEEP_RETRY()
 }
