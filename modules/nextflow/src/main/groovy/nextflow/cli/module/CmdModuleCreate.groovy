@@ -50,11 +50,11 @@ class CmdModuleCreate extends CmdBase {
 
         if( args && args.size() == 1 && args[0].contains('/') ) {
             // non-interactive: namespace/name passed as argument
-            final parts = args[0].tokenize('/')
-            if( parts.size() != 2 || !parts[0] || !parts[1] )
+            final slash = args[0].indexOf('/')
+            namespace = args[0].substring(0, slash)
+            name = args[0].substring(slash + 1)
+            if( !namespace || !name )
                 throw new AbortOperationException("Invalid module identifier -- expected format: namespace/name")
-            namespace = parts[0]
-            name = parts[1]
         }
         else if( args ) {
             throw new AbortOperationException("Invalid arguments -- usage: nextflow module create [namespace/name]")
@@ -84,7 +84,19 @@ class CmdModuleCreate extends CmdBase {
             }
         }
 
+        validateSegment('namespace', namespace)
+        validateSegments('name', name)
         createModule(namespace, name)
+    }
+    static private void validateSegment(String field, String value) {
+        if( !value.matches('[a-zA-Z0-9][a-zA-Z0-9._\\-]*') )
+                throw new AbortOperationException("Invalid module $field '${value}' -- only alphanumeric characters, hyphens, underscores and dots are allowed, and must start with an alphanumeric character")
+    }
+
+    static private void validateSegments(String field, String value) {
+        for( String segment : value.tokenize('/') ) {
+            validateSegment(field, segment)
+        }
     }
 
     protected Path modulesBase() {
@@ -131,7 +143,7 @@ class CmdModuleCreate extends CmdBase {
          * Module: ${namespace}/${name}
          */
 
-        process ${name.toUpperCase()} {
+        process ${name.replaceAll('[^a-zA-Z0-9_]', '_').toUpperCase()} {
             input:
             val greeting
 
@@ -176,7 +188,7 @@ class CmdModuleCreate extends CmdBase {
         Include this module in your Nextflow pipeline:
 
         ```nextflow
-        include { ${name.toUpperCase()} } from '${namespace}/${name}'
+        include { ${name.replaceAll('[^a-zA-Z0-9_]', '_').toUpperCase()} } from '${namespace}/${name}'
         ```
 
         ## Input / Output / Dependencies

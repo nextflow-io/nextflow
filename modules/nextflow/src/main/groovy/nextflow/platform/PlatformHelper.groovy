@@ -145,10 +145,32 @@ class PlatformHelper {
      * @return
      */
     static String getWorkspaceId(Map opts, Map<String,String> env) {
-        final workspaceId = env.get('TOWER_WORKFLOW_ID')
-            ? env.get('TOWER_WORKSPACE_ID')
-            : opts.workspaceId as Long ?: env.get('TOWER_WORKSPACE_ID') as Long
-        return workspaceId
+        try {
+            final workspaceId = env.get('TOWER_WORKFLOW_ID')
+                ? env.get('TOWER_WORKSPACE_ID')
+                : opts.workspaceId as Long ?: env.get('TOWER_WORKSPACE_ID') as Long
+            return workspaceId
+        }
+        catch (NumberFormatException e) {
+            final value = opts.workspaceId ?: env.get('TOWER_WORKSPACE_ID')
+            throw new IllegalArgumentException("Invalid Seqera Platform workspace ID: '${value}' — workspace ID must be a numeric value. Check the 'tower.workspaceId' setting in your Nextflow configuration or the TOWER_WORKSPACE_ID environment variable")
+        }
+    }
+
+    /**
+     * Return the configured Platform compute environment ID: if `TOWER_WORKFLOW_ID` is provided in the environment,
+     * it means we are running in a Platform-made run and we should ONLY retrieve the value from the environment.
+     * Otherwise, check the configuration or fallback to the environment. If not found, return null.
+     *
+     * @param opts the configuration options for Platform (e.g. `session.config.navigate('tower')`)
+     * @param env the applicable environment variables
+     * @return the Platform compute environment ID, or null
+     */
+    static String getComputeEnvId(Map opts, Map<String,String> env) {
+        final computeEnvId = env.get('TOWER_WORKFLOW_ID')
+            ? env.get('TOWER_COMPUTE_ENV_ID')
+            : opts.containsKey('computeEnvId') ? opts.computeEnvId as String : env.get('TOWER_COMPUTE_ENV_ID')
+        return computeEnvId
     }
 
     static Map<String,Object> config() {

@@ -41,7 +41,8 @@ class ExecutorOptsTest extends Specification {
 
         then:
         config.endpoint == 'https://sched.example.com'
-        config.region == 'eu-central-1'  // default
+        config.region == null
+        config.provider == null
         config.keyPairName == null
         config.batchFlushInterval == Duration.of('1 sec')
         config.machineRequirement != null
@@ -225,6 +226,27 @@ class ExecutorOptsTest extends Specification {
 
         then:
         config.taskEnvironment == [:]
+    }
+
+    def 'should create config with computeEnvId' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            computeEnvId: 'ce-12345'
+        ])
+
+        then:
+        config.computeEnvId == 'ce-12345'
+    }
+
+    def 'should default computeEnvId to null' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com'
+        ])
+
+        then:
+        config.computeEnvId == null
     }
 
     def 'should create config with provider' () {

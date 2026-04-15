@@ -934,16 +934,10 @@ class ConfigBuilder {
 
         // strip secrets
         SecretHelper.hideSecrets(config)
-        // strip command line options
-        stripCliOptions(config)
         // compute config
         final result = toCanonicalString(config, false)
         // dump config for debugging
         log.trace "Resolved config:\n${result.indent('\t')}"
         return result
-    }
-
-    private static void stripCliOptions(Map config) {
-        config.remove('outputFormat')
     }
 }
