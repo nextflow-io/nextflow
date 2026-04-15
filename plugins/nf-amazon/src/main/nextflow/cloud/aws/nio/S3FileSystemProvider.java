@@ -459,6 +459,10 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		String keyName = s3Path.getKey()
 				+ (s3Path.getKey().endsWith("/") ? "" : "/");
 
+        // Checking if trying to create a bucket. Creation of buckets is not supported.
+        if( keyName.isEmpty() || keyName.equals("/") ) {
+            throw new UnsupportedOperationException("Creating a bucket is not supported");
+        }
 		s3Path.getFileSystem()
 				.getClient()
 				.putObject(s3Path.getBucket(), keyName, new ByteArrayInputStream(new byte[0]), tags, null, 0);
@@ -476,6 +480,10 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
         }
 
         if (Files.isDirectory(path)){
+            // Checking if trying to delete a bucket. Deletion of buckets is not supported.
+            if ( s3Path.getKey().isEmpty() ) {
+                throw new UnsupportedOperationException("Deleting a bucket is not supported");
+            }
             try (DirectoryStream<Path> stream = Files.newDirectoryStream(path)){
                 if (stream.iterator().hasNext()){
                     throw new DirectoryNotEmptyException("the path: " + FilesEx.toUriString(s3Path) + " is a directory and is not empty");
