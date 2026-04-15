@@ -194,10 +194,10 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		Preconditions.checkArgument(!s3Path.getKey().equals(""),
 				"cannot create InputStream for root directory: %s", FilesEx.toUriString(s3Path));
 
-		InputStream result = s3Path
-					.getFileSystem()
-					.getClient()
-					.getObject(s3Path.getBucket(), s3Path.getKey());
+        InputStream result = s3Path
+            .getFileSystem()
+            .getClient()
+            .getObject(s3Path.getBucket(), s3Path.getKey());
 
         if (result == null)
 			throw new IOException(String.format("The specified path is a directory: %s", FilesEx.toUriString(s3Path)));
@@ -363,8 +363,14 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 			Files.write(tempFile, IOUtils.toByteArray(is));
 		}
-        catch (NoSuchFileException e){
-            // Intentionally ignored. File could not exist.
+		catch (NoSuchFileException e) {
+			// When opening for CREATE/CREATE_NEW the remote object is allowed to not exist yet
+			// — the temp file will be created and uploaded on close. For any other open mode
+			// propagate the original exception so the caller sees the real s3:// path.
+			if (!options.contains(StandardOpenOption.CREATE) && !options.contains(StandardOpenOption.CREATE_NEW)) {
+				throw e;
+			}
+			log.trace("S3 object does not exist yet, will be created on close: {}", FilesEx.toUriString(s3Path));
 		}
 
         // and we can use the File SeekableByteChannel implementation
@@ -457,15 +463,16 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		Preconditions.checkArgument(attrs.length == 0,
 				"attrs not yet supported: %s", ImmutableList.copyOf(attrs)); // TODO
 
+		// Creating a bucket is not supported
+		if (s3Path.getKey().isEmpty()) {
+			throw new UnsupportedOperationException("Creating a bucket is not supported");
+		}
+
 		List<Tag> tags = s3Path.getTagsList();
 
 		String keyName = s3Path.getKey()
 				+ (s3Path.getKey().endsWith("/") ? "" : "/");
 
-        // Checking if trying to create a bucket. Creation of buckets is not supported.
-        if( keyName.isEmpty() || keyName.equals("/") ) {
-            throw new UnsupportedOperationException("Creating a bucket is not supported");
-        }
 		s3Path.getFileSystem()
 				.getClient()
 				.putObject(s3Path.getBucket(), keyName, new ByteArrayInputStream(new byte[0]), tags, null, 0);
@@ -482,8 +489,8 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
             throw new NoSuchFileException("the path: " + FilesEx.toUriString(s3Path) + " does not exist");
         }
 
-        // Checking if trying to delete a bucket. Deletion of buckets is not supported.
-        if ( s3Path.getKey().isEmpty() ) {
+		// Deleting a bucket is not supported
+        if (s3Path.getKey().isEmpty()) {
             throw new UnsupportedOperationException("Deleting a bucket is not supported");
         }
 
