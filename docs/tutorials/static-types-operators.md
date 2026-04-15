@@ -22,6 +22,16 @@ When using `collect` with static typing, it has the same semantics as `toList`. 
 
 When using `combine` with static typing, the right operand should be a channel, dataflow value, or named arguments corresponding to record fields.
 
+When `combine` is called with named arguments, they are appended to each source record as additional fields:
+
+```nextflow
+sample = channel.value( record(id: 1, fastq: file('1.fq')) )
+index = channel.value( file('index.fa') )
+sample.combine(strandedness: 'auto', index: index)
+
+// [id:1, fastq:1.fq, strandedness:auto, index:index.fa]
+```
+
 For uses of `combine` with the `by` option, use `join` instead:
 
 ```nextflow
@@ -216,7 +226,28 @@ ch_input_pacbio.view()
 
 ### buffer, collate
 
-These operators are {ref}`non-deterministic <cache-nondeterministic-inputs>`. Use `List::collate()` instead.
+These operators are {ref}`non-deterministic <cache-nondeterministic-inputs>`. Use `groupBy` or `List::collate()` instead.
+
+```nextflow
+// before
+channel.of(1..9)
+    .collate(3)
+    .view()
+
+// [1, 2, 3]
+// [4, 5, 6]
+// [7, 8, 9]
+
+// after
+channel.of(1..9)
+    .map { i -> tuple((i - 1).intdiv(3) + 1, i) }
+    .groupBy()
+    .view()
+
+// [1, [1, 2, 3]]
+// [2, [4, 5, 6]]
+// [3, [7, 8, 9]]
+```
 
 ### collectFile
 
@@ -224,11 +255,50 @@ The `collectFile` operator is useful for collecting intermediate results into a 
 
 For other cases, consider the following alternatives:
 
-- Use an `exec` process to write text files (see {ref}`working-with-files`)
-- Use the `groupBy` operator to group  
-- Use `Iterable::toSorted` to sort
+- Use the `collect` and `groupBy` operators to collect and group items
+- Use `Iterable::toSorted` to sort collected items
+- Use an `exec` process to write files (see {ref}`working-with-files`)
 
 You can compose these functions and operators as needed to achieve the desired functionality.
+
+For example:
+
+```nextflow
+nextflow.preview.types = true
+
+process COLLECT_FILE {
+    input:
+    name: String
+    items: List<String>
+
+    output:
+    file(name)
+
+    exec:
+    def path = task.workDir.resolve(name)
+    items.each { item ->
+        path << item
+        path << '\n'
+    }
+}
+
+workflow {
+    val_names = channel.of('alpha', 'beta', 'gamma')
+        .collect()
+        .map { names -> names.toSorted() }
+
+    COLLECT_FILE('sample.txt', val_names)
+        .view { result -> result.text }
+}
+```
+
+Prints:
+
+```
+alpha
+beta
+gamma
+```
 
 ### concat
 
