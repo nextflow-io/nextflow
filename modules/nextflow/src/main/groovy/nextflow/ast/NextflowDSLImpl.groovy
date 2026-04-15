@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -238,7 +238,7 @@ class NextflowDSLImpl implements ASTTransformation {
                     newArgs.addExpression( createX(IncludeDef, token, alias) )
                 }
                 else if( arg instanceof ClosureExpression ) {
-                    // multiple modules inclusion 
+                    // multiple modules inclusion
                     final block = (BlockStatement)arg.getCode()
                     final modulesList = new ListExpression()
                     for( Statement stm : block.statements ) {
@@ -310,7 +310,7 @@ class NextflowDSLImpl implements ASTTransformation {
                 def body = (ClosureExpression)args[0]
                 newArgs.addExpression( makeWorkflowDefWrapper(body,true) )
                 methodCall.setArguments( newArgs )
-                return 
+                return
             }
 
             // extract the first argument which has to be a method-call expression
@@ -981,7 +981,7 @@ class NextflowDSLImpl implements ASTTransformation {
                     }
                 }
             }
-            else if( (varX=isVariableX(stm.expression)) && (varX.name=='stdin' || varX.name=='stdout') && NF.isDsl2() ) {
+            else if( (varX=isVariableX(stm.expression)) && (varX.name=='stdin' || varX.name=='stdout') ) {
                 final name = varX.name=='stdin' ? '_in_stdin' : '_out_stdout'
                 final call = new MethodCallExpression( new VariableExpression('this'), name, new ArgumentListExpression()  )
                 // remove replace the old one with the new one

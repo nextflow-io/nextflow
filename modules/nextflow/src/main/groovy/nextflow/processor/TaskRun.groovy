@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ import java.util.function.Function
 
 import com.google.common.hash.HashCode
 import groovy.transform.Memoized
-import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.conda.CondaCache
@@ -41,7 +40,6 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
-import nextflow.script.ProcessConfigV1
 import nextflow.script.ProcessConfigV2
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
@@ -751,10 +749,10 @@ class TaskRun implements Cloneable {
             ? containerResolver().getContainerMeta(containerKey)
             : null
     }
-    
+
     String getContainerPlatform() {
         final result = config.getArchitecture()
-        return result ? result.dockerArch : containerResolver().defaultContainerPlatform()
+        return result ? result.containerPlatform() : containerResolver().defaultContainerPlatform()
     }
 
     ResourcesBundle getModuleBundle() {

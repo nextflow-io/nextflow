@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,10 @@
 
 package nextflow.script.params
 
-import static test.TestParser.*
-
 import groovyx.gpars.dataflow.DataflowVariable
 import test.Dsl2Spec
+
+import static test.ScriptHelper.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -31,16 +31,20 @@ class TupleOutParamTest extends Dsl2Spec {
         setup:
         def text = '''
             process hola {
-              output:
-                tuple val(x)
-                tuple val(y), stdout, file('*.fa') 
-                tuple stdout, val(z)
+              input:
+              tuple val(x), val(y), val(z)
 
-              return ''
+              output:
+              tuple val(x)
+              tuple val(y), stdout, file('*.fa')
+              tuple stdout, val(z)
+
+              script:
+              ''
             }
-            
+
             workflow {
-              hola()
+              hola( ['x', 'y', 'z'] )
             }
             '''
 
@@ -90,16 +94,20 @@ class TupleOutParamTest extends Dsl2Spec {
         setup:
         def text = '''
             process hola {
-              output:
-                tuple val(x)
-                tuple val(y), stdout, file('*.fa')
-                tuple stdout, val(z)
+              input:
+              tuple val(x), val(y), val(z)
 
-              return ''
+              output:
+              tuple val(x)
+              tuple val(y), stdout, file('*.fa')
+              tuple stdout, val(z)
+
+              script:
+              ''
             }
-            
+
             workflow {
-              hola()
+              hola( ['x', 'y', 'z'] )
             }
             '''
 
@@ -149,11 +157,12 @@ class TupleOutParamTest extends Dsl2Spec {
         def text = '''
             process hola {
               output:
-                tuple env(FOO), env(BAR)
-              
-              /echo command/ 
+              tuple env('FOO'), env('BAR')
+
+              script:
+              /echo command/
             }
-            
+
             workflow {
               hola()
             }
@@ -165,7 +174,6 @@ class TupleOutParamTest extends Dsl2Spec {
         when:
         def outs = process.config.getOutputs() as List<TupleOutParam>
         then:
-        println outs.outChannel
         outs.size() == 1
         and:
         outs[0].outChannel instanceof DataflowVariable
@@ -183,24 +191,27 @@ class TupleOutParamTest extends Dsl2Spec {
         setup:
         def text = '''
             process hola {
+              input:
+              val other
+
               output:
-                tuple eval('this --one'), eval("$other --two")
-              
-              /echo command/ 
+              tuple eval('this --one'), eval("$other --two")
+
+              script:
+              /echo command/
             }
-            
+
             workflow {
-              hola()
+              hola('tool')
             }
             '''
 
-        def binding = [other:'tool']
-        def process = parseAndReturnProcess(text, binding)
+        def ctx = [other:'tool']
+        def process = parseAndReturnProcess(text)
 
         when:
         def outs = process.config.getOutputs() as List<TupleOutParam>
         then:
-        println outs.outChannel
         outs.size() == 1
         and:
         outs[0].outChannel instanceof DataflowVariable
@@ -209,11 +220,11 @@ class TupleOutParamTest extends Dsl2Spec {
         and:
         outs[0].inner[0] instanceof CmdEvalParam
         outs[0].inner[0].getName() =~ /nxf_out_eval_\d+/
-        (outs[0].inner[0] as CmdEvalParam).getTarget(binding) == 'this --one'
+        (outs[0].inner[0] as CmdEvalParam).getTarget(ctx) == 'this --one'
         and:
         outs[0].inner[1] instanceof CmdEvalParam
         outs[0].inner[1].getName() =~ /nxf_out_eval_\d+/
-        (outs[0].inner[1] as CmdEvalParam).getTarget(binding) == 'tool --two'
+        (outs[0].inner[1] as CmdEvalParam).getTarget(ctx) == 'tool --two'
 
     }
 }

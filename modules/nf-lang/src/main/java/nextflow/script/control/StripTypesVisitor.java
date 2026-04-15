@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +18,15 @@ package nextflow.script.control;
 
 import java.util.List;
 
+import nextflow.script.ast.RecordNode;
+import nextflow.script.types.Channel;
 import nextflow.script.types.Record;
 import nextflow.script.types.Tuple;
 import nextflow.script.types.Value;
 import org.codehaus.groovy.ast.ClassCodeExpressionTransformer;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.expr.CastExpression;
 import org.codehaus.groovy.ast.expr.ClosureExpression;
 import org.codehaus.groovy.ast.expr.DeclarationExpression;
@@ -45,6 +48,7 @@ public class StripTypesVisitor extends ClassCodeExpressionTransformer {
 
     private static final List<ClassNode> STRIP_TYPES = List.of(
         ClassHelper.makeWithoutCaching("nextflow.Channel"),
+        ClassHelper.makeCached(Channel.class),
         ClassHelper.makeCached(Record.class),
         ClassHelper.makeCached(Tuple.class),
         ClassHelper.makeCached(Value.class)
@@ -62,15 +66,30 @@ public class StripTypesVisitor extends ClassCodeExpressionTransformer {
     }
 
     @Override
+    public void visitMethod(MethodNode node) {
+        // Erase record type parameters so that records (with type Record)
+        // can be dispatched to these methods at runtime
+        for( var param : node.getParameters() ) {
+            if( param.getType().redirect() instanceof RecordNode )
+                param.setType(ClassHelper.dynamicType());
+        }
+        super.visitMethod(node);
+    }
+
+    @Override
     public Expression transform(Expression node) {
-        if( node instanceof CastExpression ce )
+        if( node instanceof CastExpression ce ) {
             return stripTypeAnnotation(ce);
+        }
 
-        if( node instanceof ClosureExpression ce )
-            super.visitClosureExpression(ce);
+        if( node instanceof ClosureExpression ce ) {
+            ce.visit(this);
+            return ce;
+        }
 
-        if( node instanceof DeclarationExpression de )
+        if( node instanceof DeclarationExpression de ) {
             stripTypeAnnotation(de);
+        }
 
         return super.transform(node);
     }

@@ -1,5 +1,4 @@
 # ADDITIONAL TESTS TO VERIFY THE V1 PARSER
-chunk.nf
 complex-names.nf
 env-out.nf
 env2.nf

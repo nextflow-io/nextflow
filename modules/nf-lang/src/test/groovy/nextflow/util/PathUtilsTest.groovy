@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +62,7 @@ class PathUtilsTest extends Specification {
 
     def 'should determine whether a path is excluded' () {
         given:
-        def patterns = [ '.git', '.nf-test', 'work', 'foo/bar' ]
+        def patterns = [ '.git', '.nf-test', 'work', 'foo/bar', 'nf-test.config' ]
 
         expect:
         result == PathUtils.isExcluded(Path.of(path), patterns)
@@ -74,6 +74,8 @@ class PathUtilsTest extends Specification {
         'modules/foo/.nf-test'          | true
         'modules/foo/bar'               | true
         'work'                          | true
+        'nf-test.config'                | true
+        'modules/foo/nf-test.config'    | true
         'main.nf'                       | false
         'modules/foo/main.nf'           | false
         'subworkflows/foobar/main.nf'   | false

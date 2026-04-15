@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,14 +44,15 @@ class ConfigSpec {
 
     private static Map<String,?> fromOption(SpecNode.Option node, String name) {
         final description = node.description().stripIndent(true).trim()
-        final type = fromType(new ClassNode(node.type()))
+        final types = node.types().collect { t -> fromType(new ClassNode(t)) }
 
         return [
             type: 'ConfigOption',
             spec: [
                 name: name,
                 description: description,
-                type: type
+                type: types.head(),
+                additionalTypes: types.tail()
             ]
         ]
     }

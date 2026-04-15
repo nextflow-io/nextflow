@@ -46,7 +46,7 @@ Booleans in Nextflow can be backed by any of the following Java types: `boolean`
 
 A channel (also known as a *dataflow channel* or *queue channel*) is an asynchronous sequence of values of type `E`. It is used to facilitate dataflow logic in a workflow.
 
-See {ref}`dataflow-page` for an overview of dataflow types. See {ref}`operator-page` for the available methods for channels.
+See {ref}`dataflow-page` for an overview of dataflow types. See {ref}`operator-typed-page` for the set of operators that are recommended for use with static typing.
 
 (stdlib-types-duration)=
 
@@ -521,6 +521,7 @@ The following properties are available:
 
 `name: String`
 : The path name, e.g. `/some/path/file.txt` -> `file.txt`.
+: For files staged as a task input, the path name is the path relative to the task directory (e.g., `my-dir/file.txt`). Use `fileName.name` for task paths to get only the file name.
 
 `parent: Path`
 : The path parent path, e.g. `/some/path/file.txt` -> `/some/path`.
@@ -600,10 +601,10 @@ The following methods are available for writing to files:
 : Appends text to a file without replacing existing content.
 
 `setText( text: String )`
-: Writes text to a file. Equivalent to setting the `text` property.
+: Writes text to a file, replacing any existing content. Equivalent to setting the `text` property.
 
 `write( text: String )`
-: Writes a string to a file, replacing any existing content.
+: Writes text to a file, replacing any existing content. Equivalent to `setText()`.
 
 <h3>Filesystem operations</h3>
 
@@ -766,6 +767,35 @@ The following methods are available for splitting and counting the records in fi
 
 `splitText() -> List<String>`
 : Splits a text file into a list of lines. See the {ref}`operator-splittext` operator for available options.
+
+(stdlib-types-record)=
+
+## Record
+
+A record is an immutable map of fields to values (i.e., `Map<String,?>`). Each value can have its own type. 
+
+A record can be created using the `record` function:
+
+```nextflow
+sample = record(id: '1', fastq_1: file('1_1.fastq'), fastq_2: file('1_2.fastq'))
+```
+
+Record fields can be accessed as properties:
+
+```nextflow
+sample.id
+// -> '1'
+```
+
+The following operations are supported for records:
+
+`+ : (Record, Record) -> Record`
+: Given two records, returns a new record containing the fields and values of both records. When a field is present in both records, the value of the right-hand record takes precedence.
+
+The following methods are available for a record:
+
+`subMap( keys: Iterable<String> ) -> Record`
+: Returns a new record containing only the given fields.
 
 (stdlib-types-set)=
 
@@ -959,6 +989,12 @@ A dataflow value (also known as a *value channel*) is an asynchronous value of t
 See {ref}`dataflow-page` for an overview of dataflow types.
 
 The following methods are available for a dataflow value:
+
+`combine( right: Value ) -> Value<Tuple>`
+: Combine the dataflow value with another dataflow value into a tuple.
+
+`combine( [opts] ) -> Value<Record>`
+: Combine a record with named arguments as additional record fields. Each named argument can be a value or dataflow value.
 
 `flatMap( transform: (V) -> Iterable<R> ) -> Channel<R>`
 : Transforms the dataflow value into a collection with the given closure and emits the resulting values in a dataflow channel.

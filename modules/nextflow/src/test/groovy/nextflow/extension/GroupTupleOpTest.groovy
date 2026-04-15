@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,20 +17,14 @@
 package nextflow.extension
 
 import nextflow.Channel
-
 import spock.lang.Specification
 
-import nextflow.Session
-
+import static test.ScriptHelper.runDataflow
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class GroupTupleOpTest extends Specification {
-
-    def setup() {
-        new Session()
-    }
 
     def 'should reuse the same key' () {
 
@@ -113,7 +107,9 @@ class GroupTupleOpTest extends Specification {
 
         when:
         // here the size is defined as operator argument
-        def result = tuples.channel().groupTuple(size: 2)
+        def result = runDataflow {
+            tuples.channel().groupTuple(size: 2)
+        }
         then:
         result.val == [k1, ['a', 'b'] ]
         result.val == [k1, ['d', 'c'] ]
@@ -122,7 +118,9 @@ class GroupTupleOpTest extends Specification {
 
         when:
         // here the size is inferred by the key itself
-        result = tuples.channel().groupTuple()
+        result = runDataflow {
+            tuples.channel().groupTuple()
+        }
         then:
         result.val == [k1, ['a', 'b'] ]
         result.val == [k1, ['d', 'c'] ]
@@ -131,7 +129,9 @@ class GroupTupleOpTest extends Specification {
 
 
         when:
-        result = tuples.channel().groupTuple(remainder: true)
+        result = runDataflow {
+            tuples.channel().groupTuple(remainder: true)
+        }
         then:
         result.val == [k1, ['a', 'b'] ]
         result.val == [k1, ['d', 'c'] ]
@@ -146,7 +146,7 @@ class GroupTupleOpTest extends Specification {
         def sampleName = "sample1"
         def gstringKey = "${sampleName}"  // GStringImpl
         def stringKey = "sample1"         // String
-        
+
         def tuples = [
                 [gstringKey, 'file1.txt'],
                 [stringKey, 'file2.txt'],
@@ -154,7 +154,9 @@ class GroupTupleOpTest extends Specification {
         ]
 
         when:
-        def result = tuples.channel().groupTuple()
+        def result = runDataflow {
+            tuples.channel().groupTuple()
+        }
         then:
         // Without fix, this would create separate groups for GString and String keys
         // With fix, they should be grouped together
@@ -171,7 +173,9 @@ class GroupTupleOpTest extends Specification {
         ]
 
         when:
-        def result = tuples.channel().groupTuple()
+        def result = runDataflow {
+            tuples.channel().groupTuple()
+        }
         then:
         result.val == [1, ['file1.txt']]
         result.val == [new File('/tmp'), ['file2.txt']]

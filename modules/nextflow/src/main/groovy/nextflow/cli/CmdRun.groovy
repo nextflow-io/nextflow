@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -115,6 +115,9 @@ class CmdRun extends CmdBase implements HubOptions {
 
     @Parameter(names=['-o', '-output-dir'], description = 'Directory where workflow outputs are stored')
     String outputDir
+
+    @Parameter(names=['-output-format'], description = 'Output format for printing workflow outputs. Options: `text` (default), `json`, `none`')
+    String outputFormat = 'text'
 
     @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate result files are stored')
     String workDir
@@ -321,6 +324,9 @@ class CmdRun extends CmdBase implements HubOptions {
         if( offline && latest )
             throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")
 
+        if( outputFormat !in ['text', 'json', 'none'] )
+            throw new AbortOperationException("Command line option `-output-format` should be either `text`, `json`, or `none`")
+
         checkRunName()
 
         printBanner()
@@ -336,15 +342,15 @@ class CmdRun extends CmdBase implements HubOptions {
 
         /*
          * 2-PHASE CONFIGURATION LOADING STRATEGY
-         * 
+         *
          * Problem: Configuration files may reference secrets provided by plugins (e.g., AWS secrets),
          * but plugins are loaded AFTER configuration parsing. This creates a chicken-and-egg problem:
          * - Config parsing needs secret values to complete
-         * - Plugin loading needs config to determine which plugins to load  
+         * - Plugin loading needs config to determine which plugins to load
          * - Secret providers are registered by plugins
-         * 
+         *
          * Solution: Parse configuration twice when secrets are referenced
-         * 
+         *
          * PHASE 1: Parse config with EmptySecretProvider (returns "" for all secrets)
          * - Configuration must use defensive patterns: secrets.FOO ? "value-${secrets.FOO}" : "fallback"
          * - Config parses successfully with fallback values
@@ -404,7 +410,8 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.setPreview(this.preview, previewAction)
         runner.session.profile = profile
         runner.session.commandLine = launcher.cliString
-        runner.session.ansiLog = launcher.options.ansiLog
+        runner.session.ansiLog = launcher.options.ansiLog && !SysEnv.isAgentMode()
+        runner.session.agentLog = SysEnv.isAgentMode()
         runner.session.debug = launcher.options.remoteDebug
         runner.session.disableJobsCancellation = getDisableJobsCancellation()
 
@@ -435,6 +442,11 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
     protected void printBanner() {
+        // Suppress banner in agent mode for minimal output
+        if( SysEnv.isAgentMode() ) {
+            return
+        }
+
         if( launcher.options.ansiLog ){
             // Plain header for verbose log
             log.debug "N E X T F L O W  ~  version ${BuildInfo.version}"
@@ -470,17 +482,13 @@ class CmdRun extends CmdBase implements HubOptions {
         detectStrictFeature(config, sysEnv)
         // -- determine moduleBinary
         detectModuleBinaryFeature(config)
-        // -- determine dsl mode
-        final dsl = detectDslMode(config, scriptFile.main.text, sysEnv)
-        NextflowMeta.instance.enableDsl(dsl)
         // -- show launch info
-        final ver = NF.dsl2 ? DSL2 : DSL1
         final repo = scriptFile.repository ?: scriptFile.source.toString()
         final head = preview ? "* PREVIEW * $scriptFile.repository" : "Launching `$repo`"
         final revision = scriptFile.repository
             ? scriptFile.revisionInfo.toString()
             : scriptFile.getScriptId()?.substring(0,10)
-        printLaunchInfo(ver, repo, head, revision)
+        printLaunchInfo(repo, head, revision)
     }
 
     static void detectModuleBinaryFeature(ConfigMap config) {
@@ -492,8 +500,9 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
     static void detectStrictFeature(ConfigMap config, Map sysEnv) {
+        if( NF.isSyntaxParserV2() )
+            return
         final defStrict = sysEnv.get('NXF_ENABLE_STRICT') ?: false
-        log
         final strictMode = config.navigate('nextflow.enable.strict', defStrict)
         if( strictMode ) {
             log.debug "Enabling nextflow strict mode"
@@ -501,55 +510,27 @@ class CmdRun extends CmdBase implements HubOptions {
         }
     }
 
-    protected void printLaunchInfo(String ver, String repo, String head, String revision) {
+    protected void printLaunchInfo(String repo, String head, String revision) {
+        // Agent mode output is handled by AgentLogObserver
+        if( SysEnv.isAgentMode() ) {
+            return
+        }
+
         if( launcher.options.ansiLog ){
-            log.debug "${head} [$runName] DSL${ver} - revision: ${revision}"
+            log.debug "${head} [$runName] - revision: ${revision}"
 
             def fmt = ansi()
             fmt.a("Launching").fg(Color.MAGENTA).a(" `$repo` ").reset()
             fmt.a(Attribute.INTENSITY_FAINT).a("[").reset()
             fmt.bold().fg(Color.CYAN).a(runName).reset()
-            fmt.a(Attribute.INTENSITY_FAINT).a("]")
-            fmt.a(" DSL${ver} - ")
+            fmt.a(Attribute.INTENSITY_FAINT).a("] ").reset()
             fmt.fg(Color.CYAN).a("revision: ").reset()
             fmt.fg(Color.CYAN).a(revision).reset()
             fmt.a("\n")
             AnsiConsole.out().println(fmt.eraseLine())
         }
         else {
-            log.info "${head} [$runName] DSL${ver} - revision: ${revision}"
-        }
-    }
-
-    static String detectDslMode(ConfigMap config, String scriptText, Map sysEnv) {
-        // -- try determine DSL version from config file
-
-        final dsl = config.navigate('nextflow.enable.dsl') as String
-
-        // -- script can still override the DSL version
-        final scriptDsl = NextflowMeta.checkDslMode(scriptText)
-        if( scriptDsl ) {
-            log.debug("Applied DSL=$scriptDsl from script declaration")
-            return scriptDsl
-        }
-        else if( dsl ) {
-            log.debug("Applied DSL=$dsl from config declaration")
-            return dsl
-        }
-        // -- if still unknown try probing for DSL1
-        if( NextflowMeta.probeDsl1(scriptText) ) {
-            log.debug "Applied DSL=1 by probing script field"
-            return DSL1
-        }
-
-        final envDsl = sysEnv.get('NXF_DEFAULT_DSL')
-        if( envDsl ) {
-            log.debug "Applied DSL=$envDsl from NXF_DEFAULT_DSL variable"
-            return envDsl
-        }
-        else {
-            log.debug "Applied DSL=2 by global default"
-            return DSL2
+            log.info "${head} [$runName] - revision: ${revision}"
         }
     }
 
@@ -635,39 +616,40 @@ class CmdRun extends CmdBase implements HubOptions {
         /*
          * try to look for a pipeline in the repository
          */
-        def manager = new AssetManager(pipelineName, revision, mainScript, this)
-        def repo = manager.getProjectWithRevision()
+        try( def manager = new AssetManager(pipelineName, revision, mainScript, this) ) {
+            def repo = manager.getProjectWithRevision()
 
-        boolean checkForUpdate = true
-        if( !manager.isRunnable() || latest ) {
-            if( offline )
-                throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
-            log.info "Pulling $repo ..."
-            def result = manager.download(revision,deep)
-            if( result )
-                log.info " $result"
-            checkForUpdate = false
-        }
-        // Warn if using legacy
-        if( manager.isUsingLegacyStrategy() ){
-            log.warn1 "This Nextflow version supports a new Multi-revision strategy for managing the SCM repositories, " +
-                "but '${repo}' is single-revision legacy strategy - Please consider to update the repository with the 'nextflow pull -migrate' command."
-        }
-        // post download operations
-        try {
-            manager.checkout(revision)
-            manager.updateModules()
-            final scriptFile = manager.getScriptFile(mainScript)
-            if( checkForUpdate && !offline )
-                manager.checkRemoteStatus(scriptFile.revisionInfo)
-            // return the script file
-            return scriptFile
-        }
-        catch( AbortOperationException e ) {
-            throw e
-        }
-        catch( Exception e ) {
-            throw new AbortOperationException("Unknown error accessing project `$repo` -- Repository may be corrupted: ${manager.localPath}", e)
+            boolean checkForUpdate = true
+            if( !manager.isRunnable() || latest ) {
+                if( offline )
+                    throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
+                log.info "Pulling $repo ..."
+                def result = manager.download(revision,deep)
+                if( result )
+                    log.info " $result"
+                checkForUpdate = false
+            }
+            // Warn if using legacy
+            if( manager.isUsingLegacyStrategy() ){
+                log.warn1 "This Nextflow version supports a new Multi-revision strategy for managing the SCM repositories, " +
+                    "but '${repo}' is single-revision legacy strategy - Please consider to update the repository with the 'nextflow pull -migrate' command."
+            }
+            // post download operations
+            try {
+                manager.checkout(revision)
+                manager.updateModules()
+                final scriptFile = manager.getScriptFile(mainScript)
+                if( checkForUpdate && !offline )
+                    manager.checkRemoteStatus(scriptFile.revisionInfo)
+                // return the script file
+                return scriptFile
+            }
+            catch( AbortOperationException e ) {
+                throw e
+            }
+            catch( Exception e ) {
+                throw new AbortOperationException("Unknown error accessing project `$repo` -- Repository may be corrupted: ${manager.localPath}", e)
+            }
         }
 
     }

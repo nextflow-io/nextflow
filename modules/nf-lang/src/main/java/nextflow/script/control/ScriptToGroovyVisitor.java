@@ -1,5 +1,5 @@
 /*
- * Copyright 2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package nextflow.script.control;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -28,16 +29,22 @@ import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.OutputBlockNode;
 import nextflow.script.ast.ParamBlockNode;
 import nextflow.script.ast.ParamNodeV1;
+import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ProcessNodeV1;
 import nextflow.script.ast.ProcessNodeV2;
+import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
 import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.CodeVisitorSupport;
+import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.VariableScope;
+import org.codehaus.groovy.ast.expr.ArgumentListExpression;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
+import org.codehaus.groovy.ast.expr.DeclarationExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
@@ -84,13 +91,47 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     public void visit() {
         if( moduleNode == null )
             return;
-        super.visit(moduleNode);
+
+        if( moduleNode.isTypingEnabled() )
+            moduleNode.addStatement(stmt(callThisX("enableTyping", new ArgumentListExpression())));
+
+        var declarations = moduleNode.getDeclarations();
+
+        declarations.sort(Comparator.comparing(node -> node.getLineNumber()));
+
+        for( var decl : declarations ) {
+            if( decl instanceof ClassNode cn && cn.isEnum() )
+                visitEnum(cn);
+            else if( decl instanceof FeatureFlagNode ffn )
+                visitFeatureFlag(ffn);
+            else if( decl instanceof FunctionNode fn )
+                visitFunction(fn);
+            else if( decl instanceof IncludeNode in )
+                visitInclude(in);
+            else if( decl instanceof OutputBlockNode obn )
+                visitOutputs(obn);
+            else if( decl instanceof ParamBlockNode pbn )
+                visitParams(pbn);
+            else if( decl instanceof ParamNodeV1 pn )
+                visitParamV1(pn);
+            else if( decl instanceof ProcessNode pn )
+                visitProcess(pn);
+            else if( decl instanceof RecordNode rn )
+                visitRecord(rn);
+            else if( decl instanceof WorkflowNode wn )
+                visitWorkflow(wn);
+        }
+
         if( moduleNode.isEmpty() )
             moduleNode.addStatement(ReturnStatement.RETURN_NULL_OR_VOID);
     }
 
     @Override
     public void visitFeatureFlag(FeatureFlagNode node) {
+        // static typing is enabled per-script rather than globally
+        if( "nextflow.preview.types".equals(node.name) )
+            return;
+
         var names = node.name.split("\\.");
         Expression target = varX(DefaultGroovyMethods.head(names));
         for( var name : DefaultGroovyMethods.tail(names) )
@@ -123,7 +164,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             .map((param) -> {
                 var name = constX(param.getName());
                 var type = classX(param.getType());
-                var optional = constX(type.getNodeMetaData(ASTNodeMarker.NULLABLE) != null);
+                var optional = constX(param.getType().getNodeMetaData(ASTNodeMarker.NULLABLE) != null);
                 var arguments = param.hasInitialExpression()
                     ? args(name, type, optional, param.getInitialExpression())
                     : args(name, type, optional);
@@ -143,6 +184,9 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitWorkflow(WorkflowNode node) {
+        if( !node.isEntry() )
+            checkReservedMethodName(node, "workflow");
+
         var main = node.main instanceof BlockStatement block ? block : new BlockStatement();
         visitWorkflowEmits(node.emits, main);
         visitWorkflowPublishers(node.publishers, main);
@@ -153,7 +197,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             "nextflow.script.BodyDef",
             args(
                 closureX(null, main),
-                constX(getSourceText(node)),
+                constX(null),
                 constX("workflow")
             )
         ));
@@ -217,23 +261,27 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitProcessV2(ProcessNodeV2 node) {
+        checkReservedMethodName(node, "process");
         var result = new ProcessToGroovyVisitorV2(sourceUnit).transform(node);
         moduleNode.addStatement(result);
     }
 
     @Override
     public void visitProcessV1(ProcessNodeV1 node) {
+        checkReservedMethodName(node, "process");
         var result = new ProcessToGroovyVisitorV1(sourceUnit).transform(node);
         moduleNode.addStatement(result);
     }
 
     @Override
     public void visitFunction(FunctionNode node) {
-        if( RESERVED_NAMES.contains(node.getName()) ) {
-            syntaxError(node, "`" + node.getName() + "` is not allowed as a function name because it is reserved for internal use");
-            return;
-        }
+        checkReservedMethodName(node, "function");
         moduleNode.getScriptClassDummy().addMethod(node);
+    }
+
+    private void checkReservedMethodName(MethodNode node, String typeLabel) {
+        if( RESERVED_NAMES.contains(node.getName()) )
+            syntaxError(node, "`" + node.getName() + "` is not allowed as a " + typeLabel + " name because it is reserved for internal use");
     }
 
     @Override
@@ -251,30 +299,16 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         moduleNode.addStatement(result);
     }
 
-    private String getSourceText(WorkflowNode node) {
-        if( node.isEntry() && node.getLineNumber() == -1 )
-            return sgh.getSourceText(node.main);
+    @Override
+    public void visitRecord(RecordNode node) {
+        var result = stmt(callThisX("declareType", args(classX(node))));
+        moduleNode.addStatement(result);
+    }
 
-        var builder = new StringBuilder();
-        var colx = node.getColumnNumber();
-        var colz = node.getLastColumnNumber();
-        var first = node.getLineNumber();
-        var last = node.getLastLineNumber();
-        for( int i = first; i <= last; i++ ) {
-            var line = sourceUnit.getSource().getLine(i, null);
-            if( i == last ) {
-                line = line.substring(0, colz-1).replaceFirst("}.*$", "");
-                if( line.trim().isEmpty() )
-                    continue;
-            }
-            if( i == first ) {
-                line = line.substring(colx-1).replaceFirst("^.*\\{", "").trim();
-                if( line.isEmpty() )
-                    continue;
-            }
-            builder.append(line).append('\n');
-        }
-        return builder.toString();
+    @Override
+    public void visitEnum(ClassNode node) {
+        var result = stmt(callThisX("declareType", args(classX(node))));
+        moduleNode.addStatement(result);
     }
 
     private void syntaxError(ASTNode node, String message) {

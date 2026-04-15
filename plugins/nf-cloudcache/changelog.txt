@@ -1,5 +1,8 @@
 nf-cloudcache changelog
 =======================
+0.6.0 - 8 Feb 2026
+- Add CloudCacheConfig to register cloudcache config options (#6774) [ea8fea470]
+
 0.4.3 - 20 Jan 2025
 - Bump logback 1.5.13 + slf4j 2.0.16 [cc0163ac]
 - Bump groovy 4.0.24 missing deps [40670f7e]

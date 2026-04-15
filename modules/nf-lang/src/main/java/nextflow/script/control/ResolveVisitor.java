@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,6 +69,7 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         ClassHelper.LIST_TYPE,
         ClassHelper.MAP_TYPE,
         ClassHelper.makeCached(java.nio.file.Path.class),
+        ClassHelper.makeCached(nextflow.script.types.Record.class),
         ClassHelper.SET_TYPE,
         ClassHelper.STRING_TYPE,
         ClassHelper.makeCached(nextflow.script.types.Tuple.class)
@@ -160,14 +161,18 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
             return true;
         if( !type.hasPackageName() && resolveFromGroovyImports(type) )
             return true;
-        return resolveFromClassResolver(type.getName()) != null;
+        if( resolveFromClassResolver(type.getName()) != null )
+            return true;
+        if( resolveAsInnerClass(type) )
+            return true;
+        return false;
     }
 
     protected boolean resolveFromModule(ClassNode type) {
         var name = type.getName();
         var module = sourceUnit.getAST();
         for( var cn : module.getClasses() ) {
-            if( name.equals(cn.getName()) ) {
+            if( name.equals(cn.getNameWithoutPackage()) ) {
                 if( cn != type )
                     type.setRedirect(cn);
                 return true;
@@ -259,9 +264,38 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         var lookupResult = classNodeResolver.resolveName(name, compilationUnit);
         if( lookupResult == null )
             return null;
-        if( !lookupResult.isClassNode() )
-            throw new GroovyBugError("class resolver lookup result is not a class node");
-        return lookupResult.getClassNode();
+        if( lookupResult.isClassNode() )
+            return lookupResult.getClassNode();
+        // When a Groovy class from the lib directory is used, the class
+        // loader returns the URI of the Groovy file. We only need to compile
+        // the Groovy file enough to resolve the class definition for the purpose
+        // of name checking.
+        var su = lookupResult.getSourceUnit();
+        return GroovyCompiler.compile(su).stream()
+            .filter(cn -> cn.getName().equals(name))
+            .findFirst().orElse(null);
+    }
+
+    /**
+     * Try to resolve a ClassNode as an inner class by replacing dots with $.
+     * For example, "groovy.json.JsonGenerator.Options" becomes "groovy.json.JsonGenerator$Options".
+     * This method tries all possible combinations from right to left.
+     *
+     * @param type
+     */
+    protected boolean resolveAsInnerClass(ClassNode type) {
+        var className = type.getName();
+        int lastDot = className.lastIndexOf('.');
+        while( lastDot > 0 ) {
+            var innerClassName = className.substring(0, lastDot) + '$' + className.substring(lastDot + 1);
+            var redirect = resolveFromClassResolver(innerClassName);
+            if( redirect != null ) {
+                type.setRedirect(redirect);
+                return true;
+            }
+            lastDot = className.lastIndexOf('.', lastDot - 1);
+        }
+        return false;
     }
 
     @Override
@@ -334,13 +368,15 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         property = transform(pe.getProperty());
         var result = new PropertyExpression(objectExpression, property, pe.isSafe());
         result.setSpreadSafe(pe.isSpreadSafe());
+        result.copyNodeMetaData(pe);
         // attempt to resolve property expression as a fully-qualified class name
         var className = lookupClassName(result);
         if( className != null ) {
             var type = ClassHelper.make(className);
-            type.putNodeMetaData(ASTNodeMarker.FULLY_QUALIFIED, true);
-            if( resolve(type) )
+            if( resolve(type) ) {
+                type.putNodeMetaData(ASTNodeMarker.FULLY_QUALIFIED, true);
                 return new ClassExpression(type);
+            }
         }
         return result;
     }

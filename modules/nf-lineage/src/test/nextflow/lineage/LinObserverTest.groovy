@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,11 +12,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.lineage
 
+import nextflow.extension.FilesEx
 import nextflow.lineage.exception.OutputRelativePathException
 
 import java.nio.file.Files
@@ -24,6 +24,7 @@ import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
 
 import com.google.common.hash.HashCode
+import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.file.FileHolder
 import nextflow.lineage.model.v1beta1.Checksum
@@ -41,6 +42,7 @@ import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.processor.TaskRun
 import nextflow.script.ScriptBinding
+import nextflow.script.PlatformMetadata
 import nextflow.script.ScriptMeta
 import nextflow.script.TokenVar
 import nextflow.script.WorkflowMetadata
@@ -114,8 +116,8 @@ class LinObserverTest extends Specification {
         def store = new DefaultLinStore();
         def uniqueId = UUID.randomUUID()
         def scriptFile = folder.resolve("main.nf")
-        def module1 = folder.resolve("script1.nf"); module1.text = 'hola'
-        def module2 = folder.resolve("script2.nf"); module2.text = 'world'
+        def module1 = folder.resolve("a_script1.nf"); module1.text = 'hola'
+        def module2 = folder.resolve("b_script2.nf"); module2.text = 'world'
         and:
 
         def metadata = Mock(WorkflowMetadata){
@@ -139,7 +141,7 @@ class LinObserverTest extends Specification {
         when:
         def files = observer.collectScriptDataPaths(new PathNormalizer(metadata))
         then:
-        observer.allScriptFiles() >> [ scriptFile, module1, module2 ]
+        observer.allScriptFiles() >> [ module2, scriptFile, module1 ]
         and:
         files.size() == 3
         and:
@@ -164,13 +166,26 @@ class LinObserverTest extends Specification {
         def store = new DefaultLinStore();
         def uniqueId = UUID.randomUUID()
         def scriptFile = folder.resolve("main.nf")
+        def map = [
+            repository: "https://nextflow.io/nf-test/",
+            commitId: "123456",
+            scriptId: "78910",
+            scriptFile: scriptFile,
+            projectDir: folder.resolve("projectDir"),
+            revision: "main",
+            projectName: "nextflow.io/nf-test",
+            workDir: folder.resolve("workDir")
+        ]
         def metadata = Mock(WorkflowMetadata){
-            getRepository() >> "https://nextflow.io/nf-test/"
-            getCommitId() >> "123456"
-            getScriptId() >> "78910"
-            getScriptFile() >> scriptFile
-            getProjectDir() >> folder.resolve("projectDir")
-            getWorkDir() >> folder.resolve("workDir")
+            getRepository() >> map.repository
+            getCommitId() >> map.commitId
+            getScriptId() >> map.scriptId
+            getScriptFile() >> map.scriptFile
+            getProjectDir() >> map.projectDir
+            getRevision() >> map.revision
+            getProjectName() >> map.projectName
+            getWorkDir() >> map.workDir
+            toMap() >> map
         }
         def session = Mock(Session) {
             getConfig() >> config
@@ -182,13 +197,381 @@ class LinObserverTest extends Specification {
         store.open(LineageConfig.create(session))
         def observer = new LinObserver(session, store)
         def mainScript = new DataPath("file://${scriptFile.toString()}", new Checksum("78910", "nextflow", "standard"))
-        def workflow = new Workflow([mainScript],"https://nextflow.io/nf-test/", "123456" )
-        def workflowRun = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [], config)
+        def workflow = new Workflow([mainScript], map.repository, map.commitId)
+        def workflowRun = new WorkflowRun(workflow, uniqueId.toString(), "test_run", [], config, map)
         when:
         observer.onFlowCreate(session)
         observer.onFlowBegin()
         then:
         folder.resolve("${observer.executionHash}/.data.json").text == new LinEncoder().encode(workflowRun)
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should strip sensitive user data from platform metadata in lineage' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def config = [lineage:[enabled: true, store:[location:folder.toString()]]]
+        def store = new DefaultLinStore()
+        def uniqueId = UUID.randomUUID()
+        def scriptFile = folder.resolve("main.nf")
+        and:
+        def platformMeta = new PlatformMetadata()
+        platformMeta.user = new PlatformMetadata.User([
+            id: 'u1234', userName: 'john-smith', email: 'john.smith@acme.com',
+            firstName: 'John', lastName: 'Smith', organization: 'ACME'
+        ])
+        platformMeta.workspace = new PlatformMetadata.Workspace([
+            workspaceId: '1234', workspaceName: 'my-ws', workspaceFullName: 'My WS', orgName: 'ACME'
+        ])
+        def map = [
+            repository: "https://nextflow.io/nf-test/",
+            commitId: "123456",
+            scriptId: "78910",
+            scriptFile: scriptFile,
+            projectDir: folder.resolve("projectDir"),
+            revision: "main",
+            projectName: "nextflow.io/nf-test",
+            workDir: folder.resolve("workDir"),
+            platform: platformMeta
+        ]
+        def metadata = Mock(WorkflowMetadata) {
+            getRepository() >> map.repository
+            getCommitId()  >> map.commitId
+            getScriptId()  >> map.scriptId
+            getScriptFile() >> map.scriptFile
+            getProjectDir() >> map.projectDir
+            getWorkDir()   >> map.workDir
+            toMap()        >> map
+        }
+        def session = Mock(Session) {
+            getConfig()          >> config
+            getUniqueId()        >> uniqueId
+            getRunName()         >> "test_run"
+            getWorkflowMetadata() >> metadata
+            getParams()          >> new ScriptBinding.ParamsMap()
+        }
+        store.open(LineageConfig.create(session))
+        def observer = new LinObserver(session, store)
+
+        when:
+        observer.onFlowCreate(session)
+        observer.onFlowBegin()
+        def stored = store.load(observer.executionHash) as WorkflowRun
+
+        then:
+        def storedPlatform = stored.metadata.platform as Map
+        storedPlatform.user.id == 'u1234'
+        storedPlatform.user.userName == 'john-smith'
+        storedPlatform.user.organization == 'ACME'
+        !storedPlatform.user.containsKey('email')
+        !storedPlatform.user.containsKey('firstName')
+        !storedPlatform.user.containsKey('lastName')
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should convert Path values to URI strings in workflow metadata' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def config = [lineage:[enabled: true, store:[location:folder.toString()]]]
+        def store = new DefaultLinStore()
+        def uniqueId = UUID.randomUUID()
+        def scriptFile = folder.resolve("main.nf")
+        def workDir = folder.resolve("workDir")
+        def somePath = folder.resolve("data/input.txt")
+        def map = [
+            repository  : "https://nextflow.io/nf-test/",
+            commitId    : "abc123",
+            scriptId    : "78910",
+            scriptFile  : scriptFile,
+            projectDir  : folder.resolve("projectDir"),
+            workDir     : workDir,
+            somePathKey : somePath,
+            someStringKey: "hello"
+        ]
+        def metadata = Mock(WorkflowMetadata) {
+            getRepository() >> map.repository
+            getCommitId()   >> map.commitId
+            getScriptId()   >> map.scriptId
+            getScriptFile() >> map.scriptFile
+            getProjectDir() >> map.projectDir
+            getWorkDir()    >> map.workDir
+            toMap()         >> map
+        }
+        def session = Mock(Session) {
+            getConfig()           >> config
+            getUniqueId()         >> uniqueId
+            getRunName()          >> "test_run"
+            getWorkflowMetadata() >> metadata
+            getParams()           >> new ScriptBinding.ParamsMap()
+        }
+        store.open(LineageConfig.create(session))
+        def observer = new LinObserver(session, store)
+
+        when:
+        observer.onFlowCreate(session)
+        observer.onFlowBegin()
+        def stored = store.load(observer.executionHash) as WorkflowRun
+
+        then:
+        stored.metadata.somePathKey == FilesEx.toUriString(somePath)
+        stored.metadata.someStringKey == "hello"
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should remove transient properties from workflow metadata' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def config = [lineage:[enabled: true, store:[location:folder.toString()]]]
+        def store = new DefaultLinStore()
+        def uniqueId = UUID.randomUUID()
+        def scriptFile = folder.resolve("main.nf")
+        def map = [
+            repository  : "https://nextflow.io/nf-test/",
+            commitId    : "abc123",
+            scriptId    : "78910",
+            scriptFile  : scriptFile,
+            projectDir  : folder.resolve("projectDir"),
+            workDir     : folder.resolve("workDir"),
+            // transient properties that must be removed
+            completed   : new Date(),
+            duration    : 1000L,
+            exitStatus  : 0,
+            errorMessage: "none",
+            errorReport : "none",
+            stats       : [:],
+            success     : true
+        ]
+        def metadata = Mock(WorkflowMetadata) {
+            getRepository() >> map.repository
+            getCommitId()   >> map.commitId
+            getScriptId()   >> map.scriptId
+            getScriptFile() >> map.scriptFile
+            getProjectDir() >> map.projectDir
+            getWorkDir()    >> map.workDir
+            toMap()         >> map
+        }
+        def session = Mock(Session) {
+            getConfig()           >> config
+            getUniqueId()         >> uniqueId
+            getRunName()          >> "test_run"
+            getWorkflowMetadata() >> metadata
+            getParams()           >> new ScriptBinding.ParamsMap()
+        }
+        store.open(LineageConfig.create(session))
+        def observer = new LinObserver(session, store)
+
+        when:
+        observer.onFlowCreate(session)
+        observer.onFlowBegin()
+        def stored = store.load(observer.executionHash) as WorkflowRun
+
+        then:
+        !stored.metadata.containsKey('completed')
+        !stored.metadata.containsKey('duration')
+        !stored.metadata.containsKey('exitStatus')
+        !stored.metadata.containsKey('errorMessage')
+        !stored.metadata.containsKey('errorReport')
+        !stored.metadata.containsKey('stats')
+        !stored.metadata.containsKey('success')
+        stored.metadata.containsKey('commitId')
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should convert NextflowMeta to JSON map in workflow metadata' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def config = [lineage:[enabled: true, store:[location:folder.toString()]]]
+        def store = new DefaultLinStore()
+        def uniqueId = UUID.randomUUID()
+        def scriptFile = folder.resolve("main.nf")
+        def nfMeta = new NextflowMeta("24.10.0", 9999, "01-01-2024 00:00 UTC")
+        def map = [
+            repository : "https://nextflow.io/nf-test/",
+            commitId   : "abc123",
+            scriptId   : "78910",
+            scriptFile : scriptFile,
+            projectDir : folder.resolve("projectDir"),
+            workDir    : folder.resolve("workDir"),
+            nextflow   : nfMeta
+        ]
+        def metadata = Mock(WorkflowMetadata) {
+            getRepository() >> map.repository
+            getCommitId()   >> map.commitId
+            getScriptId()   >> map.scriptId
+            getScriptFile() >> map.scriptFile
+            getProjectDir() >> map.projectDir
+            getWorkDir()    >> map.workDir
+            toMap()         >> map
+        }
+        def session = Mock(Session) {
+            getConfig()           >> config
+            getUniqueId()         >> uniqueId
+            getRunName()          >> "test_run"
+            getWorkflowMetadata() >> metadata
+            getParams()           >> new ScriptBinding.ParamsMap()
+        }
+        store.open(LineageConfig.create(session))
+        def observer = new LinObserver(session, store)
+
+        when:
+        observer.onFlowCreate(session)
+        observer.onFlowBegin()
+        def stored = store.load(observer.executionHash) as WorkflowRun
+
+        then:
+        stored.metadata.nextflow instanceof Map
+        (stored.metadata.nextflow as Map).version == "24.10.0"
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should normalize configFiles in workflow metadata' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def config = [lineage:[enabled: true, store:[location:folder.toString()]]]
+        def store = new DefaultLinStore()
+        def uniqueId = UUID.randomUUID()
+        def scriptFile = folder.resolve("main.nf")
+        def workDir = folder.resolve("workDir")
+        def projectDir = folder.resolve("projectDir")
+        def configFile = projectDir.resolve("nextflow.config")
+        def map = [
+            repository  : "https://nextflow.io/nf-test/",
+            commitId    : "abc123",
+            scriptId    : "78910",
+            scriptFile  : scriptFile,
+            projectDir  : projectDir,
+            workDir     : workDir,
+            configFiles : [configFile]
+        ]
+        def metadata = Mock(WorkflowMetadata) {
+            getRepository() >> map.repository
+            getCommitId()   >> map.commitId
+            getScriptId()   >> map.scriptId
+            getScriptFile() >> map.scriptFile
+            getProjectDir() >> map.projectDir
+            getWorkDir()    >> map.workDir
+            toMap()         >> map
+        }
+        def session = Mock(Session) {
+            getConfig()           >> config
+            getUniqueId()         >> uniqueId
+            getRunName()          >> "test_run"
+            getWorkflowMetadata() >> metadata
+            getParams()           >> new ScriptBinding.ParamsMap()
+        }
+        store.open(LineageConfig.create(session))
+        def observer = new LinObserver(session, store)
+
+        when:
+        observer.onFlowCreate(session)
+        observer.onFlowBegin()
+        def stored = store.load(observer.executionHash) as WorkflowRun
+
+        then:
+        def normalizer = new PathNormalizer(metadata)
+        (stored.metadata.configFiles as List) == [normalizer.normalizePath(configFile)]
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should handle null user in platform metadata' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def config = [lineage:[enabled: true, store:[location:folder.toString()]]]
+        def store = new DefaultLinStore()
+        def uniqueId = UUID.randomUUID()
+        def scriptFile = folder.resolve("main.nf")
+        def platformMeta = new PlatformMetadata()
+        platformMeta.workflowId = 'wf-999'
+        platformMeta.workflowUrl = 'https://tower.nf/orgs/org/workspaces/ws/watch/wf-999'
+        // user is intentionally left null
+        def map = [
+            repository : "https://nextflow.io/nf-test/",
+            commitId   : "abc123",
+            scriptId   : "78910",
+            scriptFile : scriptFile,
+            projectDir : folder.resolve("projectDir"),
+            workDir    : folder.resolve("workDir"),
+            platform   : platformMeta
+        ]
+        def metadata = Mock(WorkflowMetadata) {
+            getRepository() >> map.repository
+            getCommitId()   >> map.commitId
+            getScriptId()   >> map.scriptId
+            getScriptFile() >> map.scriptFile
+            getProjectDir() >> map.projectDir
+            getWorkDir()    >> map.workDir
+            toMap()         >> map
+        }
+        def session = Mock(Session) {
+            getConfig()           >> config
+            getUniqueId()         >> uniqueId
+            getRunName()          >> "test_run"
+            getWorkflowMetadata() >> metadata
+            getParams()           >> new ScriptBinding.ParamsMap()
+        }
+        store.open(LineageConfig.create(session))
+        def observer = new LinObserver(session, store)
+
+        when:
+        observer.onFlowCreate(session)
+        observer.onFlowBegin()
+        def stored = store.load(observer.executionHash) as WorkflowRun
+
+        then:
+        def storedPlatform = stored.metadata.platform as Map
+        storedPlatform.workflowId == 'wf-999'
+        storedPlatform.workflowUrl == 'https://tower.nf/orgs/org/workspaces/ws/watch/wf-999'
+        storedPlatform.user == null
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should return empty metadata when toMap throws' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def config = [lineage:[enabled: true, store:[location:folder.toString()]]]
+        def store = new DefaultLinStore()
+        def uniqueId = UUID.randomUUID()
+        def scriptFile = folder.resolve("main.nf")
+        def metadata = Mock(WorkflowMetadata) {
+            getRepository() >> "https://nextflow.io/nf-test/"
+            getCommitId()   >> "abc123"
+            getScriptId()   >> "78910"
+            getScriptFile() >> scriptFile
+            getProjectDir() >> folder.resolve("projectDir")
+            getWorkDir()    >> folder.resolve("workDir")
+            toMap()         >> { throw new RuntimeException("metadata error") }
+        }
+        def session = Mock(Session) {
+            getConfig()           >> config
+            getUniqueId()         >> uniqueId
+            getRunName()          >> "test_run"
+            getWorkflowMetadata() >> metadata
+            getParams()           >> new ScriptBinding.ParamsMap()
+        }
+        store.open(LineageConfig.create(session))
+        def observer = new LinObserver(session, store)
+
+        when:
+        observer.onFlowCreate(session)
+        observer.onFlowBegin()
+        def stored = store.load(observer.executionHash) as WorkflowRun
+
+        then:
+        stored.metadata == null
 
         cleanup:
         folder?.deleteDir()

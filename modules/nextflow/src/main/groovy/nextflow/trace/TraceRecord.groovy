@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -124,6 +124,8 @@ class TraceRecord implements Serializable {
     transient private CloudMachineInfo machineInfo
     transient private ContainerMeta containerMeta
     transient private Integer numSpotInterruptions
+    transient private String logStreamId
+    transient private Map<String,Object> resourceAllocation
 
     /**
      * Convert the given value to a string
@@ -622,11 +624,27 @@ class TraceRecord implements Serializable {
         this.numSpotInterruptions = numSpotInterruptions
     }
 
+    String getLogStreamId() {
+        return logStreamId
+    }
+
+    void setLogStreamId(String logStreamId) {
+        this.logStreamId = logStreamId
+    }
+
     ContainerMeta getContainerMeta() {
         return containerMeta
     }
 
     void setContainerMeta(ContainerMeta meta) {
         this.containerMeta = meta
+    }
+
+    Map<String,Object> getResourceAllocation() {
+        return resourceAllocation
+    }
+
+    void setResourceAllocation(Map<String,Object> value) {
+        this.resourceAllocation = value
     }
 }

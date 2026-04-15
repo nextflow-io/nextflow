@@ -1,6 +1,20 @@
-package nextflow.extension
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-import static nextflow.Channel.*
+package nextflow.extension
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
@@ -11,11 +25,12 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
+import groovyx.gpars.dataflow.operator.ControlMessage
+import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter
 import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import nextflow.Channel
 import nextflow.Global
-import nextflow.NF
 import nextflow.Session
 /**
  * Helper class to handle channel internal api ops
@@ -30,6 +45,8 @@ class CH {
         return (Session) Global.session
     }
 
+    static ControlMessage stop() { PoisonPill.getInstance() }
+
     static class Topic {
         DataflowBroadcast broadcaster = new DataflowBroadcast()
         List<DataflowWriteChannel> sources = new ArrayList<>(10)
@@ -41,10 +58,10 @@ class CH {
 
     static DataflowReadChannel getReadChannel(channel) {
         if (channel instanceof DataflowQueue)
-            return getRead1(channel)
+            return readChannelFromQueue(channel)
 
         if (channel instanceof DataflowBroadcast)
-            return getRead2(channel)
+            return readChannelFromBroadcast(channel)
 
         if (channel instanceof DataflowReadChannel)
             return channel
@@ -52,10 +69,7 @@ class CH {
         throw new IllegalArgumentException("Illegal channel source type: ${channel?.getClass()?.getName()}")
     }
 
-    static synchronized private DataflowReadChannel getRead1(DataflowQueue queue) {
-        if( !NF.isDsl2() )
-            return queue
-
+    static synchronized private DataflowReadChannel readChannelFromQueue(DataflowQueue queue) {
         def broadcast = bridges.get(queue)
         if( broadcast == null ) {
             broadcast = new DataflowBroadcast()
@@ -64,7 +78,7 @@ class CH {
         return broadcast.createReadChannel()
     }
 
-    static private DataflowReadChannel getRead2(DataflowBroadcast channel) {
+    static private DataflowReadChannel readChannelFromBroadcast(DataflowBroadcast channel) {
         channel.createReadChannel()
     }
 
@@ -96,14 +110,14 @@ class CH {
                 final ch = new ArrayList(topic.sources)
                 // the mix operator requires at least two sources, add an empty channel if needed
                 if( ch.size()==1 )
-                    ch.add(empty())
+                    ch.add(Channel.empty())
                 // map write channels to read channels
                 final sources = ch.collect(it -> getReadChannel(it))
-                // mix all of them 
+                // mix all of them
                 new MixOp(sources).withTarget(topic.broadcaster).apply()
             }
             else {
-                topic.broadcaster.bind(STOP)
+                topic.broadcaster.bind(stop())
             }
         }
     }
@@ -114,10 +128,10 @@ class CH {
     static DataflowWriteChannel close0(DataflowWriteChannel source) {
         if( source instanceof DataflowExpression ) {
             if( !source.isBound() )
-                source.bind(Channel.STOP)
+                source.bind(stop())
         }
         else {
-            source.bind(Channel.STOP)
+            source.bind(stop())
         }
         return source
     }
@@ -130,10 +144,7 @@ class CH {
         if( value )
             return new DataflowVariable()
 
-        if( NF.isDsl2() )
-            return new DataflowBroadcast()
-
-        return new DataflowQueue()
+        return new DataflowBroadcast()
     }
 
     static DataflowBroadcast topic(String name) {
@@ -198,28 +209,24 @@ class CH {
 
 
     static DataflowWriteChannel emit(DataflowWriteChannel ch, Object value) {
-        if(NF.isDsl2()) {
-            session().addIgniter { ch.bind(value) }
-        }
-        else {
+        session().addIgniter {
             ch.bind(value)
         }
         return ch
     }
 
-    static <T extends DataflowWriteChannel> T emitValues(T ch, Collection items) {
-        if(NF.dsl2) {
-            session().addIgniter {-> for( def it : items ) ch.bind(it) }
-        }
-        else {
-            for( def it : items ) ch.bind(it)
+    static <T extends DataflowWriteChannel> T emitValues(T ch, Iterable items) {
+        session().addIgniter {->
+            for( final it : items ) ch.bind(it)
         }
         return ch
     }
 
-    static <T extends DataflowWriteChannel> T emitAndClose(T ch, Collection items) {
-        def values = items!=null ? new ArrayList(items) : new ArrayList<>(1)
-        values.add(STOP)
-        emitValues(ch, values)
+    static <T extends DataflowWriteChannel> T emitAndClose(T ch, Iterable items) {
+        session().addIgniter {->
+            for( final it : items ) ch.bind(it)
+            ch.bind(stop())
+        }
+        return ch
     }
 }

@@ -1,6 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
- * Copyright 2018, University of Tübingen, Quantitative Biology Center (QBiC)
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -62,7 +61,7 @@ class SimpleHttpClientTest extends Specification{
         httpClient.sendHttpMessage(dummyUrl, '{"test_id": 2}')
 
         then:
-        1 * httpClient.getHttpConnection(dummyUrl) >> con 
+        1 * httpClient.getHttpConnection(dummyUrl) >> con
         httpClient.getResponseCode() == 404
 
     }

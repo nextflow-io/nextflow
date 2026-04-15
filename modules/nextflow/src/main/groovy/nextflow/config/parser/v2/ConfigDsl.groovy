@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package nextflow.config.parser.v2
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
@@ -42,13 +43,15 @@ class ConfigDsl extends Script {
 
     private boolean strict
 
+    private boolean stripSecrets
+
     private Path configPath
 
-    private Map paramOverrides
+    private Map cliParams
 
     private List<String> profiles
 
-    private Map target = [:]
+    private Map target = [params: [:]]
 
     private Set<String> declaredProfiles = []
 
@@ -66,13 +69,21 @@ class ConfigDsl extends Script {
         this.strict = value
     }
 
+    void setStripSecrets(boolean value) {
+        this.stripSecrets = value
+    }
+
     void setConfigPath(Path path) {
         this.configPath = path
     }
 
-    void setParams(Map paramOverrides) {
-        this.paramOverrides = paramOverrides
-        target.params = paramOverrides
+    void setParams(Map params) {
+        this.cliParams = params
+        (target.params as Map).putAll(params)
+    }
+
+    void setConfigParams(Map params) {
+        (target.params as Map).putAll(params)
     }
 
     void setProfiles(List<String> profiles) {
@@ -117,13 +128,61 @@ class ConfigDsl extends Script {
         }
     }
 
+    /**
+     * Assign a value to a config option.
+     *
+     * When assigning a param, if the param was specified
+     * on the command line, then the command line value takes
+     * precedence. CLI params are applied here in order to ensure
+     * that if the param is referenced later in the config file,
+     * the command line value is used.
+     *
+     * @param names
+     * @param value
+     */
     void assign(List<String> names, Object value) {
         if( names.size() == 2 && names.first() == 'params' ) {
-            declareParam(names.last(), value)
-            if( paramOverrides.containsKey(names.last()) )
-                return
+            final name = names.last()
+            declareParam(name, value)
+            if( cliParams.containsKey(name) )
+                value = asDeclaredType(cliParams[name], value)
         }
         navigate(names.init()).put(names.last(), value)
+    }
+
+    /**
+     * Convert a CLI param override to an appropriate type based
+     * on the default param value in the config file.
+     *
+     * Note: this applies only to numbers and booleans.
+     *
+     * @param value
+     * @param declValue
+     */
+    private Object asDeclaredType(Object value, Object declValue) {
+        if( value == null )
+            return null
+
+        if( value !instanceof CharSequence )
+            return value
+
+        final str = value.toString()
+
+        if( declValue instanceof Boolean ) {
+            if( str.toLowerCase() == 'true' ) return Boolean.TRUE
+            if( str.toLowerCase() == 'false' ) return Boolean.FALSE
+        }
+
+        if( declValue instanceof Number ) {
+            if( str.isInteger() ) return str.toInteger()
+            if( str.isLong() ) return str.toLong()
+            if( str.isBigInteger() ) return str.toBigInteger()
+            if( str.isFloat() ) return str.toFloat()
+            if( str.isDouble() ) return str.toDouble()
+            if( str.isBigDecimal() ) return str.toBigDecimal()
+        }
+
+        return value
     }
 
     private Map navigate(List<String> names) {
@@ -195,8 +254,10 @@ class ConfigDsl extends Script {
                 .setIgnoreIncludes(ignoreIncludes)
                 .setRenderClosureAsString(renderClosureAsString)
                 .setStrict(strict)
+                .setStripSecrets(stripSecrets)
                 .setBinding(binding.getVariables())
-                .setParams(target.params as Map)
+                .setParams(cliParams)
+                .setConfigParams(target.params as Map)
                 .setProfiles(profiles)
         final config = parser.parse(configText, includePath)
         declaredProfiles.addAll(parser.getDeclaredProfiles())
@@ -213,6 +274,7 @@ class ConfigDsl extends Script {
      * @param includePath
      */
     @Memoized
+    @CompileDynamic // required to support ProviderPath::getText() over NioExtensions::getText()
     protected static String readConfigFile(Path includePath) {
         try {
             return includePath.getText()
@@ -234,8 +296,8 @@ class ConfigDsl extends Script {
             this.scope = scope
         }
 
-        void assign(List<String> names, Object right) {
-            dsl.assign(scope + names, right)
+        void assign(List<String> names, Object value) {
+            dsl.assign(scope + names, value)
         }
 
         void block(String name, Closure closure) {
@@ -260,7 +322,7 @@ class ConfigDsl extends Script {
 
     private static class PluginsDsl extends ConfigBlockDsl {
         PluginsDsl(ConfigDsl dsl) {
-            super(dsl, Collections.emptyList())
+            super(dsl, Collections.<String>emptyList())
         }
 
         void id(String value) {
@@ -291,12 +353,12 @@ class ConfigDsl extends Script {
         private Map<String,Closure> blocks = [:]
 
         ProfilesDsl(ConfigDsl dsl, List<String> profiles) {
-            super(dsl, Collections.emptyList())
+            super(dsl, Collections.<String>emptyList())
             this.profiles = profiles
         }
 
         @Override
-        void assign(List<String> names, Object right) {
+        void assign(List<String> names, Object value) {
             throw new ConfigParseException("Only profile blocks are allowed in the `profiles` scope")
         }
 

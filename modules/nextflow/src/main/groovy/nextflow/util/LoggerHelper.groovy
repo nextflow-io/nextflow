@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,6 +56,7 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.cli.CliOptions
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
@@ -260,7 +261,7 @@ class LoggerHelper {
 
         final Appender<ILoggingEvent> result = daemon && opts.isBackground()
                 ? (Appender<ILoggingEvent>) null
-                : (opts.ansiLog ? new CaptureAppender() : new ConsoleAppender<ILoggingEvent>())
+                : ((opts.ansiLog || SysEnv.isAgentMode()) ? new CaptureAppender() : new ConsoleAppender<ILoggingEvent>())
         if( result )  {
             final filter = new ConsoleLoggerFilter( packages )
             filter.setContext(loggerContext)
@@ -633,17 +634,17 @@ class LoggerHelper {
     }
 
     static List<String> findErrorLine( Throwable e, Map<String, Path> allNames ) {
-        def lines = getErrorLines(e)
-        List error = null
-        for( String str : lines ) {
-            if( (error=getErrorLine(str,allNames))) {
-                break
-            }
+        final lines = getErrorLines(e)
+        for( final line : lines ) {
+            final error = getErrorLine(line, allNames)
+            if( error )
+                return error
         }
-        return error
+        return null
     }
 
-    static @PackageScope String[] getErrorLines(Throwable e) {
+    @PackageScope
+    static String[] getErrorLines(Throwable e) {
         try {
             return ExceptionUtils.getStackTrace(e).split('\n')
         }
@@ -653,7 +654,7 @@ class LoggerHelper {
         }
     }
 
-    static private Pattern ERR_LINE_REGEX = ~/\((Script_[0-9a-f]{16}):(\d*)\)$/
+    static private Pattern ERR_LINE_REGEX = ~/\((Main|_nf_script_[0-9a-f]{16}):(\d*)\)$/
 
     @PackageScope
     static List<String> getErrorLine( String str, Map<String,Path> allNames ) {
@@ -703,7 +704,7 @@ class LoggerHelper {
 
     /**
      * Capture logging events and forward them to. This is only used when
-     * ANSI interactive logging is enabled
+     * ANSI interactive logging or agent logging is enabled
      */
     static private class CaptureAppender extends AppenderBase<ILoggingEvent> {
 
@@ -713,21 +714,23 @@ class LoggerHelper {
 
             try {
                 final message = fmtEvent(event, session, false)
-                final renderer = session?.ansiLogObserver
-                if( !renderer || !renderer.started || renderer.stopped )
+
+                final observer = session?.logObserver
+                if( observer ) {
+                    if( !observer.started || observer.stopped )
+                        System.out.println(message)
+                    else if( event.marker == STICKY )
+                        observer.appendSticky(message)
+                    else if( event.level==Level.ERROR )
+                        observer.appendError(message)
+                    else if( event.level==Level.WARN )
+                        observer.appendWarning(message)
+                    else
+                        observer.appendInfo(message)
+                }
+                else {
                     System.out.println(message)
-
-                else if( event.marker == STICKY )
-                    renderer.appendSticky(message)
-
-                else if( event.level==Level.ERROR )
-                    renderer.appendError(message)
-
-                else if( event.level==Level.WARN )
-                    renderer.appendWarning(message)
-
-                else
-                    renderer.appendInfo(message)
+                }
             }
             catch (Throwable e) {
                 e.printStackTrace()

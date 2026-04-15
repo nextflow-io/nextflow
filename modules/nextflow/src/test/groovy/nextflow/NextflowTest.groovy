@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -103,7 +103,7 @@ class NextflowTest extends Specification {
         uri.authority == AUTH
         uri.path == PATH
         uri.query == QUERY
-        
+
         where:
         LOCATION                            | SCHEME    | AUTH      | PATH              | QUERY
         'http://foo.com/some/file.txt'      | 'http'    | 'foo.com' | '/some/file.txt'  | null

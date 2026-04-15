@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +15,6 @@
  */
 
 package nextflow.util
-
-import java.nio.file.Path
 
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
@@ -67,32 +65,6 @@ class ConfigHelper {
             return parseValue(obj.toString())
 
         return obj
-    }
-
-    /**
-     * Given a list of paths looks for the files ending with the extension '.jar' and return
-     * a list containing the original directories, plus the JARs paths
-     *
-     * @param dirs
-     * @return
-     */
-    static List<Path> resolveClassPaths( List<Path> dirs ) {
-
-        List<Path> result = []
-        if( !dirs )
-            return result
-
-        for( Path path : dirs ) {
-            if( path.isFile() && path.name.endsWith('.jar') ) {
-                result << path
-            }
-            else if( path.isDirectory() ) {
-                result << path
-                path.eachFileMatch( ~/.+\.jar$/ ) { if(it.isFile()) result << it }
-            }
-        }
-
-        return result
     }
 
     static private final String TAB = '   '

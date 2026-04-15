@@ -1,9 +1,26 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.script.parser.v2
 
 import java.nio.file.Files
 
 import nextflow.Session
 import nextflow.exception.ScriptCompilationException
+import nextflow.processor.TaskProcessor
 import nextflow.script.BaseScript
 import nextflow.script.ScriptMeta
 import nextflow.script.WorkflowDef
@@ -164,7 +181,7 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         def parser = new ScriptLoaderV2(session)
 
         def TEXT = '''
-            workflow { 
+            workflow {
                 channel.of(1, 2, 3).view { it -> "${it}" }
             }
             '''
@@ -184,7 +201,7 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         def parser = new ScriptLoaderV2(session)
 
         def TEXT = '''
-            workflow { 
+            workflow {
                 assert "${'hello'}" == 'hello'
                 assert "${'hello'}" in ['hello']
             }
@@ -205,7 +222,7 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         session.executorFactory = new MockExecutorFactory()
         def parser = new ScriptLoaderV2(session)
 
-        def TEXT = '''
+        def TEXT = '''\
             process HELLO {
                 tag props.name
 
@@ -228,6 +245,37 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         parser.parse(TEXT)
         parser.runScript()
 
+        then:
+        noExceptionThrown()
+    }
+
+    def 'should not wrap process directives that cannot be dynamic' () {
+
+        given:
+        def session = new Session()
+        session.executorFactory = new MockExecutorFactory()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''\
+            process ECHO {
+                secret secrets.NCBI_API_KEY ? "NCBI_API_KEY" : ""
+
+                script:
+                """
+                echo "NCBI_API_KEY=\\$NCBI_API_KEY"
+                """
+            }
+
+            workflow {
+                ECHO()
+            }
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+        and:
+        TaskProcessor.currentProcessor().createTaskPreview().toTaskBean()
         then:
         noExceptionThrown()
     }
@@ -293,6 +341,62 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         outputs.getParams().size() == 2
         outputs.getTopics().size() == 1
         outputs.getFiles().size() == 3
+    }
+
+    def 'should allow optional param' () {
+
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+            params {
+                path: Path?
+            }
+
+            workflow {
+                params.path
+            }
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+
+        then:
+        parser.getResult() == null
+    }
+
+    def 'should report error for invalid publish statements in output block' () {
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+            workflow {
+                main:
+                ch = channel.empty()
+
+                publish:
+                samples = ch
+            }
+
+            output {
+                samples {
+                    path { v ->
+                        if( true ) return 42
+                        v >> 'foo'
+                    }
+                }
+            }
+            '''
+
+        when:
+        parser.parse(TEXT)
+        parser.runScript()
+        then:
+        def e = thrown(ScriptCompilationException)
+        e.cause.message.contains 'Publish statements cannot be mixed with other statements in a dynamic publish path'
     }
 
 }

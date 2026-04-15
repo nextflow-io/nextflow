@@ -113,7 +113,7 @@ The following settings are available:
 : The AWS Batch [Execution Role](https://docs.aws.amazon.com/batch/latest/userguide/execution-IAM-role.html) ARN that needs to be used to execute the Batch Job. It is mandatory when using AWS Fargate.
 
 `aws.batch.forceGlacierTransfer`
-: :::{versionadded 26.04.0}
+: :::{versionadded} 26.04.0
   :::
 : When `true`, add the `--force-glacier-transfer` flag to AWS CLI S3 download commands (default: `false`).
 : This option is needed when staging directories that have been restored from [S3 Glacier](https://aws.amazon.com/s3/storage-classes/glacier/). It does not restore objects from Glacier.
@@ -539,7 +539,10 @@ The following settings are available:
 : The path where Conda environments are stored. It should be accessible from all compute nodes when using a shared file system.
 
 `conda.channels`
-: The list of Conda channels that can be used to resolve Conda packages. Channel priority decreases from left to right.
+: :::{versionchanged} 26.04.0
+  The default was changed to `'conda-forge,bioconda'`.
+  :::
+: The list of Conda channels that can be used to resolve Conda packages (default: `'conda-forge,bioconda'`). Channel priority decreases from left to right.
 
 `conda.createOptions`
 : Extra command line options for the `conda create` command. See the [Conda documentation](https://docs.conda.io/projects/conda/en/latest/commands/create.html) for more information.
@@ -875,7 +878,7 @@ The following settings are available:
 
   :::{note}
   This configuration does not mount or provide access to credential files. For example, AWS credentials like `~/.aws/credentials`, `~/.aws/config`, and SSO cache files are not mounted. AWS SSO users must export credentials to environment variables:
-  
+
   ```bash
   eval "$(aws configure export-credentials --format env)"
   ```
@@ -961,6 +964,13 @@ The following settings are available:
 : :::{versionadded} 25.03.0-edge
   :::
 : List of custom mount options for `gcsfuse` (default: `['-o rw', '-implicit-dirs']`).
+
+`google.batch.installOpsAgent`
+: Enables Ops Agent installation on Google Batch instances for enhanced monitoring and logging (default: `false`). See the [Google Batch documentation](https://docs.cloud.google.com/batch/docs/create-run-job-ops-agent) for details.
+
+: :::{note}
+  The Ops Agent requires a compatible boot disk image. For Google Batch, use [Batch-debian images](https://docs.cloud.google.com/batch/docs/vm-os-environment-overview#vm-os-image-options) (e.g., `batch-debian`) with `google.batch.bootDiskImage`. The default Container-Optimized OS (`batch-cos`) is not compatible with the Ops Agent.
+  :::
 
 `google.batch.logsPath`
 : :::{versionadded} 25.11.0-edge
@@ -1053,6 +1063,12 @@ The following settings are available:
   - `clientCertFile`
   - `clientKey`
   - `clientKeyFile`
+
+`k8s.clientRefreshInterval`
+: :::{versionadded} 26.01.0-edge
+  :::
+: The interval after which the Kubernetes client configuration is refreshed (default: `50m`).
+: This setting is useful when the Kubernetes authentication token has a limited lifespan and needs to be periodically refreshed. The client configuration will be automatically reloaded after the specified interval, allowing Nextflow to obtain fresh credentials from the Kubernetes configuration.
 
 `k8s.computeResourceType`
 : :::{versionadded} 22.05.0-edge
@@ -1400,6 +1416,91 @@ The following settings are available:
 `sarus.tty`
 : Allocates a pseudo-tty (default: `false`).
 
+(config-seqera)=
+
+## `seqera`
+
+:::{versionadded} 26.04.0
+:::
+
+:::{warning}
+*Preview feature: may change in a future release.*
+:::
+
+The `seqera` scope allows you to configure the interactions with Seqera services.
+
+### `executor`
+
+The `seqera.executor` scope configures the Seqera scheduler service for the {ref}`seqera-executor`.
+
+The following settings are available:
+
+`seqera.executor.endpoint`
+: The Seqera scheduler service endpoint URL (required).
+
+`seqera.executor.provider`
+: The compute backend provider type (e.g. `'aws'`, `'local'`). When specified, used together with `region` to select the matching compute environment.
+
+`seqera.executor.region`
+: The cloud region for task execution.
+
+`seqera.executor.computeEnvId`
+: The Seqera Platform compute environment ID. When specified, the scheduler resolves the compute environment directly by this ID instead of inferring a suitable compute environment. Used as a fallback when the workflow launch does not include a compute environment reference.
+
+`seqera.executor.autoLabels`
+: When `true`, automatically adds workflow metadata labels to the session with the `nextflow.io/` prefix (default: `false`). The following labels are added: `projectName`, `userName`, `runName`, `sessionId`, `resume`, `revision`, `commitId`, `repository`, `manifestName`, `runtimeVersion`. A `seqera.io/runId` label is also added, computed as a SipHash of the session ID and run name.
+
+`seqera.executor.labels`
+: Custom labels to apply to AWS resources for cost tracking and resource organization. Labels are propagated to ECS tasks, capacity providers, and EC2 instances. When used together with `autoLabels`, user-defined labels take precedence over auto-generated labels.
+
+`seqera.executor.machineRequirement.arch`
+: The CPU architecture for task execution, e.g. `'x86_64'` or `'arm64'`.
+
+`seqera.executor.machineRequirement.provisioning`
+: The instance provisioning mode. Can be `'spot'`, `'ondemand'`, or `'spotFirst'`.
+
+`seqera.executor.machineRequirement.maxSpotAttempts`
+: The maximum number of spot retry attempts before falling back to on-demand. Only used when `provisioning` is `'spot'` or `'spotFirst'`.
+
+`seqera.executor.machineRequirement.machineFamilies`
+: List of acceptable EC2 instance families, e.g. `['m5', 'c5', 'r5']`.
+
+`seqera.executor.machineRequirement.diskAllocation`
+: The disk allocation strategy. Can be `'task'` (default) for per-task EBS volumes, or `'node'` for per-node instance storage. When using `'node'` allocation, EBS-specific options (`diskType`, `diskIops`, `diskThroughputMiBps`, `diskEncrypted`) are not applicable.
+
+`seqera.executor.machineRequirement.diskType`
+: The EBS volume type for task scratch disk. Supported types: `'ebs/gp3'` (default), `'ebs/gp2'`, `'ebs/io1'`, `'ebs/io2'`, `'ebs/st1'`, `'ebs/sc1'`. Only applicable when `diskAllocation` is `'task'`.
+
+`seqera.executor.machineRequirement.diskThroughputMiBps`
+: The throughput in MiB/s for gp3 volumes (125-1000). Default: `325` (Fusion recommended). Only applicable when `diskAllocation` is `'task'`.
+
+`seqera.executor.machineRequirement.diskIops`
+: The IOPS for io1/io2/gp3 volumes. Required for io1/io2 volume types. Only applicable when `diskAllocation` is `'task'`.
+
+`seqera.executor.machineRequirement.diskEncrypted`
+: Enable KMS encryption for the EBS volume (default: `false`). Only applicable when `diskAllocation` is `'task'`.
+
+`seqera.executor.machineRequirement.diskMountPath`
+: The container path where the disk is mounted (default: `'/tmp'`). Applicable to all disk allocation strategies.
+
+`seqera.executor.taskEnvironment`
+: Custom environment variables to apply to all tasks submitted by the Seqera executor. These are merged with the Fusion environment variables, with Fusion variables taking precedence. For example: `taskEnvironment = [MY_VAR: 'value']`.
+
+`seqera.executor.retryPolicy.delay`
+: The initial delay when a failing HTTP request is retried (default: `'450ms'`).
+
+`seqera.executor.retryPolicy.maxDelay`
+: The maximum delay when a failing HTTP request is retried (default: `'90s'`).
+
+`seqera.executor.retryPolicy.maxAttempts`
+: The maximum number of retry attempts (default: `10`).
+
+`seqera.executor.retryPolicy.jitter`
+: The jitter factor for randomizing retry delays (default: `0.25`).
+
+`seqera.executor.retryPolicy.multiplier`
+: The multiplier for exponential backoff (default: `2.0`).
+
 (config-shifter)=
 
 ## `shifter`
@@ -1539,6 +1640,16 @@ The following settings are available:
 
 `tower.endpoint`
 : The endpoint of your Seqera Platform instance (default: `https://api.cloud.seqera.io`).
+
+`tower.httpConnectTimeout`
+: :::{versionadded} 26.04.0
+  :::
+: The HTTP connection timeout for Seqera Platform API requests (default: `'60s'`).
+
+`tower.httpReadTimeout`
+: :::{versionadded} 26.04.0
+  :::
+: The HTTP read timeout for Seqera Platform API requests (default: `'60s'`).
 
 `tower.workspaceId`
 : The workspace ID in Seqera Platform in which to save the run (default: the launching user's personal workspace).

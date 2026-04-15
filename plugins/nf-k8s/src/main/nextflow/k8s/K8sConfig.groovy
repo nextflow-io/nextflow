@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,6 @@ import nextflow.k8s.client.K8sRetryConfig
 import javax.annotation.Nullable
 
 import groovy.transform.CompileStatic
-import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
@@ -42,7 +41,7 @@ import nextflow.util.Duration
 /**
  * Model Kubernetes specific settings defined in the nextflow
  * configuration file
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @ScopeName("k8s")
@@ -80,6 +79,12 @@ class K8sConfig implements ConfigScope {
         If this option is specified, it will be used instead of `.kube/config`.
     """)
     final Map client
+
+    @ConfigOption
+    @Description("""
+        The interval after which the Kubernetes client configuration is refreshed (default: `50m`).
+    """)
+    final Duration clientRefreshInterval
 
     @ConfigOption
     @Description("""
@@ -215,6 +220,7 @@ class K8sConfig implements ConfigScope {
         autoMountHostPaths = opts.autoMountHostPaths as boolean
         cleanup = opts.cleanup as Boolean
         client = opts.client as Map
+        clientRefreshInterval = opts.clientRefreshInterval as Duration ?: Duration.of('50m')
         computeResourceType = opts.computeResourceType
         context = opts.context
         cpuLimits = opts.cpuLimits as boolean
@@ -351,9 +357,7 @@ class K8sConfig implements ConfigScope {
         return result ? result.claimName : null
     }
 
-    @Memoized
     ClientConfig getClient() {
-
         final result = client != null
                 ? clientFromNextflow(client, namespace, serviceAccount)
                 : clientDiscovery(context, namespace, serviceAccount)

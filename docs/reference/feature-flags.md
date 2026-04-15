@@ -23,6 +23,8 @@ Feature flags with the `nextflow.preview` prefix can cause pipelines run with ne
 : When `true`, enables the use of modules with binary scripts. See {ref}`module-binaries` for more information.
 
 `nextflow.enable.strict`
+: :::{deprecated} 26.04.0
+  :::
 : When `true`, executes the pipeline in "strict" mode, which introduces the following rules:
 
   - When reading a params file, Nextflow will fail if a dynamic param value references an undefined variable
@@ -71,4 +73,4 @@ Feature flags with the `nextflow.preview` prefix can cause pipelines run with ne
 : :::{versionadded} 25.10.0
   :::
 : *Preview feature: the syntax and behavior may change in future releases.*
-: When `true`, enables the use of {ref}`typed processes <process-typed-page>`. Must be enabled in every script that uses typed processes. Legacy processes cannot be defined in scripts with this flag enabled.
+: When `true`, enables the use of {ref}`typed processes <process-typed-page>` and {ref}`typed workflows <workflow-typed-page>`. Must be enabled in every script that uses typed processes/workflows. Legacy processes/workflows cannot be defined in scripts with this flag enabled.

@@ -1,0 +1,21 @@
+nf-seqera changelog
+====================
+0.17.0 - 7 Apr 2026
+- Add resourceAllocation field to trace record (#6973) [a2742939c]
+- Add compute env ID and provider support to Seqera executor (#6906) [4c2eb9390]
+- Bump sched-client@0.49.0 [784a14353]
+
+0.16.0 - 17 Mar 2026
+- Default Fusion to v2.6 for Seqera executor (#6933) [8a7e53957]
+
+0.15.0 - 10 Mar 2026
+- Add provider option to Seqera executor config (#6908) [c70376d0a]
+
+0.14.0 - 4 Mar 2026
+- Use PipelineSpec model in CreateRunRequest (#6887) [4bd7e4f02]
+
+0.13.0 - 3 Mar 2026
+- Add NVMe disk allocation and diskMountPath support (#6879) [6644d3c90]
+
+0.12.0 - 28 Feb 2026
+- Sched core implementation alpha1 (#6242) [870c858af]

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.plugin
 
 
@@ -9,7 +25,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.http.HxClient
 import io.seqera.npr.api.schema.v1.ListDependenciesResponse
-import io.seqera.npr.api.schema.v1.Plugin
+import io.seqera.npr.api.schema.v1.PluginDependency
 import nextflow.BuildInfo
 import nextflow.util.RetryConfig
 import org.pf4j.PluginRuntimeException
@@ -156,7 +172,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
                 throw new PluginRuntimeException("Failed to download plugin metadata: Failed to parse response body")
             }
             final result = new HashMap<String, PluginInfo>()
-            for( Plugin plugin : decoded.plugins ) {
+            for( PluginDependency plugin : decoded.plugins ) {
                 if( plugin.releases ) {
                     final pluginInfo = mapToPluginInfo(plugin)
                     result.put(plugin.id, pluginInfo)
@@ -179,14 +195,14 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
      * @param plugin The Plugin object from the repository API response
      * @return A PluginInfo object compatible with pf4j's update repository interface
      */
-    static protected PluginInfo mapToPluginInfo(Plugin plugin) {
+    static protected PluginInfo mapToPluginInfo(PluginDependency plugin) {
         assert plugin.releases, "Plugin releases cannot be empty"
 
         final pluginInfo = new PluginInfo()
         pluginInfo.id = plugin.id
         pluginInfo.projectUrl = plugin.projectUrl
         pluginInfo.provider = plugin.provider
-        
+
         // Map releases to PluginInfo.PluginRelease
         pluginInfo.releases = new ArrayList<>()
         for (def release : plugin.releases) {
@@ -198,7 +214,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
             pluginRelease.requires = release.requires
             pluginInfo.releases.add(pluginRelease)
         }
-        
+
         return pluginInfo
     }
 

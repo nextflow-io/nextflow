@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,6 +76,16 @@ public class ResolveIncludeVisitor extends ConfigVisitorSupport {
     }
 
     protected static URI getIncludeUri(URI uri, String source) {
+        // return source URI if it is already an absolute URI (e.g. http URL)
+        try {
+            var sourceUri = new URI(source);
+            if( sourceUri.getScheme() != null )
+                return sourceUri;
+        }
+        catch( Exception e ) {
+            // ignore
+        }
+        // otherwise, resolve the source path against the including URI
         return Path.of(uri).getParent().resolve(source).normalize().toUri();
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 
 package nextflow.extension
 
-import groovyx.gpars.dataflow.DataflowQueue
+import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.splitter.FastqSplitter
@@ -153,9 +153,9 @@ class SplitOpTest extends Specification {
 
         1 * splitter1.setMultiSplit(true)
         1 * splitter2.setMultiSplit(true)
-        1 * op.applyMergingOperator([out1, out2], _ as DataflowQueue, [-1,-2]) >> null
+        1 * op.applyMergingOperator([out1, out2], _ as DataflowBroadcast, [-1,-2]) >> null
         then:
-        result instanceof DataflowQueue
+        result instanceof DataflowBroadcast
     }
 
 

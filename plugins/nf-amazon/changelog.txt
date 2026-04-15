@@ -1,5 +1,30 @@
 nf-amazon changelog
 ===================
+3.8.2 - 7 Apr 2026
+- Bump org.apache.groovy from 4.0.30 to 4.0.31 (#6985) [62a391588]
+- Bump org.pf4j:pf4j from 3.12.0 to 3.14.1 (#6983) [95aba07a3]
+- Bump io.netty:netty-codec-http2 from 4.1.129.Final to 4.1.132.Final (#6981) [d12cdc61e]
+
+3.8.1 - 26 Mar 2026
+- Fix AWS Batch machine type trace for new instance families (#6952) [06e78ba0b]
+- Fix download of empty files in old minio based S3 transfers (#6944) [ccded1845]
+- Fix jackson-databind dependency in nf-amazon (#6941) [321c57f88]
+- Fix security vulnerabilities (#6938) [8b1ab40c4]
+
+3.8.0 - 17 Mar 2026
+- Add multi-arch support to arch process directive (#6897) [c7ca36902]
+
+3.7.1 - 28 Feb 2026
+- Fix S3 lookup unbounded pagination with double call (#6851) [a2e67eb99]
+- Fix S3 delete throwing DirectoryNotEmptyException due to eventual consistency (#6833) [f3ac49754]
+
+3.7.0 - 8 Feb 2026
+- Fix isCompleted check in getNumSpotInterruptions (#6805) [76558481a]
+- Fix AWS Batch spot instance detection (#6722) [29356f60e]
+- Fix error when checking whether an S3 bucket exists (#6706) [c1bd552ab]
+- Remove isCompleted() from getNumSpotInterruptions (#6729) [24cc59e27]
+- Add aws.batch.forceGlacierTransfer config option (#6700) [e3bf3153b]
+
 3.6.0 - 19 Dec 2025
 - Add spot interruption tracking to trace records (#6606) [eecd81671]
 

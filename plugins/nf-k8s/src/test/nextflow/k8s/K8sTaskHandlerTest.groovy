@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,7 +96,7 @@ class K8sTaskHandlerTest extends Specification {
                 containers: [[
                     name:'nf-123',
                     image:'debian:latest',
-                    args:['/bin/bash', '-ue','-c','bash /some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log']
+                    args:['/bin/bash', '-ue', '-o', 'pipefail', '-c', 'bash /some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log']
                 ]]
             ]
         ]
@@ -123,7 +123,7 @@ class K8sTaskHandlerTest extends Specification {
         and:
         result.metadata.labels == [sessionId: 'xxx']
         result.metadata.annotations == [evict: 'false']
-        result.spec.containers[0].command == ['/bin/bash', '-ue', '-c','bash /some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log']
+        result.spec.containers[0].command == ['/bin/bash', '-ue', '-o', 'pipefail', '-c', 'bash /some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log']
         result.spec.containers[0].resources == [ requests: [cpu:1] ]
         result.spec.containers[0].env == [ [name:'NXF_OWNER', value:'501:502'] ]
 
@@ -148,7 +148,7 @@ class K8sTaskHandlerTest extends Specification {
         and:
         result.metadata.namespace == 'namespace-x'
         result.spec.containers[0].image == 'user/alpine:1.0'
-        result.spec.containers[0].command == ['/bin/bash', '-ue', '-c','bash /some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log']
+        result.spec.containers[0].command == ['/bin/bash', '-ue', '-o', 'pipefail', '-c', 'bash /some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log']
         result.spec.containers[0].resources == [ requests: [cpu:4, memory:'16384Mi'], limits: [memory:'16384Mi'] ]
 
     }
@@ -428,7 +428,7 @@ class K8sTaskHandlerTest extends Specification {
                         containers: [[
                             name: 'nf-123',
                             image: 'debian:latest',
-                            command: ['/bin/bash', '-ue','-c','bash /some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log']
+                            command: ['/bin/bash', '-ue', '-o', 'pipefail', '-c', 'bash /some/work/dir/.command.run 2>&1 | tee /some/work/dir/.command.log']
                         ]]
                     ]
                 ]
@@ -647,7 +647,7 @@ class K8sTaskHandlerTest extends Specification {
         def POD_NAME = 'pod-xyz'
         def client = Mock(K8sClient)
         def handler = Spy(new K8sTaskHandler(client:client, podName: POD_NAME))
-        
+
         when:
         def state = handler.getState()
         then:
@@ -912,7 +912,7 @@ class K8sTaskHandlerTest extends Specification {
         1 * k8sConfig.getPodOptions() >> new PodOptions([[env: 'FUSION_BUCKETS', value: 's3://nextflow-ci'], [privileged: true]])
         and:
         1 * handler.taskPodOptions() >> new PodOptions([:])
-        and: 
+        and:
         opts == new PodOptions([[env: 'FUSION_BUCKETS', value: 's3://nextflow-ci'], [privileged: true]])
     }
 

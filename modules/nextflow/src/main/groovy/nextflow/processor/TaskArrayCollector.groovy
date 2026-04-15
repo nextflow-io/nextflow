@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -151,7 +151,7 @@ class TaskArrayCollector {
         // create wrapper script
         final script = createArrayTaskScript(handlers)
         log.debug "Creating task array run >> $workDir\n$script"
-        
+
         // create config for job array
         final rawConfig = new HashMap<String,Object>(ARRAY_DIRECTIVES.size())
         for( final key : ARRAY_DIRECTIVES ) {

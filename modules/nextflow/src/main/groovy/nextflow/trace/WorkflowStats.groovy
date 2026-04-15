@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -301,6 +301,7 @@ class WorkflowStats implements Cloneable {
     void markSubmitted(TaskRun task) {
         final state = getOrCreateRecord(task.processor)
         state.hash = task.hashLog
+        state.workDir = task.workDirStr
         state.taskName = task.name
         state.pending --
         state.submitted ++
@@ -350,6 +351,7 @@ class WorkflowStats implements Cloneable {
         ProgressRecord state = getOrCreateRecord(task.processor)
         state.taskName = task.name
         state.hash = task.hashLog
+        state.workDir = task.workDirStr
 
         if( status == TaskStatus.SUBMITTED ) {
             state.submitted --
@@ -401,6 +403,7 @@ class WorkflowStats implements Cloneable {
         if( trace ) {
             state.cached++
             state.hash = task.hashLog
+            state.workDir = task.workDirStr
             state.taskName = task.name
             // global counters
             this.cachedMillis += getCpuTime(trace)
@@ -409,6 +412,7 @@ class WorkflowStats implements Cloneable {
         else {
             state.stored++
             state.hash = 'skipped'
+            state.workDir = null
             state.taskName = task.name
         }
         changeTimestamp = System.currentTimeMillis()

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -333,6 +333,26 @@ class ScriptResolveTest extends Specification {
         errors[0].getStartLine() == 6
         errors[0].getStartColumn() == 9
         errors[0].getOriginalMessage() == 'Workflows cannot be called from within a closure'
+    }
+
+    def 'should recognize fully-qualified class name' () {
+        when:
+        def errors = check(
+            '''\
+            new groovy.json.JsonSlurper()
+            '''
+        )
+        then:
+        errors.size() == 0
+
+        when:
+        errors = check(
+            '''\
+            new groovy.json.JsonGenerator.Options()
+            '''
+        )
+        then:
+        errors.size() == 0
     }
 
 }
