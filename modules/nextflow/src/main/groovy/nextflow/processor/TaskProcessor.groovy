@@ -1036,7 +1036,7 @@ class TaskProcessor {
             return true
         }
 
-        return fault == TERMINATE || fault == FINISH
+        return fault == ErrorStrategy.TERMINATE || fault == ErrorStrategy.FINISH
     }
 
     /**
@@ -1050,7 +1050,7 @@ class TaskProcessor {
     final synchronized Object resumeOrDie( TaskRun task, Throwable error, TraceRecord traceRecord = null) {
         log.debug "Handling unexpected condition for\n  task: name=${safeTaskName(task)}; work-dir=${task?.workDirStr}\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
-        ErrorStrategy errorStrategy = TERMINATE
+        ErrorStrategy errorStrategy = ErrorStrategy.TERMINATE
         final List<String> message = []
         try {
             // -- do not recoverable error, just re-throw it
@@ -1169,7 +1169,7 @@ class TaskProcessor {
 
         // retry is not allowed when the script cannot be compiled or similar errors
         if( error instanceof ProcessUnrecoverableException || error.cause instanceof ProcessUnrecoverableException ) {
-            return !action.soft ? action : TERMINATE
+            return !action.soft ? action : ErrorStrategy.TERMINATE
         }
 
         // IGNORE strategy -- just continue
@@ -1200,7 +1200,7 @@ class TaskProcessor {
                 return ErrorStrategy.RETRY
             }
 
-            return TERMINATE
+            return ErrorStrategy.TERMINATE
         }
 
         return action

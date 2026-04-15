@@ -20,16 +20,18 @@ process foo {
     maxRetries 3 
 
     script:
-    if( task.attempt < 3 )
-	"""
-    exit 1 
-	"""
-    else 
-    """
-    echo ciao
-    """
+    if( task.attempt < 3 ) {
+        """
+        exit 1 
+        """
+    }
+    else {
+        """
+        echo ciao
+        """
+    }
 }
 
 workflow {
-  foo()
+    foo()
 }
