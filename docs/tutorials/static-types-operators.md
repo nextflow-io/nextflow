@@ -22,6 +22,16 @@ When using `collect` with static typing, it has the same semantics as `toList`. 
 
 When using `combine` with static typing, the right operand should be a channel, dataflow value, or named arguments corresponding to record fields.
 
+When `combine` is called with named arguments, they are appended to each source record as additional fields:
+
+```nextflow
+sample = channel.value( record(id: 1, fastq: file('1.fq')) )
+index = channel.value( file('index.fa') )
+sample.combine(strandedness: 'auto', index: index)
+
+// [id:1, fastq:1.fq, strandedness:auto, index:index.fa]
+```
+
 For uses of `combine` with the `by` option, use `join` instead:
 
 ```nextflow
