@@ -539,7 +539,7 @@ class AssetManager implements Closeable {
         if( provider instanceof LocalRepositoryProvider )
             return true
 
-        final repoUrl = provider?.getRepositoryUrl()
+        final repoUrl = provider?.getRepositoryUrl() ?: provider?.getCloneUrl()
         if( !repoUrl )
             return false
 
