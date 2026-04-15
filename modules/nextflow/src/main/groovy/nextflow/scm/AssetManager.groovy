@@ -536,15 +536,17 @@ class AssetManager implements Closeable {
      * @return {@code true} when the SCM source points to a local file-system repository.
      */
     boolean isLocalScmSource() {
-        final repoUrl = getGitRepositoryUrl()
+        if( provider instanceof LocalRepositoryProvider )
+            return true
+
+        final repoUrl = provider?.getRepositoryUrl()
         if( !repoUrl )
             return false
-        try {
-            return new GitUrl(repoUrl).protocol == 'file'
-        }
-        catch( IllegalArgumentException e ) {
-            return false
-        }
+
+        if( repoUrl.startsWith('file:') )
+            return true
+
+        return new File(repoUrl).isAbsolute()
     }
 
     File getLocalPath() {
