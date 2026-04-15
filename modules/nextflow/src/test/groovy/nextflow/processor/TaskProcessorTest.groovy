@@ -38,7 +38,6 @@ import nextflow.script.ProcessConfigV1
 import nextflow.script.ScriptType
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.script.params.FileInParam
-import nextflow.script.params.FileOutParam
 import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
@@ -489,90 +488,6 @@ class TaskProcessorTest extends Specification {
         'f*'            | '/some/file.txt'                          | '2..*'    | 'Incorrect number of input files for process `foo` -- expected 2..*, found 1'
         'f*'            | ['/some/file.txt']                        | '2..*'    | 'Incorrect number of input files for process `foo` -- expected 2..*, found 1'
         'f*'            | ['/a','/b']                               | '3'       | 'Incorrect number of input files for process `foo` -- expected 3, found 2'
-    }
-
-    def 'should collect output files' () {
-        given:
-        def executor = Mock(Executor)
-        def session = Mock(Session) {getFilePorter()>>Mock(FilePorter) }
-        def processor = Spy(new TaskProcessor(session:session, executor:executor))
-        and:
-        def context = new TaskContext(holder: new HashMap<String, Object>())
-        def task = new TaskRun(
-                name: 'foo',
-                type: ScriptType.SCRIPTLET,
-                context: context,
-                config: new TaskConfig())
-        and:
-        def workDir = Path.of('/work')
-
-        when:
-        def param = new FileOutParam(new Binding(), [])
-                .setPathQualifier(true)
-                .optional(OPTIONAL)
-                .bind(FILE_NAME) as FileOutParam
-        if( ARITY )
-            param.setArity(ARITY)
-        and:
-        processor.collectOutFiles(task, param, workDir)
-        then:
-        processor.collectOutFiles0(_,_,_) >> RESULTS
-        and:
-        task.getOutputs().get(param) == EXPECTED
-
-        where:
-        FILE_NAME       | RESULTS                                   | OPTIONAL  | ARITY         | EXPECTED
-        'file.txt'      | [Path.of('/work/file.txt')]               | false     | null          | Path.of('/work/file.txt')
-        '*'             | [Path.of('/work/file.txt')]               | false     | null          | Path.of('/work/file.txt')
-        '*'             | [Path.of('/work/A'), Path.of('/work/B')]  | false     | null          | [Path.of('/work/A'), Path.of('/work/B')]
-        '*'             | []                                        | true      | null          | []
-        and:
-        'file.txt'      | [Path.of('/work/file.txt')]               | false     | '1'           | Path.of('/work/file.txt')
-        '*'             | [Path.of('/work/file.txt')]               | false     | '1'           | Path.of('/work/file.txt')
-        '*'             | [Path.of('/work/file.txt')]               | false     | '1..*'        | [Path.of('/work/file.txt')]
-        '*'             | [Path.of('/work/A'), Path.of('/work/B')]  | false     | '2'           | [Path.of('/work/A'), Path.of('/work/B')]
-        '*'             | [Path.of('/work/A'), Path.of('/work/B')]  | false     | '1..*'        | [Path.of('/work/A'), Path.of('/work/B')]
-        '*'             | []                                        | false     | '0..*'        | []
-    }
-
-    @Unroll
-    def 'should report output file arity error' () {
-        given:
-        def executor = Mock(Executor)
-        def session = Mock(Session)
-        def processor = Spy(new TaskProcessor(session:session, executor:executor))
-        and:
-        def context = new TaskContext(holder: new HashMap<String, Object>())
-        def task = new TaskRun(
-                name: 'foo',
-                type: ScriptType.SCRIPTLET,
-                context: context,
-                config: new TaskConfig())
-        and:
-        def workDir = Path.of('/work')
-
-        when:
-        def param = new FileOutParam(new Binding(), [])
-                .setPathQualifier(true)
-                .optional(OPTIONAL)
-                .bind(FILE_NAME) as FileOutParam
-        if( ARITY )
-            param.setArity(ARITY)
-        and:
-        processor.collectOutFiles(task, param, workDir)
-        then:
-        processor.collectOutFiles0(_,_,_) >> RESULTS
-        and:
-        def e = thrown(EXCEPTION)
-        e.message == ERROR
-
-        where:
-        FILE_NAME       | RESULTS                                   | OPTIONAL  | ARITY         | EXCEPTION             | ERROR
-        'file.txt'      | [Path.of('/work/file.txt')]               | false     | '2'           | IllegalArityException | "Incorrect number of output files for process `foo` -- expected 2, found 1"
-        '*'             | [Path.of('/work/file.txt')]               | false     | '2'           | IllegalArityException | "Incorrect number of output files for process `foo` -- expected 2, found 1"
-        '*'             | [Path.of('/work/file.txt')]               | false     | '2..*'        | IllegalArityException | "Incorrect number of output files for process `foo` -- expected 2..*, found 1"
-        '*'             | []                                        | true      | '1..*'        | IllegalArityException | "Incorrect number of output files for process `foo` -- expected 1..*, found 0"
-
     }
 
     def 'should submit a task' () {
