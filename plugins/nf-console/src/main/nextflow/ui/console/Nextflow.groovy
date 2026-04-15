@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,6 @@ import groovy.console.ui.OutputTransforms
 import groovy.transform.ThreadInterrupt
 import groovy.util.logging.Slf4j
 import nextflow.NF
-import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.cli.CliOptions
 import nextflow.cli.CmdInfo
@@ -74,7 +73,6 @@ class Nextflow extends Console {
     Nextflow(ClassLoader loader) {
         super(loader, new ScriptBinding())
         this.scriptConfig = createScriptConfig()
-        NextflowMeta.instance.enableDsl2()
     }
 
     protected Map createScriptConfig() {

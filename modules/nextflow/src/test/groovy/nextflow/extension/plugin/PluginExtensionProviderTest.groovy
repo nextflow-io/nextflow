@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.extension.plugin
@@ -21,9 +20,11 @@ import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
+import nextflow.Channel
 import nextflow.plugin.extension.PluginExtensionProvider
 import spock.lang.Specification
 
+import static test.ScriptHelper.runDataflow
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -49,10 +50,12 @@ class PluginExtensionProviderTest extends Specification {
     def 'should invoke ext method' () {
         given:
         def ext = PluginExtensionProvider.INSTANCE()
-        def ch = new DataflowQueue(); ch<<1<<2<<3
 
         when:
-        def result = ext.invokeExtensionMethod(ch, 'map', { it -> it * it })
+        def result = runDataflow {
+            def ch = Channel.of(1, 2, 3)
+            ext.invokeExtensionMethod(ch, 'map', { v -> v * v })
+        }
         then:
         result instanceof DataflowReadChannel
         result.val == 1

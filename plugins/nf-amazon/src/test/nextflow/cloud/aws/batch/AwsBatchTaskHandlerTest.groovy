@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -444,7 +444,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_ID = '123'
         def client = Mock(BatchClient)
         def task = Mock(TaskRun)
-        def handler = Spy(AwsBatchTaskHandler) 
+        def handler = Spy(AwsBatchTaskHandler)
         handler.task = task
         handler.@client = client
 
@@ -527,7 +527,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         ]
         and:
         handler.addVolumeMountsToContainer(mounts, containerModel)
-        
+
         when:
         def container = containerModel.toBatchContainerProperties()
         then:
@@ -581,7 +581,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.containerProperties.logConfiguration == null
         result.containerProperties.mountPoints == null
         result.containerProperties.privileged == false
-        
+
         when:
         result = handler.makeJobDefRequest(task)
         then:
@@ -910,7 +910,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         2 * handler.isCompleted() >> false
         1 * handler.getMachineInfo() >> new CloudMachineInfo('x1.large', 'us-east-1b', PriceModel.spot)
-        
+
         and:
         trace.native_id == 'xyz-123'
         trace.executorName == 'awsbatch'
@@ -944,8 +944,6 @@ class AwsBatchTaskHandlerTest extends Specification {
         attempt2.container() >> null
         def job = JobDetail.builder().attempts([attempt1, attempt2]).build()
 
-        // Stub BEFORE calling the method
-        handler.isCompleted() >> true
         handler.getMachineInfo() >> new CloudMachineInfo('x1.large', 'us-east-1b', PriceModel.spot)
         handler.describeJob('xyz-123') >> job
 
@@ -1123,7 +1121,7 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         expect:
         handler.normaliseJobId(JOB_ID) == EXPECTED
-        
+
         where:
         JOB_ID       | EXPECTED
         null         | null
@@ -1142,7 +1140,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         task.getName() >> NAME
         and:
         result == EXPECTED
-        
+
         where:
         ENV                             | NAME      | EXPECTED
         [:]                             | 'foo'     | 'foo'

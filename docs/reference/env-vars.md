@@ -16,6 +16,11 @@ The following environment variables control the configuration of the Nextflow ru
 
 ## Nextflow settings
 
+`NXF_AGENT_MODE`
+: :::{versionadded} 26.04.0
+  :::
+: When `true`, enables agent output mode. In this mode, Nextflow replaces the interactive ANSI log with minimal, structured output optimized for AI agents and non-interactive environments. The output uses tagged lines such as `[PIPELINE]`, `[PROCESS]`, `[WARN]`, `[ERROR]`, and `[SUCCESS]`/`[FAILED]` written to standard output  (default: `false`).
+
 `NXF_ANSI_LOG`
 : Enables/disables ANSI console output (default `true` when ANSI terminal is detected).
 
@@ -270,6 +275,9 @@ The following environment variables control the configuration of the Nextflow ru
 
 `TOWER_REFRESH_TOKEN`
 : Specifies the refresh token for maintaining authentication with Seqera Platform. Can also be configured using the `tower.refreshToken` config option.
+
+`TOWER_COMPUTE_ENV_ID`
+: Specifies the Seqera Platform compute environment ID. When specified, the scheduler resolves the compute environment directly by this ID instead of inferring a suitable compute environment. Can also be configured using the `tower.computeEnvId` config option.
 
 `TOWER_WORKSPACE_ID`
 : Specifies the Seqera Platform workspace ID. Can also be configured using the `tower.workspaceId` config option.

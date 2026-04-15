@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.plugin
@@ -35,7 +34,7 @@ import org.pf4j.PluginStateEvent
 import org.pf4j.PluginStateListener
 /**
  * Manage plugins installation and configuration
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -65,8 +64,14 @@ class PluginsFacade implements PluginStateListener {
         root = getPluginsDir()
         indexUrl = getPluginsRegistryUrl()
         offline = env.get('NXF_OFFLINE') == 'true'
-        if( mode==DEV_MODE && root.toString()=='plugins' && !isRunningFromDistArchive() )
-            root = detectPluginsDevRoot()
+        if( mode==DEV_MODE && root.toString()=='plugins' ) {
+            // In dev mode with default 'plugins' path, try to detect the actual plugins directory
+            // by looking for the nextflow project root. This is needed when running tests via Gradle
+            // where classes are loaded from JARs but the plugins are in the project directory.
+            final detected = detectPluginsDevRoot0()
+            if( detected )
+                root = detected
+        }
         System.setProperty('pf4j.mode', mode)
     }
 
@@ -160,6 +165,24 @@ class PluginsFacade implements PluginStateListener {
     }
 
     /**
+     * Try to detect the development plugin root without throwing an exception.
+     *
+     * @return The nextflow plugins project path, or null if not found
+     */
+    protected Path detectPluginsDevRoot0() {
+        def file = new File('.').canonicalFile
+        while( file!=null ) {
+            final root = pluginsDevRoot(file)
+            if( root ) {
+                log.debug "Detected dev plugins root: $root"
+                return root
+            }
+            file = file.parentFile
+        }
+        return null
+    }
+
+    /**
      * Determine the development plugin root. This is required to
      * allow running unit tests for plugin projects importing the
      * nextflow core runtime.
@@ -168,18 +191,12 @@ class PluginsFacade implements PluginStateListener {
      * a sibling directory respect to the plugin project
      *
      * @return The nextflow plugins project path in the local file system
+     * @throws IllegalStateException if the plugins root cannot be detected
      */
     protected Path detectPluginsDevRoot() {
-        def file = new File('.').absoluteFile
-        do {
-            final root = pluginsDevRoot(file)
-            if( root ) {
-                log.debug "Detected dev plugins root: $root"
-                return root
-            }
-            file = file.parentFile
-        }
-        while( file!=null )
+        final root = detectPluginsDevRoot0()
+        if( root )
+            return root
         throw new IllegalStateException("Unable to detect local plugins root")
     }
 
@@ -409,7 +426,7 @@ class PluginsFacade implements PluginStateListener {
     /**
      * @return {@code true} when running in embedded mode ie. the nextflow distribution
      * include also plugin libraries. When running is this mode, plugins should not be started
-     * and cannot be updated. 
+     * and cannot be updated.
      */
     protected boolean isEmbedded() {
         return embedded
@@ -437,6 +454,9 @@ class PluginsFacade implements PluginStateListener {
         }
         if( (Bolts.navigate(config,'wave.enabled') || Bolts.navigate(config,'fusion.enabled')) && !specs.find {it.id == 'nf-wave' } ) {
             specs << defaultPlugins.getPlugin('nf-wave')
+        }
+        if( Bolts.navigate(config,'process.executor')=='seqera') {
+            specs << defaultPlugins.getPlugin('nf-seqera')
         }
 
         // add cloudcache plugin when cloudcache is enabled in the config
@@ -479,7 +499,7 @@ class PluginsFacade implements PluginStateListener {
 
         if( Bolts.navigate(config, 'weblog.enabled'))
             plugins << new PluginRef('nf-weblog')
-            
+
         return plugins
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package io.seqera.tower.plugin
@@ -23,18 +22,23 @@ import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
 
+import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.client.WireMock
 import io.seqera.http.HxClient
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.container.DockerConfig
 import nextflow.container.resolver.ContainerMeta
 import nextflow.exception.AbortOperationException
+import nextflow.script.PlatformMetadata
 import nextflow.script.ScriptBinding
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStats
 import nextflow.trace.WorkflowStatsObserver
+import nextflow.util.Duration
 import nextflow.util.ProcessHelper
 import spock.lang.Specification
 /**
@@ -115,7 +119,7 @@ class TowerClientTest extends Specification {
         'a_b_c'     | 'aBC'
         'foo__bar'  | 'fooBar'
     }
-    
+
 
     def 'should validate URL' () {
         given:
@@ -191,7 +195,7 @@ class TowerClientTest extends Specification {
         def observer = Spy(TowerClient)
         observer.@httpClient = client
         observer.@workflowId = 'xyz-123'
-        
+
         def nowTs = System.currentTimeMillis()
         def submitTs = nowTs-2000
         def startTs = nowTs-1000
@@ -378,9 +382,11 @@ class TowerClientTest extends Specification {
     def 'should post create request' () {
         given:
         def uuid = UUID.randomUUID()
+        def platform = new PlatformMetadata()
         def meta = Mock(WorkflowMetadata) {
             getProjectName() >> 'the-project-name'
             getRepository() >> 'git://repo.com/foo'
+            getPlatform() >> platform
         }
         def session = Mock(Session) {
             getUniqueId() >> uuid
@@ -394,16 +400,44 @@ class TowerClientTest extends Specification {
         when:
         client.onFlowCreate(session)
         then:
+        0 * client.applyPlatformMetadata(_)
         1 * client.getAccessToken() >> 'secret'
         1 * client.makeCreateReq(session) >> [runName: 'foo']
-        1 * client.sendHttpMessage('https://api.cloud.seqera.io/trace/create', [runName: 'foo'], 'POST') >> new TowerClient.Response(200, '{"workflowId":"xyz123"}')
+        1 * client.sendHttpMessage('https://api.cloud.seqera.io/trace/create', [runName: 'foo'], 'POST') >> new TowerClient.Response(200, '{"workflowId":"xyz123","watchUrl":"https://cloud.seqera.io/watch/xyz123"}')
         and:
         client.runName == 'foo_bar'
         client.runId == uuid.toString()
         and:
         client.workflowId == 'xyz123'
+        client.@watchUrl == 'https://cloud.seqera.io/watch/xyz123'
         !client.towerLaunch
+        and:
+        platform.workflowId == 'xyz123'
+        platform.workflowUrl == 'https://cloud.seqera.io/watch/xyz123'
 
+    }
+
+    def 'should set workflowUrl on platform metadata during onFlowBegin' () {
+        given:
+        def platform = new PlatformMetadata()
+        def meta = Mock(WorkflowMetadata) {
+            getPlatform() >> platform
+        }
+        def session = Mock(Session) {
+            getWorkflowMetadata() >> meta
+        }
+        def config = new TowerConfig([:], [:])
+        def client = Spy(new TowerClient(session, config))
+        client.@workflowId = 'abc123'
+
+        when:
+        client.onFlowBegin()
+        then:
+        1 * client.makeBeginReq(session) >> [foo: 'bar']
+        1 * client.sendHttpMessage(_, [foo: 'bar'], 'PUT') >> new TowerClient.Response(200, '{"watchUrl":"https://cloud.seqera.io/watch/abc123"}')
+        and:
+        client.@watchUrl == 'https://cloud.seqera.io/watch/abc123'
+        platform.workflowUrl == 'https://cloud.seqera.io/watch/abc123'
     }
 
     def 'should get trace endpoint' () {
@@ -523,6 +557,22 @@ class TowerClientTest extends Specification {
         client.getNewContainers([trace1, trace2, trace3]) == [c2]
     }
 
+    def 'should not send complete request when onFlowBegin was not invoked' () {
+        given:
+        def client = Spy(new TowerClient())
+        client.@workflowId = 'xyz-123'
+        client.@sender = null
+        client.@reports = Mock(TowerReports)
+
+        when:
+        client.onFlowComplete()
+
+        then:
+        1 * client.@reports.publishRuntimeReports()
+        1 * client.@reports.flowComplete()
+        0 * client.sendHttpMessage(_, _, _)
+    }
+
     def 'should handle HTTP request with content'() {
         given: 'a TowerClient'
         def tower = new TowerClient()
@@ -533,6 +583,52 @@ class TowerClientTest extends Specification {
         request != null
         request.method() == 'POST'
         request.uri().toString() == 'http://example.com/test'
+    }
+
+    def 'should apply platform metadata from trace create response'() {
+        given:
+        def metadata = new WorkflowMetadata()
+        def session = Mock(Session) {
+            getWorkflowMetadata() >> metadata
+        }
+        def config = new TowerConfig([accessToken: 'token-1234', workspaceId: '1234'], SysEnv.get())
+        def towerClient = new TowerClient(session, config)
+
+        def responseMetadata = [
+            userId: 39,
+            userName: 'user',
+            userOrganization: 'ACME Inc.',
+            workspaceId: 1234,
+            workspaceName: 'Workspace-Name',
+            workspaceFullName: 'Full Workspace Name',
+            orgName: 'ACME Inc.',
+            computeEnvId: 'ce1234',
+            computeEnvName: 'ce-test',
+            computeEnvPlatform: 'aws-batch',
+            pipelineName: 'test-pipeline',
+            pipelineId: 'pipe1234',
+            revision: 'v1.1',
+            commitId: 'abcd12345'
+        ]
+
+        when:
+        towerClient.applyPlatformMetadata(responseMetadata)
+
+        then:
+        metadata.platform.user.id == '39'
+        metadata.platform.user.userName == 'user'
+        metadata.platform.user.organization == 'ACME Inc.'
+        metadata.platform.workspace.id == '1234'
+        metadata.platform.workspace.name == 'Workspace-Name'
+        metadata.platform.workspace.fullName == 'Full Workspace Name'
+        metadata.platform.workspace.organization == 'ACME Inc.'
+        metadata.platform.computeEnv.id == 'ce1234'
+        metadata.platform.computeEnv.name == 'ce-test'
+        metadata.platform.computeEnv.platform == 'aws-batch'
+        metadata.platform.pipeline.id == 'pipe1234'
+        metadata.platform.pipeline.name == 'test-pipeline'
+        metadata.platform.pipeline.revision == 'v1.1'
+        metadata.platform.pipeline.commitId == 'abcd12345'
     }
 
     def 'should include numSpotInterruptions in task map'() {
@@ -560,7 +656,32 @@ class TowerClientTest extends Specification {
         req.tasks[0].numSpotInterruptions == 3
     }
 
-    def 'should include accelerator request in task map'() {
+    def 'should include logStreamId in task map'() {
+        given:
+        def client = Spy(new TowerClient())
+        client.getWorkflowProgress(true) >> new WorkflowProgress()
+
+        def now = System.currentTimeMillis()
+        def trace = new TraceRecord([
+            taskId: 42,
+            process: 'foo',
+            workdir: "/work/dir",
+            cpus: 1,
+            submit: now-2000,
+            start: now-1000,
+            complete: now
+        ])
+        trace.setLogStreamId('arn:aws:logs:us-east-1:123456789:log-group:/ecs/task:log-stream:abc123')
+
+        when:
+        def req = client.makeTasksReq([trace])
+
+        then:
+        req.tasks.size() == 1
+        req.tasks[0].logStreamId == 'arn:aws:logs:us-east-1:123456789:log-group:/ecs/task:log-stream:abc123'
+    }
+
+    def 'should include resourceAllocation in task map'() {
         given:
         def client = Spy(new TowerClient())
         client.getWorkflowProgress(true) >> new WorkflowProgress()
@@ -577,6 +698,7 @@ class TowerClientTest extends Specification {
             accelerator: 2,
             acceleratorType: 'v100'
         ])
+        trace.setResourceAllocation([cpuShares: 2048, memoryMiB: 4096, time: '1h'])
 
         when:
         def req = client.makeTasksReq([trace])
@@ -585,6 +707,41 @@ class TowerClientTest extends Specification {
         req.tasks.size() == 1
         req.tasks[0].accelerator == 2
         req.tasks[0].acceleratorType == 'v100'
+        req.tasks[0].resourceAllocation == [cpuShares: 2048, memoryMiB: 4096, time: '1h']
+    }
+
+    def 'should return error response on http request timeout' () {
+        given: 'a WireMock server that hangs for 5 seconds'
+        def wireMock = new WireMockServer(0)
+        wireMock.start()
+        wireMock.stubFor(
+            WireMock.post(WireMock.anyUrl())
+                .willReturn(WireMock.aResponse()
+                    .withFixedDelay(5_000)
+                    .withStatus(200)
+                    .withBody('{}'))
+        )
+
+        and: 'a TowerClient whose requests carry a 200ms timeout'
+        TowerClient client = Spy(new TowerClient().withRequestTimeout(Duration.of('200 ms'))) {
+            // inject a short per-request timeout so the test doesn't wait 5 seconds
+
+            newHttpClient() >> HxClient.newBuilder()
+                .connectTimeout(java.time.Duration.ofSeconds(5))
+                .build()
+        }
+        client.@httpClient = client.newHttpClient()
+        client.@endpoint = wireMock.baseUrl()
+
+        when:
+        def response = client.sendHttpMessage("${wireMock.baseUrl()}/trace/create", [runName: 'test'], 'POST')
+
+        then: 'a timeout produces an error response with code 0'
+        response.code == 0
+        response.message.contains('Unable to connect')
+
+        cleanup:
+        wireMock.stop()
     }
 
 }

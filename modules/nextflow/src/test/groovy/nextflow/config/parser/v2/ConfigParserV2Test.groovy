@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -734,6 +734,31 @@ class ConfigParserV2Test extends Specification {
         then:
         config.params.outdir == 'my-results'
         config.report.file == 'my-results/report.html'
+    }
+
+    def 'should convert CLI params to appropriate type based on config params' () {
+        given:
+        def cliParams = [
+            igenomes_ignore: 'true',
+            max_cpus: '8',
+            publish_mode: 'symlink',
+            config_profile_name: 'Test profile'
+        ]
+        and:
+        def CONFIG = '''
+            params.igenomes_ignore = false
+            params.max_cpus = 4
+            params.publish_mode = 'copy'
+            params.config_profile_name = null
+            '''
+
+        when:
+        def config = new ConfigParserV2().setParams(cliParams).parse(CONFIG)
+        then:
+        config.params.igenomes_ignore == true
+        config.params.max_cpus == 8
+        config.params.publish_mode == 'symlink'
+        config.params.config_profile_name == 'Test profile'
     }
 
     static class ConfigFileHandler implements HttpHandler {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -88,19 +88,38 @@ class ConfigBuilderTest extends Specification {
 
         setup:
         def builder = [:] as ConfigBuilder
-        def env = [HOME:'/home/my', PATH:'/local/bin', 'dot.key.name':'any text']
+        and:
+        SysEnv.push(HOME:'/home/my', PATH:'/local/bin', 'dot.key.name':'any text')
 
         def text1 = '''
-        task { field1 = 1; field2 = 'hola'; }
-        env { alpha = 'a1'; beta  = 'b1'; HOME="$HOME:/some/path"; }
+        task {
+            field1 = 1
+            field2 = 'hola'
+        }
+
+        env {
+            alpha = 'a1'
+            beta = 'b1'
+            HOME = "${env('HOME')}:/some/path"
+        }
         '''
 
         def text2 = '''
-        task { field2 = 'Hello' }
-        env { beta = 'b2'; delta = 'd2'; HOME="$HOME:/local/path"; XXX="$PATH:/xxx"; YYY = "$XXX:/yyy"; WWW = "${WWW?:''}:value"   }
+        task {
+            field2 = 'Hello'
+        }
+
+        env {
+            beta = 'b2'
+            delta = 'd2'
+            HOME = "${env('HOME')}:/local/path"
+            XXX = "${env('PATH')}:/xxx"
+            WWW = "${env('WWW') ?: ''}:value"
+        }
         '''
 
         when:
+        def env = SysEnv.get()
         def config1 = builder.buildConfig0(env, [text1])
         def config2 = builder.buildConfig0(env, [text1, text2])
 
@@ -122,27 +141,41 @@ class ConfigBuilderTest extends Specification {
         config2.env.HOME == '/home/my:/local/path'
         config2.env.XXX == '/local/bin:/xxx'
         config2.env.PATH == '/local/bin'
-        config2.env.YYY == '/local/bin:/xxx:/yyy'
         config2.env.ZZZ == '99'
         config2.env.WWW == ':value'
 
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'build config object 3' () {
 
         setup:
         def builder = [:] as ConfigBuilder
-        def env = [HOME:'/home/my', PATH:'/local/bin', 'dot.key.name':'any text']
+        and:
+        SysEnv.push(HOME:'/home/my', PATH:'/local/bin', 'dot.key.name':'any text')
 
         def text1 = '''
-        task { field1 = 1; field2 = 'hola'; }
-        env { alpha = 'a1'; beta  = 'b1'; HOME="$HOME:/some/path"; }
-        params { demo = 1  }
+        task {
+            field1 = 1
+            field2 = 'hola'
+        }
+
+        env {
+            alpha = 'a1'
+            beta  = 'b1'
+            HOME = "${env('HOME')}:/some/path"
+        }
+
+        params {
+            demo = 1
+        }
         params.test = 2
         '''
 
 
         when:
+        def env = SysEnv.get()
         def config1 = builder.buildConfig0(env, [text1])
 
         then:
@@ -155,6 +188,8 @@ class ConfigBuilderTest extends Specification {
         config1.params.test == 2
         config1.params.demo == 1
 
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'build config object 4' () {
@@ -169,7 +204,6 @@ class ConfigBuilderTest extends Specification {
             q = "$baseDir/2"
             x = "$projectDir/3"
             y = "$launchDir/4"
-            z = "$outputDir/5"
         }
         '''
 
@@ -180,7 +214,6 @@ class ConfigBuilderTest extends Specification {
         cfg.params.q == '/base/path/2'
         cfg.params.x == '/base/path/3'
         cfg.params.y == "${Path.of('.').toRealPath()}/4"
-        cfg.params.z == "${Path.of('results').complete()}/5"
 
     }
 
@@ -287,7 +320,7 @@ class ConfigBuilderTest extends Specification {
         def config = configWithParams(configMain.toPath(), [params: [one: '1', two: 'dos', three: 'tres']])
 
         then:
-        config.params.one == 1
+        config.params.one == '1'
         config.params.two == 'dos'
         config.params.three == 'tres'
         config.process.name == 'alpha'
@@ -375,7 +408,7 @@ class ConfigBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
-    def 'CLI params should overrides the ones in one or more profiles' () {
+    def 'CLI params should override params in profiles' () {
 
         setup:
         def file = Files.createTempFile('test',null)
@@ -388,28 +421,28 @@ class ConfigBuilderTest extends Specification {
         params {
             genomes {
                 'GRCh37' {
-                  bed12   = '/data/genes.bed'
-                  bismark = '/data/BismarkIndex'
-                  bowtie  = '/data/genome'
+                    bed12   = '/data/genes.bed'
+                    bismark = '/data/BismarkIndex'
+                    bowtie  = '/data/genome'
                 }
             }
         }
 
         profiles {
-          first {
-            params.alpha = 'Alpha'
-            params.omega = 'Omega'
-            params.gamma = 'First'
-            process.name = 'Bar'
-          }
-
-          second {
-            params.alpha = 'xxx'
-            params.gamma = 'Second'
-            process {
-                publishDir = [path: params.alpha]
+            first {
+                params.alpha = 'Alpha'
+                params.omega = 'Omega'
+                params.gamma = 'First'
+                process.name = 'Bar'
             }
-          }
+
+            second {
+                params.alpha = 'xxx'
+                params.gamma = 'Second'
+                process {
+                    publishDir = [path: params.alpha]
+                }
+            }
         }
         '''
 
@@ -436,16 +469,6 @@ class ConfigBuilderTest extends Specification {
         config.params.genomes.'GRCh37'.bismark == '/data/BismarkIndex'
         config.params.genomes.'GRCh37'.bowtie  == '/data/genome'
 
-        when:
-        config = configWithParams(file, [params: [alpha: 'AAA', beta: 'BBB', genomes: 'xxx'], profile: 'second'])
-        then:
-        config.params.alpha == 'AAA'
-        config.params.beta == 'BBB'
-        config.params.delta == 'Foo'
-        config.params.gamma == 'Second'
-        config.params.genomes == 'xxx'
-        config.process.publishDir == [path: 'AAA']
-
         cleanup:
         file?.delete()
     }
@@ -456,8 +479,8 @@ class ConfigBuilderTest extends Specification {
         and:
         def paramsFile = Files.createTempFile('test', '.yml')
         paramsFile.text = '''
-            alpha: "Hello" 
-            beta: "World" 
+            alpha: "Hello"
+            beta: "World"
             omega: "Last"
             theta: "${baseDir}/something"
             '''.stripIndent()
@@ -499,8 +522,8 @@ class ConfigBuilderTest extends Specification {
         setup:
         def params = Files.createTempFile('test', '.yml')
         params.text = '''
-            alpha: "Hello" 
-            beta: "World" 
+            alpha: "Hello"
+            beta: "World"
             omega: "Last"
             '''.stripIndent()
         and:
@@ -513,7 +536,7 @@ class ConfigBuilderTest extends Specification {
         params.delta = 'Foo'
         params.gamma = "I'm gamma"
         params.omega = "I'm the last"
-        
+
         process {
           publishDir = [path: params.alpha]
         }
@@ -1696,87 +1719,6 @@ class ConfigBuilderTest extends Specification {
 
     }
 
-    def 'should warn about missing attribute' () {
-
-        given:
-        def file = Files.createTempFile('test','config')
-        file.deleteOnExit()
-        file.text =
-                '''
-                params.foo = HOME
-                '''
-
-
-        when:
-        SysEnv.push(HOME: '/home/user')
-        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
-        def cfg = new ConfigBuilder().setOptions(opt).build()
-        SysEnv.pop()
-        then:
-        cfg.params.foo == '/home/user'
-
-        when:
-        file.text =
-                '''
-                params.foo = bar
-                '''
-        opt = new CliOptions(config: [file.toFile().canonicalPath] )
-        new ConfigBuilder().setOptions(opt).build()
-        then:
-        def e = thrown(ConfigParseException)
-        e.message == "Unknown config attribute `bar` -- check config file: ${file.toRealPath()}".toString()
-
-    }
-
-    def 'should render missing variables' () {
-        given:
-        def file = Files.createTempFile('test',null)
-
-        file.text =
-                '''
-                foo = 'xyz'
-                bar = "$SCRATCH/singularity_images_nextflow"
-                '''
-
-        when:
-        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
-        def builder = new ConfigBuilder()
-                .setOptions(opt)
-                .showMissingVariables(true)
-        def cfg = builder.buildConfigObject()
-        def str = ConfigHelper.toCanonicalString(cfg)
-        then:
-        str == '''\
-            foo = 'xyz'
-            bar = '$SCRATCH/singularity_images_nextflow'
-            '''.stripIndent()
-
-        and:
-        builder.warnings[0].startsWith('Unknown config attribute `SCRATCH`')
-        cleanup:
-        file?.delete()
-    }
-
-    def 'should report fully qualified missing attribute'  () {
-
-        given:
-        def file = Files.createTempFile('test','config')
-        file.deleteOnExit()
-
-        when:
-        file.text =
-                '''
-                params.x = foo.bar
-                '''
-        def opt = new CliOptions(config: [file.toFile().canonicalPath] )
-        new ConfigBuilder().setOptions(opt).build()
-        then:
-        def e = thrown(ConfigParseException)
-        e.message == "Unknown config attribute `foo.bar` -- check config file: ${file.toRealPath()}".toString()
-
-    }
-
-
     def 'should collect config files' () {
 
         given:
@@ -1896,7 +1838,7 @@ class ConfigBuilderTest extends Specification {
         def CONFIG = '''
                 process.container = 'base'
                 process.executor = 'local'
-                
+
                 profiles {
                     cfg1 {
                       process.executor = 'sge'
@@ -2025,7 +1967,7 @@ class ConfigBuilderTest extends Specification {
 
         given:
         def folder = Files.createTempDirectory('test')
-        def file1 = folder.resolve('test.conf')
+        def file1 = folder.resolve('test.config')
         file1.text = '''
             process {
                 cpus = 2
@@ -2052,7 +1994,7 @@ class ConfigBuilderTest extends Specification {
         when:
         def file2 = folder.resolve('nextflow.config')
         file2.text = """
-            includeConfig "$file1" 
+            includeConfig "$file1"
             """
 
         def cfg2 = new ConfigBuilder().buildConfig0([:], [file2])
@@ -2068,13 +2010,13 @@ class ConfigBuilderTest extends Specification {
 
         given:
         def folder = Files.createTempDirectory('test')
-        def file1 = folder.resolve('test.conf')
+        def file1 = folder.resolve('test.config')
         file1.text = '''
             process {
-                ext { args = "Hello World!" } 
-                cpus = 1 
+                ext { args = "Hello World!" }
+                cpus = 1
                 withName:BAR {
-                    ext { args = "Ciao mondo!" } 
+                    ext { args = "Ciao mondo!" }
                     cpus = 2
                 }
             }
@@ -2099,11 +2041,11 @@ class ConfigBuilderTest extends Specification {
 
         given:
         def folder = Files.createTempDirectory('test')
-        def file1 = folder.resolve('test.conf')
+        def file1 = folder.resolve('test.config')
         file1.text = '''
             process {
-                ext.args = "Hello World!" 
-                cpus = 1 
+                ext.args = "Hello World!"
+                cpus = 1
                 withName:BAR {
                     ext.args = "Ciao mondo!"
                     cpus = 2
@@ -2126,18 +2068,18 @@ class ConfigBuilderTest extends Specification {
     def 'should access top params from profile' () {
         given:
         def folder = Files.createTempDirectory('test')
-        def file1 = folder.resolve('file1.conf')
+        def file1 = folder.resolve('file1.config')
 
         file1.text = """
-            params.alpha = 1 
-            params.delta = 2 
-            
+            params.alpha = 1
+            params.delta = 2
+
             profiles {
                 foo {
-                    params.delta = 20 
-                    params.gamma = 30 
-                    
-                    process {  
+                    params.delta = 20
+                    params.gamma = 30
+
+                    process {
                         cpus = params.alpha
                     }
                 }
@@ -2157,22 +2099,22 @@ class ConfigBuilderTest extends Specification {
     def 'should access top params from profile [2]' () {
         given:
         def folder = Files.createTempDirectory('test')
-        def file1 = folder.resolve('file1.conf')
+        def file1 = folder.resolve('file1.config')
 
         file1.text = """
             params {
-                alpha = 1 
-                delta = 2 
+                alpha = 1
+                delta = 2
             }
-            
+
             profiles {
                 foo {
                     params {
-                        delta = 20 
+                        delta = 20
                         gamma = 30
                     }
 
-                    process {  
+                    process {
                         cpus = params.alpha
                     }
                 }
@@ -2193,26 +2135,26 @@ class ConfigBuilderTest extends Specification {
     def 'should merge params two profiles' () {
         given:
         def folder = Files.createTempDirectory('test')
-        def file1 = folder.resolve('file1.conf')
+        def file1 = folder.resolve('file1.config')
 
-        file1.text = '''    
+        file1.text = '''
             profiles {
                 foo {
                     params {
-                        alpha = 1 
-                        delta = 2 
+                        alpha = 1
+                        delta = 2
                     }
                 }
 
                 bar {
                     params {
-                        delta = 20 
-                        gamma = 30 
+                        delta = 20
+                        gamma = 30
                     }
-                    
+
                     process {
                         cpus = params.alpha
-                    }                
+                    }
                 }
             }
             '''
@@ -2242,13 +2184,13 @@ class ConfigBuilderTest extends Specification {
             baz {
                 x = "Ciao"
                 y = "mundo"
-                z { 
+                z {
                     alpha = "Hallo"
                     beta  = "World"
                 }
             }
-            
-        }        
+
+        }
         """
 
         when:
@@ -2317,14 +2259,14 @@ class ConfigBuilderTest extends Specification {
         [foo:1, bar:[x:1, y:2]]     | [foo: 2, bar: [x:10, y:20]]   | [foo: 2, bar: [x:10, y:20]]
     }
 
-    def 'prevent config side effects' () {
+    def 'prevent side effects with with nested params' () {
         given:
         def folder = Files.createTempDirectory('test')
         and:
         def config = folder.resolve('nf.config')
         config.text = '''\
         params.test.foo = "foo_def"
-        params.test.bar = "bar_def"        
+        params.test.bar = "bar_def"
         '''.stripIndent()
 
         when:
@@ -2335,7 +2277,7 @@ class ConfigBuilderTest extends Specification {
         cfg1.params.test.foo == "foo_def"
         cfg1.params.test.bar == "bar_def"
 
-        
+
         when:
         def cfg2 = configWithParams([:], [params: ['test.foo': 'CLI_FOO']], [userConfig: [config.toString()]])
         then:
@@ -2386,12 +2328,12 @@ class ConfigBuilderTest extends Specification {
         def config = folder.resolve('nf.yaml')
         config.text = '''\
             title: "something"
-            nested: 
+            nested:
               name: "Mike"
               and:
                 more: nesting
                 still:
-                  another: layer      
+                  another: layer
         '''.stripIndent()
 
         when:
@@ -2436,13 +2378,14 @@ class ConfigBuilderTest extends Specification {
                foo = 'Hello world'
                awsKey = '[secret]'
             }
-            
+
             process {
                executor = { 'local' }
             }
 
+            outputFormat = 'text'
             workDir = 'work'
-            
+
             tower {
                enabled = true
                endpoint = 'http://foo.com'
@@ -2456,28 +2399,27 @@ class ConfigBuilderTest extends Specification {
     def 'should merge profiles with conditions' () {
         given:
         def folder = Files.createTempDirectory("mergeprofiles")
-        def main = folder.resolve('main.conf')
-        def test = folder.resolve('test.conf')
-        def process = folder.resolve('process.conf')
+        def main = folder.resolve('main.config')
+        def test = folder.resolve('test.config')
+        def process = folder.resolve('process.config')
 
         main.text = '''
         params {
             load_config = null
             present = true
         }
-        
+
         profiles {
-            test { includeConfig 'test.conf' }
+            test { includeConfig 'test.config' }
         }
-        
-        if (params.load_config) {
-            includeConfig 'process.conf'
-        }        
+
+        includeConfig (params.load_config ? 'process.config' : '/dev/null')
         '''
+
         test.text = '''
         params {
             load_config = true
-        }    
+        }
         '''
 
         process.text = '''
@@ -2485,7 +2427,7 @@ class ConfigBuilderTest extends Specification {
             withName: FOO {
                 ext.args = '--quiet'
             }
-        }        
+        }
         params{
             another = true
         }
@@ -2578,7 +2520,7 @@ class ConfigBuilderTest extends Specification {
 
         snippet1.text = """
         p2 = secrets.DELTA
-        includeConfig "$snippet2" 
+        includeConfig "$snippet2"
         """
 
         snippet2.text = '''
@@ -2635,7 +2577,7 @@ class ConfigBuilderTest extends Specification {
 
         snippet1.text = '''
         p2 = 'two'
-        // include config via string interpolation using a secret 
+        // include config via string interpolation using a secret
         includeConfig "$secrets.SECRET_FILE2"
         '''
 
@@ -2697,9 +2639,9 @@ class ConfigBuilderTest extends Specification {
         and:
         configMain.text = '''
         p1 = secrets.ALPHA
-        foo.p1 = secrets.ALPHA 
+        foo.p1 = secrets.ALPHA
         bar {
-          p1 = secrets.ALPHA 
+          p1 = secrets.ALPHA
         }
         // include config via a secret property
         includeConfig secrets.SECRET_FILE1
@@ -2711,7 +2653,7 @@ class ConfigBuilderTest extends Specification {
         bar {
           p2 = "$secrets.DELTA"
         }
-        // include config via string interpolation using a secret 
+        // include config via string interpolation using a secret
         includeConfig "$secrets.SECRET_FILE2"
         '''
 

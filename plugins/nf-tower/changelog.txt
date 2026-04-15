@@ -1,5 +1,31 @@
 nf-tower changelog
 ===================
+1.24.0 - 7 Apr 2026
+- Add resourceAllocation field to trace record (#6973) [a2742939c]
+- Replace Auth0 with Platform OIDC PKCE for auth login (#6953) [f39afea97]
+- Use inline metadata from trace create response (#6976) [58736b7cc]
+
+1.23.0 - 26 Mar 2026
+- Skip launch metadata fetch for CLI-submitted runs (#6975) [3c9875720]
+- Add platform-related metadata to WorkflowRun lineage record (#6545) [fc4d7dd6e]
+- Add request timeout to tower client (#6950) [ff773ba72]
+- Fix LogsCheckpoint thread interrupt race condition (#6939) [9d65b9eea]
+- Fix typo in TowerRetryPolicy: maxAttemps -> maxAttempts (#6949) [97eb0d1b3]
+- Fix security vulnerabilities (#6938) [8b1ab40c4]
+
+1.22.0 - 17 Mar 2026
+- Add logStreamId to Tower task record (#6877) [df49fdb68]
+- Increase tasks.cloudZone width from 15 to 25 (#6907) [a217a459f]
+
+1.21.0 - 28 Feb 2026
+- Fix ResourcesAggregator deadlock with virtual thread executor (#6840) [7ac4f3ea9]
+- Propagate workflow ID and watch URL to session metadata (#6242) [870c858af]
+
+1.20.0 - 8 Feb 2026
+- Fix spurious WARN when workflow fails before onFlowBegin (#6816) [584003712]
+- Fix LogsCheckpoint thread blocking shutdown for up to 90 seconds (#6787) [54a595805]
+- Add accelerator request to trace record (#6703) [00f35b3a9]
+
 1.19.0 - 19 Dec 2025
 - Add spot interruption tracking to trace records (#6606) [eecd81671]
 

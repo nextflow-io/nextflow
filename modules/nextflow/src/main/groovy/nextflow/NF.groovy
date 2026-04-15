@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,18 +22,14 @@ import nextflow.plugin.extension.PluginExtensionProvider
 import nextflow.script.ExecutionStack
 import nextflow.script.WorkflowBinding
 /**
- * Helper class to shortcut common api 
+ * Helper class to shortcut common api
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class NF {
 
-    static private Session session() {
-        return (Session)Global.session
-    }
-
     static String getSyntaxParserVersion() {
-        return SysEnv.get('NXF_SYNTAX_PARSER', 'v1')
+        return SysEnv.get('NXF_SYNTAX_PARSER', 'v2')
     }
 
     static boolean isSyntaxParserV2() {
@@ -50,22 +46,12 @@ class NF {
         NextflowDelegatingMetaClass.provider.operatorNames().contains(name)
     }
 
-    static boolean isDsl1() {
-        !NextflowMeta.instance.isDsl2()
-    }
-
-    static boolean isDsl2() {
-        NextflowMeta.instance.isDsl2()
-    }
-
     static Binding getBinding() {
-        isDsl2() ? ExecutionStack.binding() : session().getBinding()
+        ExecutionStack.binding()
     }
 
     static String lookupVariable(value) {
-        if( isDsl2() )
-            return WorkflowBinding.lookup(value)
-        return session().getBinding().getVariableName(value)
+        return WorkflowBinding.lookup(value)
     }
 
     static boolean isStrictMode() {

@@ -42,5 +42,5 @@ process bar {
 
 
 workflow {
-  foo | bar
+  bar(foo())
 }

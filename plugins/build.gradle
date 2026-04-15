@@ -33,6 +33,27 @@ subprojects {
     }
 
     /*
+     * Copy the plugin manifest to resources directory for dev mode discovery.
+     * In dev mode, pf4j looks for META-INF/MANIFEST.MF in the classpath directories,
+     * but Gradle only generates it during JAR creation. This task copies the manifest
+     * to the resources directory after the JAR is built.
+     */
+    task copyPluginManifest(type: Copy) {
+        group 'nextflow'
+        from 'build/tmp/jar/MANIFEST.MF'
+        into 'build/resources/main/META-INF'
+        dependsOn jar
+    }
+    // Ensure manifest is available for test classpath (needed for dev mode plugin discovery)
+    tasks.matching { it.name == 'test' }.configureEach {
+        dependsOn copyPluginManifest
+    }
+    // Ensure packagePlugin task depends on copyPluginManifest to avoid implicit dependency issues
+    tasks.matching { it.name == 'packagePlugin' }.configureEach {
+        dependsOn copyPluginManifest
+    }
+
+    /*
      * publish jars maven repo on S3 
      */
     publishing {

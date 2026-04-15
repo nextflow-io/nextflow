@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@ import nextflow.splitter.FastaSplitter
 import nextflow.splitter.FastqSplitter
 import nextflow.util.ArrayTuple
 import nextflow.util.CacheHelper
+import nextflow.util.RecordMap
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 /**
@@ -150,6 +151,14 @@ class Nextflow {
         return result instanceof Collection ? result : [result]
     }
 
+    /**
+     * Creates a {@link RecordMap} from the given named arguments.
+     *
+     * @param props
+     */
+    static RecordMap record(Map<String,?> props) {
+        return new RecordMap(props)
+    }
 
     /**
      * Creates a {@link ArrayTuple} object with the given open array items
@@ -216,7 +225,7 @@ class Nextflow {
             log.debug "Ignoring exit because execution is already aborted -- message=$message"
             return
         }
-        
+
         if ( exitCode && message ) {
             log.error message
         }

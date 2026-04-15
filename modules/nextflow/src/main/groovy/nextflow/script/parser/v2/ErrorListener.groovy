@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -45,6 +45,9 @@ class ErrorSummary {
     int filesWithErrors = 0
     int filesWithoutErrors = 0
     int filesFormatted = 0
+    int warnings = 0
+    int filesWithWarnings = 0
+    int filesWithoutWarnings = 0
 }
 
 
@@ -154,8 +157,8 @@ class StandardErrorListener implements ErrorListener {
 
         for( int i = fromLine; i <= toLine; i++ ) {
             String fullLine = lines[i - 1]
-            int start = (i == startLine) ? startColumn - 1 : 0
-            int end = (i == endLine) ? endColumn - 1 : fullLine.length()
+            int start = (i == startLine) ? Math.min(startColumn - 1, fullLine.length()) : 0
+            int end = (i == endLine) ? Math.min(endColumn - 1, fullLine.length()) : fullLine.length()
 
             // Truncate to max 70 characters
             int maxLen = 70
@@ -171,8 +174,8 @@ class StandardErrorListener implements ErrorListener {
             }
 
             String line = fullLine.substring(windowStart, Math.min(lineLen, windowStart + maxLen))
-            int adjStart = Math.max(0, start - windowStart)
-            int adjEnd = Math.max(adjStart + 1, Math.min(end - windowStart, line.length()))
+            int adjStart = Math.max(0, Math.min(start - windowStart, line.length()))
+            int adjEnd = Math.max(adjStart, Math.min(end - windowStart, line.length()))
 
             // Left border
             if(i == toLine && i !== startLine) term.fg(color).a("╰").reset().a(" ")
@@ -238,6 +241,9 @@ class StandardErrorListener implements ErrorListener {
         term.bold().a("Nextflow linting complete!").reset().newline()
         if( summary.filesWithErrors > 0 ) {
             term.fg(Ansi.Color.RED).a(" ❌ ${summary.filesWithErrors} file${summary.filesWithErrors==1 ? '' : 's'} had ${summary.errors} error${summary.errors==1 ? '' : 's'}").reset().newline()
+        }
+        if( summary.filesWithWarnings > 0 ) {
+            term.fg(Ansi.Color.YELLOW).a(" ⚠️  ${summary.filesWithWarnings} file${summary.filesWithWarnings==1 ? '' : 's'} had ${summary.warnings} warning${summary.warnings==1 ? '' : 's'}").reset().newline()
         }
         if( summary.filesWithoutErrors > 0 ) {
             term.fg(Ansi.Color.GREEN).a(" ✅ ${summary.filesWithoutErrors} file${summary.filesWithoutErrors==1 ? '' : 's'} had no errors")

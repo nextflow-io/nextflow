@@ -1,7 +1,24 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.script
 
 import spock.lang.Specification
 
+import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Channel
 import nextflow.exception.DuplicateChannelNameException
@@ -12,12 +29,12 @@ import nextflow.script.params.OutputsList
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ChannelOutTest extends Specification {
-    
+
 
     def 'should get out by name' () {
         given:
-        def ch1 = Channel.value('a')
-        def ch2 = Channel.value('b')
+        def ch1 = new DataflowVariable() ; ch1.bind('a')
+        def ch2 = new DataflowVariable() ; ch2.bind('b')
 
         when:
         def out = new ChannelOut([foo:ch1, bar:ch2])

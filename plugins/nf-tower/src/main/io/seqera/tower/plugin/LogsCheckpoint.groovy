@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package io.seqera.tower.plugin
@@ -40,7 +39,7 @@ class LogsCheckpoint implements TraceObserverV2 {
     private Thread thread
     private Duration interval
     private LogsHandler handler
-    private volatile boolean terminated
+    private final Object lock = new Object()
 
     @Override
     void onFlowCreate(Session session) {
@@ -57,24 +56,32 @@ class LogsCheckpoint implements TraceObserverV2 {
 
     @Override
     void onFlowComplete() {
-        this.terminated = true
+        synchronized(lock) {
+            thread.interrupt()
+        }
         thread.join()
     }
 
     @Override
     void onFlowError(TaskEvent event) {
-        this.terminated = true
+        synchronized(lock) {
+            thread.interrupt()
+        }
         thread.join()
     }
 
     protected void run() {
         log.debug "Starting logs checkpoint thread - interval: ${interval}"
         try {
-            while( !terminated && !Thread.currentThread().isInterrupted() ) {
-                // just wait the declared delay
+            while( true ) {
                 await(interval)
-                // checkpoint the logs
-                handler.saveFiles()
+                if( Thread.currentThread().isInterrupted() )
+                    break
+                synchronized(lock) {
+                    if( Thread.currentThread().isInterrupted() )
+                        break
+                    handler.saveFiles()
+                }
             }
         }
         finally {
@@ -87,7 +94,7 @@ class LogsCheckpoint implements TraceObserverV2 {
             Thread.sleep(interval.toMillis())
         }
         catch (InterruptedException e) {
-            log.trace "Interrupted logs checkpoint thread"
+            log.debug "Interrupted logs checkpoint thread"
             Thread.currentThread().interrupt()
         }
     }

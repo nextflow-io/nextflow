@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@ public class FeatureFlagDsl {
     """)
     public boolean moduleBinaries;
 
+    @Deprecated
     @FeatureFlag("nextflow.enable.strict")
     @Description("""
         When `true`, the pipeline is executed in [strict mode](https://nextflow.io/docs/latest/reference/feature-flags.html).
@@ -51,9 +52,9 @@ public class FeatureFlagDsl {
 
     @FeatureFlag("nextflow.preview.types")
     @Description("""
-        When `true`, enables the use of [typed processes](https://nextflow.io/docs/latest/process-typed.html).
+        When `true`, enables the use of [typed processes](https://nextflow.io/docs/latest/process-typed.html) and [typed workflows](https://nextflow.io/docs/latest/workflow-typed.html).
 
-        This feature flag must be enabled in every script that uses typed processes. Legacy processes can not be defined in scripts that enable this feature flag.
+        This feature flag must be enabled in every script that uses typed processes/workflows. Legacy processes/workflows can not be defined in scripts that enable this feature flag.
     """)
     public boolean previewTypes;
 

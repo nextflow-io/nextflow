@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -381,12 +381,12 @@ public interface ProcessDsl extends DslScope {
         @Description("""
             Stage a file into the task directory under the given alias.
         """)
-        void stageAs(String filePattern, Path value);
+        void stageAs(Path value, String filePattern);
 
         @Description("""
             Stage a collection of files into the task directory under the given alias.
         """)
-        void stageAs(String filePattern, Iterable<Path> value);
+        void stageAs(Iterable<Path> value, String filePattern);
 
         @Description("""
             Stage the given value as the standard input (i.e. `stdin`) to the task script.
@@ -482,7 +482,7 @@ public interface ProcessDsl extends DslScope {
                 @NamedParam(value = "optional", type = Boolean.class),
                 @NamedParam(value = "type", type = String.class),
             })
-            Map<String,?> opts, 
+            Map<String,?> opts,
             String pattern
         );
         Set<Path> files(String pattern);

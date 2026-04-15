@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cli
@@ -33,6 +32,8 @@ import java.time.OffsetDateTime
 import org.junit.Rule
 import spock.lang.Specification
 import test.OutputCapture
+
+import static test.TestHelper.filterLogNoise
 
 /**
  * CLI lineage Tests
@@ -79,12 +80,7 @@ class CmdLineageTest extends Specification {
         when:
             def lidCmd = new CmdLineage(launcher: launcher, args: ["list"])
             lidCmd.run()
-            def stdout = capture
-                .toString()
-                .readLines()// remove the log part
-                .findResults { line -> !line.contains('DEBUG') ? line : null }
-                .findResults { line -> !line.contains('INFO') ? line : null }
-                .findResults { line -> !line.contains('plugin') ? line : null }
+            def stdout = filterLogNoise(capture)
 
         then:
             stdout.size() == 2
@@ -107,13 +103,7 @@ class CmdLineageTest extends Specification {
         when:
         def lidCmd = new CmdLineage(launcher: launcher, args: ["list"])
         lidCmd.run()
-        def stdout = capture
-            .toString()
-            .readLines()// remove the log part
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('WARN') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }
+        def stdout = filterLogNoise(capture, true)
 
         then:
         stdout.size() == 1
@@ -143,12 +133,7 @@ class CmdLineageTest extends Specification {
         when:
             def lidCmd = new CmdLineage(launcher: launcher, args: ["view", "lid://12345"])
             lidCmd.run()
-            def stdout = capture
-                .toString()
-                .readLines()// remove the log part
-                .findResults { line -> !line.contains('DEBUG') ? line : null }
-                .findResults { line -> !line.contains('INFO') ? line : null }
-                .findResults { line -> !line.contains('plugin') ? line : null }
+            def stdout = filterLogNoise(capture)
 
         then:
             stdout.size() == expectedOutput.readLines().size()
@@ -170,12 +155,7 @@ class CmdLineageTest extends Specification {
         when:
             def lidCmd = new CmdLineage(launcher: launcher, args: ["view", "lid://12345"])
             lidCmd.run()
-            def stdout = capture
-                .toString()
-                .readLines()// remove the log part
-                .findResults { line -> !line.contains('DEBUG') ? line : null }
-                .findResults { line -> !line.contains('INFO') ? line : null }
-                .findResults { line -> !line.contains('plugin') ? line : null }
+            def stdout = filterLogNoise(capture)
 
         then:
             stdout.size() == 1
@@ -246,12 +226,7 @@ class CmdLineageTest extends Specification {
         when:
         def lidCmd = new CmdLineage(launcher: launcher, args: ["render", "lid://12345/file.bam", outputHtml.toString()])
         lidCmd.run()
-        def stdout = capture
-            .toString()
-            .readLines()// remove the log part
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }
+        def stdout = filterLogNoise(capture)
 
         then:
         stdout.size() == 1
@@ -284,12 +259,7 @@ class CmdLineageTest extends Specification {
         when:
         def lidCmd = new CmdLineage(launcher: launcher, args: ["find", "type=FileOutput", "label=foo"])
         lidCmd.run()
-        def stdout = capture
-            .toString()
-            .readLines()// remove the log part
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }
+        def stdout = filterLogNoise(capture)
 
         then:
         stdout.size() == expectedOutput.readLines().size()

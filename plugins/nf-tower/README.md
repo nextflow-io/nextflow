@@ -1,5 +1,7 @@
 # Seqera Platform plugin for Nextflow
 
+## Summary
+
 The Seqera Platform plugin provides integration with Seqera Platform (formerly Tower) for workflow monitoring, resource tracking, and centralized pipeline management.
 
 ## Get Started
@@ -46,7 +48,7 @@ plugins {
 
 tower {
     enabled = true
-    accessToken = System.getenv('TOWER_ACCESS_TOKEN')
+    accessToken = '<SEQERA ACCESS TOKEN>'
 }
 ```
 
@@ -55,7 +57,7 @@ tower {
 ```groovy
 tower {
     enabled = true
-    accessToken = System.getenv('TOWER_ACCESS_TOKEN')
+    accessToken = '<SEQERA ACCESS TOKEN>'
     workspaceId = '1234567890'
 }
 ```
@@ -65,7 +67,7 @@ tower {
 ```groovy
 tower {
     enabled = true
-    accessToken = System.getenv('TOWER_ACCESS_TOKEN')
+    accessToken = '<SEQERA ACCESS TOKEN>'
     endpoint = 'https://tower.mycompany.com/api'
 }
 ```

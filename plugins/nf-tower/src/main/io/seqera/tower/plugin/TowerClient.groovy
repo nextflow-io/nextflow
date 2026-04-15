@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package io.seqera.tower.plugin
@@ -42,6 +41,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
+import nextflow.script.PlatformMetadata
 import nextflow.trace.ResourcesAggregator
 import nextflow.trace.TraceObserverV2
 import nextflow.trace.TraceRecord
@@ -142,15 +142,24 @@ class TowerClient implements TraceObserverV2 {
 
     private Map<String,Boolean> allContainers = new ConcurrentHashMap<>()
 
+    protected TowerCommonApi commonApi
+
+    private Duration readTimeout = TowerConfig.DEFAULT_READ_TIMEOUT
+
+    private Duration connectTimeout = TowerConfig.DEFAULT_CONNECT_TIMEOUT
+
     TowerClient(Session session, TowerConfig config) {
         this.session = session
         this.endpoint = checkUrl(config.endpoint)
         this.accessToken = config.accessToken
         this.workspaceId = config.workspaceId
         this.retryPolicy = config.retryPolicy
+        this.readTimeout = config.httpReadTimeout
+        this.connectTimeout = config.httpConnectTimeout
         this.schema = loadSchema()
         this.generator = TowerJsonGenerator.create(schema)
         this.reports = new TowerReports(session)
+        this.commonApi = new TowerCommonApi()
     }
 
     TowerClient withEnvironment(Map env) {
@@ -158,9 +167,15 @@ class TowerClient implements TraceObserverV2 {
         return this
     }
 
+    TowerClient withRequestTimeout(Duration duration) {
+        this.readTimeout = duration
+        return this
+    }
+
     @TestOnly
     protected TowerClient() {
         this.generator = TowerJsonGenerator.create(Collections.EMPTY_MAP)
+        this.commonApi = new TowerCommonApi()
     }
 
     @Override
@@ -271,7 +286,7 @@ class TowerClient implements TraceObserverV2 {
         log.debug "Creating Seqera Platform observer -- endpoint=$endpoint; requestInterval=$requestInterval; aliveInterval=$aliveInterval; maxRetries=$maxRetries; backOffBase=$backOffBase; backOffDelay=$backOffDelay"
 
         this.session = session
-        this.aggregator = new ResourcesAggregator(session)
+        this.aggregator = new ResourcesAggregator()
         this.runName = session.getRunName()
         this.runId = session.getUniqueId()
         this.httpClient = newHttpClient()
@@ -292,11 +307,64 @@ class TowerClient implements TraceObserverV2 {
         this.workflowId = ret.workflowId
         if( !workflowId )
             throw new AbortOperationException("Invalid Seqera Platform API response - Missing workflow Id")
+        log.debug "Platform workflow id: $workflowId; workflow url: ${ret.watchUrl}"
+        session.workflowMetadata.platform.workflowId = workflowId
+        // note: `watchUrl` in the create response requires Platform 26.01 or later
+        this.watchUrl = ret.watchUrl as String
+        session.workflowMetadata.platform.workflowUrl = watchUrl
         if( ret.message )
             log.warn(ret.message.toString())
+        // populate platform metadata from the create response
+        if( ret.metadata )
+            applyPlatformMetadata(ret.metadata as Map)
 
         // Prepare to collect report paths if tower configuration has a 'reports' section
         reports.flowCreate(workflowId)
+    }
+
+
+    /**
+     * Apply platform metadata received inline from the trace create response.
+     * This avoids extra API calls to fetch user, workspace, and launch details.
+     */
+    protected void applyPlatformMetadata(Map metadata) {
+        try {
+            final platform = session.workflowMetadata.platform
+            // user info
+            if( metadata.userId )
+                platform.user = new PlatformMetadata.User(
+                    id: metadata.userId as String,
+                    userName: metadata.userName as String,
+                    organization: metadata.userOrganization as String
+                )
+            // workspace info
+            if( metadata.workspaceId )
+                platform.workspace = new PlatformMetadata.Workspace(
+                    workspaceId: metadata.workspaceId as String,
+                    workspaceName: metadata.workspaceName as String,
+                    workspaceFullName: metadata.workspaceFullName as String,
+                    orgName: metadata.orgName as String
+                )
+            // launch details (only present for Platform-submitted runs)
+            if( metadata.computeEnvId )
+                platform.computeEnv = new PlatformMetadata.ComputeEnv(
+                    id: metadata.computeEnvId as String,
+                    name: metadata.computeEnvName as String,
+                    platform: metadata.computeEnvPlatform as String
+                )
+            if( metadata.pipelineName )
+                platform.pipeline = new PlatformMetadata.Pipeline(
+                    id: metadata.pipelineId as String,
+                    name: metadata.pipelineName as String,
+                    revision: metadata.revision as String,
+                    commitId: metadata.commitId as String
+                )
+            if( metadata.labels )
+                platform.labels = metadata.labels as List<String>
+        }
+        catch( Exception e ) {
+            log.debug("Failed to apply platform metadata from create response", e)
+        }
     }
 
     protected HxClient newHttpClient() {
@@ -308,7 +376,7 @@ class TowerClient implements TraceObserverV2 {
             .retryConfig(this.retryPolicy)
             .followRedirects(HttpClient.Redirect.NORMAL)
             .version(HttpClient.Version.HTTP_1_1)
-            .connectTimeout(java.time.Duration.ofSeconds(60))
+            .connectTimeout(java.time.Duration.ofMillis(connectTimeout.millis))
             .build()
     }
 
@@ -382,7 +450,8 @@ class TowerClient implements TraceObserverV2 {
         }
 
         final payload = parseTowerResponse(resp)
-        this.watchUrl = payload.watchUrl
+        this.watchUrl ?= payload.watchUrl
+        session.workflowMetadata.platform.workflowUrl ?= watchUrl
         this.sender = Threads.start('Tower-thread', this.&sendTasks0)
         final msg = "Monitor the execution with Seqera Platform using this URL: ${watchUrl}"
         log.info(LoggerHelper.STICKY, msg)
@@ -410,7 +479,8 @@ class TowerClient implements TraceObserverV2 {
         // wait and flush reports content
         reports.flowComplete()
         // notify the workflow completion
-        if( workflowId ) {
+        // note: only send complete if onFlowBegin was invoked (sender is set there)
+        if( workflowId && sender ) {
             final req = makeCompleteReq(session)
             final resp = sendHttpMessage(urlTraceComplete, req, 'PUT')
             logHttpResponse(urlTraceComplete, resp)
@@ -537,6 +607,7 @@ class TowerClient implements TraceObserverV2 {
             .header('Content-Type', 'application/json; charset=utf-8')
             .header('User-Agent', "Nextflow/$BuildInfo.version")
             .header('Traceparent', TraceUtils.rndTrace())
+            .timeout(java.time.Duration.ofMillis(readTimeout.millis))
 
         if( verb == 'PUT' )
             return builder.PUT(HttpRequest.BodyPublishers.ofString(payload)).build()
@@ -598,6 +669,10 @@ class TowerClient implements TraceObserverV2 {
 
     protected Map makeCompleteReq(Session session) {
         def workflow = session.getWorkflowMetadata().toMap()
+        //Remove retrieved platform info
+        if( workflow.platform )
+            workflow.remove('platform')
+
         workflow.params = session.getParams()
         workflow.id = getWorkflowId()
         // render as a string
@@ -661,6 +736,8 @@ class TowerClient implements TraceObserverV2 {
         record.machineType = trace.getMachineInfo()?.type
         record.priceModel = trace.getMachineInfo()?.priceModel?.toString()
         record.numSpotInterruptions = trace.getNumSpotInterruptions()
+        record.logStreamId = trace.getLogStreamId()
+        record.resourceAllocation = trace.getResourceAllocation()
 
         return record
     }

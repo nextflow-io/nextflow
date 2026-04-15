@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,8 +26,13 @@ import com.beust.jcommander.Parameter
 abstract class CmdBase implements Runnable {
 
     private Launcher launcher
+    private List<String> unknownOptions
 
     abstract String getName()
+
+    protected List<String> getUnknownOptions(){ return this.unknownOptions }
+
+    void setUnknownOptions(List<String> options){ this.unknownOptions = options }
 
     Launcher getLauncher() { launcher }
 

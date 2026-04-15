@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,19 +46,6 @@ class BytesSplitterTest extends Specification {
         expect:
         new BytesSplitter().options(by: 5, limit: 10).target(bytes).list() == [ [0, 1, 2, 3, 4] as byte[], [5, 6, 7, 8, 9] as byte[] ]
         new BytesSplitter().options(by: 5, limit: 13).target(bytes).list() == [ [0, 1, 2, 3, 4] as byte[], [5, 6, 7, 8, 9] as byte[], [ 0, 1, 2 ] as byte[] ]
-
-    }
-
-    def testSplitterChannel() {
-
-        when:
-        def c = new BytesSplitter().options(by: 5).target(bytes).channel()
-        then:
-        c.val == [0, 1, 2, 3, 4] as byte[]
-        c.val == [5, 6, 7, 8, 9] as byte[]
-        c.val == [ 0, 1, 2, 3, 4] as byte[]
-        c.val == [5, 6] as byte[]
-        c.val == Channel.STOP
 
     }
 

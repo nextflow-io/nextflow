@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -75,25 +75,26 @@ class CmdInfo extends CmdBase {
         }
 
         Plugins.init()
-        final manager = new AssetManager(args[0])
-        if( manager.isNotInitialized() ) {
-            throw new AbortOperationException("Unknown project `${args[0]}`")
-        }
+        try (final manager = new AssetManager(args[0])) {
+            if( manager.isNotInitialized() ) {
+                throw new AbortOperationException("Unknown project `${args[0]}`")
+            }
 
-        if( !format || format == 'text' ) {
-            printText(manager,level)
-            return
-        }
+            if( !format || format == 'text' ) {
+                printText(manager,level)
+                return
+            }
 
-        def map = createMap(manager)
-        if( format == 'json' ) {
-            printJson(map)
+            def map = createMap(manager)
+            if( format == 'json' ) {
+                printJson(map)
+            }
+            else if( format == 'yaml' ) {
+                printYaml(map)
+            }
+            else
+                throw new AbortOperationException("Unknown output format: $format");
         }
-        else if( format == 'yaml' ) {
-            printYaml(map)
-        }
-        else
-            throw new AbortOperationException("Unknown output format: $format");
 
     }
 

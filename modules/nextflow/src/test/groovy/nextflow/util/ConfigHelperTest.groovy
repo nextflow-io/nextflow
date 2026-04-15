@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,6 @@
  */
 
 package nextflow.util
-
-import java.nio.file.Files
-import java.nio.file.Paths
 
 import nextflow.config.ConfigClosurePlaceholder
 import spock.lang.Specification
@@ -44,37 +41,6 @@ class ConfigHelperTest extends Specification {
         "10.2"      | 10.2
         '5sec'      | Duration.of('5sec')
         'live_in_3d'| 'live_in_3d'
-
-    }
-
-    def testResolveClasspaths() {
-
-        given:
-        def path1 = Files.createTempDirectory('path1')
-        path1.resolve('file1').text = 'File 1'
-        path1.resolve('file2.jar').text = 'File 2'
-        path1.resolve('dir').mkdir()
-        path1.resolve('dir/file3').text = 'File 3'
-        path1.resolve('dir/file4').text = 'File 4'
-
-        def path2 = Files.createTempDirectory('path2')
-        path2.resolve('file5').text = 'File 5'
-        path2.resolve('file6.jar').text = 'File 6'
-
-        def path3 = Paths.get('/some/file')
-
-        when:
-        def list = ConfigHelper.resolveClassPaths([path1, path2, path3])
-        then:
-        list.size() == 4
-        list.contains( path1 )
-        list.contains( path1.resolve('file2.jar') )
-        list.contains( path2 )
-        list.contains( path2.resolve('file6.jar') )
-
-        cleanup:
-        path1?.deleteDir()
-        path2?.deleteDir()
 
     }
 
@@ -124,7 +90,7 @@ class ConfigHelperTest extends Specification {
                        executor = 'slurm'
                        queue = 'long'
                     }
-                    
+
                     docker {
                        enabled = true
                     }
@@ -148,7 +114,7 @@ class ConfigHelperTest extends Specification {
                     docker {
                        enabled = true
                     }
-                    
+
                     mail {
                        from = 'yo@mail.com'
                        smtp {
