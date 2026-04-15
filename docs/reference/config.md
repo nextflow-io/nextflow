@@ -245,7 +245,10 @@ The following settings are available:
 : The Size hint (in bytes) for the low level TCP receive buffer (default: `0`).
 
 `aws.client.socketTimeout`
-: The amount of time to wait (in milliseconds) for data to be transferred over an established, open connection before the connection is timed out (default: `30000`). For synchronous connections, it applies directly as a socket timeout. For S3 transfers using the CRT client, this value is translated into a connection health check that requires a minimum throughput of 1 byte per second within the specified timeout, allowing stalled CRT connections to be detected and closed.
+: :::{versionchanged} 25.10.0
+  The default socket timeout changed from `50000` to `30000`.
+  :::
+: The amount of time to wait (in milliseconds) for data to be transferred over an established, open connection before the connection is timed out (default: `30000`).
 
 `aws.client.storageClass`
 : The S3 storage class applied to stored objects, one of \[`STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, `INTELLIGENT_TIERING`\] (default: `STANDARD`).

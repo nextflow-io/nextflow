@@ -125,7 +125,7 @@ public class S3AsyncClientConfiguration extends S3ClientConfiguration{
         final long socketTimeoutMs = props.containsKey("socket_timeout")
             ? Long.parseLong(props.getProperty("socket_timeout"))
             : DEFAULT_SOCKET_TIMEOUT_MS;
-        log.debug("AWS client config - setting CRT health configuration with minimum throughput 1bps and timeout {}", socketTimeoutMs);
+        log.trace("AWS client config - socket_timeout: {} (using CRT health configuration with minimum throughput 1bps)", socketTimeoutMs);
         crtHttpConfiguration().connectionHealthConfiguration(
             S3CrtConnectionHealthConfiguration.builder()
                 .minimumThroughputInBps(1L)
