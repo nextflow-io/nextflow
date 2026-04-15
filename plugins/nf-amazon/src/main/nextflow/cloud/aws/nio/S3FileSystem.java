@@ -86,7 +86,7 @@ public class S3FileSystem extends FileSystem {
             for (Bucket bucket : client.listBuckets()) {
                 builder.add(new S3Path(this, bucket.name()));
             }
-        }catch( IOException e ) {
+        } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
 

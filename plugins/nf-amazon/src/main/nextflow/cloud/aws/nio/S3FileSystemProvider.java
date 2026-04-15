@@ -808,7 +808,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
             s3ObjectSummaryLookup.lookup(path);
 			return true;
 		}
-        catch(IOException e) {
+        catch (IOException e) {
 			return false;
 		}
 	}
