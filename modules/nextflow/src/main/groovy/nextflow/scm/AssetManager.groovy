@@ -472,7 +472,7 @@ class AssetManager implements Closeable {
             return null
 
         if( repository.endsWith('.nf') || repository.endsWith('.nxf') )
-            throw new AbortOperationException("Repository URL can end as a script file (.nf|.nxf) - Use -main-script option.")
+            throw new AbortOperationException("Repository URL can't end as a script file (.nf|.nxf) - Use -main-script option.")
 
         try {
             def url = new GitUrl(repository)
