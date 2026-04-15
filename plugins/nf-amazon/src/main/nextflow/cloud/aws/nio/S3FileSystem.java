@@ -17,6 +17,7 @@
 package nextflow.cloud.aws.nio;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.FileStore;
 import java.nio.file.FileSystem;
@@ -81,10 +82,13 @@ public class S3FileSystem extends FileSystem {
 	@Override
 	public Iterable<Path> getRootDirectories() {
 		ImmutableList.Builder<Path> builder = ImmutableList.builder();
-
-		for (Bucket bucket : client.listBuckets()) {
-			builder.add(new S3Path(this, bucket.name()));
-		}
+        try {
+            for (Bucket bucket : client.listBuckets()) {
+                builder.add(new S3Path(this, bucket.name()));
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
 
 		return builder.build();
 	}
