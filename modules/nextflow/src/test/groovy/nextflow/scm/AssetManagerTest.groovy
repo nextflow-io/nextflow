@@ -121,47 +121,57 @@ class AssetManagerTest extends Specification {
         folder.resolve('cbcrg/pipe2').mkdirs()
         folder.resolve('ncbi/blast').mkdirs()
 
-        def manager = new AssetManager()
+        // a fresh AssetManager is created per call to mirror real usage:
+        // resolveName is invoked once per AssetManager instance during build()
 
         when:
-        def result = manager.resolveName('x/y')
+        def result = new AssetManager().resolveName('x/y')
         then:
         result == 'x/y'
 
         when:
-        result = manager.resolveName('blast')
+        result = new AssetManager().resolveName('blast')
         then:
         result == 'ncbi/blast'
 
         when:
-        result = manager.resolveName('ncbi/blast/script.nf')
+        result = new AssetManager().resolveName('ncbi/blast/script.nf')
         then:
         result == 'ncbi/blast'
 
         when:
-        result = manager.resolveName('blast/script.nf')
+        result = new AssetManager().resolveName('blast/script.nf')
         then:
         result == 'ncbi/blast'
 
         when:
-        manager.resolveName('pipe')
+        new AssetManager().resolveName('pipe')
         then:
         thrown(AbortOperationException)
 
         when:
-        manager.resolveName('pipe/alpha/beta')
+        new AssetManager().resolveName('pipe/alpha/beta')
         then:
         thrown(AbortOperationException)
 
         when:
-        result = manager.resolveName('../blast/script.nf')
+        new AssetManager().resolveName('../blast/script.nf')
         then:
         thrown(AbortOperationException)
 
         when:
-        result = manager.resolveName('./blast/script.nf')
+        new AssetManager().resolveName('./blast/script.nf')
         then:
         thrown(AbortOperationException)
+
+        when:
+        // mainScript already set (e.g. via -main-script) AND name ends with a script file
+        def manager = new AssetManager()
+        manager.mainScript = 'pre-set.nf'
+        manager.resolveName('ncbi/blast/script.nf')
+        then:
+        def err = thrown(AbortOperationException)
+        err.message.contains('Project name must be a directory when main script is provided')
 
     }
 
@@ -522,6 +532,41 @@ class AssetManagerTest extends Specification {
 
     }
 
+    def 'should propagate explicit main script through build' () {
+
+        given:
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = 'empty: 1'
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        // pass an explicit script file via the new build(...) signature
+        def holder = new AssetManager()
+        holder.build('foo/bar', null, null, null, 'sub/entry.nf')
+        then:
+        holder.getMainScriptName() == 'sub/entry.nf'
+
+    }
+
+    def 'should propagate explicit main script through new constructor' () {
+
+        given:
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = 'empty: 1'
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        // exercise the new (pipelineName, revision, scriptFile, cliOpts) constructor
+        def holder = new AssetManager('foo/bar', null, 'sub/entry.nf')
+        then:
+        holder.getMainScriptName() == 'sub/entry.nf'
+
+    }
+
     def 'should return default main script file' () {
 
         given:
@@ -666,6 +711,22 @@ class AssetManagerTest extends Specification {
         then:
         result == 'foo/bar'
         manager.hub == 'gitea'
+
+        when:
+        // a repository URL ending with a `.nf` script file is not a valid repo URL
+        manager = new AssetManager()
+        manager.resolveNameFromGitUrl('https://github.com/foo/bar/main.nf')
+        then:
+        def err1 = thrown(AbortOperationException)
+        err1.message.contains('-main-script')
+
+        when:
+        // also rejects `.nxf` extension
+        manager = new AssetManager()
+        manager.resolveNameFromGitUrl('https://github.com/foo/bar/sub/main.nxf')
+        then:
+        def err2 = thrown(AbortOperationException)
+        err2.message.contains('-main-script')
 
     }
 

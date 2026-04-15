@@ -427,6 +427,9 @@ class AssetManager implements Closeable {
             if( parts.size()==1 )
                 throw new AbortOperationException("Not a valid project name: $name")
 
+            if( mainScript )
+                throw new AbortOperationException("Not a valid project name: $name - Project name must be a directory when main script is provided")
+
             if( parts.size()==2 ) {
                 mainScript = last
                 parts = [ parts.first() ]
@@ -472,7 +475,7 @@ class AssetManager implements Closeable {
             return null
 
         if( repository.endsWith('.nf') || repository.endsWith('.nxf') )
-            throw new AbortOperationException("Repository URL can't end as a script file (.nf|.nxf) - Use -main-script option.")
+            throw new AbortOperationException("Repository URL must not end with a script file extension (.nf|.nxf) - use -main-script to specify the entry script")
 
         try {
             def url = new GitUrl(repository)

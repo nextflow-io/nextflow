@@ -816,6 +816,9 @@ The `launch` command launches a pipeline run in Seqera Platform. To log in and c
 
 `-main-script`
 : The script file to be executed when launching a project directory or repository.
+  The value may be a path relative to the repository root, e.g.
+  `-main-script pipeline/main.nf`, to run a pipeline whose entry script lives
+  in a subfolder.
 
 `-params-file`
 : A JSON or YAML file to load parameters from.
@@ -1599,6 +1602,10 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 
 `-main-script` (`main.nf`)
 : The script file to be executed when launching a project directory or repository.
+  The value may be a path relative to the repository root, e.g.
+  `-main-script pipeline/main.nf`, to run a pipeline whose entry script lives
+  in a subfolder. The project's `nextflow.config` is always read from the
+  repository root regardless of the entry script location.
 
 `-name`
 : Assign a mnemonic name to the a pipeline run.
