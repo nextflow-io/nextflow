@@ -27,6 +27,7 @@ import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.Variable;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
 import org.codehaus.groovy.ast.expr.BitwiseNegationExpression;
+import org.codehaus.groovy.ast.expr.BooleanExpression;
 import org.codehaus.groovy.ast.expr.CastExpression;
 import org.codehaus.groovy.ast.expr.ClassExpression;
 import org.codehaus.groovy.ast.expr.ClosureExpression;
@@ -152,9 +153,9 @@ public class Formatter extends CodeVisitorSupport {
         appendLeadingComments(node);
         if( preIndent )
             appendIndent();
-        append("if (");
+        append("if ");
         visit(node.getBooleanExpression());
-        append(") {\n");
+        append(" {\n");
         incIndent();
         visit(node.getIfBlock());
         decIndent();
@@ -366,8 +367,6 @@ public class Formatter extends CodeVisitorSupport {
 
     private boolean inVariableDeclaration;
 
-    private boolean inWrappedPipeChain;
-
     @Override
     public void visitBinaryExpression(BinaryExpression node) {
         if( node instanceof DeclarationExpression ) {
@@ -394,25 +393,12 @@ public class Formatter extends CodeVisitorSupport {
             return;
         }
 
-        var beginWrappedPipeChain = shouldWrapPipeExpression(node);
-        if( beginWrappedPipeChain )
-            inWrappedPipeChain = true;
-
         visit(node.getLeftExpression());
 
-        if( inWrappedPipeChain ) {
-            appendNewLine();
-            incIndent();
-            appendIndent();
-        }
-        else {
-            append(' ');
-        }
+        append(' ');
         append(node.getOperation().getText());
         append(' ');
 
-        var iwpc = inWrappedPipeChain;
-        inWrappedPipeChain = false;
         if( node.getOperation().isA(Types.ASSIGNMENT_OPERATOR) ) {
             var source = node.getRightExpression();
             var cre = currentRootExpr;
@@ -423,13 +409,6 @@ public class Formatter extends CodeVisitorSupport {
         else {
             visit(node.getRightExpression());
         }
-        inWrappedPipeChain = iwpc;
-
-        if( inWrappedPipeChain )
-            decIndent();
-
-        if( beginWrappedPipeChain )
-            inWrappedPipeChain = false;
     }
 
     @Override
@@ -461,6 +440,11 @@ public class Formatter extends CodeVisitorSupport {
         visit(node.getTrueExpression());
         append(" ?: ");
         visit(node.getFalseExpression());
+    }
+
+    @Override
+    public void visitBooleanExpression(BooleanExpression node) {
+        visit(node.getExpression());
     }
 
     @Override
@@ -751,10 +735,6 @@ public class Formatter extends CodeVisitorSupport {
         return shouldWrapExpression(root)
             ? false
             : depth >= 2;
-    }
-
-    private boolean shouldWrapPipeExpression(BinaryExpression node) {
-        return currentRootExpr == node && node.getOperation().isA(Types.PIPE) && shouldWrapExpression(node);
     }
 
     private static final String SLASH_STR = "/";
