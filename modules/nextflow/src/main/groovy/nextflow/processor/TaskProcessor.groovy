@@ -797,7 +797,7 @@ class TaskProcessor {
     @CompileStatic
     final protected void checkCachedOrLaunchTask( TaskRun task, HashCode hash, boolean shouldTryCache ) {
 
-        int tries = task.failCount + task.previousFailOrAbortedCount + 1
+        int tries = task.previousTryCount + task.failCount + 1
         while( true ) {
             // increment the task hash based on the "try count"
             // in order to produce a deterministic sequence of
@@ -823,7 +823,7 @@ class TaskProcessor {
                 // try count so that any subsequent successful execution
                 // can be recovered
                 if( entry?.trace?.isFailed() || entry?.trace?.isAborted() )
-                    task.previousFailOrAbortedCount += 1
+                    task.previousTryCount += 1
             }
             catch (Throwable t) {
                 log.warn1("[${safeTaskName(task)}] Unable to resume cached task -- See log file for details", causedBy: t)
