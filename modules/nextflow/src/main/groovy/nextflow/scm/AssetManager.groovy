@@ -532,15 +532,6 @@ class AssetManager implements Closeable {
         return strategy?.getGitRepositoryUrl() ?: provider.getCloneUrl()
     }
 
-    /**
-     * @return {@code true} when the SCM source points to a local file-system repository.
-     */
-    boolean isLocalScmSource() {
-        if( provider instanceof LocalRepositoryProvider )
-            return true
-        return false
-    }
-
     File getLocalPath() {
         return strategy?.getLocalPath()
     }
@@ -655,6 +646,13 @@ class AssetManager implements Closeable {
 
     boolean isLocal() {
         return localPath && localPath.exists()
+    }
+
+    /**
+     * @return {@code true} when the SCM source points to a local file-system repository.
+     */
+    boolean isLocalScmSource() {
+        return provider instanceof LocalRepositoryProvider
     }
 
     /**

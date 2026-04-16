@@ -696,19 +696,16 @@ class AssetManagerTest extends Specification {
 
         when:
         manager = new AssetManager('my-project/repo',  Mock(HubOptions))
-
         then:
         !manager.isLocalScmSource()
 
         when:
         manager = new AssetManager('https://github.com/nextflow-io/socks.git',  Mock(HubOptions))
-
         then:
         !manager.isLocalScmSource()
 
         when:
         manager = new AssetManager( 'file:/path/my-project/repo.git', Mock(HubOptions))
-
         then:
         manager.isLocalScmSource()
     }
