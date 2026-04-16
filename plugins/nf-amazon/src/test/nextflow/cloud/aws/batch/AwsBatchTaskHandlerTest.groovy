@@ -598,6 +598,37 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.containerProperties.mountPoints[0].readOnly()
         result.containerProperties.volumes[0].host().sourcePath() == '/home/conda'
         result.containerProperties.volumes[0].name() == 'aws-cli'
+        result.consumableResourceProperties == null
+    }
+
+    def 'should create a job definition with consumable resources from hints' () {
+        given:
+        def IMAGE = 'foo/bar:1.0'
+        def JOB_NAME = 'nf-foo-bar-1-0'
+        def HINTS = [consumableResources: 'license-a=1,license-b=2', foo: 'bar']
+        def task = Mock(TaskRun) {
+            getContainer() >> IMAGE
+            getConfig() >> Mock(TaskConfig) {
+                getHints() >> HINTS
+            }
+        }
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> task
+            fusionEnabled() >> false
+        }
+        handler.@executor = Mock(AwsBatchExecutor)
+
+        when:
+        def result = handler.makeJobDefRequest(task)
+        then:
+        1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
+        1 * handler.getAwsOptions() >> new AwsOptions()
+        result.consumableResourceProperties != null
+        result.consumableResourceProperties.consumableResourceList().size() == 2
+        result.consumableResourceProperties.consumableResourceList()[0].consumableResource() == 'license-a'
+        result.consumableResourceProperties.consumableResourceList()[0].quantity() == 1
+        result.consumableResourceProperties.consumableResourceList()[1].consumableResource() == 'license-b'
+        result.consumableResourceProperties.consumableResourceList()[1].quantity() == 2
     }
 
     def 'should create a fargate job definition' () {

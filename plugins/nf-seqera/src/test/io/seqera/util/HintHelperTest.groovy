@@ -42,7 +42,7 @@ class HintHelperTest extends Specification {
         def base = new MachineRequirementOpts([arch: 'x86_64'])
 
         when:
-        def result = HintHelper.overlayHints(base, [consumableResource: 'my-license'])
+        def result = HintHelper.overlayHints(base, [consumableResources: 'my-license'])
         then:
         result.arch == 'x86_64'
     }
@@ -209,7 +209,7 @@ class HintHelperTest extends Specification {
     def 'should ignore non-seqera hints in extraction'() {
         when:
         def result = HintHelper.extractSeqeraHints([
-            consumableResource: 'my-license',
+            consumableResources: 'my-license',
             'k8s/scheduling.nodeSelector': 'gpu=true',
             'seqera/machineRequirement.arch': 'arm64'
         ])

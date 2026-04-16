@@ -35,7 +35,7 @@ class HintDefs {
      * validated by the target executor, not this registry.
      */
     static final Map<String, Class> KNOWN_HINTS = [
-        'consumableResource': String
+        'consumableResources': String
     ]
 
     /**

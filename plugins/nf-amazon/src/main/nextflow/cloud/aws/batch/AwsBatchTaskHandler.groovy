@@ -55,6 +55,8 @@ import software.amazon.awssdk.services.batch.model.AssignPublicIp
 import software.amazon.awssdk.services.batch.model.AttemptContainerDetail
 import software.amazon.awssdk.services.batch.model.BatchException
 import software.amazon.awssdk.services.batch.model.ClientException
+import software.amazon.awssdk.services.batch.model.ConsumableResourceProperties
+import software.amazon.awssdk.services.batch.model.ConsumableResourceRequirement
 import software.amazon.awssdk.services.batch.model.ContainerOverrides
 import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsRequest
 import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsResponse
@@ -623,12 +625,20 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // finally set the container options
         result.containerProperties(container)
 
+        // set consumable resource properties from hints
+        final hints = task.config.getHints()
+        final consumableResources = getConsumableResources(hints)
+        if( consumableResources )
+            result.consumableResourceProperties(consumableResources)
+
         // add to this list all values that has to contribute to the
         // job definition unique name creation
         hashingTokens.add(name)
         hashingTokens.add(container.toString())
         if( containerOpts )
             hashingTokens.add(containerOpts)
+        if( consumableResources )
+            hashingTokens.add(consumableResources.toString())
 
         return result
     }
@@ -674,6 +684,38 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             container.mountPoints(mounts)
             container.volumes(volumes)
         }
+    }
+
+    @CompileStatic
+    protected ConsumableResourceProperties getConsumableResources(Map<String,String> hints) {
+        if( !hints )
+            return null
+        final List<ConsumableResourceRequirement> resourceList = new ArrayList<>()
+        for( final key : hints.keySet() ) {
+            if( !isHint(key, 'consumableResources') )
+                continue
+            final entries = (hints[key] ?: '').tokenize(',')
+            for( final entry : entries ) {
+                final index = entry.indexOf('=')
+                final resourceName = entry.substring(0, index)
+                final resourceQuantity = entry.substring(index + 1).toLong()
+                final resource = ConsumableResourceRequirement.builder()
+                    .consumableResource(resourceName)
+                    .quantity(resourceQuantity)
+                    .build()
+                resourceList.add(resource)
+            }
+        }
+        if( !resourceList )
+            return null
+        return ConsumableResourceProperties.builder()
+            .consumableResourceList(resourceList)
+            .build()
+    }
+
+    @CompileStatic
+    protected boolean isHint(String key, String name) {
+        return key == name || key == "awsbatch/${name}".toString()
     }
 
     /**

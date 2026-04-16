@@ -18,6 +18,7 @@ package nextflow.cloud.aws.batch.model
 
 
 import groovy.transform.CompileStatic
+import software.amazon.awssdk.services.batch.model.ConsumableResourceProperties
 import software.amazon.awssdk.services.batch.model.JobDefinitionType
 import software.amazon.awssdk.services.batch.model.PlatformCapability
 import software.amazon.awssdk.services.batch.model.RegisterJobDefinitionRequest
@@ -44,6 +45,8 @@ class RegisterJobDefinitionModel {
     private Map<String,String> parameters
 
     private Map<String,String> tags
+
+    private ConsumableResourceProperties consumableResourceProperties
 
     RegisterJobDefinitionModel jobDefinitionName(String value) {
         this.jobDefinitionName = value
@@ -82,6 +85,11 @@ class RegisterJobDefinitionModel {
         return this
     }
 
+    RegisterJobDefinitionModel consumableResourceProperties(ConsumableResourceProperties value) {
+        this.consumableResourceProperties = value
+        return this
+    }
+
     String getJobDefinitionName() {
         return jobDefinitionName
     }
@@ -106,6 +114,10 @@ class RegisterJobDefinitionModel {
         return tags
     }
 
+    ConsumableResourceProperties getConsumableResourceProperties() {
+        return consumableResourceProperties
+    }
+
     RegisterJobDefinitionRequest toBatchRequest() {
         final builder = RegisterJobDefinitionRequest.builder()
 
@@ -121,6 +133,8 @@ class RegisterJobDefinitionModel {
             builder.parameters(parameters)
         if (tags)
             builder.tags(tags)
+        if (consumableResourceProperties)
+            builder.consumableResourceProperties(consumableResourceProperties)
 
         return (RegisterJobDefinitionRequest) builder.build()
     }
@@ -134,6 +148,7 @@ class RegisterJobDefinitionModel {
             ", containerProperties=" + containerProperties +
             ", parameters=" + parameters +
             ", tags=" + tags +
+            ", consumableResourceProperties=" + consumableResourceProperties +
             '}';
     }
 }

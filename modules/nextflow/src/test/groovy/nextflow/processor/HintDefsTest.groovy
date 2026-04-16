@@ -27,15 +27,15 @@ class HintDefsTest extends Specification {
 
     def 'should accept known hint key'() {
         when:
-        HintDefs.validateHints([consumableResource: 'my-license'])
+        HintDefs.validateHints([consumableResources: 'my-license'])
         then:
         noExceptionThrown()
     }
 
     def 'should warn on unknown key with close match'() {
-        // consumableResourc is close to consumableResource
+        // consumableResource is close to consumableResources
         when:
-        HintDefs.validateHints([consumableResourc: 'my-license'])
+        HintDefs.validateHints([consumableResource: 'my-license'])
         then:
         noExceptionThrown()
         // warning is logged — verified by log output in integration tests
@@ -50,16 +50,16 @@ class HintDefsTest extends Specification {
 
     def 'should reject invalid value type'() {
         when:
-        HintDefs.validateHints([consumableResource: ['a', 'b']])
+        HintDefs.validateHints([consumableResources: ['a', 'b']])
         then:
         def e = thrown(IllegalArgumentException)
         e.message.contains('Invalid hint value type')
-        e.message.contains('consumableResource')
+        e.message.contains('consumableResources')
     }
 
     def 'should accept string and integer values'() {
         when:
-        HintDefs.validateHints([consumableResource: 'my-license', 'scheduling.priority': 10])
+        HintDefs.validateHints([consumableResources: 'my-license', 'scheduling.priority': 10])
         then:
         noExceptionThrown()
     }
@@ -85,7 +85,7 @@ class HintDefsTest extends Specification {
 
     def 'should accept null hint value'() {
         when:
-        HintDefs.validateHints([consumableResource: null])
+        HintDefs.validateHints([consumableResources: null])
         then:
         noExceptionThrown()
     }

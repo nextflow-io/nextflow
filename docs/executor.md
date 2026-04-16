@@ -33,6 +33,14 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-resourcelabels`
 - {ref}`process-time`
 
+The following {ref}`hints <process-hints>` are supported:
+
+- `consumableResources`: Specify [AWS Batch consumable resources](https://docs.aws.amazon.com/batch/latest/userguide/resource-aware-scheduling.html) as a list of name-value pairs. For example:
+
+  ```nextflow
+  hints consumableResources: 'my-license-a=1,my-license-b=2'
+  ```
+
 See {ref}`aws-batch` for more information.
 
 (azurebatch-executor)=
