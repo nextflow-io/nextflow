@@ -25,6 +25,7 @@ import static nextflow.scm.MultiRevisionRepositoryStrategy.REPOS_SUBDIR
 
 import spock.lang.IgnoreIf
 
+import nextflow.cli.HubOptions
 import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Config
@@ -690,6 +691,62 @@ class AssetManagerTest extends Specification {
         })
         then:
         !manager.isLocalScmSource()
+    }
+
+    def 'should detect local scm source for LocalRepositoryProvider' () {
+        given:
+        def config = new ProviderConfig('local', [path: '/tmp/workflows'])
+        def localProvider = new LocalRepositoryProvider('socks', config)
+
+        when:
+        def manager = new AssetManager(provider: localProvider)
+
+        then:
+        manager.isLocalScmSource()
+    }
+
+    def 'should return false for local scm when provider is null' () {
+        when:
+        def manager = new AssetManager()
+
+        then:
+        !manager.isLocalScmSource()
+    }
+
+    def 'should return false for local scm when urls are null' () {
+        when:
+        def manager = new AssetManager(provider: Mock(RepositoryProvider) {
+            getRepositoryUrl() >> null
+            getCloneUrl() >> null
+        })
+
+        then:
+        !manager.isLocalScmSource()
+    }
+
+    def 'should detect local scm for pipelineNames' () {
+        when:
+        def manager = new AssetManager('my-repo', Mock(HubOptions))
+        then:
+        !manager.isLocalScmSource()
+
+        when:
+        manager = new AssetManager('my-project/repo',  Mock(HubOptions))
+
+        then:
+        !manager.isLocalScmSource()
+
+        when:
+        manager = new AssetManager('https://github.com/nextflow-io/socks.git',  Mock(HubOptions))
+
+        then:
+        !manager.isLocalScmSource()
+
+        when:
+        manager = new AssetManager( 'file:/path/my-project/repo.git', Mock(HubOptions))
+
+        then:
+        manager.isLocalScmSource()
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
