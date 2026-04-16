@@ -161,7 +161,7 @@ class CmdModuleInfo extends CmdBase {
         // Generate and display usage template
         println ""
         println "Usage Template:"
-        println "-" * 80
+        println "---------------"
         println generateUsageTemplate(reference, metadata).join(" \\\n    ")
         println ""
     }

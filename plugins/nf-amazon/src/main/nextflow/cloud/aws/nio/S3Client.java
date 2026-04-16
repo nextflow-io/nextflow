@@ -41,7 +41,9 @@ import nextflow.util.ThreadPoolManager;
 import nextflow.util.Threads;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.paginators.ListObjectsV2Iterable;
@@ -138,37 +140,89 @@ public class S3Client {
 	/**
 	 * @see software.amazon.awssdk.services.s3.S3Client#listBuckets()
 	 */
-	public List<Bucket> listBuckets() {
-		return runWithPermit(() -> client.listBuckets().buckets());
+	public List<Bucket> listBuckets() throws IOException {
+        try {
+            return runWithPermit(() -> client.listBuckets().buckets());
+        } catch (SdkException e) {
+			throw convertAwsException(e, "listBuckets", null, null);
+        }
 	}
 
 	/**
 	 * @see software.amazon.awssdk.services.s3.S3Client#listObjects(ListObjectsRequest)
 	 */
-	public ListObjectsResponse listObjects(ListObjectsRequest request) {
-		return runWithPermit(() -> client.listObjects(request));
+	public ListObjectsResponse listObjects(ListObjectsRequest request) throws IOException {
+		try {
+            return runWithPermit(() -> client.listObjects(request));
+        } catch (SdkException e){
+            throw convertAwsException(e, "listObject", request.bucket(), request.prefix());
+        }
+	}
+
+	/**
+	 * Convert an AWS SDK exception into the most appropriate {@link IOException} subtype
+	 * so callers can handle it via standard NIO semantics.
+	 *
+	 * The original {@code SdkException} is always attached as the cause for diagnostics.
+	 */
+	// package-private for testing
+	static IOException convertAwsException(SdkException e, String method, String bucket, String key) {
+		final String s3path = (key != null && !key.isEmpty())
+				? "s3://" + bucket + "/" + key
+				: "s3://" + (bucket != null ? bucket : "");
+		final String message = String.format("Exception calling %s for %s", method, s3path);
+
+		if (e instanceof NoSuchBucketException || e instanceof NoSuchKeyException) {
+			final NoSuchFileException nsfe = new NoSuchFileException(s3path);
+			nsfe.initCause(e);
+			return nsfe;
+		}
+
+		if (e instanceof AwsServiceException) {
+			final int code = ((AwsServiceException) e).statusCode();
+			if (code == 404) {
+				final NoSuchFileException nsfe = new NoSuchFileException(s3path);
+				nsfe.initCause(e);
+				return nsfe;
+			}
+			if (code == 401 || code == 403) {
+				final AccessDeniedException ade = new AccessDeniedException(s3path, null, e.getMessage());
+				ade.initCause(e);
+				return ade;
+			}
+		}
+
+		return new IOException(message, e);
 	}
 
 	/**
 	 * @see software.amazon.awssdk.services.s3.S3Client#getObject
 	 */
-	public ResponseInputStream<GetObjectResponse> getObject(String bucketName, String key) {
+	public ResponseInputStream<GetObjectResponse> getObject(String bucketName, String key) throws IOException {
 		GetObjectRequest.Builder reqBuilder = GetObjectRequest.builder().bucket(bucketName).key(key);
 		if( this.isRequesterPaysEnabled )
 			reqBuilder.requestPayer(RequestPayer.REQUESTER);
-		return runWithPermit(() -> client.getObject(reqBuilder.build()));
+        try {
+            return runWithPermit(() -> client.getObject(reqBuilder.build()));
+        } catch (SdkException e) {
+            throw convertAwsException(e, "getObject", bucketName, key);
+        }
 	}
 
 	/**
 	 * @see software.amazon.awssdk.services.s3.S3Client#putObject
 	 */
-	public PutObjectResponse putObject(String bucket, String key, File file) {
+	public PutObjectResponse putObject(String bucket, String key, File file) throws IOException {
 		PutObjectRequest.Builder builder = PutObjectRequest.builder().bucket(bucket).key(key);
 		if( cannedAcl != null ) {
 			log.trace("Setting canned ACL={}; bucket={}; key={}", cannedAcl, bucket, key);
 			builder.acl(cannedAcl);
 		}
-		return runWithPermit(() -> client.putObject(builder.build(), file.toPath()));
+		try {
+            return runWithPermit(() -> client.putObject(builder.build(), file.toPath()));
+        } catch (SdkException e) {
+            throw convertAwsException(e, "putObject", bucket, key);
+        }
 	}
 
 	private PutObjectRequest preparePutObjectRequest(PutObjectRequest.Builder reqBuilder, List<Tag> tags, String contentType, String storageClass) {
@@ -196,7 +250,7 @@ public class S3Client {
 	/**
 	 * @see software.amazon.awssdk.services.s3.S3Client#putObject
 	 */
-	public PutObjectResponse putObject(String bucket, String keyName, InputStream inputStream, List<Tag> tags, String contentType, long contentLength) {
+	public PutObjectResponse putObject(String bucket, String keyName, InputStream inputStream, List<Tag> tags, String contentType, long contentLength) throws IOException {
 		PutObjectRequest.Builder reqBuilder = PutObjectRequest.builder()
 			.bucket(bucket)
 			.key(keyName);
@@ -219,22 +273,34 @@ public class S3Client {
 		if( log.isTraceEnabled() ) {
 			log.trace("S3 PutObject request {}", req);
 		}
-		return runWithPermit(() -> client.putObject(req, RequestBody.fromInputStream(inputStream, contentLength)));
+		try {
+			return runWithPermit(() -> client.putObject(req, RequestBody.fromInputStream(inputStream, contentLength)));
+		} catch (SdkException e) {
+			throw convertAwsException(e, "putObject", bucket, keyName);
+		}
 	}
 
 	/**
 	 * @see software.amazon.awssdk.services.s3.S3Client#deleteObject
 	 */
-	public void deleteObject(String bucket, String key) {
-		runWithPermit(() ->client.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build()));
+	public void deleteObject(String bucket, String key) throws IOException {
+        try {
+            runWithPermit(() -> client.deleteObject(DeleteObjectRequest.builder().bucket(bucket).key(key).build()));
+        } catch (SdkException e) {
+            throw convertAwsException(e, "deleteObject", bucket, key);
+        }
 	}
 
 	/**
 	 * @see software.amazon.awssdk.services.s3.S3Client#getBucketAcl
 	 */
-	public AccessControlPolicy getBucketAcl(String bucket) {
-		GetBucketAclResponse response = client.getBucketAcl(GetBucketAclRequest.builder().bucket(bucket).build());
-		return AccessControlPolicy.builder().grants(response.grants()).owner(response.owner()).build();
+	public AccessControlPolicy getBucketAcl(String bucket) throws IOException {
+        try {
+            GetBucketAclResponse response = runWithPermit(() -> client.getBucketAcl(GetBucketAclRequest.builder().bucket(bucket).build()));
+            return AccessControlPolicy.builder().grants(response.grants()).owner(response.owner()).build();
+        } catch (SdkException e) {
+            throw convertAwsException(e, "getBucketAcl", bucket, null);
+        }
 	}
 
 	public void setCannedAcl(String acl) {
@@ -276,37 +342,57 @@ public class S3Client {
 	/**
 	 * @see software.amazon.awssdk.services.s3.S3Client#getObjectAcl
 	 */
-	public AccessControlPolicy getObjectAcl(String bucketName, String key) {
-		GetObjectAclResponse response = runWithPermit(() -> client.getObjectAcl(GetObjectAclRequest.builder().bucket(bucketName).key(key).build()));
-		return AccessControlPolicy.builder().grants(response.grants()).owner(response.owner()).build();
+	public AccessControlPolicy getObjectAcl(String bucketName, String key) throws IOException {
+        try {
+            GetObjectAclResponse response = runWithPermit(() -> client.getObjectAcl(GetObjectAclRequest.builder().bucket(bucketName).key(key).build()));
+            return AccessControlPolicy.builder().grants(response.grants()).owner(response.owner()).build();
+        } catch (SdkException e) {
+            throw convertAwsException(e, "getObjectAcl", bucketName, key);
+        }
 	}
 	/**
 	 * @see software.amazon.awssdk.services.s3.S3Client#headObject
 	 */
-	public HeadObjectResponse getObjectMetadata(String bucketName, String key) {
-		return runWithPermit(() -> client.headObject(HeadObjectRequest.builder().bucket(bucketName).key(key).build()));
+	public HeadObjectResponse getObjectMetadata(String bucketName, String key) throws IOException {
+        try {
+            return runWithPermit(() -> client.headObject(HeadObjectRequest.builder().bucket(bucketName).key(key).build()));
+        } catch (SdkException e) {
+            throw convertAwsException(e, "getObjectMetadata", bucketName, key);
+        }
 	}
 
     /**
      * @see software.amazon.awssdk.services.s3.S3Client#headBucket
      */
-    public HeadBucketResponse getBucketMetadata(String bucketName) {
-        return runWithPermit(() -> client.headBucket(HeadBucketRequest.builder().bucket(bucketName).build()));
+    public HeadBucketResponse getBucketMetadata(String bucketName) throws IOException {
+        try {
+            return runWithPermit(() -> client.headBucket(HeadBucketRequest.builder().bucket(bucketName).build()));
+        } catch (SdkException e) {
+            throw convertAwsException(e, "getBucketMetadata", bucketName, null);
+        }
     }
 
-	public List<Tag> getObjectTags(String bucketName, String key) {
-		return runWithPermit(() -> client.getObjectTagging(GetObjectTaggingRequest.builder().bucket(bucketName).key(key).build()).tagSet());
+	public List<Tag> getObjectTags(String bucketName, String key) throws IOException {
+        try {
+            return runWithPermit(() -> client.getObjectTagging(GetObjectTaggingRequest.builder().bucket(bucketName).key(key).build()).tagSet());
+        } catch (SdkException e) {
+            throw convertAwsException(e, "getObjectTags", bucketName, key);
+        }
 	}
 
-	public String getObjectKmsKeyId(String bucketName, String key) {
+	public String getObjectKmsKeyId(String bucketName, String key) throws IOException {
 		return getObjectMetadata(bucketName, key).ssekmsKeyId();
 	}
 
 	/**
 	 * @see software.amazon.awssdk.services.s3.S3Client#listObjectsV2Paginator
 	 */
-	public ListObjectsV2Iterable listObjectsV2Paginator(ListObjectsV2Request request) {
-		return runWithPermit(() -> client.listObjectsV2Paginator(request));
+	public ListObjectsV2Iterable listObjectsV2Paginator(ListObjectsV2Request request) throws IOException {
+        try {
+            return runWithPermit(() -> client.listObjectsV2Paginator(request));
+        } catch (SdkException e) {
+            throw convertAwsException(e, "listObjects", request.bucket(), request.prefix());
+        }
 	}
 
 	// ===== transfer manager section =====
