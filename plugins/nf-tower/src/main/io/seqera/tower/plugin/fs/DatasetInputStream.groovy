@@ -17,6 +17,7 @@
 package io.seqera.tower.plugin.fs
 
 import java.nio.ByteBuffer
+import java.nio.channels.ClosedChannelException
 import java.nio.channels.SeekableByteChannel
 
 import groovy.transform.CompileStatic
@@ -40,6 +41,8 @@ class DatasetInputStream implements SeekableByteChannel {
 
     @Override
     int read(ByteBuffer dst) throws IOException {
+        if( !open )
+            throw new ClosedChannelException()
         final len = dst.remaining()
         if (buf.length < len)
             buf = new byte[len]

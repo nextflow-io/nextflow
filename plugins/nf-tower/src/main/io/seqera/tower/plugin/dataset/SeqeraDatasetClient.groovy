@@ -58,7 +58,10 @@ class SeqeraDatasetClient {
      */
     Long getUserId() {
         try {
-             return towerClient.getUserInfo()?.id as long
+             final info = towerClient.getUserInfo()
+             if( info?.id == null )
+                 throw new AbortOperationException("Unable to retrieve user ID from Seqera Platform — check your access token")
+             return info.id as long
         }catch( UnauthorizedException e ){
             throw new AbortOperationException(e.getMessage())
         }catch( ForbiddenException e){
@@ -93,7 +96,7 @@ class SeqeraDatasetClient {
         final url = "${endpoint}/datasets?workspaceId=${workspaceId}"
         log.debug "SeqeraDatasetClient GET $url"
         final resp = towerClient.sendApiRequest(url)
-        checkResponse(resp, url)
+        checkFsResponse(resp, url)
         final json = new JsonSlurper().parseText(resp.message) as Map
         final list = json.datasets as List<Map>
         return list ? list.collect { m -> mapDataset(m) } : Collections.<DatasetDto>emptyList()
@@ -107,7 +110,7 @@ class SeqeraDatasetClient {
         final url = "${endpoint}/datasets?workspaceId=${workspaceId}"
         log.debug "SeqeraDatasetClient POST $url name=$name"
         final resp = towerClient.sendApiRequest(url, [name: name], 'POST')
-        checkResponse(resp, url)
+        checkFsResponse(resp, url)
         final json = new JsonSlurper().parseText(resp.message) as Map
         return mapDataset(json.dataset as Map)
     }
@@ -119,7 +122,7 @@ class SeqeraDatasetClient {
         final url = "${endpoint}/datasets/${datasetId}/versions?workspaceId=${workspaceId}"
         log.debug "SeqeraDatasetClient GET $url"
         final resp = towerClient.sendApiRequest(url)
-        checkResponse(resp, url)
+        checkFsResponse(resp, url)
         final json = new JsonSlurper().parseText(resp.message) as Map
         final list = json.versions as List<Map>
         return list ? list.collect { m -> mapVersion(m) } : Collections.<DatasetVersionDto>emptyList()
@@ -150,7 +153,7 @@ class SeqeraDatasetClient {
 
     // ---- private helpers ----
 
-    private static void checkResponse(TowerClient.Response resp, String url) {
+    private static void checkFsResponse(TowerClient.Response resp, String url) {
         if (!resp.error) return
         final code = resp.code
         if (code == 401)

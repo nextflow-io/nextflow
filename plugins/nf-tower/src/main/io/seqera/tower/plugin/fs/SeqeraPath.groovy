@@ -360,12 +360,14 @@ class SeqeraPath implements Path {
 
     @Override
     Path resolveSibling(Path other) {
-        return getParent().resolve(other)
+        final parent = getParent()
+        return parent != null ? parent.resolve(other) : other
     }
 
     @Override
     Path resolveSibling(String other) {
-        return getParent().resolve(other)
+        final parent = getParent()
+        return parent != null ? parent.resolve(other) : new SeqeraPath(fs, other)
     }
 
     @Override

@@ -314,7 +314,7 @@ class TowerClient {
             throw new ForbiddenException("Forbidden — check permissions")
         if( status == 404 )
             throw new NotFoundException("Resource $url not found")
-        throw new Exception("Seqera API error: HTTP ${status} for ${url}")
+        throw new IOException("Seqera API error: HTTP ${status} for ${url}")
     }
 
     protected HttpRequest makeRequest(String url, String payload, String verb) {

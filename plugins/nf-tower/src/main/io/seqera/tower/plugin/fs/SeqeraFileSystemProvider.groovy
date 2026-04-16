@@ -27,6 +27,7 @@ import java.nio.file.FileSystemAlreadyExistsException
 import java.nio.file.FileSystemNotFoundException
 import java.nio.file.Files
 import java.nio.file.LinkOption
+import java.nio.file.DirectoryIteratorException
 import java.nio.file.NoSuchFileException
 import java.nio.file.NotDirectoryException
 import java.nio.file.OpenOption
@@ -207,7 +208,8 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         }
 
         final filtered = filter ? entries.findAll { Path p ->
-            try { filter.accept(p) } catch (IOException e) { false }
+            try { filter.accept(p) }
+            catch (IOException e) { throw new DirectoryIteratorException(e) }
         } : entries
 
         return new DirectoryStream<Path>() {
