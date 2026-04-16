@@ -21,9 +21,10 @@ timeout --signal=INT 12 $NXF_RUN -resume | tee stdout || true
 # RESUME mode with completed and abort
 #
 echo ''
-timeout --signal=INT 12 $NXF_RUN -resume | tee stdout || true
+timeout --signal=INT 20 $NXF_RUN -resume | tee stdout || true
 
 [[ `< .nextflow.log grep -c 'Submitted process > SMALL_SLEEP_RETRY'` == 1 ]] || false
+[[ `< .nextflow.log grep -c 'Re-submitted process > SMALL_SLEEP_RETRY'` == 1 ]] || false
 
 #
 # RESUME mode with cached and finish

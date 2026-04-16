@@ -326,9 +326,10 @@ class TaskRun implements Cloneable {
     volatile int failCount
 
     /**
-     * The number of times the execution of the task has been aborted
+     * The number of times the execution of the task has been failed or aborted in other pipeline runs.
+     * Required to recover number of tries for task hash calculation without altering the number of attempts and failures in the current pipeline run.
      */
-    volatile int abortedCount
+    volatile int previousFailOrAbortedCount
 
     /**
      * The number of times the submit of the task has been retried
