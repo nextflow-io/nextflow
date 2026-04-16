@@ -25,6 +25,7 @@ import static nextflow.scm.MultiRevisionRepositoryStrategy.REPOS_SUBDIR
 
 import spock.lang.IgnoreIf
 
+import nextflow.cli.HubOptions
 import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Config
@@ -667,6 +668,46 @@ class AssetManagerTest extends Specification {
         result == 'foo/bar'
         manager.hub == 'gitea'
 
+    }
+
+    def 'should detect local scm source' () {
+        when: 'provider is a LocalRepositoryProvider'
+        def config = new ProviderConfig('local', [path: '/tmp/workflows'])
+        def manager = new AssetManager(provider: new LocalRepositoryProvider('socks', config))
+        then:
+        manager.isLocalScmSource()
+
+        when: 'provider is a remote RepositoryProvider'
+        manager = new AssetManager(provider: Mock(RepositoryProvider))
+        then:
+        !manager.isLocalScmSource()
+
+        when: 'provider is null'
+        manager = new AssetManager()
+        then:
+        !manager.isLocalScmSource()
+    }
+
+    def 'should detect local scm for pipelineNames' () {
+        when:
+        def manager = new AssetManager('my-repo', Mock(HubOptions))
+        then:
+        !manager.isLocalScmSource()
+
+        when:
+        manager = new AssetManager('my-project/repo',  Mock(HubOptions))
+        then:
+        !manager.isLocalScmSource()
+
+        when:
+        manager = new AssetManager('https://github.com/nextflow-io/socks.git',  Mock(HubOptions))
+        then:
+        !manager.isLocalScmSource()
+
+        when:
+        manager = new AssetManager( 'file:/path/my-project/repo.git', Mock(HubOptions))
+        then:
+        manager.isLocalScmSource()
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})

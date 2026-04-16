@@ -589,7 +589,7 @@ class CmdRun extends CmdBase implements HubOptions {
          * read from the stdin
          */
         if( pipelineName == '-' ) {
-            def file = tryReadFromStdin()
+            final file = tryReadFromStdin()
             if( !file )
                 throw new AbortOperationException("Cannot access `stdin` stream")
 
@@ -603,7 +603,7 @@ class CmdRun extends CmdBase implements HubOptions {
          * look for a file with the specified pipeline name
          */
         def script = new File(pipelineName)
-        if( script.isDirectory()  ) {
+        if( script.isDirectory() ) {
             script = mainScript ? new File(mainScript) : new AssetManager().setLocalPath(script).getMainScriptFile()
         }
 
@@ -616,23 +616,24 @@ class CmdRun extends CmdBase implements HubOptions {
         /*
          * try to look for a pipeline in the repository
          */
-        try (def manager = new AssetManager(pipelineName, this)) {
+        try( final manager = new AssetManager(pipelineName, this) ) {
             if( revision )
                 manager.setRevision(revision)
-            def repo = manager.getProjectWithRevision()
+            final repo = manager.getProjectWithRevision()
+            final remoteSource = !manager.isLocalScmSource()
 
             boolean checkForUpdate = true
             if( !manager.isRunnable() || latest ) {
-                if( offline )
+                if( offline && remoteSource )
                     throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
                 log.info "Pulling $repo ..."
-                def result = manager.download(revision,deep)
+                final result = manager.download(revision,deep)
                 if( result )
                     log.info " $result"
                 checkForUpdate = false
             }
             // Warn if using legacy
-            if( manager.isUsingLegacyStrategy() ){
+            if( manager.isUsingLegacyStrategy() ) {
                 log.warn1 "This Nextflow version supports a new Multi-revision strategy for managing the SCM repositories, " +
                     "but '${repo}' is single-revision legacy strategy - Please consider to update the repository with the 'nextflow pull -migrate' command."
             }
@@ -641,7 +642,7 @@ class CmdRun extends CmdBase implements HubOptions {
                 manager.checkout(revision)
                 manager.updateModules()
                 final scriptFile = manager.getScriptFile(mainScript)
-                if( checkForUpdate && !offline )
+                if( checkForUpdate && !(offline && remoteSource) )
                     manager.checkRemoteStatus(scriptFile.revisionInfo)
                 // return the script file
                 return scriptFile
