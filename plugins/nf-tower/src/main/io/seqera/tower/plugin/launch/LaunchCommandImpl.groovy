@@ -229,6 +229,8 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
         if (paramsText) launch.paramsText = paramsText
         if (options.mainScript) launch.mainScript = options.mainScript
         if (options.entryName) launch.entryName = options.entryName
+        if (options.userSecrets) launch.userSecrets = options.userSecrets as Set
+        if (options.workspaceSecrets) launch.workspaceSecrets = options.workspaceSecrets as Set
 
         log.debug "Built launch request with ${launch.size()} parameters"
         return [launch: launch]
