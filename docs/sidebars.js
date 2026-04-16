@@ -124,6 +124,7 @@ module.exports = {
                     label: "Migration notes",
                     link: { type: "doc", id: "migrations/index" },
                     items: [
+                        "migrations/26-04",
                         "migrations/25-10",
                         "migrations/25-04",
                         "migrations/24-10",

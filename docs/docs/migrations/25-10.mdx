@@ -9,7 +9,7 @@ description: Review new features, breaking changes, and deprecations introduced 
 
 ## New features
 
-<h3>Workflow params</h3>
+### Workflow params
 
 :::note
 Typed parameters require the [strict syntax][strict-syntax-page]. Set the `NXF_SYNTAX_PARSER` environment variable to `v2` to enable:
@@ -40,7 +40,7 @@ This syntax allows you to declare all parameters in one place with explicit type
 
 See [Parameters][workflow-typed-params] for details.
 
-<h3>Workflow outputs (out of preview)</h3>
+### Workflow outputs (out of preview)
 
 [Workflow outputs][workflow-output-def], introduced in Nextflow 24.04 as a preview feature, have been brought out of preview.
 
@@ -69,7 +69,7 @@ output {
 
 See [Migrating to workflow outputs ][migrating-workflow-outputs] to get started.
 
-<h3>Static typing (preview)</h3>
+### Static typing (preview)
 
 :::note
 Static typing requires the [strict syntax][strict-syntax-page]. Set the `NXF_SYNTAX_PARSER` environment variable to `v2` to enable:
@@ -165,9 +165,9 @@ NXF_VER=25.04.8 nextflow lint -format .
 ```
 :::
 
-See [Migrating to static types][migrating-static-types] for details.
+See [Migrating to static typing][migrating-static-types] for details.
 
-<h3>Auth and Launch commands</h3>
+### Auth and Launch commands
 
 The Nextflow CLI has two new commands: `nextflow auth` and `nextflow launch`. Together, they allow you to authenticate with Seqera Platform and launch pipelines from the command line. This approach streamlines the previous workflow of using `nextflow run` with the `-with-tower` option.
 
@@ -189,7 +189,7 @@ See [`auth`][cli-auth] and [`launch`][cli-launch] for details.
 
 ## Enhancements
 
-<h3>Nextflow plugin registry</h3>
+### Nextflow plugin registry
 
 Nextflow now uses the [Nextflow plugin registry](https://registry.nextflow.io/) to download plugins in a more efficient and scalable manner.
 
@@ -203,7 +203,7 @@ export NXF_PLUGINS_REGISTRY_URL="https://raw.githubusercontent.com/nextflow-io/p
 Plugin developers will not be able to submit PRs to the legacy plugin index once the plugin registry is generally available. Plugins should be updated to publish to the Nextflow plugin registry using the [Nextflow Gradle plugin][gradle-plugin-page] instead of the legacy plugin index. See [plugin registry][plugin-registry-page] for details.
 :::
 
-<h3>New syntax for workflow handlers</h3>
+### New syntax for workflow handlers
 
 :::note
 The new syntax for workflow handlers require the [strict syntax][strict-syntax-page]. Set the `NXF_SYNTAX_PARSER` environment variable to `v2` to enable:
@@ -230,7 +230,7 @@ workflow {
 
 This syntax is simpler and easier to use with the [strict syntax][strict-syntax-page]. See [Workflow handlers][workflow-handlers] for details.
 
-<h3>Simpler syntax for dynamic directives</h3>
+### Simpler syntax for dynamic directives
 
 The [strict syntax][strict-syntax-page] allows dynamic process directives to be specified without a closure:
 
@@ -252,7 +252,7 @@ Dynamic process settings in configuration files must still be specified with clo
 
 See [Dynamic directives][dynamic-directives] for details.
 
-<h3>Configurable date formatting</h3>
+### Configurable date formatting
 
 You can now customize the date and time format used in notifications, reports, and console output using the `NXF_DATE_FORMAT` environment variable:
 
