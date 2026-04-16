@@ -840,6 +840,31 @@ The above example produces:
 [4, D]
 ```
 
+(process-hints)=
+
+### hints
+
+The `hints` directive specifies executor-specific scheduling hints as key-value pairs. Each executor uses the hints it recognizes and ignores the rest. For example:
+
+```nextflow
+process hello {
+    hints consumableResources: 'my-license=1'
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+You can prefix a hint with the name of an executor to apply it only to that executor. For example:
+
+```nextflow
+    hints 'awsbatch/consumableResources': 'my-license=1'
+```
+
+See {ref}`executor-page` to see which hints are recognized by each executor.
+
 (process-label)=
 
 ### label

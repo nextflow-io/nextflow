@@ -224,6 +224,14 @@ public interface TaskConfig {
     """)
     boolean getFair();
 
+    @Constant("hints")
+    @Description("""
+        The `hints` directive specifies executor-specific scheduling hints as key-value pairs.
+
+        [Read more](https://nextflow.io/docs/latest/reference/process.html#hints)
+    """)
+    Map<String,String> getHints();
+
     @Constant("label")
     @Description("""
         The `label` directive allows you to annotate a process with a mnemonic identifier of your choice.
@@ -319,14 +327,6 @@ public interface TaskConfig {
         [Read more](https://nextflow.io/docs/latest/reference/process.html#queue)
     """)
     String getQueue();
-
-    @Constant("hints")
-    @Description("""
-        The `hints` directive allows you to specify executor-specific scheduling hints as key-value pairs.
-
-        [Read more](https://nextflow.io/docs/latest/reference/process.html#hints)
-    """)
-    Map<String,Object> getHints();
 
     @Constant("resourceLabels")
     @Description("""
