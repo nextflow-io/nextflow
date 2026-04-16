@@ -372,18 +372,25 @@ See the [`lint`][cli-lint] command reference for details.
 
 ## Miscellaneous
 
-- New config option: `aws.batch.forceGlacierTransfer`
-- New config option: `executor.onlyJobState`
-- New config option: `google.batch.installOpsAgent`
-- New config option: `google.batch.logsPath`
-- New config option: `wave.build.conda.baseImage`
-- New config option: `wave.build.template`
-- New standard library function: `listDirectory()`
-- Support Java 26
+- New config option: [`aws.batch.forceGlacierTransfer`][config-aws-batch-forceGlacierTransfer]
+- New config option: [`executor.onlyJobState`][config-executor-onlyJobState]
+- New config option: [`google.batch.installOpsAgent`][config-google-batch-installOpsAgent]
+- New config option: [`google.batch.logsPath`][config-google-batch-logsPath]
+- New config option: [`wave.build.conda.baseImage`][config-wave-build-conda-baseImage]
+- New config option: [`wave.build.template`][config-wave-build-template]
+- New standard library function: [`listDirectory()`][stdlib-listDirectory]
+- Support [Java 26][install-requirements]
 
 [cli-lint]: ../reference/cli#lint
 [cli-module]: ../reference/cli#module
 [cli-run]: ../reference/cli#run
+[config-aws-batch-forceGlacierTransfer]: ../reference/config#awsbatchforceglaciertransfer
+[config-executor-onlyJobState]: ../reference/config#executoronlyjobstate
+[config-google-batch-installOpsAgent]: ../reference/config#googlebatchinstallopsagent
+[config-google-batch-logsPath]: ../reference/config#googlebatchlogspath
+[config-wave-build-conda-baseImage]: ../reference/config#wavebuildcondabaseimage
+[config-wave-build-template]: ../reference/config#wavebuildtemplate
+[install-requirements]: ../install#requirements
 [migrating-static-types]: ../tutorials/static-types
 [migrating-static-types-operators]: ../tutorials/static-types-operators
 [module-registry]: ../module#registry-based-modules
@@ -391,6 +398,7 @@ See the [`lint`][cli-lint] command reference for details.
 [process-typed-page]: ../process-typed
 [script-records]: ../script#records
 [static-typing-first-preview]: ./25-10#static-typing-preview
+[stdlib-listDirectory]: ../reference/stdlib-types#listdirectory---iterablepath
 [strict-syntax-page]: ../strict-syntax
 [workflow-typed-page]: ../workflow-typed
 [workflow-typed-params]: ../workflow-typed#typed-parameters
