@@ -538,15 +538,7 @@ class AssetManager implements Closeable {
     boolean isLocalScmSource() {
         if( provider instanceof LocalRepositoryProvider )
             return true
-
-        final repoUrl = provider?.getRepositoryUrl() ?: provider?.getCloneUrl()
-        if( !repoUrl )
-            return false
-
-        if( repoUrl.startsWith('file:') )
-            return true
-
-        return new File(repoUrl).isAbsolute()
+        return false
     }
 
     File getLocalPath() {

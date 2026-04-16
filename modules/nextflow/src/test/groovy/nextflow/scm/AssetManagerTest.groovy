@@ -670,56 +670,20 @@ class AssetManagerTest extends Specification {
 
     }
 
-    def 'should detect local scm source from repository url' () {
-        when:
-        def manager = new AssetManager(provider: Mock(RepositoryProvider) {
-            getCloneUrl() >> 'file:///tmp/workflows/nextflow-io-socks.git'
-        })
-        then:
-        manager.isLocalScmSource()
-
-        when:
-        manager = new AssetManager(provider: Mock(RepositoryProvider) {
-            getCloneUrl() >> '/tmp/workflows/nextflow-io-socks.git'
-        })
-        then:
-        manager.isLocalScmSource()
-
-        when:
-        manager = new AssetManager(provider: Mock(RepositoryProvider) {
-            getCloneUrl() >> 'https://github.com/nextflow-io/socks.git'
-        })
-        then:
-        !manager.isLocalScmSource()
-    }
-
-    def 'should detect local scm source for LocalRepositoryProvider' () {
-        given:
+    def 'should detect local scm source' () {
+        when: 'provider is a LocalRepositoryProvider'
         def config = new ProviderConfig('local', [path: '/tmp/workflows'])
-        def localProvider = new LocalRepositoryProvider('socks', config)
-
-        when:
-        def manager = new AssetManager(provider: localProvider)
-
+        def manager = new AssetManager(provider: new LocalRepositoryProvider('socks', config))
         then:
         manager.isLocalScmSource()
-    }
 
-    def 'should return false for local scm when provider is null' () {
-        when:
-        def manager = new AssetManager()
-
+        when: 'provider is a remote RepositoryProvider'
+        manager = new AssetManager(provider: Mock(RepositoryProvider))
         then:
         !manager.isLocalScmSource()
-    }
 
-    def 'should return false for local scm when urls are null' () {
-        when:
-        def manager = new AssetManager(provider: Mock(RepositoryProvider) {
-            getRepositoryUrl() >> null
-            getCloneUrl() >> null
-        })
-
+        when: 'provider is null'
+        manager = new AssetManager()
         then:
         !manager.isLocalScmSource()
     }
