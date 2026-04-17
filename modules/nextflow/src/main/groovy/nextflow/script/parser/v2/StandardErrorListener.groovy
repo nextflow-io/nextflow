@@ -42,9 +42,8 @@ class StandardErrorListener implements ErrorListener {
     }
 
     private Ansi ansi() {
-        final ansi = Ansi.ansi()
-        ansi.setEnabled(ansiLog)
-        return ansi
+        Ansi.setEnabled(ansiLog)
+        return Ansi.ansi()
     }
 
     // Even though AnsiConsole already strips ANSI characters when
