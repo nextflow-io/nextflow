@@ -140,6 +140,36 @@ class SeqeraExecutorTest extends Specification {
         fusionConfig.targetVersion == null
     }
 
+    def 'should expose run resource labels coerced from config-level process.resourceLabels'() {
+        given:
+        SysEnv.push([:])
+        def executor = new SeqeraExecutor()
+        executor.session = Mock(Session) {
+            getConfig() >> [process: [resourceLabels: [team: 'a', priority: 7]]]
+        }
+
+        when:
+        executor.computeRunResourceLabels()
+
+        then:
+        executor.runResourceLabels == [team: 'a', priority: '7']
+    }
+
+    def 'should yield empty run resource labels when process.resourceLabels is absent'() {
+        given:
+        SysEnv.push([:])
+        def executor = new SeqeraExecutor()
+        executor.session = Mock(Session) {
+            getConfig() >> [:]
+        }
+
+        when:
+        executor.computeRunResourceLabels()
+
+        then:
+        executor.runResourceLabels == [:]
+    }
+
     /**
      * Builds a SchedClientConfig using the same logic as {@link SeqeraExecutor#createClient()}
      */

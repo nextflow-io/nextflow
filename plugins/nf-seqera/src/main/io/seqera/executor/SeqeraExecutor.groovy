@@ -64,6 +64,8 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     private volatile String runId
 
+    private volatile Map<String,String> runResourceLabels = Collections.<String,String>emptyMap()
+
     private SeqeraBatchSubmitter batchSubmitter
 
     @Override
@@ -114,9 +116,11 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         final workspaceId = PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get()) as Long
         final computeEnvId = PlatformHelper.getComputeEnvId(towerConfig, SysEnv.get()) ?: seqeraConfig.computeEnvId
 
+        computeRunResourceLabels()
         final labels = new Labels()
         if( seqeraConfig.autoLabels )
             labels.withWorkflowMetadata(session.workflowMetadata)
+        labels.withProcessResourceLabels(runResourceLabels)
         final predictionModel = seqeraConfig.predictionModel ? PredictionModel.fromValue(seqeraConfig.predictionModel) : null
         final pipeline = new PipelineSpec()
                 .workflowId(workflowId)
@@ -200,6 +204,17 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     String getRunId() {
         return runId
+    }
+
+    Map<String,String> getRunResourceLabels() {
+        return runResourceLabels
+    }
+
+    @groovy.transform.PackageScope
+    void computeRunResourceLabels() {
+        final processMap = session.config.process as Map
+        final raw = processMap?.get('resourceLabels') as Map<String,?>
+        this.runResourceLabels = Labels.toStringMap(raw)
     }
 
     SeqeraBatchSubmitter getBatchSubmitter() {
