@@ -17,6 +17,7 @@
 package io.seqera.executor
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import io.seqera.config.SeqeraConfig
 import io.seqera.config.ExecutorOpts
@@ -210,7 +211,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         return runResourceLabels
     }
 
-    @groovy.transform.PackageScope
+    @PackageScope
     void computeRunResourceLabels() {
         final processMap = session.config.process as Map
         final raw = processMap?.get('resourceLabels') as Map<String,?>

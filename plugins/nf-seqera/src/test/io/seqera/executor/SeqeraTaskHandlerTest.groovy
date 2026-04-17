@@ -306,6 +306,7 @@ class SeqeraTaskHandlerTest extends Specification {
         }
         def executor = Mock(SeqeraExecutor) {
             getClient() >> client
+            getRunResourceLabels() >> [:]
         }
         def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
             readExitFile() >> Integer.MAX_VALUE
@@ -347,6 +348,7 @@ class SeqeraTaskHandlerTest extends Specification {
         }
         def executor = Mock(SeqeraExecutor) {
             getClient() >> client
+            getRunResourceLabels() >> [:]
         }
         def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
             readExitFile() >> Integer.MAX_VALUE
@@ -389,6 +391,7 @@ class SeqeraTaskHandlerTest extends Specification {
         }
         def executor = Mock(SeqeraExecutor) {
             getClient() >> client
+            getRunResourceLabels() >> [:]
         }
         def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
             readExitFile() >> 1
@@ -418,6 +421,7 @@ class SeqeraTaskHandlerTest extends Specification {
             getClient() >> Mock(SchedClient)
             getBatchSubmitter() >> batchSubmitter
             getSeqeraConfig() >> seqeraConfig
+            getRunResourceLabels() >> [:]
         }
         def taskConfig = Mock(TaskConfig) {
             getCpus() >> 1
@@ -468,6 +472,7 @@ class SeqeraTaskHandlerTest extends Specification {
             getClient() >> Mock(SchedClient)
             getBatchSubmitter() >> batchSubmitter
             getSeqeraConfig() >> seqeraConfig
+            getRunResourceLabels() >> [:]
         }
         def taskConfig = Mock(TaskConfig) {
             getCpus() >> 1
@@ -512,6 +517,7 @@ class SeqeraTaskHandlerTest extends Specification {
         def executor = Mock(SeqeraExecutor) {
             getClient() >> Mock(SchedClient)
             getSeqeraConfig() >> seqeraConfig
+            getRunResourceLabels() >> [:]
         }
         def taskRun = Mock(TaskRun) {
             getWorkDir() >> Paths.get('/work/ab/cd1234')
@@ -538,6 +544,7 @@ class SeqeraTaskHandlerTest extends Specification {
         def executor = Mock(SeqeraExecutor) {
             getClient() >> Mock(SchedClient)
             getSeqeraConfig() >> seqeraConfig
+            getRunResourceLabels() >> [:]
         }
         def taskRun = Mock(TaskRun) {
             getWorkDir() >> Paths.get('/work/ab/cd1234')
@@ -564,6 +571,7 @@ class SeqeraTaskHandlerTest extends Specification {
         def executor = Mock(SeqeraExecutor) {
             getClient() >> Mock(SchedClient)
             getSeqeraConfig() >> seqeraConfig
+            getRunResourceLabels() >> [:]
         }
         def taskRun = Mock(TaskRun) {
             getWorkDir() >> Paths.get('/work/ab/cd1234')
@@ -679,7 +687,7 @@ class SeqeraTaskHandlerTest extends Specification {
             getWorkDir() >> Paths.get('/work/ab/cd1234')
             getConfig() >> Mock(TaskConfig) { getTime() >> Duration.of('6h') }
         }
-        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient) }
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient); getRunResourceLabels() >> [:] }
         def handler = new SeqeraTaskHandler(taskRun, executor)
 
         expect:
@@ -696,7 +704,7 @@ class SeqeraTaskHandlerTest extends Specification {
             getWorkDir() >> Paths.get('/work/ab/cd1234')
             getConfig() >> taskConfig
         }
-        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient) }
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient); getRunResourceLabels() >> [:] }
         def handler = new SeqeraTaskHandler(taskRun, executor)
 
         when:
@@ -718,7 +726,7 @@ class SeqeraTaskHandlerTest extends Specification {
             getWorkDir() >> Paths.get('/work/ab/cd1234')
             getConfig() >> taskConfig
         }
-        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient) }
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient); getRunResourceLabels() >> [:] }
         def handler = new SeqeraTaskHandler(taskRun, executor)
 
         when:
@@ -740,7 +748,7 @@ class SeqeraTaskHandlerTest extends Specification {
             getWorkDir() >> Paths.get('/work/ab/cd1234')
             getConfig() >> taskConfig
         }
-        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient) }
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient); getRunResourceLabels() >> [:] }
         def handler = new SeqeraTaskHandler(taskRun, executor)
 
         when:
@@ -763,6 +771,7 @@ class SeqeraTaskHandlerTest extends Specification {
             getClient() >> Mock(SchedClient)
             getBatchSubmitter() >> batchSubmitter
             getSeqeraConfig() >> seqeraConfig
+            getRunResourceLabels() >> [:]
         }
         def taskConfig = Mock(TaskConfig) {
             getCpus() >> 1
@@ -912,6 +921,7 @@ class SeqeraTaskHandlerTest extends Specification {
         }
         def executor = Mock(SeqeraExecutor) {
             getClient() >> Mock(SchedClient)
+            getRunResourceLabels() >> [:]
         }
         return new SeqeraTaskHandler(taskRun, executor)
     }
@@ -927,6 +937,7 @@ class SeqeraTaskHandlerTest extends Specification {
         }
         def executor = Mock(SeqeraExecutor) {
             getClient() >> Mock(SchedClient)
+            getRunResourceLabels() >> [:]
         }
         return new SeqeraTaskHandler(taskRun, executor)
     }
@@ -938,6 +949,7 @@ class SeqeraTaskHandlerTest extends Specification {
         def executor = Mock(SeqeraExecutor) {
             getClient() >> Mock(SchedClient)
             getName() >> 'seqera'
+            getRunResourceLabels() >> [:]
         }
         def processor = Mock(TaskProcessor) {
             getName() >> 'test_process'
