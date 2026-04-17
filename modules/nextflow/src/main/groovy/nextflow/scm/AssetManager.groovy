@@ -657,6 +657,13 @@ class AssetManager implements Closeable {
     }
 
     /**
+     * @return {@code true} when the SCM source points to a local file-system repository.
+     */
+    boolean isLocalScmSource() {
+        return provider instanceof LocalRepositoryProvider
+    }
+
+    /**
      * @return {@code true} when the local project path exists and contains at least the default script
      *      file (i.e. main.nf) or the nextflow manifest file (i.e. nextflow.config)
      */

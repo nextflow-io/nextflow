@@ -17,6 +17,7 @@
 package nextflow.cloud.aws.nio;
 
 import java.io.ByteArrayInputStream;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -59,7 +60,7 @@ import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
-import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import com.google.common.base.Preconditions;
@@ -195,23 +196,30 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		Preconditions.checkArgument(!s3Path.getKey().equals(""),
 				"cannot create InputStream for root directory: %s", FilesEx.toUriString(s3Path));
 
-		InputStream result;
-		try {
-			result = s3Path
-					.getFileSystem()
-					.getClient()
-					.getObject(s3Path.getBucket(), s3Path.getKey());
+        final ResponseInputStream<GetObjectResponse> result = s3Path
+            .getFileSystem()
+            .getClient()
+            .getObject(s3Path.getBucket(), s3Path.getKey());
 
-			if (result == null)
-				throw new IOException(String.format("The specified path is a directory: %s", FilesEx.toUriString(s3Path)));
-		}catch (AwsServiceException e) {
-			if (e.statusCode() == 404)
-				throw new NoSuchFileException(path.toString());
-			// otherwise throws a generic IO exception
-			throw new IOException(String.format("Cannot access file: %s", FilesEx.toUriString(s3Path)),e);
-		}
+        if (result == null)
+			throw new IOException(String.format("The specified path is a directory: %s", FilesEx.toUriString(s3Path)));
 
-		return result;
+		// Wrap the response stream so that close() aborts the underlying HTTP connection
+		// instead of draining the remaining bytes. Apache HTTP client's ContentLengthInputStream.close()
+		// reads to end-of-stream to release the connection back to the pool, which for a large S3
+		// object (e.g. a multi-GB FASTQ) can block the caller for many minutes. Callers of
+		// newInputStream() typically do not consume the whole object, so abort() is the correct
+		// semantics here.
+		return new FilterInputStream(result) {
+			@Override
+			public void close() {
+				result.abort();
+			}
+            // Just-used for testing
+            void abort(){
+                result.abort();
+            }
+		};
 	}
 
 	@Override
@@ -372,9 +380,14 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
 			Files.write(tempFile, IOUtils.toByteArray(is));
 		}
-		catch (S3Exception e) {
-			if (e.awsErrorDetails().sdkHttpResponse().statusCode() != 404)
-				throw new IOException(String.format("Cannot access file: %s", path),e);
+		catch (NoSuchFileException e) {
+			// When opening for CREATE/CREATE_NEW the remote object is allowed to not exist yet
+			// — the temp file will be created and uploaded on close. For any other open mode
+			// propagate the original exception so the caller sees the real s3:// path.
+			if (!options.contains(StandardOpenOption.CREATE) && !options.contains(StandardOpenOption.CREATE_NEW)) {
+				throw e;
+			}
+			log.trace("S3 object does not exist yet, will be created on close: {}", FilesEx.toUriString(s3Path));
 		}
 
         // and we can use the File SeekableByteChannel implementation
@@ -467,6 +480,11 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		Preconditions.checkArgument(attrs.length == 0,
 				"attrs not yet supported: %s", ImmutableList.copyOf(attrs)); // TODO
 
+		// Creating a bucket is not supported
+		if (s3Path.getKey().isEmpty()) {
+			throw new UnsupportedOperationException("Creating a bucket is not supported");
+		}
+
 		List<Tag> tags = s3Path.getTagsList();
 
 		String keyName = s3Path.getKey()
@@ -486,6 +504,11 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 
         if (Files.notExists(path)){
             throw new NoSuchFileException("the path: " + FilesEx.toUriString(s3Path) + " does not exist");
+        }
+
+		// Deleting a bucket is not supported
+        if (s3Path.getKey().isEmpty()) {
+            throw new UnsupportedOperationException("Deleting a bucket is not supported");
         }
 
 		// NOTE: S3 directories are virtual (marker objects or implied key prefixes),
@@ -802,7 +825,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
             s3ObjectSummaryLookup.lookup(path);
 			return true;
 		}
-        catch(NoSuchFileException e) {
+        catch (IOException e) {
 			return false;
 		}
 	}
@@ -814,10 +837,13 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
      *
 	 * @param path {@link S3Path}
 	 * @return AccessControlList
-	 * @throws NoSuchFileException if not found the path and any child
+	 * @throws IOException if error getting access control
 	 */
-	private AccessControlPolicy getAccessControl(S3Path path) throws NoSuchFileException{
-        return path.getFileSystem().getClient().getObjectAcl(path.getBucket(), path.getKey());
+	private AccessControlPolicy getAccessControl(S3Path path) throws IOException{
+        String key = path.getKey();
+        if (key == null || key.isEmpty())
+            return path.getFileSystem().getClient().getBucketAcl(path.getBucket());
+        return path.getFileSystem().getClient().getObjectAcl(path.getBucket(), key);
 	}
 
     /**
