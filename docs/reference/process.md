@@ -1391,6 +1391,7 @@ Resource labels are currently supported by the following executors:
 - {ref}`azurebatch-executor`
 - {ref}`google-batch-executor`
 - {ref}`k8s-executor`
+- {ref}`seqera-executor`
 
 :::{note}
 The limits and the syntax of the corresponding executor should be taken into consideration when using resource labels.
