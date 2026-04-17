@@ -1,10 +1,12 @@
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/_static/nextflow-logo-bg-dark.png">
-  <source media="(prefers-color-scheme: light)" srcset="docs/_static/nextflow-logo-bg-light.png">
-  <img alt="Nextflow Logo" src="docs/_static/nextflow-logo-bg-light.png">
-</picture>
+<h1 align="center">
+    <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/_static/nextflow-logo-bg-dark.png">
+        <source media="(prefers-color-scheme: light)" srcset="docs/_static/nextflow-logo-bg-light.png">
+        <img width="500" alt="Nextflow" src="docs/_static/nextflow-logo-bg-light.png">
+    </picture>
+</h1>
 
-*"Dataflow variables are spectacularly expressive in concurrent programming"*
+_"Dataflow variables are spectacularly expressive in concurrent programming"_
 <br>[Henri E. Bal , Jennifer G. Steiner , Andrew S. Tanenbaum](https://dl.acm.org/doi/abs/10.1145/72551.72552)
 
 [![Nextflow CI](https://github.com/nextflow-io/nextflow/workflows/Nextflow%20CI/badge.svg)](https://github.com/nextflow-io/nextflow/actions/workflows/build.yml?query=branch%3Amaster+event%3Apush)
@@ -15,6 +17,16 @@
 [![Nextflow license](https://img.shields.io/github/license/nextflow-io/nextflow.svg?colorB=58bd9f&style=popout)](https://github.com/nextflow-io/nextflow/blob/master/COPYING)
 
 Nextflow is a workflow system for creating scalable, portable, and reproducible workflows. It is based on the dataflow programming model, which greatly simplifies the writing of parallel and distributed pipelines, allowing you to focus on the flow of data and computation. Nextflow can deploy workflows on a variety of execution platforms, including your local machine, HPC schedulers, AWS Batch, Azure Batch, Google Cloud Batch, and Kubernetes. Additionally, it supports many ways to manage your software dependencies, including Conda, Spack, Docker, Podman, Singularity, and more.
+
+Nextflow is built with ❤️ by [Seqera](https://seqera.io/), the best place to run Nextflow.
+
+<p align="center">
+    <picture>
+        <source media="(prefers-color-scheme: dark)" srcset="docs/_static/seqera-logo-light.svg">
+        <source media="(prefers-color-scheme: light)" srcset="docs/_static/seqera-logo-dark.svg">
+        <img width="200" alt="Seqera" src="docs/_static/seqera-logo-dark.svg">
+    </picture>
+</p>
 
 ## Quick start
 
@@ -60,7 +72,7 @@ P. Di Tommaso, et al. Nextflow enables reproducible computational workflows. Nat
 
 ## Credits
 
-Nextflow is built on two \*great* open-source software projects, <a href='http://groovy-lang.org' target='_blank'>Groovy</a>
+Nextflow is built on two \*great\* open-source software projects, <a href='http://groovy-lang.org' target='_blank'>Groovy</a>
 and <a href='http://www.gpars.org/' target='_blank'>GPars</a>.
 
 <a href='http://www.yourkit.com' target='_blank'>YourKit</a> is kindly supporting Nextflow with its fully-featured Java Profiler.

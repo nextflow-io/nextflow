@@ -156,6 +156,18 @@ class KryoHelperTest extends  Specification {
 
     }
 
+    def 'should serialise a record' () {
+
+        given:
+        def record = new RecordMap([foo: 1])
+
+        when:
+        def buffer = KryoHelper.serialize(record)
+        then:
+        KryoHelper.deserialize(buffer) instanceof RecordMap
+        KryoHelper.deserialize(buffer) == record
+    }
+
     def 'should serialise xpath' () {
         when:
         def file = FileHelper.asPath('http://host.com/foo.txt')

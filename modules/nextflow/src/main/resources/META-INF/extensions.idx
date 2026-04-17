@@ -18,6 +18,7 @@ nextflow.cache.DefaultCacheFactory
 nextflow.conda.CondaConfig
 nextflow.config.ConfigMap
 nextflow.config.Manifest
+nextflow.config.RegistryConfig
 nextflow.config.WorkflowConfig
 nextflow.container.ApptainerConfig
 nextflow.container.CharliecloudConfig

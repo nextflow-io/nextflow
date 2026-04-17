@@ -18,7 +18,6 @@ package nextflow.script
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Session
 /**
  * Models the workflow output definition

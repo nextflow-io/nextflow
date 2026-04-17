@@ -2383,6 +2383,7 @@ class ConfigBuilderTest extends Specification {
                executor = { 'local' }
             }
 
+            outputFormat = 'text'
             workDir = 'work'
 
             tower {

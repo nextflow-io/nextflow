@@ -40,6 +40,7 @@ import nextflow.script.formatter.ScriptFormattingVisitor
 import nextflow.script.parser.v2.ErrorListener
 import nextflow.script.parser.v2.ErrorSummary
 import nextflow.script.parser.v2.StandardErrorListener
+import nextflow.util.ClassLoaderFactory
 import nextflow.util.PathUtils
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
@@ -62,7 +63,13 @@ class CmdLint extends CmdBase {
         names = ['-exclude'],
         description = 'File pattern to exclude from error checking (can be specified multiple times)'
     )
-    List<String> excludePatterns = ['.git', '.lineage', '.nf-test', '.nextflow', 'work', 'nf-test.config']
+    List<String> excludePatterns = ['.git', '.lineage', '.nextflow', '.nf-test', 'nf-test.config', 'work']
+
+    @Parameter(
+        names = ['-files-from'],
+        description = 'Read list of paths to lint from file (one per line, use - for stdin)'
+    )
+    String filesFrom
 
     @Parameter(
         names = ['-o', '-output'],
@@ -81,6 +88,12 @@ class CmdLint extends CmdBase {
                 throw new ParameterException("Output mode must be one of $MODES (found: $value)")
         }
     }
+
+    @Parameter(
+        names = ['-project-dir'],
+        description = 'Path to project directory (default: .)'
+    )
+    String projectDir = '.'
 
     @Parameter(names = ['-format'], description = 'Format scripts and config files that have no errors')
     boolean formatting
@@ -112,7 +125,10 @@ class CmdLint extends CmdBase {
 
     @Override
     void run() {
-        if( !args )
+        // read input files from positional args and -files-from option
+        final inputs = getInputs(args, filesFrom)
+
+        if( !inputs )
             throw new AbortOperationException("Error: No input files were specified")
 
         if( spaces && tabs )
@@ -121,7 +137,11 @@ class CmdLint extends CmdBase {
         if( !spaces && !tabs )
             spaces = 4
 
-        scriptParser = new ScriptParser()
+        final baseDir = Path.of(projectDir)
+        final libDir = baseDir.resolve('lib')
+        final classLoader = ClassLoaderFactory.create([ libDir ])
+
+        scriptParser = new ScriptParser(baseDir, classLoader)
         configParser = new ConfigParser()
         errorListener = outputMode == 'json'
             ? new JsonErrorListener()
@@ -135,9 +155,9 @@ class CmdLint extends CmdBase {
         // collect files to lint
         final List<File> files = []
 
-        for( final arg : args ) {
+        for( final input : inputs ) {
             PathUtils.visitFiles(
-                Path.of(arg),
+                Path.of(input),
                 (path) -> !PathUtils.isExcluded(path, excludePatterns),
                 (path) -> files.add(path.toFile()))
         }
@@ -165,6 +185,24 @@ class CmdLint extends CmdBase {
         // If there were errors, throw an exception to return a non-zero exit code
         if( summary.errors > 0 )
             throw new AbortOperationException()
+    }
+
+    private static List<String> getInputs(List<String> args, String filesFrom) {
+        final List<String> result = []
+        result.addAll(args)
+
+        if( filesFrom ) {
+            final lines = filesFrom == '-'
+                ? System.in.readLines()
+                : Path.of(filesFrom).readLines()
+            for( final line : lines ) {
+                final trimmed = line.trim()
+                if( trimmed )
+                    result.add(trimmed)
+            }
+        }
+
+        return result
     }
 
     private void parse(File file) {

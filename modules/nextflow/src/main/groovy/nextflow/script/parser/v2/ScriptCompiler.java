@@ -20,6 +20,8 @@ import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Path;
+import java.security.CodeSource;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -31,6 +33,7 @@ import java.util.Set;
 import groovy.lang.GroovyClassLoader;
 import groovy.lang.GroovyCodeSource;
 import com.google.common.hash.Hashing;
+import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.WorkflowNode;
 import nextflow.script.control.CallSiteCollector;
 import nextflow.script.control.Compiler;
@@ -48,13 +51,14 @@ import nextflow.script.parser.ScriptParserPluginFactory;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.CompileUnit;
 import org.codehaus.groovy.ast.MethodNode;
+import org.codehaus.groovy.ast.ModuleNode;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.CompilationUnit;
 import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.control.Phases;
 import org.codehaus.groovy.control.SourceUnit;
-import org.codehaus.groovy.control.customizers.ImportCustomizer;
 import org.codehaus.groovy.control.io.FileReaderSource;
 import org.codehaus.groovy.control.io.ReaderSource;
 import org.codehaus.groovy.control.io.StringReaderSource;
@@ -71,46 +75,32 @@ import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
 public class ScriptCompiler {
 
     private static final String DEFAULT_CODE_BASE = "/groovy/shell";
-    private static final List<String> DEFAULT_IMPORT_NAMES = List.of(
-        "java.nio.file.Path",
-        "nextflow.Channel",
-        "nextflow.script.types.Value",
-        "nextflow.util.Duration",
-        "nextflow.util.MemoryUnit",
-        "nextflow.util.VersionNumber"
-    );
     private static final String MAIN_CLASS_NAME = "Main";
     private static final String BASE_CLASS_NAME = "nextflow.script.BaseScript";
 
     private final CompilerConfiguration config;
     private final GroovyClassLoader loader;
+    private final Path projectDir;
 
     private Compiler compiler;
 
-    public ScriptCompiler(boolean debug, Path targetDirectory, ClassLoader parent) {
-        this(getConfig(debug, targetDirectory), parent);
+    public ScriptCompiler(boolean debug, Path targetDirectory, ClassLoader parent, Path projectDir) {
+        this(getConfig(debug, targetDirectory), parent, projectDir);
     }
 
-    public ScriptCompiler(CompilerConfiguration config, ClassLoader parent) {
+    public ScriptCompiler(CompilerConfiguration config, ClassLoader parent, Path projectDir) {
         this.config = config;
         this.loader = new GroovyClassLoader(parent, config);
+        this.projectDir = projectDir;
     }
 
     private static CompilerConfiguration getConfig(boolean debug, Path targetDirectory) {
-        var importCustomizer = new ImportCustomizer();
-        for ( var name : DEFAULT_IMPORT_NAMES )
-            importCustomizer.addImports(name);
-        importCustomizer.addImport("channel", "nextflow.Channel");
-        importCustomizer.addStaticStars("nextflow.Nextflow");
-
         var config = new CompilerConfiguration();
-        config.addCompilationCustomizers(importCustomizer);
         config.setScriptBaseClass(BASE_CLASS_NAME);
         config.setPluginFactory(new ScriptParserPluginFactory());
         config.setDebug(debug);
         if( targetDirectory != null )
             config.setTargetDirectory(targetDirectory.toFile());
-
         return config;
     }
 
@@ -211,13 +201,13 @@ public class ScriptCompiler {
 
     private class ScriptCompilationUnit extends CompilationUnit {
 
-        private static final List<ClassNode> DEFAULT_IMPORTS = defaultImports();
-
-        private static List<ClassNode> defaultImports() {
-            return DEFAULT_IMPORT_NAMES.stream()
-                .map(name -> ClassHelper.makeWithoutCaching(name))
-                .toList();
-        }
+        private static final List<ClassNode> DEFAULT_IMPORTS = List.of(
+            ClassHelper.makeWithoutCaching("java.nio.file.Path"),
+            ClassHelper.makeWithoutCaching("nextflow.script.types.Value"),
+            ClassHelper.makeWithoutCaching("nextflow.util.Duration"),
+            ClassHelper.makeWithoutCaching("nextflow.util.MemoryUnit"),
+            ClassHelper.makeWithoutCaching("nextflow.util.VersionNumber")
+        );
 
         private SourceUnit entry;
 
@@ -227,6 +217,10 @@ public class ScriptCompiler {
 
         ScriptCompilationUnit(CompilerConfiguration configuration, GroovyClassLoader loader) {
             super(configuration, null, loader);
+            // Replace the compile unit with one that renames types before
+            // the duplicate class check, avoiding collisions between modules that
+            // declare types with the same name.
+            this.ast = new ScriptCompileUnit(getClassLoader(), null, getConfiguration());
             super.addPhaseOperation(source -> analyze(source), Phases.CONVERSION);
         }
 
@@ -261,7 +255,7 @@ public class ScriptCompiler {
         private void analyze(SourceUnit source) {
             // on first pass, recursively add included modules to queue
             if( entry == null ) {
-                modules = new ModuleResolver(compiler).resolve(source, uri -> createSourceUnit(uri));
+                modules = new ModuleResolver(projectDir, compiler).resolve(source, uri -> createSourceUnit(uri));
                 for( var su : modules )
                     addSource(su);
                 entry = source;
@@ -274,12 +268,21 @@ public class ScriptCompiler {
             // initialize script class
             var cn = source.getAST().getClasses().get(0);
 
+            // construct script imports
+            var sn = (ScriptNode) source.getAST();
+            var imports = new ArrayList<ClassNode>();
+            imports.addAll(DEFAULT_IMPORTS);
+            var channelType = sn.isTypingEnabled()
+                ? ClassHelper.makeWithoutCaching("nextflow.script.types.Channel")
+                : ClassHelper.makeWithoutCaching("nextflow.Channel");
+            imports.add(channelType);
+
             // perform strict syntax checking
-            var includeResolver = new ResolveIncludeVisitor(source, compiler);
+            var includeResolver = new ResolveIncludeVisitor(source, projectDir, compiler);
             includeResolver.visit();
             for( var error : includeResolver.getErrors() )
                 source.getErrorCollector().addErrorAndContinue(error);
-            new ScriptResolveVisitor(source, this, DEFAULT_IMPORTS, Collections.emptyList()).visit();
+            new ScriptResolveVisitor(source, this, imports, Collections.emptyList()).visit();
             if( source.getErrorCollector().hasErrors() )
                 return;
             new TypeCheckingVisitor(source).visit();
@@ -290,6 +293,15 @@ public class ScriptCompiler {
             callSites.putAll(new CallSiteCollector().apply(source));
 
             // convert to Groovy
+            for ( var type : DEFAULT_IMPORTS )
+                sn.addImport(null, type);
+            sn.addStaticStarImport(null, ClassHelper.makeWithoutCaching("nextflow.Nextflow"));
+
+            var channelNamespace = sn.isTypingEnabled()
+                ? ClassHelper.makeWithoutCaching("nextflow.dataflow.ChannelNamespace")
+                : ClassHelper.makeWithoutCaching("nextflow.Channel");
+            sn.addImport("channel", channelNamespace);
+
             new ScriptToGroovyVisitor(source).visit();
             new StripTypesVisitor(source).visitClass(cn);
             new PathCompareVisitor(source).visitClass(cn);
@@ -331,6 +343,31 @@ public class ScriptCompiler {
                     .putUnencodedChars(uri.toString())
                     .hash();
             return "_nf_script_" + hash;
+        }
+    }
+
+    /**
+     * Custom CompileUnit that renames types with a unique package prefix
+     * before adding them to the class map, preventing duplicate class name errors
+     * when multiple modules declare types with the same name.
+     */
+    private static class ScriptCompileUnit extends CompileUnit {
+
+        ScriptCompileUnit(GroovyClassLoader loader, CodeSource codeSource, CompilerConfiguration config) {
+            super(loader, codeSource, config);
+        }
+
+        @Override
+        public void addModule(ModuleNode module) {
+            // Use the script class name as the package name for declared typess
+            var classes = module.getClasses();
+            var scriptClass = classes.get(0);
+            var packageName = scriptClass.getNameWithoutPackage();
+            for( int i = 1; i < classes.size(); i++ ) {
+                var cn = classes.get(i);
+                cn.setName(packageName + "." + cn.getNameWithoutPackage());
+            }
+            super.addModule(module);
         }
     }
 

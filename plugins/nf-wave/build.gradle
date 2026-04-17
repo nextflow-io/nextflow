@@ -20,7 +20,7 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '25.11.0-edge'
+    nextflowVersion = '26.03.0-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Provides dynamic container building and augmentation capabilities with on-demand software installation and advanced container management features'
@@ -51,7 +51,7 @@ configurations {
 dependencies {
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
-    compileOnly 'org.pf4j:pf4j:3.12.0'
+    compileOnly 'org.pf4j:pf4j:3.14.1'
     compileOnly 'io.seqera:lib-trace:0.1.0'
     compileOnly 'io.seqera:lib-httpx:2.1.0'
     compileOnly 'org.apache.commons:commons-lang3:3.18.0'
@@ -66,6 +66,6 @@ dependencies {
     api 'io.seqera:wave-utils:1.31.1'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.30"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.30"
+    testImplementation "org.apache.groovy:groovy:4.0.31"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.31"
 }

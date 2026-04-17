@@ -31,6 +31,57 @@ class CmdLintTest extends Specification {
     @Rule
     OutputCapture capture = new OutputCapture()
 
+    CmdLint createCmdLint(Map opts = null) {
+        def cmd = new CmdLint()
+        cmd.launcher = new Launcher(
+            options: new CliOptions(opts ?: [ansiLog: false])
+        )
+        return cmd
+    }
+
+    def 'should read files from positional args and -files-from option' () {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+        dir.resolve('main.nf').text = ''
+        dir.resolve('nextflow.config').text = ''
+        and:
+        def fileList = dir.resolve('files.txt')
+        fileList.text = dir.resolve('nextflow.config').toString() + '\n'
+
+        when:
+        def cmd = createCmdLint()
+        cmd.args = [dir.resolve('main.nf').toString()]
+        cmd.filesFrom = fileList.toFile().toString()
+        cmd.run()
+
+        then:
+        capture.toString().contains(dir.resolve('main.nf').toString())
+        capture.toString().contains(dir.resolve('nextflow.config').toString())
+
+        cleanup:
+        dir?.deleteDir()
+    }
+
+    def 'should throw error when -files-from file is empty' () {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+        def fileList = dir.resolve('files.txt')
+        fileList.text = '\n'
+
+        when:
+        def cmd = createCmdLint()
+        cmd.filesFrom = fileList.toFile().toString()
+        cmd.run()
+
+        then:
+        thrown(AbortOperationException)
+
+        cleanup:
+        dir?.deleteDir()
+    }
+
     def 'should report compilation errors' () {
 
         given:
@@ -60,11 +111,8 @@ class CmdLintTest extends Specification {
             '''
 
         when:
-        def cmd = new CmdLint()
+        def cmd = createCmdLint()
         cmd.args = [dir.toFile().toString()]
-        cmd.launcher = Mock(Launcher) {
-            getOptions() >> Mock(CliOptions)
-        }
         cmd.run()
 
         then:
@@ -81,6 +129,38 @@ class CmdLintTest extends Specification {
         dir?.deleteDir()
     }
 
+    def 'should add lib directory to class loader' () {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+
+        dir.resolve('main.nf').text = '''\
+            println Utils.hello()
+            '''
+
+        dir.resolve('lib').mkdir()
+        dir.resolve('lib/Utils.groovy').text = '''\
+            class Utils {
+
+                String hello() {
+                    return 'Hello!'
+                }
+            }
+            '''
+
+        when:
+        def cmd = createCmdLint()
+        cmd.args = [dir.toString()]
+        cmd.projectDir = dir.toString()
+        cmd.run()
+
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        dir?.deleteDir()
+    }
+
     def 'should suppress progress with -q flag'() {
 
         given:
@@ -88,14 +168,8 @@ class CmdLintTest extends Specification {
         dir.resolve('main.nf').text = ''
 
         when:
-        def cmd = new CmdLint()
+        def cmd = createCmdLint(ansiLog: false, quiet: true)
         cmd.args = [dir.toFile().toString()]
-        cmd.launcher = Mock(Launcher) {
-            getOptions() >> Mock(CliOptions) {
-                isQuiet() >> true
-                getAnsiLog() >> false
-            }
-        }
         cmd.run()
 
         then:
@@ -120,14 +194,8 @@ class CmdLintTest extends Specification {
             '''
 
         when:
-        def cmd = new CmdLint()
+        def cmd = createCmdLint(ansiLog: false, quiet: true)
         cmd.args = [dir.toFile().toString()]
-        cmd.launcher = Mock(Launcher) {
-            getOptions() >> Mock(CliOptions) {
-                isQuiet() >> true
-                getAnsiLog() >> false
-            }
-        }
         cmd.run()
 
         then:

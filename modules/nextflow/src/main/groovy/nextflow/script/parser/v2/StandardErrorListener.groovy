@@ -30,8 +30,11 @@ import org.fusesource.jansi.AnsiConsole
  */
 @CompileStatic
 class StandardErrorListener implements ErrorListener {
+    // can be 'full', 'extended', or 'concise'
     private String mode
+
     private boolean ansiLog
+
     private boolean quiet
 
     StandardErrorListener(String mode, boolean ansiLog, boolean quiet=false) {
@@ -45,6 +48,9 @@ class StandardErrorListener implements ErrorListener {
         return Ansi.ansi()
     }
 
+    // Even though AnsiConsole already strips ANSI characters when
+    // ANSI logging is disabled, using System.out anyway allows for
+    // unit tests to inspect stdout
     private void print(Object text) {
         final str = text.toString()
         if( ansiLog ) {
@@ -189,10 +195,10 @@ class StandardErrorListener implements ErrorListener {
                 else term.fg(color).a("│").reset().a(" ")
 
                 // Print carets underneath the range
-                String marker = ' ' * adjStart
-                String carets = '^' * Math.max(1, adjEnd - adjStart)
+                final marker = ' ' * adjStart
+                final carets = '^' * Math.max(1, adjEnd - adjStart)
                 term.a("    | ")
-                    .fg(color).bold().a(marker + carets).reset().newline()
+                    .fg(color).bold().a(marker).a(carets).reset().newline()
             }
             else {
                 term.a(Ansi.Attribute.INTENSITY_FAINT).a(line).reset().newline()

@@ -927,7 +927,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         folder?.deleteDir()
     }
 
-    def 'should load current params in included module' () {
+    def 'should load legacy params in included module' () {
         given:
         def folder = Files.createTempDirectory('test')
 
@@ -951,6 +951,77 @@ class ScriptIncludesTest extends Dsl2Spec {
         def result = runScript(folder.resolve('main.nf'))
         then:
         result == [outdir: 'results']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should load typed params in included module' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        folder.resolve('main.nf').text = '''
+            include { echoParams } from './module.nf'
+
+            params {
+                outdir: String = "results"
+            }
+
+            workflow {
+                echoParams()
+            }
+            '''
+
+        folder.resolve('module.nf').text = '''
+            def echoParams() {
+                return params
+            }
+            '''
+
+        when:
+        def result = runScript(folder.resolve('main.nf'))
+        then:
+        result == [outdir: 'results']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should ignore params block from included modules' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        folder.resolve('main.nf').text = '''
+            include { test2 } from './module.nf'
+
+            params {
+                test1: String = "test"
+            }
+
+            workflow {
+                params
+            }
+            '''
+
+        folder.resolve('module.nf').text = '''
+
+            params {
+                test2: String = "test2"
+            }
+
+            def test2() {
+            }
+            '''
+
+        when:
+        def result = runScript(folder.resolve('main.nf'))
+        then:
+        result == [test1: 'test']
+
+        when:
+        result = runScript(folder.resolve('main.nf'), params: [test1: 'hello'])
+        then:
+        result == [test1: 'hello']
 
         cleanup:
         folder?.deleteDir()

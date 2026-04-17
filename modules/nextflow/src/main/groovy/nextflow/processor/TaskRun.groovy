@@ -24,7 +24,6 @@ import java.util.function.Function
 
 import com.google.common.hash.HashCode
 import groovy.transform.Memoized
-import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.conda.CondaCache
@@ -41,7 +40,6 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
-import nextflow.script.ProcessConfigV1
 import nextflow.script.ProcessConfigV2
 import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
@@ -561,6 +559,7 @@ class TaskRun implements Cloneable {
     static final public String CMD_STAGE = '.command.stage'
     static final public String CMD_TRACE = '.command.trace'
     static final public String CMD_ENV = '.command.env'
+    static final public String FUSION_TRACE = '.fusion/trace.json'
 
 
     String toString( ) {
@@ -754,7 +753,7 @@ class TaskRun implements Cloneable {
 
     String getContainerPlatform() {
         final result = config.getArchitecture()
-        return result ? result.dockerArch : containerResolver().defaultContainerPlatform()
+        return result ? result.containerPlatform() : containerResolver().defaultContainerPlatform()
     }
 
     ResourcesBundle getModuleBundle() {

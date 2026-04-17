@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import groovy.lang.Closure;
+import nextflow.script.types.ParamsMap;
 
 /**
  * DSL scope for the workflow output definition.
@@ -35,9 +36,9 @@ public interface OutputDsl extends DslScope {
 
     @Constant("params")
     @Description("""
-        Map of workflow parameters specified in the config file or as command line options.
+        Record of pipeline parameters specified in the config file or on the command line.
     """)
-    Map<String,Object> getParams();
+    ParamsMap getParams();
 
     @Description("""
         *Currently only supported for S3.*

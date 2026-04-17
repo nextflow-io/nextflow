@@ -12,7 +12,7 @@ This guide details fundamental skills to run a basic Nextflow pipeline. It inclu
 
 You will need the following to get started:
 
-- Nextflow version 25.10 or later. See {ref}`install-page` for installation instructions. If you have an older version, see {ref}`updating-nextflow` to update.
+- Nextflow version 25.10 or later. See {ref}`install-page` for installation instructions. If you have an older version, see {ref}`updating-nextflow-page` to update.
 
 ## Run a pipeline
 
