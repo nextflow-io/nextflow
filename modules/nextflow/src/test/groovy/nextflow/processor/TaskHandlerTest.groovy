@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.LongAdder
 
 import nextflow.Session
 import nextflow.executor.Executor
+import nextflow.trace.TraceRecord
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
@@ -244,7 +245,7 @@ class TaskHandlerTest extends Specification {
         handler.isSubmitted() == EXPECT_SUBMITTED
         handler.isActive() == EXPECTED_ACTIVE
         handler.isCompleted() == EXPECT_COMPLETE
-        
+
         where:
         STATUS              | EXPECT_NEW  | EXPECT_SUBMITTED | EXPECT_RUNNING | EXPECTED_ACTIVE | EXPECT_COMPLETE
         TaskStatus.NEW      | true        | false            | false          | false           | false
@@ -279,6 +280,69 @@ class TaskHandlerTest extends Specification {
         handler.kill()
         then:
         0 * handler.killTask()
+    }
+
+    def 'should parse Fusion trace and set gpuMetrics'() {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        folder.resolve('.fusion').mkdir()
+        folder.resolve(TaskRun.FUSION_TRACE).text = '{"proc":{"realtime":100},"gpu":{"name":"Tesla T4","pct":75,"peak":100}}'
+
+        def task = new TaskRun(workDir: folder)
+        task.processor = Mock(TaskProcessor)
+        task.processor.getExecutor() >> Mock(Executor) { isFusionEnabled() >> true }
+
+        def handler = Spy(TaskHandler)
+        handler.task = task
+
+        def record = new TraceRecord()
+
+        when:
+        handler.parseFusionTrace(record)
+
+        then:
+        record.gpuMetrics.name == 'Tesla T4'
+        record.gpuMetrics.pct == 75
+        record.gpuMetrics.peak == 100
+    }
+
+    def 'should not read Fusion trace when Fusion is disabled'() {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def task = new TaskRun(workDir: folder)
+        task.processor = Mock(TaskProcessor)
+        task.processor.getExecutor() >> Mock(Executor) { isFusionEnabled() >> false }
+
+        def handler = Spy(TaskHandler)
+        handler.task = task
+
+        def record = new TraceRecord()
+
+        when:
+        handler.parseFusionTrace(record)
+
+        then:
+        record.gpuMetrics == null
+    }
+
+    def 'should handle missing Fusion trace file gracefully'() {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def task = new TaskRun(workDir: folder)
+        task.processor = Mock(TaskProcessor)
+        task.processor.getExecutor() >> Mock(Executor) { isFusionEnabled() >> true }
+
+        def handler = Spy(TaskHandler)
+        handler.task = task
+
+        def record = new TraceRecord()
+
+        when:
+        handler.parseFusionTrace(record)
+
+        then:
+        noExceptionThrown()
+        record.gpuMetrics == null
     }
 
     @Unroll

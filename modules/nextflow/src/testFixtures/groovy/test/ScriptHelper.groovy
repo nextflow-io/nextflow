@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,8 @@ import nextflow.Session
 import nextflow.config.ConfigParserFactory
 import nextflow.executor.Executor
 import nextflow.executor.ExecutorFactory
+import nextflow.dataflow.ChannelImpl
+import nextflow.dataflow.ValueImpl
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskProcessor
@@ -190,7 +192,7 @@ class ScriptHelper {
         def session = opts.config ? new MockSession(opts.config) : new MockSession()
         session.setBinding(new ScriptBinding())
 
-        session.init( new ScriptFile(path) )
+        session.init( new ScriptFile(path), null, opts.params, null )
         session.start()
 
         def loader = ScriptLoaderFactory.create(session)
@@ -221,7 +223,7 @@ class ScriptHelper {
         def cl = (Closure)action.clone()
         cl.setDelegate(session.binding)
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
-        
+
         def result = normalizeResult(cl.call())
 
         session.fireDataflowNetwork()
@@ -248,6 +250,12 @@ class ScriptHelper {
     }
 
     private static Object normalizeResult0(value) {
+        if( value instanceof ChannelImpl )
+            return value.getSource().createReadChannel()
+
+        if( value instanceof ValueImpl )
+            return value.getSource()
+
         if( value instanceof ChannelOut ) {
             def result = new ArrayList<>(value.size())
             for( def el : value )

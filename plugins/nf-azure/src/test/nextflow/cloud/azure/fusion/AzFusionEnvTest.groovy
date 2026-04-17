@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.azure.fusion
@@ -189,12 +188,12 @@ class AzFusionEnvTest extends Specification {
         Global.session = Mock(Session) {
             getConfig() >> [azure: [storage: [accountName: 'x1', accountKey: 'y1', sasToken: 'z1']]]
         }
-        
+
         when:
         def config = Mock(FusionConfig)
         def fusionEnv = new AzFusionEnv()
         def env = fusionEnv.getEnvironment('az', config)
-        
+
         then:
         def ex = thrown(IllegalArgumentException)
         ex.message.contains('Azure Storage Access key and SAS token detected')
@@ -219,7 +218,7 @@ class AzFusionEnvTest extends Specification {
         !env.AZURE_STORAGE_SAS_TOKEN  // SAS token should NOT be present
         env.size() == 2  // Only account name and managed identity
     }
-    
+
     def 'should use pool identity from batch config when available'() {
         given:
         def NAME = 'myaccount'

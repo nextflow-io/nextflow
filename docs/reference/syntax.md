@@ -34,6 +34,7 @@ A Nextflow script may contain the following top-level declarations:
 - Process definitions
 - Function definitions
 - Enum types
+- Record types
 - Output block
 
 Script declarations are in turn composed of statements and expressions.
@@ -107,6 +108,8 @@ The following definitions can be included:
 - Functions
 - Processes
 - Named workflows
+- *New in 26.04:* Enum types
+- *New in 26.04:* Record types
 
 ### Params block
 
@@ -193,6 +196,35 @@ In order for a script to be executable, it must either define an entry workflow 
 
 Entry workflow definitions are ignored when a script is included as a module. This way, the same script can be included as a module or executed as a pipeline.
 
+(syntax-workflow-typed)=
+
+### Workflow (typed)
+
+A typed workflow is a workflow that uses static typing for inputs and outputs:
+
+```nextflow
+nextflow.preview.types = true
+
+workflow greet {
+    take:
+    greetings: Channel<String>
+
+    main:
+    messages = greetings.map { v -> "$v world!" }
+
+    emit:
+    messages: Channel<String>
+}
+```
+
+Typed workflows have the following new features:
+
+- Each workflow input in the `take:` section has a name and a type.
+
+- Each named workflow output in the `emit:` section may specify a type.
+
+See {ref}`workflow-typed-page` for more information on the semantics of typed workflows.
+
 (syntax-process)=
 
 ### Process
@@ -266,9 +298,11 @@ See {ref}`process-page` for more information on the semantics of each process se
 
 ### Process (typed)
 
-A typed process is a process that uses static types for inputs and/or outputs:
+A typed process is a process that uses static typing for inputs and outputs:
 
 ```nextflow
+nextflow.preview.types = true
+
 process greet {
     input: 
     greeting: String
@@ -360,9 +394,19 @@ enum Day {
 
 Enum values in the above example can be accessed as `Day.MONDAY`, `Day.TUESDAY`, and so on.
 
-:::{note}
-Enum types cannot be included across modules at this time.
-:::
+(syntax-record-type)=
+
+### Record type
+
+A record type declaration consists of a name and a body. The body consists of one or more fields, where each field has a name and a type:
+
+```nextflow
+record FastqPair {
+    id: String
+    fastq_1: Path
+    fastq_2: Path
+}
+```
 
 ### Output block
 

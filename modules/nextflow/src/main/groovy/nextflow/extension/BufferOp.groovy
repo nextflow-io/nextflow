@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -96,7 +96,7 @@ class BufferOp {
         if( params?.skip )
             this.skip = params.skip as int
         if( params?.size )
-            this.size = params.size as int 
+            this.size = params.size as int
         if( params?.remainder == true )
             this.remainder = true
 

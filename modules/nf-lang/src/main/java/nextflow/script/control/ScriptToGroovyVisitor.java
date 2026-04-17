@@ -1,5 +1,5 @@
 /*
- * Copyright 2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,14 +32,17 @@ import nextflow.script.ast.ParamNodeV1;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ProcessNodeV1;
 import nextflow.script.ast.ProcessNodeV2;
+import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
 import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.CodeVisitorSupport;
 import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.VariableScope;
+import org.codehaus.groovy.ast.expr.ArgumentListExpression;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
 import org.codehaus.groovy.ast.expr.DeclarationExpression;
 import org.codehaus.groovy.ast.expr.Expression;
@@ -89,12 +92,17 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         if( moduleNode == null )
             return;
 
+        if( moduleNode.isTypingEnabled() )
+            moduleNode.addStatement(stmt(callThisX("enableTyping", new ArgumentListExpression())));
+
         var declarations = moduleNode.getDeclarations();
 
         declarations.sort(Comparator.comparing(node -> node.getLineNumber()));
 
         for( var decl : declarations ) {
-            if( decl instanceof FeatureFlagNode ffn )
+            if( decl instanceof ClassNode cn && cn.isEnum() )
+                visitEnum(cn);
+            else if( decl instanceof FeatureFlagNode ffn )
                 visitFeatureFlag(ffn);
             else if( decl instanceof FunctionNode fn )
                 visitFunction(fn);
@@ -108,6 +116,8 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
                 visitParamV1(pn);
             else if( decl instanceof ProcessNode pn )
                 visitProcess(pn);
+            else if( decl instanceof RecordNode rn )
+                visitRecord(rn);
             else if( decl instanceof WorkflowNode wn )
                 visitWorkflow(wn);
         }
@@ -118,6 +128,10 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitFeatureFlag(FeatureFlagNode node) {
+        // static typing is enabled per-script rather than globally
+        if( "nextflow.preview.types".equals(node.name) )
+            return;
+
         var names = node.name.split("\\.");
         Expression target = varX(DefaultGroovyMethods.head(names));
         for( var name : DefaultGroovyMethods.tail(names) )
@@ -282,6 +296,18 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             .toList();
         var closure = closureX(null, block(new VariableScope(), statements));
         var result = stmt(callThisX("output", args(closure)));
+        moduleNode.addStatement(result);
+    }
+
+    @Override
+    public void visitRecord(RecordNode node) {
+        var result = stmt(callThisX("declareType", args(classX(node))));
+        moduleNode.addStatement(result);
+    }
+
+    @Override
+    public void visitEnum(ClassNode node) {
+        var result = stmt(callThisX("declareType", args(classX(node))));
         moduleNode.addStatement(result);
     }
 

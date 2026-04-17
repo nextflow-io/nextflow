@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -190,7 +190,7 @@ class LauncherTest extends Specification {
         launcher.normalizeArgs('run','-with-cloudcache') == ['run', '-with-cloudcache', '-']
         launcher.normalizeArgs('run','-with-cloudcache', '-x') == ['run', '-with-cloudcache', '-', '-x']
         launcher.normalizeArgs('run','-with-cloudcache', 's3://foo/bar') == ['run', '-with-cloudcache','s3://foo/bar']
-        
+
         launcher.normalizeArgs('run','-with-tower') == ['run', '-with-tower', '-']
         launcher.normalizeArgs('run','-with-tower', '-x') == ['run', '-with-tower', '-', '-x']
         launcher.normalizeArgs('run','-with-tower', 'foo.com') == ['run', '-with-tower','foo.com']
@@ -279,7 +279,7 @@ class LauncherTest extends Specification {
     def 'should validate isValue' () {
         expect:
         Launcher.isValue(STR) == EXPECTED
-        
+
         where:
         STR                 | EXPECTED
         'foo'               | true
@@ -414,7 +414,7 @@ class LauncherTest extends Specification {
 
         given:
         System.properties.remove('http.nonProxyHosts')
-        
+
         when:
         Launcher.setNoProxy(ENV)
         then:

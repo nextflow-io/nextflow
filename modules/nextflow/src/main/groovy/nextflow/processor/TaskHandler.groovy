@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,7 +106,7 @@ abstract class TaskHandler {
             killTask()
         }
     }
-    
+
     /**
      * Submit the task for execution.
      *
@@ -190,7 +190,7 @@ abstract class TaskHandler {
             return null
         }
     }
-    
+
     /**
      * @return An {@link TraceRecord} instance holding task runtime information
      */
@@ -207,7 +207,7 @@ abstract class TaskHandler {
         record.process = task.processor.getName()
         record.tag = task.config.tag
         record.module = task.config.module
-        record.container = task.getContainer()
+        record.container = task.isContainerEnabled() ? task.getContainer() : null
         record.attempt = task.config.attempt
 
         record.script = task.getTraceScript()
@@ -251,9 +251,30 @@ abstract class TaskHandler {
             catch( IOException e ) {
                 log.debug "[WARN] Cannot read trace file: $file -- Cause: ${e.message}"
             }
+
+            parseFusionTrace(record)
         }
 
         return record
+    }
+
+    protected void parseFusionTrace(TraceRecord record) {
+        if( !task.processor.executor.isFusionEnabled() )
+            return
+        final fusionTrace = task.workDir?.resolve(TaskRun.FUSION_TRACE)
+        try {
+            if( fusionTrace ) {
+                final gpu = TraceRecord.parseFusionTraceFile(fusionTrace)
+                if( gpu )
+                    record.gpuMetrics = gpu
+            }
+        }
+        catch( NoSuchFileException e ) {
+            // ignore it
+        }
+        catch( Exception e ) {
+            log.debug "[WARN] Cannot read Fusion trace file: $fusionTrace -- Cause: ${e.message}"
+        }
     }
 
     /**

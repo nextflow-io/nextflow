@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,10 +12,10 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 package nextflow.cloud.aws.nio.util;
 
+import software.amazon.awssdk.services.s3.crt.S3CrtConnectionHealthConfiguration;
 import software.amazon.awssdk.services.s3.crt.S3CrtProxyConfiguration;
 import software.amazon.awssdk.services.s3.crt.S3CrtHttpConfiguration;
 import software.amazon.awssdk.services.s3.crt.S3CrtRetryConfiguration;
@@ -31,6 +31,8 @@ import java.util.Properties;
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
 public class S3AsyncClientConfiguration extends S3ClientConfiguration{
+
+    private static final long DEFAULT_SOCKET_TIMEOUT_MS = 30_000L;
 
     private S3CrtHttpConfiguration.Builder crtHttpConfiguration;
     private MultipartConfiguration.Builder multiPartBuilder;
@@ -120,9 +122,16 @@ public class S3AsyncClientConfiguration extends S3ClientConfiguration{
             crtHttpConfiguration().connectionTimeout(Duration.ofMillis(Long.parseLong(props.getProperty("connection_timeout"))));
         }
 
-        if( props.containsKey("socket_timeout")) {
-            log.warn("AWS client config - 'socket_timeout' doesn't exist in AWS SDK V2 Async Client");
-        }
+        final long socketTimeoutMs = props.containsKey("socket_timeout")
+            ? Long.parseLong(props.getProperty("socket_timeout"))
+            : DEFAULT_SOCKET_TIMEOUT_MS;
+        log.trace("AWS client config - socket_timeout: {} (using CRT health configuration with minimum throughput 1bps)", socketTimeoutMs);
+        crtHttpConfiguration().connectionHealthConfiguration(
+            S3CrtConnectionHealthConfiguration.builder()
+                .minimumThroughputInBps(1L)
+                .minimumThroughputTimeout(Duration.ofMillis(socketTimeoutMs))
+                .build()
+        );
 
         if( props.containsKey("proxy_host")) {
             final String host = props.getProperty("proxy_host");

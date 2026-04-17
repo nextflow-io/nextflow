@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ import nextflow.util.Duration
 /**
  * Query NCBI SRA database and returns the retrieved FASTQs to the specified
  * target channel. Inspired to SRA-Explorer by Phil Ewels -- https://ewels.github.io/sra-explorer/
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j

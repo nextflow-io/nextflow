@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,6 +42,8 @@ public interface ScriptVisitor extends GroovyCodeVisitor {
     void visitProcessV1(ProcessNodeV1 node);
 
     void visitFunction(FunctionNode node);
+
+    void visitRecord(RecordNode node);
 
     void visitEnum(ClassNode node);
 

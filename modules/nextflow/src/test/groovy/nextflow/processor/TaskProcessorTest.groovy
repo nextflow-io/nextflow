@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -373,7 +373,7 @@ class TaskProcessorTest extends Specification {
         then:
         1 * processor.bindOutputs0(task3)
         and:
-        processor.@fairBuffers.size() == 2 
+        processor.@fairBuffers.size() == 2
         processor.@fairBuffers[0] == null
         processor.@fairBuffers[1] == task5
 

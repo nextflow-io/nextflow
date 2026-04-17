@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 plugins {
     id "com.gradleup.shadow" version "9.3.1"
 }
@@ -25,12 +41,12 @@ dependencies {
     api(project(':nf-commons'))
     api(project(':nf-httpfs'))
     api(project(':nf-lang'))
-    api "org.apache.groovy:groovy:4.0.30"
-    api "org.apache.groovy:groovy-nio:4.0.30"
-    api "org.apache.groovy:groovy-xml:4.0.30"
-    api "org.apache.groovy:groovy-json:4.0.30"
-    api "org.apache.groovy:groovy-templates:4.0.30"
-    api "org.apache.groovy:groovy-yaml:4.0.30"
+    api "org.apache.groovy:groovy:4.0.31"
+    api "org.apache.groovy:groovy-nio:4.0.31"
+    api "org.apache.groovy:groovy-xml:4.0.31"
+    api "org.apache.groovy:groovy-json:4.0.31"
+    api "org.apache.groovy:groovy-templates:4.0.31"
+    api "org.apache.groovy:groovy-yaml:4.0.31"
     api "org.slf4j:jcl-over-slf4j:2.0.17"
     api "org.slf4j:jul-to-slf4j:2.0.17"
     api "org.slf4j:log4j-over-slf4j:2.0.17"
@@ -50,15 +66,19 @@ dependencies {
     api ('org.yaml:snakeyaml:2.2')
     api ('org.jsoup:jsoup:1.15.4')
     api 'jline:jline:2.9'
-    api 'org.pf4j:pf4j:3.12.0'
+    api 'org.pf4j:pf4j:3.14.1'
     api 'dev.failsafe:failsafe:3.1.0'
     api 'io.seqera:lib-trace:0.1.0'
     api 'com.fasterxml.woodstox:woodstox-core:7.1.1'
+    api 'org.apache.commons:commons-compress:1.27.1'  // For tar.gz extraction
+    api 'io.seqera:npr-api:0.22.0'
+    api 'io.seqera:npr-client:0.22.0'
 
     testImplementation 'org.subethamail:subethasmtp:3.1.7'
     testImplementation (project(':nf-lineage'))
+    testImplementation 'org.wiremock:wiremock:3.13.1'
     // test configuration
-    testFixturesApi ("org.apache.groovy:groovy-test:4.0.30") { exclude group: 'org.apache.groovy' }
+    testFixturesApi ("org.apache.groovy:groovy-test:4.0.31") { exclude group: 'org.apache.groovy' }
     testFixturesApi ("org.objenesis:objenesis:3.4")
     testFixturesApi ("net.bytebuddy:byte-buddy:1.14.17")
     testFixturesApi ("org.spockframework:spock-core:2.4-groovy-4.0") { exclude group: 'org.apache.groovy' }

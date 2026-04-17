@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.regex.Pattern
 
+import groovy.json.JsonSlurper
 import groovy.json.StringEscapeUtils
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -124,6 +125,9 @@ class TraceRecord implements Serializable {
     transient private CloudMachineInfo machineInfo
     transient private ContainerMeta containerMeta
     transient private Integer numSpotInterruptions
+    transient private String logStreamId
+    transient private Map<String,Object> resourceAllocation
+    transient private Map<String,Object> gpuMetrics
 
     /**
      * Convert the given value to a string
@@ -520,6 +524,11 @@ class TraceRecord implements Serializable {
         return this
     }
 
+    static Map<String,Object> parseFusionTraceFile(Path file) {
+        final json = (Map) new JsonSlurper().parse(file)
+        return (Map<String,Object>) json.get('gpu')
+    }
+
     private long parseInt( String str, Path file, String row )  {
         try {
             str.toInteger()
@@ -622,11 +631,35 @@ class TraceRecord implements Serializable {
         this.numSpotInterruptions = numSpotInterruptions
     }
 
+    String getLogStreamId() {
+        return logStreamId
+    }
+
+    void setLogStreamId(String logStreamId) {
+        this.logStreamId = logStreamId
+    }
+
     ContainerMeta getContainerMeta() {
         return containerMeta
     }
 
     void setContainerMeta(ContainerMeta meta) {
         this.containerMeta = meta
+    }
+
+    Map<String,Object> getResourceAllocation() {
+        return resourceAllocation
+    }
+
+    void setResourceAllocation(Map<String,Object> value) {
+        this.resourceAllocation = value
+    }
+
+    Map<String,Object> getGpuMetrics() {
+        return gpuMetrics
+    }
+
+    void setGpuMetrics(Map<String,Object> value) {
+        this.gpuMetrics = value
     }
 }

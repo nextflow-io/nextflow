@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.cloud.aws.batch.model
 
 import software.amazon.awssdk.services.batch.model.JobDefinitionType
@@ -13,7 +29,7 @@ class RegisterJobDefinitionModelTest extends Specification {
     def 'should create empty model'() {
         when:
         def model = new RegisterJobDefinitionModel()
-        
+
         then:
         model.jobDefinitionName == null
         model.type == null
@@ -26,10 +42,10 @@ class RegisterJobDefinitionModelTest extends Specification {
     def 'should set and get job definition name'() {
         given:
         def model = new RegisterJobDefinitionModel()
-        
+
         when:
         def result = model.jobDefinitionName('test-job-def')
-        
+
         then:
         result == model
         model.jobDefinitionName == 'test-job-def'
@@ -38,10 +54,10 @@ class RegisterJobDefinitionModelTest extends Specification {
     def 'should set and get type'() {
         given:
         def model = new RegisterJobDefinitionModel()
-        
+
         when:
         def result = model.type(JobDefinitionType.CONTAINER)
-        
+
         then:
         result == model
         model.type == JobDefinitionType.CONTAINER
@@ -51,10 +67,10 @@ class RegisterJobDefinitionModelTest extends Specification {
         given:
         def model = new RegisterJobDefinitionModel()
         def capabilities = [PlatformCapability.EC2, PlatformCapability.FARGATE]
-        
+
         when:
         def result = model.platformCapabilities(capabilities)
-        
+
         then:
         result == model
         model.platformCapabilities == capabilities
@@ -67,10 +83,10 @@ class RegisterJobDefinitionModelTest extends Specification {
         given:
         def model = new RegisterJobDefinitionModel()
         def containerProps = new ContainerPropertiesModel()
-        
+
         when:
         def result = model.containerProperties(containerProps)
-        
+
         then:
         result == model
         model.containerProperties == containerProps
@@ -80,10 +96,10 @@ class RegisterJobDefinitionModelTest extends Specification {
         given:
         def model = new RegisterJobDefinitionModel()
         def params = ['key1': 'value1', 'key2': 'value2']
-        
+
         when:
         def result = model.parameters(params)
-        
+
         then:
         result == model
         model.parameters == params
@@ -96,10 +112,10 @@ class RegisterJobDefinitionModelTest extends Specification {
         given:
         def model = new RegisterJobDefinitionModel()
         def tags = ['env': 'test', 'project': 'nextflow']
-        
+
         when:
         def result = model.tags(tags)
-        
+
         then:
         result == model
         model.tags == tags
@@ -111,10 +127,10 @@ class RegisterJobDefinitionModelTest extends Specification {
     def 'should add tag entry when tags is null'() {
         given:
         def model = new RegisterJobDefinitionModel()
-        
+
         when:
         def result = model.addTagsEntry('key1', 'value1')
-        
+
         then:
         result == model
         model.tags != null
@@ -127,10 +143,10 @@ class RegisterJobDefinitionModelTest extends Specification {
         given:
         def model = new RegisterJobDefinitionModel()
         model.tags(['existing': 'tag'])
-        
+
         when:
         def result = model.addTagsEntry('new', 'value')
-        
+
         then:
         result == model
         model.tags.size() == 2
@@ -141,12 +157,12 @@ class RegisterJobDefinitionModelTest extends Specification {
     def 'should handle multiple tag entries'() {
         given:
         def model = new RegisterJobDefinitionModel()
-        
+
         when:
         model.addTagsEntry('key1', 'value1')
              .addTagsEntry('key2', 'value2')
              .addTagsEntry('key3', 'value3')
-        
+
         then:
         model.tags.size() == 3
         model.tags['key1'] == 'value1'
@@ -157,11 +173,11 @@ class RegisterJobDefinitionModelTest extends Specification {
     def 'should handle tag entry overwrite'() {
         given:
         def model = new RegisterJobDefinitionModel()
-        
+
         when:
         model.addTagsEntry('key1', 'value1')
              .addTagsEntry('key1', 'value2')
-        
+
         then:
         model.tags.size() == 1
         model.tags['key1'] == 'value2'
@@ -174,7 +190,7 @@ class RegisterJobDefinitionModelTest extends Specification {
         def capabilities = [PlatformCapability.EC2]
         def params = ['param1': 'value1']
         def tags = ['tag1': 'value1']
-        
+
         when:
         def result = model
             .jobDefinitionName('test-job')
@@ -184,7 +200,7 @@ class RegisterJobDefinitionModelTest extends Specification {
             .parameters(params)
             .tags(tags)
             .addTagsEntry('tag2', 'value2')
-        
+
         then:
         result == model
         model.jobDefinitionName == 'test-job'
@@ -200,12 +216,12 @@ class RegisterJobDefinitionModelTest extends Specification {
     def 'should handle empty collections'() {
         given:
         def model = new RegisterJobDefinitionModel()
-        
+
         when:
         model.platformCapabilities([])
              .parameters([:])
              .tags([:])
-        
+
         then:
         model.platformCapabilities == []
         model.parameters == [:]
@@ -220,7 +236,7 @@ class RegisterJobDefinitionModelTest extends Specification {
         def capabilities = [PlatformCapability.EC2, PlatformCapability.FARGATE]
         def params = ['param1': 'value1', 'param2': 'value2']
         def tags = ['tag1': 'value1', 'tag2': 'value2']
-        
+
         when:
         model.jobDefinitionName('test-job-def')
              .type(JobDefinitionType.CONTAINER)
@@ -228,9 +244,9 @@ class RegisterJobDefinitionModelTest extends Specification {
              .containerProperties(containerProps)
              .parameters(params)
              .tags(tags)
-        
+
         def request = model.toBatchRequest()
-        
+
         then:
         request instanceof RegisterJobDefinitionRequest
         request.jobDefinitionName() == 'test-job-def'
@@ -245,10 +261,10 @@ class RegisterJobDefinitionModelTest extends Specification {
     def 'should convert to RegisterJobDefinitionRequest with null fields'() {
         given:
         def model = new RegisterJobDefinitionModel()
-        
+
         when:
         def request = model.toBatchRequest()
-        
+
         then:
         request instanceof RegisterJobDefinitionRequest
         !request.jobDefinitionName()
@@ -264,14 +280,14 @@ class RegisterJobDefinitionModelTest extends Specification {
         def model = new RegisterJobDefinitionModel()
         def containerProps = new ContainerPropertiesModel()
         containerProps.image('nginx')
-        
+
         when:
         model.jobDefinitionName('minimal-job')
              .type(JobDefinitionType.CONTAINER)
              .containerProperties(containerProps)
-        
+
         def request = model.toBatchRequest()
-        
+
         then:
         request instanceof RegisterJobDefinitionRequest
         request.jobDefinitionName() == 'minimal-job'
@@ -287,7 +303,7 @@ class RegisterJobDefinitionModelTest extends Specification {
         given:
         def model = new RegisterJobDefinitionModel()
         def containerProps = new ContainerPropertiesModel()
-        
+
         when:
         model.jobDefinitionName('empty-collections-job')
              .type(JobDefinitionType.CONTAINER)
@@ -295,9 +311,9 @@ class RegisterJobDefinitionModelTest extends Specification {
              .containerProperties(containerProps)
              .parameters([:])
              .tags([:])
-        
+
         def request = model.toBatchRequest()
-        
+
         then:
         request instanceof RegisterJobDefinitionRequest
         request.jobDefinitionName() == 'empty-collections-job'
@@ -313,7 +329,7 @@ class RegisterJobDefinitionModelTest extends Specification {
         def model = new RegisterJobDefinitionModel()
         def containerProps = new ContainerPropertiesModel()
         containerProps.image('alpine')
-        
+
         when:
         def request = model
             .jobDefinitionName('chained-job')
@@ -322,7 +338,7 @@ class RegisterJobDefinitionModelTest extends Specification {
             .addTagsEntry('env', 'test')
             .addTagsEntry('project', 'nextflow')
             .toBatchRequest()
-        
+
         then:
         request instanceof RegisterJobDefinitionRequest
         request.jobDefinitionName() == 'chained-job'

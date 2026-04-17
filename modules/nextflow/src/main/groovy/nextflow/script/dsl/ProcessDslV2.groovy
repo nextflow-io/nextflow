@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -100,10 +100,10 @@ class ProcessDslV2 extends ProcessBuilder {
      * Declare a file or collection of files to be staged into
      * the task directory under the given file pattern.
      *
-     * @param filePattern [String | Closure]
      * @param value       [Path | Collection<Path> | Closure]
+     * @param filePattern [String | Closure]
      */
-    void stageAs(Object filePattern, Object value) {
+    void stageAs(Object value, Object filePattern) {
         inputs.addFile(new ProcessFileInput(filePattern, value))
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -224,7 +224,7 @@ class ReportSummary {
             result.q2 = round(quantile(sorted, 50))
             result.q3 = round(quantile(sorted, 75))
             result.max = round(quantile(sorted, 100))
-            // discard entry with all zero 
+            // discard entry with all zero
             if( result.min == 0 && result.min == result.max  )
                 return null
 

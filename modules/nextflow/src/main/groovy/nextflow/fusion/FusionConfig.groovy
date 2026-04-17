@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.fusion
@@ -56,6 +55,8 @@ class FusionConfig implements ConfigScope {
     final static private String PRODUCT_NAME = 'fusion'
 
     final static private Pattern VERSION_JSON = ~/https:\/\/.*\/releases\/v(\d+(?:\.\w+)*)-(\w*)\.json$/
+
+    final static private Pattern VERSION_PATTERN = ~/v(\d+(?:\.\w+)*)/
 
     @ConfigOption
     @Description("""
@@ -111,6 +112,8 @@ class FusionConfig implements ConfigScope {
     """)
     final String tags
 
+    final String targetVersion
+
     boolean enabled() { enabled }
 
     boolean exportStorageCredentials() {
@@ -150,6 +153,7 @@ class FusionConfig implements ConfigScope {
         this.privileged = opts.privileged == null || opts.privileged as boolean
         this.cacheSize = opts.cacheSize as MemoryUnit
         this.snapshots = opts.snapshots as boolean
+        this.targetVersion = opts.targetVersion as String
 
         if( containerConfigUrl && !validProtocol(containerConfigUrl))
             throw new IllegalArgumentException("Fusion container config URL should start with 'http:' or 'https:' protocol prefix - offending value: $containerConfigUrl")
@@ -202,7 +206,25 @@ class FusionConfig implements ConfigScope {
 
     String version() {
         return enabled
-            ? retrieveFusionVersion(this.containerConfigUrl ?: DEFAULT_FUSION_AMD64_URL)
+            ? retrieveFusionVersion(this.containerConfigUrl ?: targetFusionUrl(DEFAULT_FUSION_AMD64_URL))
             : null
+    }
+
+    /**
+     * Replace the version in a Fusion URL with the specified version.
+     *
+     * @param url The original URL e.g. {@code https://fusionfs.seqera.io/releases/v2.5-amd64.json}
+     * @param version The target version e.g. {@code 2.6}
+     * @return The URL with the version replaced e.g. {@code https://fusionfs.seqera.io/releases/v2.6-amd64.json}
+     */
+    static String replaceVersion(String url, String version) {
+        return url.replaceFirst(VERSION_PATTERN.pattern(), "v${version}")
+    }
+
+    /**
+     * Resolve the default Fusion URL, applying the {@code targetVersion} override if set.
+     */
+    String targetFusionUrl(String url) {
+        return targetVersion ? replaceVersion(url, targetVersion) : url
     }
 }

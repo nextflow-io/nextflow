@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -279,12 +279,12 @@ class TraceRecordTest extends Specification {
         rec.secureEnvString('AWS_KEY=12345') == 'AWS_KEY=[secure]'
 
         rec.secureEnvString('''\
-                foo=hello    
+                foo=hello
                 aws_key=d7sds89
                 git_token=909s-ds-'''
                 .stripIndent() ) ==
                 '''\
-                foo=hello    
+                foo=hello
                 aws_key=[secure]
                 git_token=[secure]'''.stripIndent()
 
@@ -371,6 +371,74 @@ class TraceRecordTest extends Specification {
 
         then:
         rec2.getNumSpotInterruptions() == null
+    }
+
+    def 'should manage gpuMetrics and not persist it across serialization'() {
+        given:
+        def rec = new TraceRecord()
+
+        expect:
+        rec.getGpuMetrics() == null
+
+        when:
+        rec.setGpuMetrics([name: 'Tesla T4', pct: 75, peak: 100])
+
+        then:
+        rec.getGpuMetrics() == [name: 'Tesla T4', pct: 75, peak: 100]
+
+        when:
+        def buf = rec.serialize()
+        def rec2 = TraceRecord.deserialize(buf)
+
+        then:
+        rec2.getGpuMetrics() == null
+    }
+
+    def 'should parse Fusion trace file and extract gpu block'() {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def file = folder.resolve('.fusion/trace.json')
+        file.parent.mkdir()
+        file.text = '{"proc":{"realtime":100},"gpu":{"name":"Tesla T4","mem":15360,"driver":"580.126.09","active_time":651030,"pct":75,"peak":100,"pct_mem":40.1,"peak_mem":74.1,"avg_mem":6161,"peak_mem_used":11388,"avg_mem_bw_util":43,"peak_mem_bw_util":83},"cgroup":{"version":"v2"}}'
+
+        when:
+        def gpu = TraceRecord.parseFusionTraceFile(file)
+
+        then:
+        gpu.name == 'Tesla T4'
+        gpu.mem == 15360
+        gpu.driver == '580.126.09'
+        gpu.active_time == 651030
+        gpu.pct == 75
+        gpu.peak == 100
+        gpu.avg_mem_bw_util == 43
+        gpu.peak_mem_bw_util == 83
+    }
+
+    def 'should return null when Fusion trace file has no gpu block'() {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def file = folder.resolve('trace.json')
+        file.text = '{"proc":{"realtime":100},"cgroup":{"version":"v2"}}'
+
+        when:
+        def gpu = TraceRecord.parseFusionTraceFile(file)
+
+        then:
+        gpu == null
+    }
+
+    def 'should throw exception when Fusion trace file has malformed JSON'() {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def file = folder.resolve('trace.json')
+        file.text = 'not valid json'
+
+        when:
+        TraceRecord.parseFusionTraceFile(file)
+
+        then:
+        thrown(Exception)
     }
 
 }

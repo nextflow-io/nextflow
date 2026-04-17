@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -46,6 +46,8 @@ class ParamsDsl {
     private Map<String,Param> declarations = [:]
 
     void declare(String name, Class type, boolean optional, Object defaultValue = null) {
+        if( defaultValue == null && type == Boolean )
+            defaultValue = false
         declarations[name] = new Param(name, type, optional, defaultValue)
     }
 
@@ -82,7 +84,15 @@ class ParamsDsl {
                 throw new ScriptRuntimeException("Parameter `$name` with type ${Types.getName(decl.type)} cannot be assigned to ${params[name]} [${Types.getName(actualType)}]")
         }
 
-        session.binding.setParams(params, true)
+        // propagate resolved params to all scripts for legacy compatibility
+        if( !session.binding.getScriptPath() )
+            session.binding.setParams(params, true)
+        for( final scriptPath : ScriptMeta.allScriptNames().values() ) {
+            if( !scriptPath )
+                continue
+            final script = ScriptMeta.getScriptByPath(scriptPath)
+            script.binding.setParams(params, true)
+        }
     }
 
     private Object resolveFromCli(Param decl, Object value) {

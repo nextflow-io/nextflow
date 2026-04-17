@@ -1,7 +1,24 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.script
 
 import java.nio.file.Files
 
+import nextflow.Global
 import test.Dsl2Spec
 
 import static test.ScriptHelper.*
@@ -18,7 +35,7 @@ class ScriptProcessRunTest extends Dsl2Spec {
         given:
         def SCRIPT = '''
         params.sampleId = 'SAMPLE_001'
-        
+
         process testProcess {
             input: val sampleId
             output: val result
@@ -42,7 +59,7 @@ class ScriptProcessRunTest extends Dsl2Spec {
         def tempFile = Files.createTempFile('test', '.txt')
         def SCRIPT = """
         params.dataFile = '${tempFile}'
-        
+
         process testProcess {
             input: path dataFile
             output: val result
@@ -67,14 +84,14 @@ class ScriptProcessRunTest extends Dsl2Spec {
         given:
         def SCRIPT = '''
         params.input = 'test'
-        
+
         process firstProcess {
             input: val input
             output: val result
             exec:
                 result = "First: $input"
         }
-        
+
         process secondProcess {
             input: val input
             output: val result
@@ -109,5 +126,36 @@ class ScriptProcessRunTest extends Dsl2Spec {
         then:
         def e = thrown(Exception)
         e.message.contains('Missing required parameter: --requiredParam')
+    }
+
+    def 'should cast boolean parameter to boolean' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        def module = folder.resolve('module.nf')
+        module.text = '''\
+            process quant {
+                input:
+                val alignment_mode
+
+                exec:
+                assert alignment_mode instanceof Boolean
+            }
+            '''
+
+        def spec = folder.resolve('meta.yml')
+        spec.text = '''\
+            input:
+            - name: alignment_mode
+              type: boolean
+            '''
+
+        when:
+        runScript(module, config: [params: [alignment_mode: 'false']])
+        then:
+        Global.session.isSuccess()
+
+        cleanup:
+        folder?.deleteDir()
     }
 }

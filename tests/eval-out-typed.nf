@@ -22,7 +22,7 @@ process foo {
     shell: String
 
     output:
-    shell_version = eval("$shell --version | cat -")
+    eval("$shell --version | cat -")
 
     script:
     '''
@@ -32,6 +32,5 @@ process foo {
 
 
 workflow {
-  foo('bash')
-  foo.out.shell_version.view{ it.readLines()[0] }
+  foo('bash').view { it -> it.readLines()[0] }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,8 +69,7 @@ public class WorkflowNode extends MethodNode {
         if( emits.size() == 1 ) {
             var first = emits.get(0);
             var emit = ((ExpressionStatement) first).getExpression();
-            if( emitTarget(emit) == null )
-                return emit.getType();
+            return emit.getType();
         }
         var cn = new ClassNode(Record.class);
         emits.stream()

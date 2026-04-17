@@ -16,15 +16,19 @@
  */
 
 params {
-  // List of IDs.
+  // Comma-separated list of IDs.
   input: String
 
   // Whether to save intermediate outputs.
-  save_intermeds: Boolean = false
+  save_intermeds: Boolean
+
+  // Method to use for analyzing samples.
+  method: String = 'auto'
 }
 
 workflow {
   main:
   println "params.input = ${params.input.tokenize(',')}"
   println "params.save_intermeds = ${params.save_intermeds}"
+  println "params.method = ${params.method}"
 }

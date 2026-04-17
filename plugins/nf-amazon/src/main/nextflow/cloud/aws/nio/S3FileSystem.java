@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,12 +12,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.aws.nio;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.FileStore;
 import java.nio.file.FileSystem;
@@ -34,7 +34,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 public class S3FileSystem extends FileSystem {
-	
+
 	private final S3FileSystemProvider provider;
 	private final S3Client client;
 	private final String endpoint;
@@ -82,10 +82,13 @@ public class S3FileSystem extends FileSystem {
 	@Override
 	public Iterable<Path> getRootDirectories() {
 		ImmutableList.Builder<Path> builder = ImmutableList.builder();
-
-		for (Bucket bucket : client.listBuckets()) {
-			builder.add(new S3Path(this, bucket.name()));
-		}
+        try {
+            for (Bucket bucket : client.listBuckets()) {
+                builder.add(new S3Path(this, bucket.name()));
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
 
 		return builder.build();
 	}
@@ -130,7 +133,7 @@ public class S3FileSystem extends FileSystem {
 
 	/**
 	 * get the endpoint associated with this fileSystem.
-	 * 
+	 *
 	 * @see <a href="http://docs.aws.amazon.com/general/latest/gr/rande.html">http://docs.aws.amazon.com/general/latest/gr/rande.html</a>
 	 * @return string
 	 */
