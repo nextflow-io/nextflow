@@ -42,7 +42,9 @@ import nextflow.util.Duration
 @ToString(includeNames = true, includePackage = false, includeFields = true, useGetters = false)
 @CompileStatic
 class WaveConfig implements ConfigScope {
+
     final private static String DEF_ENDPOINT = 'https://wave.seqera.io'
+
     final private static List<String> DEF_STRATEGIES = List.of('container','dockerfile','conda')
 
     final BuildOpts build
