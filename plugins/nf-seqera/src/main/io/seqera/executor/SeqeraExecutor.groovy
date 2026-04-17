@@ -117,7 +117,6 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         final labels = new Labels()
         if( seqeraConfig.autoLabels )
             labels.withWorkflowMetadata(session.workflowMetadata)
-        labels.withUserLabels(seqeraConfig.labels)
         final predictionModel = seqeraConfig.predictionModel ? PredictionModel.fromValue(seqeraConfig.predictionModel) : null
         final pipeline = new PipelineSpec()
                 .workflowId(workflowId)

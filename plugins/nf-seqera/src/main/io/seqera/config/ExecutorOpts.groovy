@@ -73,13 +73,6 @@ class ExecutorOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        Custom labels to apply to AWS resources for cost tracking and resource organization.
-        Labels are propagated to ECS tasks, capacity providers, and EC2 instances.
-    """)
-    final Map<String, String> labels
-
-    @ConfigOption
-    @Description("""
         When `true`, automatically adds workflow metadata labels (e.g. project name,
         run name, session ID) with the `nextflow.io/` prefix to the session (default: `false`).
     """)
@@ -126,8 +119,6 @@ class ExecutorOpts implements ConfigScope {
             : Duration.of('1 sec')
         // machine requirement settings
         this.machineRequirement = new MachineRequirementOpts(opts.machineRequirement as Map ?: Map.of())
-        // labels for cost tracking
-        this.labels = opts.labels as Map<String, String>
         this.autoLabels = opts.autoLabels as boolean ?: false
         // prediction model
         this.predictionModel = opts.predictionModel as String ?: null
@@ -163,10 +154,6 @@ class ExecutorOpts implements ConfigScope {
 
     MachineRequirementOpts getMachineRequirement() {
         return machineRequirement
-    }
-
-    Map<String, String> getLabels() {
-        return labels
     }
 
     boolean getAutoLabels() {

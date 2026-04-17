@@ -79,15 +79,6 @@ class Labels {
     }
 
     /**
-     * Add user-configured labels. These take precedence over implicit labels.
-     */
-    Labels withUserLabels(Map<String,String> labels) {
-        if( labels )
-            entries.putAll(labels)
-        return this
-    }
-
-    /**
      * Add config-level {@code process.resourceLabels}. Values are coerced to
      * string via {@link String#valueOf} to satisfy the scheduler API typing.
      */

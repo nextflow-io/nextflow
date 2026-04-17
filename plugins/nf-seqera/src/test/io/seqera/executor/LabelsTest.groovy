@@ -124,31 +124,6 @@ class LabelsTest extends Specification {
         !labels.entries.containsKey('seqera:sched:clusterId')
     }
 
-    def 'should allow user labels to override implicit labels'() {
-        given:
-        def workflow = Mock(WorkflowMetadata) {
-            getProjectName() >> 'hello'
-            getUserName() >> 'user1'
-            getRunName() >> 'happy_turing'
-            getSessionId() >> UUID.randomUUID()
-            isResume() >> false
-            getManifest() >> new Manifest([:])
-        }
-
-        when:
-        def labels = new Labels()
-                .withWorkflowMetadata(workflow)
-                .withUserLabels([
-                    'nextflow.io/runName': 'custom_name',
-                    'team': 'research'
-                ])
-
-        then:
-        labels.entries['nextflow.io/runName'] == 'custom_name'
-        labels.entries['team'] == 'research'
-        labels.entries['nextflow.io/projectName'] == 'hello'
-    }
-
     def 'should include platform workflowId when available'() {
         given:
         def workflow = Mock(WorkflowMetadata) {
@@ -187,15 +162,6 @@ class LabelsTest extends Specification {
 
         then:
         !labels.entries.containsKey('seqera.io/platform/workflowId')
-    }
-
-    def 'should handle null user labels'() {
-        when:
-        def labels = new Labels()
-                .withUserLabels(null)
-
-        then:
-        labels.entries.isEmpty()
     }
 
     def 'should add process resource labels coercing values to string'() {
