@@ -215,6 +215,10 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 			public void close() {
 				result.abort();
 			}
+            // Just-used for testing
+            void abort(){
+                result.abort();
+            }
 		};
 	}
 
