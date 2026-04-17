@@ -30,6 +30,7 @@ import org.fusesource.jansi.AnsiConsole
  */
 @CompileStatic
 class StandardErrorListener implements ErrorListener {
+
     // can be 'full', 'extended', or 'concise'
     private String mode
 

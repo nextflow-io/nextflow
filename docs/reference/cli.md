@@ -918,6 +918,11 @@ The `lint` command parses and analyzes the given Nextflow scripts and config fil
 : File pattern to exclude from linting (default: `.git, .lineage, .nextflow, .nf-test, nf-test.config, work`).
 : Can be specified multiple times.
 
+`-files-from`
+: :::{versionadded} 26.04.0
+  :::
+: Read list of paths to lint from a text file. Use `-` to read from standard input.
+
 `-format`
 : Format scripts and config files that have no errors.
 
