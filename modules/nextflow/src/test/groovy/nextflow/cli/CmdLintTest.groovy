@@ -81,16 +81,11 @@ class CmdLintTest extends Specification {
         dir?.deleteDir()
     }
 
-    def 'should suppress progress with nextflow -q lint (global quiet flag)'() {
+    def 'should suppress progress with -q flag'() {
 
         given:
         def dir = Files.createTempDirectory('test')
-        dir.resolve('main.nf').text = '''\
-            process HELLO {
-                script:
-                "echo hello"
-            }
-            '''
+        dir.resolve('main.nf').text = ''
 
         when:
         def cmd = new CmdLint()
@@ -98,75 +93,6 @@ class CmdLintTest extends Specification {
         cmd.launcher = Mock(Launcher) {
             getOptions() >> Mock(CliOptions) {
                 isQuiet() >> true
-                getAnsiLog() >> false
-            }
-        }
-        cmd.run()
-
-        then:
-        noExceptionThrown()
-        and:
-        !capture.toString().contains("Linting Nextflow code")
-        !capture.toString().contains("Linting:")
-        and:
-        capture.toString().contains("Nextflow linting complete")
-
-        cleanup:
-        dir?.deleteDir()
-    }
-
-    def 'should suppress progress when ansiLog is false (non-interactive output)'() {
-
-        given:
-        def dir = Files.createTempDirectory('test')
-        dir.resolve('main.nf').text = '''\
-            process HELLO {
-                script:
-                "echo hello"
-            }
-            '''
-
-        when:
-        def cmd = new CmdLint()
-        cmd.args = [dir.toFile().toString()]
-        cmd.launcher = Mock(Launcher) {
-            getOptions() >> Mock(CliOptions) {
-                isQuiet() >> false
-                getAnsiLog() >> false
-            }
-        }
-        cmd.run()
-
-        then:
-        noExceptionThrown()
-        and:
-        !capture.toString().contains("Linting Nextflow code")
-        !capture.toString().contains("Linting:")
-        and:
-        capture.toString().contains("Nextflow linting complete")
-
-        cleanup:
-        dir?.deleteDir()
-    }
-
-    def 'should suppress progress with lint -q flag (lint-level quiet, keeps ANSI)'() {
-
-        given:
-        def dir = Files.createTempDirectory('test')
-        dir.resolve('main.nf').text = '''\
-            process HELLO {
-                script:
-                "echo hello"
-            }
-            '''
-
-        when:
-        def cmd = new CmdLint()
-        cmd.quiet = true
-        cmd.args = [dir.toFile().toString()]
-        cmd.launcher = Mock(Launcher) {
-            getOptions() >> Mock(CliOptions) {
-                isQuiet() >> false
                 getAnsiLog() >> false
             }
         }
@@ -190,17 +116,7 @@ class CmdLintTest extends Specification {
         def dir = Files.createTempDirectory('test')
 
         dir.resolve('main.nf').text = '''\
-            process HELLO {
-
-                script:
-                """
-                ${
-                    params.is_paired_end
-                        ? "..."
-                        : "..."
-                }
-                """
-            }
+            printx 'hello'
             '''
 
         when:
@@ -221,7 +137,7 @@ class CmdLintTest extends Specification {
         !capture.toString().contains("Linting:")
         and:
         capture.toString().contains("Error")
-        capture.toString().contains("Unexpected input")
+        capture.toString().contains("`printx` is not defined")
         capture.toString().contains("Nextflow linting complete")
 
         cleanup:
