@@ -139,17 +139,16 @@ class AssetManager implements Closeable {
         if( mainScript )
             this.mainScript = mainScript
 
-        if( !isValidProjectName(this.project) ) {
-            throw new IllegalArgumentException("Not a valid project name: ${this.project}")
-        }
+        if( !isValidProjectName(project) )
+            throw new IllegalArgumentException("Not a valid project name: ${project}")
+
         // Initialize strategy based on environment and repository state
         initStrategy(revision)
         this.hub = checkHubProvider(cliOpts)
         this.provider = createHubProvider(hub)
 
-        if( revision ){
+        if( revision )
             setRevision(revision)
-        }
 
         strategy.setProvider(this.provider)
 
