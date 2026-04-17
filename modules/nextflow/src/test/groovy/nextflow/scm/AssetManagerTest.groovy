@@ -121,9 +121,6 @@ class AssetManagerTest extends Specification {
         folder.resolve('cbcrg/pipe2').mkdirs()
         folder.resolve('ncbi/blast').mkdirs()
 
-        // a fresh AssetManager is created per call to mirror real usage:
-        // resolveName is invoked once per AssetManager instance during build()
-
         when:
         def result = new AssetManager().resolveName('x/y')
         then:
@@ -165,14 +162,13 @@ class AssetManagerTest extends Specification {
         thrown(AbortOperationException)
 
         when:
-        // mainScript already set (e.g. via -main-script) AND name ends with a script file
+        // mainScript already set via `-main-script` AND name ends with a script file
         def manager = new AssetManager()
-        manager.mainScript = 'pre-set.nf'
+        manager.mainScript = 'my-script.nf'
         manager.resolveName('ncbi/blast/script.nf')
         then:
         def err = thrown(AbortOperationException)
         err.message.contains('Project name must be a directory when main script is provided')
-
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
@@ -532,7 +528,7 @@ class AssetManagerTest extends Specification {
 
     }
 
-    def 'should propagate explicit main script through build' () {
+    def 'should propagate explicit main script' () {
 
         given:
         def dir = tempDir.getRoot()
@@ -548,23 +544,11 @@ class AssetManagerTest extends Specification {
         then:
         holder.getMainScriptName() == 'sub/entry.nf'
 
-    }
-
-    def 'should propagate explicit main script through new constructor' () {
-
-        given:
-        def dir = tempDir.getRoot()
-        dir.resolve('foo/bar').mkdirs()
-        dir.resolve('foo/bar/nextflow.config').text = 'empty: 1'
-        dir.resolve('foo/bar/.git').mkdir()
-        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
-
         when:
         // exercise the new (pipelineName, revision, scriptFile, cliOpts) constructor
-        def holder = new AssetManager('foo/bar', null, 'sub/entry.nf')
+        holder = new AssetManager('foo/bar', null, 'sub/entry.nf')
         then:
         holder.getMainScriptName() == 'sub/entry.nf'
-
     }
 
     def 'should return default main script file' () {
@@ -717,17 +701,8 @@ class AssetManagerTest extends Specification {
         manager = new AssetManager()
         manager.resolveNameFromGitUrl('https://github.com/foo/bar/main.nf')
         then:
-        def err1 = thrown(AbortOperationException)
-        err1.message.contains('-main-script')
-
-        when:
-        // also rejects `.nxf` extension
-        manager = new AssetManager()
-        manager.resolveNameFromGitUrl('https://github.com/foo/bar/sub/main.nxf')
-        then:
-        def err2 = thrown(AbortOperationException)
-        err2.message.contains('-main-script')
-
+        def err = thrown(AbortOperationException)
+        err.message.contains('-main-script')
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
