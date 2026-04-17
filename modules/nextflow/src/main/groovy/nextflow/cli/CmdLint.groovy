@@ -17,7 +17,6 @@
 package nextflow.cli
 
 import java.nio.file.Path
-import java.nio.file.Files
 import java.time.Instant
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -60,16 +59,16 @@ class CmdLint extends CmdBase {
     List<String> args = []
 
     @Parameter(
-        names = ['-files-from'],
-        description = 'Read list of paths to lint from file (one per line, use - for stdin)'
-    )
-    String filesFrom
-
-    @Parameter(
         names = ['-exclude'],
         description = 'File pattern to exclude from error checking (can be specified multiple times)'
     )
     List<String> excludePatterns = ['.git', '.lineage', '.nf-test', '.nextflow', 'work', 'nf-test.config']
+
+    @Parameter(
+        names = ['-files-from'],
+        description = 'Read list of paths to lint from file (one per line, use - for stdin)'
+    )
+    String filesFrom
 
     @Parameter(
         names = ['-o', '-output'],
@@ -119,21 +118,10 @@ class CmdLint extends CmdBase {
 
     @Override
     void run() {
-        // Read paths from --files-from if specified
-        if( filesFrom ) {
-            if( args == null )
-                args = []
-            final lines = filesFrom == '-'
-                ? new BufferedReader(new InputStreamReader(System.in)).readLines()
-                : Files.readAllLines(Path.of(filesFrom))
-            for( final line : lines ) {
-                final trimmed = line.trim()
-                if( trimmed )
-                    args.add(trimmed)
-            }
-        }
+        // read input files from positional args and -files-from option
+        final inputs = getInputs(args, filesFrom)
 
-        if( !args )
+        if( !inputs )
             throw new AbortOperationException("Error: No input files were specified")
 
         if( spaces && tabs )
@@ -156,9 +144,9 @@ class CmdLint extends CmdBase {
         // collect files to lint
         final List<File> files = []
 
-        for( final arg : args ) {
+        for( final input : inputs ) {
             PathUtils.visitFiles(
-                Path.of(arg),
+                Path.of(input),
                 (path) -> !PathUtils.isExcluded(path, excludePatterns),
                 (path) -> files.add(path.toFile()))
         }
@@ -186,6 +174,24 @@ class CmdLint extends CmdBase {
         // If there were errors, throw an exception to return a non-zero exit code
         if( summary.errors > 0 )
             throw new AbortOperationException()
+    }
+
+    private static List<String> getInputs(List<String> args, String filesFrom) {
+        final List<String> result = []
+        result.addAll(args)
+
+        if( filesFrom ) {
+            final lines = filesFrom == '-'
+                ? System.in.readLines()
+                : Path.of(filesFrom).readLines()
+            for( final line : lines ) {
+                final trimmed = line.trim()
+                if( trimmed )
+                    result.add(trimmed)
+            }
+        }
+
+        return result
     }
 
     private void parse(File file) {
