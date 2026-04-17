@@ -18,6 +18,7 @@
 package nextflow.cloud.aws.nio;
 
 import java.io.ByteArrayInputStream;
+import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -61,6 +62,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
+import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import com.google.common.base.Preconditions;
@@ -196,7 +198,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		Preconditions.checkArgument(!s3Path.getKey().equals(""),
 				"cannot create InputStream for root directory: %s", FilesEx.toUriString(s3Path));
 
-		InputStream result;
+		ResponseInputStream<GetObjectResponse> result;
 		try {
 			result = s3Path
 					.getFileSystem()
@@ -212,7 +214,22 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 			throw new IOException(String.format("Cannot access file: %s", FilesEx.toUriString(s3Path)),e);
 		}
 
-		return result;
+		// Wrap the response stream so that close() aborts the underlying HTTP connection
+		// instead of draining the remaining bytes. Apache HTTP client's ContentLengthInputStream.close()
+		// reads to end-of-stream to release the connection back to the pool, which for a large S3
+		// object (e.g. a multi-GB FASTQ) can block the caller for many minutes. Callers of
+		// newInputStream() typically do not consume the whole object, so abort() is the correct
+		// semantics here.
+		return new FilterInputStream(result) {
+			@Override
+			public void close() {
+				result.abort();
+			}
+            // Just-used for testing
+            void abort(){
+                result.abort();
+            }
+		};
 	}
 
 	@Override
