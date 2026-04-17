@@ -197,4 +197,46 @@ class LabelsTest extends Specification {
         then:
         labels.entries.isEmpty()
     }
+
+    def 'should add process resource labels coercing values to string'() {
+        when:
+        def labels = new Labels()
+                .withProcessResourceLabels([team: 'genomics', priority: 7, retain: true])
+
+        then:
+        labels.entries['team'] == 'genomics'
+        labels.entries['priority'] == '7'
+        labels.entries['retain'] == 'true'
+    }
+
+    def 'should ignore null or empty process resource labels'() {
+        when:
+        def a = new Labels().withProcessResourceLabels(null)
+        def b = new Labels().withProcessResourceLabels([:])
+
+        then:
+        a.entries.isEmpty()
+        b.entries.isEmpty()
+    }
+
+    def 'should let process resource labels override workflow metadata on key collision'() {
+        given:
+        def workflow = Mock(WorkflowMetadata) {
+            getProjectName() >> 'hello'
+            getRunName() >> 'happy_turing'
+            getSessionId() >> UUID.randomUUID()
+            isResume() >> false
+            getManifest() >> new Manifest([:])
+        }
+
+        when:
+        def labels = new Labels()
+                .withWorkflowMetadata(workflow)
+                .withProcessResourceLabels(['nextflow.io/runName': 'custom', team: 'a'])
+
+        then:
+        labels.entries['nextflow.io/runName'] == 'custom'
+        labels.entries['team'] == 'a'
+        labels.entries['nextflow.io/projectName'] == 'hello'
+    }
 }

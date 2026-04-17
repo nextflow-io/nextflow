@@ -88,6 +88,17 @@ class Labels {
     }
 
     /**
+     * Add config-level {@code process.resourceLabels}. Values are coerced to
+     * string via {@link String#valueOf} to satisfy the scheduler API typing.
+     */
+    Labels withProcessResourceLabels(Map<String,?> map) {
+        if( !map ) return this
+        for( Map.Entry<String,?> entry : map.entrySet() )
+            entries.put(entry.key.toString(), String.valueOf(entry.value))
+        return this
+    }
+
+    /**
      * @return all labels as an unmodifiable map
      */
     Map<String,String> getEntries() {
