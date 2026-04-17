@@ -117,4 +117,33 @@ class Labels {
                 .hash()
                 .toString()
     }
+
+    /**
+     * Coerce arbitrary map values to strings via {@link String#valueOf}.
+     * Returns an empty map for null/empty input.
+     */
+    static Map<String,String> toStringMap(Map<String,?> map) {
+        if( !map ) return Collections.<String,String>emptyMap()
+        final result = new LinkedHashMap<String,String>(map.size())
+        for( Map.Entry<String,?> entry : map.entrySet() )
+            result.put(entry.key.toString(), String.valueOf(entry.value))
+        return result
+    }
+
+    /**
+     * Return the entries of {@code task} that are missing from {@code run}
+     * or have a different value. Returns {@code null} if the resulting
+     * map would be empty (so callers can omit the field).
+     */
+    static Map<String,String> delta(Map<String,String> task, Map<String,String> run) {
+        if( !task ) return null
+        final result = new LinkedHashMap<String,String>()
+        for( Map.Entry<String,String> entry : task.entrySet() ) {
+            final k = entry.key
+            final v = entry.value
+            if( run == null || !run.containsKey(k) || run.get(k) != v )
+                result.put(k, v)
+        }
+        return result.isEmpty() ? null : result
+    }
 }

@@ -239,4 +239,30 @@ class LabelsTest extends Specification {
         labels.entries['team'] == 'a'
         labels.entries['nextflow.io/projectName'] == 'hello'
     }
+
+    def 'should coerce map values to strings'() {
+        expect:
+        Labels.toStringMap(null) == [:]
+        Labels.toStringMap([:]) == [:]
+        Labels.toStringMap([a: 1, b: 'x', c: true]) == [a: '1', b: 'x', c: 'true']
+    }
+
+    def 'should compute null delta when task labels are empty'() {
+        expect:
+        Labels.delta(null, [team: 'a']) == null
+        Labels.delta([:], [team: 'a']) == null
+    }
+
+    def 'should return full task labels when run labels are empty'() {
+        expect:
+        Labels.delta([team: 'a', region: 'us'], null) == [team: 'a', region: 'us']
+        Labels.delta([team: 'a', region: 'us'], [:]) == [team: 'a', region: 'us']
+    }
+
+    def 'should keep only differing or missing keys in delta'() {
+        expect:
+        Labels.delta([team: 'a', region: 'us'], [team: 'a']) == [region: 'us']
+        Labels.delta([team: 'b'], [team: 'a']) == [team: 'b']
+        Labels.delta([team: 'a', region: 'us'], [team: 'a', region: 'us']) == null
+    }
 }
