@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,9 +36,12 @@ class StandardErrorListener implements ErrorListener {
 
     private boolean ansiLog
 
-    StandardErrorListener(String mode, boolean ansiLog) {
+    private boolean quiet
+
+    StandardErrorListener(String mode, boolean ansiLog, boolean quiet=false) {
         this.mode = mode
         this.ansiLog = ansiLog
+        this.quiet = quiet
     }
 
     private Ansi ansi() {
@@ -63,12 +66,16 @@ class StandardErrorListener implements ErrorListener {
 
     @Override
     void beforeAll() {
+        if( quiet )
+            return
         final line = ansi().a("Linting Nextflow code..").newline()
         print(line)
     }
 
     @Override
     void beforeFile(File file) {
+        if( quiet )
+            return
         final line = ansi()
             .cursorUp(1).eraseLine()
             .a(Ansi.Attribute.INTENSITY_FAINT).a("Linting: ${file}").reset()
@@ -80,7 +87,9 @@ class StandardErrorListener implements ErrorListener {
 
     @Override
     void beforeErrors() {
-        term = ansi().cursorUp(1).eraseLine()
+        term = ansi()
+        if( !quiet )
+            term.cursorUp(1).eraseLine()
     }
 
     @Override
@@ -208,12 +217,15 @@ class StandardErrorListener implements ErrorListener {
     @Override
     void afterErrors() {
         // print extra newline since next file status will chomp back one
-        term.fg(Ansi.Color.DEFAULT).newline()
+        if( !quiet )
+            term.fg(Ansi.Color.DEFAULT).newline()
         print(term)
     }
 
     @Override
     void beforeFormat(File file) {
+        if( quiet )
+            return
         final line = ansi()
             .cursorUp(1).eraseLine()
             .a(Ansi.Attribute.INTENSITY_FAINT).a("Formatting: ${file}").reset()
@@ -224,7 +236,8 @@ class StandardErrorListener implements ErrorListener {
     @Override
     void afterAll(ErrorSummary summary) {
         final term = ansi()
-        term.cursorUp(1).eraseLine()
+        if( !quiet )
+            term.cursorUp(1).eraseLine()
         // print extra newline if no code is being shown
         if( mode == 'concise' )
             term.newline()

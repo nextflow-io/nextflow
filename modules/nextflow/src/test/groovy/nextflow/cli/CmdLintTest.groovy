@@ -31,10 +31,10 @@ class CmdLintTest extends Specification {
     @Rule
     OutputCapture capture = new OutputCapture()
 
-    CmdLint createCmdLint() {
+    CmdLint createCmdLint(Map opts = null) {
         def cmd = new CmdLint()
         cmd.launcher = new Launcher(
-            options: new CliOptions(ansiLog: false)
+            options: new CliOptions(opts ?: [ansiLog: false])
         )
         return cmd
     }
@@ -149,16 +149,64 @@ class CmdLintTest extends Specification {
             '''
 
         when:
-        def cmd = new CmdLint()
+        def cmd = createCmdLint()
         cmd.args = [dir.toString()]
         cmd.projectDir = dir.toString()
-        cmd.launcher = Mock(Launcher) {
-            getOptions() >> Mock(CliOptions)
-        }
         cmd.run()
 
         then:
         noExceptionThrown()
+
+        cleanup:
+        dir?.deleteDir()
+    }
+
+    def 'should suppress progress with -q flag'() {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+        dir.resolve('main.nf').text = ''
+
+        when:
+        def cmd = createCmdLint(ansiLog: false, quiet: true)
+        cmd.args = [dir.toFile().toString()]
+        cmd.run()
+
+        then:
+        noExceptionThrown()
+        and:
+        !capture.toString().contains("Linting Nextflow code")
+        !capture.toString().contains("Linting:")
+        and:
+        capture.toString().contains("Nextflow linting complete")
+
+        cleanup:
+        dir?.deleteDir()
+    }
+
+    def 'should still show errors when progress is suppressed' () {
+
+        given:
+        def dir = Files.createTempDirectory('test')
+
+        dir.resolve('main.nf').text = '''\
+            printx 'hello'
+            '''
+
+        when:
+        def cmd = createCmdLint(ansiLog: false, quiet: true)
+        cmd.args = [dir.toFile().toString()]
+        cmd.run()
+
+        then:
+        thrown(AbortOperationException)
+        and:
+        !capture.toString().contains("Linting Nextflow code")
+        !capture.toString().contains("Linting:")
+        and:
+        capture.toString().contains("Error")
+        capture.toString().contains("`printx` is not defined")
+        capture.toString().contains("Nextflow linting complete")
 
         cleanup:
         dir?.deleteDir()

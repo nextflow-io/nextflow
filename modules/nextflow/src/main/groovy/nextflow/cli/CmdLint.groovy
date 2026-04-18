@@ -67,7 +67,7 @@ class CmdLint extends CmdBase {
 
     @Parameter(
         names = ['-files-from'],
-        description = 'Read list of paths to lint from file (one per line, use - for stdin)'
+        description = 'Read list of paths to lint from a text file (one per line, use - for stdin)'
     )
     String filesFrom
 
@@ -143,11 +143,11 @@ class CmdLint extends CmdBase {
 
         scriptParser = new ScriptParser(baseDir, classLoader)
         configParser = new ConfigParser()
-        errorListener = outputMode == 'json'
-            ? new JsonErrorListener()
-            : outputMode == 'markdown'
-            ? new MarkdownErrorListener()
-            : new StandardErrorListener(outputMode, launcher.options.ansiLog)
+        errorListener = switch( outputMode ) {
+            case 'json' -> new JsonErrorListener()
+            case 'markdown' -> new MarkdownErrorListener()
+            default -> new StandardErrorListener(outputMode, launcher.options.ansiLog, launcher.options.quiet)
+        }
         formattingOptions = new FormattingOptions(spaces, !tabs, harhsilAlignment, false, sortDeclarations)
 
         errorListener.beforeAll()
