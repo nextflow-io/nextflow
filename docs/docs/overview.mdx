@@ -66,7 +66,7 @@ Instead, execution order is determined by their _dependencies_ — `extract_top_
 
 When the workflow is executed, it creates two processes (`blast_search` and `extract_top_hits`) that are connected by the `query_ch` channel. Each process executes a task and emits a value for each input that it receives. Whenever `blast_search` emits a value, `extract_top_hits` receives it through the `query_ch` channel.
 
-See [Channels][channels-page] and [Dataflow][dataflow-page] to learn more.
+See [Dataflow][dataflow-page] to learn more.
 
 ## Execution abstraction
 
@@ -117,7 +117,7 @@ process {
 
 See [Configuration][configuration-page] to learn more.
 
-[channels-page]: ./channel
+[channels-page]: ./workflow
 [configuration-page]: ./config
 [executors-page]: ./executor
 [dataflow-page]: ./process

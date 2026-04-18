@@ -155,7 +155,7 @@ Type annotations can be appended with `?` to denote values can be `null`:
 def x_opt: String? = null
 ```
 
-In the type system, queue channels are represented as `Channel`, while value channels are represented as `Value`. To make the terminology clearer and more concise, queue channels are now called *dataflow channels* (or simply *channels*), and value channels are now called *dataflow values*. See [Dataflow][dataflow-page] for more information.
+In the type system, queue channels are represented as `Channel`, while value channels are represented as `Value`. To make the terminology clearer and more concise, queue channels are now called *dataflow channels* (or simply *channels*), and value channels are now called *dataflow values*.
 
 :::warning
 Since Nextflow-style type annotations are new in Nextflow 25.10, formatting code with Groovy-style type annotations will make it incompatible with previous versions of Nextflow. If you need your code to remain compatible with versions prior to 25.10, run the formatter with Nextflow 25.04:
@@ -298,7 +298,6 @@ This feature addresses previous inconsistencies in timestamp representations.
 [cli-auth]: ../reference/cli#auth
 [cli-launch]: ../reference/cli#launch
 [config-workflow-handlers]: ../config#workflow-handlers
-[dataflow-page]: ../channel
 [dev-plugins-extension-points-config]: ../plugins/developing-plugins#configuration
 [dynamic-directives]: ../process#dynamic-directives
 [gradle-plugin-page]: ../guides/gradle-plugin

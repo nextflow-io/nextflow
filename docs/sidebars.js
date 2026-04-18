@@ -33,7 +33,6 @@ module.exports = {
                 "working-with-files",
                 "process",
                 "process-typed",
-                "channel",
                 "workflow",
                 "workflow-typed",
                 "module",
