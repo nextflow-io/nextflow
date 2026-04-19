@@ -72,7 +72,7 @@ class HintHelperTest extends Specification {
         def base = new MachineRequirementOpts([:])
 
         when:
-        def result = HintHelper.overlayHints(base, ['seqera/machineRequirement.maxSpotAttempts': 3])
+        def result = HintHelper.overlayHints(base, ['seqera/machineRequirement.maxSpotAttempts': '3'])
         then:
         result.maxSpotAttempts == 3
     }
@@ -102,7 +102,7 @@ class HintHelperTest extends Specification {
         def base = new MachineRequirementOpts([:])
 
         when:
-        def result = HintHelper.overlayHints(base, ['seqera/machineRequirement.diskThroughputMiBps': 500])
+        def result = HintHelper.overlayHints(base, ['seqera/machineRequirement.diskThroughputMiBps': '500'])
         then:
         result.diskThroughputMiBps == 500
     }
@@ -112,7 +112,7 @@ class HintHelperTest extends Specification {
         def base = new MachineRequirementOpts([:])
 
         when:
-        def result = HintHelper.overlayHints(base, ['seqera/machineRequirement.diskIops': 10000])
+        def result = HintHelper.overlayHints(base, ['seqera/machineRequirement.diskIops': '10000'])
         then:
         result.diskIops == 10000
     }
@@ -175,7 +175,7 @@ class HintHelperTest extends Specification {
         def result = HintHelper.overlayHints(base, [
             'seqera/machineRequirement.arch': 'arm64',
             'seqera/machineRequirement.provisioning': 'spotFirst',
-            'seqera/machineRequirement.maxSpotAttempts': 3,
+            'seqera/machineRequirement.maxSpotAttempts': '3',
             'seqera/machineRequirement.diskType': 'ebs/gp3'
         ])
         then:
