@@ -57,12 +57,12 @@ class HintHelper {
      * @param hints the full hints map from task config
      * @return a map of hint keys (with {@code seqera/} prefix stripped) to values
      */
-    static Map<String, Object> extractSeqeraHints(Map<String, Object> hints) {
+    static Map<String, String> extractSeqeraHints(Map<String, String> hints) {
         if( !hints )
             return Collections.emptyMap()
 
-        final result = new LinkedHashMap<String, Object>()
-        for( Map.Entry<String, Object> entry : hints.entrySet() ) {
+        final result = new LinkedHashMap<String, String>()
+        for( Map.Entry<String, String> entry : hints.entrySet() ) {
             final key = entry.key
             if( !key.startsWith(PREFIX) )
                 continue
@@ -84,7 +84,7 @@ class HintHelper {
      * @param hints the full hints map from task config
      * @return a new {@link MachineRequirementOpts} with hints overlaid
      */
-    static MachineRequirementOpts overlayHints(MachineRequirementOpts baseOpts, Map<String, Object> hints) {
+    static MachineRequirementOpts overlayHints(MachineRequirementOpts baseOpts, Map<String, String> hints) {
         final seqeraHints = extractSeqeraHints(hints)
         if( !seqeraHints )
             return baseOpts
@@ -107,17 +107,17 @@ class HintHelper {
         if( baseOpts.capacityMode ) merged.capacityMode = baseOpts.capacityMode
 
         // overlay hints — strip the machineRequirement. prefix to get field names
-        for( Map.Entry<String, Object> entry : seqeraHints.entrySet() ) {
+        for( Map.Entry<String, String> entry : seqeraHints.entrySet() ) {
             final fieldName = entry.key.substring(MR_PREFIX.length())
             final value = entry.value
             // handle special type conversions
             switch( fieldName ) {
                 case 'machineTypes':
                     // comma-separated string → List<String>
-                    merged.machineTypes = value instanceof String ? ((String) value).split(',').collect { it.trim() } : value
+                    merged.machineTypes = value.split(',').collect { it.trim() }
                     break
                 case 'diskEncrypted':
-                    merged.diskEncrypted = value instanceof String ? Boolean.parseBoolean((String) value) : value
+                    merged.diskEncrypted = Boolean.parseBoolean(value)
                     break
                 default:
                     merged.put(fieldName, value)
