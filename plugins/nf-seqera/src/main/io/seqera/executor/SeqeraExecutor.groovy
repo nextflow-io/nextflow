@@ -208,14 +208,13 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
     }
 
     Map<String,String> getRunResourceLabels() {
-        return runResourceLabels
+        return Collections.unmodifiableMap(runResourceLabels)
     }
 
     @PackageScope
     void computeRunResourceLabels() {
         final processMap = session.config.process as Map
-        final raw = processMap?.get('resourceLabels') as Map<String,?>
-        this.runResourceLabels = Labels.toStringMap(raw)
+        this.runResourceLabels = Labels.toStringMap(processMap?.get('resourceLabels'))
     }
 
     SeqeraBatchSubmitter getBatchSubmitter() {

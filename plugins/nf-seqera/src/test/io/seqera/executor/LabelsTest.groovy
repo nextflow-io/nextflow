@@ -213,6 +213,17 @@ class LabelsTest extends Specification {
         Labels.toStringMap([a: 1, b: 'x', c: true]) == [a: '1', b: 'x', c: 'true']
     }
 
+    def 'should reject non-map resourceLabels with a clear error'() {
+        when:
+        Labels.toStringMap(['foo', 'bar'])
+
+        then:
+        def err = thrown(IllegalArgumentException)
+        err.message.contains("'resourceLabels'")
+        err.message.contains('map of key/value pairs')
+        err.message.contains('java.util.ArrayList')
+    }
+
     def 'should compute null delta when task labels are empty'() {
         expect:
         Labels.delta(null, [team: 'a']) == null

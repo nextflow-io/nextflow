@@ -111,12 +111,21 @@ class Labels {
 
     /**
      * Coerce arbitrary map values to strings via {@link String#valueOf}.
-     * Returns an empty map for null/empty input.
+     * Returns an empty map for null/empty input. Throws
+     * {@link IllegalArgumentException} when the value is not a {@link Map},
+     * to surface a clear error when {@code process.resourceLabels} is
+     * misconfigured (e.g. as a list).
      */
-    static Map<String,String> toStringMap(Map<String,?> map) {
-        if( !map ) return Collections.<String,String>emptyMap()
+    static Map<String,String> toStringMap(Object value) {
+        if( value == null )
+            return Collections.<String,String>emptyMap()
+        if( value !instanceof Map )
+            throw new IllegalArgumentException("Invalid value for 'resourceLabels' directive - expected a map of key/value pairs, got '${value.getClass().getName()}'")
+        final map = (Map<?,?>) value
+        if( map.isEmpty() )
+            return Collections.<String,String>emptyMap()
         final result = new LinkedHashMap<String,String>(map.size())
-        for( Map.Entry<String,?> entry : map.entrySet() )
+        for( Map.Entry<?,?> entry : map.entrySet() )
             result.put(entry.key.toString(), String.valueOf(entry.value))
         return result
     }
