@@ -1,10 +1,5 @@
 nf-seqera changelog
 ====================
-0.18.0 - 17 Apr 2026
-- Support process.resourceLabels: config-level labels attached to Sched run, per-task delta attached to Sched task
-- Remove seqera.executor.labels config option (use process.resourceLabels instead)
-- Bump sched-client@0.51.0
-
 0.17.0 - 7 Apr 2026
 - Add resourceAllocation field to trace record (#6973) [a2742939c]
 - Add compute env ID and provider support to Seqera executor (#6906) [4c2eb9390]

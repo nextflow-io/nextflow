@@ -50,6 +50,4 @@ include 'plugins:nf-k8s'
 include 'plugins:nf-seqera'
 
 //includeBuild('../plugin-registry')
-
-// For local development against an unpublished sched-client, uncomment:
 //includeBuild '../sched'
