@@ -128,7 +128,7 @@ class ExecutorOptsTest extends Specification {
         config.machineRequirement.provisioning == 'spot'
     }
 
-    def 'should enable auto labels' () {
+    def 'should enable all auto labels when set to true' () {
         when:
         def config = new ExecutorOpts([
             endpoint: 'https://sched.example.com',
@@ -136,7 +136,98 @@ class ExecutorOptsTest extends Specification {
         ])
 
         then:
-        config.autoLabels
+        config.autoLabels == ExecutorOpts.VALID_AUTO_LABELS
+    }
+
+    def 'should disable auto labels when set to false' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            autoLabels: false
+        ])
+
+        then:
+        config.autoLabels.isEmpty()
+    }
+
+    def 'should accept auto labels as a list of short names' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            autoLabels: ['runName', 'projectName']
+        ])
+
+        then:
+        config.autoLabels == ['runName', 'projectName'] as Set
+    }
+
+    def 'should trim whitespace in auto labels list entries' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            autoLabels: [' runName', 'projectName ']
+        ])
+
+        then:
+        config.autoLabels == ['runName', 'projectName'] as Set
+    }
+
+    def 'should accept auto labels as a comma-separated string' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            autoLabels: 'runName,projectName,workflowId'
+        ])
+
+        then:
+        config.autoLabels == ['runName', 'projectName', 'workflowId'] as Set
+    }
+
+    def 'should tolerate whitespace around comma-separated auto labels' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            autoLabels: 'runName, projectName ,workflowId'
+        ])
+
+        then:
+        config.autoLabels == ['runName', 'projectName', 'workflowId'] as Set
+    }
+
+    def 'should treat empty auto labels list as disabled' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            autoLabels: []
+        ])
+
+        then:
+        config.autoLabels.isEmpty()
+    }
+
+    def 'should treat empty auto labels string as disabled' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            autoLabels: ''
+        ])
+
+        then:
+        config.autoLabels.isEmpty()
+    }
+
+    def 'should reject unknown auto labels name' () {
+        when:
+        new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            autoLabels: ['runName', 'foo']
+        ])
+
+        then:
+        def err = thrown(IllegalArgumentException)
+        err.message.contains("'seqera.executor.autoLabels'")
+        err.message.contains('foo')
+        err.message.contains('valid names')
     }
 
     def 'should create config with prediction model' () {

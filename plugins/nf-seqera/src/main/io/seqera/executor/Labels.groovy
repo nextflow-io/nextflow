@@ -33,32 +33,50 @@ import nextflow.script.WorkflowMetadata
 @CompileStatic
 class Labels {
 
+    static final Set<String> ALL_AUTO_LABELS = Collections.unmodifiableSet(new LinkedHashSet<>([
+        'projectName', 'userName', 'runName', 'sessionId', 'resume',
+        'revision', 'commitId', 'repository', 'manifestName',
+        'runtimeVersion', 'workflowId'
+    ]))
+
     private final Map<String,String> entries = new LinkedHashMap<>(20)
 
     /**
-     * Add {@code nextflow.io/*} labels from workflow metadata
+     * Add all {@code nextflow.io/*} and {@code seqera.io/platform/*} labels
+     * derived from workflow metadata.
      */
     Labels withWorkflowMetadata(WorkflowMetadata workflow) {
-        if( workflow.projectName )
+        return withWorkflowMetadata(workflow, ALL_AUTO_LABELS)
+    }
+
+    /**
+     * Add workflow metadata labels filtered by the {@code include} set of
+     * short names (e.g. {@code 'runName'}). Unknown names are ignored; the
+     * caller is expected to validate membership upstream.
+     */
+    Labels withWorkflowMetadata(WorkflowMetadata workflow, Set<String> include) {
+        if( !include ) return this
+        if( include.contains('projectName') && workflow.projectName )
             entries.put('nextflow.io/projectName', workflow.projectName)
-        if( workflow.userName )
+        if( include.contains('userName') && workflow.userName )
             entries.put('nextflow.io/userName', workflow.userName)
-        if( workflow.runName )
+        if( include.contains('runName') && workflow.runName )
             entries.put('nextflow.io/runName', workflow.runName)
-        if( workflow.sessionId )
+        if( include.contains('sessionId') && workflow.sessionId )
             entries.put('nextflow.io/sessionId', workflow.sessionId.toString())
-        entries.put('nextflow.io/resume', String.valueOf(workflow.resume))
-        if( workflow.revision )
+        if( include.contains('resume') )
+            entries.put('nextflow.io/resume', String.valueOf(workflow.resume))
+        if( include.contains('revision') && workflow.revision )
             entries.put('nextflow.io/revision', workflow.revision)
-        if( workflow.commitId )
+        if( include.contains('commitId') && workflow.commitId )
             entries.put('nextflow.io/commitId', workflow.commitId)
-        if( workflow.repository )
+        if( include.contains('repository') && workflow.repository )
             entries.put('nextflow.io/repository', workflow.repository)
-        if( workflow.manifest?.name )
+        if( include.contains('manifestName') && workflow.manifest?.name )
             entries.put('nextflow.io/manifestName', workflow.manifest.name)
-        if( NextflowMeta.instance.version )
+        if( include.contains('runtimeVersion') && NextflowMeta.instance.version )
             entries.put('nextflow.io/runtimeVersion', NextflowMeta.instance.version.toString())
-        if( workflow.platform?.workflowId )
+        if( include.contains('workflowId') && workflow.platform?.workflowId )
             entries.put('seqera.io/platform/workflowId', workflow.platform.workflowId)
         return this
     }
