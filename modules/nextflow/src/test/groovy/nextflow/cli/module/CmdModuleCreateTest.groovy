@@ -115,7 +115,7 @@ class CmdModuleCreateTest extends Specification {
         content.contains('# myorg/hello')
         content.contains('## Summary')
         content.contains('## Get started')
-        content.contains('## Input / Output / Dependencies')
+        content.contains('## Dependencies')
         content.contains('## License')
         content.contains("include { HELLO } from 'myorg/hello'")
     }
