@@ -16,11 +16,16 @@
 
 package io.seqera.executor
 
+import io.seqera.config.ExecutorOpts
 import io.seqera.config.SeqeraConfig
+import io.seqera.sched.api.schema.v1a1.CreateRunRequest
+import io.seqera.sched.api.schema.v1a1.CreateRunResponse
+import io.seqera.sched.client.SchedClient
 import io.seqera.sched.client.SchedClientConfig
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.platform.PlatformHelper
+import nextflow.script.WorkflowMetadata
 import spock.lang.Specification
 
 /**
@@ -138,6 +143,89 @@ class SeqeraExecutorTest extends Specification {
 
         then:
         fusionConfig.targetVersion == null
+    }
+
+    def 'should expose run resource labels coerced from config-level process.resourceLabels'() {
+        given:
+        SysEnv.push([:])
+        def executor = new SeqeraExecutor()
+        executor.session = Mock(Session) {
+            getConfig() >> [process: [resourceLabels: [team: 'a', priority: 7]]]
+        }
+
+        when:
+        executor.computeRunResourceLabels()
+
+        then:
+        executor.runResourceLabels == [team: 'a', priority: '7']
+    }
+
+    def 'should yield empty run resource labels when process.resourceLabels is absent'() {
+        given:
+        SysEnv.push([:])
+        def executor = new SeqeraExecutor()
+        executor.session = Mock(Session) {
+            getConfig() >> [:]
+        }
+
+        when:
+        executor.computeRunResourceLabels()
+
+        then:
+        executor.runResourceLabels == [:]
+    }
+
+    def 'createRun populates CreateRunRequest.labels with config-level resourceLabels merged with auto-labels'() {
+        given:
+        SysEnv.push([:])
+        CreateRunRequest captured = null
+        def mockClient = Mock(SchedClient) {
+            createRun(_) >> { args ->
+                captured = args[0] as CreateRunRequest
+                new CreateRunResponse().runId('run-1')
+            }
+        }
+        def workflowMeta = Mock(WorkflowMetadata) {
+            getProjectName() >> 'my-project'
+            getUserName() >> 'alice'
+            getRunName() >> 'test-run'
+            getSessionId() >> UUID.fromString('00000000-0000-0000-0000-000000000001')
+            getResume() >> false
+            getRevision() >> null
+            getCommitId() >> null
+            getRepository() >> null
+            getManifest() >> null
+            getPlatform() >> null
+        }
+        def sessionConfig = [
+            process: [resourceLabels: [team: 'platform', priority: 3]],
+            seqera: [executor: [endpoint: 'https://sched.example.com', provider: 'aws', region: 'us-east-1', autoLabels: true]],
+            tower: [:]
+        ]
+        def session = Mock(Session) {
+            getConfig() >> sessionConfig
+            getWorkflowMetadata() >> workflowMeta
+            getWorkDir() >> java.nio.file.Paths.get('/work')
+            getRunName() >> 'test-run'
+        }
+        def seqeraOpts = new ExecutorOpts(endpoint: 'https://sched.example.com', provider: 'aws', region: 'us-east-1', autoLabels: true)
+        def executor = new SeqeraExecutor()
+        executor.session = session
+        executor.@seqeraConfig = seqeraOpts
+        executor.@client = mockClient
+
+        when:
+        executor.createRun()
+
+        then:
+        captured != null
+        captured.getLabels()['team'] == 'platform'
+        captured.getLabels()['priority'] == '3'
+        captured.getLabels()['nextflow.io/projectName'] == 'my-project'
+        captured.getLabels()['nextflow.io/runName'] == 'test-run'
+
+        cleanup:
+        executor.batchSubmitter?.shutdown()
     }
 
     /**

@@ -53,7 +53,7 @@ dependencies {
     compileOnly 'org.pf4j:pf4j:3.14.1'
 
     api 'org.bouncycastle:bcprov-ext-jdk18on:1.78.1'
-    api 'org.bouncycastle:bcpkix-jdk18on:1.79'
+    api 'org.bouncycastle:bcpkix-jdk18on:1.84'
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation "org.apache.groovy:groovy:4.0.31"

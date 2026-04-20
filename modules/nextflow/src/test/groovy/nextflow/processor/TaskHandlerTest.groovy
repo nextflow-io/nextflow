@@ -19,6 +19,7 @@ package nextflow.processor
 import java.util.concurrent.atomic.LongAdder
 
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.executor.Executor
 import nextflow.trace.TraceRecord
 import nextflow.util.Duration
@@ -343,6 +344,114 @@ class TaskHandlerTest extends Specification {
         then:
         noExceptionThrown()
         record.gpuMetrics == null
+    }
+
+    def 'should parse full Fusion trace metrics when NXF_FUSION_TRACE is enabled'() {
+        given:
+        SysEnv.push([NXF_FUSION_TRACE: 'true'])
+        def folder = TestHelper.createInMemTempDir()
+        folder.resolve('.fusion').mkdir()
+        folder.resolve(TaskRun.FUSION_TRACE).text = '{"proc":{"realtime":660541,"pct_cpu":1045,"cpu_name":"Intel CPU","rchar":100,"wchar":200,"syscr":10,"syscw":20,"read_bytes":300,"write_bytes":400,"pct_mem":56,"vmem":1000,"rss":500,"peak_vmem":1100,"peak_rss":600,"vol_ctxt":100,"inv_ctxt":50},"gpu":{"name":"Tesla T4","pct":75,"peak":100},"cgroup":{"version":"v2","memory_current":25469927424,"memory_peak":41178980352,"memory_rss":67919872,"memory_peak_rss":14783070208,"memory_limit":77309411328}}'
+
+        def task = new TaskRun(workDir: folder)
+        task.processor = Mock(TaskProcessor)
+        task.processor.getExecutor() >> Mock(Executor) { isFusionEnabled() >> true }
+
+        def handler = Spy(TaskHandler)
+        handler.task = task
+
+        def record = new TraceRecord()
+
+        when:
+        handler.parseFusionTrace(record)
+
+        then:
+        // cgroup memory metrics
+        record.store.get('vmem') == 25469927424L
+        record.store.get('rss') == 67919872L
+        record.store.get('peak_vmem') == 41178980352L
+        record.store.get('peak_rss') == 14783070208L
+        // proc metrics
+        record.store.get('realtime') == 660541L
+        record.store.get('%cpu') == 104.5f
+        record.store.get('cpu_model') == 'Intel CPU'
+        // gpu metrics
+        record.gpuMetrics.name == 'Tesla T4'
+        record.gpuMetrics.pct == 75
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should only parse GPU metrics when NXF_FUSION_TRACE is disabled'() {
+        given:
+        SysEnv.push([NXF_FUSION_TRACE: 'false'])
+        def folder = TestHelper.createInMemTempDir()
+        folder.resolve('.fusion').mkdir()
+        folder.resolve(TaskRun.FUSION_TRACE).text = '{"proc":{"realtime":660541,"pct_cpu":1045},"gpu":{"name":"Tesla T4","pct":75,"peak":100},"cgroup":{"version":"v2","memory_current":25469927424}}'
+
+        def task = new TaskRun(workDir: folder)
+        task.processor = Mock(TaskProcessor)
+        task.processor.getExecutor() >> Mock(Executor) { isFusionEnabled() >> true }
+
+        def handler = Spy(TaskHandler)
+        handler.task = task
+
+        def record = new TraceRecord()
+
+        when:
+        handler.parseFusionTrace(record)
+
+        then:
+        // only GPU metrics populated (existing behavior)
+        record.gpuMetrics.name == 'Tesla T4'
+        // no proc/cgroup metrics populated
+        record.store.get('realtime') == null
+        record.store.get('vmem') == null
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should skip command trace file when NXF_FUSION_TRACE is enabled'() {
+        given:
+        SysEnv.push([NXF_FUSION_TRACE: 'true'])
+        def folder = TestHelper.createInMemTempDir()
+        // Create a .command.trace with different values to prove it's NOT read
+        folder.resolve(TaskRun.CMD_TRACE).text = '''\
+            nextflow.trace/v2
+            realtime=99999
+            %cpu=100
+            '''.stripIndent().leftTrim()
+        // Create fusion trace
+        folder.resolve('.fusion').mkdir()
+        folder.resolve(TaskRun.FUSION_TRACE).text = '{"proc":{"realtime":1000,"pct_cpu":500,"cpu_name":"CPU","rchar":0,"wchar":0,"syscr":0,"syscw":0,"read_bytes":0,"write_bytes":0,"pct_mem":0,"vmem":0,"rss":0,"peak_vmem":0,"peak_rss":0,"vol_ctxt":0,"inv_ctxt":0}}'
+
+        def task = new TaskRun(workDir: folder)
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> new Session()
+        task.processor.getExecutor() >> Mock(Executor) { isFusionEnabled() >> true }
+        task.processor.getName() >> 'test'
+        task.processor.getProcessEnvironment() >> [:]
+        task.config = new TaskConfig()
+        task.context = new TaskContext(Mock(Script), [:], 'none')
+
+        def handler = Spy(TaskHandler)
+        handler.task = task
+        handler.status = TaskStatus.COMPLETED
+        handler.submitTimeMillis = 500L
+        handler.startTimeMillis = 1000L
+        handler.completeTimeMillis = 2000L
+
+        when:
+        def record = handler.getTraceRecord()
+
+        then:
+        // Should use Fusion realtime (1000), NOT .command.trace realtime (99999)
+        record.store.get('realtime') == 1000L
+
+        cleanup:
+        SysEnv.pop()
     }
 
     @Unroll

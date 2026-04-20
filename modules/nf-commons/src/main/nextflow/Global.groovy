@@ -35,6 +35,13 @@ import org.apache.commons.lang3.exception.ExceptionUtils
 class Global {
 
     /**
+     * When {@code true}, Fusion trace metrics replace the bash command-trace wrapper
+     */
+    static boolean isFusionTraceEnabled() {
+        return SysEnv.get('NXF_FUSION_TRACE', 'true') == 'true'
+    }
+
+    /**
      * The pipeline session instance
      */
     static private ISession session
