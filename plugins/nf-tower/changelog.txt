@@ -1,5 +1,10 @@
 nf-tower changelog
 ===================
+1.25.0 - 20 Apr 2026
+- Fix resolution of `-with-tower` with `TOWER_API_ENDPOINT` (#7045) [ce962e882]
+- Fusion GPU metrics collection (#7022) [6289635b8]
+- Fix saveCacheFiles early return skipping log file uploads (#7015) [6fb704838]
+
 1.24.0 - 7 Apr 2026
 - Add resourceAllocation field to trace record (#6973) [a2742939c]
 - Replace Auth0 with Platform OIDC PKCE for auth login (#6953) [f39afea97]
