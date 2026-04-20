@@ -79,11 +79,13 @@ class Labels {
     }
 
     /**
-     * Add user-configured labels. These take precedence over implicit labels.
+     * Add config-level {@code process.resourceLabels}. Values are coerced to
+     * string via {@link String#valueOf} to satisfy the scheduler API typing.
      */
-    Labels withUserLabels(Map<String,String> labels) {
-        if( labels )
-            entries.putAll(labels)
+    Labels withProcessResourceLabels(Map<String,?> map) {
+        if( !map ) return this
+        for( Map.Entry<String,?> entry : map.entrySet() )
+            entries.put(entry.key.toString(), String.valueOf(entry.value))
         return this
     }
 
@@ -105,5 +107,43 @@ class Labels {
                 .putUnencodedChars(runName)
                 .hash()
                 .toString()
+    }
+
+    /**
+     * Coerce arbitrary map values to strings via {@link String#valueOf}.
+     * Returns an empty map for null/empty input. Throws
+     * {@link IllegalArgumentException} when the value is not a {@link Map},
+     * to surface a clear error when {@code process.resourceLabels} is
+     * misconfigured (e.g. as a list).
+     */
+    static Map<String,String> toStringMap(Object value) {
+        if( value == null )
+            return Collections.<String,String>emptyMap()
+        if( value !instanceof Map )
+            throw new IllegalArgumentException("Invalid value for 'resourceLabels' directive - expected a map of key/value pairs, got '${value.getClass().getName()}'")
+        final map = (Map<?,?>) value
+        if( map.isEmpty() )
+            return Collections.<String,String>emptyMap()
+        final result = new LinkedHashMap<String,String>(map.size())
+        for( Map.Entry<?,?> entry : map.entrySet() )
+            result.put(entry.key.toString(), String.valueOf(entry.value))
+        return result
+    }
+
+    /**
+     * Return the entries of {@code task} that are missing from {@code run}
+     * or have a different value. Returns {@code null} if the resulting
+     * map would be empty (so callers can omit the field).
+     */
+    static Map<String,String> delta(Map<String,String> task, Map<String,String> run) {
+        if( !task ) return null
+        final result = new LinkedHashMap<String,String>()
+        for( Map.Entry<String,String> entry : task.entrySet() ) {
+            final k = entry.key
+            final v = entry.value
+            if( run == null || !run.containsKey(k) || run.get(k) != v )
+                result.put(k, v)
+        }
+        return result.isEmpty() ? null : result
     }
 }

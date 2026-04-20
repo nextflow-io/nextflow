@@ -128,42 +128,6 @@ class ExecutorOptsTest extends Specification {
         config.machineRequirement.provisioning == 'spot'
     }
 
-    def 'should create config with labels' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            labels: [
-                project: 'genomics',
-                team: 'research',
-                costCenter: 'CC-1234'
-            ]
-        ])
-
-        then:
-        config.labels == [project: 'genomics', team: 'research', costCenter: 'CC-1234']
-    }
-
-    def 'should handle null labels' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com'
-        ])
-
-        then:
-        config.labels == null
-    }
-
-    def 'should handle empty labels' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            labels: [:]
-        ])
-
-        then:
-        config.labels == [:]
-    }
-
     def 'should enable auto labels' () {
         when:
         def config = new ExecutorOpts([
