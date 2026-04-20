@@ -73,6 +73,8 @@ class TaskBean implements Serializable, Cloneable {
 
     boolean statsEnabled
 
+    boolean fusionEnabled
+
     List<String> outputEnvNames
 
     Map<String,String> outputEvals
@@ -164,6 +166,7 @@ class TaskBean implements Serializable, Cloneable {
         this.outputEnvNames = task.getOutputEnvNames()
         this.outputEvals = task.getOutputEvals()
         this.statsEnabled = task.getProcessor().getSession().statsEnabled
+        this.fusionEnabled = task.getProcessor().isFusionEnabled()
 
         this.inputFiles = task.getInputFilesMap()
         this.outputFiles = task.getOutputFilesNames()

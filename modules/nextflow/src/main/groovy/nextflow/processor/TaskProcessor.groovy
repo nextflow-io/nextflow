@@ -331,6 +331,8 @@ class TaskProcessor {
      */
     Executor getExecutor() { executor }
 
+    boolean isFusionEnabled() { executor?.isFusionEnabled() ?: false }
+
     /**
      * @return The {@code DataflowOperator} underlying this process
      */

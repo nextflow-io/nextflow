@@ -122,48 +122,54 @@ class AssetManagerTest extends Specification {
         folder.resolve('cbcrg/pipe2').mkdirs()
         folder.resolve('ncbi/blast').mkdirs()
 
-        def manager = new AssetManager()
-
         when:
-        def result = manager.resolveName('x/y')
+        def result = new AssetManager().resolveName('x/y')
         then:
         result == 'x/y'
 
         when:
-        result = manager.resolveName('blast')
+        result = new AssetManager().resolveName('blast')
         then:
         result == 'ncbi/blast'
 
         when:
-        result = manager.resolveName('ncbi/blast/script.nf')
+        result = new AssetManager().resolveName('ncbi/blast/script.nf')
         then:
         result == 'ncbi/blast'
 
         when:
-        result = manager.resolveName('blast/script.nf')
+        result = new AssetManager().resolveName('blast/script.nf')
         then:
         result == 'ncbi/blast'
 
         when:
-        manager.resolveName('pipe')
+        new AssetManager().resolveName('pipe')
         then:
         thrown(AbortOperationException)
 
         when:
-        manager.resolveName('pipe/alpha/beta')
+        new AssetManager().resolveName('pipe/alpha/beta')
         then:
         thrown(AbortOperationException)
 
         when:
-        result = manager.resolveName('../blast/script.nf')
+        new AssetManager().resolveName('../blast/script.nf')
         then:
         thrown(AbortOperationException)
 
         when:
-        result = manager.resolveName('./blast/script.nf')
+        new AssetManager().resolveName('./blast/script.nf')
         then:
         thrown(AbortOperationException)
 
+        when:
+        // mainScript already set via `-main-script` AND name ends with a script file
+        def manager = new AssetManager()
+        manager.mainScript = 'my-script.nf'
+        manager.resolveName('ncbi/blast/script.nf')
+        then:
+        def err = thrown(AbortOperationException)
+        err.message.contains('Project name must be a directory when main script is provided')
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
@@ -523,6 +529,29 @@ class AssetManagerTest extends Specification {
 
     }
 
+    def 'should propagate explicit main script' () {
+
+        given:
+        def dir = tempDir.getRoot()
+        dir.resolve('foo/bar').mkdirs()
+        dir.resolve('foo/bar/nextflow.config').text = 'empty: 1'
+        dir.resolve('foo/bar/.git').mkdir()
+        dir.resolve('foo/bar/.git/config').text = GIT_CONFIG_TEXT
+
+        when:
+        // pass an explicit script file via the new build(...) signature
+        def holder = new AssetManager()
+        holder.build('foo/bar', null, null, null, 'sub/entry.nf')
+        then:
+        holder.getMainScriptName() == 'sub/entry.nf'
+
+        when:
+        // exercise the new (pipelineName, revision, scriptFile, cliOpts) constructor
+        holder = new AssetManager('foo/bar', null, 'sub/entry.nf')
+        then:
+        holder.getMainScriptName() == 'sub/entry.nf'
+    }
+
     def 'should return default main script file' () {
 
         given:
@@ -668,6 +697,13 @@ class AssetManagerTest extends Specification {
         result == 'foo/bar'
         manager.hub == 'gitea'
 
+        when:
+        // a repository URL ending with a `.nf` script file is not a valid repo URL
+        manager = new AssetManager()
+        manager.resolveNameFromGitUrl('https://github.com/foo/bar/main.nf')
+        then:
+        def err = thrown(AbortOperationException)
+        err.message.contains('-main-script')
     }
 
     def 'should detect local scm source' () {

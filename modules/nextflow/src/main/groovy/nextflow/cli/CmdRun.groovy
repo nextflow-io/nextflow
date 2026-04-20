@@ -616,9 +616,7 @@ class CmdRun extends CmdBase implements HubOptions {
         /*
          * try to look for a pipeline in the repository
          */
-        try( final manager = new AssetManager(pipelineName, this) ) {
-            if( revision )
-                manager.setRevision(revision)
+        try( final manager = new AssetManager(pipelineName, revision, mainScript, this) ) {
             final repo = manager.getProjectWithRevision()
             final remoteSource = !manager.isLocalScmSource()
 
