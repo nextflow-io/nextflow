@@ -24,6 +24,7 @@ import java.util.concurrent.ExecutorService
 import com.google.common.hash.HashCode
 import groovyx.gpars.agent.Agent
 import nextflow.Session
+import nextflow.cache.CacheDB
 import nextflow.exception.IllegalArityException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessUnrecoverableException
@@ -31,6 +32,8 @@ import nextflow.executor.Executor
 import nextflow.executor.NopeExecutor
 import nextflow.file.FileHolder
 import nextflow.file.FilePorter
+import nextflow.trace.TraceRecord
+import nextflow.util.HashBuilder
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
@@ -51,6 +54,13 @@ class TaskProcessorTest extends Specification {
 
     def createProcessor(String name, Session session) {
         return new DummyProcessor(name, session, Mock(BaseScript), new ProcessConfig([:]))
+    }
+
+    private static TraceRecord traceRecord(String status, String workdir) {
+        def rec = new TraceRecord()
+        rec.put('status', status)
+        rec.put('workdir', workdir)
+        return rec
     }
 
     static class DummyProcessor extends TaskProcessor {
@@ -617,5 +627,111 @@ class TaskProcessorTest extends Specification {
         and:
         0 * collector.collect(task)
         1 * exec.submit(task)
+    }
+
+    def 'should increment previousTryCount when cache entry is failed'() {
+        given:
+        def baseDir = Files.createTempDirectory('test-cached')
+        def resumeDir = Files.createDirectory(baseDir.resolve('resume-dir'))
+        def cache = Mock(CacheDB)
+        def session = Mock(Session) { getCache() >> cache }
+        def executor = Mock(Executor) { getWorkDir() >> baseDir }
+        def processor = new TaskProcessor(session: session, executor: executor, name: 'foo')
+        and:
+        def task = new TaskRun(config: new TaskConfig(), name: 'foo', processor: processor)
+
+        when:
+        processor.checkCachedOrLaunchTask(task, HashCode.fromString('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'), true)
+
+        then:
+        // first lookup: failed entry with an existing resumeDir → forces next hash
+        1 * cache.getTaskEntry(_, processor) >> new TaskEntry(trace: traceRecord('FAILED', resumeDir.toString()))
+        // second lookup: no entry → task is submitted
+        1 * cache.getTaskEntry(_, processor) >> null
+        1 * executor.submit(task)
+        and:
+        task.previousTryCount == 1
+
+        cleanup:
+        baseDir.toFile().deleteDir()
+    }
+
+    def 'should increment previousTryCount when cache entry is aborted'() {
+        given:
+        def baseDir = Files.createTempDirectory('test-cached')
+        def resumeDir = Files.createDirectory(baseDir.resolve('resume-dir'))
+        def cache = Mock(CacheDB)
+        def session = Mock(Session) { getCache() >> cache }
+        def executor = Mock(Executor) { getWorkDir() >> baseDir }
+        def processor = new TaskProcessor(session: session, executor: executor, name: 'foo')
+        and:
+        def task = new TaskRun(config: new TaskConfig(), name: 'foo', processor: processor)
+
+        when:
+        processor.checkCachedOrLaunchTask(task, HashCode.fromString('bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb'), true)
+
+        then:
+        1 * cache.getTaskEntry(_, processor) >> new TaskEntry(trace: traceRecord('ABORTED', resumeDir.toString()))
+        1 * cache.getTaskEntry(_, processor) >> null
+        1 * executor.submit(task)
+        and:
+        task.previousTryCount == 1
+
+        cleanup:
+        baseDir.toFile().deleteDir()
+    }
+
+    def 'should not increment previousTryCount when no cache entry exists'() {
+        given:
+        def baseDir = Files.createTempDirectory('test-cached')
+        def cache = Mock(CacheDB)
+        def session = Mock(Session) { getCache() >> cache }
+        def executor = Mock(Executor) { getWorkDir() >> baseDir }
+        def processor = new TaskProcessor(session: session, executor: executor, name: 'foo')
+        and:
+        def task = new TaskRun(config: new TaskConfig(), name: 'foo', processor: processor)
+
+        when:
+        processor.checkCachedOrLaunchTask(task, HashCode.fromString('cccccccccccccccccccccccccccccccc'), false)
+
+        then:
+        1 * cache.getTaskEntry(_, processor) >> null
+        1 * executor.submit(task)
+        and:
+        task.previousTryCount == 0
+
+        cleanup:
+        baseDir.toFile().deleteDir()
+    }
+
+    def 'should seed initial tries from previousTryCount and failCount'() {
+        given:
+        def baseDir = Files.createTempDirectory('test-cached')
+        def cache = Mock(CacheDB)
+        def session = Mock(Session) { getCache() >> cache }
+        def executor = Mock(Executor) { getWorkDir() >> baseDir }
+        def processor = new TaskProcessor(session: session, executor: executor, name: 'foo')
+        and:
+        def task = new TaskRun(config: new TaskConfig(), name: 'foo', processor: processor)
+        task.previousTryCount = 2
+        task.failCount = 1
+        def inputHash = HashCode.fromString('dddddddddddddddddddddddddddddddd')
+
+        when:
+        processor.checkCachedOrLaunchTask(task, inputHash, false)
+
+        then:
+        // no cached entry exists so the task is submitted immediately with the seeded hash
+        1 * cache.getTaskEntry(_, processor) >> null
+        1 * executor.submit(task)
+        and:
+        // the seeded hash corresponds to tries = previousTryCount + failCount + 1 = 4
+        task.hash == HashBuilder.defaultHasher().putBytes(inputHash.asBytes()).putInt(4).hash()
+        and:
+        // no failed/aborted entry encountered, so counter is unchanged
+        task.previousTryCount == 2
+
+        cleanup:
+        baseDir.toFile().deleteDir()
     }
 }

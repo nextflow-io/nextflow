@@ -340,6 +340,40 @@ class TraceRecordTest extends Specification {
         'COMPLETED' | true
     }
 
+    @Unroll
+    def 'should validate aborted status' () {
+        given:
+        def rec = new TraceRecord([status:STATUS])
+
+        expect:
+        rec.isAborted() == EXPECTED
+
+        where:
+        STATUS      | EXPECTED
+        null        | false
+        'NEW'       | false
+        'COMPLETED' | false
+        'FAILED'    | false
+        'ABORTED'   | true
+    }
+
+    @Unroll
+    def 'should validate failed status' () {
+        given:
+        def rec = new TraceRecord([status:STATUS])
+
+        expect:
+        rec.isFailed() == EXPECTED
+
+        where:
+        STATUS      | EXPECTED
+        null        | false
+        'NEW'       | false
+        'COMPLETED' | false
+        'ABORTED'   | false
+        'FAILED'    | true
+    }
+
     def 'should throw file not found exception' () {
         given:
         def rec = new TraceRecord([:])
