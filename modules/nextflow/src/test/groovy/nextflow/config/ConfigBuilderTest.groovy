@@ -2352,17 +2352,18 @@ class ConfigBuilderTest extends Specification {
 
     def 'should return parsed config' () {
         given:
-        def cmd = new CmdRun(profile: 'first', withTower: 'http://foo.com', launcher: new Launcher())
-        def base = Files.createTempDirectory('test')
-        base.resolve('nextflow.config').text = '''
+        def folder = Files.createTempDirectory('test')
+        def configFile = folder.resolve('nextflow.config')
+        configFile.text = '''
         profiles {
             first {
                 params {
-                  foo = 'Hello world'
-                  awsKey = 'xyz'
+                    foo = 'Hello world'
+                    awsKey = 'xyz'
                 }
                 process {
-                    executor = { 'local' }
+                    executor = 'local'
+                    cpus = { 4 }
                 }
             }
             second {
@@ -2370,17 +2371,17 @@ class ConfigBuilderTest extends Specification {
             }
         }
         '''
-        when:
-        def txt = ConfigBuilder.resolveConfig(base, cmd)
-        then:
-        txt == '''\
-            params {
-               foo = 'Hello world'
-               awsKey = '[secret]'
-            }
+        and:
+        def launcher = new Launcher(options: new CliOptions(config: [configFile.toFile().canonicalPath]))
+        def cmd = new CmdRun(profile: 'first', withTower: 'http://foo.com', launcher: launcher)
 
+        when:
+        def result = ConfigBuilder.resolveConfig(folder, cmd)
+        then:
+        result == '''\
             process {
-               executor = { 'local' }
+               executor = 'local'
+               cpus = { 4 }
             }
 
             outputFormat = 'text'
@@ -2393,7 +2394,7 @@ class ConfigBuilderTest extends Specification {
             '''.stripIndent()
 
         cleanup:
-        base?.deleteDir()
+        folder?.deleteDir()
     }
 
     def 'should merge profiles with conditions' () {
@@ -2428,7 +2429,7 @@ class ConfigBuilderTest extends Specification {
                 ext.args = '--quiet'
             }
         }
-        params{
+        params {
             another = true
         }
         '''
