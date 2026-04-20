@@ -1171,11 +1171,11 @@ The `module` command provides a comprehensive system for managing registry-based
   $ nextflow module create myorg/my-module
   ```
 
-(cli-module-info)=
+(cli-module-view)=
 
-`info [options] [namespace/name]`
+`view [options] [namespace/name]`
 
-: Display detailed information about a module from the registry.
+: Display detailed information about a module from the registry. `info` is retained as a backward-compatible alias.
 : Shows module name, version, description, and other metadata, as well as example usage.
 : The following options are available:
 
@@ -1183,19 +1183,19 @@ The `module` command provides a comprehensive system for managing registry-based
   : Specify the module version to query (e.g., `1.0.0`). If not specified, displays information for the latest version.
 
   `-o, -output` (`text`)
-  : Output mode for info results. Options: `text` (default), `json`.
+  : Output mode for results. Options: `text` (default), `json`.
 
 : **Examples:**
 
   ```console
   # Display information for latest version
-  $ nextflow module info nf-core/fastqc
+  $ nextflow module view nf-core/fastqc
 
   # Display information for specific version
-  $ nextflow module info nf-core/fastqc -version 1.0.0
+  $ nextflow module view nf-core/fastqc -version 1.0.0
 
   # Get results as JSON
-  $ nextflow module info nf-core/fastqc -output json
+  $ nextflow module view nf-core/fastqc -output json
   ```
 
 (cli-module-install)=

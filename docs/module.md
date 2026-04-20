@@ -370,12 +370,14 @@ By default, both the module files and the `.module-info` file are removed. Use t
 
 ### Viewing module information
 
-Use the `module info` command to display metadata and a usage template for a module:
+Use the `module view` command to display metadata and a usage template for a module:
 
 ```console
-$ nextflow module info nf-core/fastqc
-$ nextflow module info nf-core/fastqc -version 1.0.0
+$ nextflow module view nf-core/fastqc
+$ nextflow module view nf-core/fastqc -version 1.0.0
 ```
+
+The `module info` name is kept as a backward-compatible alias.
 
 The output includes the module description, authors, keywords, tools, inputs, outputs, and a ready-to-use command-line template. Use `-o json` to get machine-readable output.
 

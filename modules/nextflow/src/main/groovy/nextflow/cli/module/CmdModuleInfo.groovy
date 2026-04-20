@@ -82,7 +82,7 @@ class CmdModuleInfo extends CmdBase {
 
     @Override
     String getName() {
-        return 'inspect'
+        return 'view'
     }
 
     @Override
