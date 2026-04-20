@@ -798,32 +798,6 @@ class ConfigBuilder {
         else if( containerConfig.image ) {
             config.process.container = containerConfig.image
         }
-
-        if( !hasContainerDirective(config.process) )
-            throw new AbortOperationException("You have requested to run with ${engine.capitalize()} but no image was specified")
-
-    }
-
-    /**
-     * Verify that configuration for process contains at last one `container` directive
-     *
-     * @param process
-     * @return {@code true} when a `container` is defined or {@code false} otherwise
-     */
-    protected boolean hasContainerDirective(process)  {
-
-        if( process instanceof Map ) {
-            if( process.container )
-                return true
-
-            def result = process
-                    .findAll { String name, value -> (name.startsWith('withName:') || name.startsWith('$')) && value instanceof Map }
-                    .find { String name, Map value -> value.container as boolean }  // the first non-empty `container` string
-
-            return result as boolean
-        }
-
-        return false
     }
 
     ConfigObject buildConfigObject() {
