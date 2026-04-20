@@ -377,8 +377,6 @@ $ nextflow module view nf-core/fastqc
 $ nextflow module view nf-core/fastqc -version 1.0.0
 ```
 
-The `module info` name is kept as a backward-compatible alias.
-
 The output includes the module description, authors, keywords, tools, inputs, outputs, and a ready-to-use command-line template. Use `-o json` to get machine-readable output.
 
 ### Publishing modules

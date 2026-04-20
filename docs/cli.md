@@ -323,7 +323,7 @@ See {ref}`cli-module-list` for more information.
 
 ### Viewing module information
 
-The `module view` command displays detailed metadata and usage information for a specific module from the registry. (`module info` is kept as a backward-compatible alias.)
+The `module view` command displays detailed metadata and usage information for a specific module from the registry.
 
 Use this to understand module requirements, view input/output specifications, see available tools, or generate usage templates before installing or running a module.
 
