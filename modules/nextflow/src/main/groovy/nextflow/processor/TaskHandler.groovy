@@ -325,10 +325,15 @@ abstract class TaskHandler {
             record.store.put('rss', toLong(cgroup.get('memory_rss')))
             record.store.put('peak_vmem', toLong(cgroup.get('memory_peak')))
             record.store.put('peak_rss', toLong(cgroup.get('memory_peak_rss')))
+            // Compute %mem as peak RSS against the cgroup memory limit — i.e. how close the
+            // task got to its allocated memory. This overrides proc.pct_mem, which is RSS against
+            // total host memory (ps %MEM semantics) and underestimates utilization for containerized
+            // tasks whose limit is smaller than the host. Using peak (not current) RSS because Fusion
+            // overwrites memory_rss post-exit, making the last sample unrepresentative.
             final memLimit = toLong(cgroup.get('memory_limit'))
-            final memRss = toLong(cgroup.get('memory_rss'))
+            final memPeakRss = toLong(cgroup.get('memory_peak_rss'))
             if( memLimit > 0 ) {
-                record.store.put('%mem', (memRss / (float)memLimit * 100.0f) as float)
+                record.store.put('%mem', (memPeakRss / (float)memLimit * 100.0f) as float)
             }
         }
         else if( proc ) {
