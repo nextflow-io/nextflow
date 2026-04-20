@@ -1171,33 +1171,6 @@ The `module` command provides a comprehensive system for managing registry-based
   $ nextflow module create myorg/my-module
   ```
 
-(cli-module-info)=
-
-`info [options] [namespace/name]`
-
-: Display detailed information about a module from the registry.
-: Shows module name, version, description, and other metadata, as well as example usage.
-: The following options are available:
-
-  `-version`
-  : Specify the module version to query (e.g., `1.0.0`). If not specified, displays information for the latest version.
-
-  `-o, -output` (`text`)
-  : Output mode for info results. Options: `text` (default), `json`.
-
-: **Examples:**
-
-  ```console
-  # Display information for latest version
-  $ nextflow module info nf-core/fastqc
-
-  # Display information for specific version
-  $ nextflow module info nf-core/fastqc -version 1.0.0
-
-  # Get results as JSON
-  $ nextflow module info nf-core/fastqc -output json
-  ```
-
 (cli-module-install)=
 
 `install [options] [namespace/name]`
@@ -1420,6 +1393,33 @@ The `module` command provides a comprehensive system for managing registry-based
 
   # Validate module by path
   $ nextflow module validate ./modules/myorg/my-module
+  ```
+
+(cli-module-view)=
+
+`view [options] [namespace/name]`
+
+: Display detailed information about a module from the registry.
+: Shows module name, version, description, and other metadata, as well as example usage.
+: The following options are available:
+
+  `-version`
+  : Specify the module version to query (e.g., `1.0.0`). If not specified, displays information for the latest version.
+
+  `-o, -output` (`text`)
+  : Output format. Options: `text` (default), `json`.
+
+: **Examples:**
+
+  ```console
+  # Display information for latest version
+  $ nextflow module view nf-core/fastqc
+
+  # Display information for specific version
+  $ nextflow module view nf-core/fastqc -version 1.0.0
+
+  # Get results as JSON
+  $ nextflow module view nf-core/fastqc -output json
   ```
 
 (cli-plugin)=

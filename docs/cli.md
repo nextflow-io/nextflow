@@ -323,19 +323,19 @@ See {ref}`cli-module-list` for more information.
 
 ### Viewing module information
 
-The `module info` command displays detailed metadata and usage information for a specific module from the registry.
+The `module view` command displays detailed metadata and usage information for a specific module from the registry.
 
 Use this to understand module requirements, view input/output specifications, see available tools, or generate usage templates before installing or running a module.
 
 ```console
-$ nextflow module info nf-core/fastqc
-$ nextflow module info nf-core/fastqc -version 1.0.0
-$ nextflow module info nf-core/fastqc -output json
+$ nextflow module view nf-core/fastqc
+$ nextflow module view nf-core/fastqc -version 1.0.0
+$ nextflow module view nf-core/fastqc -output json
 ```
 
 The output includes the module's version, description, authors, keywords, tools, input/output channels, and a generated usage template showing how to run the module. Use `-json` for machine-readable output suitable for programmatic access.
 
-See {ref}`cli-module-info` for more information.
+See {ref}`cli-module-view` for more information.
 
 ### Running modules directly
 
@@ -358,7 +358,7 @@ $ nextflow module run nf-core/salmon \
     -resume
 ```
 
-Process inputs can be specified like params on the command line. For example, `--reads reads.fq` corresponds to the `reads` input in the `nf-core/salmon` module. Run `nextflow module info nf-core/salmon` to see the available params for the module.
+Process inputs can be specified like params on the command line. For example, `--reads reads.fq` corresponds to the `reads` input in the `nf-core/salmon` module. Run `nextflow module view nf-core/salmon` to see the available params for the module.
 
 See {ref}`cli-module-run` for more information.
 
