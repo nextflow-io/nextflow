@@ -164,6 +164,58 @@ class LabelsTest extends Specification {
         !labels.entries.containsKey('seqera.io/platform/workflowId')
     }
 
+    def 'should emit only included workflow metadata labels'() {
+        given:
+        def workflow = Mock(WorkflowMetadata) {
+            getProjectName() >> 'nf-core/rnaseq'
+            getRunName() >> 'crazy_darwin'
+            getSessionId() >> UUID.randomUUID()
+            isResume() >> false
+            getRevision() >> '3.12.0'
+            getManifest() >> new Manifest([name: 'nf-core/rnaseq'])
+        }
+
+        when:
+        def labels = new Labels()
+                .withWorkflowMetadata(workflow, ['runName', 'revision'] as Set)
+
+        then:
+        labels.entries.keySet() == ['nextflow.io/runName', 'nextflow.io/revision'] as Set
+    }
+
+    def 'should emit only the workflowId label when filtered to workflowId'() {
+        given:
+        def workflow = Mock(WorkflowMetadata) {
+            getProjectName() >> 'hello'
+            getRunName() >> 'happy_turing'
+            getSessionId() >> UUID.randomUUID()
+            isResume() >> false
+            getManifest() >> new Manifest([:])
+            getPlatform() >> new PlatformMetadata('wf-abc123')
+        }
+
+        when:
+        def labels = new Labels()
+                .withWorkflowMetadata(workflow, ['workflowId'] as Set)
+
+        then:
+        labels.entries.keySet() == ['seqera.io/platform/workflowId'] as Set
+    }
+
+    def 'should emit nothing for an empty include set'() {
+        given:
+        def workflow = Mock(WorkflowMetadata) {
+            getProjectName() >> 'hello'
+        }
+
+        when:
+        def labels = new Labels()
+                .withWorkflowMetadata(workflow, [] as Set)
+
+        then:
+        labels.entries.isEmpty()
+    }
+
     def 'should add process resource labels coercing values to string'() {
         when:
         def labels = new Labels()
