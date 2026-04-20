@@ -70,7 +70,7 @@ class CmdModule extends CmdBase implements UsageAware {
             // Register all subcommands
             commands.each { cmd ->
                 cmd.launcher = this.launcher
-                this.jCommander.addCommand(cmd.getName(), cmd, new String[0])
+                this.jCommander.addCommand(cmd.getName(), cmd, cmd.getAliases() as String[])
             }
         }
         return jCommander
@@ -117,7 +117,7 @@ class CmdModule extends CmdBase implements UsageAware {
     }
 
     private CmdBase findCmd(String name) {
-        commands.find { it.name == name }
+        commands.find { it.name == name || name in it.aliases }
     }
 
     /**

@@ -82,7 +82,12 @@ class CmdModuleInfo extends CmdBase {
 
     @Override
     String getName() {
-        return 'info'
+        return 'inspect'
+    }
+
+    @Override
+    List<String> getAliases() {
+        return List.of('info')
     }
 
     @Override
