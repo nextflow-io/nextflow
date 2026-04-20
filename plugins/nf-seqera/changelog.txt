@@ -1,5 +1,9 @@
 nf-seqera changelog
 ====================
+0.18.0 - 20 Apr 2026
+- Honour process.resourceLabels in nf-seqera executor (#7048) [979f684ff]
+- Filter autoLabels to selected workflow-metadata fields (#7049) [ddc974fe6]
+
 0.17.0 - 7 Apr 2026
 - Add resourceAllocation field to trace record (#6973) [a2742939c]
 - Add compute env ID and provider support to Seqera executor (#6906) [4c2eb9390]
