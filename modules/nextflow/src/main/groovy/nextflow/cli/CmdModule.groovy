@@ -23,7 +23,7 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cli.module.CmdModuleCreate
-import nextflow.cli.module.CmdModuleInfo
+import nextflow.cli.module.CmdModuleView
 import nextflow.cli.module.CmdModuleInstall
 import nextflow.cli.module.CmdModuleList
 import nextflow.cli.module.CmdModulePublish
@@ -57,7 +57,7 @@ class CmdModule extends CmdBase implements UsageAware {
         commands << new CmdModuleList()
         commands << new CmdModuleRemove()
         commands << new CmdModuleSearch()
-        commands << new CmdModuleInfo()
+        commands << new CmdModuleView()
         commands << new CmdModulePublish()
         commands << new CmdModuleSpec()
         commands << new CmdModuleValidate()
