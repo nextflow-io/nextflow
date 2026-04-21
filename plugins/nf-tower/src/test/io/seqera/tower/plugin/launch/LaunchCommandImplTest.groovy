@@ -17,7 +17,7 @@
 package io.seqera.tower.plugin.launch
 
 import io.seqera.http.HxClient
-import io.seqera.tower.plugin.TowerCommonApi
+import io.seqera.tower.plugin.TowerClient
 import nextflow.cli.CmdLaunch
 import nextflow.exception.AbortOperationException
 import org.junit.Rule
@@ -379,11 +379,12 @@ class LaunchCommandImplTest extends Specification {
             'tower.accessToken': 'test-token',
             'tower.endpoint': 'https://api.cloud.seqera.io'
         ]
-        def commonApi = Mock(TowerCommonApi){
-            getUserInfo(_, _) >> [name: 'testuser', id: '123']
-            getUserWorkspaceDetails(_,_, _, _) >> null
+        def client = Mock(TowerClient){
+            getUserInfo() >> [name: 'testuser', id: '123']
+            getUserWorkspaceDetails(_,_) >> null
         }
-        def cmd = Spy(new LaunchCommandImpl(commonApi))
+        def cmd = Spy(new LaunchCommandImpl())
+        cmd.createTowerClient(_,_) >> client
         cmd.readConfig() >> config
         cmd.resolveWorkspaceId(_, _, _, _) >> null
         cmd.resolveComputeEnvironment(_,_, _, _, _) >> [id: 'ce-123', name: 'test-ce', workDir: 's3://bucket/work']
@@ -405,11 +406,12 @@ class LaunchCommandImplTest extends Specification {
     def 'should use default endpoint when not configured'() {
         given:
         def config = ['tower.accessToken': 'test-token']
-        def commonApi = Mock(TowerCommonApi){
-            getUserInfo(_, _) >> [name: 'testuser', id: '123']
-            getUserWorkspaceDetails(_, _, _, _) >> null
+        def client = Mock(TowerClient){
+            getUserInfo() >> [name: 'testuser', id: '123']
+            getUserWorkspaceDetails(_, _) >> null
         }
-        def cmd = Spy(new LaunchCommandImpl(commonApi))
+        def cmd = Spy(new LaunchCommandImpl())
+        cmd.createTowerClient(_,_) >> client
         cmd.readConfig() >> config
         cmd.resolveWorkspaceId(_, _, _, _) >> null
         cmd.resolveComputeEnvironment(_,_, _, _, _) >> [id: 'ce-123', name: 'test-ce', workDir: 's3://bucket/work']
@@ -427,11 +429,12 @@ class LaunchCommandImplTest extends Specification {
         given:
 
         def config = ['tower.accessToken': 'test-token', 'tower.workspaceId': 12345]
-        def commonApi = Mock(TowerCommonApi){
-             getUserInfo(_, _) >> [name: 'testuser', id: '123']
-             getUserWorkspaceDetails(_, _, _, _) >> [orgName: 'TestOrg', workspaceName: 'TestWS']
-         }
-        def cmd = Spy(new LaunchCommandImpl(commonApi))
+        def client = Mock(TowerClient){
+             getUserInfo() >> [name: 'testuser', id: '123']
+             getUserWorkspaceDetails(_, _) >> [orgName: 'TestOrg', workspaceName: 'TestWS']
+        }
+        def cmd = Spy(new LaunchCommandImpl())
+        cmd.createTowerClient(_,_) >> client
         cmd.readConfig() >> config
         cmd.resolveWorkspaceId(_, _, _, _) >> 12345L
         cmd.resolveComputeEnvironment(_, _, _, _, _) >> [id: 'ce-123', name: 'test-ce', workDir: 's3://bucket/work']
@@ -456,10 +459,10 @@ class LaunchCommandImplTest extends Specification {
             [id: 'ce-1', name: 'primary-ce', primary: true],
             [id: 'ce-2', name: 'secondary-ce', primary: false]
         ]
-        cmd.listComputeEnvironments(_, _, _) >> computeEnvs
+        cmd.listComputeEnvironments(_, _) >> computeEnvs
 
         when:
-        def result = cmd.findComputeEnv(Mock(HxClient), 'secondary-ce', null,  'endpoint')
+        def result = cmd.findComputeEnv(Mock(TowerClient), 'secondary-ce', null)
 
         then:
         result.id == 'ce-2'
@@ -473,10 +476,10 @@ class LaunchCommandImplTest extends Specification {
             [id: 'ce-1', name: 'primary-ce', primary: true],
             [id: 'ce-2', name: 'secondary-ce', primary: false]
         ]
-        cmd.listComputeEnvironments(_, _, _) >> computeEnvs
+        cmd.listComputeEnvironments(_, _) >> computeEnvs
 
         when:
-        def result = cmd.findComputeEnv( Mock(HxClient) ,null, null,  'endpoint')
+        def result = cmd.findComputeEnv( Mock(TowerClient) ,null, null)
 
         then:
         result.id == 'ce-1'
@@ -487,10 +490,10 @@ class LaunchCommandImplTest extends Specification {
     def 'should return null when compute environment not found'() {
         given:
         def cmd = Spy(LaunchCommandImpl)
-        cmd.listComputeEnvironments(_, _, _) >> []
+        cmd.listComputeEnvironments(_, _) >> []
 
         when:
-        def result = cmd.findComputeEnv(Mock(HxClient), 'nonexistent', null, 'endpoint')
+        def result = cmd.findComputeEnv(Mock(TowerClient), 'nonexistent', null)
 
         then:
         result == null
@@ -500,7 +503,7 @@ class LaunchCommandImplTest extends Specification {
         given:
         def cmd = Spy(LaunchCommandImpl)
         // Mock findComputeEnv to return null (not found)
-        cmd.findComputeEnv(_,'nonexistent', null, 'https://api.cloud.seqera.io') >> null
+        cmd.findComputeEnv(_,'nonexistent', null) >> null
 
         when:
         cmd.resolveComputeEnvironment(null, 'nonexistent', null, 'token', 'https://api.cloud.seqera.io')
@@ -514,7 +517,8 @@ class LaunchCommandImplTest extends Specification {
         given:
         def cmd = Spy(LaunchCommandImpl)
         // Mock findComputeEnv to return null (no primary found)
-        cmd.findComputeEnv(_ , null, null, 'https://api.cloud.seqera.io') >> null
+        cmd.createTowerClient(_,_) >> Mock(TowerClient)
+        cmd.findComputeEnv(_ , null, null) >> null
 
         when:
         cmd.resolveComputeEnvironment(null, null, null, 'token', 'https://api.cloud.seqera.io')
@@ -687,11 +691,12 @@ class LaunchCommandImplTest extends Specification {
             [workspaceId: 111, workspaceName: 'ws1'],
             [workspaceId: 222, workspaceName: 'ws2']
         ]
-        def commonApi = Mock(TowerCommonApi) {
-            getUserInfo(_, _) >> [id: 'user-123']
+        def client = Mock(TowerClient) {
+            getUserInfo() >> [id: 'user-123']
         }
-        def cmd = Spy(new LaunchCommandImpl(commonApi))
-        cmd.listUserWorkspaces(_, _, _) >> workspaces
+        def cmd = Spy(new LaunchCommandImpl())
+        cmd.createTowerClient(_,_) >> client
+        cmd.listUserWorkspaces(_, _) >> workspaces
 
         when:
         def workspaceId = cmd.resolveWorkspaceId(config, 'ws2', 'token', 'endpoint')
@@ -703,10 +708,11 @@ class LaunchCommandImplTest extends Specification {
     def 'should throw error when workspace not found by name'() {
         given:
         def config = [:]
-        def commonApi = Mock(TowerCommonApi) {
-            getUserInfo(_, _) >> [id: 'user-123']
+        def client = Mock(TowerClient) {
+            getUserInfo() >> [id: 'user-123']
         }
-        def cmd = Spy(new LaunchCommandImpl(commonApi))
+        def cmd = Spy(new LaunchCommandImpl())
+        cmd.createTowerClient(_,_) >> client
         cmd.listUserWorkspaces(_, _, _) >> []
 
         when:
