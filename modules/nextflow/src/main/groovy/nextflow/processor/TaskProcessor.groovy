@@ -1895,6 +1895,13 @@ class TaskProcessor {
     final protected void submitTask( TaskRun task, HashCode hash, Path folder ) {
         log.trace "[${safeTaskName(task)}] actual run folder: ${folder}"
 
+        // validate that a container image is defined when a container engine is enabled
+        final containerConfig = task.getContainerConfig()
+        if( containerConfig?.isEnabled() && !task.getContainer() )
+            throw new ProcessUnrecoverableException(
+                "Process `${safeTaskName(task)}` requires a container image but none was specified -- add a `container` directive or disable the ${containerConfig.getEngine()} engine"
+            )
+
         // set name, hash, and working directory
         task.hash = hash
         task.workDir = folder

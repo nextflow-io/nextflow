@@ -24,6 +24,7 @@ import java.util.concurrent.ExecutorService
 import com.google.common.hash.HashCode
 import groovyx.gpars.agent.Agent
 import nextflow.Session
+import nextflow.container.ContainerConfig
 import nextflow.exception.IllegalArityException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessUnrecoverableException
@@ -616,6 +617,58 @@ class TaskProcessorTest extends Specification {
         task.getConfig() >> new TaskConfig(attempt: 2)
         and:
         0 * collector.collect(task)
+        1 * exec.submit(task)
+    }
+
+    def 'should fail submit when container engine is enabled but no container is defined'() {
+        given:
+        def exec = Mock(Executor)
+        def proc = Spy(new TaskProcessor(executor: exec))
+        and:
+        def containerCfg = Mock(ContainerConfig) {
+            isEnabled() >> true
+            getEngine() >> 'docker'
+        }
+        def task = Mock(TaskRun) {
+            lazyName() >> 'FOO'
+            getContainerConfig() >> containerCfg
+            getContainer() >> null
+        }
+        def hash = HashCode.fromString('0123456789abcdef')
+        def workDir = Path.of('/work')
+
+        when:
+        proc.submitTask(task, hash, workDir)
+
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        e.message.contains('FOO')
+        e.message.contains('docker')
+        and:
+        0 * exec.submit(task)
+    }
+
+    def 'should submit when container engine is enabled and a container image is defined'() {
+        given:
+        def exec = Mock(Executor)
+        def proc = Spy(new TaskProcessor(executor: exec))
+        and:
+        def containerCfg = Mock(ContainerConfig) {
+            isEnabled() >> true
+            getEngine() >> 'docker'
+        }
+        def task = Mock(TaskRun) {
+            getConfig() >> new TaskConfig()
+            getContainerConfig() >> containerCfg
+            getContainer() >> 'ubuntu:22.04'
+        }
+        def hash = HashCode.fromString('0123456789abcdef')
+        def workDir = Path.of('/work')
+
+        when:
+        proc.submitTask(task, hash, workDir)
+
+        then:
         1 * exec.submit(task)
     }
 }
