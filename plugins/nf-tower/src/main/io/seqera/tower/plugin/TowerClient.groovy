@@ -143,8 +143,6 @@ class TowerClient implements TraceObserverV2 {
 
     private Map<String,Boolean> allContainers = new ConcurrentHashMap<>()
 
-    private boolean abortOnError = true
-    
     protected TowerCommonApi commonApi
 
     private Duration readTimeout = TowerConfig.DEFAULT_READ_TIMEOUT
@@ -162,24 +160,12 @@ class TowerClient implements TraceObserverV2 {
         this.schema = loadSchema()
         this.generator = TowerJsonGenerator.create(schema)
         this.reports = new TowerReports(session)
-        setAbortOnError(this.env)
         this.commonApi = new TowerCommonApi()
     }
 
     TowerClient withEnvironment(Map env) {
         this.env = env
-        setAbortOnError(env)
         return this
-    }
-
-    protected void setAbortOnError(Map env){
-        if( !env ) {
-            return
-        }
-        final abort = env.get("TOWER_ABORT_ON_ERROR") as String
-        if( abort ){
-            this.abortOnError = Boolean.parseBoolean(abort)
-        }
     }
 
     TowerClient withRequestTimeout(Duration duration) {
@@ -298,7 +284,7 @@ class TowerClient implements TraceObserverV2 {
      */
     @Override
     void onFlowCreate(Session session) {
-        log.debug "Creating Seqera Platform observer -- endpoint=$endpoint; requestInterval=$requestInterval; aliveInterval=$aliveInterval; maxRetries=$maxRetries; backOffBase=$backOffBase; backOffDelay=$backOffDelay; abortOnError=$abortOnError"
+        log.debug "Creating Seqera Platform observer -- endpoint=$endpoint; requestInterval=$requestInterval; aliveInterval=$aliveInterval; maxRetries=$maxRetries; backOffBase=$backOffBase; backOffDelay=$backOffDelay;"
 
         this.session = session
         this.aggregator = new ResourcesAggregator()
@@ -310,24 +296,18 @@ class TowerClient implements TraceObserverV2 {
         final req = makeCreateReq(session)
         final resp = sendHttpMessage(urlTraceCreate, req, 'POST')
         if( resp.error ) {
-            log.debug """\
+            final message = """\
                 Unexpected HTTP response
                 - endpoint    : $urlTraceCreate
                 - status code : $resp.code
                 - response msg: $resp.cause
                 """.stripIndent(true)
-            if( abortOnError ) {
-                throw new AbortRunException(resp.message)
-            }
-            throw new AbortOperationException(resp.message)
+            throw new AbortRunException(message)
         }
         final ret = parseTowerResponse(resp)
         this.workflowId = ret.workflowId
         if( !workflowId ) {
-            if( abortOnError ) {
-                throw new AbortRunException("Invalid Seqera Platform API response - Missing workflow Id")
-            }
-            throw new AbortOperationException("Invalid Seqera Platform API response - Missing workflow Id")
+            throw new AbortRunException("Invalid Seqera Platform API response - Missing workflow Id")
         }
         log.debug "Platform workflow id: $workflowId; workflow url: ${ret.watchUrl}"
         session.workflowMetadata.platform.workflowId = workflowId
@@ -468,11 +448,7 @@ class TowerClient implements TraceObserverV2 {
                 - status code : $resp.code
                 - response msg: $resp.cause
                 """.stripIndent(true)
-            if( abortOnError ) {
-                throw new AbortRunException(resp.message)
-            } else {
-                throw new AbortOperationException(resp.message)
-            }
+            throw new AbortRunException(resp.message)
         }
 
         final payload = parseTowerResponse(resp)
@@ -509,7 +485,7 @@ class TowerClient implements TraceObserverV2 {
         if( workflowId && sender ) {
             final req = makeCompleteReq(session)
             final resp = sendHttpMessage(urlTraceComplete, req, 'PUT')
-            logHttpResponse(urlTraceComplete, resp)
+            logHttpResponse(urlTraceComplete, resp, false)
         }
     }
 
@@ -816,7 +792,7 @@ class TowerClient implements TraceObserverV2 {
     /**
      * Little helper function that can be called for logging upon an incoming HTTP response
      */
-    protected void logHttpResponse(String url, Response resp) {
+    protected void logHttpResponse(String url, Response resp, boolean abortOnError) {
         if (resp.code >= 200 && resp.code < 300) {
             log.trace "Successfully send message to ${url} -- received status code ${resp.code}"
         }
@@ -852,11 +828,7 @@ class TowerClient implements TraceObserverV2 {
                 """.stripIndent(true)
         // append separately otherwise formatting get broken
         msg += "- error cause : ${cause ?: '-'}"
-        if( abortOnError ) {
-            throw new AbortRunException(msg)
-        } else {
-            throw new Exception(msg)
-        }
+        throw new AbortRunException(msg)
     }
 
     protected String parseCause(String cause) {
@@ -923,7 +895,7 @@ class TowerClient implements TraceObserverV2 {
                     if( delta > aliveInterval.millis ) {
                         final req = makeHeartbeatReq()
                         final resp = sendHttpMessage(urlTraceHeartbeat, req, 'PUT')
-                        logHttpResponse(urlTraceHeartbeat, resp)
+                        logHttpResponse(urlTraceHeartbeat, resp, false)
                         previous = now
                     }
                     continue
@@ -933,7 +905,7 @@ class TowerClient implements TraceObserverV2 {
                     // send
                     final req = makeTasksReq(tasks.values())
                     final resp = sendHttpMessage(urlTraceProgress, req, 'PUT')
-                    logHttpResponse(urlTraceProgress, resp)
+                    logHttpResponse(urlTraceProgress, resp, true)
 
                     // clean up for next iteration
                     previous = now
@@ -942,12 +914,8 @@ class TowerClient implements TraceObserverV2 {
             }
         } catch( Exception e ) {
             this.sender = null
-            if( abortOnError ) {
-                log.error("Aborting session due to Seqera Platform telemetry exception - $e.message", e)
-                session.abort(e)
-            } else {
-                log.warn("Exception in Seqera Platform telemetry - $e.message")
-            }
+            log.error("Aborting session due to Seqera Platform telemetry exception - $e.message", e)
+            session.abort(e)
         }
     }
 
