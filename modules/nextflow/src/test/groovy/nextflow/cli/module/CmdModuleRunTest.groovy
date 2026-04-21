@@ -195,6 +195,73 @@ class CmdModuleRunTest extends Specification {
 
     }
 
+    def 'should run module from local path'() {
+        given:
+        def moduleScript = '''
+            process CREATE_LOCAL_FILE {
+                output:
+                path "local_output.txt"
+
+                script:
+                """
+                echo "Local module executed" > local_output.txt
+                """
+            }
+        '''.stripIndent()
+
+        and:
+        // Create a local module directory with main.nf
+        def moduleDir = tempDir.resolve('local-module')
+        Files.createDirectories(moduleDir)
+        moduleDir.resolve('main.nf').text = moduleScript
+
+        def escapedPath = Pattern.quote(tempDir.toString())
+        def pattern = ~/"${escapedPath}\/.+\/local_output\.txt"/
+
+        and:
+        def cmd = new CmdModuleRun()
+        def opts = new CliOptions()
+        opts.setQuiet(true)
+        cmd.launcher = Mock(Launcher) {
+            getOptions() >> opts
+            getCliString() >> "nextflow module run ${moduleDir}"
+        }
+        cmd.args = [moduleDir.toString()]
+        cmd.root = tempDir
+        cmd.workDir = tempDir.toString()
+        cmd.outputDir = tempDir.resolve('results').toString()
+        cmd.outputFormat = 'json'
+
+        when:
+        cmd.run()
+        def stdout = capture
+            .toString()
+            .readLines()// remove the log part
+            .findResults { line -> !line.contains('DEBUG') ? line : null }
+            .findResults { line -> !line.contains('INFO') ? line : null }.join(" ")
+
+        then:
+        assert (stdout =~ pattern).find()
+    }
+
+    def 'should fail when path and module do not exist'() {
+        given:
+        def nonExistentPath = tempDir.resolve('does-not-exist').toString()
+        def cmd = new CmdModuleRun()
+        cmd.launcher = Mock(Launcher) {
+            getOptions() >> null
+        }
+        cmd.args = [nonExistentPath]
+        cmd.root = tempDir
+
+        when:
+        cmd.run()
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('Invalid module reference')
+    }
+
     def 'should fail with no arguments'() {
         given:
         def cmd = new CmdModuleRun()

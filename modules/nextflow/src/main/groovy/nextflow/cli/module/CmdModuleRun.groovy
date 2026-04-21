@@ -20,6 +20,7 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import io.seqera.npr.client.RegistryClient
+import nextflow.Const
 import nextflow.cli.CmdRun
 import nextflow.config.ConfigBuilder
 import nextflow.config.RegistryConfig
@@ -55,12 +56,11 @@ class CmdModuleRun extends CmdRun {
         return 'run'
     }
 
-    @Override
-    void run() {
-        if( !args ) {
-            throw new AbortOperationException("Arguments not provided")
+    private Path determineModuleFile(){
+        //If local path exists return this path as module dir
+        if (Paths.get(args[0]).exists()){
+            return Paths.get(args[0]).toAbsolutePath().normalize().resolve(Const.DEFAULT_MAIN_FILE_NAME)
         }
-
         // Parse and validate module reference
         ModuleReference reference
         try {
@@ -77,9 +77,22 @@ class CmdModuleRun extends CmdRun {
             .build()
 
         def registryConfig = config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
+        try {
+            def resolver = new ModuleResolver(baseDir, client ?: RegistryClientFactory.forConfig(registryConfig))
+            return resolver.installModule(reference, version)
+        } catch( Exception e ) {
+            throw new AbortOperationException("Unable to install module: ${args[0]}", e)
+        }
 
-        def resolver = new ModuleResolver(baseDir, client ?: RegistryClientFactory.forConfig(registryConfig))
-        Path moduleFile = resolver.installModule(reference, version)
+    }
+
+    @Override
+    void run() {
+        if( !args ) {
+            throw new AbortOperationException("Arguments not provided")
+        }
+
+        Path moduleFile = determineModuleFile()
         if( moduleFile ) {
             args[0] = moduleFile.toAbsolutePath().toString()
             super.run()
