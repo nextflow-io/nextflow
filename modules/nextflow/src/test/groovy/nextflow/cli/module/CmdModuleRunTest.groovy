@@ -259,7 +259,7 @@ class CmdModuleRunTest extends Specification {
 
         then:
         def e = thrown(AbortOperationException)
-        e.message.contains('Invalid module reference')
+        e.message.contains('Invalid module path')
     }
 
     def 'should fail with no arguments'() {
