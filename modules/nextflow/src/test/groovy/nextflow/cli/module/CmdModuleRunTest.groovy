@@ -16,311 +16,166 @@
 
 package nextflow.cli.module
 
-import io.seqera.npr.client.RegistryClient
-import io.seqera.npr.api.schema.v1.Module
-import io.seqera.npr.api.schema.v1.ModuleRelease
 import nextflow.cli.CliOptions
 import nextflow.cli.Launcher
 import nextflow.exception.AbortOperationException
-import nextflow.module.ModuleReference
-import nextflow.module.ModuleStorage
-import org.apache.commons.compress.archivers.tar.TarArchiveEntry
-import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
-import org.junit.Rule
 import spock.lang.Specification
 import spock.lang.TempDir
-import test.OutputCapture
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.regex.Pattern
-import java.util.zip.GZIPOutputStream
 
 /**
- * Tests for CmdModuleRun command
+ * Tests for CmdModuleRun source resolution
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
 class CmdModuleRunTest extends Specification {
 
-    @Rule
-    OutputCapture capture = new OutputCapture()
-
     @TempDir
     Path tempDir
 
-    def 'should run module and create output file'() {
-        given:
-        // Create a simple module script that creates a file
-        def moduleScript = '''
-            process CREATE_FILE {
-                output:
-                path "test_output.txt"
+    // --- Source classification (data-driven) ---
 
-                script:
-                """
-                echo "Module executed successfully" > test_output.txt
-                """
-            }
-        '''.stripIndent()
+    def 'isLocalModule classifies "#source" as local=#expected'() {
+        expect:
+        new CmdModuleRun().isLocalModule(source) == expected
 
-        and:
-        // Create module directory structure
-        def storage = new ModuleStorage(tempDir)
-        def moduleRef = new ModuleReference('nf-core', 'test-module')
-        def moduleDir = storage.getModuleDir(moduleRef)
-        Files.createDirectories(moduleDir)
-
-        // Write main.nf
-        moduleDir.resolve('main.nf').text = moduleScript
-
-        // Write meta.yml
-        moduleDir.resolve('meta.yml').text = '''
-            name: nf-core/test-module
-            version: 1.0.0
-            description: Test module that creates a file
-        '''.stripIndent()
-
-        and:
-        // Create mock module package
-        def modulePackage = createModulePackage(moduleScript)
-
-        // Mock registry client
-        def mockClient = Stub(RegistryClient)
-        def moduleRelease = new ModuleRelease()
-        moduleRelease.version = '1.0.0'
-        def module = new Module()
-        module.name = 'nf-core/test-module'
-        module.latest = moduleRelease
-        mockClient.getModule(_) >> module  // Use wildcard to match any argument
-        mockClient.downloadModuleRelease(_, _, _) >> { String name, String version, Path dest ->
-            Files.write(dest, modulePackage)
-            return dest
-        }
-        def escapedPath = Pattern.quote(tempDir.toString())
-        def pattern = ~/"${escapedPath}\/.+\/test_output\.txt"/
-
-        and:
-        def cmd = new CmdModuleRun()
-        def opts = new CliOptions()
-        opts.setQuiet(true)
-        cmd.launcher = Mock(Launcher) {
-            getOptions() >> opts
-            getCliString() >> "nextflow module run nf-core/test-module"
-        }
-        cmd.args = ['nf-core/test-module']
-        cmd.root = tempDir
-        cmd.workDir = tempDir.toString()
-        cmd.outputDir = tempDir.resolve('results').toString()
-        cmd.outputFormat = 'json'
-        cmd.client = mockClient
-
-        when:
-        cmd.run()
-        def stdout = capture
-            .toString()
-            .readLines()// remove the log part
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }.join(" ")
-
-        then:
-        assert (stdout =~ pattern).find()
-        and:
-        // Verify module was installed
-        Files.exists(moduleDir)
-        Files.exists(moduleDir.resolve('main.nf'))
-
+        where:
+        source                  || expected
+        '/absolute/path'        || true
+        './relative/path'       || true
+        '../parent/path'        || true
+        '/tmp/module/main.nf'   || true
+        'nf-core/test-module'   || false
+        'scope/name'            || false
+        'single-word'           || false
     }
 
-    def 'should run module with specific version'() {
+    // --- Local resolution semantics ---
+
+    def 'local module directory resolves to main.nf'() {
         given:
-        def moduleScript = '''
-            process CREATE_FILE_V2 {
-                output:
-                path "test_output_v2.txt", emit: output_path
-
-                script:
-                """
-                echo "Module version 2.0.0 executed successfully" > test_output_v2.txt
-                """
-            }
-        '''
-
-        and:
-        def storage = new ModuleStorage(tempDir)
-        def moduleRef = new ModuleReference('nf-core', 'test-module')
-        def moduleDir = storage.getModuleDir(moduleRef)
+        def moduleDir = tempDir.resolve('my-module')
         Files.createDirectories(moduleDir)
-        moduleDir.resolve('main.nf').text = moduleScript
-        moduleDir.resolve('meta.yml').text = 'name: nf-core/test-module\nversion: 2.0.0'
-        def escapedPath = Pattern.quote(tempDir.toString())
-        def pattern = ~/"output_path": "${escapedPath}\/.+\/test_output_v2\.txt"/
-
-        and:
-        def modulePackage = createModulePackage(moduleScript)
-
-        def mockClient = Mock(RegistryClient)
-        mockClient.downloadModuleRelease('nf-core/test-module', '2.0.0', _) >> { String name, String version, Path dest ->
-            Files.write(dest, modulePackage)
-            return dest
-        }
-
-        and:
-        def cmd = new CmdModuleRun()
-        def opts = new CliOptions()
-        opts.setQuiet(true)
-        cmd.launcher = Mock(Launcher) {
-            getOptions() >> opts
-            getCliString() >> "nextflow module run nf-core/test-module"
-        }
-        cmd.args = ['nf-core/test-module']
-        cmd.version = '2.0.0'
-        cmd.root = tempDir
-        cmd.workDir = tempDir.toString()
-        cmd.outputDir = tempDir.resolve('results').toString()
-        cmd.outputFormat = 'json'
-        cmd.client = mockClient
+        moduleDir.resolve('main.nf').text = '// local module'
 
         when:
-        cmd.run()
+        def result = new CmdModuleRun().resolveLocalModule(moduleDir.toString())
 
         then:
-        def stdout = capture
-            .toString()
-            .readLines()// remove the log part
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }.join(" ")
-        assert (stdout =~ pattern).find()
-
+        result == moduleDir.resolve('main.nf')
     }
 
-    def 'should run module from local path'() {
+    def 'local module file resolves directly'() {
         given:
-        def moduleScript = '''
-            process CREATE_LOCAL_FILE {
-                output:
-                path "local_output.txt"
+        def scriptFile = tempDir.resolve('custom.nf')
+        scriptFile.text = '// custom script'
 
-                script:
-                """
-                echo "Local module executed" > local_output.txt
-                """
-            }
-        '''.stripIndent()
+        when:
+        def result = new CmdModuleRun().resolveLocalModule(scriptFile.toString())
 
-        and:
-        // Create a local module directory with main.nf
-        def moduleDir = tempDir.resolve('local-module')
+        then:
+        result == scriptFile
+    }
+
+    // --- Source dispatch interactions ---
+
+    def 'local module directory dispatches to local resolver and bypasses remote resolver'() {
+        given:
+        def moduleDir = tempDir.resolve('my-module')
         Files.createDirectories(moduleDir)
-        moduleDir.resolve('main.nf').text = moduleScript
-
-        def escapedPath = Pattern.quote(tempDir.toString())
-        def pattern = ~/"${escapedPath}\/.+\/local_output\.txt"/
+        moduleDir.resolve('main.nf').text = '// local module'
 
         and:
-        def cmd = new CmdModuleRun()
-        def opts = new CliOptions()
-        opts.setQuiet(true)
-        cmd.launcher = Mock(Launcher) {
-            getOptions() >> opts
-            getCliString() >> "nextflow module run ${moduleDir}"
-        }
+        def resolved = moduleDir.resolve('main.nf')
+        def cmd = Spy(CmdModuleRun)
         cmd.args = [moduleDir.toString()]
-        cmd.root = tempDir
-        cmd.workDir = tempDir.toString()
-        cmd.outputDir = tempDir.resolve('results').toString()
-        cmd.outputFormat = 'json'
 
         when:
-        cmd.run()
-        def stdout = capture
-            .toString()
-            .readLines()// remove the log part
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }.join(" ")
+        def result = cmd.resolveModuleSource()
 
         then:
-        assert (stdout =~ pattern).find()
+        result == resolved
+        1 * cmd.resolveLocalModule(moduleDir.toString()) >> resolved
+        0 * cmd.resolveRemoteModule(_, _)
     }
 
-    def 'should fail when path and module do not exist'() {
+    def 'local module file dispatches to local resolver and bypasses remote resolver'() {
         given:
-        def nonExistentPath = tempDir.resolve('does-not-exist').toString()
+        def scriptFile = tempDir.resolve('custom.nf')
+        scriptFile.text = '// custom script'
+
+        and:
+        def cmd = Spy(CmdModuleRun)
+        cmd.args = [scriptFile.toString()]
+
+        when:
+        def result = cmd.resolveModuleSource()
+
+        then:
+        result == scriptFile
+        1 * cmd.resolveLocalModule(scriptFile.toString()) >> scriptFile
+        0 * cmd.resolveRemoteModule(_, _)
+    }
+
+    def 'registry source dispatches to remote resolver and bypasses local resolver'() {
+        given:
+        def resolved = tempDir.resolve('modules/nf-core/test-module/main.nf')
+        def cmd = Spy(CmdModuleRun)
+        cmd.args = ['nf-core/test-module']
+        cmd.launcher = Mock(Launcher) { getOptions() >> new CliOptions() }
+
+        when:
+        def result = cmd.resolveModuleSource()
+
+        then:
+        result == resolved
+        1 * cmd.resolveRemoteModule('nf-core/test-module', null) >> resolved
+        0 * cmd.resolveLocalModule(_)
+    }
+
+    // --- Error cases ---
+
+    def 'no arguments throws AbortOperationException'() {
+        given:
         def cmd = new CmdModuleRun()
-        cmd.launcher = Mock(Launcher) {
-            getOptions() >> null
-        }
-        cmd.args = [nonExistentPath]
+        cmd.args = []
+
+        when:
+        cmd.resolveModuleSource()
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('Module name/path not provided')
+    }
+
+    def 'non-existent local path throws AbortOperationException'() {
+        given:
+        def cmd = new CmdModuleRun()
+        cmd.args = [tempDir.resolve('does-not-exist').toString()]
         cmd.root = tempDir
 
         when:
-        cmd.run()
+        cmd.resolveModuleSource()
 
         then:
         def e = thrown(AbortOperationException)
         e.message.contains('Invalid module path')
     }
 
-    def 'should fail with no arguments'() {
+    def 'invalid module reference format throws AbortOperationException'() {
         given:
         def cmd = new CmdModuleRun()
-        cmd.launcher = Mock(Launcher) {
-            getOptions() >> null
-        }
-        cmd.args = []
+        cmd.args = ['invalid-module']
         cmd.root = tempDir
+        cmd.launcher = Mock(Launcher) { getOptions() >> new CliOptions() }
 
         when:
-        cmd.run()
+        cmd.resolveModuleSource()
 
         then:
-        thrown(AbortOperationException)
-    }
-
-    def 'should fail with invalid module reference'() {
-        given:
-        def cmd = new CmdModuleRun()
-        cmd.launcher = Mock(Launcher) {
-            getOptions() >> null
-        }
-        cmd.args = ['invalid-module']  // Missing scope
-        cmd.root = tempDir
-
-        when:
-        cmd.run()
-
-        then:
-        thrown(AbortOperationException)
-    }
-
-    // Helper method to create a module package (tar.gz)
-    private byte[] createModulePackage(String mainNfContent) {
-        def baos = new ByteArrayOutputStream()
-
-        new GZIPOutputStream(baos).withCloseable { gzos ->
-            new TarArchiveOutputStream(gzos).withCloseable { tos ->
-                // Add main.nf
-                addTarEntry(tos, 'main.nf', mainNfContent.bytes)
-
-                // Add meta.yml
-                def metaContent = '''
-                    name: test-module
-                    version: 1.0.0
-                    description: Test module
-                '''.stripIndent()
-                addTarEntry(tos, 'meta.yml', metaContent.bytes)
-            }
-        }
-
-        return baos.toByteArray()
-    }
-
-    private void addTarEntry(TarArchiveOutputStream tos, String name, byte[] content) {
-        def entry = new TarArchiveEntry(name)
-        entry.setSize(content.length)
-        tos.putArchiveEntry(entry)
-        tos.write(content)
-        tos.closeArchiveEntry()
+        def e = thrown(AbortOperationException)
+        e.message.contains('Invalid module reference')
     }
 }

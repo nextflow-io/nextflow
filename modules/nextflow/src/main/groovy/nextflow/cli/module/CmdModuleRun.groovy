@@ -56,25 +56,27 @@ class CmdModuleRun extends CmdRun {
 
     @Override
     void run() {
-        if( !args ) {
-            throw new AbortOperationException("Module name/path not provided")
-        }
-
-        final moduleFile = isLocalModule(args[0])
-            ? resolveLocalModule(args[0])
-            : resolveRemoteModule(args[0], version)
-
+        final moduleFile = resolveModuleSource()
         if( moduleFile ) {
             args[0] = moduleFile.toAbsolutePath().toString()
             super.run()
         }
     }
 
+    protected Path resolveModuleSource() {
+        if( !args ) {
+            throw new AbortOperationException("Module name/path not provided")
+        }
+        return isLocalModule(args[0])
+            ? resolveLocalModule(args[0])
+            : resolveRemoteModule(args[0], version)
+    }
+
     private boolean isLocalModule(String str) {
         return str.startsWith('/') || str.startsWith('./') || str.startsWith('../')
     }
 
-    private Path resolveLocalModule(String str) {
+    protected Path resolveLocalModule(String str) {
         final module = Path.of(str).toAbsolutePath().normalize()
         final path = module.isDirectory() ? module.resolve(Const.DEFAULT_MAIN_FILE_NAME) : module
         if( !path.exists() )
@@ -82,7 +84,7 @@ class CmdModuleRun extends CmdRun {
         return path
     }
 
-    private Path resolveRemoteModule(String name, String version) {
+    protected Path resolveRemoteModule(String name, String version) {
         // Parse and validate module reference
         ModuleReference reference
         try {
