@@ -25,6 +25,7 @@ import groovy.util.logging.Slf4j
 import io.seqera.http.HxClient
 import io.seqera.tower.plugin.BaseCommandImpl
 import io.seqera.tower.plugin.TowerClient
+import io.seqera.tower.plugin.exception.ForbiddenException
 import nextflow.BuildInfo
 import nextflow.cli.CmdLaunch
 import nextflow.util.ColorUtil
@@ -154,14 +155,14 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
 
         // Resolve workspace
         final workspaceId = resolveWorkspaceId(config, options.workspace, accessToken, apiEndpoint)
-        final httpClient = createHttpClient(accessToken)
-        final userInfo = commonApi.getUserInfo(httpClient, apiEndpoint)
+        final httpClient = createTowerClient(apiEndpoint, accessToken)
+        final userInfo = httpClient.getUserInfo()
         final userName = userInfo.name as String
         final userId = userInfo.id as String
         String orgName = null
         String workspaceName = null
         if (workspaceId) {
-            final wsDetails = commonApi.getUserWorkspaceDetails(httpClient, userId, apiEndpoint, workspaceId.toString())
+            final wsDetails = httpClient.getUserWorkspaceDetails(userId, workspaceId.toString())
             orgName = wsDetails?.orgName as String
             workspaceName = wsDetails?.workspaceName as String
             log.debug "Using workspace '${workspaceName}' (ID: ${workspaceId})"
@@ -199,7 +200,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
 
         // Submit to API
         final queryParams = context.workspaceId ? [workspaceId: context.workspaceId.toString()] : [:]
-        final response = apiPost('/workflow/launch', launchRequest, queryParams, context.accessToken, context.apiEndpoint)
+        final response = postLaunch( launchRequest, queryParams, context.accessToken, context.apiEndpoint)
 
         // Fetch workflow details for accurate launch info
         final workflowDetails = fetchWorkflowDetails(response.workflowId as String, context.workspaceId,
@@ -242,7 +243,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
 
         log.debug "Fetching workflow details for ID: ${workflowId}"
         final queryParams = workspaceId ? [workspaceId: workspaceId.toString()] : [:]
-        return commonApi.apiGet( createHttpClient(accessToken), apiEndpoint, "/workflow/${workflowId}", queryParams)
+        return createTowerClient(apiEndpoint, accessToken).apiGet("/workflow/${workflowId}", queryParams)
     }
 
     /**
@@ -290,13 +291,13 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
      * Resolve compute environment by flag name config computeEnvId or get primary
      */
     protected Map resolveComputeEnvironment(Map config, String computeEnvName, Long workspaceId, String accessToken, String apiEndpoint) {
-        final client = createHttpClient(accessToken)
+        final client = createTowerClient(apiEndpoint, accessToken)
         Map computeEnvInfo = null
         if (!computeEnvName && config?.get('tower.computeEnvId')) {
-            computeEnvInfo = getComputeEnvironment(client, apiEndpoint, config['tower.computeEnvId'] as String, workspaceId?.toString())
+            computeEnvInfo = getComputeEnvironment(client, config['tower.computeEnvId'] as String, workspaceId?.toString())
         } else {
             log.debug "Looking up compute environment: ${computeEnvName ?: '(primary)'}"
-            computeEnvInfo = findComputeEnv(client, computeEnvName, workspaceId, apiEndpoint)
+            computeEnvInfo = findComputeEnv(client, computeEnvName, workspaceId)
         }
         if (!computeEnvInfo) {
             if (computeEnvName) {
@@ -508,12 +509,12 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
 
         try {
             spinner.start()
-            final client = createHttpClient(accessToken)
+            final client = createTowerClient(apiEndpoint, accessToken)
             while (!shouldExit.get() && !Thread.currentThread().isInterrupted()) {
                 try {
                     // Fetch workflow status and logs
-                    final status = fetchWorkflowStatus(client, workflowId, queryParams, apiEndpoint)
-                    final logEntries = fetchWorkflowLogs(client, workflowId, queryParams, apiEndpoint)
+                    final status = fetchWorkflowStatus(client, workflowId, queryParams)
+                    final logEntries = fetchWorkflowLogs(client, workflowId, queryParams)
 
                     // Update spinner with status if it changed
                     if (status && status != lastStatus) {
@@ -644,8 +645,8 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
     /**
      * Fetch workflow status from API
      */
-    private String fetchWorkflowStatus(HxClient client, String workflowId, Map queryParams, String apiEndpoint) {
-        final workflow = commonApi.getWorkflowDetails(client, apiEndpoint, workflowId, queryParams)
+    private String fetchWorkflowStatus(TowerClient client, String workflowId, Map queryParams) {
+        final workflow = client.getWorkflowDetails(workflowId, queryParams)
         final status = workflow?.status as String
         log.debug "Workflow status: ${status}"
         return status
@@ -654,8 +655,8 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
     /**
      * Fetch workflow logs from API
      */
-    private List<String> fetchWorkflowLogs(HxClient client, String workflowId, Map queryParams, String apiEndpoint) {
-        final logResponse = commonApi.apiGet(client, apiEndpoint,"/workflow/${workflowId}/log", queryParams)
+    private List<String> fetchWorkflowLogs(TowerClient client, String workflowId, Map queryParams) {
+        final logResponse = client.apiGet( "/workflow/${workflowId}/log", queryParams)
         final logData = logResponse.log as Map
         return logData?.entries as List<String> ?: []
     }
@@ -950,30 +951,15 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
         }
     }
 
-    // ===== API Helper Methods =====
-
-    protected Map apiPost(String path, Map body, Map queryParams = [:], String accessToken, String apiEndpoint) {
-        final url = commonApi.buildUrl(apiEndpoint, path, queryParams)
-        log.debug "Platform API - POST ${url}"
-        final requestBody = new JsonBuilder(body).toString()
-        final client = createHttpClient(accessToken)
-        final HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create(url))
-            .header('Content-Type', 'application/json')
-            .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-            .build()
-
-        final HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString())
-
-        if (response.statusCode() != 200) {
-            if (response.statusCode() == 403) {
-                throw new AbortOperationException("ERROR: Unable to launch workflow.\nCheck your credentials with 'nextflow auth status' and your user role in the workspace (required: 'maintain' or higher).")
-            }
-            final error = response.body() ?: "HTTP ${response.statusCode()}"
-            throw new RuntimeException("Failed to launch workflow: ${error}")
+    protected Map postLaunch( Map body, Map queryParams = [:], String accessToken, String apiEndpoint) {
+        try {
+            final client = createTowerClient(apiEndpoint, accessToken)
+            return client.apiPost('/workflow/launch', queryParams, body)
+        }catch (ForbiddenException e) {
+            throw new AbortOperationException("ERROR: Unable to launch workflow.\nCheck your credentials with 'nextflow auth status' and your user role in the workspace (required: 'maintain' or higher).")
+        }catch (Exception e) {
+            throw new RuntimeException("Failed to launch workflow: ${e.message}", e)
         }
-
-        return new JsonSlurper().parseText(response.body()) as Map
     }
 
     // ===== Workspace & User Helper Methods =====
@@ -987,10 +973,10 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
 
         // If workspace name provided, look it up
         if (workspaceName) {
-            final httpClient = createHttpClient(accessToken)
-            final userInfo = commonApi.getUserInfo(httpClient, apiEndpoint) as Map
+            final httpClient = createTowerClient(apiEndpoint, accessToken)
+            final userInfo = httpClient.getUserInfo() as Map
             final userId = userInfo.id as String
-            final workspaces = listUserWorkspaces(httpClient, apiEndpoint, userId)
+            final workspaces = listUserWorkspaces(httpClient, userId)
 
             final matchingWorkspace = workspaces.find { workspace ->
                 final ws = workspace as Map
@@ -1008,8 +994,8 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
         return null
     }
 
-    protected Map findComputeEnv(HxClient client, String computeEnvName, Long workspaceId, String apiEndpoint) {
-        final computeEnvs = listComputeEnvironments(client, apiEndpoint, workspaceId ? workspaceId.toString() : null)
+    protected Map findComputeEnv(TowerClient client, String computeEnvName, Long workspaceId) {
+        final computeEnvs = listComputeEnvironments(client, workspaceId ? workspaceId.toString() : null)
 
         log.debug "Looking for ${computeEnvName ? "compute environment with name: ${computeEnvName}" : "primary compute environment"} ${workspaceId ? "in workspace ID ${workspaceId}" : "in personal workspace"}"
 
