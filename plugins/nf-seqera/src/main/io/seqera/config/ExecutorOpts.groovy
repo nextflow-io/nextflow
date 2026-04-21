@@ -36,7 +36,7 @@ class ExecutorOpts implements ConfigScope {
     static final Set<String> VALID_AUTO_LABELS = Collections.unmodifiableSet(new LinkedHashSet<>([
         'projectName', 'userName', 'runName', 'sessionId', 'resume',
         'revision', 'commitId', 'repository', 'manifestName',
-        'runtimeVersion', 'workflowId'
+        'runtimeVersion', 'workflowId', 'workspaceId', 'computeEnvId'
     ]))
 
     final RetryOpts retryPolicy
@@ -87,7 +87,7 @@ class ExecutorOpts implements ConfigScope {
             `['runName', 'projectName']` or `'runName,projectName'`
         Valid names: `projectName`, `userName`, `runName`, `sessionId`, `resume`,
         `revision`, `commitId`, `repository`, `manifestName`, `runtimeVersion`,
-        `workflowId`.
+        `workflowId`, `workspaceId`, `computeEnvId`.
     """)
     final Set<String> autoLabels
 

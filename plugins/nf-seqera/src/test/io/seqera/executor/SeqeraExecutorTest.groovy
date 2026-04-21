@@ -185,6 +185,9 @@ class SeqeraExecutorTest extends Specification {
                 new CreateRunResponse().runId('run-1')
             }
         }
+        def platform = new nextflow.script.PlatformMetadata('wf-abc123')
+        platform.workspace = new nextflow.script.PlatformMetadata.Workspace(workspaceId: '1234')
+        platform.computeEnv = new nextflow.script.PlatformMetadata.ComputeEnv(id: 'ce-abc')
         def workflowMeta = Mock(WorkflowMetadata) {
             getProjectName() >> 'my-project'
             getUserName() >> 'alice'
@@ -195,7 +198,7 @@ class SeqeraExecutorTest extends Specification {
             getCommitId() >> null
             getRepository() >> null
             getManifest() >> null
-            getPlatform() >> null
+            getPlatform() >> platform
         }
         def sessionConfig = [
             process: [resourceLabels: [team: 'platform', priority: 3]],
@@ -223,10 +226,13 @@ class SeqeraExecutorTest extends Specification {
         captured.getLabels()['priority'] == '3'
         captured.getLabels()['nextflow.io/projectName'] == 'my-project'
         captured.getLabels()['nextflow.io/runName'] == 'test-run'
+        captured.getLabels()['seqera.io/platform/workspaceId'] == '1234'
+        captured.getLabels()['seqera.io/platform/computeEnvId'] == 'ce-abc'
 
         cleanup:
         executor.batchSubmitter?.shutdown()
     }
+
 
     /**
      * Builds a SchedClientConfig using the same logic as {@link SeqeraExecutor#createClient()}
