@@ -32,7 +32,8 @@ nextflowPlugin {
         'io.seqera.tower.plugin.TowerFactory',
         'io.seqera.tower.plugin.TowerFusionToken',
         'io.seqera.tower.plugin.auth.AuthCommandImpl',
-        'io.seqera.tower.plugin.launch.LaunchCommandImpl'
+        'io.seqera.tower.plugin.launch.LaunchCommandImpl',
+        'io.seqera.tower.plugin.fs.SeqeraPathFactory'
     ]
 }
 
@@ -57,6 +58,9 @@ dependencies {
     compileOnly 'io.seqera:lib-httpx:2.1.0'
     api 'io.seqera:lib-platform-oidc:0.1.0'
 
+    api('io.seqera:tower-api:1.121.0') {
+        exclude group: 'io.micronaut.servlet'
+    }
     api "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.21.1"
     api "com.fasterxml.jackson.core:jackson-databind:2.21.1"
 
