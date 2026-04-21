@@ -172,18 +172,6 @@ class ExecutorOptsTest extends Specification {
         config.autoLabels == ['workspaceId', 'computeEnvId'] as Set
     }
 
-    def 'should include workspaceId and computeEnvId when auto labels is true' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            autoLabels: true
-        ])
-
-        then:
-        'workspaceId' in config.autoLabels
-        'computeEnvId' in config.autoLabels
-    }
-
     def 'should trim whitespace in auto labels list entries' () {
         when:
         def config = new ExecutorOpts([

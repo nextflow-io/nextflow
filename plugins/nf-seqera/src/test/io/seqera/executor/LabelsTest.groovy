@@ -124,56 +124,27 @@ class LabelsTest extends Specification {
         !labels.entries.containsKey('seqera:sched:clusterId')
     }
 
-    def 'should add platform workspace and compute env labels when included'() {
+    def 'should include platform workspaceId and computeEnvId when available'() {
+        given:
+        def platform = new PlatformMetadata('wf-abc123')
+        platform.workspace = new PlatformMetadata.Workspace(workspaceId: '1234')
+        platform.computeEnv = new PlatformMetadata.ComputeEnv(id: 'ce-abc')
+        def workflow = Mock(WorkflowMetadata) {
+            getRunName() >> 'happy_turing'
+            getSessionId() >> UUID.randomUUID()
+            isResume() >> false
+            getManifest() >> new Manifest([:])
+            getPlatform() >> platform
+        }
+
         when:
         def labels = new Labels()
-                .withPlatformContext(42L, 'ce-abc', ['workspaceId', 'computeEnvId'] as Set)
+                .withWorkflowMetadata(workflow, ['workspaceId', 'computeEnvId'] as Set)
 
         then:
-        labels.entries['seqera.io/platform/workspaceId'] == '42'
+        labels.entries.keySet() == ['seqera.io/platform/workspaceId', 'seqera.io/platform/computeEnvId'] as Set
+        labels.entries['seqera.io/platform/workspaceId'] == '1234'
         labels.entries['seqera.io/platform/computeEnvId'] == 'ce-abc'
-    }
-
-    def 'should skip platform labels when include set does not mention them'() {
-        when:
-        def labels = new Labels()
-                .withPlatformContext(42L, 'ce-abc', ['runName'] as Set)
-
-        then:
-        !labels.entries.containsKey('seqera.io/platform/workspaceId')
-        !labels.entries.containsKey('seqera.io/platform/computeEnvId')
-    }
-
-    def 'should skip platform labels when values are null or blank'() {
-        when:
-        def labels = new Labels()
-                .withPlatformContext(null, null, ['workspaceId', 'computeEnvId'] as Set)
-                .withPlatformContext(null, '', ['workspaceId', 'computeEnvId'] as Set)
-
-        then:
-        !labels.entries.containsKey('seqera.io/platform/workspaceId')
-        !labels.entries.containsKey('seqera.io/platform/computeEnvId')
-    }
-
-    def 'should emit only the filtered platform label'() {
-        when:
-        def wsOnly = new Labels()
-                .withPlatformContext(42L, 'ce-abc', ['workspaceId'] as Set)
-        def ceOnly = new Labels()
-                .withPlatformContext(42L, 'ce-abc', ['computeEnvId'] as Set)
-
-        then:
-        wsOnly.entries.keySet() == ['seqera.io/platform/workspaceId'] as Set
-        ceOnly.entries.keySet() == ['seqera.io/platform/computeEnvId'] as Set
-    }
-
-    def 'should emit nothing for an empty include set in withPlatformContext'() {
-        when:
-        def labels = new Labels()
-                .withPlatformContext(42L, 'ce-abc', [] as Set)
-
-        then:
-        labels.entries.isEmpty()
     }
 
     def 'should include platform workflowId when available'() {

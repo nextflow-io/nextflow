@@ -185,6 +185,9 @@ class SeqeraExecutorTest extends Specification {
                 new CreateRunResponse().runId('run-1')
             }
         }
+        def platform = new nextflow.script.PlatformMetadata('wf-abc123')
+        platform.workspace = new nextflow.script.PlatformMetadata.Workspace(workspaceId: '1234')
+        platform.computeEnv = new nextflow.script.PlatformMetadata.ComputeEnv(id: 'ce-abc')
         def workflowMeta = Mock(WorkflowMetadata) {
             getProjectName() >> 'my-project'
             getUserName() >> 'alice'
@@ -195,7 +198,7 @@ class SeqeraExecutorTest extends Specification {
             getCommitId() >> null
             getRepository() >> null
             getManifest() >> null
-            getPlatform() >> null
+            getPlatform() >> platform
         }
         def sessionConfig = [
             process: [resourceLabels: [team: 'platform', priority: 3]],
@@ -223,53 +226,6 @@ class SeqeraExecutorTest extends Specification {
         captured.getLabels()['priority'] == '3'
         captured.getLabels()['nextflow.io/projectName'] == 'my-project'
         captured.getLabels()['nextflow.io/runName'] == 'test-run'
-
-        cleanup:
-        executor.batchSubmitter?.shutdown()
-    }
-
-    def 'createRun emits workspaceId and computeEnvId labels when autoLabels is enabled'() {
-        given:
-        SysEnv.push([
-            TOWER_WORKSPACE_ID: '1234',
-            TOWER_COMPUTE_ENV_ID: 'ce-abc'
-        ])
-        CreateRunRequest captured = null
-        def mockClient = Mock(SchedClient) {
-            createRun(_) >> { args ->
-                captured = args[0] as CreateRunRequest
-                new CreateRunResponse().runId('run-1')
-            }
-        }
-        def workflowMeta = Mock(WorkflowMetadata) {
-            getProjectName() >> 'my-project'
-            getRunName() >> 'test-run'
-            getSessionId() >> UUID.fromString('00000000-0000-0000-0000-000000000001')
-            getResume() >> false
-            getManifest() >> null
-            getPlatform() >> null
-        }
-        def sessionConfig = [
-            seqera: [executor: [endpoint: 'https://sched.example.com', provider: 'aws', region: 'us-east-1', autoLabels: true]],
-            tower: [:]
-        ]
-        def session = Mock(Session) {
-            getConfig() >> sessionConfig
-            getWorkflowMetadata() >> workflowMeta
-            getWorkDir() >> java.nio.file.Paths.get('/work')
-            getRunName() >> 'test-run'
-        }
-        def seqeraOpts = new ExecutorOpts(endpoint: 'https://sched.example.com', provider: 'aws', region: 'us-east-1', autoLabels: true)
-        def executor = new SeqeraExecutor()
-        executor.session = session
-        executor.@seqeraConfig = seqeraOpts
-        executor.@client = mockClient
-
-        when:
-        executor.createRun()
-
-        then:
-        captured != null
         captured.getLabels()['seqera.io/platform/workspaceId'] == '1234'
         captured.getLabels()['seqera.io/platform/computeEnvId'] == 'ce-abc'
 
@@ -277,103 +233,6 @@ class SeqeraExecutorTest extends Specification {
         executor.batchSubmitter?.shutdown()
     }
 
-    def 'createRun omits workspaceId and computeEnvId labels when autoLabels filter excludes them'() {
-        given:
-        SysEnv.push([
-            TOWER_WORKSPACE_ID: '1234',
-            TOWER_COMPUTE_ENV_ID: 'ce-abc'
-        ])
-        CreateRunRequest captured = null
-        def mockClient = Mock(SchedClient) {
-            createRun(_) >> { args ->
-                captured = args[0] as CreateRunRequest
-                new CreateRunResponse().runId('run-1')
-            }
-        }
-        def workflowMeta = Mock(WorkflowMetadata) {
-            getProjectName() >> 'my-project'
-            getRunName() >> 'test-run'
-            getSessionId() >> UUID.fromString('00000000-0000-0000-0000-000000000001')
-            getResume() >> false
-            getManifest() >> null
-            getPlatform() >> null
-        }
-        def sessionConfig = [
-            seqera: [executor: [endpoint: 'https://sched.example.com', provider: 'aws', region: 'us-east-1', autoLabels: ['runName']]],
-            tower: [:]
-        ]
-        def session = Mock(Session) {
-            getConfig() >> sessionConfig
-            getWorkflowMetadata() >> workflowMeta
-            getWorkDir() >> java.nio.file.Paths.get('/work')
-            getRunName() >> 'test-run'
-        }
-        def seqeraOpts = new ExecutorOpts(endpoint: 'https://sched.example.com', provider: 'aws', region: 'us-east-1', autoLabels: ['runName'])
-        def executor = new SeqeraExecutor()
-        executor.session = session
-        executor.@seqeraConfig = seqeraOpts
-        executor.@client = mockClient
-
-        when:
-        executor.createRun()
-
-        then:
-        captured != null
-        !captured.getLabels().containsKey('seqera.io/platform/workspaceId')
-        !captured.getLabels().containsKey('seqera.io/platform/computeEnvId')
-        captured.getLabels()['nextflow.io/runName'] == 'test-run'
-
-        cleanup:
-        executor.batchSubmitter?.shutdown()
-    }
-
-    def 'createRun omits workspaceId and computeEnvId labels when autoLabels is disabled'() {
-        given:
-        SysEnv.push([
-            TOWER_WORKSPACE_ID: '1234',
-            TOWER_COMPUTE_ENV_ID: 'ce-abc'
-        ])
-        CreateRunRequest captured = null
-        def mockClient = Mock(SchedClient) {
-            createRun(_) >> { args ->
-                captured = args[0] as CreateRunRequest
-                new CreateRunResponse().runId('run-1')
-            }
-        }
-        def workflowMeta = Mock(WorkflowMetadata) {
-            getRunName() >> 'test-run'
-            getSessionId() >> UUID.fromString('00000000-0000-0000-0000-000000000001')
-            getResume() >> false
-            getManifest() >> null
-            getPlatform() >> null
-        }
-        def sessionConfig = [
-            seqera: [executor: [endpoint: 'https://sched.example.com', provider: 'aws', region: 'us-east-1']],
-            tower: [:]
-        ]
-        def session = Mock(Session) {
-            getConfig() >> sessionConfig
-            getWorkflowMetadata() >> workflowMeta
-            getWorkDir() >> java.nio.file.Paths.get('/work')
-            getRunName() >> 'test-run'
-        }
-        def seqeraOpts = new ExecutorOpts(endpoint: 'https://sched.example.com', provider: 'aws', region: 'us-east-1')
-        def executor = new SeqeraExecutor()
-        executor.session = session
-        executor.@seqeraConfig = seqeraOpts
-        executor.@client = mockClient
-
-        when:
-        executor.createRun()
-
-        then:
-        captured != null
-        !captured.getLabels().containsKey('seqera.io/platform/workspaceId')
-        !captured.getLabels().containsKey('seqera.io/platform/computeEnvId')
-
-        cleanup:
-        executor.batchSubmitter?.shutdown()
-    }
 
     /**
      * Builds a SchedClientConfig using the same logic as {@link SeqeraExecutor#createClient()}
