@@ -148,6 +148,12 @@ The file storage path against which relative file paths are resolved.
 
 For example, with `NXF_FILE_ROOT=/some/root/path`, the use of `file('hello')` will be resolved to the absolute path `/some/root/path/hello`. A remote root path can be specified using the usual protocol prefix, e.g. `NXF_FILE_ROOT=s3://my-bucket/data`. Files defined using an absolute path are not affected by this setting.
 
+##### `NXF_FUSION_TRACE`
+
+<AddedInVersion version="26.04.0" />
+
+When set to `true`, collect task resource metrics (CPU, memory, I/O) from the Fusion trace file (`.fusion/trace.json`) produced in the task work directory, replacing the metrics collected by the default bash command-trace wrapper. Requires Fusion to be enabled. GPU metrics from Fusion are always collected regardless of this setting.
+
 ##### `NXF_HOME`
 
 Nextflow home directory (default: `$HOME/.nextflow`).

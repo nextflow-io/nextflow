@@ -1755,11 +1755,6 @@ The following labels are added:
 
 A `seqera.io/runId` label is also added, computed as a SipHash of the session ID and run name.
 
-###### `seqera.executor.labels`
-
-Custom labels to apply to AWS resources for cost tracking and resource organization.
-Labels are propagated to ECS tasks, capacity providers, and EC2 instances. When used together with `autoLabels`, user-defined labels take precedence over auto-generated labels.
-
 ###### `seqera.executor.machineRequirement.arch`
 
 The CPU architecture for task execution.

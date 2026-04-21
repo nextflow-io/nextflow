@@ -209,7 +209,7 @@ Would remove work/3f/70944c7a549b6221e1ccc7b4b21b62
 Would remove work/0e/2ebdba85f76f6068b21a1bcbf10cab
 ```
 
-Remove work directories for the run name `boring_euler`.
+Remove work directories for the run name `boring_euler`:
 
 ```console
 $ nextflow clean boring_euler -f
@@ -219,7 +219,7 @@ Removed work/3f/70944c7a549b6221e1ccc7b4b21b62
 Removed work/0e/2ebdba85f76f6068b21a1bcbf10cab
 ```
 
-Remove the execution entries *except* for a specific execution.
+Remove the execution entries *except* for a specific execution:
 
 ```console
 $ nextflow clean -but tiny_leavitt -f
@@ -229,7 +229,7 @@ Removed work/bf/334115deec60929dc18edf0010032a
 Removed work/a3/06521d75da296d4dd7f4f8caaddad8
 ```
 
-Dry run to remove the execution data *before* a specific execution.
+Dry run to remove the execution data *before* a specific execution:
 
 ```console
 $ nextflow clean -before tiny_leavitt -n
@@ -240,7 +240,7 @@ Would remove work/be/a4fa2aa38f76fd324958c81c2e4603
 Would remove work/54/39116773891c47a91e3c1733aad4de
 ```
 
-Dry run to remove the execution data *after* a specific execution.
+Dry run to remove the execution data *after* a specific execution:
 
 ```console
 $ nextflow clean -after focused_payne -n
@@ -250,7 +250,7 @@ Would remove work/bf/334115deec60929dc18edf0010032a
 Would remove work/a3/06521d75da296d4dd7f4f8caaddad8
 ```
 
-Dry run to remove the temporary execution data for a specific execution, while keeping the log files.
+Dry run to remove the temporary execution data for a specific execution, while keeping the log files:
 
 ```console
 $ nextflow clean -keep-logs tiny_leavitt -n
@@ -298,14 +298,14 @@ Private repository user name.
 
 #### Examples
 
-Clone the latest revision of a pipeline.
+Clone the latest revision of a pipeline:
 
 ```console
 $ nextflow clone nextflow-io/hello
 nextflow-io/hello cloned to: hello
 ```
 
-Clone a specific revision of a pipeline.
+Clone a specific revision of a pipeline:
 
 ```console
 $ nextflow clone nextflow-io/hello -r v1.1
@@ -366,7 +366,7 @@ Print the value of a config option, or fail if the option is not defined.
 
 #### Examples
 
-Print out the inferred config using a the default group key-value notation.
+Print out the inferred config using a the default group key-value notation:
 
 ```console
 $ nextflow config
@@ -380,7 +380,7 @@ process {
 }
 ```
 
-Print out the config using a flat notation.
+Print out the config using a flat notation:
 
 ```console
 $ nextflow config -flat
@@ -389,7 +389,7 @@ docker.enabled = true
 process.executor = 'local'
 ```
 
-Print out the config using the Java properties notation.
+Print out the config using the Java properties notation:
 
 ```console
 $ nextflow config -properties
@@ -398,14 +398,14 @@ docker.enabled = true
 process.executor = local
 ```
 
-Print out the value of a specific configuration property.
+Print out the value of a specific configuration property:
 
 ```console
 $ nextflow config -value process.executor
 local
 ```
 
-Print out all profiles from the project's configuration.
+Print out all profiles from the project's configuration:
 
 ```console
 $ nextflow config -show-profiles
@@ -449,7 +449,7 @@ None available.
 
 #### Examples
 
-Launch the `console` GUI.
+Launch the `console` GUI:
 
 ```console
 $ nextflow console
@@ -487,13 +487,13 @@ Project revision to drop. Can be a git branch, tag, or commit SHA number.
 
 #### Examples
 
-Drop the `nextflow-io/hello` project.
+Drop the `nextflow-io/hello` project:
 
 ```console
 $ nextflow drop nextflow-io/hello
 ```
 
-Forcefully drop the `nextflow-io/hello` pipeline, ignoring any local changes.
+Forcefully drop the `nextflow-io/hello` pipeline, ignoring any local changes:
 
 ```console
 $ nextflow drop nextflow-io/hello -f
@@ -521,31 +521,31 @@ Print the command usage.
 
 #### Examples
 
-List a directory.
+List a directory:
 
 ```console
 $ nextflow fs list <directory>
 ```
 
-Print the contents of a file to standard output.
+Print the contents of a file to standard output:
 
 ```console
 $ nextflow fs cat <file>
 ```
 
-Copy a file or directory.
+Copy a file or directory:
 
 ```console
 $ nextflow fs cp <source> <target>
 ```
 
-Move a file or directory.
+Move a file or directory:
 
 ```console
 $ nextflow fs mv <source> <target>
 ```
 
-Delete a file or directory.
+Delete a file or directory:
 
 ```console
 $ nextflow fs rm <path>
@@ -553,7 +553,7 @@ $ nextflow fs rm <path>
 
 <AddedInVersion version="23.10.0" />
 
-Print file or directory attributes.
+Print file or directory attributes:
 
 ```console
 $ nextflow fs stat <path>
@@ -581,7 +581,7 @@ Print the command usage.
 
 #### Examples
 
-Invoke the `help` option for the `drop` command.
+Invoke the `help` option for the `drop` command:
 
 ```console
 $ nextflow help drop
@@ -706,7 +706,7 @@ Revision of the project to inspect (either a git branch, tag or commit SHA numbe
 
 #### Examples
 
-Get the list of containers used by a pipeline.
+Get the list of containers used by a pipeline:
 
 ```console
 $ nextflow inspect nextflow-io/hello
@@ -810,7 +810,7 @@ Volume claim mounts. For example, `my-pvc:/mnt/path`.
 
 #### Examples
 
-Execute a pipeline into a Kubernetes cluster.
+Execute a pipeline into a Kubernetes cluster:
 
 ```console
 $ nextflow kuberun nextflow-io/hello
@@ -892,7 +892,7 @@ The Seqera Platform workspace name.
 
 #### Examples
 
-Execute a pipeline in Seqera Platform.
+Execute a pipeline in Seqera Platform:
 
 ```console
 $ nextflow launch nextflow-io/hello
@@ -1010,19 +1010,19 @@ Indent with tabs (default: `false`).
 
 #### Examples
 
-Lint a specific file.
+Lint a specific file:
 
 ```console
 $ nextflow lint main.nf
 ```
 
-Lint all files in the current directory (and subdirectories) with concise output.
+Lint all files in the current directory (and subdirectories) with concise output:
 
 ```console
 $ nextflow lint -o concise .
 ```
 
-Lint and format all files in the current directory (and subdirectories) and use two spaces per indent.
+Lint and format all files in the current directory (and subdirectories) and use two spaces per indent:
 
 ```console
 $ nextflow lint -format -spaces 2 .
@@ -1058,7 +1058,7 @@ Print the command usage.
 
 #### Examples
 
-List the downloaded pipelines.
+List the downloaded pipelines:
 
 ```console
 $ nextflow list
@@ -1129,7 +1129,7 @@ Text template used to each record in the log.
 
 #### Examples
 
-Listing the execution logs of previous invocations of all pipelines in a project.
+Listing the execution logs of previous invocations of all pipelines in a project:
 
 ```console
 $ nextflow log
@@ -1140,7 +1140,7 @@ TIMESTAMP           DURATION        RUN NAME        STATUS  REVISION ID     SESS
 2020-10-07 11:53:29 2.5s            boring_euler    OK      e3b475a61b      a6276975-7173-4208-ae09-ab9d6dce8737    nextflow run tutorial.nf
 ```
 
-Listing only the *run names* of the execution logs of all pipelines invocations in a project.
+Listing only the *run names* of the execution logs of all pipelines invocations in a project:
 
 ```console
 $ nextflow log -quiet
@@ -1150,7 +1150,7 @@ tiny_leavitt
 boring_euler
 ```
 
-List the execution entries *only* a specific execution.
+List the execution entries *only* a specific execution:
 
 ```console
 $ nextflow log tiny_leavitt
@@ -1160,7 +1160,7 @@ work/bf/334115deec60929dc18edf0010032a
 work/a3/06521d75da296d4dd7f4f8caaddad8
 ```
 
-List the execution entries *after* a specific execution.
+List the execution entries *after* a specific execution:
 
 ```console
 $ nextflow log -after tiny_leavitt
@@ -1170,7 +1170,7 @@ work/3f/70944c7a549b6221e1ccc7b4b21b62
 work/0e/2ebdba85f76f6068b21a1bcbf10cab
 ```
 
-List the execution entries *before* a specific execution.
+List the execution entries *before* a specific execution:
 
 ```console
 $ nextflow log -before tiny_leavitt
@@ -1181,7 +1181,7 @@ work/be/a4fa2aa38f76fd324958c81c2e4603
 work/54/39116773891c47a91e3c1733aad4de
 ```
 
-List the execution entries *except* for a specific execution.
+List the execution entries *except* for a specific execution:
 
 ```console
 $ nextflow log -but tiny_leavitt
@@ -1192,7 +1192,7 @@ work/be/a4fa2aa38f76fd324958c81c2e4603
 work/54/39116773891c47a91e3c1733aad4de
 ```
 
-Filter specific fields from the execution log of a process.
+Filter specific fields from the execution log of a process:
 
 ```console
 $ nextflow log tiny_leavitt -f 'process,exit,hash,duration'
@@ -1202,7 +1202,7 @@ convert_to_upper    0       bf/334115       144ms
 convert_to_upper    0       a3/06521d       139ms
 ```
 
-Filter fields from the execution log of a process based on a criteria.
+Filter fields from the execution log of a process based on a criteria:
 
 ```console
 $ nextflow log tiny_leavitt -F 'process =~ /split_letters/'
@@ -1231,21 +1231,6 @@ The `module` command provides a comprehensive system for managing registry-based
 ##### `create [namespace/name]`
 
 Create a new module with a basic `main.nf`, `meta.yml`, and `README.md`.
-
-##### `info [options] [namespace/name]` {#module-info}
-
-Display detailed information about a module from the registry.
-Shows module name, version, description, and other metadata, as well as example usage.
-
-The following options are available:
-
-###### `-version`
-
-Specify the module version to query (e.g., `1.0.0`). If not specified, displays information for the latest version.
-
-###### `-o, -output` (`text`)
-
-Output mode for info results. Options: `text` (default), `json`.
 
 ##### `install [options] [namespace/name]` {#module-install}
 
@@ -1305,11 +1290,14 @@ Force removal even if the module has no `.module-info` file (i.e. not installed 
 
 Remove the `.module-info` but keep local files in the `modules/` directory.
 
-##### `run [options] [namespace/name] [--<input_name> <input-value>]` {#module-run}
+##### `run [options] [namespace/name | path] [--<input_name> <input-value>]` {#module-run}
 
-Execute a module directly from the registry without creating a wrapper workflow.
-Automatically downloads the module if not already installed. Accepts all standard Nextflow run options.
-The `module run` command extends the `run` command and accepts all its options, including `-profile`, `-resume`, `-c`, etc. Command-line params (i.e., `--<input_name>`) are inferred from the module's declared inputs.
+Execute a module directly.
+Can be a remote module (`namespace/name`) or a local module path (beginning with `./`, `../`, or `/`).
+Automatically downloads the module if not already installed.
+
+Accepts all standard Nextflow run options. For example, `-profile`, `-resume`, and `-c`.
+Command-line params (i.e., `--<input_name>`) are inferred from the module's declared inputs.
 
 The following additional options are available:
 
@@ -1341,6 +1329,21 @@ The generated file includes `TODO` placeholders for fields that were not specifi
 If a spec file already exists, it is incorporated into the new file.
 
 The following options are available:
+
+##### `view [options] [namespace/name]` {#module-view}
+
+Display detailed information about a module from the registry.
+Shows module name, version, description, and other metadata, as well as example usage.
+
+The following options are available:
+
+###### `-version`
+
+Specify the module version to query (e.g., `1.0.0`). If not specified, displays information for the latest version.
+
+###### `-o, -output` (`text`)
+
+Output mode for info results. Options: `text` (default), `json`.
 
 ###### `-namespace <namespace>`
 
@@ -1374,74 +1377,98 @@ Verifies that all required files are present (`main.nf`, `meta.yml`, `README.md`
 
 #### Examples
 
-Install the latest module version.
+Install the latest module version:
 
 ```console
 $ nextflow module install nf-core/fastqc
 ```
 
-Display installed modules in formatted table.
+Display installed modules in formatted table:
 
 ```console
 $ nextflow module list
 ```
 
-Validate module structure without publishing.
+Validate module structure without publishing:
 
 ```console
 $ nextflow module publish myorg/my-module -dry-run
 ```
 
-Publish module to nextflow registry.
+Publish module to nextflow registry:
 
 ```console
 $ export NXF_REGISTRY_TOKEN=your-token
 $ nextflow module publish myorg/my-module
 ```
 
-Display information for latest module version.
+Display information for latest module version:
 
 ```console
-$ nextflow module info nf-core/fastqc
+$ nextflow module view nf-core/fastqc
 ```
 
-Create a module.
+Display information for specific version:
+
+```console
+$ nextflow module view nf-core/fastqc -version 1.0.0
+```
+
+Create a module:
 
 ```console
 $ nextflow module create
 ```
 
-Remove module completely.
+Remove module completely:
 
 ```console
 $ nextflow module remove nf-core/fastqc
 ```
 
-Run module with inputs.
+Run a remote module:
 
 ```console
-$ nextflow module run nf-core/fastqc --input 'data/*.fastq.gz'
+$ nextflow module run nf-core/fastqc \
+    --input 'data/*.fastq.gz'
 ```
 
-Search for alignment-related modules.
+Run a remote module with specific version and run options:
+
+```console
+$ nextflow module run nf-core/fastqc \
+    -version 1.0.0 \
+    --input 'data/*.fastq.gz' \
+    -with-conda \
+    -resume
+```
+
+Run a local module:
+
+```console
+$ nextflow module run ./modules/nf-core/fastqc/main.nf \
+      --input 'data/*.fastq.gz'
+```
+
+Search for alignment-related modules:
 
 ```console
 $ nextflow module search alignment
 ```
 
-Generate spec for local module by name.
+Generate spec for local module by name:
 
 ```console
 $ nextflow module spec nf-core/fastqc
 ```
 
-Generate spec for local module by path (namespace required)
+Generate spec for local module by path (namespace required):
 
 ```console
 $ nextflow module spec -namespace nf-core ./modules/my-module
 ```
 
-Provide additional fields to avoid TODO placeholders.
+Provide additional fields to avoid TODO placeholders:
 
 ```console
 $ nextflow module spec \
@@ -1454,13 +1481,13 @@ $ nextflow module spec \
     ./modules/nf-core/fastqc
 ```
 
-Validate module by name.
+Validate module by name:
 
 ```console
 $ nextflow module validate myorg/my-module
 ```
 
-Validate module by path.
+Validate module by path:
 
 ```console
 $ nextflow module validate ./modules/myorg/my-module
@@ -1468,7 +1495,7 @@ $ nextflow module validate ./modules/myorg/my-module
 
 ### `plugin`
 
-Manage plugins and run plugin-specific commands.
+Manage plugins and run plugin-specific commands:
 
 ```console
 $ nextflow plugin <subcommand> [options]
@@ -1544,7 +1571,7 @@ Private repository user name.
 
 #### Examples
 
-Download a new pipeline or pull the latest revision for a specific project.
+Download a new pipeline or pull the latest revision for a specific project:
 
 ```console
 $ nextflow pull nextflow-io/hello
@@ -1553,7 +1580,7 @@ Checking nextflow-io/hello ...
 done - revision: 96eb04d6a4 [master]
 ```
 
-Pull the latest revision for all downloaded projects.
+Pull the latest revision for all downloaded projects:
 
 ```console
 $ nextflow pull -all
@@ -1564,7 +1591,7 @@ Checking nextflow-hub/fastqc ...
 done - revision: 087659b18e [master]
 ```
 
-Download a specific revision of a new project or pull the latest revision for a specific project.
+Download a specific revision of a new project or pull the latest revision for a specific project:
 
 ```console
 $ nextflow pull nextflow-io/hello -r v1.1
@@ -1834,7 +1861,7 @@ Directory where intermediate result files are stored.
 
 #### Examples
 
-Run a specific revision of a remote pipeline.
+Run a specific revision of a remote pipeline:
 
 ```console
 $ nextflow run nextflow-io/hello -r v1.1
@@ -1843,7 +1870,7 @@ N E X T F L O W  ~  version 20.07.1
 Launching `nextflow-io/hello` [grave_cajal] - revision: 1c3e9e7404 [v1.1]
 ```
 
-Choose a `profile` for running the project. Assumes that a profile named `docker` has already been defined in the config file.
+Choose a `profile` for running the project. Assumes that a profile named `docker` has already been defined in the config file:
 
 ```console
 $ nextflow run main.nf -profile docker
@@ -1855,25 +1882,25 @@ Execute a pipeline and generate the summary HTML report. For more information on
 $ nextflow run main.nf -with-report
 ```
 
-Execute a pipeline with a custom queue size. By default, the queue size is the number of available CPUs.
+Execute a pipeline with a custom queue size. By default, the queue size is the number of available CPUs:
 
 ```console
 $ nextflow run nextflow-io/hello -qs 4
 ```
 
-Invoke the pipeline with a specific workflow as the entry-point.
+Invoke the pipeline with a specific workflow as the entry-point:
 
 ```console
 $ nextflow run main.nf -entry workflow_A
 ```
 
-Execute a pipeline with integrated monitoring in [Seqera Platform](https://seqera.io).
+Execute a pipeline with integrated monitoring in [Seqera Platform](https://seqera.io):
 
 ```console
 $ nextflow run nextflow-io/hello -with-tower
 ```
 
-Execute a pipeline with a custom parameters file (YAML or JSON).
+Execute a pipeline with a custom parameters file (YAML or JSON):
 
 ```console
 $ nextflow run main.nf -params-file pipeline_params.yml
@@ -1957,7 +1984,7 @@ The `self-update` command directs the `nextflow` CLI to update itself to the lat
 
 #### Examples
 
-Update Nextflow.
+Update Nextflow:
 
 ```console
 $ nextflow self-update
@@ -2009,7 +2036,7 @@ Project revision. Can be a git branch, tag, or commit SHA number.
 
 #### Examples
 
-Viewing the contents of a downloaded pipeline.
+Viewing the contents of a downloaded pipeline:
 
 ```console
 $ nextflow view nextflow-io/hello
