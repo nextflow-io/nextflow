@@ -1,5 +1,37 @@
 NEXTFLOW CHANGE-LOG
 ===================
+26.03.3-edge - 20 Apr 2026
+- Add -files-from option to lint command to avoid ARG_MAX limit (#6858) [5a3cd830c]
+- Add 26.04 migration docs (#7000) [89ec31bbf]
+- Add option to disable printing workflow outputs (#7018) [791bb449c]
+- Allow cloning from local Git repositories when `--offline` (#7035) [0fa6b5dbd]
+- Allow running pipeline from URL and main script path (#6602) [83196d4be]
+- Apply socket timeout to S3 CRT connections (#7024) [6f4a21764]
+- Filter autoLabels to selected workflow-metadata fields (#7049) [ddc974fe6]
+- Fix S3FileSystemProvider.newInputStream() draining full object on close (#7046) [cf3867604]
+- Fix formatting issues with complex expressions (#7027) [ce661d1d8]
+- Fix generated process name in `module create` command (#7008) [f3d8de796]
+- Fix inconsistent indentation in nf-amazon (#7047) [df6855d7d]
+- Fix module info formatting separator (#7033) [44dff8fcc]
+- Fix nextflowVersion for nf-tower and nf-seqera plugins [cbc0a2d8e]
+- Fix resolution of `-with-tower` with `TOWER_API_ENDPOINT` (#7045) [ce962e882]
+- Fix saveCacheFiles early return skipping log file uploads (#7015) [6fb704838]
+- Fusion GPU metrics collection (#7022) [6289635b8]
+- Honour process.resourceLabels in nf-seqera executor (#7048) [979f684ff]
+- Manage AWS SDK exceptions to convert to the appropriate IO exceptions (#6707) [39c755663]
+- Rename `module info` subcommand to `module view` (#7052) [7fa1109aa]
+- Resolve structured process input types (#7014) [583935d88]
+- Simplify demo module README template (#7051) [6d04c9ebc]
+- Suppress lint progress logging with `-q` flag (#6880) [61793bb6e]
+- Update missing pf4j updates (#7016) [f38f0067d]
+- Use Fusion trace metrics to replace bash command-trace wrapper (#7041) [de4376649]
+- Bump org.bouncycastle:bcpkix-jdk18on from 1.79 to 1.84 (#7042) [59d847d52]
+- Bump nf-amazon@3.8.3
+- Bump nf-k8s@1.5.2
+- Bump nf-seqera@0.18.0
+- Bump nf-tower@1.25.0
+- Bump nf-wave@1.19.1
+
 26.03.2-edge - 7 Apr 2026
 - Add `module create` subcommand (#6992) [d6639a5e0]
 - Add `module spec` command (#6859) [049e2a40e]

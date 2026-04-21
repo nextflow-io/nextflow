@@ -1,5 +1,11 @@
 nf-amazon changelog
 ===================
+3.8.3 - 20 Apr 2026
+- Fix inconsistent indentation in nf-amazon (#7047) [df6855d7d]
+- Fix S3FileSystemProvider.newInputStream() draining full object on close (#7046) [cf3867604]
+- Apply socket timeout to S3 CRT connections (#7024) [6f4a21764]
+- Manage AWS SDK exceptions to convert to the appropriate IO exceptions (#6707) [39c755663]
+
 3.8.2 - 7 Apr 2026
 - Bump org.apache.groovy from 4.0.30 to 4.0.31 (#6985) [62a391588]
 - Bump org.pf4j:pf4j from 3.12.0 to 3.14.1 (#6983) [95aba07a3]

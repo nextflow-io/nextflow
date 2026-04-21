@@ -1,5 +1,8 @@
 nf-wave changelog
 ==================
+1.19.1 - 20 Apr 2026
+- Fix resolution of `-with-tower` with `TOWER_API_ENDPOINT` (#7045) [ce962e882]
+
 1.19.0 - 17 Mar 2026
 - Add multi-arch support to arch process directive (#6897) [c7ca36902]
 - Default Fusion to v2.6 for Seqera executor (#6933) [8a7e53957]

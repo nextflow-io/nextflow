@@ -21,6 +21,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import io.seqera.executor.Labels
 import io.seqera.sched.api.schema.v1a1.AcceleratorType
 import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
 import io.seqera.sched.api.schema.v1a1.NextflowTask
@@ -138,6 +139,11 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
                 .taskId(task.id?.intValue())
                 .hash(task.hash?.toString())
                 .workDir(task.getWorkDirStr()))
+        // attach per-task resource labels delta (over run-level baseline)
+        final taskLabels = Labels.toStringMap(task.config.getResourceLabels())
+        final delta = Labels.delta(taskLabels, executor.runResourceLabels)
+        if( delta )
+            schedTask.labels(delta)
         log.debug "[SEQERA] Enqueueing task for batch submission: ${schedTask}"
         // Enqueue for batch submission - status will be set by setBatchTaskId callback
         executor.getBatchSubmitter().submit(this, schedTask)
