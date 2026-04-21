@@ -119,8 +119,10 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
         computeRunResourceLabels()
         final labels = new Labels()
-        if( seqeraConfig.autoLabels )
+        if( seqeraConfig.autoLabels ) {
             labels.withWorkflowMetadata(session.workflowMetadata, seqeraConfig.autoLabels)
+            labels.withPlatformContext(workspaceId, computeEnvId, seqeraConfig.autoLabels)
+        }
         labels.withProcessResourceLabels(runResourceLabels)
         final predictionModel = seqeraConfig.predictionModel ? PredictionModel.fromValue(seqeraConfig.predictionModel) : null
         final pipeline = new PipelineSpec()

@@ -1,5 +1,8 @@
 nf-seqera changelog
 ====================
+0.19.0 -
+- Add workspaceId and computeEnvId to autoLabels for cost aggregation
+
 0.18.0 - 20 Apr 2026
 - Honour process.resourceLabels in nf-seqera executor (#7048) [979f684ff]
 - Filter autoLabels to selected workflow-metadata fields (#7049) [ddc974fe6]

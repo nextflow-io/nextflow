@@ -36,7 +36,7 @@ class Labels {
     static final Set<String> ALL_AUTO_LABELS = Collections.unmodifiableSet(new LinkedHashSet<>([
         'projectName', 'userName', 'runName', 'sessionId', 'resume',
         'revision', 'commitId', 'repository', 'manifestName',
-        'runtimeVersion', 'workflowId'
+        'runtimeVersion', 'workflowId', 'workspaceId', 'computeEnvId'
     ]))
 
     private final Map<String,String> entries = new LinkedHashMap<>(20)
@@ -78,6 +78,21 @@ class Labels {
             entries.put('nextflow.io/runtimeVersion', NextflowMeta.instance.version.toString())
         if( include.contains('workflowId') && workflow.platform?.workflowId )
             entries.put('seqera.io/platform/workflowId', workflow.platform.workflowId)
+        return this
+    }
+
+    /**
+     * Add {@code seqera.io/platform/*} labels derived from the Platform
+     * execution context (workspace and compute environment). Used to
+     * aggregate Scheduler-backed runs by workspace and compute environment
+     * for cost reporting. Filtered by the {@code include} set of short names.
+     */
+    Labels withPlatformContext(Long workspaceId, String computeEnvId, Set<String> include) {
+        if( !include ) return this
+        if( include.contains('workspaceId') && workspaceId != null )
+            entries.put('seqera.io/platform/workspaceId', workspaceId.toString())
+        if( include.contains('computeEnvId') && computeEnvId )
+            entries.put('seqera.io/platform/computeEnvId', computeEnvId)
         return this
     }
 

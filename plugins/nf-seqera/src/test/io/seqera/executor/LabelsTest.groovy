@@ -124,6 +124,58 @@ class LabelsTest extends Specification {
         !labels.entries.containsKey('seqera:sched:clusterId')
     }
 
+    def 'should add platform workspace and compute env labels when included'() {
+        when:
+        def labels = new Labels()
+                .withPlatformContext(42L, 'ce-abc', ['workspaceId', 'computeEnvId'] as Set)
+
+        then:
+        labels.entries['seqera.io/platform/workspaceId'] == '42'
+        labels.entries['seqera.io/platform/computeEnvId'] == 'ce-abc'
+    }
+
+    def 'should skip platform labels when include set does not mention them'() {
+        when:
+        def labels = new Labels()
+                .withPlatformContext(42L, 'ce-abc', ['runName'] as Set)
+
+        then:
+        !labels.entries.containsKey('seqera.io/platform/workspaceId')
+        !labels.entries.containsKey('seqera.io/platform/computeEnvId')
+    }
+
+    def 'should skip platform labels when values are null or blank'() {
+        when:
+        def labels = new Labels()
+                .withPlatformContext(null, null, ['workspaceId', 'computeEnvId'] as Set)
+                .withPlatformContext(null, '', ['workspaceId', 'computeEnvId'] as Set)
+
+        then:
+        !labels.entries.containsKey('seqera.io/platform/workspaceId')
+        !labels.entries.containsKey('seqera.io/platform/computeEnvId')
+    }
+
+    def 'should emit only the filtered platform label'() {
+        when:
+        def wsOnly = new Labels()
+                .withPlatformContext(42L, 'ce-abc', ['workspaceId'] as Set)
+        def ceOnly = new Labels()
+                .withPlatformContext(42L, 'ce-abc', ['computeEnvId'] as Set)
+
+        then:
+        wsOnly.entries.keySet() == ['seqera.io/platform/workspaceId'] as Set
+        ceOnly.entries.keySet() == ['seqera.io/platform/computeEnvId'] as Set
+    }
+
+    def 'should emit nothing for an empty include set in withPlatformContext'() {
+        when:
+        def labels = new Labels()
+                .withPlatformContext(42L, 'ce-abc', [] as Set)
+
+        then:
+        labels.entries.isEmpty()
+    }
+
     def 'should include platform workflowId when available'() {
         given:
         def workflow = Mock(WorkflowMetadata) {
