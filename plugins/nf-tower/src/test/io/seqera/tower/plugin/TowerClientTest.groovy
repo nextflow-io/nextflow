@@ -22,7 +22,7 @@ import java.time.Instant
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import io.seqera.http.HxClient
-import nextflow.exception.AbortOperationException
+import nextflow.exception.AbortRunException
 import nextflow.util.Duration
 import spock.lang.Specification
 /**
@@ -113,7 +113,7 @@ class TowerClientTest extends Specification {
         def c = new TowerClient()
         c.getAccessToken()
         then:
-        thrown(AbortOperationException)
+        thrown(AbortRunException)
     }
 
     def 'should set the auth token' () {
@@ -276,4 +276,35 @@ class TowerClientTest extends Specification {
         url.contains('name=test+workflow')
     }
 
+    def 'should send AbortRunException in selected client calls'() {
+        given:
+        def client = Spy(new TowerClient(new TowerConfig([:], [TOWER_ACCESS_TOKEN: 'token']))){
+            sendHttpMessage(_,_,_) >> new TowerClient.Response(401)
+        }
+
+        when:
+        client.traceCreate([:], '1234')
+        then:
+        thrown(AbortRunException)
+
+        when:
+        client.traceBegin([:], '1234', '5678')
+        then:
+        thrown(AbortRunException)
+
+        when:
+        client.traceProgress([:], '1234', '5678')
+        then:
+        thrown(AbortRunException)
+
+        when:
+        client.traceComplete([:], '1234', '5678')
+        then:
+        notThrown(AbortRunException)
+
+        when:
+        client.traceHeartbeat([:], '1234', '5678')
+        then:
+        notThrown(AbortRunException)
+    }
 }

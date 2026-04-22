@@ -21,7 +21,7 @@ import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.container.resolver.ContainerMeta
-import nextflow.exception.AbortOperationException
+import nextflow.exception.AbortRunException
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
@@ -156,7 +156,7 @@ class TowerObserver implements TraceObserverV2 {
         final ret = client.traceCreate(makeCreateReq(session), workspaceId)
         this.workflowId = ret.workflowId
         if( !workflowId )
-            throw new AbortOperationException("Invalid Seqera Platform API response - Missing workflow Id")
+            throw new AbortRunException("Invalid Seqera Platform API response - Missing workflow Id")
         log.debug "Platform workflow id: $workflowId; workflow url: ${ret.watchUrl}"
         session.workflowMetadata.platform.workflowId = workflowId
         // note: `watchUrl` in the create response requires Platform 26.01 or later
@@ -530,45 +530,52 @@ class TowerObserver implements TraceObserverV2 {
 
 
     protected void sendTasks0(dummy) {
-        final tasks = new HashMap<TaskId, TraceRecord>(TASKS_PER_REQUEST)
-        boolean complete = false
-        long previous = System.currentTimeMillis()
-        final long period = requestInterval.millis
-        final long delay = period / 10 as long
+        try {
+            final tasks = new HashMap<TaskId, TraceRecord>(TASKS_PER_REQUEST)
+            boolean complete = false
+            long previous = System.currentTimeMillis()
+            final long period = requestInterval.millis
+            final long delay = period / 10 as long
 
-        while( !complete ) {
-            final ProcessEvent ev = events.poll(delay, TimeUnit.MILLISECONDS)
-            // reconcile task events ie. send out only the last event
-            if( ev ) {
-                log.trace "Tower event=$ev"
-                if( ev.trace )
-                    tasks[ev.trace.taskId] = ev.trace
-                if( ev.completed )
-                    complete = true
-            }
-
-            // check if there's something to send
-            final now = System.currentTimeMillis()
-            final delta = now -previous
-
-            if( !tasks ) {
-                if( delta > aliveInterval.millis ) {
-                    final req = makeHeartbeatReq()
-                    client.traceHeartbeat(req, workspaceId, workflowId)
-                    previous = now
+            while( !complete ) {
+                final ProcessEvent ev = events.poll(delay, TimeUnit.MILLISECONDS)
+                // reconcile task events ie. send out only the last event
+                if( ev ) {
+                    log.trace "Tower event=$ev"
+                    if( ev.trace )
+                        tasks[ev.trace.taskId] = ev.trace
+                    if( ev.completed )
+                        complete = true
                 }
-                continue
-            }
 
-            if( delta > period || tasks.size() >= TASKS_PER_REQUEST || complete ) {
-                // send
-                final req = makeTasksReq(tasks.values())
-                client.traceProgress(req, workspaceId, workflowId)
+                // check if there's something to send
+                final now = System.currentTimeMillis()
+                final delta = now - previous
 
-                // clean up for next iteration
-                previous = now
-                tasks.clear()
+                if( !tasks ) {
+                    if( delta > aliveInterval.millis ) {
+                        final req = makeHeartbeatReq()
+                        client.traceHeartbeat(req, workspaceId, workflowId)
+                        previous = now
+                    }
+                    continue
+                }
+
+                if( delta > period || tasks.size() >= TASKS_PER_REQUEST || complete ) {
+                    // send
+                    final req = makeTasksReq(tasks.values())
+                    client.traceProgress(req, workspaceId, workflowId)
+
+                    // clean up for next iteration
+                    previous = now
+                    tasks.clear()
+                }
             }
+        }
+        catch( Exception e ) {
+            this.sender = null
+            log.error("Aborting session due to Seqera Platform telemetry exception - $e.message", e)
+            session.abort(e)
         }
     }
 
