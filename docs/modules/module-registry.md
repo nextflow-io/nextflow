@@ -65,7 +65,7 @@ To create an API access token:
 6. Copy the token and store it somewhere safe.
    You cannot view it again after this step.
 
-Once you have your token, see [Publishing modules](#publish-modules) for instructions on how to use it.
+Once you have your token, see [Publishing modules](#publishing-modules) for instructions on how to use it.
 
 ## Viewing modules
 
