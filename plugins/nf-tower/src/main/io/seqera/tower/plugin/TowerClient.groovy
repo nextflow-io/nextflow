@@ -122,7 +122,7 @@ class TowerClient {
     }
 
     Map traceBegin(Map req, String workspaceId, String workflowId){
-        return sendAndProcessRequest( getUrlTraceBegin(workspaceId, workflowId), req, 'POST')
+        return sendAndProcessRequest( getUrlTraceBegin(workspaceId, workflowId), req, 'PUT')
     }
 
     void traceComplete(Map req, String workspaceId, String workflowId) {
