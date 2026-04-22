@@ -20,6 +20,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
 import nextflow.container.ContainerConfig
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.TaskArrayExecutor
@@ -30,6 +31,7 @@ import nextflow.util.MemoryUnit
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class TaskBean implements Serializable, Cloneable {
 
@@ -119,6 +121,8 @@ class TaskBean implements Serializable, Cloneable {
 
     Boolean stageFileEnabled
 
+    boolean binFilesStaged
+
     @PackageScope
     TaskBean() {
         shell = BashWrapperBuilder.BASH
@@ -169,6 +173,17 @@ class TaskBean implements Serializable, Cloneable {
         this.fusionEnabled = task.getProcessor().isFusionEnabled()
 
         this.inputFiles = task.getInputFilesMap()
+        final moduleBinFiles = task.getProcessor().getModuleBinFiles() ?: Collections.<String,Path>emptyMap()
+        final projectBinFiles = task.getProcessor().getReferencedProjectBinFiles(task.source) ?: Collections.<String,Path>emptyMap()
+        this.binFilesStaged = !moduleBinFiles.isEmpty() || !projectBinFiles.isEmpty()
+        if( binFilesStaged ) {
+            this.inputFiles.putAll(moduleBinFiles)
+            for( Map.Entry<String,Path> e : projectBinFiles ) {
+                if( moduleBinFiles.containsKey(e.key) )
+                    log.warn "Project bin script '${e.key.substring(TaskRun.BIN_DIR.length() + 1)}' overrides module bin script with the same name"
+                this.inputFiles.put(e.key, e.value)
+            }
+        }
         this.outputFiles = task.getOutputFilesNames()
         this.binDirs = task.getProcessor().getBinDirs()
         this.stageInMode = task.config.getStageInMode()

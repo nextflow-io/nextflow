@@ -96,6 +96,12 @@ class TaskHasher {
             keys.addAll(binEntries)
         }
 
+        final moduleBinFiles = processor.getModuleBinFiles()
+        if( moduleBinFiles ) {
+            log.trace "Task: ${task.processor.name} > Adding module bin files: ${-> moduleBinFiles.values().join('; ')}"
+            keys.addAll(moduleBinFiles.values())
+        }
+
         // add environment modules (`module` directive)
         final modules = task.getConfig().getModule()
         if( modules ) {
@@ -212,7 +218,7 @@ class TaskHasher {
     @Memoized
     List<Path> getTaskBinEntries(String script) {
         List<Path> result = []
-        final tokenizer = new StringTokenizer(script, " \t\n\r\f()[]{};&|<>`")
+        final tokenizer = new StringTokenizer(script, TaskProcessor.SCRIPT_TOKEN_DELIMITERS)
         while( tokenizer.hasMoreTokens() ) {
             final token = tokenizer.nextToken()
             final path = session.binEntries.get(token)

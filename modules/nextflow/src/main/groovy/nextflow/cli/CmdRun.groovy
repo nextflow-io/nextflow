@@ -492,10 +492,16 @@ class CmdRun extends CmdBase implements HubOptions {
     }
 
     static void detectModuleBinaryFeature(ConfigMap config) {
-        final moduleBinaries = config.navigate('nextflow.enable.moduleBinaries', false)
+        final moduleBinaries = config.navigate('nextflow.enable.moduleBinaries')
+        if( moduleBinaries == null )
+            return
         if( moduleBinaries ) {
-            log.debug "Enabling module binaries"
+            log.warn "Configuration `nextflow.enable.moduleBinaries` is no longer needed -- module binaries are now enabled by default"
             NextflowMeta.instance.moduleBinaries(true)
+        }
+        else {
+            log.warn "Configuration `nextflow.enable.moduleBinaries = false` is deprecated and will be ignored in a future version -- module binaries are now always enabled"
+            NextflowMeta.instance.moduleBinaries(false)
         }
     }
 

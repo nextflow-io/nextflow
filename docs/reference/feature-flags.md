@@ -20,7 +20,9 @@ Feature flags with the `nextflow.preview` prefix can cause pipelines run with ne
 : Defines the DSL version to use (`1` or `2`).
 
 `nextflow.enable.moduleBinaries`
-: When `true`, enables the use of modules with binary scripts. See {ref}`module-binaries` for more information.
+: :::{deprecated} 25.04.0
+  :::
+: Module binaries are now enabled by default. This flag is no longer required. See {ref}`module-binaries` for more information.
 
 `nextflow.enable.strict`
 : :::{deprecated} 26.04.0

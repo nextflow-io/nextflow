@@ -202,7 +202,7 @@ class BashWrapperBuilderTest extends Specification {
         def bash = Spy(new BashWrapperBuilder(Mock(TaskBean)))
         and:
         bash.getEnvironment() >> [:]
-        bash.getBinDirs() >> [Paths.get('/my/bin') ]
+        bash.getBinDirs() >> []
         bash.getWorkDir() >> Paths.get('/my/work/dir')
         bash.isStatsEnabled() >> false
         bash.getStageInMode() >> 'symlink'
@@ -224,7 +224,7 @@ class BashWrapperBuilderTest extends Specification {
         builder instanceof SingularityBuilder
         builder.env == ['NXF_TASK_WORKDIR', 'FOO','BAR']
         builder.workDir == Paths.get('/my/work/dir')
-        builder.mounts == [ Paths.get('/my/bin') ]
+        builder.mounts == []
     }
 
     def 'should add resolved inputs'() {
@@ -509,6 +509,33 @@ class BashWrapperBuilderTest extends Specification {
         cleanup:
         SysEnv.pop()
         folder?.deleteDir()
+    }
+
+    def 'should stage module bin files and set PATH' () {
+        given:
+        def folder = Paths.get('/work/dir')
+        def inputs = [
+            'sample.fq': Paths.get('/some/data/sample.fq'),
+            '.bin/myscript.sh': Paths.get('/modules/tool/resources/bin/myscript.sh'),
+        ]
+
+        when:
+        def binding = newBashWrapperBuilder([
+                workDir: folder,
+                targetDir: folder,
+                inputFiles: inputs,
+                binFilesStaged: true ]).makeBinding()
+
+        then:
+        binding.stage_inputs.contains('mkdir -p .bin && ln -s /modules/tool/resources/bin/myscript.sh .bin/myscript.sh')
+        binding.module_bin_path.contains('export PATH="$PWD/.bin:$PATH"')
+    }
+
+    def 'should not set module bin PATH when no module bins' () {
+        when:
+        def binding = newBashWrapperBuilder().makeBinding()
+        then:
+        binding.module_bin_path == null
     }
 
     def 'should include sync command' () {

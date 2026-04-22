@@ -62,6 +62,10 @@ class NF {
         NextflowMeta.instance.isModuleBinariesEnabled()
     }
 
+    static boolean isModuleBinariesDisabled() {
+        NextflowMeta.instance.isModuleBinariesDisabled()
+    }
+
     static boolean isRecurseEnabled() {
         NextflowMeta.instance.preview.recursion
     }
