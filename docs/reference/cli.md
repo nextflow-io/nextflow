@@ -1277,11 +1277,10 @@ The `module` command provides a comprehensive system for managing registry-based
 
 (cli-module-run)=
 
-`run [options] [namespace/name] [--<input_name> <input-value>]`
+`run [options] [namespace/name | path] [--<input_name> <input-value>]`
 
-: Execute a module directly from the registry without creating a wrapper workflow.
-: Automatically downloads the module if not already installed. Accepts all standard Nextflow run options.
-: The `module run` command extends the `run` command and accepts all its options, including `-profile`, `-resume`, `-c`, etc. Command-line params (i.e., `--<input_name>`) are inferred from the module's declared inputs.
+: Execute a module directly. Can be a remote module (`namespace/name`) or a local module path (beginning with `./`, `../`, or `/`). Automatically downloads the module if not already installed.
+: Accepts all standard Nextflow run options, including `-profile`, `-resume`, `-c`, etc. Command-line params (i.e., `--<input_name>`) are inferred from the module's declared inputs.
 : The following additional options are available:
 
   `-version`
@@ -1290,15 +1289,20 @@ The `module` command provides a comprehensive system for managing registry-based
 : **Examples:**
 
   ```console
-  # Run module with inputs
-  $ nextflow module run nf-core/fastqc --input 'data/*.fastq.gz'
-
-  # Run specific version with Nextflow options
+  # Run remote module
   $ nextflow module run nf-core/fastqc \
-      --input 'data/*.fastq.gz' \
+      --input 'data/*.fastq.gz'
+
+  # Run remote module with specific version and run options
+  $ nextflow module run nf-core/fastqc \
       -version 1.0.0 \
-      -profile docker \
+      --input 'data/*.fastq.gz' \
+      -with-conda \
       -resume
+
+  # Run local module
+  $ nextflow module run ./modules/nf-core/fastqc/main.nf \
+      --input 'data/*.fastq.gz'
   ```
 
 (cli-module-search)=

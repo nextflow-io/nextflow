@@ -44,31 +44,23 @@ class TowerFactory implements TraceObserverFactoryV2 {
 
     @Override
     Collection<TraceObserverV2> create(Session session) {
-        final client = client(session, env)
-        if( !client )
+        final config = new TowerConfig(session.config.tower as Map ?: Collections.emptyMap(), env)
+        if( !isEnabled(session, config, env) )
             return Collections.emptyList()
-
         final result = new ArrayList<TraceObserverV2>(1)
-        // create the tower client
-        result.add(client)
+        // create the tower observer
+        result.add( new TowerObserver(session, client(session, env), config.workspaceId, env))
         // create the logs checkpoint
         if( session.cloudCachePath )
             result.add( new LogsCheckpoint() )
         return result
     }
 
-    static protected TowerClient createTowerClient0(Session session, TowerConfig config, Map env) {
+    @Memoized
+    static TowerClient client(Session session, Map env) {
         final opts = session.config.tower as Map ?: Collections.emptyMap()
-
-        Duration requestInterval = opts.requestInterval as Duration
-        Duration aliveInterval = opts.aliveInterval as Duration
-
-        final tower = new TowerClient(session, config).withEnvironment(env)
-        if( aliveInterval )
-            tower.aliveInterval = aliveInterval
-        if( requestInterval )
-            tower.requestInterval = requestInterval
-
+        final config = new TowerConfig(opts, env)
+        final tower = new TowerClient(config)
         // register auth provider
         // note: this is needed to authorize access to resources via XFileSystemProvider used by NF
         // it's not needed by the tower client logic
@@ -83,17 +75,11 @@ class TowerFactory implements TraceObserverFactoryV2 {
         return new TowerXAuth(endpoint, accessToken, refreshToken)
     }
 
-    @Memoized
-    static TowerClient client(Session session, Map<String,String> env) {
-        final opts = session.config.tower as Map ?: Collections.emptyMap()
-        final config = new TowerConfig(opts, env)
-        Boolean isEnabled = config.enabled || env.get('TOWER_WORKFLOW_ID') || session.config.navigate('fusion.enabled') as Boolean
-        return isEnabled
-            ? createTowerClient0(session, config, env)
-            : null
+    private static boolean isEnabled(Session session, TowerConfig config, Map<String,String> env) {
+        return config.enabled || env.get('TOWER_WORKFLOW_ID') || session.config.navigate('fusion.enabled') as Boolean
     }
 
     static TowerClient client() {
-        client(Global.session as Session, SysEnv.get())
+        return client(Global.session as Session, SysEnv.get())
     }
 }

@@ -124,6 +124,29 @@ class LabelsTest extends Specification {
         !labels.entries.containsKey('seqera:sched:clusterId')
     }
 
+    def 'should include platform workspaceId and computeEnvId when available'() {
+        given:
+        def platform = new PlatformMetadata('wf-abc123')
+        platform.workspace = new PlatformMetadata.Workspace(workspaceId: '1234')
+        platform.computeEnv = new PlatformMetadata.ComputeEnv(id: 'ce-abc')
+        def workflow = Mock(WorkflowMetadata) {
+            getRunName() >> 'happy_turing'
+            getSessionId() >> UUID.randomUUID()
+            isResume() >> false
+            getManifest() >> new Manifest([:])
+            getPlatform() >> platform
+        }
+
+        when:
+        def labels = new Labels()
+                .withWorkflowMetadata(workflow, ['workspaceId', 'computeEnvId'] as Set)
+
+        then:
+        labels.entries.keySet() == ['seqera.io/platform/workspaceId', 'seqera.io/platform/computeEnvId'] as Set
+        labels.entries['seqera.io/platform/workspaceId'] == '1234'
+        labels.entries['seqera.io/platform/computeEnvId'] == 'ce-abc'
+    }
+
     def 'should include platform workflowId when available'() {
         given:
         def workflow = Mock(WorkflowMetadata) {

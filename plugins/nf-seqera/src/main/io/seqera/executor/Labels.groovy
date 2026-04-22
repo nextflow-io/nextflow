@@ -36,7 +36,7 @@ class Labels {
     static final Set<String> ALL_AUTO_LABELS = Collections.unmodifiableSet(new LinkedHashSet<>([
         'projectName', 'userName', 'runName', 'sessionId', 'resume',
         'revision', 'commitId', 'repository', 'manifestName',
-        'runtimeVersion', 'workflowId'
+        'runtimeVersion', 'workflowId', 'workspaceId', 'computeEnvId'
     ]))
 
     private final Map<String,String> entries = new LinkedHashMap<>(20)
@@ -78,6 +78,10 @@ class Labels {
             entries.put('nextflow.io/runtimeVersion', NextflowMeta.instance.version.toString())
         if( include.contains('workflowId') && workflow.platform?.workflowId )
             entries.put('seqera.io/platform/workflowId', workflow.platform.workflowId)
+        if( include.contains('workspaceId') && workflow.platform?.workspace?.id )
+            entries.put('seqera.io/platform/workspaceId', workflow.platform.workspace.id)
+        if( include.contains('computeEnvId') && workflow.platform?.computeEnv?.id )
+            entries.put('seqera.io/platform/computeEnvId', workflow.platform.computeEnv.id)
         return this
     }
 
