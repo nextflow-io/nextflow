@@ -17,66 +17,51 @@
 package nextflow.processor
 
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
 
 /**
- * Defines the global hint key registry and provides validation
- * for the {@code hints} process directive.
+ * Validates the shape of the {@code hints} process directive.
+ *
+ * The core is intentionally agnostic about which hint keys are supported:
+ * each executor validates the keys it recognizes (prefixed with its own
+ * namespace, e.g. {@code awsbatch/...}, {@code seqera/...}). This class
+ * only enforces that the map conforms to {@code Map<String,String>}.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
 @CompileStatic
 class HintDefs {
 
     /**
-     * Global registry of known unprefixed hint keys and their expected value types.
-     * Executor-prefixed keys (e.g. {@code seqera/machineRequirement.arch}) are
-     * validated by the target executor, not this registry.
-     */
-    static final Map<String, Class> KNOWN_HINTS = [
-        'consumableResources': String
-    ]
-
-    /**
-     * Validates the given hints map against the global registry.
-     * <p>
-     * Unprefixed keys are checked against {@link #KNOWN_HINTS}:
-     * <ul>
-     *   <li>Unknown keys produce a warning with a "did you mean?" suggestion if a close match exists</li>
-     *   <li>Value types are validated (must resolve to String or Integer)</li>
-     * </ul>
-     * Executor-prefixed keys (containing {@code /}) are skipped — they are validated by the target executor.
+     * Validates the hint map structure. Does not check whether keys are
+     * recognized — that is the responsibility of each executor.
      *
-     * @param hints the resolved hints map
+     * Rules:
+     * <ul>
+     *   <li>keys must be non-empty</li>
+     *   <li>keys may contain at most one {@code /} separating the optional
+     *       executor namespace from the hint name</li>
+     *   <li>values must be {@code String} or {@code null}</li>
+     * </ul>
+     *
+     * @param hints the hint map to validate (may be {@code null})
+     * @throws IllegalArgumentException if the map is malformed
      */
-    static void validateHints(Map<String, Object> hints) {
+    static void validateHints(Map<String, ?> hints) {
         if( !hints )
             return
 
-        for( Map.Entry<String, Object> entry : hints.entrySet() ) {
+        for( Map.Entry<String, ?> entry : hints.entrySet() ) {
             final key = entry.key
             final value = entry.value
 
-            // skip executor-prefixed keys — validated by the executor
-            if( key.contains('/') )
-                continue
+            if( !key )
+                throw new IllegalArgumentException("Process hint key cannot be null or empty")
 
-            // validate value type
-            if( value != null && !(value instanceof String) && !(value instanceof Integer) ) {
-                throw new IllegalArgumentException("Invalid hint value type for key '${key}': expected String or Integer, got ${value.getClass().getName()}")
-            }
+            if( key.count('/') > 1 )
+                throw new IllegalArgumentException("Invalid hint key '${key}': expected 'name' or 'executor/name'")
 
-            // validate key against registry
-            if( !KNOWN_HINTS.containsKey(key) ) {
-                final suggestions = KNOWN_HINTS.keySet().toList().closest(key)
-                if( suggestions ) {
-                    log.warn "Unknown process hint: '${key}' — did you mean '${suggestions.first()}'?"
-                }
-                else {
-                    log.warn "Unknown process hint: '${key}'"
-                }
-            }
+            if( value != null && !(value instanceof CharSequence) )
+                throw new IllegalArgumentException("Invalid hint value for key '${key}': expected String, got ${value.getClass().getName()}")
         }
     }
 

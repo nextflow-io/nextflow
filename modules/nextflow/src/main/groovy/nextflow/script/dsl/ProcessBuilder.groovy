@@ -25,6 +25,7 @@ import nextflow.exception.IllegalDirectiveException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.processor.ConfigList
 import nextflow.processor.ErrorStrategy
+import nextflow.processor.HintDefs
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
@@ -235,6 +236,7 @@ class ProcessBuilder {
      */
     void hints(Map<String, String> map) {
         if( !map ) return
+        HintDefs.validateHints(map)
 
         def allHints = (Map)config.get('hints')
         if( !allHints ) {

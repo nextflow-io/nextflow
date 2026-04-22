@@ -660,9 +660,9 @@ class TaskConfigTest extends Specification {
 
         when: 'config override replaces the entire map'
         def config = process.createTaskConfig()
-        config.put('hints', ['scheduling.priority': 5])
+        config.put('hints', ['scheduling.priority': '5'])
         then:
-        config.getHints() == ['scheduling.priority': 5]
+        config.getHints() == ['scheduling.priority': '5']
     }
 
     def 'should report error on negative cpus' () {

@@ -129,12 +129,12 @@ class RegisterJobDefinitionModel {
             builder.platformCapabilities(platformCapabilities)
         if (containerProperties)
             builder.containerProperties(containerProperties.toBatchContainerProperties())
+        if (consumableResourceProperties)
+            builder.consumableResourceProperties(consumableResourceProperties)
         if (parameters)
             builder.parameters(parameters)
         if (tags)
             builder.tags(tags)
-        if (consumableResourceProperties)
-            builder.consumableResourceProperties(consumableResourceProperties)
 
         return (RegisterJobDefinitionRequest) builder.build()
     }

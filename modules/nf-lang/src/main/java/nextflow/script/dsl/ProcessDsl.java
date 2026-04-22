@@ -194,7 +194,7 @@ public interface ProcessDsl extends DslScope {
         void fair(Boolean value);
 
         @Description("""
-            The `hints` directive specifies executor-specific scheduling hints as key-value pairs.
+            The `hints` directive specifies executor-specific hints as key-value pairs. Keys may be namespaced with an `executor/` prefix to target a specific executor.
 
             [Read more](https://nextflow.io/docs/latest/reference/process.html#hints)
         """)

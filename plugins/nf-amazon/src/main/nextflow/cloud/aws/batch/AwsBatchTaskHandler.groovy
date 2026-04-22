@@ -686,25 +686,40 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         }
     }
 
+    static private final String HINT_PREFIX = 'awsbatch/'
+    static private final Set<String> KNOWN_HINTS = Set.of('consumableResources')
+    static private final String SUPPORTED_HINTS_MSG =
+        KNOWN_HINTS.collect { HINT_PREFIX + it }.sort().join(', ')
+
     @CompileStatic
     protected ConsumableResourceProperties getConsumableResources(Map<String,String> hints) {
         if( !hints )
             return null
+        warnUnknownHints(hints)
+        final raw = hints.get(HINT_PREFIX + 'consumableResources') ?: hints.get('consumableResources')
+        if( !raw?.trim() )
+            return null
         final List<ConsumableResourceRequirement> resourceList = new ArrayList<>()
-        for( final key : hints.keySet() ) {
-            if( !isHint(key, 'consumableResources') )
+        for( final token : raw.tokenize(',') ) {
+            final entry = token.trim()
+            if( !entry )
                 continue
-            final entries = (hints[key] ?: '').tokenize(',')
-            for( final entry : entries ) {
-                final index = entry.indexOf('=')
-                final resourceName = entry.substring(0, index)
-                final resourceQuantity = entry.substring(index + 1).toLong()
-                final resource = ConsumableResourceRequirement.builder()
-                    .consumableResource(resourceName)
-                    .quantity(resourceQuantity)
-                    .build()
-                resourceList.add(resource)
+            final index = entry.indexOf('=')
+            if( index <= 0 || index == entry.length()-1 )
+                throw new IllegalArgumentException("Invalid 'consumableResources' hint entry '${entry}' — expected 'name=quantity'")
+            final resourceName = entry.substring(0, index).trim()
+            final qtyStr = entry.substring(index+1).trim()
+            final long resourceQuantity
+            try {
+                resourceQuantity = qtyStr.toLong()
             }
+            catch( NumberFormatException e ) {
+                throw new IllegalArgumentException("Invalid 'consumableResources' hint entry '${entry}' — quantity must be an integer")
+            }
+            resourceList.add( ConsumableResourceRequirement.builder()
+                .consumableResource(resourceName)
+                .quantity(resourceQuantity)
+                .build() )
         }
         if( !resourceList )
             return null
@@ -714,8 +729,13 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     @CompileStatic
-    protected boolean isHint(String key, String name) {
-        return key == name || key == "awsbatch/${name}".toString()
+    protected void warnUnknownHints(Map<String,String> hints) {
+        for( final key : hints.keySet() ) {
+            if( !key?.startsWith(HINT_PREFIX) )
+                continue
+            if( !KNOWN_HINTS.contains(key.substring(HINT_PREFIX.length())) )
+                log.warn1("Unknown AWS Batch hint: '${key}' — supported keys are: ${SUPPORTED_HINTS_MSG}")
+        }
     }
 
     /**

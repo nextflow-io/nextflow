@@ -25,62 +25,21 @@ import spock.lang.Specification
  */
 class HintDefsTest extends Specification {
 
-    def 'should accept known hint key'() {
+    def 'should accept valid hints'() {
         when:
-        HintDefs.validateHints([consumableResources: 'my-license'])
+        HintDefs.validateHints([
+            consumableResources: 'my-license=1',
+            'awsbatch/consumableResources': 'a=1,b=2',
+            'seqera/machineRequirement.provisioning': 'spot',
+        ])
         then:
         noExceptionThrown()
     }
 
-    def 'should warn on unknown key with close match'() {
-        // consumableResource is close to consumableResources
-        when:
-        HintDefs.validateHints([consumableResource: 'my-license'])
-        then:
-        noExceptionThrown()
-        // warning is logged — verified by log output in integration tests
-    }
-
-    def 'should warn on unknown key with no close match'() {
-        when:
-        HintDefs.validateHints([somethingRandom: 'value'])
-        then:
-        noExceptionThrown()
-    }
-
-    def 'should reject invalid value type'() {
-        when:
-        HintDefs.validateHints([consumableResources: ['a', 'b']])
-        then:
-        def e = thrown(IllegalArgumentException)
-        e.message.contains('Invalid hint value type')
-        e.message.contains('consumableResources')
-    }
-
-    def 'should accept string and integer values'() {
-        when:
-        HintDefs.validateHints([consumableResources: 'my-license', 'scheduling.priority': 10])
-        then:
-        noExceptionThrown()
-    }
-
-    def 'should skip executor-prefixed keys'() {
-        when:
-        HintDefs.validateHints(['seqera/machineRequirement.arch': 'arm64', 'seqera/unknownKey': 'value'])
-        then:
-        noExceptionThrown()
-    }
-
-    def 'should handle null and empty maps'() {
-        when:
-        HintDefs.validateHints(null)
-        then:
-        noExceptionThrown()
-
-        when:
-        HintDefs.validateHints([:])
-        then:
-        noExceptionThrown()
+    def 'should accept null and empty maps'() {
+        expect:
+        HintDefs.validateHints(null) == null
+        HintDefs.validateHints([:]) == null
     }
 
     def 'should accept null hint value'() {
@@ -88,6 +47,45 @@ class HintDefsTest extends Specification {
         HintDefs.validateHints([consumableResources: null])
         then:
         noExceptionThrown()
+    }
+
+    def 'should reject non-string value'() {
+        when:
+        HintDefs.validateHints([consumableResources: 42])
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("Invalid hint value")
+        e.message.contains("consumableResources")
+    }
+
+    def 'should reject list value'() {
+        when:
+        HintDefs.validateHints([consumableResources: ['a', 'b']])
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def 'should reject closure value'() {
+        when:
+        HintDefs.validateHints([consumableResources: { 'x' }])
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def 'should reject empty key'() {
+        when:
+        HintDefs.validateHints(['': 'x'])
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("null or empty")
+    }
+
+    def 'should reject multi-segment key'() {
+        when:
+        HintDefs.validateHints(['a/b/c': 'x'])
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("a/b/c")
     }
 
 }

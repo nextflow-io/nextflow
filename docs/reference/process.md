@@ -844,7 +844,9 @@ The above example produces:
 
 ### hints
 
-The `hints` directive specifies executor-specific scheduling hints as key-value pairs. Each executor uses the hints it recognizes and ignores the rest. For example:
+The `hints` directive specifies executor-specific hints as key-value pairs. Each executor uses the hints it recognizes and ignores the rest. Hint values must be strings.
+
+Unprefixed keys are available to **every** executor — any executor that recognizes the key consumes it. Prefixing a key with an executor name (e.g. `awsbatch/...`) restricts the hint to that executor only. For example:
 
 ```nextflow
 process hello {
@@ -857,11 +859,15 @@ process hello {
 }
 ```
 
-You can prefix a hint with the name of an executor to apply it only to that executor. For example:
+To restrict a hint to a single executor, prefix the key with the executor name:
 
 ```nextflow
     hints 'awsbatch/consumableResources': 'my-license=1'
 ```
+
+When the same hint is provided both unprefixed and with a matching executor prefix, the prefixed form takes precedence for that executor.
+
+Calling `hints` multiple times in a process definition accumulates entries, with later calls overwriting entries for the same key. Setting `hints` via configuration (e.g. in `nextflow.config`) replaces the entire map.
 
 See {ref}`executor-page` to see which hints are recognized by each executor.
 

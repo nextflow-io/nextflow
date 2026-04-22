@@ -184,26 +184,29 @@ class ProcessBuilderTest extends Specification {
         config.getHints() == ['seqera/machineRequirement.arch': 'arm64']
 
         when:
-        builder.hints 'seqera/machineRequirement.provisioning': 'spot', 'seqera/machineRequirement.maxSpotAttempts': 3
+        builder.hints 'seqera/machineRequirement.provisioning': 'spot', 'seqera/machineRequirement.maxSpotAttempts': '3'
         then:
-        config.getHints() == ['seqera/machineRequirement.arch': 'arm64', 'seqera/machineRequirement.provisioning': 'spot', 'seqera/machineRequirement.maxSpotAttempts': 3]
+        config.getHints() == ['seqera/machineRequirement.arch': 'arm64', 'seqera/machineRequirement.provisioning': 'spot', 'seqera/machineRequirement.maxSpotAttempts': '3']
 
         when: 'duplicate key overwrites'
         builder.hints 'seqera/machineRequirement.arch': 'x86_64'
         then:
-        config.getHints() == ['seqera/machineRequirement.arch': 'x86_64', 'seqera/machineRequirement.provisioning': 'spot', 'seqera/machineRequirement.maxSpotAttempts': 3]
+        config.getHints() == ['seqera/machineRequirement.arch': 'x86_64', 'seqera/machineRequirement.provisioning': 'spot', 'seqera/machineRequirement.maxSpotAttempts': '3']
     }
 
-    def 'should store closure values in hints' () {
+    def 'should reject non-string hint values' () {
         given:
         def builder = createBuilder()
-        def config = builder.getConfig()
 
         when:
-        def closure = { 'spot' }
-        builder.hints 'seqera/machineRequirement.provisioning': closure
+        builder.hints 'seqera/machineRequirement.provisioning': { 'spot' }
         then:
-        config.getHints()['seqera/machineRequirement.provisioning'].is(closure)
+        thrown(IllegalArgumentException)
+
+        when:
+        builder.hints 'seqera/machineRequirement.maxSpotAttempts': 3
+        then:
+        thrown(IllegalArgumentException)
     }
 
     def 'should check a valid label' () {

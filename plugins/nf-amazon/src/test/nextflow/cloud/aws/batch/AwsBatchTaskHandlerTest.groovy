@@ -601,16 +601,20 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.consumableResourceProperties == null
     }
 
-    def 'should create a job definition with consumable resources from hints' () {
-        given:
+    def 'should create a job definition with consumable resources from hints (built from real ProcessBuilder)' () {
+        given: 'hints set through the real DSL → ProcessConfig → TaskConfig path'
+        def process = new ProcessConfig(Mock(BaseScript))
+        new nextflow.script.dsl.ProcessBuilder(process).hints(
+            'awsbatch/consumableResources': 'license-a=1,license-b=2',
+            foo: 'bar'
+        )
+        def taskConfig = process.createTaskConfig()
+        and:
         def IMAGE = 'foo/bar:1.0'
         def JOB_NAME = 'nf-foo-bar-1-0'
-        def HINTS = [consumableResources: 'license-a=1,license-b=2', foo: 'bar']
         def task = Mock(TaskRun) {
             getContainer() >> IMAGE
-            getConfig() >> Mock(TaskConfig) {
-                getHints() >> HINTS
-            }
+            getConfig() >> taskConfig
         }
         def handler = Spy(AwsBatchTaskHandler) {
             getTask() >> task
@@ -629,6 +633,77 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.consumableResourceProperties.consumableResourceList()[0].quantity() == 1
         result.consumableResourceProperties.consumableResourceList()[1].consumableResource() == 'license-b'
         result.consumableResourceProperties.consumableResourceList()[1].quantity() == 2
+    }
+
+    def 'should apply awsbatch/-prefixed consumableResources over unprefixed' () {
+        given:
+        def handler = new AwsBatchTaskHandler()
+
+        when:
+        def result = handler.getConsumableResources([
+            consumableResources: 'legacy=9',
+            'awsbatch/consumableResources': 'license-a=1,license-b=2',
+        ])
+        then:
+        result.consumableResourceList().size() == 2
+        result.consumableResourceList()[0].consumableResource() == 'license-a'
+        result.consumableResourceList()[0].quantity() == 1
+        result.consumableResourceList()[1].consumableResource() == 'license-b'
+        result.consumableResourceList()[1].quantity() == 2
+    }
+
+    def 'should return null when hints empty or no consumableResources' () {
+        given:
+        def handler = new AwsBatchTaskHandler()
+
+        expect:
+        handler.getConsumableResources(null) == null
+        handler.getConsumableResources([:]) == null
+        handler.getConsumableResources([foo: 'bar']) == null
+        handler.getConsumableResources([consumableResources: '']) == null
+        handler.getConsumableResources([consumableResources: '   ']) == null
+    }
+
+    def 'should tolerate whitespace in consumableResources entries' () {
+        given:
+        def handler = new AwsBatchTaskHandler()
+
+        when:
+        def result = handler.getConsumableResources([consumableResources: ' license-a = 1 , license-b = 2 '])
+        then:
+        result.consumableResourceList().size() == 2
+        result.consumableResourceList()[0].consumableResource() == 'license-a'
+        result.consumableResourceList()[0].quantity() == 1
+        result.consumableResourceList()[1].consumableResource() == 'license-b'
+        result.consumableResourceList()[1].quantity() == 2
+    }
+
+    def 'should fail with a clear error on invalid consumableResources entry' () {
+        given:
+        def handler = new AwsBatchTaskHandler()
+
+        when:
+        handler.getConsumableResources([consumableResources: 'bad'])
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("'bad'")
+        e.message.contains("name=quantity")
+
+        when:
+        handler.getConsumableResources([consumableResources: 'license-a=not-a-number'])
+        then:
+        def e2 = thrown(IllegalArgumentException)
+        e2.message.contains("quantity must be an integer")
+
+        when:
+        handler.getConsumableResources([consumableResources: '=1'])
+        then:
+        thrown(IllegalArgumentException)
+
+        when:
+        handler.getConsumableResources([consumableResources: 'license-a='])
+        then:
+        thrown(IllegalArgumentException)
     }
 
     def 'should create a fargate job definition' () {

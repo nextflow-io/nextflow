@@ -29,32 +29,22 @@ class HintHelperTest extends Specification {
 
     def 'should return base opts when no hints'() {
         given:
-        def base = new MachineRequirementOpts([arch: 'x86_64'])
+        def base = new MachineRequirementOpts([provisioning: 'spot'])
 
         when:
         def result = HintHelper.overlayHints(base, [:])
         then:
-        result.arch == 'x86_64'
+        result.provisioning == 'spot'
     }
 
     def 'should return base opts when no seqera hints'() {
         given:
-        def base = new MachineRequirementOpts([arch: 'x86_64'])
+        def base = new MachineRequirementOpts([provisioning: 'spot'])
 
         when:
         def result = HintHelper.overlayHints(base, [consumableResources: 'my-license'])
         then:
-        result.arch == 'x86_64'
-    }
-
-    def 'should overlay arch hint'() {
-        given:
-        def base = new MachineRequirementOpts([arch: 'x86_64'])
-
-        when:
-        def result = HintHelper.overlayHints(base, ['seqera/machineRequirement.arch': 'arm64'])
-        then:
-        result.arch == 'arm64'
+        result.provisioning == 'spot'
     }
 
     def 'should overlay provisioning hint'() {
@@ -169,17 +159,15 @@ class HintHelperTest extends Specification {
 
     def 'should overlay multiple hints at once'() {
         given:
-        def base = new MachineRequirementOpts([arch: 'x86_64', provisioning: 'ondemand'])
+        def base = new MachineRequirementOpts([provisioning: 'ondemand'])
 
         when:
         def result = HintHelper.overlayHints(base, [
-            'seqera/machineRequirement.arch': 'arm64',
             'seqera/machineRequirement.provisioning': 'spotFirst',
             'seqera/machineRequirement.maxSpotAttempts': '3',
             'seqera/machineRequirement.diskType': 'ebs/gp3'
         ])
         then:
-        result.arch == 'arm64'
         result.provisioning == 'spotFirst'
         result.maxSpotAttempts == 3
         result.diskType == 'ebs/gp3'
@@ -187,14 +175,24 @@ class HintHelperTest extends Specification {
 
     def 'should preserve base values not overridden by hints'() {
         given:
-        def base = new MachineRequirementOpts([arch: 'x86_64', provisioning: 'spot', diskType: 'ebs/gp3'])
+        def base = new MachineRequirementOpts([provisioning: 'spot', diskType: 'ebs/gp3', diskMountPath: '/data'])
 
         when:
-        def result = HintHelper.overlayHints(base, ['seqera/machineRequirement.arch': 'arm64'])
+        def result = HintHelper.overlayHints(base, ['seqera/machineRequirement.diskType': 'ebs/io1'])
         then:
-        result.arch == 'arm64'
         result.provisioning == 'spot'
-        result.diskType == 'ebs/gp3'
+        result.diskType == 'ebs/io1'
+        result.diskMountPath == '/data'
+    }
+
+    def 'should derive known keys from MachineRequirementOpts declared fields'() {
+        expect: 'KNOWN_KEYS covers every declared field of MachineRequirementOpts'
+        HintHelper.KNOWN_KEYS.size() > 0
+        for( final field : MachineRequirementOpts.declaredFields ) {
+            if( field.synthetic || java.lang.reflect.Modifier.isStatic(field.modifiers) || field.name.startsWith('$') || field.name == 'metaClass' )
+                continue
+            assert HintHelper.KNOWN_KEYS.contains("machineRequirement.${field.name}".toString())
+        }
     }
 
     def 'should error on unknown seqera hint'() {
@@ -211,11 +209,11 @@ class HintHelperTest extends Specification {
         def result = HintHelper.extractSeqeraHints([
             consumableResources: 'my-license',
             'k8s/scheduling.nodeSelector': 'gpu=true',
-            'seqera/machineRequirement.arch': 'arm64'
+            'seqera/machineRequirement.provisioning': 'spot'
         ])
         then:
         result.size() == 1
-        result['machineRequirement.arch'] == 'arm64'
+        result['machineRequirement.provisioning'] == 'spot'
     }
 
     def 'should handle null hints map'() {
@@ -223,6 +221,49 @@ class HintHelperTest extends Specification {
         def result = HintHelper.extractSeqeraHints(null)
         then:
         result.isEmpty()
+    }
+
+    def 'should accept unprefixed known keys'() {
+        when:
+        def result = HintHelper.extractSeqeraHints([
+            'machineRequirement.provisioning': 'spot',
+            'machineRequirement.diskType': 'ebs/gp3',
+        ])
+        then:
+        result['machineRequirement.provisioning'] == 'spot'
+        result['machineRequirement.diskType'] == 'ebs/gp3'
+    }
+
+    def 'should give prefixed form precedence over unprefixed'() {
+        when:
+        def result = HintHelper.extractSeqeraHints([
+            'machineRequirement.provisioning': 'ondemand',
+            'seqera/machineRequirement.provisioning': 'spotFirst',
+        ])
+        then:
+        result['machineRequirement.provisioning'] == 'spotFirst'
+    }
+
+    def 'should overlay unprefixed hint onto base opts'() {
+        given:
+        def base = new MachineRequirementOpts([provisioning: 'ondemand'])
+
+        when:
+        def result = HintHelper.overlayHints(base, ['machineRequirement.provisioning': 'spotFirst'])
+        then:
+        result.provisioning == 'spotFirst'
+    }
+
+    def 'should ignore unknown unprefixed keys'() {
+        when:
+        def result = HintHelper.extractSeqeraHints([
+            consumableResources: 'license-a=1',
+            somethingElse: 'x',
+            'machineRequirement.provisioning': 'spot',
+        ])
+        then:
+        result.size() == 1
+        result['machineRequirement.provisioning'] == 'spot'
     }
 
 }

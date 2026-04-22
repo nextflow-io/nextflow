@@ -449,6 +449,35 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-memory`
 - {ref}`process-time`
 
+The following {ref}`hints <process-hints>` are supported. Each hint overrides the corresponding field of the `seqera.executor.machineRequirement` config scope on a per-process basis. Values must be strings; keys may be used as-is or with the `seqera/` prefix to restrict them to this executor.
+
+| Hint key | Description |
+| --- | --- |
+| `machineRequirement.capacityMode` | ECS capacity provider mode: `managed` or `asg`. |
+| `machineRequirement.diskAllocation` | Disk allocation strategy: `task` or `node`. |
+| `machineRequirement.diskEncrypted` | `true` or `false` — enable KMS encryption for the EBS volume. |
+| `machineRequirement.diskIops` | IOPS for io1/io2/gp3 volumes. |
+| `machineRequirement.diskMountPath` | Container mount path for the task disk (e.g. `/data`). |
+| `machineRequirement.diskSize` | Disk size, e.g. `100.GB`. |
+| `machineRequirement.diskThroughputMiBps` | Throughput (MiB/s) for gp3 volumes. |
+| `machineRequirement.diskType` | EBS volume type (e.g. `ebs/gp3`, `ebs/io1`). |
+| `machineRequirement.machineTypes` | Comma-separated list of acceptable machine type patterns (e.g. `m5,m5a,c6i.large`). |
+| `machineRequirement.maxSpotAttempts` | Maximum spot retry attempts before falling back to on-demand. |
+| `machineRequirement.provisioning` | Instance provisioning mode: `spot`, `ondemand`, or `spotFirst`. |
+
+For example, to override the provisioning mode for a single process:
+
+```nextflow
+process hello {
+    hints 'seqera/machineRequirement.provisioning': 'spotFirst'
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
 ### Disk support
 
 When the {ref}`process-disk` directive is specified, the Seqera executor provisions storage for the task container. There are two disk allocation strategies:
