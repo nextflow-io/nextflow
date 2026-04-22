@@ -124,7 +124,7 @@ Before publishing, verify your module is ready:
 See {ref}`dev-modules-page` for a complete guide on creating modules.
 :::
 
-See {ref}`cli-module-publish` for the full command reference.
+See {ref}`module publish <cli-module-publish>` for the full command reference.
 
 ## Registry configuration
 

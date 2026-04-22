@@ -20,7 +20,7 @@ $ nextflow module search "quality control" -limit 10
 Results include module names and descriptions.
 Use `-output json` for machine-readable output.
 
-See {ref}`cli-module-search` for the full command reference.
+See {ref}`module search <cli-module-search>` for the full command reference.
 
 ## Installing modules
 
@@ -42,7 +42,7 @@ Nextflow stores installed modules in the `modules/` directory and creates a `.mo
 Commit the `modules/` directory to your Git repository to ensure reproducibility.
 :::
 
-See {ref}`cli-module-install` for the full command reference.
+See {ref}`module install <cli-module-install>` for the full command reference.
 
 ## Listing installed modules
 
@@ -55,7 +55,7 @@ $ nextflow module list
 The output shows each module's name, installed version, and whether it has been modified locally.
 Use `-output json` for machine-readable output.
 
-See {ref}`cli-module-list` for the full command reference.
+See {ref}`module list <cli-module-list>` for the full command reference.
 
 ## Viewing module information
 
@@ -69,7 +69,7 @@ $ nextflow module view nf-core/fastqc -version 0.0.0-0c7146d
 The output includes the module's version, URL, description, authors, maintainers, keywords, tools, input/output channels, and a generated usage template.
 Use `-output json` for machine-readable output.
 
-See {ref}`cli-module-view` for the full command reference.
+See {ref}`module view <cli-module-view>` for the full command reference.
 
 ## Including modules
 
@@ -126,7 +126,7 @@ $ nextflow module run ./modules/local/fastqc/main.nf \
 The local module should define a single process, or else the command will fail.
 :::
 
-See {ref}`cli-module-run` for the full command reference.
+See {ref}`module run <cli-module-run>` for the full command reference.
 
 ## Updating modules
 
@@ -158,4 +158,4 @@ Use flags to control this behavior:
 - `-keep-files`: Remove the `.module-info` file but keep the module files in the `modules/` directory.
 - `-force`: Remove the module directory even if it has no `.module-info` file or has local modifications.
 
-See {ref}`cli-module-remove` for the full command reference.
+See {ref}`module remove <cli-module-remove>` for the full command reference.

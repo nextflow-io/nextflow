@@ -26,7 +26,7 @@ The command creates a module directory with the following files:
 - `meta.yml`: The module spec describing metadata, inputs, and outputs.
 - `README.md`: Documentation for the module.
 
-See {ref}`cli-module-create` for the full command reference.
+See {ref}`module create <cli-module-create>` for the full command reference.
 
 (dev-modules-structure)=
 
@@ -76,7 +76,7 @@ process FASTQC {
 
 Registry modules are subject to the following constraints:
 
-- The module must contain a single script named `main.nf`
+- The module must contain a single script called `main.nf`
 - The module must define a single process
 - The module must not define any named workflows
 - The module may define an entry workflow to override the default behavior of `module run`.
@@ -190,7 +190,7 @@ $ nextflow module spec \
 
 When updating an existing module spec, it is incorporated into the new file.
 
-See {ref}`cli-module-spec` for the full command reference.
+See {ref}`module spec <cli-module-spec>` for the full command reference.
 
 (dev-modules-validate)=
 
@@ -207,7 +207,7 @@ The command verifies that:
 - All required files are present (`main.nf`, `meta.yml`, `README.md`).
 - The module spec contains all required fields (name, version, description, and license).
 
-See {ref}`cli-module-validate` for the full command reference.
+See {ref}`module validate <cli-module-validate>` for the full command reference.
 
 (dev-modules-testing)=
 
