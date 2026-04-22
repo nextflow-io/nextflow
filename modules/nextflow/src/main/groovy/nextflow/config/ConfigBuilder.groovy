@@ -718,8 +718,6 @@ class ConfigBuilder {
             config.tower.enabled = true
             if( cmdRun.withTower != '-' )
                 config.tower.endpoint = cmdRun.withTower
-            else if( !config.tower.endpoint )
-                config.tower.endpoint = 'https://api.cloud.seqera.io'
         }
 
         // -- set wave options
@@ -729,8 +727,6 @@ class ConfigBuilder {
             config.wave.enabled = true
             if( cmdRun.withWave != '-' )
                 config.wave.endpoint = cmdRun.withWave
-            else if( !config.wave.endpoint )
-                config.wave.endpoint = 'https://wave.seqera.io'
         }
 
         // -- set fusion options

@@ -15,11 +15,11 @@
  */
 package nextflow.cloud.aws.nio.util;
 
+import software.amazon.awssdk.services.s3.crt.S3CrtConnectionHealthConfiguration;
 import software.amazon.awssdk.services.s3.crt.S3CrtProxyConfiguration;
 import software.amazon.awssdk.services.s3.crt.S3CrtHttpConfiguration;
 import software.amazon.awssdk.services.s3.crt.S3CrtRetryConfiguration;
 import software.amazon.awssdk.services.s3.multipart.MultipartConfiguration;
-
 
 import java.time.Duration;
 import java.util.Properties;
@@ -29,7 +29,9 @@ import java.util.Properties;
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-public class S3AsyncClientConfiguration extends S3ClientConfiguration{
+public class S3AsyncClientConfiguration extends S3ClientConfiguration {
+
+    private static final long DEFAULT_SOCKET_TIMEOUT_MS = 30_000L;
 
     private S3CrtHttpConfiguration.Builder crtHttpConfiguration;
     private MultipartConfiguration.Builder multiPartBuilder;
@@ -38,51 +40,51 @@ public class S3AsyncClientConfiguration extends S3ClientConfiguration{
     private Double targetThroughputInGbps;
     private Long maxNativeMemoryInBytes;
 
-    private S3CrtHttpConfiguration.Builder crtHttpConfiguration(){
+    private S3CrtHttpConfiguration.Builder crtHttpConfiguration() {
         if( this.crtHttpConfiguration == null)
             this.crtHttpConfiguration = S3CrtHttpConfiguration.builder();
         return this.crtHttpConfiguration;
     }
 
-    private MultipartConfiguration.Builder multipartBuilder(){
+    private MultipartConfiguration.Builder multipartBuilder() {
         if( this.multiPartBuilder == null)
             this.multiPartBuilder = MultipartConfiguration.builder();
         return this.multiPartBuilder;
     }
 
-    public S3CrtHttpConfiguration getCrtHttpConfiguration(){
+    public S3CrtHttpConfiguration getCrtHttpConfiguration() {
         if ( this.crtHttpConfiguration == null )
             return null;
         return this.crtHttpConfiguration.build();
     }
 
-    public MultipartConfiguration getMultipartConfiguration(){
+    public MultipartConfiguration getMultipartConfiguration() {
         if( this.multiPartBuilder == null )
             return null;
         return this.multiPartBuilder.build();
     }
 
-    private S3AsyncClientConfiguration(){
+    private S3AsyncClientConfiguration() {
         super();
     }
 
-    public S3CrtRetryConfiguration getCrtRetryConfiguration(){
+    public S3CrtRetryConfiguration getCrtRetryConfiguration() {
         return this.crtRetryConfiguration;
     }
 
-    public Integer getMaxConcurrency(){
+    public Integer getMaxConcurrency() {
         return this.maxConcurrency;
     }
 
-    public Double getTargetThroughputInGbps(){
+    public Double getTargetThroughputInGbps() {
         return this.targetThroughputInGbps;
     }
 
-    public Long getMaxNativeMemoryInBytes(){
+    public Long getMaxNativeMemoryInBytes() {
         return this.maxNativeMemoryInBytes;
     }
 
-    private void setAsyncConfiguration(Properties props){
+    private void setAsyncConfiguration(Properties props) {
 
         if( props.containsKey("max_error_retry")) {
             log.trace("AWS client config - max_error_retry: {}", props.getProperty("max_error_retry"));
@@ -119,9 +121,16 @@ public class S3AsyncClientConfiguration extends S3ClientConfiguration{
             crtHttpConfiguration().connectionTimeout(Duration.ofMillis(Long.parseLong(props.getProperty("connection_timeout"))));
         }
 
-        if( props.containsKey("socket_timeout")) {
-            log.warn("AWS client config - 'socket_timeout' doesn't exist in AWS SDK V2 Async Client");
-        }
+        final long socketTimeoutMs = props.containsKey("socket_timeout")
+            ? Long.parseLong(props.getProperty("socket_timeout"))
+            : DEFAULT_SOCKET_TIMEOUT_MS;
+        log.trace("AWS client config - socket_timeout: {} (using CRT health configuration with minimum throughput 1bps)", socketTimeoutMs);
+        crtHttpConfiguration().connectionHealthConfiguration(
+            S3CrtConnectionHealthConfiguration.builder()
+                .minimumThroughputInBps(1L)
+                .minimumThroughputTimeout(Duration.ofMillis(socketTimeoutMs))
+                .build()
+        );
 
         if( props.containsKey("proxy_host")) {
             final String host = props.getProperty("proxy_host");
@@ -151,11 +160,11 @@ public class S3AsyncClientConfiguration extends S3ClientConfiguration{
     }
 
     public static S3AsyncClientConfiguration create(Properties props) {
-		S3AsyncClientConfiguration config = new S3AsyncClientConfiguration();
-		if( props != null ){
+        S3AsyncClientConfiguration config = new S3AsyncClientConfiguration();
+        if( props != null ) {
             config.setClientOverrideConfiguration(props);
             config.setAsyncConfiguration(props);
         }
-		return config;
-	}
+        return config;
+    }
 }

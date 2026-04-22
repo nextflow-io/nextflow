@@ -124,29 +124,27 @@ class LabelsTest extends Specification {
         !labels.entries.containsKey('seqera:sched:clusterId')
     }
 
-    def 'should allow user labels to override implicit labels'() {
+    def 'should include platform workspaceId and computeEnvId when available'() {
         given:
+        def platform = new PlatformMetadata('wf-abc123')
+        platform.workspace = new PlatformMetadata.Workspace(workspaceId: '1234')
+        platform.computeEnv = new PlatformMetadata.ComputeEnv(id: 'ce-abc')
         def workflow = Mock(WorkflowMetadata) {
-            getProjectName() >> 'hello'
-            getUserName() >> 'user1'
             getRunName() >> 'happy_turing'
             getSessionId() >> UUID.randomUUID()
             isResume() >> false
             getManifest() >> new Manifest([:])
+            getPlatform() >> platform
         }
 
         when:
         def labels = new Labels()
-                .withWorkflowMetadata(workflow)
-                .withUserLabels([
-                    'nextflow.io/runName': 'custom_name',
-                    'team': 'research'
-                ])
+                .withWorkflowMetadata(workflow, ['workspaceId', 'computeEnvId'] as Set)
 
         then:
-        labels.entries['nextflow.io/runName'] == 'custom_name'
-        labels.entries['team'] == 'research'
-        labels.entries['nextflow.io/projectName'] == 'hello'
+        labels.entries.keySet() == ['seqera.io/platform/workspaceId', 'seqera.io/platform/computeEnvId'] as Set
+        labels.entries['seqera.io/platform/workspaceId'] == '1234'
+        labels.entries['seqera.io/platform/computeEnvId'] == 'ce-abc'
     }
 
     def 'should include platform workflowId when available'() {
@@ -189,12 +187,134 @@ class LabelsTest extends Specification {
         !labels.entries.containsKey('seqera.io/platform/workflowId')
     }
 
-    def 'should handle null user labels'() {
+    def 'should emit only included workflow metadata labels'() {
+        given:
+        def workflow = Mock(WorkflowMetadata) {
+            getProjectName() >> 'nf-core/rnaseq'
+            getRunName() >> 'crazy_darwin'
+            getSessionId() >> UUID.randomUUID()
+            isResume() >> false
+            getRevision() >> '3.12.0'
+            getManifest() >> new Manifest([name: 'nf-core/rnaseq'])
+        }
+
         when:
         def labels = new Labels()
-                .withUserLabels(null)
+                .withWorkflowMetadata(workflow, ['runName', 'revision'] as Set)
+
+        then:
+        labels.entries.keySet() == ['nextflow.io/runName', 'nextflow.io/revision'] as Set
+    }
+
+    def 'should emit only the workflowId label when filtered to workflowId'() {
+        given:
+        def workflow = Mock(WorkflowMetadata) {
+            getProjectName() >> 'hello'
+            getRunName() >> 'happy_turing'
+            getSessionId() >> UUID.randomUUID()
+            isResume() >> false
+            getManifest() >> new Manifest([:])
+            getPlatform() >> new PlatformMetadata('wf-abc123')
+        }
+
+        when:
+        def labels = new Labels()
+                .withWorkflowMetadata(workflow, ['workflowId'] as Set)
+
+        then:
+        labels.entries.keySet() == ['seqera.io/platform/workflowId'] as Set
+    }
+
+    def 'should emit nothing for an empty include set'() {
+        given:
+        def workflow = Mock(WorkflowMetadata) {
+            getProjectName() >> 'hello'
+        }
+
+        when:
+        def labels = new Labels()
+                .withWorkflowMetadata(workflow, [] as Set)
 
         then:
         labels.entries.isEmpty()
+    }
+
+    def 'should add process resource labels coercing values to string'() {
+        when:
+        def labels = new Labels()
+                .withProcessResourceLabels([team: 'genomics', priority: 7, retain: true])
+
+        then:
+        labels.entries['team'] == 'genomics'
+        labels.entries['priority'] == '7'
+        labels.entries['retain'] == 'true'
+    }
+
+    def 'should ignore null or empty process resource labels'() {
+        when:
+        def a = new Labels().withProcessResourceLabels(null)
+        def b = new Labels().withProcessResourceLabels([:])
+
+        then:
+        a.entries.isEmpty()
+        b.entries.isEmpty()
+    }
+
+    def 'should let process resource labels override workflow metadata on key collision'() {
+        given:
+        def workflow = Mock(WorkflowMetadata) {
+            getProjectName() >> 'hello'
+            getRunName() >> 'happy_turing'
+            getSessionId() >> UUID.randomUUID()
+            isResume() >> false
+            getManifest() >> new Manifest([:])
+        }
+
+        when:
+        def labels = new Labels()
+                .withWorkflowMetadata(workflow)
+                .withProcessResourceLabels(['nextflow.io/runName': 'custom', team: 'a'])
+
+        then:
+        labels.entries['nextflow.io/runName'] == 'custom'
+        labels.entries['team'] == 'a'
+        labels.entries['nextflow.io/projectName'] == 'hello'
+    }
+
+    def 'should coerce map values to strings'() {
+        expect:
+        Labels.toStringMap(null) == [:]
+        Labels.toStringMap([:]) == [:]
+        Labels.toStringMap([a: 1, b: 'x', c: true]) == [a: '1', b: 'x', c: 'true']
+    }
+
+    def 'should reject non-map resourceLabels with a clear error'() {
+        when:
+        Labels.toStringMap(['foo', 'bar'])
+
+        then:
+        def err = thrown(IllegalArgumentException)
+        err.message.contains("'resourceLabels'")
+        err.message.contains('map of key/value pairs')
+        err.message.contains('java.util.ArrayList')
+    }
+
+    def 'should compute null delta when task labels are empty'() {
+        expect:
+        Labels.delta(null, [team: 'a']) == null
+        Labels.delta([:], [team: 'a']) == null
+    }
+
+    def 'should return full task labels when run labels are empty'() {
+        expect:
+        Labels.delta([team: 'a', region: 'us'], null) == [team: 'a', region: 'us']
+        Labels.delta([team: 'a', region: 'us'], [:]) == [team: 'a', region: 'us']
+    }
+
+    def 'should keep only differing or missing keys in delta'() {
+        expect:
+        Labels.delta([team: 'a', region: 'us'], [team: 'a']) == [region: 'us']
+        Labels.delta([team: 'b'], [team: 'a']) == [team: 'b']
+        Labels.delta([team: 'a', region: 'us'], [team: 'a', region: 'us']) == null
     }
 }

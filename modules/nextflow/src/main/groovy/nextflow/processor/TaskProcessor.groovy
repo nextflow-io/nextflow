@@ -331,6 +331,8 @@ class TaskProcessor {
      */
     Executor getExecutor() { executor }
 
+    boolean isFusionEnabled() { executor?.isFusionEnabled() ?: false }
+
     /**
      * @return The {@code DataflowOperator} underlying this process
      */
@@ -396,7 +398,7 @@ class TaskProcessor {
     }
 
     protected void checkWarn(String msg, Map opts=null) {
-        if( NF.isStrictMode() )
+        if( NF.isSyntaxParserV2() || NF.isStrictMode() )
             throw new ProcessUnrecoverableException(msg)
         if( opts )
             log.warn1(opts, msg)

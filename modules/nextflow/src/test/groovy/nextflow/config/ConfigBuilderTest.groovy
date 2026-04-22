@@ -854,6 +854,7 @@ class ConfigBuilderTest extends Specification {
         then: // command line should override the config file
         config.trace instanceof Map
         config.trace.enabled
+        !config.trace.file
     }
 
     def 'should set session report options' () {
@@ -909,6 +910,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.report instanceof Map
         config.report.enabled
+        !config.report.file
     }
 
 
@@ -965,6 +967,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.dag instanceof Map
         config.dag.enabled
+        !config.dag.file
     }
 
     def 'should set session weblog options' () {
@@ -1083,6 +1086,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.timeline instanceof Map
         config.timeline.enabled
+        !config.timeline.file
     }
 
     def 'should set tower options' () {
@@ -1129,7 +1133,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.tower instanceof Map
         config.tower.enabled
-        config.tower.endpoint == 'https://api.cloud.seqera.io'
+        !config.tower.endpoint
     }
 
     def 'should set wave options' () {
@@ -1176,7 +1180,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.wave instanceof Map
         config.wave.enabled
-        config.wave.endpoint == 'https://wave.seqera.io'
+        !config.wave.endpoint
     }
 
     def 'should set cloudcache options' () {
@@ -2352,9 +2356,9 @@ class ConfigBuilderTest extends Specification {
 
     def 'should return parsed config' () {
         given:
-        def cmd = new CmdRun(profile: 'first', withTower: 'http://foo.com', launcher: new Launcher())
         def base = Files.createTempDirectory('test')
-        base.resolve('nextflow.config').text = '''
+        def configFile = base.resolve('nextflow.config')
+        configFile.text = '''
         profiles {
             first {
                 params {
@@ -2371,6 +2375,8 @@ class ConfigBuilderTest extends Specification {
         }
         '''
         when:
+        def opt = new CliOptions(config: [configFile.toFile().canonicalPath])
+        def cmd = new CmdRun(profile: 'first', withTower: 'http://foo.com', launcher: new Launcher(options: opt))
         def txt = ConfigBuilder.resolveConfig(base, cmd)
         then:
         txt == '''\
