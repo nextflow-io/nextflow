@@ -1418,9 +1418,6 @@ The following settings are available:
 `seqera.executor.autoLabels`
 : When `true`, automatically adds workflow metadata labels to the session with the `nextflow.io/` prefix (default: `false`). The following labels are added: `projectName`, `userName`, `runName`, `sessionId`, `resume`, `revision`, `commitId`, `repository`, `manifestName`, `runtimeVersion`. A `seqera.io/runId` label is also added, computed as a SipHash of the session ID and run name.
 
-`seqera.executor.machineRequirement.arch`
-: The CPU architecture for task execution, e.g. `'x86_64'` or `'arm64'`.
-
 `seqera.executor.machineRequirement.provisioning`
 : The instance provisioning mode. Can be `'spot'`, `'ondemand'`, or `'spotFirst'`.
 
