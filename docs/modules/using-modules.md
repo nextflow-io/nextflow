@@ -71,17 +71,17 @@ See {ref}`cli-module-list` for the full command reference.
 
 ## Viewing module information
 
-Use the `module info` command to view metadata and a usage template for a module:
+Use the `module view` command to view metadata and a usage template for a module:
 
 ```console
-$ nextflow module info nf-core/fastqc
-$ nextflow module info nf-core/fastqc -version 0.0.0-0c7146d
+$ nextflow module view nf-core/fastqc
+$ nextflow module view nf-core/fastqc -version 0.0.0-0c7146d
 ```
 
 The output includes the module's version, URL, description, authors, maintainers, keywords, tools, input/output channels, and a generated usage template.
 Use `-output json` for machine-readable output.
 
-See {ref}`cli-module-info` for the full command reference.
+See {ref}`cli-module-view` for the full command reference.
 
 ## Running modules directly
 
@@ -92,7 +92,7 @@ $ nextflow module run nf-core/fastqc --meta.id=test_sample --reads sample1_R1.fa
 ```
 
 :::{tip}
-Run `nextflow module info` to see the available inputs for a module.
+Run `nextflow module view` to see the available inputs for a module.
 :::
 
 The command automatically downloads the module if it is not already installed.

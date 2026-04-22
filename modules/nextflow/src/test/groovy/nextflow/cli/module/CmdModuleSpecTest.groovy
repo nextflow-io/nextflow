@@ -341,6 +341,7 @@ class CmdModuleSpecTest extends Specification {
         then:
         noExceptionThrown()
         existingMetaYml.text.contains '''\
+            $schema: https://raw.githubusercontent.com/nextflow-io/schemas/refs/heads/main/module/v1/schema.json
             name: test-namespace/fastqc
             input:
             - - name: meta

@@ -169,6 +169,7 @@ class ModuleSpec {
      */
     Map<String, Object> asMap() {
         final result = new LinkedHashMap<String, Object>()
+        result['$schema'] = 'https://raw.githubusercontent.com/nextflow-io/schemas/refs/heads/main/module/v1/schema.json'
         if( name )
             result['name'] = name
         if( version )

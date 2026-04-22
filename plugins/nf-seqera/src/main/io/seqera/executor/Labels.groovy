@@ -33,33 +33,55 @@ import nextflow.script.WorkflowMetadata
 @CompileStatic
 class Labels {
 
+    static final Set<String> ALL_AUTO_LABELS = Collections.unmodifiableSet(new LinkedHashSet<>([
+        'projectName', 'userName', 'runName', 'sessionId', 'resume',
+        'revision', 'commitId', 'repository', 'manifestName',
+        'runtimeVersion', 'workflowId', 'workspaceId', 'computeEnvId'
+    ]))
+
     private final Map<String,String> entries = new LinkedHashMap<>(20)
 
     /**
-     * Add {@code nextflow.io/*} labels from workflow metadata
+     * Add all {@code nextflow.io/*} and {@code seqera.io/platform/*} labels
+     * derived from workflow metadata.
      */
     Labels withWorkflowMetadata(WorkflowMetadata workflow) {
-        if( workflow.projectName )
+        return withWorkflowMetadata(workflow, ALL_AUTO_LABELS)
+    }
+
+    /**
+     * Add workflow metadata labels filtered by the {@code include} set of
+     * short names (e.g. {@code 'runName'}). Unknown names are ignored; the
+     * caller is expected to validate membership upstream.
+     */
+    Labels withWorkflowMetadata(WorkflowMetadata workflow, Set<String> include) {
+        if( !include ) return this
+        if( include.contains('projectName') && workflow.projectName )
             entries.put('nextflow.io/projectName', workflow.projectName)
-        if( workflow.userName )
+        if( include.contains('userName') && workflow.userName )
             entries.put('nextflow.io/userName', workflow.userName)
-        if( workflow.runName )
+        if( include.contains('runName') && workflow.runName )
             entries.put('nextflow.io/runName', workflow.runName)
-        if( workflow.sessionId )
+        if( include.contains('sessionId') && workflow.sessionId )
             entries.put('nextflow.io/sessionId', workflow.sessionId.toString())
-        entries.put('nextflow.io/resume', String.valueOf(workflow.resume))
-        if( workflow.revision )
+        if( include.contains('resume') )
+            entries.put('nextflow.io/resume', String.valueOf(workflow.resume))
+        if( include.contains('revision') && workflow.revision )
             entries.put('nextflow.io/revision', workflow.revision)
-        if( workflow.commitId )
+        if( include.contains('commitId') && workflow.commitId )
             entries.put('nextflow.io/commitId', workflow.commitId)
-        if( workflow.repository )
+        if( include.contains('repository') && workflow.repository )
             entries.put('nextflow.io/repository', workflow.repository)
-        if( workflow.manifest?.name )
+        if( include.contains('manifestName') && workflow.manifest?.name )
             entries.put('nextflow.io/manifestName', workflow.manifest.name)
-        if( NextflowMeta.instance.version )
+        if( include.contains('runtimeVersion') && NextflowMeta.instance.version )
             entries.put('nextflow.io/runtimeVersion', NextflowMeta.instance.version.toString())
-        if( workflow.platform?.workflowId )
+        if( include.contains('workflowId') && workflow.platform?.workflowId )
             entries.put('seqera.io/platform/workflowId', workflow.platform.workflowId)
+        if( include.contains('workspaceId') && workflow.platform?.workspace?.id )
+            entries.put('seqera.io/platform/workspaceId', workflow.platform.workspace.id)
+        if( include.contains('computeEnvId') && workflow.platform?.computeEnv?.id )
+            entries.put('seqera.io/platform/computeEnvId', workflow.platform.computeEnv.id)
         return this
     }
 
@@ -79,11 +101,13 @@ class Labels {
     }
 
     /**
-     * Add user-configured labels. These take precedence over implicit labels.
+     * Add config-level {@code process.resourceLabels}. Values are coerced to
+     * string via {@link String#valueOf} to satisfy the scheduler API typing.
      */
-    Labels withUserLabels(Map<String,String> labels) {
-        if( labels )
-            entries.putAll(labels)
+    Labels withProcessResourceLabels(Map<String,?> map) {
+        if( !map ) return this
+        for( Map.Entry<String,?> entry : map.entrySet() )
+            entries.put(entry.key.toString(), String.valueOf(entry.value))
         return this
     }
 
@@ -105,5 +129,43 @@ class Labels {
                 .putUnencodedChars(runName)
                 .hash()
                 .toString()
+    }
+
+    /**
+     * Coerce arbitrary map values to strings via {@link String#valueOf}.
+     * Returns an empty map for null/empty input. Throws
+     * {@link IllegalArgumentException} when the value is not a {@link Map},
+     * to surface a clear error when {@code process.resourceLabels} is
+     * misconfigured (e.g. as a list).
+     */
+    static Map<String,String> toStringMap(Object value) {
+        if( value == null )
+            return Collections.<String,String>emptyMap()
+        if( value !instanceof Map )
+            throw new IllegalArgumentException("Invalid value for 'resourceLabels' directive - expected a map of key/value pairs, got '${value.getClass().getName()}'")
+        final map = (Map<?,?>) value
+        if( map.isEmpty() )
+            return Collections.<String,String>emptyMap()
+        final result = new LinkedHashMap<String,String>(map.size())
+        for( Map.Entry<?,?> entry : map.entrySet() )
+            result.put(entry.key.toString(), String.valueOf(entry.value))
+        return result
+    }
+
+    /**
+     * Return the entries of {@code task} that are missing from {@code run}
+     * or have a different value. Returns {@code null} if the resulting
+     * map would be empty (so callers can omit the field).
+     */
+    static Map<String,String> delta(Map<String,String> task, Map<String,String> run) {
+        if( !task ) return null
+        final result = new LinkedHashMap<String,String>()
+        for( Map.Entry<String,String> entry : task.entrySet() ) {
+            final k = entry.key
+            final v = entry.value
+            if( run == null || !run.containsKey(k) || run.get(k) != v )
+                result.put(k, v)
+        }
+        return result.isEmpty() ? null : result
     }
 }

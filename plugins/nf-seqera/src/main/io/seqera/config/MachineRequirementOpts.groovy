@@ -32,12 +32,6 @@ class MachineRequirementOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The CPU architecture for task execution (e.g., `x86_64`, `arm64`).
-    """)
-    final String arch
-
-    @ConfigOption
-    @Description("""
         The instance provisioning mode: `spot`, `ondemand`, or `spotFirst`.
     """)
     final String provisioning
@@ -116,7 +110,6 @@ class MachineRequirementOpts implements ConfigScope {
     MachineRequirementOpts() {}
 
     MachineRequirementOpts(Map opts) {
-        this.arch = opts.arch as String
         this.provisioning = opts.provisioning as String
         this.maxSpotAttempts = opts.maxSpotAttempts as Integer
         this.machineTypes = (opts.machineTypes ?: opts.machineFamilies) as List<String>
@@ -130,10 +123,6 @@ class MachineRequirementOpts implements ConfigScope {
             ? opts.diskSize as MemoryUnit
             : (opts.diskSize ? MemoryUnit.of(opts.diskSize as String) : null)
         this.capacityMode = opts.capacityMode as String
-    }
-
-    String getArch() {
-        return arch
     }
 
     String getProvisioning() {

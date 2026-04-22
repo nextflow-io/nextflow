@@ -727,10 +727,10 @@ class ConfigBuilderTest extends Specification {
         when:
         opt = new CliOptions()
         run = new CmdRun(withDocker: '-')
-        new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
-        def e = thrown(AbortOperationException)
-        e.message == 'You have requested to run with Docker but no image was specified'
+        config.docker.enabled
+        !config.process.container
 
         when:
         file.text =
@@ -739,10 +739,10 @@ class ConfigBuilderTest extends Specification {
                 '''
         opt = new CliOptions(config: [file.toFile().canonicalPath])
         run = new CmdRun(withDocker: '-')
-        new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
-        e = thrown(AbortOperationException)
-        e.message == 'You have requested to run with Docker but no image was specified'
+        config.docker.enabled
+        !config.process.container
 
     }
 
@@ -788,22 +788,6 @@ class ConfigBuilderTest extends Specification {
         config.cluster.slots == 10
         config.cluster.tcp.alpha == 'uno'
         config.cluster.tcp.beta == 'due'
-
-    }
-
-    def 'has container directive' () {
-        when:
-        def config = new ConfigBuilder()
-
-        then:
-        !config.hasContainerDirective(null)
-        !config.hasContainerDirective([:])
-        !config.hasContainerDirective([foo: true])
-        config.hasContainerDirective([container: 'hello/world'])
-        !config.hasContainerDirective([foo: 1, bar: 2])
-        !config.hasContainerDirective([foo: 1, bar: 2, baz: [container: 'user/repo']])
-        config.hasContainerDirective([foo: 1, bar: 2, $baz: [container: 'user/repo']])
-        config.hasContainerDirective([foo: 1, bar: 2, 'withName:baz': [container: 'user/repo']])
 
     }
 
@@ -854,6 +838,7 @@ class ConfigBuilderTest extends Specification {
         then: // command line should override the config file
         config.trace instanceof Map
         config.trace.enabled
+        !config.trace.file
     }
 
     def 'should set session report options' () {
@@ -909,6 +894,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.report instanceof Map
         config.report.enabled
+        !config.report.file
     }
 
 
@@ -965,6 +951,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.dag instanceof Map
         config.dag.enabled
+        !config.dag.file
     }
 
     def 'should set session weblog options' () {
@@ -1083,6 +1070,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.timeline instanceof Map
         config.timeline.enabled
+        !config.timeline.file
     }
 
     def 'should set tower options' () {
@@ -1129,7 +1117,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.tower instanceof Map
         config.tower.enabled
-        config.tower.endpoint == 'https://api.cloud.seqera.io'
+        !config.tower.endpoint
     }
 
     def 'should set wave options' () {
@@ -1176,7 +1164,7 @@ class ConfigBuilderTest extends Specification {
         then:
         config.wave instanceof Map
         config.wave.enabled
-        config.wave.endpoint == 'https://wave.seqera.io'
+        !config.wave.endpoint
     }
 
     def 'should set cloudcache options' () {
@@ -2352,9 +2340,9 @@ class ConfigBuilderTest extends Specification {
 
     def 'should return parsed config' () {
         given:
-        def cmd = new CmdRun(profile: 'first', withTower: 'http://foo.com', launcher: new Launcher())
         def base = Files.createTempDirectory('test')
-        base.resolve('nextflow.config').text = '''
+        def configFile = base.resolve('nextflow.config')
+        configFile.text = '''
         profiles {
             first {
                 params {
@@ -2371,6 +2359,8 @@ class ConfigBuilderTest extends Specification {
         }
         '''
         when:
+        def opt = new CliOptions(config: [configFile.toFile().canonicalPath])
+        def cmd = new CmdRun(profile: 'first', withTower: 'http://foo.com', launcher: new Launcher(options: opt))
         def txt = ConfigBuilder.resolveConfig(base, cmd)
         then:
         txt == '''\

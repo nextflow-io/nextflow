@@ -17,6 +17,7 @@
 package nextflow.cloud.aws.nio;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.net.URI;
 import java.nio.file.FileStore;
 import java.nio.file.FileSystem;
@@ -34,110 +35,113 @@ import com.google.common.collect.ImmutableSet;
 
 public class S3FileSystem extends FileSystem {
 
-	private final S3FileSystemProvider provider;
-	private final S3Client client;
-	private final String endpoint;
-	private final String bucketName;
+    private final S3FileSystemProvider provider;
+    private final S3Client client;
+    private final String endpoint;
+    private final String bucketName;
 
-	private final Properties properties;
+    private final Properties properties;
 
-	public S3FileSystem(S3FileSystemProvider provider, S3Client client, URI uri, Properties props) {
-		this.provider = provider;
-		this.client = client;
-		this.endpoint = uri.getHost();
-		this.bucketName = S3Path.bucketName(uri);
-		this.properties = props;
-	}
+    public S3FileSystem(S3FileSystemProvider provider, S3Client client, URI uri, Properties props) {
+        this.provider = provider;
+        this.client = client;
+        this.endpoint = uri.getHost();
+        this.bucketName = S3Path.bucketName(uri);
+        this.properties = props;
+    }
 
-	@Override
-	public FileSystemProvider provider() {
-		return provider;
-	}
+    @Override
+    public FileSystemProvider provider() {
+        return provider;
+    }
 
-	public Properties properties() {
-		return properties;
-	}
+    public Properties properties() {
+        return properties;
+    }
 
-	@Override
-	public void close() {
-		this.provider.fileSystems.remove(bucketName);
-	}
+    @Override
+    public void close() {
+        this.provider.fileSystems.remove(bucketName);
+    }
 
-	@Override
-	public boolean isOpen() {
-		return this.provider.fileSystems.containsKey(bucketName);
-	}
+    @Override
+    public boolean isOpen() {
+        return this.provider.fileSystems.containsKey(bucketName);
+    }
 
-	@Override
-	public boolean isReadOnly() {
-		return false;
-	}
+    @Override
+    public boolean isReadOnly() {
+        return false;
+    }
 
-	@Override
-	public String getSeparator() {
-		return S3Path.PATH_SEPARATOR;
-	}
+    @Override
+    public String getSeparator() {
+        return S3Path.PATH_SEPARATOR;
+    }
 
-	@Override
-	public Iterable<Path> getRootDirectories() {
-		ImmutableList.Builder<Path> builder = ImmutableList.builder();
+    @Override
+    public Iterable<Path> getRootDirectories() {
+        ImmutableList.Builder<Path> builder = ImmutableList.builder();
+        try {
+            for (Bucket bucket : client.listBuckets()) {
+                builder.add(new S3Path(this, bucket.name()));
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
+        }
 
-		for (Bucket bucket : client.listBuckets()) {
-			builder.add(new S3Path(this, bucket.name()));
-		}
+        return builder.build();
+    }
 
-		return builder.build();
-	}
+    @Override
+    public Iterable<FileStore> getFileStores() {
+        return ImmutableList.of();
+    }
 
-	@Override
-	public Iterable<FileStore> getFileStores() {
-		return ImmutableList.of();
-	}
+    @Override
+    public Set<String> supportedFileAttributeViews() {
+        return ImmutableSet.of("basic");
+    }
 
-	@Override
-	public Set<String> supportedFileAttributeViews() {
-		return ImmutableSet.of("basic");
-	}
+    @Override
+    public Path getPath(String first, String... more) {
+        if (more.length == 0) {
+            return new S3Path(this, first);
+        }
 
-	@Override
-	public Path getPath(String first, String... more) {
-		if (more.length == 0) {
-			return new S3Path(this, first);
-		}
+        return new S3Path(this, first, more);
+    }
 
-		return new S3Path(this, first, more);
-	}
+    @Override
+    public PathMatcher getPathMatcher(String syntaxAndPattern) {
+        throw new UnsupportedOperationException();
+    }
 
-	@Override
-	public PathMatcher getPathMatcher(String syntaxAndPattern) {
-		throw new UnsupportedOperationException();
-	}
+    @Override
+    public UserPrincipalLookupService getUserPrincipalLookupService() {
+        throw new UnsupportedOperationException();
+    }
 
-	@Override
-	public UserPrincipalLookupService getUserPrincipalLookupService() {
-		throw new UnsupportedOperationException();
-	}
+    @Override
+    public WatchService newWatchService() throws IOException {
+        throw new UnsupportedOperationException();
+    }
 
-	@Override
-	public WatchService newWatchService() throws IOException {
-		throw new UnsupportedOperationException();
-	}
+    public S3Client getClient() {
+        return client;
+    }
 
-	public S3Client getClient() {
-		return client;
-	}
+    /**
+     * get the endpoint associated with this fileSystem.
+     *
+     * @see <a href="http://docs.aws.amazon.com/general/latest/gr/rande.html">http://docs.aws.amazon.com/general/latest/gr/rande.html</a>
+     * @return string
+     */
+    public String getEndpoint() {
+        return endpoint;
+    }
 
-	/**
-	 * get the endpoint associated with this fileSystem.
-	 *
-	 * @see <a href="http://docs.aws.amazon.com/general/latest/gr/rande.html">http://docs.aws.amazon.com/general/latest/gr/rande.html</a>
-	 * @return string
-	 */
-	public String getEndpoint() {
-		return endpoint;
-	}
-
-	public String getBucketName() {
-		return bucketName;
-	}
+    public String getBucketName() {
+        return bucketName;
+    }
 }

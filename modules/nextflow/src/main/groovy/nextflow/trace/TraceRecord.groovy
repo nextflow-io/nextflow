@@ -20,6 +20,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.regex.Pattern
 
+import groovy.json.JsonSlurper
 import groovy.json.StringEscapeUtils
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
@@ -126,6 +127,7 @@ class TraceRecord implements Serializable {
     transient private Integer numSpotInterruptions
     transient private String logStreamId
     transient private Map<String,Object> resourceAllocation
+    transient private Map<String,Object> gpuMetrics
 
     /**
      * Convert the given value to a string
@@ -522,6 +524,49 @@ class TraceRecord implements Serializable {
         return this
     }
 
+    /**
+     * Parse the Fusion trace file (.fusion/trace.json) produced by the Fusion client.
+     * The file contains task metrics in the following format:
+     * <pre>
+     * {
+     *   "proc": {
+     *     "realtime": 660541, "pct_cpu": 1045, "cpu_name": "Intel Xeon ...",
+     *     "rchar": 14112539262, "wchar": 12668821375, "syscr": 1823378, "syscw": 169293,
+     *     "read_bytes": 8011776, "write_bytes": 102400,
+     *     "vmem": 39015152, "rss": 14826068, "peak_vmem": 39047920, "peak_rss": 15775480,
+     *     "pct_mem": 56, "vol_ctxt": 413015, "inv_ctxt": 1540
+     *   },
+     *   "gpu": {
+     *     "name": "Tesla T4", "mem": 15360, "driver": "580.126.09",
+     *     "pct": 75, "peak": 100, "pct_mem": 40.1, "peak_mem": 74.1
+     *   },
+     *   "cgroup": {
+     *     "version": "v2", "memory_current": 25469927424, "memory_peak": 41178980352,
+     *     "memory_rss": 67919872, "memory_peak_rss": 14783070208,
+     *     "memory_limit": 77309411328, "cpu_usage_usec": 785302059
+     *   }
+     * }
+     * </pre>
+     *
+     * @param file Path to the .fusion/trace.json file
+     * @return The parsed JSON as a map with keys: {@code proc}, {@code gpu}, {@code cgroup}
+     */
+    static Map<String,Object> parseFusionTraceFile(Path file) {
+        return (Map<String,Object>) new JsonSlurper().parse(file)
+    }
+
+    static long toLong(Object value) {
+        if( value instanceof Number )
+            return value.longValue()
+        return value != null ? value.toString().toLong() : 0L
+    }
+
+    static float toFloat(Object value) {
+        if( value instanceof Number )
+            return value.floatValue()
+        return value != null ? value.toString().toFloat() : 0.0f
+    }
+
     private long parseInt( String str, Path file, String row )  {
         try {
             str.toInteger()
@@ -646,5 +691,13 @@ class TraceRecord implements Serializable {
 
     void setResourceAllocation(Map<String,Object> value) {
         this.resourceAllocation = value
+    }
+
+    Map<String,Object> getGpuMetrics() {
+        return gpuMetrics
+    }
+
+    void setGpuMetrics(Map<String,Object> value) {
+        this.gpuMetrics = value
     }
 }

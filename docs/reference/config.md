@@ -235,7 +235,10 @@ The following settings are available:
 : The Size hint (in bytes) for the low level TCP receive buffer (default: `0`).
 
 `aws.client.socketTimeout`
-: The amount of time to wait (in milliseconds) for data to be transferred over an established, open connection before the connection is timed out (default: `50000`).
+: :::{versionchanged} 25.10.0
+  The default socket timeout changed from `50000` to `30000`.
+  :::
+: The amount of time to wait (in milliseconds) for data to be transferred over an established, open connection before the connection is timed out (default: `30000`).
 
 `aws.client.storageClass`
 : The S3 storage class applied to stored objects, one of \[`STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, `INTELLIGENT_TIERING`\] (default: `STANDARD`).
@@ -1414,12 +1417,6 @@ The following settings are available:
 
 `seqera.executor.autoLabels`
 : When `true`, automatically adds workflow metadata labels to the session with the `nextflow.io/` prefix (default: `false`). The following labels are added: `projectName`, `userName`, `runName`, `sessionId`, `resume`, `revision`, `commitId`, `repository`, `manifestName`, `runtimeVersion`. A `seqera.io/runId` label is also added, computed as a SipHash of the session ID and run name.
-
-`seqera.executor.labels`
-: Custom labels to apply to AWS resources for cost tracking and resource organization. Labels are propagated to ECS tasks, capacity providers, and EC2 instances. When used together with `autoLabels`, user-defined labels take precedence over auto-generated labels.
-
-`seqera.executor.machineRequirement.arch`
-: The CPU architecture for task execution, e.g. `'x86_64'` or `'arm64'`.
 
 `seqera.executor.machineRequirement.provisioning`
 : The instance provisioning mode. Can be `'spot'`, `'ondemand'`, or `'spotFirst'`.
