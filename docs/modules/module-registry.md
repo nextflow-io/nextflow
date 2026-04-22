@@ -113,17 +113,16 @@ The module directory must include the following files:
 - `meta.yml`: The module spec with name, version, description, and license.
 - `README.md`: Module documentation.
 
-Provide a `namespace/name` reference (for an already-installed module) or a local directory path containing the module files.
+Provide a `namespace/name` reference or a relative path to the module directory.
 
-  :::{tip}
-  Before publishing, verify your module is ready:
+:::{tip}
+Before publishing, verify your module is ready:
 
-  - Run {ref}`module validate <cli-module-validate>` to check that all required files and fields are present.
-  - Run {ref}`module spec <cli-module-spec>` to generate or update `meta.yml` from your `main.nf`.
-  - Add `-dry-run` to `module publish` to validate the structure without uploading.
+- Run {ref}`module spec <cli-module-spec>` to generate or update `meta.yml` from your `main.nf`.
+- Run {ref}`module validate <cli-module-validate>` to check that all required files and spec fields are present.
 
-  See {ref}`dev-modules-page` for a complete guide on creating modules.
-  :::
+See {ref}`dev-modules-page` for a complete guide on creating modules.
+:::
 
 See {ref}`cli-module-publish` for the full command reference.
 

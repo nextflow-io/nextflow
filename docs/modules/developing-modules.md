@@ -57,9 +57,7 @@ process FASTQC {
     label 'process_medium'
 
     conda 'bioconda::fastqc=0.12.1'
-    container "${ workflow.containerEngine == 'singularity'
-        ? 'https://depot.galaxyproject.org/singularity/fastqc:0.12.1--hdfd78af_0'
-        : 'biocontainers/fastqc:0.12.1--hdfd78af_0' }"
+    container 'biocontainers/fastqc:0.12.1--hdfd78af_0'
 
     input:
     tuple val(meta), path(reads)
@@ -83,14 +81,14 @@ The `meta.yml` file describes the module's metadata, including its name, version
 
 The `README.md` file provides documentation for the module. It should describe what the module does, the tools it wraps, and any configuration requirements.
 
+### resources
+
+Modules can include binary scripts in the `resources/usr/bin/` directory that are locally scoped to the module's processes. See {ref}`module-binaries` for details.
+
 ### templates
 
 Include process script {ref}`templates <process-template>` alongside a module in the `templates/` directory.
 See {ref}`module-templates` for details.
-
-### resources
-
-Modules can include binary scripts in the `resources/usr/bin/` directory that are locally scoped to the module's processes. See {ref}`module-binaries` for details.
 
 (dev-modules-spec)=
 
@@ -102,7 +100,7 @@ Use the `module spec` command to generate or update the `meta.yml` file from the
 $ nextflow module spec myorg/my-module
 ```
 
-Provide metadata fields directly to avoid `TODO` placeholders in the generated file:
+Provide required fields directly when generating from scratch to avoid `TODO` placeholders in the generated file:
 
 ```console
 $ nextflow module spec \
@@ -159,7 +157,7 @@ For more thorough testing, create a small wrapper workflow that exercises the mo
 include { MY_MODULE } from './modules/myorg/my-module'
 
 workflow {
-    input_ch = Channel.fromFilePairs('test-data/*_{1,2}.fastq.gz')
+    input_ch = channel.fromFilePairs('test-data/*_{1,2}.fastq.gz')
     MY_MODULE(input_ch)
     MY_MODULE.out.results.view()
 }

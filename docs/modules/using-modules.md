@@ -88,7 +88,7 @@ See {ref}`cli-module-view` for the full command reference.
 For ad-hoc tasks or testing, run a module directly without creating a wrapper workflow:
 
 ```console
-$ nextflow module run nf-core/fastqc --meta.id=test_sample --reads sample1_R1.fastq.gz
+$ nextflow module run nf-core/fastqc --meta.id test_sample --reads sample1_R1.fastq.gz
 ```
 
 :::{tip}
@@ -100,10 +100,18 @@ It accepts all standard Nextflow run options (`-profile`, `-resume`, etc.):
 
 ```console
 $ nextflow module run nf-core/fastqc \
-    --meta.id=test_sample \
+    --meta.id test_sample \
     --reads sample1_R1.fastq.gz \
-    -profile docker \
-    -resume
+    -with-docker
+```
+
+Run a local module by specifying a path starting with `./` or `../`:
+
+```console
+$ nextflow module run ./modules/local/fastqc/main.nf \
+    --meta.id test_sample \
+    --reads sample1_R1.fastq.gz \
+    -with-docker
 ```
 
 See {ref}`cli-module-run` for the full command reference.

@@ -1294,34 +1294,10 @@ The `module` command provides a comprehensive system for managing registry-based
 
 **Examples**
 
-Create a module and prompt for details:
-
-```console
-$ nextflow module create
-```
-
-Create a module with a given name:
-
-```console
-$ nextflow module create myorg/my-module
-```
-
-Search for alignment-related modules:
+Search for modules related to "alignment":
 
 ```console
 $ nextflow module search alignment
-```
-
-Search and limit the number of results:
-
-```console
-$ nextflow module search "quality control" -limit 10
-```
-
-Search and output results as JSON:
-
-```console
-$ nextflow module search bwa -output json
 ```
 
 View information for a module:
@@ -1330,130 +1306,49 @@ View information for a module:
 $ nextflow module view nf-core/fastqc
 ```
 
-View information for a specific module version:
-
-```console
-$ nextflow module view nf-core/fastqc -version 1.0.0
-```
-
-View module information as JSON:
-
-```console
-$ nextflow module view nf-core/fastqc -output json
-```
-
-Install the latest version of a module:
+Install a module:
 
 ```console
 $ nextflow module install nf-core/fastqc
 ```
 
-Install a specific version of a module:
-
-```console
-$ nextflow module install nf-core/fastqc -version 1.0.0
-```
-
-Force a reinstall over local modifications:
-
-```console
-$ nextflow module install nf-core/fastqc -force
-```
-
-List installed modules in a formatted table:
+List installed modules:
 
 ```console
 $ nextflow module list
 ```
 
-List installed modules as JSON:
-
-```console
-$ nextflow module list -output json
-```
-
-Run a remote module:
+Run a module:
 
 ```console
 $ nextflow module run nf-core/fastqc \
-    --input 'data/*.fastq.gz'
-```
-
-Run remote module with specific version and run options:
-
-```console
-$ nextflow module run nf-core/fastqc \
-    -version 1.0.0 \
     --input 'data/*.fastq.gz' \
-    -with-conda \
-    -resume
+    -with-docker
 
 Run a local module:
 
 ```console
-$ nextflow module run ./modules/nf-core/fastqc/main.nf \
-    --input 'data/*.fastq.gz'
+$ nextflow module run ./modules/local/fastqc/main.nf \
+    --input 'data/*.fastq.gz' \
+    -with-docker
 ```
 
-Remove a module completely:
+Remove a module:
 
 ```console
 $ nextflow module remove nf-core/fastqc
 ```
 
-Remove a module from config but keep local files:
+Generate a spec for a local module:
 
 ```console
-$ nextflow module remove nf-core/fastqc -keep-files
+$ nextflow module spec -namespace myorg ./modules/myorg/my-module
 ```
 
-Generate a spec for a local module by name:
-
-```console
-$ nextflow module spec nf-core/fastqc
-```
-
-Generate a spec for a local module by path (namespace required):
-
-```console
-$ nextflow module spec -namespace nf-core ./modules/my-module
-```
-
-Provide additional fields to avoid TODO placeholders:
-
-```console
-$ nextflow module spec \
-    -namespace nf-core \
-    -version 1.0.0 \
-    -description "Quality control of raw sequencing reads" \
-    -license MIT \
-    -author "@drpatelh" \
-    -author "@joseespinosa" \
-    ./modules/nf-core/fastqc
-```
-
-Print a module spec without saving it:
-
-```console
-$ nextflow module spec -dry-run -namespace nf-core ./modules/my-module
-```
-
-Validate a module by name:
-
-```console
-$ nextflow module validate myorg/my-module
-```
-
-Validate a module by path:
+Validate a local module:
 
 ```console
 $ nextflow module validate ./modules/myorg/my-module
-```
-
-Validate a module structure without publishing:
-
-```console
-$ nextflow module publish myorg/my-module -dry-run
 ```
 
 Publish a module to the Nextflow registry:
@@ -1461,13 +1356,6 @@ Publish a module to the Nextflow registry:
 ```console
 $ export NXF_REGISTRY_TOKEN=<token>
 $ nextflow module publish myorg/my-module
-```
-
-Publish a module to a custom registry:
-
-```console
-$ export NXF_REGISTRY_TOKEN=<token>
-$ nextflow module publish myorg/my-module -registry 'https://custom.registry.com'
 ```
 
 (cli-plugin)=
