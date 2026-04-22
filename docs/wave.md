@@ -48,22 +48,16 @@ tower {
 
 Wave can build and provision container images on-demand for your Nextflow pipelines.
 
-To enable this feature, add the Dockerfile of the container to be built in the {ref}`module directory <module-directory>` where the pipeline process is defined. When Wave is enabled, it automatically uses the Dockerfile to build the required container, upload to the registry, and it uses the container to carry out the tasks defined in the module.
+To enable this feature, add the Dockerfile of the container image to the module directory where the process is defined. When Wave is enabled, it automatically uses the Dockerfile to build the required container, upload to the registry, and it uses the container to carry out the tasks defined in the module.
 
-:::{tip}
-Make sure the process does not declare a `container` directive, otherwise it will take precedence over the Dockerfile definition.
-:::
-
-If a process uses a `container` directive and you still want to build the container using the Dockerfile provided in the module directory, add the following setting to the pipeline config file:
+If a process has a `container` directive, it will take precedence over the Dockerfile. Use the `wave.strategy` config option to prioritize the Dockerfile over the `container` directive:
 
 ```groovy
 wave.strategy = ['dockerfile','container']
 ```
 
-This setting instructs Wave to prioritize the module Dockerfile over process `container` directives.
-
 :::{note}
-When building containers, Wave does not support `ADD`, `COPY`, or any other Dockerfile commands that access files in the host file system. To include custom scripts or files, use the module `resources/` directory instead. Wave automatically includes its contents in the container build context. See {ref}`module-binaries` for more details.
+When building container images, Wave does not support `ADD`, `COPY`, or any other Dockerfile commands that access files in the host file system. To include custom scripts or files, use the module `resources/` directory instead. Wave automatically includes its contents in the container build context. See {ref}`module-resources` for more details.
 :::
 
 ### Build Conda based containers

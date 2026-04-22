@@ -6,8 +6,7 @@
 :::
 
 The Nextflow module system allows you to discover, install, and manage reusable modules from centralized registries.
-This page describes how to use registry modules in your pipelines.
-For information about modules syntax, see {ref}`module-page`.
+This page describes how to use modules in your pipelines.
 
 ## Discovering modules
 
@@ -38,17 +37,6 @@ Instead, they use the format `0.0.0-<hash>`, where the suffix is a short portion
 :::
 
 Nextflow stores installed modules in the `modules/` directory and creates a `.module-info` file alongside the module to record installation metadata such as the module checksum and registry URL.
-
-Once installed, include a module by name rather than a relative path:
-
-```nextflow
-include { FASTQC } from 'nf-core/fastqc'
-
-workflow {
-    reads = Channel.fromFilePairs('data/*_{1,2}.fastq.gz')
-    FASTQC(reads)
-}
-```
 
 :::{tip}
 Commit the `modules/` directory to your Git repository to ensure reproducibility.
@@ -83,6 +71,26 @@ Use `-output json` for machine-readable output.
 
 See {ref}`cli-module-view` for the full command reference.
 
+## Including modules
+
+Modules installed from a registry can be included by name:
+
+```nextflow
+include { FASTQC } from 'nf-core/fastqc'
+
+workflow {
+    reads = channel.fromPath('data/*.fastq')
+    reads = reads.map { fastq -> tuple([id: fastq.baseName], fastq) }
+    FASTQC(reads)
+}
+```
+
+Local modules must be included by relative path:
+
+```nextflow
+include { FASTQC } from './modules/local/fastqc'
+```
+
 ## Running modules directly
 
 For ad-hoc tasks or testing, run a module directly without creating a wrapper workflow:
@@ -114,6 +122,10 @@ $ nextflow module run ./modules/local/fastqc/main.nf \
     -with-docker
 ```
 
+:::{note}
+The local module should define a single process, or else the command will fail.
+:::
+
 See {ref}`cli-module-run` for the full command reference.
 
 ## Updating modules
@@ -124,19 +136,13 @@ To update a module to a newer version, reinstall it with the desired version:
 $ nextflow module install nf-core/fastqc -version 0.0.0-c9h0bv4
 ```
 
-If you have local modifications, Nextflow warns you and prevents the update.
-Use the `-force` flag to override:
+Nextflow automatically verifies module integrity using a checksum stored in the `.module-info` file.
+If the module has local modifications, it will not be updated.
+Use the `-force` flag to overwrite local changes:
 
 ```console
 $ nextflow module install nf-core/fastqc -version 0.0.0-c9h0bv4 -force
 ```
-
-## Checksum verification
-
-Nextflow automatically verifies module integrity using checksums stored in the `.module-info` file.
-When you modify a module locally, Nextflow detects the change and prevents accidental overwrites during reinstallation.
-
-Module integrity ensures that modules remain consistent with their registry versions unless you explicitly choose to override them.
 
 ## Removing modules
 
@@ -150,6 +156,6 @@ By default, Nextflow removes both the module files and the `.module-info` file.
 Use flags to control this behavior:
 
 - `-keep-files`: Remove the `.module-info` file but keep the module files in the `modules/` directory.
-- `-force`: Force removal even if the module has no `.module-info` file or has local modifications.
+- `-force`: Remove the module directory even if it has no `.module-info` file or has local modifications.
 
 See {ref}`cli-module-remove` for the full command reference.

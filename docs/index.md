@@ -80,7 +80,6 @@ process
 process-typed
 workflow
 workflow-typed
-module
 notifications
 secrets
 sharing

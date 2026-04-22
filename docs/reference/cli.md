@@ -1339,6 +1339,12 @@ Remove a module:
 $ nextflow module remove nf-core/fastqc
 ```
 
+Create a module with a given name:
+
+```console
+$ nextflow module create myorg/my-module
+```
+
 Generate a spec for a local module:
 
 ```console

@@ -2,43 +2,54 @@
 
 # Overview
 
-Nextflow modules are reusable units of pipeline logic (i.e., processes, workflows, and functions) that you can share across projects.
-By packaging common tasks as modules, you avoid duplicating code and benefit from community improvements.
+Nextflow scripts can include **definitions** (workflows, processes, and functions) from other scripts.
+When a script is included in this way, it is referred to as a **module**.
+Modules can be re-used within a pipeline and can be shared across projects.
+By packaging definitions as modules, you avoid duplicating code and benefit from community improvements.
 
 There are two ways to use modules in Nextflow:
 
 - [Local modules](#local-modules)
 - [Registry modules](#registry-modules)
 
+See {ref}`using-modules-page` to learn how to install and use modules in a project.
+See {ref}`dev-modules-page` to learn how to create and publish your own modules.
+See {ref}`module-registry-page` to learn how to use the Nextflow module registry.
+
 ## Local modules
 
-Local modules are Nextflow scripts stored directly in your project. You include definitions from local modules using the `include` keyword with a relative path:
+Local modules are stored and maintained directly in your project. You include definitions from local modules using the `include` keyword with a relative path:
 
 ```nextflow
-include { FASTQC } from './modules/fastqc'
+include { CAT } from './modules/cat'
+
+workflow {
+    data = channel.fromPath('data/*.txt')
+    CAT(data)
+}
 ```
 
-Local modules are well suited for project-specific logic that is not intended for reuse or sharing. See {ref}`module-page` for details on module inclusion syntax, aliases, templates, and binaries.
+The above snippet imports a process named `CAT` from the *included module* into the *including script*. The include source `./modules/cat` refers to the script `./modules/cat.nf` relative to the including script path.
+
+Local modules are well suited for project-specific components that are not intended for sharing.
 
 ## Registry modules
 
 :::{versionadded} 26.04.0
 :::
 
-The [Nextflow module registry](https://registry.nextflow.io) hosts registry modules in a centralized repository.
-You manage them with the `nextflow module` command.
-Registry modules follow a standard structure with metadata (`meta.yml`), documentation (`README.md`), and a module script (`main.nf`) for version management, integrity checking, and discoverability.
+Registry modules are sourced from the [Nextflow registry](https://registry.nextflow.io) or a compatible module registry.
+Like local modules, registry modules are stored in your project, but they are installed and managed using the `nextflow module` command.
 
 Key features of registry modules:
 
 - **Discoverability**: Search for modules by keyword or name and browse available versions.
 - **Version management**: Pin specific versions or use the latest release, with automatic integrity checking via checksums.
 - **Direct execution**: Run modules as standalone workflows for ad-hoc tasks or testing without writing a wrapper script.
-- **Standard structure**: Each module includes a script (`main.nf`), metadata (`meta.yml`), and documentation (`README.md`), enabling consistent tooling and automation.
+- **Standard structure**: Each module includes a script (`main.nf`), spec (`meta.yml`), and documentation (`README.md`), providing a consistent structure for tooling and automation.
 
 :::{note}
 Modules from the [nf-core](https://nf-co.re/) community are automatically mirrored to the Nextflow module registry under the `nf-core` namespace.
-You can install and use them directly without any additional configuration.
 :::
 
 Install registry modules into your project and include them by name:
@@ -50,9 +61,3 @@ $ nextflow module install nf-core/fastqc
 ```nextflow
 include { FASTQC } from 'nf-core/fastqc'
 ```
-
-For more information about registry modules, see:
-
-- {ref}`using-modules-page` for details on discovering, installing, and managing registry modules.
-- {ref}`dev-modules-page` for details on creating and publishing your own modules.
-- {ref}`module-registry-page` for details on namespaces, access tokens, and registry configuration.

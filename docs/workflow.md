@@ -540,11 +540,20 @@ workflow {
 }
 ```
 
-Processes and workflows have a few extra rules for how they can be called:
+Processes and workflows can only be called by workflows. A given process or workflow can only be called once in a given workflow. To use a process or workflow multiple times in the same workflow, include it from another script with multiple aliases:
 
-- Processes and workflows can only be called by workflows
+```nextflow
+// workflow `hello_bye` is defined in `./modules/hello_bye/main.nf`
+include { hello_bye as hello_bye1 } from './modules/hello_bye'
+include { hello_bye as hello_bye2 } from './modules/hello_bye'
 
-- A given process or workflow can only be called once in a given workflow. To use a process or workflow multiple times in the same workflow, use {ref}`module-aliases`.
+workflow {
+    data1 = channel.fromPath('data1/*.txt')
+    data2 = channel.fromPath('data2/*.txt')
+    hello_bye1(data1)
+    hello_bye2(data2)
+}
+```
 
 The "return value" of a process or workflow call is the process outputs or workflow emits, respectively. The return value can be assigned to a variable or passed into another call:
 
