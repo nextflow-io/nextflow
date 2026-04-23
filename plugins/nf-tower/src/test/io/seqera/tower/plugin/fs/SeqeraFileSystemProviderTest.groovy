@@ -53,7 +53,10 @@ class SeqeraFileSystemProviderTest extends Specification {
     private SeqeraFileSystem buildFs(TowerClient tc) {
         final client = new SeqeraDatasetClient(tc)
         final provider = new SeqeraFileSystemProvider()
-        return new SeqeraFileSystem(provider, client)
+        final fs = new SeqeraFileSystem(provider)
+        fs.setOrgWorkspaceClient(client)
+        fs.registerHandler(new io.seqera.tower.plugin.fs.handler.DatasetsResourceHandler(fs, client))
+        return fs
     }
 
     private static String userInfoJson() {
@@ -240,16 +243,18 @@ class SeqeraFileSystemProviderTest extends Specification {
         entries[0].toString() == 'seqera://acme/research'
     }
 
-    def "newDirectoryStream on workspace returns datasets resource type"() {
+    def "newDirectoryStream on workspace returns registered resource types"() {
         given:
         def tc = spyTower()
+        tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
+        tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
         final fs = buildFs(tc)
         final wsPath = new SeqeraPath(fs, 'seqera://acme/research')
 
         when:
         def entries = fs.provider().newDirectoryStream(wsPath, null).toList()
 
-        then:
+        then: 'only datasets is registered by this test helper; data-links registration happens in the production provider'
         entries.size() == 1
         entries[0].toString() == 'seqera://acme/research/datasets'
     }
@@ -397,9 +402,8 @@ class SeqeraFileSystemProviderTest extends Specification {
 
     def "newFileSystem throws FileSystemAlreadyExistsException when filesystem exists"() {
         given: 'a provider with an existing filesystem'
-        def tc = spyTower()
         def provider = new SeqeraFileSystemProvider()
-        def fs = new SeqeraFileSystem(provider, new SeqeraDatasetClient(tc))
+        def fs = new SeqeraFileSystem(provider)
         provider.@fileSystem = fs
 
         when:
@@ -407,5 +411,45 @@ class SeqeraFileSystemProviderTest extends Specification {
 
         then:
         thrown(FileSystemAlreadyExistsException)
+    }
+
+    // ---- handler dispatch ----
+
+    def "newDirectoryStream at workspace enumerates registered handlers (datasets + data-links)"() {
+        given:
+        def tc = spyTower()
+        tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
+        tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
+        def datasetClient = new SeqeraDatasetClient(tc)
+        def fs = new SeqeraFileSystem(new SeqeraFileSystemProvider())
+        fs.setOrgWorkspaceClient(datasetClient)
+        fs.registerHandler(new io.seqera.tower.plugin.fs.handler.DatasetsResourceHandler(fs, datasetClient))
+        fs.registerHandler(new io.seqera.tower.plugin.fs.handler.DataLinksResourceHandler(fs, new io.seqera.tower.plugin.datalink.SeqeraDataLinkClient(tc)))
+        def wsPath = new SeqeraPath(fs, 'seqera://acme/research')
+
+        when:
+        def entries = fs.provider().newDirectoryStream(wsPath, null).toList()
+
+        then:
+        entries*.toString().sort() == [
+                'seqera://acme/research/data-links',
+                'seqera://acme/research/datasets'
+        ]
+    }
+
+    def "newInputStream on an unsupported resource type throws NoSuchFileException"() {
+        given:
+        def tc = spyTower()
+        tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
+        tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
+        def fs = buildFs(tc)
+        def path = new SeqeraPath(fs, 'seqera://acme/research/unknown-type/foo')
+
+        when:
+        fs.provider().newInputStream(path)
+
+        then:
+        def ex = thrown(NoSuchFileException)
+        ex.reason?.contains('Unsupported resource type')
     }
 }

@@ -24,7 +24,8 @@ import io.seqera.tower.plugin.dataset.SeqeraDatasetClient
 import spock.lang.Specification
 
 /**
- * Tests for {@link SeqeraFileSystem} caching and workspace resolution using a mock {@link TowerClient}.
+ * Tests for {@link SeqeraFileSystem} org/workspace cache and handler registry.
+ * Resource-specific caches (datasets, data-links) are tested against their handlers.
  */
 class SeqeraFileSystemTest extends Specification {
 
@@ -53,7 +54,9 @@ class SeqeraFileSystemTest extends Specification {
     }
 
     private SeqeraFileSystem buildFs(TowerClient tc) {
-        new SeqeraFileSystem(new SeqeraFileSystemProvider(), new SeqeraDatasetClient(tc))
+        final fs = new SeqeraFileSystem(new SeqeraFileSystemProvider())
+        fs.setOrgWorkspaceClient(new SeqeraDatasetClient(tc))
+        return fs
     }
 
     // ---- cache loading ----
@@ -147,58 +150,21 @@ class SeqeraFileSystemTest extends Specification {
         thrown(NoSuchFileException)
     }
 
-    // ---- dataset cache ----
+    // ---- handler registry ----
 
-    def "resolveDatasets populates cache and returns datasets"() {
+    def "registerHandler stores and looks up by resource type"() {
         given:
-        def tc = spyTower()
-        tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >>
-            ok(JsonOutput.toJson([datasets: [
-                [id: 'ds-1', name: 'samples', version: 1L, mediaType: 'text/csv',
-                 dateCreated: '2024-01-01T00:00:00Z', lastUpdated: '2024-01-02T00:00:00Z']
-            ], totalSize: 1]))
-        final fs = buildFs(tc)
+        def fs = new SeqeraFileSystem(new SeqeraFileSystemProvider())
+        def handler = Mock(ResourceTypeHandler) {
+            getResourceType() >> 'datasets'
+        }
 
         when:
-        def datasets = fs.resolveDatasets(10L)
+        fs.registerHandler(handler)
 
         then:
-        datasets.size() == 1
-        datasets[0].name == 'samples'
-    }
-
-    def "resolveDatasets returns cached result on second call without extra API request"() {
-        given:
-        def tc = spyTower()
-        final datasetsJson = JsonOutput.toJson([datasets: [
-            [id: 'ds-1', name: 'samples', version: 1L, mediaType: 'text/csv',
-             dateCreated: '2024-01-01T00:00:00Z', lastUpdated: '2024-01-02T00:00:00Z']
-        ], totalSize: 1])
-        final fs = buildFs(tc)
-
-        when:
-        fs.resolveDatasets(10L)
-        fs.resolveDatasets(10L)
-
-        then:
-        1 * tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >> ok(datasetsJson)
-    }
-
-    def "invalidateDatasetCache forces re-fetch on next resolveDatasets call"() {
-        given:
-        def tc = spyTower()
-        final datasetsJson = JsonOutput.toJson([datasets: [
-            [id: 'ds-1', name: 'samples', version: 1L, mediaType: 'text/csv',
-             dateCreated: '2024-01-01T00:00:00Z', lastUpdated: '2024-01-02T00:00:00Z']
-        ], totalSize: 1])
-        final fs = buildFs(tc)
-
-        when:
-        fs.resolveDatasets(10L)
-        fs.invalidateDatasetCache(10L)
-        fs.resolveDatasets(10L)
-
-        then:
-        2 * tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >> ok(datasetsJson)
+        fs.getHandler('datasets') === handler
+        fs.getHandler('unknown') == null
+        fs.getResourceTypes() == ['datasets'] as Set
     }
 }

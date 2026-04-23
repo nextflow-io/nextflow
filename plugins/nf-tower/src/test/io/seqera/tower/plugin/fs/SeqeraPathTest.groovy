@@ -16,7 +16,6 @@
 
 package io.seqera.tower.plugin.fs
 
-import io.seqera.tower.plugin.dataset.SeqeraDatasetClient
 import spock.lang.Specification
 
 /**
@@ -26,9 +25,10 @@ class SeqeraPathTest extends Specification {
 
     private SeqeraFileSystem mockFs() {
         def provider = new SeqeraFileSystemProvider()
-        def client = Mock(SeqeraDatasetClient)
-        return new SeqeraFileSystem(provider, client)
+        return new SeqeraFileSystem(provider)
     }
+
+    // ---- depth / segment accessors ----
 
     def "depth 0 - root path"() {
         given:
@@ -37,10 +37,10 @@ class SeqeraPathTest extends Specification {
 
         expect:
         path.depth() == 0
-        path.isDirectory()
-        !path.isRegularFile()
         path.org == null
         path.workspace == null
+        path.resourceType == null
+        path.trail == []
     }
 
     def "depth 1 - org path"() {
@@ -50,8 +50,6 @@ class SeqeraPathTest extends Specification {
 
         expect:
         path.depth() == 1
-        path.isDirectory()
-        !path.isRegularFile()
         path.org == 'acme'
         path.workspace == null
     }
@@ -63,7 +61,6 @@ class SeqeraPathTest extends Specification {
 
         expect:
         path.depth() == 2
-        path.isDirectory()
         path.org == 'acme'
         path.workspace == 'research'
         path.resourceType == null
@@ -76,39 +73,57 @@ class SeqeraPathTest extends Specification {
 
         expect:
         path.depth() == 3
-        path.isDirectory()
         path.org == 'acme'
         path.workspace == 'research'
         path.resourceType == 'datasets'
-        path.datasetName == null
+        path.trail == []
     }
 
-    def "depth 4 - dataset file path"() {
+    def "depth 4 - dataset trail segment is raw (handler parses @version)"() {
         given:
         def fs = mockFs()
         def path = new SeqeraPath(fs, 'seqera://acme/research/datasets/samples')
 
         expect:
         path.depth() == 4
-        !path.isDirectory()
-        path.isRegularFile()
-        path.org == 'acme'
-        path.workspace == 'research'
         path.resourceType == 'datasets'
-        path.datasetName == 'samples'
-        path.version == null
+        path.trail == ['samples']
     }
 
-    def "depth 4 - dataset with pinned version"() {
+    def "dataset with @version suffix stays raw in trail"() {
         given:
         def fs = mockFs()
         def path = new SeqeraPath(fs, 'seqera://acme/research/datasets/samples@2')
 
         expect:
+        // Path is resource-type-agnostic — no @version parsing here.
         path.depth() == 4
-        path.datasetName == 'samples'
-        path.version == '2'
+        path.trail == ['samples@2']
     }
+
+    def "data-link path with provider, name, and sub-path"() {
+        given:
+        def fs = mockFs()
+        def path = new SeqeraPath(fs, 'seqera://acme/research/data-links/AWS/inputs/reads/sample.fq.gz')
+
+        expect:
+        path.depth() == 7
+        path.resourceType == 'data-links'
+        path.trail == ['AWS', 'inputs', 'reads', 'sample.fq.gz']
+    }
+
+    def "data-link path at provider level"() {
+        given:
+        def fs = mockFs()
+        def path = new SeqeraPath(fs, 'seqera://acme/research/data-links/AWS')
+
+        expect:
+        path.depth() == 4
+        path.resourceType == 'data-links'
+        path.trail == ['AWS']
+    }
+
+    // ---- toUri / toString ----
 
     def "toUri round-trip - no version"() {
         given:
@@ -121,7 +136,7 @@ class SeqeraPathTest extends Specification {
         path.toString() == uri
     }
 
-    def "toUri round-trip - with version"() {
+    def "toUri round-trip - dataset with @version"() {
         given:
         def fs = mockFs()
         def uri = 'seqera://acme/research/datasets/samples@2'
@@ -130,6 +145,18 @@ class SeqeraPathTest extends Specification {
         expect:
         path.toUri().toString() == uri
     }
+
+    def "toUri round-trip - deep data-link path"() {
+        given:
+        def fs = mockFs()
+        def uri = 'seqera://acme/research/data-links/AWS/inputs/reads/sample.fq.gz'
+        def path = new SeqeraPath(fs, uri)
+
+        expect:
+        path.toUri().toString() == uri
+    }
+
+    // ---- getParent ----
 
     def "getParent - depth 4 returns depth 3"() {
         given:
@@ -142,6 +169,19 @@ class SeqeraPathTest extends Specification {
         then:
         parent.toString() == 'seqera://acme/research/datasets'
         (parent as SeqeraPath).depth() == 3
+    }
+
+    def "getParent - depth 7 returns depth 6 (drops one trail segment)"() {
+        given:
+        def fs = mockFs()
+        def path = new SeqeraPath(fs, 'seqera://acme/research/data-links/AWS/inputs/reads/s.fq.gz')
+
+        when:
+        def parent = path.getParent() as SeqeraPath
+
+        then:
+        parent.trail == ['AWS', 'inputs', 'reads']
+        parent.depth() == 6
     }
 
     def "getParent - depth 3 returns depth 2"() {
@@ -171,6 +211,8 @@ class SeqeraPathTest extends Specification {
         path.getParent() == null
     }
 
+    // ---- resolve ----
+
     def "resolve - appends segment to workspace"() {
         given:
         def fs = mockFs()
@@ -196,18 +238,51 @@ class SeqeraPathTest extends Specification {
         resolved.toString() == 'seqera://acme/research/datasets/my-dataset'
     }
 
-    def "resolve - dataset name with version"() {
+    def "resolve - dataset name with @version preserved as raw trail segment"() {
         given:
         def fs = mockFs()
         def path = new SeqeraPath(fs, 'seqera://acme/research/datasets')
 
         when:
-        def resolved = path.resolve('samples@3')
+        def resolved = path.resolve('samples@3') as SeqeraPath
 
         then:
-        (resolved as SeqeraPath).datasetName == 'samples'
-        (resolved as SeqeraPath).version == '3'
+        resolved.trail == ['samples@3']
     }
+
+    def "resolve - appends nested data-link path segment"() {
+        given:
+        def fs = mockFs()
+        def path = new SeqeraPath(fs, 'seqera://acme/research/data-links/AWS/inputs')
+
+        when:
+        def child = path.resolve('reads') as SeqeraPath
+
+        then:
+        child.trail == ['AWS', 'inputs', 'reads']
+    }
+
+    def "resolve with multi-segment string builds correct path"() {
+        given:
+        def fs = mockFs()
+        def base = new SeqeraPath(fs, 'seqera://acme/research')
+
+        expect:
+        base.resolve('datasets/samples').toString() == 'seqera://acme/research/datasets/samples'
+        base.resolve('datasets').toString() == 'seqera://acme/research/datasets'
+    }
+
+    def "resolve with absolute seqera URI returns that URI"() {
+        given:
+        def fs = mockFs()
+        def base = new SeqeraPath(fs, 'seqera://acme/research')
+        def absolute = 'seqera://other/ws/datasets/report'
+
+        expect:
+        base.resolve(absolute).toString() == absolute
+    }
+
+    // ---- equality / hashCode ----
 
     def "equality and hashCode"() {
         given:
@@ -222,7 +297,7 @@ class SeqeraPathTest extends Specification {
         p1 != p3
     }
 
-    def "isAbsolute always true"() {
+    def "isAbsolute true when fs attached"() {
         given:
         def fs = mockFs()
 
@@ -239,6 +314,7 @@ class SeqeraPathTest extends Specification {
         new SeqeraPath(fs, 'seqera://').nameCount == 0
         new SeqeraPath(fs, 'seqera://acme').nameCount == 1
         new SeqeraPath(fs, 'seqera://acme/research/datasets/samples').nameCount == 4
+        new SeqeraPath(fs, 'seqera://acme/research/data-links/AWS/inputs/reads/a.fq').nameCount == 7
     }
 
     // ---- relativize ----
@@ -291,28 +367,6 @@ class SeqeraPathTest extends Specification {
         'seqera://acme/research/datasets/samples'       | 'seqera://acme/research/datasets/other'            | '../other'
     }
 
-    // ---- multi-segment resolve ----
-
-    def "resolve with multi-segment string builds correct path"() {
-        given:
-        def fs = mockFs()
-        def base = new SeqeraPath(fs, 'seqera://acme/research')
-
-        expect:
-        base.resolve('datasets/samples').toString() == 'seqera://acme/research/datasets/samples'
-        base.resolve('datasets').toString() == 'seqera://acme/research/datasets'
-    }
-
-    def "resolve with absolute seqera URI returns that URI"() {
-        given:
-        def fs = mockFs()
-        def base = new SeqeraPath(fs, 'seqera://acme/research')
-        def absolute = 'seqera://other/ws/datasets/report'
-
-        expect:
-        base.resolve(absolute).toString() == absolute
-    }
-
     def "isAbsolute is false for relative paths produced by relativize"() {
         given:
         def fs = mockFs()
@@ -337,6 +391,7 @@ class SeqeraPathTest extends Specification {
         new SeqeraPath(fs, 'seqera://acme/research/datasets').getFileName().toString() == 'datasets'
         new SeqeraPath(fs, 'seqera://acme/research/datasets/samples').getFileName().toString() == 'samples'
         new SeqeraPath(fs, 'seqera://acme/research/datasets/samples@2').getFileName().toString() == 'samples@2'
+        new SeqeraPath(fs, 'seqera://acme/research/data-links/AWS/inputs/reads/a.fq').getFileName().toString() == 'a.fq'
     }
 
     def "getFileName is not absolute (uses relative constructor)"() {
@@ -365,9 +420,7 @@ class SeqeraPathTest extends Specification {
 
     def "asUri - path starting with dot has dot stripped"() {
         expect:
-        // seqera://. → strips dot → seqera:// → hits empty-path case → seqera:///
         SeqeraPath.asUri('seqera://.').toString() == 'seqera:///'
-        // seqera://./foo/bar → strips dot only (substring from index 10) → seqera:///foo/bar
         SeqeraPath.asUri('seqera://./foo/bar').toString() == 'seqera://foo/bar'
     }
 
@@ -517,5 +570,55 @@ class SeqeraPathTest extends Specification {
 
         then:
         parts == ['acme']
+    }
+
+    // ---- trailing slash / accidental double-slash tolerance ----
+
+    def "trailing slash on resource-type directory is ignored"() {
+        given:
+        def fs = mockFs()
+
+        when:
+        def p = new SeqeraPath(fs, 'seqera://acme/research/datasets/')
+
+        then:
+        p.depth() == 3
+        p.resourceType == 'datasets'
+        p.trail == []
+    }
+
+    def "trailing slash on data-link directory is ignored"() {
+        given:
+        def fs = mockFs()
+
+        when:
+        def p = new SeqeraPath(fs, 'seqera://acme/research/data-links/aws/inputs/')
+
+        then:
+        p.depth() == 5
+        p.trail == ['aws', 'inputs']
+    }
+
+    def "accidental double-slash inside the trail is collapsed"() {
+        given:
+        def fs = mockFs()
+
+        when:
+        def p = new SeqeraPath(fs, 'seqera://acme/research/data-links/aws/inputs//reads/a.fq')
+
+        then:
+        p.trail == ['aws', 'inputs', 'reads', 'a.fq']
+    }
+
+    def "iterator on deep data-link path returns all segments"() {
+        given:
+        def fs = mockFs()
+        def path = new SeqeraPath(fs, 'seqera://acme/research/data-links/AWS/inputs/reads/a.fq')
+
+        when:
+        def parts = path.iterator().collect { it.toString() }
+
+        then:
+        parts == ['acme', 'research', 'data-links', 'AWS', 'inputs', 'reads', 'a.fq']
     }
 }
