@@ -449,7 +449,7 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-memory`
 - {ref}`process-time`
 
-The following {ref}`hints <process-hints>` are supported. Each hint overrides the corresponding field of the `seqera.executor.machineRequirement` config scope on a per-process basis. Values must be strings; keys may be used as-is or with the `seqera/` prefix to restrict them to this executor.
+The following {ref}`hints <process-hints>` are supported:
 
 - `machineRequirement.capacityMode`
 - `machineRequirement.diskAllocation`
@@ -462,6 +462,8 @@ The following {ref}`hints <process-hints>` are supported. Each hint overrides th
 - `machineRequirement.machineTypes`
 - `machineRequirement.maxSpotAttempts`
 - `machineRequirement.provisioning`
+
+Each hint overrides the corresponding field of the `seqera.executor.machineRequirement` config scope on a per-process basis. Values must be strings; keys may be used as-is or with the `seqera/` prefix to restrict them to this executor.
 
 For example, to override the provisioning mode for a single process:
 
