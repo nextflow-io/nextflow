@@ -33,7 +33,7 @@ public class FeatureFlagDsl {
 
     @FeatureFlag("nextflow.enable.moduleBinaries")
     @Description("""
-        When `true`, enables the use of modules with executable scripts i.e. [module binaries](https://nextflow.io/docs/latest/module.html#module-binaries).
+        When `true`, enables the use of module-scoped executable scripts via [module resources](https://nextflow.io/docs/latest/module.html#module-resources).
     """)
     public boolean moduleBinaries;
 
