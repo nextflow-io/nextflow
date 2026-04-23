@@ -346,8 +346,8 @@ A *named workflow* is a workflow that can be called by other workflows:
 
 ```nextflow
 workflow my_workflow {
-    hello()
-    bye( hello.out.collect() )
+    ch_hello = hello()
+    bye( ch_hello.collect() )
 }
 
 workflow {
@@ -368,8 +368,8 @@ workflow my_workflow {
     data2
 
     main:
-    hello(data1, data2)
-    bye(hello.out)
+    ch_hello = hello(data1, data2)
+    bye(hello)
 }
 ```
 
@@ -385,31 +385,34 @@ The `emit:` section declares the outputs of a named workflow:
 
 ```nextflow
 workflow my_workflow {
+    take:
+    data
+
     main:
-    hello(data)
-    bye(hello.out)
+    ch_bye = bye(hello(data))
 
     emit:
-    bye.out
+    ch_bye
 }
 ```
-
-When calling the workflow, the output can be accessed using the `out` property, i.e. `my_workflow.out`.
 
 If an output is assigned to a name, the name can be used to reference the output from the calling workflow. For example:
 
 ```nextflow
 workflow my_workflow {
     main:
-    hello(data)
-    bye(hello.out)
+    ch_hello = hello(data)
+    ch_bye = bye(ch_hello)
 
     emit:
-    my_data = bye.out
+    my_data = ch_bye
+}
+
+workflow {
+    result = my_workflow()
+    result.my_data.view()
 }
 ```
-
-The result of the above workflow can be accessed using `my_workflow.out.my_data`.
 
 :::{note}
 Every output must be assigned to a name when multiple outputs are declared.
@@ -421,9 +424,7 @@ Every output must be assigned to a name when multiple outputs are declared.
 
 Workflows consist of *dataflow* logic, in which processes are connected to each other through *dataflow channels* and *dataflow values*.
 
-(dataflow-type-channel)=
-
-### Channels
+### Channels and values
 
 A *dataflow channel* (or simply *channel*) is an asynchronous sequence of values.
 
@@ -439,7 +440,21 @@ channel emits 2
 channel emits 3
 ```
 
-**Factories**
+A *dataflow value* is an asynchronous value.
+
+Dataflow values can be created using the {ref}`channel.value <channel-value>` factory, and they are created by processes (under {ref}`certain conditions <process-out-singleton>`).
+
+A dataflow value cannot be accessed directly, but only through an operator or process. For example:
+
+```nextflow
+channel.value(1).view { v -> "dataflow value is ${v}" }
+```
+
+```console
+dataflow value is 1
+```
+
+### Factories
 
 A channel can be created by factories in the `channel` namespace. For example, the `channel.fromPath()` factory creates a channel from a file name or glob pattern, similar to the `files()` function:
 
@@ -449,7 +464,7 @@ channel.fromPath('input/*.txt').view()
 
 See {ref}`channel-factory` for the full list of channel factories.
 
-**Operators**
+### Operators
 
 Channel operators, or *operators* for short, are functions that consume and produce channels. Because channels are asynchronous, operators are necessary to manipulate the values in a channel. Operators are particularly useful for implementing glue logic between processes.
 
@@ -473,27 +488,7 @@ Commonly used operators include:
 
 - {ref}`operator-view`: print each channel value to standard output
 
-See {ref}`operator-page` for the full set of operators.
-
-(dataflow-type-value)=
-
-### Values
-
-A *dataflow value* is an asynchronous value.
-
-Dataflow values can be created using the {ref}`channel.value <channel-value>` factory, and they are created by processes (under {ref}`certain conditions <process-out-singleton>`).
-
-A dataflow value cannot be accessed directly, but only through an operator or process. For example:
-
-```nextflow
-channel.value(1).view { v -> "dataflow value is ${v}" }
-```
-
-```console
-dataflow value is 1
-```
-
-See {ref}`stdlib-types-value` for the set of available methods for dataflow values.
+See {ref}`operator-page` for the full set of operators. See {ref}`stdlib-types-value` for the set of available methods for dataflow values.
 
 (workflow-process-invocation)=
 
@@ -540,10 +535,9 @@ workflow {
 }
 ```
 
-Processes and workflows can only be called by workflows. A given process or workflow can only be called once in a given workflow. To use a process or workflow multiple times in the same workflow, include it from another script with multiple aliases:
+Processes and workflows can only be called by workflows. A given process or workflow can only be called once in a given workflow. To use a process or workflow multiple times in the same workflow, {ref}`include <syntax-include>` it from another script with multiple aliases:
 
 ```nextflow
-// workflow `hello_bye` is defined in `./modules/hello_bye/main.nf`
 include { hello_bye as hello_bye1 } from './modules/hello_bye'
 include { hello_bye as hello_bye2 } from './modules/hello_bye'
 
@@ -623,10 +617,6 @@ workflow {
 Process named outputs are defined using the `emit` option on a process output. See {ref}`naming process outputs <process-naming-outputs>` for more information.
 :::
 
-:::{note}
-Process and workflow outputs can also be accessed by index (e.g., `hello.out[0]`, `hello.out[1]`, etc.). As a best practice, multiple outputs should be accessed by name.
-:::
-
 Workflows can be composed in the same way:
 
 ```nextflow
@@ -634,36 +624,25 @@ workflow flow1 {
     take:
     data
 
-    main:
-    tick(data)
-    tack(tick.out)
-
     emit:
-    tack.out
+    tack(tick(data))
 }
 
 workflow flow2 {
     take:
     data
 
-    main:
-    tick(data)
-    tock(tick.out)
-
     emit:
-    tock.out
+    tock(tick(data))
 }
 
 workflow {
     data = channel.fromPath('/some/path/*.txt')
-    flow1(data)
-    flow2(flow1.out)
+    flow2(flow1(data))
 }
 ```
 
-:::{note}
 The same process can be called in different workflows without using an alias, like `tick` in the above example, which is used in both `flow1` and `flow2`. The workflow call stack determines the *fully qualified process name*, which is used to distinguish the different process calls, i.e. `flow1:tick` and `flow2:tick` in the above example.
-:::
 
 :::{tip}
 The fully qualified process name can be used as a {ref}`process selector <config-process-selectors>` in a Nextflow configuration file, and it takes priority over the simple process name.
@@ -671,55 +650,18 @@ The fully qualified process name can be used as a {ref}`process selector <config
 
 (workflow-special-operators)=
 
-### Special operators
+### Special operators (`|` and `&`)
 
-The following operators have a special meaning when used in a workflow with process and workflow calls.
-
-:::{note}
-As a best practice, avoid these operators when {ref}`type checking <preparing-static-types>` is enabled. Using these operators will prevent the type checker from validating your code.
+:::{deprecated} 26.04.0
+These operators are not supported when {ref}`static typing <preparing-static-types>` is enabled. Use standard method calls and assignments instead.
 :::
 
-**Pipe `|`**
+The following operators have a special meaning when used with process and workflow calls in a workflow:
 
-The `|` *pipe* operator can be used to chain processes, operators, and workflows:
+- The `|` *pipe* operator can be used to chain processes, operators, and workflows.
+- The `&` *and* operator can be used to call multiple processes in parallel with the same channel(s).
 
-```nextflow
-process greet {
-    input:
-    val data
-
-    output:
-    val result
-
-    exec:
-    result = "$data world"
-}
-
-workflow {
-    channel.of('Hello', 'Hola', 'Ciao')
-        | greet
-        | map { v -> v.toUpperCase() }
-        | view
-}
-```
-
-The above snippet defines a process named `greet` and invokes it with the input channel. The result is then piped to the {ref}`operator-map` operator, which converts each string to uppercase, and finally to the {ref}`operator-view` operator which prints it.
-
-The same code can also be written as:
-
-```nextflow
-workflow {
-    ch_input = channel.of('Hello', 'Hola', 'Ciao')
-    ch_greet = greet(ch_input)
-    ch_greet
-        .map { v -> v.toUpperCase() }
-        .view()
-}
-```
-
-**And `&`**
-
-The `&` *and* operator can be used to call multiple processes in parallel with the same channel(s):
+For example:
 
 ```nextflow
 process greet {

@@ -91,6 +91,8 @@ Local modules must be included by relative path:
 include { FASTQC } from './modules/local/fastqc'
 ```
 
+See {ref}`syntax-include` for a full description of the include syntax.
+
 ## Running modules directly
 
 For ad-hoc tasks or testing, run a module directly without creating a wrapper workflow:

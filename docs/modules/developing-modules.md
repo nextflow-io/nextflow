@@ -38,12 +38,12 @@ Registry modules follow a standard directory structure:
 modules/
 └── myorg/
     └── my-module/
-        ├── .module-info     # Integrity checksum (generated at install/creation)
-        ├── README.md        # Documentation (required for publishing)
-        ├── main.nf          # Module script (required)
-        ├── meta.yml         # Module spec (required for publishing)
-        ├── resources/       # Optional: module resources
-        └── templates/       # Optional: process script templates
+        ├── .module-info     # Integrity checksum
+        ├── README.md        # Documentation
+        ├── main.nf          # Module script
+        ├── meta.yml         # Module spec
+        ├── resources/       # Optional: Module resources
+        └── templates/       # Optional: Process script templates
 ```
 
 Local modules that are not intended for publishing do not need to follow this structure, although it is recommended as a best practice.
