@@ -203,7 +203,7 @@ Entry workflow definitions are ignored when a script is included as a module. Th
 A typed workflow is a workflow that uses static typing for inputs and outputs:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 workflow greet {
     take:
@@ -301,7 +301,7 @@ See {ref}`process-page` for more information on the semantics of each process se
 A typed process is a process that uses static typing for inputs and outputs:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 process greet {
     input: 

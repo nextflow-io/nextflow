@@ -69,7 +69,7 @@ Feature flags with the `nextflow.preview` prefix can cause pipelines run with ne
   :::
 : When `true`, enables the use of {ref}`topic channels <channel-topic>`.
 
-`nextflow.preview.types`
+`nextflow.enable.types`
 : :::{versionadded} 25.10.0
   :::
 : *Preview feature: the syntax and behavior may change in future releases.*

@@ -205,7 +205,7 @@ class ChannelImplTest extends Specification {
         when:
         runScript(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             workflow {
                 channel.of(tuple(1,2)).flatMap()
@@ -260,7 +260,7 @@ class ChannelImplTest extends Specification {
         when:
         runScript(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             workflow {
                 channel.of(1, 2, 3).groupBy()
@@ -275,7 +275,7 @@ class ChannelImplTest extends Specification {
         when:
         runScript(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             workflow {
                 channel.of([1, 1, 'a'], [1, 1, 'b']).groupBy()
@@ -290,7 +290,7 @@ class ChannelImplTest extends Specification {
         when:
         runScript(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             workflow {
                 channel.of([1, 2, 'a'], [1, 3, 'b']).groupBy()
@@ -305,7 +305,7 @@ class ChannelImplTest extends Specification {
         when:
         runScript(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             workflow {
                 channel.of([1, 3, 'a'], [1, 3, 'b']).groupBy()
@@ -392,7 +392,7 @@ class ChannelImplTest extends Specification {
         when:
         runScript(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             workflow {
                 left = channel.of(1, 2, 3)
@@ -490,7 +490,7 @@ class ChannelImplTest extends Specification {
         when:
         runScript(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             workflow {
                 channel.empty().reduce { acc, v -> acc + v }
@@ -659,7 +659,7 @@ class ChannelImplTest extends Specification {
         when:
         runScript(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             workflow {
                 channel.of(1, 2, 3).subscribe { v ->
@@ -678,7 +678,7 @@ class ChannelImplTest extends Specification {
         when:
         def result = runScript(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             workflow {
                 channel.of(1, [2, 3], 4).flatten()

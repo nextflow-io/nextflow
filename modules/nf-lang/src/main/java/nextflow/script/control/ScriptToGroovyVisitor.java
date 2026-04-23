@@ -129,7 +129,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     @Override
     public void visitFeatureFlag(FeatureFlagNode node) {
         // static typing is enabled per-script rather than globally
-        if( "nextflow.preview.types".equals(node.name) )
+        if( "nextflow.enable.types".equals(node.name) )
             return;
 
         var names = node.name.split("\\.");

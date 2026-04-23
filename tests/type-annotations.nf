@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 workflow {
     ch_words = channel.of('one', 'two', 'three', 'four')
