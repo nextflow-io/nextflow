@@ -18,13 +18,13 @@ package io.seqera.executor
 
 import com.google.common.hash.HashCode
 import io.seqera.config.ExecutorOpts
+import io.seqera.config.MachineRequirementOpts
 import io.seqera.sched.api.schema.v1a1.DescribeTaskResponse
 import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
-import io.seqera.config.MachineRequirementOpts
 import io.seqera.sched.api.schema.v1a1.MachineInfo
-import io.seqera.sched.api.schema.v1a1.ProvisioningModel
 import io.seqera.sched.api.schema.v1a1.NextflowTask
 import io.seqera.sched.api.schema.v1a1.PriceModel as SchedPriceModel
+import io.seqera.sched.api.schema.v1a1.ProvisioningModel
 import io.seqera.sched.api.schema.v1a1.ResourceLimit
 import io.seqera.sched.api.schema.v1a1.ResourceRequirement
 import io.seqera.sched.api.schema.v1a1.Task

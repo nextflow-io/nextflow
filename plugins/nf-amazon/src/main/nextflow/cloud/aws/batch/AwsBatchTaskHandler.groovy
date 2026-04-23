@@ -686,9 +686,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         }
     }
 
-    static private final String HINT_PREFIX = 'awsbatch/'
-    static private final Set<String> KNOWN_HINTS = Set.of('consumableResources')
-    static private final String SUPPORTED_HINTS_MSG =
+    private static final String HINT_PREFIX = 'awsbatch/'
+    private static final Set<String> KNOWN_HINTS = Set.of('consumableResources')
+    private static final String SUPPORTED_HINTS_MSG =
         KNOWN_HINTS.collect { HINT_PREFIX + it }.sort().join(', ')
 
     @CompileStatic
@@ -706,7 +706,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                 continue
             final index = entry.indexOf('=')
             if( index <= 0 || index == entry.length()-1 )
-                throw new IllegalArgumentException("Invalid 'consumableResources' hint entry '${entry}' — expected 'name=quantity'")
+                throw new IllegalArgumentException("Invalid 'consumableResources' hint entry '${entry}' -- expected 'name=quantity'")
             final resourceName = entry.substring(0, index).trim()
             final qtyStr = entry.substring(index+1).trim()
             final long resourceQuantity
@@ -714,7 +714,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                 resourceQuantity = qtyStr.toLong()
             }
             catch( NumberFormatException e ) {
-                throw new IllegalArgumentException("Invalid 'consumableResources' hint entry '${entry}' — quantity must be an integer")
+                throw new IllegalArgumentException("Invalid 'consumableResources' hint entry '${entry}' -- quantity must be an integer")
             }
             resourceList.add( ConsumableResourceRequirement.builder()
                 .consumableResource(resourceName)
@@ -734,7 +734,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             if( !key?.startsWith(HINT_PREFIX) )
                 continue
             if( !KNOWN_HINTS.contains(key.substring(HINT_PREFIX.length())) )
-                log.warn1("Unknown AWS Batch hint: '${key}' — supported keys are: ${SUPPORTED_HINTS_MSG}")
+                log.warn1("Unknown AWS Batch hint: '${key}' -- supported keys are: ${SUPPORTED_HINTS_MSG}")
         }
     }
 

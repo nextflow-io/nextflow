@@ -601,7 +601,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.consumableResourceProperties == null
     }
 
-    def 'should create a job definition with consumable resources from hints (built from real ProcessBuilder)' () {
+    def 'should create a job definition with consumable resources from hints' () {
         given: 'hints set through the real DSL → ProcessConfig → TaskConfig path'
         def process = new ProcessConfig(Mock(BaseScript))
         new nextflow.script.dsl.ProcessBuilder(process).hints(

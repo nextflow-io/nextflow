@@ -451,19 +451,17 @@ Resource requests and other job characteristics can be controlled via the follow
 
 The following {ref}`hints <process-hints>` are supported. Each hint overrides the corresponding field of the `seqera.executor.machineRequirement` config scope on a per-process basis. Values must be strings; keys may be used as-is or with the `seqera/` prefix to restrict them to this executor.
 
-| Hint key | Description |
-| --- | --- |
-| `machineRequirement.capacityMode` | ECS capacity provider mode: `managed` or `asg`. |
-| `machineRequirement.diskAllocation` | Disk allocation strategy: `task` or `node`. |
-| `machineRequirement.diskEncrypted` | `true` or `false` — enable KMS encryption for the EBS volume. |
-| `machineRequirement.diskIops` | IOPS for io1/io2/gp3 volumes. |
-| `machineRequirement.diskMountPath` | Container mount path for the task disk (e.g. `/data`). |
-| `machineRequirement.diskSize` | Disk size, e.g. `100.GB`. |
-| `machineRequirement.diskThroughputMiBps` | Throughput (MiB/s) for gp3 volumes. |
-| `machineRequirement.diskType` | EBS volume type (e.g. `ebs/gp3`, `ebs/io1`). |
-| `machineRequirement.machineTypes` | Comma-separated list of acceptable machine type patterns (e.g. `m5,m5a,c6i.large`). |
-| `machineRequirement.maxSpotAttempts` | Maximum spot retry attempts before falling back to on-demand. |
-| `machineRequirement.provisioning` | Instance provisioning mode: `spot`, `ondemand`, or `spotFirst`. |
+- `machineRequirement.capacityMode`
+- `machineRequirement.diskAllocation`
+- `machineRequirement.diskEncrypted`
+- `machineRequirement.diskIops`
+- `machineRequirement.diskMountPath`
+- `machineRequirement.diskSize`
+- `machineRequirement.diskThroughputMiBps`
+- `machineRequirement.diskType`
+- `machineRequirement.machineTypes`
+- `machineRequirement.maxSpotAttempts`
+- `machineRequirement.provisioning`
 
 For example, to override the provisioning mode for a single process:
 
@@ -477,6 +475,8 @@ process hello {
     """
 }
 ```
+
+See {ref}`config-seqera` for the full config reference.
 
 ### Disk support
 
