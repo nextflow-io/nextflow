@@ -198,6 +198,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names = '-with-charliecloud', description = 'Enable process execution in a Charliecloud container runtime')
     def withCharliecloud
 
+    @Parameter(names = '-with-apple-container', description = 'Enable process execution in an Apple container runtime')
+    def withApple
+
     @Parameter(names = '-with-singularity', description = 'Enable process execution in a Singularity container')
     def withSingularity
 

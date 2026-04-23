@@ -778,6 +778,10 @@ class ConfigBuilder {
         if( cmdRun.withCharliecloud ) {
             configContainer(config, 'charliecloud', cmdRun.withCharliecloud)
         }
+
+        if( cmdRun.withApple ) {
+            configContainer(config, 'apple', cmdRun.withApple)
+        }
     }
 
     private void configContainer(ConfigObject config, String engine, def cli) {

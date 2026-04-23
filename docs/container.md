@@ -4,6 +4,71 @@
 
 Nextflow supports a variety of container runtimes. Containerization allows you to write self-contained and truly reproducible computational pipelines, by packaging the binary dependencies of a script into a standard and portable format that can be executed on any platform that supports a container runtime. Furthermore, the same pipeline can be transparently executed with any of the supported container runtimes, depending on which runtimes are available in the target compute environment.
 
+(container-apple)=
+
+## Apple containers
+
+:::{versionadded} 26.04.0-edge
+:::
+
+[Apple containers](https://github.com/apple/containerization) is a container runtime for Apple Silicon Macs that runs OCI-compatible container images natively using the macOS Virtualization framework. It provides fast, lightweight container execution without requiring Docker Desktop or any third-party virtualization software.
+
+### Prerequisites
+
+Apple containers requires macOS 26 or later and Apple Silicon (M-series chip). Install the `container` CLI tool from Apple and ensure it is available on your `PATH`.
+
+### How it works
+
+To run your pipeline with Apple containers, use the `-with-apple-container` command line option:
+
+```bash
+nextflow run <your script> -with-apple-container [OCI container image]
+```
+
+Alternatively, enable the engine in your configuration file:
+
+```groovy
+process.container = 'ubuntu:22.04'
+apple.enabled = true
+```
+
+Every time a process is executed, Nextflow will wrap it in a `container run` command using the image specified by the `container` directive.
+
+### Architecture and Rosetta
+
+Apple containers runs `linux/arm64` images by default. To run `linux/amd64` images transparently via [Rosetta](https://developer.apple.com/documentation/apple-silicon/about-the-rosetta-translation-environment), set the `arch` directive on the relevant processes:
+
+```groovy
+process {
+    arch = 'x86_64'
+}
+```
+
+Nextflow will automatically add `--platform linux/amd64 --rosetta` to the `container run` command. For pipelines that ship native arm64 images, no `arch` directive is needed.
+
+### Configuration
+
+```groovy
+process.container = 'ubuntu:22.04'
+
+apple {
+    enabled = true
+}
+```
+
+Or use the dedicated `apple_container` executor to make the engine selection explicit:
+
+```groovy
+process {
+    executor  = 'apple_container'
+    container = 'ubuntu:22.04'
+}
+```
+
+### Advanced settings
+
+Apple container advanced configuration settings are described in {ref}`config-apple` section in the Nextflow configuration page.
+
 :::{note}
 When creating a container image to use with Nextflow, make sure that Bash (3.x or later) and `ps` are installed in the image, along with other tools required for collecting metrics (See {ref}`this section <execution-report-tasks>`). Bash should be available on the path `/bin/bash` and it should be the container entrypoint.
 :::
