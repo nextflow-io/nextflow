@@ -113,6 +113,135 @@ class SeqeraDataLinkClientTest extends Specification {
         !client.listDataLinks(10L).hasNext()
     }
 
+    // ---- getDataLink ----
+
+    def "getDataLink uses server-side search filter and returns first matching provider"() {
+        given:
+        def body = JsonOutput.toJson([dataLinks: [
+                [id: 'dl-1', name: 'inputs', provider: 'google'],
+                [id: 'dl-2', name: 'inputs', provider: 'aws']
+        ], totalSize: 2])
+        def tc = tower()
+        tc.sendApiRequest("${EP}/data-links?workspaceId=10&max=100&offset=0&search=inputs") >> ok(body)
+        def client = new SeqeraDataLinkClient(tc)
+
+        when:
+        def dl = client.getDataLink(10L, 'aws', 'inputs')
+
+        then:
+        dl.id == 'dl-2'
+        dl.provider.toString() == 'aws'
+    }
+
+    def "getDataLink throws NoSuchFileException when no matching (provider, name) is found"() {
+        given:
+        def body = JsonOutput.toJson([dataLinks: [
+                [id: 'dl-1', name: 'inputs', provider: 'google']
+        ], totalSize: 1])
+        def tc = tower()
+        tc.sendApiRequest("${EP}/data-links?workspaceId=10&max=100&offset=0&search=inputs") >> ok(body)
+        def client = new SeqeraDataLinkClient(tc)
+
+        when:
+        client.getDataLink(10L, 'aws', 'inputs')
+
+        then:
+        thrown(NoSuchFileException)
+    }
+
+    def "getDataLink memoizes successful lookups"() {
+        given:
+        def body = JsonOutput.toJson([dataLinks: [
+                [id: 'dl-1', name: 'inputs', provider: 'aws']
+        ], totalSize: 1])
+        def tc = tower()
+        def client = new SeqeraDataLinkClient(tc)
+
+        when:
+        def a = client.getDataLink(10L, 'aws', 'inputs')
+        def b = client.getDataLink(10L, 'aws', 'inputs')
+
+        then:
+        1 * tc.sendApiRequest("${EP}/data-links?workspaceId=10&max=100&offset=0&search=inputs") >> ok(body)
+        a.is(b)
+    }
+
+    // ---- getDataLinkProviders ----
+
+    def "getDataLinkProviders returns distinct sorted providers across all pages"() {
+        given:
+        def p1 = JsonOutput.toJson([dataLinks: [
+                [id: 'dl-1', name: 'a', provider: 'aws'],
+                [id: 'dl-2', name: 'b', provider: 'google']
+        ], totalSize: 3])
+        def p2 = JsonOutput.toJson([dataLinks: [
+                [id: 'dl-3', name: 'c', provider: 'aws']
+        ], totalSize: 3])
+        def tc = tower()
+        tc.sendApiRequest("${EP}/data-links?workspaceId=10&max=100&offset=0") >> ok(p1)
+        tc.sendApiRequest("${EP}/data-links?workspaceId=10&max=100&offset=2") >> ok(p2)
+        def client = new SeqeraDataLinkClient(tc)
+
+        when:
+        def providers = client.getDataLinkProviders(10L)
+
+        then:
+        providers as List == ['aws', 'google']
+    }
+
+    def "getDataLinkProviders memoizes the result"() {
+        given:
+        def body = JsonOutput.toJson([dataLinks: [
+                [id: 'dl-1', name: 'a', provider: 'aws']
+        ], totalSize: 1])
+        def tc = tower()
+        def client = new SeqeraDataLinkClient(tc)
+
+        when:
+        def a = client.getDataLinkProviders(10L)
+        def b = client.getDataLinkProviders(10L)
+
+        then:
+        1 * tc.sendApiRequest("${EP}/data-links?workspaceId=10&max=100&offset=0") >> ok(body)
+        a.is(b)
+    }
+
+    def "getDataLinkProviders returns an unmodifiable Set"() {
+        given:
+        def body = JsonOutput.toJson([dataLinks: [
+                [id: 'dl-1', name: 'a', provider: 'aws']
+        ], totalSize: 1])
+        def tc = tower()
+        tc.sendApiRequest(_) >> ok(body)
+        def client = new SeqeraDataLinkClient(tc)
+
+        when:
+        client.getDataLinkProviders(10L).add('gcs')
+
+        then:
+        thrown(UnsupportedOperationException)
+    }
+
+    // ---- listDataLinks pagination robustness ----
+
+    def "listDataLinks keeps paginating when totalSize is absent until an empty page"() {
+        given:
+        def p1 = JsonOutput.toJson([dataLinks: [[id: 'dl-1', name: 'a', provider: 'aws']]]) // no totalSize
+        def p2 = JsonOutput.toJson([dataLinks: [[id: 'dl-2', name: 'b', provider: 'aws']]]) // no totalSize
+        def p3 = JsonOutput.toJson([dataLinks: []]) // empty page → exhausted
+        def tc = tower()
+        tc.sendApiRequest("${EP}/data-links?workspaceId=10&max=100&offset=0") >> ok(p1)
+        tc.sendApiRequest("${EP}/data-links?workspaceId=10&max=100&offset=1") >> ok(p2)
+        tc.sendApiRequest("${EP}/data-links?workspaceId=10&max=100&offset=2") >> ok(p3)
+        def client = new SeqeraDataLinkClient(tc)
+
+        when:
+        def list = drain(client.listDataLinks(10L))
+
+        then:
+        list*.id == ['dl-1', 'dl-2']
+    }
+
     // ---- getContent ----
 
     def "getContent on a sub-path uses /browse/{path}"() {

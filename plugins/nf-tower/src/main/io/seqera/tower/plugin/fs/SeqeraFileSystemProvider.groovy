@@ -197,8 +197,15 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
 
         final source = entries
         return new DirectoryStream<Path>() {
+            private boolean iteratorCalled = false
             @Override
             Iterator<Path> iterator() {
+                // NIO contract: DirectoryStream.iterator() may be called at most once.
+                // For data-link listings a second iteration would also re-fetch pages 2+
+                // (needlessly doubling API calls), so enforcing the contract is a win.
+                if (iteratorCalled)
+                    throw new IllegalStateException("DirectoryStream.iterator() may be called at most once")
+                iteratorCalled = true
                 final inner = source.iterator()
                 if (!filter) return inner
                 return new FilteredIterator<Path>(inner, filter)

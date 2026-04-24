@@ -60,7 +60,10 @@ class DataLinksResourceHandler implements ResourceTypeHandler {
     private final HttpClient httpClient
 
     DataLinksResourceHandler(SeqeraFileSystem fs, SeqeraDataLinkClient client) {
-        this(fs, client, HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build())
+        this(fs, client, HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .followRedirects(HttpClient.Redirect.NORMAL)
+                .build())
     }
 
     /** Test-only constructor to inject a mock {@link HttpClient}. */
@@ -111,8 +114,15 @@ class DataLinksResourceHandler implements ResourceTypeHandler {
         if (p.cachedAttributes) return p.cachedAttributes
         final workspaceId = fs.resolveWorkspaceId(p.org, p.workspace)
         final trail = p.trail
-        if (trail.size() < 2) {
-            // data-links/ or data-links/<provider> — always directory
+        if (trail.isEmpty()) {
+            // data-links/ — always a directory
+            return new SeqeraFileAttributes(true)
+        }
+        if (trail.size() == 1) {
+            // data-links/<provider> — validate the provider has at least one data-link
+            final providers = client.getDataLinkProviders(workspaceId)
+            if (!providers.contains(trail[0]))
+                throw new NoSuchFileException(p.toString(), null, "No data-links for provider '${trail[0]}' in workspace '${p.workspace}'")
             return new SeqeraFileAttributes(true)
         }
         final dl = client.getDataLink(workspaceId, trail[0], trail[1])

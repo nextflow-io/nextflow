@@ -452,4 +452,36 @@ class SeqeraFileSystemProviderTest extends Specification {
         def ex = thrown(NoSuchFileException)
         ex.reason?.contains('Unsupported resource type')
     }
+
+    def "readAttributes short-circuits when the SeqeraPath carries cachedAttributes (no API call)"() {
+        given: 'a provider with a fresh filesystem and a path carrying pre-resolved attrs'
+        def tc = spyTower()
+        def fs = buildFs(tc)
+        def attrs = new SeqeraFileAttributes(999L, java.time.Instant.EPOCH, java.time.Instant.EPOCH, 'cached-key')
+        def path = new SeqeraPath(fs, 'seqera://acme/research/datasets/samples').resolveWithAttributes('nested', attrs)
+
+        when:
+        def got = fs.provider().readAttributes(path, java.nio.file.attribute.BasicFileAttributes)
+
+        then: 'no workspace-cache load and no dataset/browse API calls were issued'
+        0 * tc.sendApiRequest(_)
+        got === attrs
+    }
+
+    def "newDirectoryStream.iterator() throws IllegalStateException on a second call"() {
+        given:
+        def tc = spyTower()
+        tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
+        tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
+        def fs = buildFs(tc)
+        def wsPath = new SeqeraPath(fs, 'seqera://acme/research')
+        def stream = fs.provider().newDirectoryStream(wsPath, null)
+
+        when:
+        stream.iterator()
+        stream.iterator()
+
+        then:
+        thrown(IllegalStateException)
+    }
 }

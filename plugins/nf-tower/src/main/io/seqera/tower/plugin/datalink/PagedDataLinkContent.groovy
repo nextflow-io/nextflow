@@ -89,7 +89,7 @@ class PagedDataLinkContent implements Iterable<DataLinkItem> {
                     current = items.iterator()
                     nextToken = page?.nextPageToken as String
                 } catch (IOException e) {
-                    throw new RuntimeException(e)
+                    throw new UncheckedIOException(e)
                 }
             }
             return true

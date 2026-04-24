@@ -33,8 +33,6 @@ import io.seqera.tower.model.DataLinkProvider
 import io.seqera.tower.plugin.TowerClient
 import nextflow.exception.AbortOperationException
 
-import java.nio.file.Path
-
 /**
  * Typed client for Seqera Platform data-link API endpoints.
  *
@@ -65,7 +63,8 @@ class SeqeraDataLinkClient {
     }
 
     /**
-     * Resolve a data-link providers in the given workspace.
+     * Distinct provider identifiers present in the workspace, sorted.
+     * The returned set is unmodifiable; memoized per workspace.
      */
     @Memoized
     Set<String> getDataLinkProviders(long workspaceId) {
@@ -75,12 +74,17 @@ class SeqeraDataLinkClient {
             final p = it.next().provider?.toString()
             if (p) providers.add(p)
         }
-        return providers
+        return Collections.unmodifiableSet(providers)
     }
 
     /**
      * Resolve a data-link by {@code (provider, name)} in the given workspace.
-     * Iterates the API's list endpoint lazily and short-circuits on first match.
+     * Iterates the API's list endpoint lazily (server-side filtered by {@code name})
+     * and short-circuits on first match.
+     *
+     * Memoized per {@code (workspaceId, provider, name)} tuple. Note: Groovy's
+     * {@code @Memoized} caches successful returns only — a path that repeatedly
+     * references a non-existent data-link re-runs the search each time.
      */
     @Memoized
     DataLinkDto getDataLink(long workspaceId, String provider, String name) {
@@ -177,7 +181,7 @@ class SeqeraDataLinkClient {
 
         private Iterator<DataLinkDto> current = Collections.<DataLinkDto>emptyIterator()
         private int offset = 0
-        private long total = -1L   // unknown until first fetch
+        private long total = -1L   // -1 = unknown; set only when the server reports totalSize
         private boolean exhausted = false
 
         DataLinkListIterator(TowerClient towerClient, String endpoint, long workspaceId, int pageSize, String search = null) {
@@ -212,8 +216,11 @@ class SeqeraDataLinkClient {
             final items = (json.dataLinks as List<Map>)?.collect { Map m -> mapDataLink(m) } ?: Collections.<DataLinkDto>emptyList()
             current = items.iterator()
             offset += items.size()
-            if (total < 0) total = (json.totalSize as Long) ?: 0L
-            if (items.isEmpty() || offset >= total) exhausted = true
+            // Record the server-reported total only if present (null/missing → leave as -1 and
+            // rely on an empty-page response to signal exhaustion)
+            if (total < 0 && json.totalSize != null) total = json.totalSize as Long
+            // Exhausted when: this page is empty, OR we've reached the known total
+            if (items.isEmpty() || (total >= 0 && offset >= total)) exhausted = true
         }
     }
 

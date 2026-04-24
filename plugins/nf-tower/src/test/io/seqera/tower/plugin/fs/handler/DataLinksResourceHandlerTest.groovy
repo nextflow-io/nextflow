@@ -271,6 +271,33 @@ class DataLinksResourceHandlerTest extends Specification {
         !attr.regularFile
     }
 
+    def "readAttributes at data-links/<provider>/ reports directory when provider exists"() {
+        given:
+        def path = new SeqeraPath(fs, 'seqera://acme/research/data-links/aws')
+
+        when:
+        def attr = handler.readAttributes(path)
+
+        then:
+        1 * fs.resolveWorkspaceId(_, _) >> 10L
+        1 * client.getDataLinkProviders(10L) >> (['aws', 'google'] as Set)
+        attr.directory
+    }
+
+    def "readAttributes at data-links/<provider>/ throws when the provider has no data-links"() {
+        given:
+        def path = new SeqeraPath(fs, 'seqera://acme/research/data-links/azure')
+
+        when:
+        handler.readAttributes(path)
+
+        then:
+        1 * fs.resolveWorkspaceId(_, _) >> 10L
+        1 * client.getDataLinkProviders(10L) >> (['aws'] as Set)
+        def ex = thrown(NoSuchFileException)
+        ex.reason?.contains("No data-links for provider 'azure'")
+    }
+
     def "readAttributes at data-link root reports directory"() {
         given:
         def path = new SeqeraPath(fs, 'seqera://acme/research/data-links/aws/inputs')
