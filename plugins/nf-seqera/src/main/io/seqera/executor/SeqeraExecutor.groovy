@@ -214,7 +214,13 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
     @PackageScope
     void computeRunResourceLabels() {
         final processMap = session.config.process as Map
-        this.runResourceLabels = Labels.toStringMap(processMap?.get('resourceLabels'))
+        final value = processMap?.get('resourceLabels')
+        if( value instanceof Closure ) {
+            log.debug "Skipping run-level process.resourceLabels: dynamic (closure) values are only resolved per-task"
+            this.runResourceLabels = Collections.<String,String>emptyMap()
+            return
+        }
+        this.runResourceLabels = Labels.toStringMap(value)
     }
 
     SeqeraBatchSubmitter getBatchSubmitter() {
