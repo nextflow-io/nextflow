@@ -895,7 +895,7 @@ class SeqeraTaskHandlerTest extends Specification {
     }
 
     private SeqeraTaskHandler createSubmitHandler(Map args) {
-        final hints = args.hints as Map<String,String> ?: [:]
+        final hints = args.hints as Map<String,Object> ?: [:]
         final baseMachineReq = args.baseMachineReq as MachineRequirementOpts
         final Closure onSubmit = args.onSubmit as Closure ?: {}
 

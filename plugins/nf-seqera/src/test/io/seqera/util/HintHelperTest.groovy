@@ -62,17 +62,17 @@ class HintHelperTest extends Specification {
         def base = new MachineRequirementOpts([:])
 
         when:
-        def result = HintHelper.overlayHints(base, ['seqera/machineRequirement.maxSpotAttempts': '3'])
+        def result = HintHelper.overlayHints(base, ['seqera/machineRequirement.maxSpotAttempts': 3])
         then:
         result.maxSpotAttempts == 3
     }
 
-    def 'should overlay machineTypes from comma-separated string'() {
+    def 'should overlay machineTypes as list'() {
         given:
         def base = new MachineRequirementOpts([:])
 
         when:
-        def result = HintHelper.overlayHints(base, ['seqera/machineRequirement.machineTypes': 'm5,m5a,m6i'])
+        def result = HintHelper.overlayHints(base, ['seqera/machineRequirement.machineTypes': ['m5', 'm5a', 'm6i']])
         then:
         result.machineTypes == ['m5', 'm5a', 'm6i']
     }
@@ -92,7 +92,7 @@ class HintHelperTest extends Specification {
         def base = new MachineRequirementOpts([:])
 
         when:
-        def result = HintHelper.overlayHints(base, ['seqera/machineRequirement.diskThroughputMiBps': '500'])
+        def result = HintHelper.overlayHints(base, ['seqera/machineRequirement.diskThroughputMiBps': 500])
         then:
         result.diskThroughputMiBps == 500
     }
@@ -102,17 +102,17 @@ class HintHelperTest extends Specification {
         def base = new MachineRequirementOpts([:])
 
         when:
-        def result = HintHelper.overlayHints(base, ['seqera/machineRequirement.diskIops': '10000'])
+        def result = HintHelper.overlayHints(base, ['seqera/machineRequirement.diskIops': 10000])
         then:
         result.diskIops == 10000
     }
 
-    def 'should overlay diskEncrypted hint from string'() {
+    def 'should overlay diskEncrypted hint as boolean'() {
         given:
         def base = new MachineRequirementOpts([:])
 
         when:
-        def result = HintHelper.overlayHints(base, ['seqera/machineRequirement.diskEncrypted': 'true'])
+        def result = HintHelper.overlayHints(base, ['seqera/machineRequirement.diskEncrypted': true])
         then:
         result.diskEncrypted == true
     }
@@ -164,7 +164,7 @@ class HintHelperTest extends Specification {
         when:
         def result = HintHelper.overlayHints(base, [
             'seqera/machineRequirement.provisioning': 'spotFirst',
-            'seqera/machineRequirement.maxSpotAttempts': '3',
+            'seqera/machineRequirement.maxSpotAttempts': 3,
             'seqera/machineRequirement.diskType': 'ebs/gp3'
         ])
         then:

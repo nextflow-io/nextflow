@@ -24,7 +24,8 @@ import groovy.transform.CompileStatic
  * The core is intentionally agnostic about which hint keys are supported:
  * each executor validates the keys it recognizes (prefixed with its own
  * namespace, e.g. {@code awsbatch/...}, {@code seqera/...}). This class
- * only enforces that the map conforms to {@code Map<String,String>}.
+ * only enforces that the map conforms to {@code Map<String,Object>} with
+ * raw data type values.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -40,17 +41,18 @@ class HintDefs {
      *   <li>keys must be non-empty</li>
      *   <li>keys may contain at most one {@code /} separating the optional
      *       executor namespace from the hint name</li>
-     *   <li>values must be {@code String} or {@code null}</li>
+     *   <li>values must be a raw data type (String, Number, Boolean, List,
+     *       Map) or {@code null}</li>
      * </ul>
      *
      * @param hints the hint map to validate (may be {@code null})
      * @throws IllegalArgumentException if the map is malformed
      */
-    static void validateHints(Map<String, ?> hints) {
+    static void validateHints(Map<String, Object> hints) {
         if( !hints )
             return
 
-        for( Map.Entry<String, ?> entry : hints.entrySet() ) {
+        for( final entry : hints.entrySet() ) {
             final key = entry.key
             final value = entry.value
 
@@ -60,9 +62,18 @@ class HintDefs {
             if( key.count('/') > 1 )
                 throw new IllegalArgumentException("Invalid hint key '${key}': expected 'name' or 'executor/name'")
 
-            if( value != null && !(value instanceof CharSequence) )
-                throw new IllegalArgumentException("Invalid hint value for key '${key}': expected String, got ${value.getClass().getName()}")
+            if( !isValidHintValue(value) )
+                throw new IllegalArgumentException("Invalid hint value for key '${key}': expected String, Number, Boolean, List, or Map, got ${value.getClass().getName()}")
         }
+    }
+
+    private static boolean isValidHintValue(Object value) {
+        return value == null
+            || value instanceof CharSequence
+            || value instanceof Number
+            || value instanceof Boolean
+            || value instanceof List
+            || value instanceof Map
     }
 
 }

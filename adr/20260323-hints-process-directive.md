@@ -63,7 +63,7 @@ The `hints` directive accepts a map of key-value pairs:
 process runDragen {
     cpus 4
     memory '16 GB'
-    hints consumableResources: 'my-dragen-license=1,other-license=2'
+    hints consumableResources: ['my-dragen-license': 1, 'other-license': 2]
 
     script:
     """
@@ -77,22 +77,22 @@ process runDragen {
 process {
     withName: 'runDragen' {
         hints = [
-            consumableResources: 'my-dragen-license=1,other-license=2'
+            consumableResources: ['my-dragen-license': 1, 'other-license': 2]
         ]
     }
 }
 ```
 
-Both keys and values are arbitrary strings. Executors are responsible for defining which hints they recognize, as well as the expected structure for a given hint value. This approach keeps the `hints` directive simple (`Map<String,String>`) while allowing executors to structure hint values however they want (as long as it's a string).
+Keys are strings. Values may be any raw data type: strings, numbers, booleans, lists, or maps. Executors are responsible for defining which hints they recognize and what value type each hint expects.
 
-In the above example, the `consumableResources` hint is given as a comma-separated string of `<name>=<count>` entries. The AWS Batch executor would parse this string into a map and supply it to each job request using `ConsumableResourceProperties`.
+In the above example, the `consumableResources` hint is given as a map of resource name to quantity. The AWS Batch executor supplies it to each job request using `ConsumableResourceProperties`.
 
 ### Namespacing
 
 Keys can use dot-separated scopes to namespace settings as needed:
 
 ```groovy
-hints consumableResources: 'my-dragen-license=1'
+hints consumableResources: ['my-dragen-license': 1]
 hints 'scheduling.priority': 10
 hints 'scheduling.provisioningModel': 'spot'
 ```
@@ -100,7 +100,7 @@ hints 'scheduling.provisioningModel': 'spot'
 Keys can be routed to specific executors by prefixing with the executor name and a slash (`/`):
 
 ```groovy
-hints 'awsbatch/consumableResources': 'my-dragen-license'
+hints 'awsbatch/consumableResources': ['my-dragen-license': 1]
 hints 'seqera/scheduling.provisioningModel': 'spot'
 hints 'k8s/nodeSelector': 'gpu=true'
 ```
@@ -126,7 +126,7 @@ process {
 
     // specific hint replaces generic hint
     withLabel: 'dragen' {
-        hints = [consumableResources: 'my-dragen-license=1']
+        hints = [consumableResources: ['my-dragen-license': 1]]
     }
 }
 ```
@@ -137,12 +137,12 @@ Within a process definition, the `hints` directive uses *accumulation semantics*
 process runDragen {
     // multiple separate hints
     hints provisioningModel: 'spot'
-    hints consumableResources: 'my-dragen-license=1,other-license=2'
+    hints consumableResources: ['my-dragen-license': 1, 'other-license': 2]
 
     // equivalent to...
     hints (
         provisioningModel: 'spot',
-        consumableResources: 'my-dragen-license=1,other-license=2'
+        consumableResources: ['my-dragen-license': 1, 'other-license': 2]
     )
 
     // ...
@@ -158,7 +158,7 @@ process {
     hints = [provisioningModel: 'spot']
 
     withLabel: 'dragen' {
-        hints = [provisioningModel: 'spot', consumableResources: 'my-dragen-license=1']
+        hints = [provisioningModel: 'spot', consumableResources: ['my-dragen-license': 1]]
     }
 }
 ```
@@ -169,11 +169,11 @@ While this approach may lead to duplication, it gives users and developers more 
 
 The following hints should be supported initially:
 
-| Hint name | Executors | Use case |
-|--|--|--|
-| `consumableResources` | AWS Batch | License-aware scheduling ([#5917](https://github.com/nextflow-io/nextflow/issues/5917)) |
-| `scheduling.priority` | AWS Batch | Job scheduling priority ([#6998](https://github.com/nextflow-io/nextflow/issues/6998)) |
-| `scheduling.provisioningModel` | Google Batch | Spot VM scheduling ([#3530](https://github.com/nextflow-io/nextflow/issues/3530)) |
+| Hint name | Value type | Executors | Use case |
+|--|--|--|--|
+| `consumableResources` | `Map<String, Integer>` | AWS Batch | License-aware scheduling ([#5917](https://github.com/nextflow-io/nextflow/issues/5917)) |
+| `scheduling.priority` | `Integer` | AWS Batch | Job scheduling priority ([#6998](https://github.com/nextflow-io/nextflow/issues/6998)) |
+| `scheduling.provisioningModel` | `String` | Google Batch | Spot VM scheduling ([#3530](https://github.com/nextflow-io/nextflow/issues/3530)) |
 
 ## Links
 

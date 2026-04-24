@@ -629,15 +629,15 @@ class TaskConfigTest extends Specification {
         when:
         def process = new ProcessConfig(script)
         def dsl = new ProcessBuilder(process)
-        dsl.hints( 'seqera/machineRequirement.arch': 'arm64', consumableResources: 'my-license=1' )
+        dsl.hints( 'seqera/machineRequirement.arch': 'arm64', consumableResources: ['my-license': 1] )
 
         then:
-        process.get('hints') == ['seqera/machineRequirement.arch': 'arm64', consumableResources: 'my-license=1']
+        process.get('hints') == ['seqera/machineRequirement.arch': 'arm64', consumableResources: ['my-license': 1]]
 
         when:
         def config = process.createTaskConfig()
         then:
-        config.getHints() == ['seqera/machineRequirement.arch': 'arm64', consumableResources: 'my-license=1']
+        config.getHints() == ['seqera/machineRequirement.arch': 'arm64', consumableResources: ['my-license': 1]]
     }
 
     def 'should return empty map when no hints set'() {
@@ -654,15 +654,15 @@ class TaskConfigTest extends Specification {
         when: 'set hints in process definition'
         def process = new ProcessConfig(script)
         def dsl = new ProcessBuilder(process)
-        dsl.hints( 'seqera/machineRequirement.arch': 'arm64', consumableResources: 'my-license' )
+        dsl.hints( 'seqera/machineRequirement.arch': 'arm64', consumableResources: ['my-license': 1] )
         then:
-        process.getHints() == ['seqera/machineRequirement.arch': 'arm64', consumableResources: 'my-license']
+        process.getHints() == ['seqera/machineRequirement.arch': 'arm64', consumableResources: ['my-license': 1]]
 
         when: 'config override replaces the entire map'
         def config = process.createTaskConfig()
-        config.put('hints', ['scheduling.priority': '5'])
+        config.put('hints', ['scheduling.priority': 5])
         then:
-        config.getHints() == ['scheduling.priority': '5']
+        config.getHints() == ['scheduling.priority': 5]
     }
 
     def 'should report error on negative cpus' () {

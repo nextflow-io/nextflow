@@ -198,7 +198,7 @@ public interface ProcessDsl extends DslScope {
 
             [Read more](https://nextflow.io/docs/latest/reference/process.html#hints)
         """)
-        void hints(Map<String,String> value);
+        void hints(Map<String,Object> value);
 
         @Description("""
             The `label` directive allows you to annotate a process with a mnemonic identifier of your choice.

@@ -64,13 +64,13 @@ class HintHelper {
      * @param hints the full hints map from task config
      * @return a map of known hint names (no prefix) to values
      */
-    static Map<String, String> extractSeqeraHints(Map<String, String> hints) {
+    static Map<String, Object> extractSeqeraHints(Map<String, Object> hints) {
         if( !hints )
             return Collections.emptyMap()
 
-        final unprefixed = new LinkedHashMap<String, String>()
-        final prefixed = new LinkedHashMap<String, String>()
-        for( Map.Entry<String, String> entry : hints.entrySet() ) {
+        final unprefixed = new LinkedHashMap<String, Object>()
+        final prefixed = new LinkedHashMap<String, Object>()
+        for( Map.Entry<String, Object> entry : hints.entrySet() ) {
             final key = entry.key
             if( !key )
                 continue
@@ -99,7 +99,7 @@ class HintHelper {
      * @param hints the full hints map from task config
      * @return a new {@link MachineRequirementOpts} with hints overlaid
      */
-    static MachineRequirementOpts overlayHints(MachineRequirementOpts baseOpts, Map<String, String> hints) {
+    static MachineRequirementOpts overlayHints(MachineRequirementOpts baseOpts, Map<String, Object> hints) {
         final seqeraHints = extractSeqeraHints(hints)
         if( !seqeraHints )
             return baseOpts
@@ -111,24 +111,14 @@ class HintHelper {
                 merged.put(field.name, value)
         }
 
-        for( Map.Entry<String, String> entry : seqeraHints.entrySet() ) {
+        for( Map.Entry<String, Object> entry : seqeraHints.entrySet() ) {
             final fieldName = entry.key.substring(MR_PREFIX.length())
             final value = entry.value
             if( value == null ) {
                 merged.remove(fieldName)
                 continue
             }
-            // special-case types that need parsing before the MachineRequirementOpts constructor can coerce them
-            switch( fieldName ) {
-                case 'machineTypes':
-                    merged.put(fieldName, value.split(',').collect { it.trim() })
-                    break
-                case 'diskEncrypted':
-                    merged.put(fieldName, Boolean.parseBoolean(value))
-                    break
-                default:
-                    merged.put(fieldName, value)
-            }
+            merged.put(fieldName, value)
         }
 
         return new MachineRequirementOpts(merged)

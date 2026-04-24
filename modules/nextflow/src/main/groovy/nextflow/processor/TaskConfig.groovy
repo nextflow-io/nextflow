@@ -529,8 +529,8 @@ class TaskConfig extends LazyMap implements Cloneable {
         return CmdLineOptionMap.emptyOption()
     }
 
-    Map<String, String> getHints() {
-        return get('hints') as Map<String, String> ?: Collections.<String,String>emptyMap()
+    Map<String, Object> getHints() {
+        return get('hints') as Map<String, Object> ?: Collections.<String,Object>emptyMap()
     }
 
     Map<String, String> getResourceLabels() {

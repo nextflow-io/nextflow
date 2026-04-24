@@ -230,7 +230,7 @@ public interface TaskConfig {
 
         [Read more](https://nextflow.io/docs/latest/reference/process.html#hints)
     """)
-    Map<String,String> getHints();
+    Map<String,Object> getHints();
 
     @Constant("label")
     @Description("""

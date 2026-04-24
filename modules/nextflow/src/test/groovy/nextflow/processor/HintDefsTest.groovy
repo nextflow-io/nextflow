@@ -28,8 +28,11 @@ class HintDefsTest extends Specification {
     def 'should accept valid hints'() {
         when:
         HintDefs.validateHints([
-            consumableResources: 'my-license=1',
-            'awsbatch/consumableResources': 'a=1,b=2',
+            consumableResources: ['my-license': 1],
+            'awsbatch/consumableResources': ['a': 1, 'b': 2],
+            'seqera/machineRequirement.diskEncrypted': true,
+            'seqera/machineRequirement.machineTypes': ['m5', 'm6i'],
+            'seqera/machineRequirement.priority': 10,
             'seqera/machineRequirement.provisioning': 'spot',
         ])
         then:
@@ -37,9 +40,11 @@ class HintDefsTest extends Specification {
     }
 
     def 'should accept null and empty maps'() {
-        expect:
-        HintDefs.validateHints(null) == null
-        HintDefs.validateHints([:]) == null
+        when:
+        HintDefs.validateHints(null)
+        HintDefs.validateHints([:])
+        then:
+        noExceptionThrown()
     }
 
     def 'should accept null hint value'() {
@@ -47,22 +52,6 @@ class HintDefsTest extends Specification {
         HintDefs.validateHints([consumableResources: null])
         then:
         noExceptionThrown()
-    }
-
-    def 'should reject non-string value'() {
-        when:
-        HintDefs.validateHints([consumableResources: 42])
-        then:
-        def e = thrown(IllegalArgumentException)
-        e.message.contains("Invalid hint value")
-        e.message.contains("consumableResources")
-    }
-
-    def 'should reject list value'() {
-        when:
-        HintDefs.validateHints([consumableResources: ['a', 'b']])
-        then:
-        thrown(IllegalArgumentException)
     }
 
     def 'should reject closure value'() {

@@ -234,7 +234,7 @@ class ProcessBuilder {
      *
      * @param map
      */
-    void hints(Map<String, String> map) {
+    void hints(Map<String, Object> map) {
         if( !map ) return
         HintDefs.validateHints(map)
 

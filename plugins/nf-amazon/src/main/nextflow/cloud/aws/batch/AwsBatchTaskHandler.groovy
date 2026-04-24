@@ -692,33 +692,27 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         KNOWN_HINTS.collect { HINT_PREFIX + it }.sort().join(', ')
 
     @CompileStatic
-    protected ConsumableResourceProperties getConsumableResources(Map<String,String> hints) {
+    protected ConsumableResourceProperties getConsumableResources(Map<String,Object> hints) {
         if( !hints )
             return null
         warnUnknownHints(hints)
         final raw = hints.get(HINT_PREFIX + 'consumableResources') ?: hints.get('consumableResources')
-        if( !raw?.trim() )
+        if( !raw )
             return null
+        if( !(raw instanceof Map) )
+            throw new IllegalArgumentException("Invalid 'consumableResources' hint: expected a map of resource name to quantity")
+        final resourceMap = (Map)raw
         final List<ConsumableResourceRequirement> resourceList = new ArrayList<>()
-        for( final token : raw.tokenize(',') ) {
-            final entry = token.trim()
-            if( !entry )
-                continue
-            final index = entry.indexOf('=')
-            if( index <= 0 || index == entry.length()-1 )
-                throw new IllegalArgumentException("Invalid 'consumableResources' hint entry '${entry}' -- expected 'name=quantity'")
-            final resourceName = entry.substring(0, index).trim()
-            final qtyStr = entry.substring(index+1).trim()
-            final long resourceQuantity
-            try {
-                resourceQuantity = qtyStr.toLong()
-            }
-            catch( NumberFormatException e ) {
-                throw new IllegalArgumentException("Invalid 'consumableResources' hint entry '${entry}' -- quantity must be an integer")
-            }
+        for( Map.Entry entry : resourceMap.entrySet() ) {
+            final resourceName = entry.key?.toString()
+            if( !resourceName )
+                throw new IllegalArgumentException("Invalid 'consumableResources' hint: resource name cannot be empty")
+            final value = entry.value
+            if( !(value instanceof Number) )
+                throw new IllegalArgumentException("Invalid 'consumableResources' hint entry '${resourceName}': quantity must be a number")
             resourceList.add( ConsumableResourceRequirement.builder()
                 .consumableResource(resourceName)
-                .quantity(resourceQuantity)
+                .quantity(((Number)value).longValue())
                 .build() )
         }
         if( !resourceList )
@@ -729,7 +723,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     @CompileStatic
-    protected void warnUnknownHints(Map<String,String> hints) {
+    protected void warnUnknownHints(Map<String,Object> hints) {
         for( final key : hints.keySet() ) {
             if( !key?.startsWith(HINT_PREFIX) )
                 continue

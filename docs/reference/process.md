@@ -844,13 +844,13 @@ The above example produces:
 
 ### hints
 
-The `hints` directive specifies executor-specific hints as key-value pairs. Each executor uses the hints it recognizes and ignores the rest. Hint values must be strings.
+The `hints` directive specifies executor-specific hints as key-value pairs. Each executor uses the hints it recognizes and ignores the rest. Hint values can be any raw value -- numbers, strings, booleans, lists, and maps.
 
 Unprefixed keys are available to **every** executor -- any executor that recognizes the key consumes it. Prefixing a key with an executor name (e.g. `awsbatch/...`) restricts the hint to that executor only. For example:
 
 ```nextflow
 process hello {
-    hints consumableResources: 'my-license=1'
+    hints consumableResources: ['my-license': 1]
 
     script:
     """
@@ -862,7 +862,7 @@ process hello {
 To restrict a hint to a single executor, prefix the key with the executor name:
 
 ```nextflow
-    hints 'awsbatch/consumableResources': 'my-license=1'
+    hints 'awsbatch/consumableResources': ['my-license': 1]
 ```
 
 When the same hint is provided both unprefixed and with a matching executor prefix, the prefixed form takes precedence for that executor.

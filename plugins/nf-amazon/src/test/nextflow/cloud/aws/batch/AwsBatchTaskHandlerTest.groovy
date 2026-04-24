@@ -605,7 +605,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         given: 'hints set through the real DSL → ProcessConfig → TaskConfig path'
         def process = new ProcessConfig(Mock(BaseScript))
         new nextflow.script.dsl.ProcessBuilder(process).hints(
-            'awsbatch/consumableResources': 'license-a=1,license-b=2',
+            'awsbatch/consumableResources': ['license-a': 1, 'license-b': 2],
             foo: 'bar'
         )
         def taskConfig = process.createTaskConfig()
@@ -641,8 +641,8 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         when:
         def result = handler.getConsumableResources([
-            consumableResources: 'legacy=9',
-            'awsbatch/consumableResources': 'license-a=1,license-b=2',
+            consumableResources: ['legacy': 9],
+            'awsbatch/consumableResources': ['license-a': 1, 'license-b': 2],
         ])
         then:
         result.consumableResourceList().size() == 2
@@ -660,50 +660,25 @@ class AwsBatchTaskHandlerTest extends Specification {
         handler.getConsumableResources(null) == null
         handler.getConsumableResources([:]) == null
         handler.getConsumableResources([foo: 'bar']) == null
-        handler.getConsumableResources([consumableResources: '']) == null
-        handler.getConsumableResources([consumableResources: '   ']) == null
+        handler.getConsumableResources([consumableResources: null]) == null
+        handler.getConsumableResources([consumableResources: [:]]) == null
     }
 
-    def 'should tolerate whitespace in consumableResources entries' () {
+    def 'should fail with a clear error on invalid consumableResources value' () {
         given:
         def handler = new AwsBatchTaskHandler()
 
-        when:
-        def result = handler.getConsumableResources([consumableResources: ' license-a = 1 , license-b = 2 '])
-        then:
-        result.consumableResourceList().size() == 2
-        result.consumableResourceList()[0].consumableResource() == 'license-a'
-        result.consumableResourceList()[0].quantity() == 1
-        result.consumableResourceList()[1].consumableResource() == 'license-b'
-        result.consumableResourceList()[1].quantity() == 2
-    }
-
-    def 'should fail with a clear error on invalid consumableResources entry' () {
-        given:
-        def handler = new AwsBatchTaskHandler()
-
-        when:
-        handler.getConsumableResources([consumableResources: 'bad'])
+        when: 'value is a string instead of a map'
+        handler.getConsumableResources([consumableResources: 'bad-string'])
         then:
         def e = thrown(IllegalArgumentException)
-        e.message.contains("'bad'")
-        e.message.contains("name=quantity")
+        e.message.contains("expected a map")
 
-        when:
-        handler.getConsumableResources([consumableResources: 'license-a=not-a-number'])
+        when: 'quantity is not a number'
+        handler.getConsumableResources([consumableResources: ['license-a': 'not-a-number']])
         then:
         def e2 = thrown(IllegalArgumentException)
-        e2.message.contains("quantity must be an integer")
-
-        when:
-        handler.getConsumableResources([consumableResources: '=1'])
-        then:
-        thrown(IllegalArgumentException)
-
-        when:
-        handler.getConsumableResources([consumableResources: 'license-a='])
-        then:
-        thrown(IllegalArgumentException)
+        e2.message.contains("quantity must be a number")
     }
 
     def 'should create a fargate job definition' () {
