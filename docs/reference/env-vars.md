@@ -126,7 +126,7 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_FUSION_TRACE`
 : :::{versionadded} 26.04.0
   :::
-: When set to `true`, collect task resource metrics (CPU, memory, I/O) from the Fusion trace file (`.fusion/trace.json`) produced in the task work directory, replacing the metrics collected by the default bash command-trace wrapper. Requires Fusion to be enabled. GPU metrics from Fusion are always collected regardless of this setting.
+: When set to `true`, collect task resource metrics (CPU, memory, I/O) from the Fusion trace file (`.fusion/trace.json`) produced in the task work directory, replacing the metrics collected by the default bash command-trace wrapper. Requires Fusion to be enabled. GPU metrics from Fusion are always collected regardless of this setting. Defaults to `false`.
 
 `NXF_HOME`
 : Nextflow home directory (default: `$HOME/.nextflow`).
