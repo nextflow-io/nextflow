@@ -15,9 +15,11 @@
  */
 package nextflow.cloud.google.batch
 
+import io.seqera.cloudinfo.api.CloudPrice
+import io.seqera.cloudinfo.client.CloudInfoClient
+
 import java.math.RoundingMode
 
-import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.transform.Immutable
 import groovy.transform.Memoized
@@ -41,8 +43,6 @@ import nextflow.util.MemoryUnit
 class GoogleBatchMachineTypeSelector {
 
     static GoogleBatchMachineTypeSelector INSTANCE = new GoogleBatchMachineTypeSelector()
-
-    private static final CLOUD_INFO_API = "https://cloudinfo.seqera.io/api/v1"
 
     /*
      * Some families CPUs are faster so this is a cost correction factor
@@ -100,6 +100,12 @@ class GoogleBatchMachineTypeSelector {
      * Families that support local SSD with 'lssd' suffix
      */
     private static final List<String> PARTIAL_LOCAL_SSD_SUPPORT_FAMILIES = ['c3-*', 'c3a-*', 'c3d-*', 'c4-*', 'c4a-*', 'c4d-*', 'h4d-*', 'z3-*']
+
+    private CloudInfoClient cloudInfo
+
+    GoogleBatchMachineTypeSelector(){
+        cloudInfo = CloudInfoClient.create()
+    }
 
     @Immutable
     static class MachineType {
@@ -170,16 +176,14 @@ class GoogleBatchMachineTypeSelector {
     @Memoized
     protected List<MachineType> getAvailableMachineTypes(String region, boolean spot) {
         final priceModel = spot ? PriceModel.spot : PriceModel.standard
-        final json = "${CLOUD_INFO_API}/providers/google/services/compute/regions/${region}/products".toURL().text
-        final data = new JsonSlurper().parseText(json)
-        final products = data['products'] as List<Map>
-        final averageSpotPrice = (List<Map> prices) -> prices ? prices.collect{it.price as float}.average() as float : 0.0f
+        final products = cloudInfo.getProducts('google', region)
+        final averageSpotPrice = (List<CloudPrice> prices) -> prices ? prices.collect{it.price as float}.average() as float : 0.0f
 
         products.collect {
             new MachineType(
                     type: it.type,
                     family: it.type.toString().split('-')[0],
-                    spotPrice: averageSpotPrice(it.spotPrice as List<Map>),
+                    spotPrice: averageSpotPrice(it.spotPrice as List<CloudPrice>),
                     onDemandPrice: it.onDemandPrice as float,
                     cpusPerVm: it.cpusPerVm as int,
                     memPerVm: it.memPerVm as int,
