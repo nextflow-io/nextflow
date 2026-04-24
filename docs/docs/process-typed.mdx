@@ -98,7 +98,6 @@ Record inputs can be declared using a record type:
 process fastqc {
     input:
     sample: Sample
-    }
 
     script:
     """
@@ -106,6 +105,7 @@ process fastqc {
     echo 'fastq: ${sample.fastq}'
     """
 }
+
 record Sample {
     id: String
     fastq: Path
