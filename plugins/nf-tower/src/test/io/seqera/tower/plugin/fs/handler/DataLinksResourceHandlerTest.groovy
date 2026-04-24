@@ -22,6 +22,7 @@ import java.nio.file.AccessMode
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
+import io.seqera.tower.model.DataLinkCredentials
 import io.seqera.tower.model.DataLinkDto
 import io.seqera.tower.model.DataLinkItem
 import io.seqera.tower.model.DataLinkItemType
@@ -40,22 +41,26 @@ class DataLinksResourceHandlerTest extends Specification {
     private HttpClient http = Mock(HttpClient)
     private DataLinksResourceHandler handler = new DataLinksResourceHandler(fs, client, http)
 
-    private static DataLinkDto dl(String id, String name, DataLinkProvider p) {
-        def d = new DataLinkDto(); d.id = id; d.name = name; d.provider = p; return d
+    private static DataLinkDto dl(String id, String name, DataLinkProvider p, String credId = null) {
+        def d = new DataLinkDto()
+        d.id = id; d.name = name; d.provider = p
+        if (credId) {
+            def c = new DataLinkCredentials(); c.id = credId
+            d.credentials = [c]
+        }
+        return d
     }
 
     private static DataLinkItem item(String name, DataLinkItemType t, long size) {
         def i = new DataLinkItem(); i.name = name; i.type = t; i.size = size; return i
     }
 
-    /** Single-page {@link PagedDataLinkContent} for tests. */
     private static PagedDataLinkContent pagedContent(List<DataLinkItem> items, String originalPath = null) {
         return new PagedDataLinkContent(originalPath, items, null, new PagedDataLinkContent.PageFetcher() {
             Map<String, Object> fetch(String t) { throw new IllegalStateException('no more pages') }
         })
     }
 
-    /** Iterator over a fixed list — what {@code client.listDataLinks(...)} is expected to return. */
     private static Iterator<DataLinkDto> iter(List<DataLinkDto> list) { list.iterator() }
 
     private static List<Path> asList(Iterable<Path> iterable) {
@@ -83,10 +88,29 @@ class DataLinksResourceHandlerTest extends Specification {
 
         then:
         1 * fs.resolveWorkspaceId('acme', 'research') >> 10L
-        1 * client.listDataLinks(10L) >> iter([dl('dl-1', 'inputs', DataLinkProvider.AWS)])
-        1 * client.getDownloadUrl('dl-1', 'reads/a.fq', 10L) >> urlResp
+        1 * client.getDataLink(10L, 'aws', 'inputs') >> dl('dl-1', 'inputs', DataLinkProvider.AWS)
+        1 * client.getDownloadUrl('dl-1', 'reads/a.fq', 10L, null) >> urlResp
         1 * http.send(_, _) >> httpResp
         stream === signedBody
+    }
+
+    def "newInputStream forwards credentialsId from the data-link's credentials"() {
+        given:
+        def path = new SeqeraPath(fs, 'seqera://acme/research/data-links/aws/inputs/reads/a.fq')
+        def urlResp = new DataLinkDownloadUrlResponse(); urlResp.url = 'https://signed/a'
+        def httpResp = Mock(HttpResponse) {
+            statusCode() >> 200
+            body() >> new ByteArrayInputStream('x'.bytes)
+        }
+
+        when:
+        handler.newInputStream(path)
+
+        then:
+        1 * fs.resolveWorkspaceId(_, _) >> 10L
+        1 * client.getDataLink(10L, 'aws', 'inputs') >> dl('dl-1', 'inputs', DataLinkProvider.AWS, 'cred-42')
+        1 * client.getDownloadUrl('dl-1', 'reads/a.fq', 10L, 'cred-42') >> urlResp
+        1 * http.send(_, _) >> httpResp
     }
 
     def "newInputStream throws NoSuchFileException when data-link unknown"() {
@@ -98,7 +122,7 @@ class DataLinksResourceHandlerTest extends Specification {
 
         then:
         1 * fs.resolveWorkspaceId('acme', 'research') >> 10L
-        1 * client.listDataLinks(10L) >> iter([dl('dl-1', 'inputs', DataLinkProvider.AWS)])
+        1 * client.getDataLink(10L, 'aws', 'unknown') >> { throw new NoSuchFileException("data-link not found") }
         thrown(NoSuchFileException)
     }
 
@@ -127,8 +151,8 @@ class DataLinksResourceHandlerTest extends Specification {
 
         then:
         1 * fs.resolveWorkspaceId(_, _) >> 10L
-        1 * client.listDataLinks(10L) >> iter([dl('dl-1', 'inputs', DataLinkProvider.AWS)])
-        1 * client.getDownloadUrl('dl-1', 'reads/a.fq', 10L) >> urlResp
+        1 * client.getDataLink(10L, 'aws', 'inputs') >> dl('dl-1', 'inputs', DataLinkProvider.AWS)
+        1 * client.getDownloadUrl('dl-1', 'reads/a.fq', 10L, null) >> urlResp
         1 * http.send(_, _) >> httpResp
         thrown(IOException)
     }
@@ -146,12 +170,8 @@ class DataLinksResourceHandlerTest extends Specification {
 
         then:
         1 * fs.resolveWorkspaceId('acme', 'research') >> 10L
-        1 * client.listDataLinks(10L) >> iter([
-                dl('dl-1', 'a', DataLinkProvider.AWS),
-                dl('dl-2', 'b', DataLinkProvider.GOOGLE),
-                dl('dl-3', 'c', DataLinkProvider.AWS)
-        ])
-        paths*.toString().sort() == [
+        1 * client.getDataLinkProviders(10L) >> (['aws', 'google'] as Set)
+        paths*.toString() == [
                 'seqera://acme/research/data-links/aws',
                 'seqera://acme/research/data-links/google'
         ]
@@ -177,7 +197,7 @@ class DataLinksResourceHandlerTest extends Specification {
         ]
     }
 
-    def "list at data-link root returns top-level objects"() {
+    def "list at data-link root returns top-level objects with cached attributes"() {
         given:
         def path = new SeqeraPath(fs, 'seqera://acme/research/data-links/aws/inputs')
 
@@ -186,8 +206,8 @@ class DataLinksResourceHandlerTest extends Specification {
 
         then:
         1 * fs.resolveWorkspaceId(_, _) >> 10L
-        1 * client.listDataLinks(10L) >> iter([dl('dl-1', 'inputs', DataLinkProvider.AWS)])
-        1 * client.getContent('dl-1', '', 10L) >> pagedContent([
+        1 * client.getDataLink(10L, 'aws', 'inputs') >> dl('dl-1', 'inputs', DataLinkProvider.AWS)
+        1 * client.getContent('dl-1', '', 10L, null) >> pagedContent([
                 item('reads', DataLinkItemType.FOLDER, 0),
                 item('samplesheet.csv', DataLinkItemType.FILE, 42)
         ])
@@ -195,6 +215,23 @@ class DataLinksResourceHandlerTest extends Specification {
                 'seqera://acme/research/data-links/aws/inputs/reads',
                 'seqera://acme/research/data-links/aws/inputs/samplesheet.csv'
         ]
+        // Attributes attached without follow-up API calls
+        (paths[0] as SeqeraPath).cachedAttributes.directory
+        (paths[1] as SeqeraPath).cachedAttributes.regularFile
+        (paths[1] as SeqeraPath).cachedAttributes.size() == 42L
+    }
+
+    def "list forwards credentialsId to getContent when data-link has credentials"() {
+        given:
+        def path = new SeqeraPath(fs, 'seqera://acme/research/data-links/aws/inputs')
+
+        when:
+        asList(handler.list(path))
+
+        then:
+        1 * fs.resolveWorkspaceId(_, _) >> 10L
+        1 * client.getDataLink(10L, 'aws', 'inputs') >> dl('dl-1', 'inputs', DataLinkProvider.AWS, 'cred-42')
+        1 * client.getContent('dl-1', '', 10L, 'cred-42') >> pagedContent([])
     }
 
     def "list at deep sub-path browses the correct sub-path"() {
@@ -206,8 +243,8 @@ class DataLinksResourceHandlerTest extends Specification {
 
         then:
         1 * fs.resolveWorkspaceId(_, _) >> 10L
-        1 * client.listDataLinks(10L) >> iter([dl('dl-1', 'inputs', DataLinkProvider.AWS)])
-        1 * client.getContent('dl-1', 'reads', 10L) >> pagedContent([
+        1 * client.getDataLink(10L, 'aws', 'inputs') >> dl('dl-1', 'inputs', DataLinkProvider.AWS)
+        1 * client.getContent('dl-1', 'reads', 10L, null) >> pagedContent([
                 item('a.fq', DataLinkItemType.FILE, 1),
                 item('b.fq', DataLinkItemType.FILE, 2)
         ])
@@ -243,7 +280,7 @@ class DataLinksResourceHandlerTest extends Specification {
 
         then:
         1 * fs.resolveWorkspaceId(_, _) >> 10L
-        1 * client.listDataLinks(10L) >> iter([dl('dl-1', 'inputs', DataLinkProvider.AWS)])
+        1 * client.getDataLink(10L, 'aws', 'inputs') >> dl('dl-1', 'inputs', DataLinkProvider.AWS)
         attr.directory
     }
 
@@ -256,8 +293,8 @@ class DataLinksResourceHandlerTest extends Specification {
 
         then:
         1 * fs.resolveWorkspaceId(_, _) >> 10L
-        1 * client.listDataLinks(10L) >> iter([dl('dl-1', 'inputs', DataLinkProvider.AWS)])
-        1 * client.getContent('dl-1', 'reads/a.fq', 10L) >> pagedContent([
+        1 * client.getDataLink(10L, 'aws', 'inputs') >> dl('dl-1', 'inputs', DataLinkProvider.AWS)
+        1 * client.getContent('dl-1', 'reads/a.fq', 10L, null) >> pagedContent([
                 item('a.fq', DataLinkItemType.FILE, 123)
         ])
         attr.regularFile
@@ -273,11 +310,27 @@ class DataLinksResourceHandlerTest extends Specification {
 
         then:
         1 * fs.resolveWorkspaceId(_, _) >> 10L
-        1 * client.listDataLinks(10L) >> iter([dl('dl-1', 'inputs', DataLinkProvider.AWS)])
-        1 * client.getContent('dl-1', 'reads', 10L) >> pagedContent(
+        1 * client.getDataLink(10L, 'aws', 'inputs') >> dl('dl-1', 'inputs', DataLinkProvider.AWS)
+        1 * client.getContent('dl-1', 'reads', 10L, null) >> pagedContent(
                 [item('a.fq', DataLinkItemType.FILE, 1), item('b.fq', DataLinkItemType.FILE, 2)],
                 'reads/')
         attr.directory
+    }
+
+    def "readAttributes short-circuits when path has cached attributes (no API call)"() {
+        given:
+        def attrs = new io.seqera.tower.plugin.fs.SeqeraFileAttributes(99L, java.time.Instant.EPOCH, java.time.Instant.EPOCH, 'key')
+        def parent = new SeqeraPath(fs, 'seqera://acme/research/data-links/aws/inputs/reads')
+        def path = parent.resolveWithAttributes('a.fq', attrs)
+
+        when:
+        def got = handler.readAttributes(path)
+
+        then:
+        0 * fs.resolveWorkspaceId(_, _)
+        0 * client.getDataLink(_, _, _)
+        0 * client.getContent(_, _, _, _)
+        got === attrs
     }
 
     // =====================================================
@@ -307,7 +360,7 @@ class DataLinksResourceHandlerTest extends Specification {
 
         then:
         1 * fs.resolveWorkspaceId(_, _) >> 10L
-        1 * client.listDataLinks(10L) >> iter([dl('dl-1', 'inputs', DataLinkProvider.AWS)])
+        1 * client.getDataLink(10L, 'aws', 'ghost') >> { throw new NoSuchFileException("not found") }
         thrown(NoSuchFileException)
     }
 
@@ -320,8 +373,8 @@ class DataLinksResourceHandlerTest extends Specification {
 
         then:
         1 * fs.resolveWorkspaceId(_, _) >> 10L
-        1 * client.listDataLinks(10L) >> iter([dl('dl-1', 'inputs', DataLinkProvider.AWS)])
-        1 * client.getContent('dl-1', 'does/not/exist', 10L) >> pagedContent([])
+        1 * client.getDataLink(10L, 'aws', 'inputs') >> dl('dl-1', 'inputs', DataLinkProvider.AWS)
+        1 * client.getContent('dl-1', 'does/not/exist', 10L, null) >> pagedContent([])
         thrown(NoSuchFileException)
     }
 

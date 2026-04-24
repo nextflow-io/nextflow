@@ -130,6 +130,8 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         if (!BasicFileAttributes.isAssignableFrom(type))
             throw new UnsupportedOperationException("Attribute type not supported: $type")
         final sp = toSeqeraPath(path)
+        if (sp.cachedAttributes)
+            return (A) sp.cachedAttributes
         final fs = sp.getFileSystem() as SeqeraFileSystem
         final d = sp.depth()
         if (d < 3) {

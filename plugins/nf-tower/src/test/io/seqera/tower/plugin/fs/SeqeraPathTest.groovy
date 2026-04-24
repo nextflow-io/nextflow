@@ -610,6 +610,35 @@ class SeqeraPathTest extends Specification {
         p.trail == ['aws', 'inputs', 'reads', 'a.fq']
     }
 
+    // ---- cached attributes ----
+
+    def "cachedAttributes is null by default and preserved by resolveWithAttributes"() {
+        given:
+        def fs = mockFs()
+        def parent = new SeqeraPath(fs, 'seqera://acme/research/data-links/aws/inputs')
+        def attrs = new SeqeraFileAttributes(42L, java.time.Instant.EPOCH, java.time.Instant.EPOCH, 'k')
+
+        when:
+        def child = parent.resolveWithAttributes('reads', attrs)
+
+        then:
+        parent.cachedAttributes == null
+        child.cachedAttributes === attrs
+        child.toString() == 'seqera://acme/research/data-links/aws/inputs/reads'
+    }
+
+    def "cachedAttributes does not affect equals/hashCode"() {
+        given:
+        def fs = mockFs()
+        def attrs = new SeqeraFileAttributes(true)
+        def withAttrs = new SeqeraPath(fs, 'seqera://acme/research/datasets').resolveWithAttributes('samples', attrs)
+        def withoutAttrs = new SeqeraPath(fs, 'seqera://acme/research/datasets/samples')
+
+        expect:
+        withAttrs == withoutAttrs
+        withAttrs.hashCode() == withoutAttrs.hashCode()
+    }
+
     def "iterator on deep data-link path returns all segments"() {
         given:
         def fs = mockFs()

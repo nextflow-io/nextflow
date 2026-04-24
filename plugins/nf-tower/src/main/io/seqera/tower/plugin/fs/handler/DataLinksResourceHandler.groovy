@@ -80,12 +80,7 @@ class DataLinksResourceHandler implements ResourceTypeHandler {
         if (trail.isEmpty()) {
             // data-links/ → distinct providers in use (sorted). Iterate the stream,
             // collect distinct provider names — small output.
-            final providers = new TreeSet<String>()
-            final Iterator<DataLinkDto> it = client.listDataLinks(workspaceId)
-            while (it.hasNext()) {
-                final p = it.next().provider?.toString()
-                if (p) providers.add(p)
-            }
+            final providers = client.getDataLinkProviders(workspaceId)
             return providers.collect { String p -> dir.resolve(p) as Path }
         }
         if (trail.size() == 1) {
@@ -105,12 +100,15 @@ class DataLinksResourceHandler implements ResourceTypeHandler {
         // Content can be very large, so we stream it lazily.
         final dl = client.getDataLink(workspaceId, trail[0], trail[1])
         final subPath = trail.size() > 2 ? trail.subList(2, trail.size()).join('/') : ''
-        final content = client.getContent(dl.id, subPath, workspaceId)
+        log.debug("Listing files for $dl.name path $subPath")
+        final content = client.getContent(dl.id, subPath, workspaceId, credentialsIdOf(dl))
         return new PathMappingIterable(content, dir)
     }
 
     @Override
     SeqeraFileAttributes readAttributes(SeqeraPath p) throws IOException {
+        // Short-circuit: attributes attached when this path was produced by a listing
+        if (p.cachedAttributes) return p.cachedAttributes
         final workspaceId = fs.resolveWorkspaceId(p.org, p.workspace)
         final trail = p.trail
         if (trail.size() < 2) {
@@ -120,7 +118,8 @@ class DataLinksResourceHandler implements ResourceTypeHandler {
         final dl = client.getDataLink(workspaceId, trail[0], trail[1])
         if (trail.size() == 2) return new SeqeraFileAttributes(true) // data-link root
         final subPath = trail.subList(2, trail.size()).join('/')
-        final content = client.getContent(dl.id, subPath, workspaceId)
+        log.debug("Reading attributes for $p")
+        final content = client.getContent(dl.id, subPath, workspaceId, credentialsIdOf(dl))
         return attributesFor(content, subPath, p)
     }
 
@@ -131,10 +130,16 @@ class DataLinksResourceHandler implements ResourceTypeHandler {
         final workspaceId = fs.resolveWorkspaceId(p.org, p.workspace)
         final dl = client.getDataLink(workspaceId, p.trail[0], p.trail[1])
         final subPath = p.trail.subList(2, p.trail.size()).join('/')
-        final urlResp = client.getDownloadUrl(dl.id, subPath, workspaceId)
+        final urlResp = client.getDownloadUrl(dl.id, subPath, workspaceId, credentialsIdOf(dl))
         if (!urlResp.url)
             throw new NoSuchFileException(p.toString(), null, "Platform returned no download URL")
         return fetchSignedUrl(urlResp.url)
+    }
+
+    /** First credentials entry on the data-link (or null if none). */
+    private static String credentialsIdOf(DataLinkDto dl) {
+        final creds = dl?.credentials
+        return (creds && !creds.isEmpty()) ? creds[0].id : null
     }
 
     @Override
@@ -187,7 +192,9 @@ class DataLinksResourceHandler implements ResourceTypeHandler {
     /**
      * Lazy {@link Iterable} that maps each {@link DataLinkItem} from a
      * {@link PagedDataLinkContent} to a child {@link SeqeraPath} under
-     * {@code parent}. Pages are fetched on demand as the iterator advances.
+     * {@code parent}. Each produced path carries cached attributes built from the
+     * item, so a follow-up {@code readAttributes()} call does not re-browse the
+     * Platform. Pages are fetched on demand as the iterator advances.
      */
     @CompileStatic
     private static class PathMappingIterable implements Iterable<Path> {
@@ -204,8 +211,17 @@ class DataLinksResourceHandler implements ResourceTypeHandler {
             final Iterator<DataLinkItem> inner = content.iterator()
             return new Iterator<Path>() {
                 @Override boolean hasNext() { inner.hasNext() }
-                @Override Path next() { parent.resolve(inner.next().name) as Path }
+                @Override Path next() {
+                    final item = inner.next()
+                    return parent.resolveWithAttributes(item.name, attributesFor(item)) as Path
+                }
             }
+        }
+
+        private static SeqeraFileAttributes attributesFor(DataLinkItem item) {
+            if (item.type == DataLinkItemType.FILE)
+                return new SeqeraFileAttributes(item.size ?: 0L, Instant.EPOCH, Instant.EPOCH, item.name)
+            return new SeqeraFileAttributes(true)
         }
     }
 }

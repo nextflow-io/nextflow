@@ -2,6 +2,15 @@
 
 **Branch**: `260422-seqera-datalinks-fs` | **Spec**: [spec.md](spec.md) | **Plan**: [plan.md](plan.md)
 
+> **Status**: This task checklist was the initial implementation recipe. The shipped code diverges in several specifics discovered during integration — the canonical design now lives in [spec.md](spec.md) and [plan.md](plan.md). Notable refinements vs the tasks below:
+>
+> - Endpoints: browse uses `/data-links/{id}/browse` and `/data-links/{id}/browse/{path}` (not `/content`); signed URLs come from `/data-links/{id}/generate-download-url?filePath=…` (not `/download`).
+> - Pagination is exposed as lazy iterators: `listDataLinks` → `Iterator<DataLinkDto>`; `getContent` → `PagedDataLinkContent` (eager first page, lazy successors).
+> - `ResourceTypeHandler.list` returns `Iterable<Path>` (not `List<Path>`) so directory streams never materialize.
+> - `SeqeraPath` gained `cachedAttributes` and `resolveWithAttributes(name, attrs)` so `readAttributes` on a child of a listing short-circuits without an API call. Dataset `@version` parsing moved into `DatasetsResourceHandler`.
+> - Data-link `credentialsId` is forwarded on browse and download-URL calls from `DataLinkDto.credentials[0].id`.
+> - `SeqeraDataLinkClient` adds `getDataLink(ws, provider, name)` (memoized, server-side `search=` filter) and `getDataLinkProviders(ws)`.
+
 > **For agentic workers**: execute tasks in order. Each task is self-contained and ends with a commit step. Do not skip TDD steps — write the test first, watch it fail, then make it pass. All commits use `git commit -s`.
 
 Tests use Spock with `Mock(TowerClient)` + `groovy.json.JsonOutput` fixtures — matching the style of `SeqeraDatasetClientTest` and `SeqeraFileSystemProviderTest`. No WireMock, no real HTTP.

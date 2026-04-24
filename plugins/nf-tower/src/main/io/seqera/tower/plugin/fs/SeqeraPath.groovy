@@ -57,11 +57,19 @@ class SeqeraPath implements Path {
     private final List<String> trail
     /** non-null only for relative paths produced by {@link #relativize(Path)} */
     private final String relPath
+    /**
+     * Optional attributes attached when this path was produced by a directory listing,
+     * so {@code readAttributes()} can return them without a follow-up API call.
+     * Not part of the URI — does not affect {@link #equals}, {@link #hashCode},
+     * {@link #toString}, {@link #toUri}, or propagation via {@link #resolve} / {@link #getParent}.
+     */
+    private final SeqeraFileAttributes cachedAttributes
 
     /** Parse a {@code seqera://} URI string. */
     SeqeraPath(SeqeraFileSystem fs, String uriString) {
         this.fs = fs
         this.relPath = null
+        this.cachedAttributes = null
         if (!uriString.startsWith(PROTOCOL))
             throw new InvalidPathException(uriString, "Not a seqera:// URI")
         final withoutScheme = uriString.substring(PROTOCOL.length())
@@ -79,6 +87,11 @@ class SeqeraPath implements Path {
 
     /** Programmatic absolute-path constructor. */
     SeqeraPath(SeqeraFileSystem fs, String org, String workspace, String resourceType, List<String> trail) {
+        this(fs, org, workspace, resourceType, trail, null)
+    }
+
+    /** Programmatic absolute-path constructor with pre-resolved attributes. */
+    SeqeraPath(SeqeraFileSystem fs, String org, String workspace, String resourceType, List<String> trail, SeqeraFileAttributes cachedAttributes) {
         this.fs = fs
         this.relPath = null
         this.org = org
@@ -87,6 +100,7 @@ class SeqeraPath implements Path {
         this.trail = trail != null
                 ? Collections.unmodifiableList(new ArrayList<String>(trail))
                 : Collections.<String>emptyList()
+        this.cachedAttributes = cachedAttributes
         validatePath(null)
     }
 
@@ -98,6 +112,7 @@ class SeqeraPath implements Path {
         this.workspace = null
         this.resourceType = null
         this.trail = Collections.<String>emptyList()
+        this.cachedAttributes = null
     }
 
     private void validatePath(String original) {
@@ -149,6 +164,17 @@ class SeqeraPath implements Path {
     String getWorkspace() { workspace }
     String getResourceType() { resourceType }
     List<String> getTrail() { trail }
+    SeqeraFileAttributes getCachedAttributes() { cachedAttributes }
+
+    /**
+     * Resolve a child segment and attach the given attributes to the resulting path.
+     * Used by directory-listing code paths so follow-up {@code readAttributes()} calls
+     * don't re-fetch information that was already available from the listing response.
+     */
+    SeqeraPath resolveWithAttributes(String segment, SeqeraFileAttributes attrs) {
+        final child = resolve(segment) as SeqeraPath
+        return new SeqeraPath(child.fs, child.org, child.workspace, child.resourceType, child.trail, attrs)
+    }
 
     int depth() {
         if (resourceType) return 3 + trail.size()

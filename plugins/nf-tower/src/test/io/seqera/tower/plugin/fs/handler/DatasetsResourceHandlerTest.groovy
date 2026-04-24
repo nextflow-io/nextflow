@@ -188,6 +188,38 @@ class DatasetsResourceHandlerTest extends Specification {
         attr.fileKey() == 'd1'
     }
 
+    def "list attaches cached attributes to every child path"() {
+        given:
+        def path = new SeqeraPath(fs, 'seqera://acme/research/datasets')
+        def now = java.time.OffsetDateTime.parse('2026-03-01T12:00:00Z')
+        def d = ds('d1', 'samples'); d.dateCreated = now; d.lastUpdated = now
+
+        when:
+        def paths = handler.list(path).toList()
+
+        then:
+        1 * fs.resolveWorkspaceId(_, _) >> 10L
+        1 * client.listDatasets(10L) >> [d]
+        def cached = (paths[0] as SeqeraPath).cachedAttributes
+        cached != null
+        cached.regularFile
+        cached.fileKey() == 'd1'
+    }
+
+    def "readAttributes short-circuits when the path has cached attributes"() {
+        given:
+        def attrs = new io.seqera.tower.plugin.fs.SeqeraFileAttributes(0L, java.time.Instant.EPOCH, java.time.Instant.EPOCH, 'key')
+        def path = new SeqeraPath(fs, 'seqera://acme/research/datasets').resolveWithAttributes('samples', attrs)
+
+        when:
+        def got = handler.readAttributes(path)
+
+        then:
+        0 * fs.resolveWorkspaceId(_, _)
+        0 * client.listDatasets(_)
+        got === attrs
+    }
+
     def "checkAccess rejects WRITE"() {
         given:
         def path = new SeqeraPath(fs, 'seqera://acme/research/datasets/samples')

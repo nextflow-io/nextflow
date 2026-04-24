@@ -9,7 +9,7 @@ Technical Story: Extend the `seqera://` NIO filesystem (introduced by [20260310-
 
 ## Summary
 
-Add a second resource type (`data-links`) to the existing `seqera://` filesystem in the `nf-tower` plugin. Paths of the form `seqera://<org>/<ws>/data-links/<provider>/<name>/<sub-path>` resolve to files and directories inside a Platform-managed data-link. Listings and attribute queries are served by the Platform's `/data-links/{id}/content` endpoint; byte reads go through pre-signed URLs returned by `/data-links/{id}/download`. Only the Seqera access token is required — no AWS/GCP/Azure credentials, no cloud SDK dependency.
+Add a second resource type (`data-links`) to the existing `seqera://` filesystem in the `nf-tower` plugin. Paths of the form `seqera://<org>/<ws>/data-links/<provider>/<name>/<sub-path>` resolve to files and directories inside a Platform-managed data-link. Listings and attribute queries are served by the Platform's `/data-links/{id}/browse[/path]` endpoints; byte reads go through pre-signed URLs returned by `/data-links/{id}/generate-download-url` and fetched with a plain JDK `HttpClient`. Only the Seqera access token is required — no AWS/GCP/Azure credentials, no cloud SDK dependency.
 
 As part of this change, the existing dataset-specific logic in `SeqeraFileSystemProvider`, `SeqeraFileSystem`, and `SeqeraPath` is extracted into a `ResourceTypeHandler` abstraction, so the two resource types coexist behind a common contract.
 
@@ -53,12 +53,12 @@ For each read, call the Platform to obtain short-lived AWS/GCP/Azure credentials
 
 ### Option 2: Pre-signed URL + direct HTTPS fetch
 
-Call the Platform's `GET /data-links/{id}/download?path=<sub>` endpoint to obtain a pre-signed URL; stream bytes through the existing `TowerClient` / `HxClient` HTTPS path.
+Call the Platform's `GET /data-links/{id}/generate-download-url?filePath=<sub>` endpoint to obtain a pre-signed URL; stream bytes through a standalone HTTPS client.
 
 - Good, because there is no cloud SDK dependency — all I/O is generic HTTPS.
 - Good, because the Platform is the only credential surface (user token goes in, signed URL comes out; credentials never cross our process boundary as a distinct object).
 - Good, because it uniformly supports every provider the Platform supports — now and in the future — with no per-provider code.
-- Good, because `TowerClient.sendStreamingRequest()` already exists and has the retry/backoff semantics we want.
+- Good, because the existing `TowerClient` handles the Platform-side call (`/generate-download-url`) with retry/backoff, and the cloud-side fetch is a one-shot HTTPS GET through a standalone `java.net.http.HttpClient`.
 - Bad, because pre-signed URLs have time windows; a very long read can outlive its URL. Acceptable: Nextflow task retry handles the failure.
 - Bad, because range reads / multi-part reads are not implemented in this iteration. Acceptable: datasets are already single-shot reads and the pattern matches.
 
@@ -76,7 +76,7 @@ See above.
 
 ## Solution or decision outcome
 
-Option 2 — pre-signed URL + direct HTTPS fetch. All data-link byte I/O goes through the Platform's `/download` endpoint and `TowerClient.sendStreamingRequest()`. The plugin never touches a cloud SDK and never holds a long-lived cloud credential.
+Option 2 — pre-signed URL + direct HTTPS fetch. The plugin calls the Platform's `/generate-download-url` endpoint through `TowerClient.sendApiRequest()` to obtain a pre-signed URL, then fetches that URL with a plain JDK `HttpClient` (no Seqera `Authorization` header). The plugin never touches a cloud SDK and never holds a long-lived cloud credential.
 
 Extend the `fs/` package with a real `ResourceTypeHandler` abstraction. Extract the existing dataset logic into a `DatasetsResourceHandler`. Add `DataLinksResourceHandler` as the second implementation.
 
@@ -147,12 +147,16 @@ interface ResourceTypeHandler {
 
 ### API Usage Summary (Data-Links)
 
-| NIO operation                                                  | Platform endpoint                          | Notes                                                                           |
-| -------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------- |
-| list data-links in workspace (resolution + depth-4/5 listings) | `GET /data-links?workspaceId=X`            | cached per workspace; pagination exhausted                                      |
-| `newDirectoryStream(dir)` at depth ≥ 5                         | `GET /data-links/{id}/content?path=<sub>`  | items array → child paths                                                       |
-| `readAttributes(path)` inside a data-link                      | `GET /data-links/{id}/content?path=<sub>`  | single targeted call; file vs folder from response                              |
-| `newInputStream(file)`                                         | `GET /data-links/{id}/download?path=<sub>` | parse `DataLinkDownloadUrlResponse.url`; fetch with plain JDK `HttpClient` (no Seqera auth header — the URL is signed for the cloud backend) |
+| NIO operation                                                  | Platform endpoint                                              | Notes                                                                           |
+| -------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| enumerate providers in workspace (depth-3 listing)             | `GET /data-links?workspaceId=X&max=100&offset=O`               | offset pagination via lazy `Iterator<DataLinkDto>`                              |
+| resolve one data-link by (provider, name)                      | `GET /data-links?workspaceId=X&search=<name>&max=100&offset=O` | server-side filter by name; short-circuit on first provider match; `@Memoized` |
+| `newDirectoryStream(dir)` at data-link root                    | `GET /data-links/{id}/browse?workspaceId=X[&credentialsId=C]`  | lazy `PagedDataLinkContent` — token pagination via `nextPageToken`              |
+| `newDirectoryStream(dir)` at a sub-path                        | `GET /data-links/{id}/browse/{path}?workspaceId=X[&credentialsId=C]` | same; slashes in `{path}` are preserved                                    |
+| `readAttributes(path)` inside a data-link                      | same as above (first page only)                                | short-circuited when `path.cachedAttributes` was set by a prior listing         |
+| `newInputStream(file)`                                         | `GET /data-links/{id}/generate-download-url?workspaceId=X&filePath=<sub>[&credentialsId=C]` | parse `DataLinkDownloadUrlResponse.url`; fetch with plain JDK `HttpClient` (no Seqera auth header — the URL is signed for the cloud backend) |
+
+`credentialsId` is forwarded when `DataLinkDto.credentials` is non-empty (using the first entry's `id`); omitted otherwise.
 
 ### Key Design Decisions
 
@@ -168,11 +172,15 @@ interface ResourceTypeHandler {
 
 6. **Handler registry at construction, not via PF4J**: handlers are instantiated in `SeqeraFileSystemProvider.newFileSystem()`. Adding a third resource type is a code change to this plugin, identical in shape to the dataset/data-link pair. No extension-point protocol is introduced — YAGNI.
 
-7. **`readAttributes` is single-target**: because `GET /data-links/{id}/content?path=<sub>` accepts both directory and file paths, a file-level `readAttributes` is one API call — not a parent browse plus filter. No N+1 problem; no browse cache needed.
+7. **`readAttributes` is single-target**: because `GET /data-links/{id}/browse/{path}` accepts both directory and file paths, a file-level `readAttributes` is one API call — not a parent browse plus filter. No N+1 problem; no browse cache needed.
 
-8. **Read-only stance preserved**: `SeqeraFileSystem.isReadOnly()` remains `true`. Write operations on data-links raise `UnsupportedOperationException`. The `/data-links/{id}/multipart-upload` endpoint is a future extension point.
+8. **Read-only stance preserved**: `SeqeraFileSystem.isReadOnly()` remains `true`. Write operations on data-links raise `UnsupportedOperationException`. The `/data-links/{id}/upload` endpoints are a future extension point.
 
-9. **Minimal cache**: only the workspace-level data-link list is cached. No browse-result cache. No URL cache. Simpler to reason about; consistent with the dataset handler's cache shape.
+9. **Listings stream lazily**: paginated Platform responses are exposed as lazy iterators rather than eagerly-materialized lists. `listDataLinks` is an `Iterator<DataLinkDto>` that fetches offsets on demand. `getContent` returns a `PagedDataLinkContent` that loads the first page eagerly (for `readAttributes`) and paginates further only as the iterator advances. Handler `list()` returns `Iterable<Path>`, flowed through `DirectoryStream` without full materialization.
+
+10. **Per-path attribute cache, not a global cache**: listings attach `SeqeraFileAttributes` to each emitted `SeqeraPath` via `resolveWithAttributes(name, attrs)`. A follow-up `readAttributes(child)` returns the cached value with zero API calls. Paths parsed from raw URIs (no prior listing) fall back to the live browse endpoint. No global browse-result or URL cache is maintained.
+
+11. **`credentialsId` forwarding**: when a data-link exposes credentials in its `DataLinkDto.credentials` list, the plugin forwards the first credential's `id` as the `credentialsId` query parameter on browse and download-URL calls. When the list is empty, the parameter is omitted and the Platform falls back to its default resolution.
 
 ### Refactor Delivered by This Change
 
@@ -187,9 +195,9 @@ The existing dataset test suite continues to pass unchanged; every dataset code 
 
 ### Limitations
 
-- **No write support for data-links in this iteration.** Upload paths must continue to use Fusion or direct cloud-SDK access until a follow-up adds the multipart-upload handler.
+- **No write support for data-links in this iteration.** Upload paths must continue to use Fusion or direct cloud-SDK access until a follow-up adds the `/data-links/{id}/upload` handler.
 - **Signed URL expiration is not handled transparently.** Very long reads may outlive the URL's validity window.
-- **No transparent pagination of data-link entries inside a single directory.** The browse API's pagination (if any) must be exhausted; for very large directories this may be slower than direct cloud listings.
+- **Per-item last-modified is not exposed by the Platform browse API.** `SeqeraFileAttributes.lastModifiedTime()` reports `Instant.EPOCH` for data-link entries until the Platform surfaces this metadata.
 - **Single endpoint per JVM** (unchanged from dataset ADR): concurrent access to multiple Platform endpoints in one JVM is not supported.
 
 ## Links

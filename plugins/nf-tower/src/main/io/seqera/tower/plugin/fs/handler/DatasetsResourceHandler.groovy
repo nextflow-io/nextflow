@@ -63,13 +63,17 @@ class DatasetsResourceHandler implements ResourceTypeHandler {
         final d = dir.depth()
         if (d == 3) {
             final workspaceId = fs.resolveWorkspaceId(dir.org, dir.workspace)
-            return resolveDatasets(workspaceId).collect { DatasetDto ds -> dir.resolve(ds.name) as Path }
+            return resolveDatasets(workspaceId).collect { DatasetDto ds ->
+                dir.resolveWithAttributes(ds.name, attributesFor(ds)) as Path
+            }
         }
         throw new IllegalArgumentException("datasets handler does not list depth $d paths: $dir")
     }
 
     @Override
     SeqeraFileAttributes readAttributes(SeqeraPath p) throws IOException {
+        // Short-circuit: attributes attached when this path was produced by a listing
+        if (p.cachedAttributes) return p.cachedAttributes
         final d = p.depth()
         if (d == 3) {
             fs.resolveWorkspaceId(p.org, p.workspace) // validates
@@ -82,11 +86,15 @@ class DatasetsResourceHandler implements ResourceTypeHandler {
         final dataset = resolveDataset(workspaceId, names[0])
         if (!dataset)
             throw new NoSuchFileException(p.toString(), null, "Dataset '${names[0]}' not found in workspace ${p.workspace}")
+        return attributesFor(dataset)
+    }
+
+    private static SeqeraFileAttributes attributesFor(DatasetDto ds) {
         return new SeqeraFileAttributes(
                 0L,
-                dataset.lastUpdated?.toInstant() ?: Instant.EPOCH,
-                dataset.dateCreated?.toInstant() ?: Instant.EPOCH,
-                dataset.id)
+                ds.lastUpdated?.toInstant() ?: Instant.EPOCH,
+                ds.dateCreated?.toInstant() ?: Instant.EPOCH,
+                ds.id)
     }
 
     @Override

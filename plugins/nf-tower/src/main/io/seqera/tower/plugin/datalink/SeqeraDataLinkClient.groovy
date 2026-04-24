@@ -24,6 +24,7 @@ import java.nio.file.NoSuchFileException
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.tower.model.DataLinkCredentials
 import io.seqera.tower.model.DataLinkDownloadUrlResponse
 import io.seqera.tower.model.DataLinkDto
 import io.seqera.tower.model.DataLinkItem
@@ -31,6 +32,8 @@ import io.seqera.tower.model.DataLinkItemType
 import io.seqera.tower.model.DataLinkProvider
 import io.seqera.tower.plugin.TowerClient
 import nextflow.exception.AbortOperationException
+
+import java.nio.file.Path
 
 /**
  * Typed client for Seqera Platform data-link API endpoints.
@@ -62,6 +65,20 @@ class SeqeraDataLinkClient {
     }
 
     /**
+     * Resolve a data-link providers in the given workspace.
+     */
+    @Memoized
+    Set<String> getDataLinkProviders(long workspaceId) {
+        final providers = new TreeSet<String>()
+        final Iterator<DataLinkDto> it = listDataLinks(workspaceId)
+        while (it.hasNext()) {
+            final p = it.next().provider?.toString()
+            if (p) providers.add(p)
+        }
+        return providers
+    }
+
+    /**
      * Resolve a data-link by {@code (provider, name)} in the given workspace.
      * Iterates the API's list endpoint lazily and short-circuits on first match.
      */
@@ -87,28 +104,32 @@ class SeqeraDataLinkClient {
      *
      * Endpoints: {@code GET /data-links/{id}/browse} (root) and
      * {@code GET /data-links/{id}/browse/{path}} (sub-path).
+     *
+     * @param credentialsId optional data-link credentials identifier (from
+     *     {@code DataLinkDto.credentials[0].id}); forwarded as a query param when set.
      */
-    PagedDataLinkContent getContent(String dataLinkId, String subPath, long workspaceId) {
+    PagedDataLinkContent getContent(String dataLinkId, String subPath, long workspaceId, String credentialsId = null) {
         final pathSegment = subPath ? '/' + encodePath(subPath) : ''
         final baseUrl = "${endpoint}/data-links/${encodePath(dataLinkId)}/browse${pathSegment}"
-        final page = fetchBrowsePage(baseUrl, workspaceId, null)
+        final page = fetchBrowsePage(baseUrl, workspaceId, credentialsId, null)
         final firstItems = page.objects
         final firstToken = page.nextPageToken
         final originalPath = page.originalPath
         final fetcher = new PagedDataLinkContent.PageFetcher() {
             @Override
             Map<String, Object> fetch(String token) throws IOException {
-                final next = fetchBrowsePage(baseUrl, workspaceId, token)
+                final next = fetchBrowsePage(baseUrl, workspaceId, credentialsId, token)
                 return [objects: next.objects, nextPageToken: next.nextPageToken] as Map<String, Object>
             }
         }
         return new PagedDataLinkContent(originalPath, firstItems, firstToken, fetcher)
     }
 
-    /** {@code GET /data-links/{id}/generate-download-url?workspaceId=<ws>&filePath=<sub>} */
-    DataLinkDownloadUrlResponse getDownloadUrl(String dataLinkId, String subPath, long workspaceId) {
-        final url = "${endpoint}/data-links/${encodePath(dataLinkId)}/generate-download-url?workspaceId=${workspaceId}&filePath=${encodeQuery(subPath ?: '')}"
-        log.debug "SeqeraDataLinkClient GET $url"
+    /** {@code GET /data-links/{id}/generate-download-url?workspaceId=<ws>&filePath=<sub>[&credentialsId=<c>]} */
+    DataLinkDownloadUrlResponse getDownloadUrl(String dataLinkId, String subPath, long workspaceId, String credentialsId = null) {
+        String url = "${endpoint}/data-links/${encodePath(dataLinkId)}/generate-download-url?workspaceId=${workspaceId}&filePath=${encodeQuery(subPath ?: '')}"
+        if (credentialsId) url += "&credentialsId=${encodeQuery(credentialsId)}"
+        log.debug "Getting downloadURL: GET $url"
         final resp = towerClient.sendApiRequest(url)
         checkFsResponse(resp, url)
         final json = new JsonSlurper().parseText(resp.message) as Map
@@ -120,10 +141,11 @@ class SeqeraDataLinkClient {
     // ---- page-fetching helpers ----
 
     /** Fetch one browse page and normalize it into a {@link BrowsePage}. */
-    private BrowsePage fetchBrowsePage(String baseUrl, long workspaceId, String nextPageToken) {
+    private BrowsePage fetchBrowsePage(String baseUrl, long workspaceId, String credentialsId, String nextPageToken) {
         String url = "${baseUrl}?workspaceId=${workspaceId}"
+        if (credentialsId) url += "&credentialsId=${encodeQuery(credentialsId)}"
         if (nextPageToken) url += "&nextPageToken=${encodeQuery(nextPageToken)}"
-        log.debug "SeqeraDataLinkClient GET $url"
+        log.debug "Fetching Browse page GET $url"
         final resp = towerClient.sendApiRequest(url)
         checkFsResponse(resp, url)
         final json = new JsonSlurper().parseText(resp.message) as Map
@@ -182,7 +204,7 @@ class SeqeraDataLinkClient {
         }
 
         private void fetchNextPage() {
-            final url = "${endpoint}/data-links?status=AVAILABLE&workspaceId=${workspaceId}&max=${pageSize}&offset=${offset}${search ? '&search='+ encodeQuery(search) :''}"
+            final url = "${endpoint}/data-links?workspaceId=${workspaceId}&max=${pageSize}&offset=${offset}${search ? '&search='+ encodeQuery(search) :''}"
             log.debug "Fetching next list of datalinks: GET $url"
             final resp = towerClient.sendApiRequest(url)
             checkFsResponse(resp, url)
@@ -227,7 +249,17 @@ class SeqeraDataLinkClient {
         dto.resourceRef = m.resourceRef as String
         if (m.provider) dto.provider = parseProvider(m.provider as String)
         dto.region = m.region as String
+        final credList = m.credentials as List<Map>
+        if (credList) dto.credentials = credList.collect { Map c -> mapCredentials(c) }
         return dto
+    }
+
+    private static DataLinkCredentials mapCredentials(Map m) {
+        final c = new DataLinkCredentials()
+        c.id = m.id as String
+        c.name = m.name as String
+        if (m.provider) c.provider = parseProvider(m.provider as String)
+        return c
     }
 
     private static DataLinkItem mapItem(Map m) {
