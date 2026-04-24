@@ -919,13 +919,14 @@ class ConfigBuilder {
         }
     }
 
-    static String resolveConfig(Path baseDir, CmdRun cmdRun) {
+    static String resolveConfig(Path baseDir, CmdRun cmdRun, Map cliParams) {
 
         final config = new ConfigBuilder()
                 .setShowClosures(true)
                 .setStripSecrets(true)
                 .setOptions(cmdRun.launcher.options)
                 .setCmdRun(cmdRun)
+                .setCliParams(cliParams)
                 .setBaseDir(baseDir)
                 .buildConfigObject()
 

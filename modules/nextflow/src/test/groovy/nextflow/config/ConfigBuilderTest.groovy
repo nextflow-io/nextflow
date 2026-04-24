@@ -2410,9 +2410,9 @@ class ConfigBuilderTest extends Specification {
 
     def 'should return parsed config' () {
         given:
-        def cmd = new CmdRun(profile: 'first', withTower: 'http://foo.com', launcher: new Launcher())
         def base = Files.createTempDirectory('test')
-        base.resolve('nextflow.config').text = '''
+        def configFile = base.resolve('nextflow.config')
+        configFile.text = '''
         profiles {
             first {
                 params {
@@ -2422,6 +2422,7 @@ class ConfigBuilderTest extends Specification {
                 process {
                     executor = { 'local' }
                 }
+                outputDir = params.outdir
             }
             second {
                 params.none = 'Blah'
@@ -2429,18 +2430,23 @@ class ConfigBuilderTest extends Specification {
         }
         '''
         when:
-        def txt = ConfigBuilder.resolveConfig(base, cmd)
+        def opt = new CliOptions(config: [configFile.toFile().canonicalPath])
+        def cmd = new CmdRun(profile: 'first', withTower: 'http://foo.com', launcher: new Launcher(options: opt))
+        def cliParams = [foo: 'Hola', outdir: 'output_folder']
+        def txt = ConfigBuilder.resolveConfig(base, cmd, cliParams)
         then:
         txt == '''\
             params {
-               foo = 'Hello world'
+               foo = 'Hola'
                awsKey = '[secret]'
+               outdir = 'output_folder'
             }
             
             process {
                executor = { 'local' }
             }
 
+            outputDir = 'output_folder'
             workDir = 'work'
             
             tower {
