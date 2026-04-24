@@ -16,3 +16,11 @@ h5, h6 {
 .theme-admonition > div {
   width: 100%;
 }
+
+/* Make wide tables horizontally scrollable instead of overflowing the page */
+.markdown table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+}
