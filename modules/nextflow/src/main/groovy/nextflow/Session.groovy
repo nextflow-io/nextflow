@@ -37,6 +37,7 @@ import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
 import nextflow.conda.CondaConfig
 import nextflow.config.Manifest
+import nextflow.container.AppleContainerConfig
 import nextflow.container.ApptainerConfig
 import nextflow.container.CharliecloudConfig
 import nextflow.container.ContainerConfig
@@ -1187,6 +1188,7 @@ class Session implements ISession {
             new SingularityConfig(config.singularity as Map ?: Collections.emptyMap()),
             new ApptainerConfig(config.apptainer as Map ?: Collections.emptyMap()),
             new CharliecloudConfig(config.charliecloud as Map ?: Collections.emptyMap()),
+            new AppleContainerConfig(config.appleContainer as Map ?: Collections.emptyMap()),
         ] as List<ContainerConfig>
 
         if( engine ) {
