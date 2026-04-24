@@ -49,6 +49,8 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
             return new ShifterBuilder(containerImage, config)
         if( config instanceof CharliecloudConfig )
             return new CharliecloudBuilder(containerImage, config)
+        if( config instanceof SmolVmConfig )
+            return new SmolVmBuilder(containerImage, config)
         //
         throw new IllegalArgumentException("Unknown container engine: $config.engine")
     }
