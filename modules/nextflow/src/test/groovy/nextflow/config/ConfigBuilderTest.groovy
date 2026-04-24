@@ -2352,6 +2352,7 @@ class ConfigBuilderTest extends Specification {
                 process {
                     executor = { 'local' }
                 }
+                outputDir = params.outdir
             }
             second {
                 params.none = 'Blah'
@@ -2361,11 +2362,13 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions(config: [configFile.toFile().canonicalPath])
         def cmd = new CmdRun(profile: 'first', withTower: 'http://foo.com', launcher: new Launcher(options: opt))
-        def txt = ConfigBuilder.resolveConfig(base, cmd)
+        def cliParams = [foo: 'Hola', outdir: 'output_folder']
+        def txt = ConfigBuilder.resolveConfig(base, cmd, cliParams)
         then:
         txt == '''\
             params {
-               foo = 'Hello world'
+               foo = 'Hola'
+               outdir = 'output_folder'
                awsKey = '[secret]'
             }
 
@@ -2373,6 +2376,7 @@ class ConfigBuilderTest extends Specification {
                executor = { 'local' }
             }
 
+            outputDir = 'output_folder'
             outputFormat = 'text'
             workDir = 'work'
 
