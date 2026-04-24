@@ -38,7 +38,7 @@ class Global {
      * When {@code true}, Fusion trace metrics replace the bash command-trace wrapper
      */
     static boolean isFusionTraceEnabled() {
-        return SysEnv.get('NXF_FUSION_TRACE', 'true') == 'true'
+        return SysEnv.get('NXF_FUSION_TRACE', 'false') == 'true'
     }
 
     /**
