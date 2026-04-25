@@ -840,6 +840,37 @@ The above example produces:
 [4, D]
 ```
 
+(process-hints)=
+
+### hints
+
+The `hints` directive specifies executor-specific hints as key-value pairs. Each executor uses the hints it recognizes and ignores the rest. Hint values can be any raw value (i.e., numbers, strings, booleans, lists, and maps).
+
+Unprefixed keys are available to **every** executor. Any executor that recognizes the key consumes it. Prefixing a key with an executor name (e.g., `awsbatch/...`) restricts the hint to that executor only. For example:
+
+```nextflow
+process hello {
+    hints consumableResources: ['my-license': 1]
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+To restrict a hint to a single executor, prefix the key with the executor name:
+
+```nextflow
+    hints 'awsbatch/consumableResources': ['my-license': 1]
+```
+
+When the same hint is provided both unprefixed and with a matching executor prefix, the prefixed form takes precedence for that executor.
+
+Calling `hints` multiple times in a process definition accumulates entries, with later calls overwriting entries for the same key. Setting `hints` via configuration (e.g., in `nextflow.config`) replaces the entire map.
+
+See {ref}`executor-page` to see which hints are recognized by each executor.
+
 (process-label)=
 
 ### label

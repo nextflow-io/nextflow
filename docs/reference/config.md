@@ -1441,6 +1441,12 @@ The `seqera.executor` scope configures the Seqera scheduler service for the {ref
 
 The following settings are available:
 
+`seqera.executor.autoLabels`
+: When `true`, automatically adds workflow metadata labels to the session with the `nextflow.io/` prefix (default: `false`). The following labels are added: `projectName`, `userName`, `runName`, `sessionId`, `resume`, `revision`, `commitId`, `repository`, `manifestName`, `runtimeVersion`. A `seqera.io/runId` label is also added, computed as a SipHash of the session ID and run name.
+
+`seqera.executor.computeEnvId`
+: The Seqera Platform compute environment ID. When specified, the scheduler resolves the compute environment directly by this ID instead of inferring a suitable compute environment. Used as a fallback when the workflow launch does not include a compute environment reference.
+
 `seqera.executor.endpoint`
 : The Seqera scheduler service endpoint URL (required).
 
@@ -1450,41 +1456,35 @@ The following settings are available:
 `seqera.executor.region`
 : The cloud region for task execution.
 
-`seqera.executor.computeEnvId`
-: The Seqera Platform compute environment ID. When specified, the scheduler resolves the compute environment directly by this ID instead of inferring a suitable compute environment. Used as a fallback when the workflow launch does not include a compute environment reference.
-
-`seqera.executor.autoLabels`
-: When `true`, automatically adds workflow metadata labels to the session with the `nextflow.io/` prefix (default: `false`). The following labels are added: `projectName`, `userName`, `runName`, `sessionId`, `resume`, `revision`, `commitId`, `repository`, `manifestName`, `runtimeVersion`. A `seqera.io/runId` label is also added, computed as a SipHash of the session ID and run name.
-
-`seqera.executor.machineRequirement.provisioning`
-: The instance provisioning mode. Can be `'spot'`, `'ondemand'`, or `'spotFirst'`.
-
-`seqera.executor.machineRequirement.maxSpotAttempts`
-: The maximum number of spot retry attempts before falling back to on-demand. Only used when `provisioning` is `'spot'` or `'spotFirst'`.
-
-`seqera.executor.machineRequirement.machineFamilies`
-: List of acceptable EC2 instance families, e.g. `['m5', 'c5', 'r5']`.
+`seqera.executor.taskEnvironment`
+: Custom environment variables to apply to all tasks submitted by the Seqera executor. These are merged with the Fusion environment variables, with Fusion variables taking precedence. For example: `taskEnvironment = [MY_VAR: 'value']`.
 
 `seqera.executor.machineRequirement.diskAllocation`
 : The disk allocation strategy. Can be `'task'` (default) for per-task EBS volumes, or `'node'` for per-node instance storage. When using `'node'` allocation, EBS-specific options (`diskType`, `diskIops`, `diskThroughputMiBps`, `diskEncrypted`) are not applicable.
 
-`seqera.executor.machineRequirement.diskType`
-: The EBS volume type for task scratch disk. Supported types: `'ebs/gp3'` (default), `'ebs/gp2'`, `'ebs/io1'`, `'ebs/io2'`, `'ebs/st1'`, `'ebs/sc1'`. Only applicable when `diskAllocation` is `'task'`.
-
-`seqera.executor.machineRequirement.diskThroughputMiBps`
-: The throughput in MiB/s for gp3 volumes (125-1000). Default: `325` (Fusion recommended). Only applicable when `diskAllocation` is `'task'`.
+`seqera.executor.machineRequirement.diskEncrypted`
+: Enable KMS encryption for the EBS volume (default: `false`). Only applicable when `diskAllocation` is `'task'`.
 
 `seqera.executor.machineRequirement.diskIops`
 : The IOPS for io1/io2/gp3 volumes. Required for io1/io2 volume types. Only applicable when `diskAllocation` is `'task'`.
 
-`seqera.executor.machineRequirement.diskEncrypted`
-: Enable KMS encryption for the EBS volume (default: `false`). Only applicable when `diskAllocation` is `'task'`.
-
 `seqera.executor.machineRequirement.diskMountPath`
 : The container path where the disk is mounted (default: `'/tmp'`). Applicable to all disk allocation strategies.
 
-`seqera.executor.taskEnvironment`
-: Custom environment variables to apply to all tasks submitted by the Seqera executor. These are merged with the Fusion environment variables, with Fusion variables taking precedence. For example: `taskEnvironment = [MY_VAR: 'value']`.
+`seqera.executor.machineRequirement.diskThroughputMiBps`
+: The throughput in MiB/s for gp3 volumes (125-1000). Default: `325` (Fusion recommended). Only applicable when `diskAllocation` is `'task'`.
+
+`seqera.executor.machineRequirement.diskType`
+: The EBS volume type for task scratch disk. Supported types: `'ebs/gp3'` (default), `'ebs/gp2'`, `'ebs/io1'`, `'ebs/io2'`, `'ebs/st1'`, `'ebs/sc1'`. Only applicable when `diskAllocation` is `'task'`.
+
+`seqera.executor.machineRequirement.machineTypes`
+: List of acceptable EC2 instance families. For example, `['m5', 'c5', 'r5']`.
+
+`seqera.executor.machineRequirement.maxSpotAttempts`
+: The maximum number of spot retry attempts before falling back to on-demand. Only used when `provisioning` is `'spot'` or `'spotFirst'`.
+
+`seqera.executor.machineRequirement.provisioning`
+: The instance provisioning mode. Can be `'spot'`, `'ondemand'`, or `'spotFirst'`.
 
 `seqera.executor.retryPolicy.delay`
 : The initial delay when a failing HTTP request is retried (default: `'450ms'`).
