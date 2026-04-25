@@ -75,20 +75,14 @@ import nextflow.script.ProcessConfigV2
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.bundle.ResourcesBundle
-import nextflow.script.params.BaseOutParam
-import nextflow.script.params.CmdEvalParam
-import nextflow.script.params.DefaultOutParam
 import nextflow.script.params.EachInParam
 import nextflow.script.params.EnvInParam
-import nextflow.script.params.EnvOutParam
 import nextflow.script.params.FileInParam
 import nextflow.script.params.FileOutParam
 import nextflow.script.params.InParam
-import nextflow.script.params.MissingParam
 import nextflow.script.params.OptionalParam
 import nextflow.script.params.OutParam
 import nextflow.script.params.StdInParam
-import nextflow.script.params.StdOutParam
 import nextflow.script.params.TupleInParam
 import nextflow.script.params.TupleOutParam
 import nextflow.script.params.ValueInParam
@@ -755,32 +749,7 @@ class TaskProcessor {
         task.config.process = task.processor.name
         task.config.executor = task.processor.executor.name
 
-        if( config instanceof ProcessConfigV1 )
-            initializeTaskRunV1(task)
-
         return task
-    }
-
-    private void initializeTaskRunV1(TaskRun task) {
-        /*
-         * initialize the inputs/outputs for this task instance
-         */
-        configV1().getInputs().each { InParam param ->
-            if( param instanceof TupleInParam )
-                param.inner.each { task.setInput(it)  }
-            else if( param instanceof EachInParam )
-                task.setInput(param.inner)
-            else
-                task.setInput(param)
-        }
-
-        configV1().getOutputs().each { OutParam param ->
-            if( param instanceof TupleOutParam ) {
-                param.inner.each { task.setOutput(it) }
-            }
-            else
-                task.setOutput(param)
-        }
     }
 
     /**
@@ -875,7 +844,6 @@ class TaskProcessor {
             // no folder -> no cached result
             return false
         }
-
 
         try {
             // -- expose task exit status to make accessible as output value
@@ -1336,67 +1304,38 @@ class TaskProcessor {
         }
     }
 
+    @CompileStatic
     protected void bindOutputsV1(TaskRun task) {
 
-        // -- creates the map of all tuple values to bind
-        Map<Short,List> tuples = [:]
-        for( OutParam param : configV1().getOutputs() ) {
-            tuples.put(param.index, [])
-        }
+        for( final output : configV1().getOutputs() ) {
+            final params = output instanceof TupleOutParam
+                ? output.inner as List<OutParam>
+                : List.of((OutParam) output)
 
-        // -- collects the values to bind
-        for( OutParam param: task.outputs.keySet() ){
-            def value = task.outputs.get(param)
+            final values = params.collect { param -> task.outputs[param] }
 
-            switch( param ) {
-            case StdOutParam:
-                log.trace "Process $name > normalize stdout param: $param"
-                value = value instanceof Path ? value.text : value?.toString()
-
-            case OptionalParam:
-                if( !value && param instanceof OptionalParam && param.optional ) {
-                    final holder = [] as MissingParam; holder.missing = param
-                    tuples[param.index] = holder
-                    break
+            if( output instanceof OptionalParam ) {
+                boolean missing = false
+                for( int i = 0; i < params.size(); i++ ) {
+                    if( !values[i] ) {
+                        log.debug "Process $name > Skipping optional output because it is missing: ${params[i]}"
+                        missing = true
+                    }
                 }
-
-            case EnvOutParam:
-            case ValueOutParam:
-            case DefaultOutParam:
-                log.trace "Process $name > collecting out param: ${param} = $value"
-                tuples[param.index].add(value)
-                break
-
-            default:
-                throw new IllegalArgumentException("Illegal output parameter type: $param")
+                if( missing )
+                    continue
             }
-        }
 
-        // -- bind out the collected values
-        for( OutParam param : configV1().getOutputs() ) {
-            final outValue = tuples[param.index]
-            if( outValue == null )
-                throw new IllegalStateException()
+            log.trace "Process $name > Emitting output: ${output} = ${values}"
 
-            if( outValue instanceof MissingParam ) {
-                log.debug "Process $name > Skipping output binding because one or more optional files are missing: $outValue.missing"
+            final x = values.size() == 1 ? values[0] : values
+            final ch = output.getOutChannel()
+            if( ch == null )
                 continue
-            }
-
-            log.trace "Process $name > Binding out param: ${param} = ${outValue}"
-            bindOutParam(param, outValue)
-        }
-    }
-
-    protected void bindOutParam( OutParam param, List values ) {
-        log.trace "<$name> Binding param $param with $values"
-        final x = values.size() == 1 ? values[0] : values
-        final ch = param.getOutChannel()
-        if( ch != null ) {
             // create a copy of the output list of operation made by a downstream task
             // can modify the list which is used internally by the task processor
             // and result in a potential error. See https://github.com/nextflow-io/nextflow/issues/3768
-            final copy = x instanceof List && x instanceof Cloneable ? x.clone() : x
+            final copy = x instanceof List ? new ArrayList<>(x) : x
             // emit the final value
             ch.bind(copy)
         }
@@ -1410,9 +1349,9 @@ class TaskProcessor {
     @CompileStatic
     protected void collectOutputs( TaskRun task ) {
         if( config instanceof ProcessConfigV2 )
-            collectOutputsV2( task )
+            collectOutputsV2(task)
         else if( config instanceof ProcessConfigV1 )
-            collectOutputsV1( task, task.getTargetDir() )
+            collectOutputsV1(task)
     }
 
     @CompileStatic
@@ -1433,136 +1372,18 @@ class TaskProcessor {
         task.canBind = true
     }
 
-    final protected void collectOutputsV1( TaskRun task, Path workDir ) {
-        log.trace "<$name> collecting output: ${task.outputs}"
-
-        for( OutParam param : task.outputs.keySet() ) {
-
-            switch( param ) {
-                case StdOutParam:
-                    collectStdOut(task, (StdOutParam)param, task.@stdout)
-                    break
-
-                case FileOutParam:
-                    collectOutFiles(task, (FileOutParam)param, workDir)
-                    break
-
-                case ValueOutParam:
-                    collectOutValues(task, (ValueOutParam)param, task.context)
-                    break
-
-                case EnvOutParam:
-                    collectOutEnvParam(task, (EnvOutParam)param, workDir)
-                    break
-
-                case CmdEvalParam:
-                    collectOutEnvParam(task, (CmdEvalParam)param, workDir)
-                    break
-
-                case DefaultOutParam:
-                    task.setOutput(param, DefaultOutParam.Completion.DONE)
-                    break
-
-                default:
-                    throw new IllegalArgumentException("Illegal output parameter: ${param.class.simpleName}")
-
-            }
-        }
-
-        // mark ready for output binding
-        task.canBind = true
-    }
-
-    protected void collectOutEnvParam(TaskRun task, BaseOutParam param, Path workDir) {
-
-        // fetch the output value
-        final outCmds =  param instanceof CmdEvalParam ? task.getOutputEvals() : null
-        final val = collectOutEnvMap(workDir,outCmds).get(param.name)
-        if( val == null && !param.optional )
-            throw new MissingValueException("Missing environment variable: $param.name")
-        // set into the output set
-        task.setOutput(param,val)
-        // trace the result
-        log.trace "Collecting param: ${param.name}; value: ${val}"
-
-    }
-
-    /**
-     * Parse the `.command.env` file which holds the value for `env` and `cmd`
-     * output types
-     *
-     * @param workDir
-     *      The task work directory that contains the `.command.env` file
-     * @param outEvals
-     *      A {@link Map} instance containing key-value pairs
-     * @return
-     */
     @CompileStatic
-    @Memoized(maxCacheSize = 10_000)
-    protected Map collectOutEnvMap(Path workDir, Map<String,String> outEvals) {
-        return new TaskEnvCollector(workDir, outEvals).collect()
-    }
+    protected void collectOutputsV1(TaskRun task) {
+        final resolver = new TaskOutputResolverV1(task)
 
-    /**
-     * Collects the process 'std output'
-     *
-     * @param task The executed process instance
-     * @param param The declared {@link StdOutParam} object
-     * @param stdout The object holding the task produced std out object
-     */
-    protected void collectStdOut( TaskRun task, StdOutParam param, def stdout ) {
-
-        if( stdout == null && task.type == ScriptType.SCRIPTLET ) {
-            throw new IllegalArgumentException("Missing 'stdout' for process > ${safeTaskName(task)}")
+        for( OutParam param : configV1().getOutputs() ) {
+            if( param instanceof TupleOutParam )
+                param.inner.each { it -> resolver.resolve(it) }
+            else
+                resolver.resolve(param)
         }
 
-        if( stdout instanceof Path && !stdout.exists() ) {
-            throw new MissingFileException("Missing 'stdout' file: ${stdout.toUriString()} for process > ${safeTaskName(task)}")
-        }
-
-        task.setOutput(param, stdout)
-    }
-
-    protected void collectOutFiles( TaskRun task, FileOutParam param, Path workDir ) {
-
-        // type file parameter can contain a multiple files pattern separating them with a special character
-        final filePatterns = param.getFilePatterns(task.context, task.workDir)
-        final opts = [
-            followLinks: param.followLinks,
-            glob: param.glob,
-            hidden: param.hidden,
-            includeInputs: param.includeInputs,
-            maxDepth: param.maxDepth,
-            optional: param.optional || param.arity?.min == 0,
-            type: param.type,
-        ]
-        final allFiles = collectOutFiles0(task, filePatterns, opts)
-
-        if( !param.isValidArity(allFiles.size()) )
-            throw new IllegalArityException("Incorrect number of output files for process `${safeTaskName(task)}` -- expected ${param.arity}, found ${allFiles.size()}")
-
-        task.setOutput( param, allFiles.size()==1 && param.isSingle() ? allFiles[0] : allFiles )
-
-    }
-
-    protected List<Path> collectOutFiles0(TaskRun task, List<String> filePatterns, Map opts) {
-        return new TaskFileCollector(filePatterns, opts, task).collect()
-    }
-
-    protected void collectOutValues( TaskRun task, ValueOutParam param, Map ctx ) {
-
-        try {
-            // fetch the output value
-            final val = param.resolve(ctx)
-            // set into the output set
-            task.setOutput(param,val)
-            // trace the result
-            log.trace "Collecting param: ${param.name}; value: ${val}"
-        }
-        catch( MissingPropertyException e ) {
-            throw new MissingValueException("Missing value declared as output parameter: ${e.property}")
-        }
-
+        task.canBind = true
     }
 
     @Memoized
@@ -1667,6 +1488,16 @@ class TaskProcessor {
     }
 
     private void resolveTaskInputsV1(TaskRun task, List values, FilePorter.Batch foreignFiles) {
+
+        // -- initialize task inputs
+        configV1().getInputs().each { InParam param ->
+            if( param instanceof TupleInParam )
+                param.inner.each { it -> task.setInput(it) }
+            else if( param instanceof EachInParam )
+                task.setInput(param.inner)
+            else
+                task.setInput(param)
+        }
 
         // -- validate input lengths
         for( final param : configV1().getInputs().ofType(TupleInParam) ) {
