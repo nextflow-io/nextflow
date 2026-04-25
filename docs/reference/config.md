@@ -34,6 +34,44 @@ The following settings are available:
 `workDir`
 : The pipeline work directory. Equivalent to the `-work-dir` option of the `run` command.
 
+(config-apple-container)=
+
+## `appleContainer`
+
+The `appleContainer` scope controls how [Apple container](https://github.com/apple/container) is used by Nextflow.
+
+The following settings are available:
+
+`appleContainer.enabled`
+: Execute tasks with Apple container (default: `false`).
+
+`appleContainer.engineOptions`
+: Specify additional options supported by the `container` CLI i.e. `container [OPTIONS] run`.
+
+`appleContainer.envWhitelist`
+: Comma separated list of environment variable names to be included in the container environment.
+
+`appleContainer.kill`
+: Set the signal used to stop a running container (default: `true`, which sends `SIGTERM` via `container stop`). Set to a signal name (e.g. `'SIGKILL'`) to use `container kill -s`, or `false` to disable.
+
+`appleContainer.registry`
+: The registry from where container images are pulled. It should NOT include the protocol prefix i.e. `http://`.
+
+`appleContainer.remove`
+: Clean up the container after the execution (default: `true`).
+
+`appleContainer.runOptions`
+: Specify extra command line options supported by the `container run` command (e.g. `--rosetta`, `--ssh`).
+
+`appleContainer.temp`
+: Mounts a path of your choice as the `/tmp` directory in the container.
+
+`appleContainer.tty`
+: Allocate a pseudo-tty (default: `false`).
+
+`appleContainer.writableInputMounts`
+: When `false`, mount input directories as read-only (default: `true`).
+
 (config-apptainer)=
 
 ## `apptainer`
