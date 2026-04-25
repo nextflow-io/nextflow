@@ -1440,7 +1440,7 @@ The following settings are available:
 : The EBS volume type for task scratch disk. Supported types: `'ebs/gp3'` (default), `'ebs/gp2'`, `'ebs/io1'`, `'ebs/io2'`, `'ebs/st1'`, `'ebs/sc1'`. Only applicable when `diskAllocation` is `'task'`.
 
 `seqera.executor.machineRequirement.machineTypes`
-: List of acceptable EC2 instance families, e.g. `['m5', 'c5', 'r5']`.
+: List of acceptable EC2 instance families. For example, `['m5', 'c5', 'r5']`.
 
 `seqera.executor.machineRequirement.maxSpotAttempts`
 : The maximum number of spot retry attempts before falling back to on-demand. Only used when `provisioning` is `'spot'` or `'spotFirst'`.
