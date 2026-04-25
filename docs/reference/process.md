@@ -867,7 +867,7 @@ To restrict a hint to a single executor, prefix the key with the executor name:
 
 When the same hint is provided both unprefixed and with a matching executor prefix, the prefixed form takes precedence for that executor.
 
-Calling `hints` multiple times in a process definition accumulates entries, with later calls overwriting entries for the same key. Setting `hints` via configuration (e.g. in `nextflow.config`) replaces the entire map.
+Calling `hints` multiple times in a process definition accumulates entries, with later calls overwriting entries for the same key. Setting `hints` via configuration (e.g., in `nextflow.config`) replaces the entire map.
 
 See {ref}`executor-page` to see which hints are recognized by each executor.
 
