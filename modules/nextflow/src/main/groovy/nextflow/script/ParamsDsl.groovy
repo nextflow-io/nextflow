@@ -26,8 +26,8 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.file.FileHelper
 import nextflow.exception.ScriptRuntimeException
+import nextflow.script.dsl.Types
 import nextflow.script.types.Bag
-import nextflow.script.types.Types
 import nextflow.splitter.CsvSplitter
 import nextflow.util.ArrayBag
 import nextflow.util.Duration
