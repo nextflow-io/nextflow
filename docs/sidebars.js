@@ -35,11 +35,21 @@ module.exports = {
                 "process-typed",
                 "workflow",
                 "workflow-typed",
-                "module",
                 "notifications",
                 "secrets",
                 "sharing",
                 "vscode"
+            ]
+        },
+        {
+            type: "category",
+            label: "Modules",
+            collapsed: true,
+            items: [
+                "modules/modules",
+                "modules/using-modules",
+                "modules/developing-modules",
+                "modules/module-registry"
             ]
         },
         {

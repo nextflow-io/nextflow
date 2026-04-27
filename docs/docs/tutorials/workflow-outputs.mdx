@@ -5,7 +5,11 @@ description: Migrate from the publishDir directive to the workflow output defini
 
 # Migrating to workflow outputs
 
-The [workflow output definition][workflow-output-def] is a new way to define the top-level outputs of a workflow. It is a replacement for the [publishDir][process-publishdir] directive. This tutorial describes these changes and explains how to migrate from `publishDir` to workflow outputs using the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline as an example.
+The [workflow output definition][workflow-output-def] is a new way to define the top-level outputs of a workflow. It is a replacement for the [publishDir][process-publishdir] directive. This tutorial demonstrates how to migrate from `publishDir` to workflow outputs using the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline as an example.
+
+:::note
+Workflow outputs are stable in Nextflow 25.10. However, for large pipelines, it is recommended that you migrate to static typing and records first. See [Migrating to static typing][migrating-static-types] for more information.
+:::
 
 ## Overview
 
@@ -41,7 +45,7 @@ The `publishDir` directive will continue to be supported, but will be deprecated
 
 ## Example: rnaseq-nf
 
-This section describes how to migrate from `publishDir` to workflow outputs using the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline as an example. To view the completed migration, see the [`preview-25-04`](https://github.com/nextflow-io/rnaseq-nf/tree/preview-25-04) branch of the rnaseq-nf repository.
+This section describes how to migrate from `publishDir` to workflow outputs using the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline as an example. To view the completed migration, see the [`preview-25-10`](https://github.com/nextflow-io/rnaseq-nf/tree/preview-25-10) branch of the rnaseq-nf repository.
 
 See [Getting started with rnaseq-nf][rnaseq-nf-page] for an introduction to the `rnaseq-nf` pipeline.
 
@@ -298,6 +302,7 @@ $ cat results/samples.csv
 In the future, if you add a tool with per-sample outputs, you only need to join the tool output into the `samples_ch` channel and update the output `path` directive accordingly. This approach keeps the output definition concise as you add more tools to the pipeline. Additionally, a single unified index file for all per-sample outputs is easier for downstream pipelines to consume, rather than cross-referencing multiple related index files.
 
 [config-process-selectors]: ../config#process-selectors
+[migrating-static-types]: ./static-types
 [process-publishdir]: ../reference/process#publishdir
 [rnaseq-nf-page]: ./rnaseq-nf
 [workflow-output-def]: ../workflow#outputs

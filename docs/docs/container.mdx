@@ -11,6 +11,86 @@ Nextflow supports a variety of container runtimes. Containerization allows you t
 When creating a container image to use with Nextflow, make sure that Bash (3.x or later) and `ps` are installed in the image, along with other tools required for collecting metrics (see [Tasks][execution-report-tasks] for more information). Bash should be available on the path `/bin/bash` and it should be the container entrypoint.
 :::
 
+## Apple container
+
+[Apple container](https://github.com/apple/container) is a lightweight container runtime that uses the [Virtualization framework](https://developer.apple.com/documentation/virtualization) to run each container inside its own virtual machine on macOS.
+
+### Prerequisites
+
+[Apple container](https://github.com/apple/container) requires Apple silicon (M1 or newer) and a recent macOS release.
+
+Start the system service before running your pipeline:
+
+```bash
+container system start
+```
+
+### How it works
+
+You don't need to modify your Nextflow script to run it with Apple container. Enable it in the Nextflow configuration file:
+
+```groovy
+process.container = 'nextflow/examples:latest'
+appleContainer.enabled = true
+```
+
+Each time your script launches a process, Nextflow wraps it and runs it inside a container created from the specified image using the `container run` command.
+
+:::note
+Each container runs in its own lightweight VM, so tasks benefit from strong isolation without the overhead of a full VM per task. Images are standard OCI images and can be pulled from any registry.
+:::
+
+:::note
+Apple container only supports Linux images. To run an `amd64` image on Apple silicon, pass `--rosetta` via `appleContainer.runOptions` and set the platform explicitly, for example, `process.arch = 'linux/amd64'`.
+:::
+
+### Multiple containers
+
+You can specify a different image for each process in your pipeline. For example, the following script defines two processes, `hello` and `bye`, each using a different image:
+
+```nextflow
+process hello {
+  container 'image_name_1'
+
+  script:
+  """
+  do this
+  """
+}
+
+process bye {
+  container 'image_name_2'
+
+  script:
+  """
+  do that
+  """
+}
+```
+
+You can also define the same container assignments in the configuration file:
+
+```groovy
+process {
+    withName:hello {
+        container = 'image_name_1'
+    }
+    withName:bye {
+        container = 'image_name_2'
+    }
+}
+
+appleContainer {
+    enabled = true
+}
+```
+
+See [Process configuration][config-process] for more information about process configuration.
+
+### Advanced settings
+
+See [`appleContainer`][config-apple-container] on the Nextflow configuration page for advanced Apple container settings.
+
 ## Apptainer
 
 [Apptainer](https://apptainer.org) is an alternative container runtime to Docker and an open source fork of Singularity. The main advantages of Apptainer are that it can be used without root privileges and it doesn't require a separate daemon process. These, along with other features such as support for autofs mounts, makes Apptainer better suited to the requirements of HPC workloads. Apptainer is able to use existing Docker images and can pull from Docker registries.
@@ -637,6 +717,7 @@ Singularity advanced configuration settings are described in the [singularity][c
 
 [execution-report-tasks]: ./reports#tasks
 [config-page]: ./config
+[config-apple-container]: ./reference/config#applecontainer
 [config-apptainer]: ./reference/config#apptainer
 [config-process]: ./config#process-configuration
 [config-charliecloud]: ./reference/config#charliecloud

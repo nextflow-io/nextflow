@@ -152,7 +152,7 @@ For example, with `NXF_FILE_ROOT=/some/root/path`, the use of `file('hello')` wi
 
 <AddedInVersion version="26.04.0" />
 
-When set to `true`, collect task resource metrics (CPU, memory, I/O) from the Fusion trace file (`.fusion/trace.json`) produced in the task work directory, replacing the metrics collected by the default bash command-trace wrapper. Requires Fusion to be enabled. GPU metrics from Fusion are always collected regardless of this setting.
+When set to `true`, collect task resource metrics (CPU, memory, I/O) from the Fusion trace file (`.fusion/trace.json`) produced in the task work directory, replacing the metrics collected by the default bash command-trace wrapper. Requires Fusion to be enabled. GPU metrics from Fusion are always collected regardless of this setting (default: `false`).
 
 ##### `NXF_HOME`
 
@@ -168,7 +168,7 @@ Allows the setting Java VM options. This is similar to `NXF_OPTS` however it's o
 
 ##### `NXF_LOG_FILE`
 
-The filename of the Nextflow log (default: `.nextflow.log`)
+The filename of the Nextflow log (default: `.nextflow.log`).
 
 ##### `NXF_OFFLINE`
 

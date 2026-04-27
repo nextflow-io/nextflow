@@ -34,6 +34,14 @@ Resource requests and other job characteristics can be controlled via the follow
 - [resourcelabels][process-resourcelabels]
 - [time][process-time]
 
+The following [hints][process-hints] are supported:
+
+- `consumableResources`: Specify [AWS Batch consumable resources](https://docs.aws.amazon.com/batch/latest/userguide/resource-aware-scheduling.html) as a list of name-value pairs. For example:
+
+  ```nextflow
+  hints consumableResources: ['my-license-a': 1, 'my-license-b': 2]
+  ```
+
 See [AWS Batch][aws-batch] for more information.
 
 ## Azure Batch
@@ -395,6 +403,37 @@ Resource requests and other job characteristics can be controlled via the follow
 - [memory][process-memory]
 - [time][process-time]
 
+The following [hints][process-hints] are supported:
+
+- `machineRequirement.capacityMode`
+- `machineRequirement.diskAllocation`
+- `machineRequirement.diskEncrypted`
+- `machineRequirement.diskIops`
+- `machineRequirement.diskMountPath`
+- `machineRequirement.diskSize`
+- `machineRequirement.diskThroughputMiBps`
+- `machineRequirement.diskType`
+- `machineRequirement.machineTypes`
+- `machineRequirement.maxSpotAttempts`
+- `machineRequirement.provisioning`
+
+Each hint overrides the corresponding field of the `seqera.executor.machineRequirement` config scope on a per-process basis. Keys may be used as-is or with the `seqera/` prefix to restrict them to this executor.
+
+For example, to override the provisioning mode for a single process:
+
+```nextflow
+process hello {
+    hints 'seqera/machineRequirement.provisioning': 'spotFirst'
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+See the [seqera scope][config-seqera] for the full config reference.
+
 ### Disk support
 
 When the [disk][process-disk] directive is specified, the Seqera executor provisions storage for the task container. There are two disk allocation strategies:
@@ -523,6 +562,7 @@ process {
 [process-containeroptions]: ./reference/process#containeroptions
 [process-cpus]: ./reference/process#cpus
 [process-disk]: ./reference/process#disk
+[process-hints]: ./reference/process#hints
 [process-machinetype]: ./reference/process#machinetype
 [process-memory]: ./reference/process#memory
 [process-penv]: ./reference/process#penv
