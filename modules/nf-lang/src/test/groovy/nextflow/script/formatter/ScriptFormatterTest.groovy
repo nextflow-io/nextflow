@@ -18,7 +18,7 @@ package nextflow.script.formatter
 
 import nextflow.script.control.ScriptParser
 import nextflow.script.control.ScriptResolveVisitor
-import nextflow.script.types.Types
+import nextflow.script.dsl.Types
 import spock.lang.Shared
 import spock.lang.Specification
 import test.TestUtils
