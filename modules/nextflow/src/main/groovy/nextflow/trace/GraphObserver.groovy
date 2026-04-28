@@ -56,9 +56,9 @@ class GraphObserver implements TraceObserverV2 {
 
     String getName() { name }
 
-    GraphObserver(DagConfig config) {
+    GraphObserver(DagConfig config, Path baseDir) {
         this.config = config
-        this.file = FileHelper.asPath(config.file)
+        this.file = baseDir.resolve(config.file)
         this.name = file.baseName
         this.format = file.getExtension().toLowerCase() ?: 'html'
     }

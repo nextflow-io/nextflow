@@ -1,4 +1,4 @@
-(tracing-page)=
+(reports-page)=
 
 # Reports
 
@@ -121,6 +121,24 @@ report {
 
 See {ref}`config-report` for the list of available config options.
 
+:::{versionadded} 26.04.0
+:::
+
+Use the `workflow.report.execution` scope instead:
+
+```groovy
+workflow {
+    report {
+        execution {
+            enabled = true
+            file = 'report.html'
+        }
+    }
+}
+```
+
+It will automatically create the execution report in the pipeline output directory instead of the launch directory.
+
 ### Summary
 
 The **Summary** section reports the execution status, the launch command, overall execution time, and other workflow metadata:
@@ -185,6 +203,24 @@ timeline {
 
 See {ref}`config-timeline` for the list of available config options.
 
+:::{versionadded} 26.04.0
+:::
+
+Use the `workflow.report.timeline` scope instead:
+
+```groovy
+workflow {
+    report {
+        timeline {
+            enabled = true
+            file = 'timeline.html'
+        }
+    }
+}
+```
+
+It will automatically create the timeline report in the pipeline output directory instead of the launch directory.
+
 (trace-report)=
 
 ## Trace file
@@ -231,6 +267,24 @@ trace {
 
 See {ref}`config-trace` for the list of available config options.
 
+:::{versionadded} 26.04.0
+:::
+
+Use the `workflow.report.trace` scope instead:
+
+```groovy
+workflow {
+    report {
+        trace {
+            enabled = true
+            file = 'trace.txt'
+        }
+    }
+}
+```
+
+It will automatically create the trace report in the pipeline output directory instead of the launch directory.
+
 (workflow-diagram)=
 
 ## Workflow diagram
@@ -259,3 +313,21 @@ nextflow run rnaseq-nf -preview -with-dag
 ```
 
 See {ref}`config-dag` for the list of available config options.
+
+:::{versionadded} 26.04.0
+:::
+
+Use the `workflow.report.dag` scope instead:
+
+```groovy
+workflow {
+    report {
+        dag {
+            enabled = true
+            file = 'dag.html'
+        }
+    }
+}
+```
+
+It will automatically create the DAG report in the pipeline output directory instead of the launch directory.
