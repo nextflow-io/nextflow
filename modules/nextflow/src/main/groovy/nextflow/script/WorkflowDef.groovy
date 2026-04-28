@@ -24,6 +24,8 @@ import nextflow.exception.MissingProcessException
 import nextflow.exception.MissingValueException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
+import nextflow.plugin.Plugins
+import nextflow.plugin.WorkflowInterceptor
 import nextflow.util.TestOnly
 /**
  * Models a script workflow component
@@ -181,6 +183,17 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
     }
 
     Object run(Object[] args) {
+        final interceptor = name != null ? Plugins.getExtension(WorkflowInterceptor) : null
+        if( interceptor != null ) {
+            final result = interceptor.intercept(this, args, { runDefault(args) })
+            if( result instanceof ChannelOut )
+                this.output = result
+            return result
+        }
+        return runDefault(args)
+    }
+
+    private Object runDefault(Object[] args) {
         binding = new WorkflowBinding(owner)
         ExecutionStack.push(this)
         try {
