@@ -834,6 +834,24 @@ class BashWrapperBuilderTest extends Specification {
 
     }
 
+    def 'should create uv activate snippet' () {
+        when:
+        def binding = newBashWrapperBuilder().makeBinding()
+        then:
+        binding.uv_activate == null
+        binding.containsKey('uv_activate')
+
+        when:
+        def UV = Paths.get('/some/uv/env/foo')
+        binding = newBashWrapperBuilder(uvEnv: UV).makeBinding()
+        then:
+        binding.uv_activate == '''\
+                # uv environment
+                source /some/uv/env/foo/bin/activate
+                '''.stripIndent()
+
+    }
+
     def 'should cleanup scratch dir' () {
         when:
         def binding = newBashWrapperBuilder().makeBinding()

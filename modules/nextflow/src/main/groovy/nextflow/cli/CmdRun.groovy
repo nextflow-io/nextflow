@@ -257,6 +257,12 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-without-spack'], description = 'Disable the use of Spack environments')
     Boolean withoutSpack
 
+    @Parameter(names=['-with-uv'], description = 'Use the specified uv environment packages or requirements file')
+    String withUv
+
+    @Parameter(names=['-without-uv'], description = 'Disable the use of uv environments')
+    Boolean withoutUv
+
     @Parameter(names=['-offline'], description = 'Do not check for remote project updates')
     boolean offline = System.getenv('NXF_OFFLINE')=='true'
 
@@ -320,6 +326,9 @@ class CmdRun extends CmdBase implements HubOptions {
 
         if( withSpack && withoutSpack )
             throw new AbortOperationException("Command line options `-with-spack` and `-without-spack` cannot be specified at the same time")
+
+        if( withUv && withoutUv )
+            throw new AbortOperationException("Command line options `-with-uv` and `-without-uv` cannot be specified at the same time")
 
         if( offline && latest )
             throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")

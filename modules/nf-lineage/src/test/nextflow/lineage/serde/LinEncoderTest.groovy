@@ -203,7 +203,7 @@ class LinEncoderTest extends Specification{
         def uniqueId = UUID.randomUUID()
         def taskRun = new TaskRun(
             uniqueId.toString(),"name", new Checksum("78910", "nextflow", "standard"), 'this is a script',
-            [new Parameter("String", "param1", "value1")], "container:version", "conda", "spack", "amd64",
+            [new Parameter("String", "param1", "value1")], "container:version", "conda", "spack", "uv-env", "amd64",
             [a: "A", b: "B"], [new DataPath("path/to/file", new Checksum("78910", "nextflow", "standard"))]
         )
         when:
@@ -221,6 +221,7 @@ class LinEncoderTest extends Specification{
         result.container == "container:version"
         result.conda == "conda"
         result.spack == "spack"
+        result.uv == "uv-env"
         result.architecture == "amd64"
         result.globalVars == [a: "A", b: "B"]
         result.binEntries.size() == 1

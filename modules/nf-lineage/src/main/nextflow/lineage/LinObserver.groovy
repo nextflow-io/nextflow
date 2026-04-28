@@ -264,6 +264,7 @@ class LinObserver implements TraceObserverV2 {
             task.isContainerEnabled() ? task.getContainerFingerprint() : null,
             normalizer.normalizePath(task.getCondaEnv()),
             normalizer.normalizePath(task.getSpackEnv()),
+            normalizer.normalizePath(task.getUvEnv()),
             task.config?.getArchitecture()?.toString(),
             getTaskGlobalVars(task),
             getTaskBinEntries(task).collect { Path p -> new DataPath(

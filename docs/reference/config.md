@@ -1601,6 +1601,29 @@ The following settings are available:
 `spack.parallelBuilds`
 : The maximum number of parallel package builds (default: the number of available CPUs).
 
+(config-uv)=
+
+## `uv`
+
+The `uv` scope controls the creation of Python virtual environments by the [uv](https://docs.astral.sh/uv/) package manager.
+
+The following settings are available:
+
+`uv.cacheDir`
+: The path where uv virtual environments are stored. It should be accessible from all compute nodes when using a shared file system.
+
+`uv.createTimeout`
+: The amount of time to wait for the uv environment to be created before failing (default: `20 min`).
+
+`uv.enabled`
+: Execute tasks with uv virtual environments (default: `false`).
+
+`uv.installOptions`
+: Extra command line options for the `uv pip install` command. See the [uv documentation](https://docs.astral.sh/uv/) for more information.
+
+`uv.pythonVersion`
+: The Python version to use when creating virtual environments (e.g. `3.12`). If not specified, uv will use its default Python resolution.
+
 (config-timeline)=
 
 ## `timeline`
