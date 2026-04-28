@@ -80,11 +80,21 @@ process
 process-typed
 workflow
 workflow-typed
-module
 notifications
 secrets
 sharing
 vscode
+```
+
+```{toctree}
+:hidden:
+:caption: Modules
+:maxdepth: 1
+
+modules/modules
+modules/using-modules
+modules/developing-modules
+modules/module-registry
 ```
 
 ```{toctree}

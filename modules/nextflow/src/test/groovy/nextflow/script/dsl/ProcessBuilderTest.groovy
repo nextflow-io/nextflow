@@ -171,6 +171,50 @@ class ProcessBuilderTest extends Specification {
 
     }
 
+    def 'should apply hints config' () {
+        given:
+        def builder = createBuilder()
+        def config = builder.getConfig()
+        expect:
+        config.getHints() == [:]
+
+        when:
+        builder.hints 'seqera/machineRequirement.arch': 'arm64'
+        then:
+        config.getHints() == ['seqera/machineRequirement.arch': 'arm64']
+
+        when:
+        builder.hints 'seqera/machineRequirement.provisioning': 'spot', 'seqera/machineRequirement.maxSpotAttempts': '3'
+        then:
+        config.getHints() == ['seqera/machineRequirement.arch': 'arm64', 'seqera/machineRequirement.provisioning': 'spot', 'seqera/machineRequirement.maxSpotAttempts': '3']
+
+        when: 'duplicate key overwrites'
+        builder.hints 'seqera/machineRequirement.arch': 'x86_64'
+        then:
+        config.getHints() == ['seqera/machineRequirement.arch': 'x86_64', 'seqera/machineRequirement.provisioning': 'spot', 'seqera/machineRequirement.maxSpotAttempts': '3']
+    }
+
+    def 'should reject closure hint values' () {
+        given:
+        def builder = createBuilder()
+
+        when:
+        builder.hints 'seqera/machineRequirement.provisioning': { 'spot' }
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def 'should accept number and boolean hint values' () {
+        given:
+        def builder = createBuilder()
+
+        when:
+        builder.hints 'seqera/machineRequirement.maxSpotAttempts': 3
+        builder.hints 'seqera/machineRequirement.diskEncrypted': true
+        then:
+        noExceptionThrown()
+    }
+
     def 'should check a valid label' () {
 
         expect:

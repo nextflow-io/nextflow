@@ -1,5 +1,11 @@
 nf-seqera changelog
 ====================
+0.19.0 - 25 Apr 2026
+- Add hints process directive for executor-specific scheduling hints (#7034) [406358e03]
+- Add workspaceId/computeEnvId to nf-seqera auto labels (#7059) [5e8276c00]
+- Remove arch config option from Seqera MachineRequirement (#7063) [da06e9a9d]
+- Fix IllegalArgumentException when process.resourceLabels is a closure (#7068) [944977e3f]
+
 0.18.0 - 20 Apr 2026
 - Honour process.resourceLabels in nf-seqera executor (#7048) [979f684ff]
 - Filter autoLabels to selected workflow-metadata fields (#7049) [ddc974fe6]

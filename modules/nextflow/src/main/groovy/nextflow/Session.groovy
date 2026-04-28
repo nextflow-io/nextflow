@@ -37,6 +37,7 @@ import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
 import nextflow.conda.CondaConfig
 import nextflow.config.Manifest
+import nextflow.container.AppleContainerConfig
 import nextflow.container.ApptainerConfig
 import nextflow.container.CharliecloudConfig
 import nextflow.container.ContainerConfig
@@ -54,6 +55,7 @@ import nextflow.exception.MissingLibraryException
 import nextflow.exception.ScriptCompilationException
 import nextflow.executor.ExecutorFactory
 import nextflow.extension.CH
+import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FilePorter
 import nextflow.plugin.Plugins
@@ -82,7 +84,6 @@ import nextflow.trace.event.TaskEvent
 import nextflow.trace.event.WorkflowOutputEvent
 import nextflow.util.Barrier
 import nextflow.util.ClassLoaderFactory
-import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
 import nextflow.util.NameGenerator
@@ -445,7 +446,8 @@ class Session implements ISession {
      */
     Session init( ScriptFile scriptFile, List<String> args=null, Map<String,?> cliParams=null, Map<String,?> configParams=null ) {
 
-        if(!workDir.mkdirs()) throw new AbortOperationException("Cannot create work-dir: $workDir -- Make sure you have write permissions or specify a different directory by using the `-w` command line option")
+        if(!workDir.mkdirs())
+            throw new AbortOperationException("Cannot create work-dir '${FilesEx.toUriString(workDir)}' -- Make sure you have write permissions or specify a different directory by using the `-w` command line option")
         log.debug "Work-dir: ${workDir.toUriString()} [${FileHelper.getPathFsType(workDir)}]"
 
         if( config.bucketDir ) {
@@ -1187,6 +1189,7 @@ class Session implements ISession {
             new SingularityConfig(config.singularity as Map ?: Collections.emptyMap()),
             new ApptainerConfig(config.apptainer as Map ?: Collections.emptyMap()),
             new CharliecloudConfig(config.charliecloud as Map ?: Collections.emptyMap()),
+            new AppleContainerConfig(config.appleContainer as Map ?: Collections.emptyMap()),
         ] as List<ContainerConfig>
 
         if( engine ) {

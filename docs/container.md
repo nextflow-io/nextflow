@@ -8,6 +8,88 @@ Nextflow supports a variety of container runtimes. Containerization allows you t
 When creating a container image to use with Nextflow, make sure that Bash (3.x or later) and `ps` are installed in the image, along with other tools required for collecting metrics (See {ref}`this section <execution-report-tasks>`). Bash should be available on the path `/bin/bash` and it should be the container entrypoint.
 :::
 
+(container-apple)=
+
+## Apple container
+
+[Apple container](https://github.com/apple/container) is a lightweight container runtime that runs each container inside its own virtual machine on macOS, using the [Virtualization framework](https://developer.apple.com/documentation/virtualization).
+
+### Prerequisites
+
+You will need [Apple container](https://github.com/apple/container) installed on your macOS system. It requires Apple silicon (M1 or newer) and a recent macOS release.
+
+Start the system service before running your pipeline:
+
+```bash
+container system start
+```
+
+### How it works
+
+You won't need to modify your Nextflow script in order to run it with Apple container. Simply enable it in the Nextflow configuration file:
+
+```groovy
+process.container = 'nextflow/examples:latest'
+appleContainer.enabled = true
+```
+
+Every time your script launches a process execution, Nextflow will run it inside a container created from the specified image. In practice Nextflow will automatically wrap your processes and run them by executing the `container run` command with the image you have provided.
+
+:::{note}
+Since each container runs in its own lightweight VM, tasks benefit from strong isolation without the overhead of a full VM per task. Images are standard OCI images and can be pulled from any registry.
+:::
+
+:::{note}
+Apple container only supports Linux images. When running an `amd64` image on Apple silicon, pass `--rosetta` via `appleContainer.runOptions` and set the platform explicitly, e.g. `process.arch = 'linux/amd64'`.
+:::
+
+### Multiple containers
+
+It is possible to specify a different image for each process definition in your pipeline script. Suppose you have two processes named `hello` and `bye`. You can specify two different images for them in the Nextflow script as shown below:
+
+```nextflow
+process hello {
+  container 'image_name_1'
+
+  script:
+  """
+  do this
+  """
+}
+
+process bye {
+  container 'image_name_2'
+
+  script:
+  """
+  do that
+  """
+}
+```
+
+Alternatively, the same container definitions can be provided by using the configuration file as shown below:
+
+```groovy
+process {
+    withName:hello {
+        container = 'image_name_1'
+    }
+    withName:bye {
+        container = 'image_name_2'
+    }
+}
+
+appleContainer {
+    enabled = true
+}
+```
+
+Read the {ref}`Process scope <config-process>` section to learn more about processes configuration.
+
+### Advanced settings
+
+Apple container advanced configuration settings are described in {ref}`config-apple-container` section in the Nextflow configuration page.
+
 (container-apptainer)=
 
 ## Apptainer

@@ -598,6 +598,87 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.containerProperties.mountPoints[0].readOnly()
         result.containerProperties.volumes[0].host().sourcePath() == '/home/conda'
         result.containerProperties.volumes[0].name() == 'aws-cli'
+        result.consumableResourceProperties == null
+    }
+
+    def 'should create a job definition with consumable resources from hints' () {
+        given: 'hints set through the real DSL → ProcessConfig → TaskConfig path'
+        def process = new ProcessConfig(Mock(BaseScript))
+        new nextflow.script.dsl.ProcessBuilder(process).hints(
+            'awsbatch/consumableResources': ['license-a': 1, 'license-b': 2],
+            foo: 'bar'
+        )
+        def taskConfig = process.createTaskConfig()
+        and:
+        def IMAGE = 'foo/bar:1.0'
+        def JOB_NAME = 'nf-foo-bar-1-0'
+        def task = Mock(TaskRun) {
+            getContainer() >> IMAGE
+            getConfig() >> taskConfig
+        }
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> task
+            fusionEnabled() >> false
+        }
+        handler.@executor = Mock(AwsBatchExecutor)
+
+        when:
+        def result = handler.makeJobDefRequest(task)
+        then:
+        1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
+        1 * handler.getAwsOptions() >> new AwsOptions()
+        result.consumableResourceProperties != null
+        result.consumableResourceProperties.consumableResourceList().size() == 2
+        result.consumableResourceProperties.consumableResourceList()[0].consumableResource() == 'license-a'
+        result.consumableResourceProperties.consumableResourceList()[0].quantity() == 1
+        result.consumableResourceProperties.consumableResourceList()[1].consumableResource() == 'license-b'
+        result.consumableResourceProperties.consumableResourceList()[1].quantity() == 2
+    }
+
+    def 'should apply awsbatch/-prefixed consumableResources over unprefixed' () {
+        given:
+        def handler = new AwsBatchTaskHandler()
+
+        when:
+        def result = handler.getConsumableResources([
+            consumableResources: ['legacy': 9],
+            'awsbatch/consumableResources': ['license-a': 1, 'license-b': 2],
+        ])
+        then:
+        result.consumableResourceList().size() == 2
+        result.consumableResourceList()[0].consumableResource() == 'license-a'
+        result.consumableResourceList()[0].quantity() == 1
+        result.consumableResourceList()[1].consumableResource() == 'license-b'
+        result.consumableResourceList()[1].quantity() == 2
+    }
+
+    def 'should return null when hints empty or no consumableResources' () {
+        given:
+        def handler = new AwsBatchTaskHandler()
+
+        expect:
+        handler.getConsumableResources(null) == null
+        handler.getConsumableResources([:]) == null
+        handler.getConsumableResources([foo: 'bar']) == null
+        handler.getConsumableResources([consumableResources: null]) == null
+        handler.getConsumableResources([consumableResources: [:]]) == null
+    }
+
+    def 'should fail with a clear error on invalid consumableResources value' () {
+        given:
+        def handler = new AwsBatchTaskHandler()
+
+        when: 'value is a string instead of a map'
+        handler.getConsumableResources([consumableResources: 'bad-string'])
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("expected a map")
+
+        when: 'quantity is not a number'
+        handler.getConsumableResources([consumableResources: ['license-a': 'not-a-number']])
+        then:
+        def e2 = thrown(IllegalArgumentException)
+        e2.message.contains("quantity must be a number")
     }
 
     def 'should create a fargate job definition' () {

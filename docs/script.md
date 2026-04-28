@@ -561,4 +561,4 @@ workflow {
 }
 ```
 
-See {ref}`workflow-page`, {ref}`process-page`, and {ref}`module-page`  for more information about how to use these features in your Nextflow scripts.
+See {ref}`Workflows <workflow-page>`, {ref}`Processes <process-page>`, and {ref}`Modules <modules-page>` for more information about how to use these features in your Nextflow scripts.

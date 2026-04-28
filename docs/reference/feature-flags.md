@@ -20,7 +20,7 @@ Feature flags marked as *preview* can cause pipelines run with newer versions of
 : Defines the DSL version to use (`1` or `2`).
 
 `nextflow.enable.moduleBinaries`
-: When `true`, enables the use of modules with binary scripts. See {ref}`module-binaries` for more information.
+: When `true`, enables the use of module-scoped executable scripts via {ref}`module resources <module-resources>`.
 
 `nextflow.enable.strict`
 : :::{deprecated} 26.04.0

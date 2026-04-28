@@ -1,5 +1,8 @@
 nf-wave changelog
 ==================
+1.20.0 - 25 Apr 2026
+- Add Apple container engine support (#7073) [2f7a3c455]
+
 1.19.1 - 20 Apr 2026
 - Fix resolution of `-with-tower` with `TOWER_API_ENDPOINT` (#7045) [ce962e882]
 
