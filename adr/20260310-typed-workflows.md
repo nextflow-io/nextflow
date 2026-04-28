@@ -219,7 +219,7 @@ This incremental approach was done in contrast to DSL2, which was a monolithic c
 
 Most of the features for static typing are new concepts that can be used alongside existing code. However, typed processes and typed workflows modify existing concepts (`process` and `workflow` definitions), so they require a feature flag.
 
-The `nextflow.enable.types` feature flag (currently in preview as `nextflow.enable.types`) will be used to distinguish between typed and legacy code, indefinitely. It would only be removed if the support for legacy syntax was removed, which is unlikely since DSL2 has been the standard Nextflow syntax for many years.
+The `nextflow.enable.types` feature flag will be used to distinguish between typed and legacy code, indefinitely. It would only be removed if the support for legacy syntax was removed, which is unlikely since DSL2 has been the standard Nextflow syntax for many years.
 
 To help distinguish between typed and legacy workflows, the use of type annotations should be allowed only for typed workflows:
 
