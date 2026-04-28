@@ -16,6 +16,7 @@
 
 package nextflow.script
 
+import java.lang.reflect.Type
 import java.nio.file.Path
 
 import groovy.json.JsonSlurper
@@ -27,12 +28,10 @@ import nextflow.Session
 import nextflow.file.FileHelper
 import nextflow.exception.ScriptRuntimeException
 import nextflow.script.dsl.Types
-import nextflow.script.types.Bag
 import nextflow.splitter.CsvSplitter
-import nextflow.util.ArrayBag
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
-import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
+import nextflow.util.TypeHelper
 import org.codehaus.groovy.runtime.typehandling.GroovyCastException
 /**
  * Implements the DSL for defining workflow params
@@ -43,9 +42,16 @@ import org.codehaus.groovy.runtime.typehandling.GroovyCastException
 @CompileStatic
 class ParamsDsl {
 
+    private Class clazz
+
     private Map<String,Param> declarations = [:]
 
-    void declare(String name, Class type, boolean optional, Object defaultValue = null) {
+    ParamsDsl(Class clazz) {
+        this.clazz = clazz
+    }
+
+    void declare(String name, boolean optional, Object defaultValue = null) {
+        final type = clazz.getField(name).getGenericType()
         if( defaultValue == null && type == Boolean )
             defaultValue = false
         declarations[name] = new Param(name, type, optional, defaultValue)
@@ -79,8 +85,9 @@ class ParamsDsl {
                 throw new ScriptRuntimeException("Parameter `$name` is required but was not specified on the command line, params file, or config")
             }
 
+            final expectedType = TypeHelper.getRawType(decl.type)
             final actualType = params[name]?.getClass()
-            if( actualType != null && !isAssignableFrom(decl.type, actualType) )
+            if( actualType != null && !isAssignableFrom(expectedType, actualType) )
                 throw new ScriptRuntimeException("Parameter `$name` with type ${Types.getName(decl.type)} cannot be assigned to ${params[name]} [${Types.getName(actualType)}]")
         }
 
@@ -95,12 +102,12 @@ class ParamsDsl {
         }
     }
 
-    private Object resolveFromCli(Param decl, Object value) {
+    private static Object resolveFromCli(Param decl, Object value) {
         if( value == null )
             return null
 
         if( value !instanceof CharSequence )
-            return value
+            return TypeHelper.asType(value, decl.type)
 
         final str = value.toString()
 
@@ -129,18 +136,18 @@ class ParamsDsl {
             return MemoryUnit.of(str)
         }
 
-        if( Collection.class.isAssignableFrom(decl.type) ) {
-            return resolveFromFile(decl.name, decl.type, FileHelper.asPath(str))
+        if( TypeHelper.isCollectionType(decl.type) ) {
+            return resolveFromFile(decl, FileHelper.asPath(str))
         }
 
         if( decl.type == Path ) {
-            return FileHelper.asPath(str)
+            return TypeHelper.asPathType(str)
         }
 
         return value
     }
 
-    private Object resolveFromCode(Param decl, Object value) {
+    private static Object resolveFromCode(Param decl, Object value) {
         if( value == null )
             return null
 
@@ -149,37 +156,35 @@ class ParamsDsl {
 
         final str = value.toString()
 
-        if( Collection.class.isAssignableFrom(decl.type) )
-            return resolveFromFile(decl.name, decl.type, FileHelper.asPath(str))
+        if( TypeHelper.isCollectionType(decl.type) )
+            return resolveFromFile(decl, FileHelper.asPath(str))
 
         if( decl.type == Path )
-            return FileHelper.asPath(str)
+            return TypeHelper.asPathType(str)
 
         return value
     }
 
-    private Object resolveFromFile(String name, Class type, Path file) {
+    private static Object resolveFromFile(Param decl, Path file) {
         final ext = file.getExtension()
         final value = switch( ext ) {
             case 'csv' -> new CsvSplitter().options(header: true, sep: ',').target(file).list()
             case 'json' -> new JsonSlurper().parse(file)
             case 'yaml' -> new YamlSlurper().parse(file)
             case 'yml' -> new YamlSlurper().parse(file)
-            default -> throw new ScriptRuntimeException("Unrecognized file format '${ext}' for input file '${file}' supplied for parameter `${name}` -- should be CSV, JSON, or YAML")
+            default -> throw new ScriptRuntimeException("Unrecognized file format '${ext}' for input file '${file}' supplied for parameter `${decl.name}` -- should be CSV, JSON, or YAML")
         }
 
         try {
-            if( Bag.class.isAssignableFrom(type) && value instanceof Collection )
-                return new ArrayBag(value)
-            return DefaultTypeTransformation.castToType(value, type)
+            return TypeHelper.asCollectionType(value as Collection, decl.type)
         }
-        catch( GroovyCastException e ) {
+        catch( GroovyCastException | UnsupportedOperationException e ) {
             final actualType = value.getClass()
-            throw new ScriptRuntimeException("Parameter `${name}` with type ${Types.getName(type)} cannot be assigned to contents of '${file}' [${Types.getName(actualType)}]")
+            throw new ScriptRuntimeException("Parameter `${decl.name}` with type ${Types.getName(decl.type)} cannot be assigned to contents of '${file}' [${Types.getName(actualType)}]")
         }
     }
 
-    private boolean isAssignableFrom(Class target, Class source) {
+    private static boolean isAssignableFrom(Class target, Class source) {
         if( target == Float.class )
             return Number.class.isAssignableFrom(source)
 
@@ -192,7 +197,7 @@ class ParamsDsl {
     @Canonical
     private static class Param {
         String name
-        Class type
+        Type type
         boolean optional
         Object defaultValue
     }

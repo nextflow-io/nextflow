@@ -20,11 +20,15 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 import nextflow.Session
-import nextflow.file.FileHelper
+import nextflow.exception.AbortOperationException
 import nextflow.exception.ScriptRuntimeException
+import nextflow.file.FileHelper
 import nextflow.script.types.Bag
+import nextflow.script.types.Record
 import spock.lang.Specification
 import spock.lang.Unroll
+
+import static test.ScriptHelper.*
 /**
  *
  * @author Ben Sherman <bentshermann@gmail.com>
@@ -33,30 +37,43 @@ class ParamsDslTest extends Specification {
 
     def 'should declare workflow params with CLI overrides'() {
         given:
-        def cliParams = [input: './data', chunk_size: '3']
+        def inputFile = Files.createTempFile('test', '.csv')
+        def cliParams = [input: inputFile.toString(), chunk_size: '3']
         def configParams = [outdir: 'results']
-        def session = new Session([params: configParams + cliParams])
-        session.init(null, null, cliParams, configParams)
 
         when:
-        def dsl = new ParamsDsl()
-        dsl.declare('input', Path, false)
-        dsl.declare('chunk_size', Integer, false, 1)
-        dsl.declare('save_intermeds', Boolean, false)
-        dsl.apply(session)
+        def result = runScript(
+            '''\
+            params {
+                input: Path
+                chunk_size: Integer = 1
+                save_intermeds: Boolean
+            }
+
+            workflow { params }
+            ''',
+            config: [params: configParams + cliParams],
+            params: cliParams,
+            configParams: configParams
+        )
         then:
-        session.binding.getParams() == [input: FileHelper.asPath('./data'), chunk_size: 3, save_intermeds: false, outdir: 'results']
+        result == [input: inputFile, chunk_size: 3, save_intermeds: false, outdir: 'results']
+
+        cleanup:
+        inputFile?.delete()
     }
 
     def 'should allow optional param'() {
-        given:
-        def session = new Session()
-        session.init(null)
-
         when:
-        def dsl = new ParamsDsl()
-        dsl.declare('input', Path, true)
-        dsl.apply(session)
+        runScript(
+            '''\
+            params {
+                input: Path?
+            }
+
+            workflow { params }
+            '''
+        )
         then:
         noExceptionThrown()
     }
@@ -65,14 +82,20 @@ class ParamsDslTest extends Specification {
         given:
         def cliParams = [:]
         def configParams = [outdir: 'results']
-        def session = new Session()
-        session.init(null, null, cliParams, configParams)
 
         when:
-        def dsl = new ParamsDsl()
-        dsl.declare('input', Path, false)
-        dsl.declare('save_intermeds', Boolean, false)
-        dsl.apply(session)
+        runScript(
+            '''\
+            params {
+                input: Path
+                save_intermeds: Boolean
+            }
+
+            workflow { params }
+            ''',
+            params: cliParams,
+            configParams: configParams
+        )
         then:
         def e = thrown(ScriptRuntimeException)
         e.message == 'Parameter `input` is required but was not specified on the command line, params file, or config'
@@ -82,14 +105,20 @@ class ParamsDslTest extends Specification {
         given:
         def cliParams = [inputs: './data']
         def configParams = [outdir: 'results']
-        def session = new Session()
-        session.init(null, null, cliParams, configParams)
 
         when:
-        def dsl = new ParamsDsl()
-        dsl.declare('input', Path, false)
-        dsl.declare('save_intermeds', Boolean, false)
-        dsl.apply(session)
+        runScript(
+            '''\
+            params {
+                input: Path
+                save_intermeds: Boolean
+            }
+
+            workflow { params }
+            ''',
+            params: cliParams,
+            configParams: configParams
+        )
         then:
         def e = thrown(ScriptRuntimeException)
         e.message == 'Parameter `inputs` was specified on the command line or params file but is not declared in the script or config'
@@ -97,53 +126,84 @@ class ParamsDslTest extends Specification {
 
     def 'should report error for invalid type'() {
         given:
-        def cliParams = [input: './data', save_intermeds: 42]
+        def cliParams = [save_intermeds: 42]
         def configParams = [:]
-        def session = new Session()
-        session.init(null, null, cliParams, configParams)
 
         when:
-        def dsl = new ParamsDsl()
-        dsl.declare('input', Path, false)
-        dsl.declare('save_intermeds', Boolean, false)
-        dsl.apply(session)
+        runScript(
+            '''\
+            params {
+                save_intermeds: Boolean
+            }
+
+            workflow { params }
+            ''',
+            params: cliParams,
+            configParams: configParams
+        )
         then:
         def e = thrown(ScriptRuntimeException)
         e.message == 'Parameter `save_intermeds` with type Boolean cannot be assigned to 42 [Integer]'
     }
 
-    @Unroll
-    def 'should validate float param with default value'() {
+    def 'should report error for missing input file'() {
         given:
-        def session = new Session()
-        session.init(null)
+        def cliParams = [input: 'input.csv']
+        def configParams = [:]
 
         when:
-        def dsl = new ParamsDsl()
-        dsl.declare('factor', Float, false, DEF_VALUE)
-        dsl.apply(session)
+        runScript(
+            '''\
+            params {
+                input: Path
+            }
+
+            workflow { params }
+            ''',
+            params: cliParams,
+            configParams: configParams
+        )
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == "Input file 'input.csv' does not exist"
+    }
+
+    @Unroll
+    def 'should validate float param with default value'() {
+        when:
+        runScript(
+            """\
+            params {
+                factor: Float = ${DEF_VALUE}
+            }
+
+            workflow { params }
+            """
+        )
         then:
         noExceptionThrown()
 
         where:
-        DEF_VALUE << [ 0.1f, 0.1d, 0.1g ]
+        DEF_VALUE << [ '0.1f', '0.1d', '0.1g' ]
     }
 
     @Unroll
     def 'should validate integer param with default value'() {
-        given:
-        def session = new Session()
-        session.init(null)
-
         when:
-        def dsl = new ParamsDsl()
-        dsl.declare('factor', Integer, false, DEF_VALUE)
-        dsl.apply(session)
+        runScript(
+            """\
+            params {
+                factor: Integer = ${DEF_VALUE}
+            }
+
+            workflow { params }
+            """
+        )
         then:
         noExceptionThrown()
 
         where:
-        DEF_VALUE << [ 100i, 100l, 100g ]
+        DEF_VALUE << [ '100i', '100l', '100g' ]
     }
 
     def 'should load collection param from CSV file'() {
@@ -156,16 +216,21 @@ class ParamsDslTest extends Specification {
             3,sample3,300
             '''.stripIndent()
         def cliParams = [samples: csvFile.toString()]
-        def session = new Session()
-        session.init(null, null, cliParams, [:])
 
         when:
-        def dsl = new ParamsDsl()
-        dsl.declare('samples', List, false)
-        dsl.apply(session)
+        def samples = runScript(
+            '''\
+            params {
+                samples: List<Record>
+            }
+
+            workflow { params.samples }
+            ''',
+            params: cliParams,
+            configParams: [:]
+        )
 
         then:
-        def samples = session.binding.getParams().samples
         samples instanceof List
         samples.size() == 3
         samples[0].id == '1'
@@ -193,18 +258,24 @@ class ParamsDslTest extends Specification {
             samplesBag: jsonFile.toString(),
             samplesSet: jsonFile.toString()
         ]
-        def session = new Session()
-        session.init(null, null, cliParams, [:])
 
         when:
-        def dsl = new ParamsDsl()
-        dsl.declare('samplesList', List, false)
-        dsl.declare('samplesBag', Bag, false)
-        dsl.declare('samplesSet', Set, false)
-        dsl.apply(session)
+        def params = runScript(
+            '''\
+            params {
+                samplesList: List<Record>
+                samplesBag: Bag<Record>
+                samplesSet: Set<Record>
+            }
+
+            workflow { params }
+            ''',
+            params: cliParams,
+            configParams: [:]
+        )
 
         then:
-        def samplesList = session.binding.getParams().samplesList
+        def samplesList = params.samplesList
         samplesList instanceof List
         samplesList.size() == 3
         samplesList[0].id == 1
@@ -213,11 +284,11 @@ class ParamsDslTest extends Specification {
         samplesList[1].id == 2
         samplesList[2].id == 3
 
-        def samplesBag = session.binding.getParams().samplesBag
+        def samplesBag = params.samplesBag
         samplesBag instanceof Bag
         samplesBag.size() == 3
 
-        def samplesSet = session.binding.getParams().samplesSet
+        def samplesSet = params.samplesSet
         samplesSet instanceof Set
         samplesSet.size() == 3
 
@@ -240,16 +311,21 @@ class ParamsDslTest extends Specification {
               value: 300
             '''.stripIndent()
         def cliParams = [samples: yamlFile.toString()]
-        def session = new Session()
-        session.init(null, null, cliParams, [:])
 
         when:
-        def dsl = new ParamsDsl()
-        dsl.declare('samples', List, false)
-        dsl.apply(session)
+        def samples = runScript(
+            '''\
+            params {
+                samples: List<Record>
+            }
+
+            workflow { params.samples }
+            ''',
+            params: cliParams,
+            configParams: [:]
+        )
 
         then:
-        def samples = session.binding.getParams().samples
         samples instanceof List
         samples.size() == 3
         samples[0].id == 1
@@ -267,16 +343,21 @@ class ParamsDslTest extends Specification {
         def jsonFile = Files.createTempFile('test', '.json')
         jsonFile.text = '[{"x": 1}, {"x": 2}]'
         def configParams = [items: jsonFile.toString()]
-        def session = new Session()
-        session.init(null, null, [:], configParams)
 
         when:
-        def dsl = new ParamsDsl()
-        dsl.declare('items', List, false)
-        dsl.apply(session)
+        def items = runScript(
+            '''\
+            params {
+                items: List<Record>
+            }
+
+            workflow { params.items }
+            ''',
+            params: [:],
+            configParams: configParams
+        )
 
         then:
-        def items = session.binding.getParams().items
         items instanceof List
         items.size() == 2
         items[0].x == 1
@@ -291,13 +372,19 @@ class ParamsDslTest extends Specification {
         def txtFile = Files.createTempFile('test', '.txt')
         txtFile.text = 'some text'
         def cliParams = [items: txtFile.toString()]
-        def session = new Session()
-        session.init(null, null, cliParams, [:])
 
         when:
-        def dsl = new ParamsDsl()
-        dsl.declare('items', List, false)
-        dsl.apply(session)
+        runScript(
+            '''\
+            params {
+                items: List<Record>
+            }
+
+            workflow { params.items }
+            ''',
+            params: cliParams,
+            configParams: [:]
+        )
 
         then:
         def e = thrown(ScriptRuntimeException)
@@ -313,20 +400,104 @@ class ParamsDslTest extends Specification {
         def jsonFile = Files.createTempFile('test', '.json')
         jsonFile.text = '{"not": "a list"}'
         def cliParams = [items: jsonFile.toString()]
-        def session = new Session()
-        session.init(null, null, cliParams, [:])
 
         when:
-        def dsl = new ParamsDsl()
-        dsl.declare('items', List, false)
-        dsl.apply(session)
+        runScript(
+            '''\
+            params {
+                items: List<Record>
+            }
+
+            workflow { params.items }
+            ''',
+            params: cliParams,
+            configParams: [:]
+        )
 
         then:
         def e = thrown(ScriptRuntimeException)
-        e.message.contains('Parameter `items` with type List cannot be assigned to contents of')
+        e.message.contains('Parameter `items` with type List<Record> cannot be assigned to contents of')
 
         cleanup:
         jsonFile?.delete()
+    }
+
+    def 'should load record collection param from file'() {
+        given:
+        def inputFile = Files.createTempFile('test', '.json')
+        inputFile.text = '''\
+            [
+              {"id": 1, "name": "sample1", "value": 100},
+              {"id": 2, "name": "sample2", "value": 200},
+              {"id": 3, "name": "sample3", "value": 300}
+            ]
+            '''.stripIndent()
+
+        when:
+        def samples = runScript(
+            '''\
+            params {
+                samples: List<Sample>
+            }
+
+            record Sample {
+                id: Integer
+                name: String
+                value: Integer
+            }
+
+            workflow {
+                params.samples
+            }
+            ''',
+            params: [samples: inputFile.toString()]
+        )
+        then:
+        samples instanceof List
+        samples.size() == 3
+        samples[0] instanceof Record
+        samples[0].id == 1
+        samples[0].name == 'sample1'
+        samples[0].value == 100
+        samples[1].id == 2
+        samples[2].id == 3
+    }
+
+    def 'should report error for missing record field'() {
+        given:
+        def inputFile = Files.createTempFile('test', '.json')
+        inputFile.text = '''\
+            [
+              {"id": 1, "name": "sample1"}
+            ]
+            '''.stripIndent()
+
+        when:
+        runScript(
+            '''\
+            params {
+                samples: List<Sample>
+            }
+
+            record Sample {
+                id: Integer
+                name: String
+                value: Integer
+            }
+
+            workflow {
+                params.samples
+            }
+            ''',
+            params: [samples: inputFile.toString()]
+        )
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message == "Input record [id:1, name:sample1] is missing field 'value' required by record type 'Sample'"
+
+        cleanup:
+        inputFile?.delete()
     }
 
 }

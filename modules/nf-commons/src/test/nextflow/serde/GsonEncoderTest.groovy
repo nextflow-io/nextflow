@@ -64,7 +64,7 @@ class GsonEncoderTest extends Specification {
         animal == dog
     }
 
-    def 'should encode and decode polymorphic class/1'() {
+    def 'should encode and decode polymorphic class/2'() {
         given:
         def encoder = new MyEncoder()
         def dog = new Cat("bau", true)
