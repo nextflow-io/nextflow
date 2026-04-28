@@ -117,6 +117,10 @@ class TaskErrorFormatter {
             // -- the exit status
             message << "\nCommand exit status:\n  ${task.exitStatus != Integer.MAX_VALUE ? task.exitStatus : '-'}".toString()
 
+            // -- the termination reason (e.g. OOMKilled, Evicted) when provided by the executor
+            if( task.terminationReason )
+                message << "\nTermination reason:\n  ${task.terminationReason}".toString()
+
             // -- the tail of the process stdout
             message << "\nCommand output:"
             final max = 50
