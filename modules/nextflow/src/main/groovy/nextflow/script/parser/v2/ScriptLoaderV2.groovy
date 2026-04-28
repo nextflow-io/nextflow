@@ -131,7 +131,7 @@ class ScriptLoaderV2 implements ScriptLoader {
     }
 
     private void printErrors(Path path) {
-        final errorListener = new StandardErrorListener('full', false)
+        final errorListener = new StandardErrorListener('full', session.ansiLog)
         println()
         errorListener.beforeErrors()
         for( final message : compiler.getErrors() ) {

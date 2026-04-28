@@ -366,10 +366,12 @@ class ConfigBuilder {
         assert env != null
 
         final ignoreIncludes = options ? options.ignoreConfigIncludes : false
+        final ansiLog = options ? options.ansiLog : false
         final parser = ConfigParserFactory.create()
                 .setRenderClosureAsString(showClosures)
                 .setStripSecrets(stripSecrets)
                 .setIgnoreIncludes(ignoreIncludes)
+                .setAnsiLog(ansiLog)
         ConfigObject result = new ConfigObject()
 
         if( cliParams )
