@@ -57,7 +57,7 @@ class ScriptRunnerTest extends Dsl2Spec {
             """
 
         when:
-        def result = runScript(script, config)
+        def result = runScript(script, config: config)
 
         then:
         result instanceof DataflowVariable
@@ -91,7 +91,7 @@ class ScriptRunnerTest extends Dsl2Spec {
             }
             '''
         when:
-        runScript(script, config)
+        runScript(script, config: config)
         def processor = TaskProcessor.currentProcessor()
         then:
         processor.name == 'simpleTask'
@@ -227,7 +227,7 @@ class ScriptRunnerTest extends Dsl2Spec {
 
         when:
         def config = [process:[executor: 'nope']]
-        runScript(script, config)
+        runScript(script, config: config)
 
         then:
         def e = thrown(ScriptCompilationException)
@@ -259,7 +259,7 @@ class ScriptRunnerTest extends Dsl2Spec {
         def config = [process: [executor: 'nope']]
 
         when:
-        def result = runScript(script, config)
+        def result = runScript(script, config: config)
         then:
         result.val == 'cat filename'
 
@@ -291,7 +291,7 @@ class ScriptRunnerTest extends Dsl2Spec {
             '''
 
         when:
-        runScript(script, config)
+        runScript(script, config: config)
         def process = TaskProcessor.currentProcessor()
 
         then:
@@ -335,7 +335,7 @@ class ScriptRunnerTest extends Dsl2Spec {
             '''
 
         when:
-        runScript(script, config)
+        runScript(script, config: config)
         def process = TaskProcessor.currentProcessor()
 
         then:
@@ -368,7 +368,7 @@ class ScriptRunnerTest extends Dsl2Spec {
             '''
 
         when:
-        runScript(script, config)
+        runScript(script, config: config)
         def process = TaskProcessor.currentProcessor()
 
         then:
@@ -404,7 +404,7 @@ class ScriptRunnerTest extends Dsl2Spec {
             '''
 
         when:
-        runScript(script, config)
+        runScript(script, config: config)
         def process = TaskProcessor.currentProcessor()
 
         then:
@@ -433,7 +433,7 @@ class ScriptRunnerTest extends Dsl2Spec {
             '''
 
         when:
-        runScript(script, config)
+        runScript(script, config: config)
         def process = TaskProcessor.currentProcessor()
 
         then:
@@ -478,7 +478,7 @@ class ScriptRunnerTest extends Dsl2Spec {
             '''
 
         when:
-        def result = runScript(script, config)
+        def result = runScript(script, config: config)
                 .getVal()
                 .toString()
                 .stripIndent()
@@ -526,7 +526,7 @@ class ScriptRunnerTest extends Dsl2Spec {
         def config = [process: [executor:'nope']]
 
         when:
-        def result = runScript(script, config)
+        def result = runScript(script, config: config)
                 .getVal()
                 .toString()
                 .stripIndent()
@@ -628,7 +628,7 @@ class ScriptRunnerTest extends Dsl2Spec {
             '''
 
         when:
-        def result = runScript(script, config)
+        def result = runScript(script, config: config)
 
         then:
         result instanceof DataflowVariable

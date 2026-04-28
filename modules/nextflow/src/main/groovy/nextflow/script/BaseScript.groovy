@@ -116,15 +116,16 @@ abstract class BaseScript extends Script implements ExecutionContext {
     /**
      * Define a params block.
      *
+     * @param clazz
      * @param body
      */
-    protected void params(Closure body) {
+    protected void params(Class clazz, Closure body) {
         if( entryFlow )
             throw new IllegalStateException("Workflow params definition must be defined before the entry workflow")
         if( ExecutionStack.withinWorkflow() )
             throw new IllegalStateException("Workflow params definition is not allowed within a workflow")
 
-        this.paramsDef = new ParamsDef(body)
+        this.paramsDef = new ParamsDef(clazz, body)
     }
 
     /**
