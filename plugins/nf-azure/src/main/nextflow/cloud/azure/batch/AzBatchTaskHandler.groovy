@@ -120,7 +120,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
-            if( task.exitStatus == Integer.MAX_VALUE && info.failureInfo.message) {
+            if( task.exitStatus == Integer.MAX_VALUE && info.failureInfo?.message) {
                 final reason = info.failureInfo.message
                 final unrecoverable = reason.contains('CannotPullContainer') && reason.contains('unauthorized')
                 // when task exist code is not defined and there is a Azure Batch task failure raise an exception with Azure's failure message
