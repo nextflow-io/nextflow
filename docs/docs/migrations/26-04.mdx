@@ -112,7 +112,7 @@ See [Records][script-records] for details. See [Migrating to static typing][migr
 ### Static typing (preview)
 
 :::note
-Typed processes and typed workflows require the `nextflow.preview.types` feature flag to be enabled in every script that uses them.
+Typed processes and typed workflows require the `nextflow.enable.types` feature flag to be enabled in every script that uses them.
 :::
 
 Nextflow 26.04 brings full support for static typing with [typed processes][process-typed-page] and [typed workflows][workflow-typed-page].
@@ -120,7 +120,7 @@ Nextflow 26.04 brings full support for static typing with [typed processes][proc
 Typed processes can now declare record inputs and outputs:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 process FASTQC {
     input:
@@ -144,7 +144,7 @@ process FASTQC {
 Typed workflows can declare typed inputs and outputs, and provide first-class support for static typing in dataflow logic:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 workflow RNASEQ {
     take:
@@ -173,6 +173,10 @@ Several operators have been extended to support static typing and records:
 
 Breaking changes from the [first preview][static-typing-first-preview]:
 
+- The `nextflow.enable.types` feature flag has been replaced with `nextflow.enable.types`.
+
+- The `nextflow.enable.types` feature flag must be enabled in order to use type annotations in workflow takes/emits.
+
 - The syntax for process tuple inputs has been updated:
 
     Before (25.10):
@@ -190,8 +194,6 @@ Breaking changes from the [first preview][static-typing-first-preview]:
     ```
 
 - The method signature for the `stageAs` directive was changed from `(filePattern, value)` to `(value, filePattern)`.
-
-- The `nextflow.preview.types` feature flag must be enabled in order to use type annotations in workflow takes/emits.
 
 See [Migrating to static typing][migrating-static-types] for more information about migrating to static typing. See [Using operators with static typing][migrating-static-types-operators] for best practices on using operators with static typing.
 

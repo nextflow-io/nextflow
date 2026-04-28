@@ -5,10 +5,10 @@ description: Reference for feature flags in Nextflow.
 
 # Feature flags
 
-Feature flags enable experimental or other opt-in features. They must be specified in the pipeline script.
+Feature flags enable opt-in features. They must be specified in the pipeline script.
 
 :::warning
-Feature flags with the `nextflow.preview` prefix can cause pipelines run with newer versions of Nextflow to fail due to breaking changes. Always consult the [migration notes][migrations-page] before updating to a new Nextflow version.
+Feature flags marked as *preview* can cause pipelines run with newer versions of Nextflow to fail due to breaking changes. Consult the [migration notes][migrations-page] before updating to a new Nextflow version.
 :::
 
 ##### `nextflow.enable.configProcessNamesValidation`
@@ -57,35 +57,9 @@ When `true`, executes the pipeline in "strict" mode, which introduces the follow
 
 - Nextflow will fail if multiple functions and/or processes with the same name are defined in a module script
 
-##### `nextflow.preview.output`
+##### `nextflow.enable.types`
 
-<AddedInVersion version="24.04.0"/>
-
-<DeprecatedInVersion version="25.10.0">
-This feature flag is no longer supported. Workflow outputs are out of preview.
-</DeprecatedInVersion>
-
-When `true`, enables the use of [workflow outputs][workflow-output-def].
-
-##### `nextflow.preview.recursion`
-
-*Preview feature: the syntax and behavior may change in future releases.*
-
-When `true`, enables [process and workflow recursion][workflow-recursion].
-
-##### `nextflow.preview.topic`
-
-<AddedInVersion version="24.04.0"/>
-
-<DeprecatedInVersion version="25.04.0">
-This feature flag is no longer supported. Topic channels are out of preview.
-</DeprecatedInVersion>
-
-When `true`, enables the use of [topic channels][channel-topic].
-
-##### `nextflow.preview.types`
-
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="26.04.0"/>
 
 *Preview feature: the syntax and behavior may change in future releases.*
 
