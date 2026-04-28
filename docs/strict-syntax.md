@@ -260,7 +260,7 @@ The following patterns are still supported but have been restricted. That is, so
 
 ### Include declarations
 
-In Nextflow DSL2, include declarations can have an `addParams` or `params` clause as described in {ref}`module-params`:
+In Nextflow DSL2, include declarations can have an `addParams` or `params` clause:
 
 ```nextflow
 params.message = 'Hola'

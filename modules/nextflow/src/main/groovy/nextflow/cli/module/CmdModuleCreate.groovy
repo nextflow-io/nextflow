@@ -191,21 +191,7 @@ class CmdModuleCreate extends CmdBase {
         include { ${name.replaceAll('[^a-zA-Z0-9_]', '_').toUpperCase()} } from '${namespace}/${name}'
         ```
 
-        ## Input / Output / Dependencies
-
-        ### Input
-
-        | Name       | Type   | Description       |
-        |------------|--------|-------------------|
-        | greeting   | string | A greeting string |
-
-        ### Output
-
-        | Name   | Type   | Description          |
-        |--------|--------|----------------------|
-        | stdout | string | The greeting message |
-
-        ### Dependencies
+        ## Dependencies
 
         None.
 

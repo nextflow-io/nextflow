@@ -815,7 +815,7 @@ The `launch` command launches a pipeline run in Seqera Platform. To log in and c
 : A mnemonic name to assign to the run.
 
 `-main-script`
-: The script file to be executed when launching a project directory or repository.
+: The script file to execute when launching a project directory or repository. Should be a path relative to the project root, e.g. `-main-script subproject/main.nf`.
 
 `-params-file`
 : A JSON or YAML file to load parameters from.
@@ -929,6 +929,11 @@ The `lint` command parses and analyzes the given Nextflow scripts and config fil
 `-exclude`
 : File pattern to exclude from linting (default: `.git, .lineage, .nextflow, .nf-test, nf-test.config, work`).
 : Can be specified multiple times.
+
+`-files-from`
+: :::{versionadded} 26.04.0
+  :::
+: Read list of paths to lint from a text file. Use `-` to read from standard input.
 
 `-format`
 : Format scripts and config files that have no errors.
@@ -1164,46 +1169,11 @@ The `module` command provides a comprehensive system for managing registry-based
 
 **Subcommands**
 
+(cli-module-create)=
+
 `create [namespace/name]`
 
 : Create a new module with a basic `main.nf`, `meta.yml`, and `README.md`.
-
-: **Examples:**
-
-  ```console
-  # Create a module (it will prompt for details)
-  $ nextflow module create
-
-  # Create a module with the given name
-  $ nextflow module create myorg/my-module
-  ```
-
-(cli-module-info)=
-
-`info [options] [namespace/name]`
-
-: Display detailed information about a module from the registry.
-: Shows module name, version, description, and other metadata, as well as example usage.
-: The following options are available:
-
-  `-version`
-  : Specify the module version to query (e.g., `1.0.0`). If not specified, displays information for the latest version.
-
-  `-o, -output` (`text`)
-  : Output mode for info results. Options: `text` (default), `json`.
-
-: **Examples:**
-
-  ```console
-  # Display information for latest version
-  $ nextflow module info nf-core/fastqc
-
-  # Display information for specific version
-  $ nextflow module info nf-core/fastqc -version 1.0.0
-
-  # Get results as JSON
-  $ nextflow module info nf-core/fastqc -output json
-  ```
 
 (cli-module-install)=
 
@@ -1220,19 +1190,6 @@ The `module` command provides a comprehensive system for managing registry-based
   `-force`
   : Force reinstall even if the module exists locally with modifications. Without this flag, Nextflow prevents overwriting locally modified modules.
 
-: **Examples:**
-
-  ```console
-  # Install latest version
-  $ nextflow module install nf-core/fastqc
-
-  # Install specific version
-  $ nextflow module install nf-core/fastqc -version 1.0.0
-
-  # Force reinstall over local modifications
-  $ nextflow module install nf-core/fastqc -force
-  ```
-
 (cli-module-list)=
 
 `list [options]`
@@ -1243,16 +1200,6 @@ The `module` command provides a comprehensive system for managing registry-based
 
   `-o, -output` (`table`)
   : Output mode for list results. Options: `table` (default), `json`.
-
-: **Examples:**
-
-  ```console
-  # Display installed modules in formatted table
-  $ nextflow module list
-
-  # Output as JSON
-  $ nextflow module list -output 'json'
-  ```
 
 (cli-module-publish)=
 
@@ -1270,21 +1217,6 @@ The `module` command provides a comprehensive system for managing registry-based
   `-registry`
   : Specify the registry to publish the module (default: `https://registry.nextflow.io`)
 
-: **Examples:**
-
-  ```console
-  # Validate module structure without publishing
-  $ nextflow module publish myorg/my-module -dry-run
-
-  # Publish to nextflow registry
-  $ export NXF_REGISTRY_TOKEN=your-token
-  $ nextflow module publish myorg/my-module
-
-  # Publish to a custom registry
-  $ export NXF_REGISTRY_TOKEN=your-token
-  $ nextflow module publish myorg/my-module -registry 'https://custom.registry.com'
-  ```
-
 (cli-module-remove)=
 
 `remove [options] [namespace/name]`
@@ -1299,41 +1231,16 @@ The `module` command provides a comprehensive system for managing registry-based
   `-keep-files`
   : Remove the `.module-info` but keep local files in the `modules/` directory.
 
-: **Examples:**
-
-  ```console
-  # Remove module completely
-  $ nextflow module remove nf-core/fastqc
-
-  # Remove from config but keep local files
-  $ nextflow module remove nf-core/fastqc -keep-files
-  ```
-
 (cli-module-run)=
 
-`run [options] [namespace/name] [--<input_name> <input-value>]`
+`run [options] [namespace/name | path] [--<input_name> <input-value>]`
 
-: Execute a module directly from the registry without creating a wrapper workflow.
-: Automatically downloads the module if not already installed. Accepts all standard Nextflow run options.
-: The `module run` command extends the `run` command and accepts all its options, including `-profile`, `-resume`, `-c`, etc. Command-line params (i.e., `--<input_name>`) are inferred from the module's declared inputs.
+: Execute a module directly. Can be a remote module (`namespace/name`) or a local module path (beginning with `./`, `../`, or `/`). Automatically downloads the module if not already installed.
+: Accepts all standard Nextflow run options, including `-profile`, `-resume`, `-c`, etc. Command-line params (i.e., `--<input_name>`) are inferred from the module's declared inputs.
 : The following additional options are available:
 
   `-version`
   : Specify the module version to run (e.g., `1.0.0`). If not specified, uses the latest version.
-
-: **Examples:**
-
-  ```console
-  # Run module with inputs
-  $ nextflow module run nf-core/fastqc --input 'data/*.fastq.gz'
-
-  # Run specific version with Nextflow options
-  $ nextflow module run nf-core/fastqc \
-      --input 'data/*.fastq.gz' \
-      -version 1.0.0 \
-      -profile docker \
-      -resume
-  ```
 
 (cli-module-search)=
 
@@ -1348,19 +1255,6 @@ The `module` command provides a comprehensive system for managing registry-based
 
   `-o, -output` (`simple`)
   : Output mode for search results. Options: `simple` (default), `json`.
-
-: **Examples:**
-
-  ```console
-  # Search for alignment-related modules
-  $ nextflow module search alignment
-
-  # Search with limited results
-  $ nextflow module search "quality control" -limit 10
-
-  # Get results as JSON
-  $ nextflow module search bwa -output json
-  ```
 
 (cli-module-spec)=
 
@@ -1389,29 +1283,6 @@ The `module` command provides a comprehensive system for managing registry-based
 `-dry-run`
 : Print the generated spec to stdout without writing any file.
 
-: **Examples:**
-
-  ```console
-  # Generate spec for local module by name
-  $ nextflow module spec nf-core/fastqc
-
-  # Generate spec for local module by path (namespace required)
-  $ nextflow module spec -namespace nf-core ./modules/my-module
-
-  # Provide additional fields to avoid TODO placeholders
-  $ nextflow module spec \
-      -namespace nf-core \
-      -version 1.0.0 \
-      -description "Quality control of raw sequencing reads" \
-      -license MIT \
-      -author "@drpatelh" \
-      -author "@joseespinosa" \
-      ./modules/nf-core/fastqc
-
-  # Print module spec without saving it
-  $ nextflow module spec -dry-run -namespace nf-core ./modules/my-module
-  ```
-
 (cli-module-validate)=
 
 `validate [options] <namespace/name or path>`
@@ -1419,15 +1290,91 @@ The `module` command provides a comprehensive system for managing registry-based
 : Validate a module before publishing to the registry.
 : Verifies that all required files are present (`main.nf`, `meta.yml`, `README.md`) and that the module spec contains all required fields (name, version, description, license).
 
-: **Examples:**
+(cli-module-view)=
 
-  ```console
-  # Validate module by name
-  $ nextflow module validate myorg/my-module
+`view [options] [namespace/name]`
 
-  # Validate module by path
-  $ nextflow module validate ./modules/myorg/my-module
-  ```
+: Display detailed information about a module from the registry.
+: Shows module name, version, description, and other metadata, as well as example usage.
+: The following options are available:
+
+  `-version`
+  : Specify the module version to query (e.g., `1.0.0`). If not specified, displays information for the latest version.
+
+  `-o, -output` (`text`)
+  : Output format. Options: `text` (default), `json`.
+
+**Examples**
+
+Search for modules related to "alignment":
+
+```console
+$ nextflow module search alignment
+```
+
+View information for a module:
+
+```console
+$ nextflow module view nf-core/fastqc
+```
+
+Install a module:
+
+```console
+$ nextflow module install nf-core/fastqc
+```
+
+List installed modules:
+
+```console
+$ nextflow module list
+```
+
+Run a module:
+
+```console
+$ nextflow module run nf-core/fastqc \
+    --input 'data/*.fastq.gz' \
+    -with-docker
+
+Run a local module:
+
+```console
+$ nextflow module run ./modules/local/fastqc/main.nf \
+    --input 'data/*.fastq.gz' \
+    -with-docker
+```
+
+Remove a module:
+
+```console
+$ nextflow module remove nf-core/fastqc
+```
+
+Create a module with a given name:
+
+```console
+$ nextflow module create myorg/my-module
+```
+
+Generate a spec for a local module:
+
+```console
+$ nextflow module spec -namespace myorg ./modules/myorg/my-module
+```
+
+Validate a local module:
+
+```console
+$ nextflow module validate ./modules/myorg/my-module
+```
+
+Publish a module to the Nextflow registry:
+
+```console
+$ export NXF_REGISTRY_TOKEN=<token>
+$ nextflow module publish myorg/my-module
+```
 
 (cli-plugin)=
 
@@ -1610,7 +1557,8 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Library extension path.
 
 `-main-script` (`main.nf`)
-: The script file to be executed when launching a project directory or repository.
+: The script file to execute when launching a project directory or repository. Should be a path relative to the project root, e.g. `-main-script subproject/main.nf`.
+: The project `nextflow.config` is always read from the project root regardless of the main script location.
 
 `-name`
 : Assign a mnemonic name to the a pipeline run.
@@ -1815,29 +1763,29 @@ $ nextflow secrets <SUBCOMMAND> [OPTIONS]
 
 **Examples**
 
-- Set a secret:
+Set a secret:
 
-    ```console
-    $ nextflow secrets set FOO "Hello world"
-    ```
+```console
+$ nextflow secrets set FOO "Hello world"
+```
 
-- List secrets:
+List secrets:
 
-    ```console
-    $ nextflow secrets list
-    ```
+```console
+$ nextflow secrets list
+```
 
-- Get a secret:
+Get a secret:
 
-    ```console
-    $ nextflow secrets get FOO
-    ```
+```console
+$ nextflow secrets get FOO
+```
 
-- Delete a secret:
+Delete a secret:
 
-    ```console
-    $ nextflow secrets delete FOO
-    ```
+```console
+$ nextflow secrets delete FOO
+```
 
 ### `self-update`
 
@@ -1855,7 +1803,7 @@ The `self-update` command directs the `nextflow` CLI to update itself to the lat
 
 **Examples**
 
-Update Nextflow.
+Update Nextflow:
 
 ```console
 $ nextflow self-update
@@ -1905,7 +1853,7 @@ The `view` command is used to inspect the pipelines that are already stored in t
 
 **Examples**
 
-Viewing the contents of a downloaded pipeline.
+View the contents of a downloaded pipeline:
 
 ```console
 $ nextflow view nextflow-io/hello

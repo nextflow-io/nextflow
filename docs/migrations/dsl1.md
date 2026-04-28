@@ -100,7 +100,7 @@ Similarly, in DSL2, process outputs can be consumed by multiple consumers automa
 
 In DSL1, the entire Nextflow pipeline must be defined in a single file. For example, `main.nf`. This restriction becomes cumbersome as a pipeline grows and hinders the sharing and reuse of pipeline components.
 
-DSL2 introduces the concept of "module scripts" (or "modules" for short), which are Nextflow scripts that can be "included" by other scripts. While modules are not essential to migrating to DSL2, nor are they mandatory in DSL2, modules can help you organize a large pipeline into multiple smaller files and take advantage of modules created by others. See {ref}`module-page` to learn more about modules.
+DSL2 introduces the concept of "module scripts" (or "modules" for short), which are Nextflow scripts that can be "included" by other scripts. While modules are not essential to migrating to DSL2, nor are they mandatory in DSL2, modules can help you organize a large pipeline into multiple smaller files and take advantage of modules created by others. See {ref}`modules-page` to learn more about modules.
 
 :::{note}
 DSL2 scripts cannot exceed 64 KB in size. Split large DSL1 scripts into modules to avoid this limit.

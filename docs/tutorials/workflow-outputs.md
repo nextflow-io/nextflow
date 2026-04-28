@@ -2,7 +2,11 @@
 
 # Migrating to workflow outputs
 
-The {ref}`workflow output definition <workflow-output-def>` is a new way to define the top-level outputs of a workflow. It is a replacement for the {ref}`publishDir <process-publishdir>` directive. This tutorial describes these changes and explains how to migrate from `publishDir` to workflow outputs using the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline as an example.
+The {ref}`workflow output definition <workflow-output-def>` is a new way to define the top-level outputs of a workflow. It is a replacement for the {ref}`publishDir <process-publishdir>` directive. This tutorial demonstrates how to migrate from `publishDir` to workflow outputs using the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline as an example.
+
+:::{note}
+Workflow outputs are stable in Nextflow 25.10. However, for large pipelines, it is recommended that you migrate to static typing and records first. See {ref}`migrating-static-types` for more information.
+:::
 
 ## Overview
 
@@ -38,7 +42,7 @@ The `publishDir` directive will continue to be supported, but will be deprecated
 
 ## Example: rnaseq-nf
 
-This section describes how to migrate from `publishDir` to workflow outputs using the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline as an example. To view the completed migration, see the [`preview-25-04`](https://github.com/nextflow-io/rnaseq-nf/tree/preview-25-04) branch of the rnaseq-nf repository.
+This section describes how to migrate from `publishDir` to workflow outputs using the [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) pipeline as an example. To view the completed migration, see the [`preview-25-10`](https://github.com/nextflow-io/rnaseq-nf/tree/preview-25-10) branch of the rnaseq-nf repository.
 
 See {ref}`rnaseq-nf-page` for an introduction to the rnaseq-nf pipeline.
 

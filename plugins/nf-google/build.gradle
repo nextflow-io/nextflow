@@ -58,7 +58,7 @@ dependencies {
     api 'com.google.cloud:google-cloud-logging:3.23.5'
     api 'com.google.cloud:google-cloud-nio:0.128.5'
     api 'com.google.cloud:google-cloud-storage:2.58.0'
-
+    api 'io.seqera:lib-cloudinfo:1.0.0'
     // Force patched version to address CVE-2025-55163 (MadeYouReset HTTP/2 DDoS vulnerability)
     runtimeOnly 'io.grpc:grpc-netty-shaded:1.75.0'
     // Force patched version to address GHSA-72hv-8253-57qq (jackson-core Number Length Constraint Bypass DoS)

@@ -41,14 +41,14 @@ import java.nio.file.Path
 import java.nio.file.Paths
 
 /**
- * Module info subcommand - displays module metadata and usage template
+ * Module view subcommand - displays module info and usage template
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Show module information and usage template")
-class CmdModuleInfo extends CmdBase {
+class CmdModuleView extends CmdBase {
 
     @Parameter(names = ["-version"], description = "Module version")
     String version
@@ -82,7 +82,12 @@ class CmdModuleInfo extends CmdBase {
 
     @Override
     String getName() {
-        return 'info'
+        return 'view'
+    }
+
+    @Override
+    List<String> getAliases() {
+        return List.of('info')
     }
 
     @Override

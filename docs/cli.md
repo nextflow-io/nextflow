@@ -250,7 +250,14 @@ $ nextflow drop nextflow-io/hello
 
 See {ref}`cli-drop` for more information.
 
-### Secret management
+## Module management
+
+:::{versionadded} 26.04.0
+:::
+
+The `module` command allows you to discover, install, and run modules through a centralized module registry. See {ref}`using-modules-page` and the {ref}`cli-module` command reference for more information.
+
+## Secret management
 
 The `secrets` command manages secure pipeline secrets.
 
@@ -263,136 +270,6 @@ $ nextflow secrets delete AWS_ACCESS_KEY_ID
 ```
 
 See {ref}`cli-secrets` for more information.
-
-## Module management
-
-:::{versionadded} 26.04.0
-:::
-
-The `module` command enables working with reusable, registry-based modules. The Nextflow module system allows you to install, run, search, and publish standardized modules from registries, eliminating duplicate work and sharing improvements with the community.
-
-Use these commands to discover modules in registries, install them into your project, run them directly without creating a workflow, and publish your own modules for others to use.
-
-### Searching for modules
-
-The `module search` command queries the module registry to discover available modules by keyword or name.
-
-Use this to find modules for specific tasks, explore available tools, or discover community modules.
-
-```console
-$ nextflow module search alignment
-$ nextflow module search "quality control" -limit 10
-$ nextflow module search bwa -output json
-```
-
-Results include module names, versions, descriptions, and download statistics. Use `-limit` to control the number of results and `-output json` for JSON-formatted output.
-
-See {ref}`cli-module-search` for more information.
-
-### Installing modules
-
-The `module install` command downloads modules from a registry and makes them available in your workflow. Modules are stored locally in the `modules/` directory. An additional `.module-info` file is created during to store installation information such as the module checksum at installation and the registry URL.
-
-Use this to add reusable modules to your pipeline, manage module versions, or update modules to newer versions.
-
-```console
-$ nextflow module install nf-core/fastqc
-$ nextflow module install nf-core/fastqc -version 1.0.0
-```
-
-The installed module will be available in `modules/nf-core/fastqc`.
-
-Use the `-force` flag to reinstall a module even if local modifications exist.
-
-See {ref}`cli-module-install` for more information.
-
-### Listing modules
-
-The `module list` command displays all modules currently installed in your project, showing their versions and integrity status.
-
-Use this to review installed modules, check module versions, or detect local modifications.
-
-```console
-$ nextflow module list
-$ nextflow module list -output json
-```
-
-The output shows each module's name, installed version, and whether it has been modified locally. Use `-o json` for JSON-formatted output.
-
-See {ref}`cli-module-list` for more information.
-
-### Viewing module information
-
-The `module info` command displays detailed metadata and usage information for a specific module from the registry.
-
-Use this to understand module requirements, view input/output specifications, see available tools, or generate usage templates before installing or running a module.
-
-```console
-$ nextflow module info nf-core/fastqc
-$ nextflow module info nf-core/fastqc -version 1.0.0
-$ nextflow module info nf-core/fastqc -output json
-```
-
-The output includes the module's version, description, authors, keywords, tools, input/output channels, and a generated usage template showing how to run the module. Use `-json` for machine-readable output suitable for programmatic access.
-
-See {ref}`cli-module-info` for more information.
-
-### Running modules directly
-
-The `module run` command executes a module directly from the registry without requiring a wrapper workflow. This provides immediate access to module functionality for ad-hoc tasks or testing.
-
-Use this to quickly run a module, test module functionality, or execute one-off data processing tasks.
-
-```console
-$ nextflow module run nf-core/fastqc --input 'data/*.fastq.gz'
-$ nextflow module run nf-core/fastqc --input 'data/*.fastq.gz' -version 1.0.0
-```
-
-The command accepts all standard Nextflow execution options (`-profile`, `-resume`, etc.):
-
-```console
-$ nextflow module run nf-core/salmon \
-    --reads reads.fq \
-    --index salmon_index \
-    -profile docker \
-    -resume
-```
-
-Process inputs can be specified like params on the command line. For example, `--reads reads.fq` corresponds to the `reads` input in the `nf-core/salmon` module. Run `nextflow module info nf-core/salmon` to see the available params for the module.
-
-See {ref}`cli-module-run` for more information.
-
-### Removing modules
-
-The `module remove` command deletes modules from your project, removing local files and configuration entries.
-
-Use this to clean up unused modules, free disk space, or remove deprecated modules from your pipeline.
-
-```console
-$ nextflow module remove nf-core/fastqc
-$ nextflow module remove nf-core/fastqc -keep-files
-```
-
-By default, both local files and configuration entries are removed. Use `-keep-files` to remove the configuration entry and `.module-info` while keeping local files.
-
-See {ref}`cli-module-remove` for more information.
-
-### Publishing modules
-
-The `module publish` command uploads modules to a registry, making them available for others to install and use.
-
-Use this to share your modules with the community, contribute to module libraries, or distribute modules within your organization.
-
-```console
-$ nextflow module publish myorg/my-module
-$ nextflow module publish myorg/my-module -dry-run
-```
-
-Publishing requires authentication via the `NXF_REGISTRY_TOKEN` environment variable or the `registry.apiKey` config option. The module must include `main.nf`, `meta.yml`, and `README.md` files.
-
-Use the {ref}`cli-module-spec` and {ref}`cli-module-validate` commands to prepare and validate a module before publishing.
-
-See {ref}`cli-module-publish` for more information.
 
 ## Configuration and validation
 

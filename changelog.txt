@@ -1,5 +1,61 @@
 NEXTFLOW CHANGE-LOG
 ===================
+26.03.4-edge - 25 Apr 2026
+- Abort execution when platform telemetry error (#6827) [b1ad3f720]
+- Add $schema ref to generated module spec (#7056) [c40d742f3]
+- Add Apple container engine support (#7073) [2f7a3c455]
+- Add hints process directive for executor-specific scheduling hints (#7034) [406358e03]
+- Add Seqera NIO filesystem for datasets and refactor TowerClient/TowerObserver (#6946) [433b10a1f]
+- Add workspaceId/computeEnvId to nf-seqera auto labels (#7059) [5e8276c00]
+- Allow `-with-docker` to be used without a default container image (#7054) [41759d36e]
+- Allow module run to run modules with local path (#7057) [e2c77c6b7]
+- Default NXF_FUSION_TRACE to false (#7071) [5b4c8f0c1]
+- Fix IllegalArgumentException when process.resourceLabels is a closure (#7068) [944977e3f]
+- Fix resolution of params in resolved config text (#7072) [cb7133def]
+- Propagate task.containerPlatform through Fusion container command (#7074) [b58a590bd]
+- Remove arch config option from Seqera MachineRequirement (#7063) [da06e9a9d]
+- Replace current cloud info URL call with cloudInfo client (#7065) [629184251]
+- Restructure modules docs as a section and add registry steps (#7030) [29370f4bc]
+- Update workflow outputs tutorial (#7060) [68d144b9c]
+- Use toUriString for paths in work-dir and FilesEx error messages (#7075) [b535377cc]
+- Bump nf-amazon@3.9.0
+- Bump nf-google@1.27.2
+- Bump nf-seqera@0.19.0
+- Bump nf-tower@1.26.0
+- Bump nf-wave@1.20.0
+
+26.03.3-edge - 20 Apr 2026
+- Add -files-from option to lint command to avoid ARG_MAX limit (#6858) [5a3cd830c]
+- Add 26.04 migration docs (#7000) [89ec31bbf]
+- Add option to disable printing workflow outputs (#7018) [791bb449c]
+- Allow cloning from local Git repositories when `--offline` (#7035) [0fa6b5dbd]
+- Allow running pipeline from URL and main script path (#6602) [83196d4be]
+- Apply socket timeout to S3 CRT connections (#7024) [6f4a21764]
+- Filter autoLabels to selected workflow-metadata fields (#7049) [ddc974fe6]
+- Fix S3FileSystemProvider.newInputStream() draining full object on close (#7046) [cf3867604]
+- Fix formatting issues with complex expressions (#7027) [ce661d1d8]
+- Fix generated process name in `module create` command (#7008) [f3d8de796]
+- Fix inconsistent indentation in nf-amazon (#7047) [df6855d7d]
+- Fix module info formatting separator (#7033) [44dff8fcc]
+- Fix nextflowVersion for nf-tower and nf-seqera plugins [cbc0a2d8e]
+- Fix resolution of `-with-tower` with `TOWER_API_ENDPOINT` (#7045) [ce962e882]
+- Fix saveCacheFiles early return skipping log file uploads (#7015) [6fb704838]
+- Fusion GPU metrics collection (#7022) [6289635b8]
+- Honour process.resourceLabels in nf-seqera executor (#7048) [979f684ff]
+- Manage AWS SDK exceptions to convert to the appropriate IO exceptions (#6707) [39c755663]
+- Rename `module info` subcommand to `module view` (#7052) [7fa1109aa]
+- Resolve structured process input types (#7014) [583935d88]
+- Simplify demo module README template (#7051) [6d04c9ebc]
+- Suppress lint progress logging with `-q` flag (#6880) [61793bb6e]
+- Update missing pf4j updates (#7016) [f38f0067d]
+- Use Fusion trace metrics to replace bash command-trace wrapper (#7041) [de4376649]
+- Bump org.bouncycastle:bcpkix-jdk18on from 1.79 to 1.84 (#7042) [59d847d52]
+- Bump nf-amazon@3.8.3
+- Bump nf-k8s@1.5.2
+- Bump nf-seqera@0.18.0
+- Bump nf-tower@1.25.0
+- Bump nf-wave@1.19.1
+
 26.03.2-edge - 7 Apr 2026
 - Add `module create` subcommand (#6992) [d6639a5e0]
 - Add `module spec` command (#6859) [049e2a40e]

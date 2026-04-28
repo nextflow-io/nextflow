@@ -21,6 +21,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import io.seqera.executor.Labels
 import io.seqera.sched.api.schema.v1a1.AcceleratorType
 import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
 import io.seqera.sched.api.schema.v1a1.NextflowTask
@@ -30,6 +31,7 @@ import io.seqera.sched.api.schema.v1a1.Task
 import io.seqera.sched.api.schema.v1a1.TaskState as SchedTaskState
 import io.seqera.sched.api.schema.v1a1.TaskStatus as SchedTaskStatus
 import io.seqera.sched.client.SchedClient
+import io.seqera.util.HintHelper
 import io.seqera.util.SchemaMapperUtil
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.ProcessException
@@ -113,8 +115,13 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
                 resourceReq.acceleratorName(accelerator.type)
         }
         // build machine requirement merging config settings with task arch, disk, and snapshot settings
-        final machineReq = SchemaMapperUtil.toMachineRequirement(
+        // overlay any seqera/machineRequirement.* hints on top of config-scope values (hints win)
+        final baseMachineOpts = HintHelper.overlayHints(
             executor.getSeqeraConfig().machineRequirement,
+            task.config.getHints()
+        )
+        final machineReq = SchemaMapperUtil.toMachineRequirement(
+            baseMachineOpts,
             task.getContainerPlatform(),
             task.config.getDisk(),
             fusionConfig().snapshotsEnabled()
@@ -138,6 +145,11 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
                 .taskId(task.id?.intValue())
                 .hash(task.hash?.toString())
                 .workDir(task.getWorkDirStr()))
+        // attach per-task resource labels delta (over run-level baseline)
+        final taskLabels = Labels.toStringMap(task.config.getResourceLabels())
+        final delta = Labels.delta(taskLabels, executor.runResourceLabels)
+        if( delta )
+            schedTask.labels(delta)
         log.debug "[SEQERA] Enqueueing task for batch submission: ${schedTask}"
         // Enqueue for batch submission - status will be set by setBatchTaskId callback
         executor.getBatchSubmitter().submit(this, schedTask)

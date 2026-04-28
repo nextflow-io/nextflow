@@ -418,7 +418,7 @@ class CmdRun extends CmdBase implements HubOptions {
         final isTowerEnabled = config.navigate('tower.enabled') as Boolean
         final isDataEnabled = config.navigate("lineage.enabled") as Boolean
         if( isTowerEnabled || isDataEnabled || log.isTraceEnabled() )
-            runner.session.resolvedConfig = ConfigBuilder.resolveConfig(scriptFile.parent, this)
+            runner.session.resolvedConfig = ConfigBuilder.resolveConfig(scriptFile.parent, this, cliParams)
         // note config files are collected during the build process
         // this line should be after `ConfigBuilder#build`
         runner.session.configFiles = builder.parsedConfigFiles
@@ -616,9 +616,7 @@ class CmdRun extends CmdBase implements HubOptions {
         /*
          * try to look for a pipeline in the repository
          */
-        try( final manager = new AssetManager(pipelineName, this) ) {
-            if( revision )
-                manager.setRevision(revision)
+        try( final manager = new AssetManager(pipelineName, revision, mainScript, this) ) {
             final repo = manager.getProjectWithRevision()
             final remoteSource = !manager.isLocalScmSource()
 

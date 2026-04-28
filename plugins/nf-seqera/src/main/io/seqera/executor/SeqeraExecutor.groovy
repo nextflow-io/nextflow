@@ -17,6 +17,7 @@
 package io.seqera.executor
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import io.seqera.config.SeqeraConfig
 import io.seqera.config.ExecutorOpts
@@ -63,6 +64,8 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
     private SchedClient client
 
     private volatile String runId
+
+    private volatile Map<String,String> runResourceLabels = Collections.<String,String>emptyMap()
 
     private SeqeraBatchSubmitter batchSubmitter
 
@@ -114,10 +117,11 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         final workspaceId = PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get()) as Long
         final computeEnvId = PlatformHelper.getComputeEnvId(towerConfig, SysEnv.get()) ?: seqeraConfig.computeEnvId
 
+        computeRunResourceLabels()
         final labels = new Labels()
         if( seqeraConfig.autoLabels )
-            labels.withWorkflowMetadata(session.workflowMetadata)
-        labels.withUserLabels(seqeraConfig.labels)
+            labels.withWorkflowMetadata(session.workflowMetadata, seqeraConfig.autoLabels)
+        labels.withProcessResourceLabels(runResourceLabels)
         final predictionModel = seqeraConfig.predictionModel ? PredictionModel.fromValue(seqeraConfig.predictionModel) : null
         final pipeline = new PipelineSpec()
                 .workflowId(workflowId)
@@ -201,6 +205,22 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     String getRunId() {
         return runId
+    }
+
+    Map<String,String> getRunResourceLabels() {
+        return Collections.unmodifiableMap(runResourceLabels)
+    }
+
+    @PackageScope
+    void computeRunResourceLabels() {
+        final processMap = session.config.process as Map
+        final value = processMap?.get('resourceLabels')
+        if( value instanceof Closure ) {
+            log.debug "Skipping run-level process.resourceLabels: dynamic (closure) values are only resolved per-task"
+            this.runResourceLabels = Collections.<String,String>emptyMap()
+            return
+        }
+        this.runResourceLabels = Labels.toStringMap(value)
     }
 
     SeqeraBatchSubmitter getBatchSubmitter() {
