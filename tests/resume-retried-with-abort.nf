@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,23 +15,44 @@
  * limitations under the License.
  */
 
-process foo {
-    errorStrategy 'retry'
-    maxRetries 3 
+process LONG_SLEEP {
+    tag "long-sleep"
+
+    output:
+    stdout
 
     script:
-    if( task.attempt < 3 ) {
-        """
-        exit 1 
-        """
-    }
-    else {
-        """
-        echo ciao
-        """
-    }
+    '''
+    echo "LONG_SLEEP start"
+    sleep 30
+    echo "LONG_SLEEP done"
+    '''
+}
+
+process SMALL_SLEEP_RETRY {
+    tag "small-sleep-retry"
+
+    errorStrategy 'retry'
+    maxRetries 1
+
+    output:
+    stdout
+
+    script:
+    """
+    echo "SMALL_SLEEP_RETRY attempt: ${task.attempt}"
+    sleep 7
+
+    if [[ ${task.attempt} -eq 1 ]]; then
+      echo "Failing first attempt on purpose"
+      exit 1
+    fi
+
+    echo "Second attempt succeeded"
+    """
 }
 
 workflow {
-    foo()
+    LONG_SLEEP()
+    SMALL_SLEEP_RETRY()
 }

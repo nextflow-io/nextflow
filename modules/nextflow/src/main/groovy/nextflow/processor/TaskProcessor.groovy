@@ -15,8 +15,6 @@
  */
 package nextflow.processor
 
-import static nextflow.processor.ErrorStrategy.*
-
 import java.nio.file.FileSystems
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
@@ -801,32 +799,48 @@ class TaskProcessor {
     @CompileStatic
     final protected void checkCachedOrLaunchTask( TaskRun task, HashCode hash, boolean shouldTryCache ) {
 
-        int tries = task.failCount +1
+        int tries = task.previousTryCount + task.failCount + 1
         while( true ) {
+            // increment the task hash based on the "try count"
+            // in order to produce a deterministic sequence of
+            // task hashes for subsequent attempts
             hash = HashBuilder.defaultHasher().putBytes(hash.asBytes()).putInt(tries).hash()
 
             Path resumeDir = null
             boolean exists = false
             try {
+                // check for a cache entry and task directory for the given task hash
                 final entry = session.cache.getTaskEntry(hash, this)
                 resumeDir = entry ? FileHelper.asPath(entry.trace.getWorkDir()) : null
                 if( resumeDir )
                     exists = resumeDir.exists()
 
+                // resume the task if it completed successfully and outputs are present
                 log.trace "[${safeTaskName(task)}] Cacheable folder=${resumeDir?.toUriString()} -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache; entry=$entry"
                 final cached = shouldTryCache && exists && entry.trace.isCompleted() && checkCachedOutput(task.clone(), resumeDir, hash, entry)
                 if( cached )
                     break
+
+                // if the task execution failed or was aborted, increment the
+                // try count so that any subsequent successful execution
+                // can be recovered
+                if( entry?.trace?.isFailed() || entry?.trace?.isAborted() )
+                    task.previousTryCount += 1
             }
             catch (Throwable t) {
                 log.warn1("[${safeTaskName(task)}] Unable to resume cached task -- See log file for details", causedBy: t)
             }
 
+            // if the task directory exists but was not resumed, it is a
+            // failed or invalid execution -- increment the try count and
+            // check the next task hash
             if( exists ) {
                 tries++
                 continue
             }
 
+            // if the task directory does not exist, execute the task
+            // with this task hash
             final lock = lockManager.acquire(hash)
             final workDir = task.getWorkDirFor(hash)
             try {
@@ -1024,22 +1038,21 @@ class TaskProcessor {
             return true
         }
 
-        return fault == TERMINATE || fault == FINISH
+        return fault == ErrorStrategy.TERMINATE || fault == ErrorStrategy.FINISH
     }
 
     /**
      * @param task The {@code TaskRun} instance that raised an error
      * @param error The error object
      * @return
-     *      Either a value of value of {@link ErrorStrategy} representing the error strategy chosen
-     *      or an instance of {@TaskFault} representing the cause of the error (that implicitly means
-     *      a {@link ErrorStrategy#TERMINATE})
+     *      Either an {@link ErrorStrategy} representing the selected error strategy,
+     *      or a {@link TaskFault} representing the cause of the error (implies {@link ErrorStrategy#TERMINATE})
      */
     @PackageScope
-    final synchronized resumeOrDie( TaskRun task, Throwable error, TraceRecord traceRecord = null) {
+    final synchronized Object resumeOrDie( TaskRun task, Throwable error, TraceRecord traceRecord = null) {
         log.debug "Handling unexpected condition for\n  task: name=${safeTaskName(task)}; work-dir=${task?.workDirStr}\n  error [${error?.class?.name}]: ${error?.getMessage()?:error}"
 
-        ErrorStrategy errorStrategy = TERMINATE
+        ErrorStrategy errorStrategy = ErrorStrategy.TERMINATE
         final List<String> message = []
         try {
             // -- do not recoverable error, just re-throw it
@@ -1051,7 +1064,7 @@ class TaskProcessor {
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Execution is retried"
                 else
                     log.info "[$task.hashLog] NOTE: ${error.message} -- Cause: ${error.cause.message} -- Execution is retried"
-                task.failCount+=1
+                task.failCount += 1
                 final taskCopy = task.makeCopy()
                 session.getExecService().submit {
                     try {
@@ -1064,8 +1077,8 @@ class TaskProcessor {
                     }
                 }
                 task.failed = true
-                task.errorAction = RETRY
-                return RETRY
+                task.errorAction = ErrorStrategy.RETRY
+                return ErrorStrategy.RETRY
             }
 
             final submitTimeout = error.cause instanceof ProcessSubmitTimeoutException
@@ -1089,9 +1102,9 @@ class TaskProcessor {
                 errorStrategy = checkErrorStrategy(task, error, taskErrCount, procErrCount, submitRetries)
                 if( errorStrategy.soft ) {
                     def msg = "[$task.hashLog] NOTE: ${submitTimeout ? submitErrMsg : error.message}"
-                    if( errorStrategy == IGNORE )
+                    if( errorStrategy == ErrorStrategy.IGNORE )
                         msg += " -- Error is ignored"
-                    else if( errorStrategy == RETRY )
+                    else if( errorStrategy == ErrorStrategy.RETRY )
                         msg += " -- Execution is retried (${submitTimeout ? submitRetries : taskErrCount})"
                     log.info msg
                     task.failed = true
@@ -1158,16 +1171,16 @@ class TaskProcessor {
 
         // retry is not allowed when the script cannot be compiled or similar errors
         if( error instanceof ProcessUnrecoverableException || error.cause instanceof ProcessUnrecoverableException ) {
-            return !action.soft ? action : TERMINATE
+            return !action.soft ? action : ErrorStrategy.TERMINATE
         }
 
         // IGNORE strategy -- just continue
-        if( action == IGNORE ) {
-            return IGNORE
+        if( action == ErrorStrategy.IGNORE ) {
+            return ErrorStrategy.IGNORE
         }
 
         // RETRY strategy -- check that process do not exceed 'maxError' and the task do not exceed 'maxRetries'
-        if( action == RETRY ) {
+        if( action == ErrorStrategy.RETRY ) {
             final int maxErrors = task.config.getMaxErrors()
             final int maxRetries = task.config.getMaxRetries()
 
@@ -1186,10 +1199,10 @@ class TaskProcessor {
                         session.abort(e)
                     }
                 } as Runnable)
-                return RETRY
+                return ErrorStrategy.RETRY
             }
 
-            return TERMINATE
+            return ErrorStrategy.TERMINATE
         }
 
         return action
@@ -1933,9 +1946,13 @@ class TaskProcessor {
      * and binding output values accordingly
      *
      * @param task The {@code TaskRun} instance to finalize
+     * @return
+     *      Either an {@link ErrorStrategy} representing the selected error strategy,
+     *      a {@link TaskFault} representing the cause of the error (implies {@link ErrorStrategy#TERMINATE}),
+     *      or null if the task completed successfully.
      */
     @PackageScope
-    final finalizeTask( TaskHandler handler) {
+    final Object finalizeTask( TaskHandler handler) {
         def task = handler.task
         log.trace "finalizing process > ${safeTaskName(task)} -- $task"
 
