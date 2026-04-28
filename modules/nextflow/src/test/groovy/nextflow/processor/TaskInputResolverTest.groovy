@@ -40,6 +40,12 @@ import spock.lang.Unroll
  */
 class TaskInputResolverTest extends Specification {
 
+    static class SampleRecord implements nextflow.script.types.Record {
+        public String id
+        public Path path
+        public List<Path> paths
+    }
+
     def holdersMap(List<FileHolder> holders) {
         final result = [:]
         for( final holder : holders )
@@ -170,6 +176,26 @@ class TaskInputResolverTest extends Specification {
         result[0].stageName == 'input.bam'
         and:
         task.context.input.bam.toString() == 'input.bam'
+    }
+
+    def 'should normalize typed record fields' () {
+        given:
+        def resolver = new TaskInputResolver(Mock(TaskRun), Mock(FilePorter.Batch), Mock(Executor))
+        def source = Path.of('/some/input.txt')
+        def holder = FileHolder.get(source, 'input.txt')
+        def record = new SampleRecord(id: 'alpha', path: source, paths: [source])
+
+        when:
+        def result = resolver.normalizeValue(record, holdersMap([holder]))
+
+        then:
+        result instanceof SampleRecord
+        !result.is(record)
+        result.id == 'alpha'
+        result.path instanceof TaskPath
+        result.path.toString() == 'input.txt'
+        result.paths[0] instanceof TaskPath
+        result.paths[0].toString() == 'input.txt'
     }
 
     def 'should return single item or collection'() {
