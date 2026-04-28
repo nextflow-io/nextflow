@@ -8,6 +8,7 @@ output-dsl.nf
 params-dsl.nf
 record-types.nf
 records.nf
+stage-file-closure.nf
 task-ext-block.nf
 topic-channel-typed.nf
 type-annotations.nf

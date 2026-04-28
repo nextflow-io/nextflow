@@ -19,6 +19,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 import groovy.transform.NamedParam;
 import groovy.transform.NamedParams;
@@ -394,6 +395,11 @@ public interface ProcessDsl extends DslScope {
             Stage a collection of files into the task directory under the given alias.
         """)
         void stageAs(Iterable<Path> value, String filePattern);
+
+        @Description("""
+            Stage a collection of files into the task directory with an alias determined by the given closure.
+        """)
+        void stageAs(Iterable<Path> value, Function<Path,String> transform);
 
         @Description("""
             Stage the given value as the standard input (i.e. `stdin`) to the task script.
