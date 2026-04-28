@@ -223,11 +223,17 @@ The following environment variables control the configuration of the Nextflow ru
 
 `NXF_SINGULARITY_CACHEDIR`
 : Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
+: :::note
+  The `NXF_SINGULARITY_CACHEDIR` variable is not applied when a container image is specified using an `oras://` URI. In that case, the image reference is passed directly to Singularity, independently of Nextflow's caching mechanism.
+  :::
 
 `NXF_SINGULARITY_LIBRARYDIR`
 : :::{versionadded} 21.09.0-edge
   :::
 : Directory where remote Singularity images are retrieved. It should be a directory accessible to all compute nodes.
+: :::note
+  The `NXF_SINGULARITY_LIBRARYDIR` variable is not applied when a container image is specified using an `oras://` URI. In that case, the image reference is passed directly to Singularity, independently of Nextflow's caching mechanism.
+  :::
 
 `NXF_SPACK_CACHEDIR`
 : Directory where Spack environments are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
