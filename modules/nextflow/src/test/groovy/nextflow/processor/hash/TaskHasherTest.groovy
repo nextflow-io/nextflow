@@ -14,11 +14,14 @@
  * limitations under the License.
  */
 
-package nextflow.processor
+package nextflow.processor.hash
 
 import java.nio.file.Path
 
 import nextflow.Session
+import nextflow.processor.TaskConfig
+import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
 import nextflow.script.ProcessConfig
 import spock.lang.Specification
 /**
@@ -48,7 +51,7 @@ class TaskHasherTest extends Specification {
             getProcessor() >> processor
         }
         and:
-        def hasher = Spy(new TaskHasher(task))
+        def hasher = Spy(new TaskHasherV1(task))
 
         when:
         def uuid1 = hasher.compute()
@@ -75,64 +78,33 @@ class TaskHasherTest extends Specification {
             getName() >> 'hello'
             getSession() >> session
         }
-        def task = Mock(TaskRun) {
-            getProcessor() >> processor
-        }
-        def hasher = new TaskHasher(task)
+        def task = new TaskRun()
+        task.processor = processor
 
         when:
-        def result = hasher.getTaskBinEntries('var=x foo.sh')
+        def result = task.getTaskBinEntries('var=x foo.sh')
         then:
         result.size() == 1
         result.contains(Path.of('/some/path/foo.sh'))
 
         when:
-        result = hasher.getTaskBinEntries('echo $(foo.sh); bar.sh')
+        result = task.getTaskBinEntries('echo $(foo.sh); bar.sh')
         then:
         result.size() == 2
         result.contains(Path.of('/some/path/foo.sh'))
         result.contains(Path.of('/some/path/bar.sh'))
     }
 
-    def 'should get task directive vars' () {
-        given:
-        def processor = Spy(TaskProcessor) {
-            getConfig() >> Mock(ProcessConfig)
-        }
-        and:
-        def config = new TaskConfig()
-        config.cpus = 4
-        config.ext.alpha = 'AAAA'
-        config.ext.delta = { foo }
-        config.ext.omega = "${-> bar}"
-        config.context = [foo: 'DDDD', bar: 'OOOO']
-        and:
-        def task = Mock(TaskRun) {
-            getConfig() >> config
-            getProcessor() >> processor
-            getVariableNames() >> { [ 'task.cpus', 'task.ext.alpha', 'task.ext.delta', 'task.ext.omega' ] as Set }
-        }
-
-        when:
-        def result = new TaskHasher(task).getTaskExtensionDirectiveVars()
-        then:
-        result == [
-            'task.ext.alpha': 'AAAA',
-            'task.ext.delta': 'DDDD',
-            'task.ext.omega': 'OOOO',
-        ]
-    }
-
     def 'should compute hash entries for eval outputs'() {
 
         when:
-        def result1 = TaskHasher.computeEvalOutputCommands([
+        def result1 = AbstractTaskHasher.computeEvalOutputCommands([
             'nxf_out_eval_2': 'echo "value2"',
             'nxf_out_eval_1': 'echo "value1"',
             'nxf_out_eval_3': 'echo "value3"'
         ])
 
-        def result2 = TaskHasher.computeEvalOutputCommands([
+        def result2 = AbstractTaskHasher.computeEvalOutputCommands([
             'nxf_out_eval_3': 'echo "value3"',
             'nxf_out_eval_1': 'echo "value1"',
             'nxf_out_eval_2': 'echo "value2"'

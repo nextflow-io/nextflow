@@ -85,7 +85,31 @@ public class HashBuilder {
 
     private Path basePath;
 
+    private boolean orderIndependentMaps = true;
+
+    private boolean cacheFunnelFirst = true;
+
     public HashBuilder() {}
+
+    /**
+     * When {@code true} (default), Maps are hashed using order-independent
+     * hashing on their entrySet. When {@code false}, only the values are
+     * hashed in iteration order (legacy V1 behaviour).
+     */
+    public HashBuilder withOrderIndependentMaps(boolean value) {
+        this.orderIndependentMaps = value;
+        return this;
+    }
+
+    /**
+     * When {@code true} (default), {@link CacheFunnel} is checked before
+     * Map and SerializableMarker. When {@code false}, it is checked after
+     * them (legacy V1 behaviour).
+     */
+    public HashBuilder withCacheFunnelFirst(boolean value) {
+        this.cacheFunnelFirst = value;
+        return this;
+    }
 
     public HashBuilder withHasher(Hasher hasher) {
         this.hasher = hasher;
@@ -146,11 +170,16 @@ public class HashBuilder {
                 with(item);
         }
 
-        else if( value instanceof CacheFunnel )
+        else if( cacheFunnelFirst && value instanceof CacheFunnel )
             ((CacheFunnel)value).funnel(hasher, mode);
 
-        else if( value instanceof Map )
-            hashUnorderedCollection(hasher, ((Map) value).entrySet(), mode);
+        else if( value instanceof Map ) {
+            if( orderIndependentMaps )
+                hashUnorderedCollection(hasher, ((Map) value).entrySet(), mode);
+            else
+                for( Object item : ((Map)value).values() )
+                    with(item);
+        }
 
         else if( value instanceof Map.Entry ) {
             Map.Entry entry = (Map.Entry)value;
@@ -181,6 +210,9 @@ public class HashBuilder {
 
         else if( value instanceof SerializableMarker)
             hasher.putInt( value.hashCode() );
+
+        else if( !cacheFunnelFirst && value instanceof CacheFunnel )
+            ((CacheFunnel)value).funnel(hasher, mode);
 
         else if( value instanceof Enum )
             hasher.putUnencodedChars( value.getClass().getName() + "." + value );
