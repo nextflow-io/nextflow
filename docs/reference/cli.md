@@ -841,14 +841,14 @@ The `launch` command launches a pipeline run in Seqera Platform. To log in and c
 `-w, -work-dir`
 : The directory where intermediate result files are stored.
 
+`-workspace`
+: The Seqera Platform workspace name.
+
 `-workspace-secret`
 : :::{versionadded} 26.04.0
   :::
 : Name of workspace secret to use in the pipeline.
 : Can be specified multiple times.
-
-`-workspace`
-: The Seqera Platform workspace name.
 
 **Examples**
 
