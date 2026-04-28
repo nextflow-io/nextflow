@@ -91,6 +91,10 @@ class CsvSplitter extends AbstractTextSplitter {
         if( options.skip )
             skipLines = options.skip as int
 
+        // the comment character if used
+        if( options.comment )
+            parser.setComment(options.comment as String)
+
         return this
     }
 
@@ -107,6 +111,7 @@ class CsvSplitter extends AbstractTextSplitter {
         result.header = [ Boolean, List ]
         result.quote = String
         result.skip = Integer
+        result.comment = String
         return result
     }
 
@@ -132,7 +137,7 @@ class CsvSplitter extends AbstractTextSplitter {
         while( z++ < skipLines && reader.readLine() != null ) { /* nope */ }
 
         if( firstLineAsHeader ) {
-            line = reader.readLine()
+            line = readParsableLine(reader)
             if( !line ) throw new IllegalStateException("Missing 'header' in CSV file")
             List allCols = parser.parse(line)
             columnsHeader = new ArrayList<>(allCols.size())
@@ -145,6 +150,24 @@ class CsvSplitter extends AbstractTextSplitter {
     }
 
     /**
+     * Read the next parsable line, skipping empty lines and comment lines
+     *
+     * @param reader The reader from which to read
+     * @return The next parsable line, or {@code null} if end of file
+     */
+    protected String readParsableLine(BufferedReader reader) {
+        String line
+        while( (line = reader.readLine()) != null ) {
+            if( !line )
+                continue
+            if( parser.comment && line.charAt(0) == parser.comment )
+                continue
+            return line
+        }
+        return null
+    }
+
+    /**
      * Process a CSV row at time
      *
      * @param reader The reader from which read the row
@@ -152,14 +175,9 @@ class CsvSplitter extends AbstractTextSplitter {
      */
     @Override
     protected fetchRecord(BufferedReader reader) {
-        String line
-        while( true ) {
-            line = reader.readLine()
-            if( line )
-                break
-            if( line==null )
-                return null
-        }
+        final line = readParsableLine(reader)
+        if( line==null )
+            return null
 
         final tokens = parser.parse(line)
 
