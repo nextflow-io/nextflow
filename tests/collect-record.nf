@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 /*
  * fake alignment step producing a BAM and BAI files

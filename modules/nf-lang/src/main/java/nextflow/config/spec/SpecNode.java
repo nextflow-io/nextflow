@@ -19,6 +19,7 @@ import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -109,10 +110,10 @@ public sealed interface SpecNode {
         return annot != null ? annot.value() : defaultValue;
     }
 
-    private static List<Class> optionTypes(Field field) {
-        var result = new ArrayList<Class>();
+    private static List<Type> optionTypes(Field field) {
+        var result = new ArrayList<Type>();
         // use the field type
-        result.add(field.getType());
+        result.add(field.getGenericType());
         // append types from ConfigOption annotation if specified
         var annot = field.getAnnotation(ConfigOption.class);
         if( annot != null ) {
@@ -120,6 +121,14 @@ public sealed interface SpecNode {
                 result.add(type);
         }
         return result;
+    }
+
+    private static Class rawType(Type type) {
+        if( type instanceof Class c )
+            return c;
+        if( type instanceof ParameterizedType pt )
+            return (Class) pt.getRawType();
+        throw new IllegalStateException();
     }
 
     /**
@@ -136,7 +145,7 @@ public sealed interface SpecNode {
      */
     public static record Option(
         String description,
-        List<Class> types
+        List<Type> types
     ) implements SpecNode {}
 
     /**
@@ -212,23 +221,23 @@ public sealed interface SpecNode {
             var children = new HashMap<String, SpecNode>();
             for( var field : scope.getDeclaredFields() ) {
                 var name = field.getName();
-                var type = field.getType();
+                var type = field.getGenericType();
+                var rawType = rawType(type);
                 var desc = annotatedDescription(field, description);
                 var placeholderName = field.getAnnotation(PlaceholderName.class);
                 // fields annotated with @ConfigOption are config options
                 if( field.getAnnotation(ConfigOption.class) != null ) {
-                    if( DslScope.class.isAssignableFrom(type) )
-                        children.put(name, new DslOption(desc, type));
+                    if( DslScope.class.isAssignableFrom(rawType) )
+                        children.put(name, new DslOption(desc, rawType));
                     else
                         children.put(name, new Option(desc, optionTypes(field)));
                 }
-                // fields of type ConfigScope are nested config scopes
-                else if( ConfigScope.class.isAssignableFrom(type) ) {
-                    children.put(name, Scope.of((Class<? extends ConfigScope>) type, desc));
+                // fields of rawType ConfigScope are nested config scopes
+                else if( ConfigScope.class.isAssignableFrom(rawType) ) {
+                    children.put(name, Scope.of((Class<? extends ConfigScope>) rawType, desc));
                 }
                 // fields of type Map<String, ConfigScope> are placeholder scopes
-                else if( Map.class.isAssignableFrom(type) && placeholderName != null ) {
-                    var pt = (ParameterizedType)field.getGenericType();
+                else if( Map.class.isAssignableFrom(rawType) && type instanceof ParameterizedType pt && placeholderName != null ) {
                     var valueType = (Class<? extends ConfigScope>)pt.getActualTypeArguments()[1];
                     children.put(name, new Placeholder(desc, placeholderName.value(), Scope.of(valueType, desc)));
                 }

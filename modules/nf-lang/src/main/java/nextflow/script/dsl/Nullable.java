@@ -13,36 +13,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package nextflow.script.dsl;
 
-package nextflow.script
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-import groovy.transform.CompileStatic
-import nextflow.Session
 /**
- * Models the workflow params definition
+ * Annotation for denoting that a field or method return value
+ * can be null (equivalent to `?` suffix in a Nextflow type annotation).
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-@CompileStatic
-class ParamsDef {
-
-    private Class clazz
-
-    private Closure closure
-
-    ParamsDef(Class clazz, Closure closure) {
-        this.clazz = clazz
-        this.closure = closure
-    }
-
-    void apply(Session session) {
-        final dsl = new ParamsDsl(clazz)
-        final cl = (Closure)closure.clone()
-        cl.setDelegate(dsl)
-        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
-        cl.call()
-
-        dsl.apply(session)
-    }
-
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ ElementType.FIELD, ElementType.METHOD })
+public @interface Nullable {
 }

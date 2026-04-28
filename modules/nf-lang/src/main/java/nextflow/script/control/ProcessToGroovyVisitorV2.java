@@ -161,37 +161,19 @@ public class ProcessToGroovyVisitorV2 {
     private static boolean isPathType(ClassNode cn) {
         if( !cn.isResolved() )
             return false;
-        var tn = new TypeNode(cn);
-        var type = tn.type;
-        if( Path.class.isAssignableFrom(type) ) {
+        var clazz = cn.getTypeClass();
+        if( Path.class.isAssignableFrom(clazz) ) {
             return true;
         }
-        if( Collection.class.isAssignableFrom(type) && tn.genericTypes != null ) {
-            var genericType = tn.genericTypes.get(0);
-            return Path.class.isAssignableFrom(genericType);
+        if( Collection.class.isAssignableFrom(clazz) && cn.isUsingGenerics() ) {
+            var elementType = cn.getGenericsTypes()[0].getType();
+            return Path.class.isAssignableFrom(elementType.getTypeClass());
         }
         return false;
     }
 
     private static boolean isRecordType(ClassNode cn) {
         return cn.redirect() instanceof RecordNode;
-    }
-
-    private static class TypeNode {
-        final Class type;
-        final List<Class> genericTypes;
-
-        public TypeNode(ClassNode cn) {
-            this.type = cn.getTypeClass();
-            if( cn.isUsingGenerics() ) {
-                this.genericTypes = Arrays.stream(cn.getGenericsTypes())
-                    .map(el -> el.getType().getTypeClass())
-                    .toList();
-            }
-            else {
-                this.genericTypes = null;
-            }
-        }
     }
 
     private void visitProcessUnstagers(Statement outputs, ProcessUnstageVisitor visitor) {

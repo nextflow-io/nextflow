@@ -208,7 +208,7 @@ The `collect` operator behaves differently from `toList` in the following ways:
 - `collect` flattens collected values whereas `toList` does not.
 
 :::{note}
-When static typing is enabled via `nextflow.preview.types`, `collect` behaves the same way as `toList`.
+When static typing is enabled via `nextflow.enable.types`, `collect` behaves the same way as `toList`.
 :::
 
 ## collectFile
@@ -527,7 +527,7 @@ When the mapping function returns a map, each key-value pair in the map is emitt
 ```
 
 :::{note}
-When static typing is enabled via `nextflow.preview.types`, `flatMap` does not flatten maps or tuples.
+When static typing is enabled via `nextflow.enable.types`, `flatMap` does not flatten maps or tuples.
 :::
 
 (operator-flatten)=
@@ -728,7 +728,7 @@ The `map` operator applies a *mapping function* to each item from a source chann
 ```
 
 :::{note}
-By default, null values are not emitted by `map`. When static typing is enabled via `nextflow.preview.types`, null values are emitted.
+By default, null values are not emitted by `map`. When static typing is enabled via `nextflow.enable.types`, null values are emitted.
 :::
 
 (operator-max)=

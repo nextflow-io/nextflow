@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 params {
   n_samples: Integer = 3

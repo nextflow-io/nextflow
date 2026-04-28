@@ -12,7 +12,7 @@ To use this feature:
     export NXF_SYNTAX_PARSER=v2
     ```
 
-2. Set `nextflow.preview.types = true` in every script that uses typed workflows. The `params` block and `output` block can be used without this feature flag.
+2. Set `nextflow.enable.types = true` in every script that uses typed workflows. The `params` block and `output` block can be used without this feature flag.
 
 See {ref}`syntax-workflow-typed` for the complete syntax reference and {ref}`migrating-static-types` to migrate existing code to static typing.
 
@@ -52,12 +52,6 @@ A parameter that doesn't specify a default value is a *required* parameter. If a
 
 Boolean parameters that don't specify a default value will default to `false`.
 
-Parameters with a collection type (i.e., `List`, `Set`, or `Bag`) can be supplied a file path instead of a literal collection. The file must be CSV, JSON, or YAML. Nextflow will parse the file contents and assign the resulting collection to the parameter. An error is thrown if the file contents do not match the parameter type.
-
-:::{note}
-When supplying a CSV file to a collection parameter, the CSV file must contain a header row and must use a comma (`,`) as the column separator.
-:::
-
 ## Typed outputs
 
 :::{versionadded} 25.10.0
@@ -66,7 +60,7 @@ When supplying a CSV file to a collection parameter, the CSV file must contain a
 Workflow outputs can use type annotations:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 params {
     input: String
@@ -135,7 +129,7 @@ Typed workflows are a preview feature. The syntax and behavior may change in fut
 Typed workflows can use type annotations in the `take:` and `emit:` sections:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 workflow hello_bye {
     take:

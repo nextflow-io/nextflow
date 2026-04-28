@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 process foo {
     output:
