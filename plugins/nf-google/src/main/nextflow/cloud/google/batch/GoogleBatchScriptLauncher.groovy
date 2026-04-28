@@ -25,7 +25,10 @@ import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.google.GoogleOpts
+import nextflow.cloud.google.batch.client.BatchConfig
 import nextflow.executor.BashWrapperBuilder
+import nextflow.executor.ScriptFileCopyStrategy
+import nextflow.executor.SimpleFileCopyStrategy
 import nextflow.extension.FilesEx
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
@@ -42,7 +45,7 @@ import nextflow.util.TestOnly
 @CompileStatic
 class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatchLauncherSpec {
 
-    private static final String MOUNT_ROOT = '/mnt/disks'
+    public static final String MOUNT_ROOT = '/mnt/disks'
 
     private GoogleOpts config
     private CloudStoragePath remoteWorkDir
@@ -54,8 +57,8 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
     @TestOnly
     protected GoogleBatchScriptLauncher() {}
 
-    GoogleBatchScriptLauncher(TaskBean bean, Path remoteBinDir) {
-        super(bean)
+    GoogleBatchScriptLauncher(TaskBean bean, Path remoteBinDir, BatchConfig batchConfig) {
+        super(defaultStageOutMode(bean), copyStrategyFor(bean, batchConfig))
         // keep track the google storage work dir
         this.remoteWorkDir = (CloudStoragePath) bean.workDir
         this.remoteBinDir = toContainerMount(remoteBinDir)
@@ -99,6 +102,20 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         // enable use of local scratch dir
         if( scratch==null )
             scratch = true
+    }
+
+    private static ScriptFileCopyStrategy copyStrategyFor(TaskBean bean, BatchConfig batchConfig) {
+        batchConfig.usesGoogleBatchStaging()
+                ? new GoogleBatchFileCopyStrategy(bean, batchConfig)
+                : new SimpleFileCopyStrategy(bean)
+    }
+
+    private static TaskBean defaultStageOutMode(TaskBean bean) {
+        // Unstaging is cross-device on Google Batch (gcsfuse-mounted work dir).
+        // `move` can fail with overlapping outputs or symlinked paths.
+        if( bean.stageOutMode == null )
+            bean.stageOutMode = 'copy'
+        return bean
     }
 
     protected String headerScript(TaskBean bean) {

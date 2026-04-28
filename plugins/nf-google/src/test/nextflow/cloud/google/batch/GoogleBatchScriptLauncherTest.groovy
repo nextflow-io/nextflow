@@ -17,10 +17,10 @@
 package nextflow.cloud.google.batch
 
 import java.nio.file.Paths
-
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.cloud.google.GoogleOpts
 import nextflow.cloud.google.batch.client.BatchConfig
+import nextflow.processor.TaskBean
 import nextflow.processor.TaskRun
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -85,6 +85,24 @@ class GoogleBatchScriptLauncherTest extends Specification{
         volumes[1].getGcs().getRemotePath() == 'omega'
         volumes[1].getMountPath() == '/mnt/disks/omega'
         volumes[1].getMountOptionsList() == ['-o rw', '-implicit-dirs', '-o allow_other', '--uid=1000', '--billing-project my-project']
+    }
+
+    def 'should default stageOutMode to copy when not set' () {
+        given:
+        def workDir = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def targetDir = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def bean = new TaskBean(
+                workDir: workDir,
+                targetDir: targetDir,
+                stageOutMode: null,
+                inputFiles: [:]
+        )
+
+        when:
+        new GoogleBatchScriptLauncher(bean, null, Mock(BatchConfig))
+
+        then:
+        bean.stageOutMode == 'copy'
     }
 
     def 'should return target files in remote work dir' () {
