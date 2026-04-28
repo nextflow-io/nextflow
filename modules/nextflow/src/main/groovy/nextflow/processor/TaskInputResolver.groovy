@@ -16,6 +16,7 @@
 
 package nextflow.processor
 
+import java.lang.reflect.Modifier
 import java.nio.file.Path
 import java.util.regex.Matcher
 import java.util.regex.Pattern
@@ -32,6 +33,7 @@ import nextflow.file.LogicalDataPath
 import nextflow.script.ScriptType
 import nextflow.script.params.FileInParam
 import nextflow.script.params.v2.ProcessFileInput
+import nextflow.script.types.Record
 import nextflow.util.ArrayBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.RecordMap
@@ -111,12 +113,45 @@ class TaskInputResolver {
             return value.collect { el -> normalizeValue(el, holders) }
         }
 
+        if( value instanceof RecordMap ) {
+            final normalized = new LinkedHashMap<String,Object>()
+            for( final entry : value.entrySet() )
+                normalized.put(entry.key, normalizeValue(entry.value, holders))
+            return new RecordMap(normalized)
+        }
+
         if( value instanceof Map ) {
             final normalized = value.collectEntries { k, v -> [k, normalizeValue(v, holders)] }
-            return value instanceof RecordMap ? new RecordMap(normalized as Map<String,?>) : normalized
+            return normalized
+        }
+
+        if( value instanceof Record ) {
+            return normalizeRecord(value, holders)
         }
 
         return value
+    }
+
+    private Object normalizeRecord(Record value, Map<Path,FileHolder> holders) {
+        final normalized = new LinkedHashMap<String,Object>()
+        final fields = value.getClass().getFields()
+            .findAll { field -> !Modifier.isStatic(field.modifiers) && !field.synthetic }
+            .sort { it.name }
+
+        for( final field : fields )
+            normalized.put(field.name, normalizeValue(field.get(value), holders))
+
+        try {
+            final result = value.getClass().getDeclaredConstructor().newInstance()
+            for( final field : fields ) {
+                field.set(result, normalized[field.name])
+            }
+            return result
+        }
+        catch( Exception e ) {
+            log.debug "Unable to normalize record as ${value.getClass().name}; using RecordMap instead", e
+            return new RecordMap(normalized)
+        }
     }
 
     private Path normalizePath(Path value, Map<Path,FileHolder> holders) {

@@ -17,6 +17,7 @@
 package nextflow.processor
 
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 
 import groovy.runtime.metaclass.ExtensionProvider
@@ -32,12 +33,18 @@ import nextflow.script.ScriptMeta
 import nextflow.util.BlankSeparatedList
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
+import nextflow.util.RecordMap
 import spock.lang.Specification
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class TaskContextTest extends Specification {
+
+    static class SampleRecord implements nextflow.script.types.Record {
+        public String id
+        public Path path
+    }
 
     def setupSpec() {
         NF.init()
@@ -78,6 +85,27 @@ class TaskContextTest extends Specification {
         result.getHolder() instanceof Map
         result.getHolder().get('alpha') == 1
 
+    }
+
+    def 'should serialize typed records as record maps' () {
+        setup:
+        def processor = Mock(TaskProcessor) {
+            getTaskBody() >> new BodyDef(null,'source')
+        }
+        def path = Paths.get('/some/input.txt')
+        def map = new TaskContext(processor, [:])
+        map.sample = new SampleRecord(id: 'alpha', path: path)
+        map.samples = [new SampleRecord(id: 'beta', path: path)]
+
+        when:
+        def buffer = map.serialize()
+        def result = TaskContext.deserialize(processor, buffer)
+
+        then:
+        result.sample instanceof RecordMap
+        result.sample == new RecordMap(id: 'alpha', path: path)
+        result.samples[0] instanceof RecordMap
+        result.samples[0] == new RecordMap(id: 'beta', path: path)
     }
 
     def 'should dehydrate rehydrate'() {
