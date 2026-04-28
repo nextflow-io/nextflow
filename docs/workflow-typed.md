@@ -52,12 +52,6 @@ A parameter that doesn't specify a default value is a *required* parameter. If a
 
 Boolean parameters that don't specify a default value will default to `false`.
 
-Parameters with a collection type (i.e., `List`, `Set`, or `Bag`) can be supplied a file path instead of a literal collection. The file must be CSV, JSON, or YAML. Nextflow will parse the file contents and assign the resulting collection to the parameter. An error is thrown if the file contents do not match the parameter type.
-
-:::{note}
-When supplying a CSV file to a collection parameter, the CSV file must contain a header row and must use a comma (`,`) as the column separator.
-:::
-
 ## Typed outputs
 
 :::{versionadded} 25.10.0

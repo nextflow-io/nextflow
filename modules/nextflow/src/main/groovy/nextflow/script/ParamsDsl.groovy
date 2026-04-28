@@ -19,16 +19,12 @@ package nextflow.script
 import java.lang.reflect.Type
 import java.nio.file.Path
 
-import groovy.json.JsonSlurper
-import groovy.yaml.YamlSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.file.FileHelper
 import nextflow.exception.ScriptRuntimeException
 import nextflow.script.dsl.Types
-import nextflow.splitter.CsvSplitter
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import nextflow.util.TypeHelper
@@ -106,8 +102,11 @@ class ParamsDsl {
         if( value == null )
             return null
 
+        if( value instanceof Collection || value instanceof Map )
+            return asType(value, decl)
+
         if( value !instanceof CharSequence )
-            return TypeHelper.asType(value, decl.type)
+            return value
 
         final str = value.toString()
 
@@ -136,10 +135,6 @@ class ParamsDsl {
             return MemoryUnit.of(str)
         }
 
-        if( TypeHelper.isCollectionType(decl.type) ) {
-            return resolveFromFile(decl, FileHelper.asPath(str))
-        }
-
         if( decl.type == Path ) {
             return TypeHelper.asPathType(str)
         }
@@ -151,13 +146,13 @@ class ParamsDsl {
         if( value == null )
             return null
 
+        if( value instanceof Collection || value instanceof Map )
+            return asType(value, decl)
+
         if( value !instanceof CharSequence )
             return value
 
         final str = value.toString()
-
-        if( TypeHelper.isCollectionType(decl.type) )
-            return resolveFromFile(decl, FileHelper.asPath(str))
 
         if( decl.type == Path )
             return TypeHelper.asPathType(str)
@@ -165,22 +160,13 @@ class ParamsDsl {
         return value
     }
 
-    private static Object resolveFromFile(Param decl, Path file) {
-        final ext = file.getExtension()
-        final value = switch( ext ) {
-            case 'csv' -> new CsvSplitter().options(header: true, sep: ',').target(file).list()
-            case 'json' -> new JsonSlurper().parse(file)
-            case 'yaml' -> new YamlSlurper().parse(file)
-            case 'yml' -> new YamlSlurper().parse(file)
-            default -> throw new ScriptRuntimeException("Unrecognized file format '${ext}' for input file '${file}' supplied for parameter `${decl.name}` -- should be CSV, JSON, or YAML")
-        }
-
+    private static Object asType(Object value, Param decl) {
         try {
-            return TypeHelper.asCollectionType(value as Collection, decl.type)
+            return TypeHelper.asType(value, decl.type)
         }
         catch( GroovyCastException | UnsupportedOperationException e ) {
             final actualType = value.getClass()
-            throw new ScriptRuntimeException("Parameter `${decl.name}` with type ${Types.getName(decl.type)} cannot be assigned to contents of '${file}' [${Types.getName(actualType)}]")
+            throw new ScriptRuntimeException("Parameter `${decl.name}` with type ${Types.getName(decl.type)} cannot be assigned to ${value} [${Types.getName(actualType)}]")
         }
     }
 
