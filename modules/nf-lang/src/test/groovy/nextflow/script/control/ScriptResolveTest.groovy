@@ -182,6 +182,54 @@ class ScriptResolveTest extends Specification {
         errors[0].getStartLine() == 3
         errors[0].getStartColumn() == 9
         errors[0].getOriginalMessage() == 'Variables in a closure should be declared with `def`'
+
+        when:
+        errors = check(
+            '''\
+            workflow hello {
+                emit:
+                x
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 3
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == '`x` is not defined'
+
+        when:
+        errors = check(
+            '''\
+            workflow hello {
+                emit:
+                x = y
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 3
+        errors[0].getStartColumn() == 9
+        errors[0].getOriginalMessage() == '`y` is not defined'
+
+        when:
+        errors = check(
+            '''\
+            workflow hello {
+                emit:
+                x + y
+            }
+            '''
+        )
+        then:
+        errors.size() == 2
+        errors[0].getStartLine() == 3
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == '`x` is not defined'
+        errors[1].getStartLine() == 3
+        errors[1].getStartColumn() == 9
+        errors[1].getOriginalMessage() == '`y` is not defined'
     }
 
     def 'should report an error for an undefined function' () {

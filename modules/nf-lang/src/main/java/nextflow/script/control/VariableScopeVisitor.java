@@ -306,6 +306,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             var output = es.getExpression();
             VariableExpression target;
             if( output instanceof VariableExpression ve ) {
+                visit(ve);
                 target = ve;
             }
             else if( output instanceof AssignmentExpression assign ) {
