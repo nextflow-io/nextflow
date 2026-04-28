@@ -12,7 +12,7 @@ To use this feature:
     export NXF_SYNTAX_PARSER=v2
     ```
 
-2. Set `nextflow.preview.types = true` in every script that uses typed workflows. The `params` block and `output` block can be used without this feature flag.
+2. Set `nextflow.enable.types = true` in every script that uses typed workflows. The `params` block and `output` block can be used without this feature flag.
 
 See {ref}`syntax-workflow-typed` for the complete syntax reference and {ref}`migrating-static-types` to migrate existing code to static typing.
 
@@ -66,7 +66,7 @@ When supplying a CSV file to a collection parameter, the CSV file must contain a
 Workflow outputs can use type annotations:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 params {
     input: String
@@ -135,7 +135,7 @@ Typed workflows are a preview feature. The syntax and behavior may change in fut
 Typed workflows can use type annotations in the `take:` and `emit:` sections:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 workflow hello_bye {
     take:

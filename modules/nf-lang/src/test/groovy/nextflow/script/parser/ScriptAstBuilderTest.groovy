@@ -268,15 +268,15 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() >= 2
         errors[0].getStartLine() == 3
         errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Typed input declaration is not allowed in legacy process -- set `nextflow.preview.types = true` to use typed processes in this script"
+        errors[0].getOriginalMessage() == "Typed input declaration is not allowed in legacy process -- set `nextflow.enable.types = true` to use typed processes in this script"
         errors[1].getStartLine() == 6
         errors[1].getStartColumn() == 5
-        errors[1].getOriginalMessage() == "Typed output declaration is not allowed in legacy process -- set `nextflow.preview.types = true` to use typed processes in this script"
+        errors[1].getOriginalMessage() == "Typed output declaration is not allowed in legacy process -- set `nextflow.enable.types = true` to use typed processes in this script"
 
         when:
         errors = check(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process hello {
                 input:
@@ -298,7 +298,7 @@ class ScriptAstBuilderTest extends Specification {
         when:
         def errors = check(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process hello {
                 input:
@@ -341,7 +341,7 @@ class ScriptAstBuilderTest extends Specification {
         when:
         def errors = check(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process hello {
                 input:
@@ -361,7 +361,7 @@ class ScriptAstBuilderTest extends Specification {
         when:
         errors = check(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process hello {
                 input:
@@ -380,7 +380,7 @@ class ScriptAstBuilderTest extends Specification {
         when:
         def errors = check(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process hello {
                 input:
@@ -402,7 +402,7 @@ class ScriptAstBuilderTest extends Specification {
         when:
         def errors = check(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process hello {
                 topic:
@@ -422,7 +422,7 @@ class ScriptAstBuilderTest extends Specification {
         when:
         errors = check(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process hello {
                 topic:

@@ -30,7 +30,7 @@ See {ref}`devenv-page` for instructions on how to setup VS Code and the Nextflow
 
 When using static typing, the language server can check your code for type-related errors. For example, it can validate that a channel of records has all the required fields when it is passed as input to a process.
 
-The language server performs type checking on every script that enables the `nextflow.preview.types` feature flag.
+The language server performs type checking on every script that enables the `nextflow.enable.types` feature flag.
 
 ### Automatic migration
 
@@ -212,7 +212,7 @@ Collection-type params can also be loaded from JSON and YAML samplesheets. See {
 See {ref}`process-typed-page` for an overview of typed processes.
 
 :::{note}
-You must enable the `nextflow.preview.types` feature flag in each script that uses typed processes.
+You must enable the `nextflow.enable.types` feature flag in each script that uses typed processes.
 :::
 
 <h4>FASTQC</h4>
@@ -240,7 +240,7 @@ process FASTQC {
 To migrate the `FASTQC` process, rewrite the inputs and outputs as follows:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 process FASTQC {
     tag id
@@ -304,7 +304,7 @@ process QUANT {
 To migrate the `QUANT` process, rewrite the inputs and outputs as follows:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 process QUANT {
     tag id
@@ -364,7 +364,7 @@ process MULTIQC {
 To migrate this process, rewrite the inputs and outputs as follows:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 process MULTIQC {
     // ...
@@ -406,7 +406,7 @@ Once you migrate every process called by a workflow to static typing, you can mi
 See {ref}`workflow-typed-page` for an overview of typed workflows.
 
 :::{note}
-You must enable the `nextflow.preview.types` feature flag in each script that uses typed workflows.
+You must enable the `nextflow.enable.types` feature flag in each script that uses typed workflows.
 :::
 
 <h4>RNASEQ</h4>
@@ -451,7 +451,7 @@ You can determine the type of each input as follows:
 Specify the workflow input types as follows:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 workflow RNASEQ {
     take:
@@ -491,7 +491,7 @@ These channels are emitted as the outputs of `RNASEQ`. However, with records it 
 Use the `join` operator to join `fastqc_ch` and `quant_ch` by sample ID:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 workflow RNASEQ {
     take:
@@ -525,7 +525,7 @@ record AlignedSample {
 Update the workflow to emit `samples_ch` with the new record type:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 workflow RNASEQ {
     take:
@@ -562,7 +562,7 @@ workflow {
 Rewrite this workflow based on the updated params, processes, and subworkflows:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 workflow {
     read_pairs_ch = channel.fromList(params.reads)

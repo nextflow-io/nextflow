@@ -431,7 +431,7 @@ class ModuleSpecFactoryTest extends Specification {
         given:
         def mainNf = tempDir.resolve('main.nf')
         mainNf.text = '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process ALIGN {
                 input:
@@ -472,7 +472,7 @@ class ModuleSpecFactoryTest extends Specification {
         given:
         def mainNf = tempDir.resolve('main.nf')
         mainNf.text = '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process ALIGN {
                 input:
@@ -526,7 +526,7 @@ class ModuleSpecFactoryTest extends Specification {
         given:
         def mainNf = tempDir.resolve('main.nf')
         mainNf.text = '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process ALIGN {
                 input:
