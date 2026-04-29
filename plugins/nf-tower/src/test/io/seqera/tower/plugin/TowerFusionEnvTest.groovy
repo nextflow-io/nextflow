@@ -16,8 +16,6 @@
 
 package io.seqera.tower.plugin
 
-import nextflow.exception.AbortOperationException
-
 import static com.github.tomakehurst.wiremock.client.WireMock.*
 
 import java.time.Instant
@@ -31,6 +29,7 @@ import io.seqera.tower.plugin.exception.UnauthorizedException
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.exception.AbortRunException
 import nextflow.script.WorkflowMetadata
 import nextflow.serde.gson.InstantAdapter
 import spock.lang.Shared
@@ -258,7 +257,7 @@ class TowerFusionEnvTest extends Specification {
         def provider = new TowerFusionToken()
 
         then: 'the access token has the expected value'
-        def e = thrown(AbortOperationException)
+        def e = thrown(AbortRunException)
         e.message.contains("Missing Seqera Platform access token")
 
         cleanup:

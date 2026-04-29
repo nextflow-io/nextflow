@@ -157,7 +157,7 @@ public class ScriptNode extends ModuleNode {
 
     public boolean isTypingEnabled() {
         return featureFlags.stream().anyMatch(ffn -> (
-            "nextflow.preview.types".equals(ffn.name)
+            "nextflow.enable.types".equals(ffn.name)
                 && ffn.value instanceof ConstantExpression ce
                 && Boolean.TRUE.equals(ce.getValue())
         ));

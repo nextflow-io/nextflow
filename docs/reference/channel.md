@@ -354,7 +354,7 @@ A *topic channel* is a channel that can receive values from many sources *implic
 A typed process can emit values to a topic using the `topic:` section:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 process hello {
     topic:

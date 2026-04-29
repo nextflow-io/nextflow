@@ -12,7 +12,7 @@ Typed processes are a preview feature. The syntax and behavior may change in fut
 Typed processes use a new syntax for inputs and outputs that supports static typing.
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 process hello {
     input:
@@ -36,7 +36,7 @@ To use this feature:
     export NXF_SYNTAX_PARSER=v2
     ```
 
-2. Set `nextflow.preview.types = true` in every script that uses typed processes.
+2. Set `nextflow.enable.types = true` in every script that uses typed processes.
 
 See {ref}`syntax-process-typed` for the complete syntax reference and {ref}`migrating-static-types` to migrate existing code to static typing.
 

@@ -245,7 +245,7 @@ Moving topic emissions to a dedicated section allows them to be defined without 
 
 ## Distinguishing between typed and legacy processes
 
-Typed processes are gated behind the `nextflow.preview.types` feature flag. This flag will be replaced by `nextflow.enable.types` when the feature becomes stable, which will be used to distinguish between typed and legacy processes in the language.
+Typed processes are gated behind the `nextflow.enable.types` feature flag, in order to distinguish between typed and legacy processes in the language.
 
 When a script enables this feature flag, its processes are treated as typed processes; otherwise, its processes are treated as legacy processes. This way, typed and legacy processes cannot be mixed in the same script, but they can be used together as long as they are declared in different scripts.
 

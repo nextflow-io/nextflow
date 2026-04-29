@@ -727,10 +727,10 @@ class ConfigBuilderTest extends Specification {
         when:
         opt = new CliOptions()
         run = new CmdRun(withDocker: '-')
-        new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
-        def e = thrown(AbortOperationException)
-        e.message == 'You have requested to run with Docker but no image was specified'
+        config.docker.enabled
+        !config.process.container
 
         when:
         file.text =
@@ -739,10 +739,10 @@ class ConfigBuilderTest extends Specification {
                 '''
         opt = new CliOptions(config: [file.toFile().canonicalPath])
         run = new CmdRun(withDocker: '-')
-        new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
+        config = new ConfigBuilder().setOptions(opt).setCmdRun(run).build()
         then:
-        e = thrown(AbortOperationException)
-        e.message == 'You have requested to run with Docker but no image was specified'
+        config.docker.enabled
+        !config.process.container
 
     }
 
@@ -788,22 +788,6 @@ class ConfigBuilderTest extends Specification {
         config.cluster.slots == 10
         config.cluster.tcp.alpha == 'uno'
         config.cluster.tcp.beta == 'due'
-
-    }
-
-    def 'has container directive' () {
-        when:
-        def config = new ConfigBuilder()
-
-        then:
-        !config.hasContainerDirective(null)
-        !config.hasContainerDirective([:])
-        !config.hasContainerDirective([foo: true])
-        config.hasContainerDirective([container: 'hello/world'])
-        !config.hasContainerDirective([foo: 1, bar: 2])
-        !config.hasContainerDirective([foo: 1, bar: 2, baz: [container: 'user/repo']])
-        config.hasContainerDirective([foo: 1, bar: 2, $baz: [container: 'user/repo']])
-        config.hasContainerDirective([foo: 1, bar: 2, 'withName:baz': [container: 'user/repo']])
 
     }
 
@@ -2368,6 +2352,7 @@ class ConfigBuilderTest extends Specification {
                 process {
                     executor = { 'local' }
                 }
+                outputDir = params.outdir
             }
             second {
                 params.none = 'Blah'
@@ -2377,11 +2362,13 @@ class ConfigBuilderTest extends Specification {
         when:
         def opt = new CliOptions(config: [configFile.toFile().canonicalPath])
         def cmd = new CmdRun(profile: 'first', withTower: 'http://foo.com', launcher: new Launcher(options: opt))
-        def txt = ConfigBuilder.resolveConfig(base, cmd)
+        def cliParams = [foo: 'Hola', outdir: 'output_folder']
+        def txt = ConfigBuilder.resolveConfig(base, cmd, cliParams)
         then:
         txt == '''\
             params {
-               foo = 'Hello world'
+               foo = 'Hola'
+               outdir = 'output_folder'
                awsKey = '[secret]'
             }
 
@@ -2389,6 +2376,7 @@ class ConfigBuilderTest extends Specification {
                executor = { 'local' }
             }
 
+            outputDir = 'output_folder'
             outputFormat = 'text'
             workDir = 'work'
 

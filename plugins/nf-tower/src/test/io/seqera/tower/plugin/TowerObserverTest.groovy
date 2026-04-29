@@ -16,31 +16,24 @@
 
 package io.seqera.tower.plugin
 
-import nextflow.script.PlatformMetadata
-
-import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
 
-import com.github.tomakehurst.wiremock.WireMockServer
-import com.github.tomakehurst.wiremock.client.WireMock
-import io.seqera.http.HxClient
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.container.DockerConfig
 import nextflow.container.resolver.ContainerMeta
-import nextflow.exception.AbortOperationException
+import nextflow.exception.AbortRunException
 import nextflow.script.PlatformMetadata
 import nextflow.script.ScriptBinding
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStats
 import nextflow.trace.WorkflowStatsObserver
-import nextflow.util.Duration
 import nextflow.util.ProcessHelper
 import spock.lang.Specification
 /**
@@ -575,6 +568,23 @@ class TowerObserverTest extends Specification {
         req.tasks[0].gpuMetrics.mem == 15360
         req.tasks[0].gpuMetrics.pct == 75
         req.tasks[0].gpuMetrics.peak == 100
+    }
+
+    def 'should throw AbortRunException if workflow id is not found'() {
+        given:
+        def session = Mock(Session){
+            getUniqueId() >> UUID.randomUUID()
+            getWorkflowMetadata() >> Mock(WorkflowMetadata)
+        }
+        def client = Mock(TowerClient){
+            traceCreate(_,_) >> [:]
+        }
+        def observer = new TowerObserver(session, client, null, [:])
+
+        when:
+        observer.onFlowCreate(session)
+        then:
+        thrown(AbortRunException)
     }
 
 

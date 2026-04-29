@@ -18,7 +18,7 @@ package nextflow.script.formatter
 
 import nextflow.script.control.ScriptParser
 import nextflow.script.control.ScriptResolveVisitor
-import nextflow.script.types.Types
+import nextflow.script.dsl.Types
 import spock.lang.Shared
 import spock.lang.Specification
 import test.TestUtils
@@ -157,14 +157,14 @@ class ScriptFormatterTest extends Specification {
         expect:
         checkFormat(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             workflow hello{
             take: x:Integer ; y:Integer ; main: xy=x*y ; emit: result:Integer = xy
             }
             ''',
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             workflow hello {
                 take:
@@ -211,14 +211,14 @@ class ScriptFormatterTest extends Specification {
         expect:
         checkFormat(
             '''\
-            nextflow.preview.types=true
+            nextflow.enable.types=true
 
             process hello{
             debug(true) ; input: tuple(id:String,infile:Path) ; index:Path ; stage: stageAs(infile,'input.txt') ; output: result=tuple(id,file('output.txt')) ; script: 'cat input.txt > output.txt'
             }
             ''',
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process hello {
                 debug true
@@ -241,14 +241,14 @@ class ScriptFormatterTest extends Specification {
 
         checkFormat(
             '''\
-            nextflow.preview.types=true
+            nextflow.enable.types=true
 
             process hello{
             input: record(id:String,infile:Path) ; script: 'cat input.txt > output.txt'
             }
             ''',
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process hello {
                 input:

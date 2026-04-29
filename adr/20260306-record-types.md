@@ -341,7 +341,7 @@ process FASTQC {
 
 This approach is syntactically more concise, and it re-uses the typed output syntax that was introduced in Nextflow 25.10.
 
-However, with this approach, the same syntax can have different meanings depending on the surrounding context (e.g. presence/absence of the `nextflow.preview.types` feature flag), which can be confusing for both users and agents.
+However, with this approach, the same syntax can have different meanings depending on the surrounding context (e.g. presence/absence of the `nextflow.enable.types` feature flag), which can be confusing for both users and agents.
 
 The `record()` approach works "out of the box", and it isn't much more verbose, so we decided that it is sufficient for now.
 

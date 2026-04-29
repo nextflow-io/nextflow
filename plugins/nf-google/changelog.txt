@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.27.2 - 25 Apr 2026
+- Replace current cloud info URL call with cloudInfo client (#7065) [629184251]
+
 1.27.1 - 26 Mar 2026
 - Fix netty and jackson vulnerabilities (#6955) [8dafdd95d]
 

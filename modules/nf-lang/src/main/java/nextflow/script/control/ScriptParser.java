@@ -21,8 +21,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 import groovy.lang.GroovyClassLoader;
+import nextflow.script.dsl.Types;
 import nextflow.script.parser.ScriptParserPluginFactory;
-import nextflow.script.types.Types;
 import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.messages.WarningMessage;

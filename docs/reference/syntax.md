@@ -73,6 +73,8 @@ A feature flag declaration is an assignment. The target should be a valid {ref}`
 nextflow.preview.recursion = true
 ```
 
+(syntax-include)=
+
 ### Include
 
 An include declaration consists of an *include source* and one or more *include clauses*:
@@ -203,7 +205,7 @@ Entry workflow definitions are ignored when a script is included as a module. Th
 A typed workflow is a workflow that uses static typing for inputs and outputs:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 workflow greet {
     take:
@@ -301,7 +303,7 @@ See {ref}`process-page` for more information on the semantics of each process se
 A typed process is a process that uses static typing for inputs and outputs:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 process greet {
     input: 
@@ -1053,6 +1055,8 @@ Compound expressions are evaluated in the following order:
 
 The following legacy features were excluded from this page because they are deprecated:
 
-- The `addParams` and `params` clauses of include declarations. See {ref}`module-params` for more information.
-- The `when:` section of a process definition. See {ref}`process-when` for more information.
-- The `shell:` section of a process definition. See {ref}`process-shell` for more information.
+- The `addParams` and `params` clauses of include declarations.
+- The `when:` section of a process definition.
+- The `shell:` section of a process definition.
+
+See {ref}`strict-syntax-page` for more information.

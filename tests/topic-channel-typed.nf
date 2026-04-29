@@ -1,5 +1,5 @@
 
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 process foo {
   input:

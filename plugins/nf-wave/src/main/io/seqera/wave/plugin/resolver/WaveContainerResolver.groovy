@@ -45,7 +45,7 @@ import nextflow.util.SysHelper
 class WaveContainerResolver implements ContainerResolver {
 
     private DefaultContainerResolver defaultResolver = new DefaultContainerResolver()
-    static final private List<String> DOCKER_LIKE = ['docker','podman','sarus']
+    static final private List<String> DOCKER_LIKE = ['docker','podman','sarus','apple-container']
     static final private List<String> SINGULARITY_LIKE = ['singularity','apptainer']
     static final private String DOCKER_PREFIX = 'docker://'
     private WaveClient client0

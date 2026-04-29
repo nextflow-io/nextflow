@@ -12,7 +12,7 @@ All operators can be used with or without static typing (i.e. {ref}`typed workfl
 
 ## Core operators
 
-The {ref}`core operators <operator-typed-page>` are recommended for use with static typing. When static typing is enabled (via `nextflow.preview.types`), some of these operators have stricter semantics which may require minor changes to pipeline code. These cases are described below.
+The {ref}`core operators <operator-typed-page>` are recommended for use with static typing. When static typing is enabled (via `nextflow.enable.types`), some of these operators have stricter semantics which may require minor changes to pipeline code. These cases are described below.
 
 ### collect
 
@@ -264,7 +264,7 @@ You can compose these functions and operators as needed to achieve the desired f
 For example:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 process COLLECT_FILE {
     input:

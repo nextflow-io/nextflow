@@ -43,28 +43,15 @@ class MapperUtilTest extends Specification {
         SchemaMapperUtil.toMachineRequirement(new MachineRequirementOpts([:])) == null
     }
 
-    def 'should map arch only' () {
-        when:
-        def result = SchemaMapperUtil.toMachineRequirement(new MachineRequirementOpts([arch: 'arm64']))
-
-        then:
-        result.arch == 'arm64'
-        result.provisioning == null
-        result.maxSpotAttempts == null
-        result.machineTypes == null
-    }
-
     def 'should map all fields' () {
         when:
         def result = SchemaMapperUtil.toMachineRequirement(new MachineRequirementOpts([
-            arch: 'x86_64',
             provisioning: 'spotFirst',
             maxSpotAttempts: 3,
             machineTypes: ['m5', 'c5']
         ]))
 
         then:
-        result.arch == 'x86_64'
         result.provisioning == ProvisioningModel.SPOT_FIRST
         result.maxSpotAttempts == 3
         result.machineTypes == ['m5', 'c5']
@@ -101,10 +88,10 @@ class MapperUtilTest extends Specification {
         result.provisioning == null
     }
 
-    def 'should use taskArch over config arch' () {
+    def 'should use taskArch with config settings' () {
         when:
         def result = SchemaMapperUtil.toMachineRequirement(
-            new MachineRequirementOpts([arch: 'x86_64', provisioning: 'spot']),
+            new MachineRequirementOpts([provisioning: 'spot']),
             'arm64'
         )
 
@@ -113,15 +100,15 @@ class MapperUtilTest extends Specification {
         result.provisioning == ProvisioningModel.SPOT
     }
 
-    def 'should use config arch when taskArch is null' () {
+    def 'should have null arch when taskArch is null' () {
         when:
         def result = SchemaMapperUtil.toMachineRequirement(
-            new MachineRequirementOpts([arch: 'x86_64', provisioning: 'spot']),
+            new MachineRequirementOpts([provisioning: 'spot']),
             null
         )
 
         then:
-        result.arch == 'x86_64'
+        result.arch == null
         result.provisioning == ProvisioningModel.SPOT
     }
 
@@ -181,8 +168,8 @@ class MapperUtilTest extends Specification {
     def 'should include disk in machine requirement' () {
         when:
         def result = SchemaMapperUtil.toMachineRequirement(
-            new MachineRequirementOpts([arch: 'x86_64']),
-            null,
+            new MachineRequirementOpts([:]),
+            'x86_64',
             MemoryUnit.of('200 GB'),
             false
         )
@@ -204,7 +191,7 @@ class MapperUtilTest extends Specification {
         result.disk.sizeGiB == 100
     }
 
-    def 'should return null when no arch, no opts, and no disk' () {
+    def 'should return null when no taskArch, no opts, and no disk' () {
         expect:
         SchemaMapperUtil.toMachineRequirement(null, null, null, false) == null
     }
@@ -289,7 +276,6 @@ class MapperUtilTest extends Specification {
     def 'should pass disk options through machine requirement' () {
         given:
         def opts = new MachineRequirementOpts([
-            arch: 'arm64',
             diskAllocation: 'task',
             diskType: 'ebs/io2',
             diskIops: 15000,
@@ -297,7 +283,7 @@ class MapperUtilTest extends Specification {
         ])
 
         when:
-        def result = SchemaMapperUtil.toMachineRequirement(opts, null, MemoryUnit.of('500 GB'), false)
+        def result = SchemaMapperUtil.toMachineRequirement(opts, 'arm64', MemoryUnit.of('500 GB'), false)
 
         then:
         result.arch == 'arm64'
@@ -365,12 +351,11 @@ class MapperUtilTest extends Specification {
     def 'should include disk allocation in machine requirement' () {
         given:
         def opts = new MachineRequirementOpts([
-            arch: 'x86_64',
             diskAllocation: 'node'
         ])
 
         when:
-        def result = SchemaMapperUtil.toMachineRequirement(opts, null, MemoryUnit.of('200 GB'), false)
+        def result = SchemaMapperUtil.toMachineRequirement(opts, 'x86_64', MemoryUnit.of('200 GB'), false)
 
         then:
         result.arch == 'x86_64'
@@ -483,7 +468,7 @@ class MapperUtilTest extends Specification {
 
     def 'should not default maxSpotAttempts when snapshot disabled' () {
         when:
-        def result = SchemaMapperUtil.toMachineRequirement(new MachineRequirementOpts([arch: 'x86_64']), null, null, false)
+        def result = SchemaMapperUtil.toMachineRequirement(new MachineRequirementOpts([:]), 'x86_64', null, false)
 
         then:
         result.snapshotEnabled == null
@@ -519,8 +504,8 @@ class MapperUtilTest extends Specification {
     def 'should include capacity mode in machine requirement with task arch' () {
         when:
         def result = SchemaMapperUtil.toMachineRequirement(
-            new MachineRequirementOpts([capacityMode: 'managed', arch: 'arm64']),
-            null,
+            new MachineRequirementOpts([capacityMode: 'managed']),
+            'arm64',
             null,
             false
         )
@@ -533,8 +518,8 @@ class MapperUtilTest extends Specification {
     def 'should combine snapshot with other machine requirement settings' () {
         when:
         def result = SchemaMapperUtil.toMachineRequirement(
-            new MachineRequirementOpts([arch: 'arm64', provisioning: 'spot']),
-            null,
+            new MachineRequirementOpts([provisioning: 'spot']),
+            'arm64',
             MemoryUnit.of('100 GB'),
             true
         )
@@ -581,10 +566,10 @@ class MapperUtilTest extends Specification {
 
     def 'should include nvme disk in machine requirement' () {
         given:
-        def opts = new MachineRequirementOpts([arch: 'x86_64', diskAllocation: 'nvme', capacityMode: 'asg'])
+        def opts = new MachineRequirementOpts([diskAllocation: 'nvme', capacityMode: 'asg'])
 
         when:
-        def result = SchemaMapperUtil.toMachineRequirement(opts)
+        def result = SchemaMapperUtil.toMachineRequirement(opts, 'x86_64', null, false)
 
         then:
         result != null

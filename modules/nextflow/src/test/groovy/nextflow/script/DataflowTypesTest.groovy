@@ -85,7 +85,7 @@ class DataflowTypesTest extends Dsl2Spec {
             '''
 
         folder.resolve('module.nf').text = '''
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process foo {
                 input:
@@ -121,7 +121,7 @@ class DataflowTypesTest extends Dsl2Spec {
         def folder = Files.createTempDirectory('test')
 
         folder.resolve('main.nf').text = '''
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             include { foo ; bar } from './module.nf'
 
@@ -166,7 +166,7 @@ class DataflowTypesTest extends Dsl2Spec {
         def folder = Files.createTempDirectory('test')
 
         folder.resolve('main.nf').text = '''
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             include { foo ; bar } from './module.nf'
 
@@ -177,7 +177,7 @@ class DataflowTypesTest extends Dsl2Spec {
             '''
 
         folder.resolve('module.nf').text = '''
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process foo {
                 input:

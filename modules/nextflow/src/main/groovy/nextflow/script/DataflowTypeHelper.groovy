@@ -27,7 +27,7 @@ import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Utility functions for converting between v1 and v2 dataflow types.
  *
- * When a script enables the `nextflow.preview.types` flag, its workflows
+ * When a script enables the `nextflow.enable.types` flag, its workflows
  * are "typed workflows", otherwise they are "legacy workflows":
  *
  * - Typed workflows use v2 dataflow types: ChannelImpl, ValueImpl

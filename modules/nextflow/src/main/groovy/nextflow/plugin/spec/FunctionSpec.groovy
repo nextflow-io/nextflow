@@ -16,11 +16,12 @@
 package nextflow.plugin.spec
 
 import java.lang.reflect.Method
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
 
 import groovy.transform.CompileStatic
 import nextflow.script.dsl.Description
-import nextflow.script.types.Types
-import org.codehaus.groovy.ast.ClassNode
+import nextflow.script.dsl.Types
 
 /**
  * Generate specs for functions, channel factories, and operators.
@@ -37,7 +38,7 @@ class FunctionSpec {
         final parameters = method.getParameters().collect { param ->
             [
                 name: param.getName(),
-                type: fromType(param.getType())
+                type: fromType(param.getParameterizedType())
             ]
         }
 
@@ -52,18 +53,13 @@ class FunctionSpec {
         ]
     }
 
-    private static Object fromType(Class c) {
-        return fromType(new ClassNode(c))
-    }
-
-    private static Object fromType(ClassNode cn) {
-        final name = Types.getName(cn.getTypeClass())
-        if( !cn.isGenericsPlaceHolder() && cn.getGenericsTypes() != null ) {
-            final typeArguments = cn.getGenericsTypes().collect { gt -> fromType(gt.getType()) }
+    private static Object fromType(Type type) {
+        if( type instanceof ParameterizedType ) {
+            final name = Types.getName(type.getRawType())
+            final typeArguments = type.getActualTypeArguments().collect { t -> fromType(t) }
             return [ name: name, typeArguments: typeArguments ]
         }
-        else {
-            return name
-        }
+
+        return Types.getName(type)
     }
 }

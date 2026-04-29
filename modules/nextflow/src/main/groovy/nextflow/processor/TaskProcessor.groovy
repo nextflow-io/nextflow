@@ -75,6 +75,7 @@ import nextflow.script.ProcessConfigV2
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.script.dsl.Types
 import nextflow.script.params.BaseOutParam
 import nextflow.script.params.CmdEvalParam
 import nextflow.script.params.DefaultOutParam
@@ -97,7 +98,6 @@ import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessTupleInput
 import nextflow.script.types.Record
 import nextflow.script.types.Tuple
-import nextflow.script.types.Types
 import nextflow.trace.TraceRecord
 import nextflow.util.Escape
 import nextflow.util.HashBuilder

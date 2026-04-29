@@ -157,7 +157,7 @@ class ValueImplTest extends Specification {
         when:
         def result = runScript(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             workflow {
                 channel.value([1, 'alpha']).cross( channel.value([1, 'x']) )

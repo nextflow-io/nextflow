@@ -175,6 +175,23 @@ class SeqeraExecutorTest extends Specification {
         executor.runResourceLabels == [:]
     }
 
+    def 'should skip run resource labels when process.resourceLabels is a closure'() {
+        given:
+        SysEnv.push([:])
+        def executor = new SeqeraExecutor()
+        def dynamic = { [team: 'a', priority: 7] }
+        executor.session = Mock(Session) {
+            getConfig() >> [process: [resourceLabels: dynamic]]
+        }
+
+        when:
+        executor.computeRunResourceLabels()
+
+        then:
+        noExceptionThrown()
+        executor.runResourceLabels == [:]
+    }
+
     def 'createRun populates CreateRunRequest.labels with config-level resourceLabels merged with auto-labels'() {
         given:
         SysEnv.push([:])

@@ -46,7 +46,6 @@ class ExecutorOptsTest extends Specification {
         config.keyPairName == null
         config.batchFlushInterval == Duration.of('1 sec')
         config.machineRequirement != null
-        config.machineRequirement.arch == null
         config.machineRequirement.provisioning == null
         !config.autoLabels
     }
@@ -79,7 +78,6 @@ class ExecutorOptsTest extends Specification {
         def config = new ExecutorOpts([
             endpoint: 'https://sched.example.com',
             machineRequirement: [
-                arch: 'arm64',
                 provisioning: 'spotFirst',
                 maxSpotAttempts: 3,
                 machineTypes: ['m6g', 'c6g']
@@ -88,7 +86,6 @@ class ExecutorOptsTest extends Specification {
 
         then:
         config.machineRequirement != null
-        config.machineRequirement.arch == 'arm64'
         config.machineRequirement.provisioning == 'spotFirst'
         config.machineRequirement.maxSpotAttempts == 3
         config.machineRequirement.machineTypes == ['m6g', 'c6g']
@@ -114,7 +111,6 @@ class ExecutorOptsTest extends Specification {
             keyPairName: 'my-key',
             batchFlushInterval: '2 sec',
             machineRequirement: [
-                arch: 'x86_64',
                 provisioning: 'spot'
             ]
         ])
@@ -124,7 +120,6 @@ class ExecutorOptsTest extends Specification {
         config.region == 'eu-west-1'
         config.keyPairName == 'my-key'
         config.batchFlushInterval == Duration.of('2 sec')
-        config.machineRequirement.arch == 'x86_64'
         config.machineRequirement.provisioning == 'spot'
     }
 

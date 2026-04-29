@@ -32,7 +32,7 @@ import io.seqera.tower.plugin.exception.UnauthorizedException
 import io.seqera.util.trace.TraceUtils
 import nextflow.BuildInfo
 import nextflow.SysEnv
-import nextflow.exception.AbortOperationException
+import nextflow.exception.AbortRunException
 import nextflow.util.Duration
 import nextflow.util.TestOnly
 /**
@@ -122,7 +122,7 @@ class TowerClient {
     }
 
     Map traceBegin(Map req, String workspaceId, String workflowId){
-        return sendAndProcessRequest( getUrlTraceBegin(workspaceId, workflowId), req, 'POST')
+        return sendAndProcessRequest( getUrlTraceBegin(workspaceId, workflowId), req, 'PUT')
     }
 
     void traceComplete(Map req, String workspaceId, String workflowId) {
@@ -140,19 +140,27 @@ class TowerClient {
     void traceProgress(Map req, String workspaceId, String workflowId) {
         final url = getUrlTraceProgress( workspaceId, workflowId )
         final resp = sendHttpMessage(url, req, 'PUT')
-        logHttpResponse(url, resp)
+        if( resp.error ) {
+            final message =  """\
+                Unexpected HTTP response
+                - endpoint    : $url
+                - status code : $resp.code
+                - response msg: $resp.message
+                """.stripIndent(true)
+            throw new AbortRunException(message)
+        }
     }
 
     protected Map sendAndProcessRequest(String url, Map req, String method){
         final resp = sendHttpMessage(url, req, method)
         if( resp.error ) {
-            log.debug """\
+            final message =  """\
                 Unexpected HTTP response
                 - endpoint    : $url
                 - status code : $resp.code
-                - response msg: $resp.cause
+                - response msg: $resp.message
                 """.stripIndent(true)
-            throw new AbortOperationException(resp.message)
+            throw new AbortRunException(message)
         }
         return parseTowerResponse(resp)
     }
@@ -241,7 +249,7 @@ class TowerClient {
 
     String getAccessToken() {
         if( !accessToken )
-            throw new AbortOperationException("Missing Seqera Platform access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
+            throw new AbortRunException("Missing Seqera Platform access token -- Make sure there's a variable TOWER_ACCESS_TOKEN in your environment")
         return accessToken
     }
 
@@ -377,7 +385,7 @@ class TowerClient {
                 """.stripIndent(true)
         // append separately otherwise formatting get broken
         msg += "- error cause : ${cause ?: '-'}"
-        throw new Exception(msg)
+        throw new AbortRunException(msg)
     }
 
     protected String parseCause(String cause) {

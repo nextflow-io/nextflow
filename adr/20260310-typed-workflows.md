@@ -85,11 +85,11 @@ Even the pipe (`|`), which is loved by many users, can rarely be used in its ide
 
 Introduce **typed workflows**, which provide a streamlined syntax for workflows that supports static typing.
 
-Typed workflows can be used with the `nextflow.preview.types` feature flag:
+Typed workflows can be used with the `nextflow.enable.types` feature flag:
 
 ```groovy
 // typed workflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 workflow HELLO {
     take:
@@ -131,7 +131,7 @@ The operator library is extended to support static typing and records:
 
 All operators can be used with or without static typing, with some caveats:
 
-- Some operators have stricter semantics when static typing is enabled via `nextflow.preview.types`. These changes are necessary in order to support static typing effectively. They should not affect the majority of existing code.
+- Some operators have stricter semantics when static typing is enabled via `nextflow.enable.types`. These changes are necessary in order to support static typing effectively. They should not affect the majority of existing code.
 
 - Some operators are discouraged from use with static typing. While they can still be used, the type checker will not be able to validate them. Users should be encouraged to migrate away from them in favor of the *core operators* that are statically typed.
 
@@ -219,7 +219,7 @@ This incremental approach was done in contrast to DSL2, which was a monolithic c
 
 Most of the features for static typing are new concepts that can be used alongside existing code. However, typed processes and typed workflows modify existing concepts (`process` and `workflow` definitions), so they require a feature flag.
 
-The `nextflow.enable.types` feature flag (currently in preview as `nextflow.preview.types`) will be used to distinguish between typed and legacy code, indefinitely. It would only be removed if the support for legacy syntax was removed, which is unlikely since DSL2 has been the standard Nextflow syntax for many years.
+The `nextflow.enable.types` feature flag will be used to distinguish between typed and legacy code, indefinitely. It would only be removed if the support for legacy syntax was removed, which is unlikely since DSL2 has been the standard Nextflow syntax for many years.
 
 To help distinguish between typed and legacy workflows, the use of type annotations should be allowed only for typed workflows:
 
@@ -239,7 +239,7 @@ workflow greet {
 
 ```groovy
 // typed workflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 workflow greet {
     take:
@@ -261,7 +261,7 @@ Typed and legacy workflows use different underlying dataflow types:
 
 - **Typed workflows (v2)** use wrapper types: `ChannelImpl` (wraps a `DataflowBroadcast`) and `ValueImpl` (wraps a `DataflowVariable`). These wrappers implement the new operators and integrate with the type system.
 
-While a given script must be entirely typed or entirely legacy (controlled by the `nextflow.preview.types` flag), **typed and legacy workflows can call each other across different scripts**. This interoperability enables incremental migration -- individual scripts can be migrated to static typing without having to update the entire pipeline at once.
+While a given script must be entirely typed or entirely legacy (controlled by the `nextflow.enable.types` flag), **typed and legacy workflows can call each other across different scripts**. This interoperability enables incremental migration -- individual scripts can be migrated to static typing without having to update the entire pipeline at once.
 
 ### Normalization at call sites
 
@@ -293,7 +293,7 @@ workflow LEGACY_ALIGN {
 
 **`typed.nf`**
 ```groovy
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 include { LEGACY_ALIGN } from './legacy'
 
@@ -312,7 +312,7 @@ workflow {
 
 **`typed.nf`**
 ```groovy
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 workflow TYPED_TRIM {
     take:
@@ -371,7 +371,7 @@ workflow LEGACY_QC {
 
 **`typed.nf`**
 ```groovy
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 include { LEGACY_QC } from './legacy'
 

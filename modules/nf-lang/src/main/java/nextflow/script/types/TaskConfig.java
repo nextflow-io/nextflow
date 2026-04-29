@@ -224,6 +224,14 @@ public interface TaskConfig {
     """)
     boolean getFair();
 
+    @Constant("hints")
+    @Description("""
+        The `hints` directive specifies executor-specific hints as key-value pairs. Keys may be namespaced with an `executor/` prefix to target a specific executor.
+
+        [Read more](https://nextflow.io/docs/latest/reference/process.html#hints)
+    """)
+    Map<String,Object> getHints();
+
     @Constant("label")
     @Description("""
         The `label` directive allows you to annotate a process with a mnemonic identifier of your choice.

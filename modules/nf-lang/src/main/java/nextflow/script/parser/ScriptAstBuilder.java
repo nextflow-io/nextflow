@@ -390,7 +390,7 @@ public class ScriptAstBuilder {
 
     private ParamNodeV1 paramDeclarationV1(ParamDeclarationV1Context ctx) {
         if( typingEnabled ) {
-            collectSyntaxError(new SyntaxException("Legacy parameter is not allowed with `nextflow.preview.types = true` -- use the `params` block instead", ast(new EmptyStatement(), ctx)));
+            collectSyntaxError(new SyntaxException("Legacy parameter is not allowed with `nextflow.enable.types = true` -- use the `params` block instead", ast(new EmptyStatement(), ctx)));
             return null;
         }
         Expression target = ast( varX("params"), ctx.PARAMS() );
@@ -609,7 +609,7 @@ public class ScriptAstBuilder {
             result = ast( stmt(variableName(ctx.identifier())), ctx );
         }
         else {
-            collectSyntaxError(new SyntaxException("Typed input declaration is not allowed in legacy process -- set `nextflow.preview.types = true` to use typed processes in this script", ast(new EmptyStatement(), ctx)));
+            collectSyntaxError(new SyntaxException("Typed input declaration is not allowed in legacy process -- set `nextflow.enable.types = true` to use typed processes in this script", ast(new EmptyStatement(), ctx)));
             return null;
         }
         return checkDirective(result, "Invalid process input");
@@ -687,7 +687,7 @@ public class ScriptAstBuilder {
             result = ast( stmt(variableName(ctx.nameTypePair().identifier())), ctx );
         }
         else {
-            collectSyntaxError(new SyntaxException("Typed output declaration is not allowed in legacy process -- set `nextflow.preview.types = true` to use typed processes in this script", ast(new EmptyStatement(), ctx)));
+            collectSyntaxError(new SyntaxException("Typed output declaration is not allowed in legacy process -- set `nextflow.enable.types = true` to use typed processes in this script", ast(new EmptyStatement(), ctx)));
             return null;
         }
         return checkDirective(result, "Invalid process output");
@@ -849,7 +849,7 @@ public class ScriptAstBuilder {
             return null;
         }
         if( !typingEnabled && ctx.type() != null ) {
-            collectSyntaxError(new SyntaxException("Typed input is not allowed in legacy workflow -- set `nextflow.preview.types = true` to use typed workflows in this script", ast(new EmptyStatement(), ctx)));
+            collectSyntaxError(new SyntaxException("Typed input is not allowed in legacy workflow -- set `nextflow.enable.types = true` to use typed workflows in this script", ast(new EmptyStatement(), ctx)));
             return null;
         }
         var type = type(ctx.type());
@@ -902,7 +902,7 @@ public class ScriptAstBuilder {
             result = stmt(target);
         }
         if( !typingEnabled && ctx.nameTypePair() != null && ctx.nameTypePair().type() != null ) {
-            collectSyntaxError(new SyntaxException("Typed output is not allowed in legacy workflow -- set `nextflow.preview.types = true` to use typed workflows in this script", result));
+            collectSyntaxError(new SyntaxException("Typed output is not allowed in legacy workflow -- set `nextflow.enable.types = true` to use typed workflows in this script", result));
             return null;
         }
         saveTrailingComment(result, ctx);

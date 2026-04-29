@@ -30,7 +30,7 @@ See {ref}`devenv-page` for instructions on how to setup VS Code and the Nextflow
 
 When using static typing, the language server can check your code for type-related errors. For example, it can validate that a channel of records has all the required fields when it is passed as input to a process.
 
-The language server performs type checking on every script that enables the `nextflow.preview.types` feature flag.
+The language server performs type checking on every script that enables the `nextflow.enable.types` feature flag.
 
 ### Automatic migration
 
@@ -166,53 +166,12 @@ read_pairs_ch = channel.of(params.reads)
     }
 ```
 
-You can simplify the code further by modeling `params.reads` as a collection of records instead of a file path.
-
-Add a header row to the samplesheet:
-
-```
-id,fastq_1,fastq_2
-gut,...
-liver,...
-lung,...
-spleen,...
-```
-
-Refactor `params.reads` as a collection of records:
-
-```nextflow
-params {
-    // The input samplesheet of paired-end reads
-    reads: List<Sample> = "${projectDir}/data/allreads.csv"
-
-    // ...
-}
-
-record Sample {
-    id: String
-    fastq_1: Path
-    fastq_2: Path
-}
-```
-
-In the above, `Sample` is a *record type* based on the samplesheet structure. When a file path is supplied to a collection-type parameter (e.g., `List<Sample>`), the file path is automatically loaded and parsed into a collection.
-
-Refactor the `read_pairs_ch` to load the collection into a channel:
-
-```nextflow
-read_pairs_ch = channel.fromList(params.reads)
-```
-
-:::{note}
-Collection-type params can also be loaded from JSON and YAML samplesheets. See {ref}`workflow-typed-params` for more information.
-:::
-
 ### Migrating processes
 
 See {ref}`process-typed-page` for an overview of typed processes.
 
 :::{note}
-You must enable the `nextflow.preview.types` feature flag in each script that uses typed processes.
+You must enable the `nextflow.enable.types` feature flag in each script that uses typed processes.
 :::
 
 <h4>FASTQC</h4>
@@ -240,7 +199,7 @@ process FASTQC {
 To migrate the `FASTQC` process, rewrite the inputs and outputs as follows:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 process FASTQC {
     tag id
@@ -304,7 +263,7 @@ process QUANT {
 To migrate the `QUANT` process, rewrite the inputs and outputs as follows:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 process QUANT {
     tag id
@@ -364,7 +323,7 @@ process MULTIQC {
 To migrate this process, rewrite the inputs and outputs as follows:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 process MULTIQC {
     // ...
@@ -406,7 +365,7 @@ Once you migrate every process called by a workflow to static typing, you can mi
 See {ref}`workflow-typed-page` for an overview of typed workflows.
 
 :::{note}
-You must enable the `nextflow.preview.types` feature flag in each script that uses typed workflows.
+You must enable the `nextflow.enable.types` feature flag in each script that uses typed workflows.
 :::
 
 <h4>RNASEQ</h4>
@@ -434,7 +393,11 @@ You can infer the type of each workflow input by examining how the workflow is c
 
 ```nextflow
 workflow {
-    read_pairs_ch = channel.fromList(params.reads)
+    read_pairs_ch = channel.of(params.reads)
+        .flatMap { csv -> csv.splitCsv() }
+        .map { row ->
+            record(id: row[0], fastq_1: file(row[1]), fastq_2: file(row[2]))
+        }
 
     RNASEQ(read_pairs_ch, params.transcriptome)
 
@@ -444,14 +407,14 @@ workflow {
 
 You can determine the type of each input as follows:
 
-- The channel `read_pairs_ch` has type `Channel<E>`, where `E` is the type of each value in the channel. It is loaded from `params.reads` which has type `List<Sample>`. Therefore `read_pairs_ch` has type `Channel<Sample>`.
+- The channel `read_pairs_ch` has type `Channel<Record>`, where each record contains the fields `id`, `fastq_1`, `fastq_2`.
 
 - The parameter `params.transcriptome` has type `Path` as defined in the `params` block.
 
 Specify the workflow input types as follows:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 workflow RNASEQ {
     take:
@@ -459,6 +422,12 @@ workflow RNASEQ {
     transcriptome: Path
 
     // ...
+}
+
+record Sample {
+    id: String
+    fastq_1: Path
+    fastq_2: Path
 }
 ```
 
@@ -491,7 +460,7 @@ These channels are emitted as the outputs of `RNASEQ`. However, with records it 
 Use the `join` operator to join `fastqc_ch` and `quant_ch` by sample ID:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 workflow RNASEQ {
     take:
@@ -525,7 +494,7 @@ record AlignedSample {
 Update the workflow to emit `samples_ch` with the new record type:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 workflow RNASEQ {
     take:
@@ -549,7 +518,11 @@ The entry workflow is defined as follows:
 
 ```nextflow
 workflow {
-    read_pairs_ch = channel.fromFilePairs(params.reads, checkIfExists: true, flat: true)
+    read_pairs_ch = channel.of(params.reads)
+        .flatMap { csv -> csv.splitCsv() }
+        .map { row ->
+            record(id: row[0], fastq_1: file(row[1]), fastq_2: file(row[2]))
+        }
 
     (fastqc_ch, quant_ch) = RNASEQ(read_pairs_ch, params.transcriptome)
 
@@ -562,10 +535,14 @@ workflow {
 Rewrite this workflow based on the updated params, processes, and subworkflows:
 
 ```nextflow
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 workflow {
-    read_pairs_ch = channel.fromList(params.reads)
+    read_pairs_ch = channel.of(params.reads)
+        .flatMap { csv -> csv.splitCsv() }
+        .map { row ->
+            record(id: row[0], fastq_1: file(row[1]), fastq_2: file(row[2]))
+        }
 
     samples_ch = RNASEQ(read_pairs_ch, params.transcriptome)
 
@@ -577,7 +554,7 @@ workflow {
 }
 ```
 
-The `reads` param was refactored as a collection of records, so it is loaded into a channel using `channel.fromList`. It is compatible with the records expected by `RNASEQ`.
+The `reads` param was refactored as a `Path`, so it is loaded into a channel of records using `splitCsv`. It is compatible with the records expected by `RNASEQ`.
 
 The `RNASEQ` workflow now returns a single combined channel, so the `mix` operation is no longer needed. The `flatMap` operator is used to extract the files from each record in `samples_ch`.
 
