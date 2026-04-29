@@ -3,13 +3,9 @@ title: Migrating to 26.04
 description: Review new features, breaking changes, and deprecations introduced in Nextflow 26.04.
 ---
 
-# Migrating to 26.04 (preview)
+# Migrating to 26.04
 
-This page summarizes the upcoming changes in Nextflow 26.04, which will be released in April 2026.
-
-:::note
-This page is a work in progress and will be updated as features are finalized. It should not be considered complete until the 26.04 release.
-:::
+[Nextflow 26.04](https://github.com/nextflow-io/nextflow/releases/tag/v26.04.0) was released on April 29, 2026.
 
 ## New features
 
@@ -197,6 +193,24 @@ Breaking changes from the [first preview][static-typing-first-preview]:
 
 See [Migrating to static typing][migrating-static-types] for more information about migrating to static typing. See [Using operators with static typing][migrating-static-types-operators] for best practices on using operators with static typing.
 
+### Process `hints` directive
+
+The `hints` process directive allows you to specify executor-specific hints for individual processes.
+
+For example, the AWS Batch executor uses the `consumableReources` hint for [resource-aware scheduling](https://aws.amazon.com/about-aws/whats-new/2025/02/aws-batch-resource-aware-scheduling/):
+
+```nextflow
+process hello {
+    hints 'awsbatch/consumableResources': ['my-license': 1]
+
+    // ...
+}
+```
+
+Custom executors can use hints to control scheduling behavior in a fine-grained manner over configuration options.
+
+See [hints][process-hints] for details.
+
 ## Enhancements
 
 ### Strict syntax parser enabled by default
@@ -238,9 +252,6 @@ Nextflow uses the default branch specified by the Git repository when no revisio
 The `manifest.defaultBranch` config option is no longer needed because of this update.
 
 ### Load collection-type params automatically from files
-
-When using the `params` block, collection-type parameters such as `List<Record>` can be loaded automatically from a CSV, JSON, or YAML file. This feature simplifies the loading of samplesheet inputs and allows a pipeline to support multiple structured data formats.
-
 See [Typed parameters][workflow-typed-params] for details. See [Migrating to static typing][migrating-static-types] for a migration example.
 
 ### Print workflow outputs on run completion
@@ -358,6 +369,33 @@ workflow RNASEQ {
 
 See the [`lint`][cli-lint] command reference for details.
 
+### Apple container support
+
+Nextflow can run containers on macOS using [Apple container](https://github.com/apple/container), a lightweight container runtime for Apple silicon machines:
+
+```groovy
+process.container = 'nextflow/examples:latest'
+appleContainer.enabled = true
+```
+
+See [Apple container][apple-container] for details.
+
+### Seqera filesystem for datasets
+
+Nextflow can download [Seqera Platform datasets](https://docs.seqera.io/platform-cloud/data/datasets) using the `seqera` URI scheme.
+
+Seqera dataset URIs are specified as `seqera://<organization>/<workspace>/datasets/<name>[@version]`. For example:
+
+```nextflow
+params.dataset = 'seqera://seqeralabs/showcase/datasets/sarek_samples'
+
+workflow {
+    println file(params.dataset).text
+}
+```
+
+A Platform access token with appropriate permissions is required to download non-public datasets. It can be specified using the `TOWER_ACCESS_TOKEN` environment variable or the `tower.accessToken` config option.
+
 ## Breaking changes
 
 - The [strict syntax parser][strict-syntax-page] is now enabled by default. The legacy parser can be enabled by setting the `NXF_SYNTAX_PARSER` environment variable to `v1`.
@@ -383,6 +421,7 @@ See the [`lint`][cli-lint] command reference for details.
 - New standard library function: [`listDirectory()`][stdlib-listDirectory]
 - Support [Java 26][install-requirements]
 
+[apple-container]: ../container#apple-container
 [cli-lint]: ../reference/cli#lint
 [cli-module]: ../reference/cli#module
 [cli-run]: ../reference/cli#run
@@ -397,6 +436,7 @@ See the [`lint`][cli-lint] command reference for details.
 [migrating-static-types-operators]: ../tutorials/static-types-operators
 [module-registry]: ../modules
 [operator-page]: ../reference/operator
+[process-hints]: ../reference/process#hints
 [process-typed-page]: ../process-typed
 [script-records]: ../script#records
 [static-typing-first-preview]: ./25-10#static-typing-preview
