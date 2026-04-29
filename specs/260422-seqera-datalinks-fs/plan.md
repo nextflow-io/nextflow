@@ -60,34 +60,34 @@ plugins/nf-tower/
     ├── main/io/seqera/tower/plugin/
     │   ├── fs/
     │   │   ├── ResourceTypeHandler.groovy         ← NEW (interface; list returns Iterable<Path>)
-    │   │   ├── SeqeraFileSystemProvider.groovy    ← refactored (dispatch by handler; lazy filter iterator)
-    │   │   ├── SeqeraFileSystem.groovy            ← refactored (handler registry; no dataset caches)
-    │   │   ├── SeqeraPath.groovy                  ← refactored (trail segments, cachedAttributes, resolveWithAttributes)
+    │   │   ├── SeqeraFileSystemProvider.groovy    ← refactored (dispatch by handler; lazy filter iterator; one-shot DirectoryStream)
+    │   │   ├── SeqeraFileSystem.groovy            ← refactored (holds TowerClient; cached getUserId; handler registry)
+    │   │   ├── SeqeraPath.groovy                  ← refactored (trail segments, volatile cachedAttributes, resolveWithAttributes)
     │   │   ├── SeqeraFileAttributes.groovy        ← refactored (isDir, size, lastMod, created, fileKey)
     │   │   ├── SeqeraPathFactory.groovy           ← unchanged
     │   │   ├── DatasetInputStream.groovy          ← unchanged
     │   │   └── handler/
     │   │         ├── DatasetsResourceHandler.groovy   ← NEW (extracted; owns dataset caches; parses @version)
-    │   │         └── DataLinksResourceHandler.groovy  ← NEW
+    │   │         └── DataLinksResourceHandler.groovy  ← NEW (parent-browse readAttributes; credentialsId forwarding; requireDataLink helper)
     │   ├── dataset/
-    │   │   └── SeqeraDatasetClient.groovy         ← unchanged
+    │   │   └── SeqeraDatasetClient.groovy         ← cleanup (only dataset endpoints; user/workspace lookup moved to SeqeraFileSystem)
     │   └── datalink/                              ← NEW package
-    │         ├── SeqeraDataLinkClient.groovy      ← NEW (typed client; returns iterators and PagedDataLinkContent)
-    │         └── PagedDataLinkContent.groovy      ← NEW (lazy pagination view over data-link content)
+    │         ├── SeqeraDataLinkClient.groovy      ← NEW (typed client; getDataLink uses combined keyword search; named static fetchers)
+    │         └── PagedIterable.groovy             ← NEW (generic lazy pagination — eager first page, lazy subsequent)
     └── test/io/seqera/tower/plugin/
         ├── fs/
         │   ├── SeqeraPathTest.groovy              ← extended (sub-path cases, cachedAttributes, trailing slash)
-        │   ├── SeqeraFileSystemTest.groovy        ← extended (handler registry)
-        │   ├── SeqeraFileSystemProviderTest.groovy ← extended (data-link dispatch specs)
+        │   ├── SeqeraFileSystemTest.groovy        ← extended (TowerClient ctor, getUserId caching, handler registry)
+        │   ├── SeqeraFileSystemProviderTest.groovy ← extended (data-link dispatch specs, DirectoryStream one-shot, cachedAttributes propagation)
         │   ├── ResourceTypeAbstractionTest.groovy ← NEW (architectural guard)
         │   └── handler/
         │         ├── DatasetsResourceHandlerTest.groovy   ← NEW (caches, attr short-circuit)
-        │         └── DataLinksResourceHandlerTest.groovy  ← NEW (cache, credentialsId, paged listings)
+        │         └── DataLinksResourceHandlerTest.groovy  ← NEW (parent-browse, cache, credentialsId, paged listings)
         └── datalink/
-              └── SeqeraDataLinkClientTest.groovy  ← NEW (pagination, endpoint URLs, error mapping)
+              └── SeqeraDataLinkClientTest.groovy  ← NEW (pagination, getDataLink combined search, endpoint URLs, error mapping)
 ```
 
-**Structure decision**: Parallel `datalink/` package mirrors the existing `dataset/` package. Handlers live in `fs/handler/` so the generic NIO classes in `fs/` remain resource-type-agnostic. All wire DTOs are reused from `io.seqera.tower.model.*` — no plugin-local DTO classes. `PagedDataLinkContent` is a plugin-local service type (not a DTO) that wraps lazy pagination over `DataLinkItem` streams.
+**Structure decision**: Parallel `datalink/` package mirrors the existing `dataset/` package. Handlers live in `fs/handler/` so the generic NIO classes in `fs/` remain resource-type-agnostic. User/workspace lookup lives on `SeqeraFileSystem` (shared infrastructure across resource types), not on a resource-type client. All wire DTOs are reused from `io.seqera.tower.model.*` — no plugin-local DTO classes. `PagedIterable<T>` is a plugin-local generic service type (not a DTO) that captures the eager-first-page + lazy-subsequent-page contract used by all paginated endpoints.
 
 ---
 
@@ -114,7 +114,9 @@ All reused from `io.seqera:tower-api:1.121.0` (already on the classpath):
 
 | Operation | Endpoint | Notes |
 |---|---|---|
-| List data-links in workspace | `GET /data-links?workspaceId=<ws>&max=<n>&offset=<o>` | Offset pagination. `totalSize` = full count; `max=100` per page. Optional `&search=<name>` used by `getDataLink` for server-side pre-filter. |
+| User-id lookup | `GET /user-info` | Called from `SeqeraFileSystem.getUserId()`; result cached for the lifetime of the filesystem. |
+| Workspaces for user | `GET /user/{userId}/workspaces` | Called from `SeqeraFileSystem.loadOrgWorkspaceCache()`. |
+| List data-links in workspace | `GET /data-links?workspaceId=<ws>&max=<n>&offset=<o>` | Offset pagination. `totalSize` = full count; `max=100` per page. Optional `&search=<value>` keyword filter; `getDataLink` uses `&search=<name>+provider:<provider>` (URL-encoded) for a single server-side resolution. |
 | Browse root of a data-link | `GET /data-links/{id}/browse?workspaceId=<ws>` | Token pagination via `nextPageToken`. Optional `credentialsId`. |
 | Browse a sub-path | `GET /data-links/{id}/browse/{path}?workspaceId=<ws>` | Same response and pagination as the root variant. The `{path}` segment preserves `/` as path separators. |
 | Pre-signed download URL | `GET /data-links/{id}/generate-download-url?workspaceId=<ws>&filePath=<sub>` | Returns `DataLinkDownloadUrlResponse.url`. Optional `credentialsId`. |
@@ -172,11 +174,10 @@ interface ResourceTypeHandler {
 
     /** open a read stream for a leaf path; throw if the path is a directory */
     InputStream newInputStream(SeqeraPath path) throws IOException
-
-    /** verify the path exists and modes are satisfiable; READ allowed, WRITE/EXECUTE rejected */
-    void checkAccess(SeqeraPath path, AccessMode... modes) throws IOException
 }
 ```
+
+`checkAccess` is **not** on this interface — `SeqeraFileSystemProvider.checkAccess` rejects WRITE/EXECUTE upfront and delegates existence-check to `h.readAttributes(sp)`.
 
 Handlers build each child path via `parent.resolveWithAttributes(segmentName, attrs)` so subsequent `readAttributes` calls short-circuit when the same path is used.
 
@@ -187,28 +188,30 @@ class SeqeraDataLinkClient {
     SeqeraDataLinkClient(TowerClient towerClient)
 
     /**
-     * Lazy iterator over every data-link in the workspace. Pages fetched on demand
-     * via GET /data-links?workspaceId=<ws>&max=100&offset=<o>.
+     * Iterator over every data-link in the workspace, backed by PagedIterable.
+     * The first page is fetched eagerly (early-fail at the call site); later pages
+     * are fetched on demand. Endpoint: GET /data-links?workspaceId=<ws>&max=100&offset=<o>.
      */
-    Iterator<DataLinkDto> listDataLinks(long workspaceId)
+    Iterator<DataLinkDto> listDataLinks(long workspaceId) throws IOException
 
     /**
-     * Server-side-filtered resolution of a single data-link by (provider, name).
-     * Iterates /data-links with &search=<name>, short-circuits on first match;
-     * result is @Memoized per (workspaceId, provider, name).
-     * Throws NoSuchFileException if not found.
+     * Resolve a single data-link by (provider, name) using the Platform's combined
+     * keyword search: `search=<name> provider:<provider>`. Server returns at most
+     * one matching data-link; this method takes the first result and returns null
+     * on miss. @Memoized per (ws, provider, name) — both successful resolutions
+     * AND null misses are cached for the lifetime of the client.
      */
-    DataLinkDto getDataLink(long workspaceId, String provider, String name)
+    DataLinkDto getDataLink(long workspaceId, String provider, String name) throws IOException
 
-    /** Distinct provider identifiers present in the workspace (sorted). */
+    /** Distinct provider identifiers present in the workspace (sorted, unmodifiable). @Memoized. */
     Set<String> getDataLinkProviders(long workspaceId)
 
     /**
-     * Lazy paginated view over /data-links/{id}/browse[/{path}].
-     * The returned PagedDataLinkContent loads the first page eagerly and paginates
-     * subsequent pages as its iterator advances.
+     * Lazy paginated view over /data-links/{id}/browse[/{path}]. PagedIterable<DataLinkItem>
+     * loads the first page eagerly and paginates subsequent pages on demand.
+     * Optional &search=<value> for server-side prefix filter on entry names.
      */
-    PagedDataLinkContent getContent(String dataLinkId, String subPath, long workspaceId, String credentialsId = null)
+    PagedIterable<DataLinkItem> getContent(String dataLinkId, String subPath, long workspaceId, String credentialsId = null, String search = null) throws IOException
 
     /** GET /data-links/{id}/generate-download-url?filePath=<sub>[&credentialsId=<c>] */
     DataLinkDownloadUrlResponse getDownloadUrl(String dataLinkId, String subPath, long workspaceId, String credentialsId = null)
@@ -217,43 +220,63 @@ class SeqeraDataLinkClient {
 
 All endpoints translate 401/403/404/5xx through the same `checkFsResponse` pattern used in `SeqeraDatasetClient`. The `credentialsId` parameter is forwarded as a query-string value when non-null; the handler sources it from `DataLinkDto.credentials[0].id`.
 
-### `PagedDataLinkContent` contract
+Pagination is delegated to two named static fetchers nested inside the client:
+- `DataLinkListFetcher` — implements `PagedIterable.NextPageFetcher<DataLinkDto>`; offset-paginated; cursor state is `(offset, total)` instance fields.
+- `DataLinkContentFetcher` — implements `PagedIterable.NextPageFetcher<DataLinkItem>`; token-paginated; cursor state is `nextToken` instance field.
+
+### `PagedIterable<T>` contract
+
+Generic lazy-pagination abstraction shared by all paginated endpoints. Eager first page (so `IOException` surfaces at the call site, not at the first `Iterator.hasNext()`); later pages on demand. Fetch failures during iteration wrap in `UncheckedIOException`.
 
 ```groovy
-class PagedDataLinkContent implements Iterable<DataLinkItem> {
-    /** Page fetcher: fetch(null) -> first page; fetch(token) -> next page. */
-    static interface PageFetcher {
-        Map<String, Object> fetch(String nextPageToken) throws IOException
-        // returns: {objects: List<DataLinkItem>, nextPageToken: String, originalPath: String (first page only)}
+class PagedIterable<T> implements Iterable<T> {
+    /** Stateful "give me the next page" callback. Cursor lives in the implementation. */
+    static interface NextPageFetcher<T> {
+        Page<T> fetch() throws IOException
     }
 
-    PagedDataLinkContent(String originalPath, List<DataLinkItem> firstPage, String firstPageNextToken, PageFetcher pageFetcher)
+    static class Page<T> {
+        final List<T> items
+        final boolean isLast       // true → no more pages after this one
+    }
 
-    String getOriginalPath()
-    List<DataLinkItem> getFirstPage()        // eager, already loaded at construction
+    /** Eagerly fetch the first page; later pages on demand. */
+    static <T> PagedIterable<T> start(NextPageFetcher<T> fetcher) throws IOException
+
+    List<T> getFirstPage()         // eager, already loaded
     boolean isEmpty()
-    Iterator<DataLinkItem> iterator()        // yields first-page items, then paginates lazily
+    Iterator<T> iterator()         // yields first-page items, then paginates lazily
 }
 ```
 
-### `SeqeraFileSystem` handler registry
+### `SeqeraFileSystem` shape
+
+Holds a `TowerClient` directly and exposes shared (across resource types) infrastructure:
 
 ```groovy
 class SeqeraFileSystem extends FileSystem {
-    // existing org/workspace state (unchanged)
-    private final Map<String, ResourceTypeHandler> handlers = new LinkedHashMap<>()
+    SeqeraFileSystem(SeqeraFileSystemProvider provider, TowerClient towerClient)
 
-    void registerHandler(ResourceTypeHandler h) { handlers.put(h.resourceType, h) }
-    ResourceTypeHandler getHandler(String type) { handlers.get(type) }
-    Set<String> getResourceTypes() { Collections.unmodifiableSet(handlers.keySet()) }
+    /** Cached for the lifetime of the FS — token doesn't change during a run. */
+    long getUserId() throws IOException
+
+    void loadOrgWorkspaceCache()
+    Set<String> listOrgNames()
+    List<String> listWorkspaceNames(String org)
+    long resolveWorkspaceId(String org, String workspace) throws NoSuchFileException
+
+    void registerHandler(ResourceTypeHandler h)
+    ResourceTypeHandler getHandler(String type)
+    Set<String> getResourceTypes()
 }
 ```
 
-`SeqeraFileSystemProvider.newFileSystem()` registers both handlers after constructing the filesystem:
+`SeqeraFileSystemProvider.newFileSystem()` constructs the filesystem with the `TowerClient` and registers both handlers:
 
 ```groovy
-fs.registerHandler(new DatasetsResourceHandler(fs, new SeqeraDatasetClient(towerClient)))
-fs.registerHandler(new DataLinksResourceHandler(fs, new SeqeraDataLinkClient(towerClient)))
+fileSystem = new SeqeraFileSystem(this, towerClient)
+fileSystem.registerHandler(new DatasetsResourceHandler(fileSystem, new SeqeraDatasetClient(towerClient)))
+fileSystem.registerHandler(new DataLinksResourceHandler(fileSystem, new SeqeraDataLinkClient(towerClient)))
 ```
 
 ### Dispatch in `SeqeraFileSystemProvider`
@@ -281,20 +304,23 @@ Internal fields become `(directory, size, lastModified, created, fileKey)`. `Dat
 |---|---|---|
 | `data-links/` (trail=[]) | `list` | `client.getDataLinkProviders(ws)` → distinct providers (sorted); emit child paths `data-links/<prov>` |
 | `data-links/<prov>` (trail=[p]) | `list` | stream `client.listDataLinks(ws)`; collect names where provider matches; emit child paths; `NoSuchFileException` if none match |
-| `data-links/<prov>/<name>` (trail=[p,n]) | `list` | `client.getDataLink(ws, p, n)` → `dl`; `client.getContent(dl.id, "", ws, credentialsIdOf(dl))` → wrap items as `Iterable<Path>` carrying cached `SeqeraFileAttributes` |
+| `data-links/<prov>/<name>` (trail=[p,n]) | `list` | `requireDataLink(ws, p, n, dir)` → `dl`; `client.getContent(dl.id, "", ws, credentialsIdOf(dl))` → wrap items as `Iterable<Path>` carrying cached `SeqeraFileAttributes` |
 | `data-links/<prov>/<name>/<sub>/…` (trail ≥ 3) | `list` | same as above with `subPath = trail[2..].join('/')` |
-| any depth ≥ 3 | `readAttributes` | short-circuit if `p.cachedAttributes` is set; else: data-link-root → directory; deeper → `getContent(id, sub, ws, credentialsIdOf(dl)).firstPage`; if one item matching the last segment with `type = FILE`, return file attrs (size from item); otherwise → directory |
-| leaf file | `newInputStream` | `client.getDataLink(ws, p, n)` → `dl`; `client.getDownloadUrl(dl.id, sub, ws, credentialsIdOf(dl))`; open a plain JDK `HttpClient.send(..., BodyHandlers.ofInputStream())` against `response.url`; return body stream |
+| `data-links/` or `data-links/<prov>` | `readAttributes` | trail=[] → directory; trail=[p] → validate via `client.getDataLinkProviders(ws)`; throw if unknown |
+| `data-links/<prov>/<name>/<sub-path>` | `readAttributes` | short-circuit if `p.cachedAttributes` is set; else `requireDataLink(...)`; trail.size==2 → directory (data-link root); trail.size≥3 → **parent-browse**: list the parent directory and find the entry by name. Entry's `type` (FILE/FOLDER) is the authoritative signal; file → `(size, EPOCH, EPOCH, path)`; folder → directory marker; missing entry → `NoSuchFileException`. Server-side `&search=<lastSeg>` narrows the parent listing. |
+| leaf file | `newInputStream` | `requireDataLink(...)`; `client.getDownloadUrl(dl.id, sub, ws, credentialsIdOf(dl))`; open a plain JDK `HttpClient.send(..., BodyHandlers.ofInputStream())` against `response.url`; return body stream |
 
 `credentialsIdOf(dl)` returns `dl.credentials[0].id` when non-empty, else `null` (query parameter omitted).
 
-Provider segment canonicalization: the path segment is the `DataLinkProvider` enum's `toString()` — lowercase (e.g. `aws`, `google`, `azure`). A path with an unknown provider segment fails via `client.getDataLink(...)` → `NoSuchFileException`.
+`requireDataLink(ws, provider, name, pathForErrors)` calls `client.getDataLink(...)` and throws `NoSuchFileException` if the result is `null` — uniform error message across the three call sites.
 
-Listings populate cached attributes on each emitted `SeqeraPath` (via `parent.resolveWithAttributes(name, attrs)`) so a follow-up `readAttributes(child)` returns immediately with zero API calls. Attributes come directly from each `DataLinkItem`: file → `(size, Instant.EPOCH, Instant.EPOCH, item.name)`; folder → `SeqeraFileAttributes(true)`.
+Provider segment canonicalization: the path segment is the `DataLinkProvider` enum's `toString()` — lowercase (e.g. `aws`, `google`, `azure`). A path with an unknown provider segment fails via `client.getDataLink(...) == null` → `requireDataLink` → `NoSuchFileException`.
+
+Listings populate cached attributes on each emitted `SeqeraPath` (via `parent.resolveWithAttributes(name, attrs)`) so a follow-up `readAttributes(child)` returns immediately with zero API calls. Attributes come directly from each `DataLinkItem`: file → `(size, Instant.EPOCH, Instant.EPOCH, item.name)`; folder → `SeqeraFileAttributes(true)`. The provider also writes back resolved attributes onto the path after a fresh `readAttributes`, so subsequent reads on the same instance also hit the cache.
 
 ### Data-link identity resolution
 
-`client.getDataLink(workspaceId, provider, name)` iterates `/data-links?search=<name>` (server-side pre-filter) and returns the first entry whose `provider.toString() == providerSegment`. Memoized via `@Memoized` per `(workspaceId, provider, name)` — repeated handler calls within a run hit the memoization cache. The handler does NOT maintain its own `Map<Long, List<DataLinkDto>>` cache — the client-level streaming iterator plus memoized-lookup replaces it.
+`client.getDataLink(workspaceId, provider, name)` issues a single combined keyword search (`&search=<name>+provider:<provider>`, URL-encoded) — the Platform returns at most the matching data-link, and the method returns the first result or `null`. `@Memoized` per `(workspaceId, provider, name)` — both successful resolutions AND `null` misses are cached for the lifetime of the client. The handler does NOT maintain its own data-link cache; the client-level memoization replaces it. Why no client-side iterate-and-filter: the server-side `provider:<x>` keyword filter eliminates the need.
 
 ---
 
