@@ -1,5 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
+26.04.0 - 28 Apr 2026
+- Add -user-secret and -workspace-secret flags to nextflow launch (#7040) [53045104d]
+- Error messages: Fix ANSI colours (#7078) [d158b71f6]
+- Fix runtime type reflection in nf-lang (#7077) [916f029b7]
+- Rename `nextflow.preview.types` feature flag to `nextflow.enable.types` (#7067) [e6faaed00]
+- Support validation of collection params with record types (#7025) [297172c63]
+- Bump nf-tower@1.27.0
+
 26.03.4-edge - 25 Apr 2026
 - Abort execution when platform telemetry error (#6827) [b1ad3f720]
 - Add $schema ref to generated module spec (#7056) [c40d742f3]
