@@ -20,7 +20,6 @@ import java.nio.file.NoSuchFileException
 
 import groovy.json.JsonOutput
 import io.seqera.tower.plugin.TowerClient
-import io.seqera.tower.plugin.dataset.SeqeraDatasetClient
 import spock.lang.Specification
 
 /**
@@ -54,9 +53,7 @@ class SeqeraFileSystemTest extends Specification {
     }
 
     private SeqeraFileSystem buildFs(TowerClient tc) {
-        final fs = new SeqeraFileSystem(new SeqeraFileSystemProvider())
-        fs.setOrgWorkspaceClient(new SeqeraDatasetClient(tc))
-        return fs
+        return new SeqeraFileSystem(new SeqeraFileSystemProvider(), tc)
     }
 
     // ---- cache loading ----
@@ -73,6 +70,21 @@ class SeqeraFileSystemTest extends Specification {
         then:
         1 * tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         1 * tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
+    }
+
+    def "getUserId is cached across multiple calls (single /user-info request)"() {
+        given:
+        def tc = spyTower()
+        final fs = buildFs(tc)
+
+        when:
+        def first = fs.getUserId()
+        def second = fs.getUserId()
+
+        then:
+        1 * tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
+        first == 42L
+        second == 42L
     }
 
     def "listOrgNames returns distinct org names from cache"() {
@@ -154,7 +166,7 @@ class SeqeraFileSystemTest extends Specification {
 
     def "registerHandler stores and looks up by resource type"() {
         given:
-        def fs = new SeqeraFileSystem(new SeqeraFileSystemProvider())
+        def fs = new SeqeraFileSystem(new SeqeraFileSystemProvider(), Mock(TowerClient))
         def handler = Mock(ResourceTypeHandler) {
             getResourceType() >> 'datasets'
         }

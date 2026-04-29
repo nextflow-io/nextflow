@@ -31,7 +31,7 @@ import groovy.util.logging.Slf4j
 import io.seqera.tower.model.DataLinkDto
 import io.seqera.tower.model.DataLinkItem
 import io.seqera.tower.model.DataLinkItemType
-import io.seqera.tower.plugin.datalink.PagedDataLinkContent
+import io.seqera.tower.plugin.datalink.PagedIterable
 import io.seqera.tower.plugin.datalink.SeqeraDataLinkClient
 import io.seqera.tower.plugin.fs.ResourceTypeHandler
 import io.seqera.tower.plugin.fs.SeqeraFileAttributes
@@ -101,7 +101,7 @@ class DataLinksResourceHandler implements ResourceTypeHandler {
         }
         // trail.size() >= 2 — browse inside a specific data-link.
         // Content can be very large, so we stream it lazily.
-        final dl = client.getDataLink(workspaceId, trail[0], trail[1])
+        final dl = requireDataLink(workspaceId, trail[0], trail[1], dir)
         final subPath = trail.size() > 2 ? trail.subList(2, trail.size()).join('/') : ''
         log.debug("Listing files for $dl.name path $subPath")
         final content = client.getContent(dl.id, subPath, workspaceId, credentialsIdOf(dl))
@@ -125,12 +125,11 @@ class DataLinksResourceHandler implements ResourceTypeHandler {
                 throw new NoSuchFileException(p.toString(), null, "No data-links for provider '${trail[0]}' in workspace '${p.workspace}'")
             return new SeqeraFileAttributes(true)
         }
-        final dl = client.getDataLink(workspaceId, trail[0], trail[1])
+        final dl = requireDataLink(workspaceId, trail[0], trail[1], p)
         if (trail.size() == 2) return new SeqeraFileAttributes(true) // data-link root
         final subPath = trail.subList(2, trail.size()).join('/')
         log.debug("Reading attributes for $p")
-        final content = client.getContent(dl.id, subPath, workspaceId, credentialsIdOf(dl))
-        return attributesFor(content, subPath, p)
+        return resolveAttrsViaParent(dl, subPath, workspaceId, p)
     }
 
     @Override
@@ -138,7 +137,7 @@ class DataLinksResourceHandler implements ResourceTypeHandler {
         if (p.trail.size() < 3)
             throw new IllegalArgumentException("newInputStream requires a file path inside a data-link: $p")
         final workspaceId = fs.resolveWorkspaceId(p.org, p.workspace)
-        final dl = client.getDataLink(workspaceId, p.trail[0], p.trail[1])
+        final dl = requireDataLink(workspaceId, p.trail[0], p.trail[1], p)
         final subPath = p.trail.subList(2, p.trail.size()).join('/')
         final urlResp = client.getDownloadUrl(dl.id, subPath, workspaceId, credentialsIdOf(dl))
         if (!urlResp.url)
@@ -152,33 +151,50 @@ class DataLinksResourceHandler implements ResourceTypeHandler {
         return (creds && !creds.isEmpty()) ? creds[0].id : null
     }
 
-    @Override
-    void checkAccess(SeqeraPath p, AccessMode... modes) throws IOException {
-        for (AccessMode m : modes) {
-            if (m == AccessMode.WRITE || m == AccessMode.EXECUTE)
-                throw new AccessDeniedException(p.toString(), null, "seqera:// data-links are read-only")
-        }
-        readAttributes(p)
+    /**
+     * Resolve a data-link by (provider, name) and throw {@link NoSuchFileException}
+     * with a uniform error message when missing. Wraps {@link SeqeraDataLinkClient#getDataLink}
+     * (which returns {@code null} on miss).
+     */
+    private DataLinkDto requireDataLink(long workspaceId, String provider, String name, SeqeraPath pathForErrors) throws NoSuchFileException {
+        final dl = client.getDataLink(workspaceId, provider, name)
+        if (!dl)
+            throw new NoSuchFileException(pathForErrors.toString(), null, "Data-link '${name}' not found for provider '${provider}' in workspace '$workspaceId'")
+        return dl
     }
 
     // ---- private helpers ----
 
     /**
-     * Decide whether {@code subPath} refers to a file or a directory by inspecting
-     * only the first page of the content response — never paginates further.
+     * Determine attributes for a path inside a data-link by listing the path's parent
+     * directory and finding the entry by name. The entry's {@code type} (FILE/FOLDER)
+     * is the authoritative file-vs-directory signal; absence of the entry means the
+     * path does not exist.
+     *
+     * The Platform's {@code /browse/{path}} response does not reliably distinguish
+     * "file path", "directory path", and "missing path" by itself ({@code originalPath}
+     * is populated in all three), so we always query the parent.
+     *
+     * Cost: one API call (or more if the parent listing paginates and the entry isn't
+     * on the first page). Iteration is short-circuited as soon as the entry is found.
      */
-    private static SeqeraFileAttributes attributesFor(PagedDataLinkContent content, String subPath, SeqeraPath pathForErrors) throws NoSuchFileException {
-        final firstPage = content.firstPage
-        final lastSeg = subPath.contains('/') ? subPath.substring(subPath.lastIndexOf('/') + 1) : subPath
-        // Single-file response: one FILE item whose name matches the final segment
-        final single = firstPage.find { DataLinkItem it -> it.name == lastSeg && it.type == DataLinkItemType.FILE }
-        if (single)
-            return new SeqeraFileAttributes(single.size ?: 0L, Instant.EPOCH, Instant.EPOCH, pathForErrors.toString())
-        // If there are children, this is a directory listing
-        if (!firstPage.isEmpty()) return new SeqeraFileAttributes(true)
-        // No items AND no originalPath → path does not exist
-        if (!content.originalPath)
-            throw new NoSuchFileException(pathForErrors.toString(), null, "Path not found inside data-link")
+    private SeqeraFileAttributes resolveAttrsViaParent(DataLinkDto dl, String subPath, long workspaceId, SeqeraPath pathForErrors) throws IOException {
+        final lastSlash = subPath.lastIndexOf('/')
+        final parentSubPath = lastSlash > 0 ? subPath.substring(0, lastSlash) : ''
+        final lastSeg = lastSlash > 0 ? subPath.substring(lastSlash + 1) : subPath
+        log.debug("Looking for $lastSeg in data-link: ${dl.id} path: $parentSubPath")
+        final parent = client.getContent(dl.id, parentSubPath, workspaceId, credentialsIdOf(dl), lastSeg)
+        DataLinkItem found = null
+        for (DataLinkItem it : parent) {
+            log.trace("Item: $it")
+            if (it.name == lastSeg || it.name == lastSeg + '/') { found = it; break }
+        }
+        if (found == null)
+            throw new NoSuchFileException(pathForErrors.toString(), null, "Path '${subPath}' not found inside data-link '${dl.name}'")
+        if (found.type == DataLinkItemType.FILE) {
+            final long size = (found.size != null) ? found.size.longValue() : 0L
+            return new SeqeraFileAttributes(size, Instant.EPOCH, Instant.EPOCH, pathForErrors.toString())
+        }
         return new SeqeraFileAttributes(true)
     }
 
@@ -201,17 +217,17 @@ class DataLinksResourceHandler implements ResourceTypeHandler {
 
     /**
      * Lazy {@link Iterable} that maps each {@link DataLinkItem} from a
-     * {@link PagedDataLinkContent} to a child {@link SeqeraPath} under
+     * {@link PagedIterable<DataLinkItem>} to a child {@link SeqeraPath} under
      * {@code parent}. Each produced path carries cached attributes built from the
      * item, so a follow-up {@code readAttributes()} call does not re-browse the
      * Platform. Pages are fetched on demand as the iterator advances.
      */
     @CompileStatic
     private static class PathMappingIterable implements Iterable<Path> {
-        private final PagedDataLinkContent content
+        private final PagedIterable<DataLinkItem> content
         private final SeqeraPath parent
 
-        PathMappingIterable(PagedDataLinkContent content, SeqeraPath parent) {
+        PathMappingIterable(PagedIterable<DataLinkItem> content, SeqeraPath parent) {
             this.content = content
             this.parent = parent
         }

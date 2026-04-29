@@ -16,6 +16,7 @@
 
 package io.seqera.tower.plugin.fs
 
+import io.seqera.tower.plugin.TowerClient
 import spock.lang.Specification
 
 /**
@@ -25,7 +26,7 @@ class SeqeraPathTest extends Specification {
 
     private SeqeraFileSystem mockFs() {
         def provider = new SeqeraFileSystemProvider()
-        return new SeqeraFileSystem(provider)
+        return new SeqeraFileSystem(provider, Mock(TowerClient))
     }
 
     // ---- depth / segment accessors ----

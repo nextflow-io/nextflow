@@ -16,7 +16,6 @@
 
 package io.seqera.tower.plugin.fs.handler
 
-import java.nio.file.AccessMode
 import java.nio.file.NoSuchFileException
 
 import io.seqera.tower.model.DatasetDto
@@ -220,14 +219,6 @@ class DatasetsResourceHandlerTest extends Specification {
         got === attrs
     }
 
-    def "checkAccess rejects WRITE"() {
-        given:
-        def path = new SeqeraPath(fs, 'seqera://acme/research/datasets/samples')
-
-        when:
-        handler.checkAccess(path, AccessMode.WRITE)
-
-        then:
-        thrown(java.nio.file.AccessDeniedException)
-    }
+    // WRITE/EXECUTE rejection is now enforced at the SeqeraFileSystemProvider level
+    // (handler.checkAccess was removed from ResourceTypeHandler). See SeqeraFileSystemProviderTest.
 }

@@ -75,10 +75,8 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         final TowerClient tc = TowerFactory.client()
         if (!tc)
             throw new IllegalStateException("File system `seqera://` requires the Seqera Platform access token — use `tower.accessToken` config option or TOWER_ACCESS_TOKEN env variable")
-        final datasetClient = new SeqeraDatasetClient(tc)
-        fileSystem = new SeqeraFileSystem(this)
-        fileSystem.setOrgWorkspaceClient(datasetClient)
-        fileSystem.registerHandler(new DatasetsResourceHandler(fileSystem, datasetClient))
+        fileSystem = new SeqeraFileSystem(this, tc)
+        fileSystem.registerHandler(new DatasetsResourceHandler(fileSystem, new SeqeraDatasetClient(tc)))
         fileSystem.registerHandler(new DataLinksResourceHandler(fileSystem, new SeqeraDataLinkClient(tc)))
         return fileSystem
     }
@@ -136,12 +134,14 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         final d = sp.depth()
         if (d < 3) {
             validateSharedDirectoryExists(fs, sp)
-            return (A) new SeqeraFileAttributes(true)
+            sp.cachedAttributes = new SeqeraFileAttributes(true)
+            return (A) sp.cachedAttributes
         }
         final h = fs.getHandler(sp.resourceType)
         if (!h)
             throw new NoSuchFileException(path.toString(), null, "Unsupported resource type: ${sp.resourceType}")
-        return (A) h.readAttributes(sp)
+        sp.cachedAttributes = h.readAttributes(sp)
+        return (A) sp.cachedAttributes
     }
 
     @Override
@@ -168,7 +168,7 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         final h = fs.getHandler(sp.resourceType)
         if (!h)
             throw new NoSuchFileException(path.toString(), null, "Unsupported resource type: ${sp.resourceType}")
-        h.checkAccess(sp, modes)
+        h.readAttributes(sp)
     }
 
     // ---- directory stream ----

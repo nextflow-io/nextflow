@@ -48,9 +48,4 @@ interface ResourceTypeHandler {
      */
     InputStream newInputStream(SeqeraPath path) throws IOException
 
-    /**
-     * Verify the path exists and requested modes are satisfiable. READ is allowed;
-     * WRITE/EXECUTE throw {@link java.nio.file.AccessDeniedException}.
-     */
-    void checkAccess(SeqeraPath path, AccessMode... modes) throws IOException
 }

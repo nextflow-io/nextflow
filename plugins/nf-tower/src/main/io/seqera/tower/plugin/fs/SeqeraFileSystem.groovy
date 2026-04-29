@@ -16,6 +16,7 @@
 
 package io.seqera.tower.plugin.fs
 
+import java.nio.file.AccessDeniedException
 import java.nio.file.FileStore
 import java.nio.file.FileSystem
 import java.nio.file.NoSuchFileException
@@ -28,22 +29,29 @@ import java.nio.file.spi.FileSystemProvider
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.tower.model.OrgAndWorkspaceDto
-import io.seqera.tower.plugin.dataset.SeqeraDatasetClient
+import io.seqera.tower.plugin.TowerClient
+import io.seqera.tower.plugin.exception.ForbiddenException
+import io.seqera.tower.plugin.exception.NotFoundException
+import io.seqera.tower.plugin.exception.UnauthorizedException
+import nextflow.exception.AbortOperationException
 
 /**
  * FileSystem instance for the {@code seqera://} scheme.
  * One instance per {@link SeqeraFileSystemProvider}.
  *
- * Resource-type-agnostic: the filesystem owns the org/workspace cache (shared across
- * resource types) and a registry of {@link ResourceTypeHandler}s. Each handler owns
- * its own API client and resource-specific caches.
+ * Resource-type-agnostic: the filesystem owns the user-id and org/workspace caches
+ * (shared across resource types) and a registry of {@link ResourceTypeHandler}s.
+ * Each handler owns its own API client and resource-specific caches.
  */
 @Slf4j
 @CompileStatic
 class SeqeraFileSystem extends FileSystem {
 
     private final SeqeraFileSystemProvider provider0
-    private SeqeraDatasetClient orgWorkspaceClient
+    private final TowerClient towerClient
+
+    /** Cached current-user id; the user is fixed by the {@code TowerClient}'s access token. */
+    private volatile Long cachedUserId
 
     /** orgName → orgId */
     private final Map<String, Long> orgCache = new LinkedHashMap<>()
@@ -55,17 +63,9 @@ class SeqeraFileSystem extends FileSystem {
 
     private volatile boolean orgWorkspaceCacheLoaded = false
 
-    SeqeraFileSystem(SeqeraFileSystemProvider provider) {
+    SeqeraFileSystem(SeqeraFileSystemProvider provider, TowerClient towerClient) {
         this.provider0 = provider
-    }
-
-    /**
-     * Attach the dataset client used for user-info / workspaces lookup. The org/workspace
-     * listing uses dataset endpoints today ({@code GET /user-info}, {@code GET /user/{id}/workspaces});
-     * keeping the client on the filesystem avoids duplicating it across handlers.
-     */
-    void setOrgWorkspaceClient(SeqeraDatasetClient client) {
-        this.orgWorkspaceClient = client
+        this.towerClient = towerClient
     }
 
     @Override
@@ -115,14 +115,58 @@ class SeqeraFileSystem extends FileSystem {
         throw new UnsupportedOperationException("WatchService not supported by seqera:// filesystem")
     }
 
-    // ---- org/workspace cache (shared across handlers) ----
+    // ---- user-id / org / workspace caches (shared across handlers) ----
+
+    /**
+     * Resolve the current user's numeric ID via {@code GET /user-info}.
+     * Cached for the lifetime of this filesystem — the token does not change
+     * during a pipeline run, so neither does the resolved user.
+     */
+    synchronized long getUserId() throws IOException {
+        if (cachedUserId != null) return cachedUserId
+        try {
+            final info = towerClient.getUserInfo()
+            if (info?.id == null)
+                throw new AbortOperationException("Unable to retrieve user ID from Seqera Platform — check your access token")
+            cachedUserId = info.id as Long
+            return cachedUserId
+        } catch (UnauthorizedException e) {
+            throw new AbortOperationException(e.getMessage())
+        } catch (ForbiddenException e) {
+            throw new AccessDeniedException("${towerClient.endpoint}/user-info", null, e.message)
+        } catch (NotFoundException e) {
+            throw new NoSuchFileException("${towerClient.endpoint}/user-info")
+        }
+    }
+
+    /** {@code GET /user/{userId}/workspaces} — reachable orgs and workspaces. */
+    private List<OrgAndWorkspaceDto> fetchUserWorkspacesAndOrgs(long userId) throws IOException {
+        try {
+            final list = towerClient.listUserWorkspacesAndOrgs(userId as String)
+            return list.collect { Map m -> mapOrgAndWorkspace(m) }
+        } catch (UnauthorizedException e) {
+            throw new AbortOperationException(e.getMessage())
+        } catch (ForbiddenException e) {
+            throw new AccessDeniedException("${towerClient.endpoint}/user/$userId/workspaces", null, e.message)
+        } catch (NotFoundException e) {
+            throw new NoSuchFileException("${towerClient.endpoint}/user/$userId/workspaces")
+        }
+    }
+
+    private static OrgAndWorkspaceDto mapOrgAndWorkspace(Map m) {
+        final dto = new OrgAndWorkspaceDto()
+        dto.orgId = (m.orgId as Long) ?: 0L
+        dto.orgName = m.orgName as String
+        dto.workspaceId = (m.workspaceId as Long) ?: 0L
+        dto.workspaceName = m.workspaceName as String
+        dto.workspaceFullName = m.workspaceFullName as String
+        return dto
+    }
 
     synchronized void loadOrgWorkspaceCache() {
         if (orgWorkspaceCacheLoaded) return
-        if (!orgWorkspaceClient)
-            throw new IllegalStateException("SeqeraFileSystem has no orgWorkspaceClient attached")
         log.debug "Loading Seqera org/workspace cache"
-        final entries = orgWorkspaceClient.listUserWorkspacesAndOrgs(orgWorkspaceClient.getUserId())
+        final entries = fetchUserWorkspacesAndOrgs(getUserId())
         for (OrgAndWorkspaceDto entry : entries) {
             if (entry.orgName)
                 orgCache.put(entry.orgName, entry.orgId)

@@ -115,14 +115,14 @@ class SeqeraDataLinkClientTest extends Specification {
 
     // ---- getDataLink ----
 
-    def "getDataLink uses server-side search filter and returns first matching provider"() {
-        given:
+    def "getDataLink uses server-side keyword search (name + provider:<p>) and returns the first match"() {
+        given: 'the server returns the single data-link matching both keywords'
         def body = JsonOutput.toJson([dataLinks: [
-                [id: 'dl-1', name: 'inputs', provider: 'google'],
                 [id: 'dl-2', name: 'inputs', provider: 'aws']
-        ], totalSize: 2])
+        ], totalSize: 1])
         def tc = tower()
-        tc.sendApiRequest("${EP}/data-links?workspaceId=10&max=100&offset=0&search=inputs") >> ok(body)
+        // URL-encoded: ' ' → '+', ':' → '%3A'
+        tc.sendApiRequest("${EP}/data-links?workspaceId=10&max=100&offset=0&search=inputs+provider%3Aaws") >> ok(body)
         def client = new SeqeraDataLinkClient(tc)
 
         when:
@@ -133,20 +133,30 @@ class SeqeraDataLinkClientTest extends Specification {
         dl.provider.toString() == 'aws'
     }
 
-    def "getDataLink throws NoSuchFileException when no matching (provider, name) is found"() {
+    def "getDataLink returns null when no matching (provider, name) is found"() {
         given:
-        def body = JsonOutput.toJson([dataLinks: [
-                [id: 'dl-1', name: 'inputs', provider: 'google']
-        ], totalSize: 1])
+        def body = JsonOutput.toJson([dataLinks: [], totalSize: 0])
         def tc = tower()
-        tc.sendApiRequest("${EP}/data-links?workspaceId=10&max=100&offset=0&search=inputs") >> ok(body)
+        tc.sendApiRequest("${EP}/data-links?workspaceId=10&max=100&offset=0&search=inputs+provider%3Aaws") >> ok(body)
+        def client = new SeqeraDataLinkClient(tc)
+
+        expect:
+        client.getDataLink(10L, 'aws', 'inputs') == null
+    }
+
+    def "getDataLink memoizes null misses (no second API call)"() {
+        given:
+        def body = JsonOutput.toJson([dataLinks: [], totalSize: 0])
+        def tc = tower()
         def client = new SeqeraDataLinkClient(tc)
 
         when:
-        client.getDataLink(10L, 'aws', 'inputs')
+        def a = client.getDataLink(10L, 'aws', 'ghost')
+        def b = client.getDataLink(10L, 'aws', 'ghost')
 
         then:
-        thrown(NoSuchFileException)
+        1 * tc.sendApiRequest("${EP}/data-links?workspaceId=10&max=100&offset=0&search=ghost+provider%3Aaws") >> ok(body)
+        a == null && b == null
     }
 
     def "getDataLink memoizes successful lookups"() {
@@ -162,7 +172,7 @@ class SeqeraDataLinkClientTest extends Specification {
         def b = client.getDataLink(10L, 'aws', 'inputs')
 
         then:
-        1 * tc.sendApiRequest("${EP}/data-links?workspaceId=10&max=100&offset=0&search=inputs") >> ok(body)
+        1 * tc.sendApiRequest("${EP}/data-links?workspaceId=10&max=100&offset=0&search=inputs+provider%3Aaws") >> ok(body)
         a.is(b)
     }
 
@@ -247,7 +257,6 @@ class SeqeraDataLinkClientTest extends Specification {
     def "getContent on a sub-path uses /browse/{path}"() {
         given:
         def body = JsonOutput.toJson([
-                originalPath: 'reads/',
                 objects: [
                         [name: 'a.fq', type: 'FILE', size: 123, mimeType: 'application/gzip'],
                         [name: 'b.fq', type: 'FILE', size: 456, mimeType: 'application/gzip']
@@ -260,7 +269,6 @@ class SeqeraDataLinkClientTest extends Specification {
         def resp = client.getContent('dl-1', 'reads/', 10L)
 
         then:
-        resp.originalPath == 'reads/'
         resp.firstPage.size() == 2
         resp.firstPage[0].name == 'a.fq'
         resp.firstPage[0].size == 123L

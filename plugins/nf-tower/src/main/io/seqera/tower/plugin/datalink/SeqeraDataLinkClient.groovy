@@ -55,11 +55,12 @@ class SeqeraDataLinkClient {
 
     /**
      * Lazy iterator over every data-link in the workspace.
-     * Pages are fetched from {@code GET /data-links?workspaceId=<ws>&max=<n>&offset=<o>}
-     * on demand as the iterator advances.
+     * The first page is fetched eagerly from {@code GET /data-links?workspaceId=<ws>&max=<n>&offset=<o>}
+     * (so any IOException surfaces here, not on the first {@code hasNext()}); subsequent
+     * pages are fetched on demand as the iterator advances.
      */
-    Iterator<DataLinkDto> listDataLinks(long workspaceId) {
-        return new DataLinkListIterator(towerClient, endpoint, workspaceId, LIST_PAGE_SIZE)
+    Iterator<DataLinkDto> listDataLinks(long workspaceId) throws IOException {
+        return PagedIterable.start(new DataLinkListFetcher(towerClient, endpoint, workspaceId, LIST_PAGE_SIZE, null)).iterator()
     }
 
     /**
@@ -79,54 +80,41 @@ class SeqeraDataLinkClient {
 
     /**
      * Resolve a data-link by {@code (provider, name)} in the given workspace.
-     * Iterates the API's list endpoint lazily (server-side filtered by {@code name})
-     * and short-circuits on first match.
+     * Filters server-side using the Platform's keyword-search syntax
+     * ({@code search=<name> provider:<provider>}) so the response contains at most
+     * the matching data-link; this method returns the first result or {@code null}.
      *
-     * Memoized per {@code (workspaceId, provider, name)} tuple. Note: Groovy's
-     * {@code @Memoized} caches successful returns only — a path that repeatedly
-     * references a non-existent data-link re-runs the search each time.
+     * Memoized per {@code (workspaceId, provider, name)} tuple, including {@code null}
+     * misses — a path that repeatedly references a non-existent data-link does not
+     * re-issue the search. Caveat: a data-link created on the Platform after a miss is
+     * cached will not be visible until a new {@link SeqeraDataLinkClient} is constructed
+     * (i.e. for the lifetime of a pipeline run, misses are sticky).
      */
     @Memoized
-    DataLinkDto getDataLink(long workspaceId, String provider, String name) {
-        final Iterator<DataLinkDto> it = new DataLinkListIterator(towerClient, endpoint, workspaceId, LIST_PAGE_SIZE, name)
-        while( it.hasNext() ) {
-            final dl = it.next()
-            if( dl.provider?.toString() == provider )
-                return dl
-        }
-        throw new NoSuchFileException(
-            "seqera://.../data-links/${provider}/${name}",
-            null,
-            "Data-link '${name}' not found for provider '${provider}' in workspace '$workspaceId'")
+    DataLinkDto getDataLink(long workspaceId, String provider, String name) throws IOException {
+        final search = "${name} provider:${provider}".toString()
+        final it = PagedIterable.start(new DataLinkListFetcher(towerClient, endpoint, workspaceId, LIST_PAGE_SIZE, search)).iterator()
+        return it.hasNext() ? it.next() : null
     }
 
     /**
      * Browse the content of a data-link.
-     * The first page is fetched eagerly to populate metadata ({@code originalPath},
-     * first-page items). Subsequent pages are fetched on demand as the returned
-     * {@link PagedDataLinkContent} is iterated.
+     * The first page is fetched eagerly (so any IOException surfaces here, not at the
+     * first iterator call); subsequent pages are fetched on demand as the returned
+     * {@link PagedIterable} is iterated.
      *
      * Endpoints: {@code GET /data-links/{id}/browse} (root) and
      * {@code GET /data-links/{id}/browse/{path}} (sub-path).
      *
      * @param credentialsId optional data-link credentials identifier (from
      *     {@code DataLinkDto.credentials[0].id}); forwarded as a query param when set.
+     * @param search optional server-side prefix filter on entry names
      */
-    PagedDataLinkContent getContent(String dataLinkId, String subPath, long workspaceId, String credentialsId = null) {
+    PagedIterable<DataLinkItem> getContent(String dataLinkId, String subPath, long workspaceId, String credentialsId = null, String search = null) throws IOException {
+        log.debug("Getting content for data-link: $dataLinkId, path: $subPath, workspace: $workspaceId, credentialsId: $credentialsId")
         final pathSegment = subPath ? '/' + encodePath(subPath) : ''
         final baseUrl = "${endpoint}/data-links/${encodePath(dataLinkId)}/browse${pathSegment}"
-        final page = fetchBrowsePage(baseUrl, workspaceId, credentialsId, null)
-        final firstItems = page.objects
-        final firstToken = page.nextPageToken
-        final originalPath = page.originalPath
-        final fetcher = new PagedDataLinkContent.PageFetcher() {
-            @Override
-            Map<String, Object> fetch(String token) throws IOException {
-                final next = fetchBrowsePage(baseUrl, workspaceId, credentialsId, token)
-                return [objects: next.objects, nextPageToken: next.nextPageToken] as Map<String, Object>
-            }
-        }
-        return new PagedDataLinkContent(originalPath, firstItems, firstToken, fetcher)
+        return PagedIterable.start(new DataLinkContentFetcher(towerClient, baseUrl, workspaceId, credentialsId, search))
     }
 
     /** {@code GET /data-links/{id}/generate-download-url?workspaceId=<ws>&filePath=<sub>[&credentialsId=<c>]} */
@@ -142,49 +130,25 @@ class SeqeraDataLinkClient {
         return out
     }
 
-    // ---- page-fetching helpers ----
+    // ---- page fetchers ----
 
-    /** Fetch one browse page and normalize it into a {@link BrowsePage}. */
-    private BrowsePage fetchBrowsePage(String baseUrl, long workspaceId, String credentialsId, String nextPageToken) {
-        String url = "${baseUrl}?workspaceId=${workspaceId}"
-        if (credentialsId) url += "&credentialsId=${encodeQuery(credentialsId)}"
-        if (nextPageToken) url += "&nextPageToken=${encodeQuery(nextPageToken)}"
-        log.debug "Fetching Browse page GET $url"
-        final resp = towerClient.sendApiRequest(url)
-        checkFsResponse(resp, url)
-        final json = new JsonSlurper().parseText(resp.message) as Map
-        final items = (json.objects as List<Map>)?.collect { Map m -> mapItem(m) } ?: Collections.<DataLinkItem>emptyList()
-        return new BrowsePage(json.originalPath as String, items, json.nextPageToken as String)
-    }
-
+    /**
+     * {@link io.seqera.tower.plugin.datalink.PagedIterable.NextPageFetcher} for the
+     * {@code /data-links} list endpoint (offset pagination).
+     * Cursor state (offset + server-reported total) lives in instance fields.
+     */
     @CompileStatic
-    private static class BrowsePage {
-        final String originalPath
-        final List<DataLinkItem> objects
-        final String nextPageToken
-
-        BrowsePage(String originalPath, List<DataLinkItem> objects, String nextPageToken) {
-            this.originalPath = originalPath
-            this.objects = objects
-            this.nextPageToken = nextPageToken
-        }
-    }
-
-    /** Lazy iterator for the {@code /data-links} list endpoint (offset pagination). */
-    @CompileStatic
-    private static class DataLinkListIterator implements Iterator<DataLinkDto> {
+    private static class DataLinkListFetcher implements PagedIterable.NextPageFetcher<DataLinkDto> {
         private final TowerClient towerClient
         private final String endpoint
         private final long workspaceId
         private final int pageSize
         private final String search
 
-        private Iterator<DataLinkDto> current = Collections.<DataLinkDto>emptyIterator()
         private int offset = 0
-        private long total = -1L   // -1 = unknown; set only when the server reports totalSize
-        private boolean exhausted = false
+        private long total = -1L   // unknown until the server reports totalSize
 
-        DataLinkListIterator(TowerClient towerClient, String endpoint, long workspaceId, int pageSize, String search = null) {
+        DataLinkListFetcher(TowerClient towerClient, String endpoint, long workspaceId, int pageSize, String search) {
             this.towerClient = towerClient
             this.endpoint = endpoint
             this.workspaceId = workspaceId
@@ -193,34 +157,56 @@ class SeqeraDataLinkClient {
         }
 
         @Override
-        boolean hasNext() {
-            while (!current.hasNext()) {
-                if (exhausted) return false
-                fetchNextPage()
-            }
-            return true
-        }
-
-        @Override
-        DataLinkDto next() {
-            if (!hasNext()) throw new NoSuchElementException()
-            return current.next()
-        }
-
-        private void fetchNextPage() {
-            final url = "${endpoint}/data-links?workspaceId=${workspaceId}&max=${pageSize}&offset=${offset}${search ? '&search='+ encodeQuery(search) :''}"
+        PagedIterable.Page<DataLinkDto> fetch() throws IOException {
+            final url = "${endpoint}/data-links?workspaceId=${workspaceId}&max=${pageSize}&offset=${offset}${search ? '&search=' + encodeQuery(search) : ''}"
             log.debug "Fetching next list of datalinks: GET $url"
             final resp = towerClient.sendApiRequest(url)
             checkFsResponse(resp, url)
             final json = new JsonSlurper().parseText(resp.message) as Map
             final items = (json.dataLinks as List<Map>)?.collect { Map m -> mapDataLink(m) } ?: Collections.<DataLinkDto>emptyList()
-            current = items.iterator()
             offset += items.size()
-            // Record the server-reported total only if present (null/missing → leave as -1 and
-            // rely on an empty-page response to signal exhaustion)
             if (total < 0 && json.totalSize != null) total = json.totalSize as Long
-            // Exhausted when: this page is empty, OR we've reached the known total
-            if (items.isEmpty() || (total >= 0 && offset >= total)) exhausted = true
+            final isLast = items.isEmpty() || (total >= 0 && offset >= total)
+            return new PagedIterable.Page<DataLinkDto>(items, isLast)
+        }
+    }
+
+    /**
+     * {@link io.seqera.tower.plugin.datalink.PagedIterable.NextPageFetcher} for a
+     * data-link's {@code /browse[/path]} endpoint (token pagination).
+     * The next-page cursor lives in the {@code nextToken} instance field.
+     */
+    @CompileStatic
+    private static class DataLinkContentFetcher implements PagedIterable.NextPageFetcher<DataLinkItem> {
+        private final TowerClient towerClient
+        private final String baseUrl
+        private final long workspaceId
+        private final String credentialsId
+        private final String search
+
+        private String nextToken = null
+
+        DataLinkContentFetcher(TowerClient towerClient, String baseUrl, long workspaceId, String credentialsId, String search) {
+            this.towerClient = towerClient
+            this.baseUrl = baseUrl
+            this.workspaceId = workspaceId
+            this.credentialsId = credentialsId
+            this.search = search
+        }
+
+        @Override
+        PagedIterable.Page<DataLinkItem> fetch() throws IOException {
+            String url = "${baseUrl}?workspaceId=${workspaceId}"
+            if (search) url += "&search=${encodeQuery(search)}"
+            if (credentialsId) url += "&credentialsId=${encodeQuery(credentialsId)}"
+            if (nextToken) url += "&nextPageToken=${encodeQuery(nextToken)}"
+            log.debug "Fetching Browse page GET $url"
+            final resp = towerClient.sendApiRequest(url)
+            checkFsResponse(resp, url)
+            final json = new JsonSlurper().parseText(resp.message) as Map
+            final items = (json.objects as List<Map>)?.collect { Map m -> mapItem(m) } ?: Collections.<DataLinkItem>emptyList()
+            nextToken = json.nextPageToken as String
+            return new PagedIterable.Page<DataLinkItem>(items, nextToken == null)
         }
     }
 

@@ -53,8 +53,7 @@ class SeqeraFileSystemProviderTest extends Specification {
     private SeqeraFileSystem buildFs(TowerClient tc) {
         final client = new SeqeraDatasetClient(tc)
         final provider = new SeqeraFileSystemProvider()
-        final fs = new SeqeraFileSystem(provider)
-        fs.setOrgWorkspaceClient(client)
+        final fs = new SeqeraFileSystem(provider, tc)
         fs.registerHandler(new io.seqera.tower.plugin.fs.handler.DatasetsResourceHandler(fs, client))
         return fs
     }
@@ -403,7 +402,7 @@ class SeqeraFileSystemProviderTest extends Specification {
     def "newFileSystem throws FileSystemAlreadyExistsException when filesystem exists"() {
         given: 'a provider with an existing filesystem'
         def provider = new SeqeraFileSystemProvider()
-        def fs = new SeqeraFileSystem(provider)
+        def fs = new SeqeraFileSystem(provider, Mock(TowerClient))
         provider.@fileSystem = fs
 
         when:
@@ -421,8 +420,7 @@ class SeqeraFileSystemProviderTest extends Specification {
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
         def datasetClient = new SeqeraDatasetClient(tc)
-        def fs = new SeqeraFileSystem(new SeqeraFileSystemProvider())
-        fs.setOrgWorkspaceClient(datasetClient)
+        def fs = new SeqeraFileSystem(new SeqeraFileSystemProvider(), tc)
         fs.registerHandler(new io.seqera.tower.plugin.fs.handler.DatasetsResourceHandler(fs, datasetClient))
         fs.registerHandler(new io.seqera.tower.plugin.fs.handler.DataLinksResourceHandler(fs, new io.seqera.tower.plugin.datalink.SeqeraDataLinkClient(tc)))
         def wsPath = new SeqeraPath(fs, 'seqera://acme/research')

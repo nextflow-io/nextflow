@@ -111,15 +111,6 @@ class DatasetsResourceHandler implements ResourceTypeHandler {
         return client.downloadDataset(dataset.id, String.valueOf(version.version), version.fileName, dataset.workspaceId)
     }
 
-    @Override
-    void checkAccess(SeqeraPath p, AccessMode... modes) throws IOException {
-        for (AccessMode m : modes) {
-            if (m == AccessMode.WRITE || m == AccessMode.EXECUTE)
-                throw new AccessDeniedException(p.toString(), null, "seqera:// datasets are read-only")
-        }
-        readAttributes(p)
-    }
-
     // ---- helpers ----
 
     /**

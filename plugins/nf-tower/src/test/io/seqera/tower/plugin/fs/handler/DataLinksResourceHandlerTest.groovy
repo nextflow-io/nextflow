@@ -18,7 +18,6 @@ package io.seqera.tower.plugin.fs.handler
 
 import java.net.http.HttpClient
 import java.net.http.HttpResponse
-import java.nio.file.AccessMode
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
@@ -28,7 +27,7 @@ import io.seqera.tower.model.DataLinkItem
 import io.seqera.tower.model.DataLinkItemType
 import io.seqera.tower.model.DataLinkProvider
 import io.seqera.tower.model.DataLinkDownloadUrlResponse
-import io.seqera.tower.plugin.datalink.PagedDataLinkContent
+import io.seqera.tower.plugin.datalink.PagedIterable
 import io.seqera.tower.plugin.datalink.SeqeraDataLinkClient
 import io.seqera.tower.plugin.fs.SeqeraFileSystem
 import io.seqera.tower.plugin.fs.SeqeraPath
@@ -55,9 +54,12 @@ class DataLinksResourceHandlerTest extends Specification {
         def i = new DataLinkItem(); i.name = name; i.type = t; i.size = size; return i
     }
 
-    private static PagedDataLinkContent pagedContent(List<DataLinkItem> items, String originalPath = null) {
-        return new PagedDataLinkContent(originalPath, items, null, new PagedDataLinkContent.PageFetcher() {
-            Map<String, Object> fetch(String t) { throw new IllegalStateException('no more pages') }
+    private static PagedIterable<DataLinkItem> pagedContent(List<DataLinkItem> items) {
+        // Single-page test fixture: firstPage already loaded, no further pages.
+        return new PagedIterable<DataLinkItem>(items, true, new PagedIterable.NextPageFetcher<DataLinkItem>() {
+            PagedIterable.Page<DataLinkItem> fetch() {
+                throw new IllegalStateException('no more pages')
+            }
         })
     }
 
@@ -122,7 +124,7 @@ class DataLinksResourceHandlerTest extends Specification {
 
         then:
         1 * fs.resolveWorkspaceId('acme', 'research') >> 10L
-        1 * client.getDataLink(10L, 'aws', 'unknown') >> { throw new NoSuchFileException("data-link not found") }
+        1 * client.getDataLink(10L, 'aws', 'unknown') >> null
         thrown(NoSuchFileException)
     }
 
@@ -311,7 +313,7 @@ class DataLinksResourceHandlerTest extends Specification {
         attr.directory
     }
 
-    def "readAttributes on a file sub-path reports file with size"() {
+    def "readAttributes on a deep file sub-path queries the parent dir and finds the entry"() {
         given:
         def path = new SeqeraPath(fs, 'seqera://acme/research/data-links/aws/inputs/reads/a.fq')
 
@@ -321,14 +323,33 @@ class DataLinksResourceHandlerTest extends Specification {
         then:
         1 * fs.resolveWorkspaceId(_, _) >> 10L
         1 * client.getDataLink(10L, 'aws', 'inputs') >> dl('dl-1', 'inputs', DataLinkProvider.AWS)
-        1 * client.getContent('dl-1', 'reads/a.fq', 10L, null) >> pagedContent([
-                item('a.fq', DataLinkItemType.FILE, 123)
+        1 * client.getContent('dl-1', 'reads', 10L, null, 'a.fq') >> pagedContent([
+                item('a.fq', DataLinkItemType.FILE, 123),
+                item('b.fq', DataLinkItemType.FILE, 456)
         ])
         attr.regularFile
         attr.size() == 123L
     }
 
-    def "readAttributes on a directory sub-path reports directory"() {
+    def "readAttributes on a top-level file queries the data-link root and finds the entry"() {
+        given:
+        def path = new SeqeraPath(fs, 'seqera://acme/research/data-links/aws/inputs/samplesheet.csv')
+
+        when:
+        def attr = handler.readAttributes(path)
+
+        then:
+        1 * fs.resolveWorkspaceId(_, _) >> 10L
+        1 * client.getDataLink(10L, 'aws', 'inputs') >> dl('dl-1', 'inputs', DataLinkProvider.AWS)
+        1 * client.getContent('dl-1', '', 10L, null, 'samplesheet.csv') >> pagedContent([
+                item('reads', DataLinkItemType.FOLDER, 0),
+                item('samplesheet.csv', DataLinkItemType.FILE, 999)
+        ])
+        attr.regularFile
+        attr.size() == 999L
+    }
+
+    def "readAttributes on a directory sub-path queries the parent dir and reports directory"() {
         given:
         def path = new SeqeraPath(fs, 'seqera://acme/research/data-links/aws/inputs/reads')
 
@@ -338,10 +359,72 @@ class DataLinksResourceHandlerTest extends Specification {
         then:
         1 * fs.resolveWorkspaceId(_, _) >> 10L
         1 * client.getDataLink(10L, 'aws', 'inputs') >> dl('dl-1', 'inputs', DataLinkProvider.AWS)
-        1 * client.getContent('dl-1', 'reads', 10L, null) >> pagedContent(
-                [item('a.fq', DataLinkItemType.FILE, 1), item('b.fq', DataLinkItemType.FILE, 2)],
-                'reads/')
+        1 * client.getContent('dl-1', '', 10L, null, 'reads') >> pagedContent([
+                item('reads', DataLinkItemType.FOLDER, 0),
+                item('samplesheet.csv', DataLinkItemType.FILE, 1)
+        ])
         attr.directory
+    }
+
+    def "readAttributes on a non-existent sub-path throws NoSuchFileException"() {
+        given:
+        def path = new SeqeraPath(fs, 'seqera://acme/research/data-links/aws/inputs/reads/missing.fq')
+
+        when:
+        handler.readAttributes(path)
+
+        then:
+        1 * fs.resolveWorkspaceId(_, _) >> 10L
+        1 * client.getDataLink(10L, 'aws', 'inputs') >> dl('dl-1', 'inputs', DataLinkProvider.AWS)
+        1 * client.getContent('dl-1', 'reads', 10L, null, 'missing.fq') >> pagedContent([
+                item('a.fq', DataLinkItemType.FILE, 1)
+        ])
+        thrown(NoSuchFileException)
+    }
+
+    def "readAttributes distinguishes a directory and a same-named file inside it (deferred #1 case)"() {
+        // Directory 'foo' contains a file 'foo'. Path .../bucket/foo refers to the dir.
+        given:
+        def path = new SeqeraPath(fs, 'seqera://acme/research/data-links/aws/bucket/foo')
+
+        when:
+        def attr = handler.readAttributes(path)
+
+        then:
+        1 * fs.resolveWorkspaceId(_, _) >> 10L
+        1 * client.getDataLink(10L, 'aws', 'bucket') >> dl('dl-1', 'bucket', DataLinkProvider.AWS)
+        // root listing shows 'foo' as a folder
+        1 * client.getContent('dl-1', '', 10L, null, 'foo') >> pagedContent([
+                item('foo', DataLinkItemType.FOLDER, 0)
+        ])
+        attr.directory
+
+        when: 'now query the inner file at .../bucket/foo/foo'
+        def innerPath = new SeqeraPath(fs, 'seqera://acme/research/data-links/aws/bucket/foo/foo')
+        def innerAttr = handler.readAttributes(innerPath)
+
+        then: 'parent dir is foo, lastSeg is foo, found as FILE'
+        1 * fs.resolveWorkspaceId(_, _) >> 10L
+        1 * client.getDataLink(10L, 'aws', 'bucket') >> dl('dl-1', 'bucket', DataLinkProvider.AWS)
+        1 * client.getContent('dl-1', 'foo', 10L, null, 'foo') >> pagedContent([
+                item('foo', DataLinkItemType.FILE, 42)
+        ])
+        innerAttr.regularFile
+        innerAttr.size() == 42L
+    }
+
+    def "readAttributes returns NoSuchFileException when the data-link is missing"() {
+        given:
+        def path = new SeqeraPath(fs, 'seqera://acme/research/data-links/aws/ghost/a.fq')
+
+        when:
+        handler.readAttributes(path)
+
+        then:
+        1 * fs.resolveWorkspaceId(_, _) >> 10L
+        1 * client.getDataLink(10L, 'aws', 'ghost') >> null
+        def ex = thrown(NoSuchFileException)
+        ex.reason?.contains("Data-link 'ghost' not found")
     }
 
     def "readAttributes short-circuits when path has cached attributes (no API call)"() {
@@ -387,7 +470,7 @@ class DataLinksResourceHandlerTest extends Specification {
 
         then:
         1 * fs.resolveWorkspaceId(_, _) >> 10L
-        1 * client.getDataLink(10L, 'aws', 'ghost') >> { throw new NoSuchFileException("not found") }
+        1 * client.getDataLink(10L, 'aws', 'ghost') >> null
         thrown(NoSuchFileException)
     }
 
@@ -401,18 +484,8 @@ class DataLinksResourceHandlerTest extends Specification {
         then:
         1 * fs.resolveWorkspaceId(_, _) >> 10L
         1 * client.getDataLink(10L, 'aws', 'inputs') >> dl('dl-1', 'inputs', DataLinkProvider.AWS)
-        1 * client.getContent('dl-1', 'does/not/exist', 10L, null) >> pagedContent([])
+        // parent listing of 'does/not' has no 'exist' entry
+        1 * client.getContent('dl-1', 'does/not', 10L, null, 'exist') >> pagedContent([])
         thrown(NoSuchFileException)
-    }
-
-    def "checkAccess with WRITE is rejected"() {
-        given:
-        def path = new SeqeraPath(fs, 'seqera://acme/research/data-links/aws/inputs/a.fq')
-
-        when:
-        handler.checkAccess(path, AccessMode.WRITE)
-
-        then:
-        thrown(java.nio.file.AccessDeniedException)
     }
 }

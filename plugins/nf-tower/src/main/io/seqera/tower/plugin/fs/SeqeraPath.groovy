@@ -16,6 +16,8 @@
 
 package io.seqera.tower.plugin.fs
 
+import groovy.transform.PackageScope
+
 import java.nio.file.FileSystem
 import java.nio.file.InvalidPathException
 import java.nio.file.LinkOption
@@ -59,11 +61,15 @@ class SeqeraPath implements Path {
     private final String relPath
     /**
      * Optional attributes attached when this path was produced by a directory listing,
-     * so {@code readAttributes()} can return them without a follow-up API call.
-     * Not part of the URI — does not affect {@link #equals}, {@link #hashCode},
-     * {@link #toString}, {@link #toUri}, or propagation via {@link #resolve} / {@link #getParent}.
+     * or set by {@link SeqeraFileSystemProvider#readAttributes} after a fresh resolution
+     * so subsequent reads on the same path instance hit the cache. Not part of the URI —
+     * does not affect {@link #equals}, {@link #hashCode}, {@link #toString}, {@link #toUri},
+     * or propagation via {@link #resolve} / {@link #getParent}.
+     *
+     * Marked {@code volatile} so the publication of a freshly-resolved value is visible
+     * to other threads that call {@link #getCachedAttributes()} on the same path.
      */
-    private final SeqeraFileAttributes cachedAttributes
+    private volatile SeqeraFileAttributes cachedAttributes
 
     /** Parse a {@code seqera://} URI string. */
     SeqeraPath(SeqeraFileSystem fs, String uriString) {
@@ -166,6 +172,11 @@ class SeqeraPath implements Path {
     List<String> getTrail() { trail }
     SeqeraFileAttributes getCachedAttributes() { cachedAttributes }
 
+    /** Package-scope: only same-package callers (e.g. {@link SeqeraFileSystemProvider}) cache attrs. */
+    @PackageScope
+    void setCachedAttributes(SeqeraFileAttributes attributes) {
+        this.cachedAttributes = attributes
+    }
     /**
      * Resolve a child segment and attach the given attributes to the resulting path.
      * Used by directory-listing code paths so follow-up {@code readAttributes()} calls
