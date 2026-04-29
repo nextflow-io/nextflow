@@ -1,5 +1,8 @@
 nf-tower changelog
 ===================
+1.27.0 - 28 Apr 2026
+- Add -user-secret and -workspace-secret flags to nextflow launch (#7040) [53045104d]
+
 1.26.0 - 25 Apr 2026
 - Abort execution when platform telemetry error (#6827) [b1ad3f720]
 - Add Seqera NIO filesystem for datasets and refactor TowerClient/TowerObserver (#6946) [433b10a1f]
