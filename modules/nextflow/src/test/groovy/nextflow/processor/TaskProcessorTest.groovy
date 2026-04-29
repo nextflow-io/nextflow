@@ -35,6 +35,7 @@ import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ProcessConfigV1
+import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.script.params.FileInParam
@@ -98,6 +99,41 @@ class TaskProcessorTest extends Specification {
         cleanup:
         home.deleteDir()
 
+    }
+
+    def 'should resolve module bundle when script path is set regardless of isModule' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def mod = folder.resolve('mod1'); mod.mkdir()
+        def bin = mod.resolve('resources/usr/bin'); bin.mkdirs()
+        def scriptPath = mod.resolve('main.nf'); Files.createFile(scriptPath)
+        Files.createFile(bin.resolve('echo.sh'))
+        and:
+        def script = Mock(BaseScript)
+        def meta = Mock(ScriptMeta) {
+            getScriptPath() >> scriptPath
+            // Simulate the failing case: script is loaded as the entry, not as an included module
+            isModule() >> false
+            getModuleBundle() >> ResourcesBundle.scan(mod.resolve('resources'))
+        }
+        and:
+        def session = Mock(Session) { getConfig() >> [:] }
+        def executor = Mock(Executor) {}
+        def processor = Spy(TaskProcessor, constructorArgs: [[session:session, executor:executor]])
+        processor.getOwnerScript() >> script
+
+        when:
+        ResourcesBundle bundle
+        GroovyMock(ScriptMeta, global: true)
+        ScriptMeta.get(script) >> meta
+        bundle = processor.getModuleBundle()
+
+        then:
+        bundle != null
+        bundle.getBinDirs() == [bin]
+
+        cleanup:
+        folder?.deleteDir()
     }
 
     @Unroll

@@ -1569,7 +1569,11 @@ class TaskProcessor {
     ResourcesBundle getModuleBundle() {
         final script = this.getOwnerScript()
         final meta = ScriptMeta.get(script)
-        return meta?.isModule() ? meta.getModuleBundle() : null
+        // Resolve the resources bundle whenever the owner script has a known path,
+        // not only when it was loaded as an included module. This allows module
+        // binaries to be picked up also when a module is launched directly as the
+        // entry script via `nextflow module run` -- see #7087
+        return meta?.getScriptPath() ? meta.getModuleBundle() : null
     }
 
     @Memoized
