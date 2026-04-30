@@ -16,10 +16,6 @@
 
 package nextflow.k8s
 
-import java.util.concurrent.TimeUnit
-
-import com.google.common.cache.CacheBuilder
-import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient
 import spock.lang.Specification
 
@@ -28,39 +24,25 @@ import spock.lang.Specification
  */
 class K8sExecutorTest extends Specification {
 
-    def 'should cache k8s client and refresh after expiration' () {
+    def 'should return the same k8s client instance on repeated calls' () {
         given:
         def CONFIG = new K8sConfig(
             client: [server: 'http://k8s-server'],
             namespace: 'test-ns',
-            serviceAccount: 'test-sa',
-            clientRefreshInterval: '100ms'
+            serviceAccount: 'test-sa'
         )
         and:
         def executor = Spy(K8sExecutor)
         executor.getK8sConfig() >> CONFIG
-        // use a short-lived cache for the test
-        executor.@clientCache = CacheBuilder.newBuilder()
-            .expireAfterWrite(100, TimeUnit.MILLISECONDS)
-            .build()
+        executor.@client = new K8sClient(CONFIG.getClient())
 
-        when: 'first call to getClient'
+        when:
         def client1 = executor.getClient()
-        then: 'a new K8sClient is created'
-        client1 instanceof K8sClient
-        client1.config.server == 'http://k8s-server'
-
-        when: 'second call within cache interval'
         def client2 = executor.getClient()
-        then: 'returns the same cached instance'
-        client2.is(client1)
 
-        when: 'call after cache expiration'
-        sleep(150)
-        def client3 = executor.getClient()
-        then: 'a new K8sClient instance is created'
-        client3 instanceof K8sClient
-        !client3.is(client1)
+        then:
+        client1 instanceof K8sClient
+        client2.is(client1)
     }
 
 }

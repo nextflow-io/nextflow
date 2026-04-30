@@ -20,6 +20,7 @@ import groovy.util.logging.Slf4j
 import nextflow.util.Duration
 
 import javax.net.ssl.KeyManager
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -49,6 +50,12 @@ class ClientConfig {
 
     String token
 
+    /**
+     * Path to the service account token file. When set, {@link #getBearerToken()} re-reads
+     * the file periodically so that kubelet-rotated projected tokens are always current.
+     */
+    Path tokenFile
+
     byte[] sslCert
 
     byte[] clientCert
@@ -76,6 +83,9 @@ class ClientConfig {
      */
     boolean isFromCluster
 
+    private volatile String cachedToken
+    private volatile long tokenCachedAt
+
     String getNamespace() { namespace ?: 'default' }
 
     ClientConfig() {
@@ -83,7 +93,27 @@ class ClientConfig {
     }
 
     String toString() {
-        "${this.class.getSimpleName()}[ server=$server, namespace=$namespace, serviceAccount=$serviceAccount, token=${cut(token)}, sslCert=${cut(sslCert)}, clientCert=${cut(clientCert)}, clientKey=${cut(clientKey)}, verifySsl=$verifySsl, fromFile=$isFromCluster, httpReadTimeout=$httpReadTimeout, httpConnectTimeout=$httpConnectTimeout, retryConfig=$retryConfig ]"
+        "${this.class.getSimpleName()}[ server=$server, namespace=$namespace, serviceAccount=$serviceAccount, token=${cut(token)}, tokenFile=$tokenFile, sslCert=${cut(sslCert)}, clientCert=${cut(clientCert)}, clientKey=${cut(clientKey)}, verifySsl=$verifySsl, fromFile=$isFromCluster, httpReadTimeout=$httpReadTimeout, httpConnectTimeout=$httpConnectTimeout, retryConfig=$retryConfig ]"
+    }
+
+    /**
+     * @return The current bearer token, re-read from {@link #tokenFile} periodically.
+     * Falls back to the last known-good value on read failure.
+     */
+    String getBearerToken() {
+        if( !tokenFile )
+            return token
+        final now = System.currentTimeMillis()
+        if( cachedToken == null || now - tokenCachedAt >= 30_000 ) {
+            try {
+                cachedToken = Files.readString(tokenFile).trim()
+                tokenCachedAt = now
+            }
+            catch( Exception e ) {
+                log.warn "Failed to read Kubernetes service account token from $tokenFile -- ${e.message}"
+            }
+        }
+        return cachedToken
     }
 
     private String cut(String str) {

@@ -82,12 +82,6 @@ class K8sConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The interval after which the Kubernetes client configuration is refreshed (default: `50m`).
-    """)
-    final Duration clientRefreshInterval
-
-    @ConfigOption
-    @Description("""
         The Kubernetes [configuration context](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/) to use.
     """)
     final String context
@@ -220,7 +214,6 @@ class K8sConfig implements ConfigScope {
         autoMountHostPaths = opts.autoMountHostPaths as boolean
         cleanup = opts.cleanup as Boolean
         client = opts.client as Map
-        clientRefreshInterval = opts.clientRefreshInterval as Duration ?: Duration.of('50m')
         computeResourceType = opts.computeResourceType
         context = opts.context
         cpuLimits = opts.cpuLimits as boolean

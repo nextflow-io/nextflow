@@ -16,6 +16,8 @@
 
 package nextflow.k8s.client
 
+import java.nio.file.Files
+
 import nextflow.exception.K8sOutOfCpuException
 import nextflow.exception.K8sOutOfMemoryException
 
@@ -66,6 +68,51 @@ class K8sClientTest extends Specification {
         def e = thrown(K8sResponseException)
         e.response.field_x == 'oops..'
 
+    }
+
+    def 'should cache token from file and refresh after TTL' () {
+
+        given:
+        def tokenFile = Files.createTempFile('k8s-token', null)
+        tokenFile.text = 'token-v1'
+        def config = new ClientConfig(server: 'host.com:443', tokenFile: tokenFile)
+
+        when: 'first read primes the cache'
+        def t1 = config.getBearerToken()
+        then:
+        t1 == 'token-v1'
+
+        when: 'token file rotated but TTL not yet expired — cached value returned'
+        tokenFile.text = 'token-v2'
+        def t2 = config.getBearerToken()
+        then:
+        t2 == 'token-v1'
+
+        when: 'TTL expires — next read picks up the rotated token'
+        config.@tokenCachedAt = System.currentTimeMillis() - 31_000
+        def t3 = config.getBearerToken()
+        then:
+        t3 == 'token-v2'
+
+        cleanup:
+        Files.deleteIfExists(tokenFile)
+    }
+
+    def 'should return last good token when file read fails' () {
+
+        given:
+        def tokenFile = Files.createTempFile('k8s-token', null)
+        tokenFile.text = 'good-token'
+        def config = new ClientConfig(server: 'host.com:443', tokenFile: tokenFile)
+        config.getBearerToken()  // prime the cache
+
+        when: 'file is deleted (simulates a transient read error) and TTL expires'
+        Files.delete(tokenFile)
+        config.@tokenCachedAt = System.currentTimeMillis() - 31_000
+        def result = config.getBearerToken()
+
+        then: 'last known-good token is returned rather than null'
+        result == 'good-token'
     }
 
     def 'should make a get request' () {

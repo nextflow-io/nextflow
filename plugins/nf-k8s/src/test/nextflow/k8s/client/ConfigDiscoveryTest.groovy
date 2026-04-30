@@ -386,7 +386,9 @@ class ConfigDiscoveryTest extends Specification {
         and:
         config.server == 'foo.com:4343'
         config.namespace == 'foo-namespace'
-        config.token == 'my-token'
+        config.token == null
+        config.tokenFile == TOKEN_FILE
+        config.getBearerToken() == 'my-token'
         config.sslCert == CERT_FILE.text.bytes
         config.isFromCluster
 
@@ -400,6 +402,7 @@ class ConfigDiscoveryTest extends Specification {
         and:
         config.server == 'https://host.com'
         config.namespace == 'my-namespace'
+        config.tokenFile == TOKEN_FILE
     }
 
     def 'should create  key managers' () {
