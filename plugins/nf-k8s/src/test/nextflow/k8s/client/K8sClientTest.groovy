@@ -16,6 +16,8 @@
 
 package nextflow.k8s.client
 
+import java.nio.file.Files
+
 import nextflow.exception.K8sOutOfCpuException
 import nextflow.exception.K8sOutOfMemoryException
 
@@ -1101,5 +1103,79 @@ class K8sClientTest extends Specification {
         // The key assertion: exitCode should not be present (null) so fallback to .exitcode file works
         result.terminated.exitCode == null
         result.terminated.exitcode == null
+    }
+
+    def 'should re-read token from disk and retry on 401 when tokenPath is set' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def tokenFile = folder.resolve('token')
+        // file already holds the rotated token (kubelet has written it)
+        tokenFile.text = 'fresh-token'
+
+        final client = Spy(K8sClient)
+        client.config.server = 'host.com:443'
+        client.config.token = 'stale-token'
+        client.config.tokenPath = tokenFile
+        // shorten retry delay so the test is fast
+        client.config.retryConfig.delay = nextflow.util.Duration.of('1ms')
+
+        def CONN_401 = Mock(HttpsURLConnection)
+        def CONN_200 = Mock(HttpsURLConnection)
+
+        when:
+        def resp = client.makeRequest('GET', '/api/v1/pods/foo/status')
+
+        then:
+        // first attempt: stale token, 401
+        2 * client.createConnection0("https://host.com:443/api/v1/pods/foo/status") >>> [CONN_401, CONN_200]
+        2 * client.setupHttpsConn(_) >> null
+        1 * CONN_401.setRequestProperty("Authorization", "Bearer stale-token")
+        1 * CONN_401.setRequestMethod('GET')
+        1 * CONN_401.setRequestProperty("Content-Type", "application/json")
+        1 * CONN_401.getResponseCode() >> 401
+        1 * CONN_401.getErrorStream() >> { new ByteArrayInputStream('{"kind":"Status","status":"Failure","message":"Unauthorized","code":401}'.bytes) }
+
+        and:
+        // second attempt: fresh token from disk, 200
+        1 * CONN_200.setRequestProperty("Authorization", "Bearer fresh-token")
+        1 * CONN_200.setRequestMethod('GET')
+        1 * CONN_200.setRequestProperty("Content-Type", "application/json")
+        1 * CONN_200.getResponseCode() >> 200
+        1 * CONN_200.getInputStream() >> { new ByteArrayInputStream('{"ok":true}'.bytes) }
+
+        and:
+        resp.text == '{"ok":true}'
+        client.config.token == 'fresh-token'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should not retry 401 when tokenPath is not set' () {
+
+        given:
+        final client = Spy(K8sClient)
+        client.config.server = 'host.com:443'
+        client.config.token = 'inline-token'
+        // tokenPath is null — token can't be re-read from disk
+
+        def CONN = Mock(HttpsURLConnection)
+
+        when:
+        client.makeRequest('GET', '/api/v1/pods/foo/status')
+
+        then:
+        // exactly one attempt — no retry because there's no file to re-read
+        1 * client.createConnection0(_) >> CONN
+        1 * client.setupHttpsConn(_) >> null
+        1 * CONN.setRequestMethod('GET')
+        1 * CONN.setRequestProperty("Authorization", "Bearer inline-token")
+        1 * CONN.setRequestProperty("Content-Type", "application/json")
+        1 * CONN.getResponseCode() >> 401
+        1 * CONN.getErrorStream() >> { new ByteArrayInputStream('{"kind":"Status","status":"Failure","message":"Unauthorized","code":401}'.bytes) }
+
+        and:
+        thrown(K8sResponseException)
     }
 }

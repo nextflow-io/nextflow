@@ -741,6 +741,9 @@ class K8sClient {
             @Override
             void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
                 log.debug("K8s response error - attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}")
+                final t = event.lastFailure
+                if( t instanceof K8sResponseException && t.response.code == 401 )
+                    refreshToken()
             }
         }
         return RetryPolicy.<T>builder()
@@ -750,6 +753,25 @@ class K8sClient {
             .withJitter(cfg.jitter)
             .onRetry(listener)
             .build()
+    }
+
+    /**
+     * Reload the service-account token from {@link ClientConfig#tokenPath} so that
+     * a request retried after a 401 picks up a token rotated in place by kubelet.
+     */
+    protected void refreshToken() {
+        if( !config.tokenPath )
+            return
+        try {
+            final newToken = config.tokenPath.getText('UTF-8')
+            if( newToken && newToken != config.token ) {
+                log.debug "[K8s] Refreshing service-account token from ${config.tokenPath}"
+                config.token = newToken
+            }
+        }
+        catch( Exception e ) {
+            log.warn "[K8s] Unable to refresh service-account token from ${config.tokenPath} - cause: ${e.message}"
+        }
     }
 
     final private static List<Integer> RETRY_CODES = List.of(408, 429, 500, 502, 503, 504)
@@ -766,6 +788,9 @@ class K8sClient {
             @Override
             boolean test(Throwable t) {
                 if ( t instanceof K8sResponseException && t.response.code in RETRY_CODES )
+                    return true
+                // 401 is retried only when the token was loaded from a file and can be re-read from disk
+                if ( t instanceof K8sResponseException && t.response.code == 401 && config.tokenPath )
                     return true
                 if( t instanceof SocketException || t.cause instanceof SocketException )
                     return true
