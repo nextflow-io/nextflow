@@ -359,7 +359,6 @@ class ModuleSpecFactoryTest extends Specification {
         !parsed.containsKey('version')
         yaml.contains('# TODO:')
         yaml.contains('Missing required field: version')
-        yaml.contains('Missing required field: description')
         yaml.contains('Missing required field: license')
 
         and:

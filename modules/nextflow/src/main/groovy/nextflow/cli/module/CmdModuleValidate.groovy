@@ -26,6 +26,7 @@ import groovy.util.logging.Slf4j
 import nextflow.cli.CmdBase
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
+import nextflow.module.ModuleSchemaValidator
 import nextflow.module.ModuleStorage
 import nextflow.module.ModuleValidator
 import nextflow.util.TestOnly
@@ -43,6 +44,9 @@ class CmdModuleValidate extends CmdBase {
     @Parameter(description = "[namespace/name or path]", required = true)
     List<String> args
 
+    @Parameter(names = '--schema', description = 'URL or local path of the JSON schema used to validate meta.yml')
+    String schema
+
     @TestOnly
     protected Path root
 
@@ -57,7 +61,8 @@ class CmdModuleValidate extends CmdBase {
             throw new AbortOperationException("Incorrect number of arguments -- usage: nextflow module validate <namespace/name>")
 
         final moduleDir = determineModuleDir(args[0])
-        final errors = ModuleValidator.validate(moduleDir)
+        final schemaLocation = schema ?: ModuleSchemaValidator.DEFAULT_SCHEMA_URL
+        final errors = ModuleValidator.validate(moduleDir, schemaLocation)
 
         if( errors ) {
             throw new AbortOperationException(

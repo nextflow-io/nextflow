@@ -71,21 +71,16 @@ class ModuleSpec {
     Map<String, Object> _passthrough
 
     /**
-     * Validate the module spec for required fields
+     * Validate Nextflow-specific module spec rules that are not expressed by
+     * the JSON schema (see ModuleSchemaValidator).
      *
      * @return List of validation errors (empty if valid)
      */
     List<String> validate() {
         final List<String> errors = []
 
-        if( !name )
-            errors << "Missing required field: name"
-
         if( !version )
             errors << "Missing required field: version"
-
-        if( !description )
-            errors << "Missing required field: description"
 
         if( !license )
             errors << "Missing required field: license"
@@ -123,11 +118,8 @@ class ModuleSpec {
             return
         }
 
-        if( !param.type || param.type == TODO_TYPE )
-            errors << "Missing type for ${name}${param.name ? " ($param.name)" : ''}".toString()
-
-        if( !param.description || param.description == TODO_DESCRIPTION )
-            errors << "Missing description for ${name}${param.name ? " ($param.name)" : ''}".toString()
+        if( param.description == TODO_DESCRIPTION )
+            errors << "Placeholder description for ${name}${param.name ? " ($param.name)" : ''}".toString()
     }
 
     /**

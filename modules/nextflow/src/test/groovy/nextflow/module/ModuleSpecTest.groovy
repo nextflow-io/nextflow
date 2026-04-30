@@ -53,20 +53,19 @@ class ModuleSpecTest extends Specification {
         spec.isValid()
     }
 
-    def 'should detect missing required fields' () {
+    def 'should detect missing required fields not covered by schema' () {
         given:
         def spec = new ModuleSpec(
             name: 'nf-core/fastqc'
-            // missing version, description, license
+            // missing version and license — description is checked by the JSON schema
         )
 
         when:
         def errors = spec.validate()
 
         then:
-        errors.size() == 3
+        errors.size() == 2
         errors.any { it.contains('version') }
-        errors.any { it.contains('description') }
         errors.any { it.contains('license') }
         !spec.isValid()
     }
@@ -145,7 +144,7 @@ class ModuleSpecTest extends Specification {
     def 'should render TODO list for missing required fields'() {
         given:
         def spec = new ModuleSpec(name: 'my-namespace/fastqc')
-        // version, description, license are all missing
+        // version and license are missing (description is validated by the JSON schema)
 
         when:
         def yaml = spec.toYaml()
@@ -153,7 +152,6 @@ class ModuleSpecTest extends Specification {
         then:
         yaml.contains('# TODO:')
         yaml.contains('Missing required field: version')
-        yaml.contains('Missing required field: description')
         yaml.contains('Missing required field: license')
     }
 
