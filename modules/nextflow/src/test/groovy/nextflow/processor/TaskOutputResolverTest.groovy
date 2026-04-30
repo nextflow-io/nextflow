@@ -22,6 +22,7 @@ import nextflow.exception.IllegalArityException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.script.params.v2.ProcessFileOutput
+import nextflow.util.RecordMap
 import spock.lang.Specification
 import spock.lang.TempDir
 
@@ -29,6 +30,12 @@ import spock.lang.TempDir
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 class TaskOutputResolverTest extends Specification {
+
+    static class SampleRecord implements nextflow.script.types.Record {
+        public String id
+        public Path path
+        public List<Path> paths
+    }
 
     @TempDir
     Path tempDir
@@ -289,5 +296,48 @@ class TaskOutputResolverTest extends Specification {
         then:
         def e = thrown(MissingValueException)
         e.message.contains('Missing variable in process output')
+    }
+
+    def 'should normalize task paths in output values'() {
+        given:
+        def source = tempDir.resolve('input.txt')
+        def taskPath = new TaskPath(source, 'input.txt')
+        def record = new SampleRecord(id: 'alpha', path: taskPath, paths: [taskPath])
+        def value = new RecordMap([
+            id: 'alpha',
+            path: taskPath,
+            nested: [path: taskPath],
+            paths: [taskPath] as Set,
+            record: record,
+        ])
+
+        when:
+        def result = TaskOutputResolver.normalizeOutputValue(value)
+
+        then:
+        result instanceof RecordMap
+        result.path == source
+        !(result.path instanceof TaskPath)
+        result.nested.path == source
+        !(result.nested.path instanceof TaskPath)
+        result.paths == [source] as Set
+        result.record instanceof RecordMap
+        result.record.path == source
+        result.record.paths == [source]
+    }
+
+    def 'should normalize resolved lazy output values'() {
+        given:
+        def source = tempDir.resolve('input.txt')
+        def task = makeTask([sample: new RecordMap(path: new TaskPath(source, 'input.txt'))])
+        def resolver = new TaskOutputResolver([:], task)
+
+        when:
+        def result = resolver.resolveOutput({ -> sample })
+
+        then:
+        result instanceof RecordMap
+        result.path == source
+        !(result.path instanceof TaskPath)
     }
 }

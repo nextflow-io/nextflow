@@ -16,6 +16,8 @@
 
 package nextflow.processor
 
+import java.io.UncheckedIOException
+import java.lang.reflect.Modifier
 import java.nio.file.Path
 
 import groovy.transform.CompileDynamic
@@ -25,7 +27,10 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.IllegalArityException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
+import nextflow.extension.Bolts
 import nextflow.script.params.v2.ProcessFileOutput
+import nextflow.script.types.Record
+import nextflow.util.RecordMap
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Implements the resolution of task outputs.
@@ -47,6 +52,75 @@ class TaskOutputResolver implements Map<String,Object> {
         this.declaredFiles = declaredFiles
         this.task = task
         this.delegate = task.context
+    }
+
+    /**
+     * Resolve and normalize an output expression before it is emitted.
+     *
+     * Values from the task context may contain {@link TaskPath}, which is a
+     * task-local view of an input file. It is valid for script interpolation,
+     * but it must not escape through output channels because downstream tasks
+     * need durable source/work-directory paths for hashing and staging.
+     *
+     * @param value
+     *      A lazy output expression, such as a closure or GString
+     * @return
+     *      The resolved output value with nested TaskPath instances converted
+     *      back to durable Path values
+     */
+    Object resolveOutput(Object value) {
+        return normalizeOutputValue(Bolts.resolveLazy(this, value))
+    }
+
+    static Object normalizeOutputValue(Object value) {
+        if( value instanceof TaskPath ) {
+            try {
+                return value.toRealPath()
+            }
+            catch( IOException e ) {
+                throw new UncheckedIOException(e)
+            }
+        }
+
+        if( value instanceof RecordMap ) {
+            final normalized = new LinkedHashMap<String,Object>()
+            for( final entry : value.entrySet() )
+                normalized.put(entry.key, normalizeOutputValue(entry.value))
+            return new RecordMap(normalized)
+        }
+
+        if( value instanceof Map ) {
+            final normalized = new LinkedHashMap<Object,Object>()
+            for( final entry : value.entrySet() )
+                normalized.put(entry.key, normalizeOutputValue(entry.value))
+            return normalized
+        }
+
+        if( value instanceof Set ) {
+            final normalized = new LinkedHashSet<Object>()
+            for( final item : value )
+                normalized.add(normalizeOutputValue(item))
+            return normalized
+        }
+
+        if( value instanceof Collection ) {
+            final normalized = new ArrayList<Object>()
+            for( final item : value )
+                normalized.add(normalizeOutputValue(item))
+            return normalized
+        }
+
+        if( value instanceof Record ) {
+            final fields = value.getClass().getFields()
+                .findAll { field -> !Modifier.isStatic(field.modifiers) && !field.synthetic }
+                .sort { it.name }
+            final normalized = new LinkedHashMap<String,Object>()
+            for( final field : fields )
+                normalized.put(field.name, normalizeOutputValue(field.get(value)))
+            return new RecordMap(normalized)
+        }
+
+        return value
     }
 
     /**

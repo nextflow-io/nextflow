@@ -1,0 +1,20 @@
+set -e
+
+export NXF_SYNTAX_PARSER=v2
+
+$NXF_RUN | tee stdout
+[[ $(grep INFO .nextflow.log | grep -c 'Submitted process > P1') == 1 ]]
+[[ $(grep INFO .nextflow.log | grep -c 'Submitted process > P2') == 1 ]]
+grep 'test1' stdout
+grep 'test2' stdout
+
+TASK_DIR=$($NXF_CMD log last -F "process == 'P2'")
+grep "cat 'input.txt' 'test2.txt' > combined.txt" "$TASK_DIR/.command.sh"
+test -e "$TASK_DIR/input.txt"
+test -e "$TASK_DIR/test2.txt"
+
+$NXF_RUN -resume | tee stdout
+[[ $(grep INFO .nextflow.log | grep -c 'Cached process > P1') == 1 ]]
+[[ $(grep INFO .nextflow.log | grep -c 'Cached process > P2') == 1 ]]
+grep 'test1' stdout
+grep 'test2' stdout

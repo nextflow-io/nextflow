@@ -9,6 +9,7 @@ params-dsl.nf
 record-types.nf
 records.nf
 task-ext-block.nf
+typed-record-output-taskpath.nf
 topic-channel-typed.nf
 type-annotations.nf
 workflow-oncomplete-v2.nf
