@@ -6,22 +6,50 @@
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package nextflow.script.parser
 
 import nextflow.script.ast.AgentNode
+import nextflow.script.ast.ScriptNode
+import nextflow.script.control.ScriptParser
+import org.codehaus.groovy.syntax.SyntaxException
+import spock.lang.Shared
 import spock.lang.Specification
 import test.TestUtils
 
+/**
+ * @see nextflow.script.parser.ScriptAstBuilder
+ */
 class AgentParserTest extends Specification {
 
+    @Shared
+    ScriptParser scriptParser
+
     def setupSpec() {
-        TestUtils.beforeSpec()
+        scriptParser = new ScriptParser()
+    }
+
+    List<SyntaxException> check(String contents) {
+        return TestUtils.check(scriptParser, contents)
+    }
+
+    ScriptNode parse(String contents) {
+        scriptParser.compiler().getSources().clear()
+        def source = scriptParser.parse('main.nf', contents.stripIndent())
+        scriptParser.analyze()
+        assert !TestUtils.hasSyntaxErrors(source)
+        return source.getAST() as ScriptNode
     }
 
     def 'should parse a minimal agent definition'() {
         when:
-        def script = TestUtils.parse('''\
+        def script = parse('''\
             nextflow.enable.types = true
 
             agent eval_agent {
@@ -41,7 +69,7 @@ class AgentParserTest extends Specification {
                 Question: ${question}
                 """
             }
-            '''.stripIndent())
+            ''')
 
         then:
         script.agents.size() == 1
