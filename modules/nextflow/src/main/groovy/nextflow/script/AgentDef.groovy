@@ -62,6 +62,7 @@ class AgentDef extends BindableDef implements ChainableDef {
     ComponentDef cloneWithName(String name) {
         def copy = (AgentDef) this.clone()
         copy.@name = name
+        copy.@simpleName = name.contains(':') ? name.tokenize(':').last() : name
         return copy
     }
 
