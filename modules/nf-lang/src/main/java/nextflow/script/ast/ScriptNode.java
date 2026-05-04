@@ -69,6 +69,7 @@ public class ScriptNode extends ModuleNode {
                 declarations.add(wn);
         }
         declarations.addAll(processes);
+        declarations.addAll(agents);
         declarations.addAll(functions);
         declarations.addAll(getTypes());
         return declarations;
