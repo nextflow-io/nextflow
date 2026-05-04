@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import nextflow.script.ast.AgentNode;
 import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.dsl.Constant;
 import nextflow.script.dsl.Operator;
@@ -216,7 +217,7 @@ public class VariableScopeChecker {
     }
 
     public static boolean isDataflowMethod(MethodNode mn) {
-        return mn instanceof ProcessNode || mn instanceof WorkflowNode || isOperator(mn);
+        return mn instanceof ProcessNode || mn instanceof WorkflowNode || mn instanceof AgentNode || isOperator(mn);
     }
 
     public static boolean isOperator(MethodNode mn) {
@@ -236,7 +237,7 @@ public class VariableScopeChecker {
     }
 
     private static ClassNode methodOutputType(MethodNode mn) {
-        if( mn instanceof ProcessNode || mn instanceof WorkflowNode )
+        if( mn instanceof ProcessNode || mn instanceof WorkflowNode || mn instanceof AgentNode )
             return ClassHelper.dynamicType();
         return mn.getReturnType();
     }

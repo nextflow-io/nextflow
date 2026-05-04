@@ -754,6 +754,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             return "Processes";
         if( mn instanceof WorkflowNode )
             return "Workflows";
+        if( mn instanceof AgentNode )
+            return "Agents";
         return "Operators";
     }
 
