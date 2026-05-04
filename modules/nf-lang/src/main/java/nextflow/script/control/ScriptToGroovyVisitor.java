@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import nextflow.script.ast.ASTNodeMarker;
+import nextflow.script.ast.AgentNode;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
@@ -53,6 +54,7 @@ import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.BlockStatement;
+import org.codehaus.groovy.ast.stmt.EmptyStatement;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
 import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
@@ -120,6 +122,8 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
                 visitParamV1(pn);
             else if( decl instanceof ProcessNode pn )
                 visitProcess(pn);
+            else if( decl instanceof AgentNode an )
+                visitAgent(an);
             else if( decl instanceof RecordNode rn )
                 visitRecord(rn);
             else if( decl instanceof WorkflowNode wn )
@@ -278,6 +282,15 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     private void visitWorkflowHandler(Statement code, String name, BlockStatement main) {
         if( code instanceof BlockStatement block )
             main.addStatement(stmt(callX(varX("workflow"), name, args(closureX(null, block)))));
+    }
+
+    @Override
+    public void visitAgent(AgentNode node) {
+        checkReservedMethodName(node, "agent");
+        var name = constX(node.getName());
+        var bodyClosure = closureX(EmptyStatement.INSTANCE);
+        var result = stmt(callThisX("agent", args(name, bodyClosure)));
+        moduleNode.addStatement(result);
     }
 
     @Override
