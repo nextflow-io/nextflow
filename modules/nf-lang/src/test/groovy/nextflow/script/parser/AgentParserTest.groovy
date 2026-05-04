@@ -78,4 +78,24 @@ class AgentParserTest extends Specification {
         node.inputs.length == 1
         node.inputs[0].name == 'question'
     }
+
+    def 'should report an error for agent without prompt section'() {
+        when:
+        def errors = check('''\
+            nextflow.enable.types = true
+
+            agent broken {
+                model 'openai/gpt-5-mini'
+                instruction 'x'
+                tools()
+
+                input:
+                    q: String
+            }
+            ''')
+
+        then:
+        errors.size() == 1
+        errors[0].getOriginalMessage() == 'Invalid agent definition -- check for missing or out-of-order section labels'
+    }
 }
