@@ -838,38 +838,9 @@ public class ScriptAstBuilder {
         if( ctx == null )
             return Parameter.EMPTY_ARRAY;
         return ctx.processInput().stream()
-            .map(this::agentInput)
+            .map(this::processInput)
             .filter(input -> input != null)
             .toArray(Parameter[]::new);
-    }
-
-    private Parameter agentInput(ProcessInputContext ctx) {
-        if( ctx.identifier() != null ) {
-            var type = type(ctx.type());
-            var name = identifier(ctx.identifier());
-            var result = ast( param(type, name), ctx );
-            checkInvalidVarName(name, result);
-            return result;
-        }
-        if( ctx.processRecordInput() != null )
-            return processRecordInput(ctx.processRecordInput());
-        if( ctx.processTupleInput() != null )
-            return processTupleInput(ctx.processTupleInput());
-        if( ctx.statement() != null ) {
-            // legacy channel-qualifier syntax: val/path/... name -> extract the variable name
-            var stmt = statement(ctx.statement());
-            if( stmt instanceof ExpressionStatement es
-                    && es.getExpression() instanceof MethodCallExpression mce
-                    && mce.isImplicitThis()
-                    && mce.getArguments() instanceof ArgumentListExpression ale
-                    && ale.getExpressions().size() == 1
-                    && ale.getExpressions().get(0) instanceof VariableExpression ve ) {
-                return ast( param(ClassHelper.OBJECT_TYPE, ve.getName()), ctx );
-            }
-            collectSyntaxError(new SyntaxException("Invalid agent input declaration", stmt));
-            return null;
-        }
-        return null;
     }
 
     private Statement agentOutputs(AgentOutputsContext ctx) {

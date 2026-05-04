@@ -59,10 +59,10 @@ class AgentParserTest extends Specification {
                 maxIterations 20
 
                 input:
-                    val question
+                    question: String
 
                 output:
-                    val plan
+                    plan: String
 
                 prompt:
                 """
