@@ -97,7 +97,7 @@ class LogsCheckpointTest extends Specification {
         checkpoint.onFlowComplete()
 
         then:
-        1 * handler.saveFiles()
+        1 * handler.saveFiles() >> { assert !Thread.currentThread().isInterrupted() }
 
         cleanup:
         SysEnv.pop()
