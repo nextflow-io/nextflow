@@ -21,6 +21,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import nextflow.script.ast.AgentNode;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.IncludeNode;
@@ -100,6 +101,8 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
                 visitParamV1(paramNode);
             for( var workflowNode : sn.getWorkflows() )
                 visitWorkflow(workflowNode);
+            for( var agentNode : sn.getAgents() )
+                visitAgent(agentNode);
             for( var processNode : sn.getProcesses() )
                 visitProcess(processNode);
             for( var functionNode : sn.getFunctions() )
@@ -139,6 +142,17 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
         resolver.visit(node.publishers);
         resolver.visit(node.onComplete);
         resolver.visit(node.onError);
+    }
+
+    @Override
+    public void visitAgent(AgentNode node) {
+        for( var input : asFlatParams(node.inputs) ) {
+            resolver.resolveOrFail(input.getType(), input);
+        }
+        resolver.visit(node.directives);
+        resolveTypedOutputs(node.outputs);
+        resolver.visit(node.outputs);
+        resolver.visit(node.prompt);
     }
 
     private void resolveTypedOutputs(Statement block) {

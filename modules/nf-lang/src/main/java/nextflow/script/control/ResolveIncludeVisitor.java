@@ -173,6 +173,7 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
         var result = new ArrayList<AnnotatedNode>();
         result.addAll(scriptNode.getWorkflows());
         result.addAll(scriptNode.getProcesses());
+        result.addAll(scriptNode.getAgents());
         result.addAll(scriptNode.getFunctions());
         result.addAll(scriptNode.getTypes());
         return result;

@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import groovy.lang.groovydoc.GroovydocHolder;
+import nextflow.script.ast.AgentNode;
 import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
@@ -116,6 +117,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             }
             for( var processNode : sn.getProcesses() )
                 declareMethod(processNode);
+            for( var agentNode : sn.getAgents() )
+                declareMethod(agentNode);
             for( var functionNode : sn.getFunctions() )
                 declareMethod(functionNode);
             declareTypes(sn);

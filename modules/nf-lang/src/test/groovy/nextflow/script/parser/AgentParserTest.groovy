@@ -98,4 +98,38 @@ class AgentParserTest extends Specification {
         errors.size() == 1
         errors[0].getOriginalMessage() == 'Invalid agent definition -- check for missing or out-of-order section labels'
     }
+
+    def 'should resolve an agent reference from a workflow'() {
+        when:
+        def script = parse('''\
+            nextflow.enable.types = true
+
+            agent eval_agent {
+                model 'openai/gpt-5-mini'
+                instruction 'x'
+                tools()
+
+                input:
+                    q: String
+
+                output:
+                    r: String
+
+                prompt:
+                """
+                ${q}
+                """
+            }
+
+            workflow {
+                channel.of('hi') | eval_agent | view
+            }
+            ''')
+
+        then:
+        script.agents.size() == 1
+        script.workflows.size() == 1
+        // The `parse` helper asserts no syntax errors. If `eval_agent` failed
+        // to resolve in the workflow body, that assertion would fail.
+    }
 }
