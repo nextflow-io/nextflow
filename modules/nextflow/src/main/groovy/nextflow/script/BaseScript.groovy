@@ -129,6 +129,21 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     /**
+     * Define an agent.
+     *
+     * Mirrors {@link #process(String, Closure)} but constructs an {@link AgentDef}
+     * via {@link AgentFactory}. Execution is stubbed in this milestone — see AgentDef.run.
+     *
+     * @param name
+     * @param body
+     */
+    protected void agent(String name, Closure body) {
+        final factory = new AgentFactory(this, session)
+        final agent = factory.newAgent(name, body)
+        meta.addDefinition(agent)
+    }
+
+    /**
      * Define a legacy process.
      *
      * @param name
