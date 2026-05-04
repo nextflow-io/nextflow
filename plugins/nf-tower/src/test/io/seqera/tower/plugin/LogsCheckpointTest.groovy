@@ -80,4 +80,26 @@ class LogsCheckpointTest extends Specification {
         cleanup:
         SysEnv.pop()
     }
+
+    def 'should perform final saveFiles when interrupted mid-sleep' () {
+        given:
+        SysEnv.push(TOWER_LOGS_CHECKPOINT_INTERVAL: '60s')
+        def session = Mock(Session) {
+            getWorkDir() >> TestHelper.createInMemTempDir()
+            getConfig() >> [:]
+        }
+        def handler = Mock(LogsHandler)
+        def checkpoint = new LogsCheckpoint()
+
+        when:
+        checkpoint.onFlowCreate(session)
+        checkpoint.@handler = handler   // inject mock before thread wakes up
+        checkpoint.onFlowComplete()
+
+        then:
+        1 * handler.saveFiles()
+
+        cleanup:
+        SysEnv.pop()
+    }
 }
