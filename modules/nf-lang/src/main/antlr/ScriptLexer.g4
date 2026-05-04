@@ -343,13 +343,13 @@ FROM            : 'from';
 
 // -- agent definition
 AGENT           : 'agent';
+PROMPT          : 'prompt';
 
 // -- process definition
 PROCESS         : 'process';
 EXEC            : 'exec';
 INPUT           : 'input';
 OUTPUT          : 'output';
-PROMPT          : 'prompt';
 SCRIPT          : 'script';
 SHELL           : 'shell';
 STAGE           : 'stage';

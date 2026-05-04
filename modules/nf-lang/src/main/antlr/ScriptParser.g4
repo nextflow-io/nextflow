@@ -629,6 +629,8 @@ identifier
     |   PARAMS
     |   FROM
     |   RECORD
+    |   AGENT
+    |   PROMPT
     |   PROCESS
     |   EXEC
     |   INPUT
@@ -833,6 +835,8 @@ keywords
     |   INCLUDE
     |   FROM
     |   RECORD
+    |   AGENT
+    |   PROMPT
     |   PROCESS
     |   EXEC
     |   INPUT
