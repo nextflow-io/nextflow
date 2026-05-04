@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import groovy.lang.Tuple2;
 import nextflow.script.ast.ASTNodeMarker;
+import nextflow.script.ast.AgentNode;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
@@ -208,7 +209,7 @@ public class ScriptAstBuilder {
 
     /// SCRIPT DECLARATIONS
 
-    private static final List<String> SCRIPT_DEF_NAMES = List.of("process", "workflow", "output");
+    private static final List<String> SCRIPT_DEF_NAMES = List.of("agent", "process", "workflow", "output");
 
     private ModuleNode compilationUnit(CompilationUnitContext ctx) {
         var statements = new ArrayList<Statement>();
@@ -314,6 +315,12 @@ public class ScriptAstBuilder {
             if( moduleNode.getParams() != null )
                 collectSyntaxError(new SyntaxException("Legacy parameter declarations cannot be mixed with the params block", node));
             moduleNode.addParamV1(node);
+        }
+
+        else if( ctx instanceof AgentDefAltContext adac ) {
+            var node = agentDef(adac.agentDef());
+            saveLeadingComments(node, ctx);
+            moduleNode.addAgent(node);
         }
 
         else if( ctx instanceof ProcessDefAltContext pdac ) {
@@ -791,6 +798,92 @@ public class ScriptAstBuilder {
         if( ctx == null )
             return EmptyStatement.INSTANCE;
         return ast( blockStatements(ctx.blockStatements()), ctx );
+    }
+
+    private AgentNode agentDef(AgentDefContext ctx) {
+        var name = ctx.name.getText();
+        if( ctx.body == null )
+            return invalidAgent("Missing agent body", ctx);
+        if( ctx.body.agentPrompt() == null )
+            return invalidAgent("Missing `prompt:` section", ctx);
+
+        var directives = agentDirectives(ctx.body.agentDirectives());
+        var inputs = agentInputs(ctx.body.agentInputs());
+        var outputs = agentOutputs(ctx.body.agentOutputs());
+        var prompt = agentPrompt(ctx.body.agentPrompt());
+
+        var result = new AgentNode(name, directives, inputs, outputs, prompt);
+        ast(result, ctx);
+        return result;
+    }
+
+    private AgentNode invalidAgent(String message, AgentDefContext ctx) {
+        var empty = EmptyStatement.INSTANCE;
+        var result = ast(new AgentNode("", empty, Parameter.EMPTY_ARRAY, empty, empty), ctx);
+        collectSyntaxError(new SyntaxException(message, result));
+        return result;
+    }
+
+    private Statement agentDirectives(AgentDirectivesContext ctx) {
+        if( ctx == null )
+            return EmptyStatement.INSTANCE;
+        var statements = ctx.statement().stream()
+            .map(this::statement)
+            .map(stmt -> checkDirective(stmt, "Invalid agent directive"))
+            .toList();
+        return ast( block(null, statements), ctx );
+    }
+
+    private Parameter[] agentInputs(AgentInputsContext ctx) {
+        if( ctx == null )
+            return Parameter.EMPTY_ARRAY;
+        return ctx.processInput().stream()
+            .map(this::agentInput)
+            .filter(input -> input != null)
+            .toArray(Parameter[]::new);
+    }
+
+    private Parameter agentInput(ProcessInputContext ctx) {
+        if( ctx.identifier() != null ) {
+            var type = type(ctx.type());
+            var name = identifier(ctx.identifier());
+            var result = ast( param(type, name), ctx );
+            checkInvalidVarName(name, result);
+            return result;
+        }
+        if( ctx.processRecordInput() != null )
+            return processRecordInput(ctx.processRecordInput());
+        if( ctx.processTupleInput() != null )
+            return processTupleInput(ctx.processTupleInput());
+        if( ctx.statement() != null ) {
+            // legacy channel-qualifier syntax: val/path/... name -> extract the variable name
+            var stmt = statement(ctx.statement());
+            if( stmt instanceof ExpressionStatement es
+                    && es.getExpression() instanceof MethodCallExpression mce
+                    && mce.isImplicitThis()
+                    && mce.getArguments() instanceof ArgumentListExpression ale
+                    && ale.getExpressions().size() == 1
+                    && ale.getExpressions().get(0) instanceof VariableExpression ve ) {
+                return ast( param(ClassHelper.OBJECT_TYPE, ve.getName()), ctx );
+            }
+            collectSyntaxError(new SyntaxException("Invalid agent input declaration", stmt));
+            return null;
+        }
+        return null;
+    }
+
+    private Statement agentOutputs(AgentOutputsContext ctx) {
+        if( ctx == null )
+            return EmptyStatement.INSTANCE;
+        var statements = ctx.processOutput().stream()
+            .map(this::processOutput)
+            .filter(stmt -> stmt != null)
+            .toList();
+        return ast( block(null, statements), ctx );
+    }
+
+    private Statement agentPrompt(AgentPromptContext ctx) {
+        return statement(ctx.statement());
     }
 
     private WorkflowNode workflowDef(WorkflowDefContext ctx) {
