@@ -39,6 +39,7 @@ public class ScriptNode extends ModuleNode {
     private OutputBlockNode outputs;
     private List<WorkflowNode> workflows = new ArrayList<>();
     private List<ProcessNode> processes = new ArrayList<>();
+    private List<AgentNode> agents = new ArrayList<>();
     private List<FunctionNode> functions = new ArrayList<>();
 
     public ScriptNode(SourceUnit sourceUnit) {
@@ -105,6 +106,10 @@ public class ScriptNode extends ModuleNode {
         return processes;
     }
 
+    public List<AgentNode> getAgents() {
+        return agents;
+    }
+
     public List<FunctionNode> getFunctions() {
         return functions;
     }
@@ -149,6 +154,10 @@ public class ScriptNode extends ModuleNode {
 
     public void addProcess(ProcessNode processNode) {
         processes.add(processNode);
+    }
+
+    public void addAgent(AgentNode agentNode) {
+        agents.add(agentNode);
     }
 
     public void addFunction(FunctionNode functionNode) {
