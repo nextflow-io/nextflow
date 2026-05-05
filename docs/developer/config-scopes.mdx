@@ -43,6 +43,10 @@ The fully-qualified class name (in this case, `nextflow.hello.HelloConfig`) must
 
 A *config option* is defined as a field with the `@ConfigOption` annotation. The field name determines the name of the config option.
 
+:::note
+Config options are collected with `Class.getDeclaredFields()`, which does not include fields inherited from a parent class. Each scope class must therefore declare its options directly. A shared parent class can still provide common logic, such as helper methods that compute default values.
+:::
+
 For example:
 
 ```groovy
@@ -60,6 +64,10 @@ The `@ConfigOption` annotation can specify an optional set of types that are val
 The field type and any additional types are included in the config spec, allowing them to be used for validation.
 
 The field type can be any Java or Groovy class, but in practice it should be a class that can be constructed from primitive values (numbers, booleans, strings). For example, `Duration` and `MemoryUnit` are standard Nextflow types that can each be constructed from an integer or string.
+
+:::note
+The field type and the `types` attribute should only refer to [standard types][stdlib-types]. Runtime classes such as `GString`, `Number`, and `Map` do not correspond to configurable types and may produce confusing errors in the language server.
+:::
 
 ### Nested scopes
 
@@ -174,3 +182,4 @@ The config spec described above can be rendered to Markdown using the `MarkdownR
 This approach to docs generation is not yet complete, and has not been incorporated into the build process yet. However, it can be used to check for discrepancies between the source code and docs when making changes. The documentation should match the `@Description` annotations as closely as possible, but may contain additional details such as version notes and extra paragraphs.
 
 [config-options]: ../reference/config
+[stdlib-types]: ../reference/stdlib-types

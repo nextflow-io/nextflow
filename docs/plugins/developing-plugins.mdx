@@ -129,6 +129,18 @@ Runs plugin unit tests. See [Test a plugin][gradle-plugin-test] for more informa
 
 Nextflow’s plugin system exposes various extension points. This section gives examples of typical extension points and how to use them.
 
+Each extension point must be registered in `build.gradle`, so that Nextflow can discover it:
+
+```groovy
+nextflowPlugin {
+    // ...
+    extensionPoints = [
+        'nextflow.myplugin.MyPluginConfig',
+        // other extension points...
+    ]
+}
+```
+
 ### Commands
 
 Plugins can define custom CLI commands that are executable with the `nextflow plugin` command.
@@ -231,6 +243,60 @@ class MyPluginConfig implements ConfigScope {
 
     MyPluginConfig(Map opts) {
         this.createMessage = opts.createMessage
+    }
+}
+```
+
+Configuration options can be grouped by adding a nested `ConfigScope` as a field on the parent scope. Nextflow discovers nested scopes by walking fields whose declared type implements `ConfigScope`, so the field itself does not need a `@ConfigOption` annotation. Only the top-level scope needs `@ScopeName`, a no-arg constructor, and an entry in `extensionPoints`.
+
+```groovy
+import java.nio.file.Path
+
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
+import nextflow.script.dsl.Description
+
+@ScopeName('myplugin')
+@Description('''
+    The `myplugin` scope allows you to configure the `nf-myplugin` plugin.
+''')
+class MyPluginConfig implements ConfigScope {
+
+    @Description('''
+        Configuration for the report file.
+    ''')
+    final ReportConfig report
+
+    // no-arg constructor is required to enable validation of config options
+    MyPluginConfig() {
+    }
+
+    MyPluginConfig(Map opts) {
+        this.report = new ReportConfig(opts.report as Map ?: [:])
+    }
+}
+
+@Description('''
+    The `myplugin.report` scope allows you to configure the report file.
+''')
+class ReportConfig implements ConfigScope {
+
+    @ConfigOption
+    @Description('''
+        Path to the report file.
+    ''')
+    final Path file
+
+    @ConfigOption
+    @Description('''
+        Whether report generation is enabled.
+    ''')
+    final Boolean enabled
+
+    ReportConfig(Map opts) {
+        this.file = opts.file as Path
+        this.enabled = opts.enabled as Boolean ?: true
     }
 }
 ```
