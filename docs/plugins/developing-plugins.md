@@ -290,25 +290,14 @@ class ReportConfig implements ConfigScope {
     ''')
     final Path file
 
-    @ConfigOption
-    @Description('''
-        Whether report generation is enabled.
-    ''')
-    final Boolean enabled
-
     ReportConfig(Map opts) {
         this.file = opts.file as Path
-        this.enabled = opts.enabled as Boolean ?: true
     }
 }
 ```
 
 :::{note}
-`@ConfigOption` fields are discovered with `Class.getDeclaredFields()`, which does not include fields inherited from a parent class. Each `ConfigScope` class must therefore declare its options directly. A shared parent class can still provide common logic, such as helper methods that compute default values, but the `@ConfigOption` declarations themselves must live on the concrete scope class.
-:::
-
-:::{note}
-The `types` attribute on `@ConfigOption` is for declaring that an option accepts more than one type, and should only list [standard Nextflow types](https://docs.seqera.io/nextflow/reference/stdlib-types) (for example, `types=[String, List]`). Avoid using runtime classes such as `GString`, `Number` or `Map` here - they may produce confusing errors in the language server and do not correspond to configurable types.
+`@ConfigOption` fields are discovered with `Class.getDeclaredFields()`, which does not include inherited fields. Each `ConfigScope` class must declare its options directly, even if a shared parent class provides common logic.
 :::
 
 This approach is not required to support plugin config options. However, it allows Nextflow to recognize plugin definitions when validating the configuration. See {ref}`config-scopes-page` for more information.
