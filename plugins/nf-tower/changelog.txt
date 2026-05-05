@@ -1,5 +1,8 @@
 nf-tower changelog
 ===================
+1.17.6 - 5 May 2026
+- Increase tasks.cloudZone width from 15 to 25 (#6907) [d853067a9]
+
 1.17.5 - 10 Feb 2026
 - Fix LogsCheckpoint thread blocking shutdown for up to 90 seconds (#6787) [118e1dca8]
 
