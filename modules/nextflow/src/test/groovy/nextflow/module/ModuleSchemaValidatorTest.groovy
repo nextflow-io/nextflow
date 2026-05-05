@@ -144,4 +144,24 @@ class ModuleSchemaValidatorTest extends Specification {
         def e = thrown(AbortOperationException)
         e.message.contains('Failed to load module schema')
     }
+
+    def 'should hard-fail when the schema does not declare a supported draft' () {
+        given:
+        def schema = writeSchema('''\
+            {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" }
+              }
+            }
+            '''.stripIndent())
+        def meta = writeMeta('name: x\n')
+
+        when:
+        ModuleSchemaValidator.validate(meta, schema.toString())
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('Cannot determine JSON Schema draft')
+    }
 }

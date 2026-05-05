@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper
 import com.networknt.schema.JsonSchema
 import com.networknt.schema.JsonSchemaFactory
 import com.networknt.schema.SpecVersion
+import com.networknt.schema.SpecVersionDetector
 import com.networknt.schema.ValidationMessage
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -54,31 +55,54 @@ class ModuleSchemaValidator {
      * @return List of validation error messages, empty if the spec is valid
      */
     static List<String> validate(Path metaYaml, String schemaLocation) {
-        final schemaText = loadSchema(schemaLocation)
-        final factory = JsonSchemaFactory.getInstance(SpecVersion.VersionFlag.V202012)
-        final JsonSchema schema
-        try {
-            schema = factory.getSchema(schemaText)
-        }
-        catch( Exception e ) {
-            throw new AbortOperationException("Invalid module schema at '${schemaLocation}': ${e.message}", e)
-        }
-
-        Object yamlData
-        try( final stream = Files.newInputStream(metaYaml) ) {
-            yamlData = new Yaml().load(stream)
-        }
-        catch( Exception e ) {
-            throw new AbortOperationException("Failed to read module spec '${metaYaml}': ${e.message}", e)
-        }
-
-        final JsonNode node = JSON_MAPPER.valueToTree(yamlData)
-        final Set<ValidationMessage> messages = schema.validate(node)
+        final schemaNode = parseSchema(loadSchema(schemaLocation), schemaLocation)
+        final specVersion = detectSpecVersion(schemaNode, schemaLocation)
+        final schema = buildSchema(schemaNode, specVersion, schemaLocation)
+        final metaNode = loadMeta(metaYaml)
+        final Set<ValidationMessage> messages = schema.validate(metaNode)
         return messages.collect { it.message }.toList()
     }
 
     static List<String> validate(Path metaYaml) {
         return validate(metaYaml, DEFAULT_SCHEMA_URL)
+    }
+
+    private static JsonNode parseSchema(String schemaText, String schemaLocation) {
+        try {
+            return JSON_MAPPER.readTree(schemaText)
+        }
+        catch( Exception e ) {
+            throw new AbortOperationException("Invalid module schema at '${schemaLocation}': ${e.message}", e)
+        }
+    }
+
+    private static SpecVersion.VersionFlag detectSpecVersion(JsonNode schemaNode, String schemaLocation) {
+        try {
+            return SpecVersionDetector.detect(schemaNode)
+        }
+        catch( Exception e ) {
+            throw new AbortOperationException(
+                "Cannot determine JSON Schema draft for '${schemaLocation}': ${e.message}. " +
+                "The schema must declare a supported \$schema (e.g. https://json-schema.org/draft/2020-12/schema).", e)
+        }
+    }
+
+    private static JsonSchema buildSchema(JsonNode schemaNode, SpecVersion.VersionFlag specVersion, String schemaLocation) {
+        try {
+            return JsonSchemaFactory.getInstance(specVersion).getSchema(schemaNode)
+        }
+        catch( Exception e ) {
+            throw new AbortOperationException("Invalid module schema at '${schemaLocation}': ${e.message}", e)
+        }
+    }
+
+    private static JsonNode loadMeta(Path metaYaml) {
+        try( final stream = Files.newInputStream(metaYaml) ) {
+            return JSON_MAPPER.valueToTree(new Yaml().load(stream))
+        }
+        catch( Exception e ) {
+            throw new AbortOperationException("Failed to read module spec '${metaYaml}': ${e.message}", e)
+        }
     }
 
     /**
