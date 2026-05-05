@@ -87,6 +87,8 @@ This test drives the grammar + AST changes. Created first so every later step ha
 
 - [ ] **Step 1.1: Write the failing test**
 
+The pattern below mirrors `ScriptAstBuilderTest.groovy` in the same directory: a `@Shared ScriptParser`, set up in `setupSpec()`, with `TestUtils.check(scriptParser, contents)` for negative tests and `scriptParser.parse(...)` + `source.getAST()` for AST inspection.
+
 ```groovy
 /*
  * Copyright 2013-2026, Seqera Labs
@@ -96,22 +98,50 @@ This test drives the grammar + AST changes. Created first so every later step ha
  * You may obtain a copy of the License at
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package nextflow.script.parser
 
 import nextflow.script.ast.AgentNode
+import nextflow.script.ast.ScriptNode
+import nextflow.script.control.ScriptParser
+import org.codehaus.groovy.syntax.SyntaxException
+import spock.lang.Shared
 import spock.lang.Specification
 import test.TestUtils
 
+/**
+ * @see nextflow.script.parser.ScriptAstBuilder
+ */
 class AgentParserTest extends Specification {
 
+    @Shared
+    ScriptParser scriptParser
+
     def setupSpec() {
-        TestUtils.beforeSpec()
+        scriptParser = new ScriptParser()
+    }
+
+    List<SyntaxException> check(String contents) {
+        return TestUtils.check(scriptParser, contents)
+    }
+
+    ScriptNode parse(String contents) {
+        scriptParser.compiler().getSources().clear()
+        def source = scriptParser.parse('main.nf', contents.stripIndent())
+        scriptParser.analyze()
+        assert !TestUtils.hasSyntaxErrors(source)
+        return source.getAST() as ScriptNode
     }
 
     def 'should parse a minimal agent definition'() {
         when:
-        def script = TestUtils.parse('''\
+        def script = parse('''\
             nextflow.enable.types = true
 
             agent eval_agent {
@@ -121,17 +151,17 @@ class AgentParserTest extends Specification {
                 maxIterations 20
 
                 input:
-                    val question
+                    question: String
 
                 output:
-                    val plan
+                    plan: String
 
                 prompt:
                 """
                 Question: ${question}
                 """
             }
-            '''.stripIndent())
+            ''')
 
         then:
         script.agents.size() == 1
@@ -306,6 +336,7 @@ git -C /Users/pditommaso/Projects/nextflow commit -s -m "lang: add agentDef gram
 package nextflow.script.ast;
 
 import org.codehaus.groovy.ast.ClassHelper;
+import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.stmt.EmptyStatement;
@@ -327,7 +358,7 @@ public class AgentNode extends MethodNode {
     public final Statement prompt;
 
     public AgentNode(String name, Statement directives, Parameter[] inputs, Statement outputs, Statement prompt) {
-        super(name, 0, ClassHelper.OBJECT_TYPE, inputs, ClassHelper.EMPTY_TYPE_ARRAY, EmptyStatement.INSTANCE);
+        super(name, 0, ClassHelper.OBJECT_TYPE, inputs, ClassNode.EMPTY_ARRAY, EmptyStatement.INSTANCE);
         this.directives = directives;
         this.inputs = inputs;
         this.outputs = outputs;
@@ -360,13 +391,13 @@ git -C /Users/pditommaso/Projects/nextflow commit -s -m "lang: add AgentNode AST
 
 - [ ] **Step 5.1: Add the `agents` collection and accessors**
 
-Find the existing `processes` field (search for `private final List<ProcessNode> processes`). Add an analogous field next to it:
+Find the existing `processes` field (search for `private List<ProcessNode> processes`). The actual style in this file uses `private List<X>` without `final`. Add an analogous field next to it:
 
 ```java
-private final List<AgentNode> agents = new ArrayList<>();
+private List<AgentNode> agents = new ArrayList<>();
 ```
 
-Find the `addProcess` method (around line 150). Add immediately below:
+Find the `addProcess` method (around line 155). Add immediately below:
 
 ```java
 public void addAgent(AgentNode agentNode) {
@@ -374,13 +405,30 @@ public void addAgent(AgentNode agentNode) {
 }
 ```
 
-Find the `getProcesses` getter (search for `public List<ProcessNode> getProcesses`). Add an analogous getter:
+Find the `getProcesses` getter (around line 105). Add an analogous getter immediately after:
 
 ```java
 public List<AgentNode> getAgents() {
     return agents;
 }
 ```
+
+Also extend the `getDeclarations()` method (around line 56) — this is the canonical-order list consumed by `ScriptFormattingVisitor` and `ScriptToGroovyVisitor`. Add agents next to processes:
+
+```java
+public List<ASTNode> getDeclarations() {
+    var declarations = new ArrayList<ASTNode>();
+    declarations.addAll(featureFlags);
+    // ... existing entries ...
+    declarations.addAll(processes);
+    declarations.addAll(agents);   // NEW
+    declarations.addAll(functions);
+    declarations.addAll(getTypes());
+    return declarations;
+}
+```
+
+(Show only the diff line — leave the surrounding block intact.)
 
 - [ ] **Step 5.2: Verify it compiles**
 
@@ -413,14 +461,31 @@ In `ScriptVisitor.java`, add immediately above `void visitProcess(ProcessNode no
 void visitAgent(AgentNode node);
 ```
 
-- [ ] **Step 6.2: Add the default no-op to `ScriptVisitorSupport`**
+- [ ] **Step 6.2: Update `ScriptVisitorSupport`**
 
-Open `ScriptVisitorSupport.java` and find the existing `visitProcess` default. Add immediately above:
+Two edits in `ScriptVisitorSupport.java`:
+
+(a) In the `visit(ScriptNode script)` method, add an iteration over `script.getAgents()` immediately after the processes loop:
+
+```java
+for( var processNode : script.getProcesses() )
+    visitProcess(processNode);
+for( var agentNode : script.getAgents() )
+    visitAgent(agentNode);
+```
+
+(b) Add a `visitAgent` default that walks the agent's body, modelled on `visitProcessV2` (which calls `visit(...)` on each Statement field). `inputs` is `Parameter[]` and is handled by the inherited `MethodNode` machinery; do not visit it here.
 
 ```java
 @Override
-public void visitAgent(AgentNode node) {}
+public void visitAgent(AgentNode node) {
+    visit(node.directives);
+    visit(node.outputs);
+    visit(node.prompt);
+}
 ```
+
+Place this method immediately above `visitProcess` for proximity to peer code.
 
 - [ ] **Step 6.3: Verify all visitor implementations still compile**
 
@@ -435,6 +500,76 @@ Expected: BUILD SUCCESSFUL. If any subclass fails because it doesn't override `v
 ```bash
 git -C /Users/pditommaso/Projects/nextflow add modules/nf-lang/src/main/java/nextflow/script/ast/ScriptVisitor.java modules/nf-lang/src/main/java/nextflow/script/ast/ScriptVisitorSupport.java
 git -C /Users/pditommaso/Projects/nextflow commit -s -m "lang: add visitAgent to script visitor"
+```
+
+---
+
+## Task 6.5: Lower `AgentNode` to a Groovy `agent(...)` call
+
+The parser produces `AgentNode` instances; `ScriptToGroovyVisitor` is the pass that converts the AST into executable Groovy code. Without a dispatch case for `AgentNode`, agent definitions are silently dropped during lowering — `BaseScript.agent(...)` is never invoked, no `AgentDef` is registered, and the smoke test in Task 15 cannot pass.
+
+For the minimal POC where agent execution is stubbed (see Task 11 — `AgentDef.run()` throws `UnsupportedOperationException`), the lowering only needs to emit a method call `agent('name', { /* empty */ })`. The body closure stays empty for now; future plans will populate it with directive/prompt info when execution lands. This is enough to satisfy the smoke test and keeps the change tiny.
+
+**Files:**
+- Modify: `modules/nf-lang/src/main/java/nextflow/script/control/ScriptToGroovyVisitor.java`
+
+- [ ] **Step 6.5.1: Add the `AgentNode` dispatch case**
+
+In `ScriptToGroovyVisitor.java`, find the `for( var decl : declarations )` loop (around line 107). It currently has cases for `ProcessNode`, `WorkflowNode`, `FunctionNode`, etc. Add an `AgentNode` branch alongside `ProcessNode`:
+
+```java
+else if( decl instanceof ProcessNode pn )
+    visitProcess(pn);
+else if( decl instanceof AgentNode an )
+    visitAgent(an);
+```
+
+- [ ] **Step 6.5.2: Add the `visitAgent` method**
+
+Find the existing `visitProcessV2` method (around line 284). Add a `visitAgent` method immediately above it:
+
+```java
+@Override
+public void visitAgent(AgentNode node) {
+    checkReservedMethodName(node, "agent");
+    var name = constX(node.getName());
+    var bodyClosure = closureX(EmptyStatement.INSTANCE);
+    var result = stmt(callThisX("agent", args(name, bodyClosure)));
+    moduleNode.addStatement(result);
+}
+```
+
+- [ ] **Step 6.5.3: Add the import**
+
+Add at the top of `ScriptToGroovyVisitor.java`:
+
+```java
+import nextflow.script.ast.AgentNode;
+```
+
+(Verify imports are sorted alphabetically — match the file's existing convention.)
+
+If `EmptyStatement` is not already imported, add:
+
+```java
+import org.codehaus.groovy.ast.stmt.EmptyStatement;
+```
+
+`closureX`, `callThisX`, `constX`, `args`, `stmt` are already imported via the static `GeneralUtils.*` import that exists at the top of the file — verify.
+
+- [ ] **Step 6.5.4: Verify it compiles**
+
+```bash
+cd /Users/pditommaso/Projects/nextflow && ./gradlew :nf-lang:compileJava -q
+```
+
+Expected: BUILD SUCCESSFUL.
+
+- [ ] **Step 6.5.5: Commit**
+
+```bash
+git -C /Users/pditommaso/Projects/nextflow add modules/nf-lang/src/main/java/nextflow/script/control/ScriptToGroovyVisitor.java
+git -C /Users/pditommaso/Projects/nextflow commit -s -m "lang: lower AgentNode to a Groovy agent(...) call"
 ```
 
 ---
@@ -475,7 +610,7 @@ Add the following private methods to `ScriptAstBuilder.java`. Place them immedia
 
 ```java
 private AgentNode agentDef(AgentDefContext ctx) {
-    var name = identifier(ctx.name);
+    var name = ctx.name.getText();
     if( ctx.body == null )
         return invalidAgent("Missing agent body", ctx);
     if( ctx.body.agentPrompt() == null )
@@ -486,8 +621,9 @@ private AgentNode agentDef(AgentDefContext ctx) {
     var outputs = agentOutputs(ctx.body.agentOutputs());
     var prompt = agentPrompt(ctx.body.agentPrompt());
 
-    var node = ast(new AgentNode(name, directives, inputs, outputs, prompt), ctx);
-    return node;
+    var result = new AgentNode(name, directives, inputs, outputs, prompt);
+    ast(result, ctx);
+    return result;
 }
 
 private AgentNode invalidAgent(String message, AgentDefContext ctx) {
@@ -500,11 +636,11 @@ private AgentNode invalidAgent(String message, AgentDefContext ctx) {
 private Statement agentDirectives(AgentDirectivesContext ctx) {
     if( ctx == null )
         return EmptyStatement.INSTANCE;
-    var stmts = ctx.statement().stream()
+    var statements = ctx.statement().stream()
         .map(this::statement)
         .map(stmt -> checkDirective(stmt, "Invalid agent directive"))
-        .collect(Collectors.toList());
-    return block(null, stmts);
+        .toList();
+    return ast( block(null, statements), ctx );
 }
 
 private Parameter[] agentInputs(AgentInputsContext ctx) {
@@ -512,16 +648,18 @@ private Parameter[] agentInputs(AgentInputsContext ctx) {
         return Parameter.EMPTY_ARRAY;
     return ctx.processInput().stream()
         .map(this::processInput)
+        .filter(input -> input != null)
         .toArray(Parameter[]::new);
 }
 
 private Statement agentOutputs(AgentOutputsContext ctx) {
     if( ctx == null )
         return EmptyStatement.INSTANCE;
-    var stmts = ctx.processOutput().stream()
+    var statements = ctx.processOutput().stream()
         .map(this::processOutput)
-        .collect(Collectors.toList());
-    return block(null, stmts);
+        .filter(stmt -> stmt != null)
+        .toList();
+    return ast( block(null, statements), ctx );
 }
 
 private Statement agentPrompt(AgentPromptContext ctx) {
@@ -582,7 +720,7 @@ Append to `AgentParserTest.groovy`:
 ```groovy
 def 'should report an error for agent without prompt section'() {
     when:
-    def errors = TestUtils.check('''\
+    def errors = check('''\
         nextflow.enable.types = true
 
         agent broken {
@@ -593,7 +731,7 @@ def 'should report an error for agent without prompt section'() {
             input:
                 val q
         }
-        '''.stripIndent())
+        ''')
 
     then:
     errors.size() == 1
@@ -601,7 +739,7 @@ def 'should report an error for agent without prompt section'() {
 }
 ```
 
-(Confirm `TestUtils.check` is the helper that returns a list of `SyntaxException` — see `ScriptAstBuilderTest` for the pattern. If the helper has a different name, adjust.)
+This uses the `check(String)` instance helper defined in Step 1.1 (which delegates to `TestUtils.check(scriptParser, contents)`).
 
 - [ ] **Step 8.2: Run it**
 
@@ -637,7 +775,7 @@ In `AgentParserTest.groovy`, add:
 ```groovy
 def 'should resolve an agent reference from a workflow'() {
     when:
-    def script = TestUtils.parse('''\
+    def script = parse('''\
         nextflow.enable.types = true
 
         agent eval_agent {
@@ -660,13 +798,13 @@ def 'should resolve an agent reference from a workflow'() {
         workflow {
             channel.of('hi') | eval_agent | view
         }
-        '''.stripIndent())
+        ''')
 
     then:
     script.agents.size() == 1
     script.workflows.size() == 1
-    // Workflow body must reference the agent without a "variable not found" error.
-    // TestUtils.parse fails if any error is collected.
+    // The `parse` helper asserts no syntax errors — if `eval_agent` failed
+    // to resolve in the workflow body, the assertion in `parse(...)` would fail.
 }
 ```
 
