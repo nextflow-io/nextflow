@@ -237,6 +237,80 @@ class MyPluginConfig implements ConfigScope {
 }
 ```
 
+The top-level scope must also be registered as an extension point in `build.gradle`, so that Nextflow discovers it when validating the configuration:
+
+```groovy
+nextflowPlugin {
+    // ...
+    extensionPoints = [
+        'nextflow.myplugin.MyPluginConfig',
+        // other extension points...
+    ]
+}
+```
+
+Configuration options can be grouped by adding a nested `ConfigScope` as a field on the parent scope. Nextflow discovers nested scopes by walking fields whose declared type implements `ConfigScope`, so the field itself does not need a `@ConfigOption` annotation. Only the top-level scope needs `@ScopeName`, a no-arg constructor, and an entry in `extensionPoints`.
+
+```groovy
+import java.nio.file.Path
+
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
+import nextflow.script.dsl.Description
+
+@ScopeName('myplugin')
+@Description('''
+    The `myplugin` scope allows you to configure the `nf-myplugin` plugin.
+''')
+class MyPluginConfig implements ConfigScope {
+
+    @Description('''
+        Configuration for the report file.
+    ''')
+    final ReportConfig report
+
+    // no-arg constructor is required to enable validation of config options
+    MyPluginConfig() {
+    }
+
+    MyPluginConfig(Map opts) {
+        this.report = new ReportConfig(opts.report as Map ?: [:])
+    }
+}
+
+@Description('''
+    The `myplugin.report` scope allows you to configure the report file.
+''')
+class ReportConfig implements ConfigScope {
+
+    @ConfigOption
+    @Description('''
+        Path to the report file.
+    ''')
+    final Path file
+
+    @ConfigOption
+    @Description('''
+        Whether report generation is enabled.
+    ''')
+    final Boolean enabled
+
+    ReportConfig(Map opts) {
+        this.file = opts.file as Path
+        this.enabled = opts.enabled as Boolean ?: true
+    }
+}
+```
+
+:::{note}
+`@ConfigOption` fields are discovered with `Class.getDeclaredFields()`, which does not include fields inherited from a parent class. Each `ConfigScope` class must therefore declare its options directly. A shared parent class can still provide common logic, such as helper methods that compute default values, but the `@ConfigOption` declarations themselves must live on the concrete scope class.
+:::
+
+:::{note}
+The `types` attribute on `@ConfigOption` is for declaring that an option accepts more than one type, and should only list [standard Nextflow types](https://docs.seqera.io/nextflow/reference/stdlib-types) (for example, `types=[String, List]`). Avoid using runtime classes such as `GString`, `Number` or `Map` here - they may produce confusing errors in the language server and do not correspond to configurable types.
+:::
+
 This approach is not required to support plugin config options. However, it allows Nextflow to recognize plugin definitions when validating the configuration. See {ref}`config-scopes-page` for more information.
 
 ### Executors
