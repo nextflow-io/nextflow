@@ -288,15 +288,8 @@ class ReportConfig implements ConfigScope {
     ''')
     final Path file
 
-    @ConfigOption
-    @Description('''
-        Whether report generation is enabled.
-    ''')
-    final Boolean enabled
-
     ReportConfig(Map opts) {
         this.file = opts.file as Path
-        this.enabled = opts.enabled as Boolean ?: true
     }
 }
 ```

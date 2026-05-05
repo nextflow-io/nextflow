@@ -44,7 +44,7 @@ The fully-qualified class name (in this case, `nextflow.hello.HelloConfig`) must
 A *config option* is defined as a field with the `@ConfigOption` annotation. The field name determines the name of the config option.
 
 :::note
-Config options are collected with `Class.getDeclaredFields()`, which does not include fields inherited from a parent class. Each scope class must therefore declare its options directly. A shared parent class can still provide common logic, such as helper methods that compute default values.
+Config options are collected with `Class.getDeclaredFields()`, which does not include inherited fields. Each scope class must declare its options directly, even if a shared parent class provides common logic.
 :::
 
 For example:
