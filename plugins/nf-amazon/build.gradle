@@ -51,6 +51,18 @@ configurations {
 }
 
 dependencies {
+    // Force patched Netty across all configurations (incl. testRuntimeClasspath, where
+    // a transitive fixture would otherwise escalate to 4.2.x).
+    // Addresses GHSA-pwqr-wmgm-9rr8 (netty-codec-http HTTP Request Smuggling)
+    // and GHSA-w9fj-cfpg-grvv (netty-codec-http2 CONTINUATION Frame Flood DoS).
+    constraints {
+        implementation('io.netty:netty-buffer') { version { strictly '4.1.132.Final' } }
+        implementation('io.netty:netty-common') { version { strictly '4.1.132.Final' } }
+        implementation('io.netty:netty-handler') { version { strictly '4.1.132.Final' } }
+        implementation('io.netty:netty-codec-http') { version { strictly '4.1.132.Final' } }
+        implementation('io.netty:netty-codec-http2') { version { strictly '4.1.132.Final' } }
+    }
+
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
     compileOnly 'org.pf4j:pf4j:3.14.1'
@@ -70,11 +82,6 @@ dependencies {
     api ('software.amazon.awssdk:s3-transfer-manager:2.33.2')
     api ('software.amazon.awssdk:apache-client:2.33.2')
     api ('software.amazon.awssdk:aws-crt-client:2.33.2')
-
-    // address security vulnerabilities
-    implementation 'io.netty:netty-common:4.1.132.Final'
-    implementation 'io.netty:netty-handler:4.1.132.Final'
-    implementation 'io.netty:netty-codec-http2:4.1.132.Final'
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
