@@ -53,6 +53,15 @@ String gitVersion() {
     return r==0 ? p.text.trim() : '(unknown)'
 }
 
+String gitBranch() {
+    def fromCI = System.env.GITHUB_REF_NAME
+    if( fromCI ) return fromCI.trim()
+    def p = new ProcessBuilder() .command('sh','-c','git rev-parse --abbrev-ref HEAD') .start()
+    def r = p.waitFor()
+    def out = r==0 ? p.text.trim() : ''
+    return (out && out != 'HEAD') ? out : '(unknown)'
+}
+
 group = 'io.nextflow'
 version = rootProject.file('VERSION').text.trim()
 ext.commitId = gitVersion()
