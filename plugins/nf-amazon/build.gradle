@@ -48,40 +48,30 @@ sourceSets {
 configurations {
     // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
     runtimeClasspath.exclude group: 'org.slf4j', module: 'slf4j-api'
+    testRuntimeClasspath.exclude group: 'io.micronaut', module: 'micronaut-core-bom'
 }
 
 dependencies {
-    // Force patched Netty across all configurations (incl. testRuntimeClasspath, where
-    // a transitive fixture would otherwise escalate to 4.2.x).
-    // Addresses GHSA-pwqr-wmgm-9rr8 (netty-codec-http HTTP Request Smuggling)
-    // and GHSA-w9fj-cfpg-grvv (netty-codec-http2 CONTINUATION Frame Flood DoS).
-    constraints {
-        implementation('io.netty:netty-buffer') { version { strictly '4.1.132.Final' } }
-        implementation('io.netty:netty-common') { version { strictly '4.1.132.Final' } }
-        implementation('io.netty:netty-handler') { version { strictly '4.1.132.Final' } }
-        implementation('io.netty:netty-codec-http') { version { strictly '4.1.132.Final' } }
-        implementation('io.netty:netty-codec-http2') { version { strictly '4.1.132.Final' } }
-    }
 
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
     compileOnly 'org.pf4j:pf4j:3.14.1'
 
     api ('javax.xml.bind:jaxb-api:2.4.0-b180830.0359')
-    api ('software.amazon.awssdk:s3:2.33.2')
-    api ('software.amazon.awssdk:ec2:2.33.2')
-    api ('software.amazon.awssdk:batch:2.33.2')
-    api ('software.amazon.awssdk:iam:2.33.2')
-    api ('software.amazon.awssdk:ecs:2.33.2')
-    api ('software.amazon.awssdk:cloudwatchlogs:2.33.2')
-    api ('software.amazon.awssdk:codecommit:2.33.2')
-    api ('software.amazon.awssdk:sts:2.33.2')
-    api ('software.amazon.awssdk:ses:2.33.2')
-    api ('software.amazon.awssdk:sso:2.33.2')
-    api ('software.amazon.awssdk:ssooidc:2.33.2')
-    api ('software.amazon.awssdk:s3-transfer-manager:2.33.2')
-    api ('software.amazon.awssdk:apache-client:2.33.2')
-    api ('software.amazon.awssdk:aws-crt-client:2.33.2')
+    api ('software.amazon.awssdk:s3:2.42.41')
+    api ('software.amazon.awssdk:ec2:2.42.41')
+    api ('software.amazon.awssdk:batch:2.42.41')
+    api ('software.amazon.awssdk:iam:2.42.41')
+    api ('software.amazon.awssdk:ecs:2.42.41')
+    api ('software.amazon.awssdk:cloudwatchlogs:2.42.41')
+    api ('software.amazon.awssdk:codecommit:2.42.41')
+    api ('software.amazon.awssdk:sts:2.42.41')
+    api ('software.amazon.awssdk:ses:2.42.41')
+    api ('software.amazon.awssdk:sso:2.42.41')
+    api ('software.amazon.awssdk:ssooidc:2.42.41')
+    api ('software.amazon.awssdk:s3-transfer-manager:2.42.41')
+    api ('software.amazon.awssdk:apache-client:2.42.41')
+    api ('software.amazon.awssdk:aws-crt-client:2.42.41')
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')

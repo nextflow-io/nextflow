@@ -47,22 +47,10 @@ sourceSets {
 configurations {
     // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
     runtimeClasspath.exclude group: 'org.slf4j', module: 'slf4j-api'
+    testRuntimeClasspath.exclude group: 'io.micronaut', module: 'micronaut-core-bom'
 }
 
 dependencies {
-    // Force patched Netty across all configurations (incl. testRuntimeClasspath, where
-    // a transitive fixture would otherwise escalate to 4.2.x).
-    // Addresses GHSA-pwqr-wmgm-9rr8 (netty-codec-http HTTP Request Smuggling)
-    // and GHSA-w9fj-cfpg-grvv (netty-codec-http2 CONTINUATION Frame Flood DoS).
-    // netty-buffer must be pinned alongside the rest -- leaving it at 4.2.x
-    // (via Micronaut BOM) causes ABI mismatch in AbstractByteBufAllocator.
-    constraints {
-        implementation('io.netty:netty-buffer') { version { strictly '4.1.132.Final' } }
-        implementation('io.netty:netty-common') { version { strictly '4.1.132.Final' } }
-        implementation('io.netty:netty-handler') { version { strictly '4.1.132.Final' } }
-        implementation('io.netty:netty-codec-http') { version { strictly '4.1.132.Final' } }
-        implementation('io.netty:netty-codec-http2') { version { strictly '4.1.132.Final' } }
-    }
 
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
