@@ -1,5 +1,13 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.10.5 - 5 May 2026
+- Fix formatting bug with map key expression (#6893) [8290bc0ae]
+- Fix incorrect evaluation of `secret` process directive (#6934) [3cef01585]
+- Fix params block in included module (#6940) [4656c9b35]
+- Fix params inclusion across modules in v2 parser (#6766) [a97071485]
+- Fix resolution of params in resolved config text (#7072) [5aaf7926f]
+- Bump nf-tower@1.17.6
+
 25.10.4 - 10 Feb 2026
 - Add isCompleted check in getNumSpotInterruptions (#6806) [21390a1fb]
 - Fix false error with optional param (#6811) [f3816365e]
