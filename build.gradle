@@ -53,6 +53,15 @@ String gitVersion() {
     return r==0 ? p.text.trim() : '(unknown)'
 }
 
+String gitBranch() {
+    def fromCI = System.env.GITHUB_REF_NAME
+    if( fromCI ) return fromCI.trim()
+    def p = new ProcessBuilder() .command('sh','-c','git rev-parse --abbrev-ref HEAD') .start()
+    def r = p.waitFor()
+    def out = r==0 ? p.text.trim() : ''
+    return (out && out != 'HEAD') ? out : '(unknown)'
+}
+
 group = 'io.nextflow'
 version = rootProject.file('VERSION').text.trim()
 ext.commitId = gitVersion()
@@ -101,12 +110,12 @@ allprojects {
         }
 
         // JUnit Platform launcher required for Gradle 9.1+ when using useJUnitPlatform()
-        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.5'
 
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:2.4.0'
-        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.30"
-        groovyDoc "org.apache.groovy:groovy-ant:4.0.30"
+        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.31"
+        groovyDoc "org.apache.groovy:groovy-ant:4.0.31"
     }
 
     test {

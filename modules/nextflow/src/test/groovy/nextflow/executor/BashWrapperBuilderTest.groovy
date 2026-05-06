@@ -1447,6 +1447,42 @@ class BashWrapperBuilderTest extends Specification {
         binding.kill_cmd == 'podman stop $NXF_BOXID'
     }
 
+    def 'should skip trace wrapper when NXF_FUSION_TRACE is enabled and Fusion is active'() {
+        given:
+        SysEnv.push([NXF_FUSION_TRACE: 'true'])
+        def bean = new TaskBean()
+        bean.statsEnabled = true
+        bean.fusionEnabled = true
+        bean.workDir = Path.of('/work/xx/yy')
+        bean.script = 'echo hello'
+
+        def builder = new BashWrapperBuilder(bean)
+
+        expect:
+        !builder.isTraceRequired()
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should keep trace wrapper when NXF_FUSION_TRACE is disabled even with Fusion'() {
+        given:
+        SysEnv.push([NXF_FUSION_TRACE: 'false'])
+        def bean = new TaskBean()
+        bean.statsEnabled = true
+        bean.fusionEnabled = true
+        bean.workDir = Path.of('/work/xx/yy')
+        bean.script = 'echo hello'
+
+        def builder = new BashWrapperBuilder(bean)
+
+        expect:
+        builder.isTraceRequired()
+
+        cleanup:
+        SysEnv.pop()
+    }
+
     @Unroll
     def 'should check retryable errors' () {
         expect:

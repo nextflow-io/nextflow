@@ -1,5 +1,8 @@
 nf-codecommit changelog
 =======================
+0.5.1 - 26 Mar 2026
+- Fix netty and jackson vulnerabilities (#6955) [8dafdd95d]
+
 0.5.0 - 8 Oct 2025
 - Add listDirectory traversal API to RepositoryProvider abstraction (#6430) [1449fdfec]
 

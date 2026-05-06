@@ -24,6 +24,18 @@ import spock.lang.Specification
  */
 class TowerConfigTest extends Specification {
 
+    def 'should use default endpoint when not specified'() {
+        when:
+        def config = new TowerConfig([:], [TOWER_API_ENDPOINT: 'https://example.com'])
+        then:
+        config.endpoint == 'https://example.com'
+
+        when:
+        config = new TowerConfig([:], [:])
+        then:
+        config.endpoint == 'https://api.cloud.seqera.io'
+    }
+
     def 'should use default timeout values when not specified'() {
         when:
         def config = new TowerConfig([:], [:])

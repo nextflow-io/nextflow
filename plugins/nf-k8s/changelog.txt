@@ -1,5 +1,9 @@
 nf-k8s changelog
 ===================
+1.5.2 - 20 Apr 2026
+- Bump org.bouncycastle:bcpkix-jdk18on from 1.79 to 1.84 (#7042) [59d847d52]
+- Allow running pipeline from URL and main script path (#6602) [83196d4be]
+
 1.5.1 - 17 Mar 2026
 - Fix K8s token refresh by caching K8sClient at executor level (#6925) [3d2e4c4c4]
 

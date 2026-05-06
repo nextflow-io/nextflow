@@ -66,6 +66,12 @@ class CmdLint extends CmdBase {
     List<String> excludePatterns = ['.git', '.lineage', '.nextflow', '.nf-test', 'nf-test.config', 'work']
 
     @Parameter(
+        names = ['-files-from'],
+        description = 'Read list of paths to lint from a text file (one per line, use - for stdin)'
+    )
+    String filesFrom
+
+    @Parameter(
         names = ['-o', '-output'],
         description = 'Output mode for reporting errors: full, extended, concise, json, markdown',
         validateWith = OutputModeValidator
@@ -119,7 +125,10 @@ class CmdLint extends CmdBase {
 
     @Override
     void run() {
-        if( !args )
+        // read input files from positional args and -files-from option
+        final inputs = getInputs(args, filesFrom)
+
+        if( !inputs )
             throw new AbortOperationException("Error: No input files were specified")
 
         if( spaces && tabs )
@@ -134,11 +143,11 @@ class CmdLint extends CmdBase {
 
         scriptParser = new ScriptParser(baseDir, classLoader)
         configParser = new ConfigParser()
-        errorListener = outputMode == 'json'
-            ? new JsonErrorListener()
-            : outputMode == 'markdown'
-            ? new MarkdownErrorListener()
-            : new StandardErrorListener(outputMode, launcher.options.ansiLog)
+        errorListener = switch( outputMode ) {
+            case 'json' -> new JsonErrorListener()
+            case 'markdown' -> new MarkdownErrorListener()
+            default -> new StandardErrorListener(outputMode, launcher.options.ansiLog, launcher.options.quiet)
+        }
         formattingOptions = new FormattingOptions(spaces, !tabs, harhsilAlignment, false, sortDeclarations)
 
         errorListener.beforeAll()
@@ -146,9 +155,9 @@ class CmdLint extends CmdBase {
         // collect files to lint
         final List<File> files = []
 
-        for( final arg : args ) {
+        for( final input : inputs ) {
             PathUtils.visitFiles(
-                Path.of(arg),
+                Path.of(input),
                 (path) -> !PathUtils.isExcluded(path, excludePatterns),
                 (path) -> files.add(path.toFile()))
         }
@@ -176,6 +185,24 @@ class CmdLint extends CmdBase {
         // If there were errors, throw an exception to return a non-zero exit code
         if( summary.errors > 0 )
             throw new AbortOperationException()
+    }
+
+    private static List<String> getInputs(List<String> args, String filesFrom) {
+        final List<String> result = []
+        result.addAll(args)
+
+        if( filesFrom ) {
+            final lines = filesFrom == '-'
+                ? System.in.readLines()
+                : Path.of(filesFrom).readLines()
+            for( final line : lines ) {
+                final trimmed = line.trim()
+                if( trimmed )
+                    result.add(trimmed)
+            }
+        }
+
+        return result
     }
 
     private void parse(File file) {

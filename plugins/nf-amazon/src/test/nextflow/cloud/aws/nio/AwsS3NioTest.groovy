@@ -281,7 +281,6 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         if( bucketName ) deleteBucket(bucketName)
     }
 
-    @Ignore // FIXME
     def 'move a remote file to a bucket' () {
         given:
         def TEXT = "Hello world!"
@@ -353,8 +352,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         if( target ) Files.deleteIfExists(target)
     }
 
-    @Ignore //FIXME
-    def 'should create a directory' () {
+    def 'should throw unsupported when create directory is a bucket' () {
 
         given:
         def bucketName = getRndBucketName()
@@ -363,10 +361,12 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         when:
         Files.createDirectory(dir)
         then:
-        existsPath(dir)
+        thrown(UnsupportedOperationException)
 
         cleanup:
-        deleteBucket(bucketName)
+        if (existsPath(dir)) {
+            deleteBucket(bucketName)
+        }
     }
 
     def 'should create a directory tree' () {
@@ -439,15 +439,14 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         deleteBucket(bucketName)
     }
 
-    @Ignore // FIXME
-    def 'should delete a bucket' () {
+    def 'should throw unsupported when trying delete a bucket' () {
         given:
         final bucketName = createBucket()
 
         when:
         Files.delete(s3path("s3://$bucketName"))
         then:
-        !existsPath(bucketName)
+        thrown(UnsupportedOperationException)
 
     }
 
@@ -480,7 +479,6 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         deleteBucket(bucketName)
     }
 
-    @Ignore // FIXME
     def 'should throw a NoSuchFileException when deleting an object not existing' () {
 
         given:
@@ -494,7 +492,24 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
     }
 
-    @Ignore //FIXME
+    def 'should delete a non-empty directory on S3 without throwing' () {
+        given:
+        def bucketName = createBucket()
+        and:
+        createObject("$bucketName/dir1/file1.txt", 'HELLO')
+        createObject("$bucketName/dir1/file2.txt", 'WORLD')
+
+        when:
+        def path = s3path("s3://$bucketName/dir1")
+        Files.delete(path)
+
+        then:
+        noExceptionThrown()
+
+        cleanup:
+        deleteBucket(bucketName)
+    }
+
     def 'should validate exists method' () {
         given:
         def bucketName = createBucket()

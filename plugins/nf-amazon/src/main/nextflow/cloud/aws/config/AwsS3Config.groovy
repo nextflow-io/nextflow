@@ -152,7 +152,7 @@ class AwsS3Config implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The amount of time to wait (in milliseconds) for data to be transferred over an established, open connection before the connection is timed out (default: `50000`).
+        The amount of time to wait (in milliseconds) for data to be transferred over an established, open connection before the connection is timed out (default: `30000`).
     """)
     final Integer socketTimeout
 

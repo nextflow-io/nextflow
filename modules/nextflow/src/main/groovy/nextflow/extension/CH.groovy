@@ -25,6 +25,8 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
+import groovyx.gpars.dataflow.operator.ControlMessage
+import groovyx.gpars.dataflow.operator.PoisonPill
 import groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter
 import groovyx.gpars.dataflow.stream.DataflowStreamWriteAdapter
 import nextflow.Channel
@@ -42,6 +44,8 @@ class CH {
     static private Session session() {
         return (Session) Global.session
     }
+
+    static ControlMessage stop() { PoisonPill.getInstance() }
 
     static class Topic {
         DataflowBroadcast broadcaster = new DataflowBroadcast()
@@ -113,7 +117,7 @@ class CH {
                 new MixOp(sources).withTarget(topic.broadcaster).apply()
             }
             else {
-                topic.broadcaster.bind(Channel.STOP)
+                topic.broadcaster.bind(stop())
             }
         }
     }
@@ -124,10 +128,10 @@ class CH {
     static DataflowWriteChannel close0(DataflowWriteChannel source) {
         if( source instanceof DataflowExpression ) {
             if( !source.isBound() )
-                source.bind(Channel.STOP)
+                source.bind(stop())
         }
         else {
-            source.bind(Channel.STOP)
+            source.bind(stop())
         }
         return source
     }
@@ -211,16 +215,18 @@ class CH {
         return ch
     }
 
-    static <T extends DataflowWriteChannel> T emitValues(T ch, Collection items) {
+    static <T extends DataflowWriteChannel> T emitValues(T ch, Iterable items) {
         session().addIgniter {->
             for( final it : items ) ch.bind(it)
         }
         return ch
     }
 
-    static <T extends DataflowWriteChannel> T emitAndClose(T ch, Collection items) {
-        def values = items!=null ? new ArrayList(items) : new ArrayList<>(1)
-        values.add(Channel.STOP)
-        emitValues(ch, values)
+    static <T extends DataflowWriteChannel> T emitAndClose(T ch, Iterable items) {
+        session().addIgniter {->
+            for( final it : items ) ch.bind(it)
+            ch.bind(stop())
+        }
+        return ch
     }
 }

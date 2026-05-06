@@ -38,21 +38,6 @@ public interface ChannelNamespace extends Namespace {
 
     @Deprecated
     @Description("""
-        Create a channel that emits each argument.
-
-        [Read more](https://nextflow.io/docs/latest/reference/channel.html#from)
-    """)
-    <E> Channel<E> from(E... values);
-
-    @Deprecated
-    @Description("""
-        Create a channel that emits each element in a collection.
-
-        [Read more](https://nextflow.io/docs/latest/reference/channel.html#from)
-    """)
-    <E> Channel<E> from(Collection<E> values);
-
-    @Description("""
         Create a channel that emits all file pairs matching a glob pattern.
 
         An optional closure can be used to customize the grouping strategy.
@@ -62,9 +47,9 @@ public interface ChannelNamespace extends Namespace {
     Channel<?> fromFilePairs(Map<String,?> opts, String pattern, Closure grouping);
 
     @Description("""
-        Create a channel that emits all paths matching a name or glob pattern.
+        Create a channel that emits files from the lineage store matching the given key-value params:
 
-        [Read more](https://nextflow.io/docs/latest/reference/channel.html#frompath)
+        [Read more](https://nextflow.io/docs/latest/reference/channel.html#fromlineage)
     """)
     Channel<Path> fromLineage(Map<String,?> opts);
 
@@ -73,7 +58,7 @@ public interface ChannelNamespace extends Namespace {
 
         [Read more](https://nextflow.io/docs/latest/reference/channel.html#fromlist)
     """)
-    <E> Channel<E> fromList(Collection<E> values);
+    <E> Channel<E> fromList(Iterable<E> values);
 
     @Description("""
         Create a channel that emits all paths matching a name or glob pattern.
@@ -94,13 +79,6 @@ public interface ChannelNamespace extends Namespace {
         String pattern
     );
     Channel<Path> fromPath(String pattern);
-
-    @Description("""
-        Create a channel that queries the [NCBI SRA](https://www.ncbi.nlm.nih.gov/sra) database and emits all FASTQ files matching the given project or accession ids.
-
-        [Read more](https://nextflow.io/docs/latest/reference/channel.html#fromsra)
-    """)
-    Channel<?> fromSRA(Map<String,?> opts, String query);
 
     @Description("""
         Create a channel that emits an incrementing index (starting from zero) at a periodic interval.

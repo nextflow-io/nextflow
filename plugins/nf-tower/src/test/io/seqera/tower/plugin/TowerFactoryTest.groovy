@@ -26,21 +26,21 @@ import spock.lang.Unroll
  */
 class TowerFactoryTest extends Specification {
 
-    def 'should create an tower observer' () {
+    def 'should create a tower observer' () {
         given:
         def factory = new TowerFactory(env: [TOWER_ACCESS_TOKEN: '123'])
 
         when:
         def session = Mock(Session) { getConfig() >> [tower: [enabled: true]] }
-        def client = factory.create(session)[0] as TowerClient
+        def observer = factory.create(session)[0] as TowerObserver
         then:
-        client.endpoint == TowerClient.DEF_ENDPOINT_URL
+        observer.@client.endpoint == TowerClient.DEF_ENDPOINT_URL
 
         when:
         session = Mock(Session) { getConfig() >> [tower: [enabled: true, endpoint:'http://foo.com/api', accessToken: 'xyz']] }
-        client = factory.create(session)[0] as TowerClient
+        observer = factory.create(session)[0] as TowerObserver
         then:
-        client.endpoint == 'http://foo.com/api'
+        observer.@client.endpoint == 'http://foo.com/api'
     }
 
     def 'should not create a tower observer' () {
@@ -56,16 +56,16 @@ class TowerFactoryTest extends Specification {
         result == []
     }
 
-    def 'should create with with workspace id'() {
+    def 'should create with workspace id'() {
         //
         // the workspace id is taken from the env
         //
         when:
         def session = Mock(Session) { getConfig() >> [tower: [enabled: true, accessToken: 'xyz']] }
         def factory = new TowerFactory(env: [TOWER_WORKSPACE_ID: '100'])
-        def client = (TowerClient) factory.create(session)[0]
+        def observer = (TowerObserver) factory.create(session)[0]
         then:
-        client.getWorkspaceId() == '100'
+        observer.getWorkspaceId() == '100'
 
         //
         // the workspace id is taken from the config
@@ -73,9 +73,9 @@ class TowerFactoryTest extends Specification {
         when:
         session = Mock(Session) { getConfig() >> [tower: [enabled: true, workspaceId: '200', accessToken: 'xyz']] }
         factory = new TowerFactory(env: [:])
-        client = (TowerClient) factory.create(session)[0]
+        observer = (TowerObserver) factory.create(session)[0]
         then:
-        client.getWorkspaceId() == '200'
+        observer.getWorkspaceId() == '200'
 
         //
         // the workspace id is set both in the config and the env
@@ -84,9 +84,9 @@ class TowerFactoryTest extends Specification {
         when:
         session = Mock(Session) { getConfig() >> [tower: [enabled: true, workspaceId: '200', accessToken: 'xyz']] }
         factory = new TowerFactory(env: [TOWER_WORKSPACE_ID: '100'])
-        client = (TowerClient) factory.create(session)[0]
+        observer = (TowerObserver) factory.create(session)[0]
         then:
-        client.getWorkspaceId() == '200'
+        observer.getWorkspaceId() == '200'
 
         //
         // when TOWER_WORKFLOW_ID is set is a tower launch
@@ -95,20 +95,20 @@ class TowerFactoryTest extends Specification {
         when:
         session = Mock(Session) { getConfig() >> [tower: [enabled: true, workspaceId: '200', accessToken: 'xyz']] }
         factory = new TowerFactory(env: [TOWER_WORKSPACE_ID: '100', TOWER_WORKFLOW_ID: '111222333', TOWER_ACCESS_TOKEN: 'xyz'])
-        client = (TowerClient) factory.create(session)[0]
+        observer = (TowerObserver) factory.create(session)[0]
         then:
-        client.getWorkspaceId() == '100'
+        observer.getWorkspaceId() == '100'
 
         //
         // when enabled is false but `TOWER_WORKFLOW_ID` is provided
-        // then the client should be created
+        // then the observer should be created
         //
         when:
         session = Mock(Session) { getConfig() >> [tower: [enabled: false]]}
         factory = new TowerFactory(env: [TOWER_WORKSPACE_ID: '100', TOWER_WORKFLOW_ID: '111222333', TOWER_ACCESS_TOKEN: 'xyz'])
-        client = (TowerClient) factory.create(session)[0]
+        observer = (TowerObserver) factory.create(session)[0]
         then:
-        client.getWorkspaceId() == '100'
+        observer.getWorkspaceId() == '100'
     }
 
     @Unroll

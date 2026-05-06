@@ -76,11 +76,13 @@ class OutputDsl {
         }
 
         // print workflow outputs on run completion
-        session.addIgniter {
+        session.workflowMetadata.onComplete {
+            if( !session.isSuccess() )
+                return
             final output = getOutput()
             if( session.outputFormat == 'json' )
                 session.printConsole(DumpHelper.prettyPrintJson(output), true)
-            else
+            else if( session.outputFormat == 'text' )
                 printOutput(session, output)
         }
     }
@@ -104,8 +106,13 @@ class OutputDsl {
     }
 
     private static void printOutput(Session session, Map<String,Object> output) {
+        if( output.size() == 1 && output.keySet().first() == '$out' ) {
+            session.printConsole(output.values().first().toString())
+            return
+        }
         final outputDir = session.outputDir.toUriString()
         final sb = new StringBuilder()
+        sb.append('\n')
         sb.append("Outputs:\n")
         sb.append('\n')
         sb.append("  ${outputDir}\n")

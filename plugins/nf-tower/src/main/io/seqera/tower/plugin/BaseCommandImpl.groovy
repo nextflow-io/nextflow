@@ -19,44 +19,26 @@ package io.seqera.tower.plugin
 import groovy.json.JsonSlurper
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
-import io.seqera.http.HxClient
 import nextflow.Const
+import nextflow.SysEnv
 import nextflow.config.ConfigBuilder
-
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-import java.time.Duration
+import nextflow.util.Duration
 
 @Slf4j
 class BaseCommandImpl {
 
-    private static final int API_TIMEOUT_MS = 10_000
+    protected static final int API_TIMEOUT_MS = 10_000
 
     /**
-     * Provides common API operations for Seqera Platform
-     */
-    protected TowerCommonApi commonApi
-
-    BaseCommandImpl(){
-        this.commonApi = new TowerCommonApi()
-    }
-
-    BaseCommandImpl( TowerCommonApi commonApi ) {
-        this.commonApi = commonApi
-    }
-
-    /**
-     * Creates an HxClient instance with optional authentication token.
+     * Creates a TowerClient instance with optional authentication token.
      *
+     * @param apiUrl Seqera Platform API url
      * @param accessToken Optional personal access token for authentication (PAT)
-     * @return Configured HxClient instance with timeout settings
+     * @return Configured TowerClient instance with timeout settings
      */
     @Memoized
-    protected HxClient createHttpClient(String accessToken = null) {
-        return HxClient.newBuilder()
-            .connectTimeout(Duration.ofMillis(API_TIMEOUT_MS))
-            .bearerToken(accessToken)
-            .build()
+    protected TowerClient createTowerClient(String apiUrl, String accessToken) {
+        return new TowerClient( new TowerConfig( [accessToken: accessToken, endpoint: apiUrl, httpConnectTimeout: Duration.of(API_TIMEOUT_MS)], SysEnv.get()))
     }
 
     /**
@@ -73,69 +55,26 @@ class BaseCommandImpl {
         return builder.buildConfigObject().flatten()
     }
 
-    protected List listUserWorkspaces(HxClient client, String endpoint, String userId) {
-        final url = "${endpoint}/user/${userId}/workspaces"
-        log.debug "Platform list workspaces - GET ${url}"
-        final request = HttpRequest.newBuilder()
-            .uri(URI.create(url))
-            .GET()
-            .build()
-
-        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
-
-        if( response.statusCode() != 200 ) {
-            final error = response.body() ?: "HTTP ${response.statusCode()}"
-            throw new RuntimeException("Failed to get workspaces: ${error}")
-        }
-
-        final json = new JsonSlurper().parseText(response.body()) as Map
-        final orgsAndWorkspaces = json.orgsAndWorkspaces as List
-
-        return orgsAndWorkspaces.findAll { ((Map) it).workspaceId != null }
+    protected List<Map> listUserWorkspaces(TowerClient client, String userId) {
+        return client.listUserWorkspacesAndOrgs(userId).findAll { ((Map) it).workspaceId != null }
     }
 
-    protected List listComputeEnvironments(HxClient client, String endpoint, String workspaceId) {
-        final uri = workspaceId
-            ? "${endpoint}/compute-envs?workspaceId=${workspaceId}"
-            : "${endpoint}/compute-envs"
-        log.debug "Platform list compute env - GET ${uri}"
-
-        final request = HttpRequest.newBuilder()
-            .uri(URI.create(uri))
-            .GET()
-            .build()
-
-        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
-
-        if( response.statusCode() != 200 ) {
-            final error = response.body() ?: "HTTP ${response.statusCode()}"
-            throw new RuntimeException("Failed to get compute environments: ${error}")
+    protected List listComputeEnvironments(TowerClient client, String workspaceId) {
+        try {
+            final json = client.apiGet("/compute-envs", workspaceId ? [workspaceId: workspaceId] : [:])
+            return json.computeEnvs as List ?: []
+        } catch ( Exception e ) {
+             throw new RuntimeException("Failed to get compute environments: ${e.message}", e)
         }
-
-        final json = new JsonSlurper().parseText(response.body()) as Map
-        return json.computeEnvs as List ?: []
     }
 
-    protected Map getComputeEnvironment(HxClient client, String endpoint, String computeEnvId, String workspaceId) {
-        final uri = workspaceId ?
-            "${endpoint}/compute-envs/${computeEnvId}?workspaceId=${workspaceId}" :
-            "${endpoint}/compute-envs"
-        log.debug "Platform get compute env - GET ${uri}"
-
-        final request = HttpRequest.newBuilder()
-            .uri(URI.create(uri))
-            .GET()
-            .build()
-
-        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
-
-        if( response.statusCode() != 200 ) {
-            final error = response.body() ?: "HTTP ${response.statusCode()}"
-            throw new RuntimeException("Failed to get compute environment: ${error}")
+    protected Map getComputeEnvironment(TowerClient client, String computeEnvId, String workspaceId) {
+        try {
+            final json = client.apiGet(workspaceId ? "/compute-envs/${computeEnvId}" : "/compute-envs",  workspaceId ? [workspaceId: workspaceId] : [:])
+            return unifyComputeEnvDescription(json.computeEnv as Map ?: [:])
+        } catch ( Exception e ) {
+             throw new RuntimeException("Failed to get compute environments: ${e.message}", e)
         }
-
-        final json = new JsonSlurper().parseText(response.body()) as Map
-        return unifyComputeEnvDescription(json.computeEnv as Map ?: [:])
     }
 
     private Map unifyComputeEnvDescription(Map computeEnv) {

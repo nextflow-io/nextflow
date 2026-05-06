@@ -76,6 +76,24 @@ class GiteaRepositoryProviderTest extends Specification {
         true        | new ProviderConfig('gitea').setToken('xyz')
     }
 
+    @Unroll
+    def 'should return git credentials' () {
+        given:
+        def provider = new GiteaRepositoryProvider('pditommaso/tutorial', CONFIG)
+
+        when:
+        def credentials = provider.getGitCredentials()
+
+        then:
+        credentials != null
+
+        where:
+        CONFIG                                                                  | _
+        new ProviderConfig('gitea').setUser('foo').setPassword('bar')           | _
+        new ProviderConfig('gitea').setUser('foo').setToken('xyz')              | _
+        new ProviderConfig('gitea').setUser('foo').setPassword('bar').setToken('xyz') | _
+    }
+
     @IgnoreIf({System.getenv('NXF_SMOKE')})
     @Requires({System.getenv('NXF_GITEA_ACCESS_TOKEN')})
     def 'should read file content'() {

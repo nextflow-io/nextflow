@@ -310,7 +310,7 @@ class ScriptLoaderV2Test extends Dsl2Spec {
 
         def TEXT = '''
 
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process hello {
 

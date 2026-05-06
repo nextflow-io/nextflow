@@ -18,6 +18,8 @@ package io.seqera.tower.plugin
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.tower.plugin.fs.SeqeraFileSystemProvider
+import nextflow.file.FileHelper
 import nextflow.plugin.BasePlugin
 import nextflow.cli.PluginExecAware
 import org.pf4j.PluginWrapper
@@ -35,6 +37,12 @@ class TowerPlugin extends BasePlugin implements PluginExecAware {
     TowerPlugin(PluginWrapper wrapper) {
         super(wrapper)
         this.delegate = new CacheCommand()
+    }
+
+    @Override
+    void start() {
+        super.start()
+        FileHelper.getOrInstallProvider(SeqeraFileSystemProvider)
     }
 
 }

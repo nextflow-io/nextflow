@@ -13,14 +13,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package nextflow.script.types;
+package nextflow.script.dsl;
 
-import java.nio.file.Path;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Map;
 
 import nextflow.script.ast.ASTNodeMarker;
-import nextflow.script.dsl.Namespace;
 import org.codehaus.groovy.GroovyBugError;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
@@ -35,19 +35,19 @@ import org.codehaus.groovy.ast.tools.GenericsUtils;
 public class Types {
 
     public static final List<ClassNode> DEFAULT_SCRIPT_IMPORTS = List.of(
-        ClassHelper.makeCached(Bag.class),
-        ClassHelper.makeCached(Channel.class),
-        ClassHelper.makeCached(Duration.class),
-        ClassHelper.makeCached(MemoryUnit.class),
-        ClassHelper.makeCached(Path.class),
-        ClassHelper.makeCached(Value.class),
-        ClassHelper.makeCached(VersionNumber.class)
+        ClassHelper.makeCached(nextflow.script.types.Bag.class),
+        ClassHelper.makeCached(nextflow.script.types.Channel.class),
+        ClassHelper.makeCached(nextflow.script.types.Duration.class),
+        ClassHelper.makeCached(nextflow.script.types.MemoryUnit.class),
+        ClassHelper.makeCached(java.nio.file.Path.class),
+        ClassHelper.makeCached(nextflow.script.types.Value.class),
+        ClassHelper.makeCached(nextflow.script.types.VersionNumber.class)
     );
 
     public static final List<ClassNode> DEFAULT_CONFIG_IMPORTS = List.of(
-        ClassHelper.makeCached(Bag.class),
-        ClassHelper.makeCached(Duration.class),
-        ClassHelper.makeCached(MemoryUnit.class)
+        ClassHelper.makeCached(nextflow.script.types.Bag.class),
+        ClassHelper.makeCached(nextflow.script.types.Duration.class),
+        ClassHelper.makeCached(nextflow.script.types.MemoryUnit.class)
     );
 
     /**
@@ -92,27 +92,27 @@ public class Types {
     private static String closureName(ClassNode type) {
         var mn = ClassHelper.findSAM(type);
         var spec = GenericsUtils.extractPlaceholders(type);
-        var builder = new StringBuilder();
+        var sb = new StringBuilder();
 
         var params = mn.getParameters();
-        builder.append('(');
+        sb.append('(');
         for( int i = 0; i < params.length; i++ ) {
             if( i > 0 )
-                builder.append(", ");
+                sb.append(", ");
             var paramType = specificType(params[i].getType(), spec);
-            builder.append(getName(paramType));
+            sb.append(getName(paramType));
         }
-        builder.append(')');
+        sb.append(')');
 
         var returnType = specificType(mn.getReturnType(), spec);
-        builder.append(" -> ");
-        builder.append(
+        sb.append(" -> ");
+        sb.append(
             ClassHelper.VOID_TYPE.equals(returnType)
                 ? "()"
                 : getName(returnType)
         );
 
-        return builder.toString();
+        return sb.toString();
     }
 
     private static ClassNode specificType(ClassNode type, Map<GenericsType.GenericsTypeName, GenericsType> spec) {
@@ -123,48 +123,68 @@ public class Types {
     }
 
     private static String tupleName(ClassNode type) {
-        var builder = new StringBuilder();
-        builder.append('(');
-        genericsTypeNames(type.getGenericsTypes(), builder);
-        builder.append(')');
-        return builder.toString();
+        var sb = new StringBuilder();
+        sb.append('(');
+        genericsTypeNames(type.getGenericsTypes(), sb);
+        sb.append(')');
+        return sb.toString();
     }
 
     private static String typeName(ClassNode type) {
-        var builder = new StringBuilder();
+        var sb = new StringBuilder();
 
         var placeholder = type.isGenericsPlaceHolder();
         if( placeholder )
-            builder.append(type.getUnresolvedName());
+            sb.append(type.getUnresolvedName());
         else if( type.getNodeMetaData(ASTNodeMarker.FULLY_QUALIFIED) != null )
-            builder.append(type.getName());
+            sb.append(type.getName());
         else if( type.isResolved() )
-            builder.append(getName(type.getTypeClass()));
+            sb.append(getName(type.getTypeClass()));
         else
-            builder.append(getName(type.getNameWithoutPackage()));
+            sb.append(getName(type.getNameWithoutPackage()));
 
         if( !placeholder && type.getGenericsTypes() != null ) {
-            builder.append('<');
-            genericsTypeNames(type.getGenericsTypes(), builder);
-            builder.append('>');
+            sb.append('<');
+            genericsTypeNames(type.getGenericsTypes(), sb);
+            sb.append('>');
         }
 
         if( type.getNodeMetaData(ASTNodeMarker.NULLABLE) != null )
-            builder.append('?');
+            sb.append('?');
 
-        return builder.toString();
+        return sb.toString();
     }
 
-    private static void genericsTypeNames(GenericsType[] genericsTypes, StringBuilder builder) {
+    private static void genericsTypeNames(GenericsType[] genericsTypes, StringBuilder sb) {
         for( int i = 0; i < genericsTypes.length; i++ ) {
             if( i > 0 )
-                builder.append(", ");
-            builder.append(getName(genericsTypes[i].getType()));
+                sb.append(", ");
+            sb.append(getName(genericsTypes[i].getType()));
         }
     }
 
-    public static String getName(Class type) {
+    public static String getName(Type type) {
+        return
+            type instanceof Class c ? getName(c) :
+            type instanceof ParameterizedType pt ? getName(pt) :
+            getName(type.getTypeName());
+    }
+
+    private static String getName(Class type) {
         return getName(type.getSimpleName());
+    }
+
+    private static String getName(ParameterizedType pt) {
+        var sb = new StringBuilder();
+        sb.append(getName(pt.getRawType()));
+        sb.append('<');
+        for( int i = 0; i < pt.getActualTypeArguments().length; i++ ) {
+            if( i > 0 )
+                sb.append(", ");
+            sb.append(getName(pt.getActualTypeArguments()[i]));
+        }
+        sb.append('>');
+        return sb.toString();
     }
 
     public static String getName(String name) {

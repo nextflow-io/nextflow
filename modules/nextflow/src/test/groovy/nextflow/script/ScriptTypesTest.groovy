@@ -16,7 +16,9 @@
 
 package nextflow.script
 
+import java.lang.reflect.ParameterizedType
 import java.nio.file.Files
+import java.nio.file.Path
 
 import nextflow.exception.ScriptCompilationException
 import test.Dsl2Spec
@@ -194,5 +196,50 @@ class ScriptTypesTest extends Dsl2Spec {
 
         cleanup:
         folder?.deleteDir()
+    }
+
+    def 'should expose type annotations via reflection'() {
+        when:
+        def script = loadScript(
+            '''\
+            record Sample {
+                id: String
+                reads: List<Path>
+            }
+            ''',
+            module: true
+        )
+        def meta = ScriptMeta.get(script)
+        def typeDef = meta.getComponent('Sample') as TypeDef
+        def type = typeDef.getTarget()
+        then:
+        type.getField('id').getType() == String
+        type.getField('id').getGenericType() instanceof Class
+        type.getField('id').getGenericType() == String
+        type.getField('reads').getType() == List
+        type.getField('reads').getGenericType() instanceof ParameterizedType
+        type.getField('reads').getGenericType().getRawType() == List
+        type.getField('reads').getGenericType().getActualTypeArguments()[0] instanceof Class
+        type.getField('reads').getGenericType().getActualTypeArguments()[0] == Path
+
+        when:
+        script = loadScript(
+            '''\
+            def greet(message: String, names: List<String>) {
+            }
+            ''',
+            module: true
+        )
+        def method = script.getClass().getDeclaredMethods().find { m -> m.name == 'greet' }
+        def params = method.getParameters()
+        then:
+        params[0].getType() == String
+        params[0].getParameterizedType() instanceof Class
+        params[0].getParameterizedType() == String
+        params[1].getType() == List
+        params[1].getParameterizedType() instanceof ParameterizedType
+        params[1].getParameterizedType().getRawType() == List
+        params[1].getParameterizedType().getActualTypeArguments()[0] instanceof Class
+        params[1].getParameterizedType().getActualTypeArguments()[0] == String
     }
 }

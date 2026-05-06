@@ -16,7 +16,7 @@
 
 package nextflow.module
 
-import nextflow.exception.AbortOperationException
+import org.yaml.snakeyaml.Yaml
 import spock.lang.Specification
 import spock.lang.TempDir
 
@@ -32,46 +32,9 @@ class ModuleSpecTest extends Specification {
     @TempDir
     Path tempDir
 
-    def 'should load valid spec' () {
-        given:
-        def metaYaml = tempDir.resolve('meta.yml')
-        metaYaml.text = '''
-name: nf-core/fastqc
-version: 1.0.0
-description: FastQC quality control
-authors:
-  - John Doe
-license: MIT
-keywords:
-  - quality-control
-  - fastq
-requires:
-  nextflow: ">=24.04.0"
-'''
-
-        when:
-        def spec = ModuleSpec.load(metaYaml)
-
-        then:
-        spec.name == 'nf-core/fastqc'
-        spec.version == '1.0.0'
-        spec.description == 'FastQC quality control'
-        spec.authors == ['John Doe']
-        spec.license == 'MIT'
-        spec.keywords == ['quality-control', 'fastq']
-        spec.requires == ['nextflow': '>=24.04.0']
-    }
-
-    def 'should fail to load non-existent spec' () {
-        given:
-        def metaYaml = tempDir.resolve('meta.yml')
-
-        when:
-        ModuleSpec.load(metaYaml)
-
-        then:
-        thrown(AbortOperationException)
-    }
+    // =========================================================================
+    // Render tests
+    // =========================================================================
 
     def 'should validate complete spec' () {
         given:
@@ -133,79 +96,6 @@ requires:
         '1.0.0.0'       | false
     }
 
-    def 'should return empty input types when file does not exist' () {
-        expect:
-        ModuleSpec.loadInputTypes(tempDir.resolve('nonexistent.yml')) == [:]
-    }
-
-    def 'should return empty input types when no input section' () {
-        given:
-        def metaYaml = tempDir.resolve('meta.yml')
-        metaYaml.text = '''\
-            name: nf-core/fastqc
-            description: FastQC quality control
-            '''.stripIndent()
-        expect:
-        ModuleSpec.loadInputTypes(metaYaml) == [:]
-    }
-
-    def 'should load input types in new module spec format' () {
-        given:
-        def metaYaml = tempDir.resolve('meta.yml')
-        metaYaml.text = '''\
-            name: nf-core/fastqc
-            description: FastQC quality control
-            input:
-            - - name: meta
-                type: map
-                description: Sample metadata
-              - name: reads
-                type: file
-                description: Input reads
-            - name: index
-              type: directory
-              description: Index directory
-            '''.stripIndent()
-        when:
-        def types = ModuleSpec.loadInputTypes(metaYaml)
-
-        then:
-        types == [meta: Map, reads: Path, index: Path]
-    }
-
-    def 'should load input types in old nf-core format' () {
-        given:
-        def metaYaml = tempDir.resolve('meta.yml')
-        metaYaml.text = '''\
-            name: nf-core/fastqc
-            description: FastQC quality control
-            input:
-            - - meta:
-                  type: map
-                  description: Sample metadata
-              - reads:
-                  type: file
-                  description: Input reads
-            - index:
-                type: directory
-                description: Index directory
-            '''.stripIndent()
-        when:
-        def types = ModuleSpec.loadInputTypes(metaYaml)
-
-        then:
-        types == [meta: Map, reads: Path, index: Path]
-    }
-
-    def 'should return empty input types for malformed YAML' () {
-        given:
-        def metaYaml = tempDir.resolve('meta.yml')
-        metaYaml.text = ': invalid: yaml: {'
-
-        expect:
-        ModuleSpec.loadInputTypes(metaYaml) == [:]
-    }
-
     def 'should validate module name format' () {
         given:
         def spec = new ModuleSpec(
@@ -228,11 +118,108 @@ requires:
         'org_1/tool_2'              | true
         'nf-core/gfatools/gfa2fa'   | true   // nested module path
         'myorg/tools/sub/module'    | true   // deeply nested
-        'org.name/tool/sub'         | true   // dot in scope
+        'org.name/tool/sub'         | true   // dot in namespace
         'fastqc'                    | false
         '@nf-core/fastqc'           | false
         'nf-core/fast qc'           | false
         'nf-core/'                  | false  // trailing slash
         '/nf-core/fastqc'           | false  // leading slash
     }
+
+    // =========================================================================
+    // Render tests
+    // =========================================================================
+
+    def 'should render YAML with comment header'() {
+        given:
+        def spec = new ModuleSpec(name: 'my-namespace/fastqc')
+
+        when:
+        def yaml = spec.toYaml()
+
+        then:
+        yaml.startsWith('# This file was auto-generated by `nextflow module spec`.')
+        yaml.contains('# Review and complete all fields marked "TODO" before publishing.')
+    }
+
+    def 'should render TODO list for missing required fields'() {
+        given:
+        def spec = new ModuleSpec(name: 'my-namespace/fastqc')
+        // version, description, license are all missing
+
+        when:
+        def yaml = spec.toYaml()
+
+        then:
+        yaml.contains('# TODO:')
+        yaml.contains('Missing required field: version')
+        yaml.contains('Missing required field: description')
+        yaml.contains('Missing required field: license')
+    }
+
+    def 'should not render TODO list when all required fields are present'() {
+        given:
+        def spec = new ModuleSpec(
+            name: 'nf-core/fastqc',
+            version: '1.0.0',
+            description: 'Run FastQC',
+            license: 'MIT'
+        )
+
+        when:
+        def yaml = spec.toYaml()
+
+        then:
+        !yaml.contains('# TODO:')
+    }
+
+    def 'should omit null fields and include present fields in rendered YAML'() {
+        given:
+        def spec = new ModuleSpec(
+            name: 'nf-core/fastqc',
+            version: '1.0.0',
+            description: 'Run FastQC',
+            license: 'MIT'
+        )
+
+        when:
+        def parsed = new Yaml().load(spec.toYaml()) as Map
+
+        then:
+        parsed['name'] == 'nf-core/fastqc'
+        parsed['version'] == '1.0.0'
+        parsed['description'] == 'Run FastQC'
+        parsed['license'] == 'MIT'
+    }
+
+    def 'should omit input and output sections when empty'() {
+        given:
+        def spec = new ModuleSpec(name: 'my-namespace/simple')
+
+        when:
+        def yaml = spec.toYaml()
+
+        then:
+        !yaml.contains('input:')
+        !yaml.contains('output:')
+        !yaml.contains('topics:')
+    }
+
+    def 'should include passthrough fields when present'() {
+        given:
+        def spec = new ModuleSpec(
+            name: 'nf-core/fastqc',
+            version: '1.0.0',
+            _passthrough: [foo: 'bar']
+        )
+
+        when:
+        def parsed = new Yaml().load(spec.toYaml()) as Map
+
+        then:
+        parsed['name'] == 'nf-core/fastqc'
+        parsed['version'] == '1.0.0'
+        parsed['foo'] == 'bar'
+    }
+
 }

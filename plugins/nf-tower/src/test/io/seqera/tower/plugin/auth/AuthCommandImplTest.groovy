@@ -16,8 +16,7 @@
 
 package io.seqera.tower.plugin.auth
 
-import io.seqera.http.HxClient
-import io.seqera.tower.plugin.TowerCommonApi
+import io.seqera.tower.plugin.TowerClient
 import nextflow.Const
 import nextflow.SysEnv
 import nextflow.util.ColorUtil
@@ -26,7 +25,6 @@ import spock.lang.Specification
 import spock.lang.TempDir
 import test.OutputCapture
 
-import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -43,35 +41,6 @@ class AuthCommandImplTest extends Specification {
     @TempDir
     Path tempDir
 
-
-    def 'should identify cloud endpoints correctly'() {
-        given:
-        def cmd = new AuthCommandImpl()
-
-        expect:
-        cmd.getCloudEndpointInfo('https://api.cloud.seqera.io').isCloud == true
-        cmd.getCloudEndpointInfo('https://api.cloud.seqera.io').auth.domain == 'seqera.eu.auth0.com'
-        cmd.getCloudEndpointInfo('https://api.cloud.stage-seqera.io').isCloud == true
-        cmd.getCloudEndpointInfo('https://api.cloud.stage-seqera.io').auth.domain == 'seqera-stage.eu.auth0.com'
-        cmd.getCloudEndpointInfo('https://api.cloud.dev-seqera.io').isCloud == true
-        cmd.getCloudEndpointInfo('https://api.cloud.dev-seqera.io').auth.domain == 'seqera-development.eu.auth0.com'
-        // Legacy URL format is normalized to standard format
-        cmd.getCloudEndpointInfo('https://cloud.seqera.io/api').isCloud == true
-        cmd.getCloudEndpointInfo('https://cloud.seqera.io/api').endpoint == 'https://api.cloud.seqera.io'
-        cmd.getCloudEndpointInfo('https://cloud.seqera.io/api').auth.domain == 'seqera.eu.auth0.com'
-        cmd.getCloudEndpointInfo('https://enterprise.example.com').isCloud == false
-        cmd.getCloudEndpointInfo('https://enterprise.example.com').auth == null
-    }
-
-    def 'should identify cloud endpoint from URL'() {
-        given:
-        def cmd = new AuthCommandImpl()
-
-        expect:
-        cmd.isCloudEndpoint('https://api.cloud.seqera.io') == true
-        cmd.isCloudEndpoint('https://api.cloud.stage-seqera.io') == true
-        cmd.isCloudEndpoint('https://enterprise.example.com') == false
-    }
 
     def 'should read config correctly'() {
         given:
@@ -681,13 +650,14 @@ param2 = 'value2'"""
         ]
 
         // Mock API calls
-        def commonApi = Mock(TowerCommonApi){
-            getUserInfo(_, _) >> [userName: 'testuser', id: '123']
-            getWorkflowDetails(_, _, _) >> null
+        def client = Mock(TowerClient){
+            getUserInfo() >> [userName: 'testuser', id: '123']
+            getWorkflowDetails(_, _) >> null
         }
-        def cmd = Spy(new AuthCommandImpl(commonApi))
+        def cmd = Spy(new AuthCommandImpl())
+        cmd.createTowerClient(_,_) >> client
         cmd.checkApiConnection(_) >> true
-        cmd.listComputeEnvironments(_, _, _) >> [[name: 'ce_test', platform: 'aws', workDir: 's3://test', primary: true]]
+        cmd.listComputeEnvironments(_, _) >> [[name: 'ce_test', platform: 'aws', workDir: 's3://test', primary: true]]
 
         when:
         def status = cmd.collectStatus(config)
@@ -763,10 +733,11 @@ param2 = 'value2'"""
         def config = ['tower.accessToken': 'invalid-token']
         SysEnv.push([:])  // Isolate from actual environment variables
 
-        def commonApi = Mock(TowerCommonApi){
-            getUserInfo(_, _) >> { throw new RuntimeException('Invalid token') }
+        def client = Mock(TowerClient){
+            getUserInfo() >> { throw new RuntimeException('Invalid token') }
         }
-        def cmd = Spy(new AuthCommandImpl(commonApi))
+        def cmd = Spy(new AuthCommandImpl())
+        cmd.createTowerClient(_,_) >> client
         cmd.checkApiConnection(_) >> true
         when:
         def status = cmd.collectStatus(config)
@@ -820,15 +791,16 @@ param2 = 'value2'"""
             'tower.accessToken': 'test-token',
             'tower.workspaceId': '12345'
         ]
-        def commonApi = Mock(TowerCommonApi){
-            getUserInfo(_, _) >> [userName: 'testuser', id: '123']
-            getUserWorkspaceDetails(_, _, _, _) >> [
+        def client = Mock(TowerClient){
+            getUserInfo() >> [userName: 'testuser', id: '123']
+            getUserWorkspaceDetails(_, _) >> [
                 orgName: 'TestOrg',
                 workspaceName: 'TestWorkspace',
                 workspaceFullName: 'test-org/test-workspace'
             ]
         }
-        def cmd = Spy(new AuthCommandImpl(commonApi))
+        def cmd = Spy(new AuthCommandImpl())
+        cmd.createTowerClient(_,_) >> client
         cmd.checkApiConnection(_) >> true
 
         when:
@@ -846,15 +818,16 @@ param2 = 'value2'"""
     def 'should collect status with workspace ID but no details'() {
         given:
 
-        def commonApi = Mock(TowerCommonApi){
-            getUserInfo(_, _) >> [userName: 'testuser', id: '123']
-            getUserWorkspaceDetails(_, _, _, _) >> null
+        def client = Mock(TowerClient){
+            getUserInfo() >> [userName: 'testuser', id: '123']
+            getUserWorkspaceDetails(_, _) >> null
         }
         def config = [
             'tower.accessToken': 'test-token',
             'tower.workspaceId': '12345'
         ]
-        def cmd = Spy(new AuthCommandImpl(commonApi))
+        def cmd = Spy(new AuthCommandImpl())
+        cmd.createTowerClient(_,_) >> client
         cmd.checkApiConnection(_) >> true
 
         when:
@@ -869,14 +842,15 @@ param2 = 'value2'"""
 
     def 'should collect status from environment variables'() {
         given:
-        def commonApi  = Mock(TowerCommonApi){
-            getUserInfo(_, _) >> [userName: 'envuser', id: '456']
-            getUserWorkspaceDetails(_, _, _, _) >> [:]
+        def client  = Mock(TowerClient){
+            getUserInfo() >> [userName: 'envuser', id: '456']
+            getUserWorkspaceDetails(_, _) >> [:]
         }
         def config = [:]
-        def cmd = Spy(new AuthCommandImpl(commonApi))
+        def cmd = Spy(new AuthCommandImpl())
+        cmd.createTowerClient(_,_) >> client
         cmd.checkApiConnection(_) >> true
-        cmd.listComputeEnvironments(_,_,_) >> []
+        cmd.listComputeEnvironments(_,_) >> []
 
         SysEnv.push(['TOWER_ACCESS_TOKEN': 'env-token',
                      'TOWER_API_ENDPOINT': 'https://env.example.com',
@@ -921,13 +895,13 @@ param2 = 'value2'"""
 
     def 'should collect status with mixed sources'() {
         given:
-        def commonApi = Mock(TowerCommonApi) {
-            getUserInfo(_, _) >> [userName: 'mixeduser', id: '789']
+        def client = Mock(TowerClient) {
+            getUserInfo() >> [userName: 'mixeduser', id: '789']
         }
-        def cmd = Spy(new AuthCommandImpl(commonApi))
+        def cmd = Spy(new AuthCommandImpl())
+        cmd.createTowerClient(_,_) >> client
         def authFile = tempDir.resolve('seqera-auth.config')
         def configFile = tempDir.resolve('config')
-
         cmd.getAuthFile() >> authFile
         cmd.getConfigFile() >> configFile
 
@@ -1028,7 +1002,7 @@ param2 = 'value2'"""
         def authFile = tempDir.resolve('seqera-auth.config-not-exists')
 
         cmd.getAuthFile() >> authFile
-        cmd.performAuth0Login(_, _) >> { /* mock to prevent actual login */ }
+        cmd.performOidcLogin(_) >> { /* mock to prevent actual login */ }
         SysEnv.push(['TOWER_ACCESS_TOKEN': 'env-token'])
 
         when:
@@ -1053,10 +1027,10 @@ param2 = 'value2'"""
         cmd.login('api.cloud.seqera.io')
 
         then:
-        1 * cmd.performAuth0Login('https://api.cloud.seqera.io', _) >> { /* mock to prevent actual login */ }
+        1 * cmd.performOidcLogin('https://api.cloud.seqera.io') >> { /* mock to prevent actual login */ }
     }
 
-    def 'should route to enterprise auth for non-cloud endpoints'() {
+    def 'should use OIDC login for any endpoint'() {
         given:
         def cmd = Spy(AuthCommandImpl)
         def authFile = tempDir.resolve('seqera-auth.config-not-exists')
@@ -1067,23 +1041,7 @@ param2 = 'value2'"""
         cmd.login('https://enterprise.example.com')
 
         then:
-        1 * cmd.handleEnterpriseAuth('https://enterprise.example.com') >> {/* mock to prevent actual login */ }
-        0 * cmd.performAuth0Login(_, _)
-    }
-
-    def 'should route to Auth0 login for cloud endpoints'() {
-        given:
-        def cmd = Spy(AuthCommandImpl)
-        def authFile = tempDir.resolve('seqera-auth.config-not-exists')
-
-        cmd.getAuthFile() >> authFile
-
-        when:
-        cmd.login('https://api.cloud.seqera.io')
-
-        then:
-        1 * cmd.performAuth0Login('https://api.cloud.seqera.io', _) >>  { /* mock to prevent actual login */ }
-        0 * cmd.handleEnterpriseAuth(_)
+        1 * cmd.performOidcLogin('https://enterprise.example.com') >> { /* mock */ }
     }
 
     def 'should save auth to config after successful PAT generation'() {
@@ -1112,70 +1070,19 @@ param2 = 'value2'"""
         content.contains('enabled = true')
     }
 
-    def 'should perform Auth0 request correctly'() {
-        given:
-        def cmd = Spy(AuthCommandImpl)
-
-        cmd.createHttpClient(_) >> {
-            // Mock HxClient that returns successful response
-            def mockClient = Mock(HxClient)
-            def mockResponse = Mock(HttpResponse)
-            mockResponse.statusCode() >> 200
-            mockResponse.body() >> '{"access_token":"test-token","expires_in":3600}'
-            mockClient.send(_, _) >> mockResponse
-            return mockClient
-        }
-
-        def params = [
-            'client_id': 'test-client-id',
-            'scope': 'openid profile'
-        ]
-
-        when:
-        def result = cmd.performAuth0Request('https://auth.example.com/oauth/token', params)
-
-        then:
-        result != null
-        result['access_token'] == 'test-token'
-        result['expires_in'] == 3600
-    }
-
-    def 'should handle Auth0 request errors'() {
-        given:
-        def cmd = Spy(AuthCommandImpl)
-        cmd.createHttpClient(_) >> {
-            def mockClient = Mock(HxClient)
-            def mockResponse = Mock(HttpResponse)
-            mockResponse.statusCode() >> 400
-            mockResponse.body() >> '{"error":"invalid_grant","error_description":"Invalid credentials"}'
-            mockClient.send(_, _) >> mockResponse
-            return mockClient
-        }
-
-        def params = ['client_id': 'test-client-id']
-
-        when:
-        cmd.performAuth0Request('https://auth.example.com/oauth/token', params)
-
-        then:
-        def ex = thrown(RuntimeException)
-        ex.message.contains('invalid_grant')
-        ex.message.contains('Invalid credentials')
-    }
-
     def 'should generate PAT with correct token name'() {
         given:
         def cmd = Spy(AuthCommandImpl)
         def username = System.getProperty('user.name')
-
-        cmd.createHttpClient(_) >> {
-            def mockClient = Mock(HxClient)
-            def mockResponse = Mock(HttpResponse)
-            mockResponse.statusCode() >> 200
-            mockResponse.body() >> '{"accessKey":"generated-pat-123","id":"token-id-456"}'
-            mockClient.send(_, _) >> mockResponse
-            return mockClient
+        def mockApiResponse = Mock(TowerClient.Response){
+            getCode() >> 200
+            getMessage() >> '{"accessKey":"generated-pat-123","id":"token-id-456"}'
         }
+        def mockClient = Mock(TowerClient){
+            sendApiRequest(_,_,_) >> mockApiResponse
+        }
+
+        cmd.createTowerClient(_,_) >> mockClient
 
         when:
         def pat = cmd.generatePAT('auth-token', 'https://api.cloud.seqera.io')
@@ -1188,14 +1095,15 @@ param2 = 'value2'"""
         given:
         def cmd = Spy(AuthCommandImpl)
 
-        cmd.createHttpClient(_) >> {
-            def mockClient = Mock(HxClient)
-            def mockResponse = Mock(HttpResponse)
-            mockResponse.statusCode() >> 401
-            mockResponse.body() >> 'Unauthorized'
-            mockClient.send(_, _) >> mockResponse
-            return mockClient
+        def mockApiResponse = Mock(TowerClient.Response){
+            getCode() >> 401
+            getMessage() >> 'Unauthorized'
         }
+        def mockClient = Mock(TowerClient){
+            sendApiRequest(_,_,_) >> mockApiResponse
+        }
+
+        cmd.createTowerClient(_,_) >> mockClient
 
         when:
         cmd.generatePAT('invalid-token', 'https://api.cloud.seqera.io')
@@ -1205,92 +1113,4 @@ param2 = 'value2'"""
         ex.message.contains('Failed to generate PAT')
     }
 
-    def 'should request device authorization with correct parameters'() {
-        given:
-        def cmd = Spy(AuthCommandImpl)
-        def auth0Config = [
-            domain: 'seqera.eu.auth0.com',
-            clientId: 'test-client-id'
-        ]
-
-        cmd.performAuth0Request(_, _) >> [
-            device_code: 'device-code-123',
-            user_code: 'ABCD-1234',
-            verification_uri: 'https://seqera.eu.auth0.com/activate',
-            interval: 5
-        ]
-
-        when:
-        def result = cmd.requestDeviceAuthorization(auth0Config)
-
-        then:
-        result['device_code'] == 'device-code-123'
-        result['user_code'] == 'ABCD-1234'
-        result['verification_uri'] == 'https://seqera.eu.auth0.com/activate'
-    }
-
-    def 'should poll for device token and return on success'() {
-        given:
-        def cmd = Spy(AuthCommandImpl)
-        def auth0Config = [
-            domain: 'seqera.eu.auth0.com',
-            clientId: 'test-client-id'
-        ]
-
-        // First call returns pending, second call returns token
-        int callCount = 0
-        cmd.performAuth0Request(_, _) >> {
-            if (callCount++ == 0) {
-                throw new RuntimeException('authorization_pending')
-            } else {
-                return [access_token: 'final-token', token_type: 'Bearer']
-            }
-        }
-
-        when:
-        def result = cmd.pollForDeviceToken('device-code-123', 1, auth0Config)
-
-        then:
-        result['access_token'] == 'final-token'
-    }
-
-    def 'should handle expired token during polling'() {
-        given:
-        def cmd = Spy(AuthCommandImpl)
-        def auth0Config = [
-            domain: 'seqera.eu.auth0.com',
-            clientId: 'test-client-id'
-        ]
-
-        cmd.performAuth0Request(_, _) >> {
-            throw new RuntimeException('expired_token')
-        }
-
-        when:
-        cmd.pollForDeviceToken('device-code-123', 1, auth0Config)
-
-        then:
-        def ex = thrown(RuntimeException)
-        ex.message.contains('expired')
-    }
-
-    def 'should handle access denied during polling'() {
-        given:
-        def cmd = Spy(AuthCommandImpl)
-        def auth0Config = [
-            domain: 'seqera.eu.auth0.com',
-            clientId: 'test-client-id'
-        ]
-
-        cmd.performAuth0Request(_, _) >> {
-            throw new RuntimeException('access_denied')
-        }
-
-        when:
-        cmd.pollForDeviceToken('device-code-123', 1, auth0Config)
-
-        then:
-        def ex = thrown(RuntimeException)
-        ex.message.contains('denied')
-    }
 }

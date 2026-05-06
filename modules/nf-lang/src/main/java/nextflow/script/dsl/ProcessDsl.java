@@ -194,6 +194,13 @@ public interface ProcessDsl extends DslScope {
         void fair(Boolean value);
 
         @Description("""
+            The `hints` directive specifies executor-specific hints as key-value pairs. Keys may be namespaced with an `executor/` prefix to target a specific executor.
+
+            [Read more](https://nextflow.io/docs/latest/reference/process.html#hints)
+        """)
+        void hints(Map<String,Object> value);
+
+        @Description("""
             The `label` directive allows you to annotate a process with a mnemonic identifier of your choice.
 
             [Read more](https://nextflow.io/docs/latest/reference/process.html#label)

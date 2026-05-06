@@ -1,5 +1,9 @@
 nf-azure changelog
 ===================
+1.22.2 - 26 Mar 2026
+- Fix netty and jackson vulnerabilities (#6955) [8dafdd95d]
+- Fix security vulnerabilities (#6938) [8b1ab40c4]
+
 1.22.1 - 17 Mar 2026
 - Record types (#6679) [d54ff29af]
 

@@ -50,7 +50,6 @@ class NextflowMeta {
         @Deprecated boolean strict
         boolean recursion
         boolean moduleBinaries
-        boolean types
 
         void setRecursion(Boolean recursion) {
             if( recursion )

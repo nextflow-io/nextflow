@@ -69,8 +69,7 @@ public class WorkflowNode extends MethodNode {
         if( emits.size() == 1 ) {
             var first = emits.get(0);
             var emit = ((ExpressionStatement) first).getExpression();
-            if( emitTarget(emit) == null )
-                return emit.getType();
+            return emit.getType();
         }
         var cn = new ClassNode(Record.class);
         emits.stream()

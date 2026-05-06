@@ -27,10 +27,6 @@ tools/*
 tests_other
 other
 docs/_build/
-docs/.docusaurus
-docs/build
-docs/node_modules
-docs/.cache-loader
 ./*.txt
 errors/
 misc/
@@ -50,4 +46,3 @@ plugins-prod
 /results
 /x/*
 mise.toml
-.netlify
