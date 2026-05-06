@@ -30,10 +30,13 @@ import org.eclipse.jgit.errors.RepositoryNotFoundException
 import org.eclipse.jgit.internal.storage.file.FileRepository
 import org.eclipse.jgit.lib.Constants
 import org.eclipse.jgit.lib.Ref
+import org.eclipse.jgit.lib.RefUpdate
 import org.eclipse.jgit.lib.Repository
 import org.eclipse.jgit.lib.SubmoduleConfig
 import org.eclipse.jgit.storage.file.FileRepositoryBuilder
+import org.eclipse.jgit.transport.FetchResult
 import org.eclipse.jgit.transport.RefSpec
+import org.eclipse.jgit.transport.TrackingRefUpdate
 
 /**
  * Multi-revision repository strategy that uses a bare repository with shared clones.
@@ -183,7 +186,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         if( provider.hasCredentials() ) {
             fetch.setCredentialsProvider(provider.getGitCredentials())
         }
-        fetch.call()
+        verifyFetchResult(fetch.call(), updateRevision, "bare repo")
     }
 
     private void createBareRepo(Manifest manifest) {
@@ -323,7 +326,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
                 .setRefSpecs(refSpecForName(downloadRevision))
             if( recurseSubmodules )
                 fetch.setRecurseSubmodules(SubmoduleConfig.FetchRecurseSubmodulesMode.YES)
-            fetch.call()
+            verifyFetchResult(fetch.call(), downloadRevision, "shared clone")
             getCommitGit().checkout().setName(downloadRevision).call()
 
         } catch( Throwable t ) {
@@ -341,7 +344,8 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         final branchName = "refs/heads/$revision".toString()
         final branch = getBareGit().getRepository().findRef(branchName)
         if( branch != null ) {
-            return new RefSpec("$branchName:$branchName")
+            // force-update: branches are mutable and may be force-pushed remotely
+            return new RefSpec("+$branchName:$branchName")
         }
 
         // Check if it's a local tag
@@ -356,7 +360,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
 
         // Is it a remote branch?
         if( remoteRefs.containsKey(branchName) ) {
-            return new RefSpec("$branchName:$branchName")
+            return new RefSpec("+$branchName:$branchName")
         }
 
         // Is it a remote tag?
@@ -366,6 +370,22 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
 
         // Assume it's a commit SHA
         return new RefSpec("$revision:$tagName")
+    }
+
+    private void verifyFetchResult(FetchResult result, String revision, String repoLabel) {
+        for( TrackingRefUpdate update : result.getTrackingRefUpdates() ) {
+            final r = update.result
+            final detail = "${project} [revision: $revision]: ${update.localName} <- ${update.remoteName} => $r (old=${update.oldObjectId?.name()}, new=${update.newObjectId?.name()})"
+            if( r == RefUpdate.Result.FORCED ) {
+                log.warn "Non-fast-forward (force) update on $repoLabel for $detail"
+            }
+            else if( r == RefUpdate.Result.NEW || r == RefUpdate.Result.FAST_FORWARD || r == RefUpdate.Result.NO_CHANGE ) {
+                log.debug "${repoLabel.capitalize()} fetch update for $detail"
+            }
+            else {
+                throw new AbortOperationException("Unable to update revision '${revision}' in $repoLabel for ${project}: ${update.localName} => $r")
+            }
+        }
     }
 
     @Override
