@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,6 +49,8 @@ class ConfigParserV2 implements ConfigParser {
 
     private boolean stripSecrets
 
+    private boolean ansiLog
+
     private List<String> appliedProfiles
 
     private Set<String> declaredProfiles = []
@@ -84,6 +86,12 @@ class ConfigParserV2 implements ConfigParser {
     @Override
     ConfigParserV2 setStripSecrets(boolean value) {
         this.stripSecrets = value
+        return this
+    }
+
+    @Override
+    ConfigParserV2 setAnsiLog(boolean value) {
+        this.ansiLog = value
         return this
     }
 
@@ -157,7 +165,7 @@ class ConfigParserV2 implements ConfigParser {
 
     private void printErrors(Path path) {
         final source = compiler.getSource()
-        final errorListener = new StandardErrorListener('full', false)
+        final errorListener = new StandardErrorListener('full', ansiLog)
         println()
         errorListener.beforeErrors()
         for( final message : compiler.getErrors() ) {

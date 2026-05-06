@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package io.seqera.wave.plugin.resolver
@@ -46,7 +45,7 @@ import nextflow.util.SysHelper
 class WaveContainerResolver implements ContainerResolver {
 
     private DefaultContainerResolver defaultResolver = new DefaultContainerResolver()
-    static final private List<String> DOCKER_LIKE = ['docker','podman','sarus']
+    static final private List<String> DOCKER_LIKE = ['docker','podman','sarus','apple-container']
     static final private List<String> SINGULARITY_LIKE = ['singularity','apptainer']
     static final private String DOCKER_PREFIX = 'docker://'
     private WaveClient client0

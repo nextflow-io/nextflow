@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.seqera.tower.plugin
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*
@@ -13,6 +29,7 @@ import io.seqera.tower.plugin.exception.UnauthorizedException
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.exception.AbortRunException
 import nextflow.script.WorkflowMetadata
 import nextflow.serde.gson.InstantAdapter
 import spock.lang.Shared
@@ -54,6 +71,7 @@ class TowerFusionEnvTest extends Specification {
 
     def 'should return the endpoint from the config'() {
         given: 'a session'
+        SysEnv.push(['TOWER_API_ENDPOINT': 'https://tower.nf', 'TOWER_ACCESS_TOKEN': 'abc123'])
         Global.session = Mock(Session) {
             config >> [
                 tower: [
@@ -67,11 +85,13 @@ class TowerFusionEnvTest extends Specification {
 
         then: 'the endpoint has the expected value'
         provider.endpoint == 'https://tower.nf'
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should return the endpoint from the environment'() {
         setup:
-        SysEnv.push(['TOWER_API_ENDPOINT': 'https://tower.nf'])
+        SysEnv.push(['TOWER_API_ENDPOINT': 'https://tower.nf', 'TOWER_ACCESS_TOKEN': 'abc123'])
         Global.session = Mock(Session) {
             config >> [:]
         }
@@ -87,6 +107,7 @@ class TowerFusionEnvTest extends Specification {
     }
 
     def 'should return the default endpoint'() {
+        SysEnv.push(['TOWER_ACCESS_TOKEN': 'abc123'])
         when: 'session config is empty'
         Global.session = Mock(Session) {
             config >> [
@@ -161,6 +182,9 @@ class TowerFusionEnvTest extends Specification {
 
         then: 'the endpoint has the expected value'
         provider.endpoint == TowerClient.DEF_ENDPOINT_URL
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should return the access token from the config'() {
@@ -233,7 +257,8 @@ class TowerFusionEnvTest extends Specification {
         def provider = new TowerFusionToken()
 
         then: 'the access token has the expected value'
-        provider.accessToken == null
+        def e = thrown(AbortRunException)
+        e.message.contains("Missing Seqera Platform access token")
 
         cleanup:
         SysEnv.pop()
@@ -291,8 +316,8 @@ class TowerFusionEnvTest extends Specification {
                 )
         )
         and:
-        def client = TowerFactory.client(session, SysEnv.get())
-        client.onFlowCreate(session)
+        def observer = new TowerFactory().create(session)[0]
+        observer.onFlowCreate(session)
 
         and: 'a mock endpoint returning a valid token'
         final now = Instant.now()
@@ -355,7 +380,7 @@ class TowerFusionEnvTest extends Specification {
                 )
         )
         and:
-        def client = TowerFactory.client(session, SysEnv.get())
+        def client = new TowerFactory().create(session)[0]
         client.onFlowCreate(session)
 
         and: 'a mock endpoint returning a valid token'
@@ -423,7 +448,7 @@ class TowerFusionEnvTest extends Specification {
                 )
         )
         and:
-        def client = TowerFactory.client(session, SysEnv.get())
+        def client = new TowerFactory().create(session)[0]
         client.onFlowCreate(session)
 
         and: 'prepare stubs'
@@ -485,7 +510,7 @@ class TowerFusionEnvTest extends Specification {
         cleanup:
         SysEnv.pop()
     }
-    
+
     def 'should throw UnauthorizedException if getting a token fails with 401'() {
         given: 'a TowerFusionEnv provider'
         def config = [
@@ -515,7 +540,7 @@ class TowerFusionEnvTest extends Specification {
                 )
         )
         and:
-        def client = TowerFactory.client(session, SysEnv.get())
+        def client = new TowerFactory().create(session)[0]
         client.onFlowCreate(session)
         and: 'a mock endpoint returning an error'
         wireMockServer.stubFor(

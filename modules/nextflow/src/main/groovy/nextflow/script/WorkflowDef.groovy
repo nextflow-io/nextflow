@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -146,7 +146,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
             final targetName = emissions[i]
             if( !binding.hasVariable(targetName) )
                 throw new MissingValueException("Missing workflow output parameter: $targetName")
-            final obj = binding.getVariable(targetName)
+            final obj = DataflowTypeHelper.normalizeV1(binding.getVariable(targetName))
 
             if( CH.isChannel(obj) ) {
                 channels.put(targetName, target(i, obj))

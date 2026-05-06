@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,35 +54,35 @@ class CmdView extends CmdBase {
     @Override
     void run() {
         Plugins.init()
-        final manager = new AssetManager(args[0], revision)
-        if( !manager.isLocal() )
-            throw new AbortOperationException("Unknown project `${manager.getProjectWithRevision()}`")
-        if( revision && manager.isUsingLegacyStrategy()){
-            log.warn("The local asset ${args[0]} does not support multi-revision - 'revision' option is ignored\n" +
-                "Consider updating the asset using 'nextflow pull ${args[0]} -r $revision -migrate'")
-        }
-        if( all ) {
-            if( !quiet )
-                println "== content of path: ${manager.localPath}"
+        try (final manager = new AssetManager(args[0], revision)) {
+            if( !manager.isLocal() )
+                throw new AbortOperationException("Unknown project `${manager.getProjectWithRevision()}`")
+            if( revision && manager.isUsingLegacyStrategy()){
+                log.warn("The local asset ${args[0]} does not support multi-revision - 'revision' option is ignored\n" +
+                    "Consider updating the asset using 'nextflow pull ${args[0]} -r $revision -migrate'")
+            }
+            if( all ) {
+                if( !quiet )
+                    println "== content of path: ${manager.localPath}"
 
-            manager.localPath.eachFile { File it ->
-                println it.name
+                manager.localPath.eachFile { File it ->
+                    println it.name
+                }
+            }
+
+            else {
+                /*
+                 * prints the script main file
+                 */
+                final script = manager.getMainScriptFile()
+                if( !script.exists() )
+                    throw new AbortOperationException("Missing script file: '${script}'")
+
+                if( !quiet )
+                    println "== content of file: $script"
+
+                script.readLines().each { println it }
             }
         }
-
-        else {
-            /*
-             * prints the script main file
-             */
-            final script = manager.getMainScriptFile()
-            if( !script.exists() )
-                throw new AbortOperationException("Missing script file: '${script}'")
-
-            if( !quiet )
-                println "== content of file: $script"
-
-            script.readLines().each { println it }
-        }
-
     }
 }

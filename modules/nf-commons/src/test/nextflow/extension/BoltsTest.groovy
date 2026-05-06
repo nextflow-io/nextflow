@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -146,7 +146,7 @@ class BoltsTest extends Specification {
     }
 
     def testAsURL() {
-        expect: 
+        expect:
         'http://foo.com' as URL == new URL('http://foo.com')
         'http://foo.com/some/file.txt' as URL == new URL('http://foo.com/some/file.txt')
     }
@@ -393,7 +393,7 @@ class BoltsTest extends Specification {
         def merge = Bolts.deepMerge(origMap, newMap)
 
         then:
-        merge.foo == 1 
+        merge.foo == 1
         merge.bar.x == 4
         merge.bar.y == 3
         merge.bar.z == 5

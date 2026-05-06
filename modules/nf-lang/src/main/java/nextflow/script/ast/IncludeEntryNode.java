@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 package nextflow.script.ast;
 
 import org.codehaus.groovy.ast.ASTNode;
-import org.codehaus.groovy.ast.MethodNode;
+import org.codehaus.groovy.ast.AnnotatedNode;
 
 /**
  * An included process, workflow, or function.
@@ -40,13 +40,13 @@ public class IncludeEntryNode extends ASTNode {
         return alias != null ? alias : name;
     }
 
-    private MethodNode target;
+    private AnnotatedNode target;
 
-    public void setTarget(MethodNode target) {
+    public void setTarget(AnnotatedNode target) {
         this.target = target;
     }
 
-    public MethodNode getTarget() {
+    public AnnotatedNode getTarget() {
         return target;
     }
 }

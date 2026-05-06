@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,9 +15,6 @@
  */
 package nextflow.script.types;
 
-import java.nio.file.Path;
-import java.util.Collection;
-import java.util.List;
 import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -29,6 +26,7 @@ import groovy.transform.NamedParam;
 import groovy.transform.NamedParams;
 import nextflow.script.dsl.Description;
 import nextflow.script.dsl.Operator;
+import nextflow.script.types.Record;
 
 @Description("""
     A channel is an asynchronous sequence of values. It is used to facilitate dataflow logic in a workflow.
@@ -39,378 +37,120 @@ public interface Channel<E> {
 
     @Operator
     @Description("""
-        The `branch` operator forwards each value from a source channel to one of multiple output channels, based on a selection criteria.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#branch)
-    """)
-    Record branch(Function<E,?> closure);
-
-    @Operator
-    @Description("""
-        The `buffer` operator collects values from a source channel into subsets and emits each subset separately.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#buffer)
-    """)
-    Channel<?> buffer(Closure openingCondition, Closure closingCondition);
-
-    @Operator
-    @Description("""
-        The `collate` operator collects values from a source channel into groups of *N* values.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#collate)
-    """)
-    Channel<?> collate(int size, int step, boolean remainder);
-
-    @Operator
-    @Description("""
         The `collect` operator collects all values from a source channel into a list and emits it as a single value.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#collect)
+        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#collect)
     """)
     Value<Bag<E>> collect();
 
     @Operator
     @Description("""
-        The `collectFile` operator collects the values from a source channel and saves them to one or more files, emitting the collected file(s).
+        The `combine` operator emits every pairwise combination of two channels.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#collectfile)
+        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#combine)
     """)
-    Channel<?> collectFile(Map<String,?> opts, Closure closure);
-    Channel<?> collectFile(Closure closure);
+    Channel<Tuple> combine(Channel right);
+    Channel<Tuple> combine(Value right);
 
     @Operator
     @Description("""
-        The `combine` operator produces the combinations (i.e. cross product, “Cartesian” product) of two source channels, or a channel and a list (as the right operand), emitting each combination separately.
+        When the `combine` operator is called on a channel of records with named arguments, the named arguments are appended to each record in the source channel. Each named argument can be a value or dataflow value.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#combine)
+        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#combine)
     """)
-    Channel<Tuple> combine(
-        @NamedParams({
-            @NamedParam(value = "by")
-        })
-        Map<String,?> opts,
-        Channel<?> right
-    );
-    Channel<Tuple> combine(Channel<?> right);
-    Channel<Tuple> combine(Value<?> right);
-    Channel<Tuple> combine(Collection right);
+    Channel<Record> combine(Map<String,?> fields);
 
     @Operator
     @Description("""
-        The `concat` operator emits the values from two or more source channels into a single output channel. Each source channel is emitted in the order in which it was specified.
+        The `filter` operator emits the values from a source channel that satisfy a condition, discarding all other values.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#concat)
-    """)
-    Channel<E> concat(Channel... others);
-
-    @Operator
-    @Description("""
-        The `count` operator computes the total number of values from a source channel and emits it.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#count)
-    """)
-    Value<Integer> count();
-
-    @Operator
-    @Description("""
-        The `cross` operator emits every pairwise combination of two channels for which the pair has a matching key.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#cross)
-    """)
-    Channel<Tuple> cross(Channel<?> right);
-
-    @Operator
-    @Description("""
-        The `distinct` operator forwards a source channel with consecutively repeated values removed, such that each emitted value is different from the preceding one.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#distinct)
-    """)
-    Channel<E> distinct();
-
-    @Operator
-    @Description("""
-        When the pipeline is executed with the `-dump-channels` command-line option, the `dump` operator prints each value in a source channel, otherwise it does nothing.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#dump)
-    """)
-    Channel<E> dump(Map<String,?> opts);
-    Channel<E> dump();
-
-    @Operator
-    @Description("""
-        The `filter` operator emits the values from a source channel that satisfy a condition, discarding all other values. The filter condition can be a literal value, a regular expression, a type qualifier, or a boolean predicate.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#filter)
+        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#filter)
     """)
     Channel<E> filter(Predicate<E> condition);
 
     @Operator
     @Description("""
-        The `first` operator emits the first value from a source channel, or the first value that satisfies a condition. The condition can be a regular expression, a type qualifier (i.e. Java class), or a boolean predicate.
+        The `flatMap` operator applies a mapping function to each value from a source channel. The mapping function should return a collection, and each element in the collection is emitted separately.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#first)
-    """)
-    Value<E> first(Predicate<E> criteria);
-    Value<E> first();
-
-    @Operator
-    @Description("""
-        The `flatMap` operator applies a mapping function to each value from a source channel.
-        
-        When the mapping function returns a list, each element in the list is emitted separately. When the mapping function returns a map, each key-value pair in the map is emitted separately.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#flatmap)
+        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#flatmap)
     """)
     <R> Channel<R> flatMap(Function<E,Iterable<R>> transform);
+    <R> Channel<R> flatMap();
 
     @Operator
     @Description("""
-        The `flatten` operator flattens each value from a source channel that is a list or other collection, such that each element in each collection is emitted separately. Deeply nested collections are also flattened.
+        The `groupBy` operator collects values from a source channel into groups based on a grouping key. A tuple is emitted for each group containing the grouping key and collection of values.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#flatten)
+        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#groupby)
     """)
-    Channel<?> flatten();
+    Channel<Tuple> groupBy();
 
     @Operator
     @Description("""
-        The `groupTuple` operator collects tuples from a source channel into groups based on a grouping key. A new tuple is emitted for each distinct key.
+        The `join` operator emits the relational join of two source channels using a matching key.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#grouptuple)
+        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#join)
     """)
-    Channel<Tuple> groupTuple(
+    Channel<Record> join(
         @NamedParams({
-            @NamedParam(value = "by"),
-            @NamedParam(value = "remainder", type = Boolean.class),
-            @NamedParam(value = "size", type = Integer.class),
-            @NamedParam(value = "sort")
-        })
-        Map<String,?> opts
-    );
-    Channel<Tuple> groupTuple();
-
-    @Operator
-    @Description("""
-        The `ifEmpty` operator emits a source channel, or a default value if the source channel is empty.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#ifempty)
-    """)
-    Channel<?> ifEmpty(Object value);
-
-    @Operator
-    @Description("""
-        The `join` operator emits the inner product of two source channels using a matching key.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#join)
-    """)
-    Channel<Tuple> join(
-        @NamedParams({
-            @NamedParam(value = "by"),
-            @NamedParam(value = "failOnDuplicate", type = Boolean.class),
-            @NamedParam(value = "failOnMismatch", type = Boolean.class),
+            @NamedParam(value = "by", type = String.class),
             @NamedParam(value = "remainder", type = Boolean.class)
         })
         Map<String,?> opts,
-        Channel<Tuple> right
+        Channel<Record> right
     );
-    Channel<Tuple> join(Channel<Tuple> right);
-
-    @Operator
-    @Description("""
-        The `last` operator emits the last value from a source channel.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#last)
-    """)
-    Value<E> last();
 
     @Operator
     @Description("""
         The `map` operator applies a mapping function to each value from a source channel.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#map)
+        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#map)
     """)
     <R> Channel<R> map(Function<E,R> transform);
 
     @Operator
     @Description("""
-        The `max` operator emits the item with the greatest value from a source channel.
+        The `mix` operator emits the values from two source channels into a single output channel.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#max)
+        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#mix)
     """)
-    Value<E> max(Closure comparator);
+    Channel<E> mix(Channel<E> other);
+    Channel<E> mix(Value<E> other);
 
     @Operator
     @Description("""
-        The `merge` operator joins the values from two or more channels into a new channel.
+        The `reduce` operator applies an accumulator function sequentially to each value from a source channel, and emits the accumulated value.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#merge)
-    """)
-    Channel<?> merge(Channel... others);
+        The accumulator function takes two parameters -- the accumulated value and the *i*-th emitted value -- and it should return the accumulated result, which is passed to the next invocation with the *i+1*-th value. This process is repeated for each value in the source channel.
 
-    @Operator
-    @Description("""
-        The `min` operator emits the item with the lowest value from a source channel.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#min)
-    """)
-    Value<E> min(Closure comparator);
-
-    @Operator
-    @Description("""
-        The `mix` operator emits the values from two or more source channels into a single output channel.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#mix)
-    """)
-    Channel<E> mix(Channel<E>... others);
-
-    @Operator
-    @Description("""
-        The `multiMap` operator applies a set of mapping functions to a source channel, producing a separate output channel for each mapping function.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#multimap)
-    """)
-    Record multiMap(Function<E,?> closure);
-
-    @Operator
-    @Description("""
-        The `randomSample` operator emits a randomly-selected subset of values from a source channel.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#randomsample)
-    """)
-    Channel<E> randomSample(int n, Long seed);
-
-    @Operator
-    @Description("""
-        The `reduce` operator applies an accumulator function sequentially to each value from a source channel, and emits the accumulated value. The accumulator function takes two parameters -- the accumulated value and the *i*-th emitted value -- and it should return the accumulated result, which is passed to the next invocation with the *i+1*-th value. This process is repeated for each value in the source channel.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#reduce)
+        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#reduce)
     """)
     <R> Value<R> reduce(R seed, BiFunction<R,E,R> accumulator);
-    <R> Value<R> reduce(BiFunction<R,E,R> accumulator);
+    Value<E> reduce(BiFunction<E,E,E> accumulator);
 
     @Operator
     @Description("""
-        The `set` operator assigns a source channel to a variable, whose name is specified in a closure.
+        The `subscribe` operator performs an action for each value in a source channel.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#set)
-    """)
-    void set(Closure holder);
-
-    @Operator
-    @Description("""
-        The `splitCsv` operator parses and splits [CSV-formatted](http://en.wikipedia.org/wiki/Comma-separated_values) text from a source channel into records, or groups of records with a given size.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#splitcsv)
-    """)
-    Channel<?> splitCsv(Map<String,?> opts);
-    Channel<?> splitCsv();
-
-    @Operator
-    @Description("""
-        The `splitFasta` operator splits [FASTA formatted](http://en.wikipedia.org/wiki/FASTA_format) text from a source channel into individual sequences.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#splitfasta)
-    """)
-    Channel<?> splitFasta(Map<String,?> opts);
-    Channel<?> splitFasta();
-
-    @Operator
-    @Description("""
-        The `splitFastq` operator splits [FASTQ formatted](http://en.wikipedia.org/wiki/FASTQ_format) text from a source channel into individual sequences.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#splitfastq)
-    """)
-    Channel<?> splitFastq(Map<String,?> opts);
-    Channel<?> splitFastq();
-
-    @Operator
-    @Description("""
-        The splitJson operator splits JSON files or text from a source channel into individual records.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#splitjson)
-    """)
-    Channel<?> splitJson(Map<String,?> opts);
-    Channel<?> splitJson();
-
-    @Operator
-    @Description("""
-        The `splitText` operator splits multi-line text content from a source channel into chunks of *N* lines.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#splittext)
-    """)
-    Channel<?> splitText(Map<String,?> opts);
-    Channel<?> splitText();
-
-    @Operator
-    @Description("""
-        The `subscribe` operator invokes a custom function for each value in a source channel.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#subscribe)
+        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#subscribe)
     """)
     void subscribe(Consumer<E> action);
-
-    @Operator
-    @Description("""
-        The `sum` operator emits the sum of all values in a source channel.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#sum)
-    """)
-    Value<?> sum(Closure transform);
-
-    @Operator
-    @Description("""
-        The `take` operator takes the first *N* values from a source channel.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#take)
-    """)
-    Channel<E> take(int n);
-
-    @Operator
-    @Description("""
-        The `tap` operator assigns a source channel to a variable, whose name is specified in a closure.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#tap)
-    """)
-    Channel<?> tap(Closure holder);
-
-    @Operator
-    @Description("""
-        The `toList` operator collects all the values from a source channel into a list and emits the list as a single value.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#to;ist)
-    """)
-    Value<?> toList();
-
-    @Operator
-    @Description("""
-        The `toSortedList` operator collects all the values from a source channel into a sorted list and emits the list as a single value.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#tosortedlist)
-    """)
-    Value<?> toSortedList();
-
-    @Operator
-    @Description("""
-        The `transpose` operator transposes each tuple from a source channel by flattening any nested list in each tuple, emitting each nested value separately.
-
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#transpose)
-    """)
-    Channel<?> transpose(Map<String,?> opts);
-    Channel<?> transpose();
+    void subscribe(Map<String,Consumer<E>> events);
 
     @Operator
     @Description("""
         The `unique` operator emits the unique values from a source channel.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#unique)
+        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#unique)
     """)
-    Channel<E> unique(Closure comparator);
+    Channel<E> unique(Function<E,?> transform);
     Channel<E> unique();
 
     @Operator
     @Description("""
         The `until` operator emits each value from a source channel until a stopping condition is satisfied.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#until)
+        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#until)
     """)
     Channel<E> until(Predicate<E> condition);
 
@@ -418,9 +158,37 @@ public interface Channel<E> {
     @Description("""
         The `view` operator prints each value from a source channel to standard output.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator.html#view)
+        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#view)
     """)
+    Channel<E> view(Map<String,?> opts, Function<E,String> transform);
     Channel<E> view(Function<E,String> transform);
+    Channel<E> view(Map<String,?> opts);
     Channel<E> view();
+
+    // legacy operators
+
+    @Deprecated @Operator Record branch(Closure closure);
+    @Deprecated @Operator Channel collectFile(Map<String,?> opts, Closure closure);
+    @Deprecated @Operator Channel collectFile(Closure closure);
+    @Deprecated @Operator Value count();
+    @Deprecated @Operator Channel cross(Channel right);
+    @Deprecated @Operator Channel dump(Map<String,?> opts);
+    @Deprecated @Operator Channel dump();
+    @Deprecated @Operator Channel flatten();
+    @Deprecated @Operator Channel groupTuple(Map<String,?> opts);
+    @Deprecated @Operator Channel ifEmpty(Object value);
+    @Deprecated @Operator Value<E> max(Closure comparator);
+    @Deprecated @Operator Value<E> min(Closure comparator);
+    @Deprecated @Operator Record multiMap(Closure closure);
+    @Deprecated @Operator Channel splitCsv(Map<String,?> opts);
+    @Deprecated @Operator Channel splitCsv();
+    @Deprecated @Operator Channel splitText(Map<String,?> opts);
+    @Deprecated @Operator Channel splitText();
+    @Deprecated @Operator Value sum(Closure transform);
+    @Deprecated @Operator Channel take(int n);
+    @Deprecated @Operator Value toList();
+    @Deprecated @Operator Value toSortedList();
+    @Deprecated @Operator Channel transpose(Map<String,?> opts);
+    @Deprecated @Operator Channel transpose();
 
 }

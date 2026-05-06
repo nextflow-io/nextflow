@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +27,7 @@ import nextflow.script.namespaces.ChannelNamespace;
 import nextflow.script.namespaces.LogNamespace;
 import nextflow.script.namespaces.NextflowNamespace;
 import nextflow.script.namespaces.WorkflowNamespace;
+import nextflow.script.types.Record;
 import nextflow.script.types.Tuple;
 
 /**
@@ -193,6 +194,11 @@ public interface ScriptDsl extends DslScope {
         Print a value to standard output with a newline.
     """)
     void println(Object value);
+
+    @Description("""
+        Create a record from the given named arguments.
+    """)
+    Record record(Map<String,?> opts);
 
     @Description("""
         Send an email.

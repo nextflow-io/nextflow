@@ -1,5 +1,5 @@
 /*
- * Copyright 2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,7 @@
  */
 package nextflow.script.control;
 
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -32,14 +33,20 @@ import nextflow.script.ast.ParamNodeV1;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ProcessNodeV1;
 import nextflow.script.ast.ProcessNodeV2;
+import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
+import nextflow.script.dsl.Nullable;
 import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.ClassHelper;
+import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.CodeVisitorSupport;
+import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.VariableScope;
+import org.codehaus.groovy.ast.expr.ArgumentListExpression;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
 import org.codehaus.groovy.ast.expr.DeclarationExpression;
 import org.codehaus.groovy.ast.expr.Expression;
@@ -89,12 +96,17 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         if( moduleNode == null )
             return;
 
+        if( moduleNode.isTypingEnabled() )
+            moduleNode.addStatement(stmt(callThisX("enableTyping", new ArgumentListExpression())));
+
         var declarations = moduleNode.getDeclarations();
 
         declarations.sort(Comparator.comparing(node -> node.getLineNumber()));
 
         for( var decl : declarations ) {
-            if( decl instanceof FeatureFlagNode ffn )
+            if( decl instanceof ClassNode cn && cn.isEnum() )
+                visitEnum(cn);
+            else if( decl instanceof FeatureFlagNode ffn )
                 visitFeatureFlag(ffn);
             else if( decl instanceof FunctionNode fn )
                 visitFunction(fn);
@@ -108,6 +120,8 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
                 visitParamV1(pn);
             else if( decl instanceof ProcessNode pn )
                 visitProcess(pn);
+            else if( decl instanceof RecordNode rn )
+                visitRecord(rn);
             else if( decl instanceof WorkflowNode wn )
                 visitWorkflow(wn);
         }
@@ -118,6 +132,10 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitFeatureFlag(FeatureFlagNode node) {
+        // static typing is enabled per-script rather than globally
+        if( "nextflow.enable.types".equals(node.name) )
+            return;
+
         var names = node.name.split("\\.");
         Expression target = varX(DefaultGroovyMethods.head(names));
         for( var name : DefaultGroovyMethods.tail(names) )
@@ -146,20 +164,37 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitParams(ParamBlockNode node) {
+        var paramsType = new RecordNode(packageName(moduleNode) + "." + "__Params");
+        for( var param : node.declarations ) {
+            var fn = new FieldNode(
+                param.getName(),
+                Modifier.PUBLIC,
+                param.getType(),
+                paramsType,
+                param.getInitialExpression()
+            );
+            paramsType.addField(fn);
+        }
+        moduleNode.addClass(paramsType);
+
         var statements = Arrays.stream(node.declarations)
             .map((param) -> {
-                var name = constX(param.getName());
-                var type = classX(param.getType());
-                var optional = constX(type.getNodeMetaData(ASTNodeMarker.NULLABLE) != null);
+                var name = param.getName();
+                var optional = param.getType().getNodeMetaData(ASTNodeMarker.NULLABLE) != null;
                 var arguments = param.hasInitialExpression()
-                    ? args(name, type, optional, param.getInitialExpression())
-                    : args(name, type, optional);
+                    ? args(constX(name), constX(optional), param.getInitialExpression())
+                    : args(constX(name), constX(optional));
                 return stmt(callThisX("declare", arguments));
             })
             .toList();
         var closure = closureX(block(new VariableScope(), statements));
-        var result = stmt(callThisX("params", args(closure)));
+        var result = stmt(callThisX("params", args(classX(paramsType), closure)));
         moduleNode.addStatement(result);
+    }
+
+    private static String packageName(ScriptNode moduleNode) {
+        var scriptClass = moduleNode.getClasses().get(0);
+        return scriptClass.getNameWithoutPackage();
     }
 
     @Override
@@ -282,6 +317,25 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             .toList();
         var closure = closureX(null, block(new VariableScope(), statements));
         var result = stmt(callThisX("output", args(closure)));
+        moduleNode.addStatement(result);
+    }
+
+    private static final ClassNode NULLABLE = ClassHelper.makeCached(Nullable.class);
+
+    @Override
+    public void visitRecord(RecordNode node) {
+        for( var fn : node.getFields() ) {
+            if( fn.getType().getNodeMetaData(ASTNodeMarker.NULLABLE) != null )
+                fn.addAnnotation(NULLABLE);
+        }
+
+        var result = stmt(callThisX("declareType", args(classX(node))));
+        moduleNode.addStatement(result);
+    }
+
+    @Override
+    public void visitEnum(ClassNode node) {
+        var result = stmt(callThisX("declareType", args(classX(node))));
         moduleNode.addStatement(result);
     }
 

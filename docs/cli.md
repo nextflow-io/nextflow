@@ -250,7 +250,14 @@ $ nextflow drop nextflow-io/hello
 
 See {ref}`cli-drop` for more information.
 
-### Secret management
+## Module management
+
+:::{versionadded} 26.04.0
+:::
+
+The `module` command allows you to discover, install, and run modules through a centralized module registry. See {ref}`using-modules-page` and the {ref}`cli-module` command reference for more information.
+
+## Secret management
 
 The `secrets` command manages secure pipeline secrets.
 
@@ -262,7 +269,7 @@ $ nextflow secrets set AWS_ACCESS_KEY_ID
 $ nextflow secrets delete AWS_ACCESS_KEY_ID
 ```
 
-See {ref}`cli-secrets` for more information. 
+See {ref}`cli-secrets` for more information.
 
 ## Configuration and validation
 
@@ -384,7 +391,7 @@ Use this to understand input/output relationships between tasks, trace data flow
 $ nextflow lineage
 ```
 
-See {ref}`data-lineage-page` to get started and {ref}`cli-lineage` for more information. 
+See {ref}`data-lineage-page` to get started and {ref}`cli-lineage` for more information.
 
 ## Seqera Platform
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 package nextflow.cloud.aws.nio.util;
 
@@ -41,46 +40,45 @@ public class S3ClientConfiguration {
 
     private ClientOverrideConfiguration.Builder cocBuilder;
 
-    private ClientOverrideConfiguration.Builder cocBuilder(){
+    private ClientOverrideConfiguration.Builder cocBuilder() {
         if( this.cocBuilder == null )
             this.cocBuilder = ClientOverrideConfiguration.builder();
         return this.cocBuilder;
     }
 
-    public ClientOverrideConfiguration getClientOverrideConfiguration(){
+    public ClientOverrideConfiguration getClientOverrideConfiguration() {
         if( cocBuilder == null )
             return null;
         return cocBuilder.build();
     }
 
-    protected S3ClientConfiguration(){}
+    protected S3ClientConfiguration() {}
 
 
     protected final void setClientOverrideConfiguration(Properties props) {
-		if( props == null )
-			return;
+        if( props == null )
+            return;
 
-		if( props.containsKey("max_error_retry")) {
-			log.trace("AWS client config - max_error_retry: {}", props.getProperty("max_error_retry"));
-			cocBuilder().retryStrategy(StandardRetryStrategy.builder().maxAttempts((Integer.parseInt(props.getProperty("max_error_retry")) + 1 )).build());
-		}
+        if( props.containsKey("max_error_retry")) {
+            log.trace("AWS client config - max_error_retry: {}", props.getProperty("max_error_retry"));
+            cocBuilder().retryStrategy(StandardRetryStrategy.builder().maxAttempts((Integer.parseInt(props.getProperty("max_error_retry")) + 1 )).build());
+        }
 
-		if( props.containsKey("protocol")) {
-			log.warn("AWS client config 'protocol' doesn't exist in AWS SDK V2");
-		}
+        if( props.containsKey("protocol")) {
+            log.warn("AWS client config 'protocol' doesn't exist in AWS SDK V2");
+        }
 
-		if ( props.containsKey("signer_override")) {
-			log.warn("AWS client config 'signerOverride' is not supported in AWS SDK V2. This option will be ignored.");
+        if ( props.containsKey("signer_override")) {
+            log.warn("AWS client config 'signerOverride' is not supported in AWS SDK V2. This option will be ignored.");
 
-		}
+        }
 
-		if( props.containsKey("socket_send_buffer_size_hints") || props.containsKey("socket_recv_buffer_size_hints") ) {
-			log.warn("AWS client config - 'socket_send_buffer_size_hints' and 'socket_recv_buffer_size_hints' do not exist in AWS SDK V2" );
-		}
+        if( props.containsKey("socket_send_buffer_size_hints") || props.containsKey("socket_recv_buffer_size_hints") ) {
+            log.warn("AWS client config - 'socket_send_buffer_size_hints' and 'socket_recv_buffer_size_hints' do not exist in AWS SDK V2" );
+        }
 
-		if( props.containsKey("user_agent")) {
-			log.warn("AWS client config 'user_agent' is not supported in AWS SDK V2. This option will be ignored.");
-		}
-	}
+        if( props.containsKey("user_agent")) {
+            log.warn("AWS client config 'user_agent' is not supported in AWS SDK V2. This option will be ignored.");
+        }
+    }
 }
-

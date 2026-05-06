@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,7 +48,7 @@ class WorkflowConfig implements ConfigScope {
 
     @Description("""
         The `workflow.output` scope provides options for publishing workflow outputs.
-    
+
         [Read more](https://nextflow.io/docs/latest/reference/config.html#workflow)
     """)
     final WorkflowOutputConfig output

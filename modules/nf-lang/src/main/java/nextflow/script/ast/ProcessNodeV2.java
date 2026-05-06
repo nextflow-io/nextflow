@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,8 +69,7 @@ public class ProcessNodeV2 extends ProcessNode {
         if( outputs.size() == 1 ) {
             var first = outputs.get(0);
             var output = ((ExpressionStatement) first).getExpression();
-            if( outputTarget(output) == null )
-                return output.getType();
+            return output.getType();
         }
         var cn = new ClassNode(Record.class);
         outputs.stream()

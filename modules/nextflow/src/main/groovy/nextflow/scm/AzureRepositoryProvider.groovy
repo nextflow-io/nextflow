@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,7 +61,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
         if( tokens.size() == 2 ){
             // URL is just organization/project. project and repo are the same.
             return [tokens[0], tokens[1], tokens[1]]
-        } 
+        }
         if( tokens.size() == 3 ){
             // URL is as expected organization/project/repository.
             return tokens
@@ -69,7 +69,7 @@ final class AzureRepositoryProvider extends RepositoryProvider {
         if( tokens.size() == 4 && tokens[2] == '_git' ){
             // Clone URL organization/project/_git/repository
             return [tokens[0], tokens[1], tokens[3]]
-        } 
+        }
         throw new IllegalArgumentException("Unexpected Azure repository path format - offending value: '$urlPath'")
     }
 
@@ -202,13 +202,13 @@ final class AzureRepositoryProvider extends RepositoryProvider {
                 "api-version": 6.0,
                 'path': path
         ] as Map<String,Object>
-        
+
         if( revision ) {
             queryParams['versionDescriptor.version'] = URLEncoder.encode(revision, StandardCharsets.UTF_8)
             if( COMMIT_REGEX.matcher(revision).matches() )
                 queryParams['versionDescriptor.versionType'] = 'commit'
         }
-        
+
         final queryString = queryParams.collect({ "$it.key=$it.value"}).join('&')
         final url = "$endpointUrl/items?$queryString"
         // Use invokeBytes for direct binary content download
@@ -224,53 +224,53 @@ final class AzureRepositoryProvider extends RepositoryProvider {
         if (!normalizedPath) {
             normalizedPath = "/"
         }
-        
+
         def queryParams = [
             'recursionLevel': depth > 1 ? 'Full' : 'OneLevel',  // Use Full for depth > 1 to get nested content
             "api-version": 6.0,
             '$format': 'json'
         ] as Map<String,Object>
-        
+
         // Only add scopePath if it's not the root directory
         if (normalizedPath != "/") {
             queryParams['scopePath'] = normalizedPath
         }
-        
+
         if (revision) {
             queryParams['versionDescriptor.version'] = URLEncoder.encode(revision, StandardCharsets.UTF_8)
             if (COMMIT_REGEX.matcher(revision).matches()) {
                 queryParams['versionDescriptor.versionType'] = 'commit'
             }
         }
-        
+
         def queryString = queryParams.collect({ "$it.key=$it.value"}).join('&')
         def url = "$endpointUrl/items?$queryString"
-        
+
         try {
             Map response = invokeAndParseResponse(url)
             List<Map> items = response?.value as List<Map>
-            
+
             if (!items) {
                 return []
             }
-            
+
             List<RepositoryEntry> entries = []
-            
+
             for (Map item : items) {
                 // Skip the root directory itself
                 String itemPath = item.get('path') as String
                 if (itemPath == path || (!path && itemPath == "/")) {
                     continue
                 }
-                
+
                 // Filter entries based on depth using base class helper
                 if (shouldIncludeAtDepth(itemPath, path, depth)) {
                     entries.add(createRepositoryEntry(item, path))
                 }
             }
-            
+
             return entries.sort { it.name }
-            
+
         } catch (Exception e) {
             // Azure Items API may have different permissions or availability than other APIs
             // Return empty list to allow graceful degradation
@@ -281,14 +281,14 @@ final class AzureRepositoryProvider extends RepositoryProvider {
     private RepositoryEntry createRepositoryEntry(Map item, String basePath) {
         String itemPath = item.get('path') as String
         String name = itemPath?.split('/')?.last() ?: "unknown"
-        
+
         // Determine type based on Azure's gitObjectType
         String gitObjectType = item.get('gitObjectType') as String
         EntryType type = (gitObjectType == 'tree') ? EntryType.DIRECTORY : EntryType.FILE
-        
+
         String sha = item.get('objectId') as String
         Long size = item.get('size') as Long
-        
+
         return new RepositoryEntry(
             name: name,
             path: itemPath,

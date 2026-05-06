@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,11 +12,12 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.aws.nio;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -70,7 +71,11 @@ public class S3Iterator implements Iterator<Path> {
             S3Client s3Client = s3FileSystem.getClient();
 
             // This automatically handles pagination
-            it = s3Client.listObjectsV2Paginator(request).stream().flatMap(r -> parseObjectListing(r).stream()).iterator();
+            try {
+                it = s3Client.listObjectsV2Paginator(request).stream().flatMap(r -> parseObjectListing(r).stream()).iterator();
+            }catch( IOException e ){
+                throw new UncheckedIOException(e);
+            }
         }
 
         return it;

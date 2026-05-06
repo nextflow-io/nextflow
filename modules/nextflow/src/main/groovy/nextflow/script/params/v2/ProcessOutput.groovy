@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ class ProcessOutput implements OutParam {
      * Lazy expression (e.g. closure) which defines the output value
      * in terms of the task context, including environment variables,
      * files, and standard output.
-     * It will be evaluated for each task after it is executed. 
+     * It will be evaluated for each task after it is executed.
      */
     private Object value
 

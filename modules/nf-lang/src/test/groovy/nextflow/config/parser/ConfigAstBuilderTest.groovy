@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,6 +99,22 @@ class ConfigAstBuilderTest extends Specification {
             '''\
             try {
                 process.cpus = 4
+            }
+            catch( Exception e ) {
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 1
+        errors[0].getOriginalMessage() == "Try-catch blocks cannot be mixed with config statements"
+
+        when:
+        errors = check(
+            '''\
+            try {
+                includeConfig 'http://example.com/nextflow.config'
             }
             catch( Exception e ) {
             }

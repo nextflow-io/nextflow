@@ -33,6 +33,14 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-resourcelabels`
 - {ref}`process-time`
 
+The following {ref}`hints <process-hints>` are supported:
+
+- `consumableResources`: Specify [AWS Batch consumable resources](https://docs.aws.amazon.com/batch/latest/userguide/resource-aware-scheduling.html) as a list of name-value pairs. For example:
+
+  ```nextflow
+  hints consumableResources: ['my-license-a': 1, 'my-license-b': 2]
+  ```
+
 See {ref}`aws-batch` for more information.
 
 (azurebatch-executor)=
@@ -413,6 +421,113 @@ Resource requests and other job characteristics can be controlled via the follow
 - {ref}`process-penv`
 - {ref}`process-queue`
 - {ref}`process-time`
+
+(seqera-executor)=
+
+## Seqera
+
+:::{versionadded} 26.04.0
+:::
+
+:::{warning}
+*Preview feature: may change in a future release.*
+:::
+
+The `seqera` executor allows you to run your pipeline using the [Seqera](https://seqera.io) cloud infrastructure. It enables the seamless execution of Nextflow pipelines by offloading process executions to the Seqera scheduler service.
+
+The pipeline processes must specify the Docker image to use by defining the `container` directive, either in the pipeline script or the `nextflow.config` file. Additionally, an S3 bucket must be used as the pipeline work directory.
+
+To enable this executor, set `process.executor = 'seqera'` in the `nextflow.config` file.
+
+Resource requests and other job characteristics can be controlled via the following process directives:
+
+- {ref}`process-arch`
+- {ref}`process-container`
+- {ref}`process-containerOptions`
+- {ref}`process-cpus`
+- {ref}`process-disk`
+- {ref}`process-memory`
+- {ref}`process-time`
+
+The following {ref}`hints <process-hints>` are supported:
+
+- `machineRequirement.capacityMode`
+- `machineRequirement.diskAllocation`
+- `machineRequirement.diskEncrypted`
+- `machineRequirement.diskIops`
+- `machineRequirement.diskMountPath`
+- `machineRequirement.diskSize`
+- `machineRequirement.diskThroughputMiBps`
+- `machineRequirement.diskType`
+- `machineRequirement.machineTypes`
+- `machineRequirement.maxSpotAttempts`
+- `machineRequirement.provisioning`
+
+Each hint overrides the corresponding field of the `seqera.executor.machineRequirement` config scope on a per-process basis. Keys may be used as-is or with the `seqera/` prefix to restrict them to this executor.
+
+For example, to override the provisioning mode for a single process:
+
+```nextflow
+process hello {
+    hints 'seqera/machineRequirement.provisioning': 'spotFirst'
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+See {ref}`config-seqera` for the full config reference.
+
+### Disk support
+
+When the {ref}`process-disk` directive is specified, the Seqera executor provisions storage for the task container. There are two disk allocation strategies:
+
+- **task** (default): A dedicated EBS volume is created for each task at launch time. This provides isolated, high-performance storage with configurable volume type, IOPS, throughput, and encryption.
+
+- **node**: Uses the instance storage attached at the cluster level. This is shared across tasks running on the same node and does not support EBS-specific options.
+
+#### Task allocation (EBS volumes)
+
+By default, a gp3 volume with 325 MiB/s throughput is used (Fusion recommended settings). You can customize the EBS volume configuration:
+
+```groovy
+seqera {
+    executor {
+        machineRequirement {
+            diskAllocation = 'task'    // Per-task EBS volume (default)
+            diskType = 'ebs/io1'       // Use provisioned IOPS SSD
+            diskIops = 10000           // Required for io1/io2
+            diskThroughputMiBps = 500  // Throughput for gp3 volumes
+            diskEncrypted = true       // Enable KMS encryption
+            diskMountPath = '/data'    // Container mount path (default: /tmp)
+        }
+    }
+}
+```
+
+Supported volume types: `ebs/gp3` (default), `ebs/gp2`, `ebs/io1`, `ebs/io2`, `ebs/st1`, `ebs/sc1`.
+
+#### Node allocation (instance storage)
+
+To use instance storage instead of per-task EBS volumes:
+
+```groovy
+seqera {
+    executor {
+        machineRequirement {
+            diskAllocation = 'node'    // Use instance storage
+        }
+    }
+}
+```
+
+:::{note}
+When using `node` allocation, the EBS-specific options (`diskType`, `diskIops`, `diskThroughputMiBps`, `diskEncrypted`) are not applicable and will cause an error if specified.
+:::
+
+See the {ref}`seqera scope <config-seqera>` for the available configuration options.
 
 (slurm-executor)=
 

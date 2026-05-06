@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.SysEnv
 import nextflow.container.ContainerBuilder
 import nextflow.container.ContainerHelper
@@ -165,7 +166,7 @@ class BashWrapperBuilder {
      * task control files (.command.out, .command.err, .command.trace, .command.env)
      *
      * See also https://github.com/nextflow-io/nextflow/pull/6364
-     * 
+     *
      * @return false by default; executors may override to implement their own logic
      */
     protected boolean shouldUnstageControls() {
@@ -407,7 +408,7 @@ class BashWrapperBuilder {
         binding.fix_ownership = fixOwnership() ? "[ \${NXF_OWNER:=''} ] && (shopt -s extglob; GLOBIGNORE='..'; chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*}) || true" : null
 
         binding.trace_script = isTraceRequired() ? getTraceScript(binding) : null
-        
+
         return binding
     }
 
@@ -582,7 +583,9 @@ class BashWrapperBuilder {
     }
 
     protected boolean isTraceRequired() {
-        statsEnabled || fixOwnership()
+        if( fusionEnabled && Global.isFusionTraceEnabled() )
+            return fixOwnership()
+        return statsEnabled || fixOwnership()
     }
 
     protected String shellPath() {
@@ -641,7 +644,7 @@ class BashWrapperBuilder {
     private String copyFileToWorkDir(String fileName) {
         copyFile(fileName, workDir.resolve(fileName))
     }
-    
+
 
     String getCleanupCmd(String scratch) {
         String result = ''

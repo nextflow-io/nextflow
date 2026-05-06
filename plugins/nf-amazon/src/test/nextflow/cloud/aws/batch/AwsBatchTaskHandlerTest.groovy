@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -444,7 +444,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_ID = '123'
         def client = Mock(BatchClient)
         def task = Mock(TaskRun)
-        def handler = Spy(AwsBatchTaskHandler) 
+        def handler = Spy(AwsBatchTaskHandler)
         handler.task = task
         handler.@client = client
 
@@ -527,7 +527,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         ]
         and:
         handler.addVolumeMountsToContainer(mounts, containerModel)
-        
+
         when:
         def container = containerModel.toBatchContainerProperties()
         then:
@@ -581,7 +581,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.containerProperties.logConfiguration == null
         result.containerProperties.mountPoints == null
         result.containerProperties.privileged == false
-        
+
         when:
         result = handler.makeJobDefRequest(task)
         then:
@@ -598,6 +598,87 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.containerProperties.mountPoints[0].readOnly()
         result.containerProperties.volumes[0].host().sourcePath() == '/home/conda'
         result.containerProperties.volumes[0].name() == 'aws-cli'
+        result.consumableResourceProperties == null
+    }
+
+    def 'should create a job definition with consumable resources from hints' () {
+        given: 'hints set through the real DSL → ProcessConfig → TaskConfig path'
+        def process = new ProcessConfig(Mock(BaseScript))
+        new nextflow.script.dsl.ProcessBuilder(process).hints(
+            'awsbatch/consumableResources': ['license-a': 1, 'license-b': 2],
+            foo: 'bar'
+        )
+        def taskConfig = process.createTaskConfig()
+        and:
+        def IMAGE = 'foo/bar:1.0'
+        def JOB_NAME = 'nf-foo-bar-1-0'
+        def task = Mock(TaskRun) {
+            getContainer() >> IMAGE
+            getConfig() >> taskConfig
+        }
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> task
+            fusionEnabled() >> false
+        }
+        handler.@executor = Mock(AwsBatchExecutor)
+
+        when:
+        def result = handler.makeJobDefRequest(task)
+        then:
+        1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
+        1 * handler.getAwsOptions() >> new AwsOptions()
+        result.consumableResourceProperties != null
+        result.consumableResourceProperties.consumableResourceList().size() == 2
+        result.consumableResourceProperties.consumableResourceList()[0].consumableResource() == 'license-a'
+        result.consumableResourceProperties.consumableResourceList()[0].quantity() == 1
+        result.consumableResourceProperties.consumableResourceList()[1].consumableResource() == 'license-b'
+        result.consumableResourceProperties.consumableResourceList()[1].quantity() == 2
+    }
+
+    def 'should apply awsbatch/-prefixed consumableResources over unprefixed' () {
+        given:
+        def handler = new AwsBatchTaskHandler()
+
+        when:
+        def result = handler.getConsumableResources([
+            consumableResources: ['legacy': 9],
+            'awsbatch/consumableResources': ['license-a': 1, 'license-b': 2],
+        ])
+        then:
+        result.consumableResourceList().size() == 2
+        result.consumableResourceList()[0].consumableResource() == 'license-a'
+        result.consumableResourceList()[0].quantity() == 1
+        result.consumableResourceList()[1].consumableResource() == 'license-b'
+        result.consumableResourceList()[1].quantity() == 2
+    }
+
+    def 'should return null when hints empty or no consumableResources' () {
+        given:
+        def handler = new AwsBatchTaskHandler()
+
+        expect:
+        handler.getConsumableResources(null) == null
+        handler.getConsumableResources([:]) == null
+        handler.getConsumableResources([foo: 'bar']) == null
+        handler.getConsumableResources([consumableResources: null]) == null
+        handler.getConsumableResources([consumableResources: [:]]) == null
+    }
+
+    def 'should fail with a clear error on invalid consumableResources value' () {
+        given:
+        def handler = new AwsBatchTaskHandler()
+
+        when: 'value is a string instead of a map'
+        handler.getConsumableResources([consumableResources: 'bad-string'])
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("expected a map")
+
+        when: 'quantity is not a number'
+        handler.getConsumableResources([consumableResources: ['license-a': 'not-a-number']])
+        then:
+        def e2 = thrown(IllegalArgumentException)
+        e2.message.contains("quantity must be a number")
     }
 
     def 'should create a fargate job definition' () {
@@ -908,9 +989,9 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def trace = handler.getTraceRecord()
         then:
-        1 * handler.isCompleted() >> false
+        2 * handler.isCompleted() >> false
         1 * handler.getMachineInfo() >> new CloudMachineInfo('x1.large', 'us-east-1b', PriceModel.spot)
-        
+
         and:
         trace.native_id == 'xyz-123'
         trace.executorName == 'awsbatch'
@@ -1121,7 +1202,7 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         expect:
         handler.normaliseJobId(JOB_ID) == EXPECTED
-        
+
         where:
         JOB_ID       | EXPECTED
         null         | null
@@ -1140,7 +1221,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         task.getName() >> NAME
         and:
         result == EXPECTED
-        
+
         where:
         ENV                             | NAME      | EXPECTED
         [:]                             | 'foo'     | 'foo'
@@ -1297,12 +1378,14 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def resultNoAttempts = handler.getNumSpotInterruptions('job-123')
         then:
+        1 * handler.isCompleted() >> true
         1 * handler.describeJob('job-123') >> JobDetail.builder().attempts([]).build()
         resultNoAttempts == 0
 
         when:
         def resultNonSpot = handler.getNumSpotInterruptions('job-456')
         then:
+        1 * handler.isCompleted() >> true
         1 * handler.describeJob('job-456') >> JobDetail.builder().attempts([attempt1, attempt2]).build()
         resultNonSpot == 0
     }
@@ -1314,18 +1397,21 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def resultNotCompleted = handler.getNumSpotInterruptions('job-123')
         then:
-        1 * handler.describeJob(_)
+        1 * handler.isCompleted() >> false
+        0 * handler.describeJob(_)
         resultNotCompleted == null
 
         when:
         def resultNullJobId = handler.getNumSpotInterruptions(null)
         then:
+        0 * handler.isCompleted()
         0 * handler.describeJob(_)
         resultNullJobId == null
 
         when:
         def resultException = handler.getNumSpotInterruptions('job-789')
         then:
+        1 * handler.isCompleted() >> true
         1 * handler.describeJob('job-789') >> { throw new RuntimeException("Error") }
         resultException == null
     }

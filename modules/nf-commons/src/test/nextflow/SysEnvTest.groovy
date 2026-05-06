@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow
@@ -119,5 +118,31 @@ class SysEnvTest extends Specification {
         [:]             | 1         | 1
         [FOO:'0']       | 1         | 0
         [FOO:'100']     | 1         | 100
+    }
+
+    @Unroll
+    def 'should detect agent mode' () {
+        given:
+        SysEnv.push(STATE)
+
+        expect:
+        SysEnv.isAgentMode() == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        STATE                       | EXPECTED
+        [:]                         | false
+        [NXF_AGENT_MODE:'true']          | true
+        [NXF_AGENT_MODE:'false']         | false
+        [AGENT:'true']              | true
+        [CLAUDECODE:'true']         | true
+        // Multiple can be set, any true triggers agent mode
+        [NXF_AGENT_MODE:'true', AGENT:'false']  | true
+        // Support '1' as truthy value (common Unix convention)
+        [NXF_AGENT_MODE:'1']             | true
+        [AGENT:'1']                 | true
+        [CLAUDECODE:'1']            | true
     }
 }

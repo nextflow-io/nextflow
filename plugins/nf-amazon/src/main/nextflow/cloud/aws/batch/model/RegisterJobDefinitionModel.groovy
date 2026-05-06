@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package nextflow.cloud.aws.batch.model
 
 
 import groovy.transform.CompileStatic
+import software.amazon.awssdk.services.batch.model.ConsumableResourceProperties
 import software.amazon.awssdk.services.batch.model.JobDefinitionType
 import software.amazon.awssdk.services.batch.model.PlatformCapability
 import software.amazon.awssdk.services.batch.model.RegisterJobDefinitionRequest
@@ -44,6 +45,8 @@ class RegisterJobDefinitionModel {
     private Map<String,String> parameters
 
     private Map<String,String> tags
+
+    private ConsumableResourceProperties consumableResourceProperties
 
     RegisterJobDefinitionModel jobDefinitionName(String value) {
         this.jobDefinitionName = value
@@ -82,6 +85,11 @@ class RegisterJobDefinitionModel {
         return this
     }
 
+    RegisterJobDefinitionModel consumableResourceProperties(ConsumableResourceProperties value) {
+        this.consumableResourceProperties = value
+        return this
+    }
+
     String getJobDefinitionName() {
         return jobDefinitionName
     }
@@ -106,9 +114,13 @@ class RegisterJobDefinitionModel {
         return tags
     }
 
+    ConsumableResourceProperties getConsumableResourceProperties() {
+        return consumableResourceProperties
+    }
+
     RegisterJobDefinitionRequest toBatchRequest() {
         final builder = RegisterJobDefinitionRequest.builder()
-        
+
         if (jobDefinitionName)
             builder.jobDefinitionName(jobDefinitionName)
         if (type)
@@ -117,11 +129,13 @@ class RegisterJobDefinitionModel {
             builder.platformCapabilities(platformCapabilities)
         if (containerProperties)
             builder.containerProperties(containerProperties.toBatchContainerProperties())
+        if (consumableResourceProperties)
+            builder.consumableResourceProperties(consumableResourceProperties)
         if (parameters)
             builder.parameters(parameters)
         if (tags)
             builder.tags(tags)
-        
+
         return (RegisterJobDefinitionRequest) builder.build()
     }
 
@@ -134,6 +148,7 @@ class RegisterJobDefinitionModel {
             ", containerProperties=" + containerProperties +
             ", parameters=" + parameters +
             ", tags=" + tags +
+            ", consumableResourceProperties=" + consumableResourceProperties +
             '}';
     }
 }

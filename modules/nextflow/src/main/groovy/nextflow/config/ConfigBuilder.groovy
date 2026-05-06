@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -211,7 +211,7 @@ class ConfigBuilder {
 
         def result = []
         if ( files ) {
-            for( String fileName : files ) { 
+            for( String fileName : files ) {
                 def thisFile = currentDir.resolve(fileName)
                 if(!thisFile.exists()) {
                     throw new AbortOperationException("The specified configuration file does not exist: $thisFile -- check the name or choose another file")
@@ -366,10 +366,12 @@ class ConfigBuilder {
         assert env != null
 
         final ignoreIncludes = options ? options.ignoreConfigIncludes : false
+        final ansiLog = options ? options.ansiLog : false
         final parser = ConfigParserFactory.create()
                 .setRenderClosureAsString(showClosures)
                 .setStripSecrets(stripSecrets)
                 .setIgnoreIncludes(ignoreIncludes)
+                .setAnsiLog(ansiLog)
         ConfigObject result = new ConfigObject()
 
         if( cliParams )
@@ -568,6 +570,9 @@ class ConfigBuilder {
         if( cmdRun.outputDir )
             config.outputDir = cmdRun.outputDir
 
+        if( cmdRun.outputFormat )
+            config.outputFormat = cmdRun.outputFormat
+
         if( cmdRun.preview )
             config.preview = cmdRun.preview
 
@@ -715,8 +720,6 @@ class ConfigBuilder {
             config.tower.enabled = true
             if( cmdRun.withTower != '-' )
                 config.tower.endpoint = cmdRun.withTower
-            else if( !config.tower.endpoint )
-                config.tower.endpoint = 'https://api.cloud.seqera.io'
         }
 
         // -- set wave options
@@ -726,8 +729,6 @@ class ConfigBuilder {
             config.wave.enabled = true
             if( cmdRun.withWave != '-' )
                 config.wave.endpoint = cmdRun.withWave
-            else if( !config.wave.endpoint )
-                config.wave.endpoint = 'https://wave.seqera.io'
         }
 
         // -- set fusion options
@@ -799,32 +800,6 @@ class ConfigBuilder {
         else if( containerConfig.image ) {
             config.process.container = containerConfig.image
         }
-
-        if( !hasContainerDirective(config.process) )
-            throw new AbortOperationException("You have requested to run with ${engine.capitalize()} but no image was specified")
-
-    }
-
-    /**
-     * Verify that configuration for process contains at last one `container` directive
-     *
-     * @param process
-     * @return {@code true} when a `container` is defined or {@code false} otherwise
-     */
-    protected boolean hasContainerDirective(process)  {
-
-        if( process instanceof Map ) {
-            if( process.container )
-                return true
-
-            def result = process
-                    .findAll { String name, value -> (name.startsWith('withName:') || name.startsWith('$')) && value instanceof Map }
-                    .find { String name, Map value -> value.container as boolean }  // the first non-empty `container` string
-
-            return result as boolean
-        }
-
-        return false
     }
 
     ConfigObject buildConfigObject() {
@@ -889,7 +864,7 @@ class ConfigBuilder {
             final value = entry.value
             final previous = getConfigVal0(config, key)
             keys << entry.key
-            
+
             if( previous==null ) {
                 config[key] = value
             }
@@ -919,17 +894,18 @@ class ConfigBuilder {
         }
     }
 
-    static String resolveConfig(Path baseDir, CmdRun cmdRun) {
+    static String resolveConfig(Path baseDir, CmdRun cmdRun, Map cliParams) {
 
         final config = new ConfigBuilder()
                 .setShowClosures(true)
                 .setStripSecrets(true)
                 .setOptions(cmdRun.launcher.options)
                 .setCmdRun(cmdRun)
+                .setCliParams(cliParams)
                 .setBaseDir(baseDir)
                 .buildConfigObject()
 
-        // strip secret
+        // strip secrets
         SecretHelper.hideSecrets(config)
         // compute config
         final result = toCanonicalString(config, false)

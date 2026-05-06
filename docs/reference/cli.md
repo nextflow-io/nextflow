@@ -815,7 +815,7 @@ The `launch` command launches a pipeline run in Seqera Platform. To log in and c
 : A mnemonic name to assign to the run.
 
 `-main-script`
-: The script file to be executed when launching a project directory or repository.
+: The script file to execute when launching a project directory or repository. Should be a path relative to the project root, e.g. `-main-script subproject/main.nf`.
 
 `-params-file`
 : A JSON or YAML file to load parameters from.
@@ -832,11 +832,23 @@ The `launch` command launches a pipeline run in Seqera Platform. To log in and c
 `-stub-run, -stub`
 : Whether to replace scripts with command stubs when executing the run.
 
+`-user-secret`
+: :::{versionadded} 26.04.0
+  :::
+: Name of user secret to use in the pipeline.
+: Can be specified multiple times.
+
 `-w, -work-dir`
 : The directory where intermediate result files are stored.
 
 `-workspace`
 : The Seqera Platform workspace name.
+
+`-workspace-secret`
+: :::{versionadded} 26.04.0
+  :::
+: Name of workspace secret to use in the pipeline.
+: Can be specified multiple times.
 
 **Examples**
 
@@ -915,13 +927,24 @@ The `lint` command parses and analyzes the given Nextflow scripts and config fil
 **Options**
 
 `-exclude`
-: File pattern to exclude from linting. Can be specified multiple times (default: `.git, .nf-test, work`).
+: File pattern to exclude from linting (default: `.git, .lineage, .nextflow, .nf-test, nf-test.config, work`).
+: Can be specified multiple times.
+
+`-files-from`
+: :::{versionadded} 26.04.0
+  :::
+: Read list of paths to lint from a text file. Use `-` to read from standard input.
 
 `-format`
 : Format scripts and config files that have no errors.
 
 `-o, -output`
 : Output mode for reporting errors: `full`, `extended`, `concise`, `json`, `markdown` (default: `full`).
+
+`-project-dir`
+: :::{versionadded} 26.04.0
+  :::
+: Path to project directory (default: `'.'`). Used to locate project-level assets such as the lib directory and modules directory.
 
 `-sort-declarations`
 : Sort script declarations in Nextflow scripts (default: `false`).
@@ -1125,6 +1148,234 @@ $ nextflow log tiny_leavitt -F 'process =~ /split_letters/'
 work/1f/f1ea9158fb23b53d5083953121d6b6
 ```
 
+(cli-module)=
+
+### `module`
+
+:::{versionadded} 26.04.0
+:::
+
+Manage Nextflow modules.
+
+**Usage**
+
+```console
+$ nextflow module <subcommand> [options]
+```
+
+**Description**
+
+The `module` command provides a comprehensive system for managing registry-based modules. It enables installing modules from registries, running them directly, searching for available modules, and publishing your own modules to a registry.
+
+**Subcommands**
+
+(cli-module-create)=
+
+`create [namespace/name]`
+
+: Create a new module with a basic `main.nf`, `meta.yml`, and `README.md`.
+
+(cli-module-install)=
+
+`install [options] [namespace/name]`
+
+: Install a module from the registry into your project.
+: Downloaded modules are stored in the `modules/` directory.
+: The `.module-info` file is created in the module directory to store additional information of the installed module.
+: The following options are available:
+
+  `-version`
+  : Specify the module version to install (e.g., `1.0.0`). If not specified, installs the latest version.
+
+  `-force`
+  : Force reinstall even if the module exists locally with modifications. Without this flag, Nextflow prevents overwriting locally modified modules.
+
+(cli-module-list)=
+
+`list [options]`
+
+: List all modules currently installed in your project.
+: Shows each module's name, version, and integrity status (whether it has been modified locally).
+: The following options are available:
+
+  `-o, -output` (`table`)
+  : Output mode for list results. Options: `table` (default), `json`.
+
+(cli-module-publish)=
+
+`publish [options] [namespace/name | path]`
+
+: Publish a module to the registry, making it available for others to install.
+: The argument can be either a `namespace/name` reference (for an already-installed module) or a local directory path containing the module files.
+: Requires authentication via the `NXF_REGISTRY_TOKEN` environment variable or the `registry.apiKey` config option.
+: The module directory must contain `main.nf`, `meta.yml`, and `README.md`.
+: The following options are available:
+
+  `-dry-run`
+  : Validate the module structure and metadata without uploading to the registry. Useful for testing before publishing.
+
+  `-registry`
+  : Specify the registry to publish the module (default: `https://registry.nextflow.io`)
+
+(cli-module-remove)=
+
+`remove [options] [namespace/name]`
+
+: Remove a module from your project.
+: By default, removes both local files and configuration entries. Use options to control what gets removed.
+: The following options are available:
+
+  `-force`
+  : Force removal even if the module has no `.module-info` file (i.e. not installed from a registry) or has local modifications.
+
+  `-keep-files`
+  : Remove the `.module-info` but keep local files in the `modules/` directory.
+
+(cli-module-run)=
+
+`run [options] [namespace/name | path] [--<input_name> <input-value>]`
+
+: Execute a module directly. Can be a remote module (`namespace/name`) or a local module path (beginning with `./`, `../`, or `/`). Automatically downloads the module if not already installed.
+: Accepts all standard Nextflow run options, including `-profile`, `-resume`, `-c`, etc. Command-line params (i.e., `--<input_name>`) are inferred from the module's declared inputs.
+: The following additional options are available:
+
+  `-version`
+  : Specify the module version to run (e.g., `1.0.0`). If not specified, uses the latest version.
+
+(cli-module-search)=
+
+`search [options] [query]`
+
+: Search for modules in the registry by keyword or name.
+: Returns modules matching the query with their names, versions, descriptions, and download statistics.
+: The following options are available:
+
+  `-limit`
+  : Maximum number of results to return (default: varies by registry).
+
+  `-o, -output` (`simple`)
+  : Output mode for search results. Options: `simple` (default), `json`.
+
+(cli-module-spec)=
+
+`spec [options] <namespace/name or path>`
+
+: Generate the `meta.yml` for a local module from the source code (`main.nf`).
+: The generated file includes `TODO` placeholders for fields that were not specified.
+: If a spec file already exists, it is incorporated into the new file.
+: The following options are available:
+
+`-namespace <namespace>`
+: Module namespace, used to construct the module name. Required when the argument is a path; ignored when it is a module name.
+
+`-version <version>`
+: Module version string (e.g. `1.0.0`). Defaults to `TODO: Add version`.
+
+`-description <text>`
+: Short description of what the module does. Defaults to `TODO: Add description`.
+
+`-license <identifier>`
+: SPDX license identifier (e.g. `MIT`, `Apache-2.0`). Defaults to `TODO: Add license (e.g., MIT)`.
+
+`-author <name>`
+: Module author. Can be specified multiple times, once per author. Defaults to `[TODO: Add author]`.
+
+`-dry-run`
+: Print the generated spec to stdout without writing any file.
+
+(cli-module-validate)=
+
+`validate [options] <namespace/name or path>`
+
+: Validate a module before publishing to the registry.
+: Verifies that all required files are present (`main.nf`, `meta.yml`, `README.md`) and that the module spec contains all required fields (name, version, description, license).
+
+(cli-module-view)=
+
+`view [options] [namespace/name]`
+
+: Display detailed information about a module from the registry.
+: Shows module name, version, description, and other metadata, as well as example usage.
+: The following options are available:
+
+  `-version`
+  : Specify the module version to query (e.g., `1.0.0`). If not specified, displays information for the latest version.
+
+  `-o, -output` (`text`)
+  : Output format. Options: `text` (default), `json`.
+
+**Examples**
+
+Search for modules related to "alignment":
+
+```console
+$ nextflow module search alignment
+```
+
+View information for a module:
+
+```console
+$ nextflow module view nf-core/fastqc
+```
+
+Install a module:
+
+```console
+$ nextflow module install nf-core/fastqc
+```
+
+List installed modules:
+
+```console
+$ nextflow module list
+```
+
+Run a module:
+
+```console
+$ nextflow module run nf-core/fastqc \
+    --input 'data/*.fastq.gz' \
+    -with-docker
+
+Run a local module:
+
+```console
+$ nextflow module run ./modules/local/fastqc/main.nf \
+    --input 'data/*.fastq.gz' \
+    -with-docker
+```
+
+Remove a module:
+
+```console
+$ nextflow module remove nf-core/fastqc
+```
+
+Create a module with a given name:
+
+```console
+$ nextflow module create myorg/my-module
+```
+
+Generate a spec for a local module:
+
+```console
+$ nextflow module spec -namespace myorg ./modules/myorg/my-module
+```
+
+Validate a local module:
+
+```console
+$ nextflow module validate ./modules/myorg/my-module
+```
+
+Publish a module to the Nextflow registry:
+
+```console
+$ export NXF_REGISTRY_TOKEN=<token>
+$ nextflow module publish myorg/my-module
+```
+
 (cli-plugin)=
 
 ### `plugin`
@@ -1171,7 +1422,7 @@ The `pull` command downloads a pipeline from a Git-hosting platform into the glo
 : Update all downloaded projects.
 
 `-d, -deep`
-: :::{deprecated} 25.12.0-edge. 
+: :::{deprecated} 25.12.0-edge
   Ignored for new multi-revision asset management strategy. Still used in legacy assets.
   :::
 : Create a shallow clone of the specified depth.
@@ -1276,6 +1527,7 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 
 `-dump-channels`
 : Dump channels for debugging purpose.
+: Optionally accepts a comma-separated list of tags to filter output to only channels with a matching tag.
 
 `-dump-hashes`
 : Dump task hash keys for debugging purposes.
@@ -1305,7 +1557,8 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : Library extension path.
 
 `-main-script` (`main.nf`)
-: The script file to be executed when launching a project directory or repository.
+: The script file to execute when launching a project directory or repository. Should be a path relative to the project root, e.g. `-main-script subproject/main.nf`.
+: The project `nextflow.config` is always read from the project root regardless of the main script location.
 
 `-name`
 : Assign a mnemonic name to the a pipeline run.
@@ -1317,6 +1570,11 @@ The `run` command is used to execute a local pipeline script or remote pipeline 
 : :::{versionadded} 24.10.0
   :::
 : Directory where workflow outputs are stored.
+
+`-output-format`
+: :::{versionadded} 26.04.0
+  :::
+: Output format for printing workflow outputs. Options: `text` (default), `json`, `none`.
 
 `-params-file`
 : Load script parameters from a JSON/YAML file.
@@ -1505,29 +1763,29 @@ $ nextflow secrets <SUBCOMMAND> [OPTIONS]
 
 **Examples**
 
-- Set a secret:
+Set a secret:
 
-    ```console
-    $ nextflow secrets set FOO "Hello world"
-    ```
+```console
+$ nextflow secrets set FOO "Hello world"
+```
 
-- List secrets:
+List secrets:
 
-    ```console
-    $ nextflow secrets list
-    ```
+```console
+$ nextflow secrets list
+```
 
-- Get a secret:
+Get a secret:
 
-    ```console
-    $ nextflow secrets get FOO
-    ```
+```console
+$ nextflow secrets get FOO
+```
 
-- Delete a secret:
+Delete a secret:
 
-    ```console
-    $ nextflow secrets delete FOO
-    ```
+```console
+$ nextflow secrets delete FOO
+```
 
 ### `self-update`
 
@@ -1545,7 +1803,7 @@ The `self-update` command directs the `nextflow` CLI to update itself to the lat
 
 **Examples**
 
-Update Nextflow.
+Update Nextflow:
 
 ```console
 $ nextflow self-update
@@ -1595,7 +1853,7 @@ The `view` command is used to inspect the pipelines that are already stored in t
 
 **Examples**
 
-Viewing the contents of a downloaded pipeline.
+View the contents of a downloaded pipeline:
 
 ```console
 $ nextflow view nextflow-io/hello

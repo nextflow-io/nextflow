@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,7 +70,7 @@ class GithubRepositoryProviderTest extends Specification {
         def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
         and:
         def DATA = this.class.getResourceAsStream('/test-asset.bin').bytes
-        
+
         when:
         def result = repo.readBytes('/test/test-asset.bin')
         then:
@@ -119,7 +119,7 @@ class GithubRepositoryProviderTest extends Specification {
         expect:
         provider.getUser() == '1234567890'
         provider.getPassword() == 'x-oauth-basic'
-        
+
         when:
         SysEnv.get().remove('GITHUB_TOKEN')
         then:
@@ -169,7 +169,7 @@ class GithubRepositoryProviderTest extends Specification {
         when:
         final result = provider.getAuth()
         then:
-        _ * provider.getUser() 
+        _ * provider.getUser()
         _ * provider.getPassword()
         1 * provider.hasCredentials()
         and:

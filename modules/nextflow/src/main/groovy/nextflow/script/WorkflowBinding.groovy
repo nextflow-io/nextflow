@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,8 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.NF
+import nextflow.dataflow.ChannelImpl
+import nextflow.dataflow.ValueImpl
 import nextflow.exception.IllegalInvocationException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
@@ -102,15 +104,22 @@ class WorkflowBinding extends Binding  {
             final component = getComponent0(name)
             if( component ) {
                 checkScope0(component)
-                return component.invoke_o(args)
+                return invoke0(component, args)
             }
 
             // check it's an operator name
-            if( NF.hasOperator(name) )
+            if( !owner?.isTypingEnabled() && NF.hasOperator(name) )
                 return OpCall.create(name, args)
         }
 
         throw new MissingMethodException(name,this.getClass())
+    }
+
+    private Object invoke0(ComponentDef component, Object args) {
+        final componentTyped = component instanceof WorkflowDef && component.getOwner().isTypingEnabled()
+        final args1 = DataflowTypeHelper.normalizeArray(args, componentTyped)
+        final result = component.invoke_a(args1)
+        return DataflowTypeHelper.normalize(result, owner?.isTypingEnabled())
     }
 
     @Override
@@ -147,9 +156,12 @@ class WorkflowBinding extends Binding  {
             super.getVariable(name)
         }
         catch( MissingPropertyException e ) {
+            if( owner?.isTypingEnabled() )
+                throw e
+
             if( !meta )
-                 throw e
-            
+                throw e
+
             def component = getComponent0(name)
             if( component )
                 return component
@@ -169,9 +181,11 @@ class WorkflowBinding extends Binding  {
             source = source[0]
         }
 
-        owner.session.outputs[name] = source instanceof DataflowWriteChannel
-            ? source
-            : CH.value(source)
+        owner.session.outputs[name] =
+            source instanceof ChannelImpl ? source.getSource() :
+            source instanceof ValueImpl ? source.getSource() :
+            source instanceof DataflowWriteChannel ? source :
+            CH.value(source)
     }
 
 }

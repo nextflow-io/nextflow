@@ -12,10 +12,6 @@ The [Nextflow plugin template](https://github.com/nextflow-io/nf-plugin-template
 
 You can use the `nextflow plugin create` sub-command to create plugins using the plugin template. See {ref}`gradle-plugin-create` for more information.
 
-:::{note}
-The Nextflow Gradle plugin is currently available as a public preview. See {ref}`Migrating to the Nextflow plugin registry <plugin-registry-page>` for more information.
-:::
-
 (dev-plugins-structure)=
 
 ### Structure

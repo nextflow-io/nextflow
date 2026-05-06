@@ -573,14 +573,14 @@ By default, Nextflow creates pool nodes suitable for most bioinformatics workloa
 
 Below are example configurations for common operating systems used in scientific computing:
 
-**Ubuntu 22.04 (default)**
+**Ubuntu 24.04 (default)**
 
 ```groovy
 azure {
     batch {
         pools {
             <POOL_NAME> {
-                sku = "batch.node.ubuntu 22.04"
+                sku = "batch.node.ubuntu 24.04"
                 offer = "ubuntu-hpc"
                 publisher = "microsoft-dsvm"
             }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ import nextflow.util.TestOnly
 @CompileStatic
 class CondaCache {
     static final private Object condaLock = new Object()
-    
+
     /**
      * Cache the prefix path for each Conda environment
      */
@@ -64,7 +64,7 @@ class CondaCache {
 
     private boolean useMamba
 
-    private boolean useMicromamba 
+    private boolean useMicromamba
 
     private Path configCacheDir0
 
@@ -83,7 +83,7 @@ class CondaCache {
     @PackageScope String getBinaryName() {
         if (useMamba)
             return "mamba"
-        if (useMicromamba) 
+        if (useMicromamba)
             return "micromamba"
         return "conda"
     }
@@ -110,7 +110,7 @@ class CondaCache {
 
         if( config.useMamba() && config.useMicromamba() )
             throw new IllegalArgumentException("Both conda.useMamba and conda.useMicromamba were enabled -- Please choose only one")
-        
+
         if( config.useMamba() ) {
             useMamba = config.useMamba()
         }

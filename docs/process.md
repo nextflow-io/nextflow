@@ -166,12 +166,15 @@ process hello {
     input:
     val STR
 
+    output:
+    stdout
+
     script:
     template 'hello.sh'
 }
 
 workflow {
-    channel.of('this', 'that') | hello
+    hello('Hello!').view()
 }
 ```
 
@@ -189,7 +192,7 @@ echo "process completed"
 Variables prefixed with the dollar character (`$`) are interpreted as Nextflow variables when the template script is executed by Nextflow and Bash variables when executed directly. For example, the above script can be executed from the command line by providing each input as an environment variable:
 
 ```bash
-STR='Hello!' bash templates/my_script.sh
+STR='Hello!' bash templates/hello.sh
 ```
 
 The following caveats should be considered:
@@ -1249,6 +1252,7 @@ All directives can be assigned a dynamic value except the following:
 - {ref}`process-executor`
 - {ref}`process-label`
 - {ref}`process-maxforks`
+- {ref}`process-secret`
 
 :::{versionadded} 25.10
 :::

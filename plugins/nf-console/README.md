@@ -1,5 +1,7 @@
 # Groovy console plugin for Nextflow
 
+## Summary
+
 The Groovy console plugin provides an interactive console and graphical user interface for Nextflow development, testing, and workflow exploration.
 
 ## Get Started

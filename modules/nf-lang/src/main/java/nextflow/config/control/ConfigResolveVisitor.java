@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,10 +58,10 @@ public class ConfigResolveVisitor extends ConfigVisitorSupport {
         if( moduleNode instanceof ConfigNode cn ) {
             // initialize variable scopes
             new VariableScopeVisitor(sourceUnit).visit();
-    
+
             // resolve type names
             super.visit(cn);
-    
+
             // report errors for any unresolved variable references
             new DynamicVariablesVisitor().visit(cn);
         }

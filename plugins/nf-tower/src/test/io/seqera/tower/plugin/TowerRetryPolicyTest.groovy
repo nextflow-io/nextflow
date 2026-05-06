@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ class TowerRetryPolicyTest extends Specification {
     def 'should validate default values of tower retry policy'() {
         when:
         def policy = new TowerRetryPolicy([:])
-        
+
         then:
         policy.delay == RetryConfig.DEFAULT_DELAY
         policy.maxDelay == RetryConfig.DEFAULT_MAX_DELAY
@@ -38,18 +38,18 @@ class TowerRetryPolicyTest extends Specification {
         policy.jitter == RetryConfig.DEFAULT_JITTER
         policy.multiplier == RetryConfig.DEFAULT_MULTIPLIER
     }
-    
+
     def 'should use provided values when specified'() {
         when:
         def customOptions = [
                 delay: '1s' as nextflow.util.Duration,
                 maxDelay: '60s' as nextflow.util.Duration,
-                maxAttemps: 3,
+                maxAttempts: 3,
                 jitter: 0.5,
                 multiplier: 1.5
         ]
         def policy = new TowerRetryPolicy(customOptions)
-        
+
         then:
         policy.delay == customOptions.delay
         policy.maxDelay == customOptions.maxDelay

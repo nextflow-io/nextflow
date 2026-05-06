@@ -2,10 +2,10 @@
 
 # Feature flags
 
-Feature flags enable experimental or other opt-in features. They must be specified in the pipeline script.
+Feature flags enable opt-in features. They must be specified in the pipeline script.
 
 :::{warning}
-Feature flags with the `nextflow.preview` prefix can cause pipelines run with newer versions of Nextflow to fail due to breaking changes. Always consult the {ref}`migration notes <migrations-page>` before updating to a new Nextflow version.
+Feature flags marked as *preview* can cause pipelines run with newer versions of Nextflow to fail due to breaking changes. Always consult the {ref}`migration notes <migrations-page>` before updating to a new Nextflow version.
 :::
 
 `nextflow.enable.configProcessNamesValidation`
@@ -20,7 +20,7 @@ Feature flags with the `nextflow.preview` prefix can cause pipelines run with ne
 : Defines the DSL version to use (`1` or `2`).
 
 `nextflow.enable.moduleBinaries`
-: When `true`, enables the use of modules with binary scripts. See {ref}`module-binaries` for more information.
+: When `true`, enables the use of module-scoped executable scripts via {ref}`module resources <module-resources>`.
 
 `nextflow.enable.strict`
 : :::{deprecated} 26.04.0
@@ -49,28 +49,8 @@ Feature flags with the `nextflow.preview` prefix can cause pipelines run with ne
 
   - Nextflow will fail if multiple functions and/or processes with the same name are defined in a module script
 
-`nextflow.preview.output`
-: :::{versionadded} 24.04.0
-  :::
-: :::{deprecated} 25.10.0
-  This feature flag is no longer supported. Workflow outputs are out of preview.
-  :::
-: When `true`, enables the use of {ref}`workflow outputs <workflow-output-def>`.
-
-`nextflow.preview.recursion`
-: *Preview feature: the syntax and behavior may change in future releases.*
-: When `true`, enables {ref}`process and workflow recursion <workflow-recursion>`.
-
-`nextflow.preview.topic`
-: :::{versionadded} 24.04.0
-  :::
-: :::{deprecated} 25.04.0
-  This feature flag is no longer supported. Topic channels are out of preview.
-  :::
-: When `true`, enables the use of {ref}`topic channels <channel-topic>`.
-
-`nextflow.preview.types`
-: :::{versionadded} 25.10.0
+`nextflow.enable.types`
+: :::{versionadded} 26.04.0
   :::
 : *Preview feature: the syntax and behavior may change in future releases.*
-: When `true`, enables the use of {ref}`typed processes <process-typed-page>`. Must be enabled in every script that uses typed processes. Legacy processes cannot be defined in scripts with this flag enabled.
+: When `true`, enables the use of {ref}`typed processes <process-typed-page>` and {ref}`typed workflows <workflow-typed-page>`. Must be enabled in every script that uses typed processes/workflows. Legacy processes/workflows cannot be defined in scripts with this flag enabled.

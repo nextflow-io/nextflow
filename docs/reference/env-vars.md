@@ -16,6 +16,11 @@ The following environment variables control the configuration of the Nextflow ru
 
 ## Nextflow settings
 
+`NXF_AGENT_MODE`
+: :::{versionadded} 26.04.0
+  :::
+: When `true`, enables agent output mode. In this mode, Nextflow replaces the interactive ANSI log with minimal, structured output optimized for AI agents and non-interactive environments. The output uses tagged lines such as `[PIPELINE]`, `[PROCESS]`, `[WARN]`, `[ERROR]`, and `[SUCCESS]`/`[FAILED]` written to standard output  (default: `false`).
+
 `NXF_ANSI_LOG`
 : Enables/disables ANSI console output (default `true` when ANSI terminal is detected).
 
@@ -117,6 +122,11 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : The file storage path against which relative file paths are resolved.
 : For example, with `NXF_FILE_ROOT=/some/root/path`, the use of `file('hello')` will be resolved to the absolute path `/some/root/path/hello`. A remote root path can be specified using the usual protocol prefix, e.g. `NXF_FILE_ROOT=s3://my-bucket/data`. Files defined using an absolute path are not affected by this setting.
+
+`NXF_FUSION_TRACE`
+: :::{versionadded} 26.04.0
+  :::
+: When set to `true`, collect task resource metrics (CPU, memory, I/O) from the Fusion trace file (`.fusion/trace.json`) produced in the task work directory, replacing the metrics collected by the default bash command-trace wrapper. Requires Fusion to be enabled. GPU metrics from Fusion are always collected regardless of this setting. Defaults to `false`.
 
 `NXF_HOME`
 : Nextflow home directory (default: `$HOME/.nextflow`).
@@ -270,6 +280,9 @@ The following environment variables control the configuration of the Nextflow ru
 
 `TOWER_REFRESH_TOKEN`
 : Specifies the refresh token for maintaining authentication with Seqera Platform. Can also be configured using the `tower.refreshToken` config option.
+
+`TOWER_COMPUTE_ENV_ID`
+: Specifies the Seqera Platform compute environment ID. When specified, the scheduler resolves the compute environment directly by this ID instead of inferring a suitable compute environment. Can also be configured using the `tower.computeEnvId` config option.
 
 `TOWER_WORKSPACE_ID`
 : Specifies the Seqera Platform workspace ID. Can also be configured using the `tower.workspaceId` config option.

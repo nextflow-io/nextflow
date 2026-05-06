@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cli
@@ -31,7 +30,7 @@ import nextflow.plugin.util.PluginRefactor
 import org.eclipse.jgit.api.Git
 /**
  * Plugin manager command
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
@@ -48,7 +47,7 @@ class CmdPlugin extends CmdBase {
 
     @Parameter(hidden = true)
     List<String> args
-    
+
     @Parameter(names = ['-template'], description = 'Plugin template version to use', hidden = true)
     String templateVersion = 'v0.3.0'
 
@@ -59,7 +58,7 @@ class CmdPlugin extends CmdBase {
         // setup plugins system
         Plugins.init()
         Runtime.addShutdownHook((it)-> Plugins.stop())
-        
+
         // check for the plugins install
         if( args[0] == 'install' ) {
             if( args.size()!=2 )
@@ -157,12 +156,12 @@ class CmdPlugin extends CmdBase {
         final templateUri = "https://github.com/nextflow-io/nf-plugin-template.git"
         final isTag = templateVersion.startsWith('v')
         final refSpec = isTag ? "refs/tags/$templateVersion".toString() : templateVersion
-        
+
         try {
             final gitCmd = Git.cloneRepository()
                 .setURI(templateUri)
                 .setDirectory(targetDir)
-            
+
             if (isTag) {
                 gitCmd.setBranchesToClone([refSpec])
                 gitCmd.setBranch(refSpec)
@@ -170,7 +169,7 @@ class CmdPlugin extends CmdBase {
                 // For branches, let Git handle the default behavior
                 gitCmd.setBranch(templateVersion)
             }
-            
+
             gitCmd.call()
         }
         catch (Exception e) {

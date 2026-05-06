@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -218,7 +218,7 @@ public class ConfigAstBuilder {
             invalidStatement(ciac.invalidStatement());
             return;
         }
-    
+
         else
             throw createParsingFailedException("Invalid statement: " + ctx.getText(), ctx);
 
@@ -303,7 +303,7 @@ public class ConfigAstBuilder {
             invalidStatement(ciac.invalidStatement());
             return null;
         }
-    
+
         else
             throw createParsingFailedException("Invalid statement in config block: " + ctx.getText(), ctx);
 
@@ -931,7 +931,7 @@ public class ConfigAstBuilder {
     /**
      * Builder for GStringExpression that inserts empty strings
      * to ensure that there are n+1 strings for n values.
-     * 
+     *
      * @see org.codehaus.groovy.runtime.GStringUtil.writeToImpl()
      */
     private static class GStringBuilder {
@@ -1037,7 +1037,7 @@ public class ConfigAstBuilder {
     private List<Expression> expressionList(ExpressionListContext ctx) {
         if( ctx == null )
             return Collections.emptyList();
-        
+
         return ctx.expression().stream()
             .map(this::expression)
             .toList();

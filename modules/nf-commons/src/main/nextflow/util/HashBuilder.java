@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -141,14 +141,16 @@ public class HashBuilder {
         else if( value instanceof byte[] )
             hasher.putBytes( (byte[])value );
 
-        else if( value instanceof Object[])
+        else if( value instanceof Object[]) {
             for( Object item : ((Object[])value) )
                 with(item);
+        }
 
-        // note: should map be order invariant as Set ?
+        else if( value instanceof CacheFunnel )
+            ((CacheFunnel)value).funnel(hasher, mode);
+
         else if( value instanceof Map )
-            for( Object item : ((Map)value).values() )
-                with(item);
+            hashUnorderedCollection(hasher, ((Map) value).entrySet(), mode);
 
         else if( value instanceof Map.Entry ) {
             Map.Entry entry = (Map.Entry)value;
@@ -179,9 +181,6 @@ public class HashBuilder {
 
         else if( value instanceof SerializableMarker)
             hasher.putInt( value.hashCode() );
-
-        else if( value instanceof CacheFunnel )
-            ((CacheFunnel)value).funnel(hasher, mode);
 
         else if( value instanceof Enum )
             hasher.putUnencodedChars( value.getClass().getName() + "." + value );

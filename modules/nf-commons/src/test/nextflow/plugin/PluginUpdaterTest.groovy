@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.plugin
 
 import nextflow.util.CacheHelper
@@ -417,7 +433,7 @@ class PluginUpdaterTest extends Specification {
         then:
         matcher.matches() == EXPECTED
         !EXPECTED || matcher.group(1) == PLUGIN
-        
+
         where:
         FILE_NAME                               | EXPECTED  | PLUGIN
         'foo'                                   | false     | null
@@ -537,16 +553,16 @@ class PluginUpdaterTest extends Specification {
         def local = localCache(folder.resolve('plugins'), [])
         def manager = new LocalPluginManager(local)
         def updater = Spy(PluginUpdater, constructorArgs: [manager, local, remote, false])
-        
+
         // Replace repositories with our mock repo
         updater.@repositories = [mockRepo]
-        
+
         and:
         def pluginList = ['my-plugin@1.0.0', 'another-plugin@2.0.0']
 
         when:
         updater.pullPlugins(pluginList)
-        
+
         then:
         // Verify prefetch is called with the correct plugin specs
         1 * mockRepo.prefetch({ List<PluginRef> specs ->
@@ -554,7 +570,7 @@ class PluginUpdaterTest extends Specification {
             specs[0].id == 'my-plugin' && specs[0].version == '1.0.0' &&
             specs[1].id == 'another-plugin' && specs[1].version == '2.0.0'
         })
-        
+
         and:
         // Mock pullPlugin0 to prevent real implementation calls
         2 * updater.pullPlugin0(_, _) >> null
