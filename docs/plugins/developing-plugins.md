@@ -249,7 +249,7 @@ nextflowPlugin {
 }
 ```
 
-Configuration options can be grouped by adding a nested `ConfigScope` as a field on the parent scope. Nextflow discovers nested scopes by walking fields whose declared type implements `ConfigScope`, so the field itself does not need a `@ConfigOption` annotation. Only the top-level scope needs `@ScopeName`, a no-arg constructor, and an entry in `extensionPoints`.
+Configuration options can be grouped by adding a nested `ConfigScope` as a field on the parent scope. Nextflow discovers nested scopes by walking fields whose declared type implements `ConfigScope`. The field itself does not need a `@ConfigOption` annotation. Only the top-level scope needs `@ScopeName`, a no-arg constructor, and an entry in `extensionPoints`.
 
 ```groovy
 import java.nio.file.Path
