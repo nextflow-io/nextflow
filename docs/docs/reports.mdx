@@ -111,7 +111,7 @@ nextflow run <pipeline> -with-report [file_name]
 
 You can also enable the report in your Nextflow configuration:
 
-```groovy title="<filename>.config"
+```groovy title="nextflow.config"
 report {
     enabled = true
     file = 'report.html'
@@ -132,7 +132,7 @@ The **Resources** section plots the distribution of resource usage for each work
 
 Plots are shown for CPU, memory, job duration, and disk I/O. Each usage metric is shown both in raw form and as a percentage of the requested resources. These plots are helpful to check that task resources are used efficiently.
 
-![Usage CPUs] _static/report-resources-min.png
+![Usage CPUs](_static/report-resources-min.png)
 
 For information about how resource usage is computed, see [Understanding task resource metrics][metrics-page].
 
@@ -167,7 +167,7 @@ nextflow run <pipeline> -with-timeline [file_name]
 
 You can also enable the execution timeline in your Nextflow configuration:
 
-```groovy title="<filename>.config"
+```groovy title="nextflow.config"
 timeline {
     enabled = true
     file = 'timeline.html'
@@ -211,7 +211,7 @@ The following caveats apply to trace metrics:
 
 You can also enable the trace file in your Nextflow configuration:
 
-```groovy title="<filename>.config"
+```groovy title="nextflow.config"
 trace {
     enabled = true
     file = 'trace.txt'

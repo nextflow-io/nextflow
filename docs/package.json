@@ -2,9 +2,6 @@
   "name": "docs",
   "version": "0.0.0",
   "private": true,
-  "overrides": {
-    "rehype-katex": "5.0.0"
-  },
   "scripts": {
     "docusaurus": "docusaurus",
     "start": "docusaurus start",
@@ -34,7 +31,7 @@
     "prism-react-renderer": "^2.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "rehype-katex": "5.0.0",
+    "rehype-katex": "^7.0.1",
     "remark-code-snippets": "^1.1.0",
     "remark-math": "^6.0.0",
     "remark-sectionize": "^2.1.0",

@@ -6,7 +6,10 @@ import {
 
 export default async function createConfigAsync() {
   return createSeqeraConfig({
-    clientModules: [require.resolve('./src/client-modules/cross-site-nav.js')],
+    clientModules: [
+      require.resolve('./src/client-modules/cross-site-nav.js'),
+      require.resolve('./src/client-modules/katex-css.js'),
+    ],
     themes: ["@docusaurus/theme-mermaid"],
     markdown: {
       mermaid: true,
