@@ -53,15 +53,18 @@ These limitations result in redundant computation when:
 
 ## Solution Approach
 
-Extend the existing `nf-cloudcache` plugin to support content-addressable global caching on cloud object storage (S3, GCS, Azure Blob).
+Refactor Nextflow's task caching into a plugin-extensible architecture so that different global cache implementations can be delivered as plugins, with the existing local/cloud cache behaviour preserved as the default. The first concrete global cache implementation extends `nf-cloudcache` for content-addressable caching on cloud object storage (S3, GCS, Azure Blob).
 
 **Rationale for this approach:**
-- `nf-cloudcache` already exists and handles cloud storage integration
-- Cloud storage provides strong consistency guarantees for concurrent access
-- Many organizations already use cloud storage for work directories
-- Cloud providers support atomic operations needed for coordination
-- No new infrastructure required
-- Scalable and accessible from anywhere
+- A pluggable architecture lets different global cache implementations co-exist without forking core code.
+- Today's cache logic is hardcoded across `TaskProcessor`, `TaskHasher`, `CacheDB`, `PublishDir`, and `FilePorter` — different cache implementations need different decisions about task identity, coordination, output storage, ref counting, and cleanup. These decisions belong behind interfaces, not in core.
+- `nf-cloudcache` already exists and handles cloud storage integration, providing a natural starting point for the first global cache implementation.
+- Cloud storage provides strong consistency guarantees for concurrent access and supports atomic operations needed for coordination.
+- Many organizations already use cloud storage for work directories.
+- No new infrastructure required for the cloud-storage variant.
+- Scalable and accessible from anywhere.
+
+The refactor itself is described in `specs/260507-pluggable-cache-architecture/spec.md`. It introduces five plugin-extensible seams — pluggable `TaskHasher`, outputs-shaped cache resolution (`beginTask`/`endTask`), workdir adoption, file-usage events, and optional cleanup capability — and preserves byte-identical behaviour when no plugin is registered.
 
 **Trade-offs:**
 - Higher latency than local filesystem (~100-500ms vs ~10ms)
@@ -1050,26 +1053,41 @@ process prod_analysis { ... }
 
 ### Implementation Plan
 
+The implementation is split between (a) a core refactor that introduces plugin-extensible cache interfaces (covered by `specs/260507-pluggable-cache-architecture/spec.md`) and (b) the global cache implementation itself, which becomes the first non-default consumer of those interfaces.
+
 **Phase 0: Proof of concept (#6100)**
 1. Associate nf-cloudcache path and workdir with the global-cache path and active resume by default
 2. Constant sessionId (0000-000-000), remove processName from task hash
 3. Optional: Use deep cache mode
 
-**Phase 1: Core functionality*
-1. Implement global hash algorithm (no sessionId, no processName)
-2. Implement content-based file hashing
+**Phase 1: Pluggable cache architecture (core refactor)**
 
-**Phase 2: Concurrency control**
-1. Add cloud storage lock acquisition (S3 conditional PUT)
-2. Test race condition handling
+See `specs/260507-pluggable-cache-architecture/spec.md` for the full design. Summary:
+1. Pluggable `TaskHasher` factory (extending #6927) so cache implementations declare their preferred hasher.
+2. Outputs-shaped cache resolution (`beginTask` / `endTask`) on `CacheDB`; default implementation preserves today's `LockManager` + workdir-mkdir loop, relocated.
+3. Workdir adoption hook (`adopt`) + `WorkdirDisposition` (KEEP/DELETE) so cache implementations can move outputs into managed storage and dispose of the workdir.
+4. File-usage events (`notifyPublish`, `notifyFilePort`) for ref-counted cleanup.
+5. Optional `CleanupCapable` capability for `nextflow cache clean ...`.
+
+All five seams ship with default implementations that preserve byte-identical behaviour and on-disk format.
+
+**Phase 2: Global cache hasher**
+1. Implement global hash algorithm as a `TaskHasher` plugin (no sessionId, no processName).
+2. Implement content-based file hashing inside the global hasher.
+
+**Phase 3: Global cache implementation**
+1. Implement a `CacheFactory` + `CacheDB` for the global cache, wiring outputs-shaped restore, adoption (with `DELETE` disposition for cache-managed outputs), and file-usage events.
+2. Add cloud storage lock acquisition (S3 conditional PUT, GCS `ifGenerationMatch=0`, Azure `If-None-Match: *`) inside the global `beginTask` implementation.
+3. Test race condition handling.
 
 **Phase 4: Polish**
 1. Add configuration options
-2. Implement cache cleanup commands 
+2. Implement cache cleanup commands via `CleanupCapable`
 3. Documentation and examples
 
 ## Links
 
+- [Pluggable cache architecture spec](../specs/260507-pluggable-cache-architecture/spec.md) - Core refactor enabling pluggable global cache implementations
 - [nf-cloudcache plugin](../plugins/nf-cloudcache/) - Foundation for global cache
 - [CloudCacheConfig](../plugins/nf-cloudcache/src/main/nextflow/cache/CloudCacheConfig.groovy) - Configuration class
 - [TaskProcessor.groovy](../modules/nextflow/src/main/groovy/nextflow/processor/TaskProcessor.groovy) - Cache checking logic (lines 825-839, 925-1001)
