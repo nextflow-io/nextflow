@@ -75,25 +75,7 @@ class CmdPlugin extends CmdBase {
             final target = items[0]
             final cmd = items[1] ? items[1..-1].join(CMD_SEP) : null
 
-            // push back the command as the first item
-            Plugins.start(target)
-            final wrapper = Plugins.manager.getPlugin(target)
-            if( !wrapper )
-                throw new AbortOperationException("Cannot find target plugin: $target")
-            final plugin = wrapper.getPlugin()
-            if( plugin instanceof PluginExecAware ) {
-                def mapped = [] as List<String>
-                params.entrySet().each{
-                    mapped << "--$it.key".toString()
-                    mapped << "$it.value".toString()
-                }
-                args.addAll(mapped)
-                final ret = plugin.exec(getLauncher(), target, cmd, args)
-                // use explicit exit to invoke the system shutdown hooks
-                System.exit(ret)
-            }
-            else
-                throw new AbortOperationException("Invalid target plugin: $target")
+            executeCustomPluginCmd(target, cmd)
         }
         else {
             throw new AbortOperationException("Invalid plugin command: ${args[0]}")
@@ -143,6 +125,40 @@ class CmdPlugin extends CmdBase {
         cleanup(targetDir)
         // done
         println "Plugin created successfully at path: $targetDir"
+    }
+
+    /**
+     * Execute a custom CLI command, defined by a plugin.
+     *
+     * @param target The target plugin and optional version, Example `nf-somePlugin@1.0.0`
+     * @param cmd The command that is passed on to the plugin.
+     */
+    private executeCustomPluginCmd(String target, String cmd) {
+        // Separate ID and version
+        final List<String> targetSplit = target.tokenize('@') as List<String>
+        final String pluginId = targetSplit[0]
+
+        // push back the command as the first item
+        Plugins.start(target)
+
+        // Fetch started plugin
+        final wrapper = Plugins.manager.getPlugin(pluginId)
+        if( !wrapper )
+            throw new AbortOperationException("Cannot find target plugin: $target")
+        final plugin = wrapper.getPlugin()
+        if( plugin instanceof PluginExecAware ) {
+            def mapped = [] as List<String>
+            params.entrySet().each{
+                mapped << "--$it.key".toString()
+                mapped << "$it.value".toString()
+            }
+            args.addAll(mapped)
+            final ret = plugin.exec(getLauncher(), target, cmd, args)
+            // use explicit exit to invoke the system shutdown hooks
+            System.exit(ret)
+        }
+        else
+            throw new AbortOperationException("Invalid target plugin: $target")
     }
 
     static private String readLine() {
