@@ -4,6 +4,7 @@
 .cache/*
 .vagrant/*
 .cache/*
+.netlify/
 .nextflow*
 .node-nextflow*
 .devcontainer
@@ -46,3 +47,4 @@ plugins-prod
 /results
 /x/*
 mise.toml
+docs/.netlify/
