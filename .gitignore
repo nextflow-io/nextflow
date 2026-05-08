@@ -26,7 +26,6 @@ test/*
 tools/*
 tests_other
 other
-docs/_build/
 ./*.txt
 errors/
 misc/
@@ -46,3 +45,4 @@ plugins-prod
 /results
 /x/*
 mise.toml
+.netlify/

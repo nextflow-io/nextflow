@@ -9,14 +9,19 @@ jobs:
   docs-build:
     name: Build
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: docs
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-node@v4
         with:
-          python-version: '3.9'
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: docs/package-lock.json
 
-      - name: Test docs build
-        run: |
-          cd docs/
-          pip install -r requirements.txt
-          make clean html
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build docs
+        run: npm run build
