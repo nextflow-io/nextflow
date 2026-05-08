@@ -469,7 +469,7 @@ class CmdRun extends CmdBase implements HubOptions {
             // Show Nextflow version
             fmt.a(Attribute.INTENSITY_FAINT).a("  ~  ").reset().a("version " + BuildInfo.version).reset()
             fmt.a("\n")
-            AnsiConsole.out.println(fmt.eraseLine())
+            AnsiConsole.err.println(fmt.eraseLine())
         }
         else {
             // Plain header to the console if ANSI is disabled
@@ -527,7 +527,7 @@ class CmdRun extends CmdBase implements HubOptions {
             fmt.fg(Color.CYAN).a("revision: ").reset()
             fmt.fg(Color.CYAN).a(revision).reset()
             fmt.a("\n")
-            AnsiConsole.out().println(fmt.eraseLine())
+            AnsiConsole.err().println(fmt.eraseLine())
         }
         else {
             log.info "${head} [$runName] - revision: ${revision}"
