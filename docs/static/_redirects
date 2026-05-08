@@ -17,3 +17,4 @@
 /nextflow/plugins                  /nextflow/plugins/plugins               301
 /nextflow/channel                  /nextflow/workflow                      301
 /nextflow/module/                  /nextflow/modules/                      301
+/nextflow/operator                 /nextflow/reference/operator            301
