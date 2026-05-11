@@ -65,7 +65,9 @@ A plugin-extensible architecture moves each of these decisions behind an interfa
         │  - adopt(task, outputs)              │
         │  - beginTask / endTask events        │
         │  - notifyPublish / notifyFilePort    │
-        │  - (optional) Cleanup capability     │
+        │  - (optional) CacheReader            │
+        │  - (optional) CacheCleaner           │
+        │  - (optional) CacheDropper           │
         └──────────────────────────────────────┘
 ```
 
@@ -75,7 +77,7 @@ The five seams:
 2. **Outputs-shaped cache contract** — `Cache.getTaskCacheEntry()` returns resolved output bindings (URIs + values + exit code + stdout); `TaskProcessor` no longer scans the workdir for restore. Default implementation realizes bindings lazily via a workdir scan at restore time.
 3. **Workdir adoption hook** — `cache.adopt(task, outputs)` after task success; default no-op; cache returns `WorkdirDisposition` (KEEP/DELETE). Workdir derivation (`task.getWorkDirFor(hash)`) untouched.
 4. **File-usage event methods on the cache** — task lifecycle (`beginTask`/`endTask`), publish, and file porting events extending the cache interface; default no-ops; events are authoritative source of truth for ref counts.
-5. **Cleanup outside the interface** — caches that need it implement an optional `CleanupCapable` sub-interface; `nextflow cache clean ...` is a thin pass-through. Default cache exposes today's behavior; alternative implementations may handle cleanup autonomously.
+5. **Capability interfaces for read/cleanup outside `Cache`** — record iteration is exposed via an optional `CacheReader`; selective bulk eviction via `CacheCleaner`; unconditional destructive ops via `CacheDropper`; the composite `CacheCleanup` is the return type of `Cache.openForClean()`. `nextflow log` / `nextflow cache clean` are thin pass-throughs that select the right capability via `openForRead()` / `openForClean()` and refuse gracefully when the implementation does not support a verb.
 
 ## Detailed Design
 
@@ -121,7 +123,28 @@ File-hash strategy stays internal to the hasher implementation. A hypothetical `
 The cache becomes the single owner of all per-task lifecycle decisions: hit lookup, slot claim, collision resolution, and input ref-counting. `TaskProcessor` makes one call and gets back one of two outcomes.
 
 ```groovy
-interface Cache {
+interface Cache extends Closeable {
+
+    /** Initialise for active (writable) use. Returns self for chaining. */
+    Cache open()
+
+    /**
+     * Initialise the underlying store in read-only mode and narrow the returned
+     * handle to the read interface. The runtime object MAY be the same instance
+     * (with internal state tracking the mode). Throws {@link UnsupportedOperationException}
+     * when the implementation does not support browsing.
+     */
+    CacheReader openForRead()
+
+    /**
+     * Initialise for cleanup operations and narrow to the {@link CacheCleanup}
+     * composite. Throws {@link UnsupportedOperationException} when the
+     * implementation does not support cleanup.
+     */
+    CacheCleanup openForClean()
+
+    // close() inherited from Closeable
+
     /**
      * Resolve the cache state for a task about to start. Single entry point for:
      *   - cache-hit lookup
@@ -284,12 +307,26 @@ Default implementations are empty methods. LevelDB and `nf-cloudcache` continue 
 4. **Cache-hit ref counting is internal.** When `beginTask` returns `CACHE_HIT`, the cache implementation produces that return value; it knows the hit happened and updates ref counts inline before returning. No separate `notifyCacheHit` event.
 5. **No retroactive corrections.** Events represent reality at the moment of emission. Cache state is built incrementally; there is no "rebuild from history" path.
 
-### Section 6 — Optional Cleanup Capability
+### Section 6 — Optional capability interfaces
 
-Cleanup *policy* is the cache implementation's prerogative; Nextflow's only obligation is to emit accurate events. The `nextflow cache clean` CLI dispatches through an optional sub-interface.
+Beyond the mandatory `Cache` lifecycle, alternative caches opt into three orthogonal capabilities. Each is a separate Groovy interface in `nextflow.cache`; a plugin declares `implements` for exactly the ones it supports. The CLI dispatches via `instanceof` checks after asking `Cache.openForRead()` / `openForClean()` to narrow the handle's type.
+
+#### `CacheReader` — record read + iteration
 
 ```groovy
-interface CleanupCapable {
+interface CacheReader extends Closeable {
+    TraceRecord getTraceRecord(HashCode hash)
+    TraceRecord findTraceRecord(Closure<Boolean> criteria)
+    void eachRecord(Closure consumer)
+}
+```
+
+Used by `nextflow log <runName>` and any per-run reporting. The receiver is obtained via `cache.openForRead()`, which returns the (narrowed) reader handle; the underlying store opens in read-only mode (no claim ownership, no async writers).
+
+#### `CacheCleaner` — selective bulk cleanup
+
+```groovy
+interface CacheCleaner {
     CleanupReport cleanAll(boolean dryRun)
     CleanupReport cleanByHash(HashCode hash, boolean dryRun)
     CleanupReport cleanOlderThan(Duration age, boolean dryRun)
@@ -305,9 +342,43 @@ class CleanupReport {
 }
 ```
 
-If `session.cache instanceof CleanupCapable`, `nextflow cache clean ...` dispatches to the right method. Otherwise it prints "this cache implementation does not support manual cleanup" and exits non-zero — silently no-op'ing would be worse than refusing.
+Predicate-driven, ref-count-aware bulk eviction returning a structured `CleanupReport`. Implementations may interact with ref counts (e.g. `DefaultCache.cleanAll` decrements via `CacheDB.removeTaskEntry` and only deletes workdirs when ref hits 0; `GlobalCache.cleanAll` drives the two-phase service protocol).
 
-The default implementation (LevelDB / `nf-cloudcache`) implements `CleanupCapable`. Today's `nextflow clean` semantics carry over essentially unchanged.
+#### `CacheDropper` — unconditional destructive ops
+
+```groovy
+interface CacheDropper {
+    /** Drop the per-run index file (implements `nextflow log -clear <runName>`). */
+    void deleteIndex()
+
+    /** Drop the entire cache for this uniqueId (implements `nextflow clean -f` and the
+      * post-condition of `clean -but` / `clean -after`). */
+    void drop()
+}
+```
+
+Blanket destructive operations — no predicate, no `CleanupReport`, no ref-count check. Separate from `CacheCleaner` because a plugin may reasonably support one without the other.
+
+#### `CacheCleanup` — composite for `openForClean()` return type
+
+```groovy
+interface CacheCleanup extends CacheCleaner, CacheDropper, Closeable {}
+```
+
+A trivial composite marker. `Cache.openForClean()` returns `CacheCleanup` so the CLI gets a single typed handle covering both selective cleanup and destructive operations without explicit `instanceof` at the entry point. A plugin opts into the composite when it can support both halves; if it supports only one, it implements only `CacheCleaner` or only `CacheDropper` and `openForClean()` throws `UnsupportedOperationException`.
+
+#### Dispatch shape (CLI)
+
+| Verb | Entry point | Required capability |
+|------|-------------|---------------------|
+| `nextflow log <runName>` | `openForRead()` → `CacheReader` | `CacheReader` |
+| `nextflow log -clear <runName>` | `openForClean()` → `CacheCleanup` | `CacheDropper` (via `deleteIndex()`) |
+| `nextflow clean -older-than <age>` / `-but <X>` / `-after <X>` | `openForClean()` → `CacheCleanup` | `CacheCleaner` |
+| `nextflow clean -f` | `openForClean()` → `CacheCleanup` | `CacheDropper` (via `drop()`) |
+
+When a required capability is missing, `openForRead()` / `openForClean()` throws and the CLI prints `"<impl> does not support <verb>"` (non-zero exit). Silent no-ops would be worse than refusing.
+
+The default implementation (LevelDB / `nf-cloudcache`) implements every capability. Today's `nextflow log` and `nextflow clean` semantics carry over essentially unchanged.
 
 ### Section 7 — Plugin API Surface
 
@@ -319,23 +390,53 @@ META-INF/services/nextflow.processor.hash.TaskHasherFactory
 ```
 
 ```groovy
-abstract class CacheFactory {
-    abstract Cache create(UUID uniqueId, String runName, Path basePath)
+abstract class CacheFactory implements ExtensionPoint {
+
+    /** UNCHANGED from pre-pluggable-cache. Every existing CacheFactory subclass
+      * (DefaultCacheFactory, CloudCacheFactory, etc.) continues to override only this
+      * method. */
+    protected abstract CacheDB newInstance(UUID uniqueId, String runName, Path home=null)
+
+    /** NEW — default body wraps the legacy CacheDB in a DefaultCache. Plugins that
+      * implement a fully bespoke pluggable Cache override this method directly. */
+    Cache create(UUID uniqueId, String runName, Path basePath) {
+        return new DefaultCache(newInstance(uniqueId, runName, basePath))
+    }
 
     /** Name of the TaskHasher this cache prefers, resolved via TaskHasherFactory registry */
     String getDefaultTaskHasher() { return 'v2' }
 
-    /** The cache scheme/type for config dispatch (e.g. "default", "cloud", "global") */
+    /** The cache scheme/type for diagnostics (e.g. "default", "cloud", "global"). */
     String getName() { return 'default' }
+
+    /** UNCHANGED static dispatch returning the legacy CacheDB. Used by remaining
+      * legacy call sites until they migrate to {@link #createCache}. */
+    static CacheDB create(UUID uniqueId, String runName, Path home=null) {
+        final all = Plugins.getPriorityExtensions(CacheFactory)
+        if( !all ) throw new IllegalStateException("Unable to find Nextflow cache factory")
+        return all.first().newInstance(uniqueId, runName, home)
+    }
+
+    /** NEW — static dispatch returning the pluggable Cache. */
+    static Cache createCache(UUID uniqueId, String runName, Path basePath=null) {
+        final all = Plugins.getPriorityExtensions(CacheFactory)
+        if( !all ) throw new IllegalStateException("Unable to find Nextflow cache factory")
+        return all.first().create(uniqueId, runName, basePath)
+    }
 }
 
-abstract class TaskHasherFactory {
+abstract class TaskHasherFactory implements ExtensionPoint {
     abstract String getName()
     abstract TaskHasher create(TaskRun task)
 }
 ```
 
-Selection at session init:
+**Plugin authoring guidance:**
+
+- A plugin built on the legacy `CacheStore` / `CacheDB` primitives (e.g. `nf-cloudcache`) implements only `newInstance(...)`. The default `create(...)` wraps the returned `CacheDB` in `DefaultCache`; the plugin automatically gets `Cache`, `CacheReader`, and `CacheCleanup` via that wrapping. No additional changes needed.
+- A plugin with a fully bespoke Cache implementation (e.g. `nf-global-cache`) overrides `create(...)` and returns its own `Cache` instance. It must still provide `newInstance(...)` (the method is abstract); the typical pattern is to throw `UnsupportedOperationException("This factory does not provide a CacheDB; use create(...) instead.")`.
+
+**Selection at session init**:
 
 ```
 1. Scan classpath for all CacheFactory implementations.
@@ -346,7 +447,25 @@ Selection at session init:
 6. Look up named TaskHasherFactory; cache resolved factory on Session.
 ```
 
-Alternative cache implementations provide both factories. Their `Cache` implements `beginTask`/`endTask`/`adopt`/`putTaskCacheEntry`/`getTaskCacheEntry`/`notifyPublish`/`notifyFilePort`; `CleanupCapable` is optional. The existing `CacheDB` class remains an internal building block of the `DefaultCache` implementation; alternative `Cache` implementations need not depend on it.
+`Session.cache` is typed `Cache` (no second `CacheDB` field). The existing `CacheDB` class remains a public API used internally by `DefaultCache`; alternative `Cache` implementations need not depend on it.
+
+#### `CacheDB` declares the read + drop capabilities
+
+`CacheDB` (public class, signature unchanged) adds `implements Closeable, CacheReader, CacheDropper`. The corresponding method bodies (`getTraceRecord`, `findTraceRecord`, `eachRecord`, `deleteIndex`, `drop`, `close`) already exist verbatim on `CacheDB`; the change is declarative.
+
+`CacheDB.removeTaskEntry` (ref-counted decrement-and-maybe-delete) stays public for backward compatibility but is **not** promoted to any new interface. It is an internal primitive of `DefaultCache.cleanAll`/`cleanByHash`/`cleanOlderThan`/`cleanIncomplete`, together with the dryRun simulation logic that today lives in `CmdClean.wouldRemove` (which moves into `DefaultCache`).
+
+#### Caller migrations
+
+| Caller | Today | After |
+|---|---|---|
+| `Session.cache` | dual fields: `CacheDB cache` + `Cache cacheImpl` | single `Cache cache`; `Session.start()` uses `CacheFactory.createCache(...).open()` |
+| `Session.cleanupAfterRunOK` | manual `eachRecord` + `removeTaskEntry` + workdir delete loop against `CacheDB` | `try (CacheCleanup c = cache.openForClean()) { c.cleanAll(false) }` |
+| `Session.notifyTaskSubmit/Complete/Cached` | direct `cache.putIndexAsync` / `putTaskAsync` / `cacheTaskAsync` calls | no cache call — writes owned by `DefaultCache.beginTask` (CLAIM_GRANTED / CACHE_HIT branches) and `DefaultCache.putTaskCacheEntry` |
+| `CacheBase.cacheFor(entry)` returning `CacheDB` | single method | split into `readerFor(entry): CacheReader` and `cleanerFor(entry): CacheCleanup` |
+| `CmdLog` | `cacheFor(entry).eachRecord(...)` | `try (CacheReader r = readerFor(entry)) { r.eachRecord(...) }`; `-clear` flag uses `cleanerFor(entry).deleteIndex()` |
+| `CmdClean` | manual loop calling `cache.removeTaskEntry` per entry + `deleteIndex` + `drop` + the `wouldRemove`/`dryHash` dryRun simulation | `try (CacheCleanup c = cleanerFor(entry)) { c.cleanAll(dryRun); if (!dryRun) { c.deleteIndex(); ...; c.drop() } }`. The dryRun simulation moves into `DefaultCache.cleanAll`. |
+| `WaveDebugCmd` | `CacheFactory.create(...)` returning `CacheDB` | `CacheFactory.createCache(...).openForRead()` returning `CacheReader`; same method calls (`findTraceRecord`/`getTraceRecord`), narrower receiver type |
 
 ### Section 8 — Backward Compatibility & Migration
 
@@ -398,7 +517,7 @@ The hasher is selected automatically based on `CacheFactory.getDefaultTaskHasher
 1. **Phase A — foundation**: ship `TaskHasher` interface (PR #6927) + plugin-extensible factory. Zero behavior change.
 2. **Phase B — cache contract**: introduce `beginTask`/`endTask`/`getTaskCacheEntry`/`putTaskCacheEntry` with default implementations wrapping today's logic. Existing `getTaskEntry` method kept as a transitional alias (deprecated). Zero behavior change.
 3. **Phase C — adoption + events**: add `adopt`, `notifyPublish`, `notifyFilePort`. Zero behavior change.
-4. **Phase D — cleanup capability**: add `CleanupCapable`; route CLI through it. Zero behavior change.
+4. **Phase D — capability interfaces**: add `CacheReader`, `CacheCleaner`, `CacheDropper`, `CacheCleanup`. Route `nextflow log` through `openForRead()` / `CacheReader` and `nextflow cache clean` through `openForClean()` / `CacheCleanup`. Migrate `CacheBase`, `CmdLog`, `CmdClean`, `Session.cleanupAfterRunOK`, `WaveDebugCmd`. Zero behavior change.
 5. **Phase E — validation**: a real alternative cache implementation (the global cache plugin) validates the contract end-to-end before declaring it stable.
 
 Each phase ships independently; no big-bang merge.
@@ -433,7 +552,7 @@ Each phase ships independently; no big-bang merge.
 
 - All five seams are introduced with default implementations that pass the existing test suite without modification.
 - A reference alternative implementation (the global cache plugin) wires all interfaces end-to-end and demonstrates outputs-shaped restore, workdir adoption with `DELETE`, and ref-counted file usage.
-- `nextflow cache clean ...` continues to work for the default implementation; refuses gracefully for caches that do not implement `CleanupCapable`.
+- `nextflow cache clean ...` continues to work for the default implementation; refuses gracefully for caches that do not implement the corresponding capability (`CacheCleaner` for selective eviction, `CacheDropper` for `-f` / drop).
 - `LockManager` is no longer referenced from `TaskProcessor`.
 - `collectOutputs` is no longer called from the cache-restore path in `TaskProcessor`.
 - LevelDB and `nf-cloudcache` on-disk formats are unchanged; pre-existing caches resume successfully.
@@ -525,17 +644,17 @@ A pipeline operator wants to use an alternative cache (for example, the global c
 
 ### User Story 5 — Operator runs `nextflow cache clean` (Priority: P3)
 
-A pipeline operator runs `nextflow cache clean` (or a variant: `-older-than`, `-hash`, `-incomplete`, `-dry-run`) against a pipeline. The CLI dispatches to the active cache implementation: the default cache cleans as today; an alternative cache implementation either cleans (if it implements `CleanupCapable`) or refuses gracefully with a clear message.
+A pipeline operator runs `nextflow cache clean` (or a variant: `-older-than`, `-hash`, `-incomplete`, `-dry-run`) against a pipeline. The CLI calls `Cache.openForClean()` to obtain a `CacheCleanup` handle and dispatches to the right method. The default cache cleans as today; an alternative cache implementation that does not support cleanup throws `UnsupportedOperationException` from `openForClean()` and the CLI refuses gracefully with a clear message.
 
-**Why this priority**: Operational story for users with cleanup needs. Lower priority than the architectural seams because existing `nextflow clean` semantics already work for the default case; the new behavior is the refusal path for caches that do not implement `CleanupCapable`.
+**Why this priority**: Operational story for users with cleanup needs. Lower priority than the architectural seams because existing `nextflow clean` semantics already work for the default case; the new behavior is the refusal path for caches that do not implement `CacheCleaner` / `CacheDropper`.
 
-**Independent Test**: Run `nextflow cache clean -dry-run` against the default cache; verify entries are reported. Repeat against a cache plugin that does not implement `CleanupCapable`; verify the CLI exits non-zero with a clear message and no entries are touched.
+**Independent Test**: Run `nextflow cache clean -dry-run` against the default cache; verify entries are reported. Repeat against a cache plugin whose `openForClean()` throws; verify the CLI exits non-zero with a clear message and no entries are touched.
 
 **Acceptance Scenarios**:
 
 1. **Given** the default cache, **When** the operator runs `nextflow cache clean -older-than 7d`, **Then** entries older than seven days are deleted and a summary report is printed.
-2. **Given** an alternative cache plugin that implements `CleanupCapable`, **When** the operator runs `nextflow cache clean`, **Then** the CLI dispatches to the plugin's implementation and reports its results.
-3. **Given** an alternative cache plugin that does not implement `CleanupCapable`, **When** the operator runs `nextflow cache clean`, **Then** the CLI prints "this cache implementation does not support manual cleanup" and exits with non-zero status.
+2. **Given** an alternative cache plugin whose `openForClean()` returns a `CacheCleanup`, **When** the operator runs `nextflow cache clean`, **Then** the CLI dispatches to the plugin's implementation and reports its results.
+3. **Given** an alternative cache plugin whose `openForClean()` throws `UnsupportedOperationException`, **When** the operator runs `nextflow cache clean`, **Then** the CLI prints "this cache implementation does not support manual cleanup" and exits with non-zero status.
 4. **Given** any cache implementation, **When** the operator runs `nextflow cache clean -dry-run`, **Then** the CLI reports what would be deleted without modifying any state.
 
 ---
@@ -574,8 +693,8 @@ A pipeline operator runs `nextflow cache clean` (or a variant: `-older-than`, `-
 - **FR-011**: System MUST NOT call `collectOutputs` or read `.exitcode`/`.command.out` from `TaskProcessor` on the cache-restore path.
 - **FR-012**: `TaskProcessor.collectOutputs(TaskRun)` MUST be the single source of truth for output collection semantics; both the success path and the cache-restore path (in the default cache implementation) MUST invoke it directly without duplicating logic.
 - **FR-013**: Default cache implementation MUST preserve existing on-disk format for both LevelDB and `nf-cloudcache`; cache files written by prior Nextflow versions MUST be readable.
-- **FR-014**: System MUST dispatch `nextflow cache clean` to the active cache when it implements `CleanupCapable`.
-- **FR-015**: System MUST refuse `nextflow cache clean` with a clear message and non-zero exit when the active cache does not implement `CleanupCapable`.
+- **FR-014**: System MUST dispatch `nextflow cache clean` to the active cache when `Cache.openForClean()` returns a `CacheCleanup` handle.
+- **FR-015**: System MUST refuse `nextflow cache clean` with a clear message and non-zero exit when the active cache's `openForClean()` throws `UnsupportedOperationException`.
 - **FR-016**: `LockManager` MUST NOT be referenced from `TaskProcessor` after the refactor; intra-session serialisation MUST be an internal concern of the default cache implementation.
 - **FR-017**: Cache implementations MUST own the hash-bump policy used for collision avoidance; `TaskProcessor` MUST NOT contain a retry/bump loop for cache-related collisions.
 - **FR-018**: Plugin authors MUST be able to register a `CacheFactory` and a `TaskHasherFactory` via standard `META-INF/services` discovery without modifying core code.
@@ -600,7 +719,10 @@ A pipeline operator runs `nextflow cache clean` (or a variant: `-older-than`, `-
 - **OutputBinding**: Per-output-parameter binding (FILE / VALUE / EVAL) with value(s) and optional metadata.
 - **CacheResolution**: Outcome of `beginTask` — `CACHE_HIT` (with entry) or `CLAIM_GRANTED` (with finalHash).
 - **AdoptionResult**: Outcome of `adopt` — possibly-rewritten output bindings plus `WorkdirDisposition` (KEEP/DELETE).
-- **CleanupCapable**: Optional sub-interface enabling `nextflow cache clean` dispatch for caches that support manual cleanup.
+- **CacheReader**: Optional capability interface (`getTraceRecord` / `findTraceRecord` / `eachRecord`) returned by `Cache.openForRead()`. Enables `nextflow log` and per-run reporting.
+- **CacheCleaner**: Optional capability interface for predicate-driven, ref-count-aware bulk eviction (`cleanAll` / `cleanByHash` / `cleanOlderThan` / `cleanIncomplete`).
+- **CacheDropper**: Optional capability interface for unconditional destructive operations (`deleteIndex` / `drop`).
+- **CacheCleanup**: Composite of `CacheCleaner` + `CacheDropper` + `Closeable`; the narrowed return type of `Cache.openForClean()`. Enables `nextflow cache clean` dispatch.
 
 ## Success Criteria
 
@@ -612,7 +734,7 @@ A pipeline operator runs `nextflow cache clean` (or a variant: `-older-than`, `-
 - **SC-004**: A reference alternative cache plugin demonstrates outputs-shaped restore, workdir adoption with `DELETE`, and ref-counted file usage end-to-end on a pipeline of at least 100 tasks with no core code modifications.
 - **SC-005**: Failure-injection tests pass for every supported `errorStrategy` (`retry`, `terminate`, `ignore`, `finish`) and for dynamic-resources retry, demonstrating exactly one `endTask` call per `beginTask` call across all paths.
 - **SC-006**: Plugin authors can ship a working `Cache` implementation as a standalone Nextflow plugin without changes to core (validated by the reference implementation shipping in a separate repository or plugin).
-- **SC-007**: `nextflow cache clean` continues to work for the default implementation with the same UX as today; refuses gracefully (non-zero exit, clear message, zero state changes) for cache plugins without `CleanupCapable`.
+- **SC-007**: `nextflow cache clean` continues to work for the default implementation with the same UX as today; refuses gracefully (non-zero exit, clear message, zero state changes) for cache plugins whose `openForClean()` throws.
 - **SC-008**: After enabling an alternative cache plugin that returns `DELETE`, workdirs are removed at a rate of at least 95% of completed tasks (the remaining 5% accounts for rare async-delete failures, which MUST be logged and MUST NOT block the workflow).
 
 ## Assumptions
