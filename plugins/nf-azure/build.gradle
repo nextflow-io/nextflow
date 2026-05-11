@@ -68,6 +68,14 @@ dependencies {
     // Force patched version to address GHSA-72hv-8253-57qq (jackson-core Number Length Constraint Bypass DoS)
     runtimeOnly 'com.fasterxml.jackson.core:jackson-core:2.18.6'
 
+    // Pin patched netty versions to address security vulnerabilities
+    implementation 'io.netty:netty-common:4.1.133.Final'
+    implementation 'io.netty:netty-handler:4.1.133.Final'
+    implementation 'io.netty:netty-handler-proxy:4.1.133.Final'
+    implementation 'io.netty:netty-codec-http:4.1.133.Final'
+    implementation 'io.netty:netty-codec-http2:4.1.133.Final'
+    implementation 'io.netty:netty-codec-dns:4.1.133.Final'
+
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
     testImplementation "org.apache.groovy:groovy:4.0.31"
