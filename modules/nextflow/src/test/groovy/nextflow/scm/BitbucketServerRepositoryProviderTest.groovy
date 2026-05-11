@@ -110,9 +110,9 @@ class BitbucketServerRepositoryProviderTest extends Specification {
         def token = System.getenv('NXF_BITBUCKET_SERVER_ACCESS_TOKEN')
         def items = token.tokenize(':')
 
-        def config = items > 1
-            ? new ProviderConfig('bbs', [server:'http://slurm.seqera.io:7990', platform:'bitbucketsever']).setUser(items[0]).setToken(items[1])
-            : new ProviderConfig('bbs', [server:'http://slurm.seqera.io:7990', platform:'bitbucketsever']).setToken(token)
+        def config = items.size() > 1
+            ? new ProviderConfig('bbs', [server:'http://slurm.seqera.io:7990', platform:'bitbucketserver']).setUser(items[0]).setToken(items[1])
+            : new ProviderConfig('bbs', [server:'http://slurm.seqera.io:7990', platform:'bitbucketserver']).setToken(token)
         and:
         def repo = new BitbucketServerRepositoryProvider('scm/hello/hello', config)
 
