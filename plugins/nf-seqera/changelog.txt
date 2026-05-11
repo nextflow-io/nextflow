@@ -1,5 +1,8 @@
 nf-seqera changelog
 ====================
+0.20.0 - 11 May 2026
+- Bump sched-client@0.55.2
+
 0.19.0 - 25 Apr 2026
 - Add hints process directive for executor-specific scheduling hints (#7034) [406358e03]
 - Add workspaceId/computeEnvId to nf-seqera auto labels (#7059) [5e8276c00]
