@@ -1569,7 +1569,12 @@ class TaskProcessor {
     ResourcesBundle getModuleBundle() {
         final script = this.getOwnerScript()
         final meta = ScriptMeta.get(script)
-        return meta?.isModule() ? meta.getModuleBundle() : null
+        // No script meta registered (e.g. processors not tied to a loaded script): nothing to resolve.
+        if( meta == null )
+            return null
+        // Resolve the bundle when the owner script is either an included module,
+        // or the entry script of a `nextflow module run` invocation (see #7087).
+        return (meta.isModule() || session.isModuleRun()) ? meta.getModuleBundle() : null
     }
 
     @Memoized
