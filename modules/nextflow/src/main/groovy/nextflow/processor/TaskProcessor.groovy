@@ -1569,6 +1569,7 @@ class TaskProcessor {
     ResourcesBundle getModuleBundle() {
         final script = this.getOwnerScript()
         final meta = ScriptMeta.get(script)
+        // No script meta registered (e.g. processors not tied to a loaded script): nothing to resolve.
         if( meta == null )
             return null
         // Resolve the bundle when the owner script is either an included module,
