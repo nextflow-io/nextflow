@@ -235,7 +235,7 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         }
 
         when:
-        strategy.invokeMethod('verifyFetchResult', [fetchResult, 'main', 'bare repo'] as Object[])
+        strategy.verifyFetchResult(fetchResult, 'main', 'bare repo')
 
         then:
         noExceptionThrown()
@@ -252,7 +252,7 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         }
 
         when:
-        strategy.invokeMethod('verifyFetchResult', [fetchResult, 'main', 'bare repo'] as Object[])
+        strategy.verifyFetchResult(fetchResult, 'main', 'bare repo')
 
         then:
         noExceptionThrown()
@@ -266,7 +266,7 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         }
 
         when:
-        strategy.invokeMethod('verifyFetchResult', [fetchResult, 'v1.0', 'bare repo'] as Object[])
+        strategy.verifyFetchResult(fetchResult, 'v1.0', 'bare repo')
 
         then:
         def ex = thrown(AbortOperationException)

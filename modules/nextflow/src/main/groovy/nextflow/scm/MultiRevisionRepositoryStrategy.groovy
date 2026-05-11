@@ -372,7 +372,8 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
         return new RefSpec("$revision:$tagName")
     }
 
-    private void verifyFetchResult(FetchResult result, String revision, String repoLabel) {
+    @PackageScope
+    void verifyFetchResult(FetchResult result, String revision, String repoLabel) {
         for( TrackingRefUpdate update : result.getTrackingRefUpdates() ) {
             final r = update.result
             final detail = "${project} [revision: $revision]: ${update.localName} <- ${update.remoteName} => $r (old=${update.oldObjectId?.name()}, new=${update.newObjectId?.name()})"
@@ -380,7 +381,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
                 log.warn "Force-push detected on $repoLabel ($detail); resetting local copy to match remote"
             }
             else if( r == RefUpdate.Result.NEW || r == RefUpdate.Result.FAST_FORWARD || r == RefUpdate.Result.NO_CHANGE ) {
-                log.debug "${repoLabel.capitalize()} fetch update for $detail"
+                log.debug "Fetch update on $repoLabel: $detail"
             }
             else {
                 throw new AbortOperationException("Unable to update revision '${revision}' in $repoLabel for ${project}: ${update.localName} => $r")
