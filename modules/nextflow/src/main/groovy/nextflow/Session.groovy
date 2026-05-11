@@ -914,9 +914,8 @@ class Session implements ISession {
         return moduleRun
     }
 
-    Session setModuleRun(boolean value) {
+    void setModuleRun(boolean value) {
         this.moduleRun = value
-        return this
     }
 
     boolean failOnIgnore() {
