@@ -1569,11 +1569,10 @@ class TaskProcessor {
     ResourcesBundle getModuleBundle() {
         final script = this.getOwnerScript()
         final meta = ScriptMeta.get(script)
-        if( meta?.scriptPath == null )
+        if( meta == null )
             return null
-        // The bundle is resolved when the owner script is either an included
-        // module, or it is the entry script of a `nextflow module run`
-        // invocation -- see #7087
+        // Resolve the bundle when the owner script is either an included module,
+        // or the entry script of a `nextflow module run` invocation (see #7087).
         return (meta.isModule() || session.isModuleRun()) ? meta.getModuleBundle() : null
     }
 
