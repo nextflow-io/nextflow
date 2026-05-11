@@ -377,7 +377,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
             final r = update.result
             final detail = "${project} [revision: $revision]: ${update.localName} <- ${update.remoteName} => $r (old=${update.oldObjectId?.name()}, new=${update.newObjectId?.name()})"
             if( r == RefUpdate.Result.FORCED ) {
-                log.warn "Non-fast-forward (force) update on $repoLabel for $detail"
+                log.warn "Force-push detected on $repoLabel ($detail); resetting local copy to match remote"
             }
             else if( r == RefUpdate.Result.NEW || r == RefUpdate.Result.FAST_FORWARD || r == RefUpdate.Result.NO_CHANGE ) {
                 log.debug "${repoLabel.capitalize()} fetch update for $detail"
