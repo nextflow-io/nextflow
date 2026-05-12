@@ -56,6 +56,15 @@ class ExecutorOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        Execution strategy within the chosen provider.
+        Narrows compute-environment selection when a provider offers multiple strategies
+        (e.g. AWS supports `ecs` and `vm`). When omitted, the provider's canonical default
+        strategy is used (AWS → `ecs`).
+    """)
+    final String strategy
+
+    @ConfigOption
+    @Description("""
         The AWS region for task execution (default: `eu-central-1`).
     """)
     final String region
@@ -125,6 +134,7 @@ class ExecutorOpts implements ConfigScope {
             throw new IllegalArgumentException("Missing Seqera endpoint - make sure to specify 'seqera.executor.endpoint' settings")
 
         this.provider = opts.provider as String
+        this.strategy = opts.strategy as String
         this.region = opts.region as String
         this.keyPairName = opts.keyPairName as String
         this.batchFlushInterval = opts.batchFlushInterval
@@ -151,6 +161,10 @@ class ExecutorOpts implements ConfigScope {
 
     String getProvider() {
         return provider
+    }
+
+    String getStrategy() {
+        return strategy
     }
 
     String getRegion() {
