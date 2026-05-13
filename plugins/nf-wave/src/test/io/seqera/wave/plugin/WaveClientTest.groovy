@@ -960,7 +960,7 @@ class WaveClientTest extends Specification {
         def manifest = folder.resolve('manifest.json')
         manifest.text = JsonOutput.toJson([entrypoint: ['entry.sh']])
         and:
-        def session = Mock(Session) { getConfig() >> [fusion: [enabled: true, containerConfigUrl: CONFIG_VALUE.call(manifest)]] }
+        def session = Mock(Session) { getConfig() >> [fusion: [enabled: true, containerConfigUrl: manifest.toUri().toString()]] }
         def client = new WaveClient(session)
 
         expect:
@@ -968,11 +968,6 @@ class WaveClientTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
-
-        where:
-        _ | CONFIG_VALUE
-        _ | { Path p -> p.toUri().toString() }                 // file:// URI
-        _ | { Path p -> p.toAbsolutePath().toString() }        // bare absolute path
     }
 
     def 'should reject unsupported scheme for container config' () {
@@ -997,7 +992,6 @@ class WaveClientTest extends Specification {
         'https://fusionfs.seqera.io/releases/v2.5-amd64.json'      | 'linux/arm64' | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
         'https://fusionfs.seqera.io/releases/v2.5-arm64.json'      | 'linux/amd64' | 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
         'file:///tmp/local-manifest.json'                          | 'linux/arm64' | 'file:///tmp/local-manifest.json'
-        '/tmp/local-manifest.json'                                 | 'linux/arm64' | '/tmp/local-manifest.json'
     }
 
     @Unroll

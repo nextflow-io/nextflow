@@ -444,8 +444,6 @@ class WaveClient {
             return fetchContainerConfig(configURI.toURL())
         if( scheme == 'file' )
             return fetchContainerConfig(Paths.get(configURI))
-        if( scheme == null )
-            return fetchContainerConfig(Paths.get(configURI.path ?: configURI.toString()))
         throw new IllegalArgumentException("Unsupported container config URI scheme: $scheme")
     }
 

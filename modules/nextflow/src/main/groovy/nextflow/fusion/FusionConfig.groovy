@@ -156,7 +156,7 @@ class FusionConfig implements ConfigScope {
         this.targetVersion = opts.targetVersion as String
 
         if( containerConfigUrl && !validProtocol(containerConfigUrl))
-            throw new IllegalArgumentException("Fusion container config URL should be an http(s) URL, a file: URI, or an absolute file path - offending value: $containerConfigUrl")
+            throw new IllegalArgumentException("Fusion container config URL should start with 'http:', 'https:' or 'file:' protocol prefix - offending value: $containerConfigUrl")
     }
 
     static private String parseTags(Object value) {
@@ -170,7 +170,7 @@ class FusionConfig implements ConfigScope {
     }
 
     protected boolean validProtocol(String url) {
-        url.startsWith('http://') || url.startsWith('https://') || url.startsWith('file:') || url.startsWith('/')
+        url.startsWith('http://') || url.startsWith('https://') || url.startsWith('file:')
     }
 
     static FusionConfig getConfig() {

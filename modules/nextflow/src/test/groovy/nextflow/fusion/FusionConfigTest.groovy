@@ -52,7 +52,6 @@ class FusionConfigTest extends Specification {
         [containerConfigUrl:'http://foo.com']   | [:]           | 'http://foo.com'
         [containerConfigUrl:'https://bar.com']  | [:]           | 'https://bar.com'
         [containerConfigUrl:'file:///some/file']| [:]           | 'file:///some/file'
-        [containerConfigUrl:'/some/file']       | [:]           | '/some/file'
         [:]                                     | [FUSION_CONTAINER_CONFIG_URL:'http://bar.com']           | 'http://bar.com'
         [containerConfigUrl:'http://foo.com']   | [FUSION_CONTAINER_CONFIG_URL:'http://bar.com']           | 'http://foo.com'
 
@@ -66,7 +65,7 @@ class FusionConfigTest extends Specification {
         thrown(IllegalArgumentException)
 
         where:
-        VALUE << ['ftp://foo.com/x.json', 'relative/path.json', 'gs://bucket/x.json']
+        VALUE << ['ftp://foo.com/x.json', '/abs/path.json', 'relative/path.json', 'gs://bucket/x.json']
     }
 
     @Unroll
