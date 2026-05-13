@@ -26,6 +26,7 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+
 jobs:
   build:
     name: Build
@@ -256,6 +257,10 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Intentionally persists credentials: the `release` task in
+      # packing.gradle runs `git push` and `git push origin vX.Y.Z` against
+      # this repo; both rely on actions/checkout having written the token
+      # into .git/config as http.extraheader.
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
