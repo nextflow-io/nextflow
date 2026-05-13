@@ -88,7 +88,7 @@ The `-resume` option is required to resume a pipeline. Ensure you enable `-resum
 
 The `cache` directive is enabled by default. However, you can disable or modify its behavior for a specific process. For example:
 
-```nextflow title="<filename>.config"
+```nextflow
 process FOO {
   cache false
   // ...
@@ -146,7 +146,7 @@ The [strict syntax][strict-syntax-page] does not allow global variables to be de
 
 A process that merges inputs from different sources non-deterministically may invalidate the cache. For example:
 
-```nextflow title="<filename>.nf"
+```nextflow
 workflow {
     ch_bam = channel.of( ['1', '1.bam'], ['2', '2.bam'] )
     ch_bai = channel.of( ['2', '2.bai'], ['1', '1.bai'] )
@@ -169,7 +169,7 @@ In the above example, the inputs will be merged without matching on `id`, in a s
 
 To resolve this issue, use the `join` operator to join the channels into a single input channel before invoking the process:
 
-```nextflow title="<filename>.nf"
+```nextflow
 workflow {
     ch_bam = channel.of( ['1', '1.bam'], ['2', '2.bam'] )
     ch_bai = channel.of( ['2', '2.bai'], ['1', '1.bai'] )
@@ -212,7 +212,7 @@ While some manual effort is required, the final diff can often reveal the exact 
 
 When using `-dump-hashes json`, the task hashes can be more easily extracted into a diff. Here is an example Bash script to perform two runs and produce a diff:
 
-```bash title="<filename>.sh"
+```bash
 nextflow -log run_1.log run $pipeline -dump-hashes json
 nextflow -log run_2.log run $pipeline -dump-hashes json -resume
 

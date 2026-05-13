@@ -17,7 +17,7 @@ A Nextflow pipeline script is made by joining together different processes. Each
 
 A process can define one or more *inputs* and *outputs*. Data flows from process to process through asynchronous dataflow structures, known as *channels* and *values*. The data dependencies between these processes implicitly determines the flow of execution. For example:
 
-```nextflow title="main.nf"
+```nextflow
 // Script parameters
 params.query = "/some/data/sample.fa"
 params.db = "/some/path/pdb"
@@ -108,7 +108,7 @@ Pipeline configuration properties are defined in a file named `nextflow.config` 
 
 This file can be used to define which executor to use, the process's environment variables, pipeline parameters etc. For example:
 
-```groovy title="nextflow.config"
+```groovy
 process {
   executor = 'sge'
   queue = 'cn-el6'

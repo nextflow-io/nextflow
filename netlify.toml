@@ -21,7 +21,20 @@
   # Limit Node.js memory to 2GB
   NODE_OPTIONS = "--max-old-space-size=2048"
 
-[[headers]]
+[[context.deploy-preview.headers]]
   for = "/*"
-  [headers.values]
+  [context.deploy-preview.headers.values]
     X-Robots-Tag = "noindex"
+
+[[context.branch-deploy.headers]]
+  for = "/*"
+  [context.branch-deploy.headers.values]
+    X-Robots-Tag = "noindex"
+
+# Production: emit `X-Robots-Tag: noindex` only for requests that hit
+# docs-migration.netlify.app directly. Requests proxied via docs.seqera.io
+# are detected through `X-Forwarded-Host` and left indexable so the canonical
+# URL (https://docs.seqera.io/nextflow/) is the one that gets indexed.
+[[context.production.edge_functions]]
+  path = "/*"
+  function = "robots-tag"

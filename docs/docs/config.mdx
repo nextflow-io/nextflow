@@ -30,7 +30,7 @@ A config file may contain any number of [assignments](#assignments), [blocks](#b
 
 A config assignment sets a config option to a value:
 
-```groovy title="<filename>.config"
+```groovy
 workDir = 'work'
 docker.enabled = true
 process.maxErrors = 10
@@ -40,7 +40,7 @@ The config option consists of an *option name* prefixed by any number of *scopes
 
 The value is typically a literal value, such as a number, boolean, or string. However, you can use any [expression][syntax-expressions]:
 
-```groovy title="<filename>.config"
+```groovy
 params.helper_file = "${projectDir}/assets/helper.txt"
 ```
 
@@ -48,7 +48,7 @@ params.helper_file = "${projectDir}/assets/helper.txt"
 
 You can specify config options in the same scope as a block:
 
-```groovy title="<filename>.config"
+```groovy
 // dot syntax
 docker.enabled = true
 docker.runOptions = '-u $(id -u):$(id -g)'
@@ -62,7 +62,7 @@ docker {
 
 As a result, deeply nested config options can be assigned in multiple ways. The following three assignments are equivalent:
 
-```groovy title="<filename>.config"
+```groovy
 executor.retry.maxAttempt = 5
 
 executor {
@@ -80,7 +80,7 @@ executor {
 
 You can include configuration files in other configuration files with the `includeConfig` keyword:
 
-```groovy title="<filename>.config"
+```groovy
 process.executor = 'sge'
 process.queue = 'long'
 process.memory = '10G'
@@ -144,11 +144,11 @@ When including a config file, the included config is evaluated with the paramete
 
 You should declare parameters in the config file only when other config options use them. When you use a parameter in the script, you should declare it there and override it in config profiles as needed:
 
-```nextflow title="<filename>.nf"
+```nextflow
 params.input = null
 ```
 
-```groovy title="<filename>.config"
+```groovy
 params {
     publish_mode = 'copy'
 }
@@ -170,7 +170,7 @@ You can use the `process` scope to specify [process directives][process-referenc
 
 For example:
 
-```groovy title="<filename>.config"
+```groovy
 process {
     executor = 'sge'
     queue = 'long'
@@ -184,7 +184,7 @@ This configuration executes all processes using the SGE executor with the given 
 
 You can use the `withLabel` selector to configure all processes annotated with a [label][process-label]:
 
-```groovy title="<filename>.config"
+```groovy
 process {
     withLabel: big_mem {
         cpus = 16
@@ -198,7 +198,7 @@ This configuration assigns 16 CPUs, 64 GB of memory, and the `long` queue to all
 
 You can use the `withName` selector to configure a specific process by its name:
 
-```groovy title="<filename>.config"
+```groovy
 process {
     withName: hello {
 cpus = 4
@@ -223,7 +223,7 @@ You don't need to enclose label and process names in quotes unless they contain 
 
 You can use regular expressions in process selectors to apply the same configuration to all processes matching the pattern:
 
-```groovy title="<filename>.config"
+```groovy
 process {
     withLabel: 'hello|bye' {
         cpus = 2
@@ -236,7 +236,7 @@ This configuration requests 2 CPUs and 4 GB of memory for processes labeled as `
 
 You can negate a selector expression by prefixing it with the special character `!`:
 
-```groovy title="<filename>.config"
+```groovy
 process {
     withLabel: 'hello' { cpus = 2 }
     withLabel: '!hello' { cpus = 4 }
@@ -259,7 +259,7 @@ Nextflow applies process configuration settings in the following order (from low
 
 For example:
 
-```groovy title="<filename>.config"
+```groovy
 process {
     cpus = 4
     withLabel: hello { cpus = 8 }
@@ -281,7 +281,7 @@ Configuration files can define one or more *profiles*. A profile is a set of con
 
 Configuration profiles are defined in the `profiles` scope. For example:
 
-```groovy title="<filename>.config"
+```groovy
 profiles {
     standard {
         process.executor = 'local'
@@ -323,7 +323,7 @@ Use a trace observer in a plugin to add custom workflow handlers to a pipeline v
 
 You can define workflow event handlers in the config file:
 
-```groovy title="<filename>.config"
+```groovy
 workflow.onComplete = {
     println "Pipeline complete"
     println "Command line: $workflow.commandLine"

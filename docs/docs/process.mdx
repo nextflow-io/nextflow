@@ -1103,8 +1103,7 @@ While this option can be used with any process output, it cannot be applied to i
 
 When a process is only supplied with dataflow values, regular values, or no inputs, it returns outputs as dataflow values. For example:
 
-```nextflow
-file=./snippets/process-out-singleton.nf
+```nextflow file=./snippets/process-out-singleton.nf
 ```
 
 In the above example, the `echo` process is invoked with a regular value that is wrapped in a dataflow value. As a result, `echo` returns a dataflow value and `greet` is executed three times.

@@ -24,7 +24,7 @@ You will run a basic Nextflow pipeline that splits a string of text into two fil
 
 The pipeline is defined in the following script:
 
-```nextflow title="main.nf"
+```nextflow
 // Default parameter input
 params.str = "Hello world!"
 
@@ -156,7 +156,7 @@ You can enable resumability using the `-resume` flag when running a pipeline. To
 1. Open `main.nf`.
 2. Replace the `convert_to_upper` process with the following:
 
-    ```nextflow title="main.nf"
+    ```nextflow
     process convert_to_upper {
         tag "$y"
 
