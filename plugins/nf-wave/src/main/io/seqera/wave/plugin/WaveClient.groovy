@@ -22,6 +22,7 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -403,35 +404,55 @@ class WaveClient {
             : new URL(DEFAULT_S5CMD_AMD64_URL)
     }
 
-    protected static URL replaceFusionArch(URL url, String platform) {
+    protected static URI replaceFusionArch(URI uri, String platform) {
         final isArm = platform.tokenize('/')?.contains('arm64')
         final targetArch = isArm ? 'arm64' : 'amd64'
-        final replaced = url.toString().replaceAll(/(?<=[-_])(amd64|arm64)(?=\.)/, targetArch)
-        return replaced != url.toString() ? new URL(replaced) : url
+        final original = uri.toString()
+        final replaced = original.replaceAll(/(?<=[-_])(amd64|arm64)(?=\.)/, targetArch)
+        return replaced != original ? new URI(replaced) : uri
     }
 
     ContainerConfig resolveContainerConfig(String platform = DEFAULT_DOCKER_PLATFORM) {
-        final urls = new ArrayList<URL>(config.containerConfigUrl())
+        final uris = new ArrayList<URI>(config.containerConfigUrl().collect { it.toURI() })
         final platforms = platform ? platform.tokenize(',') : List.of(DEFAULT_DOCKER_PLATFORM)
         if( fusion.enabled() ) {
-            final customUrl = fusion.containerConfigUrl()
+            final customUri = fusion.containerConfigURI()
             for( String p : platforms ) {
-                final fusionUrl = customUrl ? replaceFusionArch(customUrl, p.trim()) : defaultFusionUrl(p.trim())
-                urls.add(fusionUrl)
+                final fusionUri = customUri ? replaceFusionArch(customUri, p.trim()) : defaultFusionUrl(p.trim()).toURI()
+                uris.add(fusionUri)
             }
         }
         if( awsFargate ) {
             final s5cmdUrl = s5cmdConfigUrl ?: defaultS5cmdUrl(platform)
-            urls.add(s5cmdUrl)
+            uris.add(s5cmdUrl.toURI())
         }
-        if( !urls )
+        if( !uris )
             return null
         def result = new ContainerConfig()
-        for( URL it : urls ) {
+        for( URI it : uris ) {
             // append each config to the other - the last has priority
             result += fetchContainerConfig(it)
         }
         return result
+    }
+
+    @Memoized
+    synchronized protected ContainerConfig fetchContainerConfig(URI configURI) {
+        log.debug "Wave fetch container config: $configURI"
+        final scheme = configURI.scheme
+        if( scheme == 'http' || scheme == 'https' )
+            return fetchContainerConfig(configURI.toURL())
+        if( scheme == 'file' )
+            return fetchContainerConfig(Paths.get(configURI))
+        if( scheme == null )
+            return fetchContainerConfig(Paths.get(configURI.path ?: configURI.toString()))
+        throw new IllegalArgumentException("Unsupported container config URI scheme: $scheme")
+    }
+
+    @Memoized
+    synchronized protected ContainerConfig fetchContainerConfig(Path configPath) {
+        log.debug "Wave read local container config: $configPath"
+        return jsonToContainerConfig(configPath.text)
     }
 
     @Memoized

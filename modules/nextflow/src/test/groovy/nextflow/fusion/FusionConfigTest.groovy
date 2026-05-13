@@ -40,11 +40,11 @@ class FusionConfigTest extends Specification {
     }
 
     @Unroll
-    def 'should create container config url' () {
+    def 'should create container config uri' () {
         when:
         def opts = new FusionConfig(OPTS, ENV)
         then:
-        opts.containerConfigUrl() == (EXPECTED ? new URL(EXPECTED) : null)
+        opts.containerConfigURI() == (EXPECTED ? new URI(EXPECTED) : null)
 
         where:
         OPTS                                    | ENV           | EXPECTED
@@ -52,9 +52,21 @@ class FusionConfigTest extends Specification {
         [containerConfigUrl:'http://foo.com']   | [:]           | 'http://foo.com'
         [containerConfigUrl:'https://bar.com']  | [:]           | 'https://bar.com'
         [containerConfigUrl:'file:///some/file']| [:]           | 'file:///some/file'
+        [containerConfigUrl:'/some/file']       | [:]           | '/some/file'
         [:]                                     | [FUSION_CONTAINER_CONFIG_URL:'http://bar.com']           | 'http://bar.com'
         [containerConfigUrl:'http://foo.com']   | [FUSION_CONTAINER_CONFIG_URL:'http://bar.com']           | 'http://foo.com'
 
+    }
+
+    @Unroll
+    def 'should reject invalid container config url' () {
+        when:
+        new FusionConfig([containerConfigUrl: VALUE])
+        then:
+        thrown(IllegalArgumentException)
+
+        where:
+        VALUE << ['ftp://foo.com/x.json', 'relative/path.json', 'gs://bucket/x.json']
     }
 
     @Unroll
