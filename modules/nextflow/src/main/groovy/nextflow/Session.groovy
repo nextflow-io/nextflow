@@ -902,6 +902,22 @@ class Session implements ISession {
         NF.isModuleBinariesEnabled()
     }
 
+    /**
+     * Whether the entry script was launched directly as a module via
+     * `nextflow module run`. Used to decide whether the entry script's
+     * `resources/` bundle (and module bin paths) should be picked up
+     * even though the script is not being loaded via `include`.
+     */
+    private volatile boolean moduleRun
+
+    boolean isModuleRun() {
+        return moduleRun
+    }
+
+    void setModuleRun(boolean value) {
+        this.moduleRun = value
+    }
+
     boolean failOnIgnore() {
         config.navigate('workflow.failOnIgnore', false) as boolean
     }
