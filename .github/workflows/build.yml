@@ -33,6 +33,7 @@ jobs:
         with:
           fetch-depth: 1
           submodules: true
+          persist-credentials: false
 
       - name: Get the commit message
         id: get_commit_message
@@ -124,6 +125,7 @@ jobs:
         with:
           fetch-depth: 1
           submodules: true
+          persist-credentials: false
 
       - name: Setup env
         run: |
@@ -199,6 +201,7 @@ jobs:
             with:
                 fetch-depth: 1
                 submodules: true
+                persist-credentials: false
                 
           - name: Setup Java 17
             uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
@@ -213,7 +216,9 @@ jobs:
                 wget -q -O wave https://github.com/seqeralabs/wave-cli/releases/download/v1.4.1/wave-1.4.1-linux-x86_64
                 chmod +x wave
                 mv wave /usr/local/bin/
-                echo "COMMIT_MESSAGE=\"${{ needs.build.outputs.commit_message }}\"" >> $GITHUB_ENV
+                echo "COMMIT_MESSAGE=\"${NEEDS_BUILD_OUTPUTS_COMMIT_MESSAGE}\"" >> $GITHUB_ENV
+            env:
+              NEEDS_BUILD_OUTPUTS_COMMIT_MESSAGE: ${{ needs.build.outputs.commit_message }}
 
           - name : Docker Login to Seqera public CR
             uses : docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
@@ -247,6 +252,7 @@ jobs:
         with:
           fetch-depth: 0
           submodules: true
+          persist-credentials: false
 
       - name: Setup Java 17
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
