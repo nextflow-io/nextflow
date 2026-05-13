@@ -152,6 +152,64 @@ class ScriptAstBuilderTest extends Specification {
         errors[0].getOriginalMessage().contains "Statements cannot be mixed with script declarations"
     }
 
+    def 'should report an error for params block without an entry workflow' () {
+        when:
+        def errors = check(
+            '''\
+            params {
+                greeting: String
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 1
+        errors[0].getOriginalMessage() == "Params block cannot be defined without an entry workflow"
+
+        when:
+        errors = check(
+            '''\
+            params {
+                greeting: String
+            }
+
+            workflow {
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report an error for output block without an entry workflow' () {
+        when:
+        def errors = check(
+            '''\
+            output {
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 1
+        errors[0].getOriginalMessage() == "Output block cannot be defined without an entry workflow"
+
+        when:
+        errors = check(
+            '''\
+            workflow {
+            }
+
+            output {
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
     def 'should report an error for implicit process script section' () {
         when:
         def errors = check(

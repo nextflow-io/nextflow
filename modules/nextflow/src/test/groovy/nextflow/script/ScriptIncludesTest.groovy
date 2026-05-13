@@ -1009,6 +1009,9 @@ class ScriptIncludesTest extends Dsl2Spec {
                 test2: String = "test2"
             }
 
+            workflow {
+            }
+
             def test2() {
             }
             '''
