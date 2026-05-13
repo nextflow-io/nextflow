@@ -97,6 +97,7 @@ class SeqeraDatasetClient {
         log.debug "SeqeraDatasetClient GET $url"
         final resp = towerClient.sendApiRequest(url)
         checkFsResponse(resp, url)
+        log.debug("RESPONSE: $resp")
         final json = new JsonSlurper().parseText(resp.message) as Map
         final list = json.datasets as List<Map>
         return list ? list.collect { m -> mapDataset(m) } : Collections.<DatasetDto>emptyList()
@@ -123,6 +124,7 @@ class SeqeraDatasetClient {
         log.debug "SeqeraDatasetClient GET $url"
         final resp = towerClient.sendApiRequest(url)
         checkFsResponse(resp, url)
+        log.debug("RESPONSE: $resp")
         final json = new JsonSlurper().parseText(resp.message) as Map
         final list = json.versions as List<Map>
         return list ? list.collect { m -> mapVersion(m) } : Collections.<DatasetVersionDto>emptyList()
@@ -176,6 +178,7 @@ class SeqeraDatasetClient {
     }
 
     private static DatasetDto mapDataset(Map m) {
+        log.debug("Mapping dataset $m")
         final dto = new DatasetDto()
         dto.id = m.id as String
         dto.name = m.name as String
@@ -189,10 +192,12 @@ class SeqeraDatasetClient {
     }
 
     private static DatasetVersionDto mapVersion(Map m) {
+        log.debug("Mapping version $m")
         final dto = new DatasetVersionDto()
         dto.datasetId = m.datasetId as String
         dto.version = (m.version as Long) ?: 0L
         dto.fileName = m.fileName as String
+        dto.fileSize = (m.fileSize as Long) ?: 0L
         dto.mediaType = m.mediaType as String
         dto.hasHeader = (m.hasHeader as Boolean) ?: false
         dto.dateCreated = m.dateCreated ? OffsetDateTime.parse(m.dateCreated as String) : null
