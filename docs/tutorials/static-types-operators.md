@@ -481,7 +481,7 @@ channel.of(3, 2, 1, 4)
 
 // after
 channel.of(3, 2, 1, 4)
-    .collect()
+    .collect(flat: false)
     .map { vals -> vals.toSorted() }
     .view()
 ```
