@@ -254,12 +254,15 @@ jobs:
       pull-requests: write
       issues: write
     steps:
+      # Intentionally persists credentials: the `release` task in
+      # packing.gradle runs `git push` and `git push origin vX.Y.Z` against
+      # this repo; both rely on actions/checkout having written the token
+      # into .git/config as http.extraheader.
       - name: Checkout
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2 # zizmor: ignore[artipacked]
         with:
           fetch-depth: 0
           submodules: true
-          persist-credentials: false
 
       - name: Setup Java 17
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
