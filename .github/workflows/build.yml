@@ -17,10 +17,15 @@ on:
     types: [opened, reopened, synchronize]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     timeout-minutes: 100
     strategy:
       fail-fast: false
@@ -113,6 +118,8 @@ jobs:
     if: ${{ !contains(needs.build.outputs.commit_message, '[ci fast]') }}
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -263,9 +270,12 @@ jobs:
           cache: gradle
 
       - name: Configure Git
+        env:
+          GIT_USER_NAME: ${{ github.event.pusher.name || github.actor }}
+          GIT_USER_EMAIL: ${{ github.event.pusher.email || format('{0}@users.noreply.github.com', github.actor) }}
         run: |
-          git config --global user.name "${{ github.event.pusher.name || github.actor }}"
-          git config --global user.email "${{ github.event.pusher.email || format('{0}@users.noreply.github.com', github.actor) }}"
+          git config --global user.name "$GIT_USER_NAME"
+          git config --global user.email "$GIT_USER_EMAIL"
 
       - name: Docker Login to Docker Hub
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
