@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   docs-build:
     name: Build
@@ -21,7 +25,9 @@ jobs:
           persist-credentials: false
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
-          python-version: '3.9.25'
+          python-version: '3.14'
+          cache: 'pip'
+          cache-dependency-path: docs/requirements.txt
 
       - name: Test docs build
         run: |

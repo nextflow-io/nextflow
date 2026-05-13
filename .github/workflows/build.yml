@@ -20,6 +20,12 @@ on:
 permissions:
   contents: read
 
+# Cancel in-progress runs on the same ref when a new commit lands. Release
+# branches and master are not cancelled so we never abort a partial release.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   build:
     name: Build
@@ -42,22 +48,22 @@ jobs:
 
       - name: Get the commit message
         id: get_commit_message
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
         run: |
-            if [ "${{ github.event_name }}" = "pull_request" ]; then
-                echo "GitHub event=pull_request"
-                COMMIT_SHA="${{ github.event.pull_request.head.sha }}"
-                COMMIT_MESSAGE="$(curl -s \
-                  -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                  https://api.github.com/repos/${{ github.repository }}/commits/$COMMIT_SHA | jq -r '.commit.message' | head -n 1)"
-                echo "Commit message=$(printf "%s" "$COMMIT_MESSAGE")"
-                echo "commit_message=$(printf "%s" "$COMMIT_MESSAGE")" >> $GITHUB_OUTPUT
-            else
-                echo "GitHub event=${{ github.event_name }}"
-                # Extract only the first line of the commit message
-                COMMIT_MESSAGE="$(git log -1 --pretty=format:'%s')"
-                echo "Commit message=$(printf "%s" "$COMMIT_MESSAGE")"
-                echo "commit_message=$(printf "%s" "$COMMIT_MESSAGE")" >> $GITHUB_OUTPUT
-            fi
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            echo "GitHub event=pull_request"
+            # `actions/checkout` fetches the PR merge ref, so `git log -1`
+            # gives the merge commit. Ask the API for the PR head instead.
+            COMMIT_MESSAGE=$(gh api "repos/$REPO/commits/$PR_HEAD_SHA" --jq '.commit.message' | head -n 1)
+          else
+            echo "GitHub event=$GITHUB_EVENT_NAME"
+            COMMIT_MESSAGE=$(git log -1 --pretty=format:'%s')
+          fi
+          echo "Commit message=$COMMIT_MESSAGE"
+          echo "commit_message=$COMMIT_MESSAGE" >> "$GITHUB_OUTPUT"
 
       - name: Setup env
         run: |
@@ -80,11 +86,10 @@ jobs:
 
       - name: Test
         run: |
-            env | sort
             # configure test env
-            if [[ "$GOOGLE_SECRET" ]]; then
-            echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
-            export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
+            if [ -n "$GOOGLE_SECRET" ]; then
+              printf '%s' "$GOOGLE_SECRET" | base64 -d > "$RUNNER_TEMP/google_credentials.json"
+              export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/google_credentials.json"
             fi
             # run tests
             make test
@@ -152,13 +157,11 @@ jobs:
 
       - name: Run tests
         run: |
-          env | sort
           # configure test env
-          if [[ "$GOOGLE_SECRET" ]]; then
-          echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
-          export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
+          if [ -n "$GOOGLE_SECRET" ]; then
+            printf '%s' "$GOOGLE_SECRET" | base64 -d > "$RUNNER_TEMP/google_credentials.json"
+            export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/google_credentials.json"
           fi
-          cat $HOME/.nextflow/scm
           make clean assemble install
           bash test-ci.sh
         env:
@@ -199,9 +202,6 @@ jobs:
       needs: build
       runs-on: ubuntu-latest
       timeout-minutes: 10
-      permissions:
-          actions: write  # Allow writing to actions
-          contents: write # Allow writing to repository contents
       steps:
           - name: Checkout
             uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -219,13 +219,19 @@ jobs:
                 cache: gradle
 
           - name: Setup env
+            env:
+              NEEDS_BUILD_OUTPUTS_COMMIT_MESSAGE: ${{ needs.build.outputs.commit_message }}
             run: |
                 wget -q -O wave https://github.com/seqeralabs/wave-cli/releases/download/v1.4.1/wave-1.4.1-linux-x86_64
                 chmod +x wave
                 mv wave /usr/local/bin/
-                echo "COMMIT_MESSAGE=\"${NEEDS_BUILD_OUTPUTS_COMMIT_MESSAGE}\"" >> $GITHUB_ENV
-            env:
-              NEEDS_BUILD_OUTPUTS_COMMIT_MESSAGE: ${{ needs.build.outputs.commit_message }}
+                # Use heredoc-style delimiter so multi-line / quote-containing
+                # commit messages survive intact (run.sh greps for `[e2e prod]`).
+                {
+                  echo "COMMIT_MESSAGE<<NXF_EOF"
+                  echo "$NEEDS_BUILD_OUTPUTS_COMMIT_MESSAGE"
+                  echo "NXF_EOF"
+                } >> "$GITHUB_ENV"
 
           - name : Docker Login to Seqera public CR
             uses : docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
@@ -248,11 +254,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      actions: write
       contents: write
-      packages: write
-      pull-requests: write
-      issues: write
     steps:
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
