@@ -16,8 +16,6 @@
 
 package nextflow.processor
 
-import java.io.UncheckedIOException
-import java.lang.reflect.Modifier
 import java.nio.file.Path
 
 import groovy.transform.CompileDynamic
@@ -27,9 +25,9 @@ import groovy.util.logging.Slf4j
 import nextflow.exception.IllegalArityException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
-import nextflow.extension.Bolts
 import nextflow.script.params.v2.ProcessFileOutput
-import nextflow.script.types.Record
+import nextflow.script.types.Bag
+import nextflow.util.HashBag
 import nextflow.util.RecordMap
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
@@ -59,65 +57,34 @@ class TaskOutputResolver implements Map<String,Object> {
      *
      * Values from the task context may contain {@link TaskPath}, which is a
      * task-local view of an input file. It is valid for script interpolation,
-     * but it must not escape through output channels because downstream tasks
+     * but it must not escape through task outputs because downstream tasks
      * need durable source/work-directory paths for hashing and staging.
      *
      * @param value
-     *      A lazy output expression, such as a closure or GString
-     * @return
-     *      The resolved output value with nested TaskPath instances converted
-     *      back to durable Path values
      */
-    Object resolveOutput(Object value) {
-        return normalizeOutputValue(Bolts.resolveLazy(this, value))
+    Object resolve(Object value) {
+        return normalizeValue(resolveLazy(value))
     }
 
-    static Object normalizeOutputValue(Object value) {
+    Object normalizeValue(Object value) {
         if( value instanceof TaskPath ) {
-            try {
-                return value.toRealPath()
-            }
-            catch( IOException e ) {
-                throw new UncheckedIOException(e)
-            }
-        }
-
-        if( value instanceof RecordMap ) {
-            final normalized = new LinkedHashMap<String,Object>()
-            for( final entry : value.entrySet() )
-                normalized.put(entry.key, normalizeOutputValue(entry.value))
-            return new RecordMap(normalized)
-        }
-
-        if( value instanceof Map ) {
-            final normalized = new LinkedHashMap<Object,Object>()
-            for( final entry : value.entrySet() )
-                normalized.put(entry.key, normalizeOutputValue(entry.value))
-            return normalized
-        }
-
-        if( value instanceof Set ) {
-            final normalized = new LinkedHashSet<Object>()
-            for( final item : value )
-                normalized.add(normalizeOutputValue(item))
-            return normalized
+            return value.toRealPath()
         }
 
         if( value instanceof Collection ) {
-            final normalized = new ArrayList<Object>()
-            for( final item : value )
-                normalized.add(normalizeOutputValue(item))
-            return normalized
+            final elements = value.collect { el -> normalizeValue(el) }
+            return \
+                value instanceof List ? elements as List :
+                value instanceof Set ? elements as Set :
+                value instanceof Bag ? new HashBag<>(elements) :
+                elements
         }
 
-        if( value instanceof Record ) {
-            final fields = value.getClass().getFields()
-                .findAll { field -> !Modifier.isStatic(field.modifiers) && !field.synthetic }
-                .sort { it.name }
-            final normalized = new LinkedHashMap<String,Object>()
-            for( final field : fields )
-                normalized.put(field.name, normalizeOutputValue(field.get(value)))
-            return new RecordMap(normalized)
+        if( value instanceof Map ) {
+            final normalized = value.collectEntries { k, v -> [k, normalizeValue(v)] }
+            return \
+                value instanceof RecordMap ? new RecordMap(normalized as Map<String,?>) :
+                normalized
         }
 
         return value

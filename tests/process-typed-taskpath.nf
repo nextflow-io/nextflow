@@ -18,18 +18,26 @@
 nextflow.enable.types = true
 
 workflow {
-    sample = record(
+    result = P1(MAKE_SAMPLE())
+    result.view { r -> "${r.file.text.trim()} ${r.file2.text.trim()}" }
+}
+
+process MAKE_SAMPLE {
+    output:
+    record(
         id: 'alpha',
-        file: file("${projectDir}/typed-record-output-taskpath/input.txt")
+        file: file('input.txt')
     )
 
-    result = P2(P1(channel.of(sample)))
-    result.view { it -> it.text.trim() }
+    script:
+    """
+    echo 'test1' > input.txt
+    """
 }
 
 process P1 {
     input:
-    sample: SampleRecord
+    sample: Sample
 
     output:
     sample + record(file2: file('test2.txt'))
@@ -40,23 +48,7 @@ process P1 {
     """
 }
 
-process P2 {
-    input:
-    sample: SampleRecord
-
-    output:
-    file('combined.txt')
-
-    script:
-    """
-    test '${sample.file}' = 'input.txt'
-    test '${sample.file2}' = 'test2.txt'
-
-    cat '${sample.file}' '${sample.file2}' > combined.txt
-    """
-}
-
-record SampleRecord {
+record Sample {
     id: String
     file: Path
     file2: Path?

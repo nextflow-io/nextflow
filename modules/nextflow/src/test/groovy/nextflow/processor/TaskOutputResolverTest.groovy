@@ -31,12 +31,6 @@ import spock.lang.TempDir
  */
 class TaskOutputResolverTest extends Specification {
 
-    static class SampleRecord implements nextflow.script.types.Record {
-        public String id
-        public Path path
-        public List<Path> paths
-    }
-
     @TempDir
     Path tempDir
 
@@ -298,21 +292,21 @@ class TaskOutputResolverTest extends Specification {
         e.message.contains('Missing variable in process output')
     }
 
-    def 'should normalize task paths in output values'() {
+    def 'should normalize resolved lazy output values'() {
         given:
         def source = tempDir.resolve('input.txt')
         def taskPath = new TaskPath(source, 'input.txt')
-        def record = new SampleRecord(id: 'alpha', path: taskPath, paths: [taskPath])
-        def value = new RecordMap([
+        def sample = new RecordMap([
             id: 'alpha',
             path: taskPath,
             nested: [path: taskPath],
             paths: [taskPath] as Set,
-            record: record,
         ])
+        def task = makeTask([sample: sample])
+        def resolver = new TaskOutputResolver([:], task)
 
         when:
-        def result = TaskOutputResolver.normalizeOutputValue(value)
+        def result = resolver.resolve({ -> sample })
 
         then:
         result instanceof RecordMap
@@ -321,23 +315,5 @@ class TaskOutputResolverTest extends Specification {
         result.nested.path == source
         !(result.nested.path instanceof TaskPath)
         result.paths == [source] as Set
-        result.record instanceof RecordMap
-        result.record.path == source
-        result.record.paths == [source]
-    }
-
-    def 'should normalize resolved lazy output values'() {
-        given:
-        def source = tempDir.resolve('input.txt')
-        def task = makeTask([sample: new RecordMap(path: new TaskPath(source, 'input.txt'))])
-        def resolver = new TaskOutputResolver([:], task)
-
-        when:
-        def result = resolver.resolveOutput({ -> sample })
-
-        then:
-        result instanceof RecordMap
-        result.path == source
-        !(result.path instanceof TaskPath)
     }
 }

@@ -1421,12 +1421,12 @@ class TaskProcessor {
         final resolver = new TaskOutputResolver(declaredOutputs.getFiles(), task)
 
         for( final param : declaredOutputs.getParams() ) {
-            final value = resolver.resolveOutput(param.getLazyValue())
+            final value = resolver.resolve(param.getLazyValue())
             task.setOutput(param, value)
         }
 
         for( final topic : declaredOutputs.getTopics() ) {
-            final value = resolver.resolveOutput(topic.getLazyValue())
+            final value = resolver.resolve(topic.getLazyValue())
             topic.getChannel().bind(value)
         }
 
