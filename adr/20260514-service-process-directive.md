@@ -32,11 +32,16 @@ Snakemake offers exactly this pattern via "service rules" (Snakemake 7+). Bringi
 - Be opt-in and have zero impact on processes that don't use it.
 - Keep the MVP small and reviewable; expand executor coverage in follow-ups.
 
-## Non-goals
+## Non-goals (for the MVP)
+
+The MVP is deliberately small. The following are explicit non-goals for the first release but are addressed in [Future work](#future-work) below:
 
 - Cluster-wide or cross-node co-location of producer and consumers. The MVP runs on the **local executor only** and assumes producer and consumers share a POSIX work directory.
-- Group-local service instances (one service per job group, as in Snakemake's `foo.{groupid}.socket` pattern). Single-instance services only for the MVP; multi-instance variants can be layered on later if there is demand.
+- Group-local service instances (one service per job group, as in Snakemake's `foo.{groupid}.socket` pattern). Single-instance services only for the MVP; multi-instance variants can be layered on later.
 - Networked service discovery. The user is responsible for choosing a stable port / path and communicating it to consumers via the declared output.
+
+Permanent non-goal:
+
 - Per-output `service(...)` markers in the Snakemake style. Nextflow's directive model is process-level, and the simpler `service true` directive captures the same intent.
 
 ## Considered Options
@@ -233,7 +238,61 @@ workflow {
 
 All three analyses run in parallel against a shared in-process database, with the server torn down deterministically when they all finish. No long-lived state survives the pipeline run, which is the right default for reproducible workflows.
 
+## Future work
+
+The MVP intentionally restricts `service true` to the local executor. The directive is designed so that broader executor support can be added incrementally without breaking the user-facing surface (`service true` stays a single directive; the differences are in how the engine schedules, watches, and tears down the service task).
+
+This section sketches the design for the three broader environments. None of it ships in the MVP, but the MVP code paths are factored so each can be layered on later.
+
+### 1. Grid schedulers (Slurm, LSF, SGE, PBS)
+
+These are the closest cousins of the local case because they typically have a shared POSIX work directory (NFS, Lustre). The three things that need to change versus the MVP:
+
+- **Endpoint shape.** With a shared FS, a Unix domain socket no longer reaches a consumer on a different node. The declared output should be a connection string (e.g. `node05.cluster:5432`) written to a file in the work directory, and the service script should `bind` to `0.0.0.0` (or a specific interface) rather than `127.0.0.1`. This is a documentation/example change, not an engine change.
+- **Co-location vs cluster-network access.** Two strategies:
+    - *Sub-allocation*: schedule the service and its consumers inside a single multi-step job allocation (`salloc --nodes=N` + per-step `srun`). Lowest latency, fewest moving parts, but requires Nextflow to learn the concept of a "service allocation" and route the consumer submissions into it.
+    - *Cluster-network access*: schedule the service as a normal job, let it publish `host:port` to its output file, let consumers reach it over the cluster network. Simpler to implement (no new scheduling primitive), but depends on the cluster permitting inter-node TCP and on the consumer knowing the network is reachable.
+
+  The recommended first step is the cluster-network approach behind an opt-in `service.colocate` strategy directive (default `'network'`, future `'allocation'`).
+- **Termination.** Grid `TaskHandler.killTask()` implementations already issue `scancel` / `bkill` / `qdel`. The `ServiceLifecycleObserver` works unchanged on top of these.
+
+The watcher (`startServiceOutputWatcher`) is filesystem-only and works as-is over shared POSIX.
+
+### 2. Kubernetes
+
+Kubernetes is arguably the cleanest target after local because it natively models the service-and-consumers relationship.
+
+- **Service task** becomes a `Pod` (or `Deployment` with replicas=1) plus a `Service` resource that gives it a stable in-cluster DNS name. The Pod's readiness probe handles "is the output ready" without polling — the engine watches the Pod's readiness condition via the K8s API instead of polling the work directory.
+- **Endpoint** is the DNS name (`svc-<run-id>-<process>.<namespace>.svc.cluster.local:<port>`), written to the declared output file in the work directory so consumers can mount it.
+- **Consumer tasks** are normal Pods that resolve that DNS name. No special scheduling — the Pod network handles connectivity.
+- **Termination** deletes the Service and Pod via the K8s API.
+
+This requires extensions to `nf-k8s`: a new `K8sServiceTaskHandler` that creates `Service` + `Pod`, and a new branch in `ServiceLifecycleObserver` (or executor-specific readiness signaling) that uses readiness probes instead of work-directory polling.
+
+### 3. Cloud batch (AWS Batch, GCP Batch, Azure Batch)
+
+The hardest case, because cloud batch jobs run in independent containers with no shared filesystem and no built-in cross-job discovery.
+
+- **Endpoint propagation.** The service task's endpoint can't be written to a shared local path. Options:
+    - Write `endpoint.txt` to the workflow's object-storage work directory; consumers read it from there. Works today but only signals readiness on the next consumer-poll cycle (high-ish latency).
+    - Use a cloud-native service-discovery layer (AWS Cloud Map, GCP Service Directory, Azure DNS Private Zones). Cleaner but ties the executor implementation to provider-specific APIs.
+- **Reachability.** Service container and consumer containers must be in the same VPC/subnet with the right security group / firewall rules. This is policy that the user (or a higher-level platform like Seqera Platform) controls; the directive can only document the requirement.
+- **Readiness watcher.** Object-storage poll is the only portable option absent a callback channel. A future "callback URL" mechanism (the service POSTs to a Nextflow-provided URL when ready) would remove the poll latency.
+- **Termination.** Batch `TaskHandler.killTask()` implementations already call `TerminateJob`/equivalent and work for service tasks unchanged.
+
+For cloud batch, the recommended initial path is the object-storage `endpoint.txt` approach behind a documented "your service must be reachable in the workflow VPC" requirement, followed later by integration with Cloud Map / Service Directory and a callback channel.
+
+### 4. Cross-cutting follow-ups
+
+- **`service.colocate` directive** to choose the co-location strategy per executor where multiple strategies exist (`local`, `allocation`, `network`, `discovery`).
+- **Group-local services** (one service instance per job group), once Nextflow has a stable job-group abstraction. Maps to Snakemake's `foo.{groupid}.socket` use case.
+- **Readiness probes beyond "file appeared"**: a `serviceReady` sub-directive accepting an HTTP probe URL, a TCP `host:port`, or a shell command. Useful when the file is created before the server is actually accepting connections.
+- **Multi-instance services** (sharded inference, read replicas) with a directive like `serviceReplicas N`. Each replica gets its own endpoint; consumer scheduling is round-robin or user-supplied.
+- **Graceful drain**: on termination, send `SIGTERM` and wait up to a configurable timeout for the service to flush before sending `SIGKILL`.
+
 ## Links
 
 - Snakemake service rules: <https://snakemake.readthedocs.io/en/stable/snakefiles/rules.html#service-rules>
 - Related directive: [hints](20260323-hints-process-directive.md) — same pattern of small, opt-in process directives
+- NVIDIA NIM: <https://docs.nvidia.com/nim/>
+- DuckDB quack extension: <https://duckdb.org/quack/>
