@@ -204,6 +204,7 @@ class LinObserverTest extends Specification {
         observer.onFlowBegin()
         then:
         folder.resolve("${observer.executionHash}/.data.json").text == new LinEncoder().encode(workflowRun)
+        1 * metadata.setLineageId({ String it -> it.startsWith('lid://') })
 
         cleanup:
         folder?.deleteDir()

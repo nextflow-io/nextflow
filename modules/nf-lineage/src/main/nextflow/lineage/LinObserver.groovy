@@ -113,10 +113,13 @@ class LinObserver implements TraceObserverV2 {
     String setNormalizer(PathNormalizer normalizer){  this.normalizer = normalizer }
 
     @Override
-    void onFlowBegin() {
+    void onFlowCreate(Session session) {
         normalizer = new PathNormalizer(session.workflowMetadata)
         executionHash = storeWorkflowRun(normalizer)
         final executionUri = asUriString(executionHash)
+        // expose the lineage id on workflowMetadata so other observers (e.g. nf-tower)
+        // can read it before their onFlowBegin fires
+        session.workflowMetadata.lineageId = executionUri
         workflowOutput = new WorkflowOutput(
             OffsetDateTime.now(),
             executionUri,
