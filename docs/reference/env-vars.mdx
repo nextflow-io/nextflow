@@ -375,6 +375,10 @@ Defines the HTTPS proxy server. Proxy authentication is supported by providing t
 When connecting to HTTPS targets through an authenticating proxy, the JDK strips proxy credentials from the `CONNECT` request for the schemes listed in `jdk.http.auth.tunneling.disabledSchemes` (default `Basic`), which can cause a `407` error. Nextflow clears this property automatically when the proxy URL carries credentials. If you set the property yourself, Nextflow does not override it — clear it explicitly to allow Basic proxy authentication over HTTPS with `NXF_OPTS='-Djdk.http.auth.tunneling.disabledSchemes='`.
 :::
 
+##### `COLUMNS`
+
+Sets the terminal width of ANSI-formatted log output when `TERMINAL_WIDTH` is not set to a valid positive integer.
+
 ##### `NO_COLOR`
 
 Disables ANSI color codes in Nextflow log output. When this variable is set, Nextflow prints plain text logs following the [NO_COLOR standard](https://no-color.org/).

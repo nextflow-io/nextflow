@@ -17,6 +17,7 @@
 package nextflow.trace
 
 import nextflow.Session
+import nextflow.SysEnv
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -25,6 +26,32 @@ import spock.lang.Unroll
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class AnsiLogObserverTest extends Specification {
+
+    @Unroll
+    def 'should resolve terminal width from environment' () {
+        given:
+        SysEnv.push(ENV)
+
+        expect:
+        AnsiLogObserver.getEnvTerminalWidth() == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        ENV                                             | EXPECTED
+        [COLUMNS: '50']                                | 50
+        [COLUMNS: '']                                  | null
+        [COLUMNS: 'abc']                               | null
+        [COLUMNS: '0']                                 | null
+        [COLUMNS: '-10']                               | null
+        [COLUMNS: '2147483648']                        | null
+        [:]                                            | null
+        [TERMINAL_WIDTH: '60', COLUMNS: '50']          | 60
+        [TERMINAL_WIDTH: 'invalid', COLUMNS: '50']     | 50
+        [TERMINAL_WIDTH: '0', COLUMNS: '50']           | 50
+        [TERMINAL_WIDTH: '-1', COLUMNS: '50']          | 50
+    }
 
     @Unroll
     def 'should render a process line' () {
