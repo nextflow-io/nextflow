@@ -14,10 +14,11 @@ Introduce a `service` process directive that marks a process as a long-running a
 
 Some pipeline steps depend on a co-running auxiliary process rather than on a file that is produced once and then consumed. Examples include:
 
-- A local database server (`postgres`, `redis`, `chromadb`) that several downstream tools query.
-- A long-lived inference server (e.g. `vllm`, `triton`, `ollama`) that batches multiple consumer tasks against a single GPU model load.
-- A named pipe, ramdisk-backed shared workspace, or socket-based message bus.
-- A local HTTP service exposing test fixtures (`localstack`, `minio`, mock APIs) to integration-style consumer tasks.
+- **GPU inference microservices**, e.g. an [NVIDIA NIM](https://docs.nvidia.com/nim/) container, [vLLM](https://docs.vllm.ai/), Triton, or Ollama, exposing a local HTTP endpoint. The model weights take tens of seconds to minutes to load and occupy several GB of GPU memory; loading them once and amortizing over many consumer tasks (e.g. one task per sample in a cohort) is dramatically cheaper than re-loading per task.
+- **Embedded analytical databases run as a server**, e.g. [DuckDB's `quack` extension](https://duckdb.org/quack/) which turns DuckDB into a client-server system so that multiple consumer processes can run concurrent read/write queries against a shared in-memory or on-disk database.
+- **Traditional databases as scratch state for a pipeline**: a `postgres`, `redis`, or `chromadb` instance brought up for the duration of a workflow run, populated by a producer step, queried by several downstream analyses, then torn down.
+- **Named pipes, ramdisk-backed shared workspaces, or socket-based message buses** used to stream data between a producer and many consumers without going through the work-directory filesystem.
+- **Local HTTP fixtures** for integration-style steps: `localstack`, `minio`, mock APIs, or a small test web server that consumer tasks hit over `http://127.0.0.1:<port>`.
 
 In Nextflow today there is no first-class way to express this dependency. Process outputs are bound to downstream channels *only* when the task script exits, so a script that creates a socket then blocks (the usual shape of a server) never unblocks its consumers. Users currently work around this with `nohup` + manual `process.start.sh` files, with `beforeScript` hooks that leak processes across resume, or by serializing the whole pipeline into a single process — all brittle and non-portable.
 
@@ -114,7 +115,9 @@ Two environment variables tune the watcher and are intentionally undocumented in
 - `NXF_SERVICE_READY_POLL_MS` (default `250`) — poll interval while waiting for declared outputs to appear.
 - `NXF_SERVICE_READY_TIMEOUT_MS` (default `600000`) — abort if outputs don't appear within this window.
 
-### Example
+### Examples
+
+#### Minimal: socket-as-resource
 
 ```groovy
 process the_service {
@@ -130,27 +133,105 @@ process the_service {
     """
 }
 
-process consumer {
-    input:
-    path sock
-
-    output:
-    path 'out.txt'
-
-    script:
-    """
-    head -n1 ${sock} > out.txt
-    """
-}
-
 workflow {
     sock = the_service()
-    consumer(sock)
+    consumer1(sock)
     consumer2(sock)
 }
 ```
 
-`the_service` keeps running until both `consumer` and `consumer2` have finished, at which point Nextflow SIGTERMs it. The exit code (143) is treated as success for a service process.
+`the_service` keeps running until both `consumer1` and `consumer2` have finished, at which point Nextflow SIGTERMs it. The exit code (143) is treated as success for a service process.
+
+#### NVIDIA NIM inference server
+
+A NIM container loads a 7B-parameter LLM into GPU memory once, then serves many consumer tasks (e.g. one variant-annotation call per sample) over HTTP. Without `service`, each sample task would re-load the model — minutes of GPU warm-up multiplied by N samples.
+
+```groovy
+process nim_server {
+    service true
+    accelerator 1, type: 'nvidia-h100'
+    container 'nvcr.io/nim/meta/llama-3.1-8b-instruct:latest'
+
+    output:
+    path 'endpoint.txt'
+
+    script:
+    """
+    # NIM listens on :8000 by default; write the endpoint file once
+    # the server is ready, then block until SIGTERM'd.
+    /opt/nim/start-server.sh &
+    NIM_PID=\$!
+    until curl -sf http://127.0.0.1:8000/v1/health/ready >/dev/null; do sleep 1; done
+    echo "http://127.0.0.1:8000" > endpoint.txt
+    wait \$NIM_PID
+    """
+}
+
+process annotate {
+    input:
+    path endpoint
+    path sample_vcf
+
+    output:
+    path "${sample_vcf.baseName}.annotated.json"
+
+    script:
+    """
+    URL=\$(cat ${endpoint})
+    annotate-variants --endpoint \$URL --in ${sample_vcf} \\
+        --out ${sample_vcf.baseName}.annotated.json
+    """
+}
+
+workflow {
+    endpoint = nim_server()
+    annotate(endpoint, channel.fromPath('samples/*.vcf.gz'))
+}
+```
+
+The watcher unblocks consumers as soon as `endpoint.txt` is written (which the script writes only after `/v1/health/ready` reports 200), so consumers never race the model load. The single NIM stays up across all sample tasks and is SIGTERM'd once the last `annotate` finishes.
+
+#### DuckDB-as-a-server (quack)
+
+A producer step ingests raw data into a DuckDB database. Several downstream analyses query it concurrently — something a vanilla embedded DuckDB can't do because it requires single-writer/multi-reader file locking. The [`quack` extension](https://duckdb.org/quack/) exposes the database over a network socket, which is exactly the shape `service true` is for.
+
+```groovy
+process duckdb_server {
+    service true
+
+    input:
+    path 'raw/*.parquet'
+
+    output:
+    path 'duckdb.endpoint'
+
+    script:
+    """
+    duckdb analytics.db <<'SQL'
+      INSTALL quack; LOAD quack;
+      CREATE TABLE events AS SELECT * FROM read_parquet('raw/*.parquet');
+      CALL quack_start(host := '127.0.0.1', port := 5432);
+    SQL &
+    DUCK_PID=\$!
+    until nc -z 127.0.0.1 5432; do sleep 0.2; done
+    echo "127.0.0.1:5432" > duckdb.endpoint
+    wait \$DUCK_PID
+    """
+}
+
+process daily_rollup { /* SELECT date_trunc('day', ts), count(*) ... */ }
+process per_user_funnel { /* WITH steps AS (...) ... */ }
+process anomaly_scan { /* SELECT ... WHERE z_score > 3 */ }
+
+workflow {
+    endpoint = duckdb_server(channel.fromPath('raw/*.parquet').collect())
+    daily_rollup(endpoint)
+    per_user_funnel(endpoint)
+    anomaly_scan(endpoint)
+}
+```
+
+All three analyses run in parallel against a shared in-process database, with the server torn down deterministically when they all finish. No long-lived state survives the pipeline run, which is the right default for reproducible workflows.
 
 ## Links
 
