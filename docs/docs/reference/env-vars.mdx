@@ -284,9 +284,15 @@ Enable the use of Spack recipes defined by using the [spack][process-spack] dire
 
 ##### `NXF_SYNTAX_PARSER`
 
-<AddedInVersion version="25.02.0-edge" />
+<AddedInVersion version="25.04.0">
+The strict parser is disabled by default.
+</AddedInVersion>
 
-Set to `'v2'` to use the [strict syntax][strict-syntax-page] for Nextflow scripts and config files (default: `'v1'`).
+<ChangedInVersion version="26.04.0">
+The strict parser is enabled by default.
+</ChangedInVersion>
+
+Set to `'v2'` to use the [strict syntax parser][strict-syntax-page] for Nextflow code. Set to `'v1'` to fall back to the legacy parser.
 
 ##### `NXF_TEMP`
 

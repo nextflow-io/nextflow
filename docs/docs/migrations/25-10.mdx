@@ -12,7 +12,7 @@ description: Review new features, breaking changes, and deprecations introduced 
 ### Workflow params
 
 :::note
-Typed parameters require the [strict syntax][strict-syntax-page]. Set the `NXF_SYNTAX_PARSER` environment variable to `v2` to enable:
+Typed parameters require the [strict parser][strict-syntax-page]. Set the `NXF_SYNTAX_PARSER` environment variable to `v2` to enable:
 
 ```bash
 export NXF_SYNTAX_PARSER=v2
@@ -72,7 +72,7 @@ See [Migrating to workflow outputs ][migrating-workflow-outputs] to get started.
 ### Static typing (preview)
 
 :::note
-Static typing requires the [strict syntax][strict-syntax-page]. Set the `NXF_SYNTAX_PARSER` environment variable to `v2` to enable:
+Static typing requires the [strict parser][strict-syntax-page]. Set the `NXF_SYNTAX_PARSER` environment variable to `v2` to enable:
 
 ```bash
 export NXF_SYNTAX_PARSER=v2
@@ -206,7 +206,7 @@ Plugin developers will not be able to submit PRs to the legacy plugin index once
 ### New syntax for workflow handlers
 
 :::note
-The new syntax for workflow handlers require the [strict syntax][strict-syntax-page]. Set the `NXF_SYNTAX_PARSER` environment variable to `v2` to enable:
+The new syntax for workflow handlers requires the [strict parser][strict-syntax-page]. Set the `NXF_SYNTAX_PARSER` environment variable to `v2` to enable:
 
 ```bash
 export NXF_SYNTAX_PARSER=v2
@@ -228,11 +228,11 @@ workflow {
 }
 ```
 
-This syntax is simpler and easier to use with the [strict syntax][strict-syntax-page]. See [Workflow handlers][workflow-handlers] for details.
+This syntax is simpler and easier to use with the [strict parser][strict-syntax-page]. See [Workflow handlers][workflow-handlers] for details.
 
 ### Simpler syntax for dynamic directives
 
-The [strict syntax][strict-syntax-page] allows dynamic process directives to be specified without a closure:
+The [strict parser][strict-syntax-page] allows dynamic process directives to be specified without a closure:
 
 ```nextflow
 process hello {
@@ -281,11 +281,11 @@ This feature addresses previous inconsistencies in timestamp representations.
 
 ## Deprecations
 
-- The legacy type detection of CLI parameters is disabled when using the strict syntax (`NXF_SYNTAX_PARSER=v2`). [Legacy parameters][workflow-params-legacy] in the strict syntax should not rely on legacy type detection. Alternatively, use the new `params` block to convert CLI parameters based on their type annotations. Legacy type detection can be disabled globally by setting the environment variable `NXF_DISABLE_PARAMS_TYPE_DETECTION=true`.
+- The legacy type detection of CLI parameters is disabled when using the strict parser (`NXF_SYNTAX_PARSER=v2`). [Legacy parameters][workflow-params-legacy] should not rely on legacy type detection. Alternatively, use the new `params` block to convert CLI parameters based on their type annotations. Legacy type detection can be disabled globally by setting the environment variable `NXF_DISABLE_PARAMS_TYPE_DETECTION=true`.
 
 - The use of workflow handlers in the configuration file has been deprecated. You should define workflow handlers in the pipeline script or a plugin instead. See [Workflow handlers][config-workflow-handlers] for details.
 
-- The `nextflow.enable.configProcessNamesValidation` feature flag is deprecated. It was originally introduced to suppress false warnings for process selectors targeting conditional processes. The [strict syntax][strict-syntax-page] now validates process selectors without producing false warnings.
+- The `nextflow.enable.configProcessNamesValidation` feature flag is deprecated. It was originally introduced to suppress false warnings for process selectors targeting conditional processes. The [strict parser][strict-syntax-page] now validates process selectors without producing false warnings.
 
 ## Miscellaneous
 

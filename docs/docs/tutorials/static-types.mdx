@@ -45,7 +45,7 @@ Automatic migration is an experimental feature and may not be able to convert an
 
 ## Example: rnaseq-nf
 
-This section demonstrates how to migrate a pipeline to static typing using [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf) as an example. See [Getting started with rnaseq-nf][rnaseq-nf-page] for an introduction to the pipeline.
+This section demonstrates how to migrate a pipeline to static typing using [rnaseq-nf](https://github.com/nextflow-io/rnaseq-nf/tree/v2.4) (v2.4) as an example. See [Getting started with rnaseq-nf][rnaseq-nf-page] for an introduction to the pipeline.
 
 The approach is as follows:
 
@@ -140,10 +140,10 @@ Create the following samplesheet to represent the test data:
 **`data/allreads.csv`**
 ```
 id,fastq_1,fastq_2
-gut,https://raw.githubusercontent.com/nextflow-io/rnaseq-nf/refs/heads/master/data/ggal/ggal_gut_1.fq,https://raw.githubusercontent.com/nextflow-io/rnaseq-nf/refs/heads/master/data/ggal/ggal_gut_2.fq
-liver,https://raw.githubusercontent.com/nextflow-io/rnaseq-nf/refs/heads/master/data/ggal/ggal_liver_1.fq,https://raw.githubusercontent.com/nextflow-io/rnaseq-nf/refs/heads/master/data/ggal/ggal_liver_2.fq
-lung,https://raw.githubusercontent.com/nextflow-io/rnaseq-nf/refs/heads/master/data/ggal/ggal_lung_1.fq,https://raw.githubusercontent.com/nextflow-io/rnaseq-nf/refs/heads/master/data/ggal/ggal_lung_2.fq
-spleen,https://raw.githubusercontent.com/nextflow-io/rnaseq-nf/refs/heads/master/data/ggal/ggal_spleen_1.fq,https://raw.githubusercontent.com/nextflow-io/rnaseq-nf/refs/heads/master/data/ggal/ggal_spleen_2.fq
+ggal_gut,https://raw.githubusercontent.com/nextflow-io/rnaseq-nf/refs/heads/master/data/ggal/ggal_gut_1.fq,https://raw.githubusercontent.com/nextflow-io/rnaseq-nf/refs/heads/master/data/ggal/ggal_gut_2.fq
+ggal_liver,https://raw.githubusercontent.com/nextflow-io/rnaseq-nf/refs/heads/master/data/ggal/ggal_liver_1.fq,https://raw.githubusercontent.com/nextflow-io/rnaseq-nf/refs/heads/master/data/ggal/ggal_liver_2.fq
+ggal_lung,https://raw.githubusercontent.com/nextflow-io/rnaseq-nf/refs/heads/master/data/ggal/ggal_lung_1.fq,https://raw.githubusercontent.com/nextflow-io/rnaseq-nf/refs/heads/master/data/ggal/ggal_lung_2.fq
+ggal_spleen,https://raw.githubusercontent.com/nextflow-io/rnaseq-nf/refs/heads/master/data/ggal/ggal_spleen_1.fq,https://raw.githubusercontent.com/nextflow-io/rnaseq-nf/refs/heads/master/data/ggal/ggal_spleen_2.fq
 ```
 
 Refactor `params.reads` to refer to the samplesheet file path instead of a glob pattern:
@@ -330,7 +330,7 @@ process MULTIQC {
     // ...
 
     input:
-    logs: Set<Path>
+    logs: Bag<Path>
     config: Path
 
     // stage:
@@ -345,14 +345,10 @@ process MULTIQC {
 
 In a typed process, file patterns for `path` inputs must be declared using a *stage directive*. In this example, the first input uses the variable name `logs`, and the `stageAs` directive stages the input using the glob pattern `*`.
 
-In this case, you can omit the stage directive because `*` matches Nextflow's default staging behavior. Inputs of type `Path` or a `Path` collection (e.g., `Set<Path>`) are staged by default using the pattern `'*'`.
+In this case, you can omit the stage directive because `*` matches Nextflow's default staging behavior. Inputs of type `Path` or a `Path` collection (e.g., `Bag<Path>`) are staged by default using the pattern `'*'`.
 
 :::note
-In a legacy process, you can use the `arity` option to specify whether a `path` qualifier expects a single file or collection of files. When using typed inputs and outputs, the type determines this behavior, i.e., `Path` vs `Set<Path>`.
-:::
-
-:::note
-While `List<Path>` and `Bag<Path>` are also valid path collection types, `Set<Path>` is preferred in this case because it represents an unordered collection of files. You should only use `List<Path>` when you want the collection to be ordered.
+In a legacy process, you can use the `arity` option to specify whether a `path` qualifier expects a single file or collection of files. When using typed inputs and outputs, the type determines this behavior, i.e., `Path` vs `Bag<Path>`.
 :::
 
 <h4>INDEX</h4>
@@ -563,15 +559,15 @@ The `RNASEQ` workflow now returns a single combined channel, so the `mix` operat
 
 While static typing can be adopted progressively with existing code, many coding patterns are not compatible with static typing. Following best practices and avoiding anti-patterns beforehand will make it easier to adopt static typing.
 
-### Use the strict syntax
+### Use the strict syntax parser
 
-The [strict syntax][strict-syntax-page] is required to use static typing. It is enabled by default in Nextflow 26.04.
+The [strict syntax parser][strict-syntax-page] is required to use static typing. It is enabled by default in Nextflow 26.04.
 
-Before you migrate to static typing, ensure your code adheres to the strict syntax using `nextflow lint` or the language server.
+Before you migrate to static typing, ensure your code complies with the strict parser using `nextflow lint` or the language server.
 
 ### Avoid deprecated patterns
 
-When preparing for the strict syntax, try to address [deprecation warnings][strict-syntax-deprecated] as much as possible. For example:
+When preparing for the strict parser, try to address [deprecation warnings][strict-syntax-deprecated] as much as possible. For example:
 
 ```nextflow
 Channel.from(1, 2, 3).map { it * 2 }        // deprecated
