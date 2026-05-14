@@ -17,6 +17,10 @@
 package nextflow.processor
 
 import java.nio.file.Files
+import java.util.concurrent.Executors
+import java.util.concurrent.ScheduledExecutorService
+import java.util.concurrent.ScheduledFuture
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
@@ -65,25 +69,32 @@ class TaskArrayCollector {
 
     private int arraySize
 
+    private long arrayTimeoutMillis
+
+    private ScheduledExecutorService timeoutScheduler = Executors.newSingleThreadScheduledExecutor()
+
+    private ScheduledFuture<?> timeoutFuture
+
     private Lock sync = new ReentrantLock()
 
     private List<TaskRun> array
 
     private boolean closed = false
 
-    TaskArrayCollector(TaskProcessor processor, Executor executor, int arraySize) {
+    TaskArrayCollector(TaskProcessor processor, Executor executor, int arraySize, long arrayTimeoutMillis) {
         if( executor !instanceof TaskArrayExecutor )
             throw new IllegalArgumentException("Executor '${executor.name}' does not support job arrays")
 
         this.processor = processor
         this.executor = (TaskArrayExecutor)executor
         this.arraySize = arraySize
+        this.arrayTimeoutMillis = arrayTimeoutMillis
         this.array = new ArrayList<>(arraySize)
     }
 
     /**
      * Add a task to the current array, and submit the array when it
-     * reaches the desired size.
+     * reaches the desired size or the max interval has passed.
      *
      * @param task
      */
@@ -97,13 +108,22 @@ class TaskArrayCollector {
                 return
             }
 
-            // add task to the array
+            // reset timeout on first task of job array
+            if( array.isEmpty() ) {
+                final action = { submitAfterTimeout() }
+                this.timeoutFuture = timeoutScheduler.schedule(action, arrayTimeoutMillis, TimeUnit.MILLISECONDS)
+            }
+
+            // add task
             array.add(task)
 
             // submit job array when it is ready
             if( array.size() == arraySize ) {
-                executor.submit(createTaskArray(array))
-                array = new ArrayList<>(arraySize)
+                if( timeoutFuture ) {
+                    timeoutFuture.cancel(false)
+                    this.timeoutFuture = null
+                }
+                submit()
             }
         }
         finally {
@@ -112,11 +132,42 @@ class TaskArrayCollector {
     }
 
     /**
+     * Submit partial job array after timeout has elapsed.
+     */
+    private void submitAfterTimeout() {
+        sync.lock()
+        try {
+            if( !array.isEmpty() && !closed ) {
+                log.debug "Submitting partial job array after timeout (${array.size()} tasks)"
+                submit()
+            }
+        }
+        finally {
+            sync.unlock()
+        }
+    }
+
+    /**
+     * Submit job array and clear timeout.
+     */
+    private void submit() {
+        final arrayCopy = new ArrayList<TaskRun>(array)  // Create defensive copy to avoid ConcurrentModificationException
+        executor.submit(createTaskArray(arrayCopy))
+        this.array = new ArrayList<>(arraySize)
+        this.timeoutFuture = null
+    }
+
+    /**
      * Close the collector, submitting any remaining tasks as a partial job array.
      */
     void close() {
         sync.lock()
         try {
+            if( timeoutFuture ) {
+                timeoutFuture.cancel(false)
+                timeoutFuture = null
+            }
+
             if( array.size() == 1 ) {
                 executor.submit(array.first())
             }
@@ -124,10 +175,12 @@ class TaskArrayCollector {
                 executor.submit(createTaskArray(array))
                 array = null
             }
+
             closed = true
         }
         finally {
             sync.unlock()
+            timeoutScheduler.shutdownNow()
         }
     }
 
