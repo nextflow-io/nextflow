@@ -271,12 +271,12 @@ mail {
 
 ## Mail notification
 
-You can use the `sendMail` function with a [workflow completion handler][metadata-completion-handler] to notify a workflow completion. For example:
+You can use the `sendMail` function with a [workflow completion handler](#completion-handler) to notify a workflow completion. For example:
 
 ```nextflow
 workflow.onComplete {
 
-    def msg = """\
+    def msg = """\r
         Pipeline execution summary
         ---------------------------
         Completed at: ${workflow.complete}

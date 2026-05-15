@@ -1148,9 +1148,9 @@ Some directives are only supported by specific executors. See [Executors][execut
 Refer to the [process reference][process-reference-directives] for the full list of process directives. If you are new to Nextflow, here are some commonly-used operators to learn first:
 
 General:
-- [errorStrategy][process-error-strategy]]: strategy for handling task failures
-- [tag][process-executor]: the [executor][executor-page] to execute tasks
-- [executor][process-tag]: a semantic name used to differentiate between task executions of the same process
+- [errorStrategy][process-error-strategy]: strategy for handling task failures
+- [executor][process-executor]: the [executor][executor-page] to execute tasks
+- [tag][process-tag]: a semantic name used to differentiate between task executions of the same process
 
 Resource requirements:
 - [cpus][process-cpus]: the number of CPUs to request for each task
@@ -1315,8 +1315,6 @@ process hello {
 ```
 
 [cache-nondeterministic-inputs]: ./cache-and-resume#non-deterministic-process-inputs
-[channel-types]: ./channel#channel-types
-[channel-type-value]: ./channel#value-channel
 [channel-value]: ./reference/channel#value
 [executor-page]: ./executor
 [glob]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html.mdx#glob
