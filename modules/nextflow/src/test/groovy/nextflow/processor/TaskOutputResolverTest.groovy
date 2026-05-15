@@ -280,16 +280,15 @@ class TaskOutputResolverTest extends Specification {
         resolver.get('baz') == 123
     }
 
-    def 'should fail when variable is missing from context'() {
+    def 'should return null when variable is missing from context'() {
         given:
         def task = makeTask([foo: 'bar'])
         def resolver = new TaskOutputResolver([:], task)
 
-        when:
-        resolver.get('missing')
-        then:
-        def e = thrown(MissingValueException)
-        e.message.contains('Missing variable in process output')
+        expect:
+        // get() returns null for missing keys so that Groovy's Map-based method
+        // dispatch can fall back to the closure owner for script-level function calls
+        resolver.get('missing') == null
     }
 
     def 'should normalize resolved lazy output values'() {

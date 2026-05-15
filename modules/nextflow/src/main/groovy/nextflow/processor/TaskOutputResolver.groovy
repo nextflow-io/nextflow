@@ -29,7 +29,6 @@ import nextflow.script.params.v2.ProcessFileOutput
 import nextflow.script.types.Bag
 import nextflow.util.HashBag
 import nextflow.util.RecordMap
-import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Implements the resolution of task outputs.
  *
@@ -194,16 +193,28 @@ class TaskOutputResolver implements Map<String,Object> {
     /**
      * Get a variable from the task context.
      *
+     * Returns null when the key is not found rather than throwing, so that
+     * Groovy's Map-based method dispatch can fall back to the closure owner
+     * (the script) for calls like `add(x, y)` in output expressions.
+     *
      * @param name
      */
     @Override
-    @CompileDynamic
     Object get(Object name) {
-        try {
-            return InvokerHelper.getProperty(delegate, name)
-        }
-        catch( MissingPropertyException e ) {
-            throw new MissingValueException("Missing variable in process output: ${e.property}")
-        }
+        return delegate.get(name)
+    }
+
+    /**
+     * Invoke a method on the task context, which delegates to the
+     * owner script. This allows output expressions to call arbitrary
+     * functions defined in the script.
+     *
+     * @param name
+     * @param args
+     */
+    @Override
+    @CompileDynamic
+    Object invokeMethod(String name, Object args) {
+        delegate.invokeMethod(name, args)
     }
 }
