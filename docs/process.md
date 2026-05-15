@@ -211,8 +211,8 @@ Template scripts are generally discouraged due to the caveats described above. T
 
 ### Shell
 
-:::{deprecated} 24.11.0-edge
-Use the `script` section instead. Consider using the {ref}`strict syntax <strict-syntax-page>`, which provides error checking to help distinguish between Nextflow variables and Bash variables in the process script.
+:::{deprecated} 25.04.0
+Use the `script` section instead.
 :::
 
 The `shell` section is a string expression that defines the script that is executed by the process. It is an alternative to the {ref}`process-script` definition with one important difference: it uses the exclamation mark `!` character, instead of the usual dollar `$` character, to denote Nextflow variables.
@@ -1036,8 +1036,7 @@ The `tuple` qualifier outputs multiple values in a single output as a {ref}`tupl
 ```nextflow
 process blast {
   input:
-    val species
-    path query
+    tuple val(species), path(query)
 
   output:
     tuple val(species), path('result')
@@ -1052,7 +1051,7 @@ workflow {
   ch_species = channel.of('human', 'cow', 'horse')
   ch_query = channel.fromPath('*.fa')
 
-  blast(ch_species, ch_query)
+  blast(ch_species.combine(ch_query))
 }
 ```
 
@@ -1257,7 +1256,7 @@ All directives can be assigned a dynamic value except the following:
 :::{versionadded} 25.10
 :::
 
-Dynamic directives can be specified without a closure when using the {ref}`strict syntax <strict-syntax-page>`:
+Dynamic directives can be specified without a closure when using the {ref}`strict parser <strict-syntax-page>`:
 
 ```nextflow
 queue (entries > 100 ? 'long' : 'short')
