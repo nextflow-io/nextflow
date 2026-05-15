@@ -127,7 +127,7 @@ class BitbucketServerRepositoryProviderTest extends Specification {
     def 'should list tags' () {
         given:
         def token = System.getenv('NXF_BITBUCKET_SERVER_ACCESS_TOKEN')
-        def config = new ProviderConfig('bbs', [server:'http://slurm.seqera.io:7990', platform:'bitbucketsever']).setAuth(token)
+        def config = new ProviderConfig('bbs', [server:'http://slurm.seqera.io:7990', platform:'bitbucketserver']).setAuth(token)
         and:
         def repo = new BitbucketServerRepositoryProvider('scm/hello/hello', config)
 
@@ -230,7 +230,7 @@ class BitbucketServerRepositoryProviderTest extends Specification {
     def 'should list root directory contents'() {
         given:
         def token = System.getenv('NXF_BITBUCKET_SERVER_ACCESS_TOKEN')
-        def config = new ProviderConfig('bbs', [server:'http://slurm.seqera.io:7990', platform:'bitbucketsever']).setAuth(token)
+        def config = new ProviderConfig('bbs', [server:'http://slurm.seqera.io:7990', platform:'bitbucketserver']).setAuth(token)
         def repo = new BitbucketServerRepositoryProvider('scm/hello/hello', config)
 
         when:
