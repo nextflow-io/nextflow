@@ -169,17 +169,11 @@ class AzHelper {
         return client.generateAccountSas(signature)
     }
 
-    static String generateAccountSas(String accountName, String accountKey, Duration duration) {
-        final client = getOrCreateBlobServiceWithKey(accountName, accountKey)
-        return generateAccountSas(client, duration)
-    }
-
     @Memoized
-    static synchronized BlobServiceClient getOrCreateBlobServiceWithKey(String accountName, String accountKey) {
+    static synchronized BlobServiceClient getOrCreateBlobServiceWithKey(String accountName, String accountKey, String endpoint) {
         log.debug "Creating Azure blob storage client -- accountName=$accountName; accountKey=${accountKey?.substring(0,5)}.."
 
         final credential = new StorageSharedKeyCredential(accountName, accountKey)
-        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName)
 
         return new BlobServiceClientBuilder()
                 .endpoint(endpoint)
@@ -189,15 +183,13 @@ class AzHelper {
     }
 
     @Memoized
-    static synchronized BlobServiceClient getOrCreateBlobServiceWithToken(String accountName, String sasToken) {
+    static synchronized BlobServiceClient getOrCreateBlobServiceWithToken(String accountName, String sasToken, String endpoint) {
         if( !sasToken )
             throw new IllegalArgumentException("Missing Azure blob SAS token")
         if( sasToken.length()<100 )
             throw new IllegalArgumentException("Invalid Azure blob SAS token -- offending value: $sasToken")
 
         log.debug "Creating Azure blob storage client -- accountName: $accountName; sasToken: ${sasToken?.substring(0,10)}.."
-
-        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName)
 
         return new BlobServiceClientBuilder()
                 .endpoint(endpoint)
@@ -207,10 +199,8 @@ class AzHelper {
     }
 
     @Memoized
-    static synchronized BlobServiceClient getOrCreateBlobServiceWithServicePrincipal(String accountName, String clientId, String clientSecret, String tenantId) {
+    static synchronized BlobServiceClient getOrCreateBlobServiceWithServicePrincipal(String accountName, String clientId, String clientSecret, String tenantId, String endpoint) {
         log.debug "Creating Azure Blob storage client using Service Principal credentials"
-
-        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName)
 
         final credential = new ClientSecretCredentialBuilder()
                 .clientId(clientId)
@@ -226,10 +216,8 @@ class AzHelper {
     }
 
     @Memoized
-    static synchronized BlobServiceClient getOrCreateBlobServiceWithManagedIdentity(String accountName, String clientId) {
+    static synchronized BlobServiceClient getOrCreateBlobServiceWithManagedIdentity(String accountName, String clientId, String endpoint) {
         log.debug "Creating Azure blob storage client using Managed Identity ${clientId ?: '<system-assigned identity>'}"
-
-        final endpoint = String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName)
 
         final credentialBuilder = new ManagedIdentityCredentialBuilder()
         if( clientId )
