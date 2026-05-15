@@ -449,8 +449,7 @@ class WaveClient {
         throw new IllegalArgumentException("Unsupported container config URI scheme: $scheme")
     }
 
-    @Memoized
-    synchronized protected ContainerConfig fetchContainerConfig(Path configPath) {
+    protected ContainerConfig fetchContainerConfig(Path configPath) {
         log.debug "Wave read local container config: $configPath"
         try {
             return jsonToContainerConfig(configPath.text)
@@ -460,8 +459,7 @@ class WaveClient {
         }
     }
 
-    @Memoized
-    synchronized protected ContainerConfig fetchContainerConfig(URL configUrl) {
+    protected ContainerConfig fetchContainerConfig(URL configUrl) {
         log.debug "Wave request container config: $configUrl"
         final req = HttpRequest.newBuilder()
                 .uri(configUrl.toURI())
