@@ -22,6 +22,7 @@ import nextflow.exception.IllegalArityException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.script.params.v2.ProcessFileOutput
+import nextflow.util.RecordMap
 import spock.lang.Specification
 import spock.lang.TempDir
 
@@ -289,5 +290,30 @@ class TaskOutputResolverTest extends Specification {
         then:
         def e = thrown(MissingValueException)
         e.message.contains('Missing variable in process output')
+    }
+
+    def 'should normalize resolved lazy output values'() {
+        given:
+        def source = tempDir.resolve('input.txt')
+        def taskPath = new TaskPath(source, 'input.txt')
+        def sample = new RecordMap([
+            id: 'alpha',
+            path: taskPath,
+            nested: [path: taskPath],
+            paths: [taskPath] as Set,
+        ])
+        def task = makeTask([sample: sample])
+        def resolver = new TaskOutputResolver([:], task)
+
+        when:
+        def result = resolver.resolve({ -> sample })
+
+        then:
+        result instanceof RecordMap
+        result.path == source
+        !(result.path instanceof TaskPath)
+        result.nested.path == source
+        !(result.nested.path instanceof TaskPath)
+        result.paths == [source] as Set
     }
 }

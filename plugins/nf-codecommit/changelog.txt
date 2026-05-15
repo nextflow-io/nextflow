@@ -1,5 +1,8 @@
 nf-codecommit changelog
 =======================
+0.5.2 - 11 May 2026
+- Address Netty CVEs by bumping AWS SDK and excluding micronaut-core-bom from test classpath (#7100) [f54039606]
+
 0.5.1 - 26 Mar 2026
 - Fix netty and jackson vulnerabilities (#6955) [8dafdd95d]
 

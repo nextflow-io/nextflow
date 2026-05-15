@@ -10,7 +10,7 @@ Feature flags marked as *preview* can cause pipelines run with newer versions of
 
 `nextflow.enable.configProcessNamesValidation`
 : :::{deprecated} 25.10.0
-  Use the {ref}`strict syntax <strict-syntax-page>` instead. It validates process selectors without producing false warnings.
+  Use the {ref}`strict parser <strict-syntax-page>` instead. It validates process selectors without producing false warnings.
   :::
 : When `true`, prints a warning for every `withName:` process selector that doesn't match a process in the pipeline (default: `true`).
 
