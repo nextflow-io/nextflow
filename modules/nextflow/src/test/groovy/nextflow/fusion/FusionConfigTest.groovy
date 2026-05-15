@@ -58,14 +58,36 @@ class FusionConfigTest extends Specification {
     }
 
     @Unroll
-    def 'should reject invalid container config url' () {
+    def 'should reject invalid container config url: #VALUE' () {
         when:
         new FusionConfig([containerConfigUrl: VALUE])
         then:
         thrown(IllegalArgumentException)
 
         where:
-        VALUE << ['ftp://foo.com/x.json', '/abs/path.json', 'relative/path.json', 'gs://bucket/x.json']
+        VALUE << [
+            'ftp://foo.com/x.json',
+            '/abs/path.json',
+            'relative/path.json',
+            'gs://bucket/x.json',
+            'file://host/tmp/manifest.json',
+            'file:relative.json',
+            'file:./x.json',
+        ]
+    }
+
+    @Unroll
+    def 'should accept container config url: #VALUE' () {
+        expect:
+        new FusionConfig([containerConfigUrl: VALUE]).containerConfigURI() == new URI(VALUE)
+
+        where:
+        VALUE << [
+            'http://foo.com/x.json',
+            'https://foo.com/x.json',
+            'file:/tmp/manifest.json',
+            'file:///tmp/manifest.json',
+        ]
     }
 
     @Unroll
