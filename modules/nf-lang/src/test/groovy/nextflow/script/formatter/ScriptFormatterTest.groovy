@@ -343,12 +343,17 @@ class ScriptFormatterTest extends Specification {
         expect:
         checkFormat(
             '''\
+            workflow{}
+
             output{
             foo{path'foo'}
             bar{path'bar';index{path'index.csv'}}
             }
             ''',
             '''\
+            workflow {
+            }
+
             output {
                 foo {
                     path 'foo'
@@ -364,12 +369,17 @@ class ScriptFormatterTest extends Specification {
         )
         checkFormat(
             '''\
+            workflow{}
+
             output{
             foo:Path{path'foo'}
             bar:Channel<Path>{path'bar';index{path'index.csv'}}
             }
             ''',
             '''\
+            workflow {
+            }
+
             output {
                 foo: Path {
                     path 'foo'
