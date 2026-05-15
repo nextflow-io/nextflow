@@ -72,7 +72,7 @@ class FusionConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The URL of the container layer that provides the Fusion client.
+        The URL of the container layer that provides the Fusion client. Supports `http(s)://...` and `file:/...` (absolute, no authority) schemes.
     """)
     final String containerConfigUrl
 
