@@ -26,6 +26,9 @@ import nextflow.exception.IllegalArityException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.script.params.v2.ProcessFileOutput
+import nextflow.script.types.Bag
+import nextflow.util.HashBag
+import nextflow.util.RecordMap
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Implements the resolution of task outputs.
@@ -47,6 +50,44 @@ class TaskOutputResolver implements Map<String,Object> {
         this.declaredFiles = declaredFiles
         this.task = task
         this.delegate = task.context
+    }
+
+    /**
+     * Resolve and normalize an output expression before it is emitted.
+     *
+     * Values from the task context may contain {@link TaskPath}, which is a
+     * task-local view of an input file. It is valid for script interpolation,
+     * but it must not escape through task outputs because downstream tasks
+     * need durable source/work-directory paths for hashing and staging.
+     *
+     * @param value
+     */
+    Object resolve(Object value) {
+        return normalizeValue(resolveLazy(value))
+    }
+
+    Object normalizeValue(Object value) {
+        if( value instanceof TaskPath ) {
+            return value.toRealPath()
+        }
+
+        if( value instanceof Collection ) {
+            final elements = value.collect { el -> normalizeValue(el) }
+            return \
+                value instanceof List ? elements as List :
+                value instanceof Set ? elements as Set :
+                value instanceof Bag ? new HashBag<>(elements) :
+                elements
+        }
+
+        if( value instanceof Map ) {
+            final normalized = value.collectEntries { k, v -> [k, normalizeValue(v)] }
+            return \
+                value instanceof RecordMap ? new RecordMap(normalized as Map<String,?>) :
+                normalized
+        }
+
+        return value
     }
 
     /**
