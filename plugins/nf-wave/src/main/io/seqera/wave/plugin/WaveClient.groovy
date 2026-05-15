@@ -450,7 +450,12 @@ class WaveClient {
     @Memoized
     synchronized protected ContainerConfig fetchContainerConfig(Path configPath) {
         log.debug "Wave read local container config: $configPath"
-        return jsonToContainerConfig(configPath.text)
+        try {
+            return jsonToContainerConfig(configPath.text)
+        }
+        catch( Exception e ) {
+            throw new IllegalStateException("Cannot read Fusion container config from $configPath", e)
+        }
     }
 
     @Memoized
