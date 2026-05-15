@@ -87,25 +87,47 @@ class KryoHelper {
         def kryo = new Kryo()
         kryo.setInstantiatorStrategy( InstantiationStrategy.instance )
 
-        // special serializers
+        // Allow Kryo to encode unregistered classes by name on first
+        // encounter instead of failing. Without this, every plugin-
+        // contributed class would need a stable pre-registered numeric
+        // ID, but those IDs are assigned in plugin-load order — so
+        // cross-pipeline cache reuse breaks when different runs load
+        // different plugin sets (e.g. one run with only nf-amazon, the
+        // next with nf-amazon + nf-google). See spec 260514 for context.
+        kryo.setRegistrationRequired(false)
+
+        // Name-encoded classes are resolved via Class.forName at read
+        // time. The default classloader (Kryo's own) sees only system /
+        // application classes — plugin classes like S3Path live in a
+        // pf4j PluginClassLoader and aren't visible. Wire in a delegating
+        // classloader that tries the standard loader first and falls
+        // through to each started plugin's classloader.
+        kryo.setClassLoader(getPluginAwareClassLoader())
+
+        // Built-in JDK collection serializers. These register a fixed
+        // list of classes in a fixed order, so their positional IDs are
+        // stable across all Nextflow processes — safe to keep.
         UnmodifiableCollectionsSerializer.registerSerializers(kryo)
 
-        // users serializers
+        // Plugin-contributed serializers. We attach them as DEFAULT
+        // serializers rather than calling kryo.register(...), so the
+        // serializer mapping is preserved but no positional ID is
+        // pre-assigned. Classes are written by name on first encounter
+        // and Kryo assigns a per-stream dynamic ID — the encoding is
+        // therefore independent of which plugins were loaded when the
+        // blob was written.
         for( Map.Entry entry : serializers ) {
             final k = (Class)entry.key
             final v = entry.value
             if( v instanceof Class )
-                kryo.register(k,(Serializer)v.newInstance())
-
+                kryo.addDefaultSerializer(k, (Class<? extends Serializer>) v)
             else if( v instanceof Closure<Serializer> )
-                kryo.register(k, v.call(kryo))
-
-            else
-                kryo.register(k)
-
+                kryo.addDefaultSerializer(k, (Serializer) v.call(kryo))
+            // else: no serializer specified — Kryo picks a default
+            // (FieldSerializer) on first encounter. Nothing to attach.
         }
 
-        // Register default serializers
+        // Default serializers
         // - there are multiple GString implementation so it
         //   has to be registered the base class as default serializer
         //   See Nextflow issues #12
@@ -114,6 +136,41 @@ class KryoHelper {
         kryo.addDefaultSerializer(Map.Entry, MapEntrySerializer)
 
         return kryo
+    }
+
+    /**
+     * Build a classloader that resolves classes from the standard
+     * application classloader first and, on miss, falls through to each
+     * started plugin's pf4j {@code PluginClassLoader}. Required so Kryo's
+     * name-encoded class lookups can find classes contributed by plugins
+     * (e.g. {@code nextflow.cloud.aws.nio.S3Path} loaded by nf-amazon).
+     *
+     * The composite is lazy-resolved per call so plugins that start
+     * after KryoHelper initialisation are still picked up.
+     */
+    static private ClassLoader getPluginAwareClassLoader() {
+        return new ClassLoader(KryoHelper.classLoader) {
+            @Override
+            protected Class<?> findClass(String name) throws ClassNotFoundException {
+                try {
+                    final manager = Plugins.getManager()
+                    if( manager != null ) {
+                        for( def wrapper : manager.getStartedPlugins() ) {
+                            try {
+                                return wrapper.getPluginClassLoader().loadClass(name)
+                            }
+                            catch( ClassNotFoundException ignored ) {
+                                // try next plugin
+                            }
+                        }
+                    }
+                }
+                catch( Exception e ) {
+                    log.trace "Plugin-aware classloader: error iterating plugins for '${name}': ${e.message}"
+                }
+                throw new ClassNotFoundException(name)
+            }
+        }
     }
 
     /**

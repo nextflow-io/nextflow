@@ -190,11 +190,11 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                         local name=$1
                         local s3path=$2
                         if [[ "$name" == - ]]; then
-                          aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                          aws s3 cp --only-show-errors --checksum-algorithm SHA256 --storage-class STANDARD - "$s3path"
                         elif [[ -d "$name" ]]; then
-                          aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                          aws s3 cp --only-show-errors --recursive --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                         else
-                          aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                          aws s3 cp --only-show-errors --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                         fi
                     }
 
@@ -281,11 +281,11 @@ class AwsBatchFileCopyStrategyTest extends Specification {
                     local name=$1
                     local s3path=$2
                     if [[ "$name" == - ]]; then
-                      /foo/aws s3 cp --only-show-errors --sse AES256 --storage-class STANDARD_IA - "$s3path"
+                      /foo/aws s3 cp --only-show-errors --sse AES256 --checksum-algorithm SHA256 --storage-class STANDARD_IA - "$s3path"
                     elif [[ -d "$name" ]]; then
-                      /foo/aws s3 cp --only-show-errors --recursive --sse AES256 --storage-class STANDARD_IA "$name" "$s3path/$name"
+                      /foo/aws s3 cp --only-show-errors --recursive --sse AES256 --checksum-algorithm SHA256 --storage-class STANDARD_IA "$name" "$s3path/$name"
                     else
-                      /foo/aws s3 cp --only-show-errors --sse AES256 --storage-class STANDARD_IA "$name" "$s3path/$name"
+                      /foo/aws s3 cp --only-show-errors --sse AES256 --checksum-algorithm SHA256 --storage-class STANDARD_IA "$name" "$s3path/$name"
                     fi
                 }
  

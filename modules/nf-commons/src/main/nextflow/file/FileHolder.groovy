@@ -76,7 +76,16 @@ class FileHolder implements CacheFunnel {
 
     @Override
     Hasher funnel(Hasher hasher, HashMode mode) {
-        return CacheHelper.hasher(hasher, sourceObj, mode)
+        // For CLOUD_HASH mode, route to the workdir-side staged path
+        // (storePath) where the file actually lives after FilePorter staging,
+        // not the source URI which may be on a different cloud / scheme. For
+        // any other mode, preserve the existing source-identity semantics by
+        // hashing sourceObj.
+        //
+        // HashBuilder.hashFile handles file-vs-directory dispatch and the
+        // CLOUD_HASH FS-provider lookup uniformly for both.
+        final target = (mode == HashMode.CLOUD_HASH) ? storePath : sourceObj
+        return CacheHelper.hasher(hasher, target, mode)
     }
 
     @PackageScope

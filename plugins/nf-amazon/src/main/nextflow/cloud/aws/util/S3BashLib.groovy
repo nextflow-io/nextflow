@@ -20,6 +20,7 @@ import groovy.transform.CompileStatic
 import nextflow.Global
 import nextflow.Session
 import nextflow.cloud.aws.batch.AwsOptions
+import nextflow.cloud.aws.nio.S3Client
 import nextflow.executor.BashFunLib
 import software.amazon.awssdk.services.s3.model.ObjectCannedACL
 
@@ -39,6 +40,7 @@ class S3BashLib extends BashFunLib<S3BashLib> {
     private String acl = ''
     private String requesterPays = ''
     private String forceGlacierTransfer = ''
+    private String checksum = "--checksum-algorithm ${S3Client.CHECKSUM_ALGORITH.name().toUpperCase()} "
 
     S3BashLib withCliPath(String cliPath) {
         if( cliPath )
@@ -118,11 +120,11 @@ class S3BashLib extends BashFunLib<S3BashLib> {
             local name=\$1
             local s3path=\$2
             if [[ "\$name" == - ]]; then
-              $cli s3 cp --only-show-errors ${debug}${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}--storage-class $storageClass - "\$s3path"
+              $cli s3 cp --only-show-errors ${debug}${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}${checksum}--storage-class $storageClass - "\$s3path"
             elif [[ -d "\$name" ]]; then
-              $cli s3 cp --only-show-errors --recursive ${debug}${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}--storage-class $storageClass "\$name" "\$s3path/\$name"
+              $cli s3 cp --only-show-errors --recursive ${debug}${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}${checksum}--storage-class $storageClass "\$name" "\$s3path/\$name"
             else
-              $cli s3 cp --only-show-errors ${debug}${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}--storage-class $storageClass "\$name" "\$s3path/\$name"
+              $cli s3 cp --only-show-errors ${debug}${acl}${storageEncryption}${storageKmsKeyId}${requesterPays}${checksum}--storage-class $storageClass "\$name" "\$s3path/\$name"
             fi
         }
         

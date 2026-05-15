@@ -16,6 +16,8 @@
 
 package nextflow.cloud.aws.batch
 
+import nextflow.cloud.aws.nio.S3Client
+
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.TimeoutException

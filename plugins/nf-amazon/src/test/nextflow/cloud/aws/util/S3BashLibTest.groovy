@@ -89,11 +89,11 @@ class S3BashLibTest extends Specification {
                         local name=$1
                         local s3path=$2
                         if [[ "$name" == - ]]; then
-                          aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                          aws s3 cp --only-show-errors --checksum-algorithm SHA256 --storage-class STANDARD - "$s3path"
                         elif [[ -d "$name" ]]; then
-                          aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                          aws s3 cp --only-show-errors --recursive --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                         else
-                          aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                          aws s3 cp --only-show-errors --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                         fi
                     }
                     
@@ -188,11 +188,11 @@ class S3BashLibTest extends Specification {
                         local name=$1
                         local s3path=$2
                         if [[ "$name" == - ]]; then
-                          /foo/bin/aws s3 cp --only-show-errors --sse S-ENCRYPT --storage-class S-CLAZZ - "$s3path"
+                          /foo/bin/aws s3 cp --only-show-errors --sse S-ENCRYPT --checksum-algorithm SHA256 --storage-class S-CLAZZ - "$s3path"
                         elif [[ -d "$name" ]]; then
-                          /foo/bin/aws s3 cp --only-show-errors --recursive --sse S-ENCRYPT --storage-class S-CLAZZ "$name" "$s3path/$name"
+                          /foo/bin/aws s3 cp --only-show-errors --recursive --sse S-ENCRYPT --checksum-algorithm SHA256 --storage-class S-CLAZZ "$name" "$s3path/$name"
                         else
-                          /foo/bin/aws s3 cp --only-show-errors --sse S-ENCRYPT --storage-class S-CLAZZ "$name" "$s3path/$name"
+                          /foo/bin/aws s3 cp --only-show-errors --sse S-ENCRYPT --checksum-algorithm SHA256 --storage-class S-CLAZZ "$name" "$s3path/$name"
                         fi
                     }
                     
@@ -230,11 +230,11 @@ class S3BashLibTest extends Specification {
                 local name=$1
                 local s3path=$2
                 if [[ "$name" == - ]]; then
-                  aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                  aws s3 cp --only-show-errors --checksum-algorithm SHA256 --storage-class STANDARD - "$s3path"
                 elif [[ -d "$name" ]]; then
-                  aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --recursive --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                 else
-                  aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                 fi
             }
             
@@ -268,11 +268,11 @@ class S3BashLibTest extends Specification {
                 local name=$1
                 local s3path=$2
                 if [[ "$name" == - ]]; then
-                  aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                  aws s3 cp --only-show-errors --checksum-algorithm SHA256 --storage-class STANDARD - "$s3path"
                 elif [[ -d "$name" ]]; then
-                  aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --recursive --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                 else
-                  aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                 fi
             }
             
@@ -303,11 +303,11 @@ class S3BashLibTest extends Specification {
                 local name=$1
                 local s3path=$2
                 if [[ "$name" == - ]]; then
-                  aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                  aws s3 cp --only-show-errors --checksum-algorithm SHA256 --storage-class STANDARD - "$s3path"
                 elif [[ -d "$name" ]]; then
-                  aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --recursive --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                 else
-                  aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                 fi
             }
             
@@ -341,11 +341,11 @@ class S3BashLibTest extends Specification {
                 local name=$1
                 local s3path=$2
                 if [[ "$name" == - ]]; then
-                  /some/bin/aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                  /some/bin/aws s3 cp --only-show-errors --checksum-algorithm SHA256 --storage-class STANDARD - "$s3path"
                 elif [[ -d "$name" ]]; then
-                  /some/bin/aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                  /some/bin/aws s3 cp --only-show-errors --recursive --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                 else
-                  /some/bin/aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                  /some/bin/aws s3 cp --only-show-errors --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                 fi
             }
             
@@ -435,11 +435,11 @@ class S3BashLibTest extends Specification {
                 local name=$1
                 local s3path=$2
                 if [[ "$name" == - ]]; then
-                  aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                  aws s3 cp --only-show-errors --checksum-algorithm SHA256 --storage-class STANDARD - "$s3path"
                 elif [[ -d "$name" ]]; then
-                  aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --recursive --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                 else
-                  aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                 fi
             }
             
@@ -526,11 +526,11 @@ class S3BashLibTest extends Specification {
                 local name=$1
                 local s3path=$2
                 if [[ "$name" == - ]]; then
-                  aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                  aws s3 cp --only-show-errors --checksum-algorithm SHA256 --storage-class STANDARD - "$s3path"
                 elif [[ -d "$name" ]]; then
-                  aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --recursive --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                 else
-                  aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                 fi
             }
             
@@ -623,11 +623,11 @@ class S3BashLibTest extends Specification {
                 local name=$1
                 local s3path=$2
                 if [[ "$name" == - ]]; then
-                  aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id my-kms-key --storage-class STANDARD - "$s3path"
+                  aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id my-kms-key --checksum-algorithm SHA256 --storage-class STANDARD - "$s3path"
                 elif [[ -d "$name" ]]; then
-                  aws s3 cp --only-show-errors --recursive --sse aws:kms --sse-kms-key-id my-kms-key --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --recursive --sse aws:kms --sse-kms-key-id my-kms-key --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                 else
-                  aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id my-kms-key --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id my-kms-key --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                 fi
             }
             
@@ -721,11 +721,11 @@ class S3BashLibTest extends Specification {
                 local name=$1
                 local s3path=$2
                 if [[ "$name" == - ]]; then
-                  aws s3 cp --only-show-errors --acl public-read --storage-class STANDARD - "$s3path"
+                  aws s3 cp --only-show-errors --acl public-read --checksum-algorithm SHA256 --storage-class STANDARD - "$s3path"
                 elif [[ -d "$name" ]]; then
-                  aws s3 cp --only-show-errors --recursive --acl public-read --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --recursive --acl public-read --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                 else
-                  aws s3 cp --only-show-errors --acl public-read --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --acl public-read --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                 fi
             }
             
@@ -833,11 +833,11 @@ class S3BashLibTest extends Specification {
                 local name=$1
                 local s3path=$2
                 if [[ "$name" == - ]]; then
-                  aws s3 cp --only-show-errors --storage-class STANDARD - "$s3path"
+                  aws s3 cp --only-show-errors --checksum-algorithm SHA256 --storage-class STANDARD - "$s3path"
                 elif [[ -d "$name" ]]; then
-                  aws s3 cp --only-show-errors --recursive --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --recursive --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                 else
-                  aws s3 cp --only-show-errors --storage-class STANDARD "$name" "$s3path/$name"
+                  aws s3 cp --only-show-errors --checksum-algorithm SHA256 --storage-class STANDARD "$name" "$s3path/$name"
                 fi
             }
 
