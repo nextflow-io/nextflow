@@ -21,6 +21,11 @@ import groovy.json.JsonSlurper
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
+import org.eclipse.jgit.transport.CredentialsProvider
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
+
+import java.nio.charset.StandardCharsets
+
 /**
  * Implements a repository provider for the private hosted BitBucket Server service
  *
@@ -60,6 +65,31 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
     /** {@inheritDoc} */
     @Override
     String getName() { "BitBucketServer" }
+
+    @Override
+    boolean hasCredentials() {
+        return getToken() || (getUser() && getPassword())
+    }
+
+    @Override
+    protected String[] getAuth() {
+        final token = getToken()
+        if( token )
+            return new String[] { "Authorization", "Bearer " + token }
+        if( getUser() && getPassword() ) {
+            final authString = "${getUser()}:${getPassword()}".bytes.encodeBase64().toString()
+            return new String[] { "Authorization", "Basic " + authString }
+        }
+        return null
+    }
+
+    @Override
+    CredentialsProvider getGitCredentials() {
+        final token = getToken()
+        if( token )
+            return new UsernamePasswordCredentialsProvider(getUser() ?: '', token)
+        return new UsernamePasswordCredentialsProvider(getUser(), getPassword())
+    }
 
     @Override
     String getEndpointUrl() {
