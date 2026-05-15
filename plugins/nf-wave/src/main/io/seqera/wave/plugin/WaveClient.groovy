@@ -405,6 +405,8 @@ class WaveClient {
     }
 
     protected static URI replaceFusionArch(URI uri, String platform) {
+        if( uri.scheme == 'file' )
+            return uri
         final isArm = platform.tokenize('/')?.contains('arm64')
         final targetArch = isArm ? 'arm64' : 'amd64'
         final original = uri.toString()
