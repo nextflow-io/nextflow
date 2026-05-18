@@ -62,6 +62,8 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
         final result = new StringBuilder()
         final copy = environment ? new LinkedHashMap<String,String>(environment) : new LinkedHashMap<String,String>()
         copy.remove('PATH')
+        // save the launch directory so task scripts can be copied to the scratch dir
+        copy.put('NXF_TASK_LAUNCH_DIR', '$PWD')
         copy.put('PATH', '$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH')
         copy.put('AZCOPY_LOG_LOCATION', '$PWD/.azcopy_log')
         copy.put('AZ_SAS', sasToken)
@@ -85,7 +87,14 @@ class AzFileCopyStrategy extends SimpleFileCopyStrategy {
 
     @Override
     String getStageInputFilesScript(Map<String, Path> inputFiles) {
-        String result = ( remoteBinDir ? """\
+        String result = ''
+        // copy task control files from launch dir to scratch directory
+        result += 'if [[ "${NXF_SCRATCH:-}" && "${NXF_TASK_LAUNCH_DIR:-}" && "$NXF_TASK_LAUNCH_DIR" != "$PWD" ]]; then\n'
+        result += '  cp "$NXF_TASK_LAUNCH_DIR"/.command.sh . 2>/dev/null || true\n'
+        result += '  cp "$NXF_TASK_LAUNCH_DIR"/.command.run . 2>/dev/null || true\n'
+        result += '  cp "$NXF_TASK_LAUNCH_DIR"/.command.in . 2>/dev/null || true\n'
+        result += 'fi\n'
+        result += ( remoteBinDir ? """\
             nxf_az_download '${AzHelper.toHttpUrl(remoteBinDir)}' \$PWD/.nextflow-bin
             chmod +x \$PWD/.nextflow-bin/* || true
             """.stripIndent(true) : '' )
