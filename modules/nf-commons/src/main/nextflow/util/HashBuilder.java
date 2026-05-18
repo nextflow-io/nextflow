@@ -45,8 +45,10 @@ import nextflow.Global;
 import nextflow.ISession;
 import nextflow.extension.Bolts;
 import nextflow.extension.FilesEx;
+import nextflow.file.ChecksumAwareFileSystemProvider;
 import nextflow.io.SerializableMarker;
 import nextflow.script.types.Bag;
+import nextflow.util.checksum.Checksum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static nextflow.Const.DEFAULT_ROOT;
@@ -263,7 +265,7 @@ public class HashBuilder {
             log.warn("Unable to get file attributes file: {} -- Cause: {}", FilesEx.toUriString(path), e.toString());
         }
 
-        if( (mode==HashMode.STANDARD || mode==HashMode.LENIENT) && isAssetFile(path, DEFAULT_ROOT) ) {
+        if( (mode==HashMode.STANDARD || mode==HashMode.LENIENT || mode==HashMode.CLOUD_HASH) && isAssetFile(path, DEFAULT_ROOT) ) {
             if( attrs==null ) {
                 // when file attributes are not avail, or it's a directory
                 // hash the file using the file name path and the repository
@@ -287,8 +289,96 @@ public class HashBuilder {
             return hashFileContent(hasher, path);
         if( mode==HashMode.SHA256 && attrs!=null && attrs.isRegularFile() )
             return hashFileSha256(hasher, path, null);
+        if( mode==HashMode.CLOUD_HASH && attrs!=null && attrs.isRegularFile() )
+            return hashFileCloud(hasher, path, attrs, basePath);
+        if( mode==HashMode.CLOUD_HASH && attrs!=null && attrs.isDirectory() )
+            return hashDirCloud(hasher, path, attrs, basePath);
         // default
         return hashFileMetadata(hasher, path, attrs, mode, basePath);
+    }
+
+    /**
+     * Hash a single regular file using the cloud-native checksum (e.g. S3 CRC64NVMe,
+     * Azure MD5, GCS CRC32C). Falls back to {@link #hashFileMetadata} when no
+     * checksum is reachable.
+     */
+    static private Hasher hashFileCloud( Hasher hasher, Path path, BasicFileAttributes attrs, Path basePath ) {
+        final java.util.Optional<Checksum> ck = lookupCloudChecksum(path);
+        if( ck.isPresent() ) {
+            hasher.putUnencodedChars(ck.get().toHashContribution());
+            return hasher;
+        }
+        // Reason already logged inside lookupCloudChecksum().
+        return hashFileMetadata(hasher, path, attrs, HashMode.STANDARD, basePath);
+    }
+
+    /**
+     * Resolve a cloud-native checksum for a single path via the
+     * {@link ChecksumAwareFileSystemProvider} capability on the path's FS
+     * provider (e.g. S3, Azure).
+     *
+     * Returns {@link Optional#empty()} on any miss/error and emits a WARN log
+     * so the operator can see why cross-bucket cache hits aren't materialising.
+     */
+    static private java.util.Optional<Checksum> lookupCloudChecksum( Path path ) {
+        final java.nio.file.spi.FileSystemProvider provider = path.getFileSystem().provider();
+        if( !(provider instanceof ChecksumAwareFileSystemProvider) ) {
+            log.warn("No cloud-checksum support for {} (provider={}) — falling back to default hashing; cross-bucket cache hits not possible for this file", FilesEx.toUriString(path), provider.getClass().getSimpleName());
+            return java.util.Optional.empty();
+        }
+        try {
+            java.util.Optional<Checksum> ck = ((ChecksumAwareFileSystemProvider) provider).headChecksum(path);
+            if( !ck.isPresent() )
+                log.warn("No cloud-native checksum for {} (provider={}) — falling back to default hashing; cross-bucket cache hits not possible for this file", FilesEx.toUriString(path), provider.getClass().getSimpleName());
+            return ck;
+        }
+        catch( Exception e ) {
+            log.warn("Cloud checksum lookup failed for {} via {}: {} — falling back to default hashing", FilesEx.toUriString(path), provider.getClass().getSimpleName(), e.getMessage());
+            return java.util.Optional.empty();
+        }
+    }
+
+    /**
+     * Hash a directory under CLOUD_HASH mode by walking the tree and summing
+     * the per-file cloud checksums commutatively (so traversal order doesn't
+     * matter), mirroring {@link #hashDirSha256}. Files in the directory that
+     * lack a cloud-native checksum fall back to their path+size+mtime
+     * contribution so the directory hash still reflects them.
+     */
+    static private Hasher hashDirCloud( Hasher hasher, Path dir, BasicFileAttributes dirAttrs, Path basePath ) {
+        final byte[] resultBytes = new byte[HASH_BYTES];
+        try {
+            Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
+                public FileVisitResult visitFile(Path p, BasicFileAttributes a) throws IOException {
+                    final String relPath = dir.relativize(p).toString();
+                    String contribution;
+                    try {
+                        java.util.Optional<Checksum> ck = lookupCloudChecksum(p);
+                        contribution = ck.isPresent()
+                                ? ck.get().toHashContribution()
+                                : String.format("%s|%d|%d", relPath, a.size(), a.lastModifiedTime() != null ? a.lastModifiedTime().toMillis() : -1L);
+                    }
+                    catch( Exception e ) {
+                        log.warn("Cloud checksum lookup failed for {}: {} — including path/size/mtime in directory hash instead", FilesEx.toUriString(p), e.getMessage());
+                        contribution = String.format("%s|%d|%d", relPath, a.size(), a.lastModifiedTime() != null ? a.lastModifiedTime().toMillis() : -1L);
+                    }
+                    sumBytes(resultBytes, hashBytes(Map.entry(relPath, contribution), HashMode.STANDARD));
+                    return FileVisitResult.CONTINUE;
+                }
+                public FileVisitResult preVisitDirectory(Path p, BasicFileAttributes a) {
+                    final String relPath = dir.relativize(p).toString();
+                    sumBytes(resultBytes, hashBytes(relPath, HashMode.STANDARD));
+                    return FileVisitResult.CONTINUE;
+                }
+            });
+            hasher.putBytes(resultBytes);
+        }
+        catch( IOException t ) {
+            Throwable err = t.getCause()!=null ? t.getCause() : t;
+            String msg = err.getMessage()!=null ? err.getMessage() : err.toString();
+            log.warn("Unable to compute cloud-hash for directory: {} — Cause: {}", FilesEx.toUriString(dir), msg);
+        }
+        return hasher;
     }
 
 

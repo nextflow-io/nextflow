@@ -49,12 +49,23 @@ class S3SessionTest extends Specification {
     def 'should error with non-cloud bucket' () {
         given:
         def session = Spy(Session)
+        // NXF_GLOBALCACHE_PATH prototype added 'file' to the accepted scheme
+        // list (alongside s3/az/gs), so a local path no longer triggers the
+        // rejection. Stub the full Path → FileSystem → provider → scheme
+        // chain to produce a foreign scheme that should still be rejected.
+        def provider = Mock(java.nio.file.spi.FileSystemProvider)
+        provider.getScheme() >> 'ftp'
+        def fs = Mock(java.nio.file.FileSystem)
+        fs.provider() >> provider
+        def badWorkDir = Mock(Path)
+        badWorkDir.getFileSystem() >> fs
+        badWorkDir.toString() >> 'ftp://foo/dir'
 
         when:
-        session.cloudCachePath([enabled:true], Path.of('/foo/dir'))
+        session.cloudCachePath([enabled:true], badWorkDir)
         then:
         def e = thrown(IllegalArgumentException)
-        e.message == "Storage path not supported by Cloud-cache - offending value: '/foo/dir'"
+        e.message == "Storage path not supported by Cloud-cache - offending value: 'ftp://foo/dir'"
 
     }
 

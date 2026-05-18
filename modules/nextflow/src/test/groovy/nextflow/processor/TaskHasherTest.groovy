@@ -142,4 +142,19 @@ class TaskHasherTest extends Specification {
         result1 == result2
         result1 == 'nxf_out_eval_1=echo "value1"\nnxf_out_eval_2=echo "value2"\nnxf_out_eval_3=echo "value3"'
     }
+
+    def 'isGlobalCacheActive returns true only when sessionId is the zero UUID' () {
+        given:
+        def session = Mock(Session) { getUniqueId() >> uniqueId }
+        def processor = Mock(TaskProcessor) { getSession() >> session }
+        def task = Mock(TaskRun) { getProcessor() >> processor }
+
+        expect:
+        new TaskHasher(task).isGlobalCacheActive() == expected
+
+        where:
+        uniqueId                                                   | expected
+        new UUID(0L, 0L)                                           | true
+        UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c')    | false
+    }
 }

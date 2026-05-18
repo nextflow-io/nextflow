@@ -43,6 +43,8 @@ import com.azure.storage.blob.models.BlobStorageException
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.cloud.azure.batch.AzHelper
+import nextflow.file.ChecksumAwareFileSystemProvider
+import nextflow.util.checksum.Checksum
 /**
  * Implements NIO File system provider for Azure Blob Storage
  *
@@ -50,7 +52,7 @@ import nextflow.cloud.azure.batch.AzHelper
  */
 @Slf4j
 @CompileStatic
-class AzFileSystemProvider extends FileSystemProvider {
+class AzFileSystemProvider extends FileSystemProvider implements ChecksumAwareFileSystemProvider {
 
     public static final String AZURE_STORAGE_ACCOUNT_NAME = 'AZURE_STORAGE_ACCOUNT_NAME'
     public static final String AZURE_STORAGE_ACCOUNT_KEY = 'AZURE_STORAGE_ACCOUNT_KEY'
@@ -519,6 +521,36 @@ class AzFileSystemProvider extends FileSystemProvider {
     @Override
     void setAttribute(Path path, String attribute, Object value, LinkOption... options) throws IOException {
         throw new UnsupportedOperationException("Operation 'setAttribute' is not supported by AzFileSystem")
+    }
+
+    /**
+     * Implementation of {@link ChecksumAwareFileSystemProvider#headChecksum} for
+     * Azure Blob Storage paths.
+     *
+     * Returns the blob's stored {@code Content-MD5} via a single GET-properties
+     * call. Azure only stores MD5 (no native CRC64NVMe / CRC32C); blobs uploaded
+     * without an MD5 will have a null property and we fall through to default
+     * hashing. The value is content-stable for the same uploader (same upload
+     * method) but, like S3 ETag, can differ when the same content is uploaded
+     * with different chunk sizes — accepted limitation for the experiment.
+     */
+    @Override
+    Optional<Checksum> headChecksum(Path path) {
+        if( !(path instanceof AzPath) )
+            return Optional.<Checksum>empty()
+        final azPath = (AzPath) path
+        final props = azPath.blobClient().getProperties()
+        final md5 = props?.getContentMd5()
+        if( md5 == null || md5.length == 0 )
+            return Optional.<Checksum>empty()
+        return Optional.of(new Checksum('md5', bytesToHex(md5)))
+    }
+
+    private static String bytesToHex(byte[] bytes) {
+        final sb = new StringBuilder(bytes.length * 2)
+        for( byte b : bytes )
+            sb.append(String.format('%02x', b & 0xFF))
+        return sb.toString()
     }
 
 }

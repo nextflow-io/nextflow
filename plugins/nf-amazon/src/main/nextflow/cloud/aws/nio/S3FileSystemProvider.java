@@ -74,9 +74,11 @@ import nextflow.cloud.aws.nio.util.S3MultipartOptions;
 import nextflow.cloud.aws.nio.util.S3ObjectId;
 import nextflow.cloud.aws.nio.util.S3ObjectSummaryLookup;
 import nextflow.extension.FilesEx;
+import nextflow.file.ChecksumAwareFileSystemProvider;
 import nextflow.file.CopyOptions;
 import nextflow.file.FileHelper;
 import nextflow.file.FileSystemTransferAware;
+import nextflow.util.checksum.Checksum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -109,7 +111,7 @@ import static java.lang.String.format;
  *
  *
  */
-public class S3FileSystemProvider extends FileSystemProvider implements FileSystemTransferAware {
+public class S3FileSystemProvider extends FileSystemProvider implements FileSystemTransferAware, ChecksumAwareFileSystemProvider {
 
 	private static final Logger log = LoggerFactory.getLogger(S3FileSystemProvider.class);
 
@@ -261,6 +263,37 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		}
 
 		return createUploaderOutputStream(s3Path, createNew);
+	}
+
+	/**
+	 * Implementation of {@link ChecksumAwareFileSystemProvider#headChecksum} for s3:// paths.
+	 *
+	 * Reads CRC64NVMe via {@code HeadObject} with {@code ChecksumMode.ENABLED}.
+	 * CRC64NVMe has been default on every new S3 PUT/multipart upload since
+	 * early 2025 and is FULL_OBJECT-only on S3, so the value is content-stable
+	 * across single-part vs multipart uploads and across buckets. Returns
+	 * {@link Optional#empty()} when the object lacks CRC64NVMe (e.g. pre-2025
+	 * objects or KMS configurations with additional checksums disabled),
+	 * signalling the caller to fall back to default hashing.
+	 */
+	@Override
+	public Optional<Checksum> headChecksum(Path path) {
+		if( !(path instanceof S3Path) )
+			return Optional.empty();
+		final S3Path s3 = (S3Path) path;
+		final HeadObjectResponse resp = s3.getFileSystem().getClient().getObjectMetadata(s3.getBucket(), s3.getKey());
+		final String base64 = resp.checksumSHA256();
+		if( base64 == null )
+			return Optional.empty();
+		return Optional.of(new Checksum(S3Client.CHECKSUM_ALGORITH.name(), base64ToHex(base64)));
+	}
+
+	private static String base64ToHex(String base64) {
+		final byte[] bytes = java.util.Base64.getDecoder().decode(base64);
+		final StringBuilder sb = new StringBuilder(bytes.length * 2);
+		for( byte b : bytes )
+			sb.append(String.format("%02x", b & 0xFF));
+		return sb.toString();
 	}
 
 	@Override
@@ -544,7 +577,10 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
                 .sourceBucket(s3Source.getBucket())
                 .sourceKey(s3Source.getKey())
                 .destinationBucket(s3Target.getBucket())
-                .destinationKey(s3Target.getKey());
+                .destinationKey(s3Target.getKey())
+                // Ensure copy destination carries checksum so cloud-hash
+                // task hashing can reach it via the FS provider HEAD path.
+                .checksumAlgorithm(S3Client.CHECKSUM_ALGORITH);
 			log.trace("Copy file via copy object - source: source={}, target={}, tags={}, storageClass={}", s3Source, s3Target, tags, storageClass);
 			client.copyFile(reqBuilder, tags, contentType, storageClass);
 	}

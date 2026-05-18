@@ -29,7 +29,7 @@ public class CacheHelper {
 
     public enum HashMode {
 
-        STANDARD, DEEP, LENIENT, SHA256;
+        STANDARD, DEEP, LENIENT, SHA256, CLOUD_HASH;
 
         private static HashMode defaultValue;
 
@@ -56,6 +56,8 @@ public class CacheHelper {
                     return DEEP;
                 if( "sha256".equals(obj) )
                     return SHA256;
+                if( "cloud-hash".equals(obj) || "cloud_hash".equals(obj) )
+                    return CLOUD_HASH;
             }
             LoggerFactory.getLogger(HashMode.class).warn("Unknown cache mode: {}", obj.toString());
             return null;

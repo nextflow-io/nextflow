@@ -55,7 +55,8 @@ import software.amazon.awssdk.transfer.s3.model.*;
  */
 public class S3Client {
 
-	private static final Logger log = LoggerFactory.getLogger(S3Client.class);
+	public static ChecksumAlgorithm CHECKSUM_ALGORITH = ChecksumAlgorithm.SHA256;
+    private static final Logger log = LoggerFactory.getLogger(S3Client.class);
 
 	private software.amazon.awssdk.services.s3.S3Client client;
 
@@ -92,6 +93,14 @@ public class S3Client {
 		this.client = factory.getS3Client(clientConfig, global);
 		this.semaphore = Threads.useVirtual() ? new Semaphore(clientConfig.getMaxConnections()) : null;
 		this.callerAccount = fetchCallerAccount();
+	}
+
+	/**
+	 * Test-only constructor that bypasses the {@link AwsClientFactory} so unit
+	 * tests can inject a mocked SDK client. Not intended for production wiring.
+	 */
+	S3Client(software.amazon.awssdk.services.s3.S3Client client) {
+		this.client = client;
 	}
 
 	/**
@@ -164,7 +173,12 @@ public class S3Client {
 	 * @see software.amazon.awssdk.services.s3.S3Client#putObject
 	 */
 	public PutObjectResponse putObject(String bucket, String key, File file) {
-		PutObjectRequest.Builder builder = PutObjectRequest.builder().bucket(bucket).key(key);
+		PutObjectRequest.Builder builder = PutObjectRequest.builder()
+				.bucket(bucket)
+				.key(key)
+				// Request Checksum algorith so the object is reachable via the cloud-hash
+				// task-hash path (see S3FileSystemProvider.headChecksum).
+				.checksumAlgorithm(ChecksumAlgorithm.SHA256);
 		if( cannedAcl != null ) {
 			log.trace("Setting canned ACL={}; bucket={}; key={}", cannedAcl, bucket, key);
 			builder.acl(cannedAcl);
@@ -173,6 +187,11 @@ public class S3Client {
 	}
 
 	private PutObjectRequest preparePutObjectRequest(PutObjectRequest.Builder reqBuilder, List<Tag> tags, String contentType, String storageClass) {
+		// Request checksum on every PUT this helper
+		// builds, so the object is reachable via the cloud-hash task-hash
+		// path. Set unconditionally here because every caller routes through
+		// preparePutObjectRequest.
+		reqBuilder.checksumAlgorithm(CHECKSUM_ALGORITH);
 		if( cannedAcl != null ) {
 			reqBuilder.acl(cannedAcl);
 		}
@@ -200,7 +219,9 @@ public class S3Client {
 	public PutObjectResponse putObject(String bucket, String keyName, InputStream inputStream, List<Tag> tags, String contentType, long contentLength) {
 		PutObjectRequest.Builder reqBuilder = PutObjectRequest.builder()
 			.bucket(bucket)
-			.key(keyName);
+			.key(keyName)
+			// Request additional checksum (cloud-hash task-hash path).
+			.checksumAlgorithm(CHECKSUM_ALGORITH);
 		if( cannedAcl != null ) {
 			reqBuilder.acl(cannedAcl);
 		}
@@ -285,7 +306,14 @@ public class S3Client {
 	 * @see software.amazon.awssdk.services.s3.S3Client#headObject
 	 */
 	public HeadObjectResponse getObjectMetadata(String bucketName, String key) {
-		return runWithPermit(() -> client.headObject(HeadObjectRequest.builder().bucket(bucketName).key(key).build()));
+		// Enable ChecksumMode so the response carries x-amz-checksum-* headers
+		// (notably CRC64NVMe, the default since 2025). Required for the
+		// cloud-checksum task hashing path; harmless for existing callers.
+		return runWithPermit(() -> client.headObject(HeadObjectRequest.builder()
+				.bucket(bucketName)
+				.key(key)
+				.checksumMode(ChecksumMode.ENABLED)
+				.build()));
 	}
 
     /**
@@ -470,6 +498,10 @@ public class S3Client {
 
 	private PutObjectRequest.Builder updateBuilder(PutObjectRequest.Builder porBuilder, List<Tag> tags) {
 
+		// Request checksum TransferManager-driven uploads (uploadFile,
+		// uploadDirectory) populate the additional checksum needed by the
+		// cloud-hash task-hash path.
+		porBuilder.checksumAlgorithm(CHECKSUM_ALGORITH);
 		if( cannedAcl != null )
 			porBuilder.acl(cannedAcl);
 		if( storageEncryption != null )
@@ -505,6 +537,9 @@ public class S3Client {
 	}
 
     public void copyFile(CopyObjectRequest.Builder reqBuilder, List<Tag> tags, String contentType, String storageClass) throws IOException {
+		// Request checksum on the destination so a copied object remains
+		// reachable via the cloud-hash task-hash path.
+		reqBuilder.checksumAlgorithm(CHECKSUM_ALGORITH);
 		if( tags !=null && !tags.isEmpty()) {
 			log.debug("Setting tags: {}", tags);
             reqBuilder.taggingDirective(TaggingDirective.REPLACE);

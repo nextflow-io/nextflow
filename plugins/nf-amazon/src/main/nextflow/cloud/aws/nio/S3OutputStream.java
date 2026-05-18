@@ -422,6 +422,14 @@ public final class S3OutputStream extends OutputStream {
         final CreateMultipartUploadRequest.Builder reqBuilder = //
                 CreateMultipartUploadRequest.builder().bucket(objectId.bucket()).key(objectId.key());
 
+        // Request  additional checksum. This algorith should be FULL_OBJECT-only
+        // on S3, so the value is content-stable across single-part vs
+        // multipart vs different part-size uploads — enabling the cloud-hash
+        // task-hash experiment to converge across buckets. The SDK applies
+        // the algorithm to each UploadPart automatically and the completed
+        // object exposes it via x-amz-checksum-x.
+        reqBuilder.checksumAlgorithm(nextflow.cloud.aws.nio.S3Client.CHECKSUM_ALGORITH);
+
         if (storageClass != null) {
             reqBuilder.storageClass(storageClass);
         }
@@ -608,6 +616,10 @@ public final class S3OutputStream extends OutputStream {
         reqBuilder.key(objectId.key());
         reqBuilder.contentLength(contentLength);
         reqBuilder.contentMD5( Base64.getEncoder().encodeToString(checksum) );
+        // Request additional checksum so the object is hashable by
+        // S3FileSystemProvider.headChecksum (the cloud-hash task-hash path).
+        // SDK computes it client-side and sends x-amz-checksum-x.
+        reqBuilder.checksumAlgorithm(nextflow.cloud.aws.nio.S3Client.CHECKSUM_ALGORITH);
         if( cannedAcl!=null ) {
             reqBuilder.acl(cannedAcl);
         }

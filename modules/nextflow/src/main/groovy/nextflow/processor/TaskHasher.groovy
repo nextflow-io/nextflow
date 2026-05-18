@@ -46,6 +46,16 @@ class TaskHasher {
         this.session = task.processor.session
     }
 
+    /**
+     * Returns true when this session is running with the global cache feature
+     * enabled (sessionId zeroed by {@code NXF_GLOBALCACHE_PATH}). Hashing
+     * switches to {@link CacheHelper.HashMode#CLOUD_HASH} which is handled in
+     * {@code FileHolder.funnel} via {@link nextflow.file.ChecksumAwareFileSystemProvider}.
+     */
+    private boolean isGlobalCacheActive() {
+        return session != null && session.uniqueId == new UUID(0L, 0L)
+    }
+
     public HashCode compute() {
 
         final keys = new ArrayList<Object>()
@@ -125,8 +135,12 @@ class TaskHasher {
             keys.add('stub-run')
         }
 
-        // compute task hash
-        final mode = task.processor.getConfig().getHashMode()
+        // compute task hash — switch to CLOUD_HASH when the global cache feature
+        // is active so FileHolder.funnel routes through the path's
+        // ChecksumAwareFileSystemProvider (S3 CRC64NVMe etc.) instead of
+        // STANDARD path+size+mtime
+        final configMode = task.processor.getConfig().getHashMode()
+        final mode = isGlobalCacheActive() ? CacheHelper.HashMode.CLOUD_HASH : configMode
         final hash = computeHash(keys, mode)
 
         // log task hash entries if enabled
