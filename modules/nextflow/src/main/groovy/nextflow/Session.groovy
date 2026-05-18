@@ -440,6 +440,21 @@ class Session implements ISession {
         if(!workDir.mkdirs()) throw new AbortOperationException("Cannot create work-dir: $workDir -- Make sure you have write permissions or specify a different directory by using the `-w` command line option")
         log.debug "Work-dir: ${workDir.toUriString()} [${FileHelper.getPathFsType(workDir)}]"
 
+        // Bootstrap the global-cache directory if NXF_GLOBALCACHE_PATH is active.
+        // This runs here (rather than in ConfigBuilder) so cloud path factories
+        // that need the Session config (e.g. nf-azure's AzPathFactory which reads
+        // azure credentials from session.config) can resolve the URI. The
+        // pre-creation prevents CloudCacheStore.openForRead from aborting on the
+        // first run of a fresh global-cache path.
+        if( System.getenv('NXF_GLOBALCACHE_PATH') && cloudCachePath ) {
+            try {
+                cloudCachePath.resolve(uniqueId.toString()).mkdirs()
+            }
+            catch( Exception e ) {
+                log.warn("Unable to bootstrap global-cache directory ${cloudCachePath}: ${e.message}")
+            }
+        }
+
         if( config.bucketDir ) {
             this.bucketDir = config.bucketDir as Path
             log.debug "Bucket-dir: ${bucketDir.toUriString()}"

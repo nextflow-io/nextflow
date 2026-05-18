@@ -768,8 +768,11 @@ class ConfigBuilder {
 
             log.warn "Enabling global cache. This will enable resume, set the cache path to ${config.cloudcache.path}, and set the work directory to ${config.workDir}"
 
-            final cachePath = FileHelper.asPath(globalCachePath)
-            cachePath.resolve("cache/${sessionId}").mkdirs()
+            // NOTE: the bootstrap mkdirs of "${globalCachePath}/cache/${sessionId}" must
+            // happen AFTER the Session is constructed (Global.session is set), because
+            // some cloud path factories (notably nf-azure's AzPathFactory) read
+            // credentials from session config to resolve URIs. That bootstrap is
+            // performed in Session.init() once the work-dir is created.
         }
 
         // -- set container options
