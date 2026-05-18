@@ -54,7 +54,7 @@ dependencies {
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
     compileOnly 'org.pf4j:pf4j:3.14.1'
-    api('com.azure:azure-storage-blob:12.33.3') {
+    api('com.azure:azure-storage-blob:12.33.4') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
     api('com.azure:azure-compute-batch:1.0.0-beta.3') {
