@@ -320,6 +320,35 @@ class TaskPollingMonitorReadinessGateTest extends Specification {
         ready
     }
 
+    def 'should admit task only after every gate has completed'() {
+        given:
+        def latch1 = new CountDownLatch(1)
+        def latch2 = new CountDownLatch(1)
+        def g1 = Mock(TaskReadinessGate) { prepare(_) >> { latch1.await(5, TimeUnit.SECONDS) } }
+        def g2 = Mock(TaskReadinessGate) { prepare(_) >> { latch2.await(5, TimeUnit.SECONDS) } }
+        def handler = mockReadyHandler()
+        def monitor = newMonitor()
+        monitor.readinessGates = [g1, g2]
+        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
+
+        when:
+        monitor.schedule(handler)
+        Thread.sleep(50)
+        def neither = monitor.canSubmit(handler)
+        latch1.countDown()
+        Thread.sleep(50)
+        def onlyFirst = monitor.canSubmit(handler)
+        latch2.countDown()
+        Thread.sleep(50)
+        def both = monitor.canSubmit(handler)
+
+        then:
+        !neither
+        !onlyFirst
+        both
+        !monitor.gateStates.containsKey(handler)
+    }
+
     def 'should cancel gate futures on evict'() {
         given:
         def started = new CountDownLatch(1)
