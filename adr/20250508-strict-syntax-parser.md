@@ -234,7 +234,7 @@ A Nextflow SDK has many potential advantages:
 
 - SDKs are just libraries in an existing language, so they can be used with existing developer tools for that language.
 
-- SDks can be exposed to multiple programming languages via language bindings, so Nextflow could be used directly in the user's preferred language (e.g. Python).
+- SDKs can be exposed to multiple programming languages via language bindings, so Nextflow could be used directly in the user's preferred language (e.g. Python).
 
 The problem is that a Nextflow SDK would be significantly more verbose. The above example is extremely simple, but quickly becomes large and unreadable as the pipeline grows. This trade-off may be acceptable to experienced software engineers, but Nextflow is specifically designed for "domain experts" -- non-technical users who benefit from having a "domain-specific" language.
 
