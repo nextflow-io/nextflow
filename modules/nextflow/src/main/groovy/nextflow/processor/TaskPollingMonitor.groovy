@@ -18,7 +18,13 @@ package nextflow.processor
 
 import static nextflow.processor.TaskProcessor.*
 
+import java.util.concurrent.Callable
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
+import java.util.concurrent.ExecutionException
 import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.Future
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.Condition
@@ -27,6 +33,7 @@ import java.util.concurrent.locks.ReentrantLock
 
 import com.google.common.util.concurrent.RateLimiter
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.SysEnv
@@ -39,6 +46,8 @@ import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.executor.BatchCleanup
 import nextflow.executor.ExecutorConfig
 import nextflow.executor.GridTaskHandler
+import nextflow.plugin.Plugins
+import nextflow.util.CustomThreadFactory
 import nextflow.util.Duration
 import nextflow.util.SysHelper
 import nextflow.util.Threads
@@ -131,6 +140,22 @@ class TaskPollingMonitor implements TaskMonitor {
     private ExecutorService finalizerPool = { session.taskFinalizerExecutorService() }()
 
     private boolean enableAsyncFinalizer = SysEnv.getBool('NXF_ENABLE_ASYNC_FINALIZER',true)
+
+    @PackageScope
+    List<TaskReadinessGate> readinessGates = Collections.emptyList()
+
+    @PackageScope
+    ExecutorService gateExecutor
+
+    @PackageScope
+    final ConcurrentMap<TaskHandler, GateState> gateStates = new ConcurrentHashMap<>()
+
+    @PackageScope
+    static class GateState {
+        final long scheduledAt = System.currentTimeMillis()
+        final List<Future<?>> futures
+        GateState(List<Future<?>> futures) { this.futures = futures }
+    }
 
     /**
      * Create the task polling monitor with the provided named parameters object.
@@ -351,6 +376,15 @@ class TaskPollingMonitor implements TaskMonitor {
      */
     @Override
     TaskMonitor start() {
+        readinessGates = Plugins.getExtensions(TaskReadinessGate)
+        if( readinessGates ) {
+            gateExecutor = Threads.useVirtual()
+                ? Executors.newVirtualThreadPerTaskExecutor()
+                : Executors.newCachedThreadPool(new CustomThreadFactory('TaskReadinessGate'))
+            session.onShutdown { gateExecutor.shutdownNow() }
+            log.debug "Registered ${readinessGates.size()} task readiness gate(s): ${readinessGates*.class*.simpleName}"
+        }
+
         log.debug ">>> barrier register (monitor: ${this.name})"
         session.barrier.register(this)
 
