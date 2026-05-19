@@ -17,10 +17,12 @@
 package nextflow.processor
 
 import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import nextflow.Session
 import nextflow.exception.ProcessException
+import nextflow.exception.ProcessRetryableException
 import nextflow.executor.ExecutorConfig
 import spock.lang.Specification
 
@@ -130,8 +132,11 @@ class TaskPollingMonitorReadinessGateTest extends Specification {
         !monitor.gateStates.containsKey(handler)  // cleaned up
     }
 
-    def 'should preserve arbitrary RuntimeException from gate without wrapping'() {
+    def 'should wrap RuntimeException causes in a ProcessException with the original as cause'() {
         given:
+        // Wrapping (rather than rethrowing as-is) is load-bearing: resumeOrDie inspects
+        // `error.cause` for retry markers like ProcessRetryableException — a marker
+        // carried by a RuntimeException implementer would be lost if we rethrew as-is.
         def gate = Mock(TaskReadinessGate) {
             prepare(_) >> { throw new IllegalStateException('underlying') }
         }
@@ -146,9 +151,34 @@ class TaskPollingMonitorReadinessGateTest extends Specification {
         monitor.canSubmit(handler)
 
         then:
-        def e = thrown(IllegalStateException)
-        e.message == 'underlying'
+        def e = thrown(ProcessException)
+        e.message.contains('Task readiness gate failed')
+        e.cause instanceof IllegalStateException
+        e.cause.message == 'underlying'
         !monitor.gateStates.containsKey(handler)
+    }
+
+    def 'should expose ProcessRetryableException markers via error.cause for resumeOrDie'() {
+        given:
+        // A RuntimeException implementing ProcessRetryableException must reach
+        // resumeOrDie as the cause of the outer ProcessException, since resumeOrDie
+        // checks `error.cause instanceof ProcessRetryableException`.
+        def marker = new RetryableBoom()
+        def gate = Mock(TaskReadinessGate) { prepare(_) >> { throw marker } }
+        def handler = mockReadyHandler()
+        def monitor = newMonitor()
+        monitor.readinessGates = [gate]
+        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
+
+        when:
+        monitor.schedule(handler)
+        awaitFutureCompletion(monitor, handler)
+        monitor.canSubmit(handler)
+
+        then:
+        def e = thrown(ProcessException)
+        e.cause.is(marker)
+        e.cause instanceof ProcessRetryableException
     }
 
     def 'should wrap checked exception causes in a ProcessException'() {
@@ -190,7 +220,7 @@ class TaskPollingMonitorReadinessGateTest extends Specification {
         when:
         monitor.schedule(handler)
         monitor.gateStates.get(handler).futures.each { it.cancel(true) }
-        Thread.sleep(50)
+        awaitFutureCompletion(monitor, handler)
         monitor.canSubmit(handler)
 
         then:
@@ -200,6 +230,49 @@ class TaskPollingMonitorReadinessGateTest extends Specification {
 
         cleanup:
         block.countDown()
+    }
+
+    def 'should cancel peer gate futures when one gate throws'() {
+        given:
+        def peerStarted = new CountDownLatch(1)
+        def peerInterrupted = new CountDownLatch(1)
+        def failing = new TaskReadinessGate() {
+            void prepare(TaskHandler h) throws InterruptedException {
+                throw new ProcessException('failing gate')
+            }
+        }
+        def peer = new TaskReadinessGate() {
+            void prepare(TaskHandler h) throws InterruptedException {
+                peerStarted.countDown()
+                try { new CountDownLatch(1).await() }
+                catch( InterruptedException e ) { peerInterrupted.countDown(); throw e }
+            }
+        }
+        def handler = mockReadyHandler()
+        def monitor = newMonitor()
+        monitor.readinessGates = [failing, peer]
+        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
+
+        when:
+        monitor.schedule(handler)
+        peerStarted.await(5, TimeUnit.SECONDS)
+        // wait for the failing gate's future to be done so allGatesReady reaches the throw branch
+        try { monitor.gateStates.get(handler).futures[0].get(5, TimeUnit.SECONDS) }
+        catch( ExecutionException ignored ) { /* expected — failing gate threw */ }
+
+        then:
+        // canSubmit surfaces the failure and cancels the still-running peer
+        try { monitor.canSubmit(handler) } catch( ProcessException expected ) { /* expected */ }
+        peerInterrupted.await(5, TimeUnit.SECONDS)
+        !monitor.gateStates.containsKey(handler)
+    }
+
+    /**
+     * Marker class used to verify that ProcessRetryableException-carrying causes
+     * reach resumeOrDie via the outer ProcessException's `cause` field.
+     */
+    static class RetryableBoom extends RuntimeException implements ProcessRetryableException {
+        RetryableBoom() { super('retry me') }
     }
 
     // Note on ExecutionException with null cause: the allGatesReady code path

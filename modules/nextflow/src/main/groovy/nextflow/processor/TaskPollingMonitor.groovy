@@ -313,17 +313,15 @@ class TaskPollingMonitor implements TaskMonitor {
                 // cancel peer gates so their work doesn't outlive the failing task
                 state.futures*.cancel(true)
                 gateStates.remove(handler)
-                // preserve the original cause as-is when possible so that ProcessException
-                // (and its subclasses) and markers like ProcessRetryableException (carried
-                // on RuntimeException implementations) reach TaskProcessor.resumeOrDie intact
+                // Rethrow ProcessException (and subclasses) identity-preserved so the
+                // original message and type reach resumeOrDie. Wrap anything else in a
+                // ProcessException with the original attached as cause — this preserves
+                // ProcessRetryableException routing in resumeOrDie, which inspects
+                // `error.cause`, not `error` itself.
                 final cause = e.cause
-                if( cause == null )
-                    throw new ProcessException("Task readiness gate failed for task '${handler.task.name}'", e)
                 if( cause instanceof ProcessException )
                     throw (ProcessException) cause
-                if( cause instanceof RuntimeException )
-                    throw (RuntimeException) cause
-                throw new ProcessException("Task readiness gate failed for task '${handler.task.name}'", cause)
+                throw new ProcessException("Task readiness gate failed for task '${handler.task.name}'", cause ?: e)
             }
             catch( InterruptedException e ) {
                 Thread.currentThread().interrupt()
@@ -390,7 +388,8 @@ class TaskPollingMonitor implements TaskMonitor {
             pendingQueue << handler
             if( readinessGates ) {
                 final futures = new ArrayList<Future<?>>(readinessGates.size())
-                for( gate in readinessGates ) {
+                for( TaskReadinessGate g : readinessGates ) {
+                    final gate = g   // capture in a fresh local for the async closure
                     futures << gateExecutor.submit({ gate.prepare(handler) } as Callable)
                 }
                 gateStates.put(handler, new GateState(futures))
