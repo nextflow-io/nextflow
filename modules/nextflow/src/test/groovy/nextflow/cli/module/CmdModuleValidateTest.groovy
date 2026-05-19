@@ -32,42 +32,6 @@ class CmdModuleValidateTest extends Specification {
     @TempDir
     Path tempDir
 
-    private static final String SCHEMA_JSON = '''\
-        {
-          "$schema": "https://json-schema.org/draft/2020-12/schema",
-          "type": "object",
-          "properties": {
-            "name": { "type": "string" },
-            "version": { "type": "string" },
-            "description": { "type": "string" },
-            "license": { "type": "string" },
-            "input": {
-              "type": "array",
-              "items": {
-                "type": "object",
-                "properties": {
-                  "name": { "type": "string" },
-                  "type": {
-                    "type": "string",
-                    "enum": ["boolean", "float", "integer", "string", "list", "map", "file", "directory"]
-                  },
-                  "description": { "type": "string" }
-                },
-                "required": ["type", "description"]
-              }
-            }
-          },
-          "required": ["name", "description"]
-        }
-        '''.stripIndent()
-
-    private Path schemaPath() {
-        final p = tempDir.resolve('schema.json')
-        if( !Files.exists(p) )
-            Files.writeString(p, SCHEMA_JSON)
-        return p
-    }
-
     private Path createValidModule(String namespace='myorg', String name='hello') {
         def moduleDir = tempDir.resolve("modules/$namespace/$name")
         Files.createDirectories(moduleDir)
@@ -109,7 +73,7 @@ class CmdModuleValidateTest extends Specification {
         def moduleDir = createValidModule()
 
         when:
-        def errors = ModuleValidator.validate(moduleDir, schemaPath().toString())
+        def errors = ModuleValidator.validate(moduleDir)
 
         then:
         errors.isEmpty()
@@ -121,7 +85,7 @@ class CmdModuleValidateTest extends Specification {
         Files.delete(moduleDir.resolve('main.nf'))
 
         when:
-        def errors = ModuleValidator.validate(moduleDir, schemaPath().toString())
+        def errors = ModuleValidator.validate(moduleDir)
 
         then:
         errors.any { it.contains('main.nf') }
@@ -133,7 +97,7 @@ class CmdModuleValidateTest extends Specification {
         Files.delete(moduleDir.resolve('meta.yml'))
 
         when:
-        def errors = ModuleValidator.validate(moduleDir, schemaPath().toString())
+        def errors = ModuleValidator.validate(moduleDir)
 
         then:
         errors.any { it.contains('meta.yml') }
@@ -145,34 +109,17 @@ class CmdModuleValidateTest extends Specification {
         Files.delete(moduleDir.resolve('README.md'))
 
         when:
-        def errors = ModuleValidator.validate(moduleDir, schemaPath().toString())
+        def errors = ModuleValidator.validate(moduleDir)
 
         then:
         errors.any { it.contains('README.md') }
     }
 
-    def 'should fail when meta.yml is missing schema-required fields'() {
+    def 'should fail when meta.yml is missing required fields'() {
         given:
         def moduleDir = createValidModule()
         moduleDir.resolve('meta.yml').text = '''\
             name: myorg/hello
-            version: 1.0.0
-            '''.stripIndent()
-
-        when:
-        def errors = ModuleValidator.validate(moduleDir, schemaPath().toString())
-
-        then:
-        // schema-level validation runs first; reports missing required `description`
-        errors.any { it.contains('description') }
-    }
-
-    def 'should fail when meta.yml is missing nextflow-only fields'() {
-        given:
-        def moduleDir = createValidModule()
-        moduleDir.resolve('meta.yml').text = '''\
-            name: myorg/hello
-            description: A test module
             input:
               - name: greeting
                 type: string
@@ -180,10 +127,10 @@ class CmdModuleValidateTest extends Specification {
             '''.stripIndent()
 
         when:
-        def errors = ModuleValidator.validate(moduleDir, schemaPath().toString())
+        def errors = ModuleValidator.validate(moduleDir)
 
         then:
-        // schema passes, then ModuleSpec.validate() reports missing version + license
+        errors.any { it.contains('description') }
         errors.any { it.contains('version') }
         errors.any { it.contains('license') }
     }
@@ -199,7 +146,7 @@ class CmdModuleValidateTest extends Specification {
             '''.stripIndent()
 
         when:
-        def errors = ModuleValidator.validate(moduleDir, schemaPath().toString())
+        def errors = ModuleValidator.validate(moduleDir)
 
         then:
         errors.any { it.contains('version') }
