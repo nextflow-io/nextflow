@@ -313,9 +313,15 @@ class TaskPollingMonitor implements TaskMonitor {
                 // cancel peer gates so their work doesn't outlive the failing task
                 state.futures*.cancel(true)
                 gateStates.remove(handler)
-                throw e.cause instanceof ProcessException
-                    ? (ProcessException) e.cause
-                    : new ProcessException("Task readiness gate failed for task '${handler.task.name}'", e.cause)
+                // preserve the original cause as-is when possible so that markers like
+                // ProcessRetryableException (an interface, not a ProcessException subclass)
+                // reach TaskProcessor.resumeOrDie intact
+                final cause = e.cause
+                if( cause == null )
+                    throw new ProcessException("Task readiness gate failed for task '${handler.task.name}'", e)
+                if( cause instanceof RuntimeException )
+                    throw (RuntimeException) cause
+                throw new ProcessException("Task readiness gate failed for task '${handler.task.name}'", cause)
             }
             catch( InterruptedException e ) {
                 Thread.currentThread().interrupt()
