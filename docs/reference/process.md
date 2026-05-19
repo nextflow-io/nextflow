@@ -1606,6 +1606,35 @@ Multiple packages can be specified separating them with a blank space, e.g. `bwa
 
 The `spack` directive also accepts a Spack environment file path or the path of an existing Spack environment. See {ref}`spack-page` for more information.
 
+(process-uv)=
+
+### uv
+
+The `uv` directive defines the set of Python packages to be installed using the [uv](https://docs.astral.sh/uv/) package manager for each task. For example:
+
+```nextflow
+process hello {
+    uv 'numpy pandas matplotlib'
+
+    script:
+    """
+    python my_script.py
+    """
+}
+```
+
+Nextflow automatically creates a uv virtual environment for each unique set of packages.
+
+Multiple packages can be specified separating them with a blank space, e.g. `numpy pandas>=2.0 scikit-learn`.
+
+The `uv` directive also accepts:
+
+- A `requirements.txt` file path: `uv '/path/to/requirements.txt'`
+- A `pyproject.toml` file path: `uv '/path/to/pyproject.toml'`
+- The path of an existing virtual environment directory
+
+See {ref}`uv-page` for more information.
+
 (process-stageinmode)=
 
 ### stageInMode

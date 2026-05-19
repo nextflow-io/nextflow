@@ -197,7 +197,7 @@ class CmdLineageTest extends Specification {
                 'this is a script',
                 [new Parameter( "val", "sample_id","ggal_gut"),
                 new Parameter("path","reads",["lid://45678/output.txt"])],
-                null, null, null, null, [:],[], null)
+                null, null, null, null, null, [:],[], null)
         lidFile3.text = encoder.encode(entry)
         entry  = new FileOutput("path/to/file",new Checksum("45372qe","nextflow","standard"),
                 "lid://45678", "lid://45678", null, 1234, time, time, null)
@@ -205,7 +205,7 @@ class CmdLineageTest extends Specification {
         entry = new TaskRun("u345-2346-1stw2", "bar",
                 new Checksum("abfs2556","nextflow","standard"),
                 'this is a script',
-                null,null, null, null, null, [:],[], null)
+                null,null, null, null, null, null, [:],[], null)
         lidFile5.text = encoder.encode(entry)
         final network = """\
             flowchart TB

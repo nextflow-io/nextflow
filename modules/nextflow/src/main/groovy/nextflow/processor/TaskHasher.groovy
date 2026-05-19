@@ -120,6 +120,12 @@ class TaskHasher {
             }
         }
 
+        // add uv packages (`uv` directive)
+        final uv = task.getUvEnv()
+        if( uv ) {
+            keys.add(uv)
+        }
+
         // add stub run marker if enabled
         if( session.stubRun && task.config.getStubBlock() ) {
             keys.add('stub-run')

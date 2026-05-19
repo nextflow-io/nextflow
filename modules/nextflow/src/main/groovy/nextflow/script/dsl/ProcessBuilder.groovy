@@ -83,7 +83,8 @@ class ProcessBuilder {
             'stageOutMode',
             'storeDir',
             'tag',
-            'time'
+            'time',
+            'uv'
     ]
 
     protected BaseScript ownerScript

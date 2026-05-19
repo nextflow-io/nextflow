@@ -355,6 +355,7 @@ class BashWrapperBuilder {
         binding.before_script = getBeforeScriptSnippet()
         binding.conda_activate = getCondaActivateSnippet()
         binding.spack_activate = getSpackActivateSnippet()
+        binding.uv_activate = getUvActivateSnippet()
 
         /*
          * add the task environment
@@ -572,6 +573,15 @@ class BashWrapperBuilder {
         result += 'spack env activate -d '
         result += "${Escape.path(spackEnv)}\n"
         return result
+    }
+
+    private String getUvActivateSnippet() {
+        if( !uvEnv )
+            return null
+        return """\
+            # uv environment
+            source ${Escape.path(uvEnv)}/bin/activate
+            """.stripIndent()
     }
 
     protected String getTraceCommand(String interpreter) {
