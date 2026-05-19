@@ -24,6 +24,7 @@ The plugin registers an implementation via the standard PF4J `@Extension` mechan
 
 - **Blocking is allowed.** `prepare` runs on a managed virtual-thread executor inside `TaskPollingMonitor`. Calling `Thread.sleep`, blocking I/O, or long-polling APIs is fine. The scheduler thread is never blocked.
 - **Throwing fails the task.** Any exception marks the task as permanently failed and routes the cause through the task's `errorStrategy` directive. `ProcessException` (and subclasses) propagate identity-preserved. Other throwables are wrapped in a `ProcessException` with the original attached as `cause`, so retry markers like `ProcessRetryableException` reach `TaskProcessor.resumeOrDie` intact.
+- **Retry markers** (`ProcessRetryableException`, `CloudSpotTerminationException`) are recognised by `resumeOrDie` on the *cause* of the thrown exception, not on the exception itself. If you want `errorStrategy 'retry'` to fire for a transient failure, throw the marker as-is (it will be wrapped) — do not pre-wrap it in a `ProcessException`, since the `ProcessException` would propagate identity-preserved and the marker would be lost.
 - **Interrupts must be honored.** Task eviction, workflow abort, and the `executor.gateMaxWait` safety net cancel the in-flight `prepare` by interrupting its thread. Use interruptible primitives (`Thread.sleep`, blocking I/O on NIO channels, `Future.get`).
 - **Multiple gates compose.** When several plugins register gates, all must complete successfully before the task is admitted. Gates run in parallel; order is unspecified.
 
