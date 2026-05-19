@@ -428,6 +428,8 @@ class TaskPollingMonitor implements TaskMonitor {
             return false
         }
 
+        gateStates.remove(handler)?.futures*.cancel(true)
+
         if( remove(handler) ) {
             pendingLock.lock()
             try {

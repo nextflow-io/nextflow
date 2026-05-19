@@ -320,6 +320,32 @@ class TaskPollingMonitorReadinessGateTest extends Specification {
         ready
     }
 
+    def 'should cancel gate futures on evict'() {
+        given:
+        def started = new CountDownLatch(1)
+        def interrupted = new CountDownLatch(1)
+        def gate = new TaskReadinessGate() {
+            void prepare(TaskHandler h) throws InterruptedException {
+                started.countDown()
+                try { new CountDownLatch(1).await() }
+                catch( InterruptedException e ) { interrupted.countDown(); throw e }
+            }
+        }
+        def handler = mockReadyHandler()
+        def monitor = newMonitor()
+        monitor.readinessGates = [gate]
+        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
+
+        when:
+        monitor.schedule(handler)
+        started.await(5, TimeUnit.SECONDS)
+        monitor.evict(handler)
+
+        then:
+        interrupted.await(5, TimeUnit.SECONDS)
+        !monitor.gateStates.containsKey(handler)
+    }
+
     /**
      * Marker class used to verify that ProcessRetryableException-carrying causes
      * reach resumeOrDie via the outer ProcessException's `cause` field.
