@@ -20,7 +20,7 @@ import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 
 /**
- * Model Workflow and Task Parameters.
+ * Models a workflow or task parameter.
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */

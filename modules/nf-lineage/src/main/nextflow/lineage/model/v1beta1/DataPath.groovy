@@ -20,7 +20,7 @@ import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 
 /**
- * Models a data path which includes the path and a checksum to validate the content of the path.
+ * Models a data path with a checksum to validate its contents.
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */
