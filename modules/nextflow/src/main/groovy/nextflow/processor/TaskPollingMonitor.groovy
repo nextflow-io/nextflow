@@ -291,7 +291,39 @@ class TaskPollingMonitor implements TaskMonitor {
      *      by the polling monitor
      */
     protected boolean canSubmit(TaskHandler handler) {
-        (capacity > 0 ? checkQueueCapacity(handler) : true) && handler.canForkProcess() && handler.isReady()
+        allGatesReady(handler) \
+            && handler.canForkProcess() \
+            && handler.isReady() \
+            && (capacity > 0 ? checkQueueCapacity(handler) : true)
+    }
+
+    private boolean allGatesReady(TaskHandler handler) {
+        final state = gateStates.get(handler)
+        if( !state ) return true
+
+        for( f in state.futures ) {
+            if( !f.isDone() ) return false
+            if( f.isCancelled() ) {
+                state.futures*.cancel(true)
+                gateStates.remove(handler)
+                throw new ProcessException("Task readiness gate was cancelled for task '${handler.task.name}'")
+            }
+            try { f.get() }
+            catch( ExecutionException e ) {
+                // cancel peer gates so their work doesn't outlive the failing task
+                state.futures*.cancel(true)
+                gateStates.remove(handler)
+                throw e.cause instanceof ProcessException
+                    ? (ProcessException) e.cause
+                    : new ProcessException("Task readiness gate failed for task '${handler.task.name}'", e.cause)
+            }
+            catch( InterruptedException e ) {
+                Thread.currentThread().interrupt()
+                return false
+            }
+        }
+        gateStates.remove(handler)
+        return true
     }
 
     /**

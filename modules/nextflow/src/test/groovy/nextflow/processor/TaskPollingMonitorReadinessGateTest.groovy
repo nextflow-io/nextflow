@@ -79,6 +79,30 @@ class TaskPollingMonitorReadinessGateTest extends Specification {
         monitor.gateStates.isEmpty()
     }
 
+    def 'should return false from canSubmit while gate prepare runs'() {
+        given:
+        def block = new CountDownLatch(1)
+        def gate = Mock(TaskReadinessGate) {
+            prepare(_) >> { block.await(5, TimeUnit.SECONDS) }
+        }
+        def handler = mockReadyHandler()
+        def monitor = newMonitor()
+        monitor.readinessGates = [gate]
+        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
+
+        when:
+        monitor.schedule(handler)
+        def busy = monitor.canSubmit(handler)
+        block.countDown()
+        Thread.sleep(200)
+        def ready = monitor.canSubmit(handler)
+
+        then:
+        !busy
+        ready
+        !monitor.gateStates.containsKey(handler)   // state removed on admission
+    }
+
     private TaskPollingMonitor newMonitor() {
         new TaskPollingMonitor(name: 'local', session: Mock(Session), config: new ExecutorConfig([:]),
                                pollInterval: '1s', capacity: 10)
@@ -86,5 +110,13 @@ class TaskPollingMonitorReadinessGateTest extends Specification {
 
     private TaskHandler mockHandler() {
         Mock(TaskHandler) { getTask() >> Mock(TaskRun) }
+    }
+
+    private TaskHandler mockReadyHandler() {
+        Mock(TaskHandler) {
+            isReady() >> true
+            canForkProcess() >> true
+            getTask() >> Mock(TaskRun) { getName() >> 'task-x' }
+        }
     }
 }
