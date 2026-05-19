@@ -81,7 +81,7 @@ Errors are collected and reported with specific locations and messages.
 
 The legacy parser resolves include declarations at runtime, compiling each new module when the including script is executed.
 
-The strict parser, however, resolves all included modules eagerly during compilation, so that it can resolve references across modules. When the main script is compiled, it recursively resolves and parses all included modules (`ModuleResolver`) prior to semantic analysis. 
+The strict parser, however, resolves all included modules eagerly during compilation, so that it can resolve references across modules. When the main script is compiled, it recursively resolves and parses all included modules (`ModuleResolver`) prior to semantic analysis.
 
 ### Code generation
 
@@ -240,7 +240,7 @@ The problem is that a Nextflow SDK would be significantly more verbose. The abov
 
 Users who prefer SDKs already have several good options for workflow systems, such as Airflow, Prefect, and Dagster. Rewriting Nextflow as an SDK is unlikely to attract these users. In fact, it would likely only alienate Nextflow's existing user base.
 
-A custom workflow language is harder to develop and maintain, but it is essential to Nextflow's identity. Pipelines written with Nextfow are much more concise, and many of Nextflow's downsides can be addressed with better documentation and developer tooling.
+A custom workflow language is harder to develop and maintain, but it is essential to Nextflow's identity. Pipelines written with Nextflow are much more concise, and many of Nextflow's downsides can be addressed with better documentation and developer tooling.
 
 ### Replace Groovy DSL with a Python DSL
 
