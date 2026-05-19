@@ -104,13 +104,10 @@ class TaskPollingMonitorReadinessGateTest extends Specification {
         !monitor.gateStates.containsKey(handler)   // state removed on admission
     }
 
-    def 'should wrap ProcessException cause from gate (checked exception path)'() {
+    def 'should rethrow ProcessException from gate as-is'() {
         given:
-        // ProcessException extends Exception (checked), NOT RuntimeException, so
-        // the cause-preservation branch in allGatesReady wraps it in an outer
-        // ProcessException with the original attached as `cause`. This pins the
-        // contract: checked-exception causes are wrapped; RuntimeException
-        // causes pass through (see the next spec).
+        // ProcessException (and subclasses) propagate unchanged so that downstream
+        // code in TaskProcessor.resumeOrDie sees the original type and message.
         def boom = new ProcessException('boom')
         def gate = new TaskReadinessGate() {
             void prepare(TaskHandler h) throws InterruptedException {
@@ -129,8 +126,7 @@ class TaskPollingMonitorReadinessGateTest extends Specification {
 
         then:
         def e = thrown(ProcessException)
-        e.message.contains('Task readiness gate failed')
-        e.cause.is(boom)                          // original preserved as cause
+        e.is(boom)                                // same instance, not wrapped
         !monitor.gateStates.containsKey(handler)  // cleaned up
     }
 
