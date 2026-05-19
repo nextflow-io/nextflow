@@ -267,6 +267,59 @@ class TaskPollingMonitorReadinessGateTest extends Specification {
         !monitor.gateStates.containsKey(handler)
     }
 
+    def 'should time out gate that exceeds gateMaxWait'() {
+        given:
+        def block = new CountDownLatch(1)
+        def gate = Mock(TaskReadinessGate) {
+            prepare(_) >> { block.await(10, TimeUnit.SECONDS) }
+        }
+        def handler = mockReadyHandler()
+        def monitor = new TaskPollingMonitor(
+            name: 'local', session: Mock(Session),
+            config: new ExecutorConfig(gateMaxWait: '50 ms'),
+            pollInterval: '1s', capacity: 10)
+        monitor.readinessGates = [gate]
+        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
+
+        when:
+        monitor.schedule(handler)
+        Thread.sleep(150)
+        monitor.canSubmit(handler)
+
+        then:
+        def e = thrown(ProcessException)
+        e.message.contains('timed out')
+        !monitor.gateStates.containsKey(handler)
+
+        cleanup:
+        block.countDown()
+    }
+
+    def 'should not time out before gateMaxWait elapses'() {
+        given:
+        def block = new CountDownLatch(1)
+        def gate = Mock(TaskReadinessGate) { prepare(_) >> { block.await() } }
+        def handler = mockReadyHandler()
+        def monitor = new TaskPollingMonitor(
+            name: 'local', session: Mock(Session),
+            config: new ExecutorConfig(gateMaxWait: '10 sec'),
+            pollInterval: '1s', capacity: 10)
+        monitor.readinessGates = [gate]
+        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
+
+        when:
+        monitor.schedule(handler)
+        Thread.sleep(100)
+        def busy = monitor.canSubmit(handler)
+        block.countDown()
+        Thread.sleep(100)
+        def ready = monitor.canSubmit(handler)
+
+        then:
+        !busy
+        ready
+    }
+
     /**
      * Marker class used to verify that ProcessRetryableException-carrying causes
      * reach resumeOrDie via the outer ProcessException's `cause` field.
