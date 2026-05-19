@@ -26,6 +26,7 @@ import nextflow.executor.Executor
 import nextflow.executor.ExecutorFactory
 import nextflow.dataflow.ChannelImpl
 import nextflow.dataflow.ValueImpl
+import nextflow.processor.TaskFault
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskProcessor
@@ -174,6 +175,9 @@ class ScriptHelper {
         session.await()
         session.destroy()
 
+        if( session.error )
+            throw session.error
+
         return result
     }
 
@@ -204,6 +208,9 @@ class ScriptHelper {
         session.fireDataflowNetwork()
         session.await()
         session.destroy()
+
+        if( session.error )
+            throw session.error
 
         return result
     }
@@ -340,7 +347,9 @@ class MockTaskHandler extends TaskHandler {
             task.code.call()
         }
         status = TaskStatus.COMPLETED
-        task.processor.finalizeTask(this)
+        final fault = task.processor.finalizeTask(this)
+        if( fault instanceof TaskFault )
+            task.processor.session.fault(fault)
     }
 
     @Override
