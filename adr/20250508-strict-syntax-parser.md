@@ -212,7 +212,7 @@ import nextflow.Nf
     cpus = 2,
     memory = '4 GB'
 )
-def echo(String greeting) {
+def sayHello(String greeting) {
     return [
         """
         echo '${greeting} world!'
