@@ -26,10 +26,11 @@ class TaskReadinessGateTest extends Specification {
         ExtensionPoint.isAssignableFrom(TaskReadinessGate)
     }
 
-    def 'should declare prepare(TaskHandler) returning void'() {
+    def 'should declare prepare(TaskHandler) returning void and throwing InterruptedException'() {
         when:
         def method = TaskReadinessGate.getMethod('prepare', TaskHandler)
         then:
         method.returnType == void.class
+        InterruptedException in method.exceptionTypes
     }
 }
