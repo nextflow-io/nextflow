@@ -751,6 +751,9 @@ The following settings are available:
 : *Used only by grid executors.*
 : Determines how long to wait for the `.exitcode` file to be created after the task has completed, before returning an error status (default: `270 sec`).
 
+`executor.gateMaxWait`
+: Maximum time a `TaskReadinessGate` plugin may take to prepare a task before the task is failed (default: `24h`). See the [TaskReadinessGate developer page](../developer/task-readiness-gate.md) for details.
+
 `executor.jobName`
 : *Used only by grid executors and Google Batch.*
 : Determines the name of jobs submitted to the underlying cluster executor:
