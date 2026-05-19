@@ -20,6 +20,7 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import nextflow.Session
+import nextflow.exception.ProcessException
 import nextflow.executor.ExecutorConfig
 import spock.lang.Specification
 
@@ -101,6 +102,124 @@ class TaskPollingMonitorReadinessGateTest extends Specification {
         !busy
         ready
         !monitor.gateStates.containsKey(handler)   // state removed on admission
+    }
+
+    def 'should wrap ProcessException cause from gate (checked exception path)'() {
+        given:
+        // ProcessException extends Exception (checked), NOT RuntimeException, so
+        // the cause-preservation branch in allGatesReady wraps it in an outer
+        // ProcessException with the original attached as `cause`. This pins the
+        // contract: checked-exception causes are wrapped; RuntimeException
+        // causes pass through (see the next spec).
+        def boom = new ProcessException('boom')
+        def gate = new TaskReadinessGate() {
+            void prepare(TaskHandler h) throws InterruptedException {
+                throw boom
+            }
+        }
+        def handler = mockReadyHandler()
+        def monitor = newMonitor()
+        monitor.readinessGates = [gate]
+        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
+
+        when:
+        monitor.schedule(handler)
+        awaitFutureCompletion(monitor, handler)
+        monitor.canSubmit(handler)
+
+        then:
+        def e = thrown(ProcessException)
+        e.message.contains('Task readiness gate failed')
+        e.cause.is(boom)                          // original preserved as cause
+        !monitor.gateStates.containsKey(handler)  // cleaned up
+    }
+
+    def 'should preserve arbitrary RuntimeException from gate without wrapping'() {
+        given:
+        def gate = Mock(TaskReadinessGate) {
+            prepare(_) >> { throw new IllegalStateException('underlying') }
+        }
+        def handler = mockReadyHandler()
+        def monitor = newMonitor()
+        monitor.readinessGates = [gate]
+        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
+
+        when:
+        monitor.schedule(handler)
+        awaitFutureCompletion(monitor, handler)
+        monitor.canSubmit(handler)
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message == 'underlying'
+        !monitor.gateStates.containsKey(handler)
+    }
+
+    def 'should wrap checked exception causes in a ProcessException'() {
+        given:
+        def gate = new TaskReadinessGate() {
+            void prepare(TaskHandler h) throws InterruptedException {
+                throw new IOException('disk failed')
+            }
+        }
+        def handler = mockReadyHandler()
+        def monitor = newMonitor()
+        monitor.readinessGates = [gate]
+        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
+
+        when:
+        monitor.schedule(handler)
+        awaitFutureCompletion(monitor, handler)
+        monitor.canSubmit(handler)
+
+        then:
+        def e = thrown(ProcessException)
+        e.message.contains('Task readiness gate failed')
+        e.cause instanceof IOException
+        e.cause.message == 'disk failed'
+        !monitor.gateStates.containsKey(handler)
+    }
+
+    def 'should throw ProcessException when a gate future is cancelled externally'() {
+        given:
+        def block = new CountDownLatch(1)
+        def gate = Mock(TaskReadinessGate) {
+            prepare(_) >> { block.await(5, TimeUnit.SECONDS) }
+        }
+        def handler = mockReadyHandler()
+        def monitor = newMonitor()
+        monitor.readinessGates = [gate]
+        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
+
+        when:
+        monitor.schedule(handler)
+        monitor.gateStates.get(handler).futures.each { it.cancel(true) }
+        Thread.sleep(50)
+        monitor.canSubmit(handler)
+
+        then:
+        def e = thrown(ProcessException)
+        e.message.contains('cancelled')
+        !monitor.gateStates.containsKey(handler)
+
+        cleanup:
+        block.countDown()
+    }
+
+    // Note on ExecutionException with null cause: the allGatesReady code path
+    // (lines ~319-321 in TaskPollingMonitor) wraps a null-cause ExecutionException
+    // in a ProcessException("Task readiness gate failed...", e). This branch is
+    // reachable but awkward to trigger from a real gate Mock — the JDK's
+    // FutureTask.setException(null) throws NullPointerException, so we can't
+    // surface a null-cause ExecutionException without bending the test. The
+    // branch is verified by code-read.
+
+    private void awaitFutureCompletion(TaskPollingMonitor monitor, TaskHandler handler) {
+        final state = monitor.gateStates.get(handler)
+        for( f in state.futures ) {
+            try { f.get(5, TimeUnit.SECONDS) }
+            catch( Exception ignored ) { /* swallow — we only want to wait until done */ }
+        }
     }
 
     private TaskPollingMonitor newMonitor() {
