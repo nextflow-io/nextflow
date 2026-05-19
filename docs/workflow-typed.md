@@ -6,7 +6,7 @@ Typed workflows use a new syntax for inputs and outputs that supports static typ
 
 To use this feature:
 
-1. Enable the {ref}`strict syntax <strict-syntax-page>` by setting the `NXF_SYNTAX_PARSER` environment variable to `v2`:
+1. Enable the {ref}`strict parser <strict-syntax-page>` by setting the `NXF_SYNTAX_PARSER` environment variable to `v2`:
 
     ```bash
     export NXF_SYNTAX_PARSER=v2
