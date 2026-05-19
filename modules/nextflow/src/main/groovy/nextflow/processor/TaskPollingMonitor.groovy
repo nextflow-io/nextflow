@@ -150,6 +150,12 @@ class TaskPollingMonitor implements TaskMonitor {
     @PackageScope
     final ConcurrentMap<TaskHandler, GateState> gateStates = new ConcurrentHashMap<>()
 
+    /**
+     * Tracks in-flight {@link TaskReadinessGate#prepare} futures for a single handler,
+     * together with the wall-clock timestamp at which the task was scheduled. The
+     * timestamp is used by the {@code executor.gateMaxWait} safety net to decide when
+     * a stuck gate should be cancelled and the task failed.
+     */
     @PackageScope
     static class GateState {
         final long scheduledAt = System.currentTimeMillis()
