@@ -144,6 +144,11 @@ class TaskPollingMonitor implements TaskMonitor {
     @PackageScope
     List<TaskReadinessGate> readinessGates = Collections.emptyList()
 
+    /**
+     * Background executor on which {@link TaskReadinessGate#prepare} runs. Must be a
+     * non-blocking-submission executor (virtual-thread or unbounded cached pool) so that
+     * {@link #schedule} never blocks the caller while holding {@code pendingLock}.
+     */
     @PackageScope
     ExecutorService gateExecutor
 
