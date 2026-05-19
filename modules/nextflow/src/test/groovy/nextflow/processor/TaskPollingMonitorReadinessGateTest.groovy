@@ -16,7 +16,10 @@
 
 package nextflow.processor
 
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 import java.util.concurrent.Future
+import java.util.concurrent.TimeUnit
 import nextflow.Session
 import nextflow.executor.ExecutorConfig
 import spock.lang.Specification
@@ -43,5 +46,46 @@ class TaskPollingMonitorReadinessGateTest extends Specification {
         then:
         state.futures == []
         state.scheduledAt > 0
+    }
+
+    def 'should submit gate.prepare to executor on schedule'() {
+        given:
+        def latch = new CountDownLatch(1)
+        def gate = Mock(TaskReadinessGate) {
+            1 * prepare(_) >> { latch.countDown() }
+        }
+        def handler = mockHandler()
+        def monitor = newMonitor()
+        monitor.readinessGates = [gate]
+        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
+
+        when:
+        monitor.schedule(handler)
+
+        then:
+        latch.await(5, TimeUnit.SECONDS)
+        monitor.gateStates.containsKey(handler)
+        monitor.gateStates.get(handler).futures.size() == 1
+    }
+
+    def 'should not touch gate state when no gates are registered'() {
+        given:
+        def handler = mockHandler()
+        def monitor = newMonitor()
+
+        when:
+        monitor.schedule(handler)
+
+        then:
+        monitor.gateStates.isEmpty()
+    }
+
+    private TaskPollingMonitor newMonitor() {
+        new TaskPollingMonitor(name: 'local', session: Mock(Session), config: new ExecutorConfig([:]),
+                               pollInterval: '1s', capacity: 10)
+    }
+
+    private TaskHandler mockHandler() {
+        Mock(TaskHandler) { getTask() >> Mock(TaskRun) }
     }
 }
