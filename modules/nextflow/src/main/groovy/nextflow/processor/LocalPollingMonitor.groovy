@@ -24,6 +24,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.executor.ExecutorConfig
 import nextflow.exception.ProcessUnrecoverableException
+import nextflow.executor.local.LocalTaskHandler
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 
@@ -60,6 +61,11 @@ class LocalPollingMonitor extends TaskPollingMonitor {
     private final long maxMemory
 
     /**
+     * Tracks the total and available accelerators in the system
+     */
+    private AcceleratorTracker acceleratorTracker
+
+    /**
      * Create the task polling monitor with the provided named parameters object.
      * <p>
      * Valid parameters are:
@@ -76,6 +82,7 @@ class LocalPollingMonitor extends TaskPollingMonitor {
         super(params)
         this.availCpus = maxCpus = params.cpus as int
         this.availMemory = maxMemory = params.memory as long
+        this.acceleratorTracker = AcceleratorTracker.create()
         assert availCpus>0, "Local avail `cpus` attribute cannot be zero"
         assert availMemory>0, "Local avail `memory` attribute cannot zero"
     }
@@ -155,6 +162,16 @@ class LocalPollingMonitor extends TaskPollingMonitor {
     }
 
     /**
+     * @param handler
+     *      A {@link TaskHandler} instance
+     * @return
+     *      The number of accelerators requested to execute the specified task
+     */
+    private static int accelerators(TaskHandler handler) {
+        handler.task.getConfig()?.getAccelerator()?.getRequest() ?: 0
+    }
+
+    /**
      * Determines if a task can be submitted for execution checking if the resources required
      * (cpus and memory) match the amount of avail resource
      *
@@ -179,9 +196,13 @@ class LocalPollingMonitor extends TaskPollingMonitor {
         if( taskMemory>maxMemory)
             throw new ProcessUnrecoverableException("Process requirement exceeds available memory -- req: ${new MemoryUnit(taskMemory)}; avail: ${new MemoryUnit(maxMemory)}")
 
-        final result = super.canSubmit(handler) && taskCpus <= availCpus && taskMemory <= availMemory
+        final taskAccelerators = accelerators(handler)
+        if( taskAccelerators > acceleratorTracker.total() )
+            throw new ProcessUnrecoverableException("Process requirement exceeds available accelerators -- req: $taskAccelerators; avail: ${acceleratorTracker.total()}")
+
+        final result = super.canSubmit(handler) && taskCpus <= availCpus && taskMemory <= availMemory && taskAccelerators <= acceleratorTracker.available()
         if( !result && log.isTraceEnabled( ) ) {
-            log.trace "Task `${handler.task.name}` cannot be scheduled -- taskCpus: $taskCpus <= availCpus: $availCpus && taskMemory: ${new MemoryUnit(taskMemory)} <= availMemory: ${new MemoryUnit(availMemory)}"
+            log.trace "Task `${handler.task.name}` cannot be scheduled -- taskCpus: $taskCpus <= availCpus: $availCpus && taskMemory: ${new MemoryUnit(taskMemory)} <= availMemory: ${new MemoryUnit(availMemory)} && taskAccelerators: $taskAccelerators <= availAccelerators: ${acceleratorTracker.available()}"
         }
         return result
     }
@@ -194,9 +215,16 @@ class LocalPollingMonitor extends TaskPollingMonitor {
      */
     @Override
     protected void submit(TaskHandler handler) {
-        super.submit(handler)
         availCpus -= cpus(handler)
         availMemory -= mem(handler)
+
+        final taskAccelerators = accelerators(handler)
+        if( handler instanceof LocalTaskHandler && taskAccelerators > 0 ) {
+            handler.acceleratorEnv = acceleratorTracker.name()
+            handler.acceleratorIds = acceleratorTracker.acquire(taskAccelerators)
+        }
+
+        super.submit(handler)
     }
 
     /**
@@ -209,11 +237,14 @@ class LocalPollingMonitor extends TaskPollingMonitor {
      *      {@code true} when the task is successfully removed from polling queue,
      *      {@code false} otherwise
      */
+    @Override
     protected boolean remove(TaskHandler handler) {
         final result = super.remove(handler)
         if( result ) {
             availCpus += cpus(handler)
             availMemory += mem(handler)
+            if( handler instanceof LocalTaskHandler )
+                acceleratorTracker.release(handler.acceleratorIds ?: Collections.<String>emptyList())
         }
         return result
     }
