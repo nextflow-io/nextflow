@@ -31,6 +31,8 @@ import nextflow.script.params.StdInParam
 import nextflow.script.params.TupleInParam
 import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessTupleInput
+import nextflow.script.types.Record
+import nextflow.util.RecordMap
 
 /**
  * Helper class for process entry execution feature.
@@ -357,8 +359,16 @@ class ProcessEntryHandler {
         // Map declared inputs to command-line arguments
         List arguments = []
         for( final param : declaredInputs ) {
-            if( param instanceof ProcessTupleInput ) {
-                List tupleElements = []
+            if( param instanceof ProcessTupleInput && param.getType() == Record.class ) {
+                final Map<String,Object> recordFields = [:]
+                for( final innerParam : param.getComponents() ) {
+                    final value = getValueForInputV2(innerParam, paramValues)
+                    recordFields.put(innerParam.getName(), value)
+                }
+                arguments.add(new RecordMap(recordFields))
+            }
+            else if( param instanceof ProcessTupleInput ) {
+                final List tupleElements = []
                 for( final innerParam : param.getComponents() ) {
                     final value = getValueForInputV2(innerParam, paramValues)
                     tupleElements.add(value)
