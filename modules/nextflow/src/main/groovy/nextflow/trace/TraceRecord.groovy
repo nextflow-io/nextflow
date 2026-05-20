@@ -645,6 +645,14 @@ class TraceRecord implements Serializable {
         store.status == 'COMPLETED'
     }
 
+    boolean isAborted() {
+        store.status == 'ABORTED'
+    }
+
+    boolean isFailed() {
+        store.status == 'FAILED'
+    }
+
     String getExecutorName() {
         return executorName
     }
