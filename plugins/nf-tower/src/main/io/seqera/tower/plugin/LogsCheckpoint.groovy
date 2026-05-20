@@ -74,14 +74,13 @@ class LogsCheckpoint implements TraceObserverV2 {
         log.debug "Starting logs checkpoint thread - interval: ${interval}"
         try {
             while( true ) {
-                await(interval)
-                if( Thread.currentThread().isInterrupted() )
-                    break
+                final interrupted = await(interval)
+                Thread.interrupted()  // clear flag so NIO writes in saveFiles() succeed
                 synchronized(lock) {
-                    if( Thread.currentThread().isInterrupted() )
-                        break
                     handler.saveFiles()
                 }
+                if( interrupted )
+                    break
             }
         }
         finally {
@@ -89,13 +88,14 @@ class LogsCheckpoint implements TraceObserverV2 {
         }
     }
 
-    protected void await(Duration interval) {
+    protected boolean await(Duration interval) {
         try {
             Thread.sleep(interval.toMillis())
+            return Thread.currentThread().isInterrupted()
         }
         catch (InterruptedException e) {
             log.debug "Interrupted logs checkpoint thread"
-            Thread.currentThread().interrupt()
+            return true
         }
     }
 }
