@@ -62,6 +62,7 @@ import nextflow.plugin.Plugins
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskFault
 import nextflow.processor.TaskHandler
+import nextflow.processor.hash.TaskHasherFactory
 import nextflow.processor.TaskProcessor
 import nextflow.script.BaseScript
 import nextflow.script.ProcessFactory
@@ -185,6 +186,11 @@ class Session implements ISession {
      * Mnemonic name of this run instance
      */
     String runName
+
+    /**
+     * The task hash strategy version
+     */
+    TaskHasherFactory.Version hashStrategy
 
     /**
      * Enable stub run mode
@@ -391,6 +397,9 @@ class Session implements ISession {
         // -- set the run name
         this.runName = config.runName ?: NameGenerator.next()
         log.debug "Run name: $runName"
+
+        // -- hash strategy
+        this.hashStrategy = TaskHasherFactory.Version.DEFAULT()
 
         // -- dry run
         this.stubRun = config.stubRun
