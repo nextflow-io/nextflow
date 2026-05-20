@@ -21,67 +21,57 @@ import java.nio.file.attribute.FileTime
 import java.time.Instant
 
 import groovy.transform.CompileStatic
-import io.seqera.tower.model.DatasetDto
 
 /**
  * {@link BasicFileAttributes} for {@code seqera://} paths.
- * For depth &lt; 4 (directory paths): {@code isDirectory=true}, {@code size=0}.
- * For depth 4 (dataset file paths): {@code isRegularFile=true}, timestamps from {@link DatasetDto}.
  *
- * @author Seqera Labs
+ * Resource-type agnostic: virtual directories use the {@code (boolean isDir)}
+ * constructor; file-like entries use the explicit {@code (size, lastMod, created, key)}
+ * constructor. Handlers build instances using whatever metadata the underlying
+ * resource exposes.
  */
 @CompileStatic
 class SeqeraFileAttributes implements BasicFileAttributes {
 
     private final boolean directory
-    private final DatasetDto dataset
+    private final long size
+    private final Instant lastModified
+    private final Instant created
+    private final Object fileKey
 
-    /** Construct attributes for a virtual directory (depth 0–3). */
+    /** Construct attributes for a virtual directory. */
     SeqeraFileAttributes(boolean isDir) {
         this.directory = isDir
-        this.dataset = null
+        this.size = 0L
+        this.lastModified = Instant.EPOCH
+        this.created = Instant.EPOCH
+        this.fileKey = null
     }
 
-    /** Construct attributes for a dataset file (depth 4). */
-    SeqeraFileAttributes(DatasetDto dataset) {
+    /** Construct attributes for a regular file with explicit metadata. */
+    SeqeraFileAttributes(long size, Instant lastModified, Instant created, Object fileKey) {
         this.directory = false
-        this.dataset = dataset
+        this.size = size >= 0 ? size : 0L
+        this.lastModified = lastModified ?: Instant.EPOCH
+        this.created = created ?: Instant.EPOCH
+        this.fileKey = fileKey
     }
 
-    @Override
-    FileTime lastModifiedTime() {
-        if (dataset?.lastUpdated) {
-            return FileTime.from(dataset.lastUpdated.toInstant())
-        }
-        return FileTime.from(Instant.EPOCH)
-    }
+    @Override FileTime lastModifiedTime() { FileTime.from(lastModified) }
 
-    @Override
-    FileTime lastAccessTime() { lastModifiedTime() }
+    @Override FileTime lastAccessTime() { FileTime.from(lastModified) }
 
-    @Override
-    FileTime creationTime() {
-        if (dataset?.dateCreated) {
-            return FileTime.from(dataset.dateCreated.toInstant())
-        }
-        return FileTime.from(Instant.EPOCH)
-    }
+    @Override FileTime creationTime() { FileTime.from(created) }
 
-    @Override
-    boolean isRegularFile() { !directory }
+    @Override boolean isRegularFile() { !directory }
 
-    @Override
-    boolean isDirectory() { directory }
+    @Override boolean isDirectory() { directory }
 
-    @Override
-    boolean isSymbolicLink() { false }
+    @Override boolean isSymbolicLink() { false }
 
-    @Override
-    boolean isOther() { false }
+    @Override boolean isOther() { false }
 
-    @Override
-    long size() { 0L }
+    @Override long size() { size }
 
-    @Override
-    Object fileKey() { dataset?.id }
+    @Override Object fileKey() { fileKey }
 }

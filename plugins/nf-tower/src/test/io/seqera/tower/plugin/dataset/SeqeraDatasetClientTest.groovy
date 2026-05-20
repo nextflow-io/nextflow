@@ -51,27 +51,6 @@ class SeqeraDatasetClientTest extends Specification {
         new TowerClient.Response(code, "error $code")
     }
 
-    // ---- listUserWorkspacesAndOrgs ----
-
-    def "listUserWorkspacesAndOrgs returns parsed DTOs"() {
-        given:
-        def body = JsonOutput.toJson([orgsAndWorkspaces: [
-            [orgId: 1, orgName: 'acme', workspaceId: 10, workspaceName: 'research', workspaceFullName: 'acme/research']
-        ]])
-        def tc = spyTower()
-        tc.sendApiRequest('https://api.example.com/user/42/workspaces') >> ok(body)
-        def client = new SeqeraDatasetClient(tc)
-
-        when:
-        def list = client.listUserWorkspacesAndOrgs(42L)
-
-        then:
-        list.size() == 1
-        list[0].orgName == 'acme'
-        list[0].workspaceId == 10L
-        list[0].workspaceName == 'research'
-    }
-
     // ---- listDatasets ----
 
     def "listDatasets returns parsed DatasetDto list"() {
