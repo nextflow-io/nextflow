@@ -467,21 +467,4 @@ class K8sConfigTest extends Specification {
         cfg.fetchNodeName() == false
     }
 
-    def 'should set clientRefreshInterval' () {
-        when:
-        def cfg = new K8sConfig()
-        then:
-        cfg.clientRefreshInterval == Duration.of('50m')
-
-        when:
-        cfg = new K8sConfig(clientRefreshInterval: '30m')
-        then:
-        cfg.clientRefreshInterval == Duration.of('30m')
-
-        when:
-        cfg = new K8sConfig(clientRefreshInterval: '1h')
-        then:
-        cfg.clientRefreshInterval == Duration.of('1h')
-    }
-
 }

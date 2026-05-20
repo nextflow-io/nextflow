@@ -1,6 +1,7 @@
 nf-k8s changelog
 ===================
 1.5.2 - 20 Apr 2026
+- Fix projected service account token expiry by re-reading token file from disk with 30s TTL cache (#6918)
 - Bump org.bouncycastle:bcpkix-jdk18on from 1.79 to 1.84 (#7042) [59d847d52]
 - Allow running pipeline from URL and main script path (#6602) [83196d4be]
 

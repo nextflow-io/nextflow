@@ -642,8 +642,9 @@ class K8sClient {
         final prefix = config.server.contains("://") ? config.server : "https://$config.server"
         final conn = createConnection0(prefix + path)
         conn.setRequestProperty("Content-Type", "application/json")
-        if( config.token ) {
-            conn.setRequestProperty("Authorization", "Bearer $config.token")
+        final bearerToken = config.getBearerToken()
+        if( bearerToken ) {
+            conn.setRequestProperty("Authorization", "Bearer $bearerToken")
         }
 
         if( conn instanceof HttpsURLConnection ) {
