@@ -113,7 +113,7 @@ class SeqeraDatasetClientTest extends Specification {
     def "listVersions returns parsed DatasetVersionDto list"() {
         given:
         def body = JsonOutput.toJson([versions: [
-            [datasetId: 'ds-1', version: 1, fileName: 'samples.csv',
+            [datasetId: 'ds-1', version: 1, fileName: 'samples.csv', fileSize: 1024L,
              mediaType: 'text/csv', hasHeader: true, dateCreated: '2024-01-01T00:00:00Z', disabled: false]
         ]])
         def tc = mockTower()
@@ -127,6 +127,7 @@ class SeqeraDatasetClientTest extends Specification {
         list.size() == 1
         list[0].version == 1L
         list[0].fileName == 'samples.csv'
+        list[0].fileSize == 1024L
         list[0].hasHeader
         !list[0].disabled
     }

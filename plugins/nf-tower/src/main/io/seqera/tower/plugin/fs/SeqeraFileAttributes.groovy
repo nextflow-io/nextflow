@@ -21,12 +21,13 @@ import java.nio.file.attribute.FileTime
 import java.time.Instant
 
 import groovy.transform.CompileStatic
-import io.seqera.tower.model.DatasetDto
+import io.seqera.tower.model.DatasetVersionDto
 
 /**
  * {@link BasicFileAttributes} for {@code seqera://} paths.
  * For depth &lt; 4 (directory paths): {@code isDirectory=true}, {@code size=0}.
- * For depth 4 (dataset file paths): {@code isRegularFile=true}, timestamps from {@link DatasetDto}.
+ * For depth 4 (dataset file paths): {@code isRegularFile=true}, timestamps and size
+ * come from the resolved {@link DatasetVersionDto}.
  *
  * @author Seqera Labs
  */
@@ -34,24 +35,24 @@ import io.seqera.tower.model.DatasetDto
 class SeqeraFileAttributes implements BasicFileAttributes {
 
     private final boolean directory
-    private final DatasetDto dataset
+    private final DatasetVersionDto version
 
     /** Construct attributes for a virtual directory (depth 0–3). */
     SeqeraFileAttributes(boolean isDir) {
         this.directory = isDir
-        this.dataset = null
+        this.version = null
     }
 
     /** Construct attributes for a dataset file (depth 4). */
-    SeqeraFileAttributes(DatasetDto dataset) {
+    SeqeraFileAttributes(DatasetVersionDto version) {
         this.directory = false
-        this.dataset = dataset
+        this.version = version
     }
 
     @Override
     FileTime lastModifiedTime() {
-        if (dataset?.lastUpdated) {
-            return FileTime.from(dataset.lastUpdated.toInstant())
+        if (version?.lastUpdated) {
+            return FileTime.from(version.lastUpdated.toInstant())
         }
         return FileTime.from(Instant.EPOCH)
     }
@@ -61,8 +62,8 @@ class SeqeraFileAttributes implements BasicFileAttributes {
 
     @Override
     FileTime creationTime() {
-        if (dataset?.dateCreated) {
-            return FileTime.from(dataset.dateCreated.toInstant())
+        if (version?.dateCreated) {
+            return FileTime.from(version.dateCreated.toInstant())
         }
         return FileTime.from(Instant.EPOCH)
     }
@@ -80,8 +81,8 @@ class SeqeraFileAttributes implements BasicFileAttributes {
     boolean isOther() { false }
 
     @Override
-    long size() { 0L }
+    long size() { version?.fileSize ?: 0L }
 
     @Override
-    Object fileKey() { dataset?.id }
+    Object fileKey() { version ? "${version.datasetId}@${version.version}".toString() : null }
 }
