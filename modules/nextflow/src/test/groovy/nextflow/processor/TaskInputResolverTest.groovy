@@ -151,6 +151,27 @@ class TaskInputResolverTest extends Specification {
         and:
         task.context.samples*.toString() == ['sample_1.fastq', 'sample_2.fastq']
 
+        when: 'staging a file collection with a staging closure'
+        task.context = new TaskContext(holder: [:])
+        task.inputs = [:]
+        and:
+        param = Mock(InParam) { getName() >> 'reads' }
+        fileInput = new ProcessFileInput({ path -> "staged_${path.name}" }, { -> reads })
+        value = [ Path.of('/other/foo.fq'), Path.of('/other/bar.fq')]
+        task.setInput(param, value)
+        result = resolver.resolve(fileInput, value)
+        task.context.put( param.name, resolver.normalizeValue(value, holdersMap(result)) )
+        then:
+        1 * executor.isForeignFile(_ as Path) >> false
+        1 * executor.isForeignFile(_ as Path) >> false
+        and:
+        result[0].storePath == value[0]
+        result[0].stageName == 'staged_foo.fq'
+        result[1].storePath == value[1]
+        result[1].stageName == 'staged_bar.fq'
+        and:
+        task.context.reads*.toString() == ['staged_foo.fq', 'staged_bar.fq']
+
         when: 'staging a file in a record'
         task.context = new TaskContext(holder: [:])
         task.inputs = [:]
@@ -306,6 +327,31 @@ class TaskInputResolverTest extends Specification {
         then:
         list1 *. stageName == ['dir/bar01/file.fa']
         list2 *. stageName == ['dir/bar01/titi.fa', 'dir/bar02/toto.fa']
+    }
+
+    def 'should expand staging closure'() {
+
+        when: 'empty list'
+        def result = TaskInputResolver.expandStagingClosure({ path -> "staged_${path.name}" }, [])
+        then:
+        result.size() == 0
+
+        when: 'single file'
+        result = TaskInputResolver.expandStagingClosure(
+            { path -> "renamed_${path.name}" },
+            [FileHolder.get('sample.fastq')] )
+        then:
+        result.size() == 1
+        result[0].stageName == 'renamed_sample.fastq'
+
+        when: 'multiple files'
+        result = TaskInputResolver.expandStagingClosure(
+            { path -> "prefix_${path.name}" },
+            [FileHolder.get('foo.txt'), FileHolder.get('bar.txt')] )
+        then:
+        result.size() == 2
+        result[0].stageName == 'prefix_foo.txt'
+        result[1].stageName == 'prefix_bar.txt'
     }
 
     @Unroll

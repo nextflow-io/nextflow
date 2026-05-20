@@ -120,7 +120,7 @@ public class ProcessToGroovyVisitorV2 {
     private void visitProcessStagers(Statement directives) {
         asDirectives(directives).forEach((call) -> {
             var arguments = asMethodCallArguments(call).stream()
-                .map(arg -> sgh.transformToLazy(arg))
+                .map(arg -> sgh.transformToLazy(arg, false))
                 .toList();
             call.setArguments(args(arguments));
         });
