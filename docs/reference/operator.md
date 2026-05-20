@@ -1020,6 +1020,9 @@ Available options:
 `charset`
 : Parse the content with the specified charset, e.g. `UTF-8`. See the list of [standard charsets](https://docs.oracle.com/en/java/javase/11/docs/api/java.base/java/nio/charset/StandardCharsets.html) for available options.
 
+`comment`
+: The character used to denote comments (default: disabled). Lines starting with this character are skipped, and any text following this character mid-line is ignored.
+
 `decompress`
 : When `true`, decompress the content using the GZIP format before processing it (default: `false`). Files with the `.gz` extension are decompressed automatically.
 
