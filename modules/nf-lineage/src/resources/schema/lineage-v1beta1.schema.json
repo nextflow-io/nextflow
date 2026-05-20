@@ -1,0 +1,371 @@
+{
+  "$schema" : "https://json-schema.org/draft/2020-12/schema",
+  "title" : "Nextflow Lineage Model v1beta1",
+  "$defs" : {
+    "Checksum" : {
+      "type" : "object",
+      "properties" : {
+        "algorithm" : {
+          "type" : [ "string", "null" ]
+        },
+        "mode" : {
+          "type" : [ "string", "null" ]
+        },
+        "value" : {
+          "type" : [ "string", "null" ]
+        }
+      },
+      "title" : "Checksum",
+      "description" : "Models a checksum, with the value, algorithm and mode used to compute it."
+    },
+    "DataPath" : {
+      "type" : "object",
+      "properties" : {
+        "checksum" : {
+          "anyOf" : [ {
+            "type" : "null"
+          }, {
+            "$ref" : "#/$defs/Checksum"
+          } ]
+        },
+        "path" : {
+          "type" : [ "string", "null" ]
+        }
+      },
+      "title" : "DataPath",
+      "description" : "Models a data path with a checksum to validate its contents."
+    },
+    "FileOutput" : {
+      "type" : "object",
+      "properties" : {
+        "checksum" : {
+          "anyOf" : [ {
+            "type" : "null"
+          }, {
+            "$ref" : "#/$defs/Checksum"
+          } ]
+        },
+        "createdAt" : {
+          "anyOf" : [ {
+            "type" : "null"
+          }, {
+            "$ref" : "#/$defs/OffsetDateTime"
+          } ]
+        },
+        "labels" : {
+          "type" : [ "array", "null" ],
+          "items" : {
+            "type" : "string"
+          }
+        },
+        "modifiedAt" : {
+          "anyOf" : [ {
+            "type" : "null"
+          }, {
+            "$ref" : "#/$defs/OffsetDateTime"
+          } ]
+        },
+        "path" : {
+          "type" : [ "string", "null" ]
+        },
+        "size" : {
+          "type" : "integer"
+        },
+        "source" : {
+          "type" : [ "string", "null" ]
+        },
+        "taskRun" : {
+          "type" : [ "string", "null" ]
+        },
+        "workflowRun" : {
+          "type" : [ "string", "null" ]
+        }
+      },
+      "title" : "FileOutput",
+      "description" : "Models a file produced by a workflow or task."
+    },
+    "Map" : {
+      "type" : "object"
+    },
+    "OffsetDateTime" : {
+      "type" : "string",
+      "format" : "date-time"
+    },
+    "Parameter" : {
+      "type" : "object",
+      "properties" : {
+        "name" : {
+          "type" : [ "string", "null" ]
+        },
+        "type" : {
+          "type" : [ "string", "null" ]
+        },
+        "value" : { }
+      },
+      "title" : "Parameter",
+      "description" : "Models a workflow or task parameter."
+    },
+    "TaskOutput" : {
+      "type" : "object",
+      "properties" : {
+        "createdAt" : {
+          "anyOf" : [ {
+            "type" : "null"
+          }, {
+            "$ref" : "#/$defs/OffsetDateTime"
+          } ]
+        },
+        "labels" : {
+          "type" : [ "array", "null" ],
+          "items" : {
+            "type" : "string"
+          }
+        },
+        "output" : {
+          "type" : [ "array", "null" ],
+          "items" : {
+            "$ref" : "#/$defs/Parameter"
+          }
+        },
+        "taskRun" : {
+          "type" : [ "string", "null" ]
+        },
+        "workflowRun" : {
+          "type" : [ "string", "null" ]
+        }
+      },
+      "title" : "TaskOutput",
+      "description" : "Models task results."
+    },
+    "TaskRun" : {
+      "type" : "object",
+      "properties" : {
+        "architecture" : {
+          "type" : [ "string", "null" ]
+        },
+        "binEntries" : {
+          "type" : [ "array", "null" ],
+          "items" : {
+            "$ref" : "#/$defs/DataPath"
+          }
+        },
+        "codeChecksum" : {
+          "anyOf" : [ {
+            "type" : "null"
+          }, {
+            "$ref" : "#/$defs/Checksum"
+          } ]
+        },
+        "conda" : {
+          "type" : [ "string", "null" ]
+        },
+        "container" : {
+          "type" : [ "string", "null" ]
+        },
+        "globalVars" : {
+          "anyOf" : [ {
+            "type" : "null"
+          }, {
+            "$ref" : "#/$defs/Map"
+          } ]
+        },
+        "input" : {
+          "type" : [ "array", "null" ],
+          "items" : {
+            "$ref" : "#/$defs/Parameter"
+          }
+        },
+        "name" : {
+          "type" : [ "string", "null" ]
+        },
+        "script" : {
+          "type" : [ "string", "null" ]
+        },
+        "sessionId" : {
+          "type" : [ "string", "null" ]
+        },
+        "spack" : {
+          "type" : [ "string", "null" ]
+        },
+        "workflowRun" : {
+          "type" : [ "string", "null" ]
+        }
+      },
+      "title" : "TaskRun",
+      "description" : "Models a task execution."
+    },
+    "Workflow" : {
+      "type" : "object",
+      "properties" : {
+        "commitId" : {
+          "type" : [ "string", "null" ]
+        },
+        "repository" : {
+          "type" : [ "string", "null" ]
+        },
+        "scriptFiles" : {
+          "type" : [ "array", "null" ],
+          "items" : {
+            "$ref" : "#/$defs/DataPath"
+          }
+        }
+      },
+      "title" : "Workflow",
+      "description" : "Models a workflow definition."
+    },
+    "WorkflowOutput" : {
+      "type" : "object",
+      "properties" : {
+        "createdAt" : {
+          "anyOf" : [ {
+            "type" : "null"
+          }, {
+            "$ref" : "#/$defs/OffsetDateTime"
+          } ]
+        },
+        "output" : {
+          "type" : [ "array", "null" ],
+          "items" : {
+            "$ref" : "#/$defs/Parameter"
+          }
+        },
+        "workflowRun" : {
+          "type" : [ "string", "null" ]
+        }
+      },
+      "title" : "WorkflowOutput",
+      "description" : "Models the results of a workflow execution."
+    },
+    "WorkflowRun" : {
+      "type" : "object",
+      "properties" : {
+        "config" : {
+          "anyOf" : [ {
+            "type" : "null"
+          }, {
+            "$ref" : "#/$defs/Map"
+          } ]
+        },
+        "metadata" : {
+          "anyOf" : [ {
+            "type" : "null"
+          }, {
+            "$ref" : "#/$defs/Map"
+          } ]
+        },
+        "name" : {
+          "type" : [ "string", "null" ]
+        },
+        "params" : {
+          "type" : [ "array", "null" ],
+          "items" : {
+            "$ref" : "#/$defs/Parameter"
+          }
+        },
+        "sessionId" : {
+          "type" : [ "string", "null" ]
+        },
+        "workflow" : {
+          "anyOf" : [ {
+            "type" : "null"
+          }, {
+            "$ref" : "#/$defs/Workflow"
+          } ]
+        }
+      },
+      "title" : "WorkflowRun",
+      "description" : "Models a workflow execution."
+    }
+  },
+  "oneOf" : [ {
+    "type" : "object",
+    "properties" : {
+      "version" : {
+        "const" : "lineage/v1beta1"
+      },
+      "kind" : {
+        "const" : "WorkflowRun"
+      },
+      "spec" : {
+        "$ref" : "#/$defs/WorkflowRun"
+      }
+    },
+    "required" : [ "version", "kind", "spec" ],
+    "additionalProperties" : false
+  }, {
+    "type" : "object",
+    "properties" : {
+      "version" : {
+        "const" : "lineage/v1beta1"
+      },
+      "kind" : {
+        "const" : "WorkflowOutput"
+      },
+      "spec" : {
+        "$ref" : "#/$defs/WorkflowOutput"
+      }
+    },
+    "required" : [ "version", "kind", "spec" ],
+    "additionalProperties" : false
+  }, {
+    "type" : "object",
+    "properties" : {
+      "version" : {
+        "const" : "lineage/v1beta1"
+      },
+      "kind" : {
+        "const" : "Workflow"
+      },
+      "spec" : {
+        "$ref" : "#/$defs/Workflow"
+      }
+    },
+    "required" : [ "version", "kind", "spec" ],
+    "additionalProperties" : false
+  }, {
+    "type" : "object",
+    "properties" : {
+      "version" : {
+        "const" : "lineage/v1beta1"
+      },
+      "kind" : {
+        "const" : "TaskRun"
+      },
+      "spec" : {
+        "$ref" : "#/$defs/TaskRun"
+      }
+    },
+    "required" : [ "version", "kind", "spec" ],
+    "additionalProperties" : false
+  }, {
+    "type" : "object",
+    "properties" : {
+      "version" : {
+        "const" : "lineage/v1beta1"
+      },
+      "kind" : {
+        "const" : "TaskOutput"
+      },
+      "spec" : {
+        "$ref" : "#/$defs/TaskOutput"
+      }
+    },
+    "required" : [ "version", "kind", "spec" ],
+    "additionalProperties" : false
+  }, {
+    "type" : "object",
+    "properties" : {
+      "version" : {
+        "const" : "lineage/v1beta1"
+      },
+      "kind" : {
+        "const" : "FileOutput"
+      },
+      "spec" : {
+        "$ref" : "#/$defs/FileOutput"
+      }
+    },
+    "required" : [ "version", "kind", "spec" ],
+    "additionalProperties" : false
+  } ]
+}

@@ -21,7 +21,7 @@ import groovy.transform.CompileStatic
 import nextflow.lineage.serde.LinSerializable
 
 /**
- * Models a Workflow Execution
+ * Models a workflow execution.
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */

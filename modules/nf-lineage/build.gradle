@@ -13,6 +13,8 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+import nextflow.gradle.GenerateLineageSchemaTask
+
 apply plugin: 'groovy'
 
 sourceSets {
@@ -35,5 +37,26 @@ dependencies {
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation "org.apache.groovy:groovy:4.0.31"
     testImplementation "org.apache.groovy:groovy-nio:4.0.31"
+}
+
+tasks.register('generateLineageSchema', GenerateLineageSchemaTask) {
+    description = 'Generate JSON Schema for the lineage model v1beta1'
+    group = 'documentation'
+    dependsOn compileGroovy
+    classpath = sourceSets.main.runtimeClasspath
+    // Keep this list in sync with LinTypeAdapterFactory.registerSubtype(...) calls
+    // in src/main/nextflow/lineage/serde/LinTypeAdapterFactory.groovy.
+    // After editing, re-run this task to refresh
+    // src/resources/schema/lineage-v1beta1.schema.json.
+    subtypes = [
+        'nextflow.lineage.model.v1beta1.WorkflowRun',
+        'nextflow.lineage.model.v1beta1.WorkflowOutput',
+        'nextflow.lineage.model.v1beta1.Workflow',
+        'nextflow.lineage.model.v1beta1.TaskRun',
+        'nextflow.lineage.model.v1beta1.TaskOutput',
+        'nextflow.lineage.model.v1beta1.FileOutput',
+    ]
+    modelSourceDir = file('src/main/nextflow/lineage/model/v1beta1')
+    outputFile = file('src/resources/schema/lineage-v1beta1.schema.json')
 }
 

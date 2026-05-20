@@ -23,7 +23,7 @@ import nextflow.lineage.serde.LinSerializable
 import java.time.OffsetDateTime
 
 /**
- * Model a base class for workflow and task outputs
+ * Models a file produced by a workflow or task.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */

@@ -22,7 +22,7 @@ import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import nextflow.util.CacheHelper
 /**
- * Models a checksum including the value as well as the algortihm and mode used to compute it.
+ * Models a checksum, with the value, algorithm and mode used to compute it.
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io
  */

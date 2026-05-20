@@ -13,26 +13,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+plugins {
+    id 'groovy'
+}
 
-package nextflow.lineage.model.v1beta1
+repositories {
+    mavenCentral()
+}
 
-import groovy.transform.Canonical
-import groovy.transform.CompileStatic
-
-/**
- * Models a data path with a checksum to validate its contents.
- *
- * @author Jorge Ejarque <jorge.ejarque@seqera.io
- */
-@Canonical
-@CompileStatic
-class DataPath {
-    /**
-     * Real path of the output data.
-     */
-    String path
-    /**
-     * Checksum of the output data.
-     */
-    Checksum checksum
+dependencies {
+    implementation gradleApi()
+    implementation localGroovy()
+    implementation 'com.github.victools:jsonschema-generator:4.38.0'
 }

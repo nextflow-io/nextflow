@@ -46,6 +46,10 @@ class LinTypeAdapterFactory<T> extends RuntimeTypeAdapterFactory<T> {
 
     LinTypeAdapterFactory() {
         super(LinSerializable.class, "kind", false)
+        // When adding or removing a subtype here, also update the `subtypes` list in
+        // modules/nf-lineage/build.gradle (task `generateLineageSchema`) and re-run
+        // `./gradlew :nf-lineage:generateLineageSchema` to refresh
+        // src/resources/schema/lineage-v1beta1.schema.json.
         this.registerSubtype(WorkflowRun, WorkflowRun.simpleName)
             .registerSubtype(WorkflowOutput, WorkflowOutput.simpleName)
             .registerSubtype(Workflow, Workflow.simpleName)
