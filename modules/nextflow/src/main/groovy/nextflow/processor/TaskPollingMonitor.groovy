@@ -164,13 +164,6 @@ class TaskPollingMonitor implements TaskMonitor {
 
         this.pendingQueue = new LinkedBlockingQueue<TaskHandler>()
         this.runningQueue = new LinkedBlockingQueue<TaskHandler>()
-
-        this.taskCompleteLock = new ReentrantLock()
-        this.taskComplete = taskCompleteLock.newCondition()
-
-        this.pendingLock = new ReentrantLock()
-        this.taskAvail = pendingLock.newCondition()
-        this.slotAvail = pendingLock.newCondition()
     }
 
     static TaskPollingMonitor create( Session session, ExecutorConfig config, String name, int defQueueSize, Duration defPollInterval ) {
@@ -372,6 +365,13 @@ class TaskPollingMonitor implements TaskMonitor {
 
         log.debug ">>> barrier register (monitor: ${this.name})"
         session.barrier.register(this)
+
+        this.taskCompleteLock = new ReentrantLock()
+        this.taskComplete = taskCompleteLock.newCondition()
+
+        this.pendingLock = new ReentrantLock()
+        this.taskAvail = pendingLock.newCondition()
+        this.slotAvail = pendingLock.newCondition()
 
         //
         this.submitRateLimit = createSubmitRateLimit()
