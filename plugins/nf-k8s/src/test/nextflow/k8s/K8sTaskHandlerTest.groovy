@@ -22,6 +22,8 @@ import java.nio.file.Paths
 
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.exception.K8sOutOfCpuException
+import nextflow.exception.K8sOutOfMemoryException
 import nextflow.exception.NodeTerminationException
 import nextflow.file.http.XPath
 import nextflow.fusion.FusionConfig
@@ -500,8 +502,10 @@ class K8sTaskHandlerTest extends Specification {
         then:
         1 * handler.getState() >> fullState
         1 * handler.updateTimestamps(termState)
+        0 * handler.readExitFile()
         1 * handler.deleteJobIfSuccessful(task) >> null
         1 * handler.saveJobLogOnError(task) >> null
+        // exitCode 0 from K8s is now used directly instead of falling through to readExitFile()
         handler.task.exitStatus == 0
         handler.task.@stdout == OUT_FILE
         handler.task.@stderr == ERR_FILE
@@ -676,6 +680,142 @@ class K8sTaskHandlerTest extends Specification {
         and:
         state.nodeTermination instanceof PodUnschedulableException
         state.nodeTermination.message == "Pod failed for unknown reason"
+    }
+
+    def 'should return nodeTermination state for K8sOutOfMemoryException' () {
+        given:
+        def POD_NAME = 'pod-xyz'
+        def client = Mock(K8sClient)
+        def handler = Spy(new K8sTaskHandler(client:client, podName: POD_NAME))
+
+        when:
+        def state = handler.getState()
+        then:
+        1 * client.podState(POD_NAME) >> { throw new K8sOutOfMemoryException("Pod out of memory") }
+        then:
+        state.terminated.startedAt
+        state.terminated.finishedAt
+        and:
+        state.nodeTermination instanceof K8sOutOfMemoryException
+        state.nodeTermination.message == "Pod out of memory"
+    }
+
+    def 'should return nodeTermination state for K8sOutOfCpuException' () {
+        given:
+        def POD_NAME = 'pod-xyz'
+        def client = Mock(K8sClient)
+        def handler = Spy(new K8sTaskHandler(client:client, podName: POD_NAME))
+
+        when:
+        def state = handler.getState()
+        then:
+        1 * client.podState(POD_NAME) >> { throw new K8sOutOfCpuException("Pod out of CPU") }
+        then:
+        state.terminated.startedAt
+        state.terminated.finishedAt
+        and:
+        state.nodeTermination instanceof K8sOutOfCpuException
+        state.nodeTermination.message == "Pod out of CPU"
+    }
+
+    def 'should classify infrastructure failures' () {
+        expect:
+        K8sTaskHandler.isInfrastructureFailure(reason) == expected
+        where:
+        reason              | expected
+        'Evicted'           | true
+        'Preempting'        | true
+        'Shutdown'          | true
+        'DeadlineExceeded'  | true
+        'OOMKilled'         | false
+        'Completed'         | false
+        'Error'             | false
+        null                | false
+        ''                  | false
+    }
+
+    def 'should set task aborted for Evicted' () {
+        given:
+        def ERR_FILE = Paths.get('err.file')
+        def OUT_FILE = Paths.get('out.file')
+        def POD_NAME = 'pod-xyz'
+        def client = Mock(K8sClient)
+        def termState = [ reason: "Evicted",
+                          startedAt: "2018-01-13T10:09:36Z",
+                          finishedAt: "2018-01-13T10:19:36Z",
+                          exitCode: 143 ]
+        def task = new TaskRun()
+        def handler = Spy(new K8sTaskHandler(task: task, client:client, podName: POD_NAME, outputFile: OUT_FILE, errorFile: ERR_FILE))
+
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+        1 * handler.getState() >> [terminated: termState]
+        1 * handler.updateTimestamps(termState)
+        1 * handler.deleteJobIfSuccessful(task) >> null
+        1 * handler.saveJobLogOnError(task) >> null
+        handler.task.exitStatus == 143
+        handler.task.aborted == true
+        handler.task.terminationReason == 'Evicted'
+        handler.task.error instanceof NodeTerminationException
+        handler.status == TaskStatus.COMPLETED
+        result == true
+    }
+
+    def 'should set terminationReason but not aborted for OOMKilled' () {
+        given:
+        def ERR_FILE = Paths.get('err.file')
+        def OUT_FILE = Paths.get('out.file')
+        def POD_NAME = 'pod-xyz'
+        def client = Mock(K8sClient)
+        def termState = [ reason: "OOMKilled",
+                          startedAt: "2018-01-13T10:09:36Z",
+                          finishedAt: "2018-01-13T10:19:36Z",
+                          exitCode: 137 ]
+        def task = new TaskRun()
+        def handler = Spy(new K8sTaskHandler(task: task, client:client, podName: POD_NAME, outputFile: OUT_FILE, errorFile: ERR_FILE))
+
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+        1 * handler.getState() >> [terminated: termState]
+        1 * handler.updateTimestamps(termState)
+        1 * handler.deleteJobIfSuccessful(task) >> null
+        1 * handler.saveJobLogOnError(task) >> null
+        handler.task.exitStatus == 137
+        handler.task.aborted == false
+        handler.task.terminationReason == 'OOMKilled'
+        handler.task.error == null
+        handler.status == TaskStatus.COMPLETED
+        result == true
+    }
+
+    def 'should not set task aborted for application failure' () {
+        given:
+        def ERR_FILE = Paths.get('err.file')
+        def OUT_FILE = Paths.get('out.file')
+        def POD_NAME = 'pod-xyz'
+        def client = Mock(K8sClient)
+        def termState = [ reason: "Error",
+                          startedAt: "2018-01-13T10:09:36Z",
+                          finishedAt: "2018-01-13T10:19:36Z",
+                          exitCode: 1 ]
+        def task = new TaskRun()
+        def handler = Spy(new K8sTaskHandler(task: task, client:client, podName: POD_NAME, outputFile: OUT_FILE, errorFile: ERR_FILE))
+
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+        1 * handler.getState() >> [terminated: termState]
+        1 * handler.updateTimestamps(termState)
+        1 * handler.deleteJobIfSuccessful(task) >> null
+        1 * handler.saveJobLogOnError(task) >> null
+        handler.task.exitStatus == 1
+        handler.task.aborted == false
+        handler.task.terminationReason == null
+        handler.task.error == null
+        handler.status == TaskStatus.COMPLETED
+        result == true
     }
 
     def 'should return container mounts' () {

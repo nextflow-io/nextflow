@@ -240,6 +240,18 @@ class TaskConfig extends LazyMap implements Cloneable {
         throw new IllegalArgumentException("Not a valid `ErrorStrategy` value: ${strategy}")
     }
 
+    List<String> getRetryOn() {
+        final value = get('retryOn')
+        if( value instanceof List )
+            return (List<String>) value
+        if( value == null )
+            return Collections.<String>emptyList()
+        // single string value
+        if( value instanceof CharSequence )
+            return [ value.toString() ]
+        throw new IllegalArgumentException("Not a valid `retryOn` value: ${value}")
+    }
+
     def getResourceLimit(String directive) {
         final limits = get('resourceLimits') as Map
         return limits?.get(directive)

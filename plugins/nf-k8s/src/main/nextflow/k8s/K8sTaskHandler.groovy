@@ -28,6 +28,8 @@ import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.container.ContainerHelper
 import nextflow.container.DockerBuilder
+import nextflow.exception.K8sOutOfCpuException
+import nextflow.exception.K8sOutOfMemoryException
 import nextflow.exception.NodeTerminationException
 import nextflow.k8s.client.PodUnschedulableException
 import nextflow.exception.ProcessSubmitException
@@ -358,7 +360,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
             }
             return state
         }
-        catch (NodeTerminationException | PodUnschedulableException e) {
+        catch (NodeTerminationException | PodUnschedulableException | K8sOutOfCpuException | K8sOutOfMemoryException e) {
             // create a synthetic `state` object adding an extra `nodeTermination`
             // attribute to return the error to the caller method
             final instant = Instant.now()
@@ -438,11 +440,28 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                 // the K8s API is more reliable because the container may terminate before the exit file is written
                 // See https://github.com/nextflow-io/nextflow/issues/6436
                 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstateterminated-v1-core
-                log.trace("[k8s] Container Terminated state ${state.terminated}")
-                final k8sExitCode = (state.terminated as Map)?.exitCode as Integer
+                log.debug("[k8s] Container Terminated state ${state.terminated}")
+                final terminated = state.terminated as Map
+                final k8sExitCode = terminated?.exitCode as Integer
+                final reason = terminated?.reason as String
                 task.exitStatus = k8sExitCode != null ? k8sExitCode : readExitFile()
                 task.stdout = outputFile
                 task.stderr = errorFile
+                // expose termination reason so users can make decisions in errorStrategy
+                // K8s provides 'reason' when the container itself is killed (e.g. OOMKilled, Evicted)
+                // When the process inside is killed but the container exits normally, reason is null
+                // In that case, infer from exit code: 137 = SIGKILL (likely OOM), 143 = SIGTERM
+                if( reason && reason != 'Error' && reason != 'Completed' )
+                    task.terminationReason = reason
+                else if( k8sExitCode == 137 )
+                    task.terminationReason = 'OOMKilled(exit137)'
+                else if( k8sExitCode == 143 )
+                    task.terminationReason = 'SignalTerm(exit143)'
+                // classify infrastructure failures so Nextflow can auto-retry
+                if( isInfrastructureFailure(reason) ) {
+                    task.error = new NodeTerminationException("K8s infrastructure failure: ${reason}")
+                    task.aborted = true
+                }
             }
             status = TaskStatus.COMPLETED
             saveJobLogOnError(task)
@@ -453,6 +472,24 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         return false
+    }
+
+    /**
+     * Determine if the K8s container termination reason indicates an infrastructure
+     * failure (as opposed to an application failure).
+     */
+    protected static boolean isInfrastructureFailure(String reason) {
+        if( !reason )
+            return false
+        switch( reason ) {
+            case 'Evicted':
+            case 'Preempting':
+            case 'DeadlineExceeded':
+            case 'Shutdown':
+                return true
+            default:
+                return false
+        }
     }
 
     protected void saveJobLogOnError(TaskRun task) {
