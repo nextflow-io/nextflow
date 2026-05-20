@@ -287,4 +287,199 @@ class ParamsDslTest extends Specification {
         e.message == "Input record [id:1, name:sample1] is missing field 'value' required by record type 'Sample'"
     }
 
+    def 'should load record collection param from CSV file'() {
+        given:
+        def csvFile = Files.createTempFile('test', '.csv')
+        csvFile.text = '''\
+            id,name,value
+            1,sample1,100
+            2,sample2,200
+            3,sample3,300
+            '''.stripIndent()
+        def cliParams = [samples: csvFile.toString()]
+
+        when:
+        def samples = runScript(
+            '''\
+            params {
+                samples: List<Record>
+            }
+
+            workflow { params.samples }
+            ''',
+            params: cliParams,
+            configParams: [:]
+        )
+
+        then:
+        samples instanceof List
+        samples.size() == 3
+        samples[0].id == '1'
+        samples[0].name == 'sample1'
+        samples[0].value == '100'
+        samples[1].id == '2'
+        samples[2].id == '3'
+
+        cleanup:
+        csvFile?.delete()
+    }
+
+    def 'should load collection param from JSON file'() {
+        given:
+        def jsonFile = Files.createTempFile('test', '.json')
+        jsonFile.text = '''\
+            [
+              {"id": 1, "name": "sample1", "value": 100},
+              {"id": 2, "name": "sample2", "value": 200},
+              {"id": 3, "name": "sample3", "value": 300}
+            ]
+            '''.stripIndent()
+        def cliParams = [
+            samplesList: jsonFile.toString(),
+            samplesBag: jsonFile.toString(),
+            samplesSet: jsonFile.toString()
+        ]
+
+        when:
+        def params = runScript(
+            '''\
+            params {
+                samplesList: List<Record>
+                samplesBag: Bag<Record>
+                samplesSet: Set<Record>
+            }
+
+            workflow { params }
+            ''',
+            params: cliParams,
+            configParams: [:]
+        )
+        then:
+        def samplesList = params.samplesList
+        samplesList instanceof List
+        samplesList.size() == 3
+        samplesList[0].id == 1
+        samplesList[0].name == 'sample1'
+        samplesList[0].value == 100
+        samplesList[1].id == 2
+        samplesList[2].id == 3
+
+        def samplesBag = params.samplesBag
+        samplesBag instanceof Bag
+        samplesBag.size() == 3
+
+        def samplesSet = params.samplesSet
+        samplesSet instanceof Set
+        samplesSet.size() == 3
+
+        cleanup:
+        jsonFile?.delete()
+    }
+
+    def 'should load collection param from YAML file'() {
+        given:
+        def yamlFile = Files.createTempFile('test', '.yml')
+        yamlFile.text = '''\
+            - id: 1
+              name: sample1
+              value: 100
+            - id: 2
+              name: sample2
+              value: 200
+            - id: 3
+              name: sample3
+              value: 300
+            '''.stripIndent()
+        def cliParams = [samples: yamlFile.toString()]
+
+        when:
+        def samples = runScript(
+            '''\
+            params {
+                samples: List<Record>
+            }
+
+            workflow { params.samples }
+            ''',
+            params: cliParams,
+            configParams: [:]
+        )
+
+        then:
+        samples instanceof List
+        samples.size() == 3
+        samples[0].id == 1
+        samples[0].name == 'sample1'
+        samples[0].value == 100
+        samples[1].id == 2
+        samples[2].id == 3
+
+        cleanup:
+        yamlFile?.delete()
+    }
+
+    def 'should report error for unrecognized file format'() {
+        given:
+        def txtFile = Files.createTempFile('test', '.txt')
+        txtFile.text = 'some text'
+        def cliParams = [items: txtFile.toString()]
+
+        when:
+        runScript(
+            '''\
+            params {
+                items: List<Record>
+            }
+
+            workflow { params.items }
+            ''',
+            params: cliParams,
+            configParams: [:]
+        )
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains("Unrecognized file format 'txt' for input file")
+    }
+
+    def 'should validate collection param with record type'() {
+        given:
+        def inputFile = Files.createTempFile('test', '.json')
+        inputFile.text = '''\
+            [
+              {"id": 1, "name": "sample1", "value": 100},
+              {"id": 2, "name": "sample2", "value": 200},
+              {"id": 3, "name": "sample3", "value": 300}
+            ]
+            '''.stripIndent()
+
+        when:
+        def samples = runScript(
+            '''\
+            params {
+                samples: List<Sample>
+            }
+
+            record Sample {
+                id: Integer
+                name: String
+                value: Integer
+            }
+
+            workflow {
+                params.samples
+            }
+            ''',
+            params: [samples: inputFile.toString()]
+        )
+        then:
+        samples instanceof List
+        samples.size() == 3
+        samples[0] instanceof Record
+        samples[0].id == 1
+        samples[0].name == 'sample1'
+        samples[0].value == 100
+        samples[1].id == 2
+        samples[2].id == 3
+    }
+
 }
