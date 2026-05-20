@@ -16,8 +16,12 @@
 
 package nextflow.lineage
 
+import groovy.runtime.metaclass.NextflowDelegatingMetaClass
 import nextflow.extension.FilesEx
 import nextflow.lineage.exception.OutputRelativePathException
+import nextflow.plugin.extension.PluginExtensionProvider
+import nextflow.processor.TaskProcessor
+import nextflow.script.BaseScript
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -682,7 +686,7 @@ class LinObserverTest extends Specification {
                 new Parameter("path", "file1", ['lid://78567890/file1.txt']),
                 new Parameter("path", "file2", [[path: normalizer.normalizePath(file), checksum: [value:fileHash, algorithm: "nextflow", mode:  "standard"]]]),
                 new Parameter("val", "id", "value")
-            ], null, null, null, null, [:], [], "lid://hash")
+            ], null, null, null, null, [:], [], "lid://hash", null)
         def dataOutput1 = new FileOutput(outFile1.toString(), new Checksum(fileHash1, "nextflow", "standard"),
             "lid://1234567890", "lid://hash", "lid://1234567890", attrs1.size(), LinUtils.toDate(attrs1.creationTime()), LinUtils.toDate(attrs1.lastModifiedTime()) )
         def dataOutput2 = new FileOutput(outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"),
@@ -712,6 +716,73 @@ class LinObserverTest extends Specification {
         taskOutputsResult.output.get(2).value == "value"
 
         cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should resolve task module from remote module manifest' () {
+        given:
+        def folder = Files.createTempDirectory('test').toRealPath()
+        def moduleDir = folder.resolve('modules/nf-core/fastqc')
+        Files.createDirectories(moduleDir)
+        def modulePath = moduleDir.resolve('main.nf')
+        modulePath.text = 'process FASTQC { script: "echo foo" }'
+        moduleDir.resolve('meta.yml').text = 'name: nf-core/fastqc\nversion: 1.0.0\n'
+        moduleDir.resolve('.module-info').text = '{}'
+        and:
+        NextflowDelegatingMetaClass.provider = Mock(PluginExtensionProvider) {
+            operatorNames() >> new HashSet<String>()
+        }
+        def script = Mock(BaseScript)
+        def meta = ScriptMeta.register(script)
+        meta.setScriptPath(modulePath)
+        meta.setModule(true)
+        and:
+        def processor = Mock(TaskProcessor){ getOwnerScript() >> script }
+        def task = Mock(TaskRun){ getProcessor() >> processor }
+        and:
+        def observer = new LinObserver(Mock(Session), Mock(LinStore))
+
+        expect:
+        observer.getTaskModule(task) == 'nf-core/fastqc@1.0.0'
+
+        cleanup:
+        NextflowDelegatingMetaClass.provider = null
+        ScriptMeta.reset()
+        folder?.deleteDir()
+    }
+
+    def 'should return null task module when no owner script' () {
+        given:
+        def task = Mock(TaskRun){ getProcessor() >> null }
+        def observer = new LinObserver(Mock(Session), Mock(LinStore))
+
+        expect:
+        observer.getTaskModule(task) == null
+    }
+
+    def 'should return null task module when script is not a remote module' () {
+        given:
+        def folder = Files.createTempDirectory('test').toRealPath()
+        def modulePath = folder.resolve('main.nf')
+        modulePath.text = 'process FOO { script: "echo foo" }'
+        and:
+        NextflowDelegatingMetaClass.provider = Mock(PluginExtensionProvider) {
+            operatorNames() >> new HashSet<String>()
+        }
+        def script = Mock(BaseScript)
+        ScriptMeta.register(script).setScriptPath(modulePath) // setModule(true) NOT called
+        and:
+        def processor = Mock(TaskProcessor){ getOwnerScript() >> script }
+        def task = Mock(TaskRun){ getProcessor() >> processor }
+        and:
+        def observer = new LinObserver(Mock(Session), Mock(LinStore))
+
+        expect:
+        observer.getTaskModule(task) == null
+
+        cleanup:
+        NextflowDelegatingMetaClass.provider = null
+        ScriptMeta.reset()
         folder?.deleteDir()
     }
 

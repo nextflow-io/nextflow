@@ -76,4 +76,10 @@ class TaskRun implements LinSerializable {
      * Workflow run associated to the task run
      */
     String workflowRun
+    /**
+     * Remote Nextflow module that defines the process executed by this task run,
+     * encoded as {@code name@version} (e.g. {@code nf-core/fastqc@1.0.0}). Null when
+     * the process is not defined in a remote module (e.g. local include or main script).
+     */
+    String module
 }

@@ -19,6 +19,9 @@ package nextflow.lineage
 import nextflow.NextflowMeta
 import nextflow.extension.FilesEx
 import nextflow.lineage.exception.OutputRelativePathException
+import nextflow.module.ModuleInfo
+import nextflow.module.ModuleSpecFactory
+import nextflow.module.ModuleStorage
 
 import static nextflow.lineage.fs.LinPath.*
 
@@ -270,7 +273,8 @@ class LinObserver implements TraceObserverV2 {
                 normalizer.normalizePath(p.normalize()),
                 Checksum.ofNextflow(p) )
             },
-            asUriString(executionHash)
+            asUriString(executionHash),
+            getTaskModule(task)
         )
 
         // store in the underlying persistence
@@ -281,6 +285,31 @@ class LinObserver implements TraceObserverV2 {
 
     protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
         return new TaskHasher(task).getTaskGlobalVars()
+    }
+
+    protected String getTaskModule(TaskRun task) {
+        final ownerScript = task.processor?.getOwnerScript()
+        if( !ownerScript )
+            return null
+
+        final scriptMeta = ScriptMeta.get(ownerScript)
+        if( !scriptMeta || !scriptMeta.isModule() )
+            return null
+        return extractModuleInfo(scriptMeta.getScriptPath())
+    }
+
+    private String extractModuleInfo(Path scriptPath){
+        if( !scriptPath )
+            return null
+        final moduleDir = scriptPath.getParent()
+        def manifestPath = moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
+        def infoPath = moduleDir.resolve(ModuleInfo.MODULE_INFO_FILE)
+        if ( manifestPath.exists() && infoPath.exists() ) {
+            def spec = ModuleSpecFactory.fromYaml(manifestPath)
+            return "${spec.name}@${spec.version}"
+        } else {
+            return null
+        }
     }
 
     protected List<Path> getTaskBinEntries(TaskRun task) {
