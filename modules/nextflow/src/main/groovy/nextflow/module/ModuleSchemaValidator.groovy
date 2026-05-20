@@ -29,6 +29,7 @@ import com.networknt.schema.SpecVersionDetector
 import com.networknt.schema.ValidationMessage
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.BuildInfo
 import nextflow.exception.AbortOperationException
 import org.yaml.snakeyaml.Yaml
 
@@ -110,17 +111,19 @@ class ModuleSchemaValidator {
      * Hard-fails with AbortOperationException on any I/O error.
      */
     private static String loadSchema(String location) {
+        final lower = location.toLowerCase()
         try {
-            if( location.startsWith('http://') || location.startsWith('https://') ) {
+            if( lower.startsWith('http://') || lower.startsWith('https://') ) {
                 final url = new URL(location)
                 final conn = url.openConnection()
                 conn.setConnectTimeout(10_000)
                 conn.setReadTimeout(20_000)
+                conn.setRequestProperty('User-Agent', "Nextflow/${BuildInfo.version}")
                 try( final stream = conn.getInputStream() ) {
                     return new String(stream.readAllBytes(), 'UTF-8')
                 }
             }
-            if( location.startsWith('file:') ) {
+            if( lower.startsWith('file:') ) {
                 return Files.readString(Paths.get(URI.create(location)))
             }
             return Files.readString(Paths.get(location))
@@ -128,7 +131,7 @@ class ModuleSchemaValidator {
         catch( Exception e ) {
             throw new AbortOperationException(
                 "Failed to load module schema from '${location}': ${e.message}. " +
-                "Pass --schema <url-or-local-path> to override.", e)
+                "Pass -schema <url-or-local-path> to override.", e)
         }
     }
 }

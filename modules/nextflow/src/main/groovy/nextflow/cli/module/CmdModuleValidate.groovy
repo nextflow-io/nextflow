@@ -44,7 +44,7 @@ class CmdModuleValidate extends CmdBase {
     @Parameter(description = "[namespace/name or path]", required = true)
     List<String> args
 
-    @Parameter(names = '--schema', description = 'URL or local path of the JSON schema used to validate meta.yml')
+    @Parameter(names = '-schema', description = 'URL or local path of the JSON schema used to validate meta.yml')
     String schema
 
     @TestOnly
