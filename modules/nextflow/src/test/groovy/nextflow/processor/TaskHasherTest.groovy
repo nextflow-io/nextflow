@@ -16,16 +16,21 @@
 
 package nextflow.processor
 
+import java.nio.file.Files
 import java.nio.file.Path
 
 import nextflow.Session
 import nextflow.script.ProcessConfig
 import spock.lang.Specification
+import spock.lang.TempDir
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class TaskHasherTest extends Specification {
+
+    @TempDir
+    Path tempDir
 
     def 'should compute unique task hash' () {
 
@@ -92,6 +97,55 @@ class TaskHasherTest extends Specification {
         result.size() == 2
         result.contains(Path.of('/some/path/foo.sh'))
         result.contains(Path.of('/some/path/bar.sh'))
+    }
+
+    def 'should include referenced module bin files in the task hash' () {
+
+        given:
+        def moduleBin = tempDir.resolve('resources/usr/bin')
+        Files.createDirectories(moduleBin)
+        def script = moduleBin.resolve('foo.sh')
+        Files.writeString(script, 'echo first version\n')
+        script.toFile().setExecutable(true)
+        def session = Mock(Session) {
+            getUniqueId() >> UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c')
+            getBinEntries() >> [:]
+        }
+        def config = Mock(ProcessConfig) {
+            getHashMode() >> null
+        }
+        def processor = Mock(TaskProcessor) {
+            getName() >> 'hello'
+            getSession() >> session
+            getConfig() >> config
+            getBinDirs() >> [moduleBin]
+        }
+        def task = Mock(TaskRun) {
+            getSource() >> 'foo.sh --version'
+            isContainerEnabled() >> false
+            getInputs() >> [:]
+            getOutputEvals() >> null
+            getConfig() >> Mock(TaskConfig) {
+                getModule() >> null
+                getStubBlock() >> null
+                getArchitecture() >> null
+            }
+            getCondaEnv() >> null
+            getSpackEnv() >> null
+            getProcessor() >> processor
+        }
+
+        when:
+        def firstHash = Spy(TaskHasher, constructorArgs: [task]) {
+            getTaskGlobalVars() >> [:]
+        }.compute()
+        Files.writeString(script, 'echo second version\n')
+        def secondHash = Spy(TaskHasher, constructorArgs: [task]) {
+            getTaskGlobalVars() >> [:]
+        }.compute()
+
+        then:
+        firstHash != secondHash
     }
 
     def 'should get task directive vars' () {
