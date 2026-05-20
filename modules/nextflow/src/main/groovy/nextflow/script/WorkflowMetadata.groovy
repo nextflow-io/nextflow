@@ -224,6 +224,13 @@ class WorkflowMetadata {
     PlatformMetadata platform
 
     /**
+     * Workflow lineage identifier in {@code lid://<hash>} URI form,
+     * set by the lineage observer when the {@code nf-lineage} plugin is active.
+     * Null when lineage tracking is not enabled.
+     */
+    String lineageId
+
+    /**
      * The list of files that concurred to create the config object
      */
     List<Path> configFiles
