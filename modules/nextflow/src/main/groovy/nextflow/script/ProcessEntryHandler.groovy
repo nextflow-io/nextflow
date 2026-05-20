@@ -236,7 +236,7 @@ class ProcessEntryHandler {
     }
 
     /**
-     * Load mapping of input types from the module spec if available. Returns null
+     * Load mapping of input types from the module spec if available. Returns empty map
      * if module spec is absent or unreadable.
      */
     private static Map<String, Class> getModuleSpecInputTypes(Path scriptPath) {
@@ -292,6 +292,8 @@ class ProcessEntryHandler {
         final value = namedArgs.get(name)
 
         if( value == null ) {
+            if( param instanceof FileInParam )
+                return []
             throw new IllegalArgumentException("Missing required parameter: --${name}")
         }
 
@@ -387,6 +389,8 @@ class ProcessEntryHandler {
         final value = namedArgs.get(name)
 
         if( value == null ) {
+            if( param.isOptional() )
+                return null
             throw new IllegalArgumentException("Missing required parameter: --${name}")
         }
 
@@ -423,10 +427,10 @@ class ProcessEntryHandler {
      * Otherwise returns a single file object.
      *
      * @param fileInput String representation of file path(s)
-     * @return Single file object or List of file objects
+     * @return Single file or list of files
      */
     protected Object parseFileInput(String fileInput) {
-        if (fileInput.contains(',')) {
+        if( fileInput.contains(',') ) {
             // Split by comma, trim whitespace, and convert each to a file
             return fileInput.tokenize(',')
                 .collect { it.trim() }
