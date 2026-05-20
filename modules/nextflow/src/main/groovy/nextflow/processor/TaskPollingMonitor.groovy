@@ -18,13 +18,7 @@ package nextflow.processor
 
 import static nextflow.processor.TaskProcessor.*
 
-import java.util.concurrent.Callable
-import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentMap
-import java.util.concurrent.ExecutionException
 import java.util.concurrent.ExecutorService
-import java.util.concurrent.Executors
-import java.util.concurrent.Future
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.locks.Condition
@@ -46,8 +40,6 @@ import nextflow.exception.ProcessSubmitTimeoutException
 import nextflow.executor.BatchCleanup
 import nextflow.executor.ExecutorConfig
 import nextflow.executor.GridTaskHandler
-import nextflow.plugin.Plugins
-import nextflow.util.CustomThreadFactory
 import nextflow.util.Duration
 import nextflow.util.SysHelper
 import nextflow.util.Threads
@@ -142,27 +134,7 @@ class TaskPollingMonitor implements TaskMonitor {
     private boolean enableAsyncFinalizer = SysEnv.getBool('NXF_ENABLE_ASYNC_FINALIZER',true)
 
     @PackageScope
-    List<TaskReadinessGate> readinessGates = Collections.emptyList()
-
-    /**
-     * Background executor on which {@link TaskReadinessGate#prepare} runs. Must be a
-     * non-blocking-submission executor (virtual-thread or unbounded cached pool) so that
-     * {@link #schedule} never blocks the caller while holding {@code pendingLock}.
-     */
-    @PackageScope
-    ExecutorService gateExecutor
-
-    @PackageScope
-    final ConcurrentMap<TaskHandler, GateState> gateStates = new ConcurrentHashMap<>()
-
-    /**
-     * Tracks in-flight {@link TaskReadinessGate#prepare} futures for a single handler.
-     */
-    @PackageScope
-    static class GateState {
-        final List<Future<?>> futures
-        GateState(List<Future<?>> futures) { this.futures = futures }
-    }
+    TaskGateManager gateManager = new TaskGateManager(null, [])
 
     /**
      * Create the task polling monitor with the provided named parameters object.
@@ -287,45 +259,10 @@ class TaskPollingMonitor implements TaskMonitor {
      *      by the polling monitor
      */
     protected boolean canSubmit(TaskHandler handler) {
-        allGatesReady(handler) \
+        gateManager.isReady(handler) \
             && handler.canForkProcess() \
             && handler.isReady() \
             && (capacity > 0 ? checkQueueCapacity(handler) : true)
-    }
-
-    private boolean allGatesReady(TaskHandler handler) {
-        final state = gateStates.get(handler)
-        if( !state ) return true
-
-        for( f in state.futures ) {
-            if( !f.isDone() ) return false
-            if( f.isCancelled() ) {
-                state.futures*.cancel(true)
-                gateStates.remove(handler)
-                throw new ProcessException("Task readiness gate was cancelled for task '${handler.task.name}'")
-            }
-            try { f.get() }
-            catch( ExecutionException e ) {
-                // cancel peer gates so their work doesn't outlive the failing task
-                state.futures*.cancel(true)
-                gateStates.remove(handler)
-                // Rethrow ProcessException (and subclasses) identity-preserved so the
-                // original message and type reach resumeOrDie. Wrap anything else in a
-                // ProcessException with the original attached as cause — this preserves
-                // ProcessRetryableException routing in resumeOrDie, which inspects
-                // `error.cause`, not `error` itself.
-                final cause = e.cause
-                if( cause instanceof ProcessException )
-                    throw (ProcessException) cause
-                throw new ProcessException("Task readiness gate failed for task '${handler.task.name}'", cause ?: e)
-            }
-            catch( InterruptedException e ) {
-                Thread.currentThread().interrupt()
-                return false
-            }
-        }
-        gateStates.remove(handler)
-        return true
     }
 
     /**
@@ -382,14 +319,7 @@ class TaskPollingMonitor implements TaskMonitor {
         pendingLock.lock()
         try{
             pendingQueue << handler
-            if( readinessGates ) {
-                final futures = new ArrayList<Future<?>>(readinessGates.size())
-                for( TaskReadinessGate g : readinessGates ) {
-                    final gate = g   // capture in a fresh local for the async closure
-                    futures << gateExecutor.submit({ gate.prepare(handler) } as Callable)
-                }
-                gateStates.put(handler, new GateState(futures))
-            }
+            gateManager.submit(handler)
             taskAvail.signal()  // signal that a new task is available for execution
             notifyTaskPending(handler)
             log.trace "Scheduled task > $handler"
@@ -414,7 +344,7 @@ class TaskPollingMonitor implements TaskMonitor {
             return false
         }
 
-        gateStates.remove(handler)?.futures*.cancel(true)
+        gateManager.evict(handler)
 
         if( remove(handler) ) {
             pendingLock.lock()
@@ -438,14 +368,7 @@ class TaskPollingMonitor implements TaskMonitor {
      */
     @Override
     TaskMonitor start() {
-        readinessGates = Plugins.getExtensions(TaskReadinessGate)
-        if( readinessGates ) {
-            gateExecutor = Threads.useVirtual()
-                ? Executors.newVirtualThreadPerTaskExecutor()
-                : Executors.newCachedThreadPool(new CustomThreadFactory('TaskReadinessGate'))
-            session.onShutdown { gateExecutor.shutdownNow() }
-            log.debug "Registered ${readinessGates.size()} task readiness gate(s): ${readinessGates*.class*.simpleName}"
-        }
+        this.gateManager = new TaskGateManager(session)
 
         log.debug ">>> barrier register (monitor: ${this.name})"
         session.barrier.register(this)

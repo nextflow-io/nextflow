@@ -17,80 +17,25 @@
 package nextflow.processor
 
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.ExecutionException
-import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+
 import nextflow.Session
-import nextflow.exception.ProcessException
-import nextflow.exception.ProcessRetryableException
 import nextflow.executor.ExecutorConfig
 import spock.lang.Specification
 
+/**
+ * Monitor-level integration tests for the {@link TaskGateManager} hook.
+ * Behaviour of the manager itself is covered in {@link TaskGateManagerTest};
+ * these tests pin only the three monitor delegation points (schedule, canSubmit, evict).
+ */
 class TaskPollingMonitorReadinessGateTest extends Specification {
 
-    def 'should leave gateExecutor null when no gates are registered'() {
-        given:
-        def session = Mock(Session)
-        def config = new ExecutorConfig([:])
-        def monitor = new TaskPollingMonitor(name: 'local', session: session, config: config, pollInterval: '1s', capacity: 10)
-
-        when:
-        monitor.readinessGates = []   // simulate empty extension list
-
-        then:
-        monitor.gateExecutor == null
-        monitor.gateStates.isEmpty()
-    }
-
-    def 'should expose GateState as a package-scoped type'() {
-        when:
-        def state = new TaskPollingMonitor.GateState([])
-        then:
-        state.futures == []
-    }
-
-    def 'should submit gate.prepare to executor on schedule'() {
-        given:
-        def latch = new CountDownLatch(1)
-        def gate = Mock(TaskReadinessGate) {
-            1 * prepare(_) >> { latch.countDown() }
-        }
-        def handler = mockHandler()
-        def monitor = newMonitor()
-        monitor.readinessGates = [gate]
-        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
-
-        when:
-        monitor.schedule(handler)
-
-        then:
-        latch.await(5, TimeUnit.SECONDS)
-        monitor.gateStates.containsKey(handler)
-        monitor.gateStates.get(handler).futures.size() == 1
-    }
-
-    def 'should not touch gate state when no gates are registered'() {
-        given:
-        def handler = mockHandler()
-        def monitor = newMonitor()
-
-        when:
-        monitor.schedule(handler)
-
-        then:
-        monitor.gateStates.isEmpty()
-    }
-
-    def 'should return false from canSubmit while gate prepare runs'() {
+    def 'should hold task in pending while gate runs and admit it once gate completes'() {
         given:
         def block = new CountDownLatch(1)
-        def gate = Mock(TaskReadinessGate) {
-            prepare(_) >> { block.await(5, TimeUnit.SECONDS) }
-        }
+        def gate = Mock(TaskReadinessGate) { prepare(_) >> { block.await(5, TimeUnit.SECONDS) } }
         def handler = mockReadyHandler()
-        def monitor = newMonitor()
-        monitor.readinessGates = [gate]
-        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
+        def monitor = newMonitorWithGates([gate])
 
         when:
         monitor.schedule(handler)
@@ -102,200 +47,9 @@ class TaskPollingMonitorReadinessGateTest extends Specification {
         then:
         !busy
         ready
-        !monitor.gateStates.containsKey(handler)   // state removed on admission
     }
 
-    def 'should rethrow ProcessException from gate as-is'() {
-        given:
-        // ProcessException (and subclasses) propagate unchanged so that downstream
-        // code in TaskProcessor.resumeOrDie sees the original type and message.
-        def boom = new ProcessException('boom')
-        def gate = new TaskReadinessGate() {
-            void prepare(TaskHandler h) throws InterruptedException {
-                throw boom
-            }
-        }
-        def handler = mockReadyHandler()
-        def monitor = newMonitor()
-        monitor.readinessGates = [gate]
-        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
-
-        when:
-        monitor.schedule(handler)
-        awaitFutureCompletion(monitor, handler)
-        monitor.canSubmit(handler)
-
-        then:
-        def e = thrown(ProcessException)
-        e.is(boom)                                // same instance, not wrapped
-        !monitor.gateStates.containsKey(handler)  // cleaned up
-    }
-
-    def 'should wrap RuntimeException causes in a ProcessException with the original as cause'() {
-        given:
-        // Wrapping (rather than rethrowing as-is) is load-bearing: resumeOrDie inspects
-        // `error.cause` for retry markers like ProcessRetryableException — a marker
-        // carried by a RuntimeException implementer would be lost if we rethrew as-is.
-        def gate = Mock(TaskReadinessGate) {
-            prepare(_) >> { throw new IllegalStateException('underlying') }
-        }
-        def handler = mockReadyHandler()
-        def monitor = newMonitor()
-        monitor.readinessGates = [gate]
-        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
-
-        when:
-        monitor.schedule(handler)
-        awaitFutureCompletion(monitor, handler)
-        monitor.canSubmit(handler)
-
-        then:
-        def e = thrown(ProcessException)
-        e.message.contains('Task readiness gate failed')
-        e.cause instanceof IllegalStateException
-        e.cause.message == 'underlying'
-        !monitor.gateStates.containsKey(handler)
-    }
-
-    def 'should expose ProcessRetryableException markers via error.cause for resumeOrDie'() {
-        given:
-        // A RuntimeException implementing ProcessRetryableException must reach
-        // resumeOrDie as the cause of the outer ProcessException, since resumeOrDie
-        // checks `error.cause instanceof ProcessRetryableException`.
-        def marker = new RetryableBoom()
-        def gate = Mock(TaskReadinessGate) { prepare(_) >> { throw marker } }
-        def handler = mockReadyHandler()
-        def monitor = newMonitor()
-        monitor.readinessGates = [gate]
-        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
-
-        when:
-        monitor.schedule(handler)
-        awaitFutureCompletion(monitor, handler)
-        monitor.canSubmit(handler)
-
-        then:
-        def e = thrown(ProcessException)
-        e.cause.is(marker)
-        e.cause instanceof ProcessRetryableException
-    }
-
-    def 'should wrap checked exception causes in a ProcessException'() {
-        given:
-        def gate = new TaskReadinessGate() {
-            void prepare(TaskHandler h) throws InterruptedException {
-                throw new IOException('disk failed')
-            }
-        }
-        def handler = mockReadyHandler()
-        def monitor = newMonitor()
-        monitor.readinessGates = [gate]
-        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
-
-        when:
-        monitor.schedule(handler)
-        awaitFutureCompletion(monitor, handler)
-        monitor.canSubmit(handler)
-
-        then:
-        def e = thrown(ProcessException)
-        e.message.contains('Task readiness gate failed')
-        e.cause instanceof IOException
-        e.cause.message == 'disk failed'
-        !monitor.gateStates.containsKey(handler)
-    }
-
-    def 'should throw ProcessException when a gate future is cancelled externally'() {
-        given:
-        def block = new CountDownLatch(1)
-        def gate = Mock(TaskReadinessGate) {
-            prepare(_) >> { block.await(5, TimeUnit.SECONDS) }
-        }
-        def handler = mockReadyHandler()
-        def monitor = newMonitor()
-        monitor.readinessGates = [gate]
-        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
-
-        when:
-        monitor.schedule(handler)
-        monitor.gateStates.get(handler).futures.each { it.cancel(true) }
-        awaitFutureCompletion(monitor, handler)
-        monitor.canSubmit(handler)
-
-        then:
-        def e = thrown(ProcessException)
-        e.message.contains('cancelled')
-        !monitor.gateStates.containsKey(handler)
-
-        cleanup:
-        block.countDown()
-    }
-
-    def 'should cancel peer gate futures when one gate throws'() {
-        given:
-        def peerStarted = new CountDownLatch(1)
-        def peerInterrupted = new CountDownLatch(1)
-        def failing = new TaskReadinessGate() {
-            void prepare(TaskHandler h) throws InterruptedException {
-                throw new ProcessException('failing gate')
-            }
-        }
-        def peer = new TaskReadinessGate() {
-            void prepare(TaskHandler h) throws InterruptedException {
-                peerStarted.countDown()
-                try { new CountDownLatch(1).await() }
-                catch( InterruptedException e ) { peerInterrupted.countDown(); throw e }
-            }
-        }
-        def handler = mockReadyHandler()
-        def monitor = newMonitor()
-        monitor.readinessGates = [failing, peer]
-        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
-
-        when:
-        monitor.schedule(handler)
-        peerStarted.await(5, TimeUnit.SECONDS)
-        // wait for the failing gate's future to be done so allGatesReady reaches the throw branch
-        try { monitor.gateStates.get(handler).futures[0].get(5, TimeUnit.SECONDS) }
-        catch( ExecutionException ignored ) { /* expected — failing gate threw */ }
-
-        then:
-        // canSubmit surfaces the failure and cancels the still-running peer
-        try { monitor.canSubmit(handler) } catch( ProcessException expected ) { /* expected */ }
-        peerInterrupted.await(5, TimeUnit.SECONDS)
-        !monitor.gateStates.containsKey(handler)
-    }
-
-    def 'should admit task only after every gate has completed'() {
-        given:
-        def latch1 = new CountDownLatch(1)
-        def latch2 = new CountDownLatch(1)
-        def g1 = Mock(TaskReadinessGate) { prepare(_) >> { latch1.await(5, TimeUnit.SECONDS) } }
-        def g2 = Mock(TaskReadinessGate) { prepare(_) >> { latch2.await(5, TimeUnit.SECONDS) } }
-        def handler = mockReadyHandler()
-        def monitor = newMonitor()
-        monitor.readinessGates = [g1, g2]
-        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
-
-        when:
-        monitor.schedule(handler)
-        Thread.sleep(50)
-        def neither = monitor.canSubmit(handler)
-        latch1.countDown()
-        Thread.sleep(50)
-        def onlyFirst = monitor.canSubmit(handler)
-        latch2.countDown()
-        Thread.sleep(50)
-        def both = monitor.canSubmit(handler)
-
-        then:
-        !neither
-        !onlyFirst
-        both
-        !monitor.gateStates.containsKey(handler)
-    }
-
-    def 'should cancel gate futures on evict'() {
+    def 'should cancel in-flight gate futures on evict'() {
         given:
         def started = new CountDownLatch(1)
         def interrupted = new CountDownLatch(1)
@@ -307,9 +61,7 @@ class TaskPollingMonitorReadinessGateTest extends Specification {
             }
         }
         def handler = mockReadyHandler()
-        def monitor = newMonitor()
-        monitor.readinessGates = [gate]
-        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
+        def monitor = newMonitorWithGates([gate])
 
         when:
         monitor.schedule(handler)
@@ -318,40 +70,26 @@ class TaskPollingMonitorReadinessGateTest extends Specification {
 
         then:
         interrupted.await(5, TimeUnit.SECONDS)
-        !monitor.gateStates.containsKey(handler)
     }
 
-    /**
-     * Marker class used to verify that ProcessRetryableException-carrying causes
-     * reach resumeOrDie via the outer ProcessException's `cause` field.
-     */
-    static class RetryableBoom extends RuntimeException implements ProcessRetryableException {
-        RetryableBoom() { super('retry me') }
+    def 'should be a zero-cost path when no gate is registered'() {
+        given:
+        def handler = mockReadyHandler()
+        def monitor = newMonitorWithGates([])
+
+        when:
+        monitor.schedule(handler)
+
+        then:
+        monitor.canSubmit(handler)            // empty manager admits immediately
+        monitor.gateManager.trackedHandlers().isEmpty()
     }
 
-    // Note on ExecutionException with null cause: the allGatesReady code path
-    // (lines ~319-321 in TaskPollingMonitor) wraps a null-cause ExecutionException
-    // in a ProcessException("Task readiness gate failed...", e). This branch is
-    // reachable but awkward to trigger from a real gate Mock — the JDK's
-    // FutureTask.setException(null) throws NullPointerException, so we can't
-    // surface a null-cause ExecutionException without bending the test. The
-    // branch is verified by code-read.
-
-    private void awaitFutureCompletion(TaskPollingMonitor monitor, TaskHandler handler) {
-        final state = monitor.gateStates.get(handler)
-        for( f in state.futures ) {
-            try { f.get(5, TimeUnit.SECONDS) }
-            catch( Exception ignored ) { /* swallow — we only want to wait until done */ }
-        }
-    }
-
-    private TaskPollingMonitor newMonitor() {
-        new TaskPollingMonitor(name: 'local', session: Mock(Session), config: new ExecutorConfig([:]),
-                               pollInterval: '1s', capacity: 10)
-    }
-
-    private TaskHandler mockHandler() {
-        Mock(TaskHandler) { getTask() >> Mock(TaskRun) }
+    private TaskPollingMonitor newMonitorWithGates(List<TaskReadinessGate> gates) {
+        def monitor = new TaskPollingMonitor(name: 'local', session: Mock(Session), config: new ExecutorConfig([:]),
+                                             pollInterval: '1s', capacity: 10)
+        monitor.gateManager = new TaskGateManager(null, gates)
+        return monitor
     }
 
     private TaskHandler mockReadyHandler() {
