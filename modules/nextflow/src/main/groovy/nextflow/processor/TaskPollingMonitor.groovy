@@ -27,6 +27,7 @@ import java.util.concurrent.locks.ReentrantLock
 
 import com.google.common.util.concurrent.RateLimiter
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.SysEnv
@@ -131,6 +132,9 @@ class TaskPollingMonitor implements TaskMonitor {
     private ExecutorService finalizerPool = { session.taskFinalizerExecutorService() }()
 
     private boolean enableAsyncFinalizer = SysEnv.getBool('NXF_ENABLE_ASYNC_FINALIZER',true)
+
+    @PackageScope
+    TaskGateManager gateManager = new TaskGateManager(null, [])
 
     /**
      * Create the task polling monitor with the provided named parameters object.
@@ -248,7 +252,10 @@ class TaskPollingMonitor implements TaskMonitor {
      *      by the polling monitor
      */
     protected boolean canSubmit(TaskHandler handler) {
-        (capacity > 0 ? checkQueueCapacity(handler) : true) && handler.canForkProcess() && handler.isReady()
+        gateManager.isReady(handler) \
+            && handler.canForkProcess() \
+            && handler.isReady() \
+            && (capacity > 0 ? checkQueueCapacity(handler) : true)
     }
 
     /**
@@ -305,6 +312,7 @@ class TaskPollingMonitor implements TaskMonitor {
         pendingLock.lock()
         try{
             pendingQueue << handler
+            gateManager.submit(handler)
             taskAvail.signal()  // signal that a new task is available for execution
             notifyTaskPending(handler)
             log.trace "Scheduled task > $handler"
@@ -329,6 +337,8 @@ class TaskPollingMonitor implements TaskMonitor {
             return false
         }
 
+        gateManager.evict(handler)
+
         if( remove(handler) ) {
             pendingLock.lock()
             try {
@@ -351,6 +361,8 @@ class TaskPollingMonitor implements TaskMonitor {
      */
     @Override
     TaskMonitor start() {
+        this.gateManager = new TaskGateManager(session)
+
         log.debug ">>> barrier register (monitor: ${this.name})"
         session.barrier.register(this)
 
