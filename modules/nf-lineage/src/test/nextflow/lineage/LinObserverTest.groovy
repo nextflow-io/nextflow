@@ -786,6 +786,66 @@ class LinObserverTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should return null task module for local include without manifest' () {
+        given: 'a script marked as module but with no meta.yml/.module-info alongside (local include)'
+        def folder = Files.createTempDirectory('test').toRealPath()
+        def modulePath = folder.resolve('local-module.nf')
+        modulePath.text = 'process FOO { script: "echo foo" }'
+        and:
+        NextflowDelegatingMetaClass.provider = Mock(PluginExtensionProvider) {
+            operatorNames() >> new HashSet<String>()
+        }
+        def script = Mock(BaseScript)
+        def meta = ScriptMeta.register(script)
+        meta.setScriptPath(modulePath)
+        meta.setModule(true)
+        and:
+        def processor = Mock(TaskProcessor){ getOwnerScript() >> script }
+        def task = Mock(TaskRun){ getProcessor() >> processor }
+        and:
+        def observer = new LinObserver(Mock(Session), Mock(LinStore))
+
+        expect:
+        observer.getTaskModule(task) == null
+
+        cleanup:
+        NextflowDelegatingMetaClass.provider = null
+        ScriptMeta.reset()
+        folder?.deleteDir()
+    }
+
+    def 'should return null and warn when module manifest is malformed' () {
+        given:
+        def folder = Files.createTempDirectory('test').toRealPath()
+        def moduleDir = folder.resolve('modules/nf-core/broken')
+        Files.createDirectories(moduleDir)
+        def modulePath = moduleDir.resolve('main.nf')
+        modulePath.text = 'process BROKEN { script: "echo foo" }'
+        moduleDir.resolve('meta.yml').text = ':\n  not valid yaml: [unterminated'
+        moduleDir.resolve('.module-info').text = '{}'
+        and:
+        NextflowDelegatingMetaClass.provider = Mock(PluginExtensionProvider) {
+            operatorNames() >> new HashSet<String>()
+        }
+        def script = Mock(BaseScript)
+        def meta = ScriptMeta.register(script)
+        meta.setScriptPath(modulePath)
+        meta.setModule(true)
+        and:
+        def processor = Mock(TaskProcessor){ getOwnerScript() >> script }
+        def task = Mock(TaskRun){ getProcessor() >> processor }
+        and:
+        def observer = new LinObserver(Mock(Session), Mock(LinStore))
+
+        expect:
+        observer.getTaskModule(task) == null
+
+        cleanup:
+        NextflowDelegatingMetaClass.provider = null
+        ScriptMeta.reset()
+        folder?.deleteDir()
+    }
+
     def 'should save task data output' () {
         given:
         def folder = Files.createTempDirectory('test')

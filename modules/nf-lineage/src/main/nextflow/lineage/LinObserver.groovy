@@ -298,16 +298,24 @@ class LinObserver implements TraceObserverV2 {
         return extractModuleInfo(scriptMeta.getScriptPath())
     }
 
-    private String extractModuleInfo(Path scriptPath){
+    protected String extractModuleInfo(Path scriptPath){
         if( !scriptPath )
             return null
         final moduleDir = scriptPath.getParent()
-        def manifestPath = moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
-        def infoPath = moduleDir.resolve(ModuleInfo.MODULE_INFO_FILE)
-        if ( manifestPath.exists() && infoPath.exists() ) {
-            def spec = ModuleSpecFactory.fromYaml(manifestPath)
+        if( !moduleDir )
+            return null
+        final manifestPath = moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
+        // presence of the `.module-info` marker is how we identify a directory as
+        // a Nextflow-managed remote module (vs. any directory that contains a meta.yml)
+        final infoPath = moduleDir.resolve(ModuleInfo.MODULE_INFO_FILE)
+        if( !manifestPath.exists() || !infoPath.exists() )
+            return null
+        try {
+            final spec = ModuleSpecFactory.fromYaml(manifestPath)
             return "${spec.name}@${spec.version}"
-        } else {
+        }
+        catch( Throwable e ) {
+            log.warn("Unable to read module manifest '${manifestPath.toUriString()}': ${e.message}")
             return null
         }
     }
