@@ -25,64 +25,50 @@ The plugin registers an implementation via the standard PF4J `@Extension` mechan
 - **Blocking is allowed.** `prepare` runs on a managed virtual-thread executor inside `TaskPollingMonitor`. Calling `Thread.sleep`, blocking I/O, or long-polling APIs is fine. The scheduler thread is never blocked.
 - **Throwing fails the task.** Any exception marks the task as permanently failed and routes the cause through the task's `errorStrategy` directive. `ProcessException` (and subclasses) propagate identity-preserved. Other throwables are wrapped in a `ProcessException` with the original attached as `cause`, so retry markers like `ProcessRetryableException` reach `TaskProcessor.resumeOrDie` intact.
 - **Retry markers** (`ProcessRetryableException`, `CloudSpotTerminationException`) are recognised by `resumeOrDie` on the *cause* of the thrown exception, not on the exception itself. If you want `errorStrategy 'retry'` to fire for a transient failure, throw the marker as-is (it will be wrapped) — do not pre-wrap it in a `ProcessException`, since the `ProcessException` would propagate identity-preserved and the marker would be lost.
-- **Interrupts must be honored.** Task eviction, workflow abort, and the `executor.gateMaxWait` safety net cancel the in-flight `prepare` by interrupting its thread. Use interruptible primitives (`Thread.sleep`, blocking I/O on NIO channels, `Future.get`).
+- **Interrupts must be honored.** Task eviction and workflow abort cancel the in-flight `prepare` by interrupting its thread. Use interruptible primitives (`Thread.sleep`, blocking I/O on NIO channels, `Future.get`). Core does not enforce a wall-clock deadline — the plugin owns timeout policy.
 - **Multiple gates compose.** When several plugins register gates, all must complete successfully before the task is admitted. Gates run in parallel; order is unspecified.
 
-## Configuration
+## Timeouts and per-process overrides via `hints`
 
-`executor.gateMaxWait` bounds the time a gate may spend preparing a single task (default `24h`). Tasks whose gates exceed this limit are cancelled and fail with a `ProcessException` that the task's `errorStrategy` can handle (including `retry`).
-
-## Per-process opt-out
-
-Use the existing `hints` directive — no core change required:
+Core deliberately does not ship an executor-level timeout. The right deadline depends on which plugin is registered and on the workload (e.g. Glacier Standard is hours; Deep Archive Bulk is days). Plugins enforce their own deadlines via the existing `hints` directive — namespaced under the plugin's name to avoid collisions.
 
 ```nextflow
 process FAST_PATH {
-    hints 'glacier/skip': true
+    hints 'glacier/skip': true        // bypass the gate entirely
+    // ...
+}
+
+process LONG_RESTORE {
+    hints 'glacier/maxWait': '48h'    // per-process deadline override
     // ...
 }
 ```
 
-Inside the gate, inspect `handler.task.config.hints` and short-circuit:
+Inside the gate, read `handler.task.config.hints` and enforce the deadline yourself:
 
 ```groovy
 @Override
 void prepare(TaskHandler handler) throws InterruptedException {
-    if( handler.task.config.hints['glacier/skip'] == true ) return
-    // ... real work
-}
-```
+    final hints = handler.task.config.hints
+    if( hints['glacier/skip'] == true ) return
 
-The `hints` directive uses dot-separated and prefix-separated keys; plugins should namespace their hint keys (e.g. `glacier/skip`, `mycorp.cold-storage/skip`) to avoid collisions.
+    final maxWait = (hints['glacier/maxWait'] as Duration) ?: defaultMaxWait
+    final deadline = System.currentTimeMillis() + maxWait.toMillis()
 
-## Example
-
-A minimal gate that issues an S3 Glacier restore request and waits for completion:
-
-```groovy
-@CompileStatic
-class GlacierReadinessGate implements TaskReadinessGate {
-
-    private final GlacierRestoreManager manager
-
-    GlacierReadinessGate() {
-        this.manager = new GlacierRestoreManager(/* config from session */)
-    }
-
-    @Override
-    void prepare(TaskHandler handler) throws InterruptedException {
-        if( handler.task.config.hints['glacier/skip'] == true ) return
-        for( S3Path path : extractS3Inputs(handler.task) ) {
-            manager.issueRestoreIfNeeded(path)        // idempotent
-            while( !manager.isRestored(path) ) {
-                if( manager.isPermanentlyFailed(path) )
-                    throw new ProcessException("Glacier restore failed for ${path}")
-                Thread.sleep(60_000)                  // virtual thread parks
-            }
+    for( S3Path path : extractS3Inputs(handler.task) ) {
+        manager.issueRestoreIfNeeded(path)
+        while( !manager.isRestored(path) ) {
+            if( System.currentTimeMillis() > deadline )
+                throw new ProcessException("Glacier restore exceeded ${maxWait} for ${path}")
+            if( manager.isPermanentlyFailed(path) )
+                throw new ProcessException("Glacier restore failed for ${path}")
+            Thread.sleep(60_000)
         }
     }
 }
 ```
+
+The `hints` directive uses prefix-separated keys (`<plugin>/<name>`); plugins should namespace their hint keys (e.g. `glacier/skip`, `mycorp.cold-storage/skip`) to avoid collisions with other plugins.
 
 ## When `prepare` runs
 

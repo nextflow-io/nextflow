@@ -155,18 +155,11 @@ class TaskPollingMonitor implements TaskMonitor {
     @PackageScope
     final ConcurrentMap<TaskHandler, GateState> gateStates = new ConcurrentHashMap<>()
 
-    @PackageScope
-    Duration gateMaxWait
-
     /**
-     * Tracks in-flight {@link TaskReadinessGate#prepare} futures for a single handler,
-     * together with the wall-clock timestamp at which the task was scheduled. The
-     * timestamp is used by the {@code executor.gateMaxWait} safety net to decide when
-     * a stuck gate should be cancelled and the task failed.
+     * Tracks in-flight {@link TaskReadinessGate#prepare} futures for a single handler.
      */
     @PackageScope
     static class GateState {
-        final long scheduledAt = System.currentTimeMillis()
         final List<Future<?>> futures
         GateState(List<Future<?>> futures) { this.futures = futures }
     }
@@ -193,7 +186,6 @@ class TaskPollingMonitor implements TaskMonitor {
         this.name = params.name
         this.session = params.session as Session
         this.config = params.config as ExecutorConfig
-        this.gateMaxWait = config?.gateMaxWait
         this.pollIntervalMillis = ( params.pollInterval as Duration ).toMillis()
         this.dumpInterval = params.dumpInterval as Duration
         this.capacity = (params.capacity ?: 0) as int
@@ -304,12 +296,6 @@ class TaskPollingMonitor implements TaskMonitor {
     private boolean allGatesReady(TaskHandler handler) {
         final state = gateStates.get(handler)
         if( !state ) return true
-
-        if( gateMaxWait && System.currentTimeMillis() - state.scheduledAt > gateMaxWait.toMillis() ) {
-            state.futures*.cancel(true)
-            gateStates.remove(handler)
-            throw new ProcessException("Task readiness gate timed out after ${gateMaxWait} for task '${handler.task.name}'")
-        }
 
         for( f in state.futures ) {
             if( !f.isDone() ) return false

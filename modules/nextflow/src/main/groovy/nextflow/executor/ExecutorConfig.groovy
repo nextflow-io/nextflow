@@ -62,12 +62,6 @@ class ExecutorConfig implements ConfigScope {
     final Duration exitReadTimeout
 
     @ConfigOption
-    @Description("""
-        Maximum time a `TaskReadinessGate` plugin may take to prepare a task before the task is failed (default: `24h`).
-    """)
-    final Duration gateMaxWait
-
-    @ConfigOption
     @Description('''
         *Used only by grid executors and Google Batch.*
 
@@ -179,7 +173,6 @@ class ExecutorConfig implements ConfigScope {
         cpus = opts.cpus as Integer
         dumpInterval = opts.dumpInterval as Duration ?: Duration.of('5min')
         exitReadTimeout = opts.exitReadTimeout as Duration ?: Duration.of('270sec')
-        gateMaxWait = opts.gateMaxWait as Duration ?: Duration.of('24h')
         jobName = opts.jobName as Closure
         killBatchSize = opts.killBatchSize != null ? opts.killBatchSize as int : 100
         memory = opts.memory as MemoryUnit

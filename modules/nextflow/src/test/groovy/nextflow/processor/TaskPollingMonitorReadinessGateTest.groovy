@@ -47,7 +47,6 @@ class TaskPollingMonitorReadinessGateTest extends Specification {
         def state = new TaskPollingMonitor.GateState([])
         then:
         state.futures == []
-        state.scheduledAt > 0
     }
 
     def 'should submit gate.prepare to executor on schedule'() {
@@ -265,59 +264,6 @@ class TaskPollingMonitorReadinessGateTest extends Specification {
         try { monitor.canSubmit(handler) } catch( ProcessException expected ) { /* expected */ }
         peerInterrupted.await(5, TimeUnit.SECONDS)
         !monitor.gateStates.containsKey(handler)
-    }
-
-    def 'should time out gate that exceeds gateMaxWait'() {
-        given:
-        def block = new CountDownLatch(1)
-        def gate = Mock(TaskReadinessGate) {
-            prepare(_) >> { block.await(10, TimeUnit.SECONDS) }
-        }
-        def handler = mockReadyHandler()
-        def monitor = new TaskPollingMonitor(
-            name: 'local', session: Mock(Session),
-            config: new ExecutorConfig(gateMaxWait: '50 ms'),
-            pollInterval: '1s', capacity: 10)
-        monitor.readinessGates = [gate]
-        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
-
-        when:
-        monitor.schedule(handler)
-        Thread.sleep(150)
-        monitor.canSubmit(handler)
-
-        then:
-        def e = thrown(ProcessException)
-        e.message.contains('timed out')
-        !monitor.gateStates.containsKey(handler)
-
-        cleanup:
-        block.countDown()
-    }
-
-    def 'should not time out before gateMaxWait elapses'() {
-        given:
-        def block = new CountDownLatch(1)
-        def gate = Mock(TaskReadinessGate) { prepare(_) >> { block.await() } }
-        def handler = mockReadyHandler()
-        def monitor = new TaskPollingMonitor(
-            name: 'local', session: Mock(Session),
-            config: new ExecutorConfig(gateMaxWait: '10 sec'),
-            pollInterval: '1s', capacity: 10)
-        monitor.readinessGates = [gate]
-        monitor.gateExecutor = Executors.newVirtualThreadPerTaskExecutor()
-
-        when:
-        monitor.schedule(handler)
-        Thread.sleep(100)
-        def busy = monitor.canSubmit(handler)
-        block.countDown()
-        Thread.sleep(100)
-        def ready = monitor.canSubmit(handler)
-
-        then:
-        !busy
-        ready
     }
 
     def 'should admit task only after every gate has completed'() {

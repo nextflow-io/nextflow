@@ -116,20 +116,6 @@ class ExecutorConfigTest extends Specification {
         config.getExecConfigProp( 'hazelcast', 'jobName', 'alpha', [NXF_EXECUTOR_JOBNAME:'hola']) == 'hola'
     }
 
-    def 'should default gateMaxWait to 24h'() {
-        when:
-        def config = new ExecutorConfig([:])
-        then:
-        config.gateMaxWait == Duration.of('24h')
-    }
-
-    def 'should override gateMaxWait from opts'() {
-        when:
-        def config = new ExecutorConfig(gateMaxWait: '48h')
-        then:
-        config.gateMaxWait == Duration.of('48h')
-    }
-
     def 'test onlyJobState property'() {
 
         when:
