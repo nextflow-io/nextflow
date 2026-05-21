@@ -36,8 +36,12 @@ import nextflow.lineage.serde.LinEncoder
 import nextflow.plugin.Plugins
 import nextflow.util.CacheHelper
 import org.junit.Rule
+import spock.lang.Narrative
+import spock.lang.See
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.Subject
+import spock.lang.Title
 import test.OutputCapture
 
 /**
@@ -46,6 +50,24 @@ import test.OutputCapture
  *
  * @author Edmund Miller <edmund.a.miller@gmail.com>
  */
+@Title("nextflow lineage validate — end-to-end semantic equivalence check")
+@Narrative('''
+Drives `LinCommandImpl.validate` against a real on-disk lineage store populated
+with WorkflowRun + FileOutput records. These specs exercise the CI-led primary
+use case from the ADR: two runs that differ only in ephemeral fields (session,
+name, timestamps, absolute paths) must be reported as semantically equivalent;
+two runs whose published outputs, parameters, or workflow identity disagree
+must abort the command non-zero.
+
+Whenever a behaviour here disagrees with the Spock LineageSnapshotter integration
+the shared `LineageValidator` core has drifted — both surfaces must stay in lockstep.
+''')
+@See([
+    "https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md",
+    "https://github.com/nextflow-io/nextflow/pull/7167",
+    "https://github.com/nextflow-io/nextflow/pull/7168"
+])
+@Subject(LinCommandImpl)
 class LinValidateIntegrationTest extends Specification {
 
     @Shared
@@ -89,6 +111,10 @@ class LinValidateIntegrationTest extends Specification {
     @Rule
     OutputCapture capture = new OutputCapture()
 
+    @See([
+        "https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d2--equivalence-unit-outputs--key-inputs",
+        "https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d3--file-equivalence-checksum-only"
+    ])
     def 'should validate two equivalent workflow runs with outputs'() {
         given: 'Create two workflow runs with same structure'
         def wf = new Workflow([new DataPath("file:///path/to/main.nf")], "https://github.com/test/repo", "abc123")
@@ -156,6 +182,7 @@ class LinValidateIntegrationTest extends Specification {
         stdout.any { it.contains("semantically equivalent") }
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d13--difference-categories-outputs--params--workflow-identity--resources")
     def 'should detect different output checksums between runs'() {
         given: 'Create two workflow runs'
         def wf = new Workflow([new DataPath("file:///path/to/main.nf")], "https://github.com/test/repo", "abc123")
@@ -197,6 +224,7 @@ class LinValidateIntegrationTest extends Specification {
         error.message.contains("not equivalent")
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d13--difference-categories-outputs--params--workflow-identity--resources")
     def 'should detect different parameters between runs'() {
         given: 'Create two workflow runs with different params'
         def wf = new Workflow([new DataPath("file:///path/to/main.nf")], "https://github.com/test/repo", "abc123")
@@ -221,6 +249,7 @@ class LinValidateIntegrationTest extends Specification {
         error.message.contains("not equivalent")
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d5--subworkflow-handling-flatten-to-terminal-outputs")
     def 'should detect different number of outputs'() {
         given: 'Create two workflow runs'
         def wf = new Workflow([new DataPath("file:///path/to/main.nf")], "https://github.com/test/repo", "abc123")
@@ -262,6 +291,7 @@ class LinValidateIntegrationTest extends Specification {
         error.message.contains("not equivalent")
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d14--output-join-key-relative-path-under--outputdir")
     def 'should validate runs with nested output directories'() {
         given: 'Create workflow runs'
         def wf = new Workflow([new DataPath("file:///path/to/main.nf")], "https://github.com/test/repo", "abc123")
@@ -309,6 +339,7 @@ class LinValidateIntegrationTest extends Specification {
         stdout.any { it.contains("semantically equivalent") }
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d8--ignore-mechanism-flag--config-jsonpath-style")
     def 'should ignore specified fields during validation'() {
         given: 'Create workflow runs with different commitIds'
         def wf1 = new Workflow([new DataPath("file:///path/to/main.nf")], "https://github.com/test/repo", "commit_v1")
@@ -339,6 +370,7 @@ class LinValidateIntegrationTest extends Specification {
         stdout.any { it.contains("semantically equivalent") }
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d6--failure-output-human-diff-default---json-for-ci")
     def 'should show diff when validation fails'() {
         given: 'Create workflow runs with different configs'
         def wf = new Workflow([new DataPath("file:///path/to/main.nf")], "https://github.com/test/repo", "abc123")

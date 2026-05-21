@@ -30,14 +30,38 @@ import nextflow.lineage.model.v1beta1.Parameter
 import nextflow.lineage.model.v1beta1.Workflow
 import nextflow.lineage.model.v1beta1.WorkflowRun
 import nextflow.lineage.serde.LinSerializable
+import spock.lang.Narrative
+import spock.lang.See
 import spock.lang.Specification
+import spock.lang.Subject
 import spock.lang.TempDir
+import spock.lang.Title
 
 /**
  * Tests for LineageSnapshotter
  *
  * @author Edmund Miller <edmund.a.miller@gmail.com>
  */
+@Title("Spock snapshot integration for lineage validation")
+@Narrative('''
+LineageSnapshotter is the Spock-facing wrapper around the same validator core
+the CLI uses. It supports two flavours of assertion:
+
+ * `assertMatchesSnapshot(lid, id)` — compare a workflow run against a baseline
+   snapshot file on disk. The file is created on first run; subsequent runs
+   compare against it. `UPDATE_SNAPSHOTS=true` refreshes the baseline.
+ * `assertEquivalent(lidA, lidB)` — compare two runs directly, no file.
+
+Snapshot file format and ignore semantics must stay aligned with the CLI: if a
+test passes locally but `nextflow lineage validate` fails in CI (or vice versa)
+the abstraction has leaked.
+''')
+@See([
+    "https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d4--baseline-model-peer-lid-and-snapshot-file-from-day-one",
+    "https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d11--cli-vs-lineagesnapshotter-extract-shared-lineagevalidator",
+    "https://spockframework.org/spock/docs/2.4/all_in_one.html#_specifications_as_documentation"
+])
+@Subject(LineageSnapshotter)
 class LineageSnapshotterTest extends Specification {
 
     @TempDir
@@ -52,6 +76,7 @@ class LineageSnapshotterTest extends Specification {
         mockStore = Mock(LinStore)
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d4--baseline-model-peer-lid-and-snapshot-file-from-day-one")
     def 'should create snapshot on first run'() {
         given:
         def wf = new Workflow([new DataPath("/path/to/main.nf")], "test-wf", "abc123")
@@ -72,6 +97,7 @@ class LineageSnapshotterTest extends Specification {
         Files.exists(snapshotDir.resolve("test-baseline.json"))
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d2--equivalence-unit-outputs--key-inputs")
     def 'should pass when snapshot matches'() {
         given:
         def wf = new Workflow([new DataPath("/path/to/main.nf")], "test-wf", "abc123")
@@ -98,6 +124,7 @@ class LineageSnapshotterTest extends Specification {
         noExceptionThrown()
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d6--failure-output-human-diff-default---json-for-ci")
     def 'should fail when snapshot differs'() {
         given:
         def wf = new Workflow([new DataPath("/path/to/main.nf")], "test-wf", "abc123")
@@ -126,6 +153,7 @@ class LineageSnapshotterTest extends Specification {
         Files.exists(snapshotDir.resolve("test-baseline.actual.json"))
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d4--baseline-model-peer-lid-and-snapshot-file-from-day-one")
     def 'should update snapshot when updateSnapshots is true'() {
         given:
         def wf = new Workflow([new DataPath("/path/to/main.nf")], "test-wf", "abc123")
@@ -156,6 +184,7 @@ class LineageSnapshotterTest extends Specification {
         snapshotDir.resolve("test-baseline.json").text.contains("new.fastq")
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d11--cli-vs-lineagesnapshotter-extract-shared-lineagevalidator")
     def 'should compare two runs directly with assertEquivalent'() {
         given:
         def wf = new Workflow([new DataPath("/path/to/main.nf")], "test-wf", "abc123")
@@ -266,6 +295,7 @@ class LineageSnapshotterTest extends Specification {
         !json.contains("session-1")  // sessionId should be stripped
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d8--ignore-mechanism-flag--config-jsonpath-style")
     def 'should support custom ignore fields'() {
         given:
         def wf1 = new Workflow([new DataPath("/path/to/main.nf")], "test-wf", "commit1")

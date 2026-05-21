@@ -42,6 +42,7 @@ import nextflow.lineage.serde.LinEncoder
 import nextflow.plugin.Plugins
 import nextflow.util.CacheHelper
 import org.junit.Rule
+import spock.lang.See
 import spock.lang.Shared
 import spock.lang.Specification
 import test.OutputCapture
@@ -475,6 +476,7 @@ class LinCommandImplTest extends Specification{
         err.message == "Checksum of '${outputFile}' does not match with lineage metadata"
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d2--equivalence-unit-outputs--key-inputs")
     def 'should validate equivalent workflow runs'() {
         given:
         def encoder = new LinEncoder()
@@ -507,6 +509,7 @@ class LinCommandImplTest extends Specification{
         stdout.any { it.contains("semantically equivalent") }
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d13--difference-categories-outputs--params--workflow-identity--resources")
     def 'should detect differences between workflow runs'() {
         given:
         def encoder = new LinEncoder()
@@ -533,6 +536,7 @@ class LinCommandImplTest extends Specification{
         err.message.contains("not equivalent")
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d3--file-equivalence-checksum-only")
     def 'should validate with outputs'() {
         given:
         def encoder = new LinEncoder()
@@ -576,6 +580,7 @@ class LinCommandImplTest extends Specification{
         stdout.any { it.contains("semantically equivalent") }
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d3--file-equivalence-checksum-only")
     def 'should detect output checksum differences'() {
         given:
         def encoder = new LinEncoder()
@@ -610,6 +615,7 @@ class LinCommandImplTest extends Specification{
         err.message.contains("not equivalent")
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d6--failure-output-human-diff-default---json-for-ci")
     def 'should error if workflow not found'() {
         when:
         new LinCommandImpl().validate(configMap, ["lid://nonexistent", "--against", "lid://also-missing"])
@@ -619,6 +625,7 @@ class LinCommandImplTest extends Specification{
         err.message.contains("not found")
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d4--baseline-model-peer-lid-and-snapshot-file-from-day-one")
     def 'should error without --against argument'() {
         when:
         new LinCommandImpl().validate(configMap, ["lid://wf1"])
@@ -628,6 +635,7 @@ class LinCommandImplTest extends Specification{
         err.message.contains("--against")
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d8--ignore-mechanism-flag--config-jsonpath-style")
     def 'should support --ignore-fields option'() {
         given:
         def encoder = new LinEncoder()

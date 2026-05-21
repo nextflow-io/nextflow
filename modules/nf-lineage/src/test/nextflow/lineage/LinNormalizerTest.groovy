@@ -30,19 +30,36 @@ import nextflow.lineage.model.v1beta1.TaskRun
 import nextflow.lineage.model.v1beta1.Workflow
 import nextflow.lineage.model.v1beta1.WorkflowOutput
 import nextflow.lineage.model.v1beta1.WorkflowRun
+import spock.lang.Narrative
+import spock.lang.See
 import spock.lang.Specification
+import spock.lang.Subject
 import spock.lang.TempDir
+import spock.lang.Title
 
 /**
  * Tests for LinNormalizer
  *
  * @author Edmund Miller <edmund.a.miller@gmail.com>
  */
+@Title("Normalize lineage records for semantic comparison")
+@Narrative('''
+LinNormalizer strips ephemeral fields (session IDs, timestamps, absolute paths, LID
+back-references) from a lineage record so that two runs that differ only in these
+fields normalize to the same shape. It is the shared kernel under both the CLI
+`nextflow lineage validate` command and the Spock `LineageSnapshotter` integration.
+''')
+@See([
+    "https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md",
+    "https://spockframework.org/spock/docs/2.4/all_in_one.html#_specifications_as_documentation"
+])
+@Subject(LinNormalizer)
 class LinNormalizerTest extends Specification {
 
     @TempDir
     Path tmpDir
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d8--ignore-mechanism-flag--config-jsonpath-style")
     def 'should strip ephemeral fields from WorkflowRun'() {
         given:
         def normalizer = new LinNormalizer()
@@ -64,6 +81,7 @@ class LinNormalizerTest extends Specification {
         normalized['spec']['params'] != null
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d3--file-equivalence-checksum-only")
     def 'should strip timestamps from FileOutput'() {
         given:
         def normalizer = new LinNormalizer()
@@ -94,6 +112,7 @@ class LinNormalizerTest extends Specification {
         normalized['spec']['labels'] == ['experiment=test']
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d14--output-join-key-relative-path-under--outputdir")
     def 'should strip path field from FileOutput'() {
         given:
         def normalizer = new LinNormalizer()
@@ -171,6 +190,7 @@ class LinNormalizerTest extends Specification {
         normalized['spec']['codeChecksum']['value'] == 'hash123'
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d8--ignore-mechanism-flag--config-jsonpath-style")
     def 'should support additional ignore fields'() {
         given:
         def normalizer = new LinNormalizer()
@@ -197,6 +217,7 @@ class LinNormalizerTest extends Specification {
         !normalized['spec'].containsKey('conda')
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d2--equivalence-unit-outputs--key-inputs")
     def 'should compare two identical normalized trees as equal'() {
         given:
         def tree1 = [
@@ -219,6 +240,7 @@ class LinNormalizerTest extends Specification {
         diff.isEmpty()
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d6--failure-output-human-diff-default---json-for-ci")
     def 'should detect differences in normalized trees'() {
         given:
         def tree1 = [
@@ -256,6 +278,7 @@ class LinNormalizerTest extends Specification {
         diff.containsKey('outputs.b.txt')
     }
 
+    @See("https://github.com/nextflow-io/nextflow/blob/master/adr/20260521-lineage-validate.md#d5--subworkflow-handling-flatten-to-terminal-outputs")
     def 'should normalize workflow tree from store'() {
         given:
         def store = Mock(LinStore)
