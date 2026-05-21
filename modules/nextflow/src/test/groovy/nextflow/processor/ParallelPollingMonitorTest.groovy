@@ -126,6 +126,8 @@ class ParallelPollingMonitorTest extends Specification {
         and:
         def processor = Mock(TaskProcessor)
         def arrayHandler = Mock(TaskHandler) {
+            canForkProcess() >> true
+            isReady() >> true
             getTask() >> Mock(TaskArrayRun) {
                 getName() >> 'oversized_array'
                 getArraySize() >> 10
