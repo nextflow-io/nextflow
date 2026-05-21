@@ -44,6 +44,8 @@ import spock.lang.Subject
 import spock.lang.Title
 import test.OutputCapture
 
+import static test.TestHelper.filterLogNoise
+
 /**
  * Integration tests for lineage validation functionality.
  * Tests end-to-end validation of workflow runs using the CLI command.
@@ -70,6 +72,9 @@ the shared `LineageValidator` core has drifted — both surfaces must stay in lo
 @Subject(LinCommandImpl)
 class LinValidateIntegrationTest extends Specification {
 
+    // FIXME: these are @Shared but reassigned per-test in setup() — drop @Shared
+    // or move init to setupSpec(); cleanup() deletes a dir later iterations may
+    // still need under parallel execution.
     @Shared
     Path tmpDir
 
@@ -79,6 +84,9 @@ class LinValidateIntegrationTest extends Specification {
     @Shared
     ConfigMap configMap
 
+    // TODO: extract a LineageFixtures helper — Workflow / WorkflowRun / FileOutput
+    // constructors and the createDirectories+encode+write triple repeat ~25 times
+    // across this spec and adjacent test files.
     LinEncoder encoder
 
     def reset() {
@@ -170,12 +178,7 @@ class LinValidateIntegrationTest extends Specification {
 
         when: 'Validate workflow runs'
         new LinCommandImpl().validate(configMap, ["lid://wf1", "--against", "lid://wf2"])
-        def stdout = capture
-            .toString()
-            .readLines()
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }
+        def stdout = filterLogNoise(capture)
 
         then: 'Should pass - runs are semantically equivalent'
         noExceptionThrown()
@@ -327,12 +330,7 @@ class LinValidateIntegrationTest extends Specification {
 
         when: 'Validate workflow runs'
         new LinCommandImpl().validate(configMap, ["lid://wf1", "--against", "lid://wf2"])
-        def stdout = capture
-            .toString()
-            .readLines()
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }
+        def stdout = filterLogNoise(capture)
 
         then: 'Should pass - all nested outputs match'
         noExceptionThrown()
@@ -358,12 +356,7 @@ class LinValidateIntegrationTest extends Specification {
         when: 'Validate with --ignore-fields commitId'
         new LinCommandImpl().validate(configMap, 
             ["lid://wf1", "--against", "lid://wf2", "--ignore-fields", "commitId"])
-        def stdout = capture
-            .toString()
-            .readLines()
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }
+        def stdout = filterLogNoise(capture)
 
         then: 'Should pass - commitId is ignored'
         noExceptionThrown()

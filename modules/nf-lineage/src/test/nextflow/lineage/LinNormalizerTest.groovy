@@ -56,6 +56,7 @@ fields normalize to the same shape. It is the shared kernel under both the CLI
 @Subject(LinNormalizer)
 class LinNormalizerTest extends Specification {
 
+    // TODO: tmpDir is unused — drop @TempDir + field
     @TempDir
     Path tmpDir
 

@@ -498,12 +498,7 @@ class LinCommandImplTest extends Specification{
 
         when:
         new LinCommandImpl().validate(configMap, ["lid://wf1", "--against", "lid://wf2"])
-        def stdout = capture
-            .toString()
-            .readLines()
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }
+        def stdout = filterLogNoise(capture)
 
         then:
         stdout.any { it.contains("semantically equivalent") }
@@ -568,12 +563,7 @@ class LinCommandImplTest extends Specification{
 
         when:
         new LinCommandImpl().validate(configMap, ["lid://wf1", "--against", "lid://wf2"])
-        def stdout = capture
-            .toString()
-            .readLines()
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }
+        def stdout = filterLogNoise(capture)
 
         then:
         // Should be equivalent because timestamps are ignored
@@ -655,12 +645,7 @@ class LinCommandImplTest extends Specification{
         when:
         new LinCommandImpl().validate(configMap, 
             ["lid://wf1", "--against", "lid://wf2", "--ignore-fields", "commitId"])
-        def stdout = capture
-            .toString()
-            .readLines()
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }
+        def stdout = filterLogNoise(capture)
 
         then:
         stdout.any { it.contains("semantically equivalent") }
