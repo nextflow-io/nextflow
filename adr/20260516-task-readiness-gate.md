@@ -1,14 +1,14 @@
 # `TaskReadinessGate` plugin extension point for deferred task submission
 
 - Authors: Rob Syme
-- Status: draft
+- Status: accepted
 - Deciders: Paolo Di Tommaso, Ben Sherman, Rob Syme
-- Date: 2026-05-16
+- Date: 2026-05-20
 - Tags: plugin, extension-point, scheduler, task-submission
 
 ## Summary
 
-Introduce a `TaskReadinessGate` plugin extension point that lets a plugin defer task submission until an external precondition is met (e.g. an S3 object has been restored from Glacier), removing the need for plugins to subclass an executor and its task handler.
+Introduce a `TaskReadinessGate` plugin extension point that lets a plugin defer task submission until an external precondition is met (e.g. an S3 object has been restored from Glacier), removing the need for plugins to subclass an executor and its task handler. Plugins implement a blocking `void prepare(TaskHandler)` method; core runs each gate on a managed virtual-thread executor via a new `TaskGateManager`, and the standard `TaskPollingMonitor` delegates to the manager from `schedule`, `canSubmit`, and `evict`.
 
 ## Problem Statement
 
@@ -30,19 +30,21 @@ A generic extension point — "consult these plugins before submitting any task"
 
 - Work uniformly across every executor that submits tasks via `TaskPollingMonitor` (i.e. all existing executors).
 
-- Be safe-by-default: a plugin that ships a gate cannot accidentally stall the scheduler thread for the rest of the run.
+- Keep the plugin-author surface minimal — gate authors write straightforward blocking code, not an async state machine.
 
-- Allow gates to kick off async preparation work the moment a task is queued, not when an executor slot frees up — cold-storage restores can take hours and must not wait for capacity.
+- Allow gates to kick off preparation work the moment a task is queued, not when an executor slot frees up — cold-storage restores can take hours and must not wait for capacity.
 
-- Allow plugins to signal permanent task failure cleanly, integrating with the standard `errorStrategy` machinery.
+- Allow plugins to signal permanent task failure cleanly, integrating with the standard `errorStrategy` machinery (including retry routing through `ProcessRetryableException`).
 
 ## Non-goals
 
-- **Per-process gate scoping.** A gate is consulted for every task. Selectors that restrict a gate to specific processes are a config-layer concern that can be added later.
+- **Per-process gate scoping as a new directive.** A gate is consulted for every task. Plugins implement per-process opt-out by reading the existing `hints` directive (e.g. `hints 'glacier/skip': true`).
 
-- **Gate ordering or priority.** Evaluation order across gates is unspecified. An `int order()` default method can be added non-breakingly if a real use case appears.
+- **An executor-level timeout.** Core does not enforce a wall-clock deadline on `prepare`. The right value depends entirely on which plugin is registered and on the workload (Glacier Standard is hours; Deep Archive Bulk is days). Plugins own timeout policy, typically reading a per-process hint (e.g. `hints 'glacier/maxWait': '5h'`) and throwing when the deadline elapses.
 
-- **An `AbstractAsyncReadinessGate` helper class.** A base class that runs blocking work on a dedicated executor and exposes results via per-task `CompletableFuture`s would lower the cliff for plugin authors. We are deliberately not shipping it in v1: the contract is documented in javadoc, and consumers with their own cross-task state (dedup, rate limiting, batched API calls) typically would not use a per-task-future helper. It can be extracted later when a clear use case appears.
+- **Gate ordering or priority.** Evaluation order across gates is unspecified; all gates run in parallel.
+
+- **An `AbstractAsyncReadinessGate` helper class.** Since the SPI is blocking and core owns the executor, there is no async runtime for a helper to wrap. Plugin authors write blocking code directly.
 
 - **Replacing `TaskHandler.isReady()`.** The existing method stays and is still consulted; gates are AND-combined with it. No flag day for existing subclasses.
 
@@ -51,6 +53,13 @@ A generic extension point — "consult these plugins before submitting any task"
 - **Option A — `TaskReadinessGate` SPI in core (this proposal).**
 - **Option B — Channel operator `glacierRestore()`.**
 - **Option C — `FileSystemProvider` interception in nf-amazon's S3 NIO.**
+
+Within Option A, there was a sub-decision between two contract shapes:
+
+- **A.1 polling** — `boolean isReady(TaskRun)`, called repeatedly on the scheduler thread; plugin manages its own async state.
+- **A.2 blocking** — `void prepare(TaskHandler) throws InterruptedException`, called once per task on a core-managed virtual-thread executor; plugin writes straightforward blocking code.
+
+The blocking variant (A.2) was chosen — see "Why blocking, not polling" below.
 
 ## Pros and Cons of the Options
 
@@ -61,7 +70,7 @@ A new extension point consulted by `TaskPollingMonitor` before admitting a task 
 - Good, because it matches the actual problem ("defer task submission until external state is ready"), which is generic across executors and backends.
 - Good, because users get drop-in behavior — `plugins { id '...' }` is enough; no `process.executor` override.
 - Good, because the plugin stops being tied to a specific executor implementation and works with every executor in a single class.
-- Good, because the change to core is small (one interface plus a few lines in `TaskPollingMonitor`) and behavior is bit-identical when no plugin registers a gate.
+- Good, because the change to core is small (one interface, one manager class, ~14 lines in `TaskPollingMonitor`) and behavior is bit-identical when no plugin registers a gate.
 - Bad, because it requires a coordinated upstream change in Nextflow before the consumer plugin can be refactored.
 
 ### Option B — Channel operator `glacierRestore()`
@@ -84,7 +93,7 @@ Rejected. Documented here to avoid revisiting.
 
 ## Decision
 
-Adopt Option A. Introduce a `TaskReadinessGate` interface in `nextflow.processor` and consult registered implementations from `TaskPollingMonitor`. Option B may be pursued separately by individual plugins as a complementary surface.
+Adopt Option A with the blocking-`prepare` contract (A.2). Introduce a `TaskReadinessGate` interface in `nextflow.processor` and a `TaskGateManager` that orchestrates registered implementations on behalf of `TaskPollingMonitor`. Option B may be pursued separately by individual plugins as a complementary surface.
 
 ## Core capabilities
 
@@ -93,33 +102,30 @@ Adopt Option A. Introduce a `TaskReadinessGate` interface in `nextflow.processor
 ```groovy
 package nextflow.processor
 
-import nextflow.plugin.extension.ExtensionPoint
+import org.pf4j.ExtensionPoint
 
 /**
- * Plugin extension point that defers task submission until external preconditions are met.
+ * Plugin extension point that defers task submission until an external precondition is met.
  *
- * <p>Invoked by the task scheduler:
- * <ul>
- *   <li>Once when a task is added to the pending queue (return value ignored). This lets
- *       the gate kick off any async preparation, e.g. issuing an S3 RestoreObject request.</li>
- *   <li>On every subsequent polling tick (~100ms) until it returns {@code true}.</li>
- * </ul>
+ * <p>Implementations are invoked once per task by the scheduler, on a managed background
+ * thread (virtual thread when available). The task is admitted for submission when this
+ * method returns; throw to mark the task as permanently failed and route the cause through
+ * the task's {@code errorStrategy}.
  *
- * <p><b>Implementations must return promptly.</b> This method runs on the task scheduler
- * thread; blocking it stalls submission for every task in the run, not only the one being
- * gated. Kick off async work on the first call and return {@code false}; report status on
- * subsequent calls.
+ * <p>Implementations may block freely — {@code Thread.sleep}, network calls, long polling.
+ * The scheduler thread is never blocked by this call.
  *
- * <p>Throwing from this method marks the task as permanently failed, with the thrown
- * exception attached as the cause. The standard {@code errorStrategy} applies, so a
- * transient failure can be retried. Returning {@code false} indefinitely keeps the task
- * waiting forever — throw to signal definitive failure.
+ * <p>Implementations must honor {@code Thread.interrupt()} so that task eviction and
+ * workflow abort can unblock {@code prepare} promptly. Core does not enforce a wall-clock
+ * deadline — plugins own timeout policy (see the developer guide for the recommended
+ * {@code hints}-based pattern).
  *
- * <p>When multiple gates are registered, a task is admitted only when every gate returns
- * {@code true}. Evaluation order across gates is unspecified.
+ * <p>When multiple gates are registered, a task is admitted only when every gate's
+ * {@code prepare} method has returned successfully. Evaluation order across gates is
+ * unspecified; all gates start in parallel on the managed executor.
  */
 interface TaskReadinessGate extends ExtensionPoint {
-    boolean isReady(TaskRun task)
+    void prepare(TaskHandler handler) throws InterruptedException
 }
 ```
 
@@ -127,117 +133,173 @@ interface TaskReadinessGate extends ExtensionPoint {
 
 | Aspect | Contract |
 |---|---|
-| Return value | `true` = ready to submit; `false` = not yet, poll again |
-| Permanent failure | Throw an exception; routed through the standard task failure path |
-| Latency | Must return promptly. No blocking I/O on the calling thread. |
-| First-call semantics | Idempotent. Kick off async preparation, return `false` immediately. |
-| Aggregation across gates | Logical AND. Order unspecified. |
-| Per-task identity | `TaskRun.id` is stable for dedup and caching inside the gate |
+| Return | Method returns normally → task is ready to submit |
+| Permanent failure | Throw any `Throwable`; `ProcessException` is canonical |
+| Cancellation | `InterruptedException` propagates as cancellation; gate must honor `Thread.interrupt()` |
+| Threading | Runs on a core-managed virtual-thread executor; blocking I/O is fine |
+| Aggregation across gates | All gates must complete successfully; one failure aborts the task |
+| Order across gates | Unspecified; gates run in parallel |
+| Per-task identity | `handler.task.id` stable for plugin-internal dedup/caching |
+| Per-process opt-out / timeout | Plugin reads `handler.task.config.hints` and enforces its own policy |
 
-### Call site integration
+### Architecture
 
-Three small edits to `nextflow.processor.TaskPollingMonitor`.
+The orchestration lives in a new `TaskGateManager` class that owns:
 
-**Cache the gate list once per session** in `start()`:
+- The registered gates list (resolved once via `Plugins.getExtensions(TaskReadinessGate)`).
+- A managed `ExecutorService` (virtual-thread per task when `Threads.useVirtual()`, cached pool otherwise) created lazily only when at least one gate is registered.
+- A `ConcurrentMap<TaskHandler, List<Future<?>>>` tracking in-flight gate work per handler.
+- The session shutdown hook that drains the executor.
+
+The manager exposes three methods to `TaskPollingMonitor`:
 
 ```groovy
-private List<TaskReadinessGate> readinessGates = Collections.emptyList()
+void submit(TaskHandler handler)   // submit prepare() futures for each gate
+boolean isReady(TaskHandler handler)   // poll futures; throw on failure; true when all done
+void evict(TaskHandler handler)        // cancel any in-flight futures
+```
+
+### Monitor integration
+
+`TaskPollingMonitor` adds one field and four delegation lines. The total diff against upstream is ~14 lines.
+
+```groovy
+@PackageScope
+TaskGateManager gateManager = new TaskGateManager(null, [])   // empty until start()
 
 @Override
 TaskMonitor start() {
-    readinessGates = Plugins.getExtensions(TaskReadinessGate)
+    this.gateManager = new TaskGateManager(session)
     // ... existing start logic
-    return this
 }
-```
 
-**Fire-once on enqueue** so the gate can start async work the moment the task is queued — not when an executor slot frees up:
-
-```groovy
 void schedule(TaskHandler handler) {
-    // ... existing enqueue logic
-    if( readinessGates ) {
-        for( gate in readinessGates ) {
-            try {
-                gate.isReady(handler.task)
-            }
-            catch( Throwable t ) {
-                handleGateFailure(handler, t)
-                return
-            }
-        }
-    }
+    pendingLock.lock()
+    try {
+        pendingQueue << handler
+        gateManager.submit(handler)
+        // ... existing signal/notify
+    } finally { pendingLock.unlock() }
 }
-```
 
-The return value is intentionally discarded — this call exists for the side effect.
-
-**AND-in gates with the existing admission checks** in `canSubmit`:
-
-```groovy
 protected boolean canSubmit(TaskHandler handler) {
-    // The single-threaded scheduler invariant is load-bearing here: TaskReadinessGate
-    // implementations are contractually required to return promptly.
-    (capacity > 0 ? checkQueueCapacity(handler) : true) \
-        && handler.canForkProcess() \
-        && allGatesReady(handler) \
+    gateManager.isReady(handler)
+        && handler.canForkProcess()
         && handler.isReady()
+        && (capacity > 0 ? checkQueueCapacity(handler) : true)
 }
 
-private boolean allGatesReady(TaskHandler handler) {
-    if( !readinessGates ) return true
-    for( gate in readinessGates ) {
-        try {
-            if( !gate.isReady(handler.task) ) return false
-        }
-        catch( Throwable t ) {
-            handleGateFailure(handler, t)
-            return false
-        }
-    }
-    return true
+boolean evict(TaskHandler handler) {
+    if( !handler ) return false
+    gateManager.evict(handler)
+    // ... existing remove/signal
 }
 ```
 
-`handleGateFailure(TaskHandler, Throwable)` routes the exception through the same path used today for submit-time `ProcessException`s: the task transitions to `FAILED` with the gate exception as cause, and the configured `errorStrategy` (`terminate` / `ignore` / `retry`) applies.
+When `gateManager.isReady` throws, the existing catch in `submitPendingTasks` routes the cause through `handleException` → `resumeOrDie`, which dispatches via the task's `errorStrategy`. No new failure path.
+
+### Exception handling
+
+`TaskGateManager.isReady` unwraps `ExecutionException` from the future and preserves cause types so retry routing works:
+
+- `ProcessException` (and subclasses) thrown by `prepare` propagate identity-preserved.
+- Any other throwable is wrapped in `new ProcessException("Task readiness gate failed...", cause)`, so markers like `ProcessRetryableException` carried on a `RuntimeException` reach `TaskProcessor.resumeOrDie` via `error.cause`.
+- When one gate throws, peer futures for the same handler are cancelled so background work does not outlive the failing task.
 
 ### Discovery and lifecycle
 
 - Gates are resolved via `Plugins.getExtensions(TaskReadinessGate)` — the standard PF4J path used by `TraceObserverFactory`, `ContainerResolver`, and other plugin extension points.
 - Instances are constructed once when the monitor starts and reused for the run.
 - No teardown hook on the SPI. Plugins that need cleanup own that via their existing `BasePlugin.start/stop` lifecycle.
-- No config flag. A plugin that ships a gate is automatically consulted for every task; opting out means not installing the plugin.
+- The managed executor is shut down via `session.onShutdown` (`shutdownNow()` interrupts any in-flight gates).
+- No config flag. A plugin that ships a gate is automatically consulted for every task; opting out means not installing the plugin (or using `hints` for per-process opt-out).
+
+### Per-process opt-out and timeout via `hints`
+
+Plugins read process-level overrides from the existing `hints` directive — no new core directive required. Namespaced keys (`<plugin>/<name>`) avoid collisions across plugins.
+
+```nextflow
+process FAST_PATH {
+    hints 'glacier/skip': true
+    // ...
+}
+
+process LONG_RESTORE {
+    hints 'glacier/maxWait': '48h'
+    // ...
+}
+```
+
+Inside the gate:
+
+```groovy
+@Override
+void prepare(TaskHandler handler) throws InterruptedException {
+    final hints = handler.task.config.hints
+    if( hints['glacier/skip'] == true ) return
+
+    final maxWait = (hints['glacier/maxWait'] as Duration) ?: defaultMaxWait
+    final deadline = System.currentTimeMillis() + maxWait.toMillis()
+
+    // ... enforce deadline + interrupts
+}
+```
 
 ### Backward compatibility
 
-- With no gates registered, `canSubmit` evaluates one empty-list check per pending task per tick. `schedule` adds one untaken branch. Behavior is bit-identical to today.
+- With no gates registered, `gateManager.submit` and `gateManager.evict` are no-ops and `gateManager.isReady` returns `true` immediately. No executor is created. Behavior is bit-identical to upstream.
 - `TaskHandler.isReady()` is unchanged and still consulted. Existing executor and task-handler subclasses keep working.
 - The SPI is purely additive: no existing signatures change.
 
 ## Rationale & discussion
 
-**Why polling rather than blocking.** `TaskPollingMonitor` runs a single scheduler thread that walks the pending queue every ~100ms. A blocking gate (one that waits inside `isReady` for the external precondition to be satisfied) would stall submission for every task in the run, not just the one being gated. For the driving use case — Glacier restores that can take up to 12 hours — this is unacceptable. The contract is therefore explicitly polling-based: the first call kicks off async work and returns `false`; subsequent calls cheaply check status. This also matches the AWS RestoreObject API, which is async-by-design (issue `RestoreObject`, then poll `HeadObject` for status).
+### Why blocking, not polling
 
-**Why fire on enqueue, not only on `canSubmit`.** If the gate were only consulted from `canSubmit`, a task waiting behind a full executor queue or a `maxForks` limit would not trigger the gate, so the restore would not begin until capacity frees up. Adding the fire-once call in `schedule()` decouples "start the restore" from "is there a slot." The cost is one extra call per task per gate per run; the call is contractually idempotent so this is safe.
+An earlier iteration of this ADR proposed a polling contract — `boolean isReady(TaskRun)` called repeatedly on the scheduler thread, with the plugin responsible for kicking off async work idempotently on the first call. Review pushed back on three grounds:
 
-**Why exceptions for permanent failure.** Returning `false` indefinitely would keep a task waiting forever in cases where success is impossible (object permanently inaccessible, restore window timed out, AccessDenied). Adding a tri-state return value (`READY`/`WAITING`/`FAILED`) would enlarge the public API for the same effect Java already provides via exceptions. Routing through the existing failure path also means `errorStrategy 'retry'` naturally handles transient failures — a `ThrottlingException` bubbling out of the gate triggers the same retry behavior as a transient executor failure.
+1. **Plugin-author cognitive load.** "Must return promptly, kick off async on first call, idempotent thereafter, manage your own state" is a lot of contract to get right. A blocking method with the standard `Thread.interrupt` cancellation contract is what plugin authors already know how to write.
 
-**Why no helper class.** An `AbstractAsyncReadinessGate` base class that runs blocking work on a dedicated executor and exposes results via per-task `CompletableFuture`s would make safe-by-default gates trivial to write. The reason we are skipping it in v1: realistic consumers (e.g. a Glacier restorer with cross-task dedup, rate limiting, and prefix expansion) tend to have their own async state and would not use a per-task-future helper. Shipping the helper now means designing it for hypothetical consumers whose shape we cannot yet see. Extracting it later is non-breaking.
+2. **`FilePorter` precedent.** The in-tree `FilePorter` already uses a managed-pool + blocking-`Runnable` shape for similar "prepare external resource for a task" work. New extension points should follow.
 
-**Why this lives in `nextflow.processor`, not `nf-commons`.** Other task-scoped extension points (`TaskTipProvider`, the task handler itself) live in `nextflow.processor`. `nf-commons` hosts cross-cutting infrastructure (the `ExtensionPoint` marker itself, plugin loading machinery). Co-locating `TaskReadinessGate` with `TaskRun` and `TaskHandler` matches the existing layering.
+3. **Virtual threads make the blocking cost negligible.** A gate parked on a virtual thread costs about 1 KB. The "blocking gate would stall the scheduler" objection that originally motivated polling no longer applies — the scheduler thread doesn't run the gate; the managed virtual-thread executor does.
+
+The blocking design moves the async management cost from every plugin author into one place in core (`TaskGateManager`), and the plugin-facing API shrinks to a single method with no idempotency reasoning.
+
+### Why no helper class
+
+The earlier proposal noted an `AbstractAsyncReadinessGate` helper as a likely follow-up. With the blocking design, no helper is needed: plugin authors write blocking code directly, and core owns the executor. The `AbstractAsyncReadinessGate` non-goal is now permanent rather than deferred.
+
+### Why no executor-level timeout
+
+An earlier iteration carried an `executor.gateMaxWait` config option as a safety net for stuck gates. It was removed during review:
+
+- The right deadline depends on which plugin is registered (Glacier Standard hours vs Deep Archive Bulk days). A one-size-fits-all executor-level default either fires on every legitimate restore or is functionally "no limit" for buggy gates.
+- The safety net was always partial: a plugin that ignores `Thread.interrupt()` cannot be unblocked by a wall-clock timeout. Such plugins already break eviction, so the safety net never delivered on its premise.
+- Discoverability is better when the knob lives with the plugin that defines what a sensible value is. A user reading `executor.gateMaxWait` in the config reference cannot tell what value is right; a user reading the plugin's docs for `hints 'glacier/maxWait'` can.
+
+Plugins enforce their own deadlines. The hints-based pattern documented above gives natural per-process scoping for free.
+
+### Why fire on `schedule`, not only on `canSubmit`
+
+If gate work only started when `canSubmit` was first reached, a task waiting behind a full executor queue or a `maxForks` limit would not trigger preparation until capacity frees up. The fire-on-`schedule` design decouples "start the restore" from "is there a slot," so a 5-hour Glacier restore overlaps with whatever else is running rather than waiting in line for it.
+
+### Why exceptions for permanent failure
+
+Routing through the existing failure path means `errorStrategy 'retry'` naturally handles transient failures — a `ThrottlingException` bubbling out of the gate triggers the same retry behavior as a transient executor failure. Returning a tri-state value (`READY`/`WAITING`/`FAILED`) would enlarge the public API for the same effect Java already provides via exceptions.
+
+Cause-type preservation is load-bearing: `TaskProcessor.resumeOrDie` checks `error.cause instanceof ProcessRetryableException` (and `CloudSpotTerminationException`) — it inspects the cause, not the thrown exception itself. The manager therefore wraps non-`ProcessException` causes in a `ProcessException` so the marker reaches `resumeOrDie` via `error.cause`.
+
+### Why this lives in `nextflow.processor`
+
+Other task-scoped extension points (`TaskTipProvider`, the task handler itself) live in `nextflow.processor`. `nf-commons` hosts cross-cutting infrastructure (plugin loading machinery). Co-locating `TaskReadinessGate` and `TaskGateManager` with `TaskRun` and `TaskHandler` matches the existing layering.
 
 ## Testing
 
-New Spock specs in `modules/nextflow/src/test/groovy/nextflow/processor/TaskPollingMonitorTest.groovy`:
+- `TaskReadinessGateTest` — interface shape: extends `org.pf4j.ExtensionPoint`, declares `prepare(TaskHandler) throws InterruptedException`.
+- `TaskGateManagerTest` — full behavioural coverage targeting the manager directly: no-gates no-op, single-gate happy path, multi-gate all-must-complete, fail-fast peer cancellation, eviction interrupt propagation, `ProcessException` identity preservation, `ProcessRetryableException` routing via cause, `RuntimeException` wrapping, checked-exception wrapping, external cancellation.
+- The standard `TaskPollingMonitorTest` and `ParallelPollingMonitorTest` continue to pass with a one-line stub adjustment for the `canSubmit` AND-chain reorder.
 
-- No gates registered → `canSubmit` matches current behavior; `schedule` does not touch gate code.
-- One gate returning `true` → task admitted as soon as capacity and forks allow.
-- One gate returning `false` then `true` → task waits in pending across ticks; admitted on the tick the gate flips.
-- Gate invoked exactly once on enqueue; return value ignored even when `false`.
-- Multiple gates → AND semantics; one `false` blocks admission.
-- Gate throws on enqueue → task fails with the thrown cause; not added to running queue.
-- Gate throws during poll → task fails with the thrown cause; removed from pending.
-- Gate throws under `errorStrategy 'retry'` → standard retry path.
+## References
 
-Gates are injected through a test double rather than a real PF4J context.
-
+- Implementation PR: [nextflow-io/nextflow#7158](https://github.com/nextflow-io/nextflow/pull/7158).
+- This ADR PR: [nextflow-io/nextflow#7151](https://github.com/nextflow-io/nextflow/pull/7151).
