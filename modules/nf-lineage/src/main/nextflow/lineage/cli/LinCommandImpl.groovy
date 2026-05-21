@@ -21,12 +21,14 @@ import static nextflow.lineage.fs.LinPath.*
 import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 
+import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import nextflow.Session
 import nextflow.cli.CmdLineage
 import nextflow.config.ConfigMap
 import nextflow.exception.AbortOperationException
 import nextflow.lineage.LinHistoryRecord
+import nextflow.lineage.LinNormalizer
 import nextflow.lineage.LinPropertyValidator
 import nextflow.lineage.LinStore
 import nextflow.lineage.LinStoreFactory
@@ -223,5 +225,122 @@ class LinCommandImpl implements CmdLineage.LinCommand {
             params[key] << value
         }
         return params
+    }
+
+    @Override
+    void validate(ConfigMap config, List<String> args) {
+        final store = LinStoreFactory.getOrCreate(new Session(config))
+        if (!store) {
+            println ERR_NOT_LOADED
+            return
+        }
+
+        try {
+            // Parse arguments
+            final parsedArgs = parseValidateArgs(args)
+            final String newLid = parsedArgs.newLid as String
+            final String baselineLid = parsedArgs.baselineLid as String
+            final List<String> ignoreFields = parsedArgs.ignoreFields as List<String>
+            final String outputBase = parsedArgs.outputBase as String
+
+            if (!isLidUri(newLid) || !isLidUri(baselineLid)) {
+                throw new AbortOperationException("Both arguments must be lineage URLs (lid://...)")
+            }
+
+            // Create normalizer with configuration
+            final normalizer = new LinNormalizer()
+            if (outputBase) {
+                normalizer.withOutputBase(outputBase)
+            }
+            if (ignoreFields) {
+                normalizer.withIgnoreFields(ignoreFields)
+            }
+
+            // Normalize both workflow trees
+            final newTree = normalizer.normalizeWorkflowTree(store, newLid)
+            final baselineTree = normalizer.normalizeWorkflowTree(store, baselineLid)
+
+            // Compare
+            final differences = LinNormalizer.compare(newTree, baselineTree)
+
+            if (differences.isEmpty()) {
+                println "Workflow runs are semantically equivalent"
+            } else {
+                println "Workflow runs differ:"
+                println ""
+                
+                // Generate a readable diff using JGit
+                final String newJson = JsonOutput.prettyPrint(JsonOutput.toJson(newTree))
+                final String baselineJson = JsonOutput.prettyPrint(JsonOutput.toJson(baselineTree))
+                
+                final String newKey = newLid.substring(LID_PROT.size())
+                final String baselineKey = baselineLid.substring(LID_PROT.size())
+                generateDiff(baselineJson, baselineKey, newJson, newKey)
+                
+                throw new AbortOperationException("Validation failed: workflow runs are not equivalent")
+            }
+        } catch (AbortOperationException e) {
+            throw e
+        } catch (IllegalArgumentException e) {
+            throw new AbortOperationException(e.message)
+        } catch (Throwable e) {
+            throw new AbortOperationException("Error validating workflow runs: ${e.message}")
+        }
+    }
+
+    /**
+     * Parse validate command arguments
+     */
+    private Map parseValidateArgs(List<String> args) {
+        String newLid = null
+        String baselineLid = null
+        List<String> ignoreFields = []
+        String outputBase = null
+
+        def iter = args.iterator()
+        while (iter.hasNext()) {
+            def arg = iter.next()
+            
+            if (arg == '--against') {
+                if (!iter.hasNext()) {
+                    throw new IllegalArgumentException("--against requires a value")
+                }
+                baselineLid = iter.next()
+            } else if (arg.startsWith('--against=')) {
+                baselineLid = arg.substring('--against='.length())
+            } else if (arg == '--ignore-fields') {
+                if (!iter.hasNext()) {
+                    throw new IllegalArgumentException("--ignore-fields requires a value")
+                }
+                ignoreFields = iter.next().split(',').toList()
+            } else if (arg.startsWith('--ignore-fields=')) {
+                ignoreFields = arg.substring('--ignore-fields='.length()).split(',').toList()
+            } else if (arg == '--output-base') {
+                if (!iter.hasNext()) {
+                    throw new IllegalArgumentException("--output-base requires a value")
+                }
+                outputBase = iter.next()
+            } else if (arg.startsWith('--output-base=')) {
+                outputBase = arg.substring('--output-base='.length())
+            } else if (!arg.startsWith('-') && !newLid) {
+                newLid = arg
+            } else if (!arg.startsWith('-')) {
+                throw new IllegalArgumentException("Unexpected argument: ${arg}")
+            }
+        }
+
+        if (!newLid) {
+            throw new IllegalArgumentException("Missing workflow run LID")
+        }
+        if (!baselineLid) {
+            throw new IllegalArgumentException("Missing --against baseline LID")
+        }
+
+        return [
+            newLid: newLid,
+            baselineLid: baselineLid,
+            ignoreFields: ignoreFields,
+            outputBase: outputBase
+        ]
     }
 }

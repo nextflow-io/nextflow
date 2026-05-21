@@ -118,6 +118,25 @@ class LauncherTest extends Specification {
     }
 
 
+    def 'should parse `lineage validate` with -against'() {
+        when:
+        def launcher = new Launcher().parseMainArgs('lineage','validate','lid://aaa','-against','lid://bbb')
+        then:
+        launcher.command instanceof CmdLineage
+        launcher.command.args == ['validate','lid://aaa']
+        launcher.command.validateAgainst == 'lid://bbb'
+    }
+
+    def 'should parse `lineage validate` with -ignore-fields and -output-base'() {
+        when:
+        def launcher = new Launcher().parseMainArgs('lineage','validate','lid://aaa','-against','lid://bbb','-ignore-fields','x,y','-output-base','/tmp/out')
+        then:
+        launcher.command instanceof CmdLineage
+        launcher.command.validateAgainst == 'lid://bbb'
+        launcher.command.validateIgnoreFields == 'x,y'
+        launcher.command.validateOutputBase == '/tmp/out'
+    }
+
     def 'should return `run` command'() {
         when:
         def launcher = new Launcher().parseMainArgs('run','xxx', '-hub', 'bitbucket', '-user','xx:yy')

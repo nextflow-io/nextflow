@@ -1,0 +1,132 @@
+#!/bin/bash
+#
+# Test: Lineage validation with resume mode
+# Verifies that resumed runs produce equivalent lineage to fresh runs
+#
+
+set -e
+
+# Get script directory and project root
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+TESTS_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
+PROJECT_ROOT="$(dirname "$TESTS_DIR")"
+
+# Use project launcher if NXF_CMD not set
+: "${NXF_CMD:=$PROJECT_ROOT/launch.sh}"
+: "${NXF_RUN:=$NXF_CMD run $TESTS_DIR/lineage-validate-resume.nf}"
+
+# Create temporary working directory
+WORK_DIR=$(mktemp -d)
+trap "rm -rf $WORK_DIR" EXIT
+cd "$WORK_DIR"
+
+# Skip if lineage is not available
+if ! "$NXF_CMD" lineage --help &>/dev/null; then
+    echo "SKIP: lineage command not available"
+    exit 0
+fi
+
+# Create temporary lineage store
+LINEAGE_STORE="$WORK_DIR/lineage-store"
+mkdir -p "$LINEAGE_STORE"
+
+LINEAGE_CONFIG="lineage { enabled = true; store { location = '$LINEAGE_STORE' } }"
+
+#
+# Test 1: Fresh run vs resumed run should be equivalent
+#
+echo "=== Test 1: Fresh run ==="
+"$NXF_RUN" -c <(echo "$LINEAGE_CONFIG") --input_value hello 2>&1 | tee run1.out
+RUN1_LID=$(grep -oE 'lid://[a-f0-9-]+' .nextflow.log | head -1)
+echo "Fresh run LID: $RUN1_LID"
+
+# Verify all steps completed
+[[ $(grep -c 'Submitted process' .nextflow.log) == 3 ]] || \
+    { echo "ERROR: Expected 3 processes submitted"; exit 1; }
+
+# Keep work directory for resume
+mv .nextflow.log run1.nextflow.log
+
+
+#
+# Test 2: Resume same run (all cached)
+#
+echo ""
+echo "=== Test 2: Resume run (all cached) ==="
+"$NXF_RUN" -c <(echo "$LINEAGE_CONFIG") --input_value hello -resume 2>&1 | tee run2.out
+RUN2_LID=$(grep -oE 'lid://[a-f0-9-]+' .nextflow.log | head -1)
+echo "Resume run LID: $RUN2_LID"
+
+# Verify all steps were cached
+[[ $(grep -c 'Cached process' .nextflow.log) == 3 ]] || \
+    { echo "ERROR: Expected 3 cached processes"; exit 1; }
+
+mv .nextflow.log run2.nextflow.log
+
+# Validate fresh vs resumed
+echo ""
+echo "--- Validating fresh vs resumed ---"
+"$NXF_CMD" lineage validate "$RUN2_LID" --against "$RUN1_LID" \
+    -c <(echo "$LINEAGE_CONFIG") 2>&1 | tee validate1.out
+
+grep -q "semantically equivalent" validate1.out || \
+    { echo "ERROR: Fresh and resumed runs should be equivalent"; exit 1; }
+
+echo "Test 1-2 passed: Fresh and resumed runs are equivalent"
+
+
+#
+# Test 3: Partial resume (simulate failure and resume)
+#
+echo ""
+echo "=== Test 3: Fresh run for partial resume test ==="
+rm -rf work
+
+"$NXF_RUN" -c <(echo "$LINEAGE_CONFIG") --input_value partial 2>&1 | tee run3.out
+RUN3_LID=$(grep -oE 'lid://[a-f0-9-]+' .nextflow.log | head -1)
+echo "Run 3 LID: $RUN3_LID"
+mv .nextflow.log run3.nextflow.log
+
+echo ""
+echo "=== Test 4: Another fresh run (should match) ==="
+rm -rf work
+
+"$NXF_RUN" -c <(echo "$LINEAGE_CONFIG") --input_value partial 2>&1 | tee run4.out
+RUN4_LID=$(grep -oE 'lid://[a-f0-9-]+' .nextflow.log | head -1)
+echo "Run 4 LID: $RUN4_LID"
+mv .nextflow.log run4.nextflow.log
+
+# Validate two fresh runs
+echo ""
+echo "--- Validating two fresh runs ---"
+"$NXF_CMD" lineage validate "$RUN4_LID" --against "$RUN3_LID" \
+    -c <(echo "$LINEAGE_CONFIG") 2>&1 | tee validate2.out
+
+grep -q "semantically equivalent" validate2.out || \
+    { echo "ERROR: Two fresh runs should be equivalent"; exit 1; }
+
+echo "Test 3-4 passed: Multiple fresh runs are equivalent"
+
+
+#
+# Test 5: Different input should fail validation even with resume
+#
+echo ""
+echo "=== Test 5: Different input detection ==="
+
+"$NXF_RUN" -c <(echo "$LINEAGE_CONFIG") --input_value different 2>&1 | tee run5.out
+RUN5_LID=$(grep -oE 'lid://[a-f0-9-]+' .nextflow.log | head -1)
+echo "Run 5 LID: $RUN5_LID"
+
+echo ""
+echo "--- Validating different input (should fail) ---"
+if "$NXF_CMD" lineage validate "$RUN5_LID" --against "$RUN3_LID" \
+    -c <(echo "$LINEAGE_CONFIG") 2>&1 | tee validate3.out; then
+    echo "ERROR: Different input should fail validation"
+    exit 1
+fi
+
+echo "Test 5 passed: Different input detected"
+
+echo ""
+echo "=== All resume tests passed ==="

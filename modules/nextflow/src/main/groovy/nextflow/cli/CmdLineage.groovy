@@ -46,6 +46,7 @@ class CmdLineage extends CmdBase implements UsageAware {
         void diff(ConfigMap config, List<String> args)
         void find(ConfigMap config, List<String> args)
         void check(ConfigMap config, List<String> args)
+        void validate(ConfigMap config, List<String> args)
     }
 
     interface SubCmd {
@@ -68,10 +69,20 @@ class CmdLineage extends CmdBase implements UsageAware {
         commands << new CmdDiff()
         commands << new CmdFind()
         commands << new CmdCheck()
+        commands << new CmdValidate()
     }
 
     @Parameter(hidden = true)
     List<String> args
+
+    @Parameter(names = ['-against'], description = 'Baseline lineage ID for the validate sub-command', hidden = true)
+    String validateAgainst
+
+    @Parameter(names = ['-ignore-fields'], description = 'Comma-separated fields to ignore in validate', hidden = true)
+    String validateIgnoreFields
+
+    @Parameter(names = ['-output-base'], description = 'Base path for output relativization in validate', hidden = true)
+    String validateOutputBase
 
     @Override
     String getName() {
@@ -97,8 +108,18 @@ class CmdLineage extends CmdBase implements UsageAware {
         this.operation = Plugins.getExtension(LinCommand)
         if( !operation )
             throw new IllegalStateException("Unable to load lineage extensions.")
-        // consume the first argument
-        getCmd(args).apply(args.drop(1))
+        // forward sub-command-level options consumed by JCommander
+        final subArgs = new ArrayList<String>(args.drop(1))
+        if( validateAgainst != null ) {
+            subArgs.add('--against'); subArgs.add(validateAgainst)
+        }
+        if( validateIgnoreFields != null ) {
+            subArgs.add('--ignore-fields'); subArgs.add(validateIgnoreFields)
+        }
+        if( validateOutputBase != null ) {
+            subArgs.add('--output-base'); subArgs.add(validateOutputBase)
+        }
+        getCmd(args).apply(subArgs)
     }
 
     /**
@@ -307,6 +328,38 @@ class CmdLineage extends CmdBase implements UsageAware {
         void usage() {
             println description
             println "Usage: nextflow $NAME $name <lid-file>"
+        }
+
+    }
+
+    class CmdValidate implements SubCmd {
+
+        @Override
+        String getName() { 'validate' }
+
+        @Override
+        String getDescription() {
+            return 'Validate that two workflow runs are semantically equivalent'
+        }
+
+        void apply(List<String> args) {
+            if (args.size() < 2) {
+                println("ERROR: Incorrect number of parameters")
+                usage()
+                return
+            }
+            operation.validate(config, args)
+        }
+
+        @Override
+        void usage() {
+            println description
+            println "Usage: nextflow $NAME $name <lid> -against <baseline-lid> [-ignore-fields field1,field2]"
+            println ""
+            println "Options:"
+            println "  -against <lid>         The baseline workflow run to compare against"
+            println "  -ignore-fields <list>  Comma-separated list of additional fields to ignore"
+            println "  -output-base <path>    Base path for relativizing output file paths"
         }
 
     }

@@ -1,0 +1,77 @@
+#!/bin/bash
+#
+# Test: Basic lineage validation
+# Verifies that two identical runs produce semantically equivalent lineage
+#
+
+set -e
+
+# Get script directory and project root
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+TESTS_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
+PROJECT_ROOT="$(dirname "$TESTS_DIR")"
+
+# Use project launcher if NXF_CMD not set
+: "${NXF_CMD:=$PROJECT_ROOT/launch.sh}"
+: "${NXF_RUN:=$NXF_CMD run $TESTS_DIR/lineage-validate-basic.nf}"
+
+# Create temporary working directory
+WORK_DIR=$(mktemp -d)
+trap "rm -rf $WORK_DIR" EXIT
+cd "$WORK_DIR"
+
+# Skip if lineage is not available
+if ! "$NXF_CMD" lineage --help &>/dev/null; then
+    echo "SKIP: lineage command not available"
+    exit 0
+fi
+
+# Create temporary lineage store
+LINEAGE_STORE="$WORK_DIR/lineage-store"
+mkdir -p "$LINEAGE_STORE"
+
+LINEAGE_CONFIG="lineage { enabled = true; store { location = '$LINEAGE_STORE' } }"
+
+#
+# First run
+#
+echo "=== First run ==="
+$NXF_RUN -c <(echo "$LINEAGE_CONFIG") --greeting Hello --name World 2>&1 | tee run1.out
+
+# Extract workflow run LID from first run
+RUN1_LID=$(grep -oE 'lid://[a-f0-9-]+' .nextflow.log | head -1)
+echo "Run 1 LID: $RUN1_LID"
+
+# Verify lineage was created
+[[ -n "$RUN1_LID" ]] || { echo "ERROR: No LID found for run 1"; exit 1; }
+
+# Clean work directory but keep lineage store
+rm -rf work .nextflow.log
+
+#
+# Second run with identical parameters
+#
+echo ""
+echo "=== Second run (identical params) ==="
+$NXF_RUN -c <(echo "$LINEAGE_CONFIG") --greeting Hello --name World 2>&1 | tee run2.out
+
+# Extract workflow run LID from second run
+RUN2_LID=$(grep -oE 'lid://[a-f0-9-]+' .nextflow.log | head -1)
+echo "Run 2 LID: $RUN2_LID"
+
+[[ -n "$RUN2_LID" ]] || { echo "ERROR: No LID found for run 2"; exit 1; }
+[[ "$RUN1_LID" != "$RUN2_LID" ]] || { echo "ERROR: LIDs should be different"; exit 1; }
+
+#
+# Validate: runs should be equivalent
+#
+echo ""
+echo "=== Validating lineage ==="
+"$NXF_CMD" lineage validate "$RUN2_LID" --against "$RUN1_LID" \
+    -c <(echo "$LINEAGE_CONFIG") 2>&1 | tee validate.out
+
+# Check validation passed
+grep -q "semantically equivalent" validate.out || { echo "ERROR: Validation should pass"; exit 1; }
+
+echo ""
+echo "=== Test passed: Basic lineage validation ==="
