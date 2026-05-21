@@ -133,6 +133,11 @@ class TaskPollingMonitor implements TaskMonitor {
 
     private boolean enableAsyncFinalizer = SysEnv.getBool('NXF_ENABLE_ASYNC_FINALIZER',true)
 
+    /**
+     * Pre-initialised to an empty manager so the monitor remains usable under
+     * Spock property-style construction (no {@link #start} called); {@link #start}
+     * replaces this with a real manager that discovers gates via PF4J.
+     */
     @PackageScope
     TaskGateManager gateManager = new TaskGateManager(null, [])
 
@@ -252,9 +257,9 @@ class TaskPollingMonitor implements TaskMonitor {
      *      by the polling monitor
      */
     protected boolean canSubmit(TaskHandler handler) {
-        gateManager.isReady(handler) \
-            && handler.canForkProcess() \
-            && handler.isReady() \
+        gateManager.isReady(handler)
+            && handler.canForkProcess()
+            && handler.isReady()
             && (capacity > 0 ? checkQueueCapacity(handler) : true)
     }
 

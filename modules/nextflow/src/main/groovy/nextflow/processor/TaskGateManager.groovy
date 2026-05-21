@@ -116,6 +116,9 @@ class TaskGateManager {
                 throw new ProcessException("Task readiness gate failed for task '${handler.task.name}'", cause ?: e)
             }
             catch( InterruptedException e ) {
+                // the polling thread itself was interrupted (e.g. session shutdown);
+                // restore the flag so subsequent blocking calls fail fast and leave the
+                // handler in futuresByHandler so eviction can clean up on the next pass
                 Thread.currentThread().interrupt()
                 return false
             }

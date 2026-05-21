@@ -30,10 +30,11 @@ import org.pf4j.ExtensionPoint
  * <p>Implementations may block freely — {@code Thread.sleep}, network calls, long polling.
  * The scheduler thread is never blocked by this call.
  *
- * <p>Implementations <b>must</b> honor {@code Thread.interrupt()} so that task eviction,
- * workflow abort, and the {@code executor.gateMaxWait} backstop can unblock {@code prepare}
- * promptly. Use interruptible primitives ({@code Thread.sleep}, blocking I/O on NIO
- * channels, {@code Future.get}) and propagate {@code InterruptedException}.
+ * <p>Implementations <b>must</b> honor {@code Thread.interrupt()} so that task eviction
+ * and workflow abort can unblock {@code prepare} promptly. Core does not enforce a
+ * wall-clock deadline — plugins own timeout policy (see the developer guide for the
+ * recommended {@code hints}-based pattern). Use interruptible primitives ({@code Thread.sleep},
+ * blocking I/O on NIO channels, {@code Future.get}) and propagate {@code InterruptedException}.
  *
  * <p>When multiple gates are registered, a task is admitted only when every gate's
  * {@code prepare} method has returned successfully. Evaluation order across gates is
