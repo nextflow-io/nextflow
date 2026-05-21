@@ -133,7 +133,7 @@ class CmdPlugin extends CmdBase {
      * @param target The target plugin and optional version, Example `nf-somePlugin@1.0.0`
      * @param cmd The command that is passed on to the plugin.
      */
-    private executeCustomPluginCmd(String target, String cmd) {
+    private void executeCustomPluginCmd(String target, String cmd) {
         // Separate ID and version
         final List<String> targetSplit = target.tokenize('@') as List<String>
         final String pluginId = targetSplit[0]
