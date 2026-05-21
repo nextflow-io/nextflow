@@ -16,6 +16,8 @@
 
 package nextflow.cli
 
+import nextflow.plugin.PluginRef
+
 import static nextflow.cli.PluginExecAware.CMD_SEP
 
 import java.nio.file.Path
@@ -135,14 +137,13 @@ class CmdPlugin extends CmdBase {
      */
     private void executeCustomPluginCmd(String target, String cmd) {
         // Separate ID and version
-        final List<String> targetSplit = target.tokenize('@') as List<String>
-        final String pluginId = targetSplit[0]
+        PluginRef pluginRef = PluginRef.parse(target)
 
         // push back the command as the first item
         Plugins.start(target)
 
         // Fetch started plugin
-        final wrapper = Plugins.manager.getPlugin(pluginId)
+        final wrapper = Plugins.manager.getPlugin(pluginRef.id)
         if( !wrapper )
             throw new AbortOperationException("Cannot find target plugin: $target")
         final plugin = wrapper.getPlugin()
