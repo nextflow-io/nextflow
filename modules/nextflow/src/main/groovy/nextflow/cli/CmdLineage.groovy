@@ -75,6 +75,15 @@ class CmdLineage extends CmdBase implements UsageAware {
     @Parameter(hidden = true)
     List<String> args
 
+    @Parameter(names = ['-against'], description = 'Baseline lineage ID for the validate sub-command', hidden = true)
+    String validateAgainst
+
+    @Parameter(names = ['-ignore-fields'], description = 'Comma-separated fields to ignore in validate', hidden = true)
+    String validateIgnoreFields
+
+    @Parameter(names = ['-output-base'], description = 'Base path for output relativization in validate', hidden = true)
+    String validateOutputBase
+
     @Override
     String getName() {
         return NAME
@@ -99,8 +108,18 @@ class CmdLineage extends CmdBase implements UsageAware {
         this.operation = Plugins.getExtension(LinCommand)
         if( !operation )
             throw new IllegalStateException("Unable to load lineage extensions.")
-        // consume the first argument
-        getCmd(args).apply(args.drop(1))
+        // forward sub-command-level options consumed by JCommander
+        final subArgs = new ArrayList<String>(args.drop(1))
+        if( validateAgainst != null ) {
+            subArgs.add('--against'); subArgs.add(validateAgainst)
+        }
+        if( validateIgnoreFields != null ) {
+            subArgs.add('--ignore-fields'); subArgs.add(validateIgnoreFields)
+        }
+        if( validateOutputBase != null ) {
+            subArgs.add('--output-base'); subArgs.add(validateOutputBase)
+        }
+        getCmd(args).apply(subArgs)
     }
 
     /**
@@ -335,12 +354,12 @@ class CmdLineage extends CmdBase implements UsageAware {
         @Override
         void usage() {
             println description
-            println "Usage: nextflow $NAME $name <lid> --against <baseline-lid> [--ignore-fields field1,field2]"
+            println "Usage: nextflow $NAME $name <lid> -against <baseline-lid> [-ignore-fields field1,field2]"
             println ""
             println "Options:"
-            println "  --against <lid>         The baseline workflow run to compare against"
-            println "  --ignore-fields <list>  Comma-separated list of additional fields to ignore"
-            println "  --output-base <path>    Base path for relativizing output file paths"
+            println "  -against <lid>         The baseline workflow run to compare against"
+            println "  -ignore-fields <list>  Comma-separated list of additional fields to ignore"
+            println "  -output-base <path>    Base path for relativizing output file paths"
         }
 
     }

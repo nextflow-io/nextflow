@@ -20,7 +20,6 @@ import java.nio.file.Files
 
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
-import spock.lang.PendingFeature
 import spock.lang.Specification
 import spock.lang.Unroll
 import spock.util.environment.RestoreSystemProperties
@@ -119,7 +118,6 @@ class LauncherTest extends Specification {
     }
 
 
-    @PendingFeature(reason = 'CmdLineage does not yet declare -against/-ignore-fields/-output-base; JCommander rejects them')
     def 'should parse `lineage validate` with -against'() {
         when:
         def launcher = new Launcher().parseMainArgs('lineage','validate','lid://aaa','-against','lid://bbb')
@@ -129,7 +127,6 @@ class LauncherTest extends Specification {
         launcher.command.validateAgainst == 'lid://bbb'
     }
 
-    @PendingFeature(reason = 'CmdLineage does not yet declare -against/-ignore-fields/-output-base; JCommander rejects them')
     def 'should parse `lineage validate` with -ignore-fields and -output-base'() {
         when:
         def launcher = new Launcher().parseMainArgs('lineage','validate','lid://aaa','-against','lid://bbb','-ignore-fields','x,y','-output-base','/tmp/out')
