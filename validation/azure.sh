@@ -47,7 +47,7 @@ $NXF_CMD -C ./azure.config run ./test-complexpaths.nf -resume
 $NXF_CMD -C ./azure.config run ./test-subdirs.nf
 
 NXF_CLOUDCACHE_PATH=az://my-data/cache \
-$NXF_CMD -C ./azure.config \
+$NXF_CMD -c ./azure.config \
     run nextflow-io/rnaseq-nf \
     -with-report \
     -with-trace $OPTS \
@@ -55,7 +55,7 @@ $NXF_CMD -C ./azure.config \
 [[ `grep -c 'Using Nextflow cache factory: nextflow.cache.CloudCacheFactory' .nextflow.log` == 1 ]] || false
 
 NXF_CLOUDCACHE_PATH=az://my-data/cache \
-$NXF_CMD -C ./azure.config \
+$NXF_CMD -c ./azure.config \
     run nextflow-io/rnaseq-nf \
     -with-report \
     -with-trace $OPTS \

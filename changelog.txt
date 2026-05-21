@@ -1,5 +1,14 @@
 NEXTFLOW CHANGE-LOG
 ===================
+26.04.1 - 11 May 2026
+- chore: update dependency ch.qos.logback:logback-classic to v1.5.32 (#7126) [7cb285539]
+- Fix module binaries on `nextflow module run` via session flag (#7087) (#7089) [9fd816891]
+- Update warning in migration docs, now that 26.04 is released (#7085) [d30e48dc7]
+- Bump nf-amazon@3.9.1
+- Bump nf-azure@1.22.3
+- Bump nf-codecommit@0.5.2
+- Bump nf-seqera@0.19.1
+
 26.04.0 - 28 Apr 2026
 - Add -user-secret and -workspace-secret flags to nextflow launch (#7040) [53045104d]
 - Error messages: Fix ANSI colours (#7078) [d158b71f6]

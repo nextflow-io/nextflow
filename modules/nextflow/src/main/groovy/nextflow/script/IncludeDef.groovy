@@ -124,7 +124,7 @@ class IncludeDef {
     Path getOwnerPath() { getMeta().getScriptPath() }
 
     /**
-     * When using the strict syntax, the included script will already
+     * When using the strict parser, the included script will already
      * have been compiled, so simply execute it to load its definitions.
      *
      * @param path    The included script path
@@ -143,7 +143,7 @@ class IncludeDef {
     }
 
     /**
-     * When not using the strict syntax, compile and execute the
+     * When using the legacy parser, compile and execute the
      * included script to load its definitions.
      *
      * @param path    The included script path
