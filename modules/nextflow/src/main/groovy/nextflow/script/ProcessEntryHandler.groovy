@@ -292,8 +292,10 @@ class ProcessEntryHandler {
         final value = namedArgs.get(name)
 
         if( value == null ) {
-            if( param instanceof FileInParam )
+            if( param instanceof FileInParam ) {
+                log.warn "Path input '--${name}' not provided, defaulting to empty list"
                 return []
+            }
             throw new IllegalArgumentException("Missing required parameter: --${name}")
         }
 

@@ -354,8 +354,7 @@ class ProcessEntryHandlerTest extends Specification {
         'file1.txt,file2.txt'                                             | [Path.of('file1.txt').toAbsolutePath(), Path.of('file2.txt').toAbsolutePath()]
     }
 
-    def 'should return empty list for missing optional path input (v1)' () {
-        // Regression test for https://github.com/nextflow-io/nextflow/issues/7161
+    def 'should return empty list for missing path input (v1)' () {
         given:
         def session = Mock(Session)
         def script = Mock(BaseScript)
@@ -372,6 +371,24 @@ class ProcessEntryHandlerTest extends Specification {
         result == []
     }
 
+    def 'should throw error for missing val input (v1)' () {
+        given:
+        def session = Mock(Session)
+        def script = Mock(BaseScript)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> [ 'hello' ]
+        }
+        def handler = new ProcessEntryHandler(script, session, meta)
+        def valParam = Mock(ValueInParam) { getName() >> 'id' }
+
+        when: 'a val input is absent'
+        handler.getValueForInputV1(valParam, [:], [:])
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == 'Missing required parameter: --id'
+    }
+
     def 'should return null for missing optional input (v2)' () {
         // Regression test for https://github.com/nextflow-io/nextflow/issues/7161
         given:
@@ -381,11 +398,7 @@ class ProcessEntryHandlerTest extends Specification {
             getLocalProcessNames() >> [ 'hello' ]
         }
         def handler = new ProcessEntryHandler(script, session, meta)
-        def param = Mock(ProcessInput) {
-            getName() >> 'gzi'
-            getType() >> Path
-            isOptional() >> true
-        }
+        def param = new ProcessInput('gzi', Path, true)
 
         when: 'a v2 optional path input is not provided'
         def result = handler.getValueForInputV2(param, [:])
@@ -394,7 +407,7 @@ class ProcessEntryHandlerTest extends Specification {
         result == null
     }
 
-    def 'should throw for missing required input (v2)' () {
+    def 'should throw error for missing required input (v2)' () {
         given:
         def session = Mock(Session)
         def script = Mock(BaseScript)
@@ -402,17 +415,13 @@ class ProcessEntryHandlerTest extends Specification {
             getLocalProcessNames() >> [ 'hello' ]
         }
         def handler = new ProcessEntryHandler(script, session, meta)
-        def param = Mock(ProcessInput) {
-            getName() >> 'reads'
-            getType() >> Path
-            isOptional() >> false
-        }
+        def param = new ProcessInput('reads', Path, false)
 
         when:
         handler.getValueForInputV2(param, [:])
 
         then:
         def e = thrown(IllegalArgumentException)
-        e.message.contains('Missing required parameter: --reads')
+        e.message == 'Missing required parameter: --reads'
     }
 }
