@@ -372,7 +372,7 @@ class ProcessEntryHandlerTest extends Specification {
         result == []
     }
 
-    def 'should return empty list for missing optional input (v2)' () {
+    def 'should return null for missing optional input (v2)' () {
         // Regression test for https://github.com/nextflow-io/nextflow/issues/7161
         given:
         def session = Mock(Session)
