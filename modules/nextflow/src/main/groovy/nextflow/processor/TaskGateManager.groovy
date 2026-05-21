@@ -72,11 +72,12 @@ class TaskGateManager {
     }
 
     /**
-     * Submit each registered gate's {@code prepare} call for the given handler. The
-     * caller is responsible for serializing concurrent calls for the same handler
-     * (in {@code TaskPollingMonitor} this happens under {@code pendingLock}).
+     * Submit each registered gate's {@code prepare} call to the managed executor
+     * for the given handler. The caller is responsible for serializing concurrent
+     * calls for the same handler (in {@code TaskPollingMonitor} this happens under
+     * {@code pendingLock}).
      */
-    void submit(TaskHandler handler) {
+    void prepare(TaskHandler handler) {
         if( !gates ) return
 
         final futures = new ArrayList<Future<?>>(gates.size())

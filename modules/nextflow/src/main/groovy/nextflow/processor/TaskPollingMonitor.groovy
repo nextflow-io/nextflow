@@ -317,7 +317,7 @@ class TaskPollingMonitor implements TaskMonitor {
         pendingLock.lock()
         try{
             pendingQueue << handler
-            gateManager.submit(handler)
+            gateManager.prepare(handler)
             taskAvail.signal()  // signal that a new task is available for execution
             notifyTaskPending(handler)
             log.trace "Scheduled task > $handler"

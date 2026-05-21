@@ -33,7 +33,7 @@ class TaskGateManagerTest extends Specification {
         def handler = mockHandler()
 
         when:
-        manager.submit(handler)
+        manager.prepare(handler)
 
         then:
         manager.isReady(handler)            // no gates => always ready
@@ -42,7 +42,7 @@ class TaskGateManagerTest extends Specification {
         noExceptionThrown()
     }
 
-    def 'should submit gate.prepare on submit'() {
+    def 'should submit gate.prepare to the executor on prepare'() {
         given:
         def latch = new CountDownLatch(1)
         def gate = Mock(TaskReadinessGate) {
@@ -52,7 +52,7 @@ class TaskGateManagerTest extends Specification {
         def handler = mockHandler()
 
         when:
-        manager.submit(handler)
+        manager.prepare(handler)
 
         then:
         latch.await(5, TimeUnit.SECONDS)
@@ -69,7 +69,7 @@ class TaskGateManagerTest extends Specification {
         def handler = mockHandler()
 
         when:
-        manager.submit(handler)
+        manager.prepare(handler)
         def busy = manager.isReady(handler)
         block.countDown()
         awaitFutureCompletion(manager, handler)
@@ -93,7 +93,7 @@ class TaskGateManagerTest extends Specification {
         def handler = mockHandler()
 
         when:
-        manager.submit(handler)
+        manager.prepare(handler)
         awaitFutureCompletion(manager, handler)
         manager.isReady(handler)
 
@@ -112,7 +112,7 @@ class TaskGateManagerTest extends Specification {
         def handler = mockHandler()
 
         when:
-        manager.submit(handler)
+        manager.prepare(handler)
         awaitFutureCompletion(manager, handler)
         manager.isReady(handler)
 
@@ -132,7 +132,7 @@ class TaskGateManagerTest extends Specification {
         def handler = mockHandler()
 
         when:
-        manager.submit(handler)
+        manager.prepare(handler)
         awaitFutureCompletion(manager, handler)
         manager.isReady(handler)
 
@@ -153,7 +153,7 @@ class TaskGateManagerTest extends Specification {
         def handler = mockHandler()
 
         when:
-        manager.submit(handler)
+        manager.prepare(handler)
         awaitFutureCompletion(manager, handler)
         manager.isReady(handler)
 
@@ -175,7 +175,7 @@ class TaskGateManagerTest extends Specification {
         def handler = mockHandler()
 
         when:
-        manager.submit(handler)
+        manager.prepare(handler)
         manager.futuresFor(handler).each { it.cancel(true) }
         awaitFutureCompletion(manager, handler)
         manager.isReady(handler)
@@ -209,7 +209,7 @@ class TaskGateManagerTest extends Specification {
         def handler = mockHandler()
 
         when:
-        manager.submit(handler)
+        manager.prepare(handler)
         peerStarted.await(5, TimeUnit.SECONDS)
         try { manager.futuresFor(handler)[0].get(5, TimeUnit.SECONDS) }
         catch( ExecutionException ignored ) { /* expected — failing gate threw */ }
@@ -230,7 +230,7 @@ class TaskGateManagerTest extends Specification {
         def handler = mockHandler()
 
         when:
-        manager.submit(handler)
+        manager.prepare(handler)
         Thread.sleep(50)
         def neither = manager.isReady(handler)
         latch1.countDown()
@@ -262,7 +262,7 @@ class TaskGateManagerTest extends Specification {
         def handler = mockHandler()
 
         when:
-        manager.submit(handler)
+        manager.prepare(handler)
         started.await(5, TimeUnit.SECONDS)
         manager.evict(handler)
 
