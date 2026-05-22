@@ -31,7 +31,8 @@ Snakemake's `script:` directive demonstrates a better shape: external scripts ar
 - Avoid template-time string rewriting for normal script context injection.
 - Provide a consistent runtime namespace across Bash, Python, R, Julia, Rust, and future supported languages.
 - Generate useful type stubs from the process signature so agents and IDEs can see typed inputs, outputs, params, and resources.
-- Stage scripts through the same module/workflow resource mechanism as module `bin/` assets.
+- Make task-local script staging an explicit architectural decision rather than pretending it already exists as normal input staging.
+- Keep native scripts and module/workflow `bin/` assets in one coherent runtime resource model, while preserving the distinction between declared data inputs and implicit code assets.
 - Compose with `nextflow module run` so agents and developers can run a module directly, get fast feedback, and iterate on external script assets without writing a temporary wrapper workflow.
 - Keep existing inline scripts and `template:` behavior compatible.
 
@@ -72,6 +73,7 @@ Snakemake's `script:` directive demonstrates a better shape: external scripts ar
 - Good, because script context can be typed and generated per process.
 - Good, because it gives module authors and agents a clear default for non-trivial logic.
 - Bad, because it requires runtime injection libraries/stubs and task sidecar metadata.
+- Bad, because it introduces an implicit task code-asset staging path, which Nextflow has historically avoided for anything other than declared process inputs.
 - Bad, because language-specific details must be designed carefully.
 
 ## Solution or decision outcome
@@ -200,18 +202,37 @@ Jupyter notebooks should be an explicit future goal, not part of the initial nat
 - preserve executed notebooks or rendered reports as declared outputs;
 - keep notebooks small and module-local so they remain reviewable and reproducible.
 
-### ResourceBundle integration
+### Explicit code-asset staging, not process input staging
 
-Native scripts should be staged through the same ResourceBundle mechanism proposed for module `bin/` and workflow assets:
+Nextflow currently keeps task input staging deliberately narrow. The normal stage-in script is generated from `TaskBean.inputFiles`, which is populated from declared process file inputs. Other mechanisms that can look like implicit inputs do not actually add entries to that map:
+
+| Mechanism | Current behavior |
+|-----------|------------------|
+| `template()` | Resolves and reads a template path, then embeds rendered content into `.command.sh`; the template file is not staged as an input. |
+| `conda` | Activates an existing environment path from the wrapper; the environment is not staged through task inputs. |
+| workflow/module `bin` | Manipulates `PATH` or executor-specific mounts; it does not enter `TaskBean.inputFiles`. |
+| `stageInMode` / `stageOutMode` | Controls how declared inputs and outputs move; it does not decide what extra code assets stage. |
+
+Native external scripts would therefore be a new class of implicit task code asset. That is acceptable only if it is designed explicitly rather than smuggled through declared process inputs. The implementation should preserve a clear boundary:
+
+- **declared inputs** remain user data and continue to populate `inputFiles`;
+- **runtime code assets** include native scripts, generated language shims, type stubs, sidecars, and possibly module/workflow `bin` entries;
+- executors can stage or mount code assets consistently without making them appear as user-declared inputs.
+
+This weakens the argument that native scripts or module bins are a small plumbing extension, but it strengthens the product argument: if Nextflow wants module-local scripts and bins to work predictably across local, cloud, Fusion, and Kubernetes execution, it needs a first-class code-asset model.
+
+### Resource bundle integration
+
+Native scripts should be staged through an explicit ResourceBundle-backed code-asset mechanism shared with module `bin/` and workflow assets:
 
 - workflow scripts live in `scripts/` next to `bin/`;
 - module scripts live inside the module directory, for example `modules/nf-core/bwa-align/scripts/sort_bam.py`;
 - script-relative includes are resolvable from the script body through `scriptDir` or normal working-directory conventions;
 - both local and registry-installed modules stage script assets consistently.
 
-This makes external scripts a first-class module asset rather than an ad hoc path reference.
+This makes external scripts a first-class module asset rather than an ad hoc path reference, while avoiding the false claim that Nextflow already has generalized implicit input staging.
 
-This is also the missing counterpart to module `bin/` support. `bin/` is useful for executable helper tools, but it does not give agents or maintainers a structured way to move process-specific logic out of heredocs while preserving typed process context. Native external scripts should cover that gap: helpers can remain in `bin/`, while task logic that depends on `input`, `output`, `params`, and resources can live in `scripts/` with an explicit runtime namespace.
+This is also the missing counterpart to module `bin/` support. `bin/` is useful for executable helper tools, but it does not give agents or maintainers a structured way to move process-specific logic out of heredocs while preserving typed process context. Native external scripts should cover that gap: helpers can remain in `bin`, while task logic that depends on `input`, `output`, `params`, and resources can live in `scripts/` with an explicit runtime namespace.
 
 ### Agent feedback loop with `nextflow module run`
 

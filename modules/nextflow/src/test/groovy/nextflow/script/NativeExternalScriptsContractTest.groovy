@@ -104,6 +104,20 @@ class NativeExternalScriptsContractTest extends Specification {
 
     @PendingFeature
     @See('https://github.com/nextflow-io/nextflow/blob/master/adr/20260522-native-external-scripts.md')
+    def 'native external scripts are staged as code assets not declared input files'() {
+        expect:
+        false
+    }
+
+    @PendingFeature
+    @See('https://github.com/nextflow-io/nextflow/blob/master/adr/20260522-native-external-scripts.md')
+    def 'task inputFiles remains limited to declared process data inputs'() {
+        expect:
+        false
+    }
+
+    @PendingFeature
+    @See('https://github.com/nextflow-io/nextflow/blob/master/adr/20260522-native-external-scripts.md')
     def 'module bin helpers and native scripts are staged as one coherent runtime bundle'() {
         expect:
         false
