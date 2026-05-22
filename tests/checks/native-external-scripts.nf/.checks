@@ -1,0 +1,9 @@
+set -euo pipefail
+
+# Native external scripts are an executable contract for
+# adr/20260522-native-external-scripts.md. The test is listed in .IGNORE until
+# the proposed script-file syntax and runtime context injection are implemented.
+$NXF_RUN | tee .stdout
+
+grep -q 'language=bash' .stdout
+grep -q $'native\trecords' .stdout
