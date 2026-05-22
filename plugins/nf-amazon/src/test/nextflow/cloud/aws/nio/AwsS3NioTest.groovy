@@ -448,6 +448,8 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         then:
         thrown(UnsupportedOperationException)
 
+        cleanup:
+        deleteBucket(bucketName)
     }
 
     @Ignore // FIXME
