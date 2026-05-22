@@ -35,6 +35,10 @@ rewriting: external Bash, Python, R, Julia, and related scripts should be staged
 as real native-language files, while Nextflow injects task context through
 sidecars and language-specific runtime namespaces.
 
+The contract is agent-facing as well as human-facing: module-local scripts must
+be easy to inspect, edit, lint, and execute through a fast Nextflow feedback
+loop instead of forcing agents back into heredocs or preprocessed templates.
+
 This contract is intentionally pending. Each feature method names one design
 promise from the ADR so implementation work can replace the stub with a real
 assertion and remove @PendingFeature when the behavior lands.
@@ -94,6 +98,27 @@ class NativeExternalScriptsContractTest extends Specification {
     @PendingFeature
     @See('https://github.com/nextflow-io/nextflow/blob/master/adr/20260522-native-external-scripts.md')
     def 'native external scripts are staged through module and workflow resource bundles'() {
+        expect:
+        false
+    }
+
+    @PendingFeature
+    @See('https://github.com/nextflow-io/nextflow/blob/master/adr/20260522-native-external-scripts.md')
+    def 'module bin helpers and native scripts are staged as one coherent runtime bundle'() {
+        expect:
+        false
+    }
+
+    @PendingFeature
+    @See('https://github.com/nextflow-io/nextflow/blob/master/adr/20260522-native-external-scripts.md')
+    def 'nextflow module run provides a fast feedback loop for module-local script changes'() {
+        expect:
+        false
+    }
+
+    @PendingFeature
+    @See('https://github.com/nextflow-io/nextflow/blob/master/adr/20260522-native-external-scripts.md')
+    def 'script failures report the original external script path and line number'() {
         expect:
         false
     }

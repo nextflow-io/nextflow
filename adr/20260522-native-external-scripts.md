@@ -7,7 +7,7 @@
 
 ## Summary
 
-Introduce a native-language `script:` execution mode for Nextflow processes where external Bash, Python, R, Julia, and related scripts are staged unchanged and receive task context through a typed runtime namespace, instead of being preprocessed as string templates.
+Introduce a native-language `script:` execution mode for Nextflow processes where external Bash, Python, R, Julia, and related scripts are staged unchanged and receive task context through a typed runtime namespace, instead of being preprocessed as string templates. The feature should be designed as much for coding agents as for humans: agents should be able to inspect, edit, lint, and execute the same files that will run inside a Nextflow task.
 
 ## Problem Statement
 
@@ -20,6 +20,8 @@ This creates recurring pain for both humans and coding agents:
 - large scripts are pushed back into triple-quoted process bodies because externalizing them loses tooling confidence;
 - module authors have no clean, standard place for non-trivial scripts that are staged with the module and invoked with typed process inputs.
 
+Agents can sometimes generate `template:` files quickly because templates are just text, but that is not the same as a maintainable source model. Template expansion hides the true runtime program from review, breaks language-native feedback loops, and makes it harder for humans to audit or reason about agent-authored changes. Native external scripts should make the agent-friendly path also be the human-readable path.
+
 Snakemake's `script:` directive demonstrates a better shape: external scripts are real native-language files, and the workflow runtime injects a `snakemake` object or language-specific variables at execution time. Nextflow should borrow this pattern and improve it with Nextflow's typed process model.
 
 ## Goals or Decision Drivers
@@ -30,6 +32,7 @@ Snakemake's `script:` directive demonstrates a better shape: external scripts ar
 - Provide a consistent runtime namespace across Bash, Python, R, Julia, Rust, and future supported languages.
 - Generate useful type stubs from the process signature so agents and IDEs can see typed inputs, outputs, params, and resources.
 - Stage scripts through the same module/workflow resource mechanism as module `bin/` assets.
+- Compose with `nextflow module run` so agents and developers can run a module directly, get fast feedback, and iterate on external script assets without writing a temporary wrapper workflow.
 - Keep existing inline scripts and `template:` behavior compatible.
 
 ## Non-goals
@@ -208,6 +211,25 @@ Native scripts should be staged through the same ResourceBundle mechanism propos
 
 This makes external scripts a first-class module asset rather than an ad hoc path reference.
 
+This is also the missing counterpart to module `bin/` support. `bin/` is useful for executable helper tools, but it does not give agents or maintainers a structured way to move process-specific logic out of heredocs while preserving typed process context. Native external scripts should cover that gap: helpers can remain in `bin/`, while task logic that depends on `input`, `output`, `params`, and resources can live in `scripts/` with an explicit runtime namespace.
+
+### Agent feedback loop with `nextflow module run`
+
+The module system ADR already proposes `nextflow module run scope/name` as a direct execution path for registry or local modules. Native external scripts should be designed to make that command a high-quality REPL-like feedback loop for agents and humans:
+
+1. inspect a module's `main.nf`, `meta.yml`, `scripts/`, and `bin/` assets;
+2. edit a native Bash/Python/R script using language-native tools;
+3. run the module directly with representative inputs, for example `nextflow module run nf-core/bwa-align --reads reads.fq --reference genome.fa`;
+4. inspect the task work directory, sidecar context, script outputs, and logs;
+5. iterate without creating a throwaway wrapper workflow.
+
+This should influence the implementation details:
+
+- generated sidecars should be easy to find and read in the task work directory;
+- errors should point back to the original script path and line number, not only to `.command.sh`;
+- generated type stubs or context schemas should be available before task execution where possible;
+- module-local `scripts/` and `bin/` assets should be staged consistently so an agent can reason about the complete runtime bundle.
+
 ### Relationship to `template:`
 
 Native external scripts are a strict replacement for most uses of `template:` but do not need to break compatibility.
@@ -225,6 +247,7 @@ This feature gives recommendation systems and coding agents a positive default:
 - move non-trivial process logic into native external scripts;
 - lint and test those scripts directly;
 - rely on generated stubs for typed I/O and autocomplete;
+- use `nextflow module run` as the fast execution loop for module-local script changes;
 - avoid heredoc/template escaping hazards.
 
 That recommendation is more actionable than merely warning against large inline process bodies.

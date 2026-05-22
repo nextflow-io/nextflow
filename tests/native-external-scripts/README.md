@@ -10,3 +10,9 @@ The important contract is the file layout and source shape:
 - `scripts/bash_sort.sh` is valid Bash as written and expects `nextflow_*` associative arrays.
 - `scripts/python_summary.py` is valid Python as written and imports `nextflow.script.nextflow`.
 - `scripts/r_summary.R` is valid R as written and expects an injected `nextflow` object.
+
+The fixture is also intentionally agent-friendly. An agent should be able to
+inspect this directory, edit one native script, run the module or fixture with
+representative inputs, and use the generated sidecar context plus normal
+language tooling as its feedback loop. In a module registry flow, the same shape
+should work through `nextflow module run` without creating a wrapper workflow.
