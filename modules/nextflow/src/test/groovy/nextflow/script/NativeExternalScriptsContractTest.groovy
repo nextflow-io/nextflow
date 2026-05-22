@@ -86,6 +86,13 @@ class NativeExternalScriptsContractTest extends Specification {
 
     @PendingFeature
     @See('https://github.com/nextflow-io/nextflow/blob/master/adr/20260522-native-external-scripts.md')
+    def 'R scripts receive an idiomatic nextflow context object backed by the task sidecar'() {
+        expect:
+        false
+    }
+
+    @PendingFeature
+    @See('https://github.com/nextflow-io/nextflow/blob/master/adr/20260522-native-external-scripts.md')
     def 'native external scripts are staged through module and workflow resource bundles'() {
         expect:
         false

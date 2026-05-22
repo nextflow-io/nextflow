@@ -186,7 +186,7 @@ R Markdown (`.Rmd`) can be supported as an extension of the R runtime once the R
 
 Rust should be listed as a future supported language. Snakemake executes Rust scripts via `rust-script` and requires `rust-script` plus OpenSSL and a C compiler toolchain in the rule environment; it then generates a typed Rust `snakemake` instance from JSON using `json_typegen`. Nextflow can follow the same broad model later: write the canonical task context sidecar, generate a typed Rust `Nextflow` struct from the process context, and run a valid `rust-script` source file unchanged when `rust-script` is available in the task environment.
 
-The first implementation can prioritize Bash and Python, then add R, Julia, Rust, and R Markdown once the sidecar schema is stable.
+The first implementation should prioritize Bash, Python, and R. Julia, Rust, R Markdown, and notebooks can be adopted later once the sidecar schema is stable.
 
 ### Future notebook integration
 
