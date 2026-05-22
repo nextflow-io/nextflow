@@ -105,6 +105,27 @@ class NativeExternalScriptsContractTest extends Specification {
         false
     }
 
+    @PendingFeature
+    @See('https://github.com/nextflow-io/nextflow/blob/master/adr/20260522-native-external-scripts.md')
+    def 'Rust scripts can be supported later through rust-script and generated typed context structs'() {
+        expect:
+        false
+    }
+
+    @PendingFeature
+    @See('https://github.com/nextflow-io/nextflow/blob/master/adr/20260522-native-external-scripts.md')
+    def 'R Markdown documents can be supported later as report-oriented R script assets'() {
+        expect:
+        false
+    }
+
+    @PendingFeature
+    @See('https://github.com/nextflow-io/nextflow/blob/master/adr/20260522-native-external-scripts.md')
+    def 'Jupyter notebooks can be supported later through the same sidecar context contract'() {
+        expect:
+        false
+    }
+
     @Unroll
     @PendingFeature
     @See('https://github.com/nextflow-io/nextflow/blob/master/adr/20260522-native-external-scripts.md')
@@ -118,5 +139,6 @@ class NativeExternalScriptsContractTest extends Specification {
         'Python' | ['input', 'output', 'params', 'resources', 'cpus', 'attempt']
         'R'      | ['input', 'output', 'params', 'resources', 'cpus', 'attempt']
         'Julia'  | ['input', 'output', 'params', 'resources', 'cpus', 'attempt']
+        'Rust'   | ['input', 'output', 'params', 'resources', 'cpus', 'attempt']
     }
 }

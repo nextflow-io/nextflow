@@ -27,7 +27,7 @@ Snakemake's `script:` directive demonstrates a better shape: external scripts ar
 - Keep external script source files valid in their native language before, during, and after execution.
 - Preserve IDE, linter, type checker, formatter, shellcheck, debugger, and unit-test workflows.
 - Avoid template-time string rewriting for normal script context injection.
-- Provide a consistent runtime namespace across Bash, Python, R, Julia, and future supported languages.
+- Provide a consistent runtime namespace across Bash, Python, R, Julia, Rust, and future supported languages.
 - Generate useful type stubs from the process signature so agents and IDEs can see typed inputs, outputs, params, and resources.
 - Stage scripts through the same module/workflow resource mechanism as module `bin/` assets.
 - Keep existing inline scripts and `template:` behavior compatible.
@@ -120,7 +120,7 @@ The exact DSL spelling is open for design. If `script:` cannot be overloaded wit
 
 Snakemake external scripts are regular files referenced from a rule. Its documentation describes access to a runtime `snakemake` object with input, output, params, wildcards, log, threads, resources, and config. Python scripts access values such as `snakemake.input[0]`; R scripts use an S4-style object; Bash scripts receive associative arrays such as `snakemake_input`, `snakemake_output`, `snakemake_params`, and `snakemake[threads]`.
 
-The key design point is that the source file remains native-language source. Snakemake's own tests include real `test.py`, `test.R`, `test.sh`, and Julia/Rmd scripts under `tests/test_script/scripts`, exercising the runtime-injected namespace rather than template expansion.
+The key design point is that the source file remains native-language source. Snakemake's own tests include real `test.py`, `test.R`, `test.sh`, and Julia/Rmd scripts under `tests/test_script/scripts`, exercising the runtime-injected namespace rather than template expansion. Snakemake also supports Rust scripts through `rust-script` and can expose a generated Rust `snakemake` instance from JSON task context, which is a useful precedent for typed compiled-language support.
 
 Nextflow should adopt that separation of concerns:
 
@@ -175,14 +175,27 @@ nextflow.params["prefix"]
 
 A generated `.pyi` file can specialize the namespace for each process. If the process declares `path reads`, the stub can expose `nextflow.input["reads"]` as `pathlib.Path` or a list of `Path` when cardinality is known. `val` inputs can be typed from the DSL compiler where possible and fall back to `Any` where not.
 
-### R and Julia API
+### R, R Markdown, Julia, and Rust API
 
 R and Julia should expose idiomatic objects while preserving the same conceptual fields:
 
 - R: `nextflow@input[["reads"]]`, `nextflow@output[[1]]`, or a simpler list-like object if preferred;
 - Julia: `nextflow.input["reads"]`, `nextflow.output[1]`, `nextflow.cpus`.
 
-The first implementation can prioritize Bash and Python, then add R and Julia once the sidecar schema is stable.
+R Markdown (`.Rmd`) can be supported as an extension of the R runtime once the R context object is stable. The notebook/report use case is valuable, but it should not block the core external-script contract.
+
+Rust should be listed as a future supported language. Snakemake executes Rust scripts via `rust-script` and requires `rust-script` plus OpenSSL and a C compiler toolchain in the rule environment; it then generates a typed Rust `snakemake` instance from JSON using `json_typegen`. Nextflow can follow the same broad model later: write the canonical task context sidecar, generate a typed Rust `Nextflow` struct from the process context, and run a valid `rust-script` source file unchanged when `rust-script` is available in the task environment.
+
+The first implementation can prioritize Bash and Python, then add R, Julia, Rust, and R Markdown once the sidecar schema is stable.
+
+### Future notebook integration
+
+Jupyter notebooks should be an explicit future goal, not part of the initial native external script implementation. Snakemake's notebook integration is aimed at combining a modular workflow definition with small, focused notebooks for exploration and plotting rather than large monolithic notebooks. Nextflow can adopt the same product direction once the sidecar schema and Python runtime are mature:
+
+- execute `.ipynb` assets as task scripts without rewriting notebook source;
+- inject `nextflow` context into the notebook kernel through the same sidecar contract;
+- preserve executed notebooks or rendered reports as declared outputs;
+- keep notebooks small and module-local so they remain reviewable and reproducible.
 
 ### ResourceBundle integration
 
