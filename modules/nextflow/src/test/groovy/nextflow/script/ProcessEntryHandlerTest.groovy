@@ -19,6 +19,7 @@ package nextflow.script
 import java.nio.file.Files
 import java.nio.file.Path
 import nextflow.Session
+import nextflow.config.ConfigMap
 import nextflow.script.params.FileInParam
 import nextflow.script.params.InputsList
 import nextflow.script.params.TupleInParam
@@ -36,6 +37,11 @@ import spock.lang.Specification
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ProcessEntryHandlerTest extends Specification {
+
+    static class Sample implements Record {
+        String id
+        String text
+    }
 
     def 'should parse complex parameters with dot notation' () {
         given:
@@ -287,6 +293,61 @@ class ProcessEntryHandlerTest extends Specification {
         args[0] instanceof RecordMap
         args[0].id == 'abc'
         args[0].greeting == 'hello'
+    }
+
+    def 'should convert dot-notation parameters to named record input in typed process' () {
+        given: 'a module script with a process with a single custom record typed input named `sample`'
+        def session = Mock(Session)
+        def script = Mock(BaseScript)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> ['RECORDS']
+        }
+        def inputsDef = new ProcessInputsDef()
+        inputsDef.addParam('sample', Sample, false)
+        def processConfig = Mock(ProcessConfigV2) {
+            getInputs() >> inputsDef
+        }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> processConfig
+        }
+        def handler = new ProcessEntryHandler(script, session, meta)
+
+        when:
+        def args = handler.getProcessArguments(processDef, ['sample.id': 'a', 'sample.text': 'hello'])
+
+        then: 'the nested map is converted into a Record of the declared type'
+        args.size() == 1
+        args[0] instanceof Record
+        args[0].id == 'a'
+        args[0].text == 'hello'
+    }
+
+    def 'should convert ConfigMap parameter to named record input in typed process' () {
+        given: 'a module script with a process with a single custom record typed input named `sample`'
+        def session = Mock(Session)
+        def script = Mock(BaseScript)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> ['RECORDS']
+        }
+        def inputsDef = new ProcessInputsDef()
+        inputsDef.addParam('sample', Sample, false)
+        def processConfig = Mock(ProcessConfigV2) {
+            getInputs() >> inputsDef
+        }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> processConfig
+        }
+        def handler = new ProcessEntryHandler(script, session, meta)
+
+        when:
+        def params = ['sample': new ConfigMap([id: 'a', text: 'hello'])]
+        def args = handler.getProcessArguments(processDef, params)
+
+        then: 'the ConfigMap value is converted into a Record of the declared type'
+        args.size() == 1
+        args[0] instanceof Record
+        args[0].id == 'a'
+        args[0].text == 'hello'
     }
 
     def 'should convert string parameter to type declared in module spec' () {
