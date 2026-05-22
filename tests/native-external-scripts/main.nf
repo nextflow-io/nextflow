@@ -4,11 +4,11 @@
  * Native external scripts contract fixture.
  *
  * This file intentionally uses the proposed ADR syntax from
- * adr/20260522-native-external-scripts.md. It is listed in
- * tests/checks/.IGNORE until native external scripts are implemented.
+ * adr/20260522-native-external-scripts.md. It is not part of the normal
+ * tests/checks sweep until native external scripts are implemented.
  */
 
-params.reads = "$baseDir/data/sample.fa"
+params.reads = "$baseDir/../data/sample.fa"
 params.prefix = 'native'
 
 process bash_sort {
@@ -22,7 +22,7 @@ process bash_sort {
     path 'bash.context.txt', emit: context
 
     script:
-    file 'scripts/native-external/bash_sort.sh'
+    file 'scripts/bash_sort.sh'
 }
 
 process python_summary {
@@ -35,7 +35,7 @@ process python_summary {
     path 'python.context.json', emit: context
 
     script:
-    file 'scripts/native-external/python_summary.py'
+    file 'scripts/python_summary.py'
 }
 
 process r_summary {
@@ -48,7 +48,7 @@ process r_summary {
     path 'r.context.txt', emit: context
 
     script:
-    file 'scripts/native-external/r_summary.R'
+    file 'scripts/r_summary.R'
 }
 
 workflow {
