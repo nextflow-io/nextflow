@@ -50,8 +50,8 @@ dependencies {
     api "org.slf4j:jcl-over-slf4j:2.0.17"
     api "org.slf4j:jul-to-slf4j:2.0.17"
     api "org.slf4j:log4j-over-slf4j:2.0.17"
-    api "ch.qos.logback:logback-classic:1.5.26"
-    api "ch.qos.logback:logback-core:1.5.26"
+    api "ch.qos.logback:logback-classic:1.5.32"
+    api "ch.qos.logback:logback-core:1.5.32"
     api "org.codehaus.gpars:gpars:1.2.1"
     api("ch.artecat.grengine:grengine:3.0.2") { exclude group: 'org.codehaus.groovy' }
     api "org.apache.commons:commons-lang3:3.18.0"
@@ -73,6 +73,7 @@ dependencies {
     api 'org.apache.commons:commons-compress:1.27.1'  // For tar.gz extraction
     api 'io.seqera:npr-api:0.22.0'
     api 'io.seqera:npr-client:0.22.0'
+    api 'com.networknt:json-schema-validator:1.5.6'
 
     testImplementation 'org.subethamail:subethasmtp:3.1.7'
     testImplementation (project(':nf-lineage'))

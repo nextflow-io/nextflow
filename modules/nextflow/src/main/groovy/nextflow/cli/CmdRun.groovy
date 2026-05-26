@@ -414,6 +414,7 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.session.agentLog = SysEnv.isAgentMode()
         runner.session.debug = launcher.options.remoteDebug
         runner.session.disableJobsCancellation = getDisableJobsCancellation()
+        runner.session.setModuleRun(isModuleRun())
 
         final isTowerEnabled = config.navigate('tower.enabled') as Boolean
         final isDataEnabled = config.navigate("lineage.enabled") as Boolean
@@ -490,6 +491,12 @@ class CmdRun extends CmdBase implements HubOptions {
             : scriptFile.getScriptId()?.substring(0,10)
         printLaunchInfo(repo, head, revision)
     }
+
+    /**
+     * @return {@code true} when the entry script is being launched directly as a
+     * module via `nextflow module run`. Overridden by {@link nextflow.cli.module.CmdModuleRun}.
+     */
+    protected boolean isModuleRun() { false }
 
     static void detectModuleBinaryFeature(ConfigMap config) {
         final moduleBinaries = config.navigate('nextflow.enable.moduleBinaries', false)
