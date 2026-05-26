@@ -49,6 +49,13 @@ class ClientConfig {
 
     String token
 
+    /**
+     * Filesystem path of the token, when the token was loaded from a file.
+     * Used to re-read the token after expiry — kubelet rotates projected
+     * service-account tokens in place by overwriting the mounted file.
+     */
+    Path tokenPath
+
     byte[] sslCert
 
     byte[] clientCert
@@ -108,8 +115,10 @@ class ClientConfig {
 
         if( opts.token )
             result.token = opts.token
-        else if( opts.tokenFile )
-            result.token = Paths.get(opts.tokenFile.toString()).getText('UTF-8')
+        else if( opts.tokenFile ) {
+            result.tokenPath = Paths.get(opts.tokenFile.toString())
+            result.token = result.tokenPath.getText('UTF-8')
+        }
 
         result.namespace = namespace ?: opts.namespace ?: 'default'
 
@@ -143,7 +152,8 @@ class ClientConfig {
             result.token = user.token
 
         else if( user.tokenFile ) {
-            result.token = Paths.get(user.tokenFile.toString()).getText('UTF-8')
+            result.tokenPath = Paths.get(user.tokenFile.toString())
+            result.token = result.tokenPath.getText('UTF-8')
         }
 
         if( user."client-certificate" )

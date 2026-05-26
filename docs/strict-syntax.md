@@ -2,31 +2,33 @@
 
 # Preparing for strict syntax
 
-This page explains how to update Nextflow scripts and config files to adhere to the {ref}`Nextflow language specification <syntax-page>`, also known as the _strict syntax_.
+This page explains how to update Nextflow scripts and config files to adhere to the {ref}`Nextflow language specification <syntax-page>`, which is enforced by the _strict syntax parser_.
 
 :::{note}
 If you are still using DSL1, see {ref}`dsl1-page` to learn how to migrate your Nextflow pipelines to DSL2 before consulting this guide.
 :::
 
-:::{versionadded} 25.04.0
-To enable strict syntax, set the `NXF_SYNTAX_PARSER` environment variable to `v2`:
+## Overview
+
+The strict syntax parser is a strict implementation of DSL2. While the legacy DSL2 parser allows any Groovy syntax, the strict parser allows only a subset of Groovy syntax for Nextflow scripts and config files. It is used by the language server and `nextflow lint` to provide more specific error messages when checking Nextflow code.
+
+In Nextflow 25.04 and 25.10, the strict parser is disabled by default when running Nextflow code. You can enable it by setting the `NXF_SYNTAX_PARSER` environment variable to `v2`:
 
 ```bash
 export NXF_SYNTAX_PARSER=v2
 ```
-:::
 
-:::{versionchanged} 26.04.0
-The strict syntax is enabled by default. You can disable it by setting the environment variable `NXF_SYNTAX_PARSER=v1`.
-:::
+In Nextflow 26.04 and later, the strict parser is enabled by default. You can disable it by setting `NXF_SYNTAX_PARSER` to `v1`:
 
-## Overview
+```bash
+export NXF_SYNTAX_PARSER=v1
+```
 
-The strict syntax is a subset of DSL2. While DSL2 allows any Groovy syntax, the strict syntax allows only a subset of Groovy syntax for Nextflow scripts and config files. This new specification enables more specific error reporting, ensures more consistent code, and will allow the Nextflow language to evolve independently of Groovy.
+In the future, the legacy parser will be removed and the strict parser will become the only way to run Nextflow code. You can prepare for the strict parser by rewriting unsupported code with supported patterns -- code that runs with the strict parser will also run with the legacy parser.
 
-The strict syntax will eventually become the only way to write Nextflow code, and new language features will be implemented only in the strict syntax, with few exceptions. Therefore, it is important to prepare for the strict syntax in order to maintain compatibility with future versions of Nextflow and be able to use new language features.
+Starting in Nextflow 25.10, new language features can only be used with the strict parser. Therefore, it is also important to prepare for the strict parser in order to use new language features (e.g., static typing).
 
-This page outlines the key differences between DSL2 and the strict syntax. The extent of required changes will vary depending on the amount of custom Groovy code used within your scripts and config files.
+This page describes how to migrate the most common unsupported patterns to comply with the strict parser. The extent of required changes will vary depending on the amount of custom Groovy code used within your scripts and config files.
 
 ## Removed syntax
 
@@ -40,7 +42,7 @@ import groovy.json.JsonSlurper
 def json = new JsonSlurper().parseText(json_file.text)
 ```
 
-In the strict syntax, use the fully qualified name to reference the class:
+In Nextflow, use the fully qualified name to reference the class:
 
 ```nextflow
 def json = new groovy.json.JsonSlurper().parseText(json_file.text)
@@ -75,7 +77,7 @@ record FastqPair {
 
 ### Mixing script declarations and statements
 
-In the strict syntax, a script may contain any of the following top-level declarations:
+A Nextflow script may contain any of the following top-level declarations:
 
 - Feature flags
 - Include declarations
@@ -83,6 +85,7 @@ In the strict syntax, a script may contain any of the following top-level declar
 - Workflows
 - Processes
 - Functions
+- Type definitions
 - Output block
 
 Alternatively, a script may contain only statements, also known as a _code snippet_:
@@ -116,7 +119,7 @@ workflow {
 ```
 
 :::{note}
-Mixing statements and script declarations was necessary in DSL1 and optional in DSL2. However, it is no longer supported in the strict syntax in order to simplify the language and to ensure that top-level statements are not executed when the script is included as a module.
+Mixing statements and script declarations was necessary in DSL1 and optional in DSL2. However, this pattern is not supported by the strict parser in order to ensure that top-level statements are not executed when the script is included as a module.
 :::
 
 ### Assignment expressions
@@ -127,7 +130,7 @@ In Groovy, variables can be assigned in an expression:
 hello(x = 1, y = 2)
 ```
 
-In the strict syntax, assignments are allowed only as statements:
+In Nextflow, assignments are allowed only as statements:
 
 ```nextflow
 x = 1
@@ -141,7 +144,7 @@ In Groovy, variables can be incremented and decremented in an expression:
 hello(x++, y--)
 ```
 
-In the strict syntax, use `+=` and `-=` instead:
+In Nextflow, use `+=` and `-=` instead:
 
 ```nextflow
 x += 1
@@ -160,7 +163,7 @@ for (rseqc_module in ['read_distribution', 'inner_distance', 'tin']) {
 }
 ```
 
-In the strict syntax, use higher-order functions, such as the `each` method, instead:
+In Nextflow, use higher-order functions, such as the `each` method, instead:
 
 ```nextflow
 ['read_distribution', 'inner_distance', 'tin'].each { rseqc_module ->
@@ -194,7 +197,7 @@ default:
 }
 ```
 
-In the strict syntax, use if-else statements instead:
+In Nextflow, use if-else statements instead:
 
 ```nextflow
 if (aligner == 'bowtie2') {
@@ -218,9 +221,9 @@ In Groovy, the _spread_ operator can be used to flatten a nested list:
 ch.map { meta, bambai -> [meta, *bambai] }
 ```
 
-In the strict syntax, enumerate the list elements explicitly:
+In Nextflow, enumerate the list elements explicitly:
 
-```groovy
+```nextflow
 // alternative 1
 ch.map { meta, bambai -> [meta, bambai[0], bambai[1]] }
 
@@ -239,7 +242,7 @@ In Nextflow DSL1 and DSL2, environment variables can be referenced directly in s
 println "PWD = ${PWD}"
 ```
 
-In the strict syntax, use `System.getenv()` instead:
+Use `System.getenv()` instead:
 
 ```nextflow
 println "PWD = ${System.getenv('PWD')}"
@@ -273,7 +276,7 @@ workflow {
 }
 ```
 
-In the strict syntax, these clauses are no longer supported. Params should be passed to workflows, processes, and functions as explicit inputs:
+These clauses are no longer supported by the strict parser. Params should be passed to workflows, processes, and functions as explicit inputs:
 
 ```nextflow
 include { sayHello } from './some/module'
@@ -312,7 +315,7 @@ String str = 'hello'
 def Map meta = [:]
 ```
 
-In the strict syntax, variables must be declared with `def` and must not specify a type:
+In Nextflow, variables must be declared with `def` and must not specify a type:
 
 ```nextflow
 def a = 1
@@ -343,7 +346,7 @@ Groovy-style type annotations are still supported. However, the language server 
 
 Groovy supports a wide variety of strings, including multi-line strings, dynamic strings, slashy strings, multi-line dynamic slashy strings, and more.
 
-The strict syntax supports single- and double-quoted strings, multi-line strings, and slashy strings.
+Nextflow supports single- and double-quoted strings, multi-line strings, and slashy strings.
 
 Slashy strings cannot be interpolated:
 
@@ -404,7 +407,7 @@ def map = (Map) readJson(json)  // soft cast
 def map = readJson(json) as Map // hard cast
 ```
 
-In the strict syntax, only hard casts are supported. Use an explicit method to cast a value to a different type if one is available. For example, to parse a string as a number:
+In Nextflow, only hard casts are supported. Use an explicit method to cast a value to a different type if one is available. For example, to parse a string as a number:
 
 ```groovy
 def x = '42' as Integer
@@ -425,7 +428,7 @@ process my_task {
 }
 ```
 
-In the strict syntax, the name must be specified with quotes:
+The strict parser requires the name to be specified with quotes:
 
 ```nextflow
 process my_task {
@@ -452,7 +455,7 @@ process greet {
 }
 ```
 
-In the strict syntax, the `script:` label can be omitted only if there are no other sections:
+The strict parser requires the `script:` label to be specified unless there are no other sections:
 
 ```nextflow
 process hello {
@@ -483,7 +486,7 @@ workflow.onComplete {
 }
 ```
 
-The strict syntax does not allow statements to be mixed with script declarations, so workflow handlers must be defined in the entry workflow:
+The strict parser does not allow statements to be mixed with script declarations, so workflow handlers must be defined in the entry workflow:
 
 ```nextflow
 workflow {
@@ -518,7 +521,7 @@ See {ref}`workflow-handlers` for details.
 
 ## Deprecated syntax
 
-The following patterns are deprecated, and the strict syntax reports warnings for them. These warnings will become errors in the future.
+The following patterns are deprecated, and the strict parser reports warnings for them. These warnings will become errors in the future.
 
 ### `channel` vs `Channel`
 
@@ -535,11 +538,11 @@ See {ref}`stdlib-namespaces-channel` and {ref}`stdlib-types-channel` for more in
 
 In Groovy, a closure with no parameters is assumed to have a single parameter named `it`:
 
-```nextflow
+```groovy
 ch.map { it * 2 }
 ```
 
-In the strict syntax, the closure parameter should be explicitly declared:
+In Nextflow, the closure parameter should be explicitly declared:
 
 ```nextflow
 ch.map { v -> v * 2 }   // correct
@@ -548,13 +551,69 @@ ch.map { it -> it * 2 } // also correct
 
 ### Process shell section
 
-The process `shell` section is deprecated. Use the `script` section instead. The strict syntax provides error checking to help distinguish between Nextflow variables and Bash variables.
+The process `shell` section is deprecated. Use the `script` section instead. The strict parser provides error checking to help distinguish between Nextflow variables and Bash variables.
 
 ## Best practices
 
 The following patterns are discouraged and may become warnings or errors in future Nextflow versions. The language server can detect these patterns, but does not report them by default.
 
 To enable these checks, set **Nextflow > Error reporting mode** to **paranoid** in the extension settings.
+
+### Using legacy parameter declarations
+
+:::{versionadded} 25.10.0
+:::
+
+{ref}`Legacy parameters <workflow-params-legacy>` can automatically cast CLI parameters to numbers and booleans:
+
+```nextflow
+params.save_intermeds = true
+
+workflow {
+    println "save_intermeds = ${params.save_intermeds ? 'true' : 'false'}"
+}
+```
+
+```console
+$ NXF_SYNTAX_PARSER=v1 nextflow run main.nf --save_intermeds false
+save_intermeds = false
+```
+
+However, this type detection is disabled when using the strict parser. In the above example, `params.save_intermeds` will be set to `'false'` instead of `false`, causing it to be truthy:
+
+```console
+$ NXF_SYNTAX_PARSER=v2 nextflow run main.nf --save_intermeds false
+save_intermeds = true
+```
+
+Legacy parameters should not rely on CLI type detection when using the strict parser. Parameters that may be supplied on the command line should be treated as strings:
+
+```nextflow
+params.save_intermeds = 'true'
+
+workflow {
+    println "save_intermeds = ${params.save_intermeds.toBoolean() ? 'true' : 'false'}"
+}
+```
+
+```console
+$ NXF_SYNTAX_PARSER=v2 nextflow run main.nf --save_intermeds false
+save_intermeds = false
+```
+
+Alternatively, use the `params` block to convert CLI parameters based on their type annotations:
+
+```nextflow
+params {
+    save_intermeds: Booean = true
+}
+
+workflow {
+    println "save_intermeds = ${params.save_intermeds ? 'true' : 'false'}"
+}
+```
+
+See {ref}`workflow-typed-params` for details.
 
 ### Using params outside the entry workflow
 
@@ -591,19 +650,11 @@ The process {ref}`process-when` section is discouraged. As a best practice, cond
 
 ## Configuration syntax
 
-:::{versionadded} 25.04.0
-To enable the {ref}`strict syntax <strict-syntax-page>`, set the `NXF_SYNTAX_PARSER` environment variable to `v2`:
-
-```bash
-export NXF_SYNTAX_PARSER=v2
-```
-:::
-
 See {ref}`Configuration <config-syntax>` for a comprehensive description of the configuration language.
 
 ### Mixing config statements and scripting statements
 
-Currently, Nextflow parses config files as Groovy scripts, allowing the use of scripting constructs like variables, helper functions, try-catch blocks, and conditional logic for dynamic configuration:
+The legacy parser treats config files as Groovy scripts, allowing the use of scripting constructs like variables, helper functions, try-catch blocks, and conditional logic for dynamic configuration:
 
 ```groovy
 def getHostname() {
@@ -621,7 +672,7 @@ else if (hostname == 'large') {
 }
 ```
 
-The strict config syntax does not support functions, and only allows statements (e.g., variables and if statements) within closures. The same dynamic configuration can be achieved by using a dynamic include:
+The strict parser only allows config assignments, config blocks, and config includes. Function declarations are not supported. Statements (e.g., variables and if statements) can only be used within closures. The same dynamic configuration can be achieved using a dynamic include:
 
 ```groovy
 includeConfig ({
@@ -660,7 +711,7 @@ google.location = "us-west1"
 google.batch.subnetwork = "regions/${google.location}/subnetworks/default"
 ```
 
-The strict config syntax does not support this. Only params can be referenced as variables:
+The strict parser does not support this. Only params can be referenced as variables:
 
 ```groovy
 params.location = "us-west1"

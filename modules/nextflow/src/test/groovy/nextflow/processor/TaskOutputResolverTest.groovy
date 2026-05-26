@@ -22,6 +22,7 @@ import nextflow.exception.IllegalArityException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.script.params.v2.ProcessFileOutput
+import nextflow.util.RecordMap
 import spock.lang.Specification
 import spock.lang.TempDir
 
@@ -279,15 +280,39 @@ class TaskOutputResolverTest extends Specification {
         resolver.get('baz') == 123
     }
 
-    def 'should fail when variable is missing from context'() {
+    def 'should return null when variable is missing from context'() {
         given:
         def task = makeTask([foo: 'bar'])
         def resolver = new TaskOutputResolver([:], task)
 
+        expect:
+        // get() returns null for missing keys so that Groovy's Map-based method
+        // dispatch can fall back to the closure owner for script-level function calls
+        resolver.get('missing') == null
+    }
+
+    def 'should normalize resolved lazy output values'() {
+        given:
+        def source = tempDir.resolve('input.txt')
+        def taskPath = new TaskPath(source, 'input.txt')
+        def sample = new RecordMap([
+            id: 'alpha',
+            path: taskPath,
+            nested: [path: taskPath],
+            paths: [taskPath] as Set,
+        ])
+        def task = makeTask([sample: sample])
+        def resolver = new TaskOutputResolver([:], task)
+
         when:
-        resolver.get('missing')
+        def result = resolver.resolve({ -> sample })
+
         then:
-        def e = thrown(MissingValueException)
-        e.message.contains('Missing variable in process output')
+        result instanceof RecordMap
+        result.path == source
+        !(result.path instanceof TaskPath)
+        result.nested.path == source
+        !(result.nested.path instanceof TaskPath)
+        result.paths == [source] as Set
     }
 }
