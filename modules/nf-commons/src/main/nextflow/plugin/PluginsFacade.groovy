@@ -24,6 +24,7 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
+import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.extension.Bolts
 import nextflow.extension.FilesEx
@@ -57,6 +58,7 @@ class PluginsFacade implements PluginStateListener {
     private CustomPluginManager manager
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
     private String indexUrl
+    private RegistryConfig registryConfig
     private boolean embedded
 
     PluginsFacade() {
@@ -305,7 +307,16 @@ class PluginsFacade implements PluginStateListener {
     void load(Map config) {
         if( !manager )
             throw new IllegalArgumentException("Plugin system has not been initialized")
+        applyRegistryConfig(config)
         start(pluginsRequirement(config))
+    }
+
+    protected void applyRegistryConfig(Map config) {
+        final registryMap = Bolts.navigate(config, 'registry') as Map
+        if( !registryMap )
+            return
+        this.registryConfig = new RegistryConfig(registryMap)
+        updater?.addRegistryRepos(registryConfig)
     }
 
     synchronized void stop() {

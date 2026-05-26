@@ -32,6 +32,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
 import nextflow.SysEnv
+import nextflow.config.RegistryConfig
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FileMutex
@@ -98,6 +99,41 @@ class PluginUpdater extends UpdateManager {
             result.addAll(customRepos())
         }
         return result
+    }
+
+    /**
+     * Append extra plugin registry endpoints (from {@link RegistryConfig}) to this updater's
+     * repository list. URLs that already correspond to a configured repository are skipped so
+     * the default registry is not queried twice.
+     *
+     * Safe to call after construction and before {@link #prefetchMetadata}, which initialises
+     * each {@link HttpPluginRepository} with the metadata it actually needs.
+     */
+    void addRegistryRepos(RegistryConfig registryConfig) {
+        if( offline || !registryConfig )
+            return
+        final urls = registryConfig.getAllUrls()
+        if( !urls )
+            return
+        final existingUrls = new HashSet<String>()
+        final existingIds = new HashSet<String>()
+        for( UpdateRepository repo : this.@repositories ) {
+            final u = repo.url?.toString()?.replaceAll(/\/+$/, '')
+            if( u ) existingUrls.add(u)
+            existingIds.add(repo.id)
+        }
+        int counter = 0
+        for( String url : urls ) {
+            if( url.replaceAll(/\/+$/, '') in existingUrls )
+                continue
+            String repoId = "registry-${counter++}"
+            while( repoId in existingIds )
+                repoId = "registry-${counter++}"
+            existingIds.add(repoId)
+            final repo = new HttpPluginRepository(repoId, URI.create(url))
+            log.debug "Adding plugin repository: ${repo.getClass().getSimpleName()} [${repo.id}]; url=${url}"
+            addRepository(repo)
+        }
     }
 
     static private List<DefaultUpdateRepository> customRepos() {

@@ -113,6 +113,8 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
 
     @Override
     void refresh() {
+        if( plugins == null )
+            return
         plugins = fetchMetadataByIds(plugins.keySet())
     }
 
