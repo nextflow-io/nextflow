@@ -1148,6 +1148,90 @@ $ nextflow log tiny_leavitt -F 'process =~ /split_letters/'
 work/1f/f1ea9158fb23b53d5083953121d6b6
 ```
 
+### `logfile`
+
+:::{versionadded} 26.05.0-edge
+:::
+
+Print the contents of a Nextflow log file, with optional level filtering and follow mode.
+
+**Usage**
+
+```console
+$ nextflow logfile [options] [run_name | session_id | path]
+```
+
+**Description**
+
+The `logfile` command prints the contents of a `.nextflow.log` file written by Nextflow during a pipeline run. The argument can be:
+
+- A run name (e.g. `kickass_rutherford`) — resolved via the local execution history and matched to the corresponding `.nextflow.log[.N]` file in the current directory by session id.
+- A session id (or unique prefix), or the literal `last` for the most recent run.
+- A direct path to a log file (e.g. `.nextflow.log.4` or an absolute path).
+
+If no argument is given, the most recent run is used.
+
+**Options**
+
+`-f, -follow`
+: Continuously print new lines as the file grows (similar to `tail -f`). Stop with Ctrl+C.
+
+`-h, -help`
+: Print the command usage.
+
+`-keep-ansi`
+: Preserve any ANSI escape sequences found inside log content. By default these are stripped so the output is clean text.
+
+`-l, -level <LEVEL>`
+: Minimum log level to print: `TRACE`, `DEBUG`, `INFO`, `WARN`, or `ERROR`. Case-insensitive. When set, only entries at this level or higher are printed. Multi-line entries (e.g. stack traces) inherit the level of their parent entry. No filtering is applied by default.
+
+`-n, -lines <N>`
+: Print only the last N log entries. Counts entries (one or more lines each), not raw lines.
+
+`-no-pager`
+: Do not pipe the output through a pager. By default, when standard output is a terminal, the output is piped through `$NXF_PAGER`, falling back to `$PAGER`, falling back to `less -FR`. A bare `less` invocation is augmented with `-FR` so colors render. Short outputs exit without entering the pager. Pager is automatically disabled with `-f`/`-follow`.
+
+`-no-ansi`
+: Disable colored output. By default, when the output destination is a terminal:
+
+  - Every line is prefixed with a coloured 2-character level indicator.
+  - TRACE and DEBUG entries are dimmed.
+  - DEBUG, INFO, WARN and ERROR entries are syntax-highlighted to make them easier to read.
+
+  Styling is auto-disabled when output goes to a non-terminal destination (file or pipe with `-no-pager`) or when the `NO_COLOR` environment variable is set.
+
+**Examples**
+
+Print the log of the most recent run:
+
+```console
+$ nextflow logfile
+```
+
+Print the log of a specific run, looked up by name:
+
+```console
+$ nextflow logfile kickass_rutherford
+```
+
+Print a specific log file directly:
+
+```console
+$ nextflow logfile .nextflow.log.4
+```
+
+Show only warnings and errors from the most recent run (useful for piping to an LLM to save tokens):
+
+```console
+$ nextflow logfile -level WARN
+```
+
+Show the last 10 entries of an ongoing run and continue streaming new lines:
+
+```console
+$ nextflow logfile -n 10 -f
+```
+
 (cli-module)=
 
 ### `module`
