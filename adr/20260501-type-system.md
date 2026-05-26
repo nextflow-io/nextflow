@@ -12,7 +12,7 @@ Implement a type system for the Nextflow language: standard types, type annotati
 
 ## Problem Statement
 
-Nextflow is a dynamically-typed language, which means that the types of values are determined ar runtime rather than compile-time. This approach allowed Nextflow to iterate rapidly early in its history, and it allowed non-technical users to write pipelines without learning advanced programming techniques.
+Nextflow is a dynamically-typed language, which means that the types of values are determined at runtime rather than compile-time. This approach allowed Nextflow to iterate rapidly early in its history, and it allowed non-technical users to write pipelines without learning advanced programming techniques.
 
 However, as Nextflow has matured and gained industry adoption, there is an increasing need to provide a first-class experience that supports the development of large production pipelines. Dynamic typing has several limitations in this regard:
 
@@ -52,7 +52,7 @@ Nextflow inherits a rich set of types from Groovy (and Java by extension). Howev
 
 Just as the [strict parser](./20250508-strict-syntax-parser.md) allows us to define Nextflow's syntax independently from Groovy, a standard library is needed to define the set of constants, functions, and types in Nextflow. This way, the user does not need to consult external documentation (e.g. Groovy/Java APIs) to know what they can use in Nextflow.
 
-The standard types are documented [here](https://docs.seqera.io/nextflow/reference/stdlib-types). They are designed based on following considerations:
+The standard types are documented [here](https://docs.seqera.io/nextflow/reference/stdlib-types). They are designed based on the following considerations:
 
 - Use existing Java/Groovy types as much as possible: `Boolean`, `Float`, `Integer`, `Path`, `String`, `List`, `Map`, `Set`. These types have been battle-tested by the Java ecosystem and are already used in existing code.
 
@@ -63,6 +63,8 @@ The standard types are documented [here](https://docs.seqera.io/nextflow/referen
 - Types should be easy to serialize (e.g. to/from JSON) so that they can be integrated seamlessly with external data storage.
 
 - Encourage composition over inheritance for data modeling. Inheritance is an advanced programming technique that adds a lot of complexity to the type checker and isn't needed in Nextflow anyway. When it is useful, the standard library uses *traits* to model shared behaviors among multiple concrete types. For example, the `Iterable` trait is used by the collection types (`List`, `Set`, `Bag`).
+
+Nextflow types can be parameterized like Java/Groovy, e.g. `Channel<Record>` or `Map<String,Integer>`. Wildcards are supported (e.g. `List<?>`), but lower/upper bounds are not (e.g. `List<? extends Record>`). Since inheritance is not used, lower/upper bounds are not needed, which simplifies both the language and the type checker.
 
 The standard library also defines a set of *namespaces*, which provide standalone constants and functions. They are documented [here](https://docs.seqera.io/nextflow/reference/stdlib-namespaces). These namespaces can be extended in the future as needed.
 
@@ -129,9 +131,11 @@ workflow {
 
 output {
     samples: Channel<Sample> {
+        // ...
     }
 
     multiqc_report: Path {
+        // ...
     }
 }
 
