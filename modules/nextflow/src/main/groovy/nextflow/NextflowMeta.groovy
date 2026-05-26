@@ -63,10 +63,9 @@ class NextflowMeta {
         boolean strict
         boolean moduleBinaries
 
-        //Adding this method to provide a meaningful error when trying to use static types wit syntax parser v1.
-        void setTypes(boolean types){
-            if (types)
-                throw new AbortOperationException("Static types only available in syntax parser v2. Set NXF_SYNTAX_PARSER=v2 to enable static types.")
+        void setTypes(boolean types) {
+            if( types )
+                throw new AbortOperationException("Static typing requires the strict parser -- set NXF_SYNTAX_PARSER=v2 in your environment to enable the strict parser")
         }
     }
 
