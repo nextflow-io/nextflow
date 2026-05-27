@@ -21,6 +21,7 @@ import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
@@ -38,6 +39,7 @@ import nextflow.util.MemoryUnit
 @Description("""
     The `fusion` scope provides advanced configuration for the use of the [Fusion file system](https://docs.seqera.io/fusion).
 """)
+@Slf4j
 @CompileStatic
 class FusionConfig implements ConfigScope {
 
@@ -173,12 +175,12 @@ class FusionConfig implements ConfigScope {
         if( url.startsWith('http://') || url.startsWith('https://') )
             return true
         try {
+            // accept only absolute file URIs without authority, e.g. `file:/path` or `file:///path`
             final uri = new URI(url)
-            return uri.scheme == 'file' \
-                && (uri.authority == null || uri.authority.isEmpty()) \
-                && uri.path?.startsWith('/')
+            return uri.scheme == 'file' && !uri.authority && uri.path?.startsWith('/')
         }
         catch( URISyntaxException e ) {
+            log.debug "Invalid Fusion container config URL: $url - cause: ${e.message}"
             return false
         }
     }
