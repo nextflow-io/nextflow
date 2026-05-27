@@ -241,6 +241,12 @@ channel.of('a', 'b', 'c')   // Channel<String>
     .map { v -> v * v }     // error: `*` operator is not defined for String and String
 ```
 
+### Static typing and the runtime
+
+The type system exists as a separate layer from the runtime. That is, the type system defines the standard namespaces and types as interfaces, and the runtime types need only be compatible with those interfaces. Nextflow-specific types (e.g. `Duration`, `MemoryUnit`) can implement the corresponding type interface directly. Types inherited from Java (e.g. `Integer`, `String`, `List`) are modeled in the type system using "shim" interfaces, which are used during type checking and discarded prior at runtime.
+
+This approach allows us to introduce type checking without modifying runtime behavior. Nextflow still generates dynamically-typed Groovy code, but this code is validated by the type checker, so it is effectively statically-typed. This approach is similar to [TypeScript](https://www.typescriptlang.org/), where TypeScript code is type-checked at compile-time and converted to JavaScript at runtime by discarding type annotations. Static compilation (e.g. `@CompileStatic`) may be explored in the future, but it is not clear whether the performance improvement of statically-compiled code is worth the extra compilation time and additional constraints on the generated Groovy code.
+
 ### Migration plan
 
 Static typing is a significant change to the way that Nextflow pipelines are written. While the *type system* itself is largely a formalization of existing types, *static type checking* requires pipeline code to be more verbose and precise. As a result, it is important that we ease the migration for existing users as much as possible.
