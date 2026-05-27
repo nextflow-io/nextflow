@@ -52,7 +52,9 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
     private final URI url
     private final HxClient httpClient
 
-    private Map<String, PluginInfo> plugins
+    // Initialised eagerly so that getPlugin()/refresh() are safe to call even when prefetch()
+    // was skipped (e.g. PluginUpdater skip-if-installed) or failed (non-fatal degradation).
+    private Map<String, PluginInfo> plugins = new HashMap<>()
 
     HttpPluginRepository(String id, URI url) {
         this.id = id
@@ -83,7 +85,16 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
     @Override
     void prefetch(List<PluginRef> plugins) {
         if (plugins && !plugins.isEmpty()) {
-            this.plugins = fetchMetadata(plugins)
+            try {
+                this.plugins = fetchMetadata(plugins)
+            }
+            catch (PluginRuntimeException e) {
+                // Don't abort Nextflow startup if the registry is unreachable or rate-limited:
+                // downstream code will either resolve the plugins from the local store or fail
+                // with a more specific error when the metadata is actually needed.
+                log.warn "Failed to prefetch plugin metadata from ${url} - cause: ${e.message}"
+                this.plugins = new HashMap<>()
+            }
         }
     }
 
@@ -99,10 +110,6 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
 
     @Override
     Map<String, PluginInfo> getPlugins() {
-        if (plugins==null) {
-            log.warn "getPlugins() called before prefetch() - plugins map will be empty"
-            return Map.of()
-        }
         return Collections.unmodifiableMap(plugins)
     }
 

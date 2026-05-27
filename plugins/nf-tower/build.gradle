@@ -55,7 +55,7 @@ dependencies {
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
     compileOnly 'org.pf4j:pf4j:3.14.1'
-    compileOnly 'io.seqera:lib-httpx:2.1.0'
+    compileOnly 'io.seqera:lib-httpx:2.3.0'
     api 'io.seqera:lib-platform-oidc:0.1.0'
 
     api('io.seqera:tower-api:1.121.0') {
