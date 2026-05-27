@@ -1,5 +1,8 @@
 nf-k8s changelog
 ===================
+1.5.3 - 21 May 2026
+- Fix K8s 401 after token expiry (#6918) (#7093) [9cba0d8af]
+
 1.5.2 - 20 Apr 2026
 - Bump org.bouncycastle:bcpkix-jdk18on from 1.79 to 1.84 (#7042) [59d847d52]
 - Allow running pipeline from URL and main script path (#6602) [83196d4be]

@@ -1,5 +1,9 @@
 nf-azure changelog
 ===================
+1.22.4 - 21 May 2026
+- chore: update dependency com.azure:azure-storage-blob to v12.33.4 (#7153) [514f2e5c3]
+- Pin netty in nf-azure (#7131) [c3ce1d0f5]
+
 1.22.3 - 11 May 2026
 - Address Netty CVEs by bumping AWS SDK and excluding micronaut-core-bom from test classpath (#7100) [f54039606]
 

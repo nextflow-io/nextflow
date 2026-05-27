@@ -344,5 +344,28 @@ class ExecutorOptsTest extends Specification {
         config.region == 'us-west-2'
     }
 
+    def 'should create config with strategy' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            provider: 'aws',
+            strategy: 'vm'
+        ])
+
+        then:
+        config.provider == 'aws'
+        config.strategy == 'vm'
+    }
+
+    def 'should default strategy to null' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com'
+        ])
+
+        then:
+        config.strategy == null
+    }
+
 
 }

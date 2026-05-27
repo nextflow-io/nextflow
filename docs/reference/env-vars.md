@@ -238,9 +238,13 @@ The following environment variables control the configuration of the Nextflow ru
 : Enable the use of Spack recipes defined by using the {ref}`process-spack` directive. (default: `false`).
 
 `NXF_SYNTAX_PARSER`
-: :::{versionadded} 25.02.0-edge
+: :::{versionadded} 25.04.0
+  The strict parser is disabled by default.
   :::
-: Set to `'v2'` to use the {ref}`strict syntax <strict-syntax-page>` for Nextflow scripts and config files (default: `'v1'`).
+: :::{versionchanged} 26.04.0
+  The strict parser is enabled by default.
+  :::
+: Set to `'v2'` to use the {ref}`strict syntax parser <strict-syntax-page>` for Nextflow code. Set to `'v1'` to fall back to the legacy parser.
 
 `NXF_TEMP`
 : Directory where temporary files are stored

@@ -152,7 +152,8 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         final dataset = fs.resolveDataset(workspaceId, sp.datasetName)
         if (!dataset)
             throw new NoSuchFileException(sp.toString(), null, "Dataset '${sp.datasetName}' not found in workspace $sp.workspace")
-        return (A) new SeqeraFileAttributes(dataset)
+        final version = resolveVersion(fs, dataset, sp)
+        return (A) new SeqeraFileAttributes(version)
     }
 
     @Override

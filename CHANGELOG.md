@@ -1,5 +1,26 @@
 # Nextflow change-log
 
+## [Version 26.04.2](https://github.com/nextflow-io/nextflow/releases/tag/v26.04.2) - 21 May 2026
+
+- ADR: Strict syntax parser (#7150) [514a63619]
+- chore: pin dependency python to 3.14.5 (#7152) [ec74f3d28]
+- Fix `module run` to allow optional path inputs (#7163) [4fd28fd5b]
+- Fix azure rnaseq-nf test (#7143) [e4f92906d]
+- Fix destructured record input in `module run` (#7164) [0498ca6c5]
+- Fix function calls in typed process outputs (#7148) [7e0908c66]
+- Fix strict parser to include params refs in task hash (#7165) [785e801ad]
+- GitHub Actions - security updates (#7138) [5e2ef5762]
+- Honor token field in BitbucketServerRepositoryProvider (#7120) [6bf6e8d1e]
+- Normalize TaskPath -> Path in typed process outputs (#7090) [38c072395]
+- Pick up force-pushed branches in multi-revision repo strategy (#7103) [091f93f05]
+- Release HTTP sockets when reading HTTP attributes to avoid 503 throttling [f2b0284e6]
+- Tighten CI security and remove dead code in workflows (#7139) [2bec40277]
+- Update guidelines for strict parser (#7134) [3aa26a7d4]
+- Validate module spec against JSON schema (#7094) [6a6ea9fe6]
+- Bump nf-azure@1.22.4
+- Bump nf-k8s@1.5.3
+- Bump nf-seqera@0.20.0
+
 ## [Version 26.04.1](https://github.com/nextflow-io/nextflow/releases/tag/v26.04.1) - 11 May 2026
 
 - chore: update dependency ch.qos.logback:logback-classic to v1.5.32 (#7126) [7cb285539]
