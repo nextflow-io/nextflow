@@ -129,11 +129,14 @@ See {ref}`module publish <cli-module-publish>` for the full command reference.
 ## Registry configuration
 
 By default, Nextflow uses the public registry at `https://registry.nextflow.io`.
-Configure alternative or additional registries using the `registry` scope in your Nextflow configuration.
+Configure additional registries using the `registry` scope in your Nextflow configuration.
+See the {ref}`registry config scope <config-registry>` for the full reference.
 
-### Use a private registry
+The public registry is always queried first. Registries defined in the `registry` scope are queried afterwards, in the order they are listed.
 
-Replace the default registry with your organization's private registry:
+### Add a private registry
+
+Add your organization's private registry:
 
 ```groovy
 registry {
@@ -142,12 +145,12 @@ registry {
 }
 ```
 
-Nextflow uses this registry for all module operations (search, install, and publish).
+When searching for or installing a module, Nextflow queries the public registry first, then `https://registry.myorg.com`.
 
 ### Use multiple registries
 
 Specify multiple registries as a list.
-Nextflow queries them in order when searching for or installing a module:
+Nextflow queries them in the order listed, after the public registry:
 
 ```groovy
 registry {
@@ -159,10 +162,10 @@ registry {
 }
 ```
 
-In this example, Nextflow searches the private registry first and falls back to the public registry.
+In this example, Nextflow queries the public registry (`https://registry.nextflow.io`) first, then `https://registry.myorg.com`, and finally `https://private.registry.nextflow.io`. The public registry is always queried first, even when it is not listed explicitly.
 
 :::{note}
-The `apiKey` authenticates with the primary (first) registry.
+The `apiKey` is used to authenticate registry requests. Publishing targets the first registry defined in `registry.url`.
 :::
 
 :::{tip}

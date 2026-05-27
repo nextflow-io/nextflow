@@ -45,10 +45,14 @@ class RegistryClientFactory {
 
     static RegistryClient forConfig(RegistryConfig config) {
         final cfg = config ?: new RegistryConfig()
-        // always include the default registry as a fallback for module resolution
-        final urls = new ArrayList<String>(cfg.allUrls)
-        if( defaultRegistry && !urls.contains(defaultRegistry) )
+        // the default registry is always queried first as the baseline,
+        // followed by any registries configured in the `registry` scope
+        final urls = new ArrayList<String>()
+        if( defaultRegistry )
             urls.add(defaultRegistry)
+        for( String it : cfg.allUrls )
+            if( !urls.contains(it) )
+                urls.add(it)
         return new RegistryClient(
             urls,
             cfg.apiKey,

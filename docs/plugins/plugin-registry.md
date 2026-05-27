@@ -63,3 +63,24 @@ To create an API access token:
 6. Copy and past token somewhere safe, you won't be able to see it again.
 
 Once you have your token, see {ref}`gradle-plugin-publish` for instructions on how to use it.
+
+(plugin-registry-config)=
+
+## Configuring plugin registries
+
+:::{versionadded} 26.04.0
+:::
+
+By default, Nextflow resolves plugins from the public registry at `https://registry.nextflow.io`.
+Configure additional plugin registries using the `registry` scope in your Nextflow configuration:
+
+```groovy
+registry {
+    url = 'https://registry.myorg.com'
+}
+```
+
+Nextflow queries the public registry first, then the registries listed in `registry.url`, in the order they are listed.
+See the {ref}`registry config scope <config-registry>` for the full reference.
+
+To replace the default registry instead of adding to it, set the `NXF_PLUGINS_REGISTRY_URL` environment variable.

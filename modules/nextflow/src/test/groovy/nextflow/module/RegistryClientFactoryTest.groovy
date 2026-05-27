@@ -97,7 +97,7 @@ class RegistryClientFactoryTest extends Specification {
         verify(getRequestedFor(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc')))
     }
 
-    def 'should append default registry as fallback'() {
+    def 'should query default registry first, then configured registries'() {
         given:
         def moduleResponse = [
             module: [
@@ -108,30 +108,32 @@ class RegistryClientFactoryTest extends Specification {
                 ]
             ]
         ]
-        and: 'a custom primary registry (unstubbed -> 404) and the default pointing to a stubbed path'
-        def primary = "http://localhost:${wireMock.port()}/primary"
+        and: 'the default registry is queried first (not found here) and a configured registry serves the module'
         def defaultUrl = "http://localhost:${wireMock.port()}/default"
+        def configured = "http://localhost:${wireMock.port()}/configured"
         RegistryClientFactory.setDefaultRegistry(defaultUrl)
         and:
         stubFor(get(urlEqualTo('/default/v1/modules/nf-core%2Ffastqc'))
+            .willReturn(aResponse().withStatus(404).withBody('Module not found')))
+        stubFor(get(urlEqualTo('/configured/v1/modules/nf-core%2Ffastqc'))
             .willReturn(aResponse()
                 .withStatus(200)
                 .withHeader('Content-Type', 'application/json')
                 .withBody(JsonOutput.toJson(moduleResponse))))
         and:
-        def config = new RegistryConfig([url: primary])
+        def config = new RegistryConfig([url: configured])
         def client = RegistryClientFactory.forConfig(config)
 
         when:
         def result = client.getModule('nf-core/fastqc')
 
-        then: 'the module is resolved from the default registry fallback'
+        then: 'the module is resolved from the configured registry after the default misses'
         result != null
         result.name == 'nf-core/fastqc'
 
-        and: 'the primary was tried first, then the default registry'
-        verify(getRequestedFor(urlEqualTo('/primary/v1/modules/nf-core%2Ffastqc')))
+        and: 'the default registry was tried first, then the configured one'
         verify(getRequestedFor(urlEqualTo('/default/v1/modules/nf-core%2Ffastqc')))
+        verify(getRequestedFor(urlEqualTo('/configured/v1/modules/nf-core%2Ffastqc')))
     }
 
     def 'should not duplicate default registry when already configured'() {

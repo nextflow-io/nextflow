@@ -1401,6 +1401,25 @@ The following settings are available:
 `report.overwrite`
 : Overwrite any existing report file with the same name (default: `false`).
 
+(config-registry)=
+
+## `registry`
+
+:::{versionadded} 26.04.0
+:::
+
+The `registry` scope configures the registries used to resolve {ref}`modules <module-registry-page>` and {ref}`plugins <plugin-registry-page>`.
+
+The public Nextflow registry (`https://registry.nextflow.io/api`) is always queried first as the baseline. Registries defined in this scope are queried afterwards, in the order they are listed.
+
+The following settings are available:
+
+`registry.apiKey`
+: The API key used to authenticate with the registry. When not set, the `NXF_REGISTRY_TOKEN` environment variable is used.
+
+`registry.url`
+: A registry URL, or a list of registry URLs queried in the order they are listed. These are used in addition to the default public registry, which is always queried first.
+
 (config-sarus)=
 
 ## `sarus`
