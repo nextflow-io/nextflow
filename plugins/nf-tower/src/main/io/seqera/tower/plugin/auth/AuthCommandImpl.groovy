@@ -1273,8 +1273,13 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         }
         authConfigText.append("}\n")
 
-        // Write the seqera-auth.config file
-        Files.writeString(authFile, authConfigText.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+        // Write the seqera-auth.config file with owner-only permissions.
+        // Tighten the permissions *before* writing the bearer tokens so the
+        // file is never world-readable while it holds credential data.
+        Files.deleteIfExists(authFile)
+        Files.createFile(authFile)
+        authFile.setPermissions('rw-------')
+        Files.writeString(authFile, authConfigText.toString(), StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
 
         // Add includeConfig line to main config file if it doesn't exist
         addIncludeConfigToMainFile(configFile)

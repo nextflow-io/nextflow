@@ -28,6 +28,8 @@ import test.OutputCapture
 import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.attribute.PosixFilePermission
+import java.nio.file.attribute.PosixFilePermissions
 
 /**
  * Test CmdAuth functionality
@@ -245,6 +247,49 @@ param2 = 'value2'"""
         authContent.contains('accessToken = \'test-token-123\'')
         authContent.contains('endpoint = \'https://api.cloud.seqera.io\'')
         authContent.contains('enabled = true')
+    }
+
+    def 'should write seqera-auth.config with owner-only permissions'() {
+        given:
+        def cmd = Spy(AuthCommandImpl)
+        def authFile = tempDir.resolve('seqera-auth.config')
+        def configFile = tempDir.resolve('config')
+
+        cmd.getAuthFile() >> authFile
+        cmd.getConfigFile() >> configFile
+
+        def config = ['tower.accessToken': 'test-token']
+
+        when:
+        cmd.writeConfig(config, null)
+
+        then:
+        Files.exists(authFile)
+        Files.getPosixFilePermissions(authFile) == EnumSet.of(
+            PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE)
+    }
+
+    def 'should re-harden permissions when overwriting an existing world-readable file'() {
+        given:
+        def cmd = Spy(AuthCommandImpl)
+        def authFile = tempDir.resolve('seqera-auth.config')
+        def configFile = tempDir.resolve('config')
+
+        Files.writeString(authFile, 'tower { accessToken = "stale" }')
+        Files.setPosixFilePermissions(authFile, PosixFilePermissions.fromString('rw-r--r--'))
+
+        cmd.getAuthFile() >> authFile
+        cmd.getConfigFile() >> configFile
+
+        def config = ['tower.accessToken': 'test-token']
+
+        when:
+        cmd.writeConfig(config, null)
+
+        then:
+        Files.getPosixFilePermissions(authFile) == EnumSet.of(
+            PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE)
+        Files.readString(authFile).contains('test-token')
     }
 
     def 'should write config with workspace metadata'() {
