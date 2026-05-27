@@ -27,6 +27,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
 import nextflow.BuildInfo
+import nextflow.config.RegistryConfig
 import com.github.zafarkhaja.semver.Version
 import org.pf4j.Plugin
 import org.pf4j.PluginDescriptor
@@ -440,6 +441,100 @@ class PluginUpdaterTest extends Specification {
         'foo.json'                              | false     | null
         'nf-foo-1.0.0-meta.json'                | true      | 'nf-foo'
         'xpack-google-1.0.0-beta.3-meta.json'   | true      | 'xpack-google'
+    }
+
+    def 'should add registry repositories from config' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0'])
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, false)
+        and:
+        def cfg = new RegistryConfig([url: ['https://reg-a.example/api', 'https://reg-b.example/api']])
+
+        when:
+        updater.addRegistryRepos(cfg)
+        def repos = updater.getRepositories()
+
+        then:
+        repos.size() == 3
+        repos[0].id == 'nextflow.io'
+        and:
+        repos[1] instanceof HttpPluginRepository
+        repos[1].id == 'registry-0'
+        repos[1].url.toString().startsWith('https://reg-a.example/api')
+        and:
+        repos[2] instanceof HttpPluginRepository
+        repos[2].id == 'registry-1'
+        repos[2].url.toString().startsWith('https://reg-b.example/api')
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should skip registry urls already configured' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def remote = new URL('http://primary.example/api')
+        def updater = new PluginUpdater(manager, local, remote, false)
+        and:
+        def cfg = new RegistryConfig([url: ['http://primary.example/api', 'http://other.example/api']])
+
+        when:
+        updater.addRegistryRepos(cfg)
+        def repos = updater.getRepositories()
+
+        then:
+        repos.size() == 2
+        repos*.id == ['registry', 'registry-0']
+        repos[1].url.toString().startsWith('http://other.example/api')
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should not add registry repos when offline' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0'])
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, true)
+        and:
+        def cfg = new RegistryConfig([url: ['https://reg.example/api']])
+
+        when:
+        updater.addRegistryRepos(cfg)
+        def repos = updater.getRepositories()
+
+        then:
+        repos.size() == 1
+        repos[0].id == 'downloaded'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should be no-op when registry config is null' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0'])
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, false)
+        def before = updater.getRepositories().size()
+
+        when:
+        updater.addRegistryRepos(null)
+
+        then:
+        updater.getRepositories().size() == before
+
+        cleanup:
+        folder?.deleteDir()
     }
 
     // -------------------------------------------------------------------------------------

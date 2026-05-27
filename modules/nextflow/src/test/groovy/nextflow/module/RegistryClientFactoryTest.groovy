@@ -51,10 +51,13 @@ class RegistryClientFactoryTest extends Specification {
         wireMock.start()
         WireMock.configureFor("localhost", wireMock.port())
         url = "http://localhost:${wireMock.port()}/api"
+        // override the default registry fallback so tests don't reach the real public registry
+        RegistryClientFactory.setDefaultRegistry("http://localhost:${wireMock.port()}/unstubbed")
     }
 
     def cleanup() {
         wireMock?.stop()
+        RegistryClientFactory.setDefaultRegistry(RegistryConfig.DEFAULT_REGISTRY_URL)
     }
 
     def 'should fetch module metadata from registry'() {
@@ -92,6 +95,74 @@ class RegistryClientFactoryTest extends Specification {
 
         and: 'verify request was made'
         verify(getRequestedFor(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc')))
+    }
+
+    def 'should append default registry as fallback'() {
+        given:
+        def moduleResponse = [
+            module: [
+                name: 'nf-core/fastqc',
+                latest: [
+                    version: '1.0.0',
+                    createdAt: '2024-02-01T00:00:00Z'
+                ]
+            ]
+        ]
+        and: 'a custom primary registry (unstubbed -> 404) and the default pointing to a stubbed path'
+        def primary = "http://localhost:${wireMock.port()}/primary"
+        def defaultUrl = "http://localhost:${wireMock.port()}/default"
+        RegistryClientFactory.setDefaultRegistry(defaultUrl)
+        and:
+        stubFor(get(urlEqualTo('/default/v1/modules/nf-core%2Ffastqc'))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader('Content-Type', 'application/json')
+                .withBody(JsonOutput.toJson(moduleResponse))))
+        and:
+        def config = new RegistryConfig([url: primary])
+        def client = RegistryClientFactory.forConfig(config)
+
+        when:
+        def result = client.getModule('nf-core/fastqc')
+
+        then: 'the module is resolved from the default registry fallback'
+        result != null
+        result.name == 'nf-core/fastqc'
+
+        and: 'the primary was tried first, then the default registry'
+        verify(getRequestedFor(urlEqualTo('/primary/v1/modules/nf-core%2Ffastqc')))
+        verify(getRequestedFor(urlEqualTo('/default/v1/modules/nf-core%2Ffastqc')))
+    }
+
+    def 'should not duplicate default registry when already configured'() {
+        given:
+        def moduleResponse = [
+            module: [
+                name: 'nf-core/fastqc',
+                latest: [
+                    version: '1.0.0',
+                    createdAt: '2024-02-01T00:00:00Z'
+                ]
+            ]
+        ]
+        and: 'the user-configured url is the same as the default'
+        RegistryClientFactory.setDefaultRegistry(url)
+        stubFor(get(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc'))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader('Content-Type', 'application/json')
+                .withBody(JsonOutput.toJson(moduleResponse))))
+        and:
+        def config = new RegistryConfig([url: url])
+        def client = RegistryClientFactory.forConfig(config)
+
+        when:
+        def result = client.getModule('nf-core/fastqc')
+
+        then:
+        result.name == 'nf-core/fastqc'
+        and: 'the registry is queried exactly once (no duplicate fallback)'
+        verify(1, getRequestedFor(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc')))
     }
 
     def 'should search modules in registry'() {
