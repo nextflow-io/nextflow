@@ -166,13 +166,18 @@ class PluginUpdater extends UpdateManager {
         }
     }
 
-    private boolean isAlreadyInstalled(PluginRef ref) {
+    protected boolean isAlreadyInstalled(PluginRef ref) {
         // Only skip when the user has pinned a version: an unpinned spec needs remote metadata
         // to resolve the latest release.
         if( !ref.version )
             return false
-        final current = pluginManager.getPlugin(ref.id)
-        return current != null && current.descriptor.version == ref.version
+        // Check the on-disk plugin store rather than the runtime PluginManager: at prefetch
+        // time the local plugins have not been loaded into the manager yet (its per-run root
+        // is still empty), so pluginManager.getPlugin() would always return null. installPlugin()
+        // reuses the cached copy whenever the store directory exists (it only downloads when
+        // missing), so its presence is the authoritative signal that no remote metadata is
+        // required to start the plugin.
+        return pluginsStore != null && FilesEx.exists(pluginsStore.resolve("${ref.id}-${ref.version}"))
     }
 
     /**
