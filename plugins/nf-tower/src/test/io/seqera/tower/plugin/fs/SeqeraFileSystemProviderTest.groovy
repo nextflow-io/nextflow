@@ -22,6 +22,8 @@ import java.nio.file.FileSystemAlreadyExistsException
 import java.nio.file.InvalidPathException
 import java.nio.file.NoSuchFileException
 import java.nio.file.attribute.BasicFileAttributes
+import java.nio.file.attribute.FileTime
+import java.time.OffsetDateTime
 
 import groovy.json.JsonOutput
 import io.seqera.tower.plugin.TowerClient
@@ -77,9 +79,9 @@ class SeqeraFileSystemProviderTest extends Specification {
     private static String versionsJson() {
         JsonOutput.toJson([versions: [
             [datasetId: 'ds-1', version: 1L, fileName: 'samples.csv', fileSize: 100L,
-             mediaType: 'text/csv', hasHeader: true, dateCreated: '2024-01-01T00:00:00Z', disabled: false],
+             mediaType: 'text/csv', hasHeader: true, dateCreated: '2024-01-01T00:00:00Z', lastUpdated: '2024-01-03T00:00:00Z', disabled: false],
             [datasetId: 'ds-1', version: 2L, fileName: 'samples_v2.csv', fileSize: 4096L,
-             mediaType: 'text/csv', hasHeader: true, dateCreated: '2024-01-02T00:00:00Z', disabled: false]
+             mediaType: 'text/csv', hasHeader: true, dateCreated: '2024-01-02T00:00:00Z', lastUpdated: '2024-01-04T00:00:00Z', disabled: false]
         ]])
     }
 
@@ -204,6 +206,52 @@ class SeqeraFileSystemProviderTest extends Specification {
         !attrs.isDirectory()
         attrs.isRegularFile()
         attrs.size() == 4096L
+        and: 'timestamps come from the resolved version'
+        attrs.creationTime() == FileTime.from(OffsetDateTime.parse('2024-01-02T00:00:00Z').toInstant())
+        attrs.lastModifiedTime() == FileTime.from(OffsetDateTime.parse('2024-01-04T00:00:00Z').toInstant())
+        attrs.lastAccessTime() == attrs.lastModifiedTime()
+    }
+
+    def "readAttributes uses pinned version for size and timestamps"() {
+        given:
+        def tc = spyTower()
+        tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
+        tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
+        tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >> ok(datasetsJson())
+        tc.sendApiRequest("${ENDPOINT}/datasets/ds-1/versions?workspaceId=10") >> ok(versionsJson())
+
+        final fs = buildFs(tc)
+        final path = new SeqeraPath(fs, 'seqera://acme/research/datasets/samples@1')
+
+        when:
+        final attrs = fs.provider().readAttributes(path, BasicFileAttributes)
+
+        then:
+        attrs.isRegularFile()
+        attrs.size() == 100L
+        attrs.lastModifiedTime() == FileTime.from(OffsetDateTime.parse('2024-01-03T00:00:00Z').toInstant())
+    }
+
+    def "readAttributes reports size 0 when fileSize is absent (legacy Tower)"() {
+        given:
+        def tc = spyTower()
+        tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
+        tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
+        tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >> ok(datasetsJson())
+        tc.sendApiRequest("${ENDPOINT}/datasets/ds-1/versions?workspaceId=10") >> ok(JsonOutput.toJson([versions: [
+            [datasetId: 'ds-1', version: 1L, fileName: 'samples.csv',
+             mediaType: 'text/csv', hasHeader: true, dateCreated: '2024-01-01T00:00:00Z', disabled: false]
+        ]]))
+
+        final fs = buildFs(tc)
+        final path = new SeqeraPath(fs, 'seqera://acme/research/datasets/samples')
+
+        when:
+        final attrs = fs.provider().readAttributes(path, BasicFileAttributes)
+
+        then:
+        attrs.isRegularFile()
+        attrs.size() == 0L
     }
 
     // ---- newDirectoryStream (T023) ----
