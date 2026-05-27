@@ -62,6 +62,11 @@ class NextflowMeta {
         volatile float dsl
         boolean strict
         boolean moduleBinaries
+
+        void setTypes(boolean types) {
+            if( types )
+                throw new AbortOperationException("Static typing requires the strict parser -- set NXF_SYNTAX_PARSER=v2 in your environment to enable the strict parser")
+        }
     }
 
     final VersionNumber version
