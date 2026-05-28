@@ -1,5 +1,10 @@
 nf-tower changelog
 ===================
+1.28.0 - 28 May 2026
+- Expose dataset file size in seqera fs file attributes (#7141) [beac1e455]
+- Fix world-readable seqera-auth.config credential file (#7182) [41a5f24af]
+- Bump lib-httpx@2.3.0 (#7181) [1c47215a8]
+
 1.27.0 - 28 Apr 2026
 - Add -user-secret and -workspace-secret flags to nextflow launch (#7040) [53045104d]
 
