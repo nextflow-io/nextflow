@@ -19,6 +19,8 @@ package nextflow.util;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -27,6 +29,7 @@ import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -47,6 +50,7 @@ import nextflow.extension.Bolts;
 import nextflow.extension.FilesEx;
 import nextflow.io.SerializableMarker;
 import nextflow.script.types.Bag;
+import nextflow.script.types.Record;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static nextflow.Const.DEFAULT_ROOT;
@@ -151,6 +155,9 @@ public class HashBuilder {
 
         else if( value instanceof Map )
             hashUnorderedCollection(hasher, ((Map) value).entrySet(), mode);
+
+        else if( value instanceof Record )
+            hashUnorderedCollection(hasher, recordToMap((Record) value).entrySet(), mode);
 
         else if( value instanceof Map.Entry ) {
             Map.Entry entry = (Map.Entry)value;
@@ -459,6 +466,40 @@ public class HashBuilder {
 
         Hasher hasher = function.newHasher();
         return hashFileContent(hasher, file).hash();
+    }
+
+    /**
+     * Extract a typed record's instance fields into a {@link Map} so the record can be
+     * hashed as an unordered collection of (field name, field value) entries — the same
+     * representation used for {@link RecordMap}.
+     *
+     * <p>This ensures user-defined records with identical field values produce identical
+     * hashes across runs, regardless of JVM identity hash codes. Records built via the
+     * stdlib {@code record(...)} helper (which return {@link RecordMap}) and records
+     * instantiated from a typed {@code record …} declaration hash to the same value
+     * when their fields match.
+     *
+     * @param record A {@link Record} instance whose public, non-static fields will be hashed.
+     * @return A map from field name to field value.
+     */
+    static private Map<String,Object> recordToMap(Record record) {
+        if( record instanceof Map ) {
+            // already handled by the Map branch; defensive guard
+            return (Map<String,Object>) record;
+        }
+        var result = new LinkedHashMap<String,Object>();
+        for( Field field : record.getClass().getFields() ) {
+            int mods = field.getModifiers();
+            if( Modifier.isStatic(mods) || field.isSynthetic() )
+                continue;
+            try {
+                result.put(field.getName(), field.get(record));
+            }
+            catch (IllegalAccessException e) {
+                throw new IllegalStateException("Unable to read record field: " + field.getName(), e);
+            }
+        }
+        return result;
     }
 
     static private Hasher hashUnorderedCollection(Hasher hasher, Collection collection, HashMode mode)  {

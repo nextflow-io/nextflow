@@ -22,9 +22,28 @@ import java.nio.file.Paths
 import com.google.common.hash.Hashing
 import nextflow.Global
 import nextflow.Session
+import nextflow.script.types.Record
 import org.apache.commons.codec.digest.DigestUtils
 import spock.lang.Specification
 import test.TestHelper
+
+class SampleRecord implements Record {
+    public String sample
+    public Integer count
+    SampleRecord(String sample, Integer count) {
+        this.sample = sample
+        this.count = count
+    }
+}
+
+class NestedRecord implements Record {
+    public String id
+    public SampleRecord inner
+    NestedRecord(String id, SampleRecord inner) {
+        this.id = id
+        this.inner = inner
+    }
+}
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -152,6 +171,78 @@ class HashBuilderTest extends Specification {
 
         then:
         hash1.hash() == hash2.hash()
+    }
+
+    def 'should hash typed record by field values, independent of JVM identity'() {
+        given:
+        def r1 = new SampleRecord('alpha', 1)
+        def r2 = new SampleRecord('alpha', 1)
+        def r3 = new SampleRecord('beta', 1)
+        def r4 = new SampleRecord('alpha', 2)
+
+        expect: 'records with same field values hash to the same value'
+        CacheHelper.hasher(r1).hash() == CacheHelper.hasher(r2).hash()
+
+        and: 'records with different field values hash differently'
+        CacheHelper.hasher(r1).hash() != CacheHelper.hasher(r3).hash()
+        CacheHelper.hasher(r1).hash() != CacheHelper.hasher(r4).hash()
+    }
+
+    def 'typed record and equivalent RecordMap should hash to the same value'() {
+        given:
+        def typed = new SampleRecord('alpha', 1)
+        def asMap = new RecordMap([sample: 'alpha', count: 1])
+
+        expect:
+        CacheHelper.hasher(typed).hash() == CacheHelper.hasher(asMap).hash()
+    }
+
+    def 'record built with the record(...) built-in should hash the same as the typed constructor'() {
+        given: 'a record built with the stdlib record(...) helper'
+        def builtin = nextflow.Nextflow.record(sample: 'alpha', count: 1)
+
+        and: 'an equivalent record built with the typed-record constructor'
+        def typed = new SampleRecord('alpha', 1)
+
+        expect:
+        CacheHelper.hasher(builtin).hash() == CacheHelper.hasher(typed).hash()
+    }
+
+    def 'record(...) built-in hash should not depend on the order of named arguments'() {
+        given:
+        def r1 = nextflow.Nextflow.record(sample: 'alpha', count: 1)
+        def r2 = nextflow.Nextflow.record(count: 1, sample: 'alpha')
+
+        expect:
+        CacheHelper.hasher(r1).hash() == CacheHelper.hasher(r2).hash()
+    }
+
+    def 'nested typed records should hash by value'() {
+        given:
+        def n1 = new NestedRecord('x', new SampleRecord('alpha', 1))
+        def n2 = new NestedRecord('x', new SampleRecord('alpha', 1))
+        def n3 = new NestedRecord('x', new SampleRecord('beta', 1))
+        def n4 = new NestedRecord('y', new SampleRecord('alpha', 1))
+
+        expect: 'same outer and same inner field values hash equally'
+        CacheHelper.hasher(n1).hash() == CacheHelper.hasher(n2).hash()
+
+        and: 'a change to the inner record invalidates the outer hash'
+        CacheHelper.hasher(n1).hash() != CacheHelper.hasher(n3).hash()
+
+        and: 'a change to the outer field invalidates the hash'
+        CacheHelper.hasher(n1).hash() != CacheHelper.hasher(n4).hash()
+    }
+
+    def 'nested typed record and nested RecordMap should hash equally'() {
+        given:
+        def typed = new NestedRecord('x', new SampleRecord('alpha', 1))
+        def asMap = nextflow.Nextflow.record(
+                id: 'x',
+                inner: nextflow.Nextflow.record(sample: 'alpha', count: 1) )
+
+        expect:
+        CacheHelper.hasher(typed).hash() == CacheHelper.hasher(asMap).hash()
     }
 
     def 'directories with same content but different structure should yield different hashes'() {
