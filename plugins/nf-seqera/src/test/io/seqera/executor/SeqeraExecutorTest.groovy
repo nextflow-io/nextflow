@@ -26,6 +26,7 @@ import nextflow.Session
 import nextflow.SysEnv
 import nextflow.platform.PlatformHelper
 import nextflow.script.WorkflowMetadata
+import nextflow.trace.RuntimeMetadataStore
 import spock.lang.Specification
 
 /**
@@ -227,6 +228,7 @@ class SeqeraExecutorTest extends Specification {
             getWorkflowMetadata() >> workflowMeta
             getWorkDir() >> java.nio.file.Paths.get('/work')
             getRunName() >> 'test-run'
+            getRuntimeMetadata() >> new RuntimeMetadataStore()
         }
         def seqeraOpts = new ExecutorOpts(endpoint: 'https://sched.example.com', provider: 'aws', region: 'us-east-1', autoLabels: true)
         def executor = new SeqeraExecutor()
@@ -268,6 +270,7 @@ class SeqeraExecutorTest extends Specification {
             getWorkflowMetadata() >> workflowMeta
             getWorkDir() >> java.nio.file.Paths.get('/work')
             getRunName() >> 'test-run'
+            getRuntimeMetadata() >> new RuntimeMetadataStore()
         }
         def seqeraOpts = new ExecutorOpts(
             endpoint: 'https://sched.example.com',
@@ -288,6 +291,39 @@ class SeqeraExecutorTest extends Specification {
         captured.getProvider() == 'aws'
         captured.getStrategy() == 'vm'
         captured.getRegion() == 'eu-west-1'
+
+        cleanup:
+        executor.batchSubmitter?.shutdown()
+    }
+
+    def 'createRun publishes executorRunId to session runtime metadata'() {
+        given:
+        SysEnv.push([:])
+        def mockClient = Mock(SchedClient) {
+            createRun(_) >> new CreateRunResponse().runId('run-xyz')
+        }
+        def workflowMeta = Mock(WorkflowMetadata) {
+            getPlatform() >> null
+        }
+        def runtimeMetadata = new RuntimeMetadataStore()
+        def session = Mock(Session) {
+            getConfig() >> [tower: [:]]
+            getWorkflowMetadata() >> workflowMeta
+            getWorkDir() >> java.nio.file.Paths.get('/work')
+            getRunName() >> 'test-run'
+            getRuntimeMetadata() >> runtimeMetadata
+        }
+        def seqeraOpts = new ExecutorOpts(endpoint: 'https://sched.example.com', provider: 'aws')
+        def executor = new SeqeraExecutor()
+        executor.session = session
+        executor.@seqeraConfig = seqeraOpts
+        executor.@client = mockClient
+
+        when:
+        executor.createRun()
+
+        then:
+        runtimeMetadata.get('executorRunId') == 'run-xyz'
 
         cleanup:
         executor.batchSubmitter?.shutdown()

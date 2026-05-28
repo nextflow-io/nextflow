@@ -422,9 +422,12 @@ class TowerObserver implements TraceObserverV2 {
     }
 
     protected Map makeHeartbeatReq() {
-        def result = new HashMap(1)
+        def result = new LinkedHashMap(3)
         result.progress = getWorkflowProgress(true)
         result.instant = Instant.now().toEpochMilli()
+        final metadata = session.runtimeMetadata.snapshot()
+        if( metadata )
+            result.runtimeMetadata = metadata
         return result
     }
 

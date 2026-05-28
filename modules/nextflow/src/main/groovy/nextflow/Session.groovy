@@ -73,6 +73,7 @@ import nextflow.script.WorkflowMetadata
 import nextflow.script.dsl.ProcessConfigBuilder
 import nextflow.spack.SpackConfig
 import nextflow.trace.LogObserver
+import nextflow.trace.RuntimeMetadataStore
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
 import nextflow.trace.TraceObserverFactoryV2
@@ -290,6 +291,8 @@ class Session implements ISession {
 
     private WorkflowStatsObserver statsObserver
 
+    private final RuntimeMetadataStore runtimeMetadata = new RuntimeMetadataStore()
+
     private FilePorter filePorter
 
     boolean getStatsEnabled() { statsEnabled }
@@ -307,6 +310,8 @@ class Session implements ISession {
     Throwable getError() { error }
 
     WorkflowStatsObserver getStatsObserver() { statsObserver }
+
+    RuntimeMetadataStore getRuntimeMetadata() { runtimeMetadata }
 
     WorkflowMetadata getWorkflowMetadata() { workflowMetadata }
 

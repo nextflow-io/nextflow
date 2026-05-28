@@ -31,6 +31,7 @@ import nextflow.exception.AbortRunException
 import nextflow.script.PlatformMetadata
 import nextflow.script.ScriptBinding
 import nextflow.script.WorkflowMetadata
+import nextflow.trace.RuntimeMetadataStore
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStats
 import nextflow.trace.WorkflowStatsObserver
@@ -568,6 +569,41 @@ class TowerObserverTest extends Specification {
         req.tasks[0].gpuMetrics.mem == 15360
         req.tasks[0].gpuMetrics.pct == 75
         req.tasks[0].gpuMetrics.peak == 100
+    }
+
+    def 'should omit runtimeMetadata from heartbeat when store is empty' () {
+        given:
+        def session = Mock(Session) {
+            getRuntimeMetadata() >> new RuntimeMetadataStore()
+        }
+        def observer = Spy(newObserver(session))
+        observer.getWorkflowProgress(true) >> new WorkflowProgress()
+
+        when:
+        def req = observer.makeHeartbeatReq()
+
+        then:
+        req.progress != null
+        aroundNow(req.instant)
+        !req.containsKey('runtimeMetadata')
+    }
+
+    def 'should include runtimeMetadata snapshot in heartbeat when populated' () {
+        given:
+        def store = new RuntimeMetadataStore()
+        store.put('executorRunId', 'run-abc')
+        store.put('lineageId', 'lid://xyz')
+        def session = Mock(Session) {
+            getRuntimeMetadata() >> store
+        }
+        def observer = Spy(newObserver(session))
+        observer.getWorkflowProgress(true) >> new WorkflowProgress()
+
+        when:
+        def req = observer.makeHeartbeatReq()
+
+        then:
+        req.runtimeMetadata == [executorRunId: 'run-abc', lineageId: 'lid://xyz']
     }
 
     def 'should throw AbortRunException if workflow id is not found'() {
