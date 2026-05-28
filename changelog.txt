@@ -1,5 +1,18 @@
 NEXTFLOW CHANGE-LOG
 ===================
+26.04.3 - 28 May 2026
+- Fix bucket cleanup in S3 test (#7172) [4fcc58355]
+- Fix docs CI on Python 3.14 by upgrading Sphinx (#7175) [71665de7a]
+- Improve message error when enabling types with syntax parser v1 (#7173) [13282b515]
+- Make plugin metadata prefetch resilient to registry rate limiting (#7181) [1c47215a8]
+- Support fetching local files in `FUSION_CONTAINER_CONFIG_URL` (#7142) [0d1ece8c9]
+- Bump nf-azure@1.22.5
+- Bump nf-google@1.27.3
+- Bump nf-k8s@1.5.4
+- Bump nf-seqera@0.20.1
+- Bump nf-tower@1.28.0
+- Bump nf-wave@1.21.0
+
 26.04.2 - 21 May 2026
 - ADR: Strict syntax parser (#7150) [514a63619]
 - chore: pin dependency python to 3.14.5 (#7152) [ec74f3d28]
