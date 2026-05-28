@@ -70,7 +70,7 @@ public class StripTypesVisitor extends ClassCodeExpressionTransformer {
         // Erase record type parameters so that records (with type Record)
         // can be dispatched to these methods at runtime
         for( var param : node.getParameters() ) {
-            if( param.getType().redirect() instanceof RecordNode )
+            if( isNamedRecordType(param.getType()) )
                 param.setType(ClassHelper.dynamicType());
         }
         super.visitMethod(node);
@@ -95,17 +95,25 @@ public class StripTypesVisitor extends ClassCodeExpressionTransformer {
     }
 
     private Expression stripTypeAnnotation(CastExpression node) {
-        return STRIP_TYPES.contains(node.getType())
+        return shouldStripType(node.getType())
             ? node.getExpression()
             : node;
     }
 
     private Expression stripTypeAnnotation(DeclarationExpression node) {
         if( node.getLeftExpression() instanceof VariableExpression ve ) {
-            if( STRIP_TYPES.contains(ve.getType()) )
+            if( shouldStripType(ve.getType()) )
                 node.setLeftExpression(new VariableExpression(ve.getName()));
         }
         return node;
+    }
+
+    private boolean shouldStripType(ClassNode type) {
+        return STRIP_TYPES.contains(type) || isNamedRecordType(type);
+    }
+
+    private boolean isNamedRecordType(ClassNode type) {
+        return type.redirect() instanceof RecordNode;
     }
 
 }

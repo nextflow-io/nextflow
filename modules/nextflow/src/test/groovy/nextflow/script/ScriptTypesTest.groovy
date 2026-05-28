@@ -21,6 +21,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 import nextflow.exception.ScriptCompilationException
+import nextflow.util.RecordMap
 import test.Dsl2Spec
 
 import static test.ScriptHelper.*
@@ -76,6 +77,25 @@ class ScriptTypesTest extends Dsl2Spec {
         )
         then:
         result == 'Sample(id: 1, fastq: 1.fastq)'
+    }
+
+    def 'should strip record type casts' () {
+
+        when:
+        def result = runScript(
+            '''\
+            workflow {
+                record(id: '1', fastq: '1.fastq') as Sample
+            }
+
+            record Sample {
+                id: String
+                fastq: String
+            }
+            '''
+        )
+        then:
+        result == new RecordMap(id: '1', fastq: '1.fastq')
     }
 
     def 'should report error for invalid record call' () {
