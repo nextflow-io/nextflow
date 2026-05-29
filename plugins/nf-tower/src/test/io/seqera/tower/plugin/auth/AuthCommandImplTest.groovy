@@ -761,6 +761,7 @@ param2 = 'value2'"""
         given:
         def cmd = Spy(AuthCommandImpl)
         def config = ['tower.endpoint': 'https://unreachable.example.com']
+        SysEnv.push([:])  // Isolate from actual environment variables (avoid real network calls)
 
         cmd.checkApiConnection(_) >> false
 
@@ -771,6 +772,9 @@ param2 = 'value2'"""
         status != null
         status.table[1][0] == 'API connection'
         status.table[1][1].contains('ERROR')
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should collect status with failed authentication'() {
@@ -801,6 +805,7 @@ param2 = 'value2'"""
         given:
         def cmd = Spy(AuthCommandImpl)
         def config = ['tower.enabled': true]
+        SysEnv.push([:])  // Isolate from actual environment variables (avoid real network calls)
 
         cmd.checkApiConnection(_) >> true
 
@@ -811,12 +816,16 @@ param2 = 'value2'"""
         status != null
         status.table[3][0] == 'Workflow monitoring'
         status.table[3][1].contains('Yes')
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should collect status with monitoring disabled'() {
         given:
         def cmd = Spy(AuthCommandImpl)
         def config = ['tower.enabled': false]
+        SysEnv.push([:])  // Isolate from actual environment variables (avoid real network calls)
 
         cmd.checkApiConnection(_) >> true
 
@@ -827,6 +836,9 @@ param2 = 'value2'"""
         status != null
         status.table[3][0] == 'Workflow monitoring'
         status.table[3][1].contains('No')
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should collect status with workspace details'() {
@@ -922,6 +934,7 @@ param2 = 'value2'"""
         given:
         def cmd = Spy(AuthCommandImpl)
         def config = [:]
+        SysEnv.push([:])  // Isolate from actual environment variables (avoid real network calls)
 
         cmd.checkApiConnection(_) >> true
 
@@ -936,6 +949,9 @@ param2 = 'value2'"""
         // Should show monitoring disabled by default
         status.table[3][1].contains('No')
         status.table[3][2] == 'default'
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should collect status with mixed sources'() {
