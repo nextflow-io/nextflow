@@ -66,12 +66,7 @@ Every record has the same top-level structure:
 
 This approach is inspired by [Kubernetes API resources](https://kubernetes.io/docs/reference/using-api/api-concepts/). The initial lineage version is `v1beta1`, which will be replaced by `v1` when the lineage model is stable.
 
-Lineage records are saved during the workflow run using a trace observer:
-
-- When the workflow begins, save a `WorkflowRun` record
-- When a task completes, save a `TaskRun` and `TaskOutput` record, as well as a `FileOutput` record for every output file
-- When a file is published, save a `FileOutput` record linked to the workflow run
-- When the workflow completes, save a `WorkflowOutput` record
+The [lineage schema](https://raw.githubusercontent.com/nextflow-io/schemas/main/lineage/v1beta1/schema.json) is available on GitHub.
 
 ### Lineage IDs (LIDs)
 
@@ -97,11 +92,22 @@ LIDs can be referenced as URIs in Nextflow using the `lid://` URI scheme. This w
 file('lid://05dfa13d/align/index.bam')
 ```
 
-### Storage backend
+### Lineage store
 
 A *lineage store* is a key-value store of lineage IDs to lineage records. The lineage system defines a simple interface for lineage stores, as well as a default implementation which stores records as JSON files in a directory tree (e.g. `.lineage/862df531.../.data.json`).
 
 The lineage store is an extension point, so third-party plugins can integrate their own backends seamlessly into the core lineage system. For example, an alternative backend could store lineage records in a SQLite or Postgres database.
+
+### Lineage generation
+
+Lineage records are saved during the workflow run using a trace observer:
+
+- When the workflow begins, save a `WorkflowRun` record
+- When a task completes, save a `TaskRun` and `TaskOutput` record, as well as a `FileOutput` record for every output file
+- When a file is published, save a `FileOutput` record linked to the workflow run
+- When the workflow completes, save a `WorkflowOutput` record
+
+Lineage generation must be explicitly enabled by setting `lineage.enabled = true` in the Nextflow configuration.
 
 ### Lineage CLI
 
