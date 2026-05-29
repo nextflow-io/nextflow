@@ -21,6 +21,7 @@ import java.time.OffsetDateTime
 
 import nextflow.Session
 import nextflow.BuildInfo
+import nextflow.exception.AbortRunException
 import nextflow.exception.WorkflowScriptErrorException
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStats
@@ -34,6 +35,24 @@ import test.TestHelper
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class WorkflowMetadataTest extends Specification {
+
+    def 'should capture the abort cause in errorReport and errorMessage' () {
+        given:
+        def script = Mock(ScriptFile)
+        Session session = Spy(Session, constructorArgs: [[:]])
+        session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
+        // simulate a background abort (e.g. a Tower 502 telemetry failure): error set, no task fault
+        session.getError() >> new AbortRunException('Unexpected HTTP response\n- status code : 502\n- response msg: 502 Bad Gateway')
+        and:
+        def metadata = new WorkflowMetadata(session, script)
+
+        when:
+        metadata.invokeOnComplete()
+
+        then:
+        metadata.errorMessage?.contains('502 Bad Gateway')
+        metadata.errorReport?.contains('502 Bad Gateway')
+    }
 
     def 'should populate workflow object' () {
 
