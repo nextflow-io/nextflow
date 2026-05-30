@@ -195,7 +195,7 @@ process FASTQC {
 }
 ```
 
-This approach allows record inputs to be declared without the need for external record types. Each record field is acessed directly as `id`, `fastq_1`, and so on.
+This approach allows record inputs to be declared without the need for external record types. Each record field is accessed directly as `id`, `fastq_1`, and so on.
 
 ### Process outputs
 

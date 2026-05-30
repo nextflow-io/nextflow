@@ -276,6 +276,96 @@ class TowerClientTest extends Specification {
         url.contains('name=test+workflow')
     }
 
+    def 'should extract a concise reason from an HTML error body' () {
+        given:
+        def tower = new TowerClient()
+        def html = '''\
+            <html>
+            <head><title>502 Bad Gateway</title></head>
+            <body>
+            <center><h1>502 Bad Gateway</h1></center>
+            </body>
+            </html>
+            '''.stripIndent()
+
+        expect: 'an HTML gateway error page is reduced to its title reason'
+        tower.parseCause(html) == '502 Bad Gateway'
+
+        and: 'a JSON error object still returns its message'
+        tower.parseCause('{"message":"Boom"}') == 'Boom'
+
+        and: 'a plain text cause is returned as-is'
+        tower.parseCause('plain error') == 'plain error'
+
+        and: 'a null cause returns null'
+        tower.parseCause(null) == null
+    }
+
+    def 'should reduce HTML error bodies to a concise reason' () {
+        given:
+        def tower = new TowerClient()
+
+        expect:
+        tower.parseCause(BODY) == EXPECTED
+
+        where:
+        BODY                                                                | EXPECTED
+        '<html><head><title>502 Bad Gateway</title></head></html>'          | '502 Bad Gateway'
+        '<html><head><title lang="en">503 Unavailable</title></head></html>'| '503 Unavailable'
+        '<html><head><title>504\n  Gateway\n  Timeout</title></head></html>'| '504 Gateway Timeout'
+        '<html><head><title>  504 Spaces  </title></head></html>'           | '504 Spaces'
+        '<html><body>no title here</body></html>'                           | '<html><body>no title here</body></html>'
+        '<html><head><title></title></head></html>'                         | '<html><head><title></title></head></html>'
+        '{"message":"Boom"}'                                                | 'Boom'
+        'plain error'                                                       | 'plain error'
+        null                                                                | null
+    }
+
+    def 'should surface a concise reason for an HTML error response' () {
+        given:
+        def client = Mock(HxClient)
+        def tower = new TowerClient()
+        tower.@httpClient = client
+        and:
+        def html = '''\
+            <html>
+            <head><title>502 Bad Gateway</title></head>
+            <body>
+            <center><h1>502 Bad Gateway</h1></center>
+            </body>
+            </html>
+            '''.stripIndent()
+
+        when:
+        def resp = tower.sendHttpMessage('http://foo.com/trace/123/progress', [foo: 'bar'], 'PUT')
+        then:
+        1 * client.sendAsString(_) >> Mock(HttpResponse) { statusCode() >> 502; body() >> html }
+        and: 'the response surfaces the concise reason without raw HTML'
+        resp.error
+        resp.code == 502
+        resp.message == '502 Bad Gateway'
+        !resp.message.contains('<html')
+    }
+
+    def 'should abort progress with a concise reason on a 502 gateway error' () {
+        given:
+        def html = '<html>\n<head><title>502 Bad Gateway</title></head>\n<body></body>\n</html>\n'
+        def client = Mock(HxClient)
+        def tower = new TowerClient()
+        tower.@httpClient = client
+        tower.@endpoint = 'http://foo.com'
+
+        when:
+        tower.traceProgress([:], '1234', '5678')
+        then:
+        1 * client.sendAsString(_) >> Mock(HttpResponse) { statusCode() >> 502; body() >> html }
+        and:
+        def e = thrown(AbortRunException)
+        e.message.contains('502 Bad Gateway')
+        e.message.contains('status code : 502')
+        !e.message.contains('<html')
+    }
+
     def 'should send AbortRunException in selected client calls'() {
         given:
         def client = Spy(new TowerClient(new TowerConfig([:], [TOWER_ACCESS_TOKEN: 'token']))){
