@@ -16,6 +16,19 @@ on:
   pull_request:
     types: [opened, reopened, synchronize]
   workflow_dispatch:
+    inputs:
+      e2e:
+        description: 'Launch the e2e showcase test after build (same as the [e2e ...] commit tag)'
+        type: choice
+        options:
+          - 'none'
+          - 'staging'
+          - 'production'
+        default: 'none'
+      release:
+        description: 'Run the release process after build + tests (same as the [release] commit tag)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -164,7 +177,7 @@ jobs:
             export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/google_credentials.json"
           fi
           make clean assemble install
-          bash test-ci.sh
+          bash .github/scripts/test-ci.sh
         env:
           TEST_JDK: ${{ matrix.java_version }}
           TEST_MODE: ${{ matrix.test_mode }}
@@ -198,59 +211,32 @@ jobs:
             validation-tests.tar.gz
             integration-tests.tar.gz
 
+  # Launch the e2e showcase test once the build is green. Triggered by the
+  # [e2e stage]/[e2e prod] commit tag, or the workflow_dispatch `e2e` input.
+  # All logic lives in the reusable .github/workflows/e2e.yml workflow.
   test-e2e:
-      if: ${{ contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]') }}
-      needs: build
-      runs-on: ubuntu-latest
-      timeout-minutes: 10
-      steps:
-          - name: Checkout
-            uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-            with:
-                fetch-depth: 1
-                submodules: true
-                persist-credentials: false
-                
-          - name: Setup Java 17
-            uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
-            with:
-                java-version: 17
-                distribution: 'temurin'
-                architecture: x64
-                cache: gradle
+    needs: build
+    if: >-
+      contains(needs.build.outputs.commit_message, '[e2e stage]') ||
+      contains(needs.build.outputs.commit_message, '[e2e prod]') ||
+      ( github.event_name == 'workflow_dispatch' && inputs.e2e != 'none' )
+    uses: ./.github/workflows/e2e.yml
+    with:
+      # inputs.e2e is the dispatch choice ('' on push/PR, so it falls through)
+      environment: ${{ inputs.e2e || (contains(needs.build.outputs.commit_message, '[e2e prod]') && 'production' || 'staging') }}
+    secrets:
+      SEQERA_PUBLIC_CR_PASSWORD: ${{ secrets.SEQERA_PUBLIC_CR_PASSWORD }}
+      AUTOMATION_GITHUB_TOKEN: ${{ secrets.AUTOMATION_GITHUB_TOKEN }}
 
-          - name: Setup env
-            env:
-              NEEDS_BUILD_OUTPUTS_COMMIT_MESSAGE: ${{ needs.build.outputs.commit_message }}
-            run: |
-                wget -q -O wave https://github.com/seqeralabs/wave-cli/releases/download/v1.4.1/wave-1.4.1-linux-x86_64
-                chmod +x wave
-                mv wave /usr/local/bin/
-                # Use heredoc-style delimiter so multi-line / quote-containing
-                # commit messages survive intact (run.sh greps for `[e2e prod]`).
-                {
-                  echo "COMMIT_MESSAGE<<NXF_EOF"
-                  echo "$NEEDS_BUILD_OUTPUTS_COMMIT_MESSAGE"
-                  echo "NXF_EOF"
-                } >> "$GITHUB_ENV"
-
-          - name : Docker Login to Seqera public CR
-            uses : docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
-            with :
-                registry : "public.cr.seqera.io"
-                username : "public-cr-admin"
-                password : ${{ secrets.SEQERA_PUBLIC_CR_PASSWORD }}
-
-          - name: Launch tests
-            run: |
-                cd test-e2e
-                bash run.sh
-            env:
-                GITHUB_TOKEN: ${{ secrets.AUTOMATION_GITHUB_TOKEN }}
-                GRADLE_OPTS: '-Dorg.gradle.daemon=false'
-
+  # Run the release once build is green and tests pass. Triggered by the
+  # [release] commit tag, or the workflow_dispatch `release` input.
   release:
-    if: ${{ always() && contains(needs.build.outputs.commit_message, '[release]') && needs.build.result == 'success' && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
+    if: >-
+      always() &&
+      needs.build.result == 'success' &&
+      (needs.test.result == 'success' || needs.test.result == 'skipped') &&
+      ( contains(needs.build.outputs.commit_message, '[release]') ||
+        (github.event_name == 'workflow_dispatch' && inputs.release) )
     needs: [build, test]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -301,7 +287,7 @@ jobs:
           echo "Starting release process..."
           echo "npr.apiUrl=$NPR_API_URL" >> gradle.properties
           echo "npr.apiKey=$NPR_API_KEY" >> gradle.properties
-          bash release.sh
+          bash .github/scripts/release.sh
         env:
           GRADLE_OPTS: '-Dorg.gradle.daemon=false'
           AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT: 'true'
@@ -316,3 +302,61 @@ jobs:
           NPR_API_KEY: ${{ secrets.NPR_API_KEY }}
           # GitHub secrets
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Always-on consolidated summary so the run page shows, at a glance, what ran,
+  # whether it passed, and (for e2e) the showcase run URL to follow up on.
+  summary:
+    if: ${{ always() }}
+    needs: [build, test, test-e2e, release]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Write CI summary
+        env:
+          BUILD_RESULT: ${{ needs.build.result }}
+          TEST_RESULT: ${{ needs.test.result }}
+          E2E_RESULT: ${{ needs.test-e2e.result }}
+          RELEASE_RESULT: ${{ needs.release.result }}
+          E2E_ENV: ${{ needs.test-e2e.outputs.environment }}
+          E2E_LAUNCHER: ${{ needs.test-e2e.outputs.launcher_image }}
+          E2E_URL: ${{ needs.test-e2e.outputs.showcase_url }}
+        run: |
+          icon() {
+            case "$1" in
+              success)        echo "✅ success" ;;
+              failure)        echo "❌ failure" ;;
+              cancelled)      echo "⚠️ cancelled" ;;
+              skipped|"")     echo "⏭️ skipped" ;;
+              *)              echo "$1" ;;
+            esac
+          }
+
+          # overall verdict: failure wins (short-circuits), then cancelled, else passed
+          overall="✅ passed"
+          for r in "$BUILD_RESULT" "$TEST_RESULT" "$E2E_RESULT" "$RELEASE_RESULT"; do
+            case "$r" in
+              failure)   overall="❌ failed"; break ;;
+              cancelled) overall="⚠️ cancelled" ;;
+            esac
+          done
+
+          {
+            echo "## Nextflow CI — ${overall}"
+            echo ""
+            echo "| Job | Result |"
+            echo "|---|---|"
+            echo "| Build + unit tests | $(icon "$BUILD_RESULT") |"
+            echo "| Integration tests | $(icon "$TEST_RESULT") |"
+            echo "| e2e showcase | $(icon "$E2E_RESULT") |"
+            echo "| Release | $(icon "$RELEASE_RESULT") |"
+            echo ""
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$E2E_RESULT" = "success" ] && [ -n "$E2E_URL" ]; then
+            {
+              echo "### e2e showcase launched against \`${E2E_ENV}\`"
+              echo "- Run: [${E2E_URL}](${E2E_URL}) (launcher \`${E2E_LAUNCHER}\`)"
+              echo "> CI only launches the test — open the run to confirm it passed."
+            } >> "$GITHUB_STEP_SUMMARY"
+          elif [ "$E2E_RESULT" = "failure" ]; then
+            echo "### e2e showcase failed to launch — check the \`test-e2e\` job logs" >> "$GITHUB_STEP_SUMMARY"
+          fi
