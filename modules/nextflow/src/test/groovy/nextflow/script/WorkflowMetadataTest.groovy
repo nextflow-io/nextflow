@@ -20,6 +20,7 @@ import java.nio.file.Paths
 import java.time.OffsetDateTime
 
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.BuildInfo
 import nextflow.exception.AbortRunException
 import nextflow.exception.WorkflowScriptErrorException
@@ -28,13 +29,20 @@ import nextflow.trace.WorkflowStats
 import nextflow.trace.WorkflowStatsObserver
 import nextflow.util.Duration
 import nextflow.util.VersionNumber
+import org.junit.Rule
 import spock.lang.Specification
+import test.OutputCapture
 import test.TestHelper
+
+import static test.ScriptHelper.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class WorkflowMetadataTest extends Specification {
+
+    @Rule
+    OutputCapture capture = new OutputCapture()
 
     def 'should capture the abort cause in errorReport and errorMessage' () {
         given:
@@ -302,6 +310,32 @@ class WorkflowMetadataTest extends Specification {
         println metadata.executor
         then:
         thrown(MissingPropertyException)
+    }
+
+    def 'should invoke shutdown callbacks once'() {
+        given:
+        SysEnv.push(NXF_TRACE: 'nextflow')
+
+        when:
+        runScript(
+            '''\
+            workflow {
+                main:
+                println 'entry workflow > main'
+
+                onComplete:
+                println 'entry workflow > onComplete'
+            }
+            '''
+        )
+        then:
+        TestHelper.filterLogNoise(capture) == [
+            'entry workflow > main',
+            'entry workflow > onComplete'
+        ]
+
+        cleanup:
+        SysEnv.pop()
     }
 
 }
