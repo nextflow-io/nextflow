@@ -229,14 +229,20 @@ jobs:
       AUTOMATION_GITHUB_TOKEN: ${{ secrets.AUTOMATION_GITHUB_TOKEN }}
 
   # Run the release once build is green and tests pass. Triggered by the
-  # [release] commit tag, or the workflow_dispatch `release` input.
+  # [release] commit tag, or the workflow_dispatch `release` input. The dispatch
+  # path is limited to the same branches the push trigger allows, so a release
+  # can't be kicked off from an arbitrary feature branch.
   release:
     if: >-
       always() &&
       needs.build.result == 'success' &&
       (needs.test.result == 'success' || needs.test.result == 'skipped') &&
       ( contains(needs.build.outputs.commit_message, '[release]') ||
-        (github.event_name == 'workflow_dispatch' && inputs.release) )
+        ( github.event_name == 'workflow_dispatch' && inputs.release &&
+          ( github.ref_name == 'master' ||
+            startsWith(github.ref_name, 'test') ||
+            startsWith(github.ref_name, 'dev') ||
+            startsWith(github.ref_name, 'STABLE-') ) ) )
     needs: [build, test]
     runs-on: ubuntu-latest
     timeout-minutes: 10
