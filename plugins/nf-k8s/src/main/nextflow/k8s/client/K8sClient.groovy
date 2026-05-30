@@ -47,7 +47,7 @@ import org.yaml.snakeyaml.Yaml
 
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeoutException
-import java.util.function.Predicate
+import dev.failsafe.function.CheckedPredicate
 
 /**
  * Kubernetes API client
@@ -735,13 +735,13 @@ class K8sClient {
      * @param cond A predicate that determines when a retry should be triggered
      * @return The {@link dev.failsafe.RetryPolicy} instance
      */
-    protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
+    protected <T> RetryPolicy<T> retryPolicy(CheckedPredicate<? extends Throwable> cond) {
         final cfg = config.retryConfig
         final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
             @Override
             void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
-                log.debug("K8s response error - attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}")
-                final t = event.lastFailure
+                log.debug("K8s response error - attempt: ${event.attemptCount}; reason: ${event.lastException.message}")
+                final t = event.lastException
                 if( t instanceof K8sResponseException && t.response.code == 401 )
                     refreshToken()
             }
@@ -784,7 +784,7 @@ class K8sClient {
      */
     protected <T> T apply(CheckedSupplier<T> action) {
         // define the retry condition
-        final cond = new Predicate<? extends Throwable>() {
+        final cond = new CheckedPredicate<? extends Throwable>() {
             @Override
             boolean test(Throwable t) {
                 if ( t instanceof K8sResponseException && t.response.code in RETRY_CODES )
