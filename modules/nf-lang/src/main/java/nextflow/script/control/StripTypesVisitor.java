@@ -27,20 +27,32 @@ import org.codehaus.groovy.ast.ClassCodeExpressionTransformer;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.MethodNode;
+import org.codehaus.groovy.ast.expr.BinaryExpression;
 import org.codehaus.groovy.ast.expr.CastExpression;
+import org.codehaus.groovy.ast.expr.ClassExpression;
 import org.codehaus.groovy.ast.expr.ClosureExpression;
 import org.codehaus.groovy.ast.expr.DeclarationExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.control.SourceUnit;
+import org.codehaus.groovy.syntax.Types;
+
+import static org.codehaus.groovy.ast.tools.GeneralUtils.*;
 
 /**
  * Strip type annotations that are used by the Nextflow type checker
- * but not supported by the Groovy runtime.
+ * but not supported by the Groovy runtime:
  *
- * For example, Nextflow allows the Tuple type to be specified
- * with variable type arguments, which is not supported by the JVM,
- * so these type annotations must be removed.
+ * - The dataflow types (Channel and Value) are not compatible with
+ *   the runtime types used when static typing is disabled.
+ *
+ * - The Tuple type can be specified with variable type arguments,
+ *   but this is not supported by the JVM.
+ *
+ * - User-defined record types are only used to validate records with
+ *   type RecordMap. Record types must be stripped from type annotations
+ *   and type casts, and instanceof expressions on a record type must be
+ *   replaced with a runtime check.
  *
  * @author Ben Sherman <bentshermman@gmail.com>
  */
@@ -78,6 +90,10 @@ public class StripTypesVisitor extends ClassCodeExpressionTransformer {
 
     @Override
     public Expression transform(Expression node) {
+        if( node instanceof BinaryExpression be && be.getOperation().getType() == Types.KEYWORD_INSTANCEOF ) {
+            return transformInstanceof(be);
+        }
+
         if( node instanceof CastExpression ce ) {
             return stripTypeAnnotation(ce);
         }
@@ -106,6 +122,13 @@ public class StripTypesVisitor extends ClassCodeExpressionTransformer {
                 node.setLeftExpression(new VariableExpression(ve.getName()));
         }
         return node;
+    }
+
+    private Expression transformInstanceof(BinaryExpression node) {
+        var right = node.getRightExpression();
+        if( right instanceof ClassExpression ce && isNamedRecordType(ce.getType()) )
+            return callThisX("_instanceof_record_type", args(transform(node.getLeftExpression()), right));
+        return super.transform(node);
     }
 
     private boolean shouldStripType(ClassNode type) {

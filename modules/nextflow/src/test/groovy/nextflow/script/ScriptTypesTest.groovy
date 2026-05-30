@@ -98,6 +98,33 @@ class ScriptTypesTest extends Dsl2Spec {
         result == new RecordMap(id: '1', fastq: '1.fastq')
     }
 
+    def 'should replace instanceof on record type with runtime check' () {
+
+        when:
+        def result = runScript(
+            '''\
+            workflow {
+                [
+                    test1: record(id: '1', fastq: file('1.fastq')) instanceof Sample,
+                    test2: record(id: '2') instanceof Sample,
+                    test3: 42 instanceof Integer,
+                    test4: '42' instanceof Integer
+                ]
+            }
+
+            record Sample {
+               	id: String
+               	fastq: Path
+            }
+            '''
+        )
+        then:
+        result.test1 == true
+        result.test2 == false
+        result.test3 == true
+        result.test4 == false
+    }
+
     def 'should report error for invalid record call' () {
 
         when:
