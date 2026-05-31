@@ -79,7 +79,7 @@ class ScriptTypesTest extends Dsl2Spec {
         result == 'Sample(id: 1, fastq: 1.fastq)'
     }
 
-    def 'should strip record type casts' () {
+    def 'should cast value to record type' () {
 
         when:
         def result = runScript(
@@ -95,7 +95,41 @@ class ScriptTypesTest extends Dsl2Spec {
             '''
         )
         then:
-        result == new RecordMap(id: '1', fastq: '1.fastq')
+        result instanceof RecordMap
+        result.id == '1'
+        result.fastq == '1.fastq'
+    }
+
+    def 'should cast value to parameterized type'() {
+        when:
+        def samples = runScript(
+            '''\
+            workflow {
+                [
+                  [id: '1', fastq: '1.fastq'],
+                  [id: '2', fastq: '2.fastq'],
+                  [id: '3', fastq: '3.fastq']
+                ] as List<Sample>
+            }
+
+            record Sample {
+                id: String
+                fastq: String
+            }
+            '''
+        )
+        then:
+        samples instanceof List
+        samples.size() == 3
+        samples[0] instanceof RecordMap
+        samples[0].id == '1'
+        samples[0].fastq == '1.fastq'
+        samples[1] instanceof RecordMap
+        samples[1].id == '2'
+        samples[1].fastq == '2.fastq'
+        samples[2] instanceof RecordMap
+        samples[2].id == '3'
+        samples[2].fastq == '3.fastq'
     }
 
     def 'should replace instanceof on record type with runtime check' () {

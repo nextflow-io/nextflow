@@ -16,6 +16,7 @@
 
 package nextflow.script.control;
 
+import java.lang.reflect.Modifier;
 import java.util.List;
 
 import nextflow.script.ast.RecordNode;
@@ -26,6 +27,7 @@ import nextflow.script.types.Value;
 import org.codehaus.groovy.ast.ClassCodeExpressionTransformer;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
 import org.codehaus.groovy.ast.expr.CastExpression;
@@ -95,7 +97,7 @@ public class StripTypesVisitor extends ClassCodeExpressionTransformer {
         }
 
         if( node instanceof CastExpression ce ) {
-            return stripTypeAnnotation(ce);
+            return transformCast(ce);
         }
 
         if( node instanceof ClosureExpression ce ) {
@@ -110,10 +112,37 @@ public class StripTypesVisitor extends ClassCodeExpressionTransformer {
         return super.transform(node);
     }
 
-    private Expression stripTypeAnnotation(CastExpression node) {
-        return shouldStripType(node.getType())
-            ? node.getExpression()
-            : node;
+    private Expression transformCast(CastExpression node) {
+        var type = node.getType();
+        if( type.getGenericsTypes() != null ) {
+            var fn = parameterizedType(type);
+            return callThisX("_as_type", args(transform(node.getExpression()), classX(fn.getDeclaringClass()), constX(fn.getName())));
+        }
+        else {
+            return callThisX("_as_type", args(transform(node.getExpression()), classX(type)));
+        }
+    }
+
+    private ClassNode hiddenClassNode;
+
+    private FieldNode parameterizedType(ClassNode type) {
+        if( hiddenClassNode == null ) {
+            var moduleNode = sourceUnit.getAST();
+            var scriptClass = moduleNode.getClasses().get(0);
+            var packageName = scriptClass.getNameWithoutPackage();
+            this.hiddenClassNode = new RecordNode(packageName + "." + "__ParameterizedTypes");
+            moduleNode.addClass(hiddenClassNode);
+        }
+        var name = "_" + hiddenClassNode.getFields().size();
+        var fn = new FieldNode(
+            name,
+            Modifier.PUBLIC,
+            type,
+            hiddenClassNode,
+            null
+        );
+        hiddenClassNode.addField(fn);
+        return fn;
     }
 
     private Expression stripTypeAnnotation(DeclarationExpression node) {

@@ -221,6 +221,21 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     /**
+     * Runtime type cast that supports parameterized types and record types.
+     *
+     * @param value
+     * @param type
+     */
+    protected Object _as_type(Object value, Class type) {
+        return TypeHelper.asType(value, type)
+    }
+
+    protected Object _as_type(Object value, Class clazz, String field) {
+        final type = clazz.getField(field).getGenericType()
+        return TypeHelper.asType(value, type)
+    }
+
+    /**
      * Runtime check replacing {@code instanceof} for record types.
      *
      * @param value
