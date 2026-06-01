@@ -329,7 +329,7 @@ class WorkflowMetadataTest extends Specification {
             '''
         )
         then:
-        TestHelper.filterLogNoise(capture) == [
+        TestHelper.filterLogNoise(capture, true) == [
             'entry workflow > main',
             'entry workflow > onComplete'
         ]

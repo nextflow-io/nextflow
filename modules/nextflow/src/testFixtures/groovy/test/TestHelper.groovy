@@ -132,7 +132,7 @@ class TestHelper {
         output.readLines().findAll { line ->
             !line.contains('DEBUG') &&
             !line.contains('INFO') &&
-            (includeWarn || !line.contains('WARN')) &&
+            (!includeWarn || !line.contains('WARN')) &&
             !line.contains('plugin') &&
             !line.contains('-> [')  // pf4j dependency graph lines
         }
