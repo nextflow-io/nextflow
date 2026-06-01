@@ -51,10 +51,9 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.*;
  * - The Tuple type can be specified with variable type arguments,
  *   but this is not supported by the JVM.
  *
- * - User-defined record types are only used to validate records with
- *   type RecordMap. Record types must be stripped from type annotations
- *   and type casts, and instanceof expressions on a record type must be
- *   replaced with a runtime check.
+ * - User-defined record types are only used to validate records
+ *   with type RecordMap. Casts and instanceof expressions must
+ *   be replaced with runtime checks.
  *
  * @author Ben Sherman <bentshermman@gmail.com>
  */
@@ -123,6 +122,24 @@ public class StripTypesVisitor extends ClassCodeExpressionTransformer {
         }
     }
 
+    // Parameterized types in type casts are preserved from
+    // type erasure by storing the parameterized type in a
+    // field of a hidden class.
+    //
+    // For example:
+    // ```
+    // samples as List<Sample>
+    // ```
+    //
+    // Becomes:
+    // ```
+    // class __ParameterizedTypes {
+    //   List<Sample> _1
+    // }
+    //
+    // _as_type(samples, __ParameterizedTypes, '_1')
+    // ```
+    //
     private ClassNode hiddenClassNode;
 
     private FieldNode parameterizedType(ClassNode type) {
