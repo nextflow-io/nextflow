@@ -55,8 +55,12 @@ class CmdLogFile extends CmdBase {
     /** Filename suffixes scanned when resolving a run name to a (possibly rotated) log file. */
     static final List<String> LOG_FILE_SUFFIXES = ['', '.1', '.2', '.3', '.4', '.5', '.6', '.7', '.8', '.9']
 
-    /** Cap on lines scanned when locating a session UUID — UUID is logged near the top of the file. */
-    static final int SESSION_ID_SCAN_LIMIT = 200
+    /**
+     * Cap on lines scanned when locating a session UUID. The UUID is logged near the top of the
+     * file, but verbose plugin/classpath logging at -trace/-debug can push it down a few hundred
+     * lines, so the cap is generous to avoid spurious "cannot find log" resolutions.
+     */
+    static final int SESSION_ID_SCAN_LIMIT = 1000
 
     static final long FOLLOW_POLL_MS = 250
 
@@ -114,9 +118,12 @@ class CmdLogFile extends CmdBase {
         final path = resolveLogFile(args ? args[0] : null)
 
         if( follow ) {
+            // Snapshot the size once so the tail read and the follow seek share the same byte
+            // boundary — otherwise lines appended between them would be printed by neither.
+            final long startPos = Files.size(path)
             if( lines != null )
-                printLastN(path, threshold, lines)
-            followFile(path, threshold, Files.size(path))
+                printLastN(path, threshold, lines, startPos)
+            followFile(path, threshold, startPos)
             return
         }
 
@@ -136,8 +143,14 @@ class CmdLogFile extends CmdBase {
     private boolean resolveUseColor(boolean usePager) {
         if( noAnsi )
             return false
+        // Honor the same global gates as ColorUtil.isAnsiEnabled(): NO_COLOR disables, then
+        // NXF_ANSI_LOG forces on/off. These take precedence over pager/TTY detection so a user
+        // who disables color globally also gets uncolored `logfile` output.
         if( SysEnv.get('NO_COLOR') != null )
             return false
+        final ansiLog = SysEnv.get('NXF_ANSI_LOG')?.trim()
+        if( ansiLog )
+            return Boolean.parseBoolean(ansiLog)
         if( colorOverride != null )
             return colorOverride
         if( usePager )
@@ -229,6 +242,8 @@ class CmdLogFile extends CmdBase {
             throw new AbortOperationException("Unknown run name or session id: $query")
 
         final record = records.last()
+        if( record.sessionId == null )
+            throw new AbortOperationException("History record for run '${record.runName ?: query}' has no session id — pass the log file path explicitly")
         final sessionId = record.sessionId.toString()
         final dir = currentDir ?: Paths.get('.')
         for( String suffix : LOG_FILE_SUFFIXES ) {
@@ -302,7 +317,7 @@ class CmdLogFile extends CmdBase {
         }
     }
 
-    private void printLastN(Path path, Level threshold, int n) {
+    private void printLastN(Path path, Level threshold, int n, long endPos = Long.MAX_VALUE) {
         if( n == 0 )
             return
         final ArrayDeque<String> buffer = new ArrayDeque<>(n)
@@ -318,7 +333,7 @@ class CmdLogFile extends CmdBase {
             }
         }
 
-        Files.newBufferedReader(path, StandardCharsets.UTF_8).withCloseable { reader ->
+        boundedReader(path, endPos).withCloseable { reader ->
             String line
             while( (line = reader.readLine()) != null ) {
                 line = stripContentAnsi(line)
@@ -344,6 +359,47 @@ class CmdLogFile extends CmdBase {
             out.println(entry)
             if( out.checkError() ) break   // pager exited
         }
+    }
+
+    /**
+     * Open a reader over {@code path}, optionally bounded to the first {@code endPos} bytes so a
+     * tail read in follow mode stops exactly where {@link #followFile} resumes.
+     */
+    private static BufferedReader boundedReader(Path path, long endPos) {
+        final InputStream raw = Files.newInputStream(path)
+        final InputStream src = endPos == Long.MAX_VALUE ? raw : new BoundedInputStream(raw, endPos)
+        return new BufferedReader(new InputStreamReader(src, StandardCharsets.UTF_8))
+    }
+
+    /** Caps the number of bytes read from a delegate stream. */
+    @CompileStatic
+    private static class BoundedInputStream extends InputStream {
+        private final InputStream delegate
+        private long remaining
+
+        BoundedInputStream(InputStream delegate, long limit) {
+            this.delegate = delegate
+            this.remaining = limit
+        }
+
+        @Override
+        int read() throws IOException {
+            if( remaining <= 0 ) return -1
+            final b = delegate.read()
+            if( b >= 0 ) remaining--
+            return b
+        }
+
+        @Override
+        int read(byte[] buf, int off, int len) throws IOException {
+            if( remaining <= 0 ) return -1
+            final n = delegate.read(buf, off, (int) Math.min((long) len, remaining))
+            if( n > 0 ) remaining -= n
+            return n
+        }
+
+        @Override
+        void close() throws IOException { delegate.close() }
     }
 
     // RandomAccessFile.readLine() reads bytes as ISO-8859-1. Nextflow log content is essentially

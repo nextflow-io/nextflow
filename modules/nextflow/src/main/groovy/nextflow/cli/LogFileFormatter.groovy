@@ -217,7 +217,10 @@ class LogFileFormatter {
             ~/'[^'\n]*'/,
             [(0): 'string.quoted.single.nextflow-log']),
         new BodyRule(
-            ~/(?<![\w.\/@-])\/(?:[\w.-]+\/)*[\w.-]+\/?/,
+            // Possessive quantifiers (++) keep this fully iterative: a contiguous slash-path of
+            // thousands of segments would otherwise recurse in the JDK engine and throw
+            // StackOverflowError. Semantics are unchanged for real paths (`/a/b/c`, `/a/b/c/`).
+            ~/(?<![\w.\/@-])\/(?:[\w.-]++\/?)++/,
             [(0): 'string.unquoted.path.nextflow-log']),
         new BodyRule(
             ~/\b([a-zA-Z_][\w.-]*)(=)([^\s;,]+)/,
@@ -316,17 +319,35 @@ class LogFileFormatter {
             return body
         final n = body.length()
         final sb = new StringBuilder()
+        // One Matcher per rule, allocated once for this line. `starts[i]` caches the start of
+        // each matcher's current match (-1 = exhausted). A matcher is only re-scanned when its
+        // cached match falls behind the cursor, so the inner loop stays O(rules·n) rather than
+        // re-allocating and re-scanning all rules at every position (previously ~O(rules·n²)).
+        final int rc = BODY_RULES.size()
+        final Matcher[] matchers = new Matcher[rc]
+        final int[] starts = new int[rc]
+        for( int i = 0; i < rc; i++ ) {
+            final m = BODY_RULES.get(i).pattern.matcher(body)
+            matchers[i] = m
+            starts[i] = m.find(0) ? m.start() : -1
+        }
         int pos = 0
         while( pos < n ) {
             BodyRule bestRule = null
             Matcher bestMatcher = null
             int bestStart = Integer.MAX_VALUE
-            for( BodyRule rule : BODY_RULES ) {
-                final m = rule.pattern.matcher(body)
-                if( m.find(pos) && m.start() < bestStart ) {
-                    bestStart = m.start()
-                    bestRule = rule
-                    bestMatcher = m
+            for( int i = 0; i < rc; i++ ) {
+                int s = starts[i]
+                if( s >= 0 && s < pos ) {
+                    // cursor advanced past this match — find the next one at/after pos
+                    final m = matchers[i]
+                    s = m.find(pos) ? m.start() : -1
+                    starts[i] = s
+                }
+                if( s >= 0 && s < bestStart ) {
+                    bestStart = s
+                    bestRule = BODY_RULES.get(i)
+                    bestMatcher = matchers[i]
                 }
             }
             if( bestRule == null ) {
