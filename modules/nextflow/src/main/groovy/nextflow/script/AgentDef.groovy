@@ -17,16 +17,13 @@ package nextflow.script
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.script.AgentBuilder.AgentInput
+import nextflow.script.AgentBuilder.AgentOutput
 
 /**
- * Runtime model for an `agent` definition.
- *
- * Mirrors {@link ProcessDef}'s contract — the script-level binding is callable
- * and chainable in a workflow — but execution is delegated to the future
- * `nf-agent` plugin runner. Calling {@link #run(Object[])} in this milestone
- * throws {@link UnsupportedOperationException} until the runner lands.
- *
- * @author Paolo Di Tommaso
+ * Runtime model for an agent definition. Holds the captured directives,
+ * inputs, outputs and prompt. Execution is delegated to the agent runner
+ * (nf-agent plugin) and is not yet implemented — {@link #run} throws.
  */
 @Slf4j
 @CompileStatic
@@ -37,26 +34,33 @@ class AgentDef extends BindableDef implements ChainableDef {
     private BaseScript owner
     private String name
     private String simpleName
-    private Closure body
+    private Map<String,Object> directives
+    private List<AgentInput> inputs
+    private List<AgentOutput> outputs
+    private PromptDef prompt
 
-    AgentDef(BaseScript owner, Closure body, String name) {
+    AgentDef(BaseScript owner, String name, Map<String,Object> directives, List<AgentInput> inputs, List<AgentOutput> outputs, PromptDef prompt) {
         this.owner = owner
-        this.body = body
         this.name = name
         this.simpleName = name
+        this.directives = directives
+        this.inputs = inputs
+        this.outputs = outputs
+        this.prompt = prompt
     }
 
-    @Override
-    String getType() { TYPE }
-
-    @Override
-    String getName() { name }
-
+    @Override String getType() { TYPE }
+    @Override String getName() { name }
     String getSimpleName() { simpleName }
-
     BaseScript getOwner() { owner }
 
-    Closure getBody() { body }
+    String getModel() { directives.get('model') as String }
+    String getInstruction() { directives.get('instruction') as String }
+    List getTools() { (directives.get('tools') ?: []) as List }
+    Integer getMaxIterations() { directives.get('maxIterations') as Integer }
+    List<AgentInput> getInputs() { inputs }
+    List<AgentOutput> getOutputs() { outputs }
+    PromptDef getPrompt() { prompt }
 
     @Override
     ComponentDef cloneWithName(String name) {
@@ -68,7 +72,6 @@ class AgentDef extends BindableDef implements ChainableDef {
 
     @Override
     Object run(Object[] args) {
-        // Inherited path: BindableDef.invoke_a clones this and calls run().
         throw new UnsupportedOperationException('agent execution not yet implemented')
     }
 }

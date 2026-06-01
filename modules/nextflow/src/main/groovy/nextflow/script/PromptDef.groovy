@@ -15,22 +15,26 @@
  */
 package nextflow.script
 
-import nextflow.Session
-import spock.lang.Specification
+import groovy.transform.CompileStatic
 
-class AgentFactoryTest extends Specification {
+/**
+ * Models the `prompt:` block of an agent definition. Mirrors {@link BodyDef}
+ * but minimal: the prompt template is captured as a closure (evaluated per
+ * invocation with the agent inputs in scope) plus its source text.
+ */
+@CompileStatic
+class PromptDef implements Cloneable {
 
-    def 'should build an AgentDef from a body closure'() {
-        given:
-        def session = Mock(Session)
-        def script = Mock(BaseScript)
-        def factory = new AgentFactory(script, session)
+    final Closure closure
+    final String source
 
-        when:
-        def agent = factory.newAgent('eval_agent', { -> })
+    PromptDef(Closure closure, String source) {
+        this.closure = closure
+        this.source = source
+    }
 
-        then:
-        agent instanceof AgentDef
-        agent.name == 'eval_agent'
+    @Override
+    PromptDef clone() {
+        (PromptDef) super.clone()
     }
 }

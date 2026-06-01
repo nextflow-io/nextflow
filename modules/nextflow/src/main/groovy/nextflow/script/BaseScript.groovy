@@ -131,15 +131,21 @@ abstract class BaseScript extends Script implements ExecutionContext {
     /**
      * Define an agent.
      *
-     * Mirrors {@link #process(String, Closure)} but constructs an {@link AgentDef}
-     * via {@link AgentFactory}. Execution is stubbed in this milestone — see AgentDef.run.
+     * Mirrors {@link #processV2(String, Closure)} — the lowered agent closure runs
+     * against an {@link AgentBuilder} delegate that captures directives, inputs,
+     * outputs and the prompt, then builds the populated {@link AgentDef}.
+     * Execution is stubbed in this milestone — see AgentDef.run.
      *
      * @param name
      * @param body
      */
-    protected void agent(String name, Closure body) {
-        final factory = new AgentFactory(this, session)
-        final agent = factory.newAgent(name, body)
+    protected void agent(String name, Closure<PromptDef> body) {
+        final builder = new AgentBuilder(this, name)
+        final cl = (Closure<PromptDef>) body.clone()
+        cl.setDelegate(builder)
+        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
+        final prompt = cl.call()
+        final agent = builder.withPrompt(prompt).build()
         meta.addDefinition(agent)
     }
 

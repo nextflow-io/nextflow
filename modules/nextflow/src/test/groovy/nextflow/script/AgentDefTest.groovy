@@ -19,13 +19,17 @@ import spock.lang.Specification
 
 class AgentDefTest extends Specification {
 
-    def 'should construct an AgentDef with name and body'() {
+    private AgentDef makeAgent(BaseScript script, String name) {
+        def prompt = new PromptDef({ -> 'hello' }, 'hello')
+        return new AgentDef(script, name, [:], [], [], prompt)
+    }
+
+    def 'should construct an AgentDef with name and content'() {
         given:
         def script = Mock(BaseScript)
-        def body = { -> /* placeholder */ } as Closure
 
         when:
-        def agent = new AgentDef(script, body, 'eval_agent')
+        def agent = makeAgent(script, 'eval_agent')
 
         then:
         agent.name == 'eval_agent'
@@ -36,8 +40,7 @@ class AgentDefTest extends Specification {
     def 'should throw on run() since execution is not yet implemented'() {
         given:
         def script = Mock(BaseScript)
-        def body = { -> } as Closure
-        def agent = new AgentDef(script, body, 'foo')
+        def agent = makeAgent(script, 'foo')
 
         when:
         agent.run(new Object[0])
@@ -50,7 +53,7 @@ class AgentDefTest extends Specification {
     def 'should clone with a new name'() {
         given:
         def script = Mock(BaseScript)
-        def agent = new AgentDef(script, { -> }, 'foo')
+        def agent = makeAgent(script, 'foo')
 
         when:
         def renamed = agent.cloneWithName('bar')
