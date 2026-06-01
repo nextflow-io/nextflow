@@ -37,6 +37,7 @@ import nextflow.script.ast.ProcessNodeV2;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
+import nextflow.script.dsl.AgentDsl;
 import nextflow.script.dsl.Constant;
 import nextflow.script.dsl.EntryWorkflowDsl;
 import nextflow.script.dsl.FeatureFlag;
@@ -334,6 +335,32 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
                     declaredOutputs.put(name, target);
             }
         }
+    }
+
+    @Override
+    public void visitAgent(AgentNode node) {
+        vsc.pushScope(AgentDsl.class);
+        currentDefinition = node;
+        node.setVariableScope(currentScope());
+
+        for( var input : asFlatParams(node.inputs) ) {
+            vsc.declare(input, input);
+
+            // suppress "unused variable" warnings for inputs only referenced in the prompt
+            vsc.findVariableDeclaration(input.getName(), input);
+        }
+
+        vsc.pushScope(AgentDsl.DirectiveDsl.class);
+        visitDirectives(node.directives, "agent directive", false);
+        vsc.popScope();
+
+        // the prompt template may reference input parameters
+        visit(node.prompt);
+
+        visitTypedOutputs(node.outputs, "Agent output");
+
+        currentDefinition = null;
+        vsc.popScope();
     }
 
     @Override
