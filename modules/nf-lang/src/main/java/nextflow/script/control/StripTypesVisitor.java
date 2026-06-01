@@ -113,13 +113,17 @@ public class StripTypesVisitor extends ClassCodeExpressionTransformer {
 
     private Expression transformCast(CastExpression node) {
         var type = node.getType();
+        if( STRIP_TYPES.contains(node.getType()) ) {
+            return node.getExpression();
+        }
         if( type.getGenericsTypes() != null ) {
             var fn = parameterizedType(type);
             return callThisX("_as_type", args(transform(node.getExpression()), classX(fn.getDeclaringClass()), constX(fn.getName())));
         }
-        else {
+        if( isNamedRecordType(type) ) {
             return callThisX("_as_type", args(transform(node.getExpression()), classX(type)));
         }
+        return node;
     }
 
     // Parameterized types in type casts are preserved from

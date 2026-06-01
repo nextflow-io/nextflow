@@ -132,6 +132,23 @@ class ScriptTypesTest extends Dsl2Spec {
         samples[2].fastq == '3.fastq'
     }
 
+    def 'should strip unsupported type annotations' () {
+
+        when:
+        runScript(
+            '''\
+            // strip Tuple type from cast expression
+            ['1', '1.fastq', '2.fastq'] as Tuple<String,String,String>
+
+            // strip type annotation in variable declaration
+            def ch: Channel = channel.empty()
+            '''
+        )
+
+        then:
+        noExceptionThrown()
+    }
+
     def 'should replace instanceof on record type with runtime check' () {
 
         when:
