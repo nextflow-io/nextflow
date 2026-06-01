@@ -56,4 +56,46 @@ class AgentScriptLoadingTest extends Dsl2Spec {
         cleanup:
         file.parent.deleteDir()
     }
+
+    def 'should load a script with a directive-rich agent definition'() {
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+        def file = Files.createTempDirectory('test').resolve('main.nf')
+        file.text = '''
+            nextflow.enable.types = true
+
+            agent eval_agent {
+                model 'openai/gpt-5-mini'
+                instruction 'You are helpful.'
+                tools()
+                maxIterations 20
+
+                input:
+                    question: String
+
+                output:
+                    plan: String
+
+                prompt:
+                """
+                Question: ${question}
+                """
+            }
+
+            workflow {
+            }
+            '''.stripIndent()
+
+        when:
+        parser.parse(file)
+        parser.runScript()
+
+        then:
+        def definitions = ScriptMeta.get(parser.script).getDefinitions()
+        definitions.any { it instanceof AgentDef && it.name == 'eval_agent' }
+
+        cleanup:
+        file.parent.deleteDir()
+    }
 }
