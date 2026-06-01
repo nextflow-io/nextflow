@@ -54,7 +54,6 @@ import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.BlockStatement;
-import org.codehaus.groovy.ast.stmt.EmptyStatement;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
 import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
@@ -287,9 +286,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     @Override
     public void visitAgent(AgentNode node) {
         checkReservedMethodName(node, "agent");
-        var name = constX(node.getName());
-        var bodyClosure = closureX(EmptyStatement.INSTANCE);
-        var result = stmt(callThisX("agent", args(name, bodyClosure)));
+        var result = new AgentToGroovyVisitorV2(sourceUnit).transform(node);
         moduleNode.addStatement(result);
     }
 

@@ -93,7 +93,16 @@ class AgentScriptLoadingTest extends Dsl2Spec {
 
         then:
         def definitions = ScriptMeta.get(parser.script).getDefinitions()
-        definitions.any { it instanceof AgentDef && it.name == 'eval_agent' }
+        def agent = definitions.find { it instanceof AgentDef && it.name == 'eval_agent' } as AgentDef
+        agent != null
+        agent.model == 'openai/gpt-5-mini'
+        agent.instruction == 'You are helpful.'
+        agent.maxIterations == 20
+        agent.tools == []
+        agent.inputs*.name == ['question']
+        agent.outputs*.name == ['plan']
+        agent.prompt != null
+        agent.prompt.source.contains('Question:')
 
         cleanup:
         file.parent.deleteDir()
