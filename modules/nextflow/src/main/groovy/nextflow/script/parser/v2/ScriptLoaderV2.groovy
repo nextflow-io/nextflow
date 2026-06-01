@@ -29,7 +29,7 @@ import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
- * Script parser/loader that uses the strict syntax.
+ * Script loader that uses the strict syntax parser.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
@@ -51,7 +51,7 @@ class ScriptLoaderV2 implements ScriptLoader {
     @Override
     ScriptLoaderV2 setEntryName(String name) {
         if( name )
-            throw new IllegalArgumentException("The `-entry` option is not supported with the strict syntax -- use a param to run a named workflow from the entry workflow")
+            throw new IllegalArgumentException("The `-entry` option is not supported with the strict parser -- use a param to run a named workflow from the entry workflow")
         return this
     }
 

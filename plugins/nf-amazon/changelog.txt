@@ -1,5 +1,8 @@
 nf-amazon changelog
 ===================
+3.9.1 - 11 May 2026
+- Address Netty CVEs by bumping AWS SDK and excluding micronaut-core-bom from test classpath (#7100) [f54039606]
+
 3.9.0 - 25 Apr 2026
 - Add hints process directive for executor-specific scheduling hints (#7034) [406358e03]
 

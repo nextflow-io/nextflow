@@ -250,6 +250,49 @@ class SeqeraExecutorTest extends Specification {
         executor.batchSubmitter?.shutdown()
     }
 
+    def 'createRun passes provider, strategy and region to CreateRunRequest'() {
+        given:
+        SysEnv.push([:])
+        CreateRunRequest captured = null
+        def mockClient = Mock(SchedClient) {
+            createRun(_) >> { args ->
+                captured = args[0] as CreateRunRequest
+                new CreateRunResponse().runId('run-1')
+            }
+        }
+        def workflowMeta = Mock(WorkflowMetadata) {
+            getPlatform() >> null
+        }
+        def session = Mock(Session) {
+            getConfig() >> [tower: [:]]
+            getWorkflowMetadata() >> workflowMeta
+            getWorkDir() >> java.nio.file.Paths.get('/work')
+            getRunName() >> 'test-run'
+        }
+        def seqeraOpts = new ExecutorOpts(
+            endpoint: 'https://sched.example.com',
+            provider: 'aws',
+            strategy: 'vm',
+            region: 'eu-west-1'
+        )
+        def executor = new SeqeraExecutor()
+        executor.session = session
+        executor.@seqeraConfig = seqeraOpts
+        executor.@client = mockClient
+
+        when:
+        executor.createRun()
+
+        then:
+        captured != null
+        captured.getProvider() == 'aws'
+        captured.getStrategy() == 'vm'
+        captured.getRegion() == 'eu-west-1'
+
+        cleanup:
+        executor.batchSubmitter?.shutdown()
+    }
+
 
     /**
      * Builds a SchedClientConfig using the same logic as {@link SeqeraExecutor#createClient()}

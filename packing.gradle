@@ -241,6 +241,7 @@ task dockerPack(type: Exec, dependsOn: ['packOne']) {
 task release(type: Exec, dependsOn: [pack, dockerImage, validatePluginVersions]) {
 
     def launcherFile = file('nextflow').absoluteFile
+    def launcherMd5 = file('nextflow.md5').absoluteFile
     def launcherSha1 = file('nextflow.sha1').absoluteFile
     def launcherSha256 = file('nextflow.sha256').absoluteFile
     def nextflowAllFile = file("$releaseDir/nextflow-${version}-dist")
@@ -249,6 +250,7 @@ task release(type: Exec, dependsOn: [pack, dockerImage, validatePluginVersions])
     def snapshot = version ==~ /^.+(-RC\d+|-SNAPSHOT)$/
     def edge = version ==~ /^.+(-edge|-EDGE)$/
     def isLatest = !snapshot && !edge
+    def branch = gitBranch()
     def cmd =  """\
     # tag the release
     git push || exit \$?
@@ -259,7 +261,7 @@ task release(type: Exec, dependsOn: [pack, dockerImage, validatePluginVersions])
     gh release upload --repo nextflow-io/nextflow v$version ${launcherFile} ${nextflowAllFile}        
     """.stripIndent()
 
-    if( edge )
+    if( edge && branch == 'master' )
         cmd += """
         # publish the script as the latest
         export AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS}
@@ -267,11 +269,11 @@ task release(type: Exec, dependsOn: [pack, dockerImage, validatePluginVersions])
         aws s3 cp $launcherFile s3://www2.nextflow.io/releases/edge/nextflow $s3CmdOpts
         aws s3 cp $launcherSha1 s3://www2.nextflow.io/releases/edge/nextflow.sha1 $s3CmdOpts
         aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/edge/nextflow.sha256 $s3CmdOpts
-        aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/edge/nextflow.md5 $s3CmdOpts
+        aws s3 cp $launcherMd5 s3://www2.nextflow.io/releases/edge/nextflow.md5 $s3CmdOpts
         aws s3 cp $versionFile s3://www2.nextflow.io/releases/edge/version $s3CmdOpts
         """.stripIndent()
-        
-    else if( isLatest )
+
+    else if( isLatest && branch == 'master' )
         cmd += """
         # publish the script as the latest
         export AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS}
@@ -279,7 +281,7 @@ task release(type: Exec, dependsOn: [pack, dockerImage, validatePluginVersions])
         aws s3 cp $launcherFile s3://www2.nextflow.io/releases/latest/nextflow $s3CmdOpts
         aws s3 cp $launcherSha1 s3://www2.nextflow.io/releases/latest/nextflow.sha1 $s3CmdOpts
         aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/latest/nextflow.sha256 $s3CmdOpts
-        aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/latest/nextflow.md5 $s3CmdOpts
+        aws s3 cp $launcherMd5 s3://www2.nextflow.io/releases/latest/nextflow.md5 $s3CmdOpts
         aws s3 cp $versionFile s3://www2.nextflow.io/releases/latest/version $s3CmdOpts
         """.stripIndent()
 

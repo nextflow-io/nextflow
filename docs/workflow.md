@@ -385,6 +385,26 @@ The `emit:` section declares the outputs of a named workflow:
 
 ```nextflow
 workflow my_workflow {
+    main:
+    ch_hello = hello(data)
+    ch_bye = bye(ch_hello)
+
+    emit:
+    hello = ch_hello
+    bye = ch_bye
+}
+
+workflow {
+    result = my_workflow()
+    result.hello.view()
+    result.bye.view()
+}
+```
+
+The name should be omitted when only one output is declared:
+
+```nextflow
+workflow my_workflow {
     take:
     data
 
@@ -394,29 +414,12 @@ workflow my_workflow {
     emit:
     ch_bye
 }
-```
-
-If an output is assigned to a name, the name can be used to reference the output from the calling workflow. For example:
-
-```nextflow
-workflow my_workflow {
-    main:
-    ch_hello = hello(data)
-    ch_bye = bye(ch_hello)
-
-    emit:
-    my_data = ch_bye
-}
 
 workflow {
     result = my_workflow()
-    result.my_data.view()
+    result.view()
 }
 ```
-
-:::{note}
-Every output must be assigned to a name when multiple outputs are declared.
-:::
 
 (dataflow-page)=
 
@@ -581,6 +584,7 @@ workflow hello_bye {
     bye_out = bye(hello_out.txt)
 
     emit:
+    hello = hello_out.txt
     bye = bye_out.txt
 }
 
@@ -603,6 +607,7 @@ workflow hello_bye {
     bye(hello.out)
 
     emit:
+    hello = hello.out
     bye = bye.out
 }
 

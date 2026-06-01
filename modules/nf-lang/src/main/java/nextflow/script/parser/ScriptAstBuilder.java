@@ -241,6 +241,12 @@ public class ScriptAstBuilder {
             }
         }
 
+        if( moduleNode.getEntry() == null && moduleNode.getParams() != null )
+            collectSyntaxError(new SyntaxException("Params block cannot be defined without an entry workflow", moduleNode.getParams()));
+
+        if( moduleNode.getEntry() == null && moduleNode.getOutputs() != null )
+            collectSyntaxError(new SyntaxException("Output block cannot be defined without an entry workflow", moduleNode.getOutputs()));
+
         if( !statements.isEmpty() ) {
             var main = block(new VariableScope(), statements);
             ast( main, statements.get(0), statements.get(statements.size() - 1) );
@@ -944,6 +950,8 @@ public class ScriptAstBuilder {
         var hasEmitExpression = statements.stream().anyMatch(this::isEmitExpression);
         if( hasEmitExpression && statements.size() > 1 )
             collectSyntaxError(new SyntaxException("Every emit must be assigned to a name when there are multiple emits", result));
+        if( !hasEmitExpression && statements.size() == 1 )
+            collectWarning("Emit name should be omitted when there is only one emit", ctx.workflowEmit(0).getText(), result);
         return result;
     }
 

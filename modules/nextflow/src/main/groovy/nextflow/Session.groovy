@@ -759,7 +759,7 @@ class Session implements ISession {
     }
 
     final protected void shutdown0() {
-        log.trace "Shutdown: $shutdownCallbacks"
+        log.trace "Invoking ${shutdownCallbacks.size()} shutdown callbacks"
         shutdownInitiated = true
         while( shutdownCallbacks.size() ) {
             final hook = shutdownCallbacks.poll()
@@ -767,7 +767,7 @@ class Session implements ISession {
                 hook.run()
             }
             catch( Exception e ) {
-                log.debug "Failed to execute shutdown hook: $hook", e
+                log.debug "Failed to execute shutdown hook: ${hook.class.name}", e
             }
         }
 
@@ -900,6 +900,22 @@ class Session implements ISession {
 
     boolean enableModuleBinaries() {
         NF.isModuleBinariesEnabled()
+    }
+
+    /**
+     * Whether the entry script was launched directly as a module via
+     * `nextflow module run`. Used to decide whether the entry script's
+     * `resources/` bundle (and module bin paths) should be picked up
+     * even though the script is not being loaded via `include`.
+     */
+    private volatile boolean moduleRun
+
+    boolean isModuleRun() {
+        return moduleRun
+    }
+
+    void setModuleRun(boolean value) {
+        this.moduleRun = value
     }
 
     boolean failOnIgnore() {
