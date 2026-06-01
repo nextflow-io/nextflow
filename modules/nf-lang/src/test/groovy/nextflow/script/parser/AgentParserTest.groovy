@@ -132,4 +132,32 @@ class AgentParserTest extends Specification {
         // The `parse` helper asserts no syntax errors. If `eval_agent` failed
         // to resolve in the workflow body, that assertion would fail.
     }
+
+    def 'should resolve directives and prompt variables in an agent body'() {
+        when:
+        def errors = check('''\
+            nextflow.enable.types = true
+
+            agent eval_agent {
+                model 'openai/gpt-5-mini'
+                instruction 'You are helpful.'
+                tools()
+                maxIterations 20
+
+                input:
+                    question: String
+
+                output:
+                    plan: String
+
+                prompt:
+                """
+                Question: ${question}
+                """
+            }
+            ''')
+
+        then:
+        errors.isEmpty()
+    }
 }
