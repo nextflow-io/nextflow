@@ -41,6 +41,17 @@ interface CacheStore {
     void putEntry(HashCode key, byte[] value)
     void deleteEntry(HashCode key)
 
+    /**
+     * Retrieve the final hash of a successful execution for the given content hash,
+     * or {@code null} if no successful-hash index entry exists.
+     */
+    HashCode getHashIndex(HashCode contentHash)
+
+    /**
+     * Map a task content hash to the final hash of a successful execution.
+     */
+    void putHashIndex(HashCode contentHash, HashCode finalHash)
+
     void writeIndex(HashCode key, boolean cached)
     Iterator<Index> iterateIndex()
     void deleteIndex()

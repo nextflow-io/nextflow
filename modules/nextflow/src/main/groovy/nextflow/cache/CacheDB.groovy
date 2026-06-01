@@ -89,6 +89,25 @@ class CacheDB implements Closeable {
         return new TaskEntry(trace,ctx)
     }
 
+    /**
+     * Retrieve the final hash of a successful execution for the given content hash.
+     *
+     * @param contentHash The content-based task hash (before try-mixing)
+     * @return The {@link HashCode} of a successful execution, or {@code null} if absent
+     */
+    HashCode getHashIndex(HashCode contentHash) {
+        return store.getHashIndex(contentHash)
+    }
+
+    /**
+     * Asynchronously write the successful-hash index pointer. Enqueued on the
+     * same writer agent as {@link #putTaskAsync}, so it is serialized AFTER the
+     * corresponding entry write (commit-marker discipline).
+     */
+    void putHashIndexAsync(HashCode contentHash, HashCode finalHash) {
+        writer.send { store.putHashIndex(contentHash, finalHash) }
+    }
+
     void incTaskEntry( HashCode hash ) {
         final payload = store.getEntry(hash)
         if( !payload ) {

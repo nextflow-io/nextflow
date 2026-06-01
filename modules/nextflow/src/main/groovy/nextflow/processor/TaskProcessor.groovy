@@ -801,6 +801,35 @@ class TaskProcessor {
     @CompileStatic
     final protected void checkCachedOrLaunchTask( TaskRun task, HashCode hash, boolean shouldTryCache ) {
 
+        // Capture the content hash ONLY on the first attempt. Retries re-enter
+        // via resumeOrDie -> checkCachedOrLaunchTask(taskCopy, taskCopy.hash, false),
+        // where `hash` is the previous (chained) final hash, not the content hash.
+        // makeCopy()/clone() carry contentHash forward, so the null guard keeps
+        // the index key consistent across the whole retry chain.
+        if( task.contentHash == null )
+            task.contentHash = hash
+
+        // Fast resume path: resolve a previously successful execution via the
+        // successful-hash index in a single lookup, skipping the attempt scan.
+        if( shouldTryCache ) {
+            try {
+                final indexed = session.cache.getHashIndex(task.contentHash)
+                if( indexed ) {
+                    final entry = session.cache.getTaskEntry(indexed, this)
+                    final resumeDir = entry ? FileHelper.asPath(entry.trace.getWorkDir()) : null
+                    final ok = entry && entry.trace.isCompleted() && resumeDir?.exists() \
+                            && checkCachedOutput(task.clone(), resumeDir, indexed, entry)
+                    if( ok )
+                        return
+                    // stale/invalid pointer -> fall through; a successful resume
+                    // or execution rewrites the pointer (self-heal)
+                }
+            }
+            catch( Throwable t ) {
+                log.trace "[${safeTaskName(task)}] Successful-hash index lookup failed -- falling back to scan -- ${t.message}"
+            }
+        }
+
         int tries = task.failCount +1
         while( true ) {
             hash = HashBuilder.defaultHasher().putBytes(hash.asBytes()).putInt(tries).hash()

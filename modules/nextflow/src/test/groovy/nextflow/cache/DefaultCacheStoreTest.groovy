@@ -56,4 +56,40 @@ class DefaultCacheStoreTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should get and put hash index entries' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def uuid = UUID.randomUUID()
+        def store = new DefaultCacheStore(uuid, 'test_1', folder); store.open()
+        and:
+        def content = CacheHelper.hasher('CONTENT').hash()
+        def finalHash = CacheHelper.hasher('FINAL').hash()
+
+        expect: 'absent key returns null'
+        store.getHashIndex(content) == null
+
+        when:
+        store.putHashIndex(content, finalHash)
+        then: 'round-trips'
+        store.getHashIndex(content) == finalHash
+
+        and: 'index key does not collide with an entry key of the same hash'
+        store.getEntry(content) == null
+        store.putEntry(content, 'ENTRY'.bytes)
+        new String(store.getEntry(content)) == 'ENTRY'
+        store.getHashIndex(content) == finalHash
+
+        when: 'the cache is dropped'
+        store.close()
+        store.drop()
+        and: 'reopened on the same session location'
+        store = new DefaultCacheStore(uuid, 'test_1', folder); store.open()
+        then: 'the index entry is gone'
+        store.getHashIndex(content) == null
+
+        cleanup:
+        store?.close()
+        folder?.deleteDir()
+    }
+
 }

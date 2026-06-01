@@ -157,4 +157,27 @@ class CloudCacheStore implements CacheStore {
     private Path getCachePath(HashCode key) {
         dataPath.resolve(key.toString())
     }
+
+    @Override
+    HashCode getHashIndex(HashCode contentHash) {
+        try {
+            return HashCode.fromString(new String(getIndexPath(contentHash).bytes))
+        }
+        catch( NoSuchFileException e ) {
+            return null
+        }
+    }
+
+    @Override
+    void putHashIndex(HashCode contentHash, HashCode finalHash) {
+        final p = getIndexPath(contentHash)
+        Files.createDirectories(p.parent)
+        p.bytes = finalHash.toString().bytes
+    }
+
+    private Path getIndexPath(HashCode contentHash) {
+        // per-session: dataPath == basePath/<uniqueId>, so the index is NOT
+        // shared across sessions (cross-session indexing is a separate feature)
+        dataPath.resolve('index').resolve(contentHash.toString())
+    }
 }

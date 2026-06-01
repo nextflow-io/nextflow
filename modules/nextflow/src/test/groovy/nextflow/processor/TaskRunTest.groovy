@@ -20,6 +20,7 @@ import java.nio.file.Files
 import java.nio.file.Paths
 
 import ch.artecat.grengine.Grengine
+import com.google.common.hash.HashCode
 import nextflow.Session
 import nextflow.ast.TaskCmdXform
 import nextflow.container.DockerConfig
@@ -42,6 +43,7 @@ import nextflow.script.params.StdOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
 import nextflow.util.BlankSeparatedList
+import nextflow.util.CacheHelper
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
 import spock.lang.Specification
@@ -56,6 +58,18 @@ class TaskRunTest extends Specification {
 
     def setupSpec() {
         new Session()
+    }
+
+    def 'should carry contentHash across clone'() {
+        given:
+        def task = new TaskRun(config: new TaskConfig([:]), context: new TaskContext(holder: [:]))
+        task.contentHash = CacheHelper.hasher('abc').hash()
+
+        when:
+        def copy = task.clone()
+
+        then:
+        copy.contentHash == task.contentHash
     }
 
     def testGetOutputsByType() {

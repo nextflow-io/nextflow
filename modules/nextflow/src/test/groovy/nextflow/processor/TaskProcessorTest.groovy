@@ -24,6 +24,7 @@ import java.util.concurrent.ExecutorService
 import com.google.common.hash.HashCode
 import groovyx.gpars.agent.Agent
 import nextflow.Session
+import nextflow.cache.CacheDB
 import nextflow.exception.IllegalArityException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessUnrecoverableException
@@ -634,6 +635,66 @@ class TaskProcessorTest extends Specification {
         task.getConfig() >> new TaskConfig()
         and:
         1 * exec.submit(task)
+    }
+
+    def 'should consult the hash index on resume and fall through to scan when stale' () {
+        given:
+        def cache = Mock(CacheDB)
+        def session = Mock(Session) { getCache() >> cache }
+        def exec = Mock(Executor)
+        def processor = Spy(new TaskProcessor(session: session, executor: exec))
+        and:
+        def content = HashCode.fromInt(100)
+        def staleHash = HashCode.fromInt(200)
+        def workDir = Files.createTempDirectory('wd').resolve('x')  // does not exist yet
+        def task = Mock(TaskRun) {
+            getConfig() >> new TaskConfig()
+            getName() >> 'foo'
+            getFailCount() >> 0
+            getContentHash() >> content
+            getWorkDirFor(_) >> workDir
+        }
+
+        when:
+        processor.checkCachedOrLaunchTask(task, content, true)
+
+        then: 'the index is consulted; a stale pointer falls through to the scan, which submits'
+        1 * cache.getHashIndex(content) >> staleHash
+        1 * cache.getTaskEntry(staleHash, processor) >> null
+        (1.._) * cache.getTaskEntry(_, processor) >> null
+        1 * exec.submit(task)
+
+        cleanup:
+        workDir?.parent?.deleteDir()
+    }
+
+    def 'should not consult the hash index when shouldTryCache is false' () {
+        given:
+        def cache = Mock(CacheDB)
+        def session = Mock(Session) { getCache() >> cache }
+        def exec = Mock(Executor)
+        def processor = Spy(new TaskProcessor(session: session, executor: exec))
+        and:
+        def content = HashCode.fromInt(100)
+        def workDir = Files.createTempDirectory('wd').resolve('x')
+        def task = Mock(TaskRun) {
+            getConfig() >> new TaskConfig()
+            getName() >> 'foo'
+            getFailCount() >> 0
+            getContentHash() >> content
+            getWorkDirFor(_) >> workDir
+        }
+
+        when:
+        processor.checkCachedOrLaunchTask(task, content, false)
+
+        then: 'no index lookup; the task is submitted via the scan path'
+        0 * cache.getHashIndex(_)
+        (1.._) * cache.getTaskEntry(_, processor) >> null
+        1 * exec.submit(task)
+
+        cleanup:
+        workDir?.parent?.deleteDir()
     }
 
     def 'should collect a task' () {

@@ -83,6 +83,14 @@ class TaskRun implements Cloneable {
      */
     HashCode hash
 
+    /**
+     * The content-based hash of the task, captured on the first attempt
+     * (before per-attempt try-mixing). Used as the key of the successful-hash
+     * index that maps this content hash to the {@link #hash} of a successful
+     * execution. Preserved across retries by {@code clone()} / {@code makeCopy()}.
+     */
+    volatile HashCode contentHash
+
     /*
      * The processor that creates this 'task'
      */

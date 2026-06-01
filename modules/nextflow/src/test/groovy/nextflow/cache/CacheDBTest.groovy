@@ -121,6 +121,27 @@ class CacheDBTest extends Specification {
 
     }
 
+    def 'should delegate hash index read and write' () {
+        given:
+        def store = Mock(CacheStore)
+        def cache = new CacheDB(store)
+        and:
+        def content = HashCode.fromInt(1)
+        def finalHash = HashCode.fromInt(2)
+
+        when:
+        def result = cache.getHashIndex(content)
+        then:
+        1 * store.getHashIndex(content) >> finalHash
+        result == finalHash
+
+        when:
+        cache.putHashIndexAsync(content, finalHash)
+        cache.close()
+        then:
+        1 * store.putHashIndex(content, finalHash)
+    }
+
     def 'should write some tasks and iterate over them' () {
 
         setup:

@@ -185,4 +185,27 @@ class DefaultCacheStore implements CacheStore {
     void deleteEntry(HashCode key) {
         db.delete(key.asBytes())
     }
+
+    /** Key-space prefix that isolates hash-index keys from entry keys
+     *  (entry keys are exactly KEY_SIZE bytes with no prefix). */
+    private static final byte HASH_INDEX_PREFIX = 0x01
+
+    private byte[] indexKey(HashCode contentHash) {
+        final h = contentHash.asBytes()
+        final k = new byte[h.length + 1]
+        k[0] = HASH_INDEX_PREFIX
+        System.arraycopy(h, 0, k, 1, h.length)
+        return k
+    }
+
+    @Override
+    HashCode getHashIndex(HashCode contentHash) {
+        final value = db.get(indexKey(contentHash))
+        return value != null ? HashCode.fromBytes(value) : null
+    }
+
+    @Override
+    void putHashIndex(HashCode contentHash, HashCode finalHash) {
+        db.put(indexKey(contentHash), finalHash.asBytes())
+    }
 }
