@@ -39,6 +39,7 @@ class LogsCheckpoint implements TraceObserverV2 {
     private Thread thread
     private Duration interval
     private LogsHandler handler
+    private volatile boolean stopped
     private final Object lock = new Object()
 
     @Override
@@ -56,16 +57,23 @@ class LogsCheckpoint implements TraceObserverV2 {
 
     @Override
     void onFlowComplete() {
-        synchronized(lock) {
-            thread.interrupt()
-        }
-        thread.join()
+        stop()
     }
 
     @Override
     void onFlowError(TaskEvent event) {
+        stop()
+    }
+
+    protected void stop() {
+        if( thread == null )
+            return
         synchronized(lock) {
-            thread.interrupt()
+            if( stopped )
+                return
+            stopped = true
+            // wake up the checkpoint thread without relying on thread interruption
+            lock.notifyAll()
         }
         thread.join()
     }
@@ -73,29 +81,22 @@ class LogsCheckpoint implements TraceObserverV2 {
     protected void run() {
         log.debug "Starting logs checkpoint thread - interval: ${interval}"
         try {
-            while( true ) {
-                await(interval)
-                if( Thread.currentThread().isInterrupted() )
-                    break
-                synchronized(lock) {
-                    if( Thread.currentThread().isInterrupted() )
+            synchronized(lock) {
+                while( !stopped ) {
+                    // releases the lock and waits until the timeout elapses or stop() notifies
+                    lock.wait(interval.toMillis())
+                    if( stopped )
                         break
                     handler.saveFiles()
                 }
             }
         }
+        catch( InterruptedException e ) {
+            log.debug "Interrupted logs checkpoint thread - cause: ${e.message}"
+            Thread.currentThread().interrupt()
+        }
         finally {
             log.debug "Terminating logs checkpoint thread"
-        }
-    }
-
-    protected void await(Duration interval) {
-        try {
-            Thread.sleep(interval.toMillis())
-        }
-        catch (InterruptedException e) {
-            log.debug "Interrupted logs checkpoint thread"
-            Thread.currentThread().interrupt()
         }
     }
 }

@@ -80,4 +80,39 @@ class LogsCheckpointTest extends Specification {
         cleanup:
         SysEnv.pop()
     }
+
+    def 'should start and stop the checkpoint thread' () {
+        given:
+        // long interval so the thread parks in wait and termination is driven by stop()
+        SysEnv.push(TOWER_LOGS_CHECKPOINT_INTERVAL: '1h')
+        def session = Mock(Session) {
+            getWorkDir() >> TestHelper.createInMemTempDir()
+            getConfig() >> [:]
+        }
+        and:
+        def checkpoint = new LogsCheckpoint()
+
+        when:
+        checkpoint.onFlowCreate(session)
+        then:
+        checkpoint.@thread.isAlive()
+
+        when:
+        checkpoint.onFlowComplete()
+        then:
+        !checkpoint.@thread.isAlive()
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should be safe to stop when the thread was never started' () {
+        given:
+        def checkpoint = new LogsCheckpoint()
+
+        when:
+        checkpoint.onFlowComplete()
+        then:
+        noExceptionThrown()
+    }
 }
