@@ -311,6 +311,15 @@ class TaskRun implements Cloneable {
     def script
 
     /**
+     * The live command {@link GString} produced by the script block, retained before it
+     * is flattened to a string. Lets an executor inspect which command values were
+     * interpolated (e.g. from {@code task.memory}/{@code task.cpus}) together with the
+     * AST {@link #body} metadata. Null when the script is not a GString (no interpolation),
+     * a template file, or a shell block.
+     */
+    GString scriptGString
+
+    /**
      * The process source as entered by the user in the process definition
      */
     String source
@@ -862,6 +871,11 @@ class TaskRun implements Cloneable {
             }
             else {
                 script = result.toString()
+                // retain the live GString (before flattening) only on the plain scriptlet path,
+                // where `script` IS this GString's toString — so an executor can inspect which
+                // command values were interpolated from task.memory/task.cpus. Not for shell
+                // (!{...}) or template scripts, where `script` is rendered differently.
+                this.scriptGString = result instanceof GString ? (GString) result : null
             }
         }
         catch( ProcessException e ) {

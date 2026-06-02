@@ -30,10 +30,13 @@ import io.seqera.sched.api.schema.v1a1.ResourceRequirement
 import io.seqera.sched.api.schema.v1a1.Task
 import io.seqera.sched.api.schema.v1a1.TaskAttempt
 import io.seqera.sched.api.schema.v1a1.TaskState as SchedTaskState
+import io.seqera.sched.api.schema.v1a1.ResourceBindingType
 import io.seqera.sched.api.schema.v1a1.TaskStatus as SchedTaskStatus
 import io.seqera.sched.client.SchedClient
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
+import nextflow.script.BodyDef
+import nextflow.script.TokenValRef
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import nextflow.exception.ProcessException
@@ -1045,5 +1048,61 @@ class SeqeraTaskHandlerTest extends Specification {
             containerMeta() >> null
         }
         return new SeqeraTaskHandler(taskRun, executor)
+    }
+
+    def 'interpolateResources rewrites the command and captures resource bindings'() {
+        given:
+        def reqMem = MemoryUnit.of('36864 MB')
+        GString command = "bcftools sort --max-mem ${(reqMem.toMega() * 0.9) as int}M out.vcf"
+        def source = '"""bcftools sort --max-mem ${(task.memory.toMega()*0.9) as int}M out.vcf"""'
+        def body = new BodyDef({ -> command }, source, 'script', [new TokenValRef('task', 1, 1)])
+        def taskConfig = Mock(TaskConfig) {
+            getCpus() >> 6
+            getMemory() >> reqMem
+        }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getScriptGString() >> command
+            getBody() >> body
+            getConfig() >> taskConfig
+            lazyName() >> 'BCFTOOLS_SORT'
+        }
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient) }
+        def handler = new SeqeraTaskHandler(taskRun, executor)
+
+        when:
+        handler.interpolateResources()
+
+        then: 'the self-sizing value is replaced by a shell placeholder'
+        1 * taskRun.setScript('bcftools sort --max-mem ${SEQERA_TASK_MEM_0}M out.vcf')
+
+        and: 'the binding is captured for shipping to the scheduler'
+        def bindings = handler.@resourceBindings
+        bindings.size() == 1
+        bindings[0].getName() == 'SEQERA_TASK_MEM_0'
+        bindings[0].getResource() == ResourceBindingType.MEMORY
+        bindings[0].getValue() == 33177d
+    }
+
+    def 'interpolateResources is a no-op when the command has no resource-derived values'() {
+        given:
+        GString command = "echo ${'hello'}"
+        def body = new BodyDef({ -> command }, '"""echo ${greeting}"""', 'script', [new TokenValRef('greeting', 1, 1)])
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getScriptGString() >> command
+            getBody() >> body
+            getConfig() >> Mock(TaskConfig) { getCpus() >> 1; getMemory() >> MemoryUnit.of('1 GB') }
+            lazyName() >> 'FOO'
+        }
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient) }
+        def handler = new SeqeraTaskHandler(taskRun, executor)
+
+        when:
+        handler.interpolateResources()
+
+        then:
+        0 * taskRun.setScript(_)
+        handler.@resourceBindings == null
     }
 }

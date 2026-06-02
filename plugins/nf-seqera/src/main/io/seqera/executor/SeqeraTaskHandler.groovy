@@ -25,6 +25,8 @@ import io.seqera.executor.Labels
 import io.seqera.sched.api.schema.v1a1.AcceleratorType
 import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
 import io.seqera.sched.api.schema.v1a1.NextflowTask
+import io.seqera.sched.api.schema.v1a1.ResourceBinding
+import io.seqera.sched.api.schema.v1a1.ResourceBindingType
 import io.seqera.sched.api.schema.v1a1.ResourceLimit
 import io.seqera.sched.api.schema.v1a1.ResourceRequirement
 import io.seqera.sched.api.schema.v1a1.Task
@@ -42,6 +44,7 @@ import nextflow.fusion.FusionAwareTask
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.script.TokenValRef
 import nextflow.trace.TraceRecord
 /**
  * Task handler for the Seqera scheduler executor.
@@ -78,6 +81,21 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
      */
     private volatile CloudMachineInfo machineInfo
 
+    /**
+     * Resource-derived placeholder bindings captured from the command at launcher
+     * preparation; shipped with the task so the scheduler can fill them with the
+     * allocated value. Null/empty when the command has no self-sizing values.
+     */
+    private List<ResourceBinding> resourceBindings
+
+    /**
+     * Default values for the placeholder env vars: the value as rendered from the
+     * *request*. Injected into the task environment so that backends which do not resolve
+     * bindings (or before the scheduler overrides them) still produce a valid command
+     * identical to today's behavior.
+     */
+    private Map<String,String> resourceBindingDefaults
+
     SeqeraTaskHandler(TaskRun task, SeqeraExecutor executor) {
         super(task)
         this.client = executor.getClient()
@@ -91,8 +109,51 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
     @Override
     void prepareLauncher() {
         assert fusionEnabled()
+        // rewrite self-sizing command values into placeholders BEFORE the wrapper is built,
+        // so .command.sh carries ${SEQERA_TASK_*} that the scheduler fills at launch
+        interpolateResources()
         final launcher = fusionLauncher()
         launcher.build()
+    }
+
+    /**
+     * Replace command values derived from {@code task.memory}/{@code task.cpus} with shell
+     * placeholders so the scheduler can substitute the <em>allocated</em> value at launch
+     * (see {@link ResourceInterpolator}). Safe no-op on anything it cannot confidently rewrite.
+     */
+    protected void interpolateResources() {
+        try {
+            final body = task.getBody()
+            final Set<String> refNames = new HashSet<>()
+            if( body?.valRefs ) {
+                for( TokenValRef r : body.valRefs )
+                    refNames.add(r.name)
+            }
+            final res = ResourceInterpolator.interpolate(
+                    task.getScriptGString(),
+                    body?.source,
+                    refNames,
+                    task.config.getCpus(),
+                    task.config.getMemory() )
+            if( res?.changed() ) {
+                task.script = res.script
+                final bindings = new ArrayList<ResourceBinding>()
+                final defaults = new LinkedHashMap<String,String>()
+                for( ResourceInterpolator.Binding b : res.bindings ) {
+                    bindings << new ResourceBinding()
+                            .name(b.name)
+                            .resource(b.resource == ResourceInterpolator.Resource.MEMORY ? ResourceBindingType.MEMORY : ResourceBindingType.CPUS)
+                            .value(b.value.doubleValue())
+                    defaults.put(b.name, b.value.toPlainString())
+                }
+                this.resourceBindings = bindings
+                this.resourceBindingDefaults = defaults
+                log.debug "[SEQERA] Resource interpolation applied: ${bindings.size()} binding(s) for task `${task.lazyName()}`"
+            }
+        }
+        catch( Exception e ) {
+            log.debug "[SEQERA] Resource interpolation skipped for task `${task.lazyName()}`: ${e.message}"
+        }
     }
 
     @Override
@@ -150,6 +211,9 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         final delta = Labels.delta(taskLabels, executor.runResourceLabels)
         if( delta )
             schedTask.labels(delta)
+        // attach resource-derived placeholder bindings captured at launcher preparation
+        if( resourceBindings )
+            schedTask.resourceBindings(resourceBindings)
         log.debug "[SEQERA] Enqueueing task for batch submission: ${schedTask}"
         // Enqueue for batch submission - status will be set by setBatchTaskId callback
         executor.getBatchSubmitter().submit(this, schedTask)
@@ -162,10 +226,17 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
     protected Map<String, String> getTaskEnvironment() {
         final configEnv = executor.getSeqeraConfig()?.taskEnvironment
         final fusionEnv = fusionLauncher().fusionEnv()
-        if( !configEnv )
-            return fusionEnv
-        final result = new LinkedHashMap<String, String>(configEnv)
+        final result = new LinkedHashMap<String, String>()
+        if( configEnv )
+            result.putAll(configEnv)
         result.putAll(fusionEnv)
+        // seed placeholder defaults with the as-requested value. The scheduler overrides
+        // these with the allocated value at launch (ECS); backends that don't resolve
+        // bindings keep the default, so the command stays valid and identical to today.
+        if( resourceBindingDefaults ) {
+            for( Map.Entry<String,String> e : resourceBindingDefaults.entrySet() )
+                result.putIfAbsent(e.key, e.value)
+        }
         return result
     }
 
