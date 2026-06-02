@@ -24,13 +24,22 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowBroadcast
 import groovyx.gpars.dataflow.DataflowReadChannel
+import groovyx.gpars.dataflow.DataflowWriteChannel
+import groovyx.gpars.dataflow.expression.DataflowExpression
+import groovyx.gpars.dataflow.operator.DataflowEventAdapter
+import groovyx.gpars.dataflow.operator.DataflowProcessor
+import nextflow.Channel
+import nextflow.Global
 import nextflow.agent.AgentRunner
 import nextflow.agent.AgentRunnerProvider
 import nextflow.agent.AgentRunnerRequest
+import nextflow.agent.ModuleToolBridge
 import nextflow.agent.RecordSchema
+import nextflow.agent.ToolDescriptor
+import nextflow.agent.ToolDispatcher
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
-import nextflow.extension.MapOp
+import nextflow.extension.DataflowHelper
 import nextflow.script.AgentBuilder.AgentInput
 import nextflow.script.AgentBuilder.AgentOutput
 import nextflow.script.types.Record
@@ -74,7 +83,12 @@ class AgentDef extends BindableDef implements ChainableDef {
 
     String getModel() { directives.get('model') as String }
     String getInstruction() { directives.get('instruction') as String }
-    List getTools() { (directives.get('tools') ?: []) as List }
+    List getTools() {
+        final value = directives.get('tools')
+        if( value == null )
+            return []
+        return value instanceof List ? (List) value : [value]
+    }
     Integer getMaxIterations() { directives.get('maxIterations') as Integer }
     List<AgentInput> getInputs() { inputs }
     List<AgentOutput> getOutputs() { outputs }
@@ -124,13 +138,18 @@ class AgentDef extends BindableDef implements ChainableDef {
         final agentMaxIter = (this.maxIterations != null ? this.maxIterations : 20) as int
         final promptDef = this.prompt
 
+        // resolve declared `tools` to in-scope processes and pre-wire them into the
+        // dataflow network (before ignition); the bridge is poisoned on completion
+        final ModuleToolBridge bridge = createToolBridge()
+        final List<ToolDescriptor> toolSpecs = bridge != null ? bridge.descriptors() : null
+
         final mapper = { Object item ->
             final cl = (Closure) promptDef.closure.clone()
             cl.setDelegate([(inputName): item])
             cl.setResolveStrategy(Closure.DELEGATE_FIRST)
             final promptText = cl.call()?.toString()
             final inputJson = toJson(item)
-            final req = new AgentRunnerRequest(agentModel, agentInstruction, promptText, agentMaxIter, agentTools, outputSchema, inputJson)
+            final req = new AgentRunnerRequest(agentModel, agentInstruction, promptText, agentMaxIter, agentTools, outputSchema, inputJson, toolSpecs, (bridge as ToolDispatcher))
             final result = runner.run(req)
             if( !structured )
                 return result
@@ -138,10 +157,72 @@ class AgentDef extends BindableDef implements ChainableDef {
             return TypeHelper.asRecordType(map, outputClass)
         }
 
-        final out = new MapOp(source, mapper).apply()
+        final out = applyAgentOperator(source, mapper, bridge)
         final channels = new LinkedHashMap<String,Object>()
         channels.put(outputName, out)
         return new ChannelOut(channels)
+    }
+
+    /**
+     * Resolve the agent's declared {@code tools} entries (Phase 2: each is a String naming
+     * an in-scope process) to their {@link ProcessDef}s and pre-wire them as agent tools.
+     *
+     * @return a {@link ModuleToolBridge} wiring the resolved processes, or {@code null} when
+     *         no tools are declared
+     */
+    @CompileDynamic
+    private ModuleToolBridge createToolBridge() {
+        final declared = this.tools
+        if( !declared )
+            return null
+        final meta = ScriptMeta.get(owner)
+        final resolved = new LinkedHashMap<String, ProcessDef>()
+        for( final entry : declared ) {
+            final toolName = entry?.toString()
+            final proc = meta?.getProcess(toolName)
+            if( proc == null )
+                throw new ScriptRuntimeException("Agent `${name}` tool `${toolName}` is not a process in scope")
+            resolved.put(toolName, proc)
+        }
+        return new ModuleToolBridge(resolved)
+    }
+
+    /**
+     * Build the agent operator over the input {@code source}, applying the {@code mapper}
+     * per item. Mirrors {@link nextflow.extension.MapOp} but, when a {@code bridge} is
+     * present, attaches a listener whose {@code afterStop} poisons every pre-wired tool
+     * input so the session can terminate once the agent's input is exhausted.
+     */
+    @CompileDynamic
+    private DataflowWriteChannel applyAgentOperator(DataflowReadChannel source, Closure mapper, ModuleToolBridge bridge) {
+        final DataflowWriteChannel target = CH.createBy(source)
+        final boolean stopOnFirst = source instanceof DataflowExpression
+
+        final listener = new DataflowEventAdapter() {
+            @Override
+            void afterStop(final DataflowProcessor processor) {
+                bridge?.close()
+            }
+            @Override
+            boolean onException(final DataflowProcessor processor, final Throwable t) {
+                // poison tools so the network can unwind even on failure
+                bridge?.close()
+                log.error("@unknown", t)
+                Global.session?.abort(t)
+                return true
+            }
+        }
+
+        DataflowHelper.newOperator(source, target, listener) { it ->
+            final result = mapper.call(it)
+            final proc = (DataflowProcessor) getDelegate()
+            if( result != Channel.VOID )
+                proc.bindOutput(result)
+            if( result == Channel.STOP || stopOnFirst )
+                proc.terminate()
+        }
+
+        return target
     }
 
     /**
