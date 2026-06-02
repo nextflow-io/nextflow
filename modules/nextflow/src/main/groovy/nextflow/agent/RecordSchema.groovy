@@ -72,9 +72,12 @@ class RecordSchema {
         return result
     }
 
-    private static Map fragmentFor(String fieldName, Type type) {
-        final raw = rawClass(type)
-
+    /**
+     * Map a scalar type to its JSON-schema fragment, or {@code null} if the type
+     * is not a supported scalar (String / integer / number / boolean). Shared
+     * with {@link ProcessToolSchema} so the scalar mapping stays in one place.
+     */
+    static Map scalarFragment(Class raw) {
         if( raw == String )
             return [type: 'string']
 
@@ -86,6 +89,16 @@ class RecordSchema {
 
         if( raw in [Boolean, boolean] )
             return [type: 'boolean']
+
+        return null
+    }
+
+    private static Map fragmentFor(String fieldName, Type type) {
+        final raw = rawClass(type)
+
+        final scalar = scalarFragment(raw)
+        if( scalar != null )
+            return scalar
 
         if( raw == Path || Path.isAssignableFrom(raw) )
             throw new IllegalArgumentException("Unsupported agent output field `${fieldName}` of type ${raw.getName()} - `Path` is not allowed in agent outputs")
