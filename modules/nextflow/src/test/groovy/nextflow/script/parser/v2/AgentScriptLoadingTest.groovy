@@ -28,7 +28,7 @@ import test.Dsl2Spec
  */
 class AgentScriptLoadingTest extends Dsl2Spec {
 
-    def 'should load a script with an agent definition'() {
+    def 'should load a script with a minimal record-typed agent definition'() {
         given:
         def session = new Session()
         def parser = new ScriptLoaderV2(session)
@@ -36,7 +36,16 @@ class AgentScriptLoadingTest extends Dsl2Spec {
         file.text = '''
             nextflow.enable.types = true
 
+            record Question { text: String }
+            record Answer { answer: String }
+
             agent hello_agent {
+                input:
+                    q: Question
+
+                output:
+                    a: Answer
+
                 prompt:
                 "hello"
             }
@@ -57,13 +66,16 @@ class AgentScriptLoadingTest extends Dsl2Spec {
         file.parent.deleteDir()
     }
 
-    def 'should load a script with a directive-rich agent definition'() {
+    def 'should load a script with a directive-rich record-typed agent definition'() {
         given:
         def session = new Session()
         def parser = new ScriptLoaderV2(session)
         def file = Files.createTempDirectory('test').resolve('main.nf')
         file.text = '''
             nextflow.enable.types = true
+
+            record Question { text: String; context: String? }
+            record Answer { answer: String; confidence: Double }
 
             agent eval_agent {
                 model 'openai/gpt-5-mini'
@@ -72,14 +84,14 @@ class AgentScriptLoadingTest extends Dsl2Spec {
                 maxIterations 20
 
                 input:
-                    question: String
+                    q: Question
 
                 output:
-                    plan: String
+                    a: Answer
 
                 prompt:
                 """
-                Question: ${question}
+                Question: ${q.text}
                 """
             }
 
@@ -99,10 +111,18 @@ class AgentScriptLoadingTest extends Dsl2Spec {
         agent.instruction == 'You are helpful.'
         agent.maxIterations == 20
         agent.tools == []
-        agent.inputs*.name == ['question']
-        agent.outputs*.name == ['plan']
+        agent.inputs*.name == ['q']
+        agent.outputs*.name == ['a']
         agent.prompt != null
         agent.prompt.source.contains('Question:')
+        and:
+        // I/O are named record types: the resolved output type is the compiled
+        // record class (e.g. `Answer`) with the declared fields
+        def inputType = agent.inputs[0].type as Class
+        def outputType = agent.outputs[0].type as Class
+        inputType.name.endsWith('Question')
+        outputType.name.endsWith('Answer')
+        (outputType.declaredFields*.name as Set).containsAll(['answer', 'confidence'])
 
         cleanup:
         file.parent.deleteDir()
