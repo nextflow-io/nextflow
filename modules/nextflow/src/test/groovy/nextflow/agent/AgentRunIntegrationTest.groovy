@@ -32,15 +32,18 @@ class AgentRunIntegrationTest extends Dsl2Spec {
         AgentRunnerProvider.testRunner = null
     }
 
-    def 'should run an agent end-to-end against a mock runner'() {
+    def 'should run a record-typed agent end-to-end against a mock runner'() {
         given:
-        // capture the request the runner receives and echo a canned answer
+        // capture the request the runner receives and echo a canned JSON answer
         AgentRunnerRequest captured = null
-        AgentRunnerProvider.testRunner = { AgentRunnerRequest req -> captured = req; "PLAN: do fastqc" } as AgentRunner
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req -> captured = req; '{"answer":"ok","confidence":0.9}' } as AgentRunner
 
         when:
         def result = runScript('''
             nextflow.enable.types = true
+
+            record Question { text: String }
+            record Answer { answer: String; confidence: Double }
 
             agent eval_agent {
                 model 'openai/gpt-5-mini'
@@ -49,28 +52,39 @@ class AgentRunIntegrationTest extends Dsl2Spec {
                 maxIterations 7
 
                 input:
-                    question: String
+                    q: Question
 
                 output:
-                    plan: String
+                    a: Answer
 
                 prompt:
                 """
-                Question: ${question}
+                Question: ${q.text}
                 """
             }
 
             workflow {
-                eval_agent(channel.of('analyze my reads'))
+                eval_agent(channel.of(record(text: 'analyze my reads')))
             }
             ''')
 
         then:
-        result.val == 'PLAN: do fastqc'
+        // the emitted value is the bound output record
+        def out = result.val
+        out instanceof Map
+        out.answer == 'ok'
+        out.confidence == 0.9d
         and:
         captured.model == 'openai/gpt-5-mini'
         captured.instruction == 'You are helpful.'
         captured.maxIterations == 7
         captured.prompt.contains('Question: analyze my reads')
+        and:
+        // the output schema was derived from the Answer record type
+        captured.outputSchema.properties.answer.type == 'string'
+        captured.outputSchema.properties.confidence.type == 'number'
+        and:
+        // the input record was serialized to JSON
+        captured.inputJson.contains('analyze my reads')
     }
 }

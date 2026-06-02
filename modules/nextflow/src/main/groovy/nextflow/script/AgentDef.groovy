@@ -15,6 +15,10 @@
  */
 package nextflow.script
 
+import java.nio.file.Path
+
+import groovy.json.JsonOutput
+import groovy.json.JsonSlurper
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -23,11 +27,13 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import nextflow.agent.AgentRunner
 import nextflow.agent.AgentRunnerProvider
 import nextflow.agent.AgentRunnerRequest
+import nextflow.agent.RecordSchema
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
 import nextflow.extension.MapOp
 import nextflow.script.AgentBuilder.AgentInput
 import nextflow.script.AgentBuilder.AgentOutput
+import nextflow.util.TypeHelper
 
 /**
  * Runtime model for an agent definition. Holds the captured directives,
@@ -98,8 +104,13 @@ class AgentDef extends BindableDef implements ChainableDef {
         if( args.size() != 1 )
             throw new ScriptRuntimeException("Agent `${name}` expects 1 input channel but received ${args.size()}")
 
+        if( !outputs )
+            throw new ScriptRuntimeException("Agent `${name}` must declare exactly one output - zero outputs are not yet supported")
+
         final inputName = inputs[0].name
-        final outputName = outputs ? outputs[0].name : 'out'
+        final outputName = outputs[0].name
+        final outputClass = outputs[0].type as Class
+        final outputSchema = RecordSchema.of(outputClass)
         final source = createSourceChannel(args[0])
         final AgentRunner runner = AgentRunnerProvider.get()
         final agentModel = this.model
@@ -113,13 +124,58 @@ class AgentDef extends BindableDef implements ChainableDef {
             cl.setDelegate([(inputName): item])
             cl.setResolveStrategy(Closure.DELEGATE_FIRST)
             final promptText = cl.call()?.toString()
-            final req = new AgentRunnerRequest(agentModel, agentInstruction, promptText, agentMaxIter, agentTools)
-            return runner.run(req)
+            final inputJson = toJson(item)
+            final req = new AgentRunnerRequest(agentModel, agentInstruction, promptText, agentMaxIter, agentTools, outputSchema, inputJson)
+            final json = runner.run(req)
+            final map = new JsonSlurper().parseText(stripFences(json)) as Map
+            return TypeHelper.asRecordType(map, outputClass)
         }
 
         final out = new MapOp(source, mapper).apply()
         final channels = new LinkedHashMap<String,Object>()
         channels.put(outputName, out)
         return new ChannelOut(channels)
+    }
+
+    /**
+     * Serialize the input record (a Map at runtime) to JSON, rendering any
+     * {@link Path} value as its absolute string so the model receives a portable
+     * representation.
+     */
+    protected static String toJson(Object item) {
+        return JsonOutput.toJson(normalizeForJson(item))
+    }
+
+    private static Object normalizeForJson(Object value) {
+        if( value instanceof Path )
+            return value.toAbsolutePath().toString()
+        if( value instanceof Map )
+            return value.collectEntries { k, v -> [(k): normalizeForJson(v)] }
+        if( value instanceof Collection )
+            return value.collect { normalizeForJson(it) }
+        return value
+    }
+
+    /**
+     * Strip a leading ```json (or ```) fence and a trailing ``` fence from the
+     * given text, returning the inner content. If no fences are present the
+     * original text is returned unchanged.
+     */
+    protected static String stripFences(String text) {
+        if( text == null )
+            return null
+        def s = text.trim()
+        if( !s.startsWith('```') )
+            return text
+        // drop the opening fence line (``` or ```json)
+        final nl = s.indexOf('\n')
+        if( nl < 0 )
+            return text
+        s = s.substring(nl + 1)
+        // drop the trailing fence
+        final close = s.lastIndexOf('```')
+        if( close >= 0 )
+            s = s.substring(0, close)
+        return s.trim()
     }
 }

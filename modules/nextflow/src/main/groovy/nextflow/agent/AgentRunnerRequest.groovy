@@ -20,8 +20,13 @@ import groovy.transform.CompileStatic
 
 /**
  * Immutable request passed to an {@link AgentRunner}: the resolved model, the
- * system instruction, the rendered user prompt, the iteration cap, and the
- * (currently unused) tool list for forward compatibility.
+ * system instruction, the rendered user prompt, the iteration cap, the
+ * (currently unused) tool list for forward compatibility, the JSON schema
+ * describing the expected structured output, and the input record serialized
+ * as JSON.
+ *
+ * Being {@code @Canonical}, the positional constructor order is:
+ * {@code (model, instruction, prompt, maxIterations, tools, outputSchema, inputJson)}.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -33,4 +38,6 @@ class AgentRunnerRequest {
     String prompt
     int maxIterations
     List tools
+    Map outputSchema
+    String inputJson
 }
