@@ -183,8 +183,10 @@ class AgentDef extends BindableDef implements ChainableDef {
      *   <li>a <b>local module file path</b> (ends with {@code .nf}, or starts with {@code ./},
      *       {@code ../} or {@code /}) is compiled to a {@link ProcessDef} at agent-run time
      *       on the owner's live {@link nextflow.Session} (Phase 3.1);</li>
-     *   <li>a <b>registry reference</b> (e.g. {@code nf-core/fastqc}) is not yet supported
-     *       (Phase 3.3) and fails loudly.</li>
+     *   <li>a <b>registry reference</b> (e.g. {@code nf-core/fastqc}, optionally {@code @version})
+     *       is resolved through the module registry via {@link nextflow.module.ModuleResolver}
+     *       (local install first, else auto-install/download) and compiled to a {@link ProcessDef}
+     *       at agent-run time (Phase 3.3).</li>
      * </ul>
      *
      * @return a {@link ModuleToolBridge} wiring the resolved processes, or {@code null} when
@@ -218,10 +220,20 @@ class AgentDef extends BindableDef implements ChainableDef {
                     specs.put(toolName, spec)
                 continue
             }
-            // 3) a registry reference (e.g. `nf-core/fastqc`) -> not yet supported (Phase 3.3)
-            if( toolRef ==~ /[^\/\s]+\/[^\/\s]+/ )
-                throw new ScriptRuntimeException("Agent `${name}` tool `${toolRef}`: registry module tools are not yet supported (Phase 3.3); use an in-scope process or a local .nf module file")
-            // 4) otherwise: not a process in scope, not a path
+            // 3) a registry reference (e.g. `nf-core/fastqc`, optionally `@version`) -> resolve
+            //    via the module registry (ModuleResolver), compile the resolved main.nf to a
+            //    ProcessDef (the Phase 3.1 recipe) and, when an installed sibling meta.yml is
+            //    present, drive the schema/marshalling from its ModuleSpec (Phase 3.2)
+            if( looksLikeRegistryRef(toolRef) ) {
+                final entry3 = resolveRegistryTool(toolRef)
+                final toolName = entry3.key
+                resolved.put(toolName, entry3.value)
+                final spec = loadSiblingSpec(entry3.value)
+                if( spec != null )
+                    specs.put(toolName, spec)
+                continue
+            }
+            // 4) otherwise: not a process in scope, not a path, not a registry ref
             throw new ScriptRuntimeException("Agent `${name}` tool `${toolRef}` is not a process in scope")
         }
         return new ModuleToolBridge(resolved, specs)
@@ -279,9 +291,27 @@ class AgentDef extends BindableDef implements ChainableDef {
         if( !modPath.toFile().exists() )
             throw new ScriptRuntimeException("Agent `${name}` tool `${ref}`: module file not found - resolved to `${modPath}`")
 
-        // -- compile the module on the live session (spike-validated recipe);
-        //    setModule(true) is mandatory so the standalone process does not auto-build
-        //    an entry workflow
+        // -- compile the resolved module file to a ProcessDef; the tool name is the process name
+        final proc = compileModuleProcess(ref, modPath, session)
+        return new AbstractMap.SimpleImmutableEntry<String,ProcessDef>(proc.getName(), proc)
+    }
+
+    /**
+     * Compile a resolved module {@code main.nf} into a runnable {@link ProcessDef} on the
+     * owner's live {@link nextflow.Session} (pre-ignition). Shared by the local-file (Phase 3.1)
+     * and registry (Phase 3.3) tool-resolution paths.
+     *
+     * <p>{@code setModule(true)} is mandatory so the standalone process does not auto-build an
+     * entry workflow. The resolved {@code modPath} is remembered (keyed by the returned
+     * {@link ProcessDef}) so a sibling {@code meta.yml} can be located later (Phase 3.2).
+     *
+     * @param ref     the original {@code tools} entry (used for error messages)
+     * @param modPath the resolved module {@code main.nf} path
+     * @param session the live session
+     * @return the module's single {@link ProcessDef}
+     */
+    @CompileDynamic
+    private ProcessDef compileModuleProcess(String ref, Path modPath, Session session) {
         final BaseScript modScript
         try {
             final loader = new nextflow.script.parser.v2.ScriptLoaderV2(session)
@@ -301,11 +331,100 @@ class AgentDef extends BindableDef implements ChainableDef {
             throw new ScriptRuntimeException("Agent `${name}` tool `${ref}`: module file `${modPath}` declares no process")
         if( procNames.size() > 1 )
             throw new ScriptRuntimeException("Agent `${name}` tool `${ref}`: module file `${modPath}` declares more than one process (${procNames.sort()}); naming a specific process is not yet supported")
-        final procName = procNames[0]
-        final proc = modMeta.getProcess(procName)
+        final proc = modMeta.getProcess(procNames[0])
         // remember the source path so a sibling meta.yml can be located (Phase 3.2)
         compiledModulePaths.put(proc, modPath)
-        return new AbstractMap.SimpleImmutableEntry<String,ProcessDef>(procName, proc)
+        return proc
+    }
+
+    /**
+     * Whether a {@code tools} entry looks like a module <b>registry</b> reference, i.e. a
+     * {@code scope/name} (optionally suffixed with {@code @version}) that parses as a
+     * {@link nextflow.module.ModuleReference}. A leading path (handled by
+     * {@link #looksLikeModulePath}) is excluded by checking the path form first at the call site.
+     */
+    private static boolean looksLikeRegistryRef(String ref) {
+        if( !ref )
+            return false
+        final refNoVer = stripVersion(ref).first
+        try {
+            nextflow.module.ModuleReference.parse(refNoVer)
+            return true
+        }
+        catch( Exception ignored ) {
+            return false
+        }
+    }
+
+    /** Split a {@code scope/name@version} ref into {@code [scope/name, version|null]}. */
+    private static Tuple2<String,String> stripVersion(String ref) {
+        final at = ref.indexOf('@')
+        if( at < 0 )
+            return new Tuple2<String,String>(ref, null)
+        return new Tuple2<String,String>(ref.substring(0, at), ref.substring(at + 1) ?: null)
+    }
+
+    /**
+     * Resolve a registry module reference (e.g. {@code nf-core/fastqc} or
+     * {@code nf-core/fastqc@1.0.0}) to a runnable {@link ProcessDef} (Phase 3.3).
+     *
+     * <p>The reference is resolved through the module registry via {@link nextflow.module.ModuleResolver}
+     * built from the session base dir and the {@code registry} config scope (mirroring
+     * {@code CmdModuleRun.resolveRemoteModule}). {@code resolve(ref, version, autoInstall=true)}
+     * checks the local install FIRST (no network when already installed) and otherwise downloads
+     * the module. The resolved {@code main.nf} is then compiled via {@link #compileModuleProcess};
+     * the tool name is the sanitized reference (so it is a valid LLM-facing identifier).
+     *
+     * @return a {@code sanitizedToolName -> ProcessDef} entry
+     */
+    @CompileDynamic
+    private Map.Entry<String,ProcessDef> resolveRegistryTool(String ref) {
+        final session = Global.session as Session
+        if( session == null )
+            throw new ScriptRuntimeException("Agent `${name}` tool `${ref}`: cannot resolve a registry module - no active session")
+
+        final parts = stripVersion(ref)
+        final refNoVer = parts.first
+        final version = parts.second
+
+        final nextflow.module.ModuleReference moduleRef
+        try {
+            moduleRef = nextflow.module.ModuleReference.parse(refNoVer)
+        }
+        catch( Exception e ) {
+            throw new ScriptRuntimeException("Agent `${name}` tool `${ref}`: invalid registry module reference - ${e.message}", e)
+        }
+
+        // -- the modules/ dir lives at the project (base) root; mirror CmdModuleRun
+        final baseDir = session.baseDir ?: Path.of('.').toAbsolutePath().normalize()
+        final registryConfig = new nextflow.config.RegistryConfig((session.config?.registry as Map) ?: Collections.emptyMap())
+
+        // -- resolve (local install first, else auto-install via the registry client)
+        final Path modPath
+        try {
+            final client = nextflow.module.RegistryClientFactory.forConfig(registryConfig)
+            final resolver = new nextflow.module.ModuleResolver(baseDir, client)
+            modPath = resolver.resolve(moduleRef, version, /*autoInstall*/ true)
+        }
+        catch( Exception e ) {
+            throw new ScriptRuntimeException("Unable to resolve agent tool module `${ref}` from the registry: ${e.message}. Check registry access/credentials.", e)
+        }
+        if( modPath == null || !modPath.toFile().exists() )
+            throw new ScriptRuntimeException("Unable to resolve agent tool module `${ref}` from the registry: resolved path `${modPath}` does not exist. Check registry access/credentials.")
+
+        // -- compile the resolved main.nf to a ProcessDef (the Phase 3.1 recipe)
+        final proc = compileModuleProcess(ref, modPath, session)
+        // the LLM-facing tool name must be a valid identifier: sanitize `/`, `-`, `@`, `.` to `_`
+        final toolName = sanitizeToolName(refNoVer)
+        return new AbstractMap.SimpleImmutableEntry<String,ProcessDef>(toolName, proc)
+    }
+
+    /**
+     * Turn a module reference into a valid identifier usable as an LLM-facing tool name by
+     * replacing any non-word character (e.g. {@code /}, {@code -}, {@code .}) with {@code _}.
+     */
+    private static String sanitizeToolName(String ref) {
+        return ref.replaceAll(/[^A-Za-z0-9_]/, '_')
     }
 
     /**

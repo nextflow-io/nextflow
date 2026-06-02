@@ -121,11 +121,13 @@ class AgentExternalToolTest extends Dsl2Spec {
         new JsonSlurper().parseText(dispatchResult) == [result: 'ADA']
     }
 
-    def 'should fail for a registry module reference (not yet supported)'() {
+    def 'should fail with a clear error when a registry module cannot be resolved (no registry access)'() {
         given:
         AgentRunnerProvider.testRunner = { AgentRunnerRequest req -> throw new IllegalStateException('runner should not be invoked') } as AgentRunner
 
         and:
+        // a registry ref that is NOT installed locally; with no registry access the resolution
+        // fails and Phase 3.3 surfaces a clear, ref-naming error (no silent swallow)
         def main = writeScripts(
             '''
             nextflow.enable.types = true
@@ -133,7 +135,7 @@ class AgentExternalToolTest extends Dsl2Spec {
             agent a {
                 model 'm'
                 instruction 'i'
-                tools 'nf-core/fastqc'
+                tools 'acme-bogus/does-not-exist'
 
                 input:
                     request: String
@@ -154,11 +156,13 @@ class AgentExternalToolTest extends Dsl2Spec {
             'nextflow.enable.types = true')
 
         when:
-        runScript(main)
+        // point the registry at an unreachable URL so resolution fails fast (no real network)
+        runScript([config: [registry: [url: 'http://127.0.0.1:1/api']]], main)
 
         then:
         def e = thrown(ScriptRuntimeException)
-        e.message.contains('registry module tools are not yet supported (Phase 3.3)')
+        e.message.contains('Unable to resolve agent tool module `acme-bogus/does-not-exist` from the registry')
+        e.message.contains('Check registry access/credentials')
     }
 
     def 'should fail for a missing module file'() {
