@@ -104,7 +104,13 @@ Under the typed DSL (`nextflow.enable.types = true`), invoke the agent with the 
 
 ### Tools (calling modules)
 
-An agent can call **in-scope processes** as tools. Declare them with the `tools` directive, naming each process; when the model decides to use a tool, Nextflow marshals the model's JSON arguments into the process input channel, runs the process as a real dataflow node (through the normal executor machinery), and serializes its output back to the model so it can continue the conversation and produce a final answer.
+An agent can call Nextflow modules as **tools**. Declare one or more with the `tools` directive. Each entry is a string that names a tool in one of three forms:
+
+1. an **in-scope process name** (a process declared in the same script), e.g. `tools 'uppercase'`;
+2. a **local `.nf` module file path**, e.g. `tools './modules/fastqc.nf'` (a path ending in `.nf` or starting with `./`, `../` or `/`). The file must declare exactly one process, which becomes the tool, compiled at run time;
+3. a **registry reference** `owner/name` (optionally `owner/name@version`), e.g. `tools 'nf-core/fastqc'`. The module is resolved through the module registry (local install first, otherwise downloaded). Running a real registry module also requires a container runtime, since the underlying tool runs as a normal containerized task.
+
+When the model decides to call a tool, Nextflow marshals the model's JSON arguments into channel values, runs the module as a **real dataflow node** (through the normal executor / container / cache machinery — the tool task runs in its own work directory), and serializes the module's outputs back to the model as a JSON object so it can continue the conversation and produce a final answer. File outputs are returned as **absolute path-handle strings**, never file contents — so the model passes opaque path handles between tools and never sees the bytes of a file.
 
 ```groovy
 nextflow.enable.types = true
@@ -134,11 +140,58 @@ workflow {
 
 When the model calls the `uppercase` tool, the process executes as a dataflow node and its result flows back to the model, which produces the final `answer` (here, `HELLO`).
 
+#### Multiple tools
+
+An agent can declare several tools; the model is shown all of them and picks which to call (and in what order). List them as multiple arguments to `tools`:
+
+```groovy
+nextflow.enable.types = true
+
+process uppercase {
+    input:  text: String
+    output: result: String
+    exec:   result = text.toUpperCase()
+}
+
+process reverse {
+    input:  text: String
+    output: result: String
+    exec:   result = text.reverse()
+}
+
+agent transformer {
+    model 'openai/gpt-5-mini'
+    instruction '''
+        You transform text. Use the uppercase tool to upper-case text and the
+        reverse tool to reverse it. Call whichever tools the request needs,
+        then reply with only the final text.
+    '''
+    tools 'uppercase', 'reverse'
+
+    input:  request: String
+    output: answer: String
+
+    prompt: "${request}"
+}
+
+workflow {
+    transformer(channel.of('uppercase and then reverse the word hello'))
+        .view { a -> "ANSWER=${a}" }
+}
+```
+
+Each declared tool contributes its own JSON-schema descriptor; tool calls from the model are dispatched by name to the matching module.
+
+#### Tool input/output schema
+
+Each tool advertises a JSON schema describing its arguments so the model knows how to call it:
+
+- **From a sibling `meta.yml`** — when a module file (or a registry module) has a sibling `meta.yml`, its input/output spec drives the tool schema, including per-item **descriptions**. Tuple inputs are *flattened* to top-level properties: a `tuple(val(meta), path(reads))` input becomes `{meta, reads}`, where `meta` is an object and `reads` is a path-handle string. The model passes `{"meta": {...}, "reads": "/abs/path"}` rather than a nested array; on the way back, tuple/file outputs are serialized to a JSON object with file values as absolute path strings.
+- **From a typed process** — when no `meta.yml` is present, the schema is derived from the in-scope (or compiled) typed process's declared scalar I/O: each input parameter `name: Type` becomes a property, and the single scalar output is returned under its name. Tuple/`path`/`meta` process I/O without a `meta.yml` is not supported and fails loudly.
+
 :::{note}
 When an agent declares `tools`, the model's free-text final answer is emitted, so the **output must be a plain (non-record) type** such as `String`. Combining `tools` with a `record` (structured) output is rejected at run time — structured output and tools are mutually exclusive in this release.
 :::
-
-In this release, tools are limited to **in-scope processes with scalar I/O** (e.g. `String`). Each declared process's typed input is reflected into the tool's JSON schema, and its output is returned to the model. Calling external registry modules (e.g. `nf-core/...`) as tools is a later phase.
 
 Run it:
 
@@ -146,13 +199,32 @@ Run it:
 nextflow run main.nf
 ```
 
+## Configuration
+
+The `agent` configuration scope sets defaults applied to agents that do not declare the corresponding directive. An agent's own directives always take precedence; the scope only fills in a value the agent omitted.
+
+```groovy
+// nextflow.config
+agent {
+    defaultModel = 'openai/gpt-5-mini'   // used when an agent omits `model`
+    maxIterationsDefault = 10            // used when an agent omits `maxIterations` (built-in default: 20)
+    requestTimeout = '120 sec'           // per-request LLM chat timeout (built-in default: 120 sec)
+}
+```
+
+| Option | Meaning |
+|---|---|
+| `defaultModel` | Default model (`provider/model`) for an agent that does not declare a `model` directive. |
+| `maxIterationsDefault` | Default cap on the tool-calling loop for an agent that does not declare `maxIterations` (built-in default `20`). |
+| `requestTimeout` | Time to wait for a single LLM chat request before failing (built-in default `120 sec`). |
+
 ## Directives
 
 | Directive | Required | Meaning |
 |---|---|---|
 | `model` | yes | Model identifier as `provider/model`, e.g. `openai/gpt-5-mini`. The provider prefix selects the chat-model backend. Required at run time. |
 | `instruction` | no | System prompt describing the agent's role. Omitted if not set. |
-| `tools` | no | In-scope processes the agent may call as tools, named as strings (e.g. `tools 'uppercase'`). See [Tools (calling modules)](#tools-calling-modules). Requires a plain (non-record) output type. |
+| `tools` | no | One or more modules the agent may call as tools, each named as a string: an in-scope process name (`tools 'uppercase'`), a local `.nf` module file path (`tools './mod.nf'`), or a registry reference (`tools 'nf-core/fastqc'`). Multiple are allowed (`tools 'uppercase', 'reverse'`). See [Tools (calling modules)](#tools-calling-modules). Requires a plain (non-record) output type. |
 | `maxIterations` | no | Cap on the LLM tool-calling loop (default 20). Applies when `tools` are declared. |
 
 Only the `prompt:` block is structurally required; `model` is additionally required when the agent runs.
@@ -179,5 +251,7 @@ Under OpenAI strict structured output, langchain4j promotes **all** output prope
 - `Path` fields are not allowed in output records.
 - Optional (`?`) fields on output records are effectively required under OpenAI strict structured output (see the note above). Optional input-record fields are honored.
 - Only the `openai` provider is supported.
-- Tools are limited to in-scope processes with scalar I/O; declaring `tools` requires a plain (non-record) output type — tools and structured (record) output are mutually exclusive. Calling external registry modules (e.g. `nf-core/...`) as tools is a later phase.
-- No `agent { }` configuration scope or streaming yet.
+- A tool **must declare a non-record output** (its result is serialized back to the model). Declaring `tools` requires a plain (non-record) **agent** output type — tools and structured (record) agent output are mutually exclusive.
+- Tool calls are **serialized** (single-threaded): one call runs to completion before the next is dispatched, so inputs and outputs stay correlated. Parallel and correlated tool calls are deferred.
+- A failure of the underlying tool **process task** aborts the run via the standard error model. Only *dispatch-level* errors (an unknown tool name, or unparseable / malformed arguments) are returned to the model as a `{"error": ...}` tool result so it can recover and retry.
+- Streaming is not supported yet.
