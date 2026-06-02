@@ -158,6 +158,45 @@ Destructured `record(...)` agent I/O (rejected with a clear error; needs lowerin
 
 Follow-up plan: [`docs/superpowers/plans/2026-06-02-agent-record-io.md`](../docs/superpowers/plans/2026-06-02-agent-record-io.md).
 
+## Module-as-tool execution — validated direction (2026-06-02)
+
+The headline goal (tool calls are real dataflow nodes; tools are modules with `meta.yml`-derived schemas) is the real point of the feature. Re-framing accordingly:
+
+- **Agent I/O is ordinary process-style I/O** (`val`/`path`/record), not a special structured mechanism. The Plan-F LLM structured-output binding becomes **opt-in** (used only when the user declares a record output); it is no longer the centerpiece. The schema mapping that matters lives at the **tool boundary**.
+- **A tool is a Nextflow module/process.** Its `meta.yml`/`ModuleSpec` `input` metadata (e.g. `nextflow module view nf-core/fastqc -o json` → input tuple `{meta:map, reads:file}`, with per-item descriptions) becomes the LLM tool's parameter JSON-schema "for free". The LLM's tool-call args are marshalled into channel values, the module runs through the standard executor/container/retry/cache machinery, and its outputs are serialized back to the LLM as JSON (files as opaque absolute-path handles).
+
+### Execution mechanism — feasibility settled by two empirical spikes
+
+The crux was whether a module can run as a real dataflow node driven by the (post-ignition) agent loop. Two throwaway spikes settled it under the **real async executor** (`jstack`-verified):
+
+- **Spike #1 — naive synchronous invocation does NOT work.** Calling `ProcessDef.run()` from inside the agent operator *after* `session.fireDataflowNetwork()` deadlocks: the new operator's start is deferred via `session.addIgniter{…}` and the igniter list is drained only once at ignition, so the late operator never starts; `.val` and `session.await()` hang. **Creating a process node post-fire is out.**
+- **Spike #2 — pre-wiring WORKS, no core change required.** Wire `toolOut = tool(toolIn)` *before* ignition (the tool operator starts normally), then post-fire the agent operator emits onto `toolIn` and blocks on `toolOut.val`. The task genuinely executes on the real executor (real work dir, transformed result); correlation is correct when calls are serialized; the GPars operator pool can't starve because task bodies run on a separate `execService`.
+
+**Validated recipe** (per declared tool, at agent construction inside the workflow body, i.e. pre-ignition):
+```groovy
+def toolIn  = CH.queue()
+def toolOut = CH.getReadChannel( toolDef.run([toolIn] as Object[])[0] )   // == toolOut = tool(toolIn)
+// agent operator (post-fire) drives it; on completion:
+toolIn.bind(PoisonPill.instance)   // REQUIRED — otherwise session.await() hangs forever
+```
+
+**Hard runtime obligations:** (1) the harness MUST poison every pre-wired `toolIn` once the agent finishes issuing calls, or the network never terminates; (2) tool calls are serialized (or carry explicit correlation IDs — outputs reorder under `maxForks>1`). No new core runtime primitive is needed.
+
+### Core/plugin split
+
+Core owns module resolution, the pre-wiring (`toolIn`/`toolOut`), the dispatch (marshal JSON args → channel value → block on output → serialize to JSON), and poison-on-complete — all langchain4j-free, exposed to the plugin via a `ToolDescriptor` (plain Maps) + a `ToolDispatcher` (`String call(name, argsJson)`) callback. The plugin owns only langchain4j: building `ToolSpecification`s from the schema Maps and running the manual tool-call loop (`ChatRequest.toolSpecifications` → `AiMessage.toolExecutionRequests()` → `ToolExecutionResultMessage`). The plugin never touches a `ProcessDef`/`Channel`/`Path`; core never imports `dev.langchain4j.*`.
+
+### Staged scope (this is multi-plan work)
+
+1. **Headline slice** — agent invokes a **local/in-scope process** as a tool, end-to-end with the LLM, via pre-wire + blocking-pull + poison. Proves "a module runs as a real dataflow node from an LLM tool call." Tool input schema from the process's typed inputs; output serialized to JSON.
+2. **Agent I/O relaxation** — allow `val`/`path` I/O; make the record structured-output opt-in (independent; can land first).
+3. **Registry modules** — resolve `nf-core/fastqc` to a `ProcessDef` + `ModuleSpec`; derive the tool schema from `meta.yml` (descriptions, tuple flattening, file handles, the `meta` map, `eval`/topic outputs).
+4. **Polish** — multi-tool, parallel/correlated calls, error-as-tool-result, termination edge cases, docs, gated real-LLM E2E.
+
+Known open sub-problems (flagged for the plan): runtime module→`ProcessDef` compilation outside the normal include flow; concurrency when the agent input is a queue (multiple in-flight loops mutating `Global.session`/`ScriptMeta`); optional module inputs and the `meta`-map provenance (LLM-supplied). The earlier Plan-F deferrals (record-only I/O, etc.) are superseded by the I/O relaxation above.
+
+Follow-up plan: [`docs/superpowers/plans/2026-06-02-agent-tool-bridge.md`](../docs/superpowers/plans/2026-06-02-agent-tool-bridge.md).
+
 ## Links
 
 - Design spec: [`docs/superpowers/specs/2026-05-04-nextflow-llm-agent-design.md`](../docs/superpowers/specs/2026-05-04-nextflow-llm-agent-design.md)
