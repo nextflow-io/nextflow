@@ -68,6 +68,14 @@ class LangChainAgentRunner implements AgentRunner {
     }
 
     /**
+     * The per-request LLM chat timeout (seconds): the configured value carried by
+     * the request, or the built-in default when none was configured.
+     */
+    private static int timeoutSeconds(AgentRunnerRequest request) {
+        return request.requestTimeoutSeconds > 0 ? request.requestTimeoutSeconds : DEFAULT_TIMEOUT_SECONDS
+    }
+
+    /**
      * Single-shot chat (no tool calls). When an output record type is declared
      * the model is constrained to a structured-output JSON schema.
      */
@@ -77,7 +85,7 @@ class LangChainAgentRunner implements AgentRunner {
             ? JsonSchemaMapper.toJsonSchema('Output', request.outputSchema)
             : null
 
-        final model = modelFactory.createModel(request.model, DEFAULT_TIMEOUT_SECONDS, schema)
+        final model = modelFactory.createModel(request.model, timeoutSeconds(request), schema)
 
         final List<ChatMessage> messages = composeMessages(request)
 
@@ -96,7 +104,7 @@ class LangChainAgentRunner implements AgentRunner {
     private String runWithTools(AgentRunnerRequest request) {
         // Phase 2: tools XOR structured-output — do NOT force a responseFormat
         // when tools are in play (pass a null schema to the model factory).
-        final model = modelFactory.createModel(request.model, DEFAULT_TIMEOUT_SECONDS, null)
+        final model = modelFactory.createModel(request.model, timeoutSeconds(request), null)
 
         final List<ToolSpecification> specs = request.toolSpecs.collect { ModuleToolAdapter.toToolSpecification(it) }
         final List<ChatMessage> messages = composeMessages(request)

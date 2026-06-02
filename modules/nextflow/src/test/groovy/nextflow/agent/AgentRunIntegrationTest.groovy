@@ -131,5 +131,107 @@ class AgentRunIntegrationTest extends Dsl2Spec {
         and:
         // the scalar input was still serialized to JSON
         captured.inputJson.contains('what is FASTQ?')
+        and:
+        // no agent config scope: the request carries the built-in defaults
+        captured.maxIterations == 20
+        captured.requestTimeoutSeconds == 120
+    }
+
+    def 'should apply agent config scope defaults when directives are absent'() {
+        given:
+        AgentRunnerRequest captured = null
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req -> captured = req; 'hello world' } as AgentRunner
+
+        when:
+        def result = runScript(
+            config: [
+                agent: [
+                    defaultModel        : 'openai/x',
+                    maxIterationsDefault: 5,
+                    requestTimeout      : '90s'
+                ]
+            ],
+            '''
+            nextflow.enable.types = true
+
+            agent qa {
+                instruction 'You are helpful.'
+                tools()
+
+                input:
+                    question: String
+
+                output:
+                    answer: String
+
+                prompt:
+                """
+                Answer: ${question}
+                """
+            }
+
+            workflow {
+                qa(channel.of('what is FASTQ?'))
+            }
+            ''')
+
+        then:
+        result.val == 'hello world'
+        and:
+        // the agent declared no model/maxIterations directive -> config defaults apply
+        captured.model == 'openai/x'
+        captured.maxIterations == 5
+        captured.requestTimeoutSeconds == 90
+    }
+
+    def 'should let agent directives override the config scope defaults'() {
+        given:
+        AgentRunnerRequest captured = null
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req -> captured = req; 'hello world' } as AgentRunner
+
+        when:
+        def result = runScript(
+            config: [
+                agent: [
+                    defaultModel        : 'openai/x',
+                    maxIterationsDefault: 5,
+                    requestTimeout      : '90s'
+                ]
+            ],
+            '''
+            nextflow.enable.types = true
+
+            agent qa {
+                model 'openai/gpt-5-mini'
+                maxIterations 7
+                instruction 'You are helpful.'
+                tools()
+
+                input:
+                    question: String
+
+                output:
+                    answer: String
+
+                prompt:
+                """
+                Answer: ${question}
+                """
+            }
+
+            workflow {
+                qa(channel.of('what is FASTQ?'))
+            }
+            ''')
+
+        then:
+        result.val == 'hello world'
+        and:
+        // the agent's own directives win over the config defaults ...
+        captured.model == 'openai/gpt-5-mini'
+        captured.maxIterations == 7
+        and:
+        // ... while requestTimeout (no directive) still comes from the config scope
+        captured.requestTimeoutSeconds == 90
     }
 }

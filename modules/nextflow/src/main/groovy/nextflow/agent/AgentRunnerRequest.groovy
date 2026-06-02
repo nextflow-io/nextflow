@@ -30,7 +30,11 @@ import groovy.transform.CompileStatic
  * a live {@link ToolDispatcher} callback) and are never serialized.
  *
  * Being {@code @Canonical}, the positional constructor order is:
- * {@code (model, instruction, prompt, maxIterations, tools, outputSchema, inputJson, toolSpecs, dispatch)}.
+ * {@code (model, instruction, prompt, maxIterations, tools, outputSchema, inputJson, toolSpecs, dispatch, requestTimeoutSeconds)}.
+ *
+ * The {@code requestTimeoutSeconds} carries the configured per-request LLM chat
+ * timeout (from the {@code agent.requestTimeout} config option); when {@code 0}
+ * the runner applies its own built-in default.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -46,4 +50,5 @@ class AgentRunnerRequest {
     String inputJson
     List<ToolDescriptor> toolSpecs
     ToolDispatcher dispatch
+    int requestTimeoutSeconds
 }

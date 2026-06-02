@@ -31,6 +31,7 @@ import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
+import nextflow.agent.AgentConfig
 import nextflow.agent.AgentRunner
 import nextflow.agent.AgentRunnerProvider
 import nextflow.agent.AgentRunnerRequest
@@ -107,6 +108,17 @@ class AgentDef extends BindableDef implements ChainableDef {
         return copy
     }
 
+    /**
+     * Read the {@code agent} config scope from the live {@link nextflow.Session}.
+     * Returns an empty (all-null) {@link AgentConfig} when there is no active
+     * session or the scope is not defined, so callers can always read defaults.
+     */
+    protected AgentConfig agentConfig() {
+        final session = Global.session as Session
+        final opts = (session?.config?.get('agent') as Map) ?: Collections.emptyMap()
+        return new AgentConfig(opts)
+    }
+
     private DataflowReadChannel createSourceChannel(Object value) {
         if( value instanceof DataflowReadChannel || value instanceof DataflowBroadcast )
             return CH.getReadChannel(value)
@@ -143,10 +155,23 @@ class AgentDef extends BindableDef implements ChainableDef {
         final outputSchema = structured ? RecordSchema.of(outputClass) : null
         final source = createSourceChannel(args[0])
         final AgentRunner runner = AgentRunnerProvider.get()
-        final agentModel = this.model
+        // read the `agent` config scope from the live session; the agent's own
+        // directives always take precedence - the scope only fills in defaults
+        // for a value the agent did not declare
+        final agentConfig = agentConfig()
+        // effective model: directive first, else the configured default; when both
+        // are null the existing required-model error fires downstream (in the runner)
+        final agentModel = this.model ?: agentConfig.defaultModel
         final agentInstruction = this.instruction
         final agentTools = this.tools
-        final agentMaxIter = (this.maxIterations != null ? this.maxIterations : 20) as int
+        // effective max iterations: directive first, else the configured default, else 20
+        final agentMaxIter = (this.maxIterations != null
+            ? this.maxIterations
+            : (agentConfig.maxIterationsDefault != null ? agentConfig.maxIterationsDefault : 20)) as int
+        // effective request timeout (seconds): the configured value, else 120
+        final agentTimeoutSecs = (agentConfig.requestTimeout != null
+            ? agentConfig.requestTimeout.seconds
+            : 120L) as int
         final promptDef = this.prompt
 
         // resolve declared `tools` to in-scope processes and pre-wire them into the
@@ -160,7 +185,7 @@ class AgentDef extends BindableDef implements ChainableDef {
             cl.setResolveStrategy(Closure.DELEGATE_FIRST)
             final promptText = cl.call()?.toString()
             final inputJson = toJson(item)
-            final req = new AgentRunnerRequest(agentModel, agentInstruction, promptText, agentMaxIter, agentTools, outputSchema, inputJson, toolSpecs, (bridge as ToolDispatcher))
+            final req = new AgentRunnerRequest(agentModel, agentInstruction, promptText, agentMaxIter, agentTools, outputSchema, inputJson, toolSpecs, (bridge as ToolDispatcher), agentTimeoutSecs)
             final result = runner.run(req)
             if( !structured )
                 return result

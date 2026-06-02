@@ -122,4 +122,58 @@ class LangChainAgentRunnerTest extends Specification {
         then:
         thrown(IllegalArgumentException)
     }
+
+    def 'should pass the configured request timeout through to the model factory'() {
+        given:
+        ChatModel model = [
+            chat: { List<ChatMessage> messages ->
+                ChatResponse.builder().aiMessage(AiMessage.from('ok')).build()
+            }
+        ] as ChatModel
+
+        and:
+        int capturedTimeout = -1
+        def factory = Stub(ChatModelFactory) {
+            createModel(_, _, _) >> { String id, int timeout, JsonSchema schema ->
+                capturedTimeout = timeout
+                model
+            }
+        }
+        def runner = new LangChainAgentRunner(modelFactory: factory)
+        // 10th positional arg = requestTimeoutSeconds
+        def req = new AgentRunnerRequest('openai/gpt-5-mini', null, 'prompt', 5, [], null, null, null, null, 90)
+
+        when:
+        runner.run(req)
+
+        then:
+        capturedTimeout == 90
+    }
+
+    def 'should fall back to the default request timeout when none is configured'() {
+        given:
+        ChatModel model = [
+            chat: { List<ChatMessage> messages ->
+                ChatResponse.builder().aiMessage(AiMessage.from('ok')).build()
+            }
+        ] as ChatModel
+
+        and:
+        int capturedTimeout = -1
+        def factory = Stub(ChatModelFactory) {
+            createModel(_, _, _) >> { String id, int timeout, JsonSchema schema ->
+                capturedTimeout = timeout
+                model
+            }
+        }
+        def runner = new LangChainAgentRunner(modelFactory: factory)
+        // requestTimeoutSeconds left at the default 0 -> built-in default (120)
+        def req = new AgentRunnerRequest('openai/gpt-5-mini', null, 'prompt', 5, [], null, null)
+
+        when:
+        runner.run(req)
+
+        then:
+        capturedTimeout == 120
+    }
 }
