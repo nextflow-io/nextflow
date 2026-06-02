@@ -31,8 +31,10 @@ import nextflow.script.AgentBuilder.AgentOutput
 
 /**
  * Runtime model for an agent definition. Holds the captured directives,
- * inputs, outputs and prompt. Execution is delegated to the agent runner
- * (nf-agent plugin) and is not yet implemented — {@link #run} throws.
+ * inputs, outputs and prompt. {@link #run} executes the agent as a dataflow
+ * operator, rendering the prompt per input record and delegating the LLM work
+ * to an {@link nextflow.agent.AgentRunner} resolved from the active plugins
+ * (e.g. nf-agent).
  */
 @Slf4j
 @CompileStatic
