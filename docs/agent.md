@@ -55,11 +55,14 @@ agent summarizer {
 }
 
 workflow {
-    channel.of('What is FASTQ format?')
-        | summarizer
-        | view
+    summarizer(channel.of('What is FASTQ format?'))
+        .view { answer -> answer }
 }
 ```
+
+:::{note}
+Under the typed DSL (`nextflow.enable.types = true`), invoke the agent with the call form and chain operators with the method/closure form (`.view { ... }`) as shown, rather than the bare pipe form (`| view`).
+:::
 
 Run it:
 
