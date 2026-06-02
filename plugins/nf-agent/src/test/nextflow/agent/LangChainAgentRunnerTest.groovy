@@ -20,12 +20,21 @@ import dev.langchain4j.data.message.ChatMessage
 import dev.langchain4j.data.message.SystemMessage
 import dev.langchain4j.data.message.UserMessage
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.chat.request.json.JsonObjectSchema
+import dev.langchain4j.model.chat.request.json.JsonSchema
 import dev.langchain4j.model.chat.response.ChatResponse
 import spock.lang.Specification
 
 class LangChainAgentRunnerTest extends Specification {
 
-    def 'should send instruction + prompt and return the assistant text'() {
+    private static final Map ANSWER_SCHEMA = [
+        type: 'object',
+        properties: [answer: [type: 'string'], confidence: [type: 'number']],
+        required: ['answer', 'confidence'],
+        additionalProperties: false,
+    ]
+
+    def 'should compose prompt + input JSON, pass the schema, and return the assistant JSON'() {
         given:
         List<ChatMessage> captured = null
         // langchain4j ChatModel has no single abstract method (all default), so
@@ -33,58 +42,79 @@ class LangChainAgentRunnerTest extends Specification {
         ChatModel model = [
             chat: { List<ChatMessage> messages ->
                 captured = messages
-                ChatResponse.builder().aiMessage(AiMessage.from('CANNED ANSWER')).build()
+                ChatResponse.builder().aiMessage(AiMessage.from('{"answer":"ok","confidence":0.9}')).build()
             }
         ] as ChatModel
 
         and:
-        def runner = new LangChainAgentRunner(modelFactory: Stub(ChatModelFactory) {
-            createModel(_, _) >> model
-        })
-        def req = new AgentRunnerRequest('openai/gpt-5-mini', 'You are helpful.', 'Question: hi', 5, [])
+        JsonSchema capturedSchema = null
+        def factory = Stub(ChatModelFactory) {
+            createModel(_, _, _) >> { String id, int timeout, JsonSchema schema ->
+                capturedSchema = schema
+                model
+            }
+        }
+        def runner = new LangChainAgentRunner(modelFactory: factory)
+        def req = new AgentRunnerRequest(
+            'openai/gpt-5-mini',
+            'inst',
+            'the prompt',
+            5,
+            [],
+            ANSWER_SCHEMA,
+            '{"text":"hi"}')
 
         when:
         def answer = runner.run(req)
 
         then:
-        answer == 'CANNED ANSWER'
-        and:
+        answer == '{"answer":"ok","confidence":0.9}'
+
+        and: 'the schema was passed through to the model factory'
+        capturedSchema != null
+        capturedSchema.rootElement() instanceof JsonObjectSchema
+        (capturedSchema.rootElement() as JsonObjectSchema).properties().containsKey('answer')
+
+        and: 'the user message carries both the prompt and the input JSON'
         captured.size() == 2
         captured[0] instanceof SystemMessage
-        (captured[0] as SystemMessage).text() == 'You are helpful.'
+        (captured[0] as SystemMessage).text() == 'inst'
         captured[1] instanceof UserMessage
-        (captured[1] as UserMessage).singleText() == 'Question: hi'
+        def userText = (captured[1] as UserMessage).singleText()
+        userText.contains('the prompt')
+        userText.contains('{"text":"hi"}')
     }
 
-    def 'should omit the system message when no instruction is given'() {
+    def 'should omit the system message and the input JSON when not provided'() {
         given:
         List<ChatMessage> captured = null
         ChatModel model = [
             chat: { List<ChatMessage> messages ->
                 captured = messages
-                ChatResponse.builder().aiMessage(AiMessage.from('OK')).build()
+                ChatResponse.builder().aiMessage(AiMessage.from('{"answer":"ok"}')).build()
             }
         ] as ChatModel
 
         and:
         def runner = new LangChainAgentRunner(modelFactory: Stub(ChatModelFactory) {
-            createModel(_, _) >> model
+            createModel(_, _, _) >> model
         })
-        def req = new AgentRunnerRequest('openai/gpt-5-mini', null, 'just a prompt', 5, [])
+        def req = new AgentRunnerRequest('openai/gpt-5-mini', null, 'just a prompt', 5, [], null, null)
 
         when:
         def answer = runner.run(req)
 
         then:
-        answer == 'OK'
+        answer == '{"answer":"ok"}'
         captured.size() == 1
         captured[0] instanceof UserMessage
+        (captured[0] as UserMessage).singleText() == 'just a prompt'
     }
 
     def 'should fail when the model is missing'() {
         given:
         def runner = new LangChainAgentRunner()
-        def req = new AgentRunnerRequest(null, 'inst', 'prompt', 5, [])
+        def req = new AgentRunnerRequest(null, 'inst', 'prompt', 5, [], null, null)
 
         when:
         runner.run(req)

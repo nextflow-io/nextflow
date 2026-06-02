@@ -18,6 +18,9 @@ package nextflow.agent
 import java.time.Duration
 
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.chat.request.ResponseFormat
+import dev.langchain4j.model.chat.request.ResponseFormatType
+import dev.langchain4j.model.chat.request.json.JsonSchema
 import dev.langchain4j.model.openai.OpenAiChatModel
 import groovy.transform.CompileStatic
 
@@ -47,20 +50,40 @@ class ChatModelFactory {
         return modelId.substring(i + 1)
     }
 
-    ChatModel createModel(String modelId, int timeoutSeconds) {
+    /**
+     * Build a chat model for the given {@code provider/model} id. When a
+     * structured-output {@code schema} is provided, the OpenAI model is
+     * configured with a strict JSON-schema response format so that the model
+     * is constrained to return JSON matching the schema.
+     *
+     * @param modelId        the {@code provider/model} identifier
+     * @param timeoutSeconds the request timeout in seconds
+     * @param schema         the structured-output JSON schema, or {@code null}
+     *                       for free-form text output
+     */
+    ChatModel createModel(String modelId, int timeoutSeconds, JsonSchema schema) {
         final provider = providerOf(modelId)
         if( provider != 'openai' )
             throw new IllegalArgumentException("Unsupported agent model provider `${provider}` - v1 supports `openai`")
         if( !apiKey )
             throw new IllegalArgumentException("Missing OPENAI_API_KEY environment variable for agent model `${modelId}`")
-        return OpenAiChatModel.builder()
+        final builder = OpenAiChatModel.builder()
             .apiKey(apiKey)
             .modelName(modelOf(modelId))
             .timeout(Duration.ofSeconds(timeoutSeconds))
-            .build()
+        if( schema != null ) {
+            final responseFormat = ResponseFormat.builder()
+                .type(ResponseFormatType.JSON)
+                .jsonSchema(schema)
+                .build()
+            builder
+                .responseFormat(responseFormat)
+                .strictJsonSchema(true)
+        }
+        return builder.build()
     }
 
-    static ChatModel create(String modelId, int timeoutSeconds) {
-        new ChatModelFactory().createModel(modelId, timeoutSeconds)
+    static ChatModel create(String modelId, int timeoutSeconds, JsonSchema schema) {
+        new ChatModelFactory().createModel(modelId, timeoutSeconds, schema)
     }
 }

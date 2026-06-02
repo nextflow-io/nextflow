@@ -19,6 +19,7 @@ import dev.langchain4j.data.message.ChatMessage
 import dev.langchain4j.data.message.SystemMessage
 import dev.langchain4j.data.message.UserMessage
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.chat.request.json.JsonSchema
 import dev.langchain4j.model.chat.response.ChatResponse
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -43,13 +44,25 @@ class LangChainAgentRunner implements AgentRunner {
         if( !request.model )
             throw new IllegalArgumentException("Agent `model` directive is required")
 
-        final model = modelFactory.createModel(request.model, DEFAULT_TIMEOUT_SECONDS)
+        // derive the structured-output schema (when an output record type is declared)
+        final JsonSchema schema = request.outputSchema
+            ? JsonSchemaMapper.toJsonSchema('Output', request.outputSchema)
+            : null
+
+        final model = modelFactory.createModel(request.model, DEFAULT_TIMEOUT_SECONDS, schema)
+
+        // compose the user message: the rendered prompt, followed by the input
+        // record serialized as JSON (when present)
+        String userText = request.prompt
+        if( request.inputJson )
+            userText += "\n\nInput (JSON):\n" + request.inputJson
+
         final List<ChatMessage> messages = new ArrayList<ChatMessage>()
         if( request.instruction )
             messages.add(SystemMessage.from(request.instruction))
-        messages.add(UserMessage.from(request.prompt))
+        messages.add(UserMessage.from(userText))
 
-        log.debug "Running agent model=${request.model}; messages=${messages.size()}"
+        log.debug "Running agent model=${request.model}; messages=${messages.size()}; structured=${schema != null}"
         final ChatResponse response = model.chat(messages)
         return response.aiMessage().text()
     }

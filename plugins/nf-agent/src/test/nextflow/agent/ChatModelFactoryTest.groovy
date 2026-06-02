@@ -16,6 +16,7 @@
 package nextflow.agent
 
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.chat.request.json.JsonSchema
 import spock.lang.Specification
 
 class ChatModelFactoryTest extends Specification {
@@ -35,7 +36,7 @@ class ChatModelFactoryTest extends Specification {
 
     def 'should fail for an unknown provider'() {
         when:
-        new ChatModelFactory(apiKey: 'sk-test').createModel('acme/whatever', 30)
+        new ChatModelFactory(apiKey: 'sk-test').createModel('acme/whatever', 30, null)
         then:
         def e = thrown(IllegalArgumentException)
         e.message.toLowerCase().contains('provider')
@@ -43,7 +44,7 @@ class ChatModelFactoryTest extends Specification {
 
     def 'should fail when the api key is missing'() {
         when:
-        new ChatModelFactory(apiKey: null).createModel('openai/gpt-5-mini', 30)
+        new ChatModelFactory(apiKey: null).createModel('openai/gpt-5-mini', 30, null)
         then:
         def e = thrown(IllegalArgumentException)
         e.message.contains('OPENAI_API_KEY')
@@ -53,7 +54,22 @@ class ChatModelFactoryTest extends Specification {
         given:
         def factory = new ChatModelFactory(apiKey: 'sk-test')
         when:
-        ChatModel model = factory.createModel('openai/gpt-5-mini', 30)
+        ChatModel model = factory.createModel('openai/gpt-5-mini', 30, null)
+        then:
+        model != null
+    }
+
+    def 'should build an openai model with a structured-output schema (no network call)'() {
+        given:
+        def factory = new ChatModelFactory(apiKey: 'sk-test')
+        def schema = JsonSchemaMapper.toJsonSchema('Answer', [
+            type: 'object',
+            properties: [answer: [type: 'string']],
+            required: ['answer'],
+            additionalProperties: false,
+        ])
+        when:
+        ChatModel model = factory.createModel('openai/gpt-5-mini', 30, schema)
         then:
         model != null
     }
