@@ -14,6 +14,7 @@
 # limitations under the License.
 #
 
+nextflow.agent.AgentConfig
 nextflow.cache.DefaultCacheFactory
 nextflow.conda.CondaConfig
 nextflow.config.ConfigMap
