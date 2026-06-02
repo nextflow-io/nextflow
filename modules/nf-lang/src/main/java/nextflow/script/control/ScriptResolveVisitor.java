@@ -36,12 +36,14 @@ import nextflow.script.ast.TupleParameter;
 import nextflow.script.ast.WorkflowNode;
 import nextflow.script.types.Record;
 import nextflow.script.types.Tuple;
+import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.DynamicVariable;
 import org.codehaus.groovy.ast.GenericsType;
 import org.codehaus.groovy.ast.Parameter;
+import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
@@ -146,13 +148,47 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitAgent(AgentNode node) {
-        for( var input : asFlatParams(node.inputs) ) {
+        for( var input : node.inputs ) {
+            // a destructured `record(...)` input parses to a TupleParameter
+            // whose type is the bare Record type -- reject it explicitly
+            if( input instanceof TupleParameter && RECORD_TYPE.equals(input.getType()) ) {
+                requireRecordType(input.getType(), input, "Agent input `" + input.getName() + "`");
+                continue;
+            }
             resolver.resolveOrFail(input.getType(), input);
+            requireRecordType(input.getType(), input, "Agent input `" + input.getName() + "`");
         }
         resolver.visit(node.directives);
         resolveTypedOutputs(node.outputs);
+        requireRecordOutputs(node.outputs);
         resolver.visit(node.outputs);
         resolver.visit(node.prompt);
+    }
+
+    private void requireRecordOutputs(Statement block) {
+        for( var stmt : asBlockStatements(block) ) {
+            if( !(stmt instanceof ExpressionStatement stmtX) )
+                continue;
+            var output = stmtX.getExpression();
+            // a destructured `record(...)` output parses to a `record` method call
+            if( output instanceof MethodCallExpression mce && "record".equals(mce.getMethodAsString()) ) {
+                requireRecordType(RECORD_TYPE, mce, "Agent output");
+                continue;
+            }
+            var target =
+                output instanceof AssignmentExpression ae ? ae.getLeftExpression() :
+                output instanceof VariableExpression ve ? ve :
+                null;
+            if( target instanceof VariableExpression ve )
+                requireRecordType(ve.getType(), ve, "Agent output `" + ve.getName() + "`");
+        }
+    }
+
+    private void requireRecordType(ClassNode type, ASTNode ctx, String label) {
+        if( RECORD_TYPE.equals(type) )
+            resolver.addError(label + " must use a named record type; destructured `record(...)` is not yet supported for agents", ctx);
+        else if( type == null || !(type.redirect() instanceof RecordNode) )
+            resolver.addError(label + " must be a record type (got `" + (type != null ? type.getNameWithoutPackage() : "?") + "`)", ctx);
     }
 
     private void resolveTypedOutputs(Statement block) {

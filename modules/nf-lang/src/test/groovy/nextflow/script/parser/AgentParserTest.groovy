@@ -52,6 +52,14 @@ class AgentParserTest extends Specification {
         def script = parse('''\
             nextflow.enable.types = true
 
+            record Question {
+                text: String
+            }
+
+            record Answer {
+                plan: String
+            }
+
             agent eval_agent {
                 model 'openai/gpt-5-mini'
                 instruction 'You are helpful.'
@@ -59,14 +67,14 @@ class AgentParserTest extends Specification {
                 maxIterations 20
 
                 input:
-                    question: String
+                    question: Question
 
                 output:
-                    plan: String
+                    plan: Answer
 
                 prompt:
                 """
-                Question: ${question}
+                Question: ${question.text}
                 """
             }
             ''')
@@ -84,13 +92,17 @@ class AgentParserTest extends Specification {
         def errors = check('''\
             nextflow.enable.types = true
 
+            record Question {
+                text: String
+            }
+
             agent broken {
                 model 'openai/gpt-5-mini'
                 instruction 'x'
                 tools()
 
                 input:
-                    q: String
+                    q: Question
             }
             ''')
 
@@ -104,20 +116,28 @@ class AgentParserTest extends Specification {
         def script = parse('''\
             nextflow.enable.types = true
 
+            record Question {
+                text: String
+            }
+
+            record Answer {
+                text: String
+            }
+
             agent eval_agent {
                 model 'openai/gpt-5-mini'
                 instruction 'x'
                 tools()
 
                 input:
-                    q: String
+                    q: Question
 
                 output:
-                    r: String
+                    r: Answer
 
                 prompt:
                 """
-                ${q}
+                ${q.text}
                 """
             }
 
@@ -138,6 +158,14 @@ class AgentParserTest extends Specification {
         def errors = check('''\
             nextflow.enable.types = true
 
+            record Question {
+                text: String
+            }
+
+            record Answer {
+                plan: String
+            }
+
             agent eval_agent {
                 model 'openai/gpt-5-mini'
                 instruction 'You are helpful.'
@@ -145,19 +173,114 @@ class AgentParserTest extends Specification {
                 maxIterations 20
 
                 input:
-                    question: String
+                    question: Question
 
                 output:
-                    plan: String
+                    plan: Answer
 
                 prompt:
                 """
-                Question: ${question}
+                Question: ${question.text}
                 """
             }
             ''')
 
         then:
         errors.isEmpty()
+    }
+
+    def 'should accept record-typed agent I/O'() {
+        when:
+        def errors = check('''\
+            nextflow.enable.types = true
+
+            record Question {
+                text: String
+            }
+
+            record Answer {
+                answer: String
+            }
+
+            agent eval_agent {
+                model 'openai/gpt-5-mini'
+                instruction 'You are helpful.'
+                tools()
+
+                input:
+                    q: Question
+
+                output:
+                    a: Answer
+
+                prompt:
+                """
+                ${q.text}
+                """
+            }
+            ''')
+
+        then:
+        errors.isEmpty()
+    }
+
+    def 'should reject scalar agent input and output'() {
+        when:
+        def errors = check('''\
+            nextflow.enable.types = true
+
+            agent eval_agent {
+                model 'openai/gpt-5-mini'
+                instruction 'You are helpful.'
+                tools()
+
+                input:
+                    question: String
+
+                output:
+                    answer: String
+
+                prompt:
+                """
+                ${question}
+                """
+            }
+            ''')
+
+        then:
+        !errors.isEmpty()
+        errors.any { it.getOriginalMessage().contains('record type') }
+    }
+
+    def 'should reject destructured record agent I/O'() {
+        when:
+        def errors = check('''\
+            nextflow.enable.types = true
+
+            record Answer {
+                answer: String
+            }
+
+            agent eval_agent {
+                model 'openai/gpt-5-mini'
+                instruction 'You are helpful.'
+                tools()
+
+                input:
+                    record(text: String)
+
+                output:
+                    a: Answer
+
+                prompt:
+                """
+                ${text}
+                """
+            }
+            ''')
+
+        then:
+        !errors.isEmpty()
+        errors.any { it.getOriginalMessage().contains('named record type') }
     }
 }
