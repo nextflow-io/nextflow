@@ -30,6 +30,7 @@ import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowProcessor
 import nextflow.Channel
 import nextflow.Global
+import nextflow.Session
 import nextflow.agent.AgentRunner
 import nextflow.agent.AgentRunnerProvider
 import nextflow.agent.AgentRunnerRequest
@@ -170,8 +171,17 @@ class AgentDef extends BindableDef implements ChainableDef {
     }
 
     /**
-     * Resolve the agent's declared {@code tools} entries (Phase 2: each is a String naming
-     * an in-scope process) to their {@link ProcessDef}s and pre-wire them as agent tools.
+     * Resolve the agent's declared {@code tools} entries to their {@link ProcessDef}s and
+     * pre-wire them as agent tools. Each entry is a String that is resolved as follows:
+     * <ul>
+     *   <li>an <b>in-scope process name</b> (resolvable via {@link ScriptMeta#getProcess})
+     *       is used directly (Phase 2 behavior);</li>
+     *   <li>a <b>local module file path</b> (ends with {@code .nf}, or starts with {@code ./},
+     *       {@code ../} or {@code /}) is compiled to a {@link ProcessDef} at agent-run time
+     *       on the owner's live {@link nextflow.Session} (Phase 3.1);</li>
+     *   <li>a <b>registry reference</b> (e.g. {@code nf-core/fastqc}) is not yet supported
+     *       (Phase 3.3) and fails loudly.</li>
+     * </ul>
      *
      * @return a {@link ModuleToolBridge} wiring the resolved processes, or {@code null} when
      *         no tools are declared
@@ -184,13 +194,99 @@ class AgentDef extends BindableDef implements ChainableDef {
         final meta = ScriptMeta.get(owner)
         final resolved = new LinkedHashMap<String, ProcessDef>()
         for( final entry : declared ) {
-            final toolName = entry?.toString()
-            final proc = meta?.getProcess(toolName)
-            if( proc == null )
-                throw new ScriptRuntimeException("Agent `${name}` tool `${toolName}` is not a process in scope")
-            resolved.put(toolName, proc)
+            final toolRef = entry?.toString()
+            // 1) an in-scope process name (Phase 2, unchanged)
+            final inScope = meta?.getProcess(toolRef)
+            if( inScope != null ) {
+                resolved.put(toolRef, inScope)
+                continue
+            }
+            // 2) a local module file path -> compile to a ProcessDef (Phase 3.1)
+            if( looksLikeModulePath(toolRef) ) {
+                final entry2 = resolveModuleTool(meta, toolRef)
+                resolved.put(entry2.key, entry2.value)
+                continue
+            }
+            // 3) a registry reference (e.g. `nf-core/fastqc`) -> not yet supported (Phase 3.3)
+            if( toolRef ==~ /[^\/\s]+\/[^\/\s]+/ )
+                throw new ScriptRuntimeException("Agent `${name}` tool `${toolRef}`: registry module tools are not yet supported (Phase 3.3); use an in-scope process or a local .nf module file")
+            // 4) otherwise: not a process in scope, not a path
+            throw new ScriptRuntimeException("Agent `${name}` tool `${toolRef}` is not a process in scope")
         }
         return new ModuleToolBridge(resolved)
+    }
+
+    /**
+     * Whether a {@code tools} entry looks like a local module file path: it ends with
+     * {@code .nf}, or starts with {@code ./}, {@code ../} or {@code /}.
+     */
+    private static boolean looksLikeModulePath(String ref) {
+        if( !ref )
+            return false
+        return ref.endsWith('.nf') || ref.startsWith('./') || ref.startsWith('../') || ref.startsWith('/')
+    }
+
+    /**
+     * Compile a local module file into a runnable {@link ProcessDef} on the owner's live
+     * {@link nextflow.Session} (pre-ignition). The path is resolved relative to the owner
+     * script's directory when relative; the compiled module's single process becomes the
+     * tool (the tool name is the process name).
+     *
+     * @return a {@code toolName -> ProcessDef} entry
+     */
+    @CompileDynamic
+    private Map.Entry<String,ProcessDef> resolveModuleTool(ScriptMeta meta, String ref) {
+        final session = Global.session as Session
+        if( session == null )
+            throw new ScriptRuntimeException("Agent `${name}` tool `${ref}`: cannot compile a module file - no active session")
+
+        // -- resolve the module path relative to the owner script's dir when relative
+        final base = ownerBaseDir(meta, session)
+        Path modPath = Path.of(ref)
+        if( !modPath.isAbsolute() )
+            modPath = base.resolve(ref).normalize()
+        if( !modPath.toFile().exists() )
+            throw new ScriptRuntimeException("Agent `${name}` tool `${ref}`: module file not found - resolved to `${modPath}`")
+
+        // -- compile the module on the live session (spike-validated recipe);
+        //    setModule(true) is mandatory so the standalone process does not auto-build
+        //    an entry workflow
+        final BaseScript modScript
+        try {
+            final loader = new nextflow.script.parser.v2.ScriptLoaderV2(session)
+            loader.setModule(true)
+            loader.parse(modPath)
+            loader.runScript()
+            modScript = loader.getScript()
+        }
+        catch( Exception e ) {
+            throw new ScriptRuntimeException("Agent `${name}` tool `${ref}`: failed to compile module file `${modPath}` - ${e.message}", e)
+        }
+
+        // -- pick the module's single process; the tool name is the process name
+        final modMeta = ScriptMeta.get(modScript)
+        final procNames = new ArrayList<String>(modMeta.getProcessNames())
+        if( procNames.isEmpty() )
+            throw new ScriptRuntimeException("Agent `${name}` tool `${ref}`: module file `${modPath}` declares no process")
+        if( procNames.size() > 1 )
+            throw new ScriptRuntimeException("Agent `${name}` tool `${ref}`: module file `${modPath}` declares more than one process (${procNames.sort()}); naming a specific process is not yet supported")
+        final procName = procNames[0]
+        final proc = modMeta.getProcess(procName)
+        return new AbstractMap.SimpleImmutableEntry<String,ProcessDef>(procName, proc)
+    }
+
+    /**
+     * The directory used to resolve relative module-file tool paths: the owner script's
+     * directory when known, otherwise the session base dir, otherwise the launch (current)
+     * directory.
+     */
+    private static Path ownerBaseDir(ScriptMeta meta, Session session) {
+        final moduleDir = meta?.getModuleDir()
+        if( moduleDir != null )
+            return moduleDir
+        if( session?.baseDir != null )
+            return session.baseDir
+        return Path.of('.').toAbsolutePath().normalize()
     }
 
     /**
