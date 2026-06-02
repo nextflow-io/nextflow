@@ -60,7 +60,15 @@ class JsonSchemaMapper {
             .build()
     }
 
-    private static JsonObjectSchema toObjectSchema(Map schema) {
+    /**
+     * Build a langchain4j {@link JsonObjectSchema} from a portable object schema
+     * map. Used both as the root of a structured-output {@link JsonSchema} and as
+     * the {@code parameters} schema of a tool specification.
+     *
+     * @param schema the portable schema map (must describe an {@code object})
+     * @return a non-null {@link JsonObjectSchema}
+     */
+    static JsonObjectSchema toObjectSchema(Map schema) {
         final builder = JsonObjectSchema.builder()
         final Map properties = (schema?.properties ?: [:]) as Map
         for( Map.Entry entry : properties.entrySet() ) {
