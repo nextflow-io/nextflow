@@ -71,10 +71,12 @@ nextflow run main.nf
 
 | Directive | Required | Meaning |
 |---|---|---|
-| `model` | yes | Model identifier as `provider/model`, e.g. `openai/gpt-5-mini`. The provider prefix selects the chat-model backend. |
-| `instruction` | yes | System prompt describing the agent's role. |
-| `tools` | yes | Modules the agent may call as tools. *Not yet dispatched in v1 — declare `tools()`.* |
-| `maxIterations` | no | Cap on the LLM tool-calling loop (default 20). |
+| `model` | yes | Model identifier as `provider/model`, e.g. `openai/gpt-5-mini`. The provider prefix selects the chat-model backend. Required at run time. |
+| `instruction` | no | System prompt describing the agent's role. Omitted if not set. |
+| `tools` | no | Modules the agent may call as tools. *Not yet dispatched in v1 — declaring `tools()` has no effect.* |
+| `maxIterations` | no | Cap on the LLM tool-calling loop (default 20). *No effect in the v1 single-shot runner.* |
+
+Only the `prompt:` block is structurally required; `model` is additionally required when the agent runs.
 
 ## Inputs, outputs and prompt
 
