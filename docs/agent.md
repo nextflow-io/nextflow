@@ -102,6 +102,44 @@ workflow {
 Under the typed DSL (`nextflow.enable.types = true`), invoke the agent with the call form and chain operators with the method/closure form (`.view { ... }`) as shown, rather than the bare pipe form (`| view`).
 :::
 
+### Tools (calling modules)
+
+An agent can call **in-scope processes** as tools. Declare them with the `tools` directive, naming each process; when the model decides to use a tool, Nextflow marshals the model's JSON arguments into the process input channel, runs the process as a real dataflow node (through the normal executor machinery), and serializes its output back to the model so it can continue the conversation and produce a final answer.
+
+```groovy
+nextflow.enable.types = true
+
+process uppercase {
+    input:  text: String
+    output: result: String
+    exec:   result = text.toUpperCase()
+}
+
+agent shouty {
+    model 'openai/gpt-5-mini'
+    instruction 'You transform text. To uppercase text, you MUST call the uppercase tool. Then reply with just the tool result.'
+    tools 'uppercase'
+
+    input:  request: String
+    output: answer: String
+
+    prompt: "${request}"
+}
+
+workflow {
+    shouty(channel.of('uppercase the word hello'))
+        .view { a -> "ANSWER=${a}" }
+}
+```
+
+When the model calls the `uppercase` tool, the process executes as a dataflow node and its result flows back to the model, which produces the final `answer` (here, `HELLO`).
+
+:::{note}
+When an agent declares `tools`, the model's free-text final answer is emitted, so the **output must be a plain (non-record) type** such as `String`. Combining `tools` with a `record` (structured) output is rejected at run time — structured output and tools are mutually exclusive in this release.
+:::
+
+In this release, tools are limited to **in-scope processes with scalar I/O** (e.g. `String`). Each declared process's typed input is reflected into the tool's JSON schema, and its output is returned to the model. Calling external registry modules (e.g. `nf-core/...`) as tools is a later phase.
+
 Run it:
 
 ```bash
@@ -114,8 +152,8 @@ nextflow run main.nf
 |---|---|---|
 | `model` | yes | Model identifier as `provider/model`, e.g. `openai/gpt-5-mini`. The provider prefix selects the chat-model backend. Required at run time. |
 | `instruction` | no | System prompt describing the agent's role. Omitted if not set. |
-| `tools` | no | Modules the agent may call as tools. *Not yet dispatched in v1 — declaring `tools()` has no effect.* |
-| `maxIterations` | no | Cap on the LLM tool-calling loop (default 20). *No effect in the v1 single-shot runner.* |
+| `tools` | no | In-scope processes the agent may call as tools, named as strings (e.g. `tools 'uppercase'`). See [Tools (calling modules)](#tools-calling-modules). Requires a plain (non-record) output type. |
+| `maxIterations` | no | Cap on the LLM tool-calling loop (default 20). Applies when `tools` are declared. |
 
 Only the `prompt:` block is structurally required; `model` is additionally required when the agent runs.
 
@@ -141,5 +179,5 @@ Under OpenAI strict structured output, langchain4j promotes **all** output prope
 - `Path` fields are not allowed in output records.
 - Optional (`?`) fields on output records are effectively required under OpenAI strict structured output (see the note above). Optional input-record fields are honored.
 - Only the `openai` provider is supported.
-- Tool dispatch is not yet implemented: `tools()` is accepted but the declared tools are not called.
+- Tools are limited to in-scope processes with scalar I/O; declaring `tools` requires a plain (non-record) output type — tools and structured (record) output are mutually exclusive. Calling external registry modules (e.g. `nf-core/...`) as tools is a later phase.
 - No `agent { }` configuration scope or streaming yet.
