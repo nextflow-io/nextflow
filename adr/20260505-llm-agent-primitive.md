@@ -116,6 +116,38 @@ In rough order of dependency:
 4. ~~**Plan E: End-to-end demo**~~ — **DONE (2026-06-02)**, see [`docs/superpowers/plans/2026-06-02-agent-demo-and-docs.md`](../docs/superpowers/plans/2026-06-02-agent-demo-and-docs.md). Added the `docs/agent.md` user guide and a gated (`@Requires(OPENAI_API_KEY)`) end-to-end test. **Verified with a real run:** `./launch.sh run` of an agent pipeline with `plugins { id 'nf-agent@0.1.0' }` (dev mode) produced a live OpenAI `gpt-5-mini` answer (`ANSWER=Paris`), with PF4J discovering `LangChainAgentRunner` via the real extension point (not the test seam). Tool dispatch through a real module is still future (depends on the `ToolDispatcher`).
 5. **Polish backlog** (any time): make `agentPrompt` grammar-optional for better errors; add `agent` config scope; add an `@author` tag style sweep across new files; revisit `simpleName` invariants when scoped sub-workflows invoke agents; add a one-line comment in `VariableScopeVisitor.visitAgent` documenting why agent outputs are intentionally not wrapped in an output DSL scope (divergence from `visitProcessV2`); harden the resolution test to assert no unused-variable warning is emitted for an input referenced only in the `prompt:` (the `findVariableDeclaration` suppression line is currently uncovered); clarify the Elvis-precedence idiom in `ChatModelFactory.providerOf/modelOf` (`modelId?.indexOf('/') ?: -1` masks a `0` index — benign today but fragile); investigate the typed-DSL operator nuance where `agent_name | view` (bare pipe to `view`) fails to resolve under `nextflow.enable.types = true` while the chained `agent_name(ch).view { ... }` form works — confirm whether this is general to typed operators or specific to the agent `ChannelOut`, and align the docs/tests accordingly.
 
+## Record-typed structured I/O (direction, 2026-06-02)
+
+The free-style scalar I/O used in the v1 POC (`input: question: String` / `output: answer: String`, emitting the LLM's raw text) is inadequate for real usage. Going forward, **agent I/O must use record types** ([`adr/20260306-record-types.md`](20260306-record-types.md)), and the record structure drives the LLM's structured I/O:
+
+```groovy
+record Question { text: String; context: String? }
+record Answer   { answer: String; confidence: Double }
+
+agent qa {
+    model 'openai/gpt-5-mini'
+    instruction 'You are a careful question-answering assistant.'
+    input:  q: Question
+    output: a: Answer
+    prompt: "Answer the question: ${q.text}"
+}
+```
+
+**Output side (the core capability):** the output record type's structure is reflected into a JSON schema and used as the LLM **structured-output contract** (langchain4j `responseFormat` + OpenAI strict mode). The returned JSON is parsed and bound to a record instance emitted on the agent's output channel, flowing into a downstream typed agent/process.
+
+**Input side:** the input record (a `RecordMap`) is bound into the `prompt:` closure (so `${q.text}` resolves) **and** serialized as a JSON object appended to the user message, so the model receives the structured input value (decision 2026-06-02).
+
+### Decisions (locked 2026-06-02, after research + adversarial review)
+
+- **Named record types only** for v1 inputs and outputs. Destructured `record(...)` agent I/O currently loses field metadata at lowering (input → bare `Record`, output → dropped) and is rejected at resolution with a clear error; supporting it is deferred.
+- **Records required** — scalar I/O (`String`, etc.) is rejected at resolution. This is a breaking change to the experimental feature; the existing scalar-`String` tests/example/docs are migrated to records.
+- **Schema derived at runtime by reflection** on the output record `Class`. The probe confirmed a named record type lowers to a concrete, field-introspectable JVM class at runtime (the brief's feared compile-time "metadata-loss bug" does not apply to named types), so no nf-lang lowering change is needed — only a resolution constraint.
+- **SPI stays text-based.** `AgentRunner.run` still returns the raw JSON `String`; the derived schema (a portable `Map`) and input JSON travel in `AgentRunnerRequest`; the plugin sets `responseFormat` from the schema; **core** parses + binds the JSON to the output record (reusing `TypeHelper.asRecordType`). This keeps record/type coupling in core and the plugin thin.
+- **`Path` fields forbidden in agent *outputs*** for v1 (LLMs don't produce real files; `TypeHelper.asType`'s `Path` branch existence-checks and would throw). Allowed in inputs (serialized to the absolute path string). v1 output field types: `String`/`Integer`/`Long`/`Double`/`Boolean`, nested records, and `List` of those; enum/`Map`/`Set` deferred.
+- **`prompt:` stays mandatory** (grammar-enforced) and **single input / single output** for v1 (a record already aggregates many fields).
+
+Follow-up plan: [`docs/superpowers/plans/2026-06-02-agent-record-io.md`](../docs/superpowers/plans/2026-06-02-agent-record-io.md).
+
 ## Links
 
 - Design spec: [`docs/superpowers/specs/2026-05-04-nextflow-llm-agent-design.md`](../docs/superpowers/specs/2026-05-04-nextflow-llm-agent-design.md)
