@@ -134,7 +134,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
      * Mirrors {@link #processV2(String, Closure)} — the lowered agent closure runs
      * against an {@link AgentBuilder} delegate that captures directives, inputs,
      * outputs and the prompt, then builds the populated {@link AgentDef}.
-     * Execution is stubbed in this milestone — see AgentDef.run.
+     * The agent executes via {@link AgentDef#run} (see the nf-agent plugin runner).
      *
      * @param name
      * @param body
