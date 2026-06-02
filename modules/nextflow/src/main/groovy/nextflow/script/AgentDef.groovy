@@ -15,8 +15,17 @@
  */
 package nextflow.script
 
+import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowBroadcast
+import groovyx.gpars.dataflow.DataflowReadChannel
+import nextflow.agent.AgentRunner
+import nextflow.agent.AgentRunnerProvider
+import nextflow.agent.AgentRunnerRequest
+import nextflow.exception.ScriptRuntimeException
+import nextflow.extension.CH
+import nextflow.extension.MapOp
 import nextflow.script.AgentBuilder.AgentInput
 import nextflow.script.AgentBuilder.AgentOutput
 
@@ -70,8 +79,45 @@ class AgentDef extends BindableDef implements ChainableDef {
         return copy
     }
 
+    private DataflowReadChannel createSourceChannel(Object value) {
+        if( value instanceof DataflowReadChannel || value instanceof DataflowBroadcast )
+            return CH.getReadChannel(value)
+        final result = CH.value()
+        result.bind(value)
+        return result
+    }
+
     @Override
-    Object run(Object[] args) {
-        throw new UnsupportedOperationException('agent execution not yet implemented')
+    @CompileDynamic
+    Object run(Object[] args0) {
+        final args = ChannelOut.spread(args0)
+        if( inputs.size() != 1 )
+            throw new ScriptRuntimeException("Agent `${name}` must declare exactly one input (got ${inputs.size()}) - multiple/zero inputs are not yet supported")
+        if( args.size() != 1 )
+            throw new ScriptRuntimeException("Agent `${name}` expects 1 input channel but received ${args.size()}")
+
+        final inputName = inputs[0].name
+        final outputName = outputs ? outputs[0].name : 'out'
+        final source = createSourceChannel(args[0])
+        final AgentRunner runner = AgentRunnerProvider.get()
+        final agentModel = this.model
+        final agentInstruction = this.instruction
+        final agentTools = this.tools
+        final agentMaxIter = (this.maxIterations != null ? this.maxIterations : 20) as int
+        final promptDef = this.prompt
+
+        final mapper = { Object item ->
+            final cl = (Closure) promptDef.closure.clone()
+            cl.setDelegate([(inputName): item])
+            cl.setResolveStrategy(Closure.DELEGATE_FIRST)
+            final promptText = cl.call()?.toString()
+            final req = new AgentRunnerRequest(agentModel, agentInstruction, promptText, agentMaxIter, agentTools)
+            return runner.run(req)
+        }
+
+        final out = new MapOp(source, mapper).apply()
+        final channels = new LinkedHashMap<String,Object>()
+        channels.put(outputName, out)
+        return new ChannelOut(channels)
     }
 }

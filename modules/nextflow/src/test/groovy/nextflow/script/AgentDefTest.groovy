@@ -15,6 +15,7 @@
  */
 package nextflow.script
 
+import nextflow.exception.ScriptRuntimeException
 import spock.lang.Specification
 
 class AgentDefTest extends Specification {
@@ -37,17 +38,17 @@ class AgentDefTest extends Specification {
         agent.type == 'agent'
     }
 
-    def 'should throw on run() since execution is not yet implemented'() {
+    def 'should fail on run() when the agent does not declare exactly one input'() {
         given:
         def script = Mock(BaseScript)
-        def agent = makeAgent(script, 'foo')
+        def agent = makeAgent(script, 'foo') // no inputs declared
 
         when:
         agent.run(new Object[0])
 
         then:
-        def e = thrown(UnsupportedOperationException)
-        e.message.contains('agent execution not yet implemented')
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains('must declare exactly one input')
     }
 
     def 'should clone with a new name'() {
