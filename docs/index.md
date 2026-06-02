@@ -80,6 +80,7 @@ process
 process-typed
 workflow
 workflow-typed
+agent
 notifications
 secrets
 sharing
