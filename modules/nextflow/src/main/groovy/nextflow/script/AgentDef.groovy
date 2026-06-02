@@ -67,6 +67,10 @@ class AgentDef extends BindableDef implements ChainableDef {
     private List<AgentOutput> outputs
     private PromptDef prompt
 
+    /** Maps a compiled external-module {@link ProcessDef} back to its source file path,
+     * so the sibling {@code meta.yml} can be located (Phase 3.2). */
+    private transient Map<ProcessDef,Path> compiledModulePaths = new IdentityHashMap<ProcessDef,Path>()
+
     AgentDef(BaseScript owner, String name, Map<String,Object> directives, List<AgentInput> inputs, List<AgentOutput> outputs, PromptDef prompt) {
         this.owner = owner
         this.name = name
@@ -193,6 +197,7 @@ class AgentDef extends BindableDef implements ChainableDef {
             return null
         final meta = ScriptMeta.get(owner)
         final resolved = new LinkedHashMap<String, ProcessDef>()
+        final specs = new LinkedHashMap<String, nextflow.module.ModuleSpec>()
         for( final entry : declared ) {
             final toolRef = entry?.toString()
             // 1) an in-scope process name (Phase 2, unchanged)
@@ -201,10 +206,16 @@ class AgentDef extends BindableDef implements ChainableDef {
                 resolved.put(toolRef, inScope)
                 continue
             }
-            // 2) a local module file path -> compile to a ProcessDef (Phase 3.1)
+            // 2) a local module file path -> compile to a ProcessDef (Phase 3.1);
+            //    when a sibling meta.yml is present, drive the schema/marshalling from
+            //    its ModuleSpec (Phase 3.2)
             if( looksLikeModulePath(toolRef) ) {
                 final entry2 = resolveModuleTool(meta, toolRef)
-                resolved.put(entry2.key, entry2.value)
+                final toolName = entry2.key
+                resolved.put(toolName, entry2.value)
+                final spec = loadSiblingSpec(entry2.value)
+                if( spec != null )
+                    specs.put(toolName, spec)
                 continue
             }
             // 3) a registry reference (e.g. `nf-core/fastqc`) -> not yet supported (Phase 3.3)
@@ -213,7 +224,27 @@ class AgentDef extends BindableDef implements ChainableDef {
             // 4) otherwise: not a process in scope, not a path
             throw new ScriptRuntimeException("Agent `${name}` tool `${toolRef}` is not a process in scope")
         }
-        return new ModuleToolBridge(resolved)
+        return new ModuleToolBridge(resolved, specs)
+    }
+
+    /**
+     * Look for a sibling {@code meta.yml} / {@code meta.yaml} next to the compiled module file
+     * and, when present, load it into a {@link nextflow.module.ModuleSpec} to drive spec-driven
+     * tool schema and tuple/path/map marshalling (Phase 3.2). Returns {@code null} when no
+     * sibling spec is found.
+     */
+    @CompileDynamic
+    private nextflow.module.ModuleSpec loadSiblingSpec(ProcessDef proc) {
+        final modPath = compiledModulePaths.get(proc)
+        if( modPath == null )
+            return null
+        final dir = modPath.getParent()
+        for( final candidate : ['meta.yml', 'meta.yaml'] ) {
+            final specPath = dir.resolve(candidate)
+            if( specPath.toFile().exists() )
+                return nextflow.module.ModuleSpecFactory.fromYaml(specPath)
+        }
+        return null
     }
 
     /**
@@ -272,6 +303,8 @@ class AgentDef extends BindableDef implements ChainableDef {
             throw new ScriptRuntimeException("Agent `${name}` tool `${ref}`: module file `${modPath}` declares more than one process (${procNames.sort()}); naming a specific process is not yet supported")
         final procName = procNames[0]
         final proc = modMeta.getProcess(procName)
+        // remember the source path so a sibling meta.yml can be located (Phase 3.2)
+        compiledModulePaths.put(proc, modPath)
         return new AbstractMap.SimpleImmutableEntry<String,ProcessDef>(procName, proc)
     }
 
