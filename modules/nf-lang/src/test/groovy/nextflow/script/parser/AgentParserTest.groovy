@@ -224,7 +224,7 @@ class AgentParserTest extends Specification {
         errors.isEmpty()
     }
 
-    def 'should reject scalar agent input and output'() {
+    def 'should accept val agent I/O'() {
         when:
         def errors = check('''\
             nextflow.enable.types = true
@@ -248,8 +248,7 @@ class AgentParserTest extends Specification {
             ''')
 
         then:
-        !errors.isEmpty()
-        errors.any { it.getOriginalMessage().contains('record type') }
+        errors.isEmpty()
     }
 
     def 'should reject destructured record agent I/O'() {

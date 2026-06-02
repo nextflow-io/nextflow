@@ -150,45 +150,35 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
     public void visitAgent(AgentNode node) {
         for( var input : node.inputs ) {
             // a destructured `record(...)` input parses to a TupleParameter
-            // whose type is the bare Record type -- reject it explicitly
+            // whose type is the bare Record type -- reject it explicitly; any
+            // other resolvable type (scalar, path, named record) is allowed
             if( input instanceof TupleParameter && RECORD_TYPE.equals(input.getType()) ) {
-                requireRecordType(input.getType(), input, "Agent input `" + input.getName() + "`");
+                rejectDestructuredRecord(input, "Agent input `" + input.getName() + "`");
                 continue;
             }
             resolver.resolveOrFail(input.getType(), input);
-            requireRecordType(input.getType(), input, "Agent input `" + input.getName() + "`");
         }
         resolver.visit(node.directives);
         resolveTypedOutputs(node.outputs);
-        requireRecordOutputs(node.outputs);
+        rejectDestructuredRecordOutputs(node.outputs);
         resolver.visit(node.outputs);
         resolver.visit(node.prompt);
     }
 
-    private void requireRecordOutputs(Statement block) {
+    private void rejectDestructuredRecordOutputs(Statement block) {
         for( var stmt : asBlockStatements(block) ) {
             if( !(stmt instanceof ExpressionStatement stmtX) )
                 continue;
             var output = stmtX.getExpression();
             // a destructured `record(...)` output parses to a `record` method call
             if( output instanceof MethodCallExpression mce && "record".equals(mce.getMethodAsString()) ) {
-                requireRecordType(RECORD_TYPE, mce, "Agent output");
-                continue;
+                rejectDestructuredRecord(mce, "Agent output");
             }
-            var target =
-                output instanceof AssignmentExpression ae ? ae.getLeftExpression() :
-                output instanceof VariableExpression ve ? ve :
-                null;
-            if( target instanceof VariableExpression ve )
-                requireRecordType(ve.getType(), ve, "Agent output `" + ve.getName() + "`");
         }
     }
 
-    private void requireRecordType(ClassNode type, ASTNode ctx, String label) {
-        if( RECORD_TYPE.equals(type) )
-            resolver.addError(label + " must use a named record type; destructured `record(...)` is not yet supported for agents", ctx);
-        else if( type == null || !(type.redirect() instanceof RecordNode) )
-            resolver.addError(label + " must be a record type (got `" + (type != null ? type.getNameWithoutPackage() : "?") + "`)", ctx);
+    private void rejectDestructuredRecord(ASTNode ctx, String label) {
+        resolver.addError(label + " must use a named record type; destructured `record(...)` is not yet supported for agents", ctx);
     }
 
     private void resolveTypedOutputs(Statement block) {
