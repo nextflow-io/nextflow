@@ -16,6 +16,7 @@
 package nextflow.agent
 
 import groovy.json.JsonSlurper
+import nextflow.exception.ScriptRuntimeException
 import spock.lang.Timeout
 import test.Dsl2Spec
 
@@ -99,5 +100,54 @@ class AgentToolBridgeIntegrationTest extends Dsl2Spec {
         // the dispatch went through the bridge and returned the real process output
         captured != null
         new JsonSlurper().parseText(dispatchResult) == [greeting: 'Hello Ada!']
+    }
+
+    def 'should reject combining tools with a record (structured) output'() {
+        given:
+        // the runner must never be reached: the guard fires at agent run/build time
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req -> throw new IllegalStateException('runner should not be invoked') } as AgentRunner
+
+        when:
+        runScript('''
+            nextflow.enable.types = true
+
+            record Answer { greeting: String }
+
+            process greet {
+                input:
+                name: String
+
+                output:
+                greeting: String
+
+                exec:
+                greeting = "Hello ${name}!"
+            }
+
+            agent assistant {
+                model 'm'
+                instruction 'i'
+                tools 'greet'
+
+                input:
+                    request: String
+
+                output:
+                    answer: Answer
+
+                prompt:
+                """
+                ${request}
+                """
+            }
+
+            workflow {
+                assistant(channel.of('hi')).view { it }
+            }
+            ''')
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message == 'Agent `assistant`: combining tools with a record (structured) output is not yet supported - use a plain output type (e.g. String) when declaring tools'
     }
 }

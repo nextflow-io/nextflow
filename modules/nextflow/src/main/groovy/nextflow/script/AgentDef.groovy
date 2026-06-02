@@ -129,6 +129,12 @@ class AgentDef extends BindableDef implements ChainableDef {
         // JSON result to a record only when the output type is a record type;
         // otherwise the runner's text is emitted verbatim
         final boolean structured = outputClass != null && Record.isAssignableFrom(outputClass)
+        // Phase 2 is "tools XOR structured output": when tools are declared the plugin's
+        // tool loop drives the conversation and ignores any responseFormat, so the final
+        // answer is free text. Binding that text to a record (structured) output would fail
+        // at JSON-parse time - reject the combination up front with a clear message.
+        if( this.tools && structured )
+            throw new ScriptRuntimeException("Agent `${name}`: combining tools with a record (structured) output is not yet supported - use a plain output type (e.g. String) when declaring tools")
         final outputSchema = structured ? RecordSchema.of(outputClass) : null
         final source = createSourceChannel(args[0])
         final AgentRunner runner = AgentRunnerProvider.get()
