@@ -87,4 +87,49 @@ class AgentRunIntegrationTest extends Dsl2Spec {
         // the input record was serialized to JSON
         captured.inputJson.contains('analyze my reads')
     }
+
+    def 'should run a val-typed agent and emit the runner text verbatim'() {
+        given:
+        // a non-record (scalar) output opts out of structured output: the runner
+        // returns plain text which is emitted verbatim (no JSON parse)
+        AgentRunnerRequest captured = null
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req -> captured = req; 'hello world' } as AgentRunner
+
+        when:
+        def result = runScript('''
+            nextflow.enable.types = true
+
+            agent qa {
+                model 'openai/gpt-5-mini'
+                instruction 'You are helpful.'
+                tools()
+
+                input:
+                    question: String
+
+                output:
+                    answer: String
+
+                prompt:
+                """
+                Answer: ${question}
+                """
+            }
+
+            workflow {
+                qa(channel.of('what is FASTQ?'))
+            }
+            ''')
+
+        then:
+        // the emitted value is the runner text verbatim, NOT a parsed record
+        result.val == 'hello world'
+        and:
+        // no structured-output schema was derived for a scalar output
+        captured.outputSchema == null
+        captured.prompt.contains('Answer: what is FASTQ?')
+        and:
+        // the scalar input was still serialized to JSON
+        captured.inputJson.contains('what is FASTQ?')
+    }
 }

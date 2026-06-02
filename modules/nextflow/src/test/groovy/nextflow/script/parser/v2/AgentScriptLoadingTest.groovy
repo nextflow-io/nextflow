@@ -66,6 +66,53 @@ class AgentScriptLoadingTest extends Dsl2Spec {
         file.parent.deleteDir()
     }
 
+    def 'should load a script with a val-typed agent definition'() {
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+        def file = Files.createTempDirectory('test').resolve('main.nf')
+        file.text = '''
+            nextflow.enable.types = true
+
+            agent qa {
+                model 'openai/gpt-5-mini'
+                instruction 'You are helpful.'
+
+                input:
+                    question: String
+
+                output:
+                    answer: String
+
+                prompt:
+                """
+                Answer: ${question}
+                """
+            }
+
+            workflow {
+            }
+            '''.stripIndent()
+
+        when:
+        parser.parse(file)
+        parser.runScript()
+
+        then:
+        def definitions = ScriptMeta.get(parser.script).getDefinitions()
+        def agent = definitions.find { it instanceof AgentDef && it.name == 'qa' } as AgentDef
+        agent != null
+        agent.inputs*.name == ['question']
+        agent.outputs*.name == ['answer']
+        and:
+        // val I/O resolve to scalar (String) types, not record classes
+        (agent.inputs[0].type as Class) == String
+        (agent.outputs[0].type as Class) == String
+
+        cleanup:
+        file.parent.deleteDir()
+    }
+
     def 'should load a script with a directive-rich record-typed agent definition'() {
         given:
         def session = new Session()

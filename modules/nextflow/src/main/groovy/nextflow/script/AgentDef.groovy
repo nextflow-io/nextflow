@@ -33,6 +33,7 @@ import nextflow.extension.CH
 import nextflow.extension.MapOp
 import nextflow.script.AgentBuilder.AgentInput
 import nextflow.script.AgentBuilder.AgentOutput
+import nextflow.script.types.Record
 import nextflow.util.TypeHelper
 
 /**
@@ -110,7 +111,11 @@ class AgentDef extends BindableDef implements ChainableDef {
         final inputName = inputs[0].name
         final outputName = outputs[0].name
         final outputClass = outputs[0].type as Class
-        final outputSchema = RecordSchema.of(outputClass)
+        // structured output is opt-in: derive a JSON schema and bind the runner's
+        // JSON result to a record only when the output type is a record type;
+        // otherwise the runner's text is emitted verbatim
+        final boolean structured = outputClass != null && Record.isAssignableFrom(outputClass)
+        final outputSchema = structured ? RecordSchema.of(outputClass) : null
         final source = createSourceChannel(args[0])
         final AgentRunner runner = AgentRunnerProvider.get()
         final agentModel = this.model
@@ -126,8 +131,10 @@ class AgentDef extends BindableDef implements ChainableDef {
             final promptText = cl.call()?.toString()
             final inputJson = toJson(item)
             final req = new AgentRunnerRequest(agentModel, agentInstruction, promptText, agentMaxIter, agentTools, outputSchema, inputJson)
-            final json = runner.run(req)
-            final map = new JsonSlurper().parseText(stripFences(json)) as Map
+            final result = runner.run(req)
+            if( !structured )
+                return result
+            final map = new JsonSlurper().parseText(stripFences(result)) as Map
             return TypeHelper.asRecordType(map, outputClass)
         }
 
