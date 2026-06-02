@@ -22,11 +22,15 @@ import groovy.transform.CompileStatic
  * Immutable request passed to an {@link AgentRunner}: the resolved model, the
  * system instruction, the rendered user prompt, the iteration cap, the
  * (currently unused) tool list for forward compatibility, the JSON schema
- * describing the expected structured output, and the input record serialized
- * as JSON.
+ * describing the expected structured output, the input record serialized as
+ * JSON, the descriptors of the tools the LLM may call, and the callback used to
+ * execute them.
+ *
+ * The {@code toolSpecs} and {@code dispatch} fields are in-JVM only (they carry
+ * a live {@link ToolDispatcher} callback) and are never serialized.
  *
  * Being {@code @Canonical}, the positional constructor order is:
- * {@code (model, instruction, prompt, maxIterations, tools, outputSchema, inputJson)}.
+ * {@code (model, instruction, prompt, maxIterations, tools, outputSchema, inputJson, toolSpecs, dispatch)}.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -40,4 +44,6 @@ class AgentRunnerRequest {
     List tools
     Map outputSchema
     String inputJson
+    List<ToolDescriptor> toolSpecs
+    ToolDispatcher dispatch
 }
