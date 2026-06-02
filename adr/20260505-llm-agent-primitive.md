@@ -116,9 +116,11 @@ In rough order of dependency:
 4. ~~**Plan E: End-to-end demo**~~ — **DONE (2026-06-02)**, see [`docs/superpowers/plans/2026-06-02-agent-demo-and-docs.md`](../docs/superpowers/plans/2026-06-02-agent-demo-and-docs.md). Added the `docs/agent.md` user guide and a gated (`@Requires(OPENAI_API_KEY)`) end-to-end test. **Verified with a real run:** `./launch.sh run` of an agent pipeline with `plugins { id 'nf-agent@0.1.0' }` (dev mode) produced a live OpenAI `gpt-5-mini` answer (`ANSWER=Paris`), with PF4J discovering `LangChainAgentRunner` via the real extension point (not the test seam). Tool dispatch through a real module is still future (depends on the `ToolDispatcher`).
 5. **Polish backlog** (any time): make `agentPrompt` grammar-optional for better errors; add `agent` config scope; add an `@author` tag style sweep across new files; revisit `simpleName` invariants when scoped sub-workflows invoke agents; add a one-line comment in `VariableScopeVisitor.visitAgent` documenting why agent outputs are intentionally not wrapped in an output DSL scope (divergence from `visitProcessV2`); harden the resolution test to assert no unused-variable warning is emitted for an input referenced only in the `prompt:` (the `findVariableDeclaration` suppression line is currently uncovered); clarify the Elvis-precedence idiom in `ChatModelFactory.providerOf/modelOf` (`modelId?.indexOf('/') ?: -1` masks a `0` index — benign today but fragile); investigate the typed-DSL operator nuance where `agent_name | view` (bare pipe to `view`) fails to resolve under `nextflow.enable.types = true` while the chained `agent_name(ch).view { ... }` form works — confirm whether this is general to typed operators or specific to the agent `ChannelOut`, and align the docs/tests accordingly.
 
-## Record-typed structured I/O (direction, 2026-06-02)
+## Record-typed structured I/O (DELIVERED 2026-06-02)
 
-The free-style scalar I/O used in the v1 POC (`input: question: String` / `output: answer: String`, emitting the LLM's raw text) is inadequate for real usage. Going forward, **agent I/O must use record types** ([`adr/20260306-record-types.md`](20260306-record-types.md)), and the record structure drives the LLM's structured I/O:
+**Status: delivered** (Plan F, [`docs/superpowers/plans/2026-06-02-agent-record-io.md`](../docs/superpowers/plans/2026-06-02-agent-record-io.md)). Verified with a real run: `./launch.sh run` of a record-typed agent (`input: q: Question` / `output: a: Answer`) produced a structured record bound from the live OpenAI structured-output path — output `CAPITAL=Paris COUNTRY=France`, log `LangChainAgentRunner - Running agent model=openai/gpt-5-mini; messages=2; structured=true`, with the `Answer` fields read individually off the emitted record.
+
+The free-style scalar I/O used in the original POC (`input: question: String` / `output: answer: String`, emitting the LLM's raw text) was inadequate for real usage. **Agent I/O now uses record types** ([`adr/20260306-record-types.md`](20260306-record-types.md)), and the record structure drives the LLM's structured I/O:
 
 ```groovy
 record Question { text: String; context: String? }
@@ -145,6 +147,14 @@ agent qa {
 - **SPI stays text-based.** `AgentRunner.run` still returns the raw JSON `String`; the derived schema (a portable `Map`) and input JSON travel in `AgentRunnerRequest`; the plugin sets `responseFormat` from the schema; **core** parses + binds the JSON to the output record (reusing `TypeHelper.asRecordType`). This keeps record/type coupling in core and the plugin thin.
 - **`Path` fields forbidden in agent *outputs*** for v1 (LLMs don't produce real files; `TypeHelper.asType`'s `Path` branch existence-checks and would throw). Allowed in inputs (serialized to the absolute path string). v1 output field types: `String`/`Integer`/`Long`/`Double`/`Boolean`, nested records, and `List` of those; enum/`Map`/`Set` deferred.
 - **`prompt:` stays mandatory** (grammar-enforced) and **single input / single output** for v1 (a record already aggregates many fields).
+
+### Known semantic caveat (discovered during implementation)
+
+Under OpenAI **strict** structured output, langchain4j force-promotes *all* output schema properties to `required` before sending. So an optional (`?`) field in an agent **output** record is effectively required — the model must always emit it. Optional fields on **input** records are honored normally. This is documented in `docs/agent.md`.
+
+### Remaining deferrals after Plan F
+
+Destructured `record(...)` agent I/O (rejected with a clear error; needs lowering work); `Path`/enum/`Map`/`Set` fields in agent outputs; multiple inputs/outputs; non-OpenAI providers; the tool-dispatch bridge (limitation #5 below); and the `agent {}` config scope (limitation #6).
 
 Follow-up plan: [`docs/superpowers/plans/2026-06-02-agent-record-io.md`](../docs/superpowers/plans/2026-06-02-agent-record-io.md).
 
