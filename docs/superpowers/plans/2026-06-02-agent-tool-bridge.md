@@ -99,12 +99,23 @@ workflow {
 
 ---
 
-## Phase 3 — Registry modules (`nf-core/fastqc`) + `meta.yml`-driven schema  (OUTLINE)
+## Phase 3 — External/registry modules + `meta.yml`-driven schema
 
-- Resolve `'nf-core/fastqc'` → main.nf via `ModuleResolver`, COMPILE it to a `ProcessDef` (runtime include — its own sub-problem; spike first), and fetch the `ModuleSpec`/registry `ModuleMetadata` for the descriptor.
-- Tool input schema from `ModuleSpec.inputs`: flatten the input tuple `{meta:map, reads:file}` to top-level properties with per-item **descriptions** (the "free" descriptor); `meta`→object, `file`→string(path-handle). Decide `meta`-map provenance (LLM-supplied vs synthesized default).
-- Marshal tool-call args back into the tuple shape for `ProcessDef.run`; serialize tuple/file/`eval`/topic outputs to JSON (files as absolute-path handles). System prompt states the opaque-path contract.
-- Handle optional inputs (`path(..., optional:true)` → not in `required`).
+**Spike (2026-06-02) confirmed feasibility:** a module FILE compiles to a runnable `ProcessDef` at agent-run time via `new ScriptLoaderV2(session).setModule(true); loader.parse(path); loader.runScript(); ScriptMeta.get(loader.script).getProcess(name)` — on the OWNER's live `Session`, pre-ignition (where `createToolBridge` runs). `setModule(true)` is mandatory (else the standalone process auto-builds an entry workflow and fails on `--params`). The resulting `ProcessDef` pre-wires through the existing `ModuleToolBridge` unchanged. No core change needed.
+
+### Task 3.1 — External module file as a tool (compile → ProcessDef)
+- In `AgentDef.createToolBridge`, a `tools` entry that is NOT an in-scope process name and looks like a path (`./x.nf`, `/x.nf`, `x.nf`) is compiled via the spike recipe → `ProcessDef`, added to the bridge map. In-scope names still resolve via `ScriptMeta.getProcess`. Tool name = sanitized basename/process name.
+- Test: a LOCAL module file with a typed scalar process used as `tools './mod.nf'`, end-to-end via the no-LLM dispatch test (reusing `AgentToolBridgeIntegrationTest` style); assert the external process ran + result returned + session terminates.
+
+### Task 3.2 — `ModuleSpec`/`meta.yml`-driven tool schema + tuple/path/map marshalling
+- Derive the tool input/output schema from a module's `ModuleSpec` (`nextflow.module.ModuleSpecFactory.fromYaml(sibling meta.yml)`) when present — this is the rich "free" descriptor (names, types, **descriptions**). New `ModuleSpecToolSchema` (or extend `ProcessToolSchema`): flatten the input tuple `{meta:map, reads:file}` to top-level properties (`meta`→object, `file`/`path`→string path-handle, `val`→typed, with the item `description`); `required` = non-optional items.
+- Extend `ModuleToolBridge` marshalling: LLM args (flattened JSON) → the tuple channel value the `ProcessDef` expects (`[meta, file(readsPath)]`); `file`/`path` args → a `Path` (via `Nextflow.file`/`FileHelper`). Serialize tuple/file outputs back to JSON (files → absolute path-handle strings; `meta`→object; `eval`/topic → string). Decide `meta`-map provenance: LLM-supplied (documented in the system prompt) for v1.
+- Handle optional inputs (`path(..., optional:true)` / `?` → not in `required`).
+- Test: a LOCAL module file + sibling `meta.yml` mimicking the fastqc tuple shape (trivial `exec` body, no real container); assert the tuple-input tool schema (flattened + descriptions), arg marshalling, and tuple/file output serialization. The opaque-path contract is stated in the agent system prompt.
+
+### Task 3.3 — Registry reference resolution (`nf-core/fastqc`)
+- A `tools 'nf-core/fastqc'` entry → `ModuleReference.parse` + `ModuleResolver.resolve(ref, autoInstall=true)` → `Path` (downloaded) → the 3.1 compile path; fetch the registry `ModuleMetadata` (or the installed `meta.yml`) for the 3.2 schema.
+- **External dependency:** registry download needs network + (likely) registry auth, and running a real nf-core tool needs a container runtime — so the REAL end-to-end (download + run `fastqc`) is a validation-environment concern. Build + unit/integration-test the resolution+compile CODE PATH with a LOCAL stand-in; gate any real-registry test (skip without registry access) and clearly LOG/flag the requirement. Do not fake success.
 
 ## Phase 4 — Polish (OUTLINE)
 
