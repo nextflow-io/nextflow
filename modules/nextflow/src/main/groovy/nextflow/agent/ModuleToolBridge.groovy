@@ -212,30 +212,64 @@ class ModuleToolBridge implements ToolDispatcher {
      * pre-wired queue, then block on the output channel(s). Calls are serialized so that
      * inputs and outputs stay correlated.
      *
+     * <p><b>Dispatch-level errors are returned as a tool result, not thrown.</b> An unknown
+     * tool name, unparseable {@code argsJson}, or a malformed/mis-shaped argument all yield a
+     * well-formed {@code {"error": "<message>"}} JSON object that names the tool and what went
+     * wrong, so the LLM can see the failure and retry rather than the agent loop being aborted
+     * by an exception escaping the dispatcher.
+     *
+     * <p><b>Limitation (documented, future hardening):</b> a failure of the underlying tool
+     * <i>process task</i> (the Nextflow task the tool runs as) is NOT recovered here. Such a
+     * failure surfaces through the process's own dataflow operator and aborts the session via
+     * the standard error model; intercepting it as a recoverable tool result fights the runtime
+     * and is deferred to a future phase. Only DISPATCH-level errors (unknown tool / argument
+     * parsing / argument marshalling) are turned into a tool-result error here.
+     *
      * @param toolName the name of the tool to invoke
      * @param argsJson the LLM-supplied arguments as a JSON object string
-     * @return the tool result serialized as a JSON object string; on any failure a
-     *         {@code {"error": "..."}} JSON object so the LLM can recover
+     * @return the tool result serialized as a JSON object string; on any dispatch-level failure
+     *         a {@code {"error": "..."}} JSON object so the LLM can recover
      */
     @Override
     synchronized String call(String toolName, String argsJson) {
         try {
             final tool = tools.get(toolName)
             if( tool == null )
-                throw new IllegalArgumentException("Unknown agent tool `${toolName}`")
+                throw new IllegalArgumentException("Unknown agent tool `${toolName}` - available tools: ${tools.keySet()}")
 
-            final parsed = (argsJson != null && !argsJson.trim().isEmpty())
-                ? new JsonSlurper().parseText(argsJson) as Map
-                : Collections.emptyMap()
+            final parsed = parseArgs(toolName, argsJson)
 
             return tool.spec != null
                 ? callSpec(tool, parsed)
                 : callScalar(tool, parsed)
         }
         catch( Exception e ) {
-            log.warn("Agent tool `${toolName}` failed - ${e.message}", e)
-            return JsonOutput.toJson([error: (e.message ?: e.toString())])
+            // dispatch-level failure (unknown tool / arg parsing / arg marshalling): return it
+            // as a tool result so the LLM can recover, rather than letting it abort the loop
+            final message = "Agent tool `${toolName}` failed - ${e.message ?: e.toString()}".toString()
+            log.warn(message, e)
+            return JsonOutput.toJson([error: message])
         }
+    }
+
+    /**
+     * Parse the LLM-supplied arguments into a {@code Map}. An empty/blank payload is treated as
+     * no arguments; an unparseable payload, or one that is not a JSON object, raises an error
+     * that names the offending tool so it round-trips to the LLM as a clear tool-result error.
+     */
+    private static Map parseArgs(String toolName, String argsJson) {
+        if( argsJson == null || argsJson.trim().isEmpty() )
+            return Collections.emptyMap()
+        final Object parsed
+        try {
+            parsed = new JsonSlurper().parseText(argsJson)
+        }
+        catch( Exception e ) {
+            throw new IllegalArgumentException("could not parse the tool arguments as JSON (${e.message}); arguments must be a JSON object")
+        }
+        if( !(parsed instanceof Map) )
+            throw new IllegalArgumentException("the tool arguments must be a JSON object, got ${parsed?.getClass()?.simpleName ?: 'null'}")
+        return (Map) parsed
     }
 
     private String callScalar(Tool tool, Map parsed) {

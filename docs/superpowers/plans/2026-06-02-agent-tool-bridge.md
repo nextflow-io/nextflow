@@ -123,6 +123,11 @@ workflow {
 - Concurrency when the agent input is a queue (multiple in-flight LLM loops): per-loop correlation, thread-safety of `ScriptMeta`/`Global.session` access, and per-tool `toolIn` sharing.
 - Termination edge cases (poison on error paths); `agent {}` config scope; docs + gated real-LLM E2E with a real module.
 
+### Task 4.1 — Multi-tool support + dispatch-level error-as-tool-result (DELIVERED)
+- **Multi-tool** already worked end-to-end (no fix needed): `AgentDef.createToolBridge` resolves every `tools` entry into the `ModuleToolBridge` tool map; `descriptors()` returns all; `LangChainAgentRunner.runWithTools` advertises every `ToolSpecification` and dispatches each `ToolExecutionRequest` by name. Covered by a no-LLM integration test (`AgentMultiToolBridgeIntegrationTest`): two in-scope processes (`shout`/`whisper`) wired as tools, both descriptors advertised, each dispatched to its correct distinct process.
+- **Dispatch-level error-as-tool-result**: `ModuleToolBridge.call` returns a well-formed `{"error": "<message>"}` JSON string (naming the tool + the problem) instead of throwing for: an unknown tool name, an unparseable/blank/non-object `argsJson`, and any argument-marshalling failure. The error is logged at warn and counts as a normal tool result so the LLM can retry rather than the agent loop aborting.
+- **Limitation (documented, future hardening):** a failure of the underlying tool *process task* is NOT recovered as a tool result — it surfaces through the process's own dataflow operator and aborts the session via the standard error model. Intercepting it cleanly fights the runtime and is deferred. Only dispatch-level errors (unknown tool / arg parsing / arg marshalling) are turned into a tool-result error.
+
 ---
 
 ## What this plan does NOT deliver (v1 / Phases 1–2)

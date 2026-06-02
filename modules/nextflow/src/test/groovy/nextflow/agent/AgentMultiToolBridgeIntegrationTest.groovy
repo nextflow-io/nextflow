@@ -22,13 +22,19 @@ import test.Dsl2Spec
 import static test.ScriptHelper.runScript
 
 /**
- * End-to-end test of MULTIPLE tools per agent, WITHOUT a real LLM.
+ * End-to-end tests (WITHOUT a real LLM) of MULTIPLE tools per agent and of
+ * dispatch-level error handling.
  *
- * <p>The agent declares two in-scope processes — {@code shout} (uppercases) and
- * {@code whisper} (lowercases) — as tools. A mock runner asserts that BOTH
+ * <p>The first test declares two in-scope processes — {@code shout} (uppercases)
+ * and {@code whisper} (lowercases) — as tools. A mock runner asserts that BOTH
  * descriptors are advertised and then dispatches a call to EACH tool, proving the
  * two distinct processes ran (uppercase vs lowercase) and that the bridge routes
  * each call to the correct pre-wired process.
+ *
+ * <p>The second test exercises the dispatch-level error path: an unknown tool name
+ * and an unparseable {@code argsJson} are each returned to the caller as a
+ * {@code {"error": ...}} JSON string (so the LLM could recover) without the agent
+ * loop crashing, and a subsequent valid call still runs the real process.
  *
  * <p>The {@code @Timeout} guards against the tool input queues not being poisoned
  * on completion (which would hang {@code session.await()}).
@@ -118,5 +124,80 @@ class AgentMultiToolBridgeIntegrationTest extends Dsl2Spec {
         // both distinct processes ran and produced their distinct (upper/lower) outputs
         new JsonSlurper().parseText(shoutResult) == [loud: 'HI']
         new JsonSlurper().parseText(whisperResult) == [quiet: 'hi']
+    }
+
+    def 'should return dispatch-level errors as JSON tool results without crashing the agent'() {
+        given:
+        AgentRunnerRequest captured = null
+        String unknownToolResult = null
+        String badJsonResult = null
+        String okResult = null
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
+            captured = req
+            // an unknown tool name -> a {"error": ...} naming the tool, NOT a thrown exception
+            unknownToolResult = req.dispatch.call('nope', '{}')
+            // unparseable args -> a {"error": ...} mentioning a parse failure
+            badJsonResult = req.dispatch.call('shout', '{not json')
+            // the bridge is still usable afterwards (the loop did not crash)
+            okResult = req.dispatch.call('shout', '{"text":"Hi"}')
+            return okResult
+        } as AgentRunner
+
+        when:
+        def result = runScript('''
+            nextflow.enable.types = true
+
+            process shout {
+                input:
+                text: String
+
+                output:
+                loud: String
+
+                exec:
+                loud = text.toUpperCase()
+            }
+
+            agent assistant {
+                model 'm'
+                instruction 'i'
+                tools 'shout'
+
+                input:
+                    request: String
+
+                output:
+                    answer: String
+
+                prompt:
+                """
+                ${request}
+                """
+            }
+
+            workflow {
+                assistant(channel.of('hi')).view { it }
+            }
+            ''')
+
+        then:
+        captured != null
+        and:
+        // unknown-tool error is a well-formed JSON string naming the missing tool
+        unknownToolResult instanceof String
+        def unknown = new JsonSlurper().parseText(unknownToolResult)
+        unknown.error != null
+        unknown.error.contains('nope')
+        and:
+        // parse-failure error is a well-formed JSON string naming the tool + the parse problem
+        badJsonResult instanceof String
+        def bad = new JsonSlurper().parseText(badJsonResult)
+        bad.error != null
+        bad.error.contains('shout')
+        bad.error.toLowerCase().contains('parse')
+        and:
+        // the agent loop did NOT crash: a subsequent valid call still runs the real process
+        new JsonSlurper().parseText(okResult) == [loud: 'HI']
+        new JsonSlurper().parseText(result.val) == [loud: 'HI']
     }
 }
