@@ -216,6 +216,30 @@ Console output: `ANSWER=HELLO`, `[SUCCESS] completed=1 failed=0 cached=0`. The L
 
 Follow-up plan: [`docs/superpowers/plans/2026-06-02-agent-tool-bridge.md`](../docs/superpowers/plans/2026-06-02-agent-tool-bridge.md).
 
+## Registry-sourced tool metadata + high-level instructions — DELIVERED (2026-06-03)
+
+**Status: a module tool is now self-describing to the LLM from the module registry metadata**, so the agent `instruction` can be a high-level functional goal rather than tool mechanics. This is Plan H, [`docs/superpowers/plans/2026-06-03-agent-registry-tool-metadata.md`](../docs/superpowers/plans/2026-06-03-agent-registry-tool-metadata.md).
+
+- **Tool description + input schema come from the registry `ModuleMetadata`** (public `GET /api/v1/modules/{name}`, `@Secured(IS_ANONYMOUS)`): `RegistryClient.getModule(name).latest.metadata` feeds `ModuleMetadataToolSchema`, which builds the tool's `ToolDescriptor.description` (module description + `tools[]` prose + output-shape) and the parameter JSON-schema from `ModuleChannelItem` (null-guarded names, folding in `description`/`pattern`/`enum`). When the registry fetch fails or the module is local/in-scope, it **falls back to the installed `meta.yml`/`ModuleSpec`** (`ModuleSpecToolSchema`). A consistency check warns on descriptor↔executor input-name drift.
+- **The `module run` `ProcessEntryHandler` param→channel binding is reused verbatim** for tool marshalling: the LLM's args JSON is parsed to a params-style Map and bound via `ProcessEntryHandler.getProcessArguments(...)` (dot-params, type coercion from `meta.yml`, tuple assembly, `Nextflow.file` for files) — no parallel marshalling convention.
+- **The nf-core `meta.id` convention is honored**, not reinvented: an nf-core `meta` map input becomes a nested schema object `{type:object, properties:{id:{type:string, description:...}}, additionalProperties:true}` (mirroring `CmdModuleView.inferNfCoreParam`), so the LLM knows to build `meta.id`.
+- **`JsonSchemaMapper` now propagates per-field `description` (and `enum`, and nested `object` `properties`/`required`)** into the langchain4j `JsonObjectSchema`/`JsonStringSchema`/`JsonEnumSchema` builders. This was the load-bearing fix: previously the mapper switched on `type` only and dropped descriptions/enum, so the rich per-field hints never reached the LLM. Now they do — which is what makes the high-level instruction sufficient.
+- **Example agent instructions are now high-level functional goals.** `examples/agents/skesa/main.nf` instruction is simply *"Assemble the genome from the provided sequencing reads and report the path to the assembled contigs."* (no "call nf-core/skesa", no "build meta as a map with id"). `examples/agents/isolate-triage/main.nf` keeps the genuine orchestration intent (assemble → QC → threshold gate → conditionally annotate → report) but drops the per-tool mechanics (tool names, `meta.id =`, arg names).
+
+**Verified with a real run (Plan H Task 4 Part C).** From `examples/agents/skesa`, `NXF_PLUGINS_MODE=dev OPENAI_API_KEY=… ../../../launch.sh -trace nextflow.agent run main.nf` against live OpenAI `gpt-5-mini` + Wave/Docker, with the **high-level** instruction above (so the LLM had no instruction-level guidance to build `meta.id`). Verbatim `.nextflow.log` evidence:
+
+```
+DEBUG nextflow.agent.LangChainAgentRunner - Running agent model=openai/gpt-5-mini; tools=[nf_core_skesa]; maxIterations=20
+DEBUG nextflow.agent.LangChainAgentRunner - Agent tool call name=nf_core_skesa; args={"meta":{"id":"sample1"},"fastq":"/Users/.../examples/agents/skesa/data/sample.fastq"}
+DEBUG nextflow.script.ProcessEntryHandler - Getting input arguments for process: nf_core_skesa
+INFO  nextflow.Session - [75/d53b4b] Submitted process > nf_core_skesa (sample1)
+DEBUG n.processor.TaskPollingMonitor - Task completed > TaskHandler[id: 1; name: nf_core_skesa (sample1); status: COMPLETED; exit: 0; ...]
+```
+
+Console: `ASSEMBLY=… /work/75/d53b4b…/sample1.fa`, `[SUCCESS] completed=1 failed=0 cached=0`. **The LLM built `meta:{id:"sample1"}` from the SCHEMA (the registry-sourced `meta.id` convention), not from the instruction** — proving the registry-metadata descriptor + the `JsonSchemaMapper` per-field-description fix reach the LLM and make a high-level instruction sufficient. The reused `ProcessEntryHandler` then marshalled the args and skesa ran as a real dataflow node (exit 0, real work dir, real FASTA).
+
+**Deferred:** version-correct metadata fetch (the wiring currently uses `.latest` + the consistency-warning rather than surfacing the install-resolved version from `ModuleResolver.resolve`); and a live integration test of the `ModuleMetadata`→descriptor branch (the registry-download + container-execution path is exercised only in the validation environment / this manual real run, not in unit tests — the unit suite covers `ModuleMetadataToolSchema` and the offline `meta.yml` fallback directly).
+
 ## Links
 
 - Design spec: [`docs/superpowers/specs/2026-05-04-nextflow-llm-agent-design.md`](../docs/superpowers/specs/2026-05-04-nextflow-llm-agent-design.md)
