@@ -192,4 +192,26 @@ class TypeHelper {
         return result
     }
 
+    /**
+     * Returns {@code true} if {@code value} is a {@link RecordMap} that
+     * contains every non-nullable field declared by {@code type}.
+     *
+     * @param value the value to test
+     * @param type  the record type class
+     */
+    static boolean instanceofRecordType(Object value, Class type) {
+        if( value !instanceof RecordMap )
+            return false
+        final record = (RecordMap) value
+        for( final field : type.getDeclaredFields() ) {
+            if( field.isSynthetic() )
+                continue
+            if( field.isAnnotationPresent(Nullable.class) )
+                continue
+            if( record.get(field.getName()) == null )
+                return false
+        }
+        return true
+    }
+
 }

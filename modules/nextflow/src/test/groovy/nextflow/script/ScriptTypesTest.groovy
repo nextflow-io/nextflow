@@ -21,6 +21,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 
 import nextflow.exception.ScriptCompilationException
+import nextflow.util.RecordMap
 import test.Dsl2Spec
 
 import static test.ScriptHelper.*
@@ -76,6 +77,103 @@ class ScriptTypesTest extends Dsl2Spec {
         )
         then:
         result == 'Sample(id: 1, fastq: 1.fastq)'
+    }
+
+    def 'should cast value to record type' () {
+
+        when:
+        def result = runScript(
+            '''\
+            workflow {
+                record(id: '1', fastq: '1.fastq') as Sample
+            }
+
+            record Sample {
+                id: String
+                fastq: String
+            }
+            '''
+        )
+        then:
+        result instanceof RecordMap
+        result.id == '1'
+        result.fastq == '1.fastq'
+    }
+
+    def 'should cast value to parameterized type'() {
+        when:
+        def samples = runScript(
+            '''\
+            workflow {
+                [
+                  [id: '1', fastq: '1.fastq'],
+                  [id: '2', fastq: '2.fastq'],
+                  [id: '3', fastq: '3.fastq']
+                ] as List<Sample>
+            }
+
+            record Sample {
+                id: String
+                fastq: String
+            }
+            '''
+        )
+        then:
+        samples instanceof List
+        samples.size() == 3
+        samples[0] instanceof RecordMap
+        samples[0].id == '1'
+        samples[0].fastq == '1.fastq'
+        samples[1] instanceof RecordMap
+        samples[1].id == '2'
+        samples[1].fastq == '2.fastq'
+        samples[2] instanceof RecordMap
+        samples[2].id == '3'
+        samples[2].fastq == '3.fastq'
+    }
+
+    def 'should strip unsupported type annotations' () {
+
+        when:
+        runScript(
+            '''\
+            // strip Tuple type from cast expression
+            ['1', '1.fastq', '2.fastq'] as Tuple<String,String,String>
+
+            // strip type annotation in variable declaration
+            def ch: Channel = channel.empty()
+            '''
+        )
+
+        then:
+        noExceptionThrown()
+    }
+
+    def 'should replace instanceof on record type with runtime check' () {
+
+        when:
+        def result = runScript(
+            '''\
+            workflow {
+                [
+                    test1: record(id: '1', fastq: file('1.fastq')) instanceof Sample,
+                    test2: record(id: '2') instanceof Sample,
+                    test3: 42 instanceof Integer,
+                    test4: '42' instanceof Integer
+                ]
+            }
+
+            record Sample {
+               	id: String
+               	fastq: Path
+            }
+            '''
+        )
+        then:
+        result.test1 == true
+        result.test2 == false
+        result.test3 == true
+        result.test4 == false
     }
 
     def 'should report error for invalid record call' () {
