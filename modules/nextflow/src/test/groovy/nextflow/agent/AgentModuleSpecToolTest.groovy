@@ -163,4 +163,107 @@ class AgentModuleSpecToolTest extends Dsl2Spec {
         outAssert.content == 'hello'
         Files.exists(Path.of(outAssert.outfile as String))
     }
+
+    def 'should skip an nf-core versions (eval/topic) output and not block the dispatch'() {
+        given:
+        final dir = Files.createTempDirectory('test')
+        final work = dir.resolve('work'); Files.createDirectories(work)
+        final reads = dir.resolve('reads.txt'); reads.text = 'hello'
+        final readsAbs = reads.toAbsolutePath().toString()
+
+        // a module with a DATA output (`report`) AND an nf-core `versions` output:
+        // a tuple carrying an `eval` component routed to a `topic` -- exactly the
+        // skesa shape that previously blocked the dispatcher forever on `.val`.
+        dir.resolve('mod.nf').text = '''
+            process echo_tool {
+                input:
+                tuple val(meta), path(reads)
+
+                output:
+                tuple val(meta), path("out.txt"), emit: report
+                tuple val("${task.process}"), val('echo'), eval('echo 1.0'), topic: versions, emit: versions_echo
+
+                script:
+                """
+                cat ${reads} > out.txt
+                """
+            }
+            '''.stripIndent()
+
+        // sibling meta.yml: a `report` data output + a versions output whose components
+        // include an `eval` (plus the matching `versions` topic)
+        dir.resolve('meta.yml').text = '''\
+            name: echo_tool
+            description: Copy reads to an output file
+            input:
+              - - name: meta
+                  type: map
+                - name: reads
+                  type: file
+            output:
+              - - name: meta
+                  type: map
+                - name: outfile
+                  type: file
+              - - name: proc
+                  type: string
+                - name: tool
+                  type: string
+                - name: version
+                  type: eval
+            topics:
+              - - name: proc
+                  type: string
+                - name: tool
+                  type: string
+                - name: version
+                  type: eval
+            '''.stripIndent()
+
+        dir.resolve('main.nf').text = '''
+            agent a {
+                model 'm'
+                instruction 'i'
+                tools './mod.nf'
+
+                input:
+                    request: String
+                output:
+                    answer: String
+
+                prompt:
+                """
+                ${request}
+                """
+            }
+
+            workflow {
+                a(channel.of('go')).view { it }
+            }
+            '''.stripIndent()
+
+        and:
+        String dispatchResult = null
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
+            dispatchResult = req.dispatch.call('echo_tool', JsonOutput.toJson([meta: [id: 's1'], reads: readsAbs]))
+            return dispatchResult
+        } as AgentRunner
+
+        when:
+        final runner = new ScriptRunner([process: [executor: 'local'], workDir: work.toString()])
+        runner.setScript(new ScriptFile(dir.resolve('main.nf')))
+        runner.execute()
+
+        then:
+        // the dispatch returned (it did NOT block forever on the eval/versions output's `.val`)
+        // and the whole run terminated within @Timeout
+        dispatchResult != null
+        final parsed = new JsonSlurper().parseText(dispatchResult) as Map
+        // the data output IS collected ...
+        parsed.containsKey('report')
+        ((parsed.report as Map).outfile as String).startsWith('/')
+        // ... and the eval/versions output is NOT (skipped, not blocked on)
+        !parsed.containsKey('versions_echo')
+        parsed.size() == 1
+    }
 }

@@ -301,14 +301,46 @@ class ModuleToolBridge implements ToolDispatcher {
         final result = new LinkedHashMap<String,Object>()
         final outputs = spec.outputs ?: Collections.<ModuleParam>emptyList()
         final emitNames = emitNamesByPosition(tool.channelOut)
+        final int nOut = tool.channelOut.size()
         for( int i=0; i<outputs.size(); i++ ) {
             final param = outputs[i]
+            // Skip nf-core `versions`-style outputs: a tuple carrying an `eval`
+            // component is pipeline bookkeeping routed to a `topic`, not a
+            // per-invocation tool result -- and its channel never binds a readable
+            // value, so reading `.val` here would block the dispatch forever.
+            if( isEvalOutput(param) )
+                continue
+            // Defensively skip an output with no corresponding emitted data channel
+            // (e.g. a topic-only output) rather than block on a non-existent channel.
+            if( i >= nOut )
+                continue
             final key = outputKey(param, emitNames, i)
             final ch = CH.getReadChannel(tool.channelOut[i])
             final value = ch.val
             result.put(key, serializeOutput(param, value))
         }
         return JsonOutput.toJson(result)
+    }
+
+    /**
+     * True for an nf-core `versions`-style output: a tuple whose components include an
+     * {@code eval} (or the param itself is an {@code eval}). Such outputs are computed
+     * command captures routed to a `topic` for pipeline bookkeeping -- they are not a
+     * per-invocation tool result and their channel does not bind a readable value, so
+     * the dispatcher must not block reading them.
+     */
+    private static boolean isEvalOutput(ModuleParam param) {
+        if( param == null )
+            return false
+        if( 'eval'.equalsIgnoreCase(param.type) )
+            return true
+        final comps = param.components
+        if( comps != null ) {
+            for( final ModuleParam c : comps )
+                if( c != null && 'eval'.equalsIgnoreCase(c.type) )
+                    return true
+        }
+        return false
     }
 
     /**
@@ -409,8 +441,8 @@ class ModuleToolBridge implements ToolDispatcher {
             return
         closed = true
         for( final tool : tools.values() ) {
-            for( final in : tool.toolIns )
-                in.bind(PoisonPill.instance)
+            for( final queue : tool.toolIns )
+                queue.bind(PoisonPill.instance)
         }
     }
 
