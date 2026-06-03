@@ -225,6 +225,11 @@ class AgentDef extends BindableDef implements ChainableDef {
         final meta = ScriptMeta.get(owner)
         final resolved = new LinkedHashMap<String, ProcessDef>()
         final specs = new LinkedHashMap<String, nextflow.module.ModuleSpec>()
+        // registry-sourced tool metadata (Phase 3.3 / Task 3): when a registry tool resolves and
+        // its public `ModuleMetadata` is fetched, the descriptor (description + input schema) is
+        // sourced from it; the value is wrapped together with the nf-core scope flag (for the
+        // `meta.id` convention). Tools missing here fall back to the sibling meta.yml ModuleSpec.
+        final metadatas = new LinkedHashMap<String, ModuleToolBridge.RegistryMeta>()
         for( final entry : declared ) {
             final toolRef = entry?.toString()
             // 1) an in-scope process name (Phase 2, unchanged)
@@ -248,9 +253,10 @@ class AgentDef extends BindableDef implements ChainableDef {
             // 3) a registry reference (e.g. `nf-core/fastqc`, optionally `@version`) -> resolve
             //    via the module registry (ModuleResolver), compile the resolved main.nf to a
             //    ProcessDef (the Phase 3.1 recipe) and, when an installed sibling meta.yml is
-            //    present, drive the schema/marshalling from its ModuleSpec (Phase 3.2)
+            //    present, drive the schema/marshalling from its ModuleSpec (Phase 3.2). The
+            //    descriptor is sourced from the public registry `ModuleMetadata` when available.
             if( looksLikeRegistryRef(toolRef) ) {
-                final entry3 = resolveRegistryTool(toolRef)
+                final entry3 = resolveRegistryTool(toolRef, metadatas)
                 final toolName = entry3.key
                 resolved.put(toolName, entry3.value)
                 final spec = loadSiblingSpec(entry3.value)
@@ -261,7 +267,7 @@ class AgentDef extends BindableDef implements ChainableDef {
             // 4) otherwise: not a process in scope, not a path, not a registry ref
             throw new ScriptRuntimeException("Agent `${name}` tool `${toolRef}` is not a process in scope")
         }
-        return new ModuleToolBridge(resolved, specs)
+        return new ModuleToolBridge(resolved, specs, metadatas)
     }
 
     /**
@@ -403,7 +409,7 @@ class AgentDef extends BindableDef implements ChainableDef {
      * @return a {@code sanitizedToolName -> ProcessDef} entry
      */
     @CompileDynamic
-    private Map.Entry<String,ProcessDef> resolveRegistryTool(String ref) {
+    private Map.Entry<String,ProcessDef> resolveRegistryTool(String ref, Map<String,ModuleToolBridge.RegistryMeta> metadatas) {
         final session = Global.session as Session
         if( session == null )
             throw new ScriptRuntimeException("Agent `${name}` tool `${ref}`: cannot resolve a registry module - no active session")
@@ -425,9 +431,9 @@ class AgentDef extends BindableDef implements ChainableDef {
         final registryConfig = new nextflow.config.RegistryConfig((session.config?.registry as Map) ?: Collections.emptyMap())
 
         // -- resolve (local install first, else auto-install via the registry client)
+        final client = nextflow.module.RegistryClientFactory.forConfig(registryConfig)
         final Path modPath
         try {
-            final client = nextflow.module.RegistryClientFactory.forConfig(registryConfig)
             final resolver = new nextflow.module.ModuleResolver(baseDir, client)
             modPath = resolver.resolve(moduleRef, version, /*autoInstall*/ true)
         }
@@ -441,7 +447,36 @@ class AgentDef extends BindableDef implements ChainableDef {
         final proc = compileModuleProcess(ref, modPath, session)
         // the LLM-facing tool name must be a valid identifier: sanitize `/`, `-`, `@`, `.` to `_`
         final toolName = sanitizeToolName(refNoVer)
+
+        // -- fetch the PUBLIC registry metadata (description + input schema source). Reuse the
+        //    SAME RegistryClient (CmdModuleView pattern): `getModule(fullName).latest?.metadata`,
+        //    or `getModuleRelease(fullName, version)?.metadata` when a version is pinned. A registry
+        //    hiccup / private module degrades to null -> the bridge falls back to the meta.yml spec.
+        final metadata = fetchModuleMetadata(client, moduleRef, version)
+        if( metadata != null )
+            metadatas.put(toolName, new ModuleToolBridge.RegistryMeta(metadata, moduleRef.scope == 'nf-core'))
+
         return new AbstractMap.SimpleImmutableEntry<String,ProcessDef>(toolName, proc)
+    }
+
+    /**
+     * Fetch the public {@link io.seqera.npr.api.schema.v1.ModuleMetadata} for a resolved registry
+     * module via the SAME {@link io.seqera.npr.client.RegistryClient} already built to resolve the
+     * module ({@code GET /api/v1/modules/{name}} is anonymous/public). Any failure (network hiccup,
+     * private module without metadata, missing release) is logged and yields {@code null} so the
+     * caller degrades gracefully to the sibling {@code meta.yml} {@link nextflow.module.ModuleSpec}.
+     */
+    @CompileDynamic
+    private io.seqera.npr.api.schema.v1.ModuleMetadata fetchModuleMetadata(io.seqera.npr.client.RegistryClient client, nextflow.module.ModuleReference moduleRef, String version) {
+        try {
+            if( version )
+                return client.getModuleRelease(moduleRef.fullName, version)?.metadata
+            return client.getModule(moduleRef.fullName)?.latest?.metadata
+        }
+        catch( Exception e ) {
+            log.warn("Agent `${name}` tool `${moduleRef.fullName}`: could not fetch registry metadata (${e.message}) - falling back to the local module spec for the tool descriptor")
+            return null
+        }
     }
 
     /**

@@ -20,10 +20,12 @@ import java.nio.file.Path
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
+import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.PoisonPill
+import io.seqera.npr.api.schema.v1.ModuleMetadata
 import nextflow.Nextflow
 import nextflow.extension.CH
 import nextflow.module.ModuleSpec
@@ -91,6 +93,18 @@ class ModuleToolBridge implements ToolDispatcher {
         ProcessDef processDef
     }
 
+    /**
+     * The public registry {@link ModuleMetadata} for a tool plus its nf-core scope flag (for the
+     * {@code meta.id} convention). When present for a spec-driven tool, the tool DESCRIPTOR
+     * (description + input schema) is sourced from the metadata instead of the sibling
+     * {@code meta.yml} {@link ModuleSpec}; marshalling/output stays on the spec + ProcessDef.
+     */
+    @TupleConstructor
+    static class RegistryMeta {
+        final ModuleMetadata metadata
+        final boolean nfCore
+    }
+
     private final Map<String,Tool> tools = new LinkedHashMap<String,Tool>()
 
     private final List<ToolDescriptor> descriptors = new ArrayList<ToolDescriptor>()
@@ -116,10 +130,26 @@ class ModuleToolBridge implements ToolDispatcher {
      * @param specs    a name -> ModuleSpec map; tools present here use spec-driven marshalling
      */
     ModuleToolBridge(Map<String,ProcessDef> resolved, Map<String,ModuleSpec> specs) {
+        this(resolved, specs, Collections.<String,RegistryMeta>emptyMap())
+    }
+
+    /**
+     * Build the bridge, sourcing the tool DESCRIPTOR from the public registry
+     * {@link ModuleMetadata} when present (Task 3) and otherwise from the sibling {@code meta.yml}
+     * {@link ModuleSpec}. Marshalling/output is always spec-driven (the spec + ProcessDef) for a
+     * tool that has a {@link ModuleSpec}; tools with neither use the scalar typed-I/O path.
+     *
+     * @param resolved   a name -> ProcessDef map of the resolved tools the agent declared
+     * @param specs      a name -> ModuleSpec map; tools present here use spec-driven marshalling
+     * @param metadatas  a name -> {@link RegistryMeta} map; for a spec-driven tool present here the
+     *                   descriptor is sourced from the registry metadata (description + schema)
+     */
+    ModuleToolBridge(Map<String,ProcessDef> resolved, Map<String,ModuleSpec> specs, Map<String,RegistryMeta> metadatas) {
         for( final entry : resolved.entrySet() ) {
             final spec = specs?.get(entry.key)
+            final registryMeta = metadatas?.get(entry.key)
             if( spec != null )
-                wireSpec(entry.key, entry.value, spec)
+                wireSpec(entry.key, entry.value, spec, registryMeta?.metadata, registryMeta != null ? registryMeta.nfCore : false)
             else
                 wireScalar(entry.key, entry.value)
         }
@@ -176,12 +206,28 @@ class ModuleToolBridge implements ToolDispatcher {
     // SPEC-driven mode (Phase 3.2) - meta.yml describes the tuple/path/map I/O
     // -------------------------------------------------------------------------
 
-    private void wireSpec(String name, ProcessDef proc, ModuleSpec spec) {
+    private void wireSpec(String name, ProcessDef proc, ModuleSpec spec, ModuleMetadata metadata = null, boolean nfCore = false) {
         final inputs = spec.inputs ?: Collections.<ModuleParam>emptyList()
 
-        // -- portable schema descriptor (flattened inputs + prose output shape)
-        final inputSchema = ModuleSpecToolSchema.inputSchema(spec)
-        final description = buildDescription(spec)
+        // -- portable schema descriptor (flattened inputs + prose output shape). When the public
+        //    registry ModuleMetadata is available (Task 3) it is the canonical, richer source
+        //    (per-field descriptions, patterns, enums, the nf-core meta.id convention, tool
+        //    homepages); otherwise fall back to the sibling meta.yml ModuleSpec (offline /
+        //    local-file / in-scope tools). Marshalling/output is UNCHANGED (always spec-driven).
+        final Map inputSchema
+        final String description
+        if( metadata != null ) {
+            inputSchema = ModuleMetadataToolSchema.inputSchema(metadata, nfCore)
+            description = ModuleMetadataToolSchema.description(metadata)
+            // consistency / silent-drift guard: the descriptor (from the registry `.latest`
+            // metadata) and the executor (the installed meta.yml ModuleSpec used for marshalling)
+            // are two views of the same module - warn if their flattened input names differ.
+            warnOnInputDrift(name, metadata, spec)
+        }
+        else {
+            inputSchema = ModuleSpecToolSchema.inputSchema(spec)
+            description = buildDescription(spec)
+        }
         final descriptor = new ToolDescriptor(name, description, inputSchema, null)
 
         // -- the number of input queues = the PROCESS's declared input-channel count;
@@ -224,6 +270,33 @@ class ModuleToolBridge implements ToolDispatcher {
     private static String buildDescription(ModuleSpec spec) {
         final base = spec.description ?: spec.name ?: 'module tool'
         return "${base}\n\n${ModuleSpecToolSchema.outputDescription(spec)}".toString()
+    }
+
+    /**
+     * Consistency check: warn when the flattened input property names derived from the registry
+     * {@link ModuleMetadata} (the descriptor source) differ from those of the executable
+     * {@link ModuleSpec} (the marshalling source) - a silent-drift guard between the registry
+     * {@code .latest} descriptor and the installed spec the tool actually runs as.
+     */
+    private static void warnOnInputDrift(String name, ModuleMetadata metadata, ModuleSpec spec) {
+        final fromMeta = ModuleMetadataToolSchema.inputPropertyNames(metadata)
+        final fromSpec = specInputNames(spec)
+        if( fromMeta != fromSpec )
+            log.warn("Agent tool `${name}`: registry metadata declares inputs ${fromMeta} but the installed module spec declares ${fromSpec} - the tool descriptor (from the registry) and its marshalling (from the local spec) may be out of sync")
+    }
+
+    /** The flattened input property names of a {@link ModuleSpec}, in declaration order. */
+    private static List<String> specInputNames(ModuleSpec spec) {
+        final names = new ArrayList<String>()
+        final inputs = spec?.inputs ?: Collections.<ModuleParam>emptyList()
+        for( final ModuleParam param : inputs ) {
+            final comps = param.isTuple() ? param.components : Collections.singletonList(param)
+            for( final ModuleParam comp : comps ) {
+                if( comp?.name )
+                    names.add(comp.name)
+            }
+        }
+        return names
     }
 
     /**
