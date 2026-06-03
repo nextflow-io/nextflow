@@ -111,6 +111,14 @@ class ModuleToolBridge implements ToolDispatcher {
 
     private boolean closed
 
+    /** The maximum size (in bytes) of a structured file output whose content is inlined to the
+     * LLM; larger or non text-like/binary outputs stay opaque path handles. Defaults to 32 KB. */
+    private long maxInlineBytes = 32768L
+
+    /** Set the cap (in bytes) for inlining structured file outputs; non-positive values reset
+     * to the 32 KB default. Wired from the {@code agent.maxToolOutputInlineSize} config scope. */
+    void setMaxInlineBytes(long bytes) { this.maxInlineBytes = bytes > 0 ? bytes : 32768L }
+
     /**
      * Build the bridge by pre-wiring each in-scope process tool into the dataflow
      * network (scalar mode). Must be invoked in the workflow body before ignition.
@@ -449,9 +457,10 @@ class ModuleToolBridge implements ToolDispatcher {
     /**
      * Serialize an output channel value per the spec param shape: a tuple value (a List)
      * becomes an object keyed by component name; a scalar value is serialized directly.
-     * File/path values become absolute path strings.
+     * File/path values become absolute path strings, except small structured (text-like)
+     * outputs whose contents are inlined for the LLM (see {@link ToolOutputReader}).
      */
-    private static Object serializeOutput(ModuleParam param, Object value) {
+    private Object serializeOutput(ModuleParam param, Object value) {
         if( param.isTuple() ) {
             final record = new LinkedHashMap<String,Object>()
             final list = (value instanceof List) ? (List) value : [value]
@@ -466,11 +475,18 @@ class ModuleToolBridge implements ToolDispatcher {
         return serializeValue(param, value)
     }
 
-    private static Object serializeValue(ModuleParam comp, Object value) {
+    private Object serializeValue(ModuleParam comp, Object value) {
         if( value == null )
             return null
-        if( ModuleSpecToolSchema.isFileType(comp.type?.toLowerCase()) )
-            return pathString(value)
+        if( ModuleSpecToolSchema.isFileType(comp.type?.toLowerCase()) ) {
+            // a file output: inline the contents of a small structured (text-like) file so the
+            // LLM can reason over it, else return the opaque absolute path handle (the
+            // opaque-path contract for bulk/binary/oversized data). Defensive fall-back to the
+            // path string when the value is unexpectedly not a Path.
+            return value instanceof Path
+                ? ToolOutputReader.readOrHandle((Path) value, maxInlineBytes)
+                : pathString(value)
+        }
         return value
     }
 

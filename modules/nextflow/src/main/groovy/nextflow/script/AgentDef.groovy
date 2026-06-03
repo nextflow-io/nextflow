@@ -177,6 +177,8 @@ class AgentDef extends BindableDef implements ChainableDef {
         // resolve declared `tools` to in-scope processes and pre-wire them into the
         // dataflow network (before ignition); the bridge is poisoned on completion
         final ModuleToolBridge bridge = createToolBridge()
+        if( bridge != null )
+            bridge.setMaxInlineBytes(agentConfig.maxToolOutputInlineBytes())
         final List<ToolDescriptor> toolSpecs = bridge != null ? bridge.descriptors() : null
 
         final mapper = { Object item ->

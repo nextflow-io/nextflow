@@ -54,18 +54,19 @@ class AgentModuleSpecToolTest extends Dsl2Spec {
         final readsAbs = reads.toAbsolutePath().toString()
 
         // a CLASSIC DSL2 module mimicking the nf-core tuple shape (NOT typed records);
-        // the script body uses `cat`, which runs via the LocalExecutor shell (no container)
+        // the script body uses `cat`, which runs via the LocalExecutor shell (no container).
+        // The output is a `.dat` (NOT a text-like extension) so it stays an opaque path handle.
         dir.resolve('mod.nf').text = '''
             process echo_tool {
                 input:
                 tuple val(meta), path(reads)
 
                 output:
-                tuple val(meta), path("out.txt"), emit: report
+                tuple val(meta), path("out.dat"), emit: report
 
                 script:
                 """
-                cat ${reads} > out.txt
+                cat ${reads} > out.dat
                 """
             }
             '''.stripIndent()
@@ -164,6 +165,110 @@ class AgentModuleSpecToolTest extends Dsl2Spec {
         Files.exists(Path.of(outAssert.outfile as String))
     }
 
+    def 'should inline a small structured json tool output to the LLM instead of a path handle'() {
+        given:
+        final dir = Files.createTempDirectory('test')
+        final work = dir.resolve('work'); Files.createDirectories(work)
+        final reads = dir.resolve('reads.txt'); reads.text = 'hello'
+        final readsAbs = reads.toAbsolutePath().toString()
+
+        // a CLASSIC DSL2 module producing a SMALL .json stats output (the assemblyscan
+        // shape): the script body writes a tiny JSON that the LLM must reason over
+        dir.resolve('mod.nf').text = '''
+            process echo_tool {
+                input:
+                tuple val(meta), path(reads)
+
+                output:
+                tuple val(meta), path("stats.json"), emit: report
+
+                script:
+                """
+                echo '{"n50":54321,"contigs":12}' > stats.json
+                """
+            }
+            '''.stripIndent()
+
+        // sibling meta.yml describing the tuple I/O; the file output is a .json
+        dir.resolve('meta.yml').text = '''\
+            name: echo_tool
+            description: Compute assembly statistics
+            input:
+              - - name: meta
+                  type: map
+                  description: sample meta
+                - name: reads
+                  type: file
+                  description: input reads
+            output:
+              - - name: meta
+                  type: map
+                  description: sample meta
+                - name: outfile
+                  type: file
+                  description: the stats json
+                  pattern: "*.json"
+            '''.stripIndent()
+
+        final main = dir.resolve('main.nf')
+        main.text = '''
+            agent a {
+                model 'm'
+                instruction 'i'
+                tools './mod.nf'
+
+                input:
+                    request: String
+
+                output:
+                    answer: String
+
+                prompt:
+                """
+                ${request}
+                """
+            }
+
+            workflow {
+                a(channel.of('go')).view { it }
+            }
+            '''.stripIndent()
+
+        and:
+        String dispatchResult = null
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
+            dispatchResult = req.dispatch.call('echo_tool', JsonOutput.toJson([meta: [id: 's1'], reads: readsAbs]))
+            final parsed = new JsonSlurper().parseText(dispatchResult) as Map
+            // the result is keyed by the emit name `report`; its `outfile` carries the
+            // FILE CONTENTS as a String (inlined) -- NOT an absolute path handle
+            assert parsed.containsKey('report')
+            final report = parsed.report as Map
+            assert report.meta == [id: 's1']
+            final outfile = report.outfile as String
+            assert !outfile.startsWith('/')
+            assert outfile.contains('"n50"')
+            assert outfile.contains('54321')
+            return dispatchResult
+        } as AgentRunner
+
+        when:
+        final runner = new ScriptRunner([process: [executor: 'local'], workDir: work.toString()])
+        runner.setScript(new ScriptFile(main))
+        runner.execute()
+
+        then:
+        dispatchResult != null
+        final parsed = new JsonSlurper().parseText(dispatchResult) as Map
+        parsed.containsKey('report')
+        (parsed.report as Map).meta == [id: 's1']
+        and:
+        // the file contents were inlined: the value is the JSON content, not a /abs/path
+        final outfile = (parsed.report as Map).outfile as String
+        !outfile.startsWith('/')
+        outfile.contains('"n50"')
+        outfile.contains('54321')
+    }
+
     def 'should skip an nf-core versions (eval/topic) output and not block the dispatch'() {
         given:
         final dir = Files.createTempDirectory('test')
@@ -174,18 +279,19 @@ class AgentModuleSpecToolTest extends Dsl2Spec {
         // a module with a DATA output (`report`) AND an nf-core `versions` output:
         // a tuple carrying an `eval` component routed to a `topic` -- exactly the
         // skesa shape that previously blocked the dispatcher forever on `.val`.
+        // The data output is a `.dat` (NOT text-like) so it stays an opaque path handle.
         dir.resolve('mod.nf').text = '''
             process echo_tool {
                 input:
                 tuple val(meta), path(reads)
 
                 output:
-                tuple val(meta), path("out.txt"), emit: report
+                tuple val(meta), path("out.dat"), emit: report
                 tuple val("${task.process}"), val('echo'), eval('echo 1.0'), topic: versions, emit: versions_echo
 
                 script:
                 """
-                cat ${reads} > out.txt
+                cat ${reads} > out.dat
                 """
             }
             '''.stripIndent()
