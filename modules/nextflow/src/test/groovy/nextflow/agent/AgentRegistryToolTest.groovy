@@ -43,7 +43,7 @@ import test.Dsl2Spec
  * is present, schema/marshalling is spec-driven (Phase 3.2).
  *
  * The module runs through the REAL local executor (it {@code cat}s the staged input into
- * {@code out.txt}), proving real resolution + compile + staging + execution. The
+ * {@code out.dat}), proving real resolution + compile + staging + execution. The
  * {@code @Timeout} fails if the tool input queues are not poisoned on completion.
  */
 @Timeout(90)
@@ -79,11 +79,11 @@ class AgentRegistryToolTest extends Dsl2Spec {
                 tuple val(meta), path(reads)
 
                 output:
-                tuple val(meta), path("out.txt"), emit: report
+                tuple val(meta), path("out.dat"), emit: report
 
                 script:
                 """
-                cat ${reads} > out.txt
+                cat ${reads} > out.dat
                 """
             }
             '''.stripIndent()
@@ -150,7 +150,7 @@ class AgentRegistryToolTest extends Dsl2Spec {
             assert req.toolSpecs[0].inputSchema.properties.meta.type == 'object'
             assert req.toolSpecs[0].inputSchema.properties.reads.type == 'string'
             // invoke the tool: drives the REAL echo_tool process through the executor,
-            // staging `reads.txt` and producing `out.txt`
+            // staging `reads.txt` and producing `out.dat`
             dispatchResult = req.dispatch.call('acme_echo', JsonOutput.toJson([meta: [id: 's1'], reads: readsAbs]))
             final parsed = new JsonSlurper().parseText(dispatchResult) as Map
             // the result is keyed by the emit name `report`; its record carries `outfile`
