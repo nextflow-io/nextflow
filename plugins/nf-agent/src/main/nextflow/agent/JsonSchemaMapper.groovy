@@ -17,6 +17,7 @@ package nextflow.agent
 
 import dev.langchain4j.model.chat.request.json.JsonArraySchema
 import dev.langchain4j.model.chat.request.json.JsonBooleanSchema
+import dev.langchain4j.model.chat.request.json.JsonEnumSchema
 import dev.langchain4j.model.chat.request.json.JsonIntegerSchema
 import dev.langchain4j.model.chat.request.json.JsonNumberSchema
 import dev.langchain4j.model.chat.request.json.JsonObjectSchema
@@ -82,27 +83,53 @@ class JsonSchemaMapper {
         final additional = schema?.additionalProperties
         if( additional != null )
             builder.additionalProperties(additional as Boolean)
+        final description = schema?.description as String
+        if( description != null )
+            builder.description(description)
         return builder.build()
     }
 
     private static JsonSchemaElement toElement(String name, Map spec) {
         final type = spec?.type as String
+        final description = spec?.description as String
         switch( type ) {
             case 'string':
-                return new JsonStringSchema()
+                final enumValues = spec?.enum as List
+                if( enumValues != null ) {
+                    final eb = JsonEnumSchema.builder()
+                        .enumValues(enumValues.collect { it as String })
+                    if( description != null )
+                        eb.description(description)
+                    return eb.build()
+                }
+                final sb = JsonStringSchema.builder()
+                if( description != null )
+                    sb.description(description)
+                return sb.build()
             case 'integer':
-                return new JsonIntegerSchema()
+                final ib = JsonIntegerSchema.builder()
+                if( description != null )
+                    ib.description(description)
+                return ib.build()
             case 'number':
-                return new JsonNumberSchema()
+                final nb = JsonNumberSchema.builder()
+                if( description != null )
+                    nb.description(description)
+                return nb.build()
             case 'boolean':
-                return new JsonBooleanSchema()
+                final bb = JsonBooleanSchema.builder()
+                if( description != null )
+                    bb.description(description)
+                return bb.build()
             case 'array':
                 final items = spec.items as Map
                 if( items == null )
                     throw new IllegalArgumentException("Array property `${name}` is missing an `items` schema")
-                return JsonArraySchema.builder()
+                final ab = JsonArraySchema.builder()
                     .items(toElement(name + '[]', items))
-                    .build()
+                if( description != null )
+                    ab.description(description)
+                return ab.build()
             case 'object':
                 return toObjectSchema(spec)
             default:
