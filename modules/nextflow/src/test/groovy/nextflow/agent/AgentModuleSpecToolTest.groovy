@@ -33,7 +33,7 @@ import test.Dsl2Spec
  * {@code meta.yml}, derives a FLATTENED tool input schema ({@code meta}→object,
  * {@code reads}→string), and at dispatch time reassembles the flattened JSON args
  * into the {@code [meta, path]} tuple the process expects. The module runs through
- * the REAL local executor (it {@code cat}s the staged input into {@code out.txt}),
+ * the REAL local executor (it {@code cat}s the staged input into {@code out.dat}),
  * proving real staging + execution; the tuple/file output is serialized back to JSON
  * with the output file as an ABSOLUTE PATH STRING (the opaque-path contract).
  *
@@ -127,7 +127,7 @@ class AgentModuleSpecToolTest extends Dsl2Spec {
             assert req.toolSpecs[0].inputSchema.properties.meta.type == 'object'
             assert req.toolSpecs[0].inputSchema.properties.reads.type == 'string'
             // invoke the tool: this drives the REAL echo_tool process through the executor,
-            // staging `reads.txt` and producing `out.txt`
+            // staging `reads.txt` and producing `out.dat`
             dispatchResult = req.dispatch.call('echo_tool', JsonOutput.toJson([meta: [id: 's1'], reads: readsAbs]))
             final parsed = new JsonSlurper().parseText(dispatchResult) as Map
             // the result is keyed by the emit name `report`; its record carries `outfile`

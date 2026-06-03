@@ -57,6 +57,9 @@ class ToolOutputReader {
     /** Number of leading bytes inspected by the binary-content sniff. */
     private static final int SNIFF_BYTES = 8192
 
+    /** Default inline size cap (32 KB) applied when {@code agent.maxToolOutputInlineSize} is not set. */
+    static final long DEFAULT_INLINE_BYTES = 32 * 1024L
+
     /**
      * Decide whether to inline the file's content or return it as an opaque path handle.
      *

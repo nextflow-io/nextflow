@@ -113,11 +113,11 @@ class ModuleToolBridge implements ToolDispatcher {
 
     /** The maximum size (in bytes) of a structured file output whose content is inlined to the
      * LLM; larger or non text-like/binary outputs stay opaque path handles. Defaults to 32 KB. */
-    private long maxInlineBytes = 32768L
+    private long maxInlineBytes = ToolOutputReader.DEFAULT_INLINE_BYTES
 
     /** Set the cap (in bytes) for inlining structured file outputs; non-positive values reset
      * to the 32 KB default. Wired from the {@code agent.maxToolOutputInlineSize} config scope. */
-    void setMaxInlineBytes(long bytes) { this.maxInlineBytes = bytes > 0 ? bytes : 32768L }
+    void setMaxInlineBytes(long bytes) { this.maxInlineBytes = bytes > 0 ? bytes : ToolOutputReader.DEFAULT_INLINE_BYTES }
 
     /**
      * Build the bridge by pre-wiring each in-scope process tool into the dataflow

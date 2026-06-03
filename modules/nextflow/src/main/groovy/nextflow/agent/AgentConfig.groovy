@@ -85,5 +85,5 @@ class AgentConfig implements ConfigScope {
      * The effective maximum size, in bytes, of a structured tool-output file whose contents
      * are inlined for the LLM; defaults to 32 KB when not configured.
      */
-    long maxToolOutputInlineBytes() { maxToolOutputInlineSize != null ? maxToolOutputInlineSize.toBytes() : 32768L }
+    long maxToolOutputInlineBytes() { maxToolOutputInlineSize != null ? maxToolOutputInlineSize.toBytes() : ToolOutputReader.DEFAULT_INLINE_BYTES }
 }
