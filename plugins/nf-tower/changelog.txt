@@ -1,5 +1,9 @@
 nf-tower changelog
 ===================
+1.17.7 - 3 June 2026
+- Fix world-readable seqera-auth.config credential file (#7182) [a2813c610]
+- Fix LogsCheckpoint thread interrupt race condition (#6939) [c45515623]
+
 1.17.6 - 5 May 2026
 - Increase tasks.cloudZone width from 15 to 25 (#6907) [d853067a9]
 
