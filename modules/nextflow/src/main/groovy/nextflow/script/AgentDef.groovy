@@ -348,6 +348,17 @@ class AgentDef extends BindableDef implements ChainableDef {
         final BaseScript modScript
         try {
             final loader = new nextflow.script.parser.v2.ScriptLoaderV2(session)
+            // -- isolate the module's binding (seeded with the owner's params) so loading it
+            //    does not overwrite the shared session binding's `moduleDir` (and `container`/
+            //    `conda` resolved lazily against it). Mirrors IncludeDef.loadModuleV2, which runs
+            //    each included module on its own ScriptBinding. Without this, declaring multiple
+            //    file/registry tools makes every tool resolve `moduleDir` to the LAST-compiled
+            //    module dir (container bleed).
+            final modBinding = new ScriptBinding()
+            final ownerParams = owner?.getBinding()?.getParams()
+            if( ownerParams != null )
+                modBinding.setParams(ownerParams)
+            loader.setMainBinding(modBinding)
             loader.setModule(true)
             loader.parse(modPath)
             loader.runScript()

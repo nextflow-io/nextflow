@@ -40,6 +40,8 @@ class ScriptLoaderV2 implements ScriptLoader {
 
     private BaseScript mainScript
 
+    private ScriptBinding mainBinding
+
     private boolean skipEntryFlow
 
     private Object result
@@ -58,6 +60,19 @@ class ScriptLoaderV2 implements ScriptLoader {
     @Override
     ScriptLoaderV2 setModule(boolean value) {
         this.skipEntryFlow = value
+        return this
+    }
+
+    /**
+     * Opt-in: use the given {@link ScriptBinding} as the main script's binding instead
+     * of the shared {@code session.binding}. This isolates per-load script state (e.g.
+     * {@code moduleDir}) so loading a module here does not corrupt the shared session
+     * binding -- mirroring the isolated binding that {@code IncludeDef.loadModuleV2}
+     * relies on for included modules. When not set, the shared {@code session.binding}
+     * is used (existing behavior, unchanged for all current callers).
+     */
+    ScriptLoaderV2 setMainBinding(ScriptBinding binding) {
+        this.mainBinding = binding
         return this
     }
 
@@ -114,7 +129,7 @@ class ScriptLoaderV2 implements ScriptLoader {
                 ? compiler.compile(scriptPath.toFile())
                 : compiler.compile(scriptText)
 
-            this.mainScript = createScript(compileResult.main(), session.binding, scriptPath, skipEntryFlow)
+            this.mainScript = createScript(compileResult.main(), mainBinding ?: session.binding, scriptPath, skipEntryFlow)
 
             compileResult.modules().forEach((path, clazz) -> {
                 createScript(clazz, new ScriptBinding(), path, true)
