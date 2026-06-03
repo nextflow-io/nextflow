@@ -29,8 +29,10 @@ import nextflow.extension.CH
 import nextflow.module.ModuleSpec
 import nextflow.module.ModuleSpec.ModuleParam
 import nextflow.script.ChannelOut
+import nextflow.script.ProcessConfigV1
 import nextflow.script.ProcessConfigV2
 import nextflow.script.ProcessDef
+import nextflow.script.ProcessEntryHandler
 import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessOutput
 
@@ -84,6 +86,9 @@ class ModuleToolBridge implements ToolDispatcher {
         // spec mode: the module spec + the captured ChannelOut (named outputs)
         ModuleSpec spec
         ChannelOut channelOut
+        // spec mode: the cloned ProcessDef the tool runs as, used to bind the LLM args
+        // onto the input channels via the SAME logic as `module run` (ProcessEntryHandler)
+        ProcessDef processDef
     }
 
     private final Map<String,Tool> tools = new LinkedHashMap<String,Tool>()
@@ -179,9 +184,17 @@ class ModuleToolBridge implements ToolDispatcher {
         final description = buildDescription(spec)
         final descriptor = new ToolDescriptor(name, description, inputSchema, null)
 
-        // -- pre-wire: one queue per spec input channel
-        final toolIns = new ArrayList<DataflowWriteChannel>(inputs.size())
-        for( int i=0; i<inputs.size(); i++ )
+        // -- the number of input queues = the PROCESS's declared input-channel count;
+        //    `ProcessEntryHandler.getProcessArguments` returns one value per declared input
+        //    channel, so the queues must match that, NOT the spec input count. They should be
+        //    equal (descriptor and executor are two views of the same meta.yml) -- warn on drift.
+        final int nInputs = declaredInputChannelCount(proc)
+        if( nInputs != inputs.size() )
+            log.warn("Agent tool `${name}`: module spec declares ${inputs.size()} input(s) but the process declares ${nInputs} input channel(s) - using the process input count for marshalling")
+
+        // -- pre-wire: one queue per process input channel
+        final toolIns = new ArrayList<DataflowWriteChannel>(nInputs)
+        for( int i=0; i<nInputs; i++ )
             toolIns.add(CH.queue())
         final cloned = proc.cloneWithName(name)
         final ChannelOut out = (ChannelOut) cloned.run(toolIns as Object[])
@@ -190,9 +203,22 @@ class ModuleToolBridge implements ToolDispatcher {
             name: name,
             toolIns: toolIns,
             spec: spec,
-            channelOut: out )
+            channelOut: out,
+            processDef: cloned )
         tools.put(name, tool)
         descriptors.add(descriptor)
+    }
+
+    /**
+     * The number of declared input channels of a process: each {@code val}/{@code path}/... is one
+     * channel and a {@code tuple} counts as a single channel. Matches the per-input-channel arity
+     * that {@link nextflow.script.ProcessEntryHandler#getProcessArguments} returns.
+     */
+    private static int declaredInputChannelCount(ProcessDef proc) {
+        final config = proc.getProcessConfig()
+        if( config instanceof ProcessConfigV2 )
+            return ((ProcessConfigV2) config).getInputs().getParams().size()
+        return ((ProcessConfigV1) config).getInputs().size()
     }
 
     private static String buildDescription(ModuleSpec spec) {
@@ -288,14 +314,18 @@ class ModuleToolBridge implements ToolDispatcher {
 
     private String callSpec(Tool tool, Map parsed) {
         final spec = tool.spec
-        final inputs = spec.inputs ?: Collections.<ModuleParam>emptyList()
 
-        // -- marshal the flattened args into one channel value per input channel
-        for( int i=0; i<inputs.size(); i++ ) {
-            final param = inputs[i]
-            final value = marshalInput(param, parsed)
-            tool.toolIns[i].bind(value)
-        }
+        // -- marshal the flattened LLM args into one channel value per input channel using the
+        //    SAME logic as `nextflow module run` (ProcessEntryHandler.getProcessArguments): the
+        //    args map is treated as the params map (dot-notation folded into nested maps), each
+        //    declared input is looked up by name, coerced per the module spec types (file ->
+        //    Nextflow.file, map -> Map, integer -> Integer, ...) and a tuple input is assembled
+        //    into a List of its components (e.g. [[id:'s1'], file(reads)]).
+        //    A missing/invalid arg throws IllegalArgumentException which the dispatcher in `call`
+        //    turns into a {"error":...} tool result so the LLM can recover.
+        final List args = ProcessEntryHandler.getProcessArguments(tool.processDef, parsed, spec)
+        for( int i=0; i<tool.toolIns.size(); i++ )
+            tool.toolIns[i].bind(args[i])
 
         // -- block on each output channel, in declared order, serializing the records
         final result = new LinkedHashMap<String,Object>()
@@ -341,33 +371,6 @@ class ModuleToolBridge implements ToolDispatcher {
                     return true
         }
         return false
-    }
-
-    /**
-     * Reassemble the channel value the process expects for the given input channel from the
-     * flattened LLM args: a tuple channel becomes a {@code List} of its components in order;
-     * a scalar channel becomes the single marshalled value.
-     */
-    private static Object marshalInput(ModuleParam param, Map parsed) {
-        if( param.isTuple() ) {
-            final list = new ArrayList<Object>(param.components.size())
-            for( final comp : param.components )
-                list.add(marshalComponent(comp, parsed.get(comp.name)))
-            return list
-        }
-        return marshalComponent(param, parsed.get(param.name))
-    }
-
-    /**
-     * Marshal a single flattened arg into the runtime value: file/path/directory args (path
-     * strings) become a {@link Path} via {@link Nextflow#file}; everything else passes through.
-     */
-    private static Object marshalComponent(ModuleParam comp, Object arg) {
-        if( arg == null )
-            return null
-        if( ModuleSpecToolSchema.isFileType(comp.type?.toLowerCase()) )
-            return Nextflow.file(arg.toString())
-        return arg
     }
 
     /**

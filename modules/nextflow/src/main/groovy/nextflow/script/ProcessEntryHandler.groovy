@@ -24,6 +24,7 @@ import nextflow.Nextflow
 import nextflow.module.ModuleSpec
 import nextflow.module.ModuleSpecFactory
 import nextflow.module.ModuleStorage
+import nextflow.script.params.DefaultInParam
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.FileInParam
 import nextflow.script.params.InParam
@@ -262,6 +263,13 @@ class ProcessEntryHandler {
         // Map declared inputs to command-line arguments
         List arguments = []
         for( final param : declaredInputs ) {
+            // Skip the synthetic `$` control input that a process gains once it has been
+            // `run()` (DefaultInParam): it is a termination-control channel, never a
+            // user-supplied value. It is absent in the typical `module run` path (which binds
+            // BEFORE run) and present when binding a process that was pre-wired/run earlier
+            // (e.g. the agent tool bridge) - skipping it makes both paths produce the same args.
+            if( param instanceof DefaultInParam )
+                continue
             if( param instanceof TupleInParam ) {
                 List tupleElements = []
                 for( final innerParam : param.inner ) {
