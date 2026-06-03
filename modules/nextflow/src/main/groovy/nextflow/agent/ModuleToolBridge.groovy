@@ -35,6 +35,7 @@ import nextflow.script.ProcessConfigV1
 import nextflow.script.ProcessConfigV2
 import nextflow.script.ProcessDef
 import nextflow.script.ProcessEntryHandler
+import nextflow.script.params.OutParam
 import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessOutput
 
@@ -275,6 +276,35 @@ class ModuleToolBridge implements ToolDispatcher {
         return ((ProcessConfigV1) config).getInputs().size()
     }
 
+    /**
+     * The ProcessDef's declared output params, in declaration order. These are positionally
+     * aligned with the captured {@link ChannelOut} (the ProcessDef builds the {@code ChannelOut}
+     * from these same outputs, in order), so {@code outParams[i]} corresponds to
+     * {@code channelOut[i]}. Used to detect topic-routed outputs authoritatively.
+     */
+    private static List<OutParam> declaredOutputParams(ProcessDef proc) {
+        final config = proc.getProcessConfig()
+        if( config instanceof ProcessConfigV2 )
+            return new ArrayList<OutParam>(((ProcessConfigV2) config).getOutputs().getParams())
+        return new ArrayList<OutParam>(((ProcessConfigV1) config).getOutputs())
+    }
+
+    /**
+     * True when the ProcessDef's declared output at position {@code i} is routed to a
+     * {@code topic:} (nf-core {@code versions}-style bookkeeping). Such outputs use a
+     * topic-source channel that never binds a readable per-invocation value, so the dispatcher
+     * must not block reading them. This is authoritative -- the meta.yml {@code type} is
+     * unreliable: some modules type the eval/version component as {@code string}, not
+     * {@code eval} (e.g. nf-core/assemblyscan vs nf-core/skesa), so {@link #isEvalOutput} alone
+     * would miss it and the dispatch would hang.
+     */
+    private static boolean isTopicOutput(List<OutParam> outParams, int i) {
+        if( outParams == null || i >= outParams.size() )
+            return false
+        final p = outParams[i]
+        return p != null && p.getChannelTopicName() != null
+    }
+
     private static String buildDescription(ModuleSpec spec) {
         final base = spec.description ?: spec.name ?: 'module tool'
         return "${base}\n\n${ModuleSpecToolSchema.outputDescription(spec)}".toString()
@@ -413,13 +443,19 @@ class ModuleToolBridge implements ToolDispatcher {
         final outputs = spec.outputs ?: Collections.<ModuleParam>emptyList()
         final emitNames = emitNamesByPosition(tool.channelOut)
         final int nOut = tool.channelOut.size()
+        // the ProcessDef's declared output params, positionally aligned with the output
+        // channels (ProcessDef builds the ChannelOut from these in the same order); this is
+        // the AUTHORITATIVE source for detecting topic-routed (`versions`-style) outputs
+        final List<OutParam> outParams = declaredOutputParams(tool.processDef)
         for( int i=0; i<outputs.size(); i++ ) {
             final param = outputs[i]
             // Skip nf-core `versions`-style outputs: a tuple carrying an `eval`
             // component is pipeline bookkeeping routed to a `topic`, not a
             // per-invocation tool result -- and its channel never binds a readable
             // value, so reading `.val` here would block the dispatch forever.
-            if( isEvalOutput(param) )
+            // Topic-routed outputs are detected authoritatively from the ProcessDef
+            // (the meta.yml `type` is unreliable -- see isTopicOutput).
+            if( isEvalOutput(param) || isTopicOutput(outParams, i) )
                 continue
             // Defensively skip an output with no corresponding emitted data channel
             // (e.g. a topic-only output) rather than block on a non-existent channel.
