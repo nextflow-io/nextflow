@@ -22,6 +22,7 @@ import nextflow.config.spec.ConfigScope
 import nextflow.config.spec.ScopeName
 import nextflow.script.dsl.Description
 import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 
 /**
  * Model the `agent` configuration scope. These settings are applied as
@@ -56,6 +57,12 @@ class AgentConfig implements ConfigScope {
     """)
     final Duration requestTimeout
 
+    @ConfigOption
+    @Description("""
+        The maximum size of a structured tool-output file whose contents are passed to the LLM; larger outputs are returned as a path handle (default: `32 KB`).
+    """)
+    final MemoryUnit maxToolOutputInlineSize
+
     /* required by extension point -- do not remove */
     AgentConfig() {}
 
@@ -63,6 +70,7 @@ class AgentConfig implements ConfigScope {
         defaultModel = opts.defaultModel as String
         maxIterationsDefault = opts.maxIterationsDefault != null ? opts.maxIterationsDefault as Integer : null
         requestTimeout = opts.requestTimeout != null ? opts.requestTimeout as Duration : null
+        maxToolOutputInlineSize = opts.maxToolOutputInlineSize != null ? opts.maxToolOutputInlineSize as MemoryUnit : null
     }
 
     String getDefaultModel() { defaultModel }
@@ -70,4 +78,12 @@ class AgentConfig implements ConfigScope {
     Integer getMaxIterationsDefault() { maxIterationsDefault }
 
     Duration getRequestTimeout() { requestTimeout }
+
+    MemoryUnit getMaxToolOutputInlineSize() { maxToolOutputInlineSize }
+
+    /**
+     * The effective maximum size, in bytes, of a structured tool-output file whose contents
+     * are inlined for the LLM; defaults to 32 KB when not configured.
+     */
+    long maxToolOutputInlineBytes() { maxToolOutputInlineSize != null ? maxToolOutputInlineSize.toBytes() : 32768L }
 }

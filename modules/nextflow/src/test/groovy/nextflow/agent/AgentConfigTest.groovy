@@ -33,11 +33,12 @@ class AgentConfigTest extends Specification {
 
     def 'should build from a config map'() {
         when:
-        def config = new AgentConfig([defaultModel: 'openai/gpt-5-mini', maxIterationsDefault: 7, requestTimeout: '90s'])
+        def config = new AgentConfig([defaultModel: 'openai/gpt-5-mini', maxIterationsDefault: 7, requestTimeout: '90s', maxToolOutputInlineSize: '64 KB'])
         then:
         config.defaultModel == 'openai/gpt-5-mini'
         config.maxIterationsDefault == 7
         config.requestTimeout == Duration.of('90s')
+        config.maxToolOutputInlineBytes() == 64 * 1024
     }
 
     def 'should build from an empty config map'() {
@@ -47,6 +48,7 @@ class AgentConfigTest extends Specification {
         config.defaultModel == null
         config.maxIterationsDefault == null
         config.requestTimeout == null
+        config.maxToolOutputInlineBytes() == 32768
     }
 
     def 'should be a recognized config scope'() {
@@ -55,7 +57,8 @@ class AgentConfigTest extends Specification {
             agent: [
                 defaultModel: 'openai/gpt-5-mini',
                 maxIterationsDefault: 7,
-                requestTimeout: '90s'
+                requestTimeout: '90s',
+                maxToolOutputInlineSize: '64 KB'
             ]
         ])
         then:
