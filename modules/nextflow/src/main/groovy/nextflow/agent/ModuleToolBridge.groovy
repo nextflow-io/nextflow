@@ -90,6 +90,10 @@ class ModuleToolBridge implements ToolDispatcher {
         // spec mode: the module spec + the captured ChannelOut (named outputs)
         ModuleSpec spec
         ChannelOut channelOut
+        // spec mode: the output READ channels, captured at WIRING time (before ignition) so each
+        // subscribes BEFORE any task binds a value -- reading these never misses a broadcast value
+        // regardless of read order (see callSpec). Positionally aligned with `channelOut`.
+        List<DataflowReadChannel> outReadChannels
         // spec mode: the cloned ProcessDef the tool runs as, used to bind the LLM args
         // onto the input channels via the SAME logic as `module run` (ProcessEntryHandler)
         ProcessDef processDef
@@ -255,11 +259,20 @@ class ModuleToolBridge implements ToolDispatcher {
         final cloned = proc.cloneWithName(name)
         final ChannelOut out = (ChannelOut) cloned.run(toolIns as Object[])
 
+        // Capture the output READ channels NOW, at wiring time (before the network ignites), so
+        // every output subscribes before any task binds a value. Obtaining a read channel lazily
+        // at dispatch time (after the task has bound) misses values on broadcast-style outputs and
+        // deadlocks the `.val` read -- see callSpec.
+        final outReadChannels = new ArrayList<DataflowReadChannel>(out.size())
+        for( int i=0; i<out.size(); i++ )
+            outReadChannels.add(CH.getReadChannel(out[i]))
+
         final tool = new Tool(
             name: name,
             toolIns: toolIns,
             spec: spec,
             channelOut: out,
+            outReadChannels: outReadChannels,
             processDef: cloned )
         tools.put(name, tool)
         descriptors.add(descriptor)
@@ -467,7 +480,13 @@ class ModuleToolBridge implements ToolDispatcher {
             if( i >= nOut )
                 continue
             final key = outputKey(param, emitNames, i)
-            final ch = CH.getReadChannel(tool.channelOut[i])
+            // Read from the read channel captured at WIRING time (before ignition), NOT a fresh
+            // CH.getReadChannel(...) created here at read time: these process output channels are
+            // broadcast-style, so a subscriber created AFTER a value is bound never sees it. The
+            // first output happens to subscribe while the task is still running, but every
+            // subsequent output's read-time adapter is created only after the task already bound
+            // all its values -> it would miss them and block forever. (Mirrors the scalar path.)
+            final ch = tool.outReadChannels[i]
             final value = ch.val
             result.put(key, serializeOutput(param, value))
         }

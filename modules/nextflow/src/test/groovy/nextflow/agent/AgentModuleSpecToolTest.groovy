@@ -269,6 +269,101 @@ class AgentModuleSpecToolTest extends Dsl2Spec {
         outfile.contains('54321')
     }
 
+    def 'should read ALL outputs of a multi-output tool (not block on the 2nd)'() {
+        given:
+        final dir = Files.createTempDirectory('test')
+        final work = dir.resolve('work'); Files.createDirectories(work)
+        final reads = dir.resolve('reads.txt'); reads.text = 'hello'
+        final readsAbs = reads.toAbsolutePath().toString()
+
+        // a module with TWO data outputs (the prokka shape). Regression guard for the read-channel
+        // timing bug: the bridge used to obtain each output read channel lazily at dispatch time,
+        // so on broadcast-style outputs only the FIRST (subscribed while the task still ran) was
+        // received and the SECOND blocked forever. Single-output modules never exposed it.
+        dir.resolve('mod.nf').text = '''
+            process two_out {
+                input:
+                tuple val(meta), path(reads)
+
+                output:
+                tuple val(meta), path("a.json"), emit: first
+                tuple val(meta), path("b.json"), emit: second
+
+                script:
+                """
+                echo '{"a":1}' > a.json
+                echo '{"b":2}' > b.json
+                """
+            }
+            '''.stripIndent()
+
+        dir.resolve('meta.yml').text = '''\
+            name: two_out
+            description: Emit two small JSON outputs
+            input:
+              - - name: meta
+                  type: map
+                - name: reads
+                  type: file
+            output:
+              - - name: meta
+                  type: map
+                - name: first
+                  type: file
+                  pattern: "*.json"
+              - - name: meta
+                  type: map
+                - name: second
+                  type: file
+                  pattern: "*.json"
+            '''.stripIndent()
+
+        dir.resolve('main.nf').text = '''
+            agent a {
+                model 'm'
+                instruction 'i'
+                tools './mod.nf'
+
+                input:
+                    request: String
+                output:
+                    answer: String
+
+                prompt:
+                """
+                ${request}
+                """
+            }
+
+            workflow {
+                a(channel.of('go')).view { it }
+            }
+            '''.stripIndent()
+
+        and:
+        String dispatchResult = null
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
+            dispatchResult = req.dispatch.call('two_out', JsonOutput.toJson([meta: [id: 's1'], reads: readsAbs]))
+            return dispatchResult
+        } as AgentRunner
+
+        when:
+        final runner = new ScriptRunner([process: [executor: 'local'], workDir: work.toString()])
+        runner.setScript(new ScriptFile(dir.resolve('main.nf')))
+        runner.execute()
+
+        then:
+        // BOTH outputs were read (the 2nd did NOT block -- the run terminated within @Timeout)
+        dispatchResult != null
+        final parsed = new JsonSlurper().parseText(dispatchResult) as Map
+        parsed.containsKey('first')
+        parsed.containsKey('second')
+        and:
+        // both small .json are inlined as contents
+        ((parsed.first as Map).first as String).contains('"a"')
+        ((parsed.second as Map).second as String).contains('"b"')
+    }
+
     def 'should skip an nf-core versions (eval/topic) output and not block the dispatch'() {
         given:
         final dir = Files.createTempDirectory('test')
