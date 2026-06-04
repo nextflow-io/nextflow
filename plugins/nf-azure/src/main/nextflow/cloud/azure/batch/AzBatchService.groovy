@@ -647,7 +647,9 @@ class AzBatchService implements Closeable {
     protected BatchSupportedImage getImage(AzPoolOpts opts) {
         PagedIterable<BatchSupportedImage> images = apply(() -> client.listSupportedImages())
 
+        final available = new ArrayList<String>()
         for (BatchSupportedImage it : images) {
+            available.add("${it.imageReference.publisher}:${it.imageReference.offer}:${it.nodeAgentSkuId}:${it.osType}:${it.verificationType}".toString())
             if( !it.nodeAgentSkuId.equalsIgnoreCase(opts.sku) )
                 continue
             if( it.osType != opts.osType )
@@ -660,6 +662,7 @@ class AzBatchService implements Closeable {
                 return it
         }
 
+        log.debug "[AZURE BATCH] No VM image matching sku=$opts.sku; publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; verification type=$opts.verification - supported images: $available"
         throw new IllegalStateException("Cannot find a matching VM image with publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; verification type=$opts.verification")
     }
 
