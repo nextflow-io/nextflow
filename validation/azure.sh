@@ -48,7 +48,7 @@ $NXF_CMD -C ./azure.config run ./test-subdirs.nf
 
 NXF_CLOUDCACHE_PATH=az://my-data/cache \
 $NXF_CMD -C ./azure.config \
-    run nextflow-io/rnaseq-nf \
+    run nextflow-io/rnaseq-nf -r v2.3 \
     -with-report \
     -with-trace $OPTS \
     -plugins nf-cloudcache
@@ -56,7 +56,7 @@ $NXF_CMD -C ./azure.config \
 
 NXF_CLOUDCACHE_PATH=az://my-data/cache \
 $NXF_CMD -C ./azure.config \
-    run nextflow-io/rnaseq-nf \
+    run nextflow-io/rnaseq-nf -r v2.3 \
     -with-report \
     -with-trace $OPTS \
     -plugins nf-cloudcache \
