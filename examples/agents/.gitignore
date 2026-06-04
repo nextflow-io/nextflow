@@ -1,0 +1,9 @@
+# Nextflow run artifacts and auto-installed/registry-fetched modules
+**/work/
+**/.nextflow*
+**/modules/
+*.log
+run.log
+
+# Local data fixtures (provide your own; not committed)
+**/data/

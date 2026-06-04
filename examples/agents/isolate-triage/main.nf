@@ -12,20 +12,33 @@ nextflow.enable.types = true
  *  the path through the tools is decided at run time from intermediate results,
  *  not hard-wired in the DAG.
  *
- *  The agent has three tools:
- *    1. nf-core/skesa   — assemble reads -> contigs (a FILE handle)
- *    2. assembly_qc     — compute assembly metrics -> SCALAR values
- *    3. nf-core/prokka  — annotate contigs -> annotation FILES
+ *  The agent has three nf-core tools, all resolved from the module registry:
+ *    1. nf-core/skesa        — assemble reads -> contigs (a FASTA file handle)
+ *    2. nf-core/assemblyscan — compute assembly statistics -> a small JSON file
+ *    3. nf-core/prokka       — annotate contigs -> annotation files
  *
- *  KEY DESIGN PRINCIPLE (why this works with the LLM-tool model):
- *  ----------------------------------------------------------------
- *  The LLM never reads file CONTENTS — it only sees opaque absolute-path
- *  handles and passes them between tools. So anything the LLM must REASON OVER
- *  (here: "is this assembly good enough?") must be returned as a SCALAR / `val`
- *  tool output, not as a file. That is exactly what `assembly_qc` does: it turns
- *  a FASTA file into numbers (N50, #contigs) the model can compare to a
- *  threshold. Heavy artifacts (contigs, GFF/GBK) stay as handles the model just
- *  forwards. Design your tool outputs around this split.
+ *  TWO KINDS OF TOOL OUTPUT (why this works with the LLM-tool model):
+ *  -------------------------------------------------------------------
+ *  Bulk/binary artifacts the LLM only forwards between tools — the skesa
+ *  contigs, the prokka annotations — come back as OPAQUE ABSOLUTE-PATH HANDLES:
+ *  the model never reads their bytes, it just passes the path to the next tool.
+ *
+ *  But the QC GATE needs the model to REASON OVER numbers (N50, #contigs), and
+ *  assemblyscan emits those as a SMALL `.json` file. Nextflow detects that this
+ *  output is a small, text/structured file (extension in a known set, size under
+ *  the `agent.maxToolOutputInlineSize` cap, not binary) and INLINES ITS CONTENTS
+ *  into the tool result the LLM receives — so the model reads the real stats and
+ *  gates on them. A large or binary output would stay an opaque handle. You do
+ *  not annotate anything for this: it is inferred from the output file's format
+ *  and size at run time.
+ *
+ *  SELF-DESCRIBING TOOLS: each nf-core tool describes itself to the LLM from the
+ *  module-registry metadata — its tool description and input schema (including
+ *  the `meta` map and its `id`) are fetched and wired into the tool spec
+ *  automatically. That is why the `instruction` below is a purely HIGH-LEVEL
+ *  functional goal: it never names a tool, an argument shape, or `meta.id` — the
+ *  LLM learns all of that from the tool schemas, exactly as a user would from
+ *  `nextflow module run <name> --help`.
  */
 
 record Isolate {
@@ -34,54 +47,28 @@ record Isolate {
     reads:     String      // path to the short-read FASTQ (a handle for the tools)
 }
 
-/*
- * A thin, CONTAINER-FREE QC tool: it parses the assembled FASTA and emits
- * decision-relevant metrics as SCALARS the LLM can reason over. Pure Groovy
- * `exec:` — no external binary, so the model gets numbers, not a report file.
- */
-process assembly_qc {
-    input:
-        contigs: Path
-    output:
-        n50:         Integer
-        num_contigs: Integer
-        total_bp:    Integer
-    exec:
-        final lengths = []
-        int cur = 0
-        contigs.eachLine { String line ->
-            if( line.startsWith('>') ) { if( cur > 0 ) lengths.add(cur); cur = 0 }
-            else cur += line.trim().length()
-        }
-        if( cur > 0 ) lengths.add(cur)
-        lengths.sort()
-        num_contigs = lengths.size()
-        total_bp = (lengths.sum() ?: 0) as Integer
-        // N50: the contig length at which half the assembly is in contigs >= that length
-        final half = total_bp.intdiv(2)
-        int acc = 0; int n = 0
-        for( int i = lengths.size() - 1; i >= 0; i-- ) {
-            acc += lengths[i]
-            if( acc >= half ) { n = lengths[i]; break }
-        }
-        n50 = n
-}
-
 agent triage {
     model 'openai/gpt-5-mini'
+    // NOTE: the QC thresholds below are deliberately LENIENT so the bundled demo
+    // reads (a small ggal fragment that assembles to N50≈863, ~24 contigs) PASS the
+    // gate and the annotation branch (prokka) runs. For a real bacterial isolate use
+    // realistic values, e.g. "N50 below 20000 bp OR more than 500 contigs".
     instruction '''\
         You triage bacterial isolate assemblies. Work step by step:
           1. Assemble the isolate's sequencing reads into contigs.
-          2. Compute assembly QC metrics (n50, num_contigs, total_bp) from the contigs.
-          3. QC GATE: if n50 < 20000 OR num_contigs > 500, the assembly is too fragmented —
-             reply "FAIL <sample>: fragmented (N50=<n50>, contigs=<num_contigs>), needs manual review"
+          2. Compute assembly QC statistics from the contigs.
+          3. QC GATE: read the assembly statistics and decide. If the assembly is
+             too fragmented — N50 below 500 bp OR more than 1000 contigs — it
+             FAILS QC: reply
+             "FAIL <sample>: fragmented (N50=<n50>, contigs=<contigs>), needs manual review"
              and DO NOT annotate.
-          4. Otherwise, annotate the contigs, then reply
-             "PASS <sample>: N50=<n50>, contigs=<num_contigs>, annotation=<path to the .gff>".
+          4. Otherwise the assembly PASSES QC: annotate the contigs, then reply
+             "PASS <sample>: N50=<n50>, contigs=<contigs>, annotation=<path to the annotation file>".
         '''.stripIndent()
 
-    // `tools` is varargs and freely mixes registry refs with in-scope process names:
-    tools 'nf-core/skesa', 'assembly_qc', 'nf-core/prokka'
+    // `tools` is varargs; here all three are nf-core registry modules. Each is
+    // resolved from the registry and wired as a self-describing LLM tool.
+    tools 'nf-core/skesa', 'nf-core/assemblyscan', 'nf-core/prokka'
 
     input:
         isolate: Isolate
@@ -96,7 +83,7 @@ agent triage {
 }
 
 workflow {
-    triage(Channel.of(
+    triage(channel.of(
         record(sample_id: 'isolate_001', organism: 'Escherichia coli',
                reads: "${projectDir}/data/sample.fastq")
     ))
