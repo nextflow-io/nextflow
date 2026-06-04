@@ -1,5 +1,10 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.10.6 - 4 June 2026
+- Bump nf-amazon@3.4.5
+- Bump nf-azure@1.20.3
+- Bump nf-tower@1.17.7
+
 25.10.5 - 5 May 2026
 - Fix formatting bug with map key expression (#6893) [8290bc0ae]
 - Fix incorrect evaluation of `secret` process directive (#6934) [3cef01585]
