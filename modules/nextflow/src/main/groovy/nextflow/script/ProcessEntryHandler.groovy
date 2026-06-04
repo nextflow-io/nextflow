@@ -343,19 +343,24 @@ class ProcessEntryHandler {
         final type = paramTypes.get(name)
         final value = namedArgs.get(name)
 
-        if( value == null ) {
-            if( param instanceof FileInParam ) {
+        // File/path inputs: a null OR blank-string value means "not provided". nf-core path
+        // inputs are optional by convention and default to an empty list (the process script
+        // handles the empty case); treating "" like null also prevents file("") from throwing
+        // when a caller (e.g. an LLM tool call) passes an empty string for an optional path.
+        if( param instanceof FileInParam ) {
+            if( value == null || value.toString().trim().isEmpty() ) {
                 log.warn "Path input '--${name}' not provided, defaulting to empty list"
                 return []
             }
-            throw new IllegalArgumentException("Missing required parameter: --${name}")
+            return parseFileInput(value.toString())
         }
 
-        // handle file, path, env, stdin inputs
-        switch( param ) {
-            case FileInParam:
-                return parseFileInput(value.toString())
+        // non-file inputs: a missing value is a hard error (required)
+        if( value == null )
+            throw new IllegalArgumentException("Missing required parameter: --${name}")
 
+        // handle env, stdin inputs
+        switch( param ) {
             case EnvInParam:
                 throw new IllegalArgumentException("Process `env` input qualifier is not supported by implicit process entry")
 

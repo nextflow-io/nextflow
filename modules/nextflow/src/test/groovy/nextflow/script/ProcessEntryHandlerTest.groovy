@@ -410,6 +410,23 @@ class ProcessEntryHandlerTest extends Specification {
         result == []
     }
 
+    def 'should treat a blank-string path input as not provided (v1)' () {
+        given:
+        def session = Mock(Session)
+        def script = Mock(BaseScript)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> [ 'hello' ]
+        }
+        def handler = new ProcessEntryHandler(script, session, meta)
+        def pathParam = Mock(FileInParam) { getName() >> 'proteins' }
+
+        expect: 'an empty/blank path arg is treated like "not provided" -> empty list (never file(""))'
+        handler.getValueForInputV1(pathParam, [proteins: VALUE], [:]) == []
+
+        where:
+        VALUE << ['', '   ', '\t']
+    }
+
     def 'should throw error for missing val input (v1)' () {
         given:
         def session = Mock(Session)
