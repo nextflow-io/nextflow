@@ -35,6 +35,7 @@ import nextflow.script.ProcessConfigV1
 import nextflow.script.ProcessConfigV2
 import nextflow.script.ProcessDef
 import nextflow.script.ProcessEntryHandler
+import nextflow.script.params.BaseOutParam
 import nextflow.script.params.OutParam
 import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessOutput
@@ -302,7 +303,11 @@ class ModuleToolBridge implements ToolDispatcher {
         if( outParams == null || i >= outParams.size() )
             return false
         final p = outParams[i]
-        return p != null && p.getChannelTopicName() != null
+        // Only classic-DSL2 (V1) outputs carry a `topic:` channel name on the param itself.
+        // The typed (V2) ProcessOutput.getChannelTopicName() throws UnsupportedOperationException,
+        // and V2 topics are a SEPARATE collection (not in getOutputs().getParams()), so a V2 data
+        // output is never a topic-source here -- guard on BaseOutParam to avoid the throw.
+        return (p instanceof BaseOutParam) && ((BaseOutParam) p).getChannelTopicName() != null
     }
 
     private static String buildDescription(ModuleSpec spec) {
