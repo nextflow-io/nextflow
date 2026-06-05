@@ -29,6 +29,7 @@ import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
+import nextflow.util.KryoHelper
 import spock.lang.Specification
 /**
  *
@@ -181,6 +182,27 @@ class CacheDBTest extends Specification {
         cleanup:
         cache?.close()
         folder?.deleteDir()
+    }
+
+    def 'should not fail entry removal when the index cleanup throws' () {
+        given:
+        def store = Mock(CacheStore)
+        def cache = new CacheDB(store)
+        and:
+        def hash = CacheHelper.hasher('SUCCESS').hash()
+        def content = CacheHelper.hasher('CONTENT').hash()
+        and: 'a ref-count-1 entry carrying its content hash in the fourth slot'
+        def payload = KryoHelper.serialize([null, null, 1, content.asBytes()])
+
+        when:
+        def removed = cache.removeTaskEntry(hash)
+
+        then: 'a throwing index lookup is swallowed; the entry is still removed'
+        1 * store.getEntry(hash) >> payload
+        1 * store.deleteEntry(hash)
+        1 * store.getSuccessfulHash(content) >> { throw new RuntimeException('boom') }
+        0 * store.deleteSuccessfulHash(_)
+        removed
     }
 
     def 'should write some tasks and iterate over them' () {

@@ -883,8 +883,12 @@ class TaskProcessor {
                 return false
             final entry = session.cache.getTaskEntry(indexed, this)
             final resumeDir = entry ? FileHelper.asPath(entry.trace.getWorkDir()) : null
+            // mark the clone so notifyTaskCached skips rewriting an already-correct
+            // index pointer (the scan path leaves the flag unset to self-heal)
+            final taskCopy = task.clone()
+            taskCopy.resumedFromIndex = true
             return entry && entry.trace.isCompleted() && resumeDir?.exists() \
-                    && checkCachedOutput(task.clone(), resumeDir, indexed, entry)
+                    && checkCachedOutput(taskCopy, resumeDir, indexed, entry)
         }
         catch( Throwable t ) {
             log.trace "[${safeTaskName(task)}] Successful-hash index lookup failed -- falling back to scan -- ${t.message}"

@@ -83,6 +83,45 @@ class SessionTest extends Specification {
         0 * cache.putSuccessfulHashAsync(_, _)
     }
 
+    def 'should refresh the hash index on a scan-path resume'() {
+        given:
+        def session = new Session()
+        def cache = Mock(CacheDB)
+        session.@cache = cache
+        and:
+        def content = HashCode.fromInt(1)
+        def finalHash = HashCode.fromInt(2)
+        // resumedFromIndex defaults to false -> scan-path resume
+        def task = new TaskRun(hash: finalHash, contentHash: content)
+        def trace = new TraceRecord([status: 'COMPLETED'])
+        def handler = Mock(TaskHandler) { getTask() >> task; getTraceRecord() >> trace }
+
+        when:
+        session.notifyTaskCached(handler)
+        then: 'the pointer is (re)written to self-heal / upgrade to the fast-path'
+        1 * cache.cacheTaskAsync(handler)
+        1 * cache.putSuccessfulHashAsync(content, finalHash)
+    }
+
+    def 'should not refresh the hash index when resumed from the index fast-path'() {
+        given:
+        def session = new Session()
+        def cache = Mock(CacheDB)
+        session.@cache = cache
+        and:
+        def content = HashCode.fromInt(1)
+        def finalHash = HashCode.fromInt(2)
+        def task = new TaskRun(hash: finalHash, contentHash: content, resumedFromIndex: true)
+        def trace = new TraceRecord([status: 'COMPLETED'])
+        def handler = Mock(TaskHandler) { getTask() >> task; getTraceRecord() >> trace }
+
+        when:
+        session.notifyTaskCached(handler)
+        then: 'the pointer is already correct, so the redundant rewrite is skipped'
+        1 * cache.cacheTaskAsync(handler)
+        0 * cache.putSuccessfulHashAsync(_, _)
+    }
+
     def 'test baseDir and binDir'() {
 
         setup:

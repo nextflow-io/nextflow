@@ -41,13 +41,17 @@ process SMALL_SLEEP_RETRY {
     script:
     """
     echo "SMALL_SLEEP_RETRY attempt: ${task.attempt}"
-    sleep 7
 
     if [[ ${task.attempt} -eq 1 ]]; then
+      # first attempt fails fast so the retry is reached early in each resume
+      sleep 3
       echo "Failing first attempt on purpose"
       exit 1
     fi
 
+    # the second (successful) attempt runs long, giving the abort a wide,
+    # timing-insensitive window to land in while it is still in flight
+    sleep 10
     echo "Second attempt succeeded"
     """
 }

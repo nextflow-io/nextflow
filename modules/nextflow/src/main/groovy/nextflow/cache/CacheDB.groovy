@@ -142,10 +142,17 @@ class CacheDB implements Closeable {
             store.deleteEntry(hash)
             // -- remove the successful-hash index pointer, but only when it
             //    targets this very entry (a failed attempt shares the same
-            //    content hash, yet the pointer aims at the successful one)
-            final contentHash = record.size()>3 && record[3]!=null ? HashCode.fromBytes((byte[])record[3]) : null
-            if( contentHash != null && store.getSuccessfulHash(contentHash) == hash )
-                store.deleteSuccessfulHash(contentHash)
+            //    content hash, yet the pointer aims at the successful one).
+            //    Best-effort: a bad/unreadable pointer must never derail entry
+            //    removal -- it self-heals on the next resume.
+            try {
+                final contentHash = record.size()>3 && record[3]!=null ? HashCode.fromBytes((byte[])record[3]) : null
+                if( contentHash != null && store.getSuccessfulHash(contentHash) == hash )
+                    store.deleteSuccessfulHash(contentHash)
+            }
+            catch( Exception e ) {
+                log.debug "Unable to clean successful-hash index pointer for entry $hash -- ${e.message}"
+            }
             return true
         }
     }

@@ -1063,8 +1063,10 @@ class Session implements ISession {
         if( trace ) {
             cache.cacheTaskAsync(handler)
             // -- refresh the successful-hash index (self-heals a stale pointer
-            //    and upgrades a scan-path resume to a fast-path resume)
-            if( handler.task.contentHash && handler.task.hash )
+            //    and upgrades a scan-path resume to a fast-path resume); skip it
+            //    when the resume already came from the index, where the pointer
+            //    is known to be correct and the rewrite would be redundant
+            if( !handler.task.resumedFromIndex && handler.task.contentHash && handler.task.hash )
                 cache.putSuccessfulHashAsync(handler.task.contentHash, handler.task.hash)
         }
 
