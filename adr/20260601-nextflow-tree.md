@@ -22,6 +22,7 @@ Nextflow already has the semantic information needed to answer this question: th
 - Omit channel expressions, process scripts, directives, params, `take:`, `main:`, `emit:`, and other syntax that does not help understand structure.
 - Be useful by default on incomplete or partially broken projects.
 - Provide a stable text format for agents and optional machine-readable output.
+- Make the structural overview easy for coding agents to discover from `nextflow -h` and `nextflow help`.
 - Reuse Nextflow parser and include-resolution semantics rather than inventing a separate language model.
 
 ## Non-goals
@@ -58,6 +59,8 @@ workflow main
 ```
 
 The command should use the strict parser / `nf-lang` model as the source of truth. In particular, it should build on script AST concepts such as `WorkflowNode`, `ProcessNode`, and `IncludeNode`, and include-resolution behavior such as `ResolveIncludeVisitor`, which already knows how to resolve local includes, directory includes, remote modules, plugin includes, aliases, and missing included names.
+
+`nextflow tree` should be a top-level command rather than only a mode of `nextflow inspect`. `nextflow -h` already presents commands such as `inspect`, `lint`, and `view` as the primary discovery surface for users and agents. A dedicated command with help text such as `Print workflow, subworkflow, and module outline` is easier for agents to find and infer than an option hidden under `inspect`. The existing `inspect` command is described as inspecting process settings, and its current output is a flat process/container inventory; this ADR targets a different question: how the pipeline is structurally organized. A future `inspect` option may delegate to the same outline model, but `nextflow tree` should be the canonical discoverable interface.
 
 ## User interface
 
