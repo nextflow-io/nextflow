@@ -109,8 +109,13 @@ loop continues to serve two roles: write-side collision avoidance for retries
 within a run, and the fallback read path for caches that predate the index. On
 any successful resume or execution, the index pointer is written (or rewritten).
 
-The alternative — splitting the method into `tryResumeFromIndex()` and
-`launchTask()` — was rejected for this change as a larger blast radius on a
+To keep `checkCachedOrLaunchTask` readable, the fast-path's lookup/validation
+logic is **extracted into a private `resumeFromSuccessfulHashIndex(task)` helper** rather
+than inlined; the method itself only gains the content-hash capture and a
+single `if( shouldTryCache && resumeFromSuccessfulHashIndex(task) ) return`. The original
+loop body is **not** refactored — it stays byte-for-byte as before. This is a
+narrower change than splitting the whole method into `tryResumeFromIndex()` +
+`launchTask()`, which was rejected as a larger blast radius on a
 concurrency-sensitive method with no behavioural benefit.
 
 ### Component changes
@@ -119,25 +124,52 @@ concurrency-sensitive method with no behavioural benefit.
 implementations.
 
 ```java
-HashCode getHashIndex(HashCode contentHash)            // null if absent
-void     putHashIndex(HashCode contentHash, HashCode finalHash)
+HashCode getSuccessfulHash(HashCode contentHash)            // null if absent
+void     putSuccessfulHash(HashCode contentHash, HashCode finalHash)
+void     deleteSuccessfulHash(HashCode contentHash)
 ```
 
-The index is **forward only** (`contentHash → finalHash`) and there is no
-reverse link: `finalHash = H(contentHash + tries)` is one-way, and cache
-entries / the run-index are keyed by finalHash. `nextflow clean` and
-`removeTaskEntry` only ever hold a finalHash, so they cannot locate the
-corresponding index key — which is why there is no `deleteHashIndex` and no
-per-entry index cleanup (see *Edge cases* and *Backward compatibility*). The
-index is wiped wholesale by a full cache `drop()`.
+The index is **forward only** (`contentHash → finalHash`): `finalHash =
+H(contentHash + tries)` is one-way, and cache entries / the run-index are keyed
+by finalHash, so `removeTaskEntry(finalHash)` cannot derive the index key from
+the hash alone. To make per-entry cleanup possible, the **content hash is
+stored in the cache entry record itself** (a fourth slot — see *CacheDB*
+below). When an entry is deleted, `removeTaskEntry` recovers the content hash
+from the record and **conditionally** removes the index pointer — only when the
+pointer actually targets the entry being deleted (a failed attempt shares the
+same content hash, but the pointer aims at the *successful* finalHash, so it
+must be preserved). A full cache `drop()` still wipes the index wholesale.
 
 - `DefaultCacheStore` (LevelDB): store the pointer under a **namespaced key** —
-  a 1-byte prefix (e.g. `0x01`) prepended to `contentHash.asBytes()`. Task-entry
-  keys are exactly `KEY_SIZE` bytes with no prefix, so a prefixed key can never
-  collide with an entry key. Value = `finalHash.asBytes()`.
+  a 1-byte prefix (`0x01`) prepended to `contentHash.asBytes()`, value =
+  `finalHash.asBytes()`.
+
+  **Key-space contract.** The single LevelDB instance hosts two disjoint key
+  namespaces — task entries at `key = <hash>` (exactly `KEY_SIZE` bytes) and
+  index pointers at `key = 0x01 + <hash>` (`KEY_SIZE + 1` bytes). The extra byte
+  makes the two lengths different, so an index key can never byte-collide with an
+  entry key (LevelDB compares the full byte sequence). This is the idiomatic
+  embedded-KV pattern (one ordered store, prefixed keys for multiple logical
+  record types — as used by, e.g., Bitcoin Core / go-ethereum, and the role
+  RocksDB column families fill); it is preferred over a second LevelDB instance
+  here because the index shares the entries' lifecycle (created, cleaned, and
+  `drop()`-ed together), access pattern (point lookups), and durability, so none
+  of the triggers that justify a separate store apply — and a shared store keeps
+  one lifecycle and preserves the option of atomic batched writes.
+
+  *Invariant to preserve:* all key construction goes through a single
+  `successfulIndexKey()` builder; the store is **never** iterated by LevelDB key (record
+  enumeration uses the separate flat index file), so this heterogeneous keyspace
+  is invisible today. Should a LevelDB key scan ever be added, it MUST filter by
+  this contract (length / prefix) so it does not treat index pointers as
+  task-entry records. The contract is documented at the top of the entry/index
+  accessors in `DefaultCacheStore`.
 - `CloudCacheStore` (`nf-cloudcache`): implement the same seam as a small object
-  whose payload is the finalHash. This keeps the interface fully implemented
-  across stores; no cloud coordination logic is added here.
+  whose payload is the finalHash. Here separation is by **path** (a per-session
+  `index/` subdir, see below), the natural namespacing for an object store —
+  i.e. each backend uses the idiom native to its medium. This keeps the
+  interface fully implemented across stores; no cloud coordination logic is
+  added here.
 
 **Session scoping (default / non-global cache).** This index is intentionally
 **per-session**, preserving today's resume semantics — it is *not* a
@@ -160,12 +192,22 @@ explicit and matches how task entries are already partitioned.)
 **2. `CacheDB`** (`nextflow.cache.CacheDB`) — thin delegators mirroring the
 existing `getTaskEntry` / `putTaskAsync` pattern.
 
-- `HashCode getHashIndex(HashCode contentHash)` → `store.getHashIndex(...)`.
-- `void putHashIndexAsync(HashCode contentHash, HashCode finalHash)` — enqueued
+- `HashCode getSuccessfulHash(HashCode contentHash)` → `store.getSuccessfulHash(...)`.
+- `void putSuccessfulHashAsync(HashCode contentHash, HashCode finalHash)` — enqueued
   on the **same `writer` Agent** used by `putTaskAsync`, so the index write is
   serialized *after* the corresponding entry write. This enforces the
   commit-marker discipline: a reader following the index never lands on an entry
   that is not yet durable.
+- `writeTaskEntry0` writes a **fourth record slot** holding
+  `task.contentHash?.asBytes()`, alongside the existing `[trace, ctx,
+  refCount]`. This is a backward-compatible record extension: code that reads
+  the record ignores extra slots, and entries written before this change simply
+  lack slot 3.
+- `removeTaskEntry(finalHash)`, when the ref-count reaches zero and the entry is
+  deleted, recovers the content hash from slot 3 and removes the index pointer
+  **iff** `getSuccessfulHash(contentHash) == finalHash` (the pointer targets the
+  deleted entry). Old 3-slot entries → no content hash → the pointer is left to
+  self-heal on the next resume.
 
 **3. `TaskRun`** (`nextflow.processor.TaskRun`).
 
@@ -177,8 +219,10 @@ existing `getTaskEntry` / `putTaskAsync` pattern.
 
 ### Read path (resume)
 
-A fast-path block added at the top of `checkCachedOrLaunchTask`, before the
-existing loop:
+A minimal fast-path is added at the top of `checkCachedOrLaunchTask`, before the
+existing loop — the content-hash capture plus a single delegation to a
+`resumeFromSuccessfulHashIndex` helper. The loop body is left **byte-for-byte unchanged**;
+all new lookup logic lives in the helper, keeping the method's complexity flat:
 
 ```
 // Capture the content hash ONLY on the first attempt. Retries re-enter this
@@ -189,25 +233,31 @@ existing loop:
 if( task.contentHash == null )
     task.contentHash = hash
 
-if( shouldTryCache ) {
+// fast resume path; otherwise fall back to the scan below
+if( shouldTryCache && resumeFromSuccessfulHashIndex(task) )
+    return
+
+// existing iterate-and-bump loop, unchanged
+```
+
+with the helper:
+
+```
+private boolean resumeFromSuccessfulHashIndex( TaskRun task ) {
     try {
-        final indexed = session.cache.getHashIndex(task.contentHash)
-        if( indexed ) {
-            final entry = session.cache.getTaskEntry(indexed, this)
-            final resumeDir = entry ? FileHelper.asPath(entry.trace.getWorkDir()) : null
-            final cached = entry && entry.trace.isCompleted()
-                    && resumeDir?.exists()
-                    && checkCachedOutput(task.clone(), resumeDir, indexed, entry)
-            if( cached )
-                return                          // resumed via index, no walk
-            // stale/invalid pointer -> fall through; rewrite on success
-        }
+        final indexed = session.cache.getSuccessfulHash(task.contentHash)
+        if( !indexed )
+            return false
+        final entry = session.cache.getTaskEntry(indexed, this)
+        final resumeDir = entry ? FileHelper.asPath(entry.trace.getWorkDir()) : null
+        return entry && entry.trace.isCompleted() && resumeDir?.exists()
+                && checkCachedOutput(task.clone(), resumeDir, indexed, entry)
     }
     catch( Throwable t ) {
         log.trace("Hash-index lookup failed -- falling back to scan", t)
+        return false   // stale/invalid pointer or error -> scan; self-heals on success
     }
 }
-// existing iterate-and-bump loop, unchanged
 ```
 
 **Why the hash sequence chains.** On the first call, `hash` is the content
@@ -226,12 +276,12 @@ writes, so it covers every success path without touching the
 - **`notifyTaskComplete`** (a task finished executing): after
   `cache.putTaskAsync(handler, trace)`, if `trace?.isCompleted()` and
   `handler.task.contentHash` is set, enqueue
-  `cache.putHashIndexAsync(handler.task.contentHash, handler.task.hash)`.
+  `cache.putSuccessfulHashAsync(handler.task.contentHash, handler.task.hash)`.
 - **`notifyTaskCached`** (a task resumed from cache — fired by
   `checkCachedOutput` for both the fast-path and the scan-path): after the
   existing `cache.cacheTaskAsync(handler)`, if `trace` is present and
   `handler.task.contentHash` is set, enqueue the same
-  `putHashIndexAsync(...)`. This rewrites the pointer on every resume, which
+  `putSuccessfulHashAsync(...)`. This rewrites the pointer on every resume, which
   both self-heals a stale pointer and upgrades a scan-path resume to a
   fast-path resume next time.
 
@@ -248,28 +298,34 @@ contentHash are content-equivalent, so the write is idempotent.
 | Pointer targets an incomplete entry | Cannot occur under commit-marker discipline; defensive `isCompleted()` check treats it as stale regardless. |
 | Two tasks, same contentHash, within one run | `tries++` + `lockManager` allocate distinct workdirs as today; index write is idempotent. No new race. |
 | Retry within the same run | Index is written only on success; a failed attempt writes nothing. The relaunch succeeds at a fresh `tries` and writes the pointer. No `previousTryCount` needed. |
-| `getHashIndex` throws / corrupt pointer | Caught; logged at trace; fall through to loop. The index is strictly an optimization, never fatal. |
-| `nextflow clean <runName>` / `removeTaskEntry` deletes an entry | The index is **not** touched — clean only holds the finalHash and cannot recover the contentHash key. The forward pointer is left orphaned and self-heals on the next resume (target entry missing → fall through → rewrite). Orphaned pointers are tiny (~a few dozen bytes) and harmless. |
+| `getSuccessfulHash` throws / corrupt pointer | Caught; logged at trace; fall through to loop. The index is strictly an optimization, never fatal. |
+| `removeTaskEntry` deletes the **successful** entry (ref-count → 0) | The content hash is recovered from record slot 3; since `getSuccessfulHash(contentHash) == finalHash`, the pointer is removed too. |
+| `removeTaskEntry` deletes a **failed-attempt** entry sharing the same content hash | `getSuccessfulHash(contentHash)` points at the *successful* finalHash (≠ the deleted hash), so the pointer is **preserved**. |
+| `removeTaskEntry` deletes an old 3-slot entry (no content hash) | No content hash to recover → pointer untouched; self-heals on next resume. |
+| `nextflow clean <runName>` of a single-run session | Every entry is removed and then `drop()` wipes the whole per-session DB, index included. |
 
 ### Backward compatibility
 
-- Old caches have no index keys → `getHashIndex` returns `null` → the existing
+- Old caches have no index keys → `getSuccessfulHash` returns `null` → the existing
   loop runs exactly as today. Such caches retain the original #6884 limitation
   until a fresh run repopulates the index, after which resume is correct.
-- No on-disk format version bump: new namespaced keys are simply absent in old
-  LevelDB databases.
+- No on-disk format version bump: new namespaced index keys are simply absent in
+  old LevelDB databases, and the new fourth record slot is a backward-compatible
+  extension (readers ignore extra slots; old 3-slot entries lack it).
 - Nothing to migrate from #6903, since it is not merged.
-- Orphaned index pointers (from partial `nextflow clean`) accumulate but are
-  negligible in size and self-heal on resume; a full cache `drop()` removes
-  them. No per-entry index cleanup is performed.
+- An entry written before this change carries no content hash, so deleting it
+  cannot clean its index pointer; the orphaned pointer self-heals on the next
+  resume. A full cache `drop()` removes any remaining pointers.
 
 ## Testing
 
-- **`DefaultCacheStoreTest`** — round-trip `putHashIndex` / `getHashIndex`;
-  absent key returns `null`; prefixed index keys never collide with entry keys;
-  `drop()` removes index keys.
+- **`DefaultCacheStoreTest`** — round-trip `putSuccessfulHash` / `getSuccessfulHash` /
+  `deleteSuccessfulHash`; absent key returns `null`; prefixed index keys never
+  collide with entry keys; `drop()` removes index keys.
 - **`CacheDBTest`** — delegators; async ordering (entry committed before its
-  index pointer).
+  index pointer); `removeTaskEntry` removes the pointer for the successful
+  entry it targets, **preserves** the pointer when a failed-attempt entry
+  sharing the same content hash is removed.
 - **`TaskProcessorTest`** (primary behavioural coverage):
   - success after N failed attempts resolves on resume in a single index
     lookup, with no scan;

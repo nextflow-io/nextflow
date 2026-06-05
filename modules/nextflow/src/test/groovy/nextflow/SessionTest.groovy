@@ -22,12 +22,10 @@ import java.nio.file.attribute.PosixFilePermission
 
 import com.google.common.hash.HashCode
 import nextflow.cache.CacheDB
-import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
 import nextflow.container.DockerConfig
 import nextflow.container.PodmanConfig
 import nextflow.container.SarusConfig
-import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
@@ -37,8 +35,6 @@ import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceHelper
 import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStatsObserver
-import nextflow.util.Duration
-import nextflow.util.VersionNumber
 import spock.lang.Specification
 import spock.lang.Unroll
 import test.TestHelper
@@ -67,7 +63,7 @@ class SessionTest extends Specification {
         session.notifyTaskComplete(handler)
         then:
         1 * cache.putTaskAsync(handler, trace)
-        1 * cache.putHashIndexAsync(content, finalHash)
+        1 * cache.putSuccessfulHashAsync(content, finalHash)
     }
 
     def 'should not write hash index when the task is not completed'() {
@@ -84,7 +80,7 @@ class SessionTest extends Specification {
         session.notifyTaskComplete(handler)
         then:
         1 * cache.putTaskAsync(handler, trace)
-        0 * cache.putHashIndexAsync(_, _)
+        0 * cache.putSuccessfulHashAsync(_, _)
     }
 
     def 'test baseDir and binDir'() {

@@ -34,12 +34,17 @@ class CloudCacheStoreTest extends Specification {
         def finalHash = CacheHelper.hasher('FINAL').hash()
 
         expect:
-        store.getHashIndex(content) == null
+        store.getSuccessfulHash(content) == null
 
         when:
-        store.putHashIndex(content, finalHash)
+        store.putSuccessfulHash(content, finalHash)
         then:
-        store.getHashIndex(content) == finalHash
+        store.getSuccessfulHash(content) == finalHash
+
+        when:
+        store.deleteSuccessfulHash(content)
+        then:
+        store.getSuccessfulHash(content) == null
 
         cleanup:
         store?.close()
@@ -53,12 +58,12 @@ class CloudCacheStoreTest extends Specification {
         def finalHash = CacheHelper.hasher('FINAL').hash()
         and: 'session A writes a pointer'
         def storeA = new CloudCacheStore(UUID.randomUUID(), 'run_A', base)
-        storeA.putHashIndex(content, finalHash)
+        storeA.putSuccessfulHash(content, finalHash)
         and: 'a different session B over the same base'
         def storeB = new CloudCacheStore(UUID.randomUUID(), 'run_B', base)
 
         expect: 'session B does not see session A pointer'
-        storeB.getHashIndex(content) == null
+        storeB.getSuccessfulHash(content) == null
 
         cleanup:
         storeA?.close(); storeB?.close()

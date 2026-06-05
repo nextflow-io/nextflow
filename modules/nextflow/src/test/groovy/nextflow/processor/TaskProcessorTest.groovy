@@ -659,7 +659,7 @@ class TaskProcessorTest extends Specification {
         processor.checkCachedOrLaunchTask(task, content, true)
 
         then: 'the index is consulted; a stale pointer falls through to the scan, which submits'
-        1 * cache.getHashIndex(content) >> staleHash
+        1 * cache.getSuccessfulHash(content) >> staleHash
         1 * cache.getTaskEntry(staleHash, processor) >> null
         (1.._) * cache.getTaskEntry(_, processor) >> null
         1 * exec.submit(task)
@@ -689,7 +689,7 @@ class TaskProcessorTest extends Specification {
         processor.checkCachedOrLaunchTask(task, content, false)
 
         then: 'no index lookup; the task is submitted via the scan path'
-        0 * cache.getHashIndex(_)
+        0 * cache.getSuccessfulHash(_)
         (1.._) * cache.getTaskEntry(_, processor) >> null
         1 * exec.submit(task)
 

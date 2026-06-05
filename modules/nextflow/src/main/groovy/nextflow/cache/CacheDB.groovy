@@ -95,8 +95,8 @@ class CacheDB implements Closeable {
      * @param contentHash The content-based task hash (before try-mixing)
      * @return The {@link HashCode} of a successful execution, or {@code null} if absent
      */
-    HashCode getHashIndex(HashCode contentHash) {
-        return store.getHashIndex(contentHash)
+    HashCode getSuccessfulHash(HashCode contentHash) {
+        return store.getSuccessfulHash(contentHash)
     }
 
     /**
@@ -104,8 +104,8 @@ class CacheDB implements Closeable {
      * same writer agent as {@link #putTaskAsync}, so it is serialized AFTER the
      * corresponding entry write (commit-marker discipline).
      */
-    void putHashIndexAsync(HashCode contentHash, HashCode finalHash) {
-        writer.send { store.putHashIndex(contentHash, finalHash) }
+    void putSuccessfulHashAsync(HashCode contentHash, HashCode finalHash) {
+        writer.send { store.putSuccessfulHash(contentHash, finalHash) }
     }
 
     void incTaskEntry( HashCode hash ) {
@@ -140,6 +140,12 @@ class CacheDB implements Closeable {
         }
         else {
             store.deleteEntry(hash)
+            // -- remove the successful-hash index pointer, but only when it
+            //    targets this very entry (a failed attempt shares the same
+            //    content hash, yet the pointer aims at the successful one)
+            final contentHash = record.size()>3 && record[3]!=null ? HashCode.fromBytes((byte[])record[3]) : null
+            if( contentHash != null && store.getSuccessfulHash(contentHash) == hash )
+                store.deleteSuccessfulHash(contentHash)
             return true
         }
     }
@@ -161,10 +167,13 @@ class CacheDB implements Closeable {
         // only the 'cache' is active and
         TaskContext ctx = proc.isCacheable() && task.hasCacheableValues() ? task.context : null
 
-        def record = new ArrayList(3)
+        def record = new ArrayList(4)
         record[0] = trace.serialize()
         record[1] = ctx != null ? ctx.serialize() : null
         record[2] = 1
+        // fourth slot keeps the task content hash so the successful-hash index
+        // pointer can be located and removed when this entry is deleted
+        record[3] = task.contentHash?.asBytes()
 
         // -- save in the db
         store.putEntry( key, KryoHelper.serialize(record) )

@@ -66,26 +66,32 @@ class DefaultCacheStoreTest extends Specification {
         def finalHash = CacheHelper.hasher('FINAL').hash()
 
         expect: 'absent key returns null'
-        store.getHashIndex(content) == null
+        store.getSuccessfulHash(content) == null
 
         when:
-        store.putHashIndex(content, finalHash)
+        store.putSuccessfulHash(content, finalHash)
         then: 'round-trips'
-        store.getHashIndex(content) == finalHash
+        store.getSuccessfulHash(content) == finalHash
 
         and: 'index key does not collide with an entry key of the same hash'
         store.getEntry(content) == null
         store.putEntry(content, 'ENTRY'.bytes)
         new String(store.getEntry(content)) == 'ENTRY'
-        store.getHashIndex(content) == finalHash
+        store.getSuccessfulHash(content) == finalHash
+
+        when: 'the index entry is deleted'
+        store.deleteSuccessfulHash(content)
+        then:
+        store.getSuccessfulHash(content) == null
 
         when: 'the cache is dropped'
+        store.putSuccessfulHash(content, finalHash)
         store.close()
         store.drop()
         and: 'reopened on the same session location'
         store = new DefaultCacheStore(uuid, 'test_1', folder); store.open()
         then: 'the index entry is gone'
-        store.getHashIndex(content) == null
+        store.getSuccessfulHash(content) == null
 
         cleanup:
         store?.close()

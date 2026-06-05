@@ -1044,7 +1044,7 @@ class Session implements ISession {
         // -- update the successful-hash index so a later resume resolves this
         //    task in a single lookup, even if it succeeded after retries
         if( trace?.isCompleted() && handler.task.contentHash && handler.task.hash )
-            cache.putHashIndexAsync(handler.task.contentHash, handler.task.hash)
+            cache.putSuccessfulHashAsync(handler.task.contentHash, handler.task.hash)
 
         // set the pipeline to return non-exit code if specified
         if( handler.task.errorAction == ErrorStrategy.IGNORE && failOnIgnore() ) {
@@ -1065,7 +1065,7 @@ class Session implements ISession {
             // -- refresh the successful-hash index (self-heals a stale pointer
             //    and upgrades a scan-path resume to a fast-path resume)
             if( handler.task.contentHash && handler.task.hash )
-                cache.putHashIndexAsync(handler.task.contentHash, handler.task.hash)
+                cache.putSuccessfulHashAsync(handler.task.contentHash, handler.task.hash)
         }
 
         notifyEvent(observersV1, ob -> ob.onProcessCached(handler, trace))

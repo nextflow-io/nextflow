@@ -159,7 +159,7 @@ class CloudCacheStore implements CacheStore {
     }
 
     @Override
-    HashCode getHashIndex(HashCode contentHash) {
+    HashCode getSuccessfulHash(HashCode contentHash) {
         try {
             return HashCode.fromString(new String(getIndexPath(contentHash).bytes))
         }
@@ -169,10 +169,15 @@ class CloudCacheStore implements CacheStore {
     }
 
     @Override
-    void putHashIndex(HashCode contentHash, HashCode finalHash) {
+    void putSuccessfulHash(HashCode contentHash, HashCode finalHash) {
         final p = getIndexPath(contentHash)
         Files.createDirectories(p.parent)
         p.bytes = finalHash.toString().bytes
+    }
+
+    @Override
+    void deleteSuccessfulHash(HashCode contentHash) {
+        getIndexPath(contentHash).delete()
     }
 
     private Path getIndexPath(HashCode contentHash) {
