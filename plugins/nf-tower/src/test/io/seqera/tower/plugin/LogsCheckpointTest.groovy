@@ -16,10 +16,14 @@
 
 package io.seqera.tower.plugin
 
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.TimeUnit
+
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.util.Duration
 import spock.lang.Specification
+import spock.lang.Timeout
 import test.TestHelper
 
 /**
@@ -114,5 +118,42 @@ class LogsCheckpointTest extends Specification {
         checkpoint.onFlowComplete()
         then:
         noExceptionThrown()
+    }
+
+    @Timeout(30)
+    def 'should not block shutdown when saveFiles is hung on a network call' () {
+        given:
+        def entered = new CountDownLatch(1)
+        def release = new CountDownLatch(1) // never released -> saveFiles blocks forever
+        def handler = Mock(LogsHandler) {
+            saveFiles() >> { entered.countDown(); release.await() }
+        }
+        def session = Mock(Session) {
+            getWorkDir() >> TestHelper.createInMemTempDir()
+            getConfig() >> [tower:[logs:[checkpoint:[interval: '50ms', terminateTimeout: '500ms']]]]
+        }
+        and:
+        def checkpoint = Spy(LogsCheckpoint)
+        checkpoint.createHandler() >> handler
+        and:
+        checkpoint.onFlowCreate(session)
+        // wait until the worker is actually stuck inside saveFiles
+        assert entered.await(10, TimeUnit.SECONDS)
+
+        when:
+        long t0 = System.currentTimeMillis()
+        checkpoint.onFlowComplete()
+        long elapsed = System.currentTimeMillis() - t0
+
+        then:
+        // returned within ~terminateTimeout, not waiting for the never-ending saveFiles
+        elapsed < 5_000
+        // the stuck worker was abandoned rather than joined; it is a daemon so it
+        // cannot keep the JVM alive even though it is still technically running
+        checkpoint.@thread.isAlive()
+        checkpoint.@thread.isDaemon()
+
+        cleanup:
+        release.countDown()
     }
 }

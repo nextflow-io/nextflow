@@ -47,10 +47,14 @@ class LogsCheckpoint implements TraceObserverV2 {
     void onFlowCreate(Session session) {
         this.session = session
         this.config = session.config
-        this.handler = new LogsHandler(session, SysEnv.get())
+        this.handler = createHandler()
         this.interval = config.navigate('tower.logs.checkpoint.interval', defaultInterval()) as Duration
         this.terminateTimeout = config.navigate('tower.logs.checkpoint.terminateTimeout', defaultTerminateTimeout()) as Duration
         thread = Threads.start('tower-logs-checkpoint', this.&run)
+    }
+
+    protected LogsHandler createHandler() {
+        new LogsHandler(session, SysEnv.get())
     }
 
     private String defaultInterval() {
