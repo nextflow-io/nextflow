@@ -92,14 +92,21 @@ class LogsCheckpoint implements TraceObserverV2 {
     protected void run() {
         log.debug "Starting logs checkpoint thread - interval: ${interval}"
         try {
-            synchronized(lock) {
-                while( !stopped ) {
-                    // releases the lock and waits until the timeout elapses or stop() notifies
-                    lock.wait(interval.toMillis())
+            while( !stopped ) {
+                synchronized(lock) {
+                    // the stopped check must stay co-located with wait() under the same
+                    // lock acquisition, otherwise stop() could notify between the check
+                    // and the wait, causing a lost wake-up
                     if( stopped )
                         break
-                    handler.saveFiles()
+                    // releases the lock and waits until the timeout elapses or stop() notifies
+                    lock.wait(interval.toMillis())
                 }
+                if( stopped )
+                    break
+                // saveFiles() runs outside the lock so a hung upload cannot block stop()
+                // from acquiring the lock to signal shutdown and reach the bounded join
+                handler.saveFiles()
             }
         }
         catch( InterruptedException e ) {
