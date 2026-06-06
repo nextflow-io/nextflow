@@ -68,16 +68,7 @@ class CmdPlugin extends CmdBase implements UsageAware {
     void usage(List<String> args) {
         List<String> result = []
         if( !args ) {
-            result << this.getClass().getAnnotation(Parameters).commandDescription()
-            result << 'Usage: nextflow plugin <sub-command> [options]'
-            result << ''
-            result << 'Commands:'
-            result << '  install <pluginId,...>            Install a plugin'
-            result << '  create [<name> <provider> [dir]]  Create a new plugin project from the template'
-            result << '  <plugin-name>:<command> [args]    Execute a plugin-specific command'
-            result << ''
-            result << 'See the documentation of an individual plugin for its plugin-specific commands.'
-            result << ''
+            generalUsage(result)
         }
         else {
             switch( args[0] ) {
@@ -94,10 +85,35 @@ class CmdPlugin extends CmdBase implements UsageAware {
                     result << ''
                     break
                 default:
-                    throw new AbortOperationException("Unknown plugin sub-command: ${args[0]}")
+                    if( args[0].contains(CMD_SEP) ) {
+                        result << 'Execute a plugin-specific command'
+                        result << 'Usage: nextflow plugin <plugin-name>:<command> [args]'
+                        result << ''
+                        result << 'See the documentation of the individual plugin for its available commands.'
+                        result << ''
+                    }
+                    else {
+                        // print the reason of the failure, then fall back to the general usage
+                        result << "Unknown plugin sub-command: ${args[0]}".toString()
+                        result << ''
+                        generalUsage(result)
+                    }
             }
         }
         println result.join('\n').toString()
+    }
+
+    private void generalUsage(List<String> result) {
+        result << this.getClass().getAnnotation(Parameters).commandDescription()
+        result << 'Usage: nextflow plugin <sub-command> [options]'
+        result << ''
+        result << 'Commands:'
+        result << '  install <pluginId,...>            Install a plugin'
+        result << '  create [<name> <provider> [dir]]  Create a new plugin project from the template'
+        result << '  <plugin-name>:<command> [args]    Execute a plugin-specific command'
+        result << ''
+        result << 'See the documentation of an individual plugin for its plugin-specific commands.'
+        result << ''
     }
 
     @Override
