@@ -38,6 +38,7 @@ class LogsCheckpoint implements TraceObserverV2 {
     private Map config
     private Thread thread
     private Duration interval
+    private Duration terminateTimeout
     private LogsHandler handler
     private volatile boolean stopped
     private final Object lock = new Object()
@@ -48,11 +49,16 @@ class LogsCheckpoint implements TraceObserverV2 {
         this.config = session.config
         this.handler = new LogsHandler(session, SysEnv.get())
         this.interval = config.navigate('tower.logs.checkpoint.interval', defaultInterval()) as Duration
+        this.terminateTimeout = config.navigate('tower.logs.checkpoint.terminateTimeout', defaultTerminateTimeout()) as Duration
         thread = Threads.start('tower-logs-checkpoint', this.&run)
     }
 
     private String defaultInterval() {
         SysEnv.get('TOWER_LOGS_CHECKPOINT_INTERVAL','90s')
+    }
+
+    private String defaultTerminateTimeout() {
+        SysEnv.get('TOWER_LOGS_CHECKPOINT_TERMINATE_TIMEOUT','120s')
     }
 
     @Override
@@ -75,7 +81,12 @@ class LogsCheckpoint implements TraceObserverV2 {
             // wake up the checkpoint thread without relying on thread interruption
             lock.notifyAll()
         }
-        thread.join()
+        // wait a bounded amount of time for the thread to terminate; if a saveFiles()
+        // upload is genuinely hung the join times out and the daemon worker is abandoned
+        // so it cannot keep the JVM alive and the run can shut down
+        thread.join(terminateTimeout.toMillis())
+        if( thread.isAlive() )
+            log.warn "Logs checkpoint thread did not terminate within ${terminateTimeout} - abandoning it to allow the run to shut down"
     }
 
     protected void run() {
