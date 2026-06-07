@@ -16,6 +16,7 @@
 package nextflow.script
 
 import java.nio.file.Path
+import java.util.concurrent.atomic.AtomicInteger
 
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
@@ -71,6 +72,10 @@ class AgentDef extends BindableDef implements ChainableDef {
     /** Maps a compiled external-module {@link ProcessDef} back to its source file path,
      * so the sibling {@code meta.yml} can be located (Phase 3.2). */
     private transient Map<ProcessDef,Path> compiledModulePaths = new IdentityHashMap<ProcessDef,Path>()
+
+    /** Per-agent invocation counter, used to disambiguate the console log line
+     * (the {@code (n)} suffix) across the records an agent processes. */
+    private transient AtomicInteger invocations = new AtomicInteger()
 
     AgentDef(BaseScript owner, String name, Map<String,Object> directives, List<AgentInput> inputs, List<AgentOutput> outputs, PromptDef prompt) {
         this.owner = owner
@@ -188,6 +193,13 @@ class AgentDef extends BindableDef implements ChainableDef {
             final promptText = cl.call()?.toString()
             final inputJson = toJson(item)
             final req = new AgentRunnerRequest(agentModel, agentInstruction, promptText, agentMaxIter, agentTools, outputSchema, inputJson, toolSpecs, (bridge as ToolDispatcher), agentTimeoutSecs)
+
+            // report the invocation on the console; deliberately NOT hash-prefixed
+            // (like a task `[ab/123456] ...` line) so the ANSI log observer does not
+            // treat it as a task line and suppress it in favor of the progress table
+            final int idx = invocations.incrementAndGet()
+            log.info "Submitted agent > ${name} (${idx})"
+
             final result = runner.run(req)
             if( !structured )
                 return result
