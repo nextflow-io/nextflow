@@ -304,8 +304,12 @@ throw new IllegalStateException("Agent exceeded the maximum number of tool-call 
 
 - Tool specs are advertised on **every** chat request.
 - `request.dispatch` is the `ModuleToolBridge` (a `ToolDispatcher`); `call(...)` is
-  **`synchronized`** so concurrent tool requests in one turn stay input/output correlated over the
-  shared pre-wired queues.
+  **`synchronized`**: the bridge submits and awaits **one tool call at a time** so input/output
+  stay correlated over each tool's single shared pre-wired instance. This serializes *dispatch*,
+  **not** module execution — the module runs as a normal Nextflow task on its configured executor
+  (its own thread/process, or a remote grid/cloud backend) while the dispatcher thread blocks on
+  `.val` (see §6 and §12). Several tool requests in one assistant turn are therefore submitted
+  sequentially, not overlapped.
 - The loop ends on a text-only assistant message, or throws on hitting `maxIterations` (the operator
   then aborts the session).
 - `composeMessages` builds: optional `SystemMessage(instruction)` + `UserMessage(prompt + "\n\nInput (JSON):\n" + inputJson)`.
@@ -397,7 +401,7 @@ v1). Enable the runner with the `nf-agent` plugin.
 |---|---|---|
 | **Pre-wire tools before ignition**; bind+`.val` at dispatch | `ModuleToolBridge.wireSpec/wireScalar` | synchronous process invocation *after* ignition deadlocks GPars |
 | **Capture output read channels at wiring** | `wireSpec` | broadcast outputs: a subscriber created after a value binds misses it → deadlock on multi-output tools |
-| **Serialized (`synchronized`) dispatch** | `ModuleToolBridge.call` | shared pre-wired queues — keep each call's input/output correlated |
+| **Serialized dispatch** (`synchronized`) — submit-and-await one call at a time | `ModuleToolBridge.call` | single pre-wired instance per tool — keep input/output correlated. Serializes *dispatch*, not the module task (which runs async on its executor) |
 | **Registry `ModuleMetadata` first, `meta.yml` fallback** | `createToolBridge`, `ModuleMetadataToolSchema` | richer self-describing tools (descriptions/patterns/enums/`meta.id`); works offline via spec |
 | **Marshalling shared with `module run`** | `ProcessEntryHandler.getProcessArguments` | one code path for flattened-JSON → channel values; blank/optional path → `[]` |
 | **Inline small structured outputs; handle bulk** | `ToolOutputReader.readOrHandle` | LLM must reason over stats (gate) but only chain bulk artifacts (handles) |

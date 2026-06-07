@@ -25,7 +25,7 @@ The defining property of the design: **a tool call from the LLM is not a functio
 - Agent-to-agent invocation as tools (composition is via channels only)
 - Cost tracking, prompt analytics, fine-grained token budgets
 - RAG, persistent memory, conversation state across invocations
-- **Concurrent** tool dispatch — multiple tool calls in one assistant turn run **serially** (see §3)
+- **Concurrent** tool *dispatch* — multiple tool calls in one assistant turn are submitted one at a time (the module *tasks* still run asynchronously on their executor; see §3)
 - Streaming partial outputs (langchain4j supports it; surfaced as a follow-up)
 
 > Note: *typed/structured LLM outputs* were listed as a non-goal in the first draft but are
@@ -147,9 +147,20 @@ The runtime is **in-JVM**. The DSL keyword/AST and all dataflow/tool-bridge logi
 
 A tool call must run *synchronously* from inside the agent's map closure — the LLM is blocked waiting for the result. Invoking a `ProcessDef` synchronously *after* the dataflow network has ignited deadlocks GPars. The bridge therefore **pre-wires** each tool in the workflow body (before ignition): it creates one persistent queue per input channel, runs the cloned process over those queues once, and **captures the output read channels at wiring time**. At dispatch it merely `bind()`s args onto the queues and blocks on `.val`. Capturing the read channels at wiring (not lazily at dispatch) is required because process outputs are broadcast-style — a subscriber created after a value binds never sees it, which would deadlock the 2nd+ output of a multi-output tool.
 
-### Why dispatch is serialized (not concurrent)
+### Tool *dispatch* is serialized; module *execution* is not
 
-The original draft proposed running concurrent tool calls in parallel. The implementation does the opposite: `ModuleToolBridge.call` is **`synchronized`**. The pre-wired queues are shared per tool, so binding args and pulling `.val` must stay paired; serializing dispatch keeps each call's input correlated with its output. Multiple tool requests in one assistant turn are executed one at a time.
+The original draft proposed dispatching concurrent tool calls in parallel. The implementation
+serializes **dispatch**: `ModuleToolBridge.call` is **`synchronized`**, so the bridge binds the
+args, blocks until that call's output is available, and only then accepts the next call. This
+serializes the *submit-and-await* step — **not** the compute. The module itself runs as an
+ordinary Nextflow task on its configured executor (its own thread/process, or a remote grid/cloud
+backend), fully off the agent operator thread; the dispatcher merely blocks on `.val` waiting for
+the result. The serialization is required because each tool is pre-wired as a **single** process
+instance over one shared set of queues — binding two calls' args before reading would break the
+1:1 input→output correlation on those broadcast channels. Practical effect: when the LLM emits
+several tool calls in one assistant turn they are submitted sequentially rather than overlapped,
+but tasks from different agent input items (or other pipeline processes) still run concurrently as
+usual.
 
 ### Why in-JVM rather than subprocess
 
@@ -253,7 +264,7 @@ The DSL keyword and AST stay in **core** (the parser must recognize `agent`); th
 | 4 | Agent-as-tool | Not in v1 |
 | 5 | Runtime engine | langchain4j (in-JVM), **OpenAI only** in v1 |
 | 6 | Provider/model identifier | `provider/model`, parsed by `ChatModelFactory` |
-| 7 | Concurrent tool calls | **Serialized** (`synchronized` dispatch over shared pre-wired queues) — reversed from the draft |
+| 7 | Concurrent tool calls | Dispatch is **serialized** (`synchronized` over the shared pre-wired queues); the module tasks still execute asynchronously on their executor — reversed from the draft |
 
 ## 9. Future extensions
 
@@ -270,7 +281,7 @@ The DSL keyword and AST stay in **core** (the parser must recognize `agent`); th
 
 The first draft (2026-05-04) and the shipped v1 differ in these material ways:
 
-1. **Concurrency reversed** — draft said concurrent tool dispatch; v1 serializes (`synchronized`) because tool queues are shared and pre-wired.
+1. **Concurrency reversed** — draft said concurrent tool dispatch; v1 serializes *dispatch* (`synchronized`) because each tool is a single pre-wired instance over shared queues. Note this serializes submit-and-await only — the module tasks still run asynchronously on their executor.
 2. **Pre-wiring** — draft created channels per call (`Channel.value`/`Channel.fromPath`); v1 pre-wires persistent queues before ignition and captures output read channels at wiring (a GPars-deadlock requirement the draft didn't anticipate).
 3. **Single provider** — draft implied multi-provider via langchain4j; v1 ships OpenAI only.
 4. **Tool-descriptor source** — draft sourced everything from `meta.yml`; v1 prefers the public registry `ModuleMetadata` and falls back to `meta.yml`.
