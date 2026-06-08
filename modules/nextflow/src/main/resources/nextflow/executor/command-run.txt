@@ -32,9 +32,10 @@ nxf_date() {
     ## should return the current timestamp in milliseconds
     ## handles GNU coreutils (9-digit %N), uutils coreutils (zero-stripped %N),
     ## and BSD/macOS date (literal "N" from %N, falling back to second precision)
+    ## note: seconds and nanoseconds are read with a single `date` invocation so
+    ## they are sampled atomically and cannot straddle a second boundary
     local s n
-    s=$(date +%s)
-    n=$(date +%N)
+    read s n < <(date '+%s %N')
     if [[ $n =~ ^[0-9]+$ ]]; then
         n=$(printf '%09d' "$((10#$n))")
         echo "$((s * 1000 + 10#${n:0:3}))"
