@@ -74,7 +74,7 @@ import org.pf4j.ExtensionPoint
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Manage Seqera Platform authentication")
-class CmdAuth extends CmdBase implements UsageAware {
+class CmdAuth extends CmdBase implements UsageAware, SubcommandAware {
 
     /**
      * Interface for auth sub-commands that defines the contract for command execution and help text.
@@ -91,6 +91,11 @@ class CmdAuth extends CmdBase implements UsageAware {
          * @return the name of this sub-command (e.g., "login", "logout")
          */
         String getName()
+
+        /**
+         * @return a one-line description of this sub-command
+         */
+        String getDescription()
 
         /**
          * Executes the sub-command with the provided arguments.
@@ -182,10 +187,8 @@ class CmdAuth extends CmdBase implements UsageAware {
             result << 'Usage: nextflow auth <sub-command> [options]'
             result << ''
             result << 'Commands:'
-            result << '  login    Authenticate with Seqera Platform'
-            result << '  logout   Remove authentication and revoke access token'
-            result << '  status   Show current authentication status and configuration'
-            result << '  config   Configure Seqera Platform settings'
+            final len = commands.collect { it.name.size() }.max()
+            commands.each { result << "  ${it.name.padRight(len)}   ${it.description}".toString() }
             result << ''
         } else {
             def sub = commands.find { it.name == args[0] }
@@ -234,6 +237,11 @@ class CmdAuth extends CmdBase implements UsageAware {
         throw new AbortOperationException(msg)
     }
 
+    @Override
+    List<SubcommandAware.Subcommand> getSubcommands() {
+        commands.collect { new SubcommandAware.Subcommand(name: it.name, help: it.description) }
+    }
+
     /**
      * Implements the {@code nextflow auth login} sub-command for authenticating with Seqera Platform.
      *
@@ -271,6 +279,9 @@ class CmdAuth extends CmdBase implements UsageAware {
 
         @Override
         String getName() { 'login' }
+
+        @Override
+        String getDescription() { 'Authenticate with Seqera Platform' }
 
         @Override
         void apply(List<String> args) {
@@ -336,6 +347,9 @@ class CmdAuth extends CmdBase implements UsageAware {
         String getName() { 'logout' }
 
         @Override
+        String getDescription() { 'Remove authentication and revoke access token' }
+
+        @Override
         void apply(List<String> args) {
             if (args.size() > 0) {
                 throw new AbortOperationException("Too many arguments for ${name} command")
@@ -394,6 +408,9 @@ class CmdAuth extends CmdBase implements UsageAware {
 
         @Override
         String getName() { 'config' }
+
+        @Override
+        String getDescription() { 'Configure Seqera Platform settings' }
 
         @Override
         void apply(List<String> args) {
@@ -472,6 +489,9 @@ class CmdAuth extends CmdBase implements UsageAware {
 
         @Override
         String getName() { 'status' }
+
+        @Override
+        String getDescription() { 'Show current authentication status and configuration' }
 
         @Override
         void apply(List<String> args) {

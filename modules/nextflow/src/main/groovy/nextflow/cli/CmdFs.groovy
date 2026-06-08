@@ -44,7 +44,7 @@ import nextflow.plugin.Plugins
 @CompileStatic
 @Slf4j
 @Parameters(commandDescription = "Perform filesystem operations")
-class CmdFs extends CmdBase implements UsageAware {
+class CmdFs extends CmdBase implements UsageAware, SubcommandAware {
 
     static final public NAME = 'fs'
 
@@ -259,6 +259,11 @@ class CmdFs extends CmdBase implements UsageAware {
 
     private SubCmd findCmd( String name ) {
         commands.find { it.name == name }
+    }
+
+    @Override
+    List<SubcommandAware.Subcommand> getSubcommands() {
+        commands.collect { new SubcommandAware.Subcommand(name: it.name, help: it.description) }
     }
 
     private void traverse( String source, Closure op ) {

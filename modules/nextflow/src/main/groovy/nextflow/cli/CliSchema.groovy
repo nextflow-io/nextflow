@@ -61,15 +61,26 @@ class CliSchema {
 
     /**
      * Build the schema for a single command: its usage, options and positional
-     * arguments.
+     * arguments. Commands that dispatch to nested sub-commands (those
+     * implementing {@link SubcommandAware}) describe them recursively under a
+     * {@code subcommands} key.
      */
     static String command(CmdBase cmd) {
+        return render(commandSchema(cmd.name, "nextflow ${cmd.name}".toString(), cmd))
+    }
+
+    /**
+     * Build the schema map for a command at the given {@code path} (e.g.
+     * {@code nextflow module create}). Recurses into nested sub-commands.
+     */
+    @CompileStatic
+    private static Map<String,Object> commandSchema(String name, String path, CmdBase cmd) {
         final clazz = cmd.getClass()
         final params = paramsOf(clazz)
         final schema = [
-            name   : cmd.name,
-            path   : "nextflow ${cmd.name}".toString(),
-            usage  : usageOf(cmd, params),
+            name   : name,
+            path   : path,
+            usage  : usageOf(path, params),
             params : params,
         ] as Map<String,Object>
 
@@ -79,8 +90,42 @@ class CliSchema {
         final aliases = aliasesOf(clazz)
         if( aliases )
             schema.aliases = aliases
+        if( cmd instanceof SubcommandAware ) {
+            final subcommands = subcommandIndex(path, (cmd as SubcommandAware).getSubcommands())
+            if( subcommands )
+                schema.subcommands = subcommands
+        }
 
-        return render(schema)
+        return schema
+    }
+
+    /**
+     * Build the nested {@code subcommands} index for a {@link SubcommandAware}
+     * command. Sub-commands backed by a full {@link CmdBase} are introspected
+     * recursively for complete option/argument detail; those whose arguments
+     * are parsed manually surface a lightweight name + description entry,
+     * matching the top-level command index.
+     */
+    @CompileStatic
+    private static Map<String,Object> subcommandIndex(String parentPath, List<SubcommandAware.Subcommand> subcommands) {
+        final index = new TreeMap<String,Object>()
+        for( SubcommandAware.Subcommand sub : subcommands ) {
+            index[sub.name] = sub.command != null
+                ? commandSchema(sub.name, "${parentPath} ${sub.name}".toString(), sub.command)
+                : leafEntry(sub.help, sub.aliases)
+        }
+        return index
+    }
+
+    /** A lightweight index entry carrying only help text and aliases, when present. */
+    @CompileDynamic
+    private static Map<String,Object> leafEntry(String help, List<String> aliases) {
+        final entry = [:] as Map<String,Object>
+        if( help )
+            entry.help = help
+        if( aliases )
+            entry.aliases = aliases
+        return entry
     }
 
     /**
@@ -97,11 +142,7 @@ class CliSchema {
             // only advertise commands that opt in with a description, matching `-help`
             if( !description )
                 continue
-            final entry = [help: description] as Map<String,Object>
-            final aliases = aliasesOf(clazz)
-            if( aliases )
-                entry.aliases = aliases
-            index[cmd.name] = entry
+            index[cmd.name] = leafEntry(description, aliasesOf(clazz))
         }
         return index
     }
@@ -162,9 +203,9 @@ class CliSchema {
         result << entry
     }
 
-    /** Build a usage string, e.g. {@code nextflow run [options] <args>}. */
-    private static String usageOf(CmdBase cmd, List<Map<String,Object>> params) {
-        final pieces = ["nextflow ${cmd.name}".toString()]
+    /** Build a usage string, e.g. {@code nextflow run [options] [args...]}. */
+    private static String usageOf(String path, List<Map<String,Object>> params) {
+        final pieces = [path]
         if( params.any { it.kind == 'option' } )
             pieces << '[options]'
         if( params.any { it.kind == 'argument' } )

@@ -34,7 +34,7 @@ import org.pf4j.ExtensionPoint
  */
 @CompileStatic
 @Parameters(commandDescription = "Explore workflows lineage metadata", commandNames = ['li'])
-class CmdLineage extends CmdBase implements UsageAware {
+class CmdLineage extends CmdBase implements UsageAware, SubcommandAware {
 
     private static final String NAME = 'lineage'
 
@@ -147,6 +147,11 @@ class CmdLineage extends CmdBase implements UsageAware {
         if( matches )
             msg += " -- Did you mean one of these?\n" + matches.collect { "  $it"}.join('\n')
         throw new AbortOperationException(msg)
+    }
+
+    @Override
+    List<SubcommandAware.Subcommand> getSubcommands() {
+        commands.collect { new SubcommandAware.Subcommand(name: it.name, help: it.description) }
     }
 
     class CmdList implements SubCmd {

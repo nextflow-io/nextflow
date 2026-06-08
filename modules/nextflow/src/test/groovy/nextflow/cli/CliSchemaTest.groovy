@@ -96,4 +96,31 @@ class CliSchemaTest extends Specification {
         schema.aliases == ['li']
     }
 
+    def 'should recurse into manually-parsed sub-commands as an index' () {
+        when:
+        def schema = parse(CliSchema.command(new CmdSecret()))
+
+        then: 'each sub-command is indexed by name with its description'
+        schema.subcommands.size() == 4
+        schema.subcommands.containsKey('get')
+        schema.subcommands.containsKey('set')
+        schema.subcommands.get.help == 'Get a secret value with the name'
+
+        and: 'manually-parsed sub-commands have no introspected params'
+        !schema.subcommands.get.containsKey('params')
+    }
+
+    def 'should recurse into JCommander-backed sub-commands with full detail' () {
+        when:
+        def schema = parse(CliSchema.command(new CmdModule()))
+
+        then: 'sub-commands carry their own path, usage and params'
+        def create = schema.subcommands.create
+        create.name == 'create'
+        create.path == 'nextflow module create'
+        create.usage.startsWith('nextflow module create')
+        create.help == 'Create a new module skeleton'
+        create.params instanceof List
+    }
+
 }
