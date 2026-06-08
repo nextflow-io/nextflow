@@ -303,7 +303,7 @@ class CliSchema {
     }
 
     /** Soft line-length budget for the compact renderer. */
-    private static final int MAX_WIDTH = 100
+    private static final int MAX_WIDTH = 160
     private static final int INDENT = 2
 
     private static String render(Map schema) {
