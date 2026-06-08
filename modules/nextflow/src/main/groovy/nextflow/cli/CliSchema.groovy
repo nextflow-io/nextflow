@@ -109,8 +109,9 @@ class CliSchema {
     /**
      * Introspect the {@link Parameter} / {@link DynamicParameter} annotations of
      * a command (or options) class into a list of JSON-friendly maps. Inherited
-     * fields are included; hidden and meta options ({@code -h}, {@code -help},
-     * {@code -help-json}) are skipped.
+     * fields are included; the meta options ({@code -h}, {@code -help},
+     * {@code -help-json}) are skipped, and hidden options are kept but flagged
+     * with {@code hidden: true}.
      */
     @CompileDynamic
     private static List<Map<String,Object>> paramsOf(Class clazz) {
@@ -132,8 +133,6 @@ class CliSchema {
 
     @CompileDynamic
     private static void addParam(List result, Field field, List<String> names, String description, boolean hidden, boolean required, int arity, Object instance) {
-        if( hidden )
-            return
         if( names.any { it in META_OPTIONS } )
             return
 
@@ -152,6 +151,9 @@ class CliSchema {
             entry.required = true
         if( isFlag )
             entry.is_flag = true
+        // hidden params are kept (parity with rich-click) but flagged so consumers can skip them
+        if( hidden )
+            entry.hidden = true
 
         final defValue = defaultOf(field, instance)
         if( defValue != null && !isFlag )

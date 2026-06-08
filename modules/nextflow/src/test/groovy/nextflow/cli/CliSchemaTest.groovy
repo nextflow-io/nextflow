@@ -55,6 +55,10 @@ class CliSchemaTest extends Specification {
 
         and: 'aliases are surfaced when present'
         schema.subcommands.lineage.aliases == ['li']
+
+        and: 'hidden options are reported but flagged'
+        def debug = schema.params.find { '-debug' in (it.opts ?: []) }
+        debug.hidden == true
     }
 
     def 'should build a command schema with options and arguments' () {
