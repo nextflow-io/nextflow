@@ -243,9 +243,40 @@ channel.of('a', 'b', 'c')   // Channel<String>
 
 ### Static typing and the runtime
 
-The type system exists as a separate layer from the runtime. That is, the type system defines the standard namespaces and types as interfaces, and the runtime types need only be compatible with those interfaces. Nextflow-specific types (e.g. `Duration`, `MemoryUnit`) can implement the corresponding type interface directly. Types inherited from Java (e.g. `Integer`, `String`, `List`) are modeled in the type system using "shim" interfaces, which are used during type checking and discarded prior at runtime.
+The type system exists as a separate layer from the runtime. That is, the type system defines the standard namespaces and types as interfaces, and the runtime types need only be compatible with those interfaces. Nextflow-specific types (e.g. `Duration`, `MemoryUnit`) can implement the corresponding type interface directly. Types inherited from Java (e.g. `Integer`, `String`, `List`) are modeled in the type system using "shim" interfaces, which are used during type checking and discarded at runtime.
 
 This approach allows us to introduce type checking without modifying runtime behavior. Nextflow still generates dynamically-typed Groovy code, but this code is validated by the type checker, so it is effectively statically-typed. This approach is similar to [TypeScript](https://www.typescriptlang.org/), where TypeScript code is type-checked at compile-time and converted to JavaScript at runtime by discarding type annotations. Static compilation (e.g. `@CompileStatic`) may be explored in the future, but it is not clear whether the performance improvement of statically-compiled code is worth the extra compilation time and additional constraints on the generated Groovy code.
+
+### Type conversions
+
+There are a few cases where type checking can only be performed at runtime. Pipeline inputs are validated and converted to the appropriate type based on the `params` block (e.g. `--max_cpus 16` is converted to the number `16` based on the declaration `max_cpus: Integer`). However, complex inputs such as samplesheets must be loaded and explicitly converted using a type cast (`as`).
+
+For example, a CSV samplesheet needs to be loaded as a channel of records:
+
+```groovy
+params {
+    input: Path
+}
+
+workflow {
+    csv = params.input
+    samples = csv.splitCsv(header: true) as List<Sample>
+    channel.fromList(samples).view()
+}
+
+record Sample {
+    id: String
+    fastq_1: Path
+    fastq_2: Path?
+}
+```
+
+Nextflow extends Groovy's `as` operator to support parameterized types and record types. In the above example:
+
+1. the `splitCsv` function returns a list of maps,
+2. the type cast converts each map to a record, verifying that it satisfies the requirements of `Sample`.
+
+This way, the `as` operator provides a guarantee to the type checker and enforces that guarantee at runtime.
 
 ### Migration plan
 
