@@ -29,6 +29,7 @@ import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.OutputBlockNode;
 import nextflow.script.ast.OutputNode;
 import nextflow.script.ast.ParamBlockNode;
+import nextflow.script.ast.ParamNodeV1;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ProcessNodeV1;
 import nextflow.script.ast.ProcessNodeV2;
@@ -248,6 +249,11 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         }
     }
 
+    @Override
+    public void visitParamV1(ParamNodeV1 node) {
+        vsc.addParanoidWarning("Legacy parameter declarations are discouraged -- use the `params` block instead", "params", node);
+    }
+
     private boolean inWorkflowEmit;
 
     @Override
@@ -344,7 +350,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         visitDirectives(node.stagers, "stage directive", false);
         vsc.popScope();
 
-        // deprecation warning reported during ast construction
+        if( !(node.when instanceof EmptyExpression) )
+            vsc.addWarning("Process `when` section will not be supported in a future version", "", node.when);
         visit(node.when);
 
         visit(node.exec);

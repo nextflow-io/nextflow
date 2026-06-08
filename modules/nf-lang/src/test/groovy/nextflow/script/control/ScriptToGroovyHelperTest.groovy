@@ -40,6 +40,32 @@ class ScriptToGroovyHelperTest extends Specification {
         return source
     }
 
+    def 'should collect params.* and task.ext.* references from process script body' () {
+        given:
+        def source = parse('''\
+            process hello {
+                input:
+                val x
+
+                script:
+                """
+                echo ${params.x} ${task.ext.args} ${x}
+                """
+            }
+            ''')
+        def sgh = new ScriptToGroovyHelper(source)
+
+        when:
+        def process = source.getAST().getProcesses().first()
+        def refs = sgh.getVariableRefs(process.exec)
+        def names = refs.expressions
+            .collect { expr -> expr.arguments.expressions[0].value }
+            .sort()
+
+        then:
+        names == ['params.x', 'task.ext.args']
+    }
+
     def 'should get source text of process body' () {
         given:
         def source = parse('''\
