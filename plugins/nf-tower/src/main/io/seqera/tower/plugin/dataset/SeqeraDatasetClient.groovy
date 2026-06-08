@@ -146,9 +146,13 @@ class SeqeraDatasetClient {
         dto.datasetId = m.datasetId as String
         dto.version = (m.version as Long) ?: 0L
         dto.fileName = m.fileName as String
+        // A missing/null fileSize collapses to 0 — "size unknown" (older Tower deployments
+        // that omit the field) is not distinguishable from a genuinely empty file.
+        dto.fileSize = (m.fileSize as Long) ?: 0L
         dto.mediaType = m.mediaType as String
         dto.hasHeader = (m.hasHeader as Boolean) ?: false
         dto.dateCreated = m.dateCreated ? OffsetDateTime.parse(m.dateCreated as String) : null
+        dto.lastUpdated = m.lastUpdated ? OffsetDateTime.parse(m.lastUpdated as String) : null
         dto.disabled = (m.disabled as Boolean) ?: false
         return dto
     }

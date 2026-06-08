@@ -320,7 +320,7 @@ nextflow run main.nf -profile standard,cloud
 Nextflow applies config profiles in the order in which they were defined in the config, regardless of the order you specify them on the command line.
 
 :::{versionadded} 25.04.0
-When using the {ref}`strict syntax <strict-syntax-page>`, Nextflow applies profiles in the order you specify them on the command line.
+When using the {ref}`strict parser <strict-syntax-page>`, Nextflow applies profiles in the order you specify them on the command line.
 :::
 
 (config-workflow-handlers)=

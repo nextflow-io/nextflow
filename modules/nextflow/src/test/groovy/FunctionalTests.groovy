@@ -16,6 +16,7 @@
 
 import java.nio.file.Files
 
+import nextflow.exception.ProcessUnrecoverableException
 import nextflow.processor.TaskProcessor
 import nextflow.util.MemoryUnit
 import spock.lang.Timeout
@@ -686,9 +687,10 @@ class FunctionalTests extends Dsl2Spec {
         when:
         def config = [process:[executor: 'nope']]
         runScript(script, config: config)
-        def processor = TaskProcessor.currentProcessor()
         then:
-        processor.session.fault.report ==~ /(?s).*-- Check script '(.*?)' at line: 10.*/
+        thrown(ProcessUnrecoverableException)
+        and:
+        TaskProcessor.currentProcessor().session.fault.report ==~ /(?s).*-- Check script '(.*?)' at line: 10.*/
     }
 
     def 'should show the source line when reporting an error in a module'() {
@@ -723,8 +725,9 @@ class FunctionalTests extends Dsl2Spec {
         when:
         def config = [process:[executor: 'nope']]
         runScript(script, config: config)
-        def processor = TaskProcessor.currentProcessor()
         then:
-        processor.session.fault.report ==~ /(?s).*-- Check script '(.*?)' at line: 10.*/
+        thrown(ProcessUnrecoverableException)
+        and:
+        TaskProcessor.currentProcessor().session.fault.report ==~ /(?s).*-- Check script '(.*?)' at line: 10.*/
     }
 }

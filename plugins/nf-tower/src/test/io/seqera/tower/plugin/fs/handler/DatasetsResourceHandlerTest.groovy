@@ -16,6 +16,8 @@
 
 package io.seqera.tower.plugin.fs.handler
 
+import io.seqera.tower.plugin.fs.SeqeraFileAttributes
+
 import java.nio.file.NoSuchFileException
 
 import io.seqera.tower.model.DatasetDto
@@ -24,6 +26,9 @@ import io.seqera.tower.plugin.dataset.SeqeraDatasetClient
 import io.seqera.tower.plugin.fs.SeqeraFileSystem
 import io.seqera.tower.plugin.fs.SeqeraPath
 import spock.lang.Specification
+
+import java.time.Instant
+import java.time.OffsetDateTime
 
 class DatasetsResourceHandlerTest extends Specification {
 
@@ -58,6 +63,8 @@ class DatasetsResourceHandlerTest extends Specification {
         then:
         1 * fs.resolveWorkspaceId('acme', 'research') >> 10L
         1 * client.listDatasets(10L) >> [ds('d1', 'one'), ds('d2', 'two')]
+        1 * client.listVersions('d1',10L ) >> [ver('d1', 1, 'file1.csv')]
+        1 * client.listVersions('d2',10L ) >> [ver('d2', 1, 'file2.csv')]
         paths*.toString() == [
                 'seqera://acme/research/datasets/one',
                 'seqera://acme/research/datasets/two'
@@ -75,6 +82,7 @@ class DatasetsResourceHandlerTest extends Specification {
         then:
         2 * fs.resolveWorkspaceId('acme', 'research') >> 10L
         1 * client.listDatasets(10L) >> [ds('d1', 'one')]
+        1 * client.listVersions('d1',10L ) >> [ver('d1', 1, 'file1.csv')]
     }
 
     def "newInputStream resolves latest non-disabled version when no pin"() {
@@ -182,32 +190,35 @@ class DatasetsResourceHandlerTest extends Specification {
         then:
         1 * fs.resolveWorkspaceId(_, _) >> 10L
         1 * client.listDatasets(10L) >> [ds('d1', 'samples')]
+        1 * client.listVersions('d1',10L ) >> [ver('d1', 1, 'file1.csv')]
         attr.regularFile
         !attr.directory
-        attr.fileKey() == 'd1'
+        attr.fileKey() == 'd1@1'
     }
 
     def "list attaches cached attributes to every child path"() {
         given:
         def path = new SeqeraPath(fs, 'seqera://acme/research/datasets')
-        def now = java.time.OffsetDateTime.parse('2026-03-01T12:00:00Z')
-        def d = ds('d1', 'samples'); d.dateCreated = now; d.lastUpdated = now
-
+        def now = OffsetDateTime.parse('2026-03-01T12:00:00Z')
+        def d = ds('d1', 'samples')
+        def dv = ver('d1', 1, 'file1.csv'); dv.dateCreated = now; dv.lastUpdated = now; dv.fileSize(1200L)
         when:
         def paths = handler.list(path).toList()
 
         then:
         1 * fs.resolveWorkspaceId(_, _) >> 10L
         1 * client.listDatasets(10L) >> [d]
+        1 * client.listVersions('d1',10L) >> [dv]
         def cached = (paths[0] as SeqeraPath).cachedAttributes
         cached != null
         cached.regularFile
-        cached.fileKey() == 'd1'
+        cached.fileKey() == 'd1@1'
+        cached.size() == 1200L
     }
 
     def "readAttributes short-circuits when the path has cached attributes"() {
         given:
-        def attrs = new io.seqera.tower.plugin.fs.SeqeraFileAttributes(0L, java.time.Instant.EPOCH, java.time.Instant.EPOCH, 'key')
+        def attrs = new SeqeraFileAttributes(100L, Instant.EPOCH, Instant.EPOCH, 'key')
         def path = new SeqeraPath(fs, 'seqera://acme/research/datasets').resolveWithAttributes('samples', attrs)
 
         when:

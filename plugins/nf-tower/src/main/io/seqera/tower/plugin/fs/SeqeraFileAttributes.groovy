@@ -57,21 +57,36 @@ class SeqeraFileAttributes implements BasicFileAttributes {
         this.fileKey = fileKey
     }
 
-    @Override FileTime lastModifiedTime() { FileTime.from(lastModified) }
+    @Override
+    FileTime lastModifiedTime() {
+        FileTime.from(lastModified)
+    }
 
-    @Override FileTime lastAccessTime() { FileTime.from(lastModified) }
+    @Override
+    FileTime lastAccessTime() {
+        FileTime.from(lastModified)
+    }
 
-    @Override FileTime creationTime() { FileTime.from(created) }
+    @Override
+    FileTime creationTime() {
+        FileTime.from(created)
+    }
 
-    @Override boolean isRegularFile() { !directory }
+    @Override
+    boolean isRegularFile() { !directory }
 
-    @Override boolean isDirectory() { directory }
+    @Override
+    boolean isDirectory() { directory }
 
-    @Override boolean isSymbolicLink() { false }
+    @Override
+    boolean isSymbolicLink() { false }
 
-    @Override boolean isOther() { false }
+    @Override
+    boolean isOther() { false }
 
-    @Override long size() { size }
+    @Override
+    long size() { size }
 
-    @Override Object fileKey() { fileKey }
+    @Override
+    Object fileKey() { fileKey }
 }

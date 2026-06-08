@@ -141,7 +141,7 @@ channel.of(1,2,3).map { v -> def X=v; X+=2 }.view { v -> "ch1 = $v" }
 ```
 
 :::{versionadded} 25.04.0
-The {ref}`strict syntax <strict-syntax-page>` does not allow global variables to be declared in closures.
+The {ref}`strict parser <strict-syntax-page>` does not allow global variables to be declared in closures.
 :::
 
 (cache-nondeterministic-inputs)=

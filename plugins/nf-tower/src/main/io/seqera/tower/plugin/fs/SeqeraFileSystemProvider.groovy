@@ -60,12 +60,13 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
 
     public static final String SCHEME = 'seqera'
 
+    /** Single filesystem instance — TowerClient is a singleton per session */
     private volatile SeqeraFileSystem fileSystem
 
     @Override
     String getScheme() { SCHEME }
 
-    // ---- lifecycle ----
+    // ---- FileSystem lifecycle ----
 
     @Override
     synchronized FileSystem newFileSystem(URI uri, Map<String, ?> env) throws IOException {
@@ -90,7 +91,10 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
 
     synchronized SeqeraFileSystem getOrCreateFileSystem(URI uri, Map<String, ?> env) {
         checkScheme(uri)
-        if (!fileSystem) newFileSystem(uri, env ?: Collections.<String, Object>emptyMap())
+        if (!fileSystem) {
+            final envMap = env ?: Collections.<String, Object>emptyMap()
+            newFileSystem(uri, envMap as Map<String, ?>)
+        }
         return fileSystem
     }
 
@@ -100,7 +104,7 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         return new SeqeraPath(fs, uri.toString())
     }
 
-    // ---- read ----
+    // ---- Read operations ----
 
     @Override
     InputStream newInputStream(Path path, OpenOption... options) throws IOException {
@@ -117,11 +121,12 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
     @Override
     SeekableByteChannel newByteChannel(Path path, Set<? extends OpenOption> options, FileAttribute<?>... attrs) throws IOException {
         if (options?.contains(StandardOpenOption.WRITE) || options?.contains(StandardOpenOption.APPEND))
-            throw new UnsupportedOperationException("seqera:// filesystem is read-only")
-        return new DatasetInputStream(newInputStream(path))
+            throw new UnsupportedOperationException("File system `seqera://` is read-only")
+        final inputStream = newInputStream(path)
+        return new DatasetInputStream(inputStream)
     }
 
-    // ---- attributes ----
+    // ---- Metadata ----
 
     @Override
     <A extends BasicFileAttributes> A readAttributes(Path path, Class<A> type, LinkOption... options) throws IOException {
@@ -149,7 +154,7 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         throw new UnsupportedOperationException("Operation `readAttributes(String)` not supported by `seqera://` file system")
     }
 
-    // ---- access ----
+    // ---- Access check ----
 
     @Override
     void checkAccess(Path path, AccessMode... modes) throws IOException {
@@ -171,7 +176,7 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         h.readAttributes(sp)
     }
 
-    // ---- directory stream ----
+    // ---- Directory stream ----
 
     @Override
     DirectoryStream<Path> newDirectoryStream(Path dir, DirectoryStream.Filter<? super Path> filter) throws IOException {
@@ -180,9 +185,11 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         final d = sp.depth()
         Iterable<Path> entries
         if (d == 0) {
+            // Root: list distinct org names
             fs.loadOrgWorkspaceCache()
             entries = fs.listOrgNames().collect { String org -> sp.resolve(org) as Path }
         } else if (d == 1) {
+            // Org: list workspace names
             fs.loadOrgWorkspaceCache()
             entries = fs.listWorkspaceNames(sp.org).collect { String ws -> sp.resolve(ws) as Path }
         } else if (d == 2) {
@@ -253,19 +260,20 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         }
     }
 
-    // ---- copy ----
+    // ---- Copy ----
 
     @Override
     void copy(Path source, Path target, CopyOption... options) throws IOException {
         toSeqeraPath(source)
         if (target instanceof SeqeraPath)
             throw new UnsupportedOperationException("seqera:// filesystem is read-only")
+        // cross-provider (seqera → local): stream to target
         try (final InputStream is = newInputStream(source)) {
             Files.copy(is, target, options)
         }
     }
 
-    // ---- unsupported mutations ----
+    // ---- Unsupported mutations ----
 
     @Override
     void move(Path source, Path target, CopyOption... options) {
@@ -282,7 +290,7 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         throw new UnsupportedOperationException("createDirectory() not supported by seqera:// filesystem")
     }
 
-    // ---- misc ----
+    // ---- Misc ----
 
     @Override
     boolean isSameFile(Path path, Path path2) throws IOException {
@@ -307,7 +315,7 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         throw new UnsupportedOperationException("setAttribute() not supported by seqera:// filesystem")
     }
 
-    // ---- helpers ----
+    // ---- private helpers ----
 
     private static SeqeraPath toSeqeraPath(Path path) {
         if (path !instanceof SeqeraPath) throw new ProviderMismatchException()
@@ -322,6 +330,7 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
     private static void validateSharedDirectoryExists(SeqeraFileSystem fs, SeqeraPath sp) throws NoSuchFileException {
         final d = sp.depth()
         if (d == 0) return
+        // Depth 1+: ensure org/workspace cache is loaded
         fs.loadOrgWorkspaceCache()
         if (d >= 1 && !fs.listOrgNames().contains(sp.org))
             throw new NoSuchFileException("seqera://${sp.org}", null, "Organisation not found")

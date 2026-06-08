@@ -64,7 +64,8 @@ class DatasetsResourceHandler implements ResourceTypeHandler {
         if (d == 3) {
             final workspaceId = fs.resolveWorkspaceId(dir.org, dir.workspace)
             return resolveDatasets(workspaceId).collect { DatasetDto ds ->
-                dir.resolveWithAttributes(ds.name, attributesFor(ds)) as Path
+                final version = resolveVersion(ds, ds.version?.toString(), dir.resolve(ds.name) as SeqeraPath )
+                dir.resolveWithAttributes(ds.name, attributesFor(version)) as Path
             }
         }
         throw new IllegalArgumentException("datasets handler does not list depth $d paths: $dir")
@@ -86,15 +87,16 @@ class DatasetsResourceHandler implements ResourceTypeHandler {
         final dataset = resolveDataset(workspaceId, names[0])
         if (!dataset)
             throw new NoSuchFileException(p.toString(), null, "Dataset '${names[0]}' not found in workspace ${p.workspace}")
-        return attributesFor(dataset)
+        final version = resolveVersion(dataset, names[1], p)
+        return attributesFor(version)
     }
 
-    private static SeqeraFileAttributes attributesFor(DatasetDto ds) {
+    private static SeqeraFileAttributes attributesFor(DatasetVersionDto datasetVersion) {
         return new SeqeraFileAttributes(
-                0L,
-                ds.lastUpdated?.toInstant() ?: Instant.EPOCH,
-                ds.dateCreated?.toInstant() ?: Instant.EPOCH,
-                ds.id)
+                datasetVersion.fileSize ?: 0L,
+                datasetVersion.lastUpdated?.toInstant() ?: Instant.EPOCH,
+                datasetVersion.dateCreated?.toInstant() ?: Instant.EPOCH,
+                "${datasetVersion.datasetId}@${datasetVersion.version}".toString())
     }
 
     @Override

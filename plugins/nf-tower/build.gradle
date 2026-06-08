@@ -55,10 +55,10 @@ dependencies {
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
     compileOnly 'org.pf4j:pf4j:3.14.1'
-    compileOnly 'io.seqera:lib-httpx:2.1.0'
+    compileOnly 'io.seqera:lib-httpx:2.3.0'
     api 'io.seqera:lib-platform-oidc:0.1.0'
 
-    api('io.seqera:tower-api:1.121.0') {
+    api('io.seqera:tower-api:1.158.0') {
         exclude group: 'io.micronaut.servlet'
     }
     api "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.21.1"
@@ -69,7 +69,7 @@ dependencies {
     testImplementation "org.apache.groovy:groovy-nio:4.0.31"
     testImplementation "org.apache.groovy:groovy-json:4.0.31"
     // wiremock required by TowerFusionEnvTest
-    testImplementation "org.wiremock:wiremock:3.13.1"
+    testImplementation "org.wiremock:wiremock:3.13.2"
     // Address security vulnerabilities CVE-2022-45688 and CVE-2023-5072
     testImplementation 'org.json:json:20240303'
 }
