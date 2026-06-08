@@ -313,6 +313,7 @@ class CmdFs extends CmdBase implements UsageAware, SubcommandAware {
             result << "  ${it.name}\t${it.description}"
             }
             result << ''
+            result << Launcher.HELP_JSON_TIP
             println result.join('\n').toString()
         }
         else {

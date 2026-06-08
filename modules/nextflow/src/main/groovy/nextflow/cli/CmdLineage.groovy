@@ -123,6 +123,7 @@ class CmdLineage extends CmdBase implements UsageAware, SubcommandAware {
             commands.forEach {len = it.name.size() > len ? it.name.size() : len }
             commands.sort(){it.name}.each { result << "  ${it.name.padRight(len)}\t${it.description}".toString()  }
             result << ''
+            result << Launcher.HELP_JSON_TIP
             println result.join('\n').toString()
         }
         else {

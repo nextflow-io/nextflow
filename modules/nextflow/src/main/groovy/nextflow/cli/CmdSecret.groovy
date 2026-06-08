@@ -83,6 +83,7 @@ class CmdSecret extends CmdBase implements UsageAware, SubcommandAware {
             result << 'Commands:'
             commands.collect{ it.name }.sort().each { result << "  $it".toString()  }
             result << ''
+            result << Launcher.HELP_JSON_TIP
         }
         else {
             def sub = commands.find { it.name == args[0] }

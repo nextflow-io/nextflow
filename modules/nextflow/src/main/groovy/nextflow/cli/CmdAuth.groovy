@@ -190,6 +190,7 @@ class CmdAuth extends CmdBase implements UsageAware, SubcommandAware {
             final len = commands.collect { it.name.size() }.max()
             commands.each { result << "  ${it.name.padRight(len)}   ${it.description}".toString() }
             result << ''
+            result << Launcher.HELP_JSON_TIP
         } else {
             def sub = commands.find { it.name == args[0] }
             if (sub)

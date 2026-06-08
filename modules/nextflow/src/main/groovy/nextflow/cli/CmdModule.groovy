@@ -150,6 +150,7 @@ class CmdModule extends CmdBase implements UsageAware, SubcommandAware {
                 result << "  ${it.name.padRight(12)}${description}"
             }
             result << ''
+            result << Launcher.HELP_JSON_TIP
             println result.join('\n').toString()
         } else {
             final sub = findCmd(args[0])
