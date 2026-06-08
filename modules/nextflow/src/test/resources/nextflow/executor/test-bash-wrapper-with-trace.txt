@@ -208,8 +208,7 @@ nxf_sleep() {
 
 nxf_date() {
     local s n
-    s=$(date +%s)
-    n=$(date +%N)
+    read s n < <(date '+%s %N')
     if [[ $n =~ ^[0-9]+$ ]]; then
         n=$(printf '%09d' "$((10#$n))")
         echo "$((s * 1000 + 10#${n:0:3}))"
