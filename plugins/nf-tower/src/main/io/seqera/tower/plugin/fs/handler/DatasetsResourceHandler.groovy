@@ -16,8 +16,6 @@
 
 package io.seqera.tower.plugin.fs.handler
 
-import java.nio.file.AccessDeniedException
-import java.nio.file.AccessMode
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.time.Instant
@@ -63,11 +61,20 @@ class DatasetsResourceHandler implements ResourceTypeHandler {
         final d = dir.depth()
         if (d == 3) {
             final workspaceId = fs.resolveWorkspaceId(dir.org, dir.workspace)
-            return resolveDatasets(workspaceId).collect { DatasetDto ds ->
-                // Get latest version to build dataset attributes (null pinned version)
-                final version = resolveVersion(ds, null, dir.resolve(ds.name) as SeqeraPath )
-                dir.resolveWithAttributes(ds.name, attributesFor(version)) as Path
+            final out = new ArrayList<Path>()
+            for (DatasetDto ds : resolveDatasets(workspaceId)) {
+                try {
+                    // Get latest version to build dataset attributes (null pinned version)
+                    final version = resolveVersion(ds, null, dir.resolve(ds.name) as SeqeraPath)
+                    out.add(dir.resolveWithAttributes(ds.name, attributesFor(version)) as Path)
+                }
+                catch (NoSuchFileException e) {
+                    // A dataset with no resolvable (enabled) version is not a valid file entry —
+                    // skip it rather than aborting the whole listing.
+                    log.debug("Skipping dataset '${ds.name}' in workspace ${dir.workspace}: ${e.message}")
+                }
             }
+            return out
         }
         throw new IllegalArgumentException("datasets handler does not list depth $d paths: $dir")
     }
@@ -75,7 +82,8 @@ class DatasetsResourceHandler implements ResourceTypeHandler {
     @Override
     SeqeraFileAttributes readAttributes(SeqeraPath p) throws IOException {
         // Short-circuit: attributes attached when this path was produced by a listing
-        if (p.cachedAttributes) return p.cachedAttributes
+        if (p.cachedAttributes)
+            return p.cachedAttributes
         final d = p.depth()
         if (d == 3) {
             fs.resolveWorkspaceId(p.org, p.workspace) // validates

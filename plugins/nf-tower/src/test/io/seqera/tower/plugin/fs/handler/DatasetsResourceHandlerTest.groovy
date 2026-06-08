@@ -71,6 +71,40 @@ class DatasetsResourceHandlerTest extends Specification {
         ]
     }
 
+    def "list skips datasets with no resolvable version instead of aborting"() {
+        given:
+        def path = new SeqeraPath(fs, 'seqera://acme/research/datasets')
+
+        when:
+        def paths = handler.list(path).toList()
+
+        then:
+        1 * fs.resolveWorkspaceId('acme', 'research') >> 10L
+        1 * client.listDatasets(10L) >> [ds('d1', 'one'), ds('d2', 'empty'), ds('d3', 'three')]
+        1 * client.listVersions('d1', 10L) >> [ver('d1', 1, 'file1.csv')]
+        1 * client.listVersions('d2', 10L) >> []                           // no versions → skipped
+        1 * client.listVersions('d3', 10L) >> [ver('d3', 1, 'file3.csv')]
+        paths*.toString() == [
+                'seqera://acme/research/datasets/one',
+                'seqera://acme/research/datasets/three'
+        ]
+    }
+
+    def "list skips datasets whose only versions are disabled"() {
+        given:
+        def path = new SeqeraPath(fs, 'seqera://acme/research/datasets')
+
+        when:
+        def paths = handler.list(path).toList()
+
+        then:
+        1 * fs.resolveWorkspaceId('acme', 'research') >> 10L
+        1 * client.listDatasets(10L) >> [ds('d1', 'one'), ds('d2', 'disabledOnly')]
+        1 * client.listVersions('d1', 10L) >> [ver('d1', 1, 'file1.csv')]
+        1 * client.listVersions('d2', 10L) >> [ver('d2', 1, 'x.csv', true)] // disabled → skipped
+        paths*.toString() == ['seqera://acme/research/datasets/one']
+    }
+
     def "list result is cached across calls"() {
         given:
         def path = new SeqeraPath(fs, 'seqera://acme/research/datasets')

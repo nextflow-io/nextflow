@@ -73,7 +73,8 @@ class SeqeraDataLinkClient {
         final Iterator<DataLinkDto> it = listDataLinks(workspaceId)
         while (it.hasNext()) {
             final p = it.next().provider?.toString()
-            if (p) providers.add(p)
+            if (p)
+                providers.add(p)
         }
         return Collections.unmodifiableSet(providers)
     }
@@ -120,7 +121,8 @@ class SeqeraDataLinkClient {
     /** {@code GET /data-links/{id}/generate-download-url?workspaceId=<ws>&filePath=<sub>[&credentialsId=<c>]} */
     DataLinkDownloadUrlResponse getDownloadUrl(String dataLinkId, String subPath, long workspaceId, String credentialsId = null) {
         String url = "${endpoint}/data-links/${encodePath(dataLinkId)}/generate-download-url?workspaceId=${workspaceId}&filePath=${encodeQuery(subPath ?: '')}"
-        if (credentialsId) url += "&credentialsId=${encodeQuery(credentialsId)}"
+        if (credentialsId)
+            url += "&credentialsId=${encodeQuery(credentialsId)}"
         log.debug "Getting downloadURL: GET $url"
         final resp = towerClient.sendApiRequest(url)
         checkFsResponse(resp, url)
@@ -165,7 +167,8 @@ class SeqeraDataLinkClient {
             final json = new JsonSlurper().parseText(resp.message) as Map
             final items = (json.dataLinks as List<Map>)?.collect { Map m -> mapDataLink(m) } ?: Collections.<DataLinkDto>emptyList()
             offset += items.size()
-            if (total < 0 && json.totalSize != null) total = json.totalSize as Long
+            if (total < 0 && json.totalSize != null)
+                total = json.totalSize as Long
             final isLast = items.isEmpty() || (total >= 0 && offset >= total)
             return new PagedIterable.Page<DataLinkDto>(items, isLast)
         }
@@ -197,9 +200,12 @@ class SeqeraDataLinkClient {
         @Override
         PagedIterable.Page<DataLinkItem> fetch() throws IOException {
             String url = "${baseUrl}?workspaceId=${workspaceId}"
-            if (search) url += "&search=${encodeQuery(search)}"
-            if (credentialsId) url += "&credentialsId=${encodeQuery(credentialsId)}"
-            if (nextToken) url += "&nextPageToken=${encodeQuery(nextToken)}"
+            if (search)
+                url += "&search=${encodeQuery(search)}"
+            if (credentialsId)
+                url += "&credentialsId=${encodeQuery(credentialsId)}"
+            if (nextToken)
+                url += "&nextPageToken=${encodeQuery(nextToken)}"
             log.debug "Fetching Browse page GET $url"
             final resp = towerClient.sendApiRequest(url)
             checkFsResponse(resp, url)
@@ -223,7 +229,8 @@ class SeqeraDataLinkClient {
     }
 
     private static void checkFsResponse(TowerClient.Response resp, String url) {
-        if (!resp.error) return
+        if (!resp.error)
+            return
         final code = resp.code
         if (code == 401)
             throw new AbortOperationException("Seqera authentication failed — check tower.accessToken or TOWER_ACCESS_TOKEN")
@@ -240,10 +247,12 @@ class SeqeraDataLinkClient {
         dto.name = m.name as String
         dto.description = m.description as String
         dto.resourceRef = m.resourceRef as String
-        if (m.provider) dto.provider = parseProvider(m.provider as String)
+        if (m.provider)
+            dto.provider = parseProvider(m.provider as String)
         dto.region = m.region as String
         final credList = m.credentials as List<Map>
-        if (credList) dto.credentials = credList.collect { Map c -> mapCredentials(c) }
+        if (credList)
+            dto.credentials = credList.collect { Map c -> mapCredentials(c) }
         return dto
     }
 
@@ -251,14 +260,16 @@ class SeqeraDataLinkClient {
         final c = new DataLinkCredentials()
         c.id = m.id as String
         c.name = m.name as String
-        if (m.provider) c.provider = parseProvider(m.provider as String)
+        if (m.provider)
+            c.provider = parseProvider(m.provider as String)
         return c
     }
 
     private static DataLinkItem mapItem(Map m) {
         final it = new DataLinkItem()
         it.name = m.name as String
-        if (m.type) it.type = parseItemType(m.type as String)
+        if (m.type)
+            it.type = parseItemType(m.type as String)
         it.size = (m.size as Long) ?: 0L
         it.mimeType = m.mimeType as String
         return it

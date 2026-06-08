@@ -19,8 +19,6 @@ package io.seqera.tower.plugin.fs.handler
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.nio.file.AccessDeniedException
-import java.nio.file.AccessMode
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.time.Duration
@@ -93,7 +91,8 @@ class DataLinksResourceHandler implements ResourceTypeHandler {
             final Iterator<DataLinkDto> it = client.listDataLinks(workspaceId)
             while (it.hasNext()) {
                 final dl = it.next()
-                if (dl.provider?.toString() == prov) names.add(dl.name)
+                if (dl.provider?.toString() == prov)
+                    names.add(dl.name)
             }
             if (names.isEmpty())
                 throw new NoSuchFileException(dir.toString(), null, "No data-links for provider '$prov' in workspace '${dir.workspace}'")
@@ -111,7 +110,8 @@ class DataLinksResourceHandler implements ResourceTypeHandler {
     @Override
     SeqeraFileAttributes readAttributes(SeqeraPath p) throws IOException {
         // Short-circuit: attributes attached when this path was produced by a listing
-        if (p.cachedAttributes) return p.cachedAttributes
+        if (p.cachedAttributes)
+            return p.cachedAttributes
         final workspaceId = fs.resolveWorkspaceId(p.org, p.workspace)
         final trail = p.trail
         if (trail.isEmpty()) {
@@ -126,7 +126,8 @@ class DataLinksResourceHandler implements ResourceTypeHandler {
             return new SeqeraFileAttributes(true)
         }
         final dl = requireDataLink(workspaceId, trail[0], trail[1], p)
-        if (trail.size() == 2) return new SeqeraFileAttributes(true) // data-link root
+        if (trail.size() == 2)
+            return new SeqeraFileAttributes(true) // data-link root
         final subPath = trail.subList(2, trail.size()).join('/')
         log.debug("Reading attributes for $p")
         return resolveAttrsViaParent(dl, subPath, workspaceId, p)
@@ -187,7 +188,10 @@ class DataLinksResourceHandler implements ResourceTypeHandler {
         DataLinkItem found = null
         for (DataLinkItem it : parent) {
             log.trace("Item: $it")
-            if (it.name == lastSeg || it.name == lastSeg + '/') { found = it; break }
+            if (it.name == lastSeg || it.name == lastSeg + '/') {
+                found = it
+                break
+            }
         }
         if (found == null)
             throw new NoSuchFileException(pathForErrors.toString(), null, "Path '${subPath}' not found inside data-link '${dl.name}'")
@@ -206,12 +210,32 @@ class DataLinksResourceHandler implements ResourceTypeHandler {
         try {
             final HttpResponse<InputStream> resp = httpClient.send(req, HttpResponse.BodyHandlers.ofInputStream())
             final status = resp.statusCode()
-            if (status >= 200 && status < 300) return resp.body()
-            try { resp.body()?.close() } catch (Throwable ignored) {}
-            throw new IOException("Signed URL fetch failed: HTTP $status for $url")
+            if (status >= 200 && status < 300)
+                return resp.body()
+            try {
+                resp.body()?.close()
+            }
+            catch (Throwable ignored) {
+                // best-effort close of the error-response body
+            }
+            throw new IOException("Signed URL fetch failed: HTTP $status for ${redactUrl(url)}")
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt()
             throw new IOException("Interrupted while fetching signed URL", e)
+        }
+    }
+
+    /**
+     * Strip the query string from a pre-signed URL before it is logged or surfaced in an
+     * exception — the query carries temporary credentials/signatures (e.g. {@code X-Amz-Signature},
+     * SAS tokens, GCS {@code Signature}) that must not leak into logs or error reports.
+     */
+    private static String redactUrl(String url) {
+        try {
+            final u = URI.create(url)
+            return new URI(u.scheme, u.authority, u.path, null, null).toString()
+        } catch (Exception ignored) {
+            return '(redacted)'
         }
     }
 
@@ -236,8 +260,11 @@ class DataLinksResourceHandler implements ResourceTypeHandler {
         Iterator<Path> iterator() {
             final Iterator<DataLinkItem> inner = content.iterator()
             return new Iterator<Path>() {
-                @Override boolean hasNext() { inner.hasNext() }
-                @Override Path next() {
+                @Override
+                boolean hasNext() { inner.hasNext() }
+
+                @Override
+                Path next() {
                     final item = inner.next()
                     return parent.resolveWithAttributes(item.name, attributesFor(item)) as Path
                 }

@@ -196,8 +196,11 @@ class SeqeraPath implements Path {
 
     // ---- Path API ----
 
-    @Override FileSystem getFileSystem() { fs }
-    @Override boolean isAbsolute() { fs != null }
+    @Override
+    FileSystem getFileSystem() { fs }
+
+    @Override
+    boolean isAbsolute() { fs != null }
 
     @Override
     Path getRoot() { new SeqeraPath(fs, null, null, null, null) }
@@ -224,7 +227,8 @@ class SeqeraPath implements Path {
         return new SeqeraPath(fs, org, workspace, resourceType, newTrail)
     }
 
-    @Override int getNameCount() { depth() }
+    @Override
+    int getNameCount() { depth() }
 
     @Override
     Path getName(int index) {
@@ -244,14 +248,19 @@ class SeqeraPath implements Path {
 
     @Override
     boolean startsWith(Path other) {
-        if (other !instanceof SeqeraPath) return false
+        if (other !instanceof SeqeraPath)
+            return false
         final that = (SeqeraPath) other
-        if (this.isAbsolute() != that.isAbsolute()) return false
-        final mine = nameComponents()
-        final theirs = that.nameComponents()
-        if (theirs.size() > mine.size()) return false
-        for (int i = 0; i < theirs.size(); i++)
-            if (mine[i] != theirs[i]) return false
+        if (this.isAbsolute() != that.isAbsolute())
+            return false
+        final thisNames = this.nameComponents()
+        final thatNames = that.nameComponents()
+        if (thatNames.size() > thisNames.size())
+            return false
+        for (int i = 0; i < thatNames.size(); i++) {
+            if (thisNames[i] != thatNames[i])
+                return false
+        }
         return true
     }
 
@@ -261,20 +270,27 @@ class SeqeraPath implements Path {
         try {
             final Path p = SeqeraPath.isSeqeraUri(other) ? new SeqeraPath(fs, other) : new SeqeraPath(other)
             return startsWith(p)
-        } catch (Exception ignored) { return false }
+        } catch (Exception ignored) {
+            return false
+        }
     }
 
     @Override
     boolean endsWith(Path other) {
-        if (other !instanceof SeqeraPath) return false
+        if (other !instanceof SeqeraPath)
+            return false
         final that = (SeqeraPath) other
-        if (that.isAbsolute()) return this.equals(that)
-        final mine = nameComponents()
-        final theirs = that.nameComponents()
-        if (theirs.isEmpty() || theirs.size() > mine.size()) return false
-        final offset = mine.size() - theirs.size()
-        for (int i = 0; i < theirs.size(); i++)
-            if (mine[offset + i] != theirs[i]) return false
+        if (that.isAbsolute())
+            return this.equals(that)
+        final thisNames = this.nameComponents()
+        final thatNames = that.nameComponents()
+        if (thatNames.isEmpty() || thatNames.size() > thisNames.size())
+            return false
+        final offset = thisNames.size() - thatNames.size()
+        for (int i = 0; i < thatNames.size(); i++) {
+            if (thisNames[offset + i] != thatNames[i])
+                return false
+        }
         return true
     }
 
@@ -284,16 +300,20 @@ class SeqeraPath implements Path {
         try {
             final Path p = SeqeraPath.isSeqeraUri(other) ? new SeqeraPath(fs, other) : new SeqeraPath(other)
             return endsWith(p)
-        } catch (Exception ignored) { return false }
+        } catch (Exception ignored) {
+            return false
+        }
     }
 
-    @Override Path normalize() { this }
+    @Override
+    Path normalize() { this }
 
     @Override
     Path resolve(Path other) {
         if (other instanceof SeqeraPath) {
             final that = (SeqeraPath) other
             if (that.isAbsolute()) return that
+            // Relative SeqeraPath: resolve each segment of relPath against this
             return resolve(that.relPath)
         }
         return resolve(other.toString())
@@ -302,16 +322,22 @@ class SeqeraPath implements Path {
     @Override
     Path resolve(String segment) {
         if (!segment) return this
+        // Absolute seqera:// URI — parse and return directly
         if (segment.startsWith(PROTOCOL))
             return new SeqeraPath(fs, segment)
+        // Strip a single leading slash
         final stripped = segment.startsWith(SEPARATOR) ? segment.substring(1) : segment
         if (!stripped) return this
+        // Multi-segment: split and resolve one segment at a time
         final segs = stripped.split(SEPARATOR, -1).findAll { String s -> s } as List<String>
         SeqeraPath result = this
-        for (String seg : segs) result = result.resolveOne(seg)
+        for (String seg : segs) {
+            result = result.resolveOne(seg)
+        }
         return result
     }
 
+    /** Resolve a single (non-empty, slash-free) segment against this path. */
     private SeqeraPath resolveOne(String seg) {
         final d = depth()
         if (d == 0) return new SeqeraPath(fs, seg, null, null, null)
@@ -336,22 +362,30 @@ class SeqeraPath implements Path {
 
     @Override
     Path relativize(Path other) {
-        if (other !instanceof SeqeraPath) throw new ProviderMismatchException()
+        if (other !instanceof SeqeraPath)
+            throw new ProviderMismatchException()
         final that = (SeqeraPath) other
         if (!this.isAbsolute() || !that.isAbsolute())
             throw new IllegalArgumentException("Both paths must be absolute to relativize: ${this} vs ${other}")
-        final mine = this.nameComponents()
-        final theirs = that.nameComponents()
+        final thisNames = this.nameComponents()
+        final thatNames = that.nameComponents()
+        // Find common prefix length
         int common = 0
-        while (common < mine.size() && common < theirs.size() && mine[common] == theirs[common]) common++
+        while (common < thisNames.size() && common < thatNames.size()
+               && thisNames[common] == thatNames[common])
+            common++
+        // Build ".." for each remaining segment in this, then append remaining segments of other
         final parts = new ArrayList<String>()
-        for (int i = common; i < mine.size(); i++) parts.add('..')
-        for (int i = common; i < theirs.size(); i++) parts.add(theirs[i])
+        for (int i = common; i < thisNames.size(); i++)
+            parts.add('..')
+        for (int i = common; i < thatNames.size(); i++)
+            parts.add(thatNames[i])
         return new SeqeraPath(parts.join(SEPARATOR))
     }
 
     @Override
     URI toUri() {
+        // Build path component for depth >= 2
         String uriPath = null
         if (workspace) {
             final segments = [workspace]
@@ -359,13 +393,16 @@ class SeqeraPath implements Path {
             for (String t : trail) segments.add(t)
             uriPath = '/' + segments.join('/')
         }
+        // new URI(scheme, authority, path, query, fragment) avoids URI.create() pitfalls for edge cases
         return new URI(SCHEME, org ?: '', uriPath, null, null)
     }
 
     @Override
     String toString() {
         if (!isAbsolute()) return relPath
-        if (depth() == 0) return PROTOCOL
+        // Return the canonical human-readable representation
+        final d = depth()
+        if (d == 0) return "${SCHEME}://"
         return toUri().toString()
     }
 
@@ -376,30 +413,38 @@ class SeqeraPath implements Path {
         return this
     }
 
-    @Override Path toRealPath(LinkOption... options) { this }
+    @Override
+    Path toRealPath(LinkOption... options) { this }
 
     @Override
-    File toFile() { throw new UnsupportedOperationException("toFile() not supported for seqera:// paths") }
+    File toFile() {
+        throw new UnsupportedOperationException("toFile() not supported for seqera:// paths")
+    }
 
     @Override
-    WatchKey register(WatchService w, WatchEvent.Kind<?>[] e, WatchEvent.Modifier... m) {
+    WatchKey register(WatchService watcher, WatchEvent.Kind<?>[] events, WatchEvent.Modifier... modifiers) {
         throw new UnsupportedOperationException("WatchService not supported by seqera:// paths")
     }
 
     @Override
-    WatchKey register(WatchService w, WatchEvent.Kind<?>... e) {
+    WatchKey register(WatchService watcher, WatchEvent.Kind<?>... events) {
         throw new UnsupportedOperationException("WatchService not supported by seqera:// paths")
     }
 
     @Override
     Iterator<Path> iterator() {
         final d = depth()
-        final out = new ArrayList<Path>(d)
-        for (int i = 0; i < d; i++) out.add(getName(i))
-        return out.iterator()
+        final List<Path> parts = new ArrayList<>(d)
+        for (int i = 0; i < d; i++) {
+            parts.add(getName(i))
+        }
+        return parts.iterator()
     }
 
-    @Override int compareTo(Path other) { toString().compareTo(other.toString()) }
+    @Override
+    int compareTo(Path other) {
+        return toString().compareTo(other.toString())
+    }
 
     @Override
     boolean equals(Object obj) {
@@ -408,17 +453,23 @@ class SeqeraPath implements Path {
         return toString() == obj.toString()
     }
 
-    @Override int hashCode() { toString().hashCode() }
+    @Override
+    int hashCode() { toString().hashCode() }
 
     static URI asUri(String path) {
-        if (!path) throw new IllegalArgumentException("Missing 'path' argument")
-        if (!path.startsWith(PROTOCOL))
+        if( !path )
+            throw new IllegalArgumentException("Missing 'path' argument")
+        if( !path.startsWith(PROTOCOL) )
             throw new IllegalArgumentException("Invalid Seqera file system path URI - it must start with '${PROTOCOL}' prefix - offending value: $path")
-        if (path.startsWith(PROTOCOL + SEPARATOR) && path.length() > PROTOCOL.length() + 1)
+        if( path.startsWith(PROTOCOL + SEPARATOR) && path.length() > PROTOCOL.length() + 1 )
             throw new IllegalArgumentException("Invalid Seqera file system path URI - make sure the scheme prefix does not contain more than two slash characters or a query in the root '/' - offending value: $path")
-        if (path.startsWith(PROTOCOL + './'))
+
+        //URI strings like seqera://./something are converted to seqera://something
+        if( path.startsWith(PROTOCOL + './') ) {
             path = PROTOCOL + path.substring(PROTOCOL.length() + 2)
-        if (path == PROTOCOL || path == PROTOCOL + '.')
+        }
+
+        if( path == PROTOCOL || path == PROTOCOL + '.') //Empty path case
             return new URI(PROTOCOL + '/')
         return new URI(path)
     }

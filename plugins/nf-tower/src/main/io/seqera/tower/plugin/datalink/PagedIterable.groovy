@@ -64,7 +64,8 @@ class PagedIterable<T> implements Iterable<T> {
     /** Eagerly fetch the first page; later pages on demand. Throws IOException at the call site on failure. */
     static <T> PagedIterable<T> start(NextPageFetcher<T> fetcher) throws IOException {
         final p = fetcher.fetch()
-        if (p == null) return new PagedIterable<T>(Collections.<T>emptyList(), true, fetcher)
+        if (p == null)
+            return new PagedIterable<T>(Collections.<T>emptyList(), true, fetcher)
         return new PagedIterable<T>(p.items, p.isLast, fetcher)
     }
 
@@ -73,8 +74,17 @@ class PagedIterable<T> implements Iterable<T> {
 
     boolean isEmpty() { firstPage.isEmpty() && firstPageIsLast }
 
+    private boolean iteratorReturned = false
+
     @Override
     Iterator<T> iterator() {
+        // Single-use: the page fetcher carries mutable cursor state (offset/token), so a
+        // second iterator would resume mid-stream rather than restart, silently skipping or
+        // duplicating pages. Fail fast instead. Reading getFirstPage() does not consume the
+        // iterator and remains allowed.
+        if (iteratorReturned)
+            throw new IllegalStateException("PagedIterable is single-use: iterator() may be called at most once")
+        iteratorReturned = true
         return new PagedIterator()
     }
 
@@ -91,12 +101,14 @@ class PagedIterable<T> implements Iterable<T> {
         @Override
         boolean hasNext() {
             while (!current.hasNext()) {
-                if (exhausted) return false
+                if (exhausted)
+                    return false
                 try {
                     final p = fetcher.fetch()
                     final items = p?.items ?: Collections.<T>emptyList()
                     current = items.iterator()
-                    if (p == null || p.isLast) exhausted = true
+                    if (p == null || p.isLast)
+                        exhausted = true
                 } catch (IOException e) {
                     throw new UncheckedIOException(e)
                 }
@@ -106,7 +118,8 @@ class PagedIterable<T> implements Iterable<T> {
 
         @Override
         T next() {
-            if (!hasNext()) throw new NoSuchElementException()
+            if (!hasNext())
+                throw new NoSuchElementException()
             return current.next()
         }
     }

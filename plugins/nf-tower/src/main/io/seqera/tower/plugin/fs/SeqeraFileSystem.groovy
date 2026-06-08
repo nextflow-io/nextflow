@@ -72,7 +72,7 @@ class SeqeraFileSystem extends FileSystem {
     FileSystemProvider provider() { provider0 }
 
     @Override
-    void close() { /* no-op */ }
+    void close() { /* no-op: platform API connection is stateless */ }
 
     @Override
     boolean isOpen() { true }
@@ -163,6 +163,10 @@ class SeqeraFileSystem extends FileSystem {
         return dto
     }
 
+    /**
+     * Ensure the org/workspace cache is populated. Thread-safe: loads at most once.
+     * Calls GET /user-info then GET /user/{userId}/workspaces.
+     */
     synchronized void loadOrgWorkspaceCache() {
         if (orgWorkspaceCacheLoaded) return
         log.debug "Loading Seqera org/workspace cache"
@@ -176,11 +180,17 @@ class SeqeraFileSystem extends FileSystem {
         orgWorkspaceCacheLoaded = true
     }
 
+    /**
+     * @return distinct org names visible to the authenticated user
+     */
     synchronized Set<String> listOrgNames() {
         loadOrgWorkspaceCache()
         return Collections.unmodifiableSet(orgCache.keySet())
     }
 
+    /**
+     * @return workspace names for the given org
+     */
     synchronized List<String> listWorkspaceNames(String org) {
         loadOrgWorkspaceCache()
         return workspaceCache.keySet()
@@ -188,6 +198,10 @@ class SeqeraFileSystem extends FileSystem {
                 .collect { String k -> k.substring(org.length() + 1) }
     }
 
+    /**
+     * Resolve a workspace ID by org and workspace name.
+     * @throws NoSuchFileException if the org or workspace is not in the cache
+     */
     synchronized long resolveWorkspaceId(String org, String workspace) throws NoSuchFileException {
         loadOrgWorkspaceCache()
         final key = "${org}/${workspace}" as String

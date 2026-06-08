@@ -217,7 +217,8 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
                 if (!filter) return inner
                 return new FilteredIterator<Path>(inner, filter)
             }
-            @Override void close() {}
+            @Override
+            void close() {}
         }
     }
 
@@ -318,7 +319,8 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
     // ---- private helpers ----
 
     private static SeqeraPath toSeqeraPath(Path path) {
-        if (path !instanceof SeqeraPath) throw new ProviderMismatchException()
+        if (path !instanceof SeqeraPath)
+            throw new ProviderMismatchException()
         return (SeqeraPath) path
     }
 
