@@ -265,6 +265,7 @@ class LinObserver implements TraceObserverV2 {
             normalizer.normalizePath(task.getCondaEnv()),
             normalizer.normalizePath(task.getSpackEnv()),
             task.config?.getArchitecture()?.toString(),
+            task.config?.getModule() ?: null,
             getTaskGlobalVars(task),
             getTaskBinEntries(task).collect { Path p -> new DataPath(
                 normalizer.normalizePath(p.normalize()),

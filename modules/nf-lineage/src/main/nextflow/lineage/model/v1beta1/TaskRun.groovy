@@ -65,6 +65,10 @@ class TaskRun implements LinSerializable {
      */
     String architecture
     /**
+     * Environment modules used for the task run
+     */
+    List<String> module
+    /**
      * Global variables defined in the task run
      */
     Map globalVars

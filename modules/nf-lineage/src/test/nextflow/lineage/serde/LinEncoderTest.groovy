@@ -204,7 +204,7 @@ class LinEncoderTest extends Specification{
         def taskRun = new TaskRun(
             uniqueId.toString(),"name", new Checksum("78910", "nextflow", "standard"), 'this is a script',
             [new Parameter("String", "param1", "value1")], "container:version", "conda", "spack", "amd64",
-            [a: "A", b: "B"], [new DataPath("path/to/file", new Checksum("78910", "nextflow", "standard"))]
+            ["samtools/1.9"], [a: "A", b: "B"], [new DataPath("path/to/file", new Checksum("78910", "nextflow", "standard"))]
         )
         when:
         def encoded = encoder.encode(taskRun)
@@ -222,6 +222,7 @@ class LinEncoderTest extends Specification{
         result.conda == "conda"
         result.spack == "spack"
         result.architecture == "amd64"
+        result.module == ["samtools/1.9"]
         result.globalVars == [a: "A", b: "B"]
         result.binEntries.size() == 1
         result.binEntries.get(0).path == "path/to/file"
