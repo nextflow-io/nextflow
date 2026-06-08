@@ -19,9 +19,9 @@ package nextflow.cli
 import spock.lang.Specification
 /**
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Phil Ewels <phil.ewels@seqera.io>
  */
-class CmdPluginUsageTest extends Specification {
+class CmdPluginTest extends Specification {
 
     private String capture(List<String> args) {
         final cmd = new CmdPlugin(args: args)
