@@ -53,8 +53,14 @@ class CliSchemaTest extends Specification {
         schema.subcommands.containsKey('info')
         schema.subcommands.run.help
 
-        and: 'aliases are surfaced when present'
-        schema.subcommands.lineage.aliases == ['li']
+        and: 'the index is lightweight - help only, no params or aliases'
+        !schema.subcommands.run.containsKey('params')
+        !schema.subcommands.lineage.containsKey('aliases')
+
+        and: 'the index recurses into nested sub-commands by name + help'
+        schema.subcommands.lineage.subcommands.containsKey('view')
+        schema.subcommands.lineage.subcommands.view.help
+        !schema.subcommands.lineage.subcommands.view.containsKey('params')
 
         and: 'hidden options are reported but flagged'
         def debug = schema.params.find { '-debug' in (it.opts ?: []) }

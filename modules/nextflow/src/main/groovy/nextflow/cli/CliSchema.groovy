@@ -35,7 +35,7 @@ import groovy.transform.CompileStatic
  * {@code -help} text:
  *
  * <pre>
- *   nextflow -help-json            # global options + index of all commands
+ *   nextflow -help-json            # global options + the full command tree
  *   nextflow run -help-json        # full option/argument detail for `run`
  * </pre>
  *
@@ -46,7 +46,10 @@ class CliSchema {
 
     /**
      * Build the schema for the top-level program: the global options plus a
-     * name + description index of every available command.
+     * recursive index of the whole command tree by name + description (e.g.
+     * {@code module} → {@code create}, {@code install}, ...). This is the
+     * progressive-disclosure entry point — full option/argument detail is
+     * revealed by drilling into a command with {@code nextflow <cmd> -help-json}.
      */
     static String root(CliOptions options, List<CmdBase> commands) {
         final schema = [
@@ -129,22 +132,50 @@ class CliSchema {
     }
 
     /**
-     * Map each command name to its description and aliases. Nextflow commands
-     * are flat (no nested groups), so a single index lists them all; drill into
-     * any one with {@code nextflow <command> -help-json}.
+     * Lightweight, recursive index of the command tree: each command mapped to
+     * its description plus — for commands that dispatch sub-commands — a nested
+     * index of the same shape, all the way down. Deliberately carries only names
+     * and help text (no params, aliases or paths): it's the map of the CLI, and
+     * full detail is disclosed by drilling into a command.
      */
     @CompileDynamic
     private static Map<String,Object> commandIndex(List<CmdBase> commands) {
         final index = new TreeMap<String,Object>()
         for( CmdBase cmd : commands ) {
-            final clazz = cmd.getClass()
-            final description = descriptionOf(clazz)
+            final description = descriptionOf(cmd.getClass())
             // only advertise commands that opt in with a description, matching `-help`
             if( !description )
                 continue
-            index[cmd.name] = leafEntry(description, aliasesOf(clazz))
+            index[cmd.name] = indexEntry(description, cmd)
         }
         return index
+    }
+
+    /** One node of the lightweight index: help text, plus a nested index when the command dispatches sub-commands. */
+    @CompileDynamic
+    private static Map<String,Object> indexEntry(String help, CmdBase cmd) {
+        final entry = [:] as Map<String,Object>
+        if( help )
+            entry.help = help
+        if( cmd instanceof SubcommandAware ) {
+            final nested = new TreeMap<String,Object>()
+            for( SubcommandAware.Subcommand sub : (cmd as SubcommandAware).getSubcommands() ) {
+                final subHelp = sub.command != null ? descriptionOf(sub.command.getClass()) : sub.help
+                nested[sub.name] = sub.command != null ? indexEntry(subHelp, sub.command) : leafHelp(subHelp)
+            }
+            if( nested )
+                entry.subcommands = nested
+        }
+        return entry
+    }
+
+    /** A leaf index node carrying only help text (for manually-parsed sub-commands). */
+    @CompileDynamic
+    private static Map<String,Object> leafHelp(String help) {
+        final entry = [:] as Map<String,Object>
+        if( help )
+            entry.help = help
+        return entry
     }
 
     /**
@@ -271,8 +302,56 @@ class CliSchema {
         return fields
     }
 
+    /** Soft line-length budget for the compact renderer. */
+    private static final int MAX_WIDTH = 100
+    private static final int INDENT = 2
+
     private static String render(Map schema) {
-        return JsonOutput.prettyPrint(JsonOutput.toJson(schema))
+        return format(schema, 0, 0)
+    }
+
+    /**
+     * Render JSON that stays human-readable but is condensed: any object or
+     * array that fits within {@link #MAX_WIDTH} columns is kept on a single
+     * line, and only the containers that overflow are expanded — so leaf maps
+     * like a single parameter print as one tidy line instead of a dozen.
+     *
+     * @param value the value to render
+     * @param indent leading-whitespace width of the line this value starts on
+     * @param col    column at which this value's first character is placed
+     *               (accounts for any {@code "key": } prefix already emitted)
+     */
+    @CompileDynamic
+    private static String format(Object value, int indent, int col) {
+        final oneLine = inline(value)
+        if( col + oneLine.length() <= MAX_WIDTH )
+            return oneLine
+
+        final childIndent = indent + INDENT
+        final pad = ' ' * childIndent
+        if( value instanceof Map && !value.isEmpty() ) {
+            final parts = value.collect { k, v ->
+                final key = JsonOutput.toJson(k.toString()) + ': '
+                pad + key + format(v, childIndent, childIndent + key.length())
+            }
+            return '{\n' + parts.join(',\n') + '\n' + (' ' * indent) + '}'
+        }
+        if( value instanceof List && !value.isEmpty() ) {
+            final parts = value.collect { v -> pad + format(v, childIndent, childIndent) }
+            return '[\n' + parts.join(',\n') + '\n' + (' ' * indent) + ']'
+        }
+        // scalar (or empty container) that can't be broken — emit as-is
+        return oneLine
+    }
+
+    /** Single-line JSON for a value, with {@code ": "} / {@code ", "} spacing for readability (unlike minified output). */
+    @CompileDynamic
+    private static String inline(Object value) {
+        if( value instanceof Map )
+            return value.isEmpty() ? '{}' : '{' + value.collect { k, v -> JsonOutput.toJson(k.toString()) + ': ' + inline(v) }.join(', ') + '}'
+        if( value instanceof List )
+            return value.isEmpty() ? '[]' : '[' + value.collect { inline(it) }.join(', ') + ']'
+        return JsonOutput.toJson(value)
     }
 
     private static final List<String> META_OPTIONS = ['-h', '-help', '-help-json']
