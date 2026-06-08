@@ -48,6 +48,18 @@ class ExecutorOptsTest extends Specification {
         config.machineRequirement != null
         config.machineRequirement.provisioning == null
         !config.autoLabels
+        !config.ssh
+    }
+
+    def 'should enable on-demand ssh when set' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            ssh: true
+        ])
+
+        then:
+        config.ssh
     }
 
     def 'should create config with custom region' () {

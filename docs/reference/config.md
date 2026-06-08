@@ -1456,6 +1456,9 @@ The following settings are available:
 `seqera.executor.region`
 : The cloud region for task execution.
 
+`seqera.executor.ssh`
+: When `true`, enables on-demand SSH access to the run's task containers for the VM and local backends (default: `false`). A running task can then be reached with `sched task ssh <task-id>` (or a plain `ssh <task-id>@<scheduler>`), and the connection survives task completion.
+
 `seqera.executor.taskEnvironment`
 : Custom environment variables to apply to all tasks submitted by the Seqera executor. These are merged with the Fusion environment variables, with Fusion variables taking precedence. For example: `taskEnvironment = [MY_VAR: 'value']`.
 
