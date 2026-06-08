@@ -28,7 +28,7 @@ import groovy.transform.PackageScope
  *
  * Each line is prefixed with a 2-character level indicator and the message body is
  * highlighted using rules ported from the nextflow-log TextMate grammar shipped with
- * vscode-language-nextflow.
+ * the Nextflow VS Code extension.
  *
  * @author Phil Ewels <phil.ewels@seqera.io>
  */
@@ -64,9 +64,8 @@ class LogFileFormatter {
     /** Entry-start pattern. Captures: 1=timestamp, 2=thread, 3=level, 4=logger, 5=dash. */
     static final Pattern ENTRY_HEADER = ~/^([A-Z][a-z]{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) (\[[^\]]+\]) (TRACE|DEBUG|INFO|WARN|ERROR) +([\w$.]+) (-)/
 
-    /** Captured offsets of an entry-start match. Immutable snapshot — does not keep the Matcher. */
+    /** Captured offsets of an entry-start match. Immutable snapshot -- does not keep the Matcher. */
     @PackageScope
-    @CompileStatic
     static class EntryHeader {
         final Level level
         final int timestampStart, timestampEnd
@@ -135,7 +134,6 @@ class LogFileFormatter {
      * resolved from {@link #THEME} at construction so apply-time is allocation-free.
      */
     @PackageScope
-    @CompileStatic
     static class BodyRule {
         final Pattern pattern
         final int[] groupIndexes
@@ -155,7 +153,7 @@ class LogFileFormatter {
         }
     }
 
-    /** Body patterns, in priority order — `message-body` rules from the grammar. */
+    /** Body patterns, in priority order -- `message-body` rules from the grammar. */
     static final List<BodyRule> BODY_RULES = Collections.unmodifiableList([
         new BodyRule(
             ~/^(Caused by|Command executed|Command exit status|Command output|Command error|Work dir|Tip):/,
@@ -296,7 +294,7 @@ class LogFileFormatter {
             sb.append(line, h.timestampEnd, h.threadStart)
             appendColored(sb, line, h.threadStart, h.threadEnd, SCOPE_THREAD)
             sb.append(line, h.threadEnd, h.levelStart)
-            // level token plain — indicator block carries the signal
+            // level token plain -- indicator block carries the signal
             sb.append(line, h.levelStart, h.levelEnd)
         }
         sb.append(line, h.levelEnd, h.loggerStart)
@@ -339,7 +337,7 @@ class LogFileFormatter {
             for( int i = 0; i < rc; i++ ) {
                 int s = starts[i]
                 if( s >= 0 && s < pos ) {
-                    // cursor advanced past this match — find the next one at/after pos
+                    // cursor advanced past this match -- find the next one at/after pos
                     final m = matchers[i]
                     s = m.find(pos) ? m.start() : -1
                     starts[i] = s

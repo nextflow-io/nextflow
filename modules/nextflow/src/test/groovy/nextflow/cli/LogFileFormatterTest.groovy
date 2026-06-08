@@ -107,7 +107,7 @@ class LogFileFormatterTest extends Specification {
         LogFileFormatter.INDICATOR_ERROR_FILL.endsWith("${ESC}[0m")
     }
 
-    // ----- format() — no-color passes through -----
+    // ----- format() -- no-color passes through -----
 
     def 'format returns line unchanged when useColor is false'() {
         given:
@@ -119,7 +119,7 @@ class LogFileFormatterTest extends Specification {
         f.format(line, Level.INFO, h) == line
     }
 
-    // ----- format() — TRACE/DEBUG wrapping -----
+    // ----- format() -- TRACE/DEBUG wrapping -----
 
     def 'TRACE entry: indicator + dim wrapper, no body grammar applied'() {
         given:
@@ -151,7 +151,7 @@ class LogFileFormatterTest extends Specification {
         out.startsWith('  ')                  // DEBUG uses plain 2-space prefix
         out.startsWith(LogFileFormatter.INDICATOR_PLAIN + ESC + '[2m')
         out.endsWith("${ESC}[0m")
-        // grammar styling still applied — thread, logger colored — and dim reactivated after each reset
+        // grammar styling still applied -- thread, logger colored -- and dim reactivated after each reset
         out.contains("${ESC}[36m[main]${ESC}[0m${ESC}[2m")     // cyan thread + reset + dim again
         out.contains("${ESC}[32mnextflow.Session${ESC}[0m${ESC}[2m")  // green logger + reset + dim again
     }
@@ -197,7 +197,7 @@ class LogFileFormatterTest extends Specification {
         out.contains("${ESC}[36mfoo.Bar.baz${ESC}[0m${ESC}[2m")
     }
 
-    // ----- format() — INFO/WARN/ERROR styling -----
+    // ----- format() -- INFO/WARN/ERROR styling -----
 
     def 'INFO entry-start: single black-bg indicator + grammar styling, no level-token highlight'() {
         given:
@@ -278,7 +278,7 @@ class LogFileFormatterTest extends Specification {
         out.contains("${ESC}[0m${ESC}[31m")
     }
 
-    // ----- format() — grammar body rules -----
+    // ----- format() -- grammar body rules -----
 
     def 'format highlights work-hash in entry-start body'() {
         given:
@@ -346,9 +346,9 @@ class LogFileFormatterTest extends Specification {
         out == '  ' + line  // plain 2-space prefix, no styling
     }
 
-    // ----- format() — useColor=false path adds no prefix -----
+    // ----- format() -- useColor=false path adds no prefix -----
 
-    def 'useColor=false preserves bytes — no prefix, no ANSI'() {
+    def 'useColor=false preserves bytes -- no prefix, no ANSI'() {
         given:
         final f = new LogFileFormatter(false)
         final line = 'May-26 14:30:00.000 [main] INFO  nextflow.Session - hi'

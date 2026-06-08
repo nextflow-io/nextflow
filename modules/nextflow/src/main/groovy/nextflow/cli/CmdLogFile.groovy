@@ -106,20 +106,20 @@ class CmdLogFile extends CmdBase {
     @Override
     void run() {
         if( args && args.size() > 1 )
-            throw new AbortOperationException("Too many arguments — expected a single run name or file path")
+            throw new AbortOperationException("Too many arguments -- expected a single run name or file path")
         if( lines != null && lines < 0 )
             throw new AbortOperationException("Option `-n` must be a non-negative integer")
 
-        stripAnsi = !keepAnsi
+        this.stripAnsi = !keepAnsi
         final usePager = shouldUsePager()
-        formatter = new LogFileFormatter(resolveUseColor(usePager))
+        this.formatter = new LogFileFormatter(resolveUseColor(usePager))
 
         final threshold = parseLevel(level)
         final path = resolveLogFile(args ? args[0] : null)
 
         if( follow ) {
             // Snapshot the size once so the tail read and the follow seek share the same byte
-            // boundary — otherwise lines appended between them would be printed by neither.
+            // boundary -- otherwise lines appended between them would be printed by neither.
             final long startPos = Files.size(path)
             if( lines != null )
                 printLastN(path, threshold, lines, startPos)
@@ -154,7 +154,7 @@ class CmdLogFile extends CmdBase {
         if( colorOverride != null )
             return colorOverride
         if( usePager )
-            return true  // pager handles the real terminal — keep colors
+            return true  // pager handles the real terminal -- keep colors
         return System.console() != null
     }
 
@@ -243,7 +243,7 @@ class CmdLogFile extends CmdBase {
 
         final record = records.last()
         if( record.sessionId == null )
-            throw new AbortOperationException("History record for run '${record.runName ?: query}' has no session id — pass the log file path explicitly")
+            throw new AbortOperationException("History record for run '${record.runName ?: query}' has no session id -- pass the log file path explicitly")
         final sessionId = record.sessionId.toString()
         final dir = currentDir ?: Paths.get('.')
         for( String suffix : LOG_FILE_SUFFIXES ) {
@@ -280,9 +280,9 @@ class CmdLogFile extends CmdBase {
         if( !value )
             return null
         final str = value.trim().toUpperCase()
-        // Level.toLevel accepts extras like ALL/OFF — gate on our supported set first
+        // Level.toLevel accepts extras like ALL/OFF -- gate on our supported set first
         if( !(str in LEVEL_NAMES) )
-            throw new AbortOperationException("Invalid log level: '${value}' — expected one of ${LEVEL_NAMES.join(', ')}")
+            throw new AbortOperationException("Invalid log level: '${value}' -- expected one of ${LEVEL_NAMES.join(', ')}")
         return Level.toLevel(str)
     }
 
@@ -311,7 +311,7 @@ class CmdLogFile extends CmdBase {
                 }
                 if( keep ) {
                     out.println(formatter.format(line, currentLevel, header))
-                    if( out.checkError() ) break   // pager exited (broken pipe) — stop reading
+                    if( out.checkError() ) break   // pager exited (broken pipe) -- stop reading
                 }
             }
         }
@@ -372,7 +372,6 @@ class CmdLogFile extends CmdBase {
     }
 
     /** Caps the number of bytes read from a delegate stream. */
-    @CompileStatic
     private static class BoundedInputStream extends InputStream {
         private final InputStream delegate
         private long remaining
@@ -414,7 +413,7 @@ class CmdLogFile extends CmdBase {
             raf.seek(startPos)
             while( !Thread.currentThread().isInterrupted() ) {
                 if( raf.length() < raf.getFilePointer() ) {
-                    // file was truncated or rotated — reopen from the start
+                    // file was truncated or rotated -- reopen from the start
                     raf.close()
                     raf = new RandomAccessFile(path.toFile(), 'r')
                     keep = passesFilter(null, threshold)

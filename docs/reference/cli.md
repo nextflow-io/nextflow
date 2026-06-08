@@ -1165,7 +1165,7 @@ $ nextflow logfile [options] [run_name | session_id | path]
 
 The `logfile` command prints the contents of a `.nextflow.log` file written by Nextflow during a pipeline run. The argument can be:
 
-- A run name (e.g. `kickass_rutherford`) — resolved via the local execution history and matched to the corresponding `.nextflow.log[.N]` file in the current directory by session id.
+- A run name (e.g. `kickass_rutherford`) -- resolved via the local execution history and matched to the corresponding `.nextflow.log[.N]` file in the current directory by session id.
 - A session id (or unique prefix), or the literal `last` for the most recent run.
 - A direct path to a log file (e.g. `.nextflow.log.4` or an absolute path).
 
@@ -1220,7 +1220,7 @@ Print a specific log file directly:
 $ nextflow logfile .nextflow.log.4
 ```
 
-Show only warnings and errors from the most recent run (useful for piping to an LLM to save tokens):
+Show only warnings and errors from the most recent run:
 
 ```console
 $ nextflow logfile -level WARN
