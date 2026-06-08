@@ -64,7 +64,8 @@ class DatasetsResourceHandler implements ResourceTypeHandler {
         if (d == 3) {
             final workspaceId = fs.resolveWorkspaceId(dir.org, dir.workspace)
             return resolveDatasets(workspaceId).collect { DatasetDto ds ->
-                final version = resolveVersion(ds, ds.version?.toString(), dir.resolve(ds.name) as SeqeraPath )
+                // Get latest version to build dataset attributes (null pinned version)
+                final version = resolveVersion(ds, null, dir.resolve(ds.name) as SeqeraPath )
                 dir.resolveWithAttributes(ds.name, attributesFor(version)) as Path
             }
         }
