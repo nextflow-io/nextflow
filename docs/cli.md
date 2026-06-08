@@ -539,7 +539,7 @@ The option is contextual, following a progressive-disclosure model. At the top l
 $ nextflow -help-json
 ```
 
-Add it to any command to get that command's full options and arguments. Commands that group sub-commands (such as `fs`, `secrets`, and `module`) nest those sub-commands under the same `subcommands` key, recursively, so a single call covers the whole command tree:
+Add it to any command to get that command's full options and arguments. Commands that group sub-commands (such as `fs`, `secrets`, `plugin`, and `module`) nest those sub-commands under the same `subcommands` key, recursively, so a single call covers the whole command tree:
 
 ```console
 $ nextflow run -help-json
