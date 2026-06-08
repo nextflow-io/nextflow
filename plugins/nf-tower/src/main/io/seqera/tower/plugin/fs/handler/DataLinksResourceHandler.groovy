@@ -85,10 +85,12 @@ class DataLinksResourceHandler implements ResourceTypeHandler {
             return providers.collect { String p -> dir.resolve(p) as Path }
         }
         if (trail.size() == 1) {
-            // data-links/<provider>/ → sorted data-link names for that provider
+            // data-links/<provider>/ → sorted data-link names for that provider.
+            // Filtered server-side so we don't page over the whole workspace; the equality
+            // check guards against a non-exact keyword match.
             final prov = trail[0]
             final names = new TreeSet<String>()
-            final Iterator<DataLinkDto> it = client.listDataLinks(workspaceId)
+            final Iterator<DataLinkDto> it = client.listDataLinksByProvider(workspaceId, prov)
             while (it.hasNext()) {
                 final dl = it.next()
                 if (dl.provider?.toString() == prov)

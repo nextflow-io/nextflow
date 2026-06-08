@@ -186,9 +186,9 @@ class DataLinksResourceHandlerTest extends Specification {
         when:
         def paths = asList(handler.list(path))
 
-        then:
+        then: 'server filters by provider; the stray GOOGLE entry is dropped by the equality guard'
         1 * fs.resolveWorkspaceId(_, _) >> 10L
-        1 * client.listDataLinks(10L) >> iter([
+        1 * client.listDataLinksByProvider(10L, 'aws') >> iter([
                 dl('dl-1', 'inputs', DataLinkProvider.AWS),
                 dl('dl-2', 'archive', DataLinkProvider.AWS),
                 dl('dl-3', 'onGcs', DataLinkProvider.GOOGLE)
@@ -456,7 +456,7 @@ class DataLinksResourceHandlerTest extends Specification {
 
         then:
         1 * fs.resolveWorkspaceId(_, _) >> 10L
-        1 * client.listDataLinks(10L) >> iter([dl('dl-1', 'x', DataLinkProvider.AWS)])
+        1 * client.listDataLinksByProvider(10L, 'azure') >> iter([dl('dl-1', 'x', DataLinkProvider.AWS)])
         def ex = thrown(NoSuchFileException)
         ex.reason?.toLowerCase()?.contains('no data-links')
     }

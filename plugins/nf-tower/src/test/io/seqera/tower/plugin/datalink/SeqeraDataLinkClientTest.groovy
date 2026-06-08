@@ -113,6 +113,37 @@ class SeqeraDataLinkClientTest extends Specification {
         !client.listDataLinks(10L).hasNext()
     }
 
+    // ---- listDataLinksByProvider ----
+
+    def "listDataLinksByProvider filters server-side via the provider keyword"() {
+        given:
+        def body = JsonOutput.toJson([dataLinks: [
+                [id: 'dl-1', name: 'inputs',  provider: 'aws'],
+                [id: 'dl-2', name: 'archive', provider: 'aws']
+        ], totalSize: 2])
+        def tc = tower()
+        // URL-encoded: ':' → '%3A'
+        tc.sendApiRequest("${EP}/data-links?workspaceId=10&max=100&offset=0&search=provider%3Aaws") >> ok(body)
+        def client = new SeqeraDataLinkClient(tc)
+
+        when:
+        def list = drain(client.listDataLinksByProvider(10L, 'aws'))
+
+        then:
+        list*.name == ['inputs', 'archive']
+    }
+
+    def "listDataLinksByProvider returns empty iterator when the provider has none"() {
+        given:
+        def body = JsonOutput.toJson([dataLinks: [], totalSize: 0])
+        def tc = tower()
+        tc.sendApiRequest("${EP}/data-links?workspaceId=10&max=100&offset=0&search=provider%3Aazure") >> ok(body)
+        def client = new SeqeraDataLinkClient(tc)
+
+        expect:
+        !client.listDataLinksByProvider(10L, 'azure').hasNext()
+    }
+
     // ---- getDataLink ----
 
     def "getDataLink uses server-side keyword search (name + provider:<p>) and returns the first match"() {

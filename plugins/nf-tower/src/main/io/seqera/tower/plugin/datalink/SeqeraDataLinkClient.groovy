@@ -64,6 +64,17 @@ class SeqeraDataLinkClient {
     }
 
     /**
+     * Lazy iterator over the data-links of a single provider, filtered server-side via the
+     * Platform's {@code search=provider:<provider>} keyword so the workspace's other
+     * providers are never paged over. Callers should still verify {@code provider} equality
+     * on each result, as the keyword search is not guaranteed to be an exact match.
+     */
+    Iterator<DataLinkDto> listDataLinksByProvider(long workspaceId, String provider) throws IOException {
+        final search = "provider:${provider}".toString()
+        return PagedIterable.start(new DataLinkListFetcher(towerClient, endpoint, workspaceId, LIST_PAGE_SIZE, search)).iterator()
+    }
+
+    /**
      * Distinct provider identifiers present in the workspace, sorted.
      * The returned set is unmodifiable; memoized per workspace.
      */
