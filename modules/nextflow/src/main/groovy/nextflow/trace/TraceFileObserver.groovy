@@ -75,8 +75,8 @@ class TraceFileObserver implements TraceObserverV2 {
 
     private boolean useRawNumber
 
-    TraceFileObserver(TraceConfig config) {
-        tracePath = FileHelper.asPath(config.file)
+    TraceFileObserver(TraceConfig config, Path baseDir) {
+        tracePath = baseDir.resolve(config.file)
         overwrite = config.overwrite
         separator = config.sep
         useRawNumbers(config.raw)

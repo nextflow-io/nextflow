@@ -17,7 +17,7 @@
 package nextflow.trace
 
 import java.nio.file.Files
-import java.nio.file.Paths
+import java.nio.file.Path
 import java.time.OffsetDateTime
 
 import groovy.json.JsonSlurper
@@ -150,7 +150,7 @@ class ReportObserverTest extends Specification {
     def 'should increment workflow stats' () {
         given:
         def workflow = new WorkflowMetadata(
-                workDir: Paths.get('/work/dir'),
+                workDir: Path.of('/work/dir'),
                 stats: new WorkflowStats(),
                 nextflow: new NextflowMeta('0.27.9', 3232, '2017-12-12')
         )
@@ -198,7 +198,7 @@ class ReportObserverTest extends Specification {
     def 'should render not tasks payload' () {
 
         given:
-        def observer = Spy(new ReportObserver(new ReportConfig([:])))
+        def observer = Spy(new ReportObserver(new ReportConfig([:]), Path.of('.')))
         def BIG = Mock(Map)
         BIG.size() >> ReportConfig.DEF_MAX_TASKS+1
 
@@ -211,7 +211,7 @@ class ReportObserverTest extends Specification {
 
     def 'should render tasks payload' () {
         given:
-        def observer = Spy(new ReportObserver(new ReportConfig([:])))
+        def observer = Spy(new ReportObserver(new ReportConfig([:]), Path.of('.')))
 
         def TASKID1 = TaskId.of(10)
         def TASKID2 = TaskId.of(20)
