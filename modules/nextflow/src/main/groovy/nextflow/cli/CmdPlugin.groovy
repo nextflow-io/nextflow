@@ -16,8 +16,6 @@
 
 package nextflow.cli
 
-import nextflow.plugin.PluginRef
-
 import static nextflow.cli.PluginExecAware.CMD_SEP
 
 import java.nio.file.Path
@@ -27,6 +25,7 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import nextflow.exception.AbortOperationException
+import nextflow.plugin.PluginRef
 import nextflow.plugin.Plugins
 import nextflow.plugin.util.PluginRefactor
 import org.eclipse.jgit.api.Git
@@ -77,7 +76,7 @@ class CmdPlugin extends CmdBase {
             final target = items[0]
             final cmd = items[1] ? items[1..-1].join(CMD_SEP) : null
 
-            executeCustomPluginCmd(target, cmd)
+            executePluginCommand(target, cmd)
         }
         else {
             throw new AbortOperationException("Invalid plugin command: ${args[0]}")
@@ -130,36 +129,37 @@ class CmdPlugin extends CmdBase {
     }
 
     /**
-     * Execute a custom CLI command, defined by a plugin.
+     * Execute a plugin CLI command.
      *
-     * @param target The target plugin and optional version, Example `nf-somePlugin@1.0.0`
-     * @param cmd The command that is passed on to the plugin.
+     * @param target    The target plugin and optional version, e.g. `nf-somePlugin@1.0.0`
+     * @param cmd       The command that is passed to the plugin.
      */
-    private void executeCustomPluginCmd(String target, String cmd) {
-        // Separate ID and version
-        PluginRef pluginRef = PluginRef.parse(target)
-
-        // push back the command as the first item
+    private void executePluginCommand(String target, String cmd) {
+        // start the plugin
         Plugins.start(target)
 
-        // Fetch started plugin
+        // fetch started plugin
+        final pluginRef = PluginRef.parse(target)
         final wrapper = Plugins.manager.getPlugin(pluginRef.id)
         if( !wrapper )
             throw new AbortOperationException("Cannot find target plugin: $target")
         final plugin = wrapper.getPlugin()
         if( plugin instanceof PluginExecAware ) {
-            def mapped = [] as List<String>
-            params.entrySet().each{
-                mapped << "--$it.key".toString()
-                mapped << "$it.value".toString()
+            // normalize `--key=value` arguments as `--key value`
+            final List<String> mapped = []
+            for( final entry : params.entrySet() ) {
+                mapped << "--${entry.key}".toString()
+                mapped << "${entry.value}".toString()
             }
             args.addAll(mapped)
+            // execute plugin command
             final ret = plugin.exec(getLauncher(), target, cmd, args)
             // use explicit exit to invoke the system shutdown hooks
             System.exit(ret)
         }
-        else
+        else {
             throw new AbortOperationException("Invalid target plugin: $target")
+        }
     }
 
     static private String readLine() {
