@@ -77,7 +77,7 @@ class ExecutorOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The interval for batching task submissions (default: `1 sec`).
+        The interval for batching task submissions (default: `5 sec`).
     """)
     final Duration batchFlushInterval
 
@@ -147,7 +147,7 @@ class ExecutorOpts implements ConfigScope {
         this.keyPairName = opts.keyPairName as String
         this.batchFlushInterval = opts.batchFlushInterval
             ? Duration.of(opts.batchFlushInterval as String)
-            : Duration.of('1 sec')
+            : Duration.of('5 sec')
         // machine requirement settings
         this.machineRequirement = new MachineRequirementOpts(opts.machineRequirement as Map ?: Map.of())
         this.autoLabels = parseAutoLabels(opts.get('autoLabels'))

@@ -44,7 +44,7 @@ class ExecutorOptsTest extends Specification {
         config.region == null
         config.provider == null
         config.keyPairName == null
-        config.batchFlushInterval == Duration.of('1 sec')
+        config.batchFlushInterval == Duration.of('5 sec')
         config.machineRequirement != null
         config.machineRequirement.provisioning == null
         !config.autoLabels
