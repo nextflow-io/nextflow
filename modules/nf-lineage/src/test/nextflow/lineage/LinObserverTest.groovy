@@ -756,7 +756,7 @@ class LinObserverTest extends Specification {
         observer.storeTaskRun(task, observer.normalizer)
         def result = store.load(hash.toString()) as nextflow.lineage.model.v1beta1.TaskRun
         then:
-        result.eval == ['echo one', 'echo two']
+        result.eval == [eval1: 'echo one', eval2: 'echo two']
 
         cleanup:
         folder?.deleteDir()

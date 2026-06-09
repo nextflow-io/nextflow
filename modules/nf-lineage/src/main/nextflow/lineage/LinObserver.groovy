@@ -288,9 +288,9 @@ class LinObserver implements TraceObserverV2 {
         return new TaskHasher(task).getTaskBinEntries(task.source)
     }
 
-    protected List<String> getTaskOutputEvals(TaskRun task) {
+    protected Map<String,String> getTaskOutputEvals(TaskRun task) {
         final outEvals = task.getOutputEvals()
-        return outEvals ? new ArrayList<String>(outEvals.values()) : null
+        return outEvals ? new LinkedHashMap<String,String>(outEvals) : null
     }
 
     protected String storeTaskOutput(TaskRun task, Path path) {
