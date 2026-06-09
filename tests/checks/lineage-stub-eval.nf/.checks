@@ -1,0 +1,36 @@
+set -e
+
+#
+# enable lineage tracking for this run
+#
+cat > nextflow.config <<'EOF'
+lineage.enabled = true
+lineage.store.location = '.lineage'
+EOF
+
+#
+# stub-run mode: task lineage records must be generated (regression: none were)
+# and the output eval command must be recorded in the TaskRun entry
+#
+echo ''
+$NXF_RUN -stub-run | tee stdout
+
+[[ `grep 'INFO' .nextflow.log | grep -c 'Submitted process > FOO'` == 1 ]] || false
+[[ `grep -rl '"kind":"TaskRun"' .lineage | wc -l` == 1 ]] || false
+[[ `grep -rl '"kind":"TaskRun"' .lineage | xargs grep -c '"eval":\["echo hello"\]'` == 1 ]] || false
+# the recorded source code must be the stub block, not the main script
+[[ `grep -rl '"kind":"TaskRun"' .lineage | xargs grep -c 'echo stubdata'` == 1 ]] || false
+[[ `grep -rl '"kind":"TaskRun"' .lineage | xargs grep -c 'echo data'` == 0 ]] || false
+
+#
+# normal mode: the output eval command must also be recorded in the TaskRun entry
+#
+echo ''
+rm -rf .lineage scratch
+$NXF_RUN | tee stdout
+
+[[ `grep -rl '"kind":"TaskRun"' .lineage | wc -l` == 1 ]] || false
+[[ `grep -rl '"kind":"TaskRun"' .lineage | xargs grep -c '"eval":\["echo hello"\]'` == 1 ]] || false
+# the recorded source code must be the main script, not the stub block
+[[ `grep -rl '"kind":"TaskRun"' .lineage | xargs grep -c 'echo data'` == 1 ]] || false
+[[ `grep -rl '"kind":"TaskRun"' .lineage | xargs grep -c 'echo stubdata'` == 0 ]] || false
