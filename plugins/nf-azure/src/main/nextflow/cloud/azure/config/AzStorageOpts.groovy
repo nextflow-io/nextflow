@@ -47,6 +47,12 @@ class AzStorageOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        The blob storage service endpoint e.g. `https://nfbatch1.blob.core.windows.net`.
+    """)
+    final String endpoint
+
+    @ConfigOption
+    @Description("""
         The blob storage shared access signature (SAS) token, which can be provided instead of an account key. Defaults to environment variable `AZURE_STORAGE_SAS_TOKEN`.
     """)
     String sasToken
@@ -65,6 +71,7 @@ class AzStorageOpts implements ConfigScope {
         assert config!=null
         this.accountKey = config.accountKey ?: env.get('AZURE_STORAGE_ACCOUNT_KEY')
         this.accountName = config.accountName ?: env.get('AZURE_STORAGE_ACCOUNT_NAME')
+        this.endpoint = parseEndpoint(config.endpoint as String, accountName)
         this.sasToken = config.sasToken ?: env.get('AZURE_STORAGE_SAS_TOKEN')
         this.tokenDuration = (config.tokenDuration as Duration) ?: Duration.of('48h')
         this.fileShares = parseFileShares(config.fileShares instanceof Map ? config.fileShares as Map<String, Map>
@@ -76,8 +83,17 @@ class AzStorageOpts implements ConfigScope {
         Map<String, Object> props = new HashMap<>();
         props.put(AzFileSystemProvider.AZURE_STORAGE_ACCOUNT_KEY, accountKey)
         props.put(AzFileSystemProvider.AZURE_STORAGE_ACCOUNT_NAME, accountName)
+        props.put(AzFileSystemProvider.AZURE_STORAGE_ENDPOINT, endpoint)
         props.put(AzFileSystemProvider.AZURE_STORAGE_SAS_TOKEN, sasToken)
         return props
+    }
+
+    static String parseEndpoint(String endpoint, String accountName) {
+        if( endpoint )
+            return endpoint
+        if( accountName )
+            return String.format(Locale.ROOT, "https://%s.blob.core.windows.net", accountName)
+        return null
     }
 
     static Map<String,AzFileShareOpts> parseFileShares(Map<String,Map> shares) {
