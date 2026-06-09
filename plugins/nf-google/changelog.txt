@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.27.3 - 28 May 2026
+- Bump Failsafe to 3.3.2 and force lib-httpx@2.3.0 (#7181) [1c47215a8]
+
 1.27.2 - 25 Apr 2026
 - Replace current cloud info URL call with cloudInfo client (#7065) [629184251]
 

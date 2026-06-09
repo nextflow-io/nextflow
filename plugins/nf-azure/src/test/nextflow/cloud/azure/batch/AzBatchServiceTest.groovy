@@ -20,7 +20,7 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.function.Predicate
+import dev.failsafe.function.CheckedPredicate
 
 import com.azure.compute.batch.models.BatchPool
 import com.azure.compute.batch.models.BatchJobCreateContent
@@ -643,7 +643,7 @@ class AzBatchServiceTest extends Specification {
         AzBatchService svc = Spy(new AzBatchService(exec))
 
         when:
-        final policy = svc.retryPolicy(Mock(Predicate))
+        final policy = svc.retryPolicy(Mock(CheckedPredicate))
         then:
         policy.config.delay.toMillis() == 100
         policy.config.maxDelay.toMillis() == 200

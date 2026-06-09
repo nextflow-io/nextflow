@@ -1,5 +1,12 @@
 nf-seqera changelog
 ====================
+0.20.1 - 28 May 2026
+- Force lib-httpx@2.3.0 to fix plugin classpath (#7181) [1c47215a8]
+
+0.20.0 - 21 May 2026
+- Add strategy option to Seqera executor (#7132) [80905b89f]
+- Bump sched-client@0.59.0 [980d28b6c]
+
 0.19.1 - 11 May 2026
 - Bump sched-client@0.55.2 (#7130) [495d2eff7]
 

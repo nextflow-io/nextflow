@@ -120,7 +120,7 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
 
     @ConfigOption
     @Description("""
-        The ID of the Compute Node agent SKU which the pool identified with `<name>` supports (default: `batch.node.centos 8`).
+        The ID of the Compute Node agent SKU which the pool identified with `<name>` supports (default: `batch.node.ubuntu 24.04`).
     """)
     final String sku
 
