@@ -31,6 +31,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.time.OffsetDateTime
 
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.lineage.model.v1beta1.Checksum
@@ -274,7 +275,7 @@ class LinObserver implements TraceObserverV2 {
                 Checksum.ofNextflow(p) )
             },
             asUriString(executionHash),
-            getTaskModule(task)
+            getTaskModuleId(task)
         )
 
         // store in the underlying persistence
@@ -287,7 +288,7 @@ class LinObserver implements TraceObserverV2 {
         return new TaskHasher(task).getTaskGlobalVars()
     }
 
-    protected String getTaskModule(TaskRun task) {
+    protected String getTaskModuleId(TaskRun task) {
         final ownerScript = task.processor?.getOwnerScript()
         if( !ownerScript )
             return null
@@ -298,7 +299,8 @@ class LinObserver implements TraceObserverV2 {
         return extractModuleInfo(scriptMeta.getScriptPath())
     }
 
-    protected String extractModuleInfo(Path scriptPath){
+    @Memoized
+    protected String extractModuleInfo(Path scriptPath) {
         if( !scriptPath )
             return null
         final moduleDir = scriptPath.getParent()
@@ -312,9 +314,13 @@ class LinObserver implements TraceObserverV2 {
             return null
         try {
             final spec = ModuleSpecFactory.fromYaml(manifestPath)
-            return "${spec.name}@${spec.version}"
+            if( !spec.name || !spec.version ) {
+                log.warn("Incomplete module manifest '${manifestPath.toUriString()}': missing name or version")
+                return null
+            }
+            return "${spec.name}@${spec.version}".toString()
         }
-        catch( Throwable e ) {
+        catch( Exception e ) {
             log.warn("Unable to read module manifest '${manifestPath.toUriString()}': ${e.message}")
             return null
         }

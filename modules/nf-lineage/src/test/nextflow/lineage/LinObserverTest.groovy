@@ -16,7 +16,12 @@
 
 package nextflow.lineage
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import groovy.runtime.metaclass.NextflowDelegatingMetaClass
+import org.slf4j.LoggerFactory
 import nextflow.extension.FilesEx
 import nextflow.lineage.exception.OutputRelativePathException
 import nextflow.plugin.extension.PluginExtensionProvider
@@ -743,7 +748,7 @@ class LinObserverTest extends Specification {
         def observer = new LinObserver(Mock(Session), Mock(LinStore))
 
         expect:
-        observer.getTaskModule(task) == 'nf-core/fastqc@1.0.0'
+        observer.getTaskModuleId(task) == 'nf-core/fastqc@1.0.0'
 
         cleanup:
         NextflowDelegatingMetaClass.provider = null
@@ -757,7 +762,7 @@ class LinObserverTest extends Specification {
         def observer = new LinObserver(Mock(Session), Mock(LinStore))
 
         expect:
-        observer.getTaskModule(task) == null
+        observer.getTaskModuleId(task) == null
     }
 
     def 'should return null task module when script is not a remote module' () {
@@ -778,7 +783,7 @@ class LinObserverTest extends Specification {
         def observer = new LinObserver(Mock(Session), Mock(LinStore))
 
         expect:
-        observer.getTaskModule(task) == null
+        observer.getTaskModuleId(task) == null
 
         cleanup:
         NextflowDelegatingMetaClass.provider = null
@@ -806,7 +811,7 @@ class LinObserverTest extends Specification {
         def observer = new LinObserver(Mock(Session), Mock(LinStore))
 
         expect:
-        observer.getTaskModule(task) == null
+        observer.getTaskModuleId(task) == null
 
         cleanup:
         NextflowDelegatingMetaClass.provider = null
@@ -836,14 +841,67 @@ class LinObserverTest extends Specification {
         def task = Mock(TaskRun){ getProcessor() >> processor }
         and:
         def observer = new LinObserver(Mock(Session), Mock(LinStore))
+        and:
+        def appender = attachLogAppender(LinObserver)
 
         expect:
-        observer.getTaskModule(task) == null
+        observer.getTaskModuleId(task) == null
+        appender.list.any { it.level == Level.WARN && it.formattedMessage.contains('Unable to read module manifest') }
 
         cleanup:
+        detachLogAppender(LinObserver, appender)
         NextflowDelegatingMetaClass.provider = null
         ScriptMeta.reset()
         folder?.deleteDir()
+    }
+
+    def 'should return null and warn when module manifest is incomplete' () {
+        given: 'a valid YAML manifest missing the name/version keys'
+        def folder = Files.createTempDirectory('test').toRealPath()
+        def moduleDir = folder.resolve('modules/nf-core/incomplete')
+        Files.createDirectories(moduleDir)
+        def modulePath = moduleDir.resolve('main.nf')
+        modulePath.text = 'process INCOMPLETE { script: "echo foo" }'
+        moduleDir.resolve('meta.yml').text = 'description: a module without name or version\n'
+        moduleDir.resolve('.module-info').text = '{}'
+        and:
+        NextflowDelegatingMetaClass.provider = Mock(PluginExtensionProvider) {
+            operatorNames() >> new HashSet<String>()
+        }
+        def script = Mock(BaseScript)
+        def meta = ScriptMeta.register(script)
+        meta.setScriptPath(modulePath)
+        meta.setModule(true)
+        and:
+        def processor = Mock(TaskProcessor){ getOwnerScript() >> script }
+        def task = Mock(TaskRun){ getProcessor() >> processor }
+        and:
+        def observer = new LinObserver(Mock(Session), Mock(LinStore))
+        and:
+        def appender = attachLogAppender(LinObserver)
+
+        expect:
+        observer.getTaskModuleId(task) == null
+        appender.list.any { it.level == Level.WARN && it.formattedMessage.contains('Incomplete module manifest') }
+
+        cleanup:
+        detachLogAppender(LinObserver, appender)
+        NextflowDelegatingMetaClass.provider = null
+        ScriptMeta.reset()
+        folder?.deleteDir()
+    }
+
+    private static ListAppender<ILoggingEvent> attachLogAppender(Class clazz) {
+        final logger = (Logger) LoggerFactory.getLogger(clazz)
+        final appender = new ListAppender<ILoggingEvent>()
+        appender.start()
+        logger.addAppender(appender)
+        return appender
+    }
+
+    private static void detachLogAppender(Class clazz, ListAppender<ILoggingEvent> appender) {
+        final logger = (Logger) LoggerFactory.getLogger(clazz)
+        logger.detachAppender(appender)
     }
 
     def 'should save task data output' () {

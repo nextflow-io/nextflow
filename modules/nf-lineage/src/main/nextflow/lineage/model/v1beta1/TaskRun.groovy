@@ -81,5 +81,5 @@ class TaskRun implements LinSerializable {
      * encoded as {@code name@version} (e.g. {@code nf-core/fastqc@1.0.0}). Null when
      * the process is not defined in a remote module (e.g. local include or main script).
      */
-    String module
+    String moduleId
 }
