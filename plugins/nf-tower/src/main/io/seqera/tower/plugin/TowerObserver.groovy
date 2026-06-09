@@ -428,6 +428,20 @@ class TowerObserver implements TraceObserverV2 {
         return result
     }
 
+    /**
+     * @return the Seqera Intelligent Compute scheduler run identifier for the current
+     * execution, or {@code null} when the run is not managed by the scheduler or the
+     * identifier has not been assigned yet (i.e. before the first task is submitted).
+     *
+     * It is sent only on progress requests: the run id is assigned on the first task
+     * submission, which is also what triggers the first progress request, so a progress
+     * record always carries it. Heartbeats only fire when there are no pending tasks —
+     * before the first task (no id yet) or during a lull (already delivered by progress).
+     */
+    protected String getSchedulerRunId() {
+        return session.workflowMetadata?.scheduler?.runId
+    }
+
     protected String mapToString(def obj) {
         if( obj == null )
             return null
@@ -491,6 +505,9 @@ class TowerObserver implements TraceObserverV2 {
         result.put('tasks', payload)
         result.put('progress', getWorkflowProgress(true))
         result.put('containers', getNewContainers(tasks))
+        final schedulerRunId = getSchedulerRunId()
+        if( schedulerRunId )
+            result.put('schedulerRunId', schedulerRunId)
         result.instant = Instant.now().toEpochMilli()
         return result
     }

@@ -29,6 +29,7 @@ import nextflow.container.DockerConfig
 import nextflow.container.resolver.ContainerMeta
 import nextflow.exception.AbortRunException
 import nextflow.script.PlatformMetadata
+import nextflow.script.SchedulerMetadata
 import nextflow.script.ScriptBinding
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceRecord
@@ -150,6 +151,40 @@ class TowerObserverTest extends Specification {
         req.containers[0].targetImage == 'wave.io/12345/ubuntu:latest'
         and:
         aroundNow(req.instant)
+    }
+
+    def 'should add scheduler run id to progress requests' () {
+        given:
+        def scheduler = new SchedulerMetadata('seqera')
+        scheduler.runId = 'run-xyz'
+        def meta = Mock(WorkflowMetadata) { getScheduler() >> scheduler }
+        def session = Mock(Session) { getWorkflowMetadata() >> meta }
+        def PROGRESS = Mock(WorkflowProgress)
+        def observer = Spy(newObserver(session))
+        observer.getWorkflowProgress(true) >> PROGRESS
+
+        when:
+        def progressReq = observer.makeTasksReq([])
+        then:
+        progressReq.schedulerRunId == 'run-xyz'
+
+        and: 'the run id is not sent on heartbeats (progress already carries it)'
+        !observer.makeHeartbeatReq().containsKey('schedulerRunId')
+    }
+
+    def 'should omit scheduler run id from progress when not assigned' () {
+        given:
+        def scheduler = new SchedulerMetadata('local')  // not scheduler-managed, runId stays null
+        def meta = Mock(WorkflowMetadata) { getScheduler() >> scheduler }
+        def session = Mock(Session) { getWorkflowMetadata() >> meta }
+        def PROGRESS = Mock(WorkflowProgress)
+        def observer = Spy(newObserver(session))
+        observer.getWorkflowProgress(true) >> PROGRESS
+
+        when:
+        def progressReq = observer.makeTasksReq([])
+        then:
+        !progressReq.containsKey('schedulerRunId')
     }
 
     static now_millis = System.currentTimeMillis()
