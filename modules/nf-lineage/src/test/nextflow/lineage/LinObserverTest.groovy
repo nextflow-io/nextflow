@@ -855,7 +855,7 @@ class LinObserverTest extends Specification {
         folder?.deleteDir()
     }
 
-    def 'should return null and warn when module manifest is incomplete' () {
+    def 'should return null when module manifest is incomplete' () {
         given: 'a valid YAML manifest missing the name/version keys'
         def folder = Files.createTempDirectory('test').toRealPath()
         def moduleDir = folder.resolve('modules/nf-core/incomplete')
@@ -877,15 +877,11 @@ class LinObserverTest extends Specification {
         def task = Mock(TaskRun){ getProcessor() >> processor }
         and:
         def observer = new LinObserver(Mock(Session), Mock(LinStore))
-        and:
-        def appender = attachLogAppender(LinObserver)
 
         expect:
         observer.getTaskModuleId(task) == null
-        appender.list.any { it.level == Level.WARN && it.formattedMessage.contains('Incomplete module manifest') }
 
         cleanup:
-        detachLogAppender(LinObserver, appender)
         NextflowDelegatingMetaClass.provider = null
         ScriptMeta.reset()
         folder?.deleteDir()
