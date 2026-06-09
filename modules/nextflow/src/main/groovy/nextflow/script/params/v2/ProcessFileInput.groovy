@@ -34,19 +34,31 @@ class ProcessFileInput {
     private Object filePattern
 
     /**
+     * Closure that defines the stage name for a given input file.
+     */
+    private Closure stagingClosure
+
+    /**
      * Lazy expression (e.g. closure) which defines which files
      * to stage in terms of the task inputs.
      * It is evaluated for each task against the task context.
      */
     private Object value
 
-    ProcessFileInput(Object filePattern, Object value) {
-        this.filePattern = filePattern != null ? filePattern : '*'
+    ProcessFileInput(Object patternOrClosure, Object value) {
+        if( patternOrClosure instanceof Closure && patternOrClosure.getMaximumNumberOfParameters() == 1 )
+            this.stagingClosure = patternOrClosure
+        else
+            this.filePattern = patternOrClosure != null ? patternOrClosure : '*'
         this.value = value
     }
 
     String getFilePattern(Map ctx) {
-        return ctx.resolveLazy(filePattern)
+        return filePattern != null ? ctx.resolveLazy(filePattern) : null
+    }
+
+    Closure getStagingClosure() {
+        return stagingClosure
     }
 
     Object resolve(Map ctx) {

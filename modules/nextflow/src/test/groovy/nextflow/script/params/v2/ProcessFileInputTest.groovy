@@ -45,6 +45,34 @@ class ProcessFileInputTest extends Specification {
         input.getFilePattern([id: 'sample1']) == 'sample1.txt'
     }
 
+    def 'should resolve staging closure'() {
+        given:
+        def stagingClosure
+        def input
+
+        when: 'no staging closure is set'
+        input = new ProcessFileInput(null, null)
+        then:
+        input.getStagingClosure() == null
+
+        when: 'a string pattern is set'
+        input = new ProcessFileInput('*.txt', null)
+        then:
+        input.getStagingClosure() == null
+
+        when: 'a zero-param closure is used as file pattern'
+        input = new ProcessFileInput({ -> 'pattern.txt' }, null)
+        then:
+        input.getStagingClosure() == null
+
+        when: 'a one-param closure is used as staging closure'
+        stagingClosure = { file -> "staged_${file}" }
+        input = new ProcessFileInput(stagingClosure, null)
+        then:
+        input.getStagingClosure() == stagingClosure
+        input.getFilePattern([:]) == null
+    }
+
     def 'should resolve file value'() {
         given:
         def value
