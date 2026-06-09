@@ -314,8 +314,10 @@ class LinObserver implements TraceObserverV2 {
             return null
         try {
             final spec = ModuleSpecFactory.fromYaml(manifestPath)
-            if( !spec.name || !spec.version )
+            if( !spec.name || !spec.version ) {
+                log.debug("Incomplete module manifest '${manifestPath.toUriString()}': missing name or version")
                 return null
+            }
             return "${spec.name}@${spec.version}".toString()
         }
         catch( Exception e ) {
