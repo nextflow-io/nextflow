@@ -197,12 +197,13 @@ class LocalPollingMonitor extends TaskPollingMonitor {
             throw new ProcessUnrecoverableException("Process requirement exceeds available memory -- req: ${new MemoryUnit(taskMemory)}; avail: ${new MemoryUnit(maxMemory)}")
 
         final taskAccelerators = accelerators(handler)
-        if( taskAccelerators > acceleratorTracker.total() )
+        if( acceleratorTracker.name() != null && taskAccelerators > acceleratorTracker.total() )
             throw new ProcessUnrecoverableException("Process requirement exceeds available accelerators -- req: $taskAccelerators; avail: ${acceleratorTracker.total()}")
 
-        final result = super.canSubmit(handler) && taskCpus <= availCpus && taskMemory <= availMemory && taskAccelerators <= acceleratorTracker.available()
+        final accelOk = acceleratorTracker.name() == null || taskAccelerators <= acceleratorTracker.available()
+        final result = super.canSubmit(handler) && taskCpus <= availCpus && taskMemory <= availMemory && accelOk
         if( !result && log.isTraceEnabled( ) ) {
-            log.trace "Task `${handler.task.name}` cannot be scheduled -- taskCpus: $taskCpus <= availCpus: $availCpus && taskMemory: ${new MemoryUnit(taskMemory)} <= availMemory: ${new MemoryUnit(availMemory)} && taskAccelerators: $taskAccelerators <= availAccelerators: ${acceleratorTracker.available()}"
+            log.trace "Task `${handler.task.name}` cannot be scheduled -- taskCpus: $taskCpus <= availCpus: $availCpus && taskMemory: ${new MemoryUnit(taskMemory)} <= availMemory: ${new MemoryUnit(availMemory)} && taskAccelerators: $taskAccelerators <= availAccelerators: ${acceleratorTracker.name() != null ? acceleratorTracker.available() : 'n/a'}"
         }
         return result
     }
@@ -215,16 +216,23 @@ class LocalPollingMonitor extends TaskPollingMonitor {
      */
     @Override
     protected void submit(TaskHandler handler) {
-        availCpus -= cpus(handler)
-        availMemory -= mem(handler)
-
         final taskAccelerators = accelerators(handler)
-        if( handler instanceof LocalTaskHandler && taskAccelerators > 0 ) {
+        if( handler instanceof LocalTaskHandler && acceleratorTracker.name() != null && taskAccelerators > 0 ) {
             handler.acceleratorEnv = acceleratorTracker.name()
             handler.acceleratorIds = acceleratorTracker.acquire(taskAccelerators)
         }
 
-        super.submit(handler)
+        try {
+            super.submit(handler)
+        }
+        catch( Throwable e ) {
+            if( handler instanceof LocalTaskHandler && handler.acceleratorIds )
+                acceleratorTracker.release(handler.acceleratorIds)
+            throw e
+        }
+
+        availCpus -= cpus(handler)
+        availMemory -= mem(handler)
     }
 
     /**

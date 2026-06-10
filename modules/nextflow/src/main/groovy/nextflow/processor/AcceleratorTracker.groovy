@@ -39,6 +39,14 @@ class AcceleratorTracker {
         return create(SysEnv.get())
     }
 
+    /**
+     * Create an {@link AcceleratorTracker} from the given environment.
+     * The first matching device env var wins (CUDA_VISIBLE_DEVICES >
+     * HIP_VISIBLE_DEVICES > ROCR_VISIBLE_DEVICES); subsequent matches
+     * are ignored. Returns a no-op tracker when none is set.
+     *
+     * @param env
+     */
     static AcceleratorTracker create(Map<String,String> env) {
         return DEVICE_ENV_NAMES.stream()
             .filter(name -> env.containsKey(name))
