@@ -327,7 +327,7 @@ Notes about the white-box approach:
 
 **Configuration**
 
-Resource directives -- the *how* -- live in the meta-pipeline config. Because each included pipeline is part of the dataflow graph, its processes can be targeted like normal:
+Since each included pipeline is just part of the dataflow graph, configuration works like normal. Processes in an included pipeline can be targeted via config selector:
 
 ```groovy
 process {
@@ -342,7 +342,7 @@ process {
 }
 ```
 
-The *what* directives (`container`, `conda`) are defined in each pipeline's process definitions and do not need to be replicated here. Directives like `ext` can still be overridden by the meta-pipeline as needed.
+Both the meta-pipeline developer and users can override whatever they want from config. In practice, the process definitions should own the *what* (`container`, `conda`) while the meta-pipeline config should own the *how* (`cpus`, `memory`).
 
 **Trade-offs**
 
