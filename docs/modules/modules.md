@@ -3,9 +3,9 @@
 # Overview
 
 Nextflow scripts can include **definitions** (workflows, processes, and functions) from other scripts.
-When a script is included in this way, it is referred to as a **module**.
+A **module** is a script that contains a single process definition.
 Modules can be re-used within a pipeline and can be shared across projects.
-By packaging definitions as modules, you avoid duplicating code and benefit from community improvements.
+By packaging process definitions as modules, you avoid duplicating code and benefit from community improvements.
 
 There are two ways to use modules in Nextflow:
 
@@ -29,7 +29,7 @@ workflow {
 }
 ```
 
-The above snippet imports a process named `CAT` from the *included module* into the *including script*. The include source `./modules/cat` refers to the script `./modules/cat.nf` relative to the including script path.
+The above snippet imports a process named `CAT` from the *included script* into the *including script*. The include source `./modules/cat` refers to the script `./modules/cat.nf` relative to the including script path.
 
 Local modules are well suited for project-specific components that are not intended for sharing.
 
