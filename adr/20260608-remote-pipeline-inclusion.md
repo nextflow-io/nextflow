@@ -53,14 +53,14 @@ As a result, if a user wants to preserve any top-level concerns from the include
 
 To be importable in practice, a pipeline's core workflow (and its dependent modules/workflows) should be free of external context:
 
-1. No `params` usage outside the entry workflow -- pass values as explicit process/workflow inputs.
-2. No `publishDir` -- use the `output` block.
-3. No use of project-level assets (`projectDir`, `bin`, `lib`) within the core workflow. Module-level assets can be used through the module `resources/` bundle and `moduleDir`.
+1. Avoid `params` usage outside the entry workflow -- pass values as explicit process/workflow inputs.
+2. Avoid `publishDir` -- use the `output` block.
+3. Avoid use of project-level assets (`projectDir`, `bin`, `lib`) within the core workflow. Module-level assets can be safely used through the module `resources/` bundle and `moduleDir`.
 4. Declare software dependencies (`container`, `conda`) in the process definition, not in config.
-5. No default `ext` settings in config -- specify these defaults in the process definition or use explicit process inputs. Otherwise, any default `ext` settings must be replicated manually in the meta-pipeline.
-6. No plugin functions within the core workflow.
+5. Avoid default `ext` settings in config -- specify these defaults in the process definition or use explicit process inputs. Otherwise, any default `ext` settings must be replicated manually in the meta-pipeline.
+6. Avoid plugin functions within the core workflow.
 
-For process directives, it is helpful to distinguish *what* is executed vs *how* it is executed. Directives that affect the *what* (`container`, `ext` settings) should be owned by the process definition. Directives that affect the *how* (`cpus`, `memory`, `executor`, `queue`, `errorStrategy`) should be owned by the meta-pipeline.
+For process directives, it is helpful to distinguish *what* is computed vs *how* it is computed. Directives that affect the *what* (`container`, `ext` settings) should be owned by the process definition. Directives that affect the *how* (`cpus`, `memory`, `executor`, `queue`, `errorStrategy`) should be owned by the meta-pipeline.
 
 These constraints are not absolute -- it is possible to import a pipeline that does not adhere to any of these rules. Following these constraints simply makes it easier to import a pipeline with minimal extra work (manual replication, cross-cutting concerns).
 
