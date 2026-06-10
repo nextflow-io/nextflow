@@ -10,7 +10,7 @@ This page describes the standard types in the Nextflow standard library.
 
 *Implements the {ref}`stdlib-types-iterable` trait.*
 
-A bag is an unordered collection.
+A bag is an unordered collection of values of type `E`.
 
 The following operations are supported for bags:
 
@@ -44,9 +44,9 @@ Booleans in Nextflow can be backed by any of the following Java types: `boolean`
 
 ## Channel\<E\>
 
-A channel (also known as a *dataflow channel* or *queue channel*) is an asynchronous sequence of values. It is used to facilitate dataflow logic in a workflow.
+A channel (also known as a *dataflow channel* or *queue channel*) is an asynchronous sequence of values of type `E`. It is used to facilitate dataflow logic in a workflow.
 
-See {ref}`dataflow-page` for an overview of dataflow types. See {ref}`operator-page` for the available methods for channels.
+See {ref}`dataflow-page` for an overview of dataflow types. See {ref}`operator-typed-page` for the set of operators that are recommended for use with static typing.
 
 (stdlib-types-duration)=
 
@@ -266,7 +266,7 @@ Iterables in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/j
 
 *Implements the {ref}`stdlib-types-iterable` trait.*
 
-A list is an ordered collection of elements. See {ref}`script-list` for an overview of lists.
+A list is an ordered collection of values of type `E`. See {ref}`script-list` for an overview of lists.
 
 The following operations are supported for lists:
 
@@ -349,7 +349,7 @@ Lists in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javas
 
 ## Map\<K,V\>
 
-A map associates or "maps" keys to values. Each key can map to at most one value -- a map cannot contain duplicate keys. See {ref}`script-map` for an overview of maps.
+A map associates or "maps" keys of type `K` to values of type `V`. Each key can map to at most one value -- a map cannot contain duplicate keys. See {ref}`script-map` for an overview of maps.
 
 The following operations are supported for maps:
 
@@ -509,30 +509,33 @@ The following operations are supported for paths:
 `<< : (Path, String)`
 : Appends text to a file without replacing existing content. Equivalent to `append()`.
 
-<h3>Getting attributes</h3>
+<h3>Filesystem attributes</h3>
 
-The following methods are useful for getting attributes of a path:
+The following properties are available:
+
+`baseName: String`
+: The path name without its extension, e.g. `/some/path/file.tar.gz` -> `file.tar`.
+
+`extension: String`
+: The path extension, e.g. `/some/path/file.txt` -> `txt`.
+
+`name: String`
+: The path name, e.g. `/some/path/file.txt` -> `file.txt`.
+: For files staged as a task input, the path name is the path relative to the task directory (e.g., `my-dir/file.txt`). Use `fileName.name` for task paths to get only the file name.
+
+`parent: Path`
+: The path parent path, e.g. `/some/path/file.txt` -> `/some/path`.
+
+`scheme: String`
+: The path URI scheme, e.g. `s3://some-bucket/hello.txt` -> `s3`.
+
+`simpleName: String`
+: The path name without any extension, e.g. `/some/path/file.tar.gz` -> `file`.
+
+The following methods are available for getting filesystem attributes:
 
 `exists() -> Boolean`
 : Returns `true` if the path exists.
-
-`getBaseName() -> String`
-: Gets the path name without its extension, e.g. `/some/path/file.tar.gz` -> `file.tar`.
-
-`getExtension() -> String`
-: Gets the path extension, e.g. `/some/path/file.txt` -> `txt`.
-
-`getName() -> String`
-: Gets the path name, e.g. `/some/path/file.txt` -> `file.txt`.
-
-`getSimpleName() -> String`
-: Gets the path name without any extension, e.g. `/some/path/file.tar.gz` -> `file`.
-
-`getParent() -> Path`
-: Gets the path parent path, e.g. `/some/path/file.txt` -> `/some/path`.
-
-`getScheme() -> String`
-: Gets the path URI scheme, e.g. `s3://some-bucket/hello.txt` -> `s3`.
 
 `isDirectory() -> Boolean`
 : Returns `true` if the path is a directory.
@@ -578,32 +581,17 @@ The following methods are useful for getting attributes of a path:
 
 The following methods are available for reading files:
 
-`eachByte( action: (byte) -> () )`
-: Iterates over the file, applying the specified closure to each byte.
-
 `eachLine( action: (String) -> () )`
 : Iterates over the file, applying the specified closure to each line.
-
-`getBytes() -> byte[]`
-: Returns the file content as a byte array.
 
 `getText() -> String`
 : Returns the file content as a string.
 
-`newInputStream() -> InputStream`
-: Returns an [InputStream](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/InputStream.html) object to read a binary file.
-
-`newReader() -> Reader`
-: Returns a [Reader](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/Reader.html) object to read a text file.
-
 `readLines() -> List<String>`
 : Reads the file line by line and returns the content as a list of strings.
 
-`withInputStream( action: (InputStream) -> () )`
-: Opens a file for reading and lets you access it with an [InputStream](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/InputStream.html) object.
-
-`withReader( action: (Reader) -> () )`
-: Opens a file for reading and lets you access it with a [Reader](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/Reader.html) object.
+`withReader( action: (BufferedReader) -> () )`
+: Invokes the given closure with a [BufferedReader](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/BufferedReader.html), which can be used to read the file one line at a time using the `readLine()` method.
 
 <h3>Writing</h3>
 
@@ -612,32 +600,11 @@ The following methods are available for writing to files:
 `append( text: String )`
 : Appends text to a file without replacing existing content.
 
-`newOutputStream() -> OutputStream`
-: Creates an [OutputStream](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/OutputStream.html) object that allows you to write binary data to a file.
-
-`newPrintWriter() -> PrintWriter`
-: Creates a [PrintWriter](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/PrintWriter.html) object that allows you to write formatted text to a file.
-
-`newWriter() -> Writer`
-: Creates a [Writer](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/Writer.html) object that allows you to save text data to a file.
-
-`setBytes( bytes: byte[] )`
-: Writes a byte array to a file. Equivalent to setting the `bytes` property.
-
 `setText( text: String )`
-: Writes text to a file. Equivalent to setting the `text` property.
-
-`withOutputStream( action: (OutputStream) -> () )`
-: Applies the specified closure to an [OutputStream](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/OutputStream.html) object, closing it when finished.
-
-`withPrintWriter( action: (PrintWriter) -> () )`
-: Applies the specified closure to a [PrintWriter](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/PrintWriter.html) object, closing it when finished.
-
-`withWriter( action: (Writer) -> () )`
-: Applies the specified closure to a [Writer](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/Writer.html) object, closing it when finished.
+: Writes text to a file, replacing any existing content. Equivalent to setting the `text` property.
 
 `write( text: String )`
-: Writes a string to a file, replacing any existing content.
+: Writes text to a file, replacing any existing content. Equivalent to `setText()`.
 
 <h3>Filesystem operations</h3>
 
@@ -690,12 +657,6 @@ The following methods are available for manipulating files and directories in a 
 
 `getPermissions() -> String`
 : Returns a file's permissions using the [symbolic notation](http://en.wikipedia.org/wiki/File_system_permissions#Symbolic_notation), e.g. `'rw-rw-r--'`.
-
-`list() -> List<String>`
-: Returns the first-level elements (files and directories) of a directory as a list of strings.
-
-`listFiles() -> List<Path>`
-: Returns the first-level elements (files and directories) of a directory as a list of Paths.
 
 `mkdir() -> Boolean`
 : Creates a directory at the given path, returning `true` if the directory is created successfully, and `false` otherwise:
@@ -759,23 +720,22 @@ The following methods are available for manipulating files and directories in a 
 
 The following methods are available for listing and traversing directories:
 
-`eachDir( action: (Path) -> () )`
-: Iterates through first-level directories only.
-
-`eachDirMatch( nameFilter: String, action: (Path) -> () )`
-: Iterates through directories whose names match the given filter.
-
-`eachDirRecurse( action: (Path) -> () )`
-: Iterates through directories depth-first (regular files are ignored).
-
 `eachFile( action: (Path) -> () )`
 : Iterates through first-level files and directories.
 
-`eachFileMatch( nameFilter: String, action: (Path) -> () )`
-: Iterates through files and directories whose names match the given filter.
-
 `eachFileRecurse( action: (Path) -> () )`
 : Iterates through files and directories depth-first.
+
+`listDirectory() -> Iterable<Path>`
+: :::{versionadded} 26.04.0
+  :::
+: Returns the first-level elements (files and directories) in a directory.
+
+`listFiles() -> Iterable<Path>`
+: :::{deprecated} 26.04.0
+  Use `listDirectory()` instead.
+  :::
+: Returns the first-level elements (files and directories) in a directory.
 
 <h3>Splitting files</h3>
 
@@ -808,13 +768,42 @@ The following methods are available for splitting and counting the records in fi
 `splitText() -> List<String>`
 : Splits a text file into a list of lines. See the {ref}`operator-splittext` operator for available options.
 
+(stdlib-types-record)=
+
+## Record
+
+A record is an immutable map of fields to values (i.e., `Map<String,?>`). Each value can have its own type. 
+
+A record can be created using the `record` function:
+
+```nextflow
+sample = record(id: '1', fastq_1: file('1_1.fastq'), fastq_2: file('1_2.fastq'))
+```
+
+Record fields can be accessed as properties:
+
+```nextflow
+sample.id
+// -> '1'
+```
+
+The following operations are supported for records:
+
+`+ : (Record, Record) -> Record`
+: Given two records, returns a new record containing the fields and values of both records. When a field is present in both records, the value of the right-hand record takes precedence.
+
+The following methods are available for a record:
+
+`subMap( keys: Iterable<String> ) -> Record`
+: Returns a new record containing only the given fields.
+
 (stdlib-types-set)=
 
 ## Set\<E\>
 
 *Implements the {ref}`stdlib-types-iterable` trait.*
 
-A set is an unordered collection that cannot contain duplicate elements.
+A set is an unordered collection of values of type `E` which cannot contain duplicates.
 
 A set can be created from a list using the `toSet()` method:
 
@@ -995,11 +984,17 @@ The following operations are supported for tuples:
 
 ## Value\<V\>
 
-A dataflow value (also known as a *value channel*) is an asynchronous value. It is used to facilitate dataflow logic in a workflow.
+A dataflow value (also known as a *value channel*) is an asynchronous value of type `V`. It is used to facilitate dataflow logic in a workflow.
 
 See {ref}`dataflow-page` for an overview of dataflow types.
 
 The following methods are available for a dataflow value:
+
+`combine( right: Value ) -> Value<Tuple>`
+: Combine the dataflow value with another dataflow value into a tuple.
+
+`combine( [opts] ) -> Value<Record>`
+: Combine a record with named arguments as additional record fields. Each named argument can be a value or dataflow value.
 
 `flatMap( transform: (V) -> Iterable<R> ) -> Channel<R>`
 : Transforms the dataflow value into a collection with the given closure and emits the resulting values in a dataflow channel.

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,7 +71,9 @@ class PodOptions {
     private String schedulerName
 
     private Integer ttlSecondsAfterFinished
-    
+
+    private String runtimeClassName
+
     PodOptions( List<Map> options=null ) {
         int size = options ? options.size() : 0
         envVars = new HashSet<>(size)
@@ -87,7 +89,7 @@ class PodOptions {
     }
 
     @PackageScope void init(List<Map> options) {
-        if( !options ) return 
+        if( !options ) return
         for( Map entry : options ) {
             create(entry)
         }
@@ -166,6 +168,9 @@ class PodOptions {
         else if( entry.ttlSecondsAfterFinished instanceof Integer ) {
             this.ttlSecondsAfterFinished = entry.ttlSecondsAfterFinished as Integer
         }
+        else if( entry.runtimeClassName ) {
+            this.runtimeClassName = entry.runtimeClassName
+        }
         else
             throw new IllegalArgumentException("Unknown pod options: $entry")
     }
@@ -235,6 +240,8 @@ class PodOptions {
     Boolean getPrivileged() { privileged }
 
     Integer getTtlSecondsAfterFinished() { ttlSecondsAfterFinished }
+
+    String getRuntimeClassName() { runtimeClassName }
 
     PodOptions plus( PodOptions other ) {
         def result = new PodOptions()
@@ -307,6 +314,9 @@ class PodOptions {
 
         // ttl seconds after finished (job)
         result.ttlSecondsAfterFinished = other.ttlSecondsAfterFinished!=null ? other.ttlSecondsAfterFinished : this.ttlSecondsAfterFinished
+
+        // runtime class name
+        result.runtimeClassName = other.runtimeClassName ?: this.runtimeClassName
 
         return result
     }

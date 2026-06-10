@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, Microsoft Corp
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,9 @@ import groovy.transform.CompileStatic
 import nextflow.SysEnv
 import nextflow.cloud.azure.batch.AzHelper
 import nextflow.cloud.azure.nio.AzFileSystemProvider
-import nextflow.config.schema.ConfigOption
-import nextflow.config.schema.ConfigScope
-import nextflow.config.schema.PlaceholderName
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.PlaceholderName
 import nextflow.script.dsl.Description
 import nextflow.util.Duration
 /**

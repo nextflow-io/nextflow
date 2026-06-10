@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ import groovy.runtime.metaclass.NextflowDelegatingMetaClass
 import groovy.transform.InheritConstructors
 import nextflow.Global
 import nextflow.NF
-import nextflow.NextflowMeta
 import nextflow.Session
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
@@ -43,7 +42,7 @@ class TaskContextTest extends Specification {
     def setupSpec() {
         NF.init()
     }
-    
+
     def 'should save and read TaskContext object' () {
 
         setup:
@@ -185,8 +184,6 @@ class TaskContextTest extends Specification {
         result == temp.resolve('templates/foo.txt')
 
         when:
-        // it's a DSL2 module
-        NextflowMeta.instance.enableDsl2()
         NextflowDelegatingMetaClass.provider = Mock(ExtensionProvider) { operatorNames() >> new HashSet<String>() }
         def meta = ScriptMeta.register(script)
         meta.setScriptPath(temp.resolve('modules/my-module/main.nf'))
@@ -203,7 +200,6 @@ class TaskContextTest extends Specification {
 
         cleanup:
         NextflowDelegatingMetaClass.provider = null
-        NextflowMeta.instance.disableDsl2()
         temp?.deleteDir()
     }
 

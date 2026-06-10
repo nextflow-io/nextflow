@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,19 +15,31 @@
  */
 package nextflow.script.control;
 
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FunctionNode;
+import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.OutputNode;
 import nextflow.script.ast.ParamNodeV1;
-import nextflow.script.ast.ProcessNode;
+import nextflow.script.ast.ProcessNodeV1;
+import nextflow.script.ast.ProcessNodeV2;
+import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
+import nextflow.script.ast.TupleParameter;
 import nextflow.script.ast.WorkflowNode;
+import nextflow.script.types.Record;
+import nextflow.script.types.Tuple;
+import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.DynamicVariable;
+import org.codehaus.groovy.ast.GenericsType;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
@@ -45,13 +57,19 @@ import static nextflow.script.ast.ASTUtils.*;
  */
 public class ScriptResolveVisitor extends ScriptVisitorSupport {
 
+    private static final ClassNode RECORD_TYPE = ClassHelper.makeCached(Record.class);
+    private static final ClassNode TUPLE_TYPE = ClassHelper.makeCached(Tuple.class);
+
     private SourceUnit sourceUnit;
+
+    private List<ClassNode> imports;
 
     private ResolveVisitor resolver;
 
     public ScriptResolveVisitor(SourceUnit sourceUnit, CompilationUnit compilationUnit, List<ClassNode> defaultImports, List<ClassNode> libImports) {
         this.sourceUnit = sourceUnit;
-        this.resolver = new ResolveVisitor(sourceUnit, compilationUnit, defaultImports, libImports);
+        this.imports = new ArrayList<>(defaultImports);
+        this.resolver = new ResolveVisitor(sourceUnit, compilationUnit, imports, libImports);
     }
 
     @Override
@@ -66,7 +84,15 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
             var variableScopeVisitor = new VariableScopeVisitor(sourceUnit);
             variableScopeVisitor.declare();
             variableScopeVisitor.visit();
-    
+
+            // append included types to default imports
+            for( var includeNode : sn.getIncludes() ) {
+                for( var entry : includeNode.entries ) {
+                    if( entry.getTarget() instanceof ClassNode cn )
+                        imports.add(cn);
+                }
+            }
+
             // resolve type names
             if( sn.getParams() != null )
                 visitParams(sn.getParams());
@@ -78,9 +104,15 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
                 visitProcess(processNode);
             for( var functionNode : sn.getFunctions() )
                 visitFunction(functionNode);
+            for( var type : sn.getClasses() ) {
+                if( type instanceof RecordNode rn )
+                    visitRecord(rn);
+                else if( type.isEnum() )
+                    visitEnum(type);
+            }
             if( sn.getOutputs() != null )
                 visitOutputs(sn.getOutputs());
-    
+
             // report errors for any unresolved variable references
             new DynamicVariablesVisitor().visit(sn);
         }
@@ -102,20 +134,20 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
         for( var take : node.getParameters() )
             resolver.resolveOrFail(take.getType(), take);
         resolver.visit(node.main);
-        resolveWorkflowEmits(node.emits);
+        resolveTypedOutputs(node.emits);
         resolver.visit(node.emits);
         resolver.visit(node.publishers);
         resolver.visit(node.onComplete);
         resolver.visit(node.onError);
     }
 
-    private void resolveWorkflowEmits(Statement emits) {
-        for( var stmt : asBlockStatements(emits) ) {
+    private void resolveTypedOutputs(Statement block) {
+        for( var stmt : asBlockStatements(block) ) {
             var stmtX = (ExpressionStatement)stmt;
-            var emit = stmtX.getExpression();
+            var output = stmtX.getExpression();
             var target =
-                emit instanceof AssignmentExpression ae ? ae.getLeftExpression() :
-                emit instanceof VariableExpression ve ? ve :
+                output instanceof AssignmentExpression ae ? ae.getLeftExpression() :
+                output instanceof VariableExpression ve ? ve :
                 null;
 
             if( target instanceof VariableExpression ve )
@@ -124,7 +156,45 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
     }
 
     @Override
-    public void visitProcess(ProcessNode node) {
+    public void visitProcessV2(ProcessNodeV2 node) {
+        for( var input : asFlatParams(node.inputs) ) {
+            resolver.resolveOrFail(input.getType(), input);
+        }
+        for( var input : node.inputs ) {
+            var type = input.getType();
+            if( input instanceof TupleParameter tp && RECORD_TYPE.equals(type) )
+                resolveRecordInput(tp);
+            if( input instanceof TupleParameter tp && TUPLE_TYPE.equals(type) )
+                resolveTupleInput(tp);
+        }
+        resolver.visit(node.directives);
+        resolver.visit(node.stagers);
+        resolveTypedOutputs(node.outputs);
+        resolver.visit(node.outputs);
+        resolver.visit(node.topics);
+        resolver.visit(node.when);
+        resolver.visit(node.exec);
+        resolver.visit(node.stub);
+    }
+
+    private void resolveRecordInput(TupleParameter tp) {
+        var type = tp.getType();
+        for( var param : tp.components ) {
+            var fn = new FieldNode(param.getName(), Modifier.PUBLIC, param.getType(), type, null);
+            fn.setDeclaringClass(type);
+            type.addField(fn);
+        }
+    }
+
+    private void resolveTupleInput(TupleParameter tp) {
+        var genericsTypes = Arrays.stream(tp.components)
+            .map(p -> new GenericsType(p.getType()))
+            .toArray(GenericsType[]::new);
+        tp.getType().setGenericsTypes(genericsTypes);
+    }
+
+    @Override
+    public void visitProcessV1(ProcessNodeV1 node) {
         resolver.visit(node.directives);
         resolver.visit(node.inputs);
         resolver.visit(node.outputs);
@@ -144,7 +214,13 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
     }
 
     @Override
+    public void visitField(FieldNode node) {
+        resolver.resolveOrFail(node.getType(), node);
+    }
+
+    @Override
     public void visitOutput(OutputNode node) {
+        resolver.resolveOrFail(node.getType(), node.getType());
         resolver.visit(node.body);
     }
 

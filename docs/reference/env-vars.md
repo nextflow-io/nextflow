@@ -16,6 +16,11 @@ The following environment variables control the configuration of the Nextflow ru
 
 ## Nextflow settings
 
+`NXF_AGENT_MODE`
+: :::{versionadded} 26.04.0
+  :::
+: When `true`, enables agent output mode. In this mode, Nextflow replaces the interactive ANSI log with minimal, structured output optimized for AI agents and non-interactive environments. The output uses tagged lines such as `[PIPELINE]`, `[PROCESS]`, `[WARN]`, `[ERROR]`, and `[SUCCESS]`/`[FAILED]` written to standard output  (default: `false`).
+
 `NXF_ANSI_LOG`
 : Enables/disables ANSI console output (default `true` when ANSI terminal is detected).
 
@@ -117,6 +122,11 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : The file storage path against which relative file paths are resolved.
 : For example, with `NXF_FILE_ROOT=/some/root/path`, the use of `file('hello')` will be resolved to the absolute path `/some/root/path/hello`. A remote root path can be specified using the usual protocol prefix, e.g. `NXF_FILE_ROOT=s3://my-bucket/data`. Files defined using an absolute path are not affected by this setting.
+
+`NXF_FUSION_TRACE`
+: :::{versionadded} 26.04.0
+  :::
+: When set to `true`, collect task resource metrics (CPU, memory, I/O) from the Fusion trace file (`.fusion/trace.json`) produced in the task work directory, replacing the metrics collected by the default bash command-trace wrapper. Requires Fusion to be enabled. GPU metrics from Fusion are always collected regardless of this setting. Defaults to `false`.
 
 `NXF_HOME`
 : Nextflow home directory (default: `$HOME/.nextflow`).
@@ -228,9 +238,13 @@ The following environment variables control the configuration of the Nextflow ru
 : Enable the use of Spack recipes defined by using the {ref}`process-spack` directive. (default: `false`).
 
 `NXF_SYNTAX_PARSER`
-: :::{versionadded} 25.02.0-edge
+: :::{versionadded} 25.04.0
+  The strict parser is disabled by default.
   :::
-: Set to `'v2'` to use the {ref}`strict syntax <strict-syntax-page>` for Nextflow scripts and config files (default: `'v1'`).
+: :::{versionchanged} 26.04.0
+  The strict parser is enabled by default.
+  :::
+: Set to `'v2'` to use the {ref}`strict syntax parser <strict-syntax-page>` for Nextflow code. Set to `'v1'` to fall back to the legacy parser.
 
 `NXF_TEMP`
 : Directory where temporary files are stored
@@ -247,8 +261,35 @@ The following environment variables control the configuration of the Nextflow ru
 `NXF_WRAPPER_STAGE_FILE_THRESHOLD`
 : :::{versionadded} 23.05.0-edge
   :::
-: Defines the minimum size of the `.command.run` staging script for it to be written to a separate `.command.stage` file (default: `'1 MB'`).
+: Enables writing large staging scripts to a separate `.command.stage` file. The value defines the minimum size of the `.command.run` staging script for it to be written to the separate file (default when enabled: `'1 MB'`).
 : This setting is useful for executors that impose a size limit on job scripts.
+
+## Seqera Platform settings
+
+`TOWER_ACCESS_TOKEN`
+: Specifies the access token for authenticating with Seqera Platform. Can also be configured using the `tower.accessToken` config option.
+
+`TOWER_API_ENDPOINT`
+: Specifies the Seqera Platform API endpoint (default: `https://api.cloud.seqera.io`). Can also be configured using the `tower.endpoint` config option.
+
+`TOWER_AUTH_DOMAIN`
+: :::{versionadded} 25.10.0
+  :::
+: Specifies the Auth0 domain for authenticating with Seqera Platform when connecting to a custom endpoint. When specified, this value takes precedence over the built-in mappings for known Seqera endpoints. Must be used in conjunction with `TOWER_AUTH_CLIENT_ID`.
+
+`TOWER_AUTH_CLIENT_ID`
+: :::{versionadded} 25.10.0
+  :::
+: Specifies the Auth0 client ID for authenticating with a custom Seqera Platform endpoint. Must be used in conjunction with `TOWER_AUTH_DOMAIN`.
+
+`TOWER_REFRESH_TOKEN`
+: Specifies the refresh token for maintaining authentication with Seqera Platform. Can also be configured using the `tower.refreshToken` config option.
+
+`TOWER_COMPUTE_ENV_ID`
+: Specifies the Seqera Platform compute environment ID. When specified, the scheduler resolves the compute environment directly by this ID instead of inferring a suitable compute environment. Can also be configured using the `tower.computeEnvId` config option.
+
+`TOWER_WORKSPACE_ID`
+: Specifies the Seqera Platform workspace ID. Can also be configured using the `tower.workspaceId` config option.
 
 ## Other settings
 

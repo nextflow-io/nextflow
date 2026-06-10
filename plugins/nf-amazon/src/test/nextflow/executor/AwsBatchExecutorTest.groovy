@@ -1,8 +1,17 @@
 /*
- * Copyright (c) 2020-2021. Seqera Labs, S.L.
+ * Copyright 2013-2026, Seqera Labs
  *
- * All Rights reserved
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package nextflow.executor
@@ -127,8 +136,8 @@ class AwsBatchExecutorTest extends Specification {
 
         where:
         FUSION  | DEFAULT_FS  | S5CMD   | TASK_DIR            | EXPECTED
-        false   | false       | false   | 's3://foo/work/dir' | 'bash -o pipefail -c \'trap "{ ret=$?; aws s3 cp --only-show-errors .command.log s3://foo/work/dir/.command.log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors s3://foo/work/dir/.command.run - | bash 2>&1 | tee .command.log\''
-        false   | false       | true    | 's3://foo/work/dir' | 'bash -o pipefail -c \'trap "{ ret=$?; s5cmd cp .command.log s3://foo/work/dir/.command.log||true; exit $ret; }" EXIT; s5cmd cat s3://foo/work/dir/.command.run | bash 2>&1 | tee .command.log\''
+        false   | false       | false   | 's3://foo/work/dir' | 'bash -o pipefail -c \'trap "[[ -n \\$pid ]] && kill -TERM \\$pid" TERM; trap "{ ret=$?; aws s3 cp --only-show-errors .command.log s3://foo/work/dir/.command.log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors s3://foo/work/dir/.command.run - | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid\''
+        false   | false       | true    | 's3://foo/work/dir' | 'bash -o pipefail -c \'trap "[[ -n \\$pid ]] && kill -TERM \\$pid" TERM; trap "{ ret=$?; s5cmd cp .command.log s3://foo/work/dir/.command.log||true; exit $ret; }" EXIT; s5cmd cat s3://foo/work/dir/.command.run | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid\''
         and:
         true    | false       | false   | '/fusion/work/dir'  | 'bash /fusion/work/dir/.command.run'
         false   | true        | false   | '/nfs/work/dir'     | 'bash /nfs/work/dir/.command.run 2>&1 > /nfs/work/dir/.command.log'

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ class TaskCmdXformVisitorTest extends Specification {
         def result = shell.evaluate('''
             return "$X, $Y, $Z"
             ''')
-        
+
         then:
         result == 'foo, f\\ o\\ o.txt, 1 2 3'
     }

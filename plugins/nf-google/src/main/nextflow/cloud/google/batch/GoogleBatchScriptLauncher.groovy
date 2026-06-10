@@ -1,6 +1,5 @@
 /*
- * Copyright 2023, Seqera Labs.
- * Copyright 2022, Google Inc.
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +35,7 @@ import nextflow.util.TestOnly
 
 /**
  * Implement Nextflow task launcher script
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -66,7 +65,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         bean.workDir = toContainerMount(bean.workDir)
         bean.targetDir = toContainerMount(bean.targetDir)
 
-        // add all children work dir 
+        // add all children work dir
         if( bean.arrayWorkDirs ) {
             for( Path it : bean.arrayWorkDirs )
                 toContainerMount(it)
@@ -184,9 +183,22 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         return remoteWorkDir.resolve(TaskRun.CMD_INFILE)
     }
 
+    @Override
+    protected Path targetStageFile() {
+        return remoteWorkDir.resolve(TaskRun.CMD_STAGE)
+    }
+
     GoogleBatchScriptLauncher withConfig(GoogleOpts config) {
         this.config = config
+        addLogsBucket(config.batch.logsPath())
         return this
+    }
+
+    protected void addLogsBucket(Path path) {
+        if( path instanceof CloudStoragePath )
+            buckets.add(path.bucket())
+        else if( path != null )
+            throw new IllegalArgumentException("Unexpected value for Google Batch logs path: ${path.toUriString()}")
     }
 
     GoogleBatchScriptLauncher withIsArray(boolean value) {

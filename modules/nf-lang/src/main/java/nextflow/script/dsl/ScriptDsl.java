@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +21,13 @@ import java.util.List;
 import java.util.Map;
 
 import groovy.lang.Closure;
+import groovy.transform.NamedParam;
+import groovy.transform.NamedParams;
 import nextflow.script.namespaces.ChannelNamespace;
 import nextflow.script.namespaces.LogNamespace;
 import nextflow.script.namespaces.NextflowNamespace;
 import nextflow.script.namespaces.WorkflowNamespace;
+import nextflow.script.types.Record;
 import nextflow.script.types.Tuple;
 
 /**
@@ -131,13 +134,35 @@ public interface ScriptDsl extends DslScope {
 
         *NOTE: This function will return a collection if the glob pattern yields zero or multiple files. Use `files()` to get a collection of files.*
     """)
-    Path file(Map<String,?> opts, String filePattern);
+    Path file(
+        @NamedParams({
+            @NamedParam(value = "checkIfExists", type = Boolean.class),
+            @NamedParam(value = "followLinks", type = Boolean.class),
+            @NamedParam(value = "glob", type = Boolean.class),
+            @NamedParam(value = "hidden", type = Boolean.class),
+            @NamedParam(value = "maxDepth", type = Integer.class),
+            @NamedParam(value = "type", type = String.class),
+        })
+        Map<String,?> opts,
+        String filePattern
+    );
     Path file(String filePattern);
 
     @Description("""
         Get a collection of files from a file name or glob pattern.
     """)
-    Collection<Path> files(Map<String,?> opts, String filePattern);
+    Collection<Path> files(
+        @NamedParams({
+            @NamedParam(value = "checkIfExists", type = Boolean.class),
+            @NamedParam(value = "followLinks", type = Boolean.class),
+            @NamedParam(value = "glob", type = Boolean.class),
+            @NamedParam(value = "hidden", type = Boolean.class),
+            @NamedParam(value = "maxDepth", type = Integer.class),
+            @NamedParam(value = "type", type = String.class),
+        })
+        Map<String,?> opts,
+        String filePattern
+    );
     Collection<Path> files(String filePattern);
 
     @Description("""
@@ -169,6 +194,11 @@ public interface ScriptDsl extends DslScope {
         Print a value to standard output with a newline.
     """)
     void println(Object value);
+
+    @Description("""
+        Create a record from the given named arguments.
+    """)
+    Record record(Map<String,?> opts);
 
     @Description("""
         Send an email.

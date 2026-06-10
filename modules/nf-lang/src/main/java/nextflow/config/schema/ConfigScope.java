@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,12 @@
  */
 package nextflow.config.schema;
 
-import org.pf4j.ExtensionPoint;
-
-public interface ConfigScope extends ExtensionPoint {
+/**
+ * Deprecated alias for backwards compatibility.
+ *
+ * @deprecated Use {@link nextflow.config.spec.ConfigScope} instead.
+ *             This package was renamed from config.schema to config.spec.
+ */
+@Deprecated
+public interface ConfigScope {
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,10 +16,10 @@
 
 package nextflow.extension
 
+import nextflow.Channel
 import spock.lang.Specification
 
-import nextflow.Channel
-
+import static test.ScriptHelper.runDataflow
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -52,7 +52,9 @@ class CountLinesOpTest extends Specification {
             '''
                 .stripIndent().strip()
 
-        def result = Channel.of(str, str2, str3).countLines()
+        def result = runDataflow {
+            Channel.of(str, str2, str3).countLines()
+        }
         then:
         result.val == 11
 

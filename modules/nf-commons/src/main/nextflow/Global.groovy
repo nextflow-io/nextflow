@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,8 +24,8 @@ import nextflow.util.Duration
 import nextflow.util.IniFile
 import nextflow.util.MemoryUnit
 import nextflow.util.TestOnly
-import org.apache.commons.lang.StringUtils
-import org.apache.commons.lang.exception.ExceptionUtils
+import org.apache.commons.lang3.StringUtils
+import org.apache.commons.lang3.exception.ExceptionUtils
 /**
  * Hold global variables
  *
@@ -33,6 +33,13 @@ import org.apache.commons.lang.exception.ExceptionUtils
  */
 @Slf4j
 class Global {
+
+    /**
+     * When {@code true}, Fusion trace metrics replace the bash command-trace wrapper
+     */
+    static boolean isFusionTraceEnabled() {
+        return SysEnv.get('NXF_FUSION_TRACE', 'false') == 'true'
+    }
 
     /**
      * The pipeline session instance
@@ -86,7 +93,7 @@ class Global {
     static void onCleanup(Consumer<ISession> callback) {
         if( callback==null ) {
             log.warn "Cleanup consumer cannot be null\n${ExceptionUtils.getStackTrace(new Exception())}"
-            return 
+            return
         }
         hooks.add(callback)
     }

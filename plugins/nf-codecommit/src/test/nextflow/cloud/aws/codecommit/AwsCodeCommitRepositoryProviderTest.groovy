@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.aws.codecommit
@@ -50,11 +49,11 @@ class AwsCodeCommitRepositoryProviderTest extends Specification {
         expect:
         provider.readText('main.nf') == '''\
                 nextflow.enable.dsl=2
-                
+
                 workflow {
                   sayHello()
                 }
-                
+
                 process sayHello {
                   /echo Hello world/
                 }
@@ -104,6 +103,58 @@ class AwsCodeCommitRepositoryProviderTest extends Specification {
                 new RepositoryProvider.BranchInfo('master', 'c820e0904d9ce4404e005e3cc910502300b36ba3'),
                 new RepositoryProvider.BranchInfo('dev1', 'c90422a1b4823f1c0980bbf8cab261e45a351622')] as Set
 
+    }
+
+    def 'should list root directory contents'() {
+        given:
+        def config = new AwsCodeCommitProviderConfig('git-codecommit.eu-west-1.amazonaws.com')
+        def provider = new AwsCodeCommitRepositoryProvider('codecommit-eu-west-1/my-repo', config)
+
+        when:
+        def entries = provider.listDirectory("/", 1)
+
+        then:
+        entries.size() > 0
+        and:
+        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        and:
+        entries.every { it.path && it.name && it.sha }
+        // Should only include immediate children for depth=1
+        entries.every { it.path.split('/').length <= 2 }
+    }
+
+    def 'should list directory contents recursively'() {
+        given:
+        def config = new AwsCodeCommitProviderConfig('git-codecommit.eu-west-1.amazonaws.com')
+        def provider = new AwsCodeCommitRepositoryProvider('codecommit-eu-west-1/my-repo', config)
+
+        when:
+        def entries = provider.listDirectory("/", 10)
+
+        then:
+        entries.size() > 0
+        and:
+        // Should include files from root and potentially subdirectories
+        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        and:
+        entries.every { it.path && it.name && it.sha }
+    }
+
+    def 'should list directory contents with depth 2'() {
+        given:
+        def config = new AwsCodeCommitProviderConfig('git-codecommit.eu-west-1.amazonaws.com')
+        def provider = new AwsCodeCommitRepositoryProvider('codecommit-eu-west-1/my-repo', config)
+
+        when:
+        def depthOne = provider.listDirectory("/", 1)
+        def depthTwo = provider.listDirectory("/", 2)
+
+        then:
+        depthOne.size() > 0
+        depthTwo.size() >= depthOne.size()
+        and:
+        depthOne.every { it.path && it.name && it.sha }
+        depthTwo.every { it.path && it.name && it.sha }
     }
 
 }

@@ -1,5 +1,5 @@
 #
-# Copyright 2013-2024, Seqera Labs
+# Copyright 2013-2026, Seqera Labs
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,14 +13,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-#
 
 # cleanup
 rm -rf .nextflow && mkdir .nextflow
 # copy nextflow dependencies
 (cd ..
-make assemble
-BUILD_PACK=1 ./gradlew installScratch publishToMavenLocal
+export NXF_PLUGINS_DIR=$PWD/build/plugins
+make releaseInfo assemble installScratch
 )
 
 # copy nextflow plugins
@@ -64,7 +63,7 @@ echo "Nextflow snapshots launcher image $image"
 #
 # Create an ephemeral container with the scratch image and base Platform launcher image
 #
-launcher=$(wave -i ${base} --include ${image} --platform linux/amd64 --config-env NXF_HOME=/.nextflow)
+launcher=$(wave -i ${base} --include ${image} --platform linux/amd64 --config-env NXF_HOME=/.nextflow --config-env NXF_SYNTAX_PARSER=v1)
 echo "Running Platform tests using image launcher: $launcher"
 
 # determining the e2e test environment checking the $COMMIT_MESSAGE

@@ -112,6 +112,7 @@ scriptDeclaration
     |   importDeclaration           #importDeclAlt
     |   paramsDef                   #paramsDefAlt
     |   paramDeclarationV1          #paramDeclV1Alt
+    |   recordDef                   #recordDefAlt
     |   enumDef                     #enumDefAlt
     |   processDef                  #processDefAlt
     |   workflowDef                 #workflowDefAlt
@@ -169,6 +170,17 @@ paramDeclarationV1
     :   PARAMS (DOT identifier)+ nls ASSIGN nls expression
     ;
 
+// -- record definition
+recordDef
+    :   RECORD identifier nls LBRACE
+        nls recordBody?
+        nls RBRACE
+    ;
+
+recordBody
+    :   nameTypePair (sep nameTypePair)*
+    ;
+
 // -- enum definition
 enumDef
     :   ENUM identifier nls LBRACE
@@ -191,7 +203,9 @@ processBody
     // explicit script/exec body with optional stub
     :   (sep processDirectives)?
         (sep processInputs)?
+        (sep processStage)?
         (sep processOutputs)?
+        (sep processTopics)?
         (sep processWhen)?
         sep processExec
         (sep processStub)?
@@ -199,15 +213,19 @@ processBody
     // explicit "Mahesh" form
     |   (sep processDirectives)?
         (sep processInputs)?
+        (sep processStage)?
         (sep processWhen)?
         sep processExec
         (sep processStub)?
-        sep processOutputs
+        (sep processOutputs)?
+        (sep processTopics)?
 
     // implicit script/exec body
     |   (sep processDirectives)?
         (sep processInputs)?
+        (sep processStage)?
         (sep processOutputs)?
+        (sep processTopics)?
         (sep processWhen)?
         sep blockStatements
     ;
@@ -217,11 +235,39 @@ processDirectives
     ;
 
 processInputs
-    :   INPUT COLON nls statement (sep statement)*
+    :   INPUT COLON nls processInput (sep processInput)*
+    ;
+
+processInput
+    :   identifier (COLON type)?
+    |   processRecordInput
+    |   processTupleInput
+    |   statement
+    ;
+
+processRecordInput
+    :   RECORD LPAREN nls nameTypePair (COMMA nls nameTypePair)* COMMA? nls rparen
+    ;
+
+processTupleInput
+    :   TUPLE LPAREN nls nameTypePair (COMMA nls nameTypePair)* COMMA? nls rparen
+    ;
+
+processStage
+    :   STAGE COLON nls statement (sep statement)*
     ;
 
 processOutputs
-    :   OUTPUT COLON nls statement (sep statement)*
+    :   OUTPUT COLON nls processOutput (sep processOutput)*
+    ;
+
+processOutput
+    :   nameTypePair (ASSIGN expression)?
+    |   statement
+    ;
+
+processTopics
+    :   TOPIC COLON nls statement (sep statement)*
     ;
 
 processWhen
@@ -378,7 +424,7 @@ variableDeclaration
     ;
 
 nameTypePairs
-    :   LPAREN nameTypePair (COMMA nameTypePair)+ rparen
+    :   LPAREN nls nameTypePair (COMMA nls nameTypePair)+ nls rparen
     ;
 
 nameTypePair
@@ -391,7 +437,7 @@ multipleAssignmentStatement
     ;
 
 variableNames
-    :   LPAREN identifier (COMMA identifier)+ rparen
+    :   LPAREN nls identifier (COMMA nls identifier)+ nls rparen
     ;
 
 assignmentStatement
@@ -551,13 +597,17 @@ identifier
     |   NEXTFLOW
     |   PARAMS
     |   FROM
+    |   RECORD
     |   PROCESS
     |   EXEC
     |   INPUT
     |   OUTPUT
     |   SCRIPT
     |   SHELL
+    |   STAGE
     |   STUB
+    |   TOPIC
+    |   TUPLE
     |   WHEN
     |   WORKFLOW
     |   EMIT
@@ -724,7 +774,12 @@ className
     ;
 
 typeArguments
-    :   LT type (COMMA type)* GT
+    :   LT typeArgument (COMMA typeArgument)* GT
+    ;
+
+typeArgument
+    :   type
+    |   QUESTION
     ;
 
 legacyType
@@ -746,13 +801,17 @@ keywords
     |   PARAMS
     |   INCLUDE
     |   FROM
+    |   RECORD
     |   PROCESS
     |   EXEC
     |   INPUT
     |   OUTPUT
     |   SCRIPT
     |   SHELL
+    |   STAGE
     |   STUB
+    |   TOPIC
+    |   TUPLE
     |   WHEN
     |   WORKFLOW
     |   EMIT

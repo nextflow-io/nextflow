@@ -1,8 +1,25 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.platform
 
 import groovy.transform.CompileStatic
 import nextflow.Global
 import nextflow.Session
+import nextflow.SysEnv
 
 /**
  * Helper methods for Platform-related operations
@@ -25,6 +42,66 @@ class PlatformHelper {
         if( !result || result=='-' )
             result = env.get('TOWER_API_ENDPOINT') ?: 'https://api.cloud.seqera.io'
         return result.stripEnd('/')
+    }
+
+    /**
+     * Get the Auth0 domain for a given Platform API endpoint
+     *
+     * @param endpoint the Platform API endpoint
+     * @return the Auth0 domain, or null if not a cloud endpoint
+     * @deprecated Auth0 is no longer used for authentication. Platform OIDC is used instead.
+     */
+    @Deprecated
+    static String getAuthDomain(String endpoint) {
+        /* Check if custom domain is set via environment variable first.
+         * Note: We cannot use the env var in a switch case statement because
+         * that would require the endpoint to match the env var value, when
+         * we actually want the env var to take precedence for ANY endpoint.
+         */
+        final customDomain = SysEnv.get('TOWER_AUTH_DOMAIN')
+        if( customDomain )
+            return customDomain
+
+        switch(endpoint) {
+            case 'https://api.cloud.dev-seqera.io':
+                return 'seqera-development.eu.auth0.com'
+            case 'https://api.cloud.stage-seqera.io':
+                return 'seqera-stage.eu.auth0.com'
+            case 'https://api.cloud.seqera.io':
+                return 'seqera.eu.auth0.com'
+            default:
+                return null
+        }
+    }
+
+    /**
+     * Get the Auth0 client ID for a given Platform API endpoint
+     *
+     * @param endpoint the Platform API endpoint
+     * @return the Auth0 client ID, or null if not a cloud endpoint
+     * @deprecated Auth0 is no longer used for authentication. Platform OIDC is used instead.
+     */
+    @Deprecated
+    static String getAuthClientId(String endpoint) {
+        /* Check if custom client ID is set via environment variable first.
+         * Note: We cannot use the env var in a switch case statement because
+         * that would require the endpoint to match the env var value, when
+         * we actually want the env var to take precedence for ANY endpoint.
+         */
+        final customClientId = SysEnv.get('TOWER_AUTH_CLIENT_ID')
+        if( customClientId )
+            return customClientId
+
+        switch(endpoint) {
+            case 'https://api.cloud.dev-seqera.io':
+                return 'Ep2LhYiYmuV9hhz0dH6dbXVq0S7s7SWZ'
+            case 'https://api.cloud.stage-seqera.io':
+                return '60cPDjI6YhoTPjyMTIBjGtxatSUwWswB'
+            case 'https://api.cloud.seqera.io':
+                return 'FxCM8EJ76nNeHUDidSHkZfT8VtsrhHeL'
+            default:
+                return null
+        }
     }
 
     /**
@@ -68,10 +145,32 @@ class PlatformHelper {
      * @return
      */
     static String getWorkspaceId(Map opts, Map<String,String> env) {
-        final workspaceId = env.get('TOWER_WORKFLOW_ID')
-            ? env.get('TOWER_WORKSPACE_ID')
-            : opts.workspaceId as Long ?: env.get('TOWER_WORKSPACE_ID') as Long
-        return workspaceId
+        try {
+            final workspaceId = env.get('TOWER_WORKFLOW_ID')
+                ? env.get('TOWER_WORKSPACE_ID')
+                : opts.workspaceId as Long ?: env.get('TOWER_WORKSPACE_ID') as Long
+            return workspaceId
+        }
+        catch (NumberFormatException e) {
+            final value = opts.workspaceId ?: env.get('TOWER_WORKSPACE_ID')
+            throw new IllegalArgumentException("Invalid Seqera Platform workspace ID: '${value}' — workspace ID must be a numeric value. Check the 'tower.workspaceId' setting in your Nextflow configuration or the TOWER_WORKSPACE_ID environment variable")
+        }
+    }
+
+    /**
+     * Return the configured Platform compute environment ID: if `TOWER_WORKFLOW_ID` is provided in the environment,
+     * it means we are running in a Platform-made run and we should ONLY retrieve the value from the environment.
+     * Otherwise, check the configuration or fallback to the environment. If not found, return null.
+     *
+     * @param opts the configuration options for Platform (e.g. `session.config.navigate('tower')`)
+     * @param env the applicable environment variables
+     * @return the Platform compute environment ID, or null
+     */
+    static String getComputeEnvId(Map opts, Map<String,String> env) {
+        final computeEnvId = env.get('TOWER_WORKFLOW_ID')
+            ? env.get('TOWER_COMPUTE_ENV_ID')
+            : opts.containsKey('computeEnvId') ? opts.computeEnvId as String : env.get('TOWER_COMPUTE_ENV_ID')
+        return computeEnvId
     }
 
     static Map<String,Object> config() {

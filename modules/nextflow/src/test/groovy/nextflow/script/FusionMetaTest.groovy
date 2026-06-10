@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.script
@@ -40,7 +39,7 @@ class FusionMetaTest extends Specification {
         OPTS                        | EXPECTED_ENABLED  | EXPECTED_VERSION
         [:]                         | false             | null
         [fusion:[enabled:false]]    | false             | null
-        [fusion:[enabled:true]]     | true              | '2.4'
+        [fusion:[enabled:true]]     | true              | '2.5'
         [fusion:[enabled:true, containerConfigUrl: 'https://foo.io/releases/v3.0-amd64.json']]     | true    | '3.0'
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ import nextflow.util.CheckHelper
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import nextflow.util.RateUnit
-import org.apache.commons.lang.StringUtils
+import org.apache.commons.lang3.StringUtils
 import org.codehaus.groovy.runtime.DefaultGroovyMethods
 import org.codehaus.groovy.runtime.GStringImpl
 import org.codehaus.groovy.runtime.ResourceGroovyMethods
@@ -960,5 +960,22 @@ class Bolts {
         else
             return new HashMap<>(map)
     }
-    
+
+    /**
+     * Resolve a lazy expression (e.g. closure, gstring) against
+     * a delegate (i.e. binding).
+     *
+     * @param binding
+     * @param value
+     */
+    static Object resolveLazy(Object binding, Object value) {
+        if( value instanceof Closure )
+            return cloneWith(value, binding).call()
+
+        if( value instanceof GString )
+            return cloneAsLazy(value, binding).toString()
+
+        return value
+    }
+
 }

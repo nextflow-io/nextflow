@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,15 +33,15 @@ class ManifestTest extends Specification {
             author: 'pablo',
             contributors: [
                 [
-                    name: 'Alice', 
-                    affiliation: 'University', 
+                    name: 'Alice',
+                    affiliation: 'University',
                     email: 'alice@university.edu',
                     contribution: ['author', 'maintainer'],
                     orcid: 'https://orcid.org/0000-0000-0000-0000'
                 ],
                 [
-                    name: 'Bob', 
-                    affiliation: 'Company', 
+                    name: 'Bob',
+                    affiliation: 'Company',
                     email: 'bob@company.com',
                     contribution: ['contributor'],
                 ]
@@ -102,21 +102,52 @@ class ManifestTest extends Specification {
 
         when:
         def MAP = [
-            name: 'Alice', 
-            affiliation: 'University', 
+            name: 'Alice',
+            affiliation: 'University',
             email: 'alice@university.edu',
             contribution: ['author', 'maintainer'],
             orcid: 'https://orcid.org/0000-0000-0000-0000'
         ]
         then:
         new Manifest.Contributor(MAP).toMap() == [
-            name: 'Alice', 
-            affiliation: 'University', 
+            name: 'Alice',
+            affiliation: 'University',
             email: 'alice@university.edu',
             github: null,
             contribution: ['author', 'maintainer'],
             orcid: 'https://orcid.org/0000-0000-0000-0000'
         ]
+    }
+
+    def 'should handle contributors without contribution field' () {
+        when:
+        def manifest = new Manifest([
+            contributors: [[
+                name: 'Alice',
+                affiliation: 'University',
+                orcid: 'https://orcid.org/0000-0000-0000-0000'
+            ]]
+        ])
+        then:
+        manifest.contributors.size() == 1
+        manifest.contributors[0].name == 'Alice'
+        manifest.contributors[0].affiliation == 'University'
+        manifest.contributors[0].orcid == 'https://orcid.org/0000-0000-0000-0000'
+        manifest.contributors[0].contribution == []
+    }
+
+    def 'should handle contributors with empty contribution field' () {
+        when:
+        def manifest = new Manifest([
+            contributors: [[
+                name: 'Bob',
+                contribution: []
+            ]]
+        ])
+        then:
+        manifest.contributors.size() == 1
+        manifest.contributors[0].name == 'Bob'
+        manifest.contributors[0].contribution == []
     }
 
     def 'should throw error on invalid manifest' () {
@@ -148,7 +179,8 @@ class ManifestTest extends Specification {
         ])
         manifest.contributors
         then:
-        thrown(AbortOperationException)
+        def e = thrown(AbortOperationException)
+        e.message.contains("Invalid contribution type 'owner' in `manifest.contributors` config option")
     }
 
 }

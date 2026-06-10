@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package io.seqera.wave.plugin.config
@@ -24,9 +23,9 @@ import io.seqera.wave.api.BuildCompression
 import io.seqera.wave.api.ScanLevel
 import io.seqera.wave.api.ScanMode
 import io.seqera.wave.config.CondaOpts
-import nextflow.config.schema.ConfigOption
-import nextflow.config.schema.ConfigScope
-import nextflow.config.schema.ScopeName
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
 import nextflow.script.dsl.Description
 import nextflow.file.FileHelper
 import nextflow.util.Duration
@@ -43,7 +42,9 @@ import nextflow.util.Duration
 @ToString(includeNames = true, includePackage = false, includeFields = true, useGetters = false)
 @CompileStatic
 class WaveConfig implements ConfigScope {
+
     final private static String DEF_ENDPOINT = 'https://wave.seqera.io'
+
     final private static List<String> DEF_STRATEGIES = List.of('container','dockerfile','conda')
 
     final BuildOpts build
@@ -139,6 +140,8 @@ class WaveConfig implements ConfigScope {
 
     String cacheRepository() { build.cacheRepository }
 
+    String buildTemplate() { build.template }
+
     Duration buildMaxDuration() { build.maxDuration }
 
     BuildCompression buildCompression() { build.compression }
@@ -209,8 +212,8 @@ class WaveConfig implements ConfigScope {
         return containerConfigUrl ?: Collections.<URL>emptyList()
     }
 
-    Duration tokensCacheMaxDuration() { 
-        return tokensCacheMaxDuration 
+    Duration tokensCacheMaxDuration() {
+        return tokensCacheMaxDuration
     }
 
     ScanMode scanMode() {
@@ -275,6 +278,12 @@ class BuildOpts implements ConfigScope {
     """)
     final String cacheRepository
 
+    @ConfigOption
+    @Description("""
+        The build template to use for container builds. Supported values: `conda/pixi:v1` (Pixi with multi-stage builds), `conda/micromamba:v2` (Micromamba 2.x with multi-stage builds), `cran/installr:v1` (R/CRAN packages). Default: standard conda/micromamba:v1 template.
+    """)
+    final String template
+
     final CondaOpts conda
 
     final BuildCompression compression
@@ -287,6 +296,7 @@ class BuildOpts implements ConfigScope {
     BuildOpts(Map opts) {
         repository = opts.repository
         cacheRepository = opts.cacheRepository
+        template = opts.template
         conda = new CondaOpts(opts.conda as Map ?: Collections.emptyMap())
         compression = parseCompression(opts.compression as Map)
         maxDuration = opts.maxDuration as Duration ?: Duration.of('40m')

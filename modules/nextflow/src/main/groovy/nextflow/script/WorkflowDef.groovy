@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -106,8 +106,6 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 
     @PackageScope Map<String,Map> getDeclaredPublish() { declaredPublish }
 
-    @PackageScope String getSource() { body.source }
-
     @PackageScope List<String> getDeclaredVariables() { new ArrayList<String>(variableNames) }
 
     String getType() { 'workflow' }
@@ -148,7 +146,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
             final targetName = emissions[i]
             if( !binding.hasVariable(targetName) )
                 throw new MissingValueException("Missing workflow output parameter: $targetName")
-            final obj = binding.getVariable(targetName)
+            final obj = DataflowTypeHelper.normalizeV1(binding.getVariable(targetName))
 
             if( CH.isChannel(obj) ) {
                 channels.put(targetName, target(i, obj))
@@ -197,15 +195,22 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
     }
 
     private Object run0(Object[] args) {
+        // add inputs to workflow binding
         collectInputs(binding, args)
-        // invoke the workflow execution
+        // execute the workflow
         final closure = body.closure
         closure.setDelegate(binding)
         closure.setResolveStrategy(Closure.DELEGATE_FIRST)
-        closure.call()
-        // collect the workflow outputs
-        output = collectOutputs(declaredOutputs)
-        return output
+        final result = closure.call()
+        if( name == null ) {
+            // return the last statement if entry workflow (used for testing)
+            return result
+        }
+        else {
+            // otherwise collect the outputs from the workflow binding
+            output = collectOutputs(declaredOutputs)
+            return output
+        }
     }
 
 }

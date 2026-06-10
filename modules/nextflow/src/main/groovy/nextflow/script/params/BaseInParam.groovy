@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import nextflow.NF
 import nextflow.exception.ProcessException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
-import nextflow.script.ProcessConfig
+import nextflow.script.ProcessConfigV1
 import nextflow.script.TokenVar
 /**
  * Model a process generic input parameter
@@ -54,7 +54,7 @@ abstract class BaseInParam extends BaseParam implements InParam {
         return inChannel
     }
 
-    BaseInParam( ProcessConfig config ) {
+    BaseInParam( ProcessConfigV1 config ) {
         this(config.getOwnerScript().getBinding(), config.getInputs())
     }
 

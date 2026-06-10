@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -66,6 +66,7 @@ class ScriptMeta {
 
     static BaseScript getScriptByPath(Path path) {
         return scriptsByPath.get(path)
+            ?: scriptsByPath.get(path.toRealPath())
     }
 
     static Set<String> allProcessNames() {
@@ -199,7 +200,8 @@ class ScriptMeta {
         final name = component.name
         if( !module && NF.hasOperator(name) )
             log.warn "${component.type.capitalize()} with name '$name' overrides a built-in operator with the same name"
-        checkComponentName(component, name)
+        if( !NF.isSyntaxParserV2() )
+            checkComponentName(component, name)
         definitions.put(component.name, component)
         if( component instanceof FunctionDef ){
             incFunctionCount(name)
@@ -256,7 +258,7 @@ class ScriptMeta {
         final result = new HashSet(definitions.size() + imports.size())
         // local definitions
         for( def item : definitions.values() ) {
-            if( item instanceof WorkflowDef )
+            if( item instanceof WorkflowDef && item.name )
                 result.add(item.name)
         }
         // processes from imports
@@ -301,6 +303,26 @@ class ScriptMeta {
         return result
     }
 
+    /**
+     * Check if this script has standalone processes that can be executed
+     * automatically without requiring workflows
+     *
+     * @return true if the script has one or more processes and no workflows
+     */
+    boolean hasExecutableProcesses() {
+        // Don't allow execution of true modules (those are meant for inclusion)
+        if( isModule() )
+            return false
+
+        // Must have at least one process
+        final processNames = getLocalProcessNames()
+        if( processNames.isEmpty() )
+            return false
+
+        // Must not have any workflow definitions (including unnamed workflow)
+        return getLocalWorkflowNames().isEmpty()
+    }
+
     void addModule(BaseScript script, String name, String alias) {
        addModule(get(script), name, alias)
     }
@@ -319,13 +341,12 @@ class ScriptMeta {
         assert component
 
         final name = alias ?: component.name
-        checkComponentName(component, name)
-        if( name != component.name ) {
+        if( !NF.isSyntaxParserV2() )
+            checkComponentName(component, name)
+        if( name != component.name )
             imports.put(name, component.cloneWithName(name))
-        }
-        else {
+        else
             imports.put(name, component)
-        }
     }
 
     @Memoized

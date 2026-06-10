@@ -4,11 +4,11 @@
 
 The [Nextflow plugin registry](https://registry.nextflow.io/) is a central repository for Nextflow plugins. It hosts an index of plugin metadata that supports plugin discovery, accessibility, and version tracking.
 
-Nextflow 25.10 and later can use the plugin registry as a drop-in replacement for the [legacy plugin index](https://github.com/nextflow-io/plugins) hosted on GitHub. See {ref}`migrate-plugin-registry-page` for more information about migrating to the Nextflow plugin registry.
+Nextflow 25.10 and later can use the plugin registry as a drop-in replacement for the [legacy plugin index](https://github.com/nextflow-io/plugins) hosted on GitHub. See {ref}`migrate-plugin-page` for more information about migrating to the Nextflow plugin registry.
 
-:::{note}
-The Nextflow plugin registry is currently available as a public preview. Plugin developers can access the registry by contacting [info@nextflow.io](mailto:info@nextflow.io) to obtain access to the registry.
-:::
+See {ref}`gradle-plugin-publish` for instructions on how to publish plugins to the registry, including the {ref}`README.md requirement <gradle-plugin-readme>`.
+
+(plugin-registry-claim)=
 
 ## Claiming a plugin
 
@@ -31,14 +31,14 @@ To claim ownership of a plugin:
 5. Enter your organization name in the **Provider** field.
 
     :::{note}
-    This organization must match with the organization specified when publishing your plugin.
+    Your organization must match the provider specified when publishing your plugin.
     :::
 
 6. Select **Submit Request**.
 
 The plugin will show as **PENDING REVIEW** under **Pending Ownership Requests** until an admin approves the claim. Admin approval is required only once.
 
-(plugin-registry-create)=
+(plugin-registry-access-token)=
 
 ## Creating an access token
 

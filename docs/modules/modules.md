@@ -1,0 +1,63 @@
+(modules-page)=
+
+# Overview
+
+Nextflow scripts can include **definitions** (workflows, processes, and functions) from other scripts.
+When a script is included in this way, it is referred to as a **module**.
+Modules can be re-used within a pipeline and can be shared across projects.
+By packaging definitions as modules, you avoid duplicating code and benefit from community improvements.
+
+There are two ways to use modules in Nextflow:
+
+- [Local modules](#local-modules)
+- [Registry modules](#registry-modules)
+
+See {ref}`using-modules-page` to learn how to install and use modules in a project.
+See {ref}`dev-modules-page` to learn how to create and publish your own modules.
+See {ref}`module-registry-page` to learn how to use the Nextflow module registry.
+
+## Local modules
+
+Local modules are stored and maintained directly in your project. You include definitions from local modules using the `include` keyword with a relative path:
+
+```nextflow
+include { CAT } from './modules/cat'
+
+workflow {
+    data = channel.fromPath('data/*.txt')
+    CAT(data)
+}
+```
+
+The above snippet imports a process named `CAT` from the *included module* into the *including script*. The include source `./modules/cat` refers to the script `./modules/cat.nf` relative to the including script path.
+
+Local modules are well suited for project-specific components that are not intended for sharing.
+
+## Registry modules
+
+:::{versionadded} 26.04.0
+:::
+
+Registry modules are sourced from the [Nextflow registry](https://registry.nextflow.io) or a compatible module registry.
+Like local modules, registry modules are stored in your project, but they are installed and managed using the `nextflow module` command.
+
+Key features of registry modules:
+
+- **Discoverability**: Search for modules by keyword or name and browse available versions.
+- **Version management**: Pin specific versions or use the latest release, with automatic integrity checking via checksums.
+- **Direct execution**: Run modules as standalone workflows for ad-hoc tasks or testing without writing a wrapper script.
+- **Standard structure**: Each module includes a script (`main.nf`), spec (`meta.yml`), and documentation (`README.md`), providing a consistent structure for tooling and automation.
+
+:::{note}
+Modules from the [nf-core](https://nf-co.re/) community are automatically mirrored to the Nextflow module registry under the `nf-core` namespace.
+:::
+
+Install registry modules into your project and include them by name:
+
+```console
+$ nextflow module install nf-core/fastqc
+```
+
+```nextflow
+include { FASTQC } from 'nf-core/fastqc'
+```

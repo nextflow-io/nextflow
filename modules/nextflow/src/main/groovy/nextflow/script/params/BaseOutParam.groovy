@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,7 +21,7 @@ import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.NF
 import nextflow.extension.CH
-import nextflow.script.ProcessConfig
+import nextflow.script.ProcessConfigV1
 import nextflow.script.TokenVar
 import nextflow.util.ConfigHelper
 /**
@@ -50,7 +50,7 @@ abstract class BaseOutParam extends BaseParam implements OutParam {
         super(binding,list,ownerIndex)
     }
 
-    BaseOutParam( ProcessConfig config ) {
+    BaseOutParam( ProcessConfigV1 config ) {
         super(config.getOwnerScript().getBinding(), config.getOutputs())
     }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,10 +12,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.aws.config
+
+import software.amazon.awssdk.regions.Region
 
 import java.nio.file.Files
 
@@ -49,7 +50,7 @@ class AwsConfigTest extends Specification {
             aws_access_key_id = aaa
             aws_secret_access_key = bbbb
             region = reg-something
-            
+
             [foo]
             aws_access_key_id = xxx
             aws_secret_access_key = yyy
@@ -114,5 +115,19 @@ class AwsConfigTest extends Specification {
         [foo: 1]                        | [AWS_MAX_ATTEMPTS:'3']| [max_error_retry: '3', foo: 1]
         [max_error_retry: '2', foo: 1]  | [:]                   | [max_error_retry: '2', foo: 1]
         [:]                             | [:]                   | [max_error_retry: '5']
+    }
+
+    @Unroll
+    def 'should resolve S3 region' () {
+        expect:
+        new AwsConfig(CONFIG).resolveS3Region() == REGION
+
+        where:
+        CONFIG                                                                                  | REGION
+        [:]                                                                                     | Region.US_EAST_1.id()
+        [client: [endpoint: "http://custom.endpoint.com"]]                                      | Region.US_EAST_1.id()
+        [region: "eu-south-1", client: [endpoint: "http://custom.endpoint.com"]]                | Region.EU_SOUTH_1.id()
+        [region: "eu-south-1", client: [endpoint: "https://s3.eu-west-1.amazonaws.com"]]        | Region.EU_WEST_1.id()
+        [region: "eu-south-1", client: [endpoint: "https://bucket.s3-global.amazonaws.com"]]    | Region.EU_SOUTH_1.id()
     }
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.aws.nio;
@@ -27,6 +26,7 @@ import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -161,7 +161,7 @@ public final class S3OutputStream extends OutputStream {
     }
 
     private ByteBuffer expandBuffer(ByteBuffer byteBuffer) {
-        
+
         final float expandFactor = 2.5f;
         final int newCapacity = Math.min( (int)(byteBuffer.capacity() * expandFactor), bufferSize );
 
@@ -383,7 +383,7 @@ public final class S3OutputStream extends OutputStream {
             if( buf != null )
                 putObject(buf, md5.digest());
             else
-                // this is needed when trying to upload an empty 
+                // this is needed when trying to upload an empty
                 putObject(new ByteArrayInputStream(new byte[]{}), 0, createMd5().digest());
         }
         else {
@@ -548,9 +548,13 @@ public final class S3OutputStream extends OutputStream {
         final int partCount = completedParts.size();
         log.trace("Completing upload to {} consisting of {} parts", objectId, partCount);
 
+        //Ensure parts are sorted by partNumber
+        CompletedPart[] parts = completedParts.stream()
+            .sorted(Comparator.comparingInt(CompletedPart::partNumber))
+            .toArray(CompletedPart[]::new);
         try {
             final CompletedMultipartUpload completedUpload = CompletedMultipartUpload.builder()
-            .parts(completedParts)
+            .parts(parts)
             .build();
 
             s3.completeMultipartUpload(CompleteMultipartUploadRequest.builder()

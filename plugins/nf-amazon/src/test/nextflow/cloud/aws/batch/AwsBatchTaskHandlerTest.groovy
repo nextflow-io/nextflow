@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,6 +43,8 @@ import nextflow.script.ProcessConfig
 import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
 import software.amazon.awssdk.services.batch.BatchClient
+import software.amazon.awssdk.services.batch.model.AttemptDetail
+import software.amazon.awssdk.services.batch.model.ContainerDetail
 import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsRequest
 import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsResponse
 import software.amazon.awssdk.services.batch.model.DescribeJobsRequest
@@ -51,6 +53,7 @@ import software.amazon.awssdk.services.batch.model.EvaluateOnExit
 import software.amazon.awssdk.services.batch.model.JobDefinition
 import software.amazon.awssdk.services.batch.model.JobDefinitionType
 import software.amazon.awssdk.services.batch.model.JobDetail
+import software.amazon.awssdk.services.batch.model.JobStatus
 import software.amazon.awssdk.services.batch.model.KeyValuePair
 import software.amazon.awssdk.services.batch.model.PlatformCapability
 import software.amazon.awssdk.services.batch.model.RegisterJobDefinitionResponse
@@ -441,7 +444,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def JOB_ID = '123'
         def client = Mock(BatchClient)
         def task = Mock(TaskRun)
-        def handler = Spy(AwsBatchTaskHandler) 
+        def handler = Spy(AwsBatchTaskHandler)
         handler.task = task
         handler.@client = client
 
@@ -524,7 +527,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         ]
         and:
         handler.addVolumeMountsToContainer(mounts, containerModel)
-        
+
         when:
         def container = containerModel.toBatchContainerProperties()
         then:
@@ -578,7 +581,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.containerProperties.logConfiguration == null
         result.containerProperties.mountPoints == null
         result.containerProperties.privileged == false
-        
+
         when:
         result = handler.makeJobDefRequest(task)
         then:
@@ -595,6 +598,87 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.containerProperties.mountPoints[0].readOnly()
         result.containerProperties.volumes[0].host().sourcePath() == '/home/conda'
         result.containerProperties.volumes[0].name() == 'aws-cli'
+        result.consumableResourceProperties == null
+    }
+
+    def 'should create a job definition with consumable resources from hints' () {
+        given: 'hints set through the real DSL → ProcessConfig → TaskConfig path'
+        def process = new ProcessConfig(Mock(BaseScript))
+        new nextflow.script.dsl.ProcessBuilder(process).hints(
+            'awsbatch/consumableResources': ['license-a': 1, 'license-b': 2],
+            foo: 'bar'
+        )
+        def taskConfig = process.createTaskConfig()
+        and:
+        def IMAGE = 'foo/bar:1.0'
+        def JOB_NAME = 'nf-foo-bar-1-0'
+        def task = Mock(TaskRun) {
+            getContainer() >> IMAGE
+            getConfig() >> taskConfig
+        }
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> task
+            fusionEnabled() >> false
+        }
+        handler.@executor = Mock(AwsBatchExecutor)
+
+        when:
+        def result = handler.makeJobDefRequest(task)
+        then:
+        1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
+        1 * handler.getAwsOptions() >> new AwsOptions()
+        result.consumableResourceProperties != null
+        result.consumableResourceProperties.consumableResourceList().size() == 2
+        result.consumableResourceProperties.consumableResourceList()[0].consumableResource() == 'license-a'
+        result.consumableResourceProperties.consumableResourceList()[0].quantity() == 1
+        result.consumableResourceProperties.consumableResourceList()[1].consumableResource() == 'license-b'
+        result.consumableResourceProperties.consumableResourceList()[1].quantity() == 2
+    }
+
+    def 'should apply awsbatch/-prefixed consumableResources over unprefixed' () {
+        given:
+        def handler = new AwsBatchTaskHandler()
+
+        when:
+        def result = handler.getConsumableResources([
+            consumableResources: ['legacy': 9],
+            'awsbatch/consumableResources': ['license-a': 1, 'license-b': 2],
+        ])
+        then:
+        result.consumableResourceList().size() == 2
+        result.consumableResourceList()[0].consumableResource() == 'license-a'
+        result.consumableResourceList()[0].quantity() == 1
+        result.consumableResourceList()[1].consumableResource() == 'license-b'
+        result.consumableResourceList()[1].quantity() == 2
+    }
+
+    def 'should return null when hints empty or no consumableResources' () {
+        given:
+        def handler = new AwsBatchTaskHandler()
+
+        expect:
+        handler.getConsumableResources(null) == null
+        handler.getConsumableResources([:]) == null
+        handler.getConsumableResources([foo: 'bar']) == null
+        handler.getConsumableResources([consumableResources: null]) == null
+        handler.getConsumableResources([consumableResources: [:]]) == null
+    }
+
+    def 'should fail with a clear error on invalid consumableResources value' () {
+        given:
+        def handler = new AwsBatchTaskHandler()
+
+        when: 'value is a string instead of a map'
+        handler.getConsumableResources([consumableResources: 'bad-string'])
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("expected a map")
+
+        when: 'quantity is not a number'
+        handler.getConsumableResources([consumableResources: ['license-a': 'not-a-number']])
+        then:
+        def e2 = thrown(IllegalArgumentException)
+        e2.message.contains("quantity must be a number")
     }
 
     def 'should create a fargate job definition' () {
@@ -905,15 +989,55 @@ class AwsBatchTaskHandlerTest extends Specification {
         when:
         def trace = handler.getTraceRecord()
         then:
-        1 * handler.isCompleted() >> false
+        2 * handler.isCompleted() >> false
         1 * handler.getMachineInfo() >> new CloudMachineInfo('x1.large', 'us-east-1b', PriceModel.spot)
-        
+
         and:
         trace.native_id == 'xyz-123'
         trace.executorName == 'awsbatch'
         trace.machineInfo.type == 'x1.large'
         trace.machineInfo.zone == 'us-east-1b'
         trace.machineInfo.priceModel == PriceModel.spot
+    }
+
+    def 'should create the trace record when job is completed with spot interruptions' () {
+        given:
+        def exec = Mock(Executor) { getName() >> 'awsbatch' }
+        def processor = Mock(TaskProcessor)
+        processor.getExecutor() >> exec
+        processor.getName() >> 'foo'
+        processor.getConfig() >> new ProcessConfig(Mock(BaseScript))
+        def task = Mock(TaskRun)
+        task.getProcessor() >> processor
+        task.getConfig() >> GroovyMock(TaskConfig)
+        def proxy = Mock(AwsBatchProxy)
+        def handler = Spy(AwsBatchTaskHandler)
+        handler.@client = proxy
+        handler.task = task
+        handler.@jobId = 'xyz-123'
+        handler.setStatus(TaskStatus.COMPLETED)
+
+        def attempt1 = GroovyMock(AttemptDetail)
+        def attempt2 = GroovyMock(AttemptDetail)
+        attempt1.statusReason() >> 'Host EC2 (instance i-123) terminated.'
+        attempt1.container() >> null
+        attempt2.statusReason() >> 'Essential container in task exited'
+        attempt2.container() >> null
+        def job = JobDetail.builder().attempts([attempt1, attempt2]).build()
+
+        handler.getMachineInfo() >> new CloudMachineInfo('x1.large', 'us-east-1b', PriceModel.spot)
+        handler.describeJob('xyz-123') >> job
+
+        when:
+        def trace = handler.getTraceRecord()
+
+        then:
+        trace.native_id == 'xyz-123'
+        trace.executorName == 'awsbatch'
+        trace.machineInfo.type == 'x1.large'
+        trace.machineInfo.zone == 'us-east-1b'
+        trace.machineInfo.priceModel == PriceModel.spot
+        trace.numSpotInterruptions == 1
     }
 
     def 'should render submit command' () {
@@ -930,7 +1054,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         executor.getAwsOptions()>> Mock(AwsOptions) { getAwsCli() >> 'aws' }
         then:
-        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; aws s3 cp --only-show-errors .command.log s3://work/.command.log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors s3://work/.command.run - | bash 2>&1 | tee .command.log'
+        result.join(' ') == 'bash -o pipefail -c trap "[[ -n \\$pid ]] && kill -TERM \\$pid" TERM; trap "{ ret=$?; aws s3 cp --only-show-errors .command.log s3://work/.command.log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors s3://work/.command.run - | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid'
 
         when:
         result =  handler.getSubmitCommand()
@@ -942,7 +1066,7 @@ class AwsBatchTaskHandlerTest extends Specification {
             getStorageKmsKeyId() >> 'kms-key-123'
         }
         then:
-        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug .command.log s3://work/.command.log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug s3://work/.command.run - | bash 2>&1 | tee .command.log'
+        result.join(' ') == 'bash -o pipefail -c trap "[[ -n \\$pid ]] && kill -TERM \\$pid" TERM; trap "{ ret=$?; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug .command.log s3://work/.command.log||true; exit $ret; }" EXIT; aws s3 cp --only-show-errors --sse aws:kms --sse-kms-key-id kms-key-123 --debug s3://work/.command.run - | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid'
     }
 
     def 'should render submit command with s5cmd' () {
@@ -959,7 +1083,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         executor.getAwsOptions() >> Mock(AwsOptions)  { getS5cmdPath() >> 's5cmd' }
         then:
-        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; s5cmd cp .command.log s3://work/.command.log||true; exit $ret; }" EXIT; s5cmd cat s3://work/.command.run | bash 2>&1 | tee .command.log'
+        result.join(' ') == 'bash -o pipefail -c trap "[[ -n \\$pid ]] && kill -TERM \\$pid" TERM; trap "{ ret=$?; s5cmd cp .command.log s3://work/.command.log||true; exit $ret; }" EXIT; s5cmd cat s3://work/.command.run | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid'
 
         when:
         result =  handler.getSubmitCommand()
@@ -970,7 +1094,7 @@ class AwsBatchTaskHandlerTest extends Specification {
             getStorageKmsKeyId() >> 'kms-key-123'
         }
         then:
-        result.join(' ') == 'bash -o pipefail -c trap "{ ret=$?; s5cmd --debug cp --sse aws:kms --sse-kms-key-id kms-key-123 .command.log s3://work/.command.log||true; exit $ret; }" EXIT; s5cmd --debug cat s3://work/.command.run | bash 2>&1 | tee .command.log'
+        result.join(' ') == 'bash -o pipefail -c trap "[[ -n \\$pid ]] && kill -TERM \\$pid" TERM; trap "{ ret=$?; s5cmd --debug cp --sse aws:kms --sse-kms-key-id kms-key-123 .command.log s3://work/.command.log||true; exit $ret; }" EXIT; s5cmd --debug cat s3://work/.command.run | bash > >(tee .command.log) 2>&1 & pid=$!; wait $pid'
 
     }
 
@@ -1078,7 +1202,7 @@ class AwsBatchTaskHandlerTest extends Specification {
 
         expect:
         handler.normaliseJobId(JOB_ID) == EXPECTED
-        
+
         where:
         JOB_ID       | EXPECTED
         null         | null
@@ -1097,7 +1221,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         task.getName() >> NAME
         and:
         result == EXPECTED
-        
+
         where:
         ENV                             | NAME      | EXPECTED
         [:]                             | 'foo'     | 'foo'
@@ -1134,8 +1258,162 @@ class AwsBatchTaskHandlerTest extends Specification {
         2           | true  | false      | 2
         and:
         null        | true  | true       | 5    // <-- default to 5
-        0           | true  | true       | 5    // <-- default to 5 
+        0           | true  | true       | 5    // <-- default to 5
         1           | true  | true       | 1
         2           | true  | true       | 2
     }
+
+    def 'should check if completed with exit code from scheduler'() {
+        given:
+        def task = new TaskRun()
+        def jobId = 'job-123'
+        def handler = Spy(new AwsBatchTaskHandler(task: task, jobId: jobId, status: TaskStatus.RUNNING))
+        and:
+
+        def job = JobDetail.builder().container(ContainerDetail.builder()
+            .exitCode(0).build()).status(JobStatus.SUCCEEDED)
+            .build()
+
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+        1 * handler.describeJob('job-123') >> job
+        0 * handler.readExitFile()  // Should NOT read exit file when scheduler provides exit code
+        and:
+        result == true
+        handler.status == TaskStatus.COMPLETED
+        handler.task.exitStatus == 0
+    }
+
+    def 'should check if completed with non-zero exit code from scheduler'() {
+        given:
+        def task = new TaskRun()
+        def executor = Mock(AwsBatchExecutor)
+        def jobId = 'job-123'
+        def handler = Spy(new AwsBatchTaskHandler(task: task, jobId: jobId, status: TaskStatus.RUNNING, executor: executor))
+        and:
+        def job = JobDetail.builder().container(ContainerDetail.builder().exitCode(137).build())
+            .status(JobStatus.FAILED)
+            .statusReason('Task terminated')
+            .build()
+
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+
+        1 * handler.describeJob(jobId) >> job
+        0 * handler.readExitFile()  // Should NOT read exit file when scheduler provides exit code
+        1 * executor.getJobOutputStream('job-123') >> null
+        and:
+        result == true
+        handler.status == TaskStatus.COMPLETED
+        handler.task.exitStatus == 137
+
+    }
+
+    def 'should check if completed and fallback to exit file when scheduler exit code is null'() {
+        given:
+        def task = new TaskRun()
+        task.name = 'hello'
+        def jobId = 'job-123'
+        def handler = Spy(new AwsBatchTaskHandler(task: task, jobId: jobId, status: TaskStatus.RUNNING))
+        and:
+
+        def job = JobDetail.builder().container(ContainerDetail.builder().build())
+            .status(JobStatus.SUCCEEDED)
+            .build()
+
+
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+        1 * handler.describeJob('job-123') >> job
+        1 * handler.readExitFile() >> 0   // Should read exit file as fallback
+        and:
+        result == true
+        handler.status == TaskStatus.COMPLETED
+        handler.task.exitStatus == 0
+
+    }
+
+    def 'should check if completed no container exit code neither .exitcode file'() {
+        given:
+        def task = new TaskRun()
+        task.name = 'hello'
+        def jobId = 'job-123'
+        def executor = Mock(AwsBatchExecutor)
+        def handler = Spy(new AwsBatchTaskHandler(task: task, jobId: jobId, status: TaskStatus.RUNNING, executor: executor))
+        and:
+
+        def job = JobDetail.builder().container(ContainerDetail.builder().build())
+            .status(JobStatus.SUCCEEDED)
+            .statusReason('Unknown termination')
+            .build()
+
+
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+        1 * handler.describeJob(jobId) >> job
+        1 * handler.readExitFile() >> Integer.MAX_VALUE   // Should read exit file as fallback
+        1 * executor.getJobOutputStream(jobId) >> null
+        and:
+        result == true
+        handler.status == TaskStatus.COMPLETED
+        handler.task.exitStatus == Integer.MAX_VALUE
+        handler.task.error.message == 'Unknown termination'
+
+    }
+
+    def 'should return zero spot interruptions when no attempts or non-spot terminations exist'() {
+        given:
+        def handler = Spy(AwsBatchTaskHandler)
+        def attempt1 = GroovyMock(AttemptDetail) {
+            statusReason() >> 'Essential container in task exited'
+        }
+        def attempt2 = GroovyMock(AttemptDetail) {
+            statusReason() >> 'Some other reason'
+        }
+
+        when:
+        def resultNoAttempts = handler.getNumSpotInterruptions('job-123')
+        then:
+        1 * handler.isCompleted() >> true
+        1 * handler.describeJob('job-123') >> JobDetail.builder().attempts([]).build()
+        resultNoAttempts == 0
+
+        when:
+        def resultNonSpot = handler.getNumSpotInterruptions('job-456')
+        then:
+        1 * handler.isCompleted() >> true
+        1 * handler.describeJob('job-456') >> JobDetail.builder().attempts([attempt1, attempt2]).build()
+        resultNonSpot == 0
+    }
+
+    def 'should return null when job cannot be processed'() {
+        given:
+        def handler = Spy(AwsBatchTaskHandler)
+
+        when:
+        def resultNotCompleted = handler.getNumSpotInterruptions('job-123')
+        then:
+        1 * handler.isCompleted() >> false
+        0 * handler.describeJob(_)
+        resultNotCompleted == null
+
+        when:
+        def resultNullJobId = handler.getNumSpotInterruptions(null)
+        then:
+        0 * handler.isCompleted()
+        0 * handler.describeJob(_)
+        resultNullJobId == null
+
+        when:
+        def resultException = handler.getNumSpotInterruptions('job-789')
+        then:
+        1 * handler.isCompleted() >> true
+        1 * handler.describeJob('job-789') >> { throw new RuntimeException("Error") }
+        resultException == null
+    }
+
 }

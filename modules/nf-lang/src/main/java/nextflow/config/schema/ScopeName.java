@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,13 +21,14 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
- * Annotation for defining the name of a custom config scope. Used
- * only by third-party plugins.
+ * Deprecated alias for backwards compatibility.
  *
- * @author Ben Sherman <bentshermann@gmail.com>
+ * @deprecated Use {@link nextflow.config.spec.ScopeName} instead.
+ *             This package was renamed from config.schema to config.spec.
  */
+@Deprecated
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.TYPE })
+@Target(ElementType.TYPE)
 public @interface ScopeName {
     String value();
 }

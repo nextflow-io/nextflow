@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,11 +69,14 @@ public class OpCriteriaVisitor extends ClassCodeExpressionTransformer {
 
     @Override
     public Expression transform(Expression node) {
-        if( node instanceof ClosureExpression ce )
-            super.visitClosureExpression(ce);
+        if( node instanceof ClosureExpression ce ) {
+            ce.visit(this);
+            return ce;
+        }
 
-        if( node instanceof MethodCallExpression mce )
+        if( node instanceof MethodCallExpression mce ) {
             return transformMethodCall(mce);
+        }
 
         return super.transform(node);
     }

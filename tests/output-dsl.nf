@@ -14,16 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-nextflow.preview.output = true
+nextflow.enable.types = true
 
-params.save_bam_bai = false
+params {
+  n_samples: Integer = 3
+  save_bam_bai: Boolean
+}
 
 process fastqc {
   input:
-  val id
+  id: String
 
   output:
-  tuple val(id), path('*.fastqc.log')
+  record(id: id, fastqc: file('*.fastqc.log'))
 
   script:
   """
@@ -33,11 +36,10 @@ process fastqc {
 
 process align {
   input:
-  val id
+  id: String
 
   output:
-  tuple val(id), path('*.bam')
-  tuple val(id), path('*.bai')
+  record(id: id, bam: file('*.bam'), bai: file('*.bai'))
 
   script:
   """
@@ -48,10 +50,10 @@ process align {
 
 process quant {
   input:
-  val id
+  id: String
 
   output:
-  tuple val(id), path('quant')
+  record(id: id, quant: file('quant'))
 
   script:
   '''
@@ -64,10 +66,14 @@ process quant {
 
 process summary {
   input:
-  path logs
+  logs: Bag<Path>
 
   output:
-  tuple path('summary_report.html'), path('summary_data/data.json'), path('summary_data/fastqc.txt')
+  record(
+    report: file('summary_report.html'), 
+    data: file('summary_data/data.json'), 
+    fastqc: file('summary_data/fastqc.txt')
+  )
 
   script:
   '''
@@ -80,42 +86,32 @@ process summary {
 
 workflow {
   main:
-  ids = channel.of('alpha', 'beta', 'delta')
+  ids = channel.of(1..params.n_samples).map { i -> "sample${i}" }
   ch_fastqc = fastqc(ids)
-  (ch_bam, ch_bai) = align(ids)
+  ch_align = align(ids)
   ch_quant = quant(ids)
 
   ch_samples = ch_fastqc
-    .join(ch_bam)
-    .join(ch_bai)
-    .join(ch_quant)
-    .map { id, fastqc, bam, bai, quant ->
-      [
-        id: id,
-        fastqc: fastqc,
-        bam: params.save_bam_bai ? bam : null,
-        bai: params.save_bam_bai ? bai : null,
-        quant: quant
-      ]
-    }
+    .join(ch_align, by: 'id')
+    .join(ch_quant, by: 'id')
 
   ch_logs = ch_samples
     .map { sample -> sample.fastqc }
     .collect()
 
-  summary(ch_logs)
+  ch_summary = summary(ch_logs)
 
   publish:
   samples = ch_samples
-  summary = summary.out
+  summary = ch_summary
 }
 
 output {
   samples {
     path { sample ->
       sample.fastqc >> 'log/'
-      sample.bam >> 'align/'
-      sample.bai >> 'align/'
+      sample.bam >> (params.save_bam_bai ? 'align/' : null)
+      sample.bai >> (params.save_bam_bai ? 'align/' : null)
       sample.quant >> "quant/${sample.id}"
     }
     index {
@@ -126,10 +122,10 @@ output {
   }
 
   summary {
-    path { report, data_json, fastqc_txt ->
-      report >> './'
-      data_json >> './'
-      fastqc_txt >> './'
+    path { r ->
+      r.report >> './'
+      r.data >> './'
+      r.fastqc >> './'
     }
   }
 }

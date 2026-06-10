@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,13 @@
 package nextflow.script.control;
 
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import groovy.lang.Tuple2;
 import nextflow.script.ast.ASTNodeMarker;
-import nextflow.script.types.Bag;
 import org.codehaus.groovy.GroovyBugError;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassCodeExpressionTransformer;
@@ -62,14 +62,17 @@ import static org.codehaus.groovy.ast.tools.ClosureUtils.getParametersSafe;
 public class ResolveVisitor extends ClassCodeExpressionTransformer {
 
     public static final ClassNode[] STANDARD_TYPES = {
-        ClassHelper.makeCached(Bag.class),
+        ClassHelper.makeCached(nextflow.script.types.Bag.class),
         ClassHelper.Boolean_TYPE,
+        ClassHelper.Float_TYPE,
         ClassHelper.Integer_TYPE,
-        ClassHelper.Number_TYPE,
-        ClassHelper.STRING_TYPE,
         ClassHelper.LIST_TYPE,
         ClassHelper.MAP_TYPE,
-        ClassHelper.SET_TYPE
+        ClassHelper.makeCached(java.nio.file.Path.class),
+        ClassHelper.makeCached(nextflow.script.types.Record.class),
+        ClassHelper.SET_TYPE,
+        ClassHelper.STRING_TYPE,
+        ClassHelper.makeCached(nextflow.script.types.Tuple.class)
     };
 
     private SourceUnit sourceUnit;
@@ -109,14 +112,41 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
     }
 
     public void resolveOrFail(ClassNode type, ASTNode node) {
-        if( !resolve(type) )
-            addError("`" + type.toString(false) + "` is not defined", node);
+        var unresolvedTypes = new LinkedList<ClassNode>();
+        resolve(type, unresolvedTypes);
+        for( var ut : unresolvedTypes )
+            addError("`" + ut.toString(false) + "` is not defined", node);
     }
 
-    public boolean resolve(ClassNode type) {
-        var genericsTypes = type.getGenericsTypes();
-        resolveGenericsTypes(genericsTypes);
+    private boolean resolve(ClassNode type) {
+        var unresolvedTypes = new LinkedList<ClassNode>();
+        resolve(type, unresolvedTypes);
+        return unresolvedTypes.isEmpty();
+    }
 
+    /**
+     * Resolve a type annotation, including generic type arguments.
+     *
+     * Returns the list of types that could not be resolved.
+     *
+     * @param type
+     * @param unresolvedTypes
+     */
+    private void resolve(ClassNode type, List<ClassNode> unresolvedTypes) {
+        if( !resolveType(type) )
+            unresolvedTypes.add(type);
+        var gts = type.getGenericsTypes();
+        if( gts == null )
+            return;
+        for( var gt : gts ) {
+            if( gt.isResolved() )
+                continue;
+            resolve(gt.getType(), unresolvedTypes);
+            gt.setResolved(gt.getType().isResolved());
+        }
+    }
+
+    private boolean resolveType(ClassNode type) {
         if( type.isPrimaryClassNode() )
             return true;
         if( type.isResolved() )
@@ -131,35 +161,18 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
             return true;
         if( !type.hasPackageName() && resolveFromGroovyImports(type) )
             return true;
-        return resolveFromClassResolver(type.getName()) != null;
-    }
-
-    private boolean resolveGenericsTypes(GenericsType[] types) {
-        if( types == null )
+        if( resolveFromClassResolver(type.getName()) != null )
             return true;
-        boolean resolved = true;
-        for( var type : types ) {
-            if( !resolveGenericsType(type) )
-                resolved = false;
-        }
-        return resolved;
-    }
-
-    private boolean resolveGenericsType(GenericsType genericsType) {
-        if( genericsType.isResolved() )
+        if( resolveAsInnerClass(type) )
             return true;
-        var type = genericsType.getType();
-        resolveOrFail(type, genericsType);
-        if( resolveGenericsTypes(type.getGenericsTypes()) )
-            genericsType.setResolved(genericsType.getType().isResolved());
-        return genericsType.isResolved();
+        return false;
     }
 
     protected boolean resolveFromModule(ClassNode type) {
         var name = type.getName();
         var module = sourceUnit.getAST();
         for( var cn : module.getClasses() ) {
-            if( name.equals(cn.getName()) ) {
+            if( name.equals(cn.getNameWithoutPackage()) ) {
                 if( cn != type )
                     type.setRedirect(cn);
                 return true;
@@ -251,9 +264,38 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         var lookupResult = classNodeResolver.resolveName(name, compilationUnit);
         if( lookupResult == null )
             return null;
-        if( !lookupResult.isClassNode() )
-            throw new GroovyBugError("class resolver lookup result is not a class node");
-        return lookupResult.getClassNode();
+        if( lookupResult.isClassNode() )
+            return lookupResult.getClassNode();
+        // When a Groovy class from the lib directory is used, the class
+        // loader returns the URI of the Groovy file. We only need to compile
+        // the Groovy file enough to resolve the class definition for the purpose
+        // of name checking.
+        var su = lookupResult.getSourceUnit();
+        return GroovyCompiler.compile(su).stream()
+            .filter(cn -> cn.getName().equals(name))
+            .findFirst().orElse(null);
+    }
+
+    /**
+     * Try to resolve a ClassNode as an inner class by replacing dots with $.
+     * For example, "groovy.json.JsonGenerator.Options" becomes "groovy.json.JsonGenerator$Options".
+     * This method tries all possible combinations from right to left.
+     *
+     * @param type
+     */
+    protected boolean resolveAsInnerClass(ClassNode type) {
+        var className = type.getName();
+        int lastDot = className.lastIndexOf('.');
+        while( lastDot > 0 ) {
+            var innerClassName = className.substring(0, lastDot) + '$' + className.substring(lastDot + 1);
+            var redirect = resolveFromClassResolver(innerClassName);
+            if( redirect != null ) {
+                type.setRedirect(redirect);
+                return true;
+            }
+            lastDot = className.lastIndexOf('.', lastDot - 1);
+        }
+        return false;
     }
 
     @Override
@@ -326,13 +368,15 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
         property = transform(pe.getProperty());
         var result = new PropertyExpression(objectExpression, property, pe.isSafe());
         result.setSpreadSafe(pe.isSpreadSafe());
+        result.copyNodeMetaData(pe);
         // attempt to resolve property expression as a fully-qualified class name
         var className = lookupClassName(result);
         if( className != null ) {
             var type = ClassHelper.make(className);
-            type.putNodeMetaData(ASTNodeMarker.FULLY_QUALIFIED, true);
-            if( resolve(type) )
+            if( resolve(type) ) {
+                type.putNodeMetaData(ASTNodeMarker.FULLY_QUALIFIED, true);
                 return new ClassExpression(type);
+            }
         }
         return result;
     }

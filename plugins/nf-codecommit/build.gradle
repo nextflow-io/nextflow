@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,10 +13,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-apply plugin: 'java'
-apply plugin: 'java-test-fixtures'
-apply plugin: 'idea'
-apply plugin: 'groovy'
+plugins {
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
+    id 'java-test-fixtures'
+}
+
+nextflowPlugin {
+    nextflowVersion = '25.09.0-edge'
+
+    provider = "${nextflowPluginProvider}"
+    description = 'Provides seamless integration with AWS CodeCommit repositories for workflow source code management and version control'
+    className = 'nextflow.cloud.aws.codecommit.AwsCodeCommitPlugin'
+    useDefaultDependencies = false
+    generateSpec = false
+    extensionPoints = [
+        'nextflow.cloud.aws.codecommit.AwsCodeCommitFactory'
+    ]
+}
 
 sourceSets {
     main.java.srcDirs = []
@@ -30,20 +43,21 @@ sourceSets {
 configurations {
     // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
     runtimeClasspath.exclude group: 'org.slf4j', module: 'slf4j-api'
+    testRuntimeClasspath.exclude group: 'io.micronaut', module: 'micronaut-core-bom'
 }
 
 dependencies {
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
-    compileOnly 'org.pf4j:pf4j:3.12.0'
+    compileOnly 'org.pf4j:pf4j:3.14.1'
 
     api ('javax.xml.bind:jaxb-api:2.4.0-b180830.0359')
-    api ('software.amazon.awssdk:codecommit:2.31.64')
-    api ('software.amazon.awssdk:sso:2.31.64')
-    api ('software.amazon.awssdk:ssooidc:2.31.64')
-        
+    api ('software.amazon.awssdk:codecommit:2.44.3')
+    api ('software.amazon.awssdk:sso:2.44.3')
+    api ('software.amazon.awssdk:ssooidc:2.44.3')
+
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.apache.groovy:groovy:4.0.28"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.28"
+    testImplementation "org.apache.groovy:groovy:4.0.31"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.31"
 }

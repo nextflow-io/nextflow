@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,15 +19,15 @@ package nextflow.conda
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
-import nextflow.config.schema.ConfigOption
-import nextflow.config.schema.ConfigScope
-import nextflow.config.schema.ScopeName
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
 import nextflow.script.dsl.Description
 import nextflow.util.Duration
 
 /**
  * Model Conda configuration
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @ScopeName("conda")
@@ -99,7 +99,7 @@ class CondaConfig implements ConfigScope {
 
     private List<String> parseChannels(Object value) {
         if( !value )
-            return Collections.emptyList()
+            return ['conda-forge','bioconda']
         if( value instanceof List )
             return value
         if( value instanceof CharSequence )

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -238,7 +238,7 @@ class ContainerPropertiesModel {
 
     ContainerProperties toBatchContainerProperties() {
         def builder = ContainerProperties.builder()
-        
+
         if (image) builder.image(image)
         if (command) builder.command(command)
         if (resourceRequirements) builder.resourceRequirements(resourceRequirements)
@@ -256,7 +256,8 @@ class ContainerPropertiesModel {
         if (networkConfiguration) builder.networkConfiguration(networkConfiguration)
         if (ephemeralStorage) builder.ephemeralStorage(ephemeralStorage)
         if (runtimePlatform) builder.runtimePlatform(runtimePlatform)
-        
+        if (secrets) builder.secrets(secrets)
+
         return builder.build()
     }
 
@@ -280,6 +281,7 @@ class ContainerPropertiesModel {
             ", networkConfiguration=" + networkConfiguration +
             ", ephemeralStorage=" + ephemeralStorage +
             ", runtimePlatform=" + runtimePlatform +
+            ", secrets=" + secrets +
             '}';
     }
 }

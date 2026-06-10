@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -104,7 +104,7 @@ class LinFileSystemProviderTest extends Specification {
         and:
         def uri = LinPath.asUri('lid://12345')
         def provider = new LinFileSystemProvider()
-        
+
         when:
         def fs = provider.getFileSystemOrCreate(uri) as LinFileSystem
         then:
@@ -333,7 +333,7 @@ class LinFileSystemProviderTest extends Specification {
         and:
         def provider = new LinFileSystemProvider()
         def lid = provider.getPath(LinPath.asUri('lid://12345'))
-        
+
         when:
         provider.delete(lid)
         then:

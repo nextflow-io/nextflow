@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -84,12 +84,13 @@ class ConfigDiscovery {
         final server = formatHostName(host, port)
 
         final cert = path('/var/run/secrets/kubernetes.io/serviceaccount/ca.crt').bytes
-        final token = path('/var/run/secrets/kubernetes.io/serviceaccount/token').text
+        final tokenFile = path('/var/run/secrets/kubernetes.io/serviceaccount/token')
         final namespace = path('/var/run/secrets/kubernetes.io/serviceaccount/namespace').text
 
         return new ClientConfig(
                 server: server,
-                token: token,
+                token: tokenFile.text,
+                tokenPath: tokenFile,
                 namespace: cfgNamespace ?: namespace,
                 serviceAccount: serviceAccount,
                 sslCert: cert,

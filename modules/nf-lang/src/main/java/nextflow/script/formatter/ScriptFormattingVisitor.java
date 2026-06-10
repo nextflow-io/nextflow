@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,7 @@ package nextflow.script.formatter;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
@@ -29,8 +30,12 @@ import nextflow.script.ast.OutputNode;
 import nextflow.script.ast.ParamNodeV1;
 import nextflow.script.ast.ParamBlockNode;
 import nextflow.script.ast.ProcessNode;
+import nextflow.script.ast.ProcessNodeV1;
+import nextflow.script.ast.ProcessNodeV2;
+import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
+import nextflow.script.ast.TupleParameter;
 import nextflow.script.ast.WorkflowNode;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.Parameter;
@@ -127,6 +132,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 visitParamV1(pn);
             else if( decl instanceof ProcessNode pn )
                 visitProcess(pn);
+            else if( decl instanceof RecordNode rn )
+                visitRecord(rn);
             else if( decl instanceof WorkflowNode wn )
                 visitWorkflow(wn);
         }
@@ -195,10 +202,6 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitParams(ParamBlockNode node) {
-        var alignmentWidth = options.harshilAlignment()
-            ? maxParameterWidth(node.declarations)
-            : 0;
-
         fmt.appendLeadingComments(node);
         fmt.append("params {\n");
         fmt.incIndent();
@@ -207,10 +210,6 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             fmt.appendIndent();
             fmt.append(param.getName());
             if( fmt.hasType(param) ) {
-                if( alignmentWidth > 0 ) {
-                    var padding = alignmentWidth - param.getName().length() + 1;
-                    fmt.append(" ".repeat(padding));
-                }
                 fmt.append(": ");
                 fmt.visitTypeAnnotation(param.getType());
             }
@@ -222,12 +221,6 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         }
         fmt.decIndent();
         fmt.append("}\n");
-    }
-
-    private static int maxParameterWidth(Parameter[] parameters) {
-        return Arrays.stream(parameters)
-            .map(param -> param.getName().length())
-            .max(Integer::compare).orElse(0);
     }
 
     @Override
@@ -264,11 +257,11 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         if( takes.length > 0 ) {
             fmt.appendIndent();
             fmt.append("take:\n");
-            visitWorkflowTakes(takes);
+            visitTypedInputs(takes);
         }
         if( !node.main.isEmpty() ) {
-            fmt.appendNewLine();
             if( takes.length > 0 || !node.emits.isEmpty() || !node.publishers.isEmpty() ) {
+                fmt.appendNewLine();
                 fmt.appendIndent();
                 fmt.append("main:\n");
             }
@@ -278,7 +271,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             fmt.appendNewLine();
             fmt.appendIndent();
             fmt.append("emit:\n");
-            visitWorkflowEmits(asBlockStatements(node.emits));
+            visitTypedOutputs(asBlockStatements(node.emits));
         }
         if( !node.publishers.isEmpty() ) {
             fmt.appendNewLine();
@@ -302,46 +295,77 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.append("}\n");
     }
 
-    private void visitWorkflowTakes(Parameter[] takes) {
-        var alignmentWidth = options.harshilAlignment()
-            ? maxParameterWidth(takes)
-            : 0;
-
-        for( var take : takes ) {
+    private void visitTypedInputs(Parameter[] inputs) {
+        for( var input : inputs ) {
             fmt.appendIndent();
-            fmt.append(take.getName());
-            if( fmt.hasType(take) ) {
-                if( alignmentWidth > 0 ) {
-                    var padding = alignmentWidth - take.getName().length() + 1;
-                    fmt.append(" ".repeat(padding));
-                }
-                fmt.append(": ");
-                fmt.visitTypeAnnotation(take.getType());
+            if( input instanceof TupleParameter tp ) {
+                visitStructuredInput(tp);
             }
-            fmt.appendTrailingComment(take);
+            else {
+                visitTypedInput(input);
+            }
+            fmt.appendTrailingComment(input);
             fmt.appendNewLine();
         }
     }
 
-    private void visitWorkflowEmits(List<Statement> emits) {
+    private void visitStructuredInput(TupleParameter tp) {
+        var isRecord = "Record".equals(tp.getType().getNameWithoutPackage());
+        var wrap = isRecord;
+
+        fmt.append(isRecord ? "record" : "tuple");
+        fmt.append('(');
+        if( wrap )
+            fmt.incIndent();
+        for( int i = 0; i < tp.components.length; i++ ) {
+            var p = tp.components[i];
+            if( wrap ) {
+                fmt.appendNewLine();
+                fmt.appendIndent();
+            }
+            fmt.append(p.getName());
+            if( fmt.hasType(p) ) {
+                fmt.append(": ");
+                fmt.visitTypeAnnotation(p.getType());
+            }
+            if( i < tp.components.length - 1 )
+                fmt.append(wrap ? "," : ", ");
+        }
+        if( wrap ) {
+            fmt.appendNewLine();
+            fmt.decIndent();
+            fmt.appendIndent();
+        }
+        fmt.append(')');
+    }
+
+    private void visitTypedInput(Parameter node) {
+        fmt.append(node.getName());
+        if( fmt.hasType(node) ) {
+            fmt.append(": ");
+            fmt.visitTypeAnnotation(node.getType());
+        }
+    }
+
+    private void visitTypedOutputs(List<Statement> outputs) {
         var alignmentWidth = options.harshilAlignment()
-            ? maxParameterWidth(emits)
+            ? maxParameterWidth(outputs)
             : 0;
 
-        for( var stmt : emits ) {
+        for( var stmt : outputs ) {
             var stmtX = (ExpressionStatement)stmt;
-            var emit = stmtX.getExpression();
+            var output = stmtX.getExpression();
             var target =
-                emit instanceof AssignmentExpression ae ? (VariableExpression)ae.getLeftExpression() :
-                emit instanceof VariableExpression ve ? ve :
+                output instanceof AssignmentExpression ae ? (VariableExpression)ae.getLeftExpression() :
+                output instanceof VariableExpression ve ? ve :
                 null;
             var source =
-                emit instanceof AssignmentExpression ae ? ae.getRightExpression() :
+                output instanceof AssignmentExpression ae ? ae.getRightExpression() :
                 null;
 
             if( target != null ) {
                 fmt.appendIndent();
-                visitEmitAssignment(target, source, alignmentWidth);
+                visitOutputAssignment(target, source, alignmentWidth);
                 fmt.appendTrailingComment(stmt);
                 fmt.appendNewLine();
             }
@@ -363,7 +387,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             var source = emit.getRightExpression();
 
             fmt.appendIndent();
-            visitEmitAssignment(target, source, alignmentWidth);
+            visitOutputAssignment(target, source, alignmentWidth);
             fmt.appendTrailingComment(stmt);
             fmt.appendNewLine();
         }
@@ -389,13 +413,15 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             .max(Integer::compare).orElse(0);
     }
 
-    private void visitEmitAssignment(VariableExpression target, Expression source, int alignmentWidth) {
+    private void visitOutputAssignment(VariableExpression target, Expression source, int alignmentWidth) {
         fmt.append(target.getText());
+        if( (fmt.hasType(target) || source != null) && alignmentWidth > 0 ) {
+            var padding = alignmentWidth - target.getName().length();
+            fmt.append(" ".repeat(padding));
+        }
         if( fmt.hasType(target) ) {
-            if( alignmentWidth > 0 ) {
-                var padding = alignmentWidth - target.getName().length() + 1;
-                fmt.append(" ".repeat(padding));
-            }
+            if( alignmentWidth > 0 )
+                fmt.append(' ');
             fmt.append(": ");
             fmt.visitTypeAnnotation(target.getType());
         }
@@ -406,7 +432,84 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
     }
 
     @Override
-    public void visitProcess(ProcessNode node) {
+    public void visitProcessV2(ProcessNodeV2 node) {
+        fmt.appendLeadingComments(node);
+        fmt.append("process ");
+        fmt.append(node.getName());
+        fmt.append(" {\n");
+        fmt.incIndent();
+        if( !node.directives.isEmpty() ) {
+            visitDirectives(node.directives);
+            fmt.appendNewLine();
+        }
+        var inputs = node.inputs;
+        if( inputs.length > 0 ) {
+            fmt.appendIndent();
+            fmt.append("input:\n");
+            visitTypedInputs(inputs);
+            fmt.appendNewLine();
+        }
+        if( !node.stagers.isEmpty() ) {
+            fmt.appendIndent();
+            fmt.append("stage:\n");
+            visitDirectives(node.stagers);
+            fmt.appendNewLine();
+        }
+        if( !options.maheshForm() ) {
+            if( !node.outputs.isEmpty() ) {
+                visitProcessOutputs(node.outputs);
+                fmt.appendNewLine();
+            }
+            if( !node.topics.isEmpty() ) {
+                visitProcessTopics(node.topics);
+                fmt.appendNewLine();
+            }
+        }
+        if( !(node.when instanceof EmptyExpression) ) {
+            fmt.appendIndent();
+            fmt.append("when:\n");
+            fmt.appendIndent();
+            fmt.visit(node.when);
+            fmt.append("\n\n");
+        }
+        fmt.appendIndent();
+        fmt.append(node.type);
+        fmt.append(":\n");
+        fmt.visit(node.exec);
+        if( !node.stub.isEmpty() ) {
+            fmt.appendNewLine();
+            fmt.appendIndent();
+            fmt.append("stub:\n");
+            fmt.visit(node.stub);
+        }
+        if( options.maheshForm() ) {
+            if( !node.outputs.isEmpty() ) {
+                fmt.appendNewLine();
+                visitProcessOutputs(node.outputs);
+            }
+            if( !node.topics.isEmpty() ) {
+                fmt.appendNewLine();
+                visitProcessTopics(node.topics);
+            }
+        }
+        fmt.decIndent();
+        fmt.append("}\n");
+    }
+
+    private void visitProcessOutputs(Statement outputs) {
+        fmt.appendIndent();
+        fmt.append("output:\n");
+        visitTypedOutputs(asBlockStatements(outputs));
+    }
+
+    private void visitProcessTopics(Statement topics) {
+        fmt.appendIndent();
+        fmt.append("topic:\n");
+        fmt.visit(topics);
+    }
+
+    @Override
+    public void visitProcessV1(ProcessNodeV1 node) {
         fmt.appendLeadingComments(node);
         fmt.append("process ");
         fmt.append(node.getName());
@@ -423,7 +526,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             fmt.appendNewLine();
         }
         if( !options.maheshForm() && !node.outputs.isEmpty() ) {
-            visitProcessOutputs(node.outputs);
+            visitProcessOutputsV1(node.outputs);
             fmt.appendNewLine();
         }
         if( !(node.when instanceof EmptyExpression) ) {
@@ -445,13 +548,13 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         }
         if( options.maheshForm() && !node.outputs.isEmpty() ) {
             fmt.appendNewLine();
-            visitProcessOutputs(node.outputs);
+            visitProcessOutputsV1(node.outputs);
         }
         fmt.decIndent();
         fmt.append("}\n");
     }
 
-    private void visitProcessOutputs(Statement outputs) {
+    private void visitProcessOutputsV1(Statement outputs) {
         fmt.appendIndent();
         fmt.append("output:\n");
         visitDirectives(outputs);
@@ -474,6 +577,32 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.visit(node.getCode());
         fmt.decIndent();
         fmt.append("}\n");
+    }
+
+    @Override
+    public void visitRecord(RecordNode node) {
+        fmt.appendLeadingComments(node);
+        fmt.append("record ");
+        fmt.append(node.getName());
+        visitRecordBody(node);
+        fmt.appendNewLine();
+    }
+
+    private void visitRecordBody(RecordNode node) {
+        fmt.append(" {\n");
+        fmt.incIndent();
+        for( var fn : node.getFields() ) {
+            fmt.appendIndent();
+            fmt.append(fn.getName());
+            if( fmt.hasType(fn) ) {
+                fmt.append(": ");
+                fmt.visitTypeAnnotation(fn.getType());
+            }
+            fmt.appendNewLine();
+        }
+        fmt.decIndent();
+        fmt.appendIndent();
+        fmt.append("}");
     }
 
     @Override
@@ -507,10 +636,10 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
     public void visitOutput(OutputNode node) {
         fmt.appendLeadingComments(node);
         fmt.appendIndent();
-        fmt.append(node.name);
-        if( fmt.hasType(node.type) ) {
+        fmt.append(node.getName());
+        if( fmt.hasType(node) ) {
             fmt.append(": ");
-            fmt.visitTypeAnnotation(node.type);
+            fmt.visitTypeAnnotation(node.getType());
         }
         fmt.append(" {\n");
         fmt.incIndent();

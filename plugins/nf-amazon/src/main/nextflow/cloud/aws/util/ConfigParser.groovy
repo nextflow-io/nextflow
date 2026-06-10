@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.aws.util
@@ -21,7 +20,6 @@ import java.nio.file.Path
 import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
-import org.apache.commons.lang.text.StrBuilder
 /**
  * Parse and merge AWS config and credentials file
  *
@@ -69,7 +67,7 @@ class ConfigParser {
     }
 
     String text() {
-        final result = new StrBuilder()
+        final result = new StringBuilder()
         for( Map.Entry<String,List<String>> entry : content ) {
             result.append('[').append(entry.key).append(']\n')
             for( String line : entry.value ) {

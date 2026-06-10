@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -90,6 +90,22 @@ class CsvSplitterTest extends Specification {
         items[0] == ['gamma', '', 'zeta']
         items[1] == ['eta', 'theta', 'iota']
         items[2] == ['mu', 'nu', 'xi']
+
+        when:
+        def LINES = '''
+                alpha,beta,delta
+
+                gamma,,zeta
+                eta,theta,iota
+                pi,rho,sigma
+                '''
+                .stripIndent().trim()
+        items = new CsvSplitter().target(LINES).options(skip:3).list()
+        then:
+        items.size() == 2
+        items[0] instanceof List
+        items[0] == ['eta', 'theta', 'iota']
+        items[1] == ['pi', 'rho', 'sigma']
     }
 
     def testSplitWithCount() {

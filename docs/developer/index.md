@@ -137,6 +137,13 @@ cd tests/checks
 ./qrun.sh
 ```
 
+To run a specific integration test:
+
+```bash
+cd tests/checks
+./qrun.sh <FOLDER>
+```
+
 To test the documentation snippets:
 
 ```bash

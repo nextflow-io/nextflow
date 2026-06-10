@@ -1,5 +1,5 @@
 /*
- * Copyright 2022, Google Inc.
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +16,12 @@
 
 package nextflow.cloud.google.batch.client
 
-import com.google.auth.oauth2.GoogleCredentials
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.Session
-import nextflow.cloud.google.GoogleOpts
-import nextflow.config.schema.ConfigOption
-import nextflow.config.schema.ConfigScope
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
 import nextflow.script.dsl.Description
 import nextflow.util.MemoryUnit
 /**
@@ -35,7 +34,7 @@ import nextflow.util.MemoryUnit
 class BatchConfig implements ConfigScope {
 
     static final private int DEFAULT_MAX_SPOT_ATTEMPTS = 0
-    
+
     static final private List<Integer> DEFAULT_RETRY_LIST = List.of(50001)
 
     static final private List<String> DEFAULT_GCSFUSE_OPTS = List.<String>of('-o rw', '-implicit-dirs')
@@ -84,6 +83,18 @@ class BatchConfig implements ConfigScope {
     @Description("""
     """)
     final boolean installGpuDrivers
+
+    @ConfigOption
+    @Description("""
+        Enable the installation of the Ops Agent on Google Batch instances for enhanced monitoring and logging (default: `false`).
+    """)
+    final boolean installOpsAgent
+
+    @ConfigOption
+    @Description("""
+        The Google Cloud Storage path where job logs should be stored, e.g. `gs://my-logs-bucket/logs`.
+    """)
+    final String logsPath
 
     @ConfigOption
     @Description("""
@@ -142,6 +153,8 @@ class BatchConfig implements ConfigScope {
         cpuPlatform = opts.cpuPlatform
         gcsfuseOptions = opts.gcsfuseOptions as List<String> ?: DEFAULT_GCSFUSE_OPTS
         installGpuDrivers = opts.installGpuDrivers as boolean
+        installOpsAgent = opts.installOpsAgent as boolean
+        logsPath = opts.logsPath
         maxSpotAttempts = opts.maxSpotAttempts != null ? opts.maxSpotAttempts as int : DEFAULT_MAX_SPOT_ATTEMPTS
         network = opts.network
         networkTags = opts.networkTags as List<String> ?: Collections.emptyList()
@@ -154,5 +167,9 @@ class BatchConfig implements ConfigScope {
     }
 
     BatchRetryConfig getRetryConfig() { retry }
+
+    Path logsPath() {
+        return logsPath as Path
+    }
 
 }

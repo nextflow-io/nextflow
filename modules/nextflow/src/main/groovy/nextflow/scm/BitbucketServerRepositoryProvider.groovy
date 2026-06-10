@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,12 +21,17 @@ import groovy.json.JsonSlurper
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
+import org.eclipse.jgit.transport.CredentialsProvider
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
+
+import java.nio.charset.StandardCharsets
+
 /**
  * Implements a repository provider for the private hosted BitBucket Server service
  *
  * See for details
  *  https://confluence.atlassian.com/bitbucketserver
- *  
+ *
  * @author Piotr Faba <piotr.faba@ardigen.com>
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -62,6 +67,31 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
     String getName() { "BitBucketServer" }
 
     @Override
+    boolean hasCredentials() {
+        return getToken() || (getUser() && getPassword())
+    }
+
+    @Override
+    protected String[] getAuth() {
+        final token = getToken()
+        if( token )
+            return new String[] { "Authorization", "Bearer " + token }
+        if( getUser() && getPassword() ) {
+            final authString = "${getUser()}:${getPassword()}".bytes.encodeBase64().toString()
+            return new String[] { "Authorization", "Basic " + authString }
+        }
+        return null
+    }
+
+    @Override
+    CredentialsProvider getGitCredentials() {
+        final token = getToken()
+        if( token )
+            return new UsernamePasswordCredentialsProvider(getUser() ?: '', token)
+        return new UsernamePasswordCredentialsProvider(getUser(), getPassword())
+    }
+
+    @Override
     String getEndpointUrl() {
         return "${config.endpoint}/rest/api/1.0/projects/${project}/repos/${repository}"
     }
@@ -73,7 +103,7 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
         //
         def result = "${config.endpoint}/rest/api/1.0/projects/${project}/repos/${repository}/raw/${path}"
         if( revision )
-            result += "?at=$revision"
+            result += "?at=${URLEncoder.encode(revision, StandardCharsets.UTF_8)}"
         return result
     }
 
@@ -109,6 +139,12 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
     byte[] readBytes(String path) {
         final url = getContentUrl(path)
         return invokeBytes(url)
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    List<RepositoryEntry> listDirectory(String path, int depth) {
+        throw new UnsupportedOperationException("BitbucketServerRepositoryProvider does not support 'listDirectory' operation")
     }
 
     @Override

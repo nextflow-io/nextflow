@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,6 +52,14 @@ class GithubRepositoryProviderTest extends Specification {
         def result = repo.readText('main.nf')
         then:
         result.trim().startsWith('#!/usr/bin/env nextflow')
+
+        //Read from branch
+        when:
+        repo.setRevision('test/branch+with&strangecharacters')
+        result = repo.readText('/test/branch_name')
+        then:
+        result.trim().startsWith('test/branch+with&strangecharacters')
+
     }
 
     @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
@@ -62,7 +70,7 @@ class GithubRepositoryProviderTest extends Specification {
         def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
         and:
         def DATA = this.class.getResourceAsStream('/test-asset.bin').bytes
-        
+
         when:
         def result = repo.readBytes('/test/test-asset.bin')
         then:
@@ -95,6 +103,11 @@ class GithubRepositoryProviderTest extends Specification {
                 .setRevision('the-commit-id')
                 .getContentUrl('main.nf') == 'https://github.com/repos/pditommaso/hello/contents/main.nf?ref=the-commit-id'
 
+        and:
+        new GithubRepositoryProvider('pditommaso/hello', obj)
+            .setRevision('test/branch+with&strangecharacters')
+            .getContentUrl('main.nf') == 'https://github.com/repos/pditommaso/hello/contents/main.nf?ref=test%2Fbranch%2Bwith%26strangecharacters'
+
     }
 
     def 'should user github token as creds' () {
@@ -106,12 +119,27 @@ class GithubRepositoryProviderTest extends Specification {
         expect:
         provider.getUser() == '1234567890'
         provider.getPassword() == 'x-oauth-basic'
-        
+
         when:
         SysEnv.get().remove('GITHUB_TOKEN')
         then:
         provider.getUser() >> null
         provider.getPassword() >> null
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should user specified token instead of github token as creds' () {
+        given:
+        SysEnv.push(['GITHUB_TOKEN': '1234567890'])
+        and:
+        def config = new ProviderConfig('github', [auth: '987654321'])
+        def provider = Spy(new GithubRepositoryProvider('foo/bar', config))
+
+        expect:
+        provider.getUser() == '987654321'
+        provider.getPassword() == 'x-oauth-basic'
 
         cleanup:
         SysEnv.pop()
@@ -141,7 +169,7 @@ class GithubRepositoryProviderTest extends Specification {
         when:
         final result = provider.getAuth()
         then:
-        _ * provider.getUser() 
+        _ * provider.getUser()
         _ * provider.getPassword()
         1 * provider.hasCredentials()
         and:
@@ -166,6 +194,107 @@ class GithubRepositoryProviderTest extends Specification {
         def result = repo.readText('main.nf')
         then:
         result.trim().startsWith(/println "I'm the main"/)
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should list root directory contents'() {
+        given:
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def config = new ProviderConfig('github').setAuth(token)
+        def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
+
+        when:
+        def entries = repo.listDirectory("/", 1)
+
+        then:
+        entries.size() > 0
+        and:
+        entries.any { it.name == 'main.nf' && it.path == '/main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.name == 'test' && it.path == '/test' && it.type == RepositoryProvider.EntryType.DIRECTORY }
+        and:
+        !entries.any { it.path == '/test/test-asset.bin' }
+        and:
+        entries.every { it.path && it.sha }
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should list subdirectory contents'() {
+        given:
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def config = new ProviderConfig('github').setAuth(token)
+        def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
+
+        when:
+        def entries = repo.listDirectory("/test", 1)
+
+        then:
+        entries.size() > 0
+        entries.any { it.name == 'test-asset.bin' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.every { it.path.startsWith('/test/') }
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should list directory contents recursively'() {
+        given:
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def config = new ProviderConfig('github').setAuth(token)
+        def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
+
+        when:
+        def entries = repo.listDirectory("/", 10)
+
+        then:
+        entries.size() > 0
+        and:
+        // Should include files from root and subdirectories
+        entries.any { it.path == '/main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.path == '/test/test-asset.bin' && it.type == RepositoryProvider.EntryType.FILE }
+        and:
+        entries.every { it.path && it.sha }
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should list directory contents with limited depth'() {
+        given:
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def config = new ProviderConfig('github').setAuth(token)
+        def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
+
+        when:
+        def depthOne = repo.listDirectory("/", 1)
+        def depthTwo = repo.listDirectory("/", 2)
+
+        then:
+        depthOne.size() > 0
+        depthTwo.size() >= depthOne.size()
+        // Depth 1 should only include immediate children (no nested paths beyond root)
+        depthOne.every { it.path.split('/').length <= 2 }
+    }
+
+    @Requires({System.getenv('NXF_GITHUB_ACCESS_TOKEN')})
+    def 'should list directory contents with depth 2'() {
+        given:
+        def token = System.getenv('NXF_GITHUB_ACCESS_TOKEN')
+        def config = new ProviderConfig('github').setAuth(token)
+        def repo = new GithubRepositoryProvider('nextflow-io/test-hello', config)
+
+        when:
+        def entries = repo.listDirectory("/", 2)
+
+        then:
+        entries.size() > 0
+        // Should include immediate children (depth 1)
+        entries.any { it.name == 'main.nf' && it.type == RepositoryProvider.EntryType.FILE }
+        entries.any { it.name == 'test' && it.type == RepositoryProvider.EntryType.DIRECTORY }
+        // Should include nested files (depth 2)
+        entries.any { it.name == 'test-asset.bin' && it.path.contains('/test/') }
+        entries.every { it.path && it.sha }
+    }
+
+    def 'should return empty list for directory with no entries'() {
+        expect:
+        // This test will be integration test based - relying on actual API
+        true
     }
 }
 

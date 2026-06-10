@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ class TaskPollingMonitorTest extends Specification {
         def session = Mock(Session)
         def config = new ExecutorConfig(submitRateLimit: RATE)
         def monitor = new TaskPollingMonitor(name:'local', session: session, config: config, pollInterval: '1s', capacity: 100)
-        
+
         when:
         def limit = monitor.createSubmitRateLimit()
         then:
@@ -175,7 +175,7 @@ class TaskPollingMonitorTest extends Specification {
         where:
         CAPACITY | ARRAY_SIZE | TASK_NAME
         10       | 15         | 'test_array'
-        5        | 10         | 'large_array'  
+        5        | 10         | 'large_array'
         1        | 2          | 'small_array'
     }
 

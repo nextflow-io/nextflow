@@ -34,6 +34,7 @@ A Nextflow script may contain the following top-level declarations:
 - Process definitions
 - Function definitions
 - Enum types
+- Record types
 - Output block
 
 Script declarations are in turn composed of statements and expressions.
@@ -72,6 +73,8 @@ A feature flag declaration is an assignment. The target should be a valid {ref}`
 nextflow.preview.recursion = true
 ```
 
+(syntax-include)=
+
 ### Include
 
 An include declaration consists of an *include source* and one or more *include clauses*:
@@ -107,10 +110,12 @@ The following definitions can be included:
 - Functions
 - Processes
 - Named workflows
+- *New in 26.04:* Enum types
+- *New in 26.04:* Record types
 
 ### Params block
 
-The params block consists of one or more *parameter declarations*. A parameter declaration consists of a name and an optional default value:
+The params block consists of one or more *parameter declarations*. A parameter declaration consists of a name, type, and an optional default value:
 
 ```nextflow
 params {
@@ -193,6 +198,35 @@ In order for a script to be executable, it must either define an entry workflow 
 
 Entry workflow definitions are ignored when a script is included as a module. This way, the same script can be included as a module or executed as a pipeline.
 
+(syntax-workflow-typed)=
+
+### Workflow (typed)
+
+A typed workflow is a workflow that uses static typing for inputs and outputs:
+
+```nextflow
+nextflow.enable.types = true
+
+workflow greet {
+    take:
+    greetings: Channel<String>
+
+    main:
+    messages = greetings.map { v -> "$v world!" }
+
+    emit:
+    messages: Channel<String>
+}
+```
+
+Typed workflows have the following new features:
+
+- Each workflow input in the `take:` section has a name and a type.
+
+- Each named workflow output in the `emit:` section may specify a type.
+
+See {ref}`workflow-typed-page` for more information on the semantics of typed workflows.
+
 (syntax-process)=
 
 ### Process
@@ -262,6 +296,56 @@ The script and stub sections must return a string in the same manner as a [funct
 
 See {ref}`process-page` for more information on the semantics of each process section.
 
+(syntax-process-typed)=
+
+### Process (typed)
+
+A typed process is a process that uses static typing for inputs and outputs:
+
+```nextflow
+nextflow.enable.types = true
+
+process greet {
+    input: 
+    greeting: String
+    name: String
+
+    stage:
+    env 'NAME', name
+
+    output:
+    stdout()
+
+    topic:
+    eval('bash --version') >> 'versions'
+
+    script:
+    """
+    echo "${greeting}, \${NAME}!"
+    """
+}
+```
+
+Typed processes may specify the following sections:
+
+`input:`
+: Consists of one or more process inputs. Each input has a name and type.
+
+`stage:`
+: Consists of one or more stage directives. See {ref}`process-reference-typed` for the set of available stage directives.
+
+`output:`
+: Consists of one or more *output statements*. An output statement can be a [variable name](#variable), an [assignment](#assignment), or an [expression statement](#expression-statement). An output statement must be the only output if it is an expression statement.  See {ref}`process-reference-typed` for the set of available output functions.
+
+`topic:`
+: Consists of one or more *topic statements*. A topic statement is a right-shift expression with an output value on the left side and a string on the right side.
+
+:::{note}
+Typed processes use the same behavior as legacy processes for all other sections.
+:::
+
+See {ref}`process-typed-page` for more information on the semantics of typed processes.
+
 (syntax-function)=
 
 ### Function
@@ -312,9 +396,19 @@ enum Day {
 
 Enum values in the above example can be accessed as `Day.MONDAY`, `Day.TUESDAY`, and so on.
 
-:::{note}
-Enum types cannot be included across modules at this time.
-:::
+(syntax-record-type)=
+
+### Record type
+
+A record type declaration consists of a name and a body. The body consists of one or more fields, where each field has a name and a type:
+
+```nextflow
+record FastqPair {
+    id: String
+    fastq_1: Path
+    fastq_2: Path
+}
+```
 
 ### Output block
 
@@ -553,6 +647,8 @@ catch( IOException e ) {
 ```
 
 The try block will be executed, and if an error is raised and matches the expected error type of a catch clause, the code in that catch clause will be executed. If no catch clause is matched, the error will be raised to the next enclosing try/catch statement, or to the Nextflow runtime.
+
+(syntax-expressions)=
 
 ## Expressions
 
@@ -959,7 +1055,8 @@ Compound expressions are evaluated in the following order:
 
 The following legacy features were excluded from this page because they are deprecated:
 
-- The `addParams` and `params` clauses of include declarations. See {ref}`module-params` for more information.
-- The `when:` section of a process definition. See {ref}`process-when` for more information.
-- The `shell:` section of a process definition. See {ref}`process-shell` for more information.
-- The implicit `it` closure parameter. See {ref}`script-closure` for more information.
+- The `addParams` and `params` clauses of include declarations.
+- The `when:` section of a process definition.
+- The `shell:` section of a process definition.
+
+See {ref}`strict-syntax-page` for more information.

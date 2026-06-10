@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,6 +37,7 @@ import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
 import nextflow.conda.CondaConfig
 import nextflow.config.Manifest
+import nextflow.container.AppleContainerConfig
 import nextflow.container.ApptainerConfig
 import nextflow.container.CharliecloudConfig
 import nextflow.container.ContainerConfig
@@ -47,12 +48,14 @@ import nextflow.container.ShifterConfig
 import nextflow.container.SingularityConfig
 import nextflow.dag.DAG
 import nextflow.exception.AbortOperationException
+import nextflow.exception.AbortRunException
 import nextflow.exception.AbortSignalException
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.MissingLibraryException
 import nextflow.exception.ScriptCompilationException
 import nextflow.executor.ExecutorFactory
 import nextflow.extension.CH
+import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FilePorter
 import nextflow.plugin.Plugins
@@ -61,15 +64,15 @@ import nextflow.processor.TaskFault
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskProcessor
 import nextflow.script.BaseScript
-import nextflow.script.ProcessConfig
 import nextflow.script.ProcessFactory
 import nextflow.script.ScriptBinding
 import nextflow.script.ScriptFile
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
+import nextflow.script.dsl.ProcessConfigBuilder
 import nextflow.spack.SpackConfig
-import nextflow.trace.AnsiLogObserver
+import nextflow.trace.LogObserver
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
 import nextflow.trace.TraceObserverFactoryV2
@@ -80,16 +83,14 @@ import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.TaskEvent
 import nextflow.trace.event.WorkflowOutputEvent
 import nextflow.util.Barrier
-import nextflow.util.ConfigHelper
-import nextflow.util.Duration
+import nextflow.util.ClassLoaderFactory
 import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
 import nextflow.util.NameGenerator
 import nextflow.util.SysHelper
 import nextflow.util.ThreadPoolManager
 import nextflow.util.Threads
-import nextflow.util.VersionNumber
-import org.apache.commons.lang.exception.ExceptionUtils
+import org.apache.commons.lang3.exception.ExceptionUtils
 import sun.misc.Signal
 import sun.misc.SignalHandler
 /**
@@ -149,6 +150,11 @@ class Session implements ISession {
      * The folder where workflow outputs are stored
      */
     Path outputDir
+
+    /**
+     * Output format for workflow outputs
+     */
+    String outputFormat
 
     /**
      * The folder where tasks temporary files are stored
@@ -312,9 +318,11 @@ class Session implements ISession {
 
     boolean ansiLog
 
+    boolean agentLog
+
     boolean disableJobsCancellation
 
-    AnsiLogObserver ansiLogObserver
+    LogObserver logObserver
 
     FilePorter getFilePorter() { filePorter }
 
@@ -408,6 +416,7 @@ class Session implements ISession {
 
         // -- init output dir
         this.outputDir = FileHelper.toCanonicalPath(config.outputDir ?: 'results')
+        this.outputFormat = config.outputFormat
 
         // -- init work dir
         this.workDir = FileHelper.toCanonicalPath(config.workDir ?: 'work')
@@ -437,7 +446,8 @@ class Session implements ISession {
      */
     Session init( ScriptFile scriptFile, List<String> args=null, Map<String,?> cliParams=null, Map<String,?> configParams=null ) {
 
-        if(!workDir.mkdirs()) throw new AbortOperationException("Cannot create work-dir: $workDir -- Make sure you have write permissions or specify a different directory by using the `-w` command line option")
+        if(!workDir.mkdirs())
+            throw new AbortOperationException("Cannot create work-dir '${FilesEx.toUriString(workDir)}' -- Make sure you have write permissions or specify a different directory by using the `-w` command line option")
         log.debug "Work-dir: ${workDir.toUriString()} [${FileHelper.getPathFsType(workDir)}]"
 
         if( config.bucketDir ) {
@@ -601,21 +611,8 @@ class Session implements ISession {
     ScriptBinding getBinding() { binding }
 
     @Memoized
-    ClassLoader getClassLoader() { getClassLoader0() }
-
-    @PackageScope
-    ClassLoader getClassLoader0() {
-        // extend the class-loader if required
-        final gcl = new GroovyClassLoader()
-        final libraries = ConfigHelper.resolveClassPaths(getLibDir())
-
-        for( Path lib : libraries ) {
-            def path = lib.complete()
-            log.debug "Adding to the classpath library: ${path}"
-            gcl.addClasspath(path.toString())
-        }
-
-        return gcl
+    ClassLoader getClassLoader() {
+        ClassLoaderFactory.create(getLibDir())
     }
 
     Barrier getBarrier() { monitorsBarrier }
@@ -686,7 +683,6 @@ class Session implements ISession {
         throw new IllegalStateException("Not a valid config env object: $config.env")
     }
 
-    @Memoized
     Manifest getManifest() {
         if( !config.manifest )
             return new Manifest()
@@ -763,7 +759,7 @@ class Session implements ISession {
     }
 
     final protected void shutdown0() {
-        log.trace "Shutdown: $shutdownCallbacks"
+        log.trace "Invoking ${shutdownCallbacks.size()} shutdown callbacks"
         shutdownInitiated = true
         while( shutdownCallbacks.size() ) {
             final hook = shutdownCallbacks.poll()
@@ -771,7 +767,7 @@ class Session implements ISession {
                 hook.run()
             }
             catch( Exception e ) {
-                log.debug "Failed to execute shutdown hook: $hook", e
+                log.debug "Failed to execute shutdown hook: ${hook.class.name}", e
             }
         }
 
@@ -834,7 +830,7 @@ class Session implements ISession {
             shutdown0()
             notifyError(null)
             // force termination
-            ansiLogObserver?.forceTermination()
+            logObserver?.forceTermination()
             executorFactory?.signalExecutors()
             processesBarrier.forceTermination()
             monitorsBarrier.forceTermination()
@@ -890,19 +886,11 @@ class Session implements ISession {
 
     ExecutorService getExecService() { execService }
 
-    /**
-     * Check preconditions before run the main script
-     */
-    protected void validate() {
-        checkVersion()
-    }
-
     @PackageScope void checkConfig() {
         final enabled = config.navigate('nextflow.enable.configProcessNamesValidation', true) as boolean
         if( enabled ) {
             final names = ScriptMeta.allProcessNames()
-            final ver = "dsl${NF.dsl1 ?'1' :'2'}"
-            log.debug "Workflow process names [$ver]: ${names.join(', ')}"
+            log.debug "Process names: ${names.join(', ')}"
             validateConfig(names)
         }
         else {
@@ -914,38 +902,24 @@ class Session implements ISession {
         NF.isModuleBinariesEnabled()
     }
 
+    /**
+     * Whether the entry script was launched directly as a module via
+     * `nextflow module run`. Used to decide whether the entry script's
+     * `resources/` bundle (and module bin paths) should be picked up
+     * even though the script is not being loaded via `include`.
+     */
+    private volatile boolean moduleRun
+
+    boolean isModuleRun() {
+        return moduleRun
+    }
+
+    void setModuleRun(boolean value) {
+        this.moduleRun = value
+    }
+
     boolean failOnIgnore() {
         config.navigate('workflow.failOnIgnore', false) as boolean
-    }
-
-    @PackageScope VersionNumber getCurrentVersion() {
-        new VersionNumber(BuildInfo.version)
-    }
-
-    @PackageScope void checkVersion() {
-        def version = manifest.getNextflowVersion()?.trim()
-        if( !version )
-            return
-
-        // when the version string is prefix with a `!`
-        // an exception is thrown is the version does not match
-        boolean important = false
-        if( version.startsWith('!') ) {
-            important = true
-            version = version.substring(1).trim()
-        }
-
-        if( !getCurrentVersion().matches(version) ) {
-            important ? showVersionError(version) : showVersionWarning(version)
-        }
-    }
-
-    @PackageScope void showVersionError(String ver) {
-        throw new AbortOperationException("Nextflow version $BuildInfo.version does not match workflow required version: $ver")
-    }
-
-    @PackageScope void showVersionWarning(String ver) {
-        log.warn "Nextflow version $BuildInfo.version does not match workflow required version: $ver -- Execution will continue, but things may break!"
     }
 
     /**
@@ -992,7 +966,7 @@ class Session implements ISession {
      * @return {@code true} if the name specified belongs to the list of process names or {@code false} otherwise
      */
     protected boolean checkValidProcessName(Collection<String> processNames, String selector, List<String> errorMessage)  {
-        final matches = processNames.any { name -> ProcessConfig.matchesSelector(name, selector) }
+        final matches = processNames.any { name -> ProcessConfigBuilder.matchesSelector(name, selector) }
         if( matches )
             return true
 
@@ -1090,11 +1064,9 @@ class Session implements ISession {
     }
 
     void notifyBeforeWorkflowExecution() {
-        validate()
     }
 
     void notifyAfterWorkflowExecution() {
-
     }
 
     void notifyFlowBegin() {
@@ -1149,6 +1121,11 @@ class Session implements ISession {
             final observer = observers.get(i)
             try {
                 action.accept(observer)
+            }
+            catch (AbortRunException e) {
+                // AbortRunException are forwarded to produce an error in the execution
+                log.error("Abort exception produced when notifying an event - $e.message")
+                throw e
             }
             catch ( Throwable e ) {
                 log.debug(e.getMessage(), e)
@@ -1228,6 +1205,7 @@ class Session implements ISession {
             new SingularityConfig(config.singularity as Map ?: Collections.emptyMap()),
             new ApptainerConfig(config.apptainer as Map ?: Collections.emptyMap()),
             new CharliecloudConfig(config.charliecloud as Map ?: Collections.emptyMap()),
+            new AppleContainerConfig(config.appleContainer as Map ?: Collections.emptyMap()),
         ] as List<ContainerConfig>
 
         if( engine ) {
@@ -1319,8 +1297,8 @@ class Session implements ISession {
     }
 
     void printConsole(String str, boolean newLine=false) {
-        if( ansiLogObserver )
-            ansiLogObserver.appendInfo(str)
+        if( logObserver )
+            logObserver.appendInfo(str)
         else if( newLine )
             System.out.println(str)
         else
@@ -1328,7 +1306,7 @@ class Session implements ISession {
     }
 
     void printConsole(Path file) {
-        ansiLogObserver ? ansiLogObserver.appendInfo(file.text) : Files.copy(file, System.out)
+        logObserver ? logObserver.appendInfo(file.text) : Files.copy(file, System.out)
     }
 
     private volatile ThreadPoolManager finalizePoolManager

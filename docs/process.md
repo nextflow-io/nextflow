@@ -166,12 +166,15 @@ process hello {
     input:
     val STR
 
+    output:
+    stdout
+
     script:
     template 'hello.sh'
 }
 
 workflow {
-    channel.of('this', 'that') | hello
+    hello('Hello!').view()
 }
 ```
 
@@ -189,7 +192,7 @@ echo "process completed"
 Variables prefixed with the dollar character (`$`) are interpreted as Nextflow variables when the template script is executed by Nextflow and Bash variables when executed directly. For example, the above script can be executed from the command line by providing each input as an environment variable:
 
 ```bash
-STR='Hello!' bash templates/my_script.sh
+STR='Hello!' bash templates/hello.sh
 ```
 
 The following caveats should be considered:
@@ -208,8 +211,8 @@ Template scripts are generally discouraged due to the caveats described above. T
 
 ### Shell
 
-:::{deprecated} 24.11.0-edge
-Use the `script` section instead. Consider using the {ref}`strict syntax <strict-syntax-page>`, which provides error checking to help distinguish between Nextflow variables and Bash variables in the process script.
+:::{deprecated} 25.04.0
+Use the `script` section instead.
 :::
 
 The `shell` section is a string expression that defines the script that is executed by the process. It is an alternative to the {ref}`process-script` definition with one important difference: it uses the exclamation mark `!` character, instead of the usual dollar `$` character, to denote Nextflow variables.
@@ -483,6 +486,8 @@ path x, name: 'my-dir/file.txt'
 In this case, `x.name` returns the file name with the parent directory (e.g. `my-dir/file.txt`), whereas normally it would return the file name (e.g. `file.txt`). You can use `x.fileName.name` to get the file name.
 :::
 
+(process-multiple-input-files)=
+
 ### Multiple input files
 
 A `path` input can also accept a collection of files instead of a single value. In this case, the input variable will be a list.
@@ -514,7 +519,7 @@ seq1 seq2 seq3
 ...
 ```
 
-The target input file name may contain the `*` and `?` wildcards, which can be used to control the name of staged files. The following table shows how the wildcards are replaced depending on the cardinality of the received input collection.
+The target input file name may contain the {index}`*` and {index}`?` wildcards, which can be used to control the name of staged files. The following table shows how the {index}`wildcards` are replaced depending on the cardinality of the received input collection.
 
 | Arity       | Name pattern | Staged file names                                                                                       |
 | ----------- | ------------ | ------------------------------------------------------------------------------------------------------- |
@@ -678,6 +683,8 @@ In the above example, the `tuple` input consists of the value `x` and the file `
 
 A `tuple` definition may contain any of the following qualifiers, as previously described: `val`, `env`, `path` and `stdin`. Files specified with the `path` qualifier are treated exactly the same as standalone `path` inputs.
 
+(process-input-each)=
+
 ### Input repeaters (`each`)
 
 The `each` qualifier allows you to repeat the execution of a process for each item in a collection, each time a new value is received. For example:
@@ -735,7 +742,7 @@ When multiple repeaters are defined, the process is executed for each *combinati
 :::
 
 :::{note}
-Input repeaters do not support tuples. Use the {ref}`operator-combine` or {ref}`operator-cross` operator to combine the repeated input with the other inputs to produce all of the desired input combinations.
+Input repeaters do not support tuples. Use the {ref}`operator-combine` operator to combine the repeated input with the other inputs to produce all of the desired input combinations.
 :::
 
 (process-multiple-inputs)=
@@ -1029,8 +1036,7 @@ The `tuple` qualifier outputs multiple values in a single output as a {ref}`tupl
 ```nextflow
 process blast {
   input:
-    val species
-    path query
+    tuple val(species), path(query)
 
   output:
     tuple val(species), path('result')
@@ -1045,7 +1051,7 @@ workflow {
   ch_species = channel.of('human', 'cow', 'horse')
   ch_query = channel.fromPath('*.fa')
 
-  blast(ch_species, ch_query)
+  blast(ch_species.combine(ch_query))
 }
 ```
 
@@ -1198,6 +1204,8 @@ Software dependencies:
 - {ref}`process-conda`: list of conda packages to provision for tasks
 - {ref}`process-container`: container image to use for tasks
 
+(task-directive-values)=
+
 ### Using task directive values
 
 The `task` object also contains the values of all process directives for the given task, which allows you to access these settings at runtime. For examples:
@@ -1243,11 +1251,12 @@ All directives can be assigned a dynamic value except the following:
 - {ref}`process-executor`
 - {ref}`process-label`
 - {ref}`process-maxforks`
+- {ref}`process-secret`
 
 :::{versionadded} 25.10
 :::
 
-Dynamic directives can be specified without a closure when using the {ref}`strict syntax <strict-syntax-page>`:
+Dynamic directives can be specified without a closure when using the {ref}`strict parser <strict-syntax-page>`:
 
 ```nextflow
 queue (entries > 100 ? 'long' : 'short')
@@ -1336,11 +1345,15 @@ process hello {
 }
 ```
 
-In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to 1 GB. In each subsequent attempt, the requested memory is doubled. See {ref}`trace-report` for more information about trace records.
+In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to 1 GB. In each subsequent attempt, the requested memory is doubled. 
+
+:::{note}
+Many fields from the previous task attempts are accessible. See {ref}`trace-report` for a list of available fields.
+:::
 
 ### Dynamic retry with backoff
 
-There are cases in which the required execution resources may be temporary unavailable e.g. network congestion. In these cases immediately re-executing the task will likely result in the identical error. A retry with an exponential backoff delay can better recover these error conditions:
+There are cases in which the required execution resources may be temporarily unavailable e.g. network congestion. In these cases immediately re-executing the task will likely result in the identical error. A retry with an exponential backoff delay can better recover these error conditions:
 
 ```nextflow
 process hello {

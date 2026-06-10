@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,35 +58,6 @@ class TaskRunTest extends Specification {
         new Session()
     }
 
-    def testGetInputsByType() {
-
-        setup:
-        def binding = new Binding('x': 1, 'y': 2)
-        def task = new TaskRun()
-        def list = []
-
-        task.setInput( new StdInParam(binding,list) )
-        task.setInput( new FileInParam(binding, list).bind(new TokenVar('x')), 'file1' )
-        task.setInput( new FileInParam(binding, list).bind(new TokenVar('y')), 'file2' )
-        task.setInput( new EnvInParam(binding, list).bind('z'), 'env' )
-
-
-        when:
-        def files = task.getInputsByType(FileInParam)
-        then:
-        files.size() == 2
-
-        files.keySet()[0] instanceof FileInParam
-        files.keySet()[1] instanceof FileInParam
-
-        files.keySet()[0].name == 'x'
-        files.keySet()[1].name == 'y'
-
-        files.values()[0] == 'file1'
-        files.values()[1] == 'file2'
-
-    }
-
     def testGetOutputsByType() {
 
         setup:
@@ -124,9 +95,11 @@ class TaskRunTest extends Specification {
 
         def x = new ValueInParam(binding, list).bind( new TokenVar('x') )
         def y = new FileInParam(binding, list).bind('y')
+        def y_files = [ new FileHolder(Paths.get('file_y_1')) ]
 
         task.setInput(x, 1)
-        task.setInput(y, [ new FileHolder(Paths.get('file_y_1')) ])
+        task.setInput(y, y_files)
+        task.inputFiles.addAll(y_files)
 
         expect:
         task.getInputFiles().size() == 1
@@ -144,9 +117,15 @@ class TaskRunTest extends Specification {
         def y = new FileInParam(binding, list).bind('y')
         def z = new FileInParam(binding, list).bind('z')
 
+        def y_files = [ new FileHolder(Paths.get('file_y_1')).withName('foo.txt') ]
+        def z_files = [ new FileHolder(Paths.get('file_y_2')).withName('bar.txt') ]
+
         task.setInput(x, 1)
-        task.setInput(y, [ new FileHolder(Paths.get('file_y_1')).withName('foo.txt') ])
-        task.setInput(z, [ new FileHolder(Paths.get('file_y_2')).withName('bar.txt') ])
+        task.setInput(y, y_files)
+        task.setInput(z, z_files)
+
+        task.inputFiles.addAll(y_files)
+        task.inputFiles.addAll(z_files)
 
         expect:
         task.getInputFilesMap() == ['foo.txt': Paths.get('file_y_1'), 'bar.txt': Paths.get('file_y_2')]
@@ -159,6 +138,7 @@ class TaskRunTest extends Specification {
         setup:
         def binding = new Binding()
         def task = new TaskRun()
+        task.processor = Mock(TaskProcessor)
         def list = []
 
         when:
@@ -599,6 +579,28 @@ class TaskRunTest extends Specification {
         isNative
     }
 
+    def 'should check stage file enabled flag' () {
+
+        given:
+        def executor = Mock(Executor)
+        def task = Spy(TaskRun)
+        task.processor = Mock(TaskProcessor)
+
+        when:
+        def enabled = task.isStageFileEnabled()
+        then:
+        1 * task.processor.getExecutor() >> executor
+        1 * executor.isStageFileEnabled() >> false
+        !enabled
+
+        when:
+        enabled = task.isStageFileEnabled()
+        then:
+        1 * task.processor.getExecutor() >> executor
+        1 * executor.isStageFileEnabled() >> true
+        enabled
+    }
+
     def 'should check container enabled flag' () {
 
         given:
@@ -641,7 +643,8 @@ class TaskRunTest extends Specification {
 
         given:
         def EXPECT = [FOO: 'hola', BAR: 'mundo', OMEGA: 'ooo',_OPTS:'any']
-        def task = Spy(TaskRun);
+        def task = Spy(TaskRun)
+        task.inputEnv = [BAR: 'mundo', OMEGA: 'ooo', _OPTS: 'any']
         def proc = Mock(TaskProcessor)
 
         when:
@@ -649,7 +652,6 @@ class TaskRunTest extends Specification {
         then:
         1 * task.getProcessor() >> proc
         1 * proc.getProcessEnvironment() >> [FOO: 'hola', BAR: 'world']
-        1 * task.getInputEnvironment() >> [BAR: 'mundo', OMEGA: 'ooo', _OPTS: 'any']
         env ==  EXPECT   // note: `BAR` in the process config should be overridden by `BAR` in the task input
         str(env) == str(EXPECT)
     }
@@ -692,6 +694,7 @@ class TaskRunTest extends Specification {
         def env1 = new EnvOutParam(new Binding(),[]).bind(new TokenVar('FOO'))
         def env2 = new EnvOutParam(new Binding(),[]).bind(new TokenVar('BAR'))
         def task = new TaskRun()
+        task.processor = Mock(TaskProcessor)
         task.outputs.put(env1, null)
         task.outputs.put(env2, null)
 
@@ -757,7 +760,7 @@ class TaskRunTest extends Specification {
         def vars = task.getVariableNames()
         then:
         1 * task.context.getVariableNames() >> ['foo']
-        and: 
+        and:
         vars == ['foo'] as Set
     }
 
@@ -879,11 +882,13 @@ class TaskRunTest extends Specification {
         !task.isArray()
     }
 
+    // note: use `stubRun >> value` instead of `getStubRun() >> value` because
+    // Spock 2.4 requires property stubbing for direct property access (session.stubRun)
     def 'should resolve task body' () {
         given:
         def task = Spy(TaskRun)
         task.processor = Mock(TaskProcessor) {
-            getSession()>>Mock(Session) { getStubRun() >> false}
+            getSession()>>Mock(Session) { stubRun >> false}
         }
         and:
         def body = Mock(BodyDef)
@@ -899,7 +904,7 @@ class TaskRunTest extends Specification {
         given:
         def task = Spy(TaskRun)
         task.processor = Mock(TaskProcessor) {
-            getSession()>>Mock(Session) { getStubRun() >> true}
+            getSession()>>Mock(Session) { stubRun >> true}
         }
         task.config = Mock(TaskConfig) { getStubBlock()>> null }
         and:
@@ -920,7 +925,7 @@ class TaskRunTest extends Specification {
         def task = Spy(TaskRun)
         task.config = Mock(TaskConfig) { getStubBlock()>>stub }
         task.processor = Mock(TaskProcessor) {
-            getSession()>>Mock(Session) { getStubRun() >> true}
+            getSession()>>Mock(Session) { stubRun >> true}
         }
 
         when:
@@ -954,7 +959,7 @@ class TaskRunTest extends Specification {
         and:
         result2 == meta
     }
-    
+
     def 'should resolve task stub from template' () {
 
         given:

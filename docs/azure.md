@@ -569,18 +569,18 @@ When Nextflow creates a pool of compute nodes, it selects:
 
 These settings determine the operating system, version, and available features for each compute node in your pool.
 
-By default, Nextflow creates pool nodes suitable for most bioinformatics workloads based on Ubuntu 22.04. You can customize the OS in your pool configuration to meet specific requirements.
+By default, Nextflow creates pool nodes suitable for most bioinformatics workloads based on Ubuntu 24.04. You can customize the OS in your pool configuration to meet specific requirements.
 
 Below are example configurations for common operating systems used in scientific computing:
 
-**Ubuntu 22.04 (default)**
+**Ubuntu 24.04 (default)**
 
 ```groovy
 azure {
     batch {
         pools {
             <POOL_NAME> {
-                sku = "batch.node.ubuntu 22.04"
+                sku = "batch.node.ubuntu 24.04"
                 offer = "ubuntu-hpc"
                 publisher = "microsoft-dsvm"
             }

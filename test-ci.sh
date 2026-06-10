@@ -1,5 +1,21 @@
 #!/bin/bash
 #
+# Copyright 2013-2026, Seqera Labs
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+#
+
+#
 # setup env for integration tests
 #
 TEST_JDK=${TEST_JDK:=11}
@@ -10,7 +26,6 @@ X_PULL_REQUEST=${TRAVIS_PULL_REQUEST:-false}
 [[ $GITHUB_EVENT_NAME == pull_request ]] && X_PULL_REQUEST=true
 
 export WITH_DOCKER='-with-docker'
-export NXF_PLUGINS_DIR=$PWD/build/plugins
 export NXF_CMD=$PWD/nextflow;
 export TEST_JDK
 export TEST_MODE

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,7 +68,7 @@ class ArrayBagTest extends Specification {
     def 'should stringify the bag' () {
         given:
         def bag = new ArrayBag([1,2,3])
-        
+
         expect:
         bag.toString() == '[1, 2, 3]'
         String.valueOf(bag) == '[1, 2, 3]'

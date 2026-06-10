@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
 import nextflow.script.TaskClosure
+import nextflow.script.dsl.ProcessBuilder
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import spock.lang.Specification
@@ -96,12 +97,14 @@ class TaskConfigTest extends Specification {
     def testModules() {
         given:
         def config
+        def dsl
         def local
 
         when:
         config = new ProcessConfig([:])
-        config.module 't_coffee/10'
-        config.module( [ 'blast/2.2.1', 'clustalw/2'] )
+        dsl = new ProcessBuilder(config)
+        dsl.module 't_coffee/10'
+        dsl.module 'blast/2.2.1:clustalw/2'
         local = config.createTaskConfig()
         then:
         local.module == ['t_coffee/10', 'blast/2.2.1', 'clustalw/2']
@@ -110,8 +113,9 @@ class TaskConfigTest extends Specification {
 
         when:
         config = new ProcessConfig([:])
-        config.module 'a/1'
-        config.module 'b/2:c/3'
+        dsl = new ProcessBuilder(config)
+        dsl.module 'a/1'
+        dsl.module 'b/2:c/3'
         local = config.createTaskConfig()
         then:
         local.module == ['a/1','b/2','c/3']
@@ -119,9 +123,10 @@ class TaskConfigTest extends Specification {
 
         when:
         config = new ProcessConfig([:])
-        config.module { 'a/1' }
-        config.module { 'b/2:c/3' }
-        config.module 'd/4'
+        dsl = new ProcessBuilder(config)
+        dsl.module { 'a/1' }
+        dsl.module { 'b/2:c/3' }
+        dsl.module 'd/4'
         local = config.createTaskConfig()
         local.setContext([:])
         then:
@@ -130,7 +135,8 @@ class TaskConfigTest extends Specification {
 
         when:
         config = new ProcessConfig([:])
-        config.module = 'b/2:c/3'
+        dsl = new ProcessBuilder(config)
+        dsl.module 'b/2:c/3'
         local = config.createTaskConfig()
         then:
         local.module == ['b/2','c/3']
@@ -183,6 +189,24 @@ class TaskConfigTest extends Specification {
         config.getMaxRetries() == 3
         config.errorStrategy == ErrorStrategy.RETRY
         config.getErrorStrategy() == ErrorStrategy.RETRY
+    }
+
+    def 'should get debug flag' () {
+        expect:
+        new TaskConfig(opts).getDebug() == expected
+
+        where:
+        opts            | expected
+        [:]             | false
+        [debug: false]  | false
+        [debug: true]   | true
+    }
+
+    def 'should ignore the removed echo directive' () {
+        // the deprecated `echo` directive has been removed and no longer
+        // enables the debug output
+        expect:
+        new TaskConfig([echo: true]).getDebug() == false
     }
 
     def testMaxErrors() {
@@ -452,11 +476,13 @@ class TaskConfigTest extends Specification {
         setup:
         def script = Mock(BaseScript)
         ProcessConfig process
+        ProcessBuilder dsl
         PublishDir publish
 
         when:
         process = new ProcessConfig(script)
-        process.publishDir '/data'
+        dsl = new ProcessBuilder(process)
+        dsl.publishDir '/data'
         publish = process.createTaskConfig().getPublishDir()[0]
         then:
         publish.path == Paths.get('/data').complete()
@@ -466,7 +492,8 @@ class TaskConfigTest extends Specification {
 
         when:
         process = new ProcessConfig(script)
-        process.publishDir '/data', overwrite: false, mode: 'copy', pattern: '*.txt'
+        dsl = new ProcessBuilder(process)
+        dsl.publishDir '/data', overwrite: false, mode: 'copy', pattern: '*.txt'
         publish = process.createTaskConfig().getPublishDir()[0]
         then:
         publish.path == Paths.get('/data').complete()
@@ -476,7 +503,8 @@ class TaskConfigTest extends Specification {
 
         when:
         process = new ProcessConfig(script)
-        process.publishDir '/my/data', mode: 'copyNoFollow'
+        dsl = new ProcessBuilder(process)
+        dsl.publishDir '/my/data', mode: 'copyNoFollow'
         publish = process.createTaskConfig().getPublishDir()[0]
         then:
         publish.path == Paths.get('//my/data').complete()
@@ -484,11 +512,12 @@ class TaskConfigTest extends Specification {
 
         when:
         process = new ProcessConfig(script)
-        process.publishDir '/here'
-        process.publishDir '/there', pattern: '*.fq'
+        dsl = new ProcessBuilder(process)
+        dsl.publishDir '/here'
+        dsl.publishDir '/there', pattern: '*.fq'
         def dirs = process.createTaskConfig().getPublishDir()
         then:
-        dirs.size() == 2 
+        dirs.size() == 2
         dirs[0].path == Paths.get('/here')
         dirs[0].pattern == null
         dirs[1].path == Paths.get('/there')
@@ -537,9 +566,10 @@ class TaskConfigTest extends Specification {
 
         when:
         def process = new ProcessConfig(script)
-        process.pod secret: 'foo', mountPath: '/this'
-        process.pod secret: 'bar', env: 'BAR_XXX'
-        
+        def dsl = new ProcessBuilder(process)
+        dsl.pod secret: 'foo', mountPath: '/this'
+        dsl.pod secret: 'bar', env: 'BAR_XXX'
+
         then:
         process.get('pod') == [
                     [secret: 'foo', mountPath: '/this'],
@@ -556,15 +586,17 @@ class TaskConfigTest extends Specification {
 
         when:
         def process = new ProcessConfig(script)
-        process.accelerator 5
+        def dsl = new ProcessBuilder(process)
+        dsl.accelerator 5
         def res = process.createTaskConfig().getAccelerator()
         then:
-        res.limit == 5 
+        res.limit == 5
         res.request == 5
 
         when:
         process = new ProcessConfig(script)
-        process.accelerator 5, limit: 10, type: 'nvidia'
+        dsl = new ProcessBuilder(process)
+        dsl.accelerator 5, limit: 10, type: 'nvidia'
         res = process.createTaskConfig().getAccelerator()
         then:
         res.request == 5
@@ -578,8 +610,9 @@ class TaskConfigTest extends Specification {
 
         when:
         def process = new ProcessConfig(script)
-        process.secret 'alpha'
-        process.secret 'omega'
+        def dsl = new ProcessBuilder(process)
+        dsl.secret 'alpha'
+        dsl.secret 'omega'
 
         then:
         process.getSecret() == ['alpha', 'omega']
@@ -594,7 +627,8 @@ class TaskConfigTest extends Specification {
 
         when:
         def process = new ProcessConfig(script)
-        process.resourceLabels( region: 'eu-west-1', organization: 'A', user: 'this', team: 'that' )
+        def dsl = new ProcessBuilder(process)
+        dsl.resourceLabels( region: 'eu-west-1', organization: 'A', user: 'this', team: 'that' )
 
         then:
         process.get('resourceLabels') == [region: 'eu-west-1', organization: 'A', user: 'this', team: 'that']
@@ -604,6 +638,49 @@ class TaskConfigTest extends Specification {
         then:
         config.getResourceLabels() == [region: 'eu-west-1', organization: 'A', user: 'this', team: 'that']
         config.getResourceLabelsAsString() == 'region=eu-west-1,organization=A,user=this,team=that'
+    }
+
+    def 'should configure hints options'()  {
+        given:
+        def script = Mock(BaseScript)
+
+        when:
+        def process = new ProcessConfig(script)
+        def dsl = new ProcessBuilder(process)
+        dsl.hints( 'seqera/machineRequirement.arch': 'arm64', consumableResources: ['my-license': 1] )
+
+        then:
+        process.get('hints') == ['seqera/machineRequirement.arch': 'arm64', consumableResources: ['my-license': 1]]
+
+        when:
+        def config = process.createTaskConfig()
+        then:
+        config.getHints() == ['seqera/machineRequirement.arch': 'arm64', consumableResources: ['my-license': 1]]
+    }
+
+    def 'should return empty map when no hints set'() {
+        when:
+        def config = new TaskConfig([:])
+        then:
+        config.getHints() == [:]
+    }
+
+    def 'should replace hints via config override'()  {
+        given:
+        def script = Mock(BaseScript)
+
+        when: 'set hints in process definition'
+        def process = new ProcessConfig(script)
+        def dsl = new ProcessBuilder(process)
+        dsl.hints( 'seqera/machineRequirement.arch': 'arm64', consumableResources: ['my-license': 1] )
+        then:
+        process.getHints() == ['seqera/machineRequirement.arch': 'arm64', consumableResources: ['my-license': 1]]
+
+        when: 'config override replaces the entire map'
+        def config = process.createTaskConfig()
+        config.put('hints', ['scheduling.priority': 5])
+        then:
+        config.getHints() == ['scheduling.priority': 5]
     }
 
     def 'should report error on negative cpus' () {

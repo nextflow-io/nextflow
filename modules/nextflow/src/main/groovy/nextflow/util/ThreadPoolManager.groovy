@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,13 +12,13 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.util
 
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.ThreadFactory
 import java.util.concurrent.TimeoutException
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -39,7 +39,7 @@ import nextflow.exception.AbortOperationException
 class ThreadPoolManager {
 
     private static final AtomicInteger poolCount = new AtomicInteger()
-    
+
     final static public int DEFAULT_MIN_THREAD = 10
     final static public int DEFAULT_MAX_THREAD = Math.max(DEFAULT_MIN_THREAD, Runtime.runtime.availableProcessors()*3)
     final static public int DEFAULT_QUEUE_SIZE = -1 // use -1 for using an unbound queue
@@ -89,9 +89,24 @@ class ThreadPoolManager {
             minThreads = maxThreads
         }
 
-        return executorService = Threads.useVirtual()
-                ? Executors.newThreadPerTaskExecutor(new CustomThreadFactory(name ?: "nf-thread-pool-${poolCount.getAndIncrement()}".toString()))
-                : legacyThreadPool()
+        executorService = Threads.useVirtual()
+            ? virtualThreadService()
+            : legacyThreadPool()
+
+        return executorService
+    }
+
+    protected ExecutorService virtualThreadService() {
+        final poolName = name ?: "nf-thread-pool-${poolCount.getAndIncrement()}".toString()
+        final pool = VirtualThreadFactoryBuilder.create(poolName)
+        return Executors.newThreadPerTaskExecutor(pool)
+    }
+
+    // this class is required to avoid failures when using Java version < 21
+    private static class VirtualThreadFactoryBuilder {
+        static ThreadFactory create(String name) {
+            return Thread.ofVirtual().name(name).factory()
+        }
     }
 
     protected ExecutorService legacyThreadPool() {

@@ -6,9 +6,9 @@ classDiagram
 
     Plugins --> PluginsFacade : init
 
-    PluginsFacade "1" --> "*" PluginSpec : load
+    PluginsFacade "1" --> "*" PluginRef : load
 
-    class PluginSpec {
+    class PluginRef {
         id : String
         version : String
     }

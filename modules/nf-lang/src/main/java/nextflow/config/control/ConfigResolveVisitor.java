@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@ package nextflow.config.control;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import nextflow.config.ast.ConfigAssignNode;
 import nextflow.config.ast.ConfigIncludeNode;
@@ -57,10 +58,10 @@ public class ConfigResolveVisitor extends ConfigVisitorSupport {
         if( moduleNode instanceof ConfigNode cn ) {
             // initialize variable scopes
             new VariableScopeVisitor(sourceUnit).visit();
-    
+
             // resolve type names
             super.visit(cn);
-    
+
             // report errors for any unresolved variable references
             new DynamicVariablesVisitor().visit(cn);
         }
@@ -78,6 +79,8 @@ public class ConfigResolveVisitor extends ConfigVisitorSupport {
 
     private class DynamicVariablesVisitor extends ConfigVisitorSupport {
 
+        private static final Pattern ENV_VAR_NAME = Pattern.compile("[A-Z_]+[A-Z0-9_]*");
+
         @Override
         protected SourceUnit getSourceUnit() {
             return sourceUnit;
@@ -86,8 +89,12 @@ public class ConfigResolveVisitor extends ConfigVisitorSupport {
         @Override
         public void visitVariableExpression(VariableExpression node) {
             var variable = node.getAccessedVariable();
-            if( variable instanceof DynamicVariable )
-                resolver.addError("`" + node.getName() + "` is not defined", node);
+            if( variable instanceof DynamicVariable ) {
+                var message = "`" + node.getName() + "` is not defined";
+                if( ENV_VAR_NAME.matcher(variable.getName()).matches() )
+                    message += " (hint: use `env('...')` to access environment variable)";
+                resolver.addError(message, node);
+            }
         }
     }
 

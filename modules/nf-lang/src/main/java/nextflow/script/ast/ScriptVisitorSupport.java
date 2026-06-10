@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,7 +43,9 @@ public abstract class ScriptVisitorSupport extends ClassCodeVisitorSupport imple
         for( var functionNode : script.getFunctions() )
             visitFunction(functionNode);
         for( var classNode : script.getClasses() ) {
-            if( classNode.isEnum() )
+            if( classNode instanceof RecordNode rn )
+                visitRecord(rn);
+            else if( classNode.isEnum() )
                 visitEnum(classNode);
         }
         if( script.getOutputs() != null )
@@ -85,6 +87,25 @@ public abstract class ScriptVisitorSupport extends ClassCodeVisitorSupport imple
 
     @Override
     public void visitProcess(ProcessNode node) {
+        if( node instanceof ProcessNodeV2 pn )
+            visitProcessV2(pn);
+        if( node instanceof ProcessNodeV1 pn )
+            visitProcessV1(pn);
+    }
+
+    @Override
+    public void visitProcessV2(ProcessNodeV2 node) {
+        visit(node.directives);
+        visit(node.stagers);
+        visit(node.outputs);
+        visit(node.topics);
+        visit(node.when);
+        visit(node.exec);
+        visit(node.stub);
+    }
+
+    @Override
+    public void visitProcessV1(ProcessNodeV1 node) {
         visit(node.directives);
         visit(node.inputs);
         visit(node.outputs);
@@ -96,6 +117,12 @@ public abstract class ScriptVisitorSupport extends ClassCodeVisitorSupport imple
     @Override
     public void visitFunction(FunctionNode node) {
         visit(node.getCode());
+    }
+
+    @Override
+    public void visitRecord(RecordNode node) {
+        for( var fn : node.getFields() )
+            visitField(fn);
     }
 
     @Override

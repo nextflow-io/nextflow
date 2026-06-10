@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.SysEnv
 import nextflow.container.ContainerBuilder
 import nextflow.container.ContainerHelper
@@ -51,15 +52,15 @@ import nextflow.util.TestOnly
 @CompileStatic
 class BashWrapperBuilder {
 
-    private static MemoryUnit DEFAULT_STAGE_FILE_THRESHOLD = MemoryUnit.of('1 MB')
-    private static int DEFAULT_WRITE_BACK_OFF_BASE = 3
-    private static int DEFAULT_WRITE_BACK_OFF_DELAY = 250
-    private static int DEFAULT_WRITE_MAX_ATTEMPTS = 5
+    final private static MemoryUnit DEFAULT_STAGE_FILE_THRESHOLD = MemoryUnit.of('1 MB')
+    final private static int DEFAULT_WRITE_BACK_OFF_BASE = 3
+    final private static int DEFAULT_WRITE_BACK_OFF_DELAY = 250
+    final private static int DEFAULT_WRITE_MAX_ATTEMPTS = 5
 
-    private MemoryUnit stageFileThreshold = SysEnv.get('NXF_WRAPPER_STAGE_FILE_THRESHOLD') as MemoryUnit ?: DEFAULT_STAGE_FILE_THRESHOLD
-    private int writeBackOffBase = SysEnv.get('NXF_WRAPPER_BACK_OFF_BASE') as Integer ?: DEFAULT_WRITE_BACK_OFF_BASE
-    private int writeBackOffDelay = SysEnv.get('NXF_WRAPPER_BACK_OFF_DELAY') as Integer ?: DEFAULT_WRITE_BACK_OFF_DELAY
-    private int writeMaxAttempts = SysEnv.get('NXF_WRAPPER_MAX_ATTEMPTS') as Integer ?: DEFAULT_WRITE_MAX_ATTEMPTS
+    final private MemoryUnit stageFileThreshold = SysEnv.get('NXF_WRAPPER_STAGE_FILE_THRESHOLD') as MemoryUnit ?: DEFAULT_STAGE_FILE_THRESHOLD
+    final private int writeBackOffBase = SysEnv.get('NXF_WRAPPER_BACK_OFF_BASE') as Integer ?: DEFAULT_WRITE_BACK_OFF_BASE
+    final private int writeBackOffDelay = SysEnv.get('NXF_WRAPPER_BACK_OFF_DELAY') as Integer ?: DEFAULT_WRITE_BACK_OFF_DELAY
+    final private int writeMaxAttempts = SysEnv.get('NXF_WRAPPER_MAX_ATTEMPTS') as Integer ?: DEFAULT_WRITE_MAX_ATTEMPTS
 
     static final public KILL_CMD = '[[ "$pid" ]] && nxf_kill $pid'
 
@@ -158,6 +159,18 @@ class BashWrapperBuilder {
 
     protected boolean shouldUnstageOutputs() {
         return targetDir && workDir!=targetDir
+    }
+
+    /**
+     * Template method that allows controlling if it's required to unstage
+     * task control files (.command.out, .command.err, .command.trace, .command.env)
+     *
+     * See also https://github.com/nextflow-io/nextflow/pull/6364
+     *
+     * @return false by default; executors may override to implement their own logic
+     */
+    protected boolean shouldUnstageControls() {
+        return false
     }
 
     protected boolean fixOwnership() {
@@ -260,9 +273,10 @@ class BashWrapperBuilder {
             return null
 
         final header = "# stage input files\n"
-        // enable only when the stage uses the default file system, i.e. it's not a remote object storage file
-        // see https://github.com/nextflow-io/nextflow/issues/4279
-        if( stageFile.fileSystem == FileSystems.default && stagingScript.size() >= stageFileThreshold.bytes ) {
+        // Write large staging scripts to a separate .command.stage file to avoid command line length limits.
+        // This is enabled only for executors that support it (e.g. HPC grid schedulers with shared filesystem,
+        // See https://github.com/nextflow-io/nextflow/issues/4279
+        if( stageFileEnabled && stagingScript.size() >= stageFileThreshold.bytes ) {
             stageScript = stagingScript
             return header + "bash ${stageFile}"
         }
@@ -379,7 +393,7 @@ class BashWrapperBuilder {
         binding.launch_cmd = getLaunchCommand(interpreter,env)
         binding.stage_cmd = getStageCommand()
         binding.unstage_cmd = getUnstageCommand()
-        binding.unstage_controls = changeDir || shouldUnstageOutputs() ? getUnstageControls() : null
+        binding.unstage_controls = changeDir || shouldUnstageControls() ? getUnstageControls() : null
 
         if( changeDir || shouldUnstageOutputs() ) {
             binding.unstage_outputs = copyStrategy.getUnstageOutputFilesScript(outputFiles,targetDir)
@@ -394,7 +408,7 @@ class BashWrapperBuilder {
         binding.fix_ownership = fixOwnership() ? "[ \${NXF_OWNER:=''} ] && (shopt -s extglob; GLOBIGNORE='..'; chown -fR --from root \$NXF_OWNER ${workDir}/{*,.*}) || true" : null
 
         binding.trace_script = isTraceRequired() ? getTraceScript(binding) : null
-        
+
         return binding
     }
 
@@ -569,7 +583,9 @@ class BashWrapperBuilder {
     }
 
     protected boolean isTraceRequired() {
-        statsEnabled || fixOwnership()
+        if( fusionEnabled && Global.isFusionTraceEnabled() )
+            return fixOwnership()
+        return statsEnabled || fixOwnership()
     }
 
     protected String shellPath() {
@@ -608,7 +624,7 @@ class BashWrapperBuilder {
             final needChangeTaskWorkDir = containerBuilder instanceof SingularityBuilder
             if( (env || needChangeTaskWorkDir) && !containerConfig.entrypointOverride() ) {
                 if( needChangeTaskWorkDir )
-                    cmd = 'cd $NXF_TASK_WORKDIR; ' + cmd
+                    cmd = 'cd \\"$NXF_TASK_WORKDIR\\"; ' + cmd
                 cmd = "/bin/bash -c \"$cmd\""
             }
             launcher = containerBuilder.getRunCommand(cmd)
@@ -628,7 +644,7 @@ class BashWrapperBuilder {
     private String copyFileToWorkDir(String fileName) {
         copyFile(fileName, workDir.resolve(fileName))
     }
-    
+
 
     String getCleanupCmd(String scratch) {
         String result = ''

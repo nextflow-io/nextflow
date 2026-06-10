@@ -77,13 +77,24 @@ reports
 script
 working-with-files
 process
-channel
+process-typed
 workflow
-module
+workflow-typed
 notifications
 secrets
 sharing
 vscode
+```
+
+```{toctree}
+:hidden:
+:caption: Modules
+:maxdepth: 1
+
+modules/modules
+modules/using-modules
+modules/developing-modules
+modules/module-registry
 ```
 
 ```{toctree}
@@ -132,6 +143,7 @@ reference/syntax
 reference/stdlib
 reference/process
 reference/channel
+reference/operator-typed
 reference/operator
 ```
 
@@ -171,8 +183,11 @@ developer/packages
 :caption: Tutorials
 :maxdepth: 1
 
+tutorials/rnaseq-nf
 tutorials/data-lineage
 tutorials/workflow-outputs
+tutorials/static-types
+tutorials/static-types-operators
 tutorials/metrics
 tutorials/flux
 ```
@@ -184,7 +199,6 @@ tutorials/flux
 
 guides/aws-java-sdk-v2
 guides/gradle-plugin
-guides/plugin-registry
 guides/migrate-plugin
 guides/updating-spot-retries
 ```

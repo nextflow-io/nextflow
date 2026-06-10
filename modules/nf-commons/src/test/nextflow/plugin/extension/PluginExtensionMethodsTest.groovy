@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.plugin.extension
@@ -21,11 +20,14 @@ import java.nio.file.Path
 
 import nextflow.Channel
 import nextflow.exception.DuplicateModuleFunctionException
+import nextflow.exception.MissingProcessException
 import nextflow.plugin.Plugins
 import nextflow.plugin.TestPluginManager
 import spock.lang.Shared
 import spock.lang.TempDir
 import test.Dsl2Spec
+
+import static test.ScriptHelper.*
 /**
  *
  * @author Jorge Aguilera <jorge.aguilera@seqera.io>
@@ -58,16 +60,16 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
 
     def 'should execute custom operator extension/1' () {
         given:
-        def  SCRIPT_TEXT = '''
+        def SCRIPT_TEXT = '''
             include { goodbye } from 'plugin/nf-test-plugin-hello'
 
-            channel
-              .of('Bye bye folks')
-              .goodbye()            
+            workflow {
+                channel.of('Bye bye folks').goodbye()
+            }
             '''
 
         when:
-        def result = dsl_eval(SCRIPT_TEXT)
+        def result = runScript(SCRIPT_TEXT)
 
         then:
         result.val == 'Bye bye folks'
@@ -77,32 +79,32 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
     def 'should execute custom operator extension/2' () {
         given:
         def SCRIPT_TEXT = '''
-
             include { reverse; goodbye } from 'plugin/nf-test-plugin-hello'
 
-            channel
-              .of('Bye bye folks')
-              .goodbye()             
+            workflow {
+                channel.of('Bye bye folks').goodbye()
+            }
             '''
         when:
-        def result = dsl_eval(SCRIPT_TEXT)
+        def result = runScript(SCRIPT_TEXT)
 
         then:
         result.val == 'Bye bye folks'
         result.val == Channel.STOP
-
     }
 
     def 'should execute custom factory extension/1' () {
         given:
         def SCRIPT_TEXT = '''
-            include { reverse } from 'plugin/nf-test-plugin-hello'                
+            include { reverse } from 'plugin/nf-test-plugin-hello'
 
-            channel.reverse('a string')            
+            workflow {
+                channel.reverse('a string')
+            }
             '''
 
         when:
-        def result = dsl_eval(SCRIPT_TEXT)
+        def result = runScript(SCRIPT_TEXT)
 
         then:
         result
@@ -114,15 +116,16 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
     def 'should execute custom factory extension/2' () {
         given:
         def SCRIPT_TEXT = '''
-
             include { reverse } from 'plugin/nf-test-plugin-hello'
             include { goodbye } from 'plugin/nf-test-plugin-hello'
-                
-            channel.reverse('a string')            
+
+            workflow {
+                channel.reverse('a string')
+            }
             '''
 
         when:
-        def result = dsl_eval(SCRIPT_TEXT)
+        def result = runScript(SCRIPT_TEXT)
 
         then:
         result
@@ -136,13 +139,13 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         def SCRIPT_TEXT = '''
             include { goodbye as myFunction } from 'plugin/nf-test-plugin-hello'
 
-            channel
-              .of(100,200,300)
-              .myFunction()            
+            workflow {
+                channel.of(100,200,300).myFunction()
+            }
             '''
 
         when:
-        def result = dsl_eval(SCRIPT_TEXT)
+        def result = runScript(SCRIPT_TEXT)
 
         then:
         result.val == 100
@@ -154,14 +157,15 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
     def 'should execute custom factory as alias extension' () {
         given:
         def SCRIPT_TEXT = '''
-            nextflow.enable.dsl=2
             include { reverse as myFunction } from 'plugin/nf-test-plugin-hello'
-         
-            channel.myFunction('reverse this string')            
+
+            workflow {
+                channel.myFunction('reverse this string')
+            }
             '''
 
         when:
-        def result = dsl_eval(SCRIPT_TEXT)
+        def result = runScript(SCRIPT_TEXT)
 
         then:
         result
@@ -173,32 +177,33 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
     def 'should not include operators without the right signature' () {
         given:
         def SCRIPT_TEXT = '''
-            nextflow.enable.dsl=2
             include { goodbyeWrongSignature } from 'plugin/nf-test-plugin-hello'
 
-            channel
-              .of('Bye bye folks') | goodbyeWrongSignature                        
+            workflow {
+                channel.of('Bye bye folks') | goodbyeWrongSignature
+            }
             '''
 
         when:
-        dsl_eval(SCRIPT_TEXT)
+        runScript(SCRIPT_TEXT)
 
         then:
-        thrown(MissingMethodException)
+        thrown(MissingProcessException)
 
     }
 
     def 'should not include factories without the right signature' () {
         given:
         def SCRIPT_TEXT = '''
-            nextflow.enable.dsl=2
-            include { reverseCantBeImportedBecauseWrongSignature } from 'plugin/nf-test-plugin-hello'                
+            include { reverseCantBeImportedBecauseWrongSignature } from 'plugin/nf-test-plugin-hello'
 
-            channel.reverseCantBeImportedBecauseWrongSignature('a string')                        
+            workflow {
+                channel.reverseCantBeImportedBecauseWrongSignature('a string')
+            }
             '''
 
         when:
-        dsl_eval(SCRIPT_TEXT)
+        runScript(SCRIPT_TEXT)
 
         then:
         thrown(IllegalStateException)
@@ -207,7 +212,7 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
 
     def 'should execute custom functions'() {
         when:
-        def result = dsl_eval(SCRIPT_TEXT)
+        def result = runScript(SCRIPT_TEXT)
 
         then:
         result.val == EXPECTED
@@ -215,33 +220,38 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
 
         where:
         SCRIPT_TEXT                                                                           | EXPECTED
-        "include { sayHello } from 'plugin/nf-test-plugin-hello'; channel.of( sayHello() )"     | 'hi'
-        "include { sayHello } from 'plugin/nf-test-plugin-hello'; channel.of( sayHello('es') )" | 'hola'
-        "include { sayHello as hi } from 'plugin/nf-test-plugin-hello'; channel.of( hi() )"     | 'hi'
+        "include { sayHello } from 'plugin/nf-test-plugin-hello'; workflow { channel.of( sayHello() ) }"     | 'hi'
+        "include { sayHello } from 'plugin/nf-test-plugin-hello'; workflow { channel.of( sayHello('es') ) }" | 'hola'
+        "include { sayHello as hi } from 'plugin/nf-test-plugin-hello'; workflow { channel.of( hi() ) }"     | 'hi'
 
     }
 
     def 'should call init plugin in custom functions'() {
         when:
-        def result = dsl_eval("""
-            include { sayHello } from 'plugin/nf-test-plugin-hello' 
-            sayHello()
-        """)
+        def result = runScript("""
+            include { sayHello } from 'plugin/nf-test-plugin-hello'
+
+            workflow {
+                sayHello()
+            }
+            """)
 
         then:
-        true
+        noExceptionThrown()
     }
 
     def 'should throw function not found'() {
         given:
         def SCRIPT_TEXT = '''
-        include { sayHelloNotExist } from 'plugin/nf-test-plugin-hello' 
-        
-        channel.of( sayHelloNotExist() )
-        '''
+            include { sayHelloNotExist } from 'plugin/nf-test-plugin-hello'
+
+            workflow {
+                channel.of( sayHelloNotExist() )
+            }
+            '''
 
         when:
-        dsl_eval(SCRIPT_TEXT)
+        runScript(SCRIPT_TEXT)
 
         then:
         thrown(IllegalStateException)
@@ -250,36 +260,37 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
     def 'should not allow to include an existing function'() {
         given:
         def SCRIPT_TEXT = '''
-        nextflow.enable.strict = true
-        
-        def sayHello(){ 'hi' }
-        
-        include { sayHello } from 'plugin/nf-test-plugin-hello' 
-        
-        channel.of( sayHello() )
-        '''
+            def sayHello() { 'hi' }
+
+            include { sayHello } from 'plugin/nf-test-plugin-hello'
+
+            workflow {
+                channel.of( sayHello() )
+            }
+            '''
 
         when:
-        dsl_eval(SCRIPT_TEXT)
+        runScript(SCRIPT_TEXT)
 
         then:
-        thrown(DuplicateModuleFunctionException)
+        def e = thrown(Exception)
+        e.cause.message.contains('`sayHello` is already included')
     }
 
     def 'should allows to include an existing function but as alias'() {
         given:
         def SCRIPT_TEXT= '''
-        nextflow.enable.strict = true
-        
-        def sayHello(){ 'hi' }
-        
-        include { sayHello as anotherHello } from 'plugin/nf-test-plugin-hello' 
-        
-        channel.of( anotherHello() )
-        '''
+            def sayHello() { 'hi' }
+
+            include { sayHello as anotherHello } from 'plugin/nf-test-plugin-hello'
+
+            workflow {
+                channel.of( anotherHello() )
+            }
+            '''
 
         when:
-        def result = dsl_eval(SCRIPT_TEXT)
+        def result = runScript(SCRIPT_TEXT)
 
         then:
         result.val == 'hi'
@@ -288,16 +299,16 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
 
     def 'should not include a non annotated function'() {
         given:
-        def SCRIPT_TEXT= '''      
-        nextflow.enable.strict = true
-        
-        include { aNonImportedFunction } from 'plugin/nf-test-plugin-hello' 
-        
-        channel.of( aNonImportedFunction() )
-        '''
+        def SCRIPT_TEXT= '''
+            include { aNonImportedFunction } from 'plugin/nf-test-plugin-hello'
+
+            workflow {
+                channel.of( aNonImportedFunction() )
+            }
+            '''
 
         when:
-        dsl_eval(SCRIPT_TEXT)
+        runScript(SCRIPT_TEXT)
 
         then:
         thrown(IllegalStateException)
@@ -309,32 +320,29 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         def MODULE = folder.resolve('module.nf')
 
         MODULE.text = '''
-        nextflow.enable.strict = true
-                
-        include { sayHello } from 'plugin/nf-test-plugin-hello' 
+        include { sayHello } from 'plugin/nf-test-plugin-hello'
 
         process foo {
             input:
               val lng
             output:
               stdout
-              
+
+            script:
             "${sayHello(lng)}"
         }
         '''
 
         SCRIPT.text = '''
-        include { foo } from './module.nf'        
-        workflow{
-            main:
-                foo( 'en' )
-            emit:
-                foo.out
+        include { foo } from './module.nf'
+
+        workflow {
+            foo( 'en' )
         }
         '''
 
         when:
-        def result = dsl_eval(SCRIPT)
+        def result = runScript(SCRIPT)
 
         then:
         result.val == 'hi'
@@ -348,49 +356,44 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         def MODULE2 = folder.resolve('module2.nf')
 
         MODULE1.text = '''
-        nextflow.enable.strict=true
-                
-        include { sayHello } from 'plugin/nf-test-plugin-hello' 
+        include { sayHello } from 'plugin/nf-test-plugin-hello'
 
         process foo {
             input:
               val lng
             output:
               stdout
-              
+
+            script:
             "${sayHello(lng)}"
         }
         '''
 
         MODULE2.text = '''
-        nextflow.enable.strict=true
-                
-        include { sayHello } from 'plugin/nf-test-plugin-hello' 
+        include { sayHello } from 'plugin/nf-test-plugin-hello'
 
         process bar {
             input:
               val lng
             output:
               stdout
-              
+
+            script:
             "${sayHello('es')}"
         }
         '''
 
         SCRIPT.text = '''
-        include { foo } from './module1.nf'        
+        include { foo } from './module1.nf'
         include { bar } from './module2.nf'
-        
-        workflow{
-            main:
-                foo( 'en' ) | bar
-            emit:
-                bar.out
+
+        workflow {
+            foo( 'en' ) | bar
         }
         '''
 
         when:
-        def result = dsl_eval(SCRIPT)
+        def result = runScript(SCRIPT)
 
         then:
         result.val == 'hola'
@@ -400,19 +403,20 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         given:
         def SCRIPT = folder.resolve('main.nf')
 
-        SCRIPT.text = SCRIPT_TEXT
+        SCRIPT.text = '''
+            include { sayHello; goodbye } from 'plugin/nf-test-plugin-hello'
+
+            workflow {
+                channel.of( sayHello() ).goodbye()
+            }
+            '''
 
         when:
-        def result = dsl_eval(SCRIPT)
+        def result = runScript(SCRIPT)
 
         then:
-        result.val == EXPECTED
+        result.val == 'hi'
         result.val == Channel.STOP
-
-        where:
-        SCRIPT_TEXT                                                                                           | EXPECTED
-        "include { sayHello; goodbye } from 'plugin/nf-test-plugin-hello'; channel.of( sayHello() ).goodbye() " | 'hi'
-
     }
 
     def 'should not allow a function with the same name as a process'() {
@@ -420,31 +424,29 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         def SCRIPT = folder.resolve('main.nf')
 
         SCRIPT.text = """
-        nextflow.enable.strict=true
-                
-        include { sayHello } from 'plugin/nf-test-plugin-hello' 
+        include { sayHello } from 'plugin/nf-test-plugin-hello'
 
         process sayHello {
             input:
               val lng
             output:
               stdout
-              
+
+            script:
             "Hi"
         }
-        workflow{
-            main:
-                Channel.of('hi') | sayHello
-            emit:
-                sayHello.out
+
+        workflow {
+            channel.of('hi') | sayHello
         }
         """.stripIndent()
 
         when:
-        dsl_eval(SCRIPT)
+        runScript(SCRIPT)
 
         then:
-        thrown(DuplicateModuleFunctionException)
+        def e = thrown(Exception)
+        e.cause.message.contains('`sayHello` is already included')
     }
 
     def 'should not allow a function and a process with the same from other module'() {
@@ -453,45 +455,41 @@ class PluginExtensionMethodsTest extends Dsl2Spec {
         def MODULE1 = folder.resolve('module1.nf')
 
         MODULE1.text = '''
-        nextflow.enable.strict=true
-
         process sayHello {
             input:
               val lng
             output:
               stdout
-              
+
+            script:
             "$lng"
         }
         '''
         SCRIPT.text = """
-        nextflow.enable.strict=true
-    
-        include { sayHello } from 'plugin/nf-test-plugin-hello'                 
-        include { sayHello } from './module1.nf' 
+        include { sayHello } from 'plugin/nf-test-plugin-hello'
+        include { sayHello } from './module1.nf'
 
         process foo {
             input:
               val lng
             output:
               stdout
-              
+
+            script:
             "Hi"
         }
-        workflow{
-            main:
-                Channel.of('hi') | foo
-            emit:
-                foo.out
+
+        workflow {
+            channel.of('hi') | foo
         }
         """.stripIndent()
 
         when:
-        dsl_eval(SCRIPT)
+        runScript(SCRIPT)
 
         then:
-        thrown(DuplicateModuleFunctionException)
-
+        def e = thrown(Exception)
+        e.cause.message.contains('`sayHello` is already included')
     }
 
 }

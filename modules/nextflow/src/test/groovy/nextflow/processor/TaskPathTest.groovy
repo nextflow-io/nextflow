@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,7 +37,7 @@ class TaskPathTest extends Specification {
         def folder = Files.createTempDirectory('test')
         def hello = folder.resolve('hello.txt')
         hello.text = 'Hello world'
-        
+
         when:
         def path = new TaskPath(hello, 'ciao.txt')
         then:
@@ -87,7 +87,6 @@ class TaskPathTest extends Specification {
 
         cleanup:
         folder.deleteDir()
-
     }
 
     def 'should validate equals method' () {
@@ -98,7 +97,7 @@ class TaskPathTest extends Specification {
         def t2 = new TaskPath(p1, 'foo.txt')
         def t3 = new TaskPath(p2)
 
-        expect: 
+        expect:
         t1.equals(t1)
         t1.equals(new TaskPath(p1))
         new TaskPath(p1).equals(t1)
@@ -111,9 +110,7 @@ class TaskPathTest extends Specification {
         new TaskPath(p1, 'foo.txt').equals(t2)
 
         !t1.equals(t3)
-
     }
-
 
     def 'should validate operator equality' () {
         given:
@@ -123,7 +120,7 @@ class TaskPathTest extends Specification {
         def t2 = new TaskPath(p1, 'foo.txt')
         def t3 = new TaskPath(p2)
         def t4 = new TaskPath(p2)
-        
+
         expect:
         TaskPath.equals(p1, t1)
         TaskPath.equals(t1, p1)
@@ -138,7 +135,6 @@ class TaskPathTest extends Specification {
 
         expect:
         new TaskPath(Paths.get('/foo')).size() == 0
-
     }
 
     @Ignore
@@ -159,9 +155,7 @@ class TaskPathTest extends Specification {
 
         cleanup:
         folder.deleteDir()
-
     }
-
 
     def 'should serialised task path' () {
 
@@ -174,7 +168,22 @@ class TaskPathTest extends Specification {
         copy.equals(p)
     }
 
+    def 'should support directory listing' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('hello.txt').text = 'Hello world'
+
+        when:
+        def path = new TaskPath(folder, 'test')
+        def result = path.listDirectory()
+
+        then:
+        result.size() == 1
+        result[0].name == 'hello.txt'
+
+        cleanup:
+        folder.deleteDir()
+    }
+
 }
-
-
-

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.plugin
@@ -37,12 +36,10 @@ class TestPluginClasspath extends PluginClasspath {
         // the path where classes are resources should be found in the dev environment
         // for each plugin project directory
         addClassesDirectories('build/classes/groovy/testFixtures', 'build/resources/testFixtures')
-
         // the path where the plugin dependencies jar files are expected to be found
         // note: this path is not created automatically by Gradle, it should be created by a custom task
-        // see `targetLibs` task in the base plugins `build.gradle`
+        // see `copyPluginLibs` task in the base plugins `build.gradle`
         addJarsDirectories('build/target/libs')
-
     }
 
     @Override

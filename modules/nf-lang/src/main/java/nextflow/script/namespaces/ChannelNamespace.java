@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,9 +20,12 @@ import java.util.Collection;
 import java.util.Map;
 
 import groovy.lang.Closure;
+import groovy.transform.NamedParam;
+import groovy.transform.NamedParams;
 import nextflow.script.dsl.Description;
 import nextflow.script.dsl.Namespace;
 import nextflow.script.types.Channel;
+import nextflow.script.types.Value;
 
 public interface ChannelNamespace extends Namespace {
 
@@ -31,24 +34,9 @@ public interface ChannelNamespace extends Namespace {
 
         [Read more](https://nextflow.io/docs/latest/reference/channel.html#empty)
     """)
-    Channel empty();
+    Channel<?> empty();
 
     @Deprecated
-    @Description("""
-        Create a channel that emits each argument.
-
-        [Read more](https://nextflow.io/docs/latest/reference/channel.html#from)
-    """)
-    <E> Channel<E> from(E... values);
-
-    @Deprecated
-    @Description("""
-        Create a channel that emits each element in a collection.
-
-        [Read more](https://nextflow.io/docs/latest/reference/channel.html#from)
-    """)
-    <E> Channel<E> from(Collection<E> values);
-
     @Description("""
         Create a channel that emits all file pairs matching a glob pattern.
 
@@ -56,12 +44,12 @@ public interface ChannelNamespace extends Namespace {
 
         [Read more](https://nextflow.io/docs/latest/reference/channel.html#fromfilepairs)
     """)
-    Channel fromFilePairs(Map<String,?> opts, String pattern, Closure grouping);
+    Channel<?> fromFilePairs(Map<String,?> opts, String pattern, Closure grouping);
 
     @Description("""
-        Create a channel that emits all paths matching a name or glob pattern.
+        Create a channel that emits files from the lineage store matching the given key-value params:
 
-        [Read more](https://nextflow.io/docs/latest/reference/channel.html#frompath)
+        [Read more](https://nextflow.io/docs/latest/reference/channel.html#fromlineage)
     """)
     Channel<Path> fromLineage(Map<String,?> opts);
 
@@ -70,22 +58,34 @@ public interface ChannelNamespace extends Namespace {
 
         [Read more](https://nextflow.io/docs/latest/reference/channel.html#fromlist)
     """)
-    <E> Channel<E> fromList(Collection<E> values);
+    <E> Channel<E> fromList(Iterable<E> values);
 
     @Description("""
         Create a channel that emits all paths matching a name or glob pattern.
 
         [Read more](https://nextflow.io/docs/latest/reference/channel.html#frompath)
     """)
-    Channel<Path> fromPath(Map<String,?> opts, String pattern);
+    Channel<Path> fromPath(
+        @NamedParams({
+            @NamedParam(value = "checkIfExists", type = Boolean.class),
+            @NamedParam(value = "followLinks", type = Boolean.class),
+            @NamedParam(value = "glob", type = Boolean.class),
+            @NamedParam(value = "hidden", type = Boolean.class),
+            @NamedParam(value = "maxDepth", type = Integer.class),
+            @NamedParam(value = "relative", type = Boolean.class),
+            @NamedParam(value = "type", type = String.class),
+        })
+        Map<String,?> opts,
+        String pattern
+    );
     Channel<Path> fromPath(String pattern);
 
     @Description("""
-        Create a channel that queries the [NCBI SRA](https://www.ncbi.nlm.nih.gov/sra) database and emits all FASTQ files matching the given project or accession ids.
+        Create a channel that emits an incrementing index (starting from zero) at a periodic interval.
 
-        [Read more](https://nextflow.io/docs/latest/reference/channel.html#fromsra)
+        [Read more](https://nextflow.io/docs/latest/reference/channel.html#interval)
     """)
-    Channel fromSRA(Map<String,?> opts, String query);
+    Channel<Integer> interval(String interval);
 
     @Description("""
         Create a channel that emits each argument.
@@ -99,14 +99,14 @@ public interface ChannelNamespace extends Namespace {
 
         [Read more](https://nextflow.io/docs/latest/reference/channel.html#topic)
     """)
-    Channel topic(String name);
+    Channel<?> topic(String name);
 
     @Description("""
         Create a value channel.
 
         [Read more](https://nextflow.io/docs/latest/reference/channel.html#value)
     """)
-    <E> Channel<E> value(E value);
+    <V> Value<V> value(V value);
 
     @Description("""
         Create a channel that watches for filesystem events for all files matching the given pattern.

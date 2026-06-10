@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -152,6 +152,64 @@ class ScriptAstBuilderTest extends Specification {
         errors[0].getOriginalMessage().contains "Statements cannot be mixed with script declarations"
     }
 
+    def 'should report an error for params block without an entry workflow' () {
+        when:
+        def errors = check(
+            '''\
+            params {
+                greeting: String
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 1
+        errors[0].getOriginalMessage() == "Params block cannot be defined without an entry workflow"
+
+        when:
+        errors = check(
+            '''\
+            params {
+                greeting: String
+            }
+
+            workflow {
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report an error for output block without an entry workflow' () {
+        when:
+        def errors = check(
+            '''\
+            output {
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 1
+        errors[0].getOriginalMessage() == "Output block cannot be defined without an entry workflow"
+
+        when:
+        errors = check(
+            '''\
+            workflow {
+            }
+
+            output {
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
     def 'should report an error for implicit process script section' () {
         when:
         def errors = check(
@@ -246,6 +304,223 @@ class ScriptAstBuilderTest extends Specification {
         errors[0].getStartLine() == 3
         errors[0].getStartColumn() == 5
         errors[0].getOriginalMessage() == "Invalid workflow emit -- must be a name, assignment, or expression"
+    }
+
+    def 'should report error for defining a typed process without preview flag' () {
+        when:
+        def errors = check(
+            '''\
+            process hello {
+                input:
+                message: String
+
+                output:
+                result: String
+
+                exec:
+                result = message
+            }
+            '''
+        )
+        then:
+        errors.size() >= 2
+        errors[0].getStartLine() == 3
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Typed input declaration is not allowed in legacy process -- set `nextflow.enable.types = true` to use typed processes in this script"
+        errors[1].getStartLine() == 6
+        errors[1].getStartColumn() == 5
+        errors[1].getOriginalMessage() == "Typed output declaration is not allowed in legacy process -- set `nextflow.enable.types = true` to use typed processes in this script"
+
+        when:
+        errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                message: String
+
+                output:
+                result: String
+
+                exec:
+                result = message
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report error for defining a legacy process with preview flag enabled' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                val message
+
+                output:
+                val result
+
+                exec:
+                result = message
+            }
+            '''
+        )
+        then:
+        errors.size() >= 1
+        errors[0].getStartLine() == 5
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Invalid input declaration in typed process"
+
+        when:
+        errors = check(
+            '''\
+            process hello {
+                input:
+                val message
+
+                output:
+                val result
+
+                exec:
+                result = message
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report an error for invalid process tuple input' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                tuple(id: String)
+
+                script:
+                ""
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 5
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Process tuple input must have more than one component"
+
+        when:
+        errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                tuple(id: String, fastq: Path)
+
+                script:
+                ""
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report an error for invalid process record input' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                record(
+                    id: String,
+                    fastq: Path,
+                )
+
+                script:
+                ""
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report error for invalid topic statement' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                topic:
+                versions = stdout()
+
+                script:
+                ""
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 5
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Invalid process topic statement"
+
+        when:
+        errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                topic:
+                stdout() >> 'versions'
+
+                script:
+                ""
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report error for invalid record definition' () {
+        when:
+        def errors = check(
+            '''\
+            record Sample {}
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 1
+        errors[0].getOriginalMessage() == "Missing record body"
+
+        when:
+        errors = check(
+            '''\
+            record Sample {
+                id
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 2
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Missing field type"
     }
 
 }
