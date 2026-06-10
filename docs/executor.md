@@ -462,14 +462,28 @@ The following {ref}`hints <process-hints>` are supported:
 - `machineRequirement.machineTypes`
 - `machineRequirement.maxSpotAttempts`
 - `machineRequirement.provisioning`
+- `predictionModel`
 
-Each hint overrides the corresponding field of the `seqera.executor.machineRequirement` config scope on a per-process basis. Keys may be used as-is or with the `seqera/` prefix to restrict them to this executor.
+The `machineRequirement.*` hints override the corresponding field of the `seqera.executor.machineRequirement` config scope on a per-process basis. The `predictionModel` hint overrides the run-level `seqera.executor.predictionModel` for a single process: set it to `qr/v1` or `qr/v2` to select a model, or to `none` to disable resource prediction for that process even when the run enables a model. When omitted, the process inherits the run-level prediction model. Keys may be used as-is or with the `seqera/` prefix to restrict them to this executor.
 
 For example, to override the provisioning mode for a single process:
 
 ```nextflow
 process hello {
     hints 'seqera/machineRequirement.provisioning': 'spotFirst'
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+To disable resource prediction for a single process when the run sets a model:
+
+```nextflow
+process hello {
+    hints 'seqera/predictionModel': 'none'
 
     script:
     """
