@@ -209,6 +209,74 @@ Each pipeline has its own `modules/` and `workflows/`, so the two pipelines can 
 
 **Pipeline code**
 
+The included pipelines are defined as follows, with a clear separation of *core workflow* from *entry workflow*:
+
+```groovy
+// nf-core/fetchngs — main.nf
+params {
+    input: Path // file of SRA/ENA accessions
+}
+workflow {
+    main:
+    ch_ids = channel.fromPath(params.input).splitCsv()
+    ch_samples = NFCORE_FETCHNGS( ch_ids )
+    publish:
+    samples = ch_samples
+}
+output {
+    samples: Channel<Sample> { path 'fastq' }
+}
+
+workflow NFCORE_FETCHNGS {
+    take:
+    ids: Channel<String>
+
+    main:
+    // ...
+
+    emit:
+    samples: Channel<Sample>
+}
+```
+
+```groovy
+// nf-core/rnaseq — main.nf
+params {
+    input: Path // samplesheet
+    aligner: String = 'star_salmon'
+    fasta: Path
+}
+workflow {
+    main:
+    ch_samples = channel.fromPath(params.input).splitCsv()
+    rnaseq = NFCORE_RNASEQ( ch_samples, params.aligner, params.fasta )
+    publish:
+    multiqc = rnaseq.multiqc
+    bams    = rnaseq.bams
+    counts  = rnaseq.counts
+}
+output {
+    multiqc: Path { path 'multiqc' }
+    bams: Channel<Path> { path 'bams' }
+    counts: Channel<Path> { path 'counts' }
+}
+
+workflow NFCORE_RNASEQ {
+    take:
+    samples: Channel<Sample>
+    aligner: String
+    fasta: Path
+
+    main:
+    // ...
+
+    emit:
+    multiqc: Value<Path>
+    bams: Channel<Path>
+    counts: Channel<Path>
+}
+```
+
 The meta-pipeline includes the core workflow from each pipeline and composes them into an entry workflow with params and outputs:
 
 ```groovy
@@ -218,13 +286,15 @@ include { NFCORE_RNASEQ } from 'nf-core/rnaseq'
 params {
     input: Path
     strandedness: String = 'auto'
+    aligner: String = 'star_salmon'
+    fasta: Path
 }
 
 workflow {
     main:
     // fetch FASTQ samples from NCBI SRA
-    ids = channel.fromPath(params.input).splitCsv()
-    ch_samples = NFCORE_FETCHNGS( ids )
+    ch_ids = channel.fromPath(params.input).splitCsv()
+    ch_samples = NFCORE_FETCHNGS( ch_ids )
 
     // adapt fetchngs output to rnaseq input (add strandedness)
     ch_samples = ch_samples.map { r ->
@@ -232,16 +302,18 @@ workflow {
     }
 
     // perform RNAseq analysis
-    multiqc_report = NFCORE_RNASEQ( ch_samples )
+    rnaseq = NFCORE_RNASEQ( ch_samples, params.aligner, params.fasta )
 
     publish:
-    multiqc_report = multiqc_report
+    multiqc = rnaseq.multiqc
+    bams    = rnaseq.bams
+    counts  = rnaseq.counts
 }
 
 output {
-    multiqc_report {
-        path '.'
-    }
+    multiqc: Path { path 'multiqc' }
+    bams: Channel<Path> { path 'bams' }
+    counts: Channel<Path> { path 'counts' }
 }
 ```
 
