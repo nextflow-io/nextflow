@@ -752,7 +752,7 @@ Input repeaters do not support tuples. Use the {ref}`operator-combine` operator 
 A process can declare multiple inputs, which allows it to accept inputs from multiple dataflow sources.
 
 :::{warning}
-Do not supply more than one channel when calling a process with multiple inputs. Invoking a process with multiple channels can lead to {ref}`non-deterministic behavior <cache-nondeterministic-inputs>`. All additional inputs should be dataflow values. 
+Do not supply more than one channel when calling a process with multiple inputs. Invoking a process with multiple channels can lead to {ref}`non-deterministic behavior <cache-nondeterministic-inputs>`. All additional inputs should be dataflow values.
 :::
 
 When a process is defined with multiple inputs, it waits for a value from each input and launches a new task with the combined values. When one of the inputs is a channel, the process repeats until all values in the channel are consumed. If the channel is empty, the process will not launch any tasks.
@@ -1155,7 +1155,7 @@ See also: {ref}`process-multiple-inputs`.
 ## When
 
 :::{note}
-As a best practice, conditional logic should be implemented in the calling workflow (e.g. using an `if` statement or {ref}`operator-filter` operator) instead of the process definition.
+The `when:` section is not supported with {ref}`typed processes <process-typed-page>`. As a best practice, conditional logic should be implemented in the calling workflow (e.g. using an `if` statement or {ref}`operator-filter` operator) instead of the process definition.
 :::
 
 The `when` section allows you to define a condition that must be satisfied in order to execute the process. The condition can be any expression that returns a boolean value.
@@ -1345,7 +1345,7 @@ process hello {
 }
 ```
 
-In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to 1 GB. In each subsequent attempt, the requested memory is doubled. 
+In the above example, the {ref}`process-memory` is set according to previous trace record metrics. In the first attempt, when no trace metrics are available, it is set to 1 GB. In each subsequent attempt, the requested memory is doubled.
 
 :::{note}
 Many fields from the previous task attempts are accessible. See {ref}`trace-report` for a list of available fields.

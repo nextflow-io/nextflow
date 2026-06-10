@@ -465,13 +465,6 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 fmt.appendNewLine();
             }
         }
-        if( !(node.when instanceof EmptyExpression) ) {
-            fmt.appendIndent();
-            fmt.append("when:\n");
-            fmt.appendIndent();
-            fmt.visit(node.when);
-            fmt.append("\n\n");
-        }
         fmt.appendIndent();
         fmt.append(node.type);
         fmt.append(":\n");

@@ -57,13 +57,10 @@ public class ProcessToGroovyVisitorV2 {
 
     private SourceUnit sourceUnit;
 
-    private ScriptNode moduleNode;
-
     private ScriptToGroovyHelper sgh;
 
     public ProcessToGroovyVisitorV2(SourceUnit sourceUnit) {
         this.sourceUnit = sourceUnit;
-        this.moduleNode = (ScriptNode) sourceUnit.getAST();
         this.sgh = new ScriptToGroovyHelper(sourceUnit);
     }
 
@@ -90,7 +87,6 @@ public class ProcessToGroovyVisitorV2 {
             processInputs(node.inputs),
             processOutputs(node.outputs),
             processTopics(node.topics),
-            processWhen(node.when),
             processStub(node.stub),
             stmt(createX(
                 "nextflow.script.BodyDef",
@@ -316,18 +312,6 @@ public class ProcessToGroovyVisitorV2 {
             })
             .toList();
         return block(null, statements);
-    }
-
-    private Statement processWhen(Expression when) {
-        if( when instanceof EmptyExpression )
-            return EmptyStatement.INSTANCE;
-        return stmt(callThisX("when", createX(
-            "nextflow.script.TaskClosure",
-            args(
-                closureX(null, block(stmt(when))),
-                constX(sgh.getSourceText(when))
-            )
-        )));
     }
 
     private Statement processStub(Statement stub) {
