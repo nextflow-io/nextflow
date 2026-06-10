@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,9 @@ class TrackingSemaphore {
 
     TrackingSemaphore(List<String> ids) {
         semaphore = new Semaphore(ids.size())
-        availIds = new HashMap<>(ids.size())
+        // use a LinkedHashMap so that ids are handed out in a deterministic,
+        // insertion-order fashion
+        availIds = new LinkedHashMap<>(ids.size())
         for( final id : ids )
             availIds.put(id, true)
     }
@@ -47,23 +49,31 @@ class TrackingSemaphore {
     }
 
     List<String> acquire(int permits) {
+        // acquire the permits *outside* the lock: blocking here while holding
+        // the monitor would prevent a concurrent release() from making progress
         semaphore.acquire(permits)
         final result = new ArrayList<String>(permits)
-        for( final entry : availIds.entrySet() ) {
-            if( entry.getValue() ) {
-                entry.setValue(false)
-                result.add(entry.getKey())
+        synchronized (availIds) {
+            for( final entry : availIds.entrySet() ) {
+                if( entry.getValue() ) {
+                    entry.setValue(false)
+                    result.add(entry.getKey())
+                }
+                if( result.size() == permits )
+                    break
             }
-            if( result.size() == permits )
-                break
         }
         return result
     }
 
     void release(List<String> ids) {
+        // mark the ids available *before* releasing the permits, so that a
+        // waking acquirer always finds enough available entries to scan
+        synchronized (availIds) {
+            for( final id : ids )
+                availIds.put(id, true)
+        }
         semaphore.release(ids.size())
-        for( final id : ids )
-            availIds.put(id, true)
     }
 
 }

@@ -254,7 +254,7 @@ The local executor supports two types of tasks:
 
 ### Accelerators
 
-:::{versionadded} 25.10.0
+:::{versionadded} 26.10.0
 :::
 
 The local executor can use the `accelerator` directive to allocate accelerators, such as GPUs. To use accelerators, set the corresponding environment variable:
@@ -265,9 +265,13 @@ The local executor can use the `accelerator` directive to allocate accelerators,
 
 - `ROCR_VISIBLE_DEVICES` for [AMD ROCm](https://rocm.docs.amd.com/en/latest/conceptual/gpu-isolation.html) applications
 
-Set the environment variable to a comma-separated list of device IDs for Nextflow to access. Nextflow uses this environment variable to allocate accelerators for tasks that request them.
+Set the environment variable to a comma-separated list of device IDs for Nextflow to access. Nextflow uses this environment variable to allocate accelerators for tasks that request them. The variable must be set to a non-empty list — if it is empty, no accelerators are available and any task that requests one will fail.
 
 For example, to use all GPUs on a node with four NVIDIA GPUs, set `CUDA_VISIBLE_DEVICES` to `0,1,2,3`. If four tasks each request one GPU, they will be executed with `CUDA_VISIBLE_DEVICES` set to `0`, `1`, `2`, and `3`, respectively.
+
+:::{note}
+When running tasks in containers, the device environment variable must be propagated into the container and the container runtime must be configured for GPU access. For example, with Docker add `CUDA_VISIBLE_DEVICES` to `docker.envWhitelist` and set the appropriate GPU options (e.g. `--gpus`) via `docker.runOptions`. Refer to your container runtime's documentation for GPU support.
+:::
 
 (lsf-executor)=
 

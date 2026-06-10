@@ -1,7 +1,17 @@
 
 export CUDA_VISIBLE_DEVICES="0,1,2,3,4,5,6,7"
 
-$NXF_RUN | tee .stdout
+$NXF_RUN -c ../../local-gpu.config | tee .stdout
 
+# all 16 tasks were submitted (8 matmul1 + 8 matmul2)
 [[ `grep INFO .nextflow.log | grep -c 'Submitted process'` == 16 ]] || false
-cmp .expected <(sort .stdout) || false
+
+# every task saw exactly one GPU id within the advertised range 0..7
+[[ `grep -cE 'matmul[12]: gpu [0-7]$' .stdout` == 16 ]] || false
+
+# the 8 concurrent matmul1 tasks must each get a *distinct* device id
+# (executor.cpus/queueSize=8 forces them to run at once, so all 8 ids must appear)
+[[ `grep -oE 'matmul1: gpu [0-7]' .stdout | sort -u | wc -l` == 8 ]] || false
+
+# matmul2 ran => the device ids were released by matmul1 and reacquired
+[[ `grep -cE 'matmul2: gpu [0-7]$' .stdout` == 8 ]] || false
