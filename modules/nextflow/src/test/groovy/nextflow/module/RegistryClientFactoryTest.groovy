@@ -51,13 +51,10 @@ class RegistryClientFactoryTest extends Specification {
         wireMock.start()
         WireMock.configureFor("localhost", wireMock.port())
         url = "http://localhost:${wireMock.port()}/api"
-        // override the default registry fallback so tests don't reach the real public registry
-        RegistryClientFactory.setDefaultRegistry("http://localhost:${wireMock.port()}/unstubbed")
     }
 
     def cleanup() {
         wireMock?.stop()
-        RegistryClientFactory.setDefaultRegistry(RegistryConfig.DEFAULT_REGISTRY_URL)
     }
 
     def 'should fetch module metadata from registry'() {
@@ -97,7 +94,7 @@ class RegistryClientFactoryTest extends Specification {
         verify(getRequestedFor(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc')))
     }
 
-    def 'should query default registry first, then configured registries'() {
+    def 'should query the configured registries in the order listed'() {
         given:
         def moduleResponse = [
             module: [
@@ -108,35 +105,33 @@ class RegistryClientFactoryTest extends Specification {
                 ]
             ]
         ]
-        and: 'the default registry is queried first (not found here) and a configured registry serves the module'
-        def defaultUrl = "http://localhost:${wireMock.port()}/default"
-        def configured = "http://localhost:${wireMock.port()}/configured"
-        RegistryClientFactory.setDefaultRegistry(defaultUrl)
-        and:
-        stubFor(get(urlEqualTo('/default/v1/modules/nf-core%2Ffastqc'))
+        and: 'two registries are configured; the first misses and the second serves the module'
+        String first = "http://localhost:${wireMock.port()}/first"
+        String second = "http://localhost:${wireMock.port()}/second"
+        stubFor(get(urlEqualTo('/first/v1/modules/nf-core%2Ffastqc'))
             .willReturn(aResponse().withStatus(404).withBody('Module not found')))
-        stubFor(get(urlEqualTo('/configured/v1/modules/nf-core%2Ffastqc'))
+        stubFor(get(urlEqualTo('/second/v1/modules/nf-core%2Ffastqc'))
             .willReturn(aResponse()
                 .withStatus(200)
                 .withHeader('Content-Type', 'application/json')
                 .withBody(JsonOutput.toJson(moduleResponse))))
         and:
-        def config = new RegistryConfig([url: configured])
+        def config = new RegistryConfig([url: [first, second]])
         def client = RegistryClientFactory.forConfig(config)
 
         when:
         def result = client.getModule('nf-core/fastqc')
 
-        then: 'the module is resolved from the configured registry after the default misses'
+        then: 'the module is resolved from the second registry after the first misses'
         result != null
         result.name == 'nf-core/fastqc'
 
-        and: 'the default registry was tried first, then the configured one'
-        verify(getRequestedFor(urlEqualTo('/default/v1/modules/nf-core%2Ffastqc')))
-        verify(getRequestedFor(urlEqualTo('/configured/v1/modules/nf-core%2Ffastqc')))
+        and: 'only the configured registries are queried, in order'
+        verify(getRequestedFor(urlEqualTo('/first/v1/modules/nf-core%2Ffastqc')))
+        verify(getRequestedFor(urlEqualTo('/second/v1/modules/nf-core%2Ffastqc')))
     }
 
-    def 'should not duplicate default registry when already configured'() {
+    def 'should query only the configured registry, without a default fallback'() {
         given:
         def moduleResponse = [
             module: [
@@ -147,8 +142,6 @@ class RegistryClientFactoryTest extends Specification {
                 ]
             ]
         ]
-        and: 'the user-configured url is the same as the default'
-        RegistryClientFactory.setDefaultRegistry(url)
         stubFor(get(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc'))
             .willReturn(aResponse()
                 .withStatus(200)
@@ -163,7 +156,7 @@ class RegistryClientFactoryTest extends Specification {
 
         then:
         result.name == 'nf-core/fastqc'
-        and: 'the registry is queried exactly once (no duplicate fallback)'
+        and: 'the registry is queried exactly once (no default fallback appended)'
         verify(1, getRequestedFor(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc')))
     }
 

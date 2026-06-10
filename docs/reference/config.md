@@ -1410,7 +1410,7 @@ The following settings are available:
 
 The `registry` scope configures the registries used to resolve {ref}`modules <module-registry-page>` and {ref}`plugins <plugin-registry-page>`.
 
-The public Nextflow registry (`https://registry.nextflow.io/api`) is always queried first as the baseline. Registries defined in this scope are queried afterwards, in the order they are listed.
+The registries defined in this scope are authoritative: when one or more are configured, Nextflow queries exactly those, in the order they are listed, and the public Nextflow registry (`https://registry.nextflow.io/api`) is *not* added implicitly. When the scope is not configured, the public registry is used. To keep using the public registry alongside your own, include its URL in `registry.url` explicitly.
 
 The following settings are available:
 
@@ -1418,7 +1418,7 @@ The following settings are available:
 : The API key used to authenticate with the registry. When not set, the `NXF_REGISTRY_TOKEN` environment variable is used.
 
 `registry.url`
-: A registry URL, or a list of registry URLs queried in the order they are listed. These are used in addition to the default public registry, which is always queried first.
+: A registry URL, or a list of registry URLs queried in the order they are listed. When set, these replace the default public registry.
 
 (config-sarus)=
 

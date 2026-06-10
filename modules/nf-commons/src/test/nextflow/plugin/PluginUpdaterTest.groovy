@@ -443,7 +443,7 @@ class PluginUpdaterTest extends Specification {
         'xpack-google-1.0.0-beta.3-meta.json'   | true      | 'xpack-google'
     }
 
-    def 'should add registry repositories from config' () {
+    def 'should replace the default registry with the configured registries' () {
         given:
         def folder = Files.createTempDirectory('test')
         def remote = remoteRepository(folder.resolve('repo'), ['1.0.0'])
@@ -457,23 +457,21 @@ class PluginUpdaterTest extends Specification {
         updater.addRegistryRepos(cfg)
         def repos = updater.getRepositories()
 
-        then:
-        repos.size() == 3
-        repos[0].id == 'nextflow.io'
+        then: 'the default registry repo is dropped; only the configured registries remain, in order'
+        repos.size() == 2
+        repos[0] instanceof HttpPluginRepository
+        repos[0].id == 'registry-0'
+        repos[0].url.toString().startsWith('https://reg-a.example/api')
         and:
         repos[1] instanceof HttpPluginRepository
-        repos[1].id == 'registry-0'
-        repos[1].url.toString().startsWith('https://reg-a.example/api')
-        and:
-        repos[2] instanceof HttpPluginRepository
-        repos[2].id == 'registry-1'
-        repos[2].url.toString().startsWith('https://reg-b.example/api')
+        repos[1].id == 'registry-1'
+        repos[1].url.toString().startsWith('https://reg-b.example/api')
 
         cleanup:
         folder?.deleteDir()
     }
 
-    def 'should skip registry urls already configured' () {
+    def 'should replace the default registry even when a configured url matches it' () {
         given:
         def folder = Files.createTempDirectory('test')
         def local = localCache(folder.resolve('plugins'), [])
@@ -487,9 +485,10 @@ class PluginUpdaterTest extends Specification {
         updater.addRegistryRepos(cfg)
         def repos = updater.getRepositories()
 
-        then:
+        then: 'the default registry is replaced and all configured registries are added, in order'
         repos.size() == 2
-        repos*.id == ['registry', 'registry-0']
+        repos*.id == ['registry-0', 'registry-1']
+        repos[0].url.toString().startsWith('http://primary.example/api')
         repos[1].url.toString().startsWith('http://other.example/api')
 
         cleanup:

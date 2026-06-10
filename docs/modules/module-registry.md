@@ -129,14 +129,14 @@ See {ref}`module publish <cli-module-publish>` for the full command reference.
 ## Registry configuration
 
 By default, Nextflow uses the public registry at `https://registry.nextflow.io`.
-Configure additional registries using the `registry` scope in your Nextflow configuration.
+Configure alternative or additional registries using the `registry` scope in your Nextflow configuration.
 See the {ref}`registry config scope <config-registry>` for the full reference.
 
-The public registry is always queried first. Registries defined in the `registry` scope are queried afterwards, in the order they are listed.
+The registries defined in the `registry` scope are authoritative: when one or more are configured, Nextflow queries exactly those, in the order they are listed, and the public registry is *not* added implicitly. To keep using the public registry alongside your own, include its URL in the list explicitly.
 
-### Add a private registry
+### Use a private registry
 
-Add your organization's private registry:
+Replace the default registry with your organization's private registry:
 
 ```groovy
 registry {
@@ -145,16 +145,17 @@ registry {
 }
 ```
 
-When searching for or installing a module, Nextflow queries the public registry first, then `https://registry.myorg.com`.
+In this example, Nextflow uses `https://registry.myorg.com` for all module operations (search, install, and publish), and does not query the public registry.
 
 ### Use multiple registries
 
 Specify multiple registries as a list.
-Nextflow queries them in the order listed, after the public registry:
+Nextflow queries them in the order listed:
 
 ```groovy
 registry {
     url = [
+        'https://registry.nextflow.io',
         'https://registry.myorg.com',
         'https://private.registry.nextflow.io'
     ]
@@ -162,10 +163,10 @@ registry {
 }
 ```
 
-In this example, Nextflow queries the public registry (`https://registry.nextflow.io`) first, then `https://registry.myorg.com`, and finally `https://private.registry.nextflow.io`. The public registry is always queried first, even when it is not listed explicitly.
+In this example, Nextflow queries `https://registry.nextflow.io` first, then `https://registry.myorg.com`, and finally `https://private.registry.nextflow.io`. The public registry is queried only because it is listed explicitly.
 
 :::{note}
-The `apiKey` is used to authenticate registry requests. Publishing targets the first registry defined in `registry.url`.
+The `apiKey` authenticates with the primary (first) registry.
 :::
 
 :::{tip}

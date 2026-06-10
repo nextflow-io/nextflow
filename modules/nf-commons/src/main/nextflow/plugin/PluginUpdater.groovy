@@ -101,10 +101,15 @@ class PluginUpdater extends UpdateManager {
         return result
     }
 
+    /** Ids of the default registry repositories created by {@link #wrap} */
+    private static final List<String> DEFAULT_REGISTRY_REPO_IDS = ['registry', 'nextflow.io']
+
     /**
-     * Append extra plugin registry endpoints (from {@link RegistryConfig}) to this updater's
-     * repository list. URLs that already correspond to a configured repository are skipped so
-     * the default registry is not queried twice.
+     * Apply the plugin registry endpoints declared in the {@code registry} config scope.
+     *
+     * The configured registries are authoritative: the URLs provided by {@link RegistryConfig}
+     * fully replace the default registry repository. Users that want to keep resolving plugins
+     * from the public registry must include its URL explicitly in {@code registry.url}.
      *
      * Safe to call after construction and before {@link #prefetchMetadata}, which initialises
      * each {@link HttpPluginRepository} with the metadata it actually needs.
@@ -115,17 +120,15 @@ class PluginUpdater extends UpdateManager {
         final urls = registryConfig.getAllUrls()
         if( !urls )
             return
-        final existingUrls = new HashSet<String>()
+        // the configured registries take over: drop the default registry repository so that
+        // only the user-provided endpoints are queried
+        for( String id : DEFAULT_REGISTRY_REPO_IDS )
+            removeRepository(id)
         final existingIds = new HashSet<String>()
-        for( UpdateRepository repo : this.@repositories ) {
-            final u = repo.url?.toString()?.replaceAll(/\/+$/, '')
-            if( u ) existingUrls.add(u)
+        for( UpdateRepository repo : this.@repositories )
             existingIds.add(repo.id)
-        }
         int counter = 0
         for( String url : urls ) {
-            if( url.replaceAll(/\/+$/, '') in existingUrls )
-                continue
             String repoId = "registry-${counter++}"
             while( repoId in existingIds )
                 repoId = "registry-${counter++}"

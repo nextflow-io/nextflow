@@ -313,7 +313,9 @@ class PluginsFacade implements PluginStateListener {
 
     protected void applyRegistryConfig(Map config) {
         final registryMap = Bolts.navigate(config, 'registry') as Map
-        if( !registryMap )
+        // only override the plugin repositories when one or more registry URLs are explicitly
+        // configured; the configured registries are authoritative and replace the default one
+        if( !registryMap?.url )
             return
         this.registryConfig = new RegistryConfig(registryMap)
         updater?.addRegistryRepos(registryConfig)

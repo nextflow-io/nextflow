@@ -72,7 +72,7 @@ Once you have your token, see {ref}`gradle-plugin-publish` for instructions on h
 :::
 
 By default, Nextflow resolves plugins from the public registry at `https://registry.nextflow.io`.
-Configure additional plugin registries using the `registry` scope in your Nextflow configuration:
+Configure the plugin registries using the `registry` scope in your Nextflow configuration:
 
 ```groovy
 registry {
@@ -80,7 +80,8 @@ registry {
 }
 ```
 
-Nextflow queries the public registry first, then the registries listed in `registry.url`, in the order they are listed.
+The registries defined in `registry.url` are authoritative: when one or more are configured, Nextflow resolves plugins from exactly those, in the order they are listed, and the public registry is *not* added implicitly. To keep resolving plugins from the public registry as well, include its URL (`https://registry.nextflow.io/api`) in the list explicitly.
+
 See the {ref}`registry config scope <config-registry>` for the full reference.
 
-To replace the default registry instead of adding to it, set the `NXF_PLUGINS_REGISTRY_URL` environment variable.
+Alternatively, to override the default registry without using the `registry` scope, set the `NXF_PLUGINS_REGISTRY_URL` environment variable.

@@ -21,7 +21,6 @@ import io.seqera.http.HxClient
 import io.seqera.npr.client.RegistryClient
 import nextflow.config.RegistryConfig
 import nextflow.util.RetryConfig
-import nextflow.util.TestOnly
 
 import java.net.http.HttpClient
 
@@ -35,26 +34,12 @@ class RegistryClientFactory {
 
     private static volatile RegistryClient instance
 
-    /** Default registry always appended as a fallback for module resolution */
-    private static String defaultRegistry = RegistryConfig.DEFAULT_REGISTRY_URL
-
-    @TestOnly
-    static void setDefaultRegistry(String url) {
-        defaultRegistry = url
-    }
-
     static RegistryClient forConfig(RegistryConfig config) {
         final cfg = config ?: new RegistryConfig()
-        // the default registry is always queried first as the baseline,
-        // followed by any registries configured in the `registry` scope
-        final urls = new ArrayList<String>()
-        if( defaultRegistry )
-            urls.add(defaultRegistry)
-        for( String it : cfg.allUrls )
-            if( !urls.contains(it) )
-                urls.add(it)
+        // the configured registries are authoritative: use exactly the URLs declared in the
+        // `registry` scope (which falls back to the default registry when none are configured)
         return new RegistryClient(
-            urls,
+            cfg.allUrls as List<String>,
             cfg.apiKey,
             HxClient.newBuilder()
                 .retryConfig(RetryConfig.config())
