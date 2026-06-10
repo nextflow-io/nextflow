@@ -265,7 +265,7 @@ The local executor can use the `accelerator` directive to allocate accelerators,
 
 - `ROCR_VISIBLE_DEVICES` for [AMD ROCm](https://rocm.docs.amd.com/en/latest/conceptual/gpu-isolation.html) applications
 
-Set the environment variable to a comma-separated list of device IDs for Nextflow to access. Nextflow uses this environment variable to allocate accelerators for tasks that request them. The variable must be set to a non-empty list — if it is empty, no accelerators are available and any task that requests one will fail.
+Set the environment variable to a comma-separated list of device IDs for Nextflow to access. Nextflow uses this environment variable to allocate accelerators for tasks that request them. The variable must be set to a non-empty list -- if it is empty, no accelerators are available and any task that requests one will fail.
 
 For example, to use all GPUs on a node with four NVIDIA GPUs, set `CUDA_VISIBLE_DEVICES` to `0,1,2,3`. If four tasks each request one GPU, they will be executed with `CUDA_VISIBLE_DEVICES` set to `0`, `1`, `2`, and `3`, respectively.
 
@@ -619,4 +619,3 @@ process {
 }
 ```
 :::
-

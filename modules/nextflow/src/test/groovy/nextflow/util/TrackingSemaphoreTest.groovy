@@ -23,7 +23,7 @@ import spock.lang.Specification
 
 /**
  *
- * @author Ben Sherman <bentshermann@gmail.com>
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
 class TrackingSemaphoreTest extends Specification {
 

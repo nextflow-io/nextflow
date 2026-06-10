@@ -47,5 +47,7 @@ process matmul2 {
 }
 
 workflow {
-    matmul1( channel.of(1..8) ) | matmul2
+    ids = channel.of(1..8)
+    ids = matmul1( ids )
+    matmul2( ids )
 }
