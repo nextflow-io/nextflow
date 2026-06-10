@@ -21,6 +21,7 @@ import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.container.resolver.ContainerMeta
+import nextflow.dag.DagSerializer
 import nextflow.exception.AbortRunException
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
@@ -389,12 +390,40 @@ class TowerObserver implements TraceObserverV2 {
         workflow.logFile = getLogFile()
         workflow.outFile = getOutFile()
 
-        def result = new LinkedHashMap(5)
+        def result = new LinkedHashMap(6)
         result.workflow = workflow
         result.processNames = new ArrayList(processNames)
         result.towerLaunch = towerLaunch
+        // faithful serialization of the execution DAG (optional, additive field).
+        // The dataflow network is fully built by the time `onFlowBegin` fires (the
+        // script body runs before `fireDataflowNetwork`), so the DAG is complete here.
+        final dag = renderDag(session)
+        if( dag )
+            result.dag = dag
         result.instant = Instant.now().toEpochMilli()
         return result
+    }
+
+    /**
+     * Serialize the run execution DAG into a plain map for transport to Seqera Platform.
+     *
+     * Failures are swallowed (logged at debug) so that DAG reporting can never abort or
+     * disrupt the run — the field is optional and additive.
+     *
+     * @param session The current Nextflow session
+     * @return The serialized DAG, or {@code null} if it is empty or cannot be serialized
+     */
+    protected Map renderDag(Session session) {
+        try {
+            final dag = session.getDag()
+            if( dag == null || dag.isEmpty() )
+                return null
+            return DagSerializer.toMap(dag)
+        }
+        catch( Exception e ) {
+            log.debug("Unable to serialize execution DAG for Seqera Platform -- Cause: ${e.message ?: e}", e)
+            return null
+        }
     }
 
     protected Map makeCompleteReq(Session session) {
