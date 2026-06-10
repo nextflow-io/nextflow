@@ -85,3 +85,7 @@ The registries defined in `registry.url` are authoritative: when one or more are
 See the {ref}`registry config scope <config-registry>` for the full reference.
 
 Alternatively, to override the default registry without using the `registry` scope, set the `NXF_PLUGINS_REGISTRY_URL` environment variable.
+
+:::{note}
+Both `registry.url` and `NXF_PLUGINS_REGISTRY_URL` override the default plugin registry. When both are set, `registry.url` takes precedence. Unlike `registry.url` — which configures the registries for both modules and plugins — `NXF_PLUGINS_REGISTRY_URL` applies to plugin resolution only.
+:::
