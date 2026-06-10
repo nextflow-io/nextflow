@@ -89,3 +89,7 @@ Alternatively, to override the default registry without using the `registry` sco
 :::{note}
 Both `registry.url` and `NXF_PLUGINS_REGISTRY_URL` override the default plugin registry. When both are set, `registry.url` takes precedence. Unlike `registry.url` — which configures the registries for both modules and plugins — `NXF_PLUGINS_REGISTRY_URL` applies to plugin resolution only.
 :::
+
+:::{warning}
+The `registry` scope is only applied once the configuration has been resolved. Plugins required *before* that point — for example a filesystem provider for a remote pipeline script or an `includeConfig` location (such as `s3://`), or an SCM provider — are resolved against the default plugin registry (or `NXF_PLUGINS_REGISTRY_URL`). As a result, the default registry may still be fetched even when it is not listed in `registry.url`. Plugins needed at this early stage must be available in the default registry, set via `NXF_PLUGINS_REGISTRY_URL`, or pre-installed.
+:::
