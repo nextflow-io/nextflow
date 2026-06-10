@@ -6,8 +6,6 @@
 - Date: 2026-06-09
 - Tags: nf-seqera, nf-tower, intelligent-compute, scheduler, platform, trace, accounting
 
-Technical Story: COMP-1817 (dependency of COMP-1705 cost-alignment)
-
 ## Summary
 
 When a workflow runs on the Seqera Intelligent Compute scheduler (the `seqera` executor),
@@ -41,8 +39,7 @@ after completion. Today neither value reaches Platform:
 ## Non-goals
 
 - The Platform-side changes (new `WfSchedulerMeta` embedded entity, DTO fields, persistence in
-  the progress handler, and the cost-retrieval cron). Those are the Platform half of
-  COMP-1817 / COMP-1705.
+  the progress handler, and the cost-retrieval cron). Those are the Platform half of this work.
 - Per-task cost or VM attribution and workspace-level rollups (out of scope for the consumer
   feature's v1).
 
@@ -146,5 +143,5 @@ consuming it.
 
 ## Links
 
-- Consumer feature spec: `seqeralabs/platform` PR #11345 — `specs/260529-cost-alignment/spec.md`
-  (COMP-1705), whose FR-001 requires the scheduler run identifier on the Platform side.
+- The Platform-side cost-alignment feature is the consumer of this change; it requires the
+  scheduler run identifier on the Platform side.
