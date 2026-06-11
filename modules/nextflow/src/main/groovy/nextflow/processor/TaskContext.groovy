@@ -19,6 +19,7 @@ package nextflow.processor
 import nextflow.NF
 import nextflow.script.ScriptMeta
 
+import java.lang.reflect.Modifier
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.Files
@@ -33,7 +34,9 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
 import nextflow.exception.ProcessException
 import nextflow.script.ScriptBinding
+import nextflow.script.types.Record
 import nextflow.util.KryoHelper
+import nextflow.util.RecordMap
 import nextflow.util.TestOnly
 /**
  * Map used to delegate variable resolution to script scope
@@ -196,7 +199,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
                 map.remove(TaskProcessor.TASK_CONTEXT_PROPERTY_NAME)
             }
 
-            return KryoHelper.serialize(map)
+            return KryoHelper.serialize(sanitizeValue(map))
         }
         catch( Exception e ) {
             log.warn "Cannot serialize context map. Cause: ${e.cause} -- Resume will not work on this process"
@@ -208,6 +211,25 @@ class TaskContext implements Map<String,Object>, Cloneable {
     static TaskContext deserialize(TaskProcessor processor, byte[] buffer) {
         def map = (Map)KryoHelper.deserialize(buffer)
         new TaskContext(processor, map)
+    }
+
+    private static Object sanitizeValue(Object value) {
+        if( value instanceof Map ) {
+            final normalized = value.collectEntries { k, v -> [k, sanitizeValue(v)] }
+            return value instanceof RecordMap ? new RecordMap(normalized) : normalized
+        }
+        if( value instanceof Collection ) {
+            return value.collect { item -> sanitizeValue(item) }
+        }
+        if( value instanceof Record ) {
+            final fields = value.getClass().getFields()
+                .findAll { field -> !Modifier.isStatic(field.modifiers) && !field.synthetic }
+                .sort { it.name }
+            return new RecordMap(fields.collectEntries { field ->
+                [field.name, sanitizeValue(field.get(value))]
+            })
+        }
+        return value
     }
 
 
