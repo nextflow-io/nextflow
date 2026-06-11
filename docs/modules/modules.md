@@ -3,7 +3,7 @@
 # Overview
 
 Nextflow scripts can include **definitions** (workflows, processes, and functions) from other scripts.
-A **module** is a script that contains a single process definition.
+A **module** is a self-contained process definition and corresponding {ref}`spec file <dev-modules-structure>`.
 Modules can be re-used within a pipeline and can be shared across projects.
 By packaging process definitions as modules, you avoid duplicating code and benefit from community improvements.
 

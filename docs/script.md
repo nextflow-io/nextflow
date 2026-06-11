@@ -11,7 +11,7 @@ Nextflow uses UTF-8 as the default character encoding for source files. Make sur
 :::
 
 :::{warning}
-Nextflow scripts have a maximum size of 64 KiB. To avoid this limit for large pipelines, consider moving pipeline components into separate files and including them into the main script.
+Nextflow scripts have a maximum size of 64 KiB. To avoid this limit for large pipelines, consider moving pipeline components into separate files and including them in the main script.
 :::
 
 ## Hello world
