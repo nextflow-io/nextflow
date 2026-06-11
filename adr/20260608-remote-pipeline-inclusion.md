@@ -104,9 +104,9 @@ Since this use case is rare -- plugin functions are typically used in the entry 
 
 ### Pipeline chaining
 
-An alternative to a meta-pipeline is a *pipeline chain*, such as a shell script that simply calls multiple Nextflow pipelines in sequence.
+An alternative to a meta-pipeline is a *pipeline chain*, in which multiple Nextflow pipelines are called in sequence via `nextflow run`.
 
-For example, a fetchngs -> rnaseq pipeline chain could be implemented as follows:
+For example, a fetchngs -> rnaseq pipeline chain can be implemented in a shell script:
 
 ```bash
 # fetch FASTQ samples from NCBI SRA
@@ -129,21 +129,11 @@ nextflow -q run nf-core/rnaseq \
     > results/output-rnaseq.json
 ```
 
-While pipeline chaining has always been possible in theory, new language features such as [workflow outputs](20251020-workflow-outputs.md) and [record types](20260306-record-types.md) make it much more practical. Each pipeline can define a structured output which can be passed to the next pipeline via JSON. Mismatches between an upstream output and downstream input (e.g. missing columns, different column names) can be resolved by a small adapter pipeline.
-
-Pipeline chaining remains a valid solution for certain use cases, such as simple chains (A -> B -> C) of off-the-shelf pipelines with little to no additional coding. For compositions that are more complex and/or require maximum dataflow concurrency, meta-pipelines are the general solution.
-
-### Nextflow-in-Nextflow
-
-Another solution that sits between pipeline chaining and meta-pipelines is a Nextflow pipeline that runs other Nextflow pipelines as tasks.
-
-The [nf-cascade](https://github.com/mahesh-panchal/nf-cascade) project explores this approach to its limits. It defines a native process called `NEXTFLOW_RUN`, which takes a pipeline with inputs and runs it via `nextflow run`. The pipeline developer then writes a kind of meta-pipeline with aliases of `NEXTFLOW_RUN`.
-
-For example, rewriting the fetchngs -> rnaseq chain described above as a Nextflow pipeline:
+Or a Nextflow pipeline:
 
 ```groovy
-include { NEXTFLOW_RUN as NFCORE_FETCHNGS } from "./modules/local/nextflow/run/main"
-include { NEXTFLOW_RUN as NFCORE_RNASEQ } from "./modules/local/nextflow/run/main"
+include { NEXTFLOW_RUN as NFCORE_FETCHNGS } from "./modules/local/nextflow/run"
+include { NEXTFLOW_RUN as NFCORE_RNASEQ } from "./modules/local/nextflow/run"
 
 workflow {
     NFCORE_FETCHNGS (
@@ -157,13 +147,19 @@ workflow {
 }
 ```
 
-This approach works with any Nextflow pipeline out of the box, because it simply executes the pipeline directly. However, this approach sacrifices dataflow composition, i.e. each pipeline must complete before the next pipeline can start.
+The `NEXTFLOW_RUN` process simply calls `nextflow run` in a native process. See [nf-cascade](https://github.com/mahesh-panchal/nf-cascade) for more information about this approach.
+
+Pipeline chains can also be implemented in Seqera Platform using actions (e.g. when a fetchngs run completes -> launch rnaseq on the fetchngs output).
+
+Pipeline chaining works with any Nextflow pipeline out of the box, because it simply executes each pipeline directly. Chaining often requires glue logic to adapt upstream outputs to downstream outputs -- missing columns, different column names, etc -- but language features such as [workflow outputs](20251020-workflow-outputs.md) and [record types](20260306-record-types.md) make it easier by allowing pipelines to defined structured inputs and outputs.
+
+The downside of pipeline chaining is that it sacrifices dataflow concurrency -- each pipeline must complete before the next pipeline can start. As a result, pipeline chaining is a categorically different solution from meta-pipelines. It remains a valid option for certain use cases, such as simple chains (A -> B -> C) of off-the-shelf pipelines. For compositions that are more complex and/or require maximum dataflow concurrency, meta-pipelines are the general solution.
 
 ### Best of both: runtime inheritance
 
 The meta-pipeline approach treats the included pipeline as a *white box* -- it composes the pipeline like any included workflow, producing a single dataflow graph. It also imposes several constraints on how the included pipeline is written, and it imposes development overhead. For example, any params / outputs that need to be exposed from the included pipeline must be replicated in the meta-pipeline.
 
-The Nextflow-in-Nextflow approach treats the included pipeline as a *black box* -- it preserves the exact pipeline behavior (core workflow + entry workflow + config) while forfeiting dataflow composition (separate dataflow graphs).
+Pipeline chaining treats the included pipeline as a *black box* -- it preserves the exact pipeline behavior (core workflow + entry workflow + config) while forfeiting dataflow composition (separate dataflow graphs).
 
 An ideal solution might combine the best of both: compose pipelines into a single dataflow graph (white box) while inheriting each pipeline's params, outputs, and config so they need not be replicated (black box). We considered such a model, where an included pipeline contributes its shell as namespaced, overridable defaults, but rejected it. Dataflow composition fundamentally requires exposing the core workflow as a set of channel ports, so the white-box mechanism is unavoidable; inheritance would only layer implicit behavior on top of it. That behavior comes at a steep cost: it relocates a one-time *write* cost (boilerplate) into a recurring *read* cost (hidden defaults, auto-bound arguments, auto-published outputs), burdens every tool that must now understand it (linter, type checker, config resolution, resume), and conflicts with the frozen-island philosophy that otherwise governs vendored code.
 
@@ -319,7 +315,7 @@ output {
 
 Notes about the white-box approach:
 
-- **The handoff is a channel, not a file.** The black-box approaches block until fetchngs finishes before rnaseq starts. Here, `ch_samples` is a live channel: rnaseq begins aligning each sample the moment fetchngs emits it. This is the dataflow composition that motivates the meta-pipeline.
+- **The handoff is a channel, not a file.** A pipeline chain blocks until fetchngs finishes before rnaseq starts. Here, `ch_samples` is a live channel: rnaseq begins aligning each sample the moment fetchngs emits it. This is the dataflow composition that motivates the meta-pipeline.
 
 - **The adapter is an operator, not a pipeline.** The strandedness gap that required a separate `fetchngs-rnaseq.nf` adapter in the chaining example collapses to a single `map` operator in the meta-pipeline.
 
@@ -346,7 +342,7 @@ Both the meta-pipeline developer and users can override whatever they want from 
 
 **Trade-offs**
 
-| Concern | Chaining (Black-box) | Meta-pipeline (white-box) |
+| Concern | Chaining (black-box) | Meta-pipeline (white-box) |
 | --- | --- | --- |
 | Concurrency | Synchronous (each `run` completes first) | Asynchronous (rnaseq reacts to each fetchngs sample) |
 | Params and outputs | Owned by each pipeline | Replicated in the meta-pipeline |
