@@ -68,13 +68,9 @@ dependencies {
     // Force patched version to address GHSA-72hv-8253-57qq (jackson-core Number Length Constraint Bypass DoS)
     runtimeOnly 'com.fasterxml.jackson.core:jackson-core:2.18.6'
 
-    // Pin patched netty versions to address security vulnerabilities
-    implementation 'io.netty:netty-common:4.1.133.Final'
-    implementation 'io.netty:netty-handler:4.1.133.Final'
-    implementation 'io.netty:netty-handler-proxy:4.1.133.Final'
-    implementation 'io.netty:netty-codec-http:4.1.133.Final'
-    implementation 'io.netty:netty-codec-http2:4.1.133.Final'
-    implementation 'io.netty:netty-codec-dns:4.1.133.Final'
+    // Pin azure-core-http-netty to a version that brings patched netty
+    // (4.1.135.Final) to address GHSA-3qp7-7mw8-wx86 / CVE-2026-44249
+    implementation 'com.azure:azure-core-http-netty:1.16.5'
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
