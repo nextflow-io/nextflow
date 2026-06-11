@@ -25,6 +25,28 @@ jobs:
     permissions:
       pull-requests: write
     steps:
+      # Trigger an immediate build instead of waiting for the scheduled run in
+      # the dev-builds repo. Requires the DEV_BUILDS_DISPATCH_TOKEN secret
+      # (fine-grained PAT with actions:write on nextflow-dev-builds). Failure
+      # is reported in the PR comment but never blocks anything.
+      - name: Trigger dev build
+        id: dispatch
+        env:
+          GH_TOKEN: ${{ secrets.DEV_BUILDS_DISPATCH_TOKEN }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          DEV_REPO: nextflow-io/nextflow-dev-builds
+        run: |
+          set -euo pipefail
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::notice::DEV_BUILDS_DISPATCH_TOKEN is not set, the scheduled build will pick up this push instead"
+            echo "status=scheduled" >> "$GITHUB_OUTPUT"
+          elif gh workflow run build.yml -R "$DEV_REPO" -f pr="$PR_NUMBER"; then
+            echo "status=triggered" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::Failed to trigger dev build in $DEV_REPO, the scheduled build will pick up this push instead"
+            echo "status=failed" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Create or update comment
         env:
           GH_TOKEN: ${{ github.token }}
@@ -32,10 +54,17 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           DEV_REPO: nextflow-io/nextflow-dev-builds
           MARKER: '<!-- dev-build-comment -->'
+          DISPATCH_STATUS: ${{ steps.dispatch.outputs.status }}
         run: |
           set -euo pipefail
           base=$(gh api "repos/$GITHUB_REPOSITORY/contents/VERSION?ref=$HEAD_SHA" --jq .content | base64 -d | tr -d '[:space:]')
           version="${base}-pr-${PR_NUMBER}-${HEAD_SHA:0:7}"
+
+          case "$DISPATCH_STATUS" in
+            triggered) timing="shortly (build triggered automatically)" ;;
+            failed)    timing="within about 30 minutes (automatic build trigger failed, falling back to the scheduled build)" ;;
+            *)         timing="within about 30 minutes (next scheduled build)" ;;
+          esac
           # the VERSION file in a PR is attacker-controlled, so only allow safe characters
           if [[ ! "$version" =~ ^[A-Za-z0-9.\-]+$ ]]; then
             echo "unsafe version string '$version', skipping comment"
@@ -45,7 +74,7 @@ jobs:
           $MARKER
           ## 📦 Nextflow dev build
 
-          A development build of this PR (commit \`${HEAD_SHA:0:7}\`) will be [published](https://github.com/$DEV_REPO/releases/tag/v${version}) within about 30 minutes. Test it with:
+          A development build of this PR (commit \`${HEAD_SHA:0:7}\`) will be [published](https://github.com/$DEV_REPO/releases/tag/v${version}) ${timing}. Test it with:
 
           \`\`\`bash
           NXF_DEV=pr-${PR_NUMBER} nextflow run <pipeline>
