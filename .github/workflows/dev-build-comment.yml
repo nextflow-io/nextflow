@@ -1,0 +1,72 @@
+name: Dev build comment
+
+# Posts a comment on each pull request with instructions for testing the
+# automated dev build of that PR, published by the nextflow-dev-builds repo.
+# The comment is created once and then updated in place on each push.
+#
+# Uses pull_request_target so the comment can also be posted on PRs from
+# forks. This is safe because the workflow never checks out or executes any
+# code from the PR: it only reads PR metadata and the VERSION file, whose
+# content is validated before use.
+
+on:
+  pull_request_target:
+    types: [opened, reopened, synchronize]
+
+permissions: {}
+
+concurrency:
+  group: dev-build-comment-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  comment:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - name: Create or update comment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          DEV_REPO: nextflow-io/nextflow-dev-builds
+          MARKER: '<!-- dev-build-comment -->'
+        run: |
+          set -euo pipefail
+          base=$(gh api "repos/$GITHUB_REPOSITORY/contents/VERSION?ref=$HEAD_SHA" --jq .content | base64 -d | tr -d '[:space:]')
+          version="${base}-pr-${PR_NUMBER}-${HEAD_SHA:0:7}"
+          # the VERSION file in a PR is attacker-controlled, so only allow safe characters
+          if [[ ! "$version" =~ ^[A-Za-z0-9.\-]+$ ]]; then
+            echo "unsafe version string '$version', skipping comment"
+            exit 0
+          fi
+          body=$(cat <<EOF
+          $MARKER
+          ## 📦 Nextflow dev build
+
+          A development build of this PR (commit \`${HEAD_SHA:0:7}\`) will be [published](https://github.com/$DEV_REPO/releases/tag/v${version}) within about 30 minutes. Test it with:
+
+          \`\`\`bash
+          NXF_DEV=pr-${PR_NUMBER} nextflow run <pipeline>
+          \`\`\`
+
+          Or, with Nextflow versions that don't support \`NXF_DEV\` yet:
+
+          \`\`\`bash
+          NXF_BASE=https://github.com/$DEV_REPO/releases/download \\
+          NXF_VER=${version} \\
+          nextflow run <pipeline>
+          \`\`\`
+
+          For testing purposes only. See [$DEV_REPO](https://github.com/$DEV_REPO) for details. This comment is updated on each push.
+          EOF
+          )
+
+          comment_id=$(gh api "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments?per_page=100" --paginate \
+            --jq '[.[] | select(.body | startswith(env.MARKER)) | .id] | first // empty' | head -n1)
+          if [ -n "$comment_id" ]; then
+            gh api --silent -X PATCH "repos/$GITHUB_REPOSITORY/issues/comments/$comment_id" -f body="$body"
+          else
+            gh api --silent -X POST "repos/$GITHUB_REPOSITORY/issues/$PR_NUMBER/comments" -f body="$body"
+          fi
