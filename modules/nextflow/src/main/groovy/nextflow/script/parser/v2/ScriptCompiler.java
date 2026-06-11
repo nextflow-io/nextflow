@@ -213,6 +213,10 @@ public class ScriptCompiler {
 
         private Set<SourceUnit> modules;
 
+        private Map<SourceUnit, List<SourceUnit>> dependencies = Collections.emptyMap();
+
+        private Set<SourceUnit> analyzedSources = Collections.newSetFromMap(new IdentityHashMap<>());
+
         private Map<WorkflowNode, Map<String, MethodNode>> callSites = new IdentityHashMap<>();
 
         ScriptCompilationUnit(CompilerConfiguration configuration, GroovyClassLoader loader) {
@@ -255,7 +259,9 @@ public class ScriptCompiler {
         private void analyze(SourceUnit source) {
             // on first pass, recursively add included modules to queue
             if( entry == null ) {
-                modules = new ModuleResolver(projectDir, compiler).resolve(source, uri -> createSourceUnit(uri));
+                var moduleResolver = new ModuleResolver(projectDir, compiler);
+                modules = moduleResolver.resolve(source, uri -> createSourceUnit(uri));
+                dependencies = moduleResolver.getDependencies();
                 for( var su : modules )
                     addSource(su);
                 entry = source;
@@ -265,6 +271,28 @@ public class ScriptCompiler {
             }
 
             // on second pass, all source files have been parsed
+            analyze0(source);
+        }
+
+        /**
+         * Analyze a source file after analyzing the modules it includes
+         * from, so that included types are fully resolved before they
+         * are used (e.g. to infer the implicit staging of record fields
+         * in a process input).
+         *
+         * @param source
+         */
+        private void analyze0(SourceUnit source) {
+            if( source.getAST() == null )
+                return;
+            if( !analyzedSources.add(source) )
+                return;
+            for( var includeSource : dependencies.getOrDefault(source, Collections.emptyList()) )
+                analyze0(includeSource);
+            analyze1(source);
+        }
+
+        private void analyze1(SourceUnit source) {
             // initialize script class
             var cn = source.getAST().getClasses().get(0);
 

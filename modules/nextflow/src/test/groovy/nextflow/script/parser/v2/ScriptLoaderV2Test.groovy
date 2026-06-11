@@ -19,6 +19,7 @@ package nextflow.script.parser.v2
 import java.nio.file.Files
 
 import nextflow.Session
+import nextflow.SysEnv
 import nextflow.exception.ScriptCompilationException
 import nextflow.processor.TaskProcessor
 import nextflow.script.BaseScript
@@ -343,6 +344,54 @@ class ScriptLoaderV2Test extends Dsl2Spec {
 
         then:
         parser.getResult() == null
+    }
+
+    def 'should stage path fields of an included record type' () {
+
+        given:
+        SysEnv.push(NXF_SYNTAX_PARSER: 'v2')
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('types.nf').text = '''\
+            record Pair {
+                id: String
+                r1: Path
+                r2: Path
+            }
+            '''.stripIndent()
+        def file = folder.resolve('main.nf')
+        file.text = '''\
+            nextflow.enable.types = true
+
+            include { Pair } from './types.nf'
+
+            process CONSUME {
+                input:
+                rec: Pair
+
+                script:
+                """
+                cat ${rec.r1} ${rec.r2}
+                """
+            }
+            '''.stripIndent()
+
+        when:
+        parser.setModule(true)
+        parser.parse(file)
+        parser.runScript()
+        def process = ScriptMeta.get(parser.getScript()).getProcess('CONSUME')
+        def inputs = process.getProcessConfig().getInputs()
+
+        then:
+        // the `r1` and `r2` record fields should be staged as input files
+        inputs.getFiles().size() == 2
+
+        cleanup:
+        SysEnv.pop()
+        folder.deleteDir()
     }
 
     def 'should report error for invalid publish statements in output block' () {
