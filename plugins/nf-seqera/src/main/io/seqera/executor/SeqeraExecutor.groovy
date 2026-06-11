@@ -138,7 +138,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
                 .pipeline(pipeline)
                 .predictionModel(predictionModel)
                 .computeEnvId(computeEnvId)
-                .ssh(seqeraConfig.ssh)
+                .shellEnabled(seqeraConfig.shellEnabled)
         log.debug "[SEQERA] Creating run: ${request}"
         final response = client.createRun(request)
         this.runId = response.getRunId()

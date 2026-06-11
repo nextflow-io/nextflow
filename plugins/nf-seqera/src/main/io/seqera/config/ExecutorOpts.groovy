@@ -125,11 +125,12 @@ class ExecutorOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        Enable on-demand SSH access to this run's task containers (VM and local backends).
-        When `true`, a running task can be reached with `sched task ssh <task-id>` (or a plain
-        `ssh <task-id>@<scheduler>`), and the connection survives task completion. Default: `false`.
+        Enable on-demand interactive shell access (e.g. SSH) to this run's task containers
+        (VM and local backends). When `true`, a running task can be reached with
+        `sched task ssh <task-id>` (or a plain `ssh <task-id>@<scheduler>`), and the
+        connection survives task completion. Default: `false`.
     """)
-    final boolean ssh
+    final boolean shellEnabled
 
     /* required by config scope -- do not remove */
 
@@ -157,8 +158,8 @@ class ExecutorOpts implements ConfigScope {
         this.taskEnvironment = opts.taskEnvironment as Map<String, String>
         // compute environment ID
         this.computeEnvId = opts.computeEnvId as String
-        // on-demand SSH access to task containers (default false)
-        this.ssh = opts.ssh as boolean
+        // on-demand shell access to task containers (default false)
+        this.shellEnabled = opts.shellEnabled as boolean
     }
 
     RetryOpts retryOpts() {
@@ -227,7 +228,7 @@ class ExecutorOpts implements ConfigScope {
         return computeEnvId
     }
 
-    boolean getSsh() {
-        return ssh
+    boolean getShellEnabled() {
+        return shellEnabled
     }
 }
