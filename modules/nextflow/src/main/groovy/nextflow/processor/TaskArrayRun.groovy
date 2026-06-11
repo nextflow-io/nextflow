@@ -58,4 +58,17 @@ class TaskArrayRun extends TaskRun {
         return true
     }
 
+    /**
+     * A job array is only a launcher for its child tasks and does not stage
+     * any output files of its own. Returning an empty list also avoids
+     * resolving the process output declarations against the array task
+     * context, which (unlike a child task) has no input variables bound and
+     * would otherwise fail for typed outputs that reference an input
+     * (see https://github.com/nextflow-io/nextflow/issues/7215).
+     */
+    @Override
+    List<String> getOutputFilesNames() {
+        return Collections.<String>emptyList()
+    }
+
 }
