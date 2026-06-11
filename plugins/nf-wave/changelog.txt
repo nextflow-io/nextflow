@@ -1,5 +1,9 @@
 nf-wave changelog
 ==================
+1.21.0 - 28 May 2026
+- Support fetching local files in `FUSION_CONTAINER_CONFIG_URL` (#7142) [0d1ece8c9]
+- Bump lib-httpx@2.3.0 (#7181) [1c47215a8]
+
 1.20.0 - 25 Apr 2026
 - Add Apple container engine support (#7073) [2f7a3c455]
 

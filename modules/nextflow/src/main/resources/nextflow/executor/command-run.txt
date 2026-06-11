@@ -30,15 +30,17 @@ nxf_sleep() {
 
 nxf_date() {
     ## should return the current timestamp in milliseconds
-    ## note1: some linux silently ignores the `%3N` option and returns the ts in seconds (len==10)
-    ## note2: old date tool ignores the `%3N` option and append that string to the timestamp in seconds
-    ## note3: mac date tools ignores the `%3N` option and the string `3N` is appended to the timestamp in seconds
-    local ts=$(date +%s%3N);
-    if [[ ${#ts} == 10 ]]; then echo ${ts}000
-    elif [[ $ts == *%3N ]]; then echo ${ts/\%3N/000}
-    elif [[ $ts == *3N ]]; then echo ${ts/3N/000}
-    elif [[ ${#ts} == 13 ]]; then echo $ts
-    else echo "Unexpected timestamp value: $ts"; exit 1
+    ## handles GNU coreutils (9-digit %N), uutils coreutils (zero-stripped %N),
+    ## and BSD/macOS date (literal "N" from %N, falling back to second precision)
+    ## note: seconds and nanoseconds are read with a single `date` invocation so
+    ## they are sampled atomically and cannot straddle a second boundary
+    local s n
+    read s n < <(date '+%s %N')
+    if [[ $n =~ ^[0-9]+$ ]]; then
+        n=$(printf '%09d' "$((10#$n))")
+        echo "$((s * 1000 + 10#${n:0:3}))"
+    else
+        echo "$((s * 1000))"
     fi
 }
 

@@ -136,7 +136,7 @@ The linter (`nextflow lint`) uses the same components described above to perform
 
 The language server takes a similar approach, with a focus on caching and live editing. Third-party tools can similarly use `nf-lang` to parse, analyze, and manipulate Nextflow code.
 
-### Backwards compatibility
+### Migration plan
 
 The Nextflow runtime can use the v1 parser (legacy) or v2 parser (strict) based on an environment variable:
 
@@ -155,6 +155,8 @@ In practice, many users have adopted patterns that are allowed in Groovy but are
 To that end, we have defined a language specification for Nextflow which enumerates every syntax construct that is supported, as well as a guide that describes the most common patterns that must be rewritten to comply with the strict parser.
 
 In most cases, these changes are minor and easy to fix. As a last resort, any non-compliant code can be moved to the `lib` directory or a plugin.
+
+The legacy parser should eventually be removed to simplify the codebase and encourage users to comply with the strict parser.
 
 ### Future language features
 

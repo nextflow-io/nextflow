@@ -89,6 +89,33 @@ class PluginUpdaterTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should detect already-installed pinned plugin from the on-disk store' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0'])
+        and:
+        def local = localCache(folder.resolve('plugins'), ['1.0.0'])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, false)
+
+        expect:
+        // at prefetch time the local plugins have NOT been loaded into the manager yet
+        manager.getPlugin(PLUGIN_ID) == null
+        and:
+        // pinned + present in the store -> already installed, no remote metadata needed
+        updater.isAlreadyInstalled(PluginRef.parse('my-plugin@1.0.0'))
+        and:
+        // pinned but a different version is not installed
+        !updater.isAlreadyInstalled(PluginRef.parse('my-plugin@9.9.9'))
+        and:
+        // unpinned spec always needs remote metadata to resolve the latest release
+        !updater.isAlreadyInstalled(PluginRef.parse('my-plugin'))
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should update a plugin' () {
         given:
         def folder = Files.createTempDirectory('test')

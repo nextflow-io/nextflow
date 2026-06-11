@@ -881,7 +881,7 @@ The following settings are available:
 : The maximum size of the local cache used by the Fusion client.
 
 `fusion.containerConfigUrl`
-: The URL of the container layer that provides the Fusion client.
+: The URL of the container layer that provides the Fusion client. Supports `http(s)://...` and `file:/...` (absolute, no authority) schemes — the latter is intended for local development against a custom manifest, e.g. `file:/path/to/manifest.json`.
 
 `fusion.enabled`
 : Enable the Fusion file system (default: `false`).

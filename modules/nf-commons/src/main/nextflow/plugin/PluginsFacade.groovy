@@ -424,8 +424,10 @@ class PluginsFacade implements PluginStateListener {
             final skippedIds = skippable.collect{ plugin -> plugin.id }
             log.debug "Plugin 'start' is not required in embedded mode -- ignoring for plugins: $skippedIds"
         }
-        // prefetch the plugins meta
-        updater.prefetchMetadata(startable)
+        // prefetch the plugins meta - skipped in offline mode to make the no-network guarantee
+        // explicit (in offline mode no remote repo is wired in, so this is also a no-op transitively)
+        if( !offline )
+            updater.prefetchMetadata(startable)
         // finally start the plugins
         for( PluginRef plugin : startable ) {
             updater.prepareAndStart(plugin.id, plugin.version)

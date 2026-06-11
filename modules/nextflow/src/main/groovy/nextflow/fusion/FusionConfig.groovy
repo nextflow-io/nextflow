@@ -21,6 +21,7 @@ import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
@@ -38,6 +39,7 @@ import nextflow.util.MemoryUnit
 @Description("""
     The `fusion` scope provides advanced configuration for the use of the [Fusion file system](https://docs.seqera.io/fusion).
 """)
+@Slf4j
 @CompileStatic
 class FusionConfig implements ConfigScope {
 
@@ -72,7 +74,7 @@ class FusionConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The URL of the container layer that provides the Fusion client.
+        The URL of the container layer that provides the Fusion client. Supports `http(s)://...` and `file:/...` (absolute, no authority) schemes.
     """)
     final String containerConfigUrl
 
@@ -132,8 +134,8 @@ class FusionConfig implements ConfigScope {
 
     boolean snapshotsEnabled() { snapshots }
 
-    URL containerConfigUrl() {
-        this.containerConfigUrl ? new URL(this.containerConfigUrl) : null
+    URI containerConfigURI() {
+        containerConfigUrl ? new URI(containerConfigUrl) : null
     }
 
     boolean privileged() {
@@ -156,7 +158,7 @@ class FusionConfig implements ConfigScope {
         this.targetVersion = opts.targetVersion as String
 
         if( containerConfigUrl && !validProtocol(containerConfigUrl))
-            throw new IllegalArgumentException("Fusion container config URL should start with 'http:' or 'https:' protocol prefix - offending value: $containerConfigUrl")
+            throw new IllegalArgumentException("Fusion container config URL must be 'http(s)://...' or 'file:/...' (absolute, no authority) - offending value: $containerConfigUrl")
     }
 
     static private String parseTags(Object value) {
@@ -170,7 +172,17 @@ class FusionConfig implements ConfigScope {
     }
 
     protected boolean validProtocol(String url) {
-        url.startsWith('http://') || url.startsWith('https://') || url.startsWith('file:/')
+        if( url.startsWith('http://') || url.startsWith('https://') )
+            return true
+        try {
+            // accept only absolute file URIs without authority, e.g. `file:/path` or `file:///path`
+            final uri = new URI(url)
+            return uri.scheme == 'file' && !uri.authority && uri.path?.startsWith('/')
+        }
+        catch( URISyntaxException e ) {
+            log.debug "Invalid Fusion container config URL: $url - cause: ${e.message}"
+            return false
+        }
     }
 
     static FusionConfig getConfig() {

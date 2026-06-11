@@ -1,5 +1,8 @@
 nf-k8s changelog
 ===================
+1.5.4 - 28 May 2026
+- Bump Failsafe to 3.3.2 (#7181) [1c47215a8]
+
 1.5.3 - 21 May 2026
 - Fix K8s 401 after token expiry (#6918) (#7093) [9cba0d8af]
 
