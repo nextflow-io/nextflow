@@ -430,6 +430,9 @@ class NameGenerator {
             // Hypatia - Greek Alexandrine Neoplatonist philosopher in Egypt who was one of the earliest mothers of mathematics. https://en.wikipedia.org/wiki/Hypatia
             "hypatia",
 
+            // Jagadish Chandra Bose - Indian physicist, biologist, and biophysicist who pioneered the investigation of radio and microwave optics and made seminal contributions to plant biology. https://en.wikipedia.org/wiki/Jagadish_Chandra_Bose
+            "jagadish",
+
             // Yeong-Sil Jang was a Korean scientist and astronomer during the Joseon Dynasty; he invented the first metal printing press and water gauge. https://en.wikipedia.org/wiki/Jang_Yeong-sil
             "jang",
 
@@ -678,6 +681,9 @@ class NameGenerator {
 
             // Claudius Ptolemy - a Greco-Egyptian writer of Alexandria, known as a mathematician, astronomer, geographer, astrologer, and poet of a single epigram in the Greek Anthology. https://en.wikipedia.org/wiki/Ptolemy
             "ptolemy",
+
+            // Gopalasamudram Narayana Ramachandran - Indian physicist and biophysicist best known for the Ramachandran plot, a fundamental tool in structural biology for assessing protein backbone conformations. https://en.wikipedia.org/wiki/G._N._Ramachandran
+            "ramachandran",
 
             // C. V. Raman - Indian physicist who won the Nobel Prize in 1930 for proposing the Raman effect. https://en.wikipedia.org/wiki/C._V._Raman
             "raman",
