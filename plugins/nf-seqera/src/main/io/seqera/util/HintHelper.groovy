@@ -106,24 +106,23 @@ class HintHelper {
      * @return a new {@link MachineRequirementOpts} with hints overlaid
      */
     static MachineRequirementOpts overlayHints(MachineRequirementOpts baseOpts, Map<String, Object> hints) {
-        final seqeraHints = extractSeqeraHints(hints)
-        if( !seqeraHints )
+        // only machineRequirement.* hints contribute here; top-level task hints
+        // (e.g. predictionModel) are resolved separately
+        final mrHints = extractSeqeraHints(hints).findAll { it.key.startsWith(MR_PREFIX) }
+        if( !mrHints )
             return baseOpts
 
         final Map<String, Object> merged = new LinkedHashMap<>()
-        for( final field : MR_FIELDS ) {
-            final value = field.get(baseOpts)
-            if( value != null )
-                merged.put(field.name, value)
+        if( baseOpts != null ) {
+            for( final field : MR_FIELDS ) {
+                final value = field.get(baseOpts)
+                if( value != null )
+                    merged.put(field.name, value)
+            }
         }
 
-        for( Map.Entry<String, Object> entry : seqeraHints.entrySet() ) {
-            final key = entry.key
-            // only machineRequirement.* hints contribute here; top-level task hints
-            // (e.g. predictionModel) are resolved separately
-            if( !key.startsWith(MR_PREFIX) )
-                continue
-            final fieldName = key.substring(MR_PREFIX.length())
+        for( Map.Entry<String, Object> entry : mrHints.entrySet() ) {
+            final fieldName = entry.key.substring(MR_PREFIX.length())
             final value = entry.value
             if( value == null ) {
                 merged.remove(fieldName)
