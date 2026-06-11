@@ -420,7 +420,10 @@ class TowerObserver implements TraceObserverV2 {
                 return null
             return DagSerializer.toMap(dag)
         }
-        catch( Exception e ) {
+        catch( Throwable e ) {
+            // catch Throwable (not just Exception): DAG.normalize() enforces its
+            // invariant with a Groovy `assert`, which throws AssertionError (an Error,
+            // not an Exception) — so DAG reporting can never abort or disrupt the run.
             log.debug("Unable to serialize execution DAG for Seqera Platform -- Cause: ${e.message ?: e}", e)
             return null
         }
