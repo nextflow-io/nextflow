@@ -53,9 +53,8 @@ class TaskArrayRunTest extends Specification {
         task.isArray()
     }
 
-    // see https://github.com/nextflow-io/nextflow/issues/7215
     def 'should not stage output files because it is only a child task launcher' () {
-        given: 'a typed (v2) process so that getOutputFilesNames would take the v2 path'
+        given: 'a typed process'
         def config = Mock(ProcessConfigV2)
         def processor = Mock(TaskProcessor) { getConfig() >> config }
         and: 'an array task whose context has no input variables bound, like the real array parent'
@@ -64,7 +63,7 @@ class TaskArrayRunTest extends Specification {
         when:
         def names = task.getOutputFilesNames()
 
-        then: 'no output files are returned and the v2 output declarations are never evaluated'
+        then: 'no output files are returned and the typed output declarations are never evaluated'
         names == []
         0 * config.getOutputs()
     }
