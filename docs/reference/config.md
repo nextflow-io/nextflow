@@ -1462,8 +1462,8 @@ The following settings are available:
 `seqera.executor.region`
 : The cloud region for task execution.
 
-`seqera.executor.ssh`
-: When `true`, enables on-demand SSH access to the run's task containers for the VM and local backends (default: `false`). A running task can then be reached with `sched task ssh <task-id>` (or a plain `ssh <task-id>@<scheduler>`), and the connection survives task completion.
+`seqera.executor.shellEnabled`
+: When `true`, enables on-demand interactive shell access (e.g. SSH) to the run's task containers for the VM and local backends (default: `false`). A running task can then be reached with `sched task ssh <task-id>` (or a plain `ssh <task-id>@<scheduler>`), and the connection survives task completion.
 
 `seqera.executor.strategy`
 : The execution strategy within the chosen `provider`. Narrows compute-environment selection when a provider offers multiple strategies (e.g. AWS supports `'ecs'` and `'vm'`). When omitted, the provider's canonical default strategy is used (AWS → `'ecs'`).
