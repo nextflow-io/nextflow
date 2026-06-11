@@ -209,6 +209,7 @@ The `local` executor is useful for developing and testing a pipeline script on y
 
 Resource requests and other job characteristics can be controlled via the following process directives:
 
+- [accelerator][process-accelerator]
 - [cpus][process-cpus]
 - [memory][process-memory]
 - [time][process-time]
@@ -222,6 +223,26 @@ While the `local` executor limits the number of concurrent tasks based on reques
 The local executor supports two types of tasks:
 - Script tasks (processes with a `script` or `shell` block) - executed via a Bash wrapper
 - Native tasks (processes with an `exec` block) - executed directly in the JVM.
+
+### Accelerators
+
+<AddedInVersion version="26.10.0" />
+
+The local executor allocates accelerators, such as GPUs, to tasks that request them with the [accelerator][process-accelerator] directive. Set the environment variable for your accelerator type:
+
+- `CUDA_VISIBLE_DEVICES` for [NVIDIA CUDA](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-environment-variables) applications
+
+- `HIP_VISIBLE_DEVICES` for [HIP](https://rocm.docs.amd.com/projects/HIP/en/docs-develop/reference/env_variables.html) applications
+
+- `ROCR_VISIBLE_DEVICES` for [AMD ROCm](https://rocm.docs.amd.com/en/latest/conceptual/gpu-isolation.html) applications
+
+Set the variable to a comma-separated list of device IDs that Nextflow can use. The list must not be empty. If no devices are listed, no accelerators are available and any task that requests one fails.
+
+For example, to use all GPUs on a node with four NVIDIA GPUs, set `CUDA_VISIBLE_DEVICES` to `0,1,2,3`. If four tasks each request one GPU, they run with `CUDA_VISIBLE_DEVICES` set to `0`, `1`, `2`, and `3`, respectively.
+
+:::note
+To run tasks in containers, propagate the device environment variable into the container and configure the container runtime for GPU access. For example, with Docker, add `CUDA_VISIBLE_DEVICES` to `docker.envWhitelist` and set GPU options such as `--gpus` via `docker.runOptions`. See your container runtime's documentation for GPU support.
+:::
 
 ## LSF
 
