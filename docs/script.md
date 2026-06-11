@@ -532,7 +532,7 @@ When a closure takes a single parameter, the parameter can be omitted, in which 
 
 So far, we have been focusing on the basic building blocks of Nextflow code, like variables, lists, strings, and closures.
 
-In practice, however, Nextflow scripts are composed of *workflows*, *processes*, and *functions* (collectively known as *definitions*), and can *include*  definitions from other scripts.
+In practice, however, Nextflow scripts are composed of *workflows*, *processes*, and *functions* (collectively known as *definitions*), and can *include* definitions from other scripts.
 
 To transition a code snippet into a proper workflow script, simply wrap it in a `workflow` block:
 
@@ -544,7 +544,7 @@ workflow {
 
 This block is called the *entry workflow*. It serves as the entrypoint when the script is executed. A script can only have one entry workflow. Whenever a script contains only simple statements like `println 'Hello!'`, Nextflow simply treats it as an entry workflow.
 
-You can also break up code into functions, for example:
+You can break up code into functions, for example:
 
 ```nextflow
 def sayHello() {
@@ -561,4 +561,27 @@ workflow {
 }
 ```
 
-See {ref}`Workflows <workflow-page>`, {ref}`Processes <process-page>`, and {ref}`Modules <modules-page>` for more information about how to use these features in your Nextflow scripts.
+You can organize these definitions further by moving them to a separate script and including them in the main script:
+
+```nextflow
+// functions.nf
+def sayHello() {
+    println 'Hello!'
+}
+
+def add(a, b) {
+    a + b
+}
+```
+
+```nextflow
+// main.nf
+include { sayHello; add } from './functions.nf'
+
+workflow {
+    sayHello()
+    println "2 + 2 = ${add(2, 2)}!"
+}
+```
+
+See {ref}`Workflows <workflow-page>`, {ref}`Processes <process-page>`, and {ref}`Includes <syntax-include>` for more information about how to use these features in your Nextflow scripts.
