@@ -72,6 +72,7 @@ import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
 import nextflow.script.dsl.ProcessConfigBuilder
 import nextflow.spack.SpackConfig
+import nextflow.uv.UvConfig
 import nextflow.trace.LogObserver
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
@@ -1182,6 +1183,12 @@ class Session implements ISession {
     SpackConfig getSpackConfig() {
         final opts = config.spack as Map ?: Collections.emptyMap()
         return new SpackConfig(opts, getSystemEnv())
+    }
+
+    @Memoized
+    UvConfig getUvConfig() {
+        final opts = config.uv as Map ?: Collections.emptyMap()
+        return new UvConfig(opts, getSystemEnv())
     }
 
     /**

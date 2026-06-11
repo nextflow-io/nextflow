@@ -61,6 +61,10 @@ class TaskRun implements LinSerializable {
      */
     String spack
     /**
+     * uv environment used for the task run
+     */
+    String uv
+    /**
      * Architecture defined in the Spack environment used for the task run
      */
     String architecture
