@@ -25,6 +25,7 @@ import io.seqera.executor.Labels
 import io.seqera.sched.api.schema.v1a1.AcceleratorType
 import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
 import io.seqera.sched.api.schema.v1a1.NextflowTask
+import io.seqera.sched.api.schema.v1a1.PredictionModel
 import io.seqera.sched.api.schema.v1a1.ResourceLimit
 import io.seqera.sched.api.schema.v1a1.ResourceRequirement
 import io.seqera.sched.api.schema.v1a1.Task
@@ -126,6 +127,10 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             task.config.getDisk(),
             fusionConfig().snapshotsEnabled()
         )
+        // resolve optional per-task prediction model override from the seqera/predictionModel hint;
+        // when unset the task inherits the run-level model
+        final predictionModelHint = HintHelper.resolvePredictionModel(task.config.getHints())
+        final predictionModel = predictionModelHint ? PredictionModel.fromValue(predictionModelHint) : null
         // build resource limit from process resourceLimits directive (upper bound for OOM retry scaling)
         final resourceLim = toResourceLimit()
         // validate container - Seqera executor requires all processes to specify a container image
@@ -141,6 +146,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             .resourceRequirement(resourceReq)  // cpu, memory, accelerators
             .resourceLimit(resourceLim)         // resource upper bounds for OOM retry
             .machineRequirement(machineReq)    // machine type and disk requirements
+            .predictionModel(predictionModel)  // optional per-task prediction model override
             .nextflow(new NextflowTask()
                 .taskId(task.id?.intValue())
                 .hash(task.hash?.toString())
