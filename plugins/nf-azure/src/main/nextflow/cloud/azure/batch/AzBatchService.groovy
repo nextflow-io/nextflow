@@ -31,12 +31,12 @@ import com.azure.compute.batch.BatchClientBuilder
 import com.azure.compute.batch.models.AutoUserScope
 import com.azure.compute.batch.models.AutoUserSpecification
 import com.azure.compute.batch.models.AzureFileShareConfiguration
-import com.azure.compute.batch.models.BatchJobCreateContent
+import com.azure.compute.batch.models.BatchJobCreateParameters
 import com.azure.compute.batch.models.BatchJobConstraints
-import com.azure.compute.batch.models.BatchJobUpdateContent
+import com.azure.compute.batch.models.BatchJobUpdateParameters
 import com.azure.compute.batch.models.BatchNodeFillType
 import com.azure.compute.batch.models.BatchPool
-import com.azure.compute.batch.models.BatchPoolCreateContent
+import com.azure.compute.batch.models.BatchPoolCreateParameters
 import com.azure.compute.batch.models.BatchPoolInfo
 import com.azure.compute.batch.models.BatchPoolState
 import com.azure.compute.batch.models.BatchStartTask
@@ -44,16 +44,16 @@ import com.azure.compute.batch.models.BatchSupportedImage
 import com.azure.compute.batch.models.BatchTask
 import com.azure.compute.batch.models.BatchTaskConstraints
 import com.azure.compute.batch.models.BatchTaskContainerSettings
-import com.azure.compute.batch.models.BatchTaskCreateContent
+import com.azure.compute.batch.models.BatchTaskCreateParameters
 import com.azure.compute.batch.models.BatchTaskSchedulingPolicy
-import com.azure.compute.batch.models.ContainerConfiguration
+import com.azure.compute.batch.models.BatchContainerConfiguration
 import com.azure.compute.batch.models.ContainerRegistryReference
 import com.azure.compute.batch.models.ContainerType
 import com.azure.compute.batch.models.ElevationLevel
-import com.azure.compute.batch.models.MetadataItem
+import com.azure.compute.batch.models.BatchMetadataItem
 import com.azure.compute.batch.models.MountConfiguration
 import com.azure.compute.batch.models.NetworkConfiguration
-import com.azure.compute.batch.models.OnAllBatchTasksComplete
+import com.azure.compute.batch.models.BatchAllTasksCompleteMode
 import com.azure.compute.batch.models.OutputFile
 import com.azure.compute.batch.models.OutputFileBlobContainerDestination
 import com.azure.compute.batch.models.OutputFileDestination
@@ -445,7 +445,7 @@ class AzBatchService implements Closeable {
         log.debug "[AZURE BATCH] created job for ${task.processor.name} with pool ${poolId}"
         // create a batch job
         final jobId = makeJobId(task)
-        final content = new BatchJobCreateContent(jobId, new BatchPoolInfo(poolId: poolId))
+        final content = new BatchJobCreateParameters(jobId, new BatchPoolInfo(poolId: poolId))
 
         if (config.batch().jobMaxWallClockTime) {
             content.setConstraints(createJobConstraints(config.batch().jobMaxWallClockTime))
@@ -455,7 +455,7 @@ class AzBatchService implements Closeable {
         return jobId
     }
 
-    protected void applyCreateJob(BatchJobCreateContent content) {
+    protected void applyCreateJob(BatchJobCreateParameters content) {
         final maxRetries = config.batch().maxJobQuotaRetries
         final retryDelay = config.batch().jobQuotaRetryDelay
 
@@ -492,7 +492,7 @@ class AzBatchService implements Closeable {
         }
     }
 
-    protected void createJobRequest(BatchJobCreateContent content) {
+    protected void createJobRequest(BatchJobCreateParameters content) {
         apply(() -> client.createJob(content))
     }
 
@@ -518,7 +518,7 @@ class AzBatchService implements Closeable {
         return key.size()>MAX_LEN ? key.substring(0,MAX_LEN) : key
     }
 
-    protected BatchTaskCreateContent createTask(String poolId, String jobId, TaskRun task) {
+    protected BatchTaskCreateParameters createTask(String poolId, String jobId, TaskRun task) {
         assert poolId, 'Missing Azure Batch poolId argument'
         assert jobId, 'Missing Azure Batch jobId argument'
         assert task, 'Missing Azure Batch task argument'
@@ -594,7 +594,7 @@ class AzBatchService implements Closeable {
         final constraints = taskConstraints(task)
 
         log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
-        return new BatchTaskCreateContent(taskId, cmd)
+        return new BatchTaskCreateParameters(taskId, cmd)
                 .setUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs, AutoUserScope.TASK))
                 .setContainerSettings(containerOpts)
                 .setResourceFiles(resourceFileUrls(task, sas))
@@ -843,7 +843,7 @@ class AzBatchService implements Closeable {
          *
          * https://github.com/MicrosoftDocs/azure-docs/blob/master/articles/batch/batch-docker-container-workloads.md#:~:text=Run%20container%20applications%20on%20Azure,compatible%20containers%20on%20the%20nodes.
          */
-        final containerConfig = new ContainerConfiguration(ContainerType.DOCKER_COMPATIBLE)
+        final containerConfig = new BatchContainerConfiguration(ContainerType.DOCKER_COMPATIBLE)
         final registryOpts = config.registry()
 
         if( registryOpts && registryOpts.isConfigured() ) {
@@ -894,7 +894,7 @@ class AzBatchService implements Closeable {
 
     protected void createPool(AzVmPoolSpec spec) {
 
-        final poolParams = new BatchPoolCreateContent(spec.poolId, spec.vmType.name)
+        final poolParams = new BatchPoolCreateParameters(spec.poolId, spec.vmType.name)
                 .setVirtualMachineConfiguration(poolVmConfig(spec.opts))
                 // same as the number of cores
                 // maximum of 256, which is the limit on Azure Batch
@@ -909,7 +909,7 @@ class AzBatchService implements Closeable {
         // resource labels
         if( spec.metadata ) {
             final metadata = spec.metadata.collect { name, value ->
-                new MetadataItem(name, value)
+                new BatchMetadataItem(name, value)
             }
             poolParams.setMetadata(metadata)
         }
@@ -1039,8 +1039,8 @@ class AzBatchService implements Closeable {
                 final job = apply(() -> client.getJob(jobId))
                 final poolInfo = job.poolInfo
 
-                final jobParameter = new BatchJobUpdateContent()
-                        .setOnAllTasksComplete(OnAllBatchTasksComplete.TERMINATE_JOB)
+                final jobParameter = new BatchJobUpdateParameters()
+                        .setAllTasksCompleteMode(BatchAllTasksCompleteMode.TERMINATE_JOB)
                         .setPoolInfo(poolInfo)
 
                 apply(() -> client.updateJob(jobId, jobParameter))
@@ -1059,7 +1059,7 @@ class AzBatchService implements Closeable {
         for( String jobId : allJobIds.values() ) {
             try {
                 log.trace "Deleting Azure job ${jobId}"
-                apply(() -> client.deleteJob(jobId))
+                apply(() -> client.beginDeleteJob(jobId).waitForCompletion())
             }
             catch (Exception e) {
                 log.warn "Unable to delete Azure Batch job ${jobId} - Reason: ${e.message ?: e}"
@@ -1070,7 +1070,7 @@ class AzBatchService implements Closeable {
     protected void cleanupPools() {
         for( String poolId : allPools.keySet() ) {
             try {
-                apply(() -> client.deletePool(poolId))
+                apply(() -> client.beginDeletePool(poolId).waitForCompletion())
             }
             catch (Exception e) {
                 log.warn "Unable to delete Azure Batch pool ${poolId} - Reason: ${e.message ?: e}"
