@@ -173,6 +173,64 @@ class ReportSummaryTest extends Specification {
 
     }
 
+    def 'should get gpu summary stats' () {
+        given:
+        def GPU_PCT = [75, 90, 60, 85]
+        def GPU_MEM_PEAK = [11388, 12000, 9000, 11500]
+        def GPU_MEM_AVG = [6161, 7000, 5000, 6500]
+
+        def report = new ReportSummary()
+
+        4.times { int index ->
+            def t = new TraceRecord([process: 'gpu_proc', name: "gpu_proc-$index"])
+            t.gpuMetrics = [
+                name: 'Tesla T4',
+                pct: GPU_PCT[index],
+                peak_mem_used: GPU_MEM_PEAK[index],
+                avg_mem: GPU_MEM_AVG[index] ]
+            report.add(t)
+        }
+        // a cpu-only task contributes nothing to the gpu series
+        report.add(new TraceRecord([process: 'gpu_proc', name: 'cpu-only', '%cpu': 50]))
+
+        when:
+        def gpuUsage = report.compute('gpuUsage')
+        def gpuMemPeak = report.compute('gpuMemPeak')
+        def gpuMemAvg = report.compute('gpuMemAvg')
+        then:
+        gpuUsage.min == quantile(GPU_PCT, 0)
+        gpuUsage.q1 == quantile(GPU_PCT, 25)
+        gpuUsage.q2 == quantile(GPU_PCT, 50)
+        gpuUsage.q3 == quantile(GPU_PCT, 75)
+        gpuUsage.max == quantile(GPU_PCT, 100)
+        gpuUsage.mean == mean(GPU_PCT)
+        gpuUsage.minLabel == 'gpu_proc-2'
+        gpuUsage.maxLabel == 'gpu_proc-1'
+
+        gpuMemPeak.min == quantile(GPU_MEM_PEAK, 0)
+        gpuMemPeak.max == quantile(GPU_MEM_PEAK, 100)
+        gpuMemPeak.mean == mean(GPU_MEM_PEAK)
+
+        gpuMemAvg.min == quantile(GPU_MEM_AVG, 0)
+        gpuMemAvg.max == quantile(GPU_MEM_AVG, 100)
+        gpuMemAvg.mean == mean(GPU_MEM_AVG)
+    }
+
+    def 'should return null gpu summary when no task reports gpu metrics' () {
+        given:
+        def report = new ReportSummary()
+        10.times { int index ->
+            def t = new TraceRecord([process: 'foo', name: "foo-$index", '%cpu': 10 + index])
+            report.add(t)
+        }
+
+        expect:
+        report.compute('cpu') != null
+        report.compute('gpuUsage') == null
+        report.compute('gpuMemPeak') == null
+        report.compute('gpuMemAvg') == null
+    }
+
     def 'should set q1,q2,q3 labels' () {
         given:
         def records = []
