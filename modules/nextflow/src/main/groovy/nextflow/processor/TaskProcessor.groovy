@@ -801,6 +801,19 @@ class TaskProcessor {
     @CompileStatic
     final protected void checkCachedOrLaunchTask( TaskRun task, HashCode hash, boolean shouldTryCache ) {
 
+        // Capture the content hash ONLY on the first attempt. Retries re-enter
+        // via resumeOrDie -> checkCachedOrLaunchTask(taskCopy, taskCopy.hash, false),
+        // where `hash` is the previous (chained) final hash, not the content hash.
+        // makeCopy()/clone() carry contentHash forward, so the null guard keeps
+        // the index key consistent across the whole retry chain.
+        if( task.contentHash == null )
+            task.contentHash = hash
+
+        // fast resume path: try to resolve a previously successful execution via
+        // the successful-hash index, otherwise fall back to the scan below
+        if( shouldTryCache && resumeFromSuccessfulHashIndex(task) )
+            return
+
         int tries = task.failCount +1
         while( true ) {
             hash = HashBuilder.defaultHasher().putBytes(hash.asBytes()).putInt(tries).hash()
@@ -848,6 +861,39 @@ class TaskProcessor {
             break
         }
 
+    }
+
+    /**
+     * Fast resume path for {@link #checkCachedOrLaunchTask}: resolve a previously
+     * successful execution via the successful-hash index in a single lookup,
+     * skipping the iterate-and-bump scan. The index maps the task content hash
+     * (see {@link TaskRun#contentHash}) to the final hash of the successful attempt.
+     *
+     * @param task The task being resolved; its {@code contentHash} must be set
+     * @return {@code true} if the task was resumed from the indexed entry;
+     *      {@code false} to fall back to the scan (index miss, stale/invalid
+     *      pointer, or lookup error). A stale pointer self-heals on the next
+     *      successful resume or execution.
+     */
+    @CompileStatic
+    private boolean resumeFromSuccessfulHashIndex(TaskRun task ) {
+        try {
+            final indexed = session.cache.getSuccessfulHash(task.contentHash)
+            if( !indexed )
+                return false
+            final entry = session.cache.getTaskEntry(indexed, this)
+            final resumeDir = entry ? FileHelper.asPath(entry.trace.getWorkDir()) : null
+            // mark the clone so notifyTaskCached skips rewriting an already-correct
+            // index pointer (the scan path leaves the flag unset to self-heal)
+            final taskCopy = task.clone()
+            taskCopy.resumedFromIndex = true
+            return entry && entry.trace.isCompleted() && resumeDir?.exists() \
+                    && checkCachedOutput(taskCopy, resumeDir, indexed, entry)
+        }
+        catch( Throwable t ) {
+            log.trace "[${safeTaskName(task)}] Successful-hash index lookup failed -- falling back to scan -- ${t.message}"
+            return false
+        }
     }
 
     /**

@@ -19,8 +19,6 @@ package nextflow.cache
 import java.nio.file.Files
 
 import com.google.common.hash.HashCode
-import nextflow.cache.CacheDB
-import nextflow.cache.DefaultCacheStore
 import nextflow.executor.CachedTaskHandler
 import nextflow.processor.TaskContext
 import nextflow.processor.TaskEntry
@@ -31,6 +29,7 @@ import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
+import nextflow.util.KryoHelper
 import spock.lang.Specification
 /**
  *
@@ -119,6 +118,91 @@ class CacheDBTest extends Specification {
         def trace = new TraceRecord()
         return new CachedTaskHandler(task, trace)
 
+    }
+
+    def 'should delegate hash index read and write' () {
+        given:
+        def store = Mock(CacheStore)
+        def cache = new CacheDB(store)
+        and:
+        def content = HashCode.fromInt(1)
+        def finalHash = HashCode.fromInt(2)
+
+        when:
+        def result = cache.getSuccessfulHash(content)
+        then:
+        1 * store.getSuccessfulHash(content) >> finalHash
+        result == finalHash
+
+        when:
+        cache.putSuccessfulHashAsync(content, finalHash)
+        cache.close()
+        then:
+        1 * store.putSuccessfulHash(content, finalHash)
+    }
+
+    private makeHandler(HashCode hash, HashCode contentHash) {
+        def proc = Mock(TaskProcessor)
+        proc.getTaskBody() >> new BodyDef(null,'source')
+        proc.getConfig() >> new ProcessConfig([:])
+        def task = Mock(TaskRun)
+        task.getProcessor() >> proc
+        task.getHash() >> hash
+        task.getContentHash() >> contentHash
+        return new CachedTaskHandler(task, new TraceRecord())
+    }
+
+    def 'should remove the hash index pointer when its target entry is deleted' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def store = new DefaultCacheStore(UUID.randomUUID(), 'test_1', folder)
+        def cache = new CacheDB(store).open()
+        and:
+        def content = CacheHelper.hasher('CONTENT').hash()
+        def successHash = CacheHelper.hasher('SUCCESS').hash()
+        def failHash = CacheHelper.hasher('FAIL').hash()
+        and: 'a successful entry carrying its content hash, indexed'
+        cache.writeTaskEntry0(makeHandler(successHash, content), new TraceRecord([task_id:1, exit:0]))
+        store.putSuccessfulHash(content, successHash)
+        and: 'a failed-attempt entry for the SAME content hash (not the index target)'
+        cache.writeTaskEntry0(makeHandler(failHash, content), new TraceRecord([task_id:1, exit:1]))
+
+        when: 'the failed-attempt entry is removed'
+        def removedFail = cache.removeTaskEntry(failHash)
+        then: 'the entry is gone but the pointer to the successful entry survives'
+        removedFail
+        store.getSuccessfulHash(content) == successHash
+
+        when: 'the successful entry (the index target) is removed'
+        def removedSuccess = cache.removeTaskEntry(successHash)
+        then: 'its index pointer is removed too'
+        removedSuccess
+        store.getSuccessfulHash(content) == null
+
+        cleanup:
+        cache?.close()
+        folder?.deleteDir()
+    }
+
+    def 'should not fail entry removal when the index cleanup throws' () {
+        given:
+        def store = Mock(CacheStore)
+        def cache = new CacheDB(store)
+        and:
+        def hash = CacheHelper.hasher('SUCCESS').hash()
+        def content = CacheHelper.hasher('CONTENT').hash()
+        and: 'a ref-count-1 entry carrying its content hash in the fourth slot'
+        def payload = KryoHelper.serialize([null, null, 1, content.asBytes()])
+
+        when:
+        def removed = cache.removeTaskEntry(hash)
+
+        then: 'a throwing index lookup is swallowed; the entry is still removed'
+        1 * store.getEntry(hash) >> payload
+        1 * store.deleteEntry(hash)
+        1 * store.getSuccessfulHash(content) >> { throw new RuntimeException('boom') }
+        0 * store.deleteSuccessfulHash(_)
+        removed
     }
 
     def 'should write some tasks and iterate over them' () {
