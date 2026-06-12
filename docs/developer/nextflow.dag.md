@@ -17,3 +17,5 @@ Some classes may be excluded from the above diagram for brevity.
 The workflow DAG defines the network of processes, channels, and operators that comprise a workflow. It is produced by the execution of the Nextflow script. See [nextflow.script](nextflow.script.md) for more details.
 
 Implementations of the `DagRenderer` interface define how to render the workflow DAG to a particular diagram format. See {ref}`workflow-diagram` for more details.
+
+Separately, `DagSerializer` produces a faithful machine-readable map of the DAG (every vertex and edge, with no reduction) for transport to external consumers such as Seqera Platform, as opposed to the file-oriented `DagRenderer` implementations.
