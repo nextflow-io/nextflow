@@ -120,6 +120,10 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
 
     @Override
     void refresh() {
+        // nothing to refresh when no metadata was prefetched (null or empty): avoid a
+        // pointless registry round-trip. In Groovy an empty or null map is falsy.
+        if( !plugins )
+            return
         plugins = fetchMetadataByIds(plugins.keySet())
     }
 

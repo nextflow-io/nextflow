@@ -32,6 +32,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
 import nextflow.SysEnv
+import nextflow.config.RegistryConfig
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FileMutex
@@ -98,6 +99,44 @@ class PluginUpdater extends UpdateManager {
             result.addAll(customRepos())
         }
         return result
+    }
+
+    /** Ids of the default registry repositories created by {@link #wrap} */
+    private static final List<String> DEFAULT_REGISTRY_REPO_IDS = ['registry', 'nextflow.io']
+
+    /**
+     * Apply the plugin registry endpoints declared in the {@code registry} config scope.
+     *
+     * The configured registries are authoritative: the URLs provided by {@link RegistryConfig}
+     * fully replace the default registry repository. Users that want to keep resolving plugins
+     * from the public registry must include its URL explicitly in {@code registry.url}.
+     *
+     * Safe to call after construction and before {@link #prefetchMetadata}, which initialises
+     * each {@link HttpPluginRepository} with the metadata it actually needs.
+     */
+    void addRegistryRepos(RegistryConfig registryConfig) {
+        if( offline || !registryConfig )
+            return
+        final urls = registryConfig.getAllUrls()
+        if( !urls )
+            return
+        // the configured registries take over: drop the default registry repository so that
+        // only the user-provided endpoints are queried
+        for( String id : DEFAULT_REGISTRY_REPO_IDS )
+            removeRepository(id)
+        final existingIds = new HashSet<String>()
+        for( UpdateRepository repo : this.@repositories )
+            existingIds.add(repo.id)
+        int counter = 0
+        for( String url : urls ) {
+            String repoId = "registry-${counter++}"
+            while( repoId in existingIds )
+                repoId = "registry-${counter++}"
+            existingIds.add(repoId)
+            final repo = new HttpPluginRepository(repoId, URI.create(url))
+            log.debug "Adding plugin repository: ${repo.getClass().getSimpleName()} [${repo.id}]; url=${url}"
+            addRepository(repo)
+        }
     }
 
     static private List<DefaultUpdateRepository> customRepos() {
