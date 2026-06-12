@@ -492,13 +492,16 @@ public class ScriptAstBuilder {
         if( !typingEnabled && !topics.isEmpty() )
             collectSyntaxError(new SyntaxException("The `topic:` section is not supported in a legacy process", topics));
 
+        if( typingEnabled && !(when instanceof EmptyExpression) )
+            collectSyntaxError(new SyntaxException("The `when:` section is not supported in a typed process", when));
+
         if( ctx.body.blockStatements() != null ) {
             if( !directives.isEmpty() || ctx.body.processInputs() != null || !outputs.isEmpty() || !topics.isEmpty() )
                 collectSyntaxError(new SyntaxException("The `script:` or `exec:` label is required when other sections are present", exec));
         }
 
         var result = typingEnabled
-            ? new ProcessNodeV2(name, directives, inputsV2, stagers, outputs, topics, when, type, exec, stub)
+            ? new ProcessNodeV2(name, directives, inputsV2, stagers, outputs, topics, type, exec, stub)
             : new ProcessNodeV1(name, directives, inputsV1, outputs, when, type, exec, stub);
         ast(result, ctx);
         groovydocManager.handle(result, ctx);
