@@ -270,7 +270,8 @@ class LinObserver implements TraceObserverV2 {
                 normalizer.normalizePath(p.normalize()),
                 Checksum.ofNextflow(p) )
             },
-            asUriString(executionHash)
+            asUriString(executionHash),
+            getTaskOutputEvals(task)
         )
 
         // store in the underlying persistence
@@ -285,6 +286,11 @@ class LinObserver implements TraceObserverV2 {
 
     protected List<Path> getTaskBinEntries(TaskRun task) {
         return new TaskHasher(task).getTaskBinEntries(task.source)
+    }
+
+    protected Map<String,String> getTaskOutputEvals(TaskRun task) {
+        final outEvals = task.getOutputEvals()
+        return outEvals ? new LinkedHashMap<String,String>(outEvals) : null
     }
 
     protected String storeTaskOutput(TaskRun task, Path path) {

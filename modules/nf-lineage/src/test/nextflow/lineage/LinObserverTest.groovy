@@ -715,6 +715,100 @@ class LinObserverTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should store task run output eval commands' () {
+        given:
+        def folder = Files.createTempDirectory('test').toRealPath()
+        def config = [workflow:[lineage:[enabled: true, store:[location:folder.toString()]]]]
+        def uniqueId = UUID.randomUUID()
+        def workDir = folder.resolve("work")
+        def session = Mock(Session) {
+            getConfig()>>config
+            getUniqueId()>>uniqueId
+            getRunName()>>"test_run"
+            getWorkDir() >> workDir
+        }
+        def metadata = Mock(WorkflowMetadata){
+            getProjectDir() >> workDir.resolve("projectDir")
+            getWorkDir() >> workDir
+        }
+        and:
+        def store = new DefaultLinStore();
+        store.open(LineageConfig.create(session))
+        and:
+        def observer = Spy(new LinObserver(session, store))
+        observer.executionHash = "hash"
+        observer.normalizer = new PathNormalizer(metadata)
+        observer.getTaskGlobalVars(_) >> [:]
+        observer.getTaskBinEntries(_) >> []
+        and:
+        def hash = HashCode.fromString("1234567890")
+        def task = Mock(TaskRun) {
+            getName() >> 'foo'
+            getHash() >> hash
+            getSource() >> 'echo task source'
+            getScript() >> 'this is the script'
+            getInputs() >> [:]
+            getOutputEvals() >> [eval1: 'echo one', eval2: 'echo two']
+            getWorkDir() >> workDir
+        }
+
+        when:
+        observer.storeTaskRun(task, observer.normalizer)
+        def result = store.load(hash.toString()) as nextflow.lineage.model.v1beta1.TaskRun
+        then:
+        result.eval == [eval1: 'echo one', eval2: 'echo two']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should store null eval when task has no output evals' () {
+        given:
+        def folder = Files.createTempDirectory('test').toRealPath()
+        def config = [workflow:[lineage:[enabled: true, store:[location:folder.toString()]]]]
+        def uniqueId = UUID.randomUUID()
+        def workDir = folder.resolve("work")
+        def session = Mock(Session) {
+            getConfig()>>config
+            getUniqueId()>>uniqueId
+            getRunName()>>"test_run"
+            getWorkDir() >> workDir
+        }
+        def metadata = Mock(WorkflowMetadata){
+            getProjectDir() >> workDir.resolve("projectDir")
+            getWorkDir() >> workDir
+        }
+        and:
+        def store = new DefaultLinStore();
+        store.open(LineageConfig.create(session))
+        and:
+        def observer = Spy(new LinObserver(session, store))
+        observer.executionHash = "hash"
+        observer.normalizer = new PathNormalizer(metadata)
+        observer.getTaskGlobalVars(_) >> [:]
+        observer.getTaskBinEntries(_) >> []
+        and:
+        def hash = HashCode.fromString("1234567890")
+        def task = Mock(TaskRun) {
+            getName() >> 'foo'
+            getHash() >> hash
+            getSource() >> 'echo task source'
+            getScript() >> 'this is the script'
+            getInputs() >> [:]
+            getOutputEvals() >> [:]
+            getWorkDir() >> workDir
+        }
+
+        when:
+        observer.storeTaskRun(task, observer.normalizer)
+        def result = store.load(hash.toString()) as nextflow.lineage.model.v1beta1.TaskRun
+        then:
+        result.eval == null
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should save task data output' () {
         given:
         def folder = Files.createTempDirectory('test')

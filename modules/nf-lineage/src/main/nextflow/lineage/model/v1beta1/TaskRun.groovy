@@ -76,4 +76,9 @@ class TaskRun implements LinSerializable {
      * Workflow run associated to the task run
      */
     String workflowRun
+    /**
+     * Output eval commands executed by the task run, mapped by output name.
+     * Both the name and the command feed the task hash, so both are recorded.
+     */
+    Map<String,String> eval
 }
