@@ -293,6 +293,41 @@ class SeqeraExecutorTest extends Specification {
         executor.batchSubmitter?.shutdown()
     }
 
+    def 'createRun publishes the run id to the workflow scheduler metadata'() {
+        given:
+        SysEnv.push([:])
+        def mockClient = Mock(SchedClient) {
+            createRun(_) >> new CreateRunResponse().runId('run-xyz')
+        }
+        def scheduler = new nextflow.script.SchedulerMetadata('seqera')
+        def workflowMeta = Mock(WorkflowMetadata) {
+            getPlatform() >> null
+            getScheduler() >> scheduler
+        }
+        def session = Mock(Session) {
+            getConfig() >> [tower: [:]]
+            getWorkflowMetadata() >> workflowMeta
+            getWorkDir() >> java.nio.file.Paths.get('/work')
+            getRunName() >> 'test-run'
+        }
+        def seqeraOpts = new ExecutorOpts(endpoint: 'https://sched.example.com', provider: 'aws', region: 'eu-west-1')
+        def executor = new SeqeraExecutor()
+        executor.session = session
+        executor.@seqeraConfig = seqeraOpts
+        executor.@client = mockClient
+
+        when:
+        executor.createRun()
+
+        then:
+        executor.runId == 'run-xyz'
+        and:
+        scheduler.runId == 'run-xyz'
+
+        cleanup:
+        executor.batchSubmitter?.shutdown()
+    }
+
 
     /**
      * Builds a SchedClientConfig using the same logic as {@link SeqeraExecutor#createClient()}

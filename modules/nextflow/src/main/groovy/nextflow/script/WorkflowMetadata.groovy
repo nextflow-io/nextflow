@@ -218,6 +218,12 @@ class WorkflowMetadata {
     FusionMetadata fusion
 
     /**
+     * Metadata specific to the Seqera Intelligent Compute scheduler, including:
+     * <li>enabled: whether the scheduler (i.e. the {@code seqera} executor) is enabled
+     */
+    SchedulerMetadata scheduler
+
+    /**
      * Metadata specific to Seqera Platform, including:
      * <li>workflowId: the Platform-assigned workflow identifier
      */
@@ -511,5 +517,16 @@ class WorkflowMetadata {
             platform = new PlatformMetadata()
         }
         return platform
+    }
+
+    SchedulerMetadata getScheduler() {
+        if( scheduler!=null )
+            return scheduler
+        synchronized (this) {
+            if( scheduler!=null )
+                return scheduler
+            scheduler = new SchedulerMetadata(session)
+        }
+        return scheduler
     }
 }

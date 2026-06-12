@@ -105,6 +105,8 @@ class TowerObserver implements TraceObserverV2 {
 
     private Map<String,Boolean> allContainers = new ConcurrentHashMap<>()
 
+    private boolean schedulerRunIdSent
+
     TowerObserver(Session session, TowerClient client, String workspaceId, Map env) {
         this.session = session
         this.workspaceId = workspaceId
@@ -428,6 +430,31 @@ class TowerObserver implements TraceObserverV2 {
         return result
     }
 
+    /**
+     * @return the Seqera Intelligent Compute scheduler run identifier for the current
+     * execution, or {@code null} when the run is not managed by the scheduler or the
+     * identifier has not been assigned yet (i.e. before the first task is submitted).
+     */
+    protected String getSchedulerRunId() {
+        return session.workflowMetadata?.scheduler?.runId
+    }
+
+    /**
+     * Propagate the scheduler run id to Platform via a one-off {@code PATCH /workflow/{workflowId}}
+     * as soon as it is available (assigned on the first task submission). The id is stable for the
+     * life of the run, so it is sent exactly once; Platform stores it as a workflow-extension field
+     * used for cost and resource accounting.
+     */
+    protected void sendSchedulerRunId() {
+        if( schedulerRunIdSent )
+            return
+        final id = getSchedulerRunId()
+        if( !id )
+            return
+        client.updateWorkflow([schedulerRunId: id], workspaceId, workflowId)
+        schedulerRunIdSent = true
+    }
+
     protected String mapToString(def obj) {
         if( obj == null )
             return null
@@ -547,6 +574,9 @@ class TowerObserver implements TraceObserverV2 {
                     if( ev.completed )
                         complete = true
                 }
+
+                // propagate the scheduler run id once it is available (sent exactly once)
+                sendSchedulerRunId()
 
                 // check if there's something to send
                 final now = System.currentTimeMillis()
