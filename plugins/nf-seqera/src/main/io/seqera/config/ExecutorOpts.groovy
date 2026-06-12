@@ -77,7 +77,7 @@ class ExecutorOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The interval for batching task submissions (default: `1 sec`).
+        The interval for batching task submissions (default: `5 sec`).
     """)
     final Duration batchFlushInterval
 
@@ -123,6 +123,15 @@ class ExecutorOpts implements ConfigScope {
     """)
     final String computeEnvId
 
+    @ConfigOption
+    @Description("""
+        Enable on-demand interactive shell access (e.g. SSH) to this run's task containers
+        (VM and local backends). When `true`, a running task can be reached with
+        `sched task ssh <task-id>` (or a plain `ssh <task-id>@<scheduler>`), and the
+        connection survives task completion. Default: `false`.
+    """)
+    final boolean shellEnabled
+
     /* required by config scope -- do not remove */
 
     ExecutorOpts() {}
@@ -139,7 +148,7 @@ class ExecutorOpts implements ConfigScope {
         this.keyPairName = opts.keyPairName as String
         this.batchFlushInterval = opts.batchFlushInterval
             ? Duration.of(opts.batchFlushInterval as String)
-            : Duration.of('1 sec')
+            : Duration.of('5 sec')
         // machine requirement settings
         this.machineRequirement = new MachineRequirementOpts(opts.machineRequirement as Map ?: Map.of())
         this.autoLabels = parseAutoLabels(opts.get('autoLabels'))
@@ -149,6 +158,8 @@ class ExecutorOpts implements ConfigScope {
         this.taskEnvironment = opts.taskEnvironment as Map<String, String>
         // compute environment ID
         this.computeEnvId = opts.computeEnvId as String
+        // on-demand shell access to task containers (default false)
+        this.shellEnabled = opts.shellEnabled as boolean
     }
 
     RetryOpts retryOpts() {
@@ -215,5 +226,9 @@ class ExecutorOpts implements ConfigScope {
 
     String getComputeEnvId() {
         return computeEnvId
+    }
+
+    boolean getShellEnabled() {
+        return shellEnabled
     }
 }
