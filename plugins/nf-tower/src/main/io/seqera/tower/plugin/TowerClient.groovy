@@ -152,6 +152,24 @@ class TowerClient {
         }
     }
 
+    /**
+     * Update workflow-extension metadata via the generic {@code PATCH /workflow/{workflowId}}
+     * endpoint. Used to propagate the Seqera Intelligent Compute scheduler run id.
+     */
+    void updateWorkflow(Map req, String workspaceId, String workflowId) {
+        final url = getUrlWorkflowUpdate(workspaceId, workflowId)
+        final resp = sendHttpMessage(url, req, 'PATCH')
+        if( resp.error ) {
+            final message =  """\
+                Unexpected HTTP response
+                - endpoint    : $url
+                - status code : $resp.code
+                - response msg: $resp.message
+                """.stripIndent(true)
+            throw new AbortRunException(message)
+        }
+    }
+
     protected Map sendAndProcessRequest(String url, Map req, String method){
         final resp = sendHttpMessage(url, req, method)
         if( resp.error ) {
@@ -196,6 +214,13 @@ class TowerClient {
 
     protected String getUrlTraceProgress(String workspaceId, String workflowId) {
         def result = "$endpoint/trace/$workflowId/progress"
+        if( workspaceId )
+            result += "?workspaceId=$workspaceId"
+        return result
+    }
+
+    protected String getUrlWorkflowUpdate(String workspaceId, String workflowId) {
+        def result = "$endpoint/workflow/$workflowId"
         if( workspaceId )
             result += "?workspaceId=$workspaceId"
         return result
@@ -346,6 +371,9 @@ class TowerClient {
 
         if( verb == 'POST' )
             return builder.POST(HttpRequest.BodyPublishers.ofString(payload)).build()
+
+        if( verb == 'PATCH' )
+            return builder.method('PATCH', HttpRequest.BodyPublishers.ofString(payload)).build()
 
         throw new IllegalArgumentException("Unsupported HTTP verb: $verb")
     }

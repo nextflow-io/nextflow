@@ -47,6 +47,7 @@ import nextflow.file.FileHolder
 import nextflow.processor.TaskHasher
 import nextflow.processor.TaskRun
 import nextflow.script.PlatformMetadata
+import nextflow.script.SchedulerMetadata
 import nextflow.script.ScriptMeta
 import nextflow.script.params.BaseParam
 import nextflow.script.params.CmdEvalParam
@@ -549,6 +550,8 @@ class LinObserver implements TraceObserverV2 {
             metadata.removeAll {it.key.toString() in workflowMetadataPropertiesToRemove }
             if( metadata.containsKey("nextflow") )
                 metadata["nextflow"] = (metadata["nextflow"] as NextflowMeta).toJsonMap()
+            if( metadata.containsKey("scheduler") )
+                metadata["scheduler"] = (metadata["scheduler"] as SchedulerMetadata).toMap()
             if( metadata.containsKey("configFiles") )
                 metadata["configFiles"] = (metadata["configFiles"] as List<Path>).collect {normalizer.normalizePath(it)}
             return metadata
