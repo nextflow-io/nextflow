@@ -56,6 +56,13 @@ import static nextflow.util.SysHelper.dumpThreads
 class Launcher {
 
     /**
+     * One-line hint, appended to usage help, pointing users at the
+     * machine-readable {@code -help-json} flag. Shared across the top-level
+     * and all sub-command help screens for consistency.
+     */
+    static final String HELP_JSON_TIP = 'Tip: add -help-json to any command for machine-readable help.'
+
+    /**
      * Create the application command line parser
      *
      * @return An instance of {@code CliBuilder}
@@ -399,12 +406,14 @@ class Launcher {
             }
 
             jcommander.usage(command)
+            println "\n$HELP_JSON_TIP\n"
             return
         }
 
         println "Usage: nextflow [options] COMMAND [arg...]\n"
         printOptions(CliOptions)
         printCommands(allCommands)
+        println "$HELP_JSON_TIP\n"
     }
 
     @CompileDynamic
@@ -479,6 +488,10 @@ class Launcher {
         return this
     }
 
+    private boolean isHelpJson() {
+        options.helpJson || command?.helpJson
+    }
+
     protected void checkForHelp() {
         if( options.help || !command || command.help ) {
             if( command instanceof UsageAware ) {
@@ -517,6 +530,13 @@ class Launcher {
             // -- print out the version number, then exit
             if ( options.version ) {
                 println getVersion(fullVersion)
+                return 0
+            }
+
+            // -- print out the machine-readable JSON help, then exit
+            if( isHelpJson() ) {
+                final json = command ? CliSchema.command(command) : CliSchema.root(options, allCommands)
+                println json
                 return 0
             }
 
@@ -706,9 +726,6 @@ class Launcher {
 
     }
 
-    /*
-     * The application 'logo'
-     */
     /*
      * The application 'logo'
      */

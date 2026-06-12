@@ -42,4 +42,7 @@ abstract class CmdBase implements Runnable {
 
     @Parameter(names=['-h','-help'], description = 'Print the command usage', arity = 0, help = true)
     boolean help
+
+    @Parameter(names=['-help-json'], description = 'Print the command help and options as JSON (for tools and LLMs)', arity = 0, help = true)
+    boolean helpJson
 }

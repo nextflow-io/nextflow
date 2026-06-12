@@ -32,10 +32,11 @@ import nextflow.secret.SecretsProvider
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Manage pipeline secrets")
-class CmdSecret extends CmdBase implements UsageAware {
+class CmdSecret extends CmdBase implements UsageAware, SubcommandAware {
 
     interface SubCmd {
         String getName()
+        String getDescription()
         void apply(List<String> result)
         void usage(List<String> result)
     }
@@ -82,6 +83,7 @@ class CmdSecret extends CmdBase implements UsageAware {
             result << 'Commands:'
             commands.collect{ it.name }.sort().each { result << "  $it".toString()  }
             result << ''
+            result << Launcher.HELP_JSON_TIP
         }
         else {
             def sub = commands.find { it.name == args[0] }
@@ -133,6 +135,11 @@ class CmdSecret extends CmdBase implements UsageAware {
         throw new AbortOperationException(msg)
     }
 
+    @Override
+    List<SubcommandAware.Subcommand> getSubcommands() {
+        commands.collect { new SubcommandAware.Subcommand(name: it.name, help: it.description) }
+    }
+
     private void addOption(String fieldName, List<String> result) {
         def annot = this.class.getDeclaredField(fieldName)?.getAnnotation(Parameter)
         if( annot ) {
@@ -148,6 +155,9 @@ class CmdSecret extends CmdBase implements UsageAware {
 
         @Override
         String getName() { 'set' }
+
+        @Override
+        String getDescription() { 'Set a key-pair in the secrets store' }
 
         @Override
         void apply(List<String> result) {
@@ -176,6 +186,9 @@ class CmdSecret extends CmdBase implements UsageAware {
         String getName() { 'get' }
 
         @Override
+        String getDescription() { 'Get a secret value with the name' }
+
+        @Override
         void apply(List<String> result) {
             if( result.size() != 1 )
                 throw new AbortOperationException("Wrong number of arguments")
@@ -200,6 +213,9 @@ class CmdSecret extends CmdBase implements UsageAware {
     class ListCmd implements SubCmd {
         @Override
         String getName() { 'list' }
+
+        @Override
+        String getDescription() { 'List all names in the secrets store' }
 
         @Override
         void apply(List<String> result) {
@@ -231,6 +247,9 @@ class CmdSecret extends CmdBase implements UsageAware {
     class DeleteCmd implements SubCmd {
         @Override
         String getName() { 'delete' }
+
+        @Override
+        String getDescription() { 'Delete an entry from the secrets store' }
 
         @Override
         void apply(List<String> result) {

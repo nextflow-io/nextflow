@@ -168,6 +168,7 @@ class CmdLaunch extends CmdBase implements UsageAware {
         result << '  -workspace-secret <name>  Workspace secret name to use in the pipeline (can be specified multiple times)'
         result << '  --<param>=<value>         Set a parameter used by the pipeline'
         result << ''
+        result << Launcher.HELP_JSON_TIP
         println result.join('\n').toString()
     }
 

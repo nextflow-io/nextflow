@@ -35,11 +35,24 @@ import org.eclipse.jgit.api.Git
  */
 @CompileStatic
 @Parameters(commandDescription = "Execute plugin-specific commands")
-class CmdPlugin extends CmdBase implements UsageAware {
+class CmdPlugin extends CmdBase implements UsageAware, SubcommandAware {
 
     @Override
     String getName() {
         return 'plugin'
+    }
+
+    /**
+     * The statically-known sub-commands, surfaced in {@code -help-json}. The
+     * dynamic {@code <plugin-name>:<command>} form is resolved at runtime and so
+     * can't be introspected here.
+     */
+    @Override
+    List<SubcommandAware.Subcommand> getSubcommands() {
+        return [
+            new SubcommandAware.Subcommand(name: 'install', help: 'Install a plugin'),
+            new SubcommandAware.Subcommand(name: 'create', help: 'Create a new plugin project from the template'),
+        ]
     }
 
     @DynamicParameter(names = "--", description = "Custom plugin parameters go here", hidden = true)
@@ -114,6 +127,7 @@ class CmdPlugin extends CmdBase implements UsageAware {
         result << ''
         result << 'See the documentation of an individual plugin for its plugin-specific commands.'
         result << ''
+        result << Launcher.HELP_JSON_TIP
     }
 
     @Override
