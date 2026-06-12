@@ -171,7 +171,7 @@ task installLauncher(type: Copy, dependsOn: ['pack']) {
 
 task installScratch(type: Copy, dependsOn: ['pack']) {
     from "$releaseDir/nextflow-$version-one.jar"
-    into "${rootProject.projectDir}/test-e2e/.nextflow/framework/$version/"
+    into "${rootProject.projectDir}/.github/test-e2e/.nextflow/framework/$version/"
 }
 
 /*
