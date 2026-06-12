@@ -222,7 +222,7 @@ class LinEncoderTest extends Specification{
         result.conda == "conda"
         result.spack == "spack"
         result.architecture == "amd64"
-        result.module == ["samtools/1.9"]
+        result.envModule == ["samtools/1.9"]
         result.globalVars == [a: "A", b: "B"]
         result.binEntries.size() == 1
         result.binEntries.get(0).path == "path/to/file"
