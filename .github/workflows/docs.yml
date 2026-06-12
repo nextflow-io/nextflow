@@ -4,6 +4,7 @@ on:
     types: [opened, reopened, synchronize]
     paths:
       - 'docs/**'
+      - '.github/workflows/docs.yml'
   workflow_dispatch:
 
 permissions:

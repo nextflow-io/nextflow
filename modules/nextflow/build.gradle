@@ -67,12 +67,13 @@ dependencies {
     api ('org.jsoup:jsoup:1.15.4')
     api 'jline:jline:2.9'
     api 'org.pf4j:pf4j:3.14.1'
-    api 'dev.failsafe:failsafe:3.1.0'
+    api 'dev.failsafe:failsafe:3.3.2'
     api 'io.seqera:lib-trace:0.1.0'
     api 'com.fasterxml.woodstox:woodstox-core:7.1.1'
     api 'org.apache.commons:commons-compress:1.27.1'  // For tar.gz extraction
     api 'io.seqera:npr-api:0.22.0'
     api 'io.seqera:npr-client:0.22.0'
+    api 'com.networknt:json-schema-validator:1.5.6'
 
     testImplementation 'org.subethamail:subethasmtp:3.1.7'
     testImplementation (project(':nf-lineage'))

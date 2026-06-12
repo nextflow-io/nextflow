@@ -759,7 +759,7 @@ class Session implements ISession {
     }
 
     final protected void shutdown0() {
-        log.trace "Shutdown: $shutdownCallbacks"
+        log.trace "Invoking ${shutdownCallbacks.size()} shutdown callbacks"
         shutdownInitiated = true
         while( shutdownCallbacks.size() ) {
             final hook = shutdownCallbacks.poll()
@@ -767,7 +767,7 @@ class Session implements ISession {
                 hook.run()
             }
             catch( Exception e ) {
-                log.debug "Failed to execute shutdown hook: $hook", e
+                log.debug "Failed to execute shutdown hook: ${hook.class.name}", e
             }
         }
 

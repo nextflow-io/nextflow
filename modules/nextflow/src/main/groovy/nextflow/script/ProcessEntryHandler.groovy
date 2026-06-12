@@ -31,6 +31,8 @@ import nextflow.script.params.StdInParam
 import nextflow.script.params.TupleInParam
 import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessTupleInput
+import nextflow.script.types.Record
+import nextflow.util.RecordMap
 
 /**
  * Helper class for process entry execution feature.
@@ -236,7 +238,7 @@ class ProcessEntryHandler {
     }
 
     /**
-     * Load mapping of input types from the module spec if available. Returns null
+     * Load mapping of input types from the module spec if available. Returns empty map
      * if module spec is absent or unreadable.
      */
     private static Map<String, Class> getModuleSpecInputTypes(Path scriptPath) {
@@ -292,6 +294,10 @@ class ProcessEntryHandler {
         final value = namedArgs.get(name)
 
         if( value == null ) {
+            if( param instanceof FileInParam ) {
+                log.warn "Path input '--${name}' not provided, defaulting to empty list"
+                return []
+            }
             throw new IllegalArgumentException("Missing required parameter: --${name}")
         }
 
@@ -357,8 +363,16 @@ class ProcessEntryHandler {
         // Map declared inputs to command-line arguments
         List arguments = []
         for( final param : declaredInputs ) {
-            if( param instanceof ProcessTupleInput ) {
-                List tupleElements = []
+            if( param instanceof ProcessTupleInput && param.getType() == Record.class ) {
+                final Map<String,Object> recordFields = [:]
+                for( final innerParam : param.getComponents() ) {
+                    final value = getValueForInputV2(innerParam, paramValues)
+                    recordFields.put(innerParam.getName(), value)
+                }
+                arguments.add(new RecordMap(recordFields))
+            }
+            else if( param instanceof ProcessTupleInput ) {
+                final List tupleElements = []
                 for( final innerParam : param.getComponents() ) {
                     final value = getValueForInputV2(innerParam, paramValues)
                     tupleElements.add(value)
@@ -387,6 +401,8 @@ class ProcessEntryHandler {
         final value = namedArgs.get(name)
 
         if( value == null ) {
+            if( param.isOptional() )
+                return null
             throw new IllegalArgumentException("Missing required parameter: --${name}")
         }
 
@@ -423,10 +439,10 @@ class ProcessEntryHandler {
      * Otherwise returns a single file object.
      *
      * @param fileInput String representation of file path(s)
-     * @return Single file object or List of file objects
+     * @return Single file or list of files
      */
     protected Object parseFileInput(String fileInput) {
-        if (fileInput.contains(',')) {
+        if( fileInput.contains(',') ) {
             // Split by comma, trim whitespace, and convert each to a file
             return fileInput.tokenize(',')
                 .collect { it.trim() }

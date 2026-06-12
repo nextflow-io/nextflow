@@ -99,6 +99,7 @@ class Launcher {
                 new CmdLaunch(),
                 new CmdList(),
                 new CmdLog(),
+                new CmdLogFile(),
                 new CmdPull(),
                 new CmdRun(),
                 new CmdKubeRun(),
