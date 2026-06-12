@@ -326,6 +326,13 @@ class TaskRun implements Cloneable {
     volatile int failCount
 
     /**
+     * The number of unsuccessful attempts in the previous run. Used to
+     * recover the hash of a successful execution if it occurred after
+     * one or more failed attempts.
+     */
+    volatile int previousTryCount
+
+    /**
      * The number of times the submit of the task has been retried
      */
     volatile int submitRetries
