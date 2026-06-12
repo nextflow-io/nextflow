@@ -18,12 +18,8 @@ package nextflow.script.control;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.IdentityHashMap;
 import java.util.LinkedList;
 import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -42,19 +38,10 @@ public class ModuleResolver {
 
     private Compiler compiler;
     private Path projectDir;
-    private Map<SourceUnit,List<SourceUnit>> dependencies = new IdentityHashMap<>();
 
     public ModuleResolver(Path projectDir, Compiler compiler) {
         this.compiler = compiler;
         this.projectDir = projectDir;
-    }
-
-    /**
-     * Get the modules included by each source file resolved by
-     * this module resolver.
-     */
-    public Map<SourceUnit,List<SourceUnit>> getDependencies() {
-        return dependencies;
     }
 
     /**
@@ -77,9 +64,8 @@ public class ModuleResolver {
                 var includeSource = resolveInclude(in, source, sourceResolver);
                 if( includeSource == null )
                     continue;
-                dependencies.computeIfAbsent(source, k -> new ArrayList<>()).add(includeSource);
-                if( includeSource != entry && modules.add(includeSource) )
-                    queuedSources.add(includeSource);
+                modules.add(includeSource);
+                queuedSources.add(includeSource);
             }
         }
         return modules;
@@ -92,9 +78,8 @@ public class ModuleResolver {
 
         var uri = sourceUnit.getSource().getURI();
         var includeUri = getIncludeUri(uri, source);
-        var existingSource = compiler.getSource(includeUri);
-        if( existingSource != null )
-            return existingSource;
+        if( compiler.getSource(includeUri) != null )
+            return null;
         if( !Files.exists(Path.of(includeUri)) )
             return null;
         var includeSource = sourceResolver.apply(includeUri);

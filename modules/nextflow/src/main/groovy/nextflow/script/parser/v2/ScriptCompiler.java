@@ -213,9 +213,7 @@ public class ScriptCompiler {
 
         private Set<SourceUnit> modules;
 
-        private Map<SourceUnit, List<SourceUnit>> dependencies = Collections.emptyMap();
-
-        private Set<SourceUnit> analyzedSources = Collections.newSetFromMap(new IdentityHashMap<>());
+        private Set<SourceUnit> analyzed = Collections.newSetFromMap(new IdentityHashMap<>());
 
         private Map<WorkflowNode, Map<String, MethodNode>> callSites = new IdentityHashMap<>();
 
@@ -226,6 +224,7 @@ public class ScriptCompiler {
             // declare types with the same name.
             this.ast = new ScriptCompileUnit(getClassLoader(), null, getConfiguration());
             super.addPhaseOperation(source -> analyze(source), Phases.CONVERSION);
+            super.addPhaseOperation(source -> convertToGroovy(source), Phases.CONVERSION);
         }
 
         Set<SourceUnit> getModules() {
@@ -259,9 +258,7 @@ public class ScriptCompiler {
         private void analyze(SourceUnit source) {
             // on first pass, recursively add included modules to queue
             if( entry == null ) {
-                var moduleResolver = new ModuleResolver(projectDir, compiler);
-                modules = moduleResolver.resolve(source, uri -> createSourceUnit(uri));
-                dependencies = moduleResolver.getDependencies();
+                modules = new ModuleResolver(projectDir, compiler).resolve(source, uri -> createSourceUnit(uri));
                 for( var su : modules )
                     addSource(su);
                 entry = source;
@@ -271,31 +268,6 @@ public class ScriptCompiler {
             }
 
             // on second pass, all source files have been parsed
-            analyze0(source);
-        }
-
-        /**
-         * Analyze a source file after analyzing the modules it includes
-         * from, so that included types are fully resolved before they
-         * are used (e.g. to infer the implicit staging of record fields
-         * in a process input).
-         *
-         * @param source
-         */
-        private void analyze0(SourceUnit source) {
-            if( source.getAST() == null )
-                return;
-            if( !analyzedSources.add(source) )
-                return;
-            for( var includeSource : dependencies.getOrDefault(source, Collections.emptyList()) )
-                analyze0(includeSource);
-            analyze1(source);
-        }
-
-        private void analyze1(SourceUnit source) {
-            // initialize script class
-            var cn = source.getAST().getClasses().get(0);
-
             // construct script imports
             var sn = (ScriptNode) source.getAST();
             var imports = new ArrayList<ClassNode>();
@@ -317,10 +289,21 @@ public class ScriptCompiler {
             if( source.getErrorCollector().hasErrors() )
                 return;
 
+            // mark script as analyzed so that it proceeds to Groovy compilation
+            analyzed.add(source);
+        }
+
+        private void convertToGroovy(SourceUnit source) {
+            // skip sources that have not passed analysis
+            // (entry on the first pass, or any source with errors)
+            if( !analyzed.contains(source) )
+                return;
+
             // collect call sites for each workflow in the script
             callSites.putAll(new CallSiteCollector().apply(source));
 
             // convert to Groovy
+            var sn = (ScriptNode) source.getAST();
             for ( var type : DEFAULT_IMPORTS )
                 sn.addImport(null, type);
             sn.addStaticStarImport(null, ClassHelper.makeWithoutCaching("nextflow.Nextflow"));
@@ -330,6 +313,7 @@ public class ScriptCompiler {
                 : ClassHelper.makeWithoutCaching("nextflow.Channel");
             sn.addImport("channel", channelNamespace);
 
+            var cn = sn.getClasses().get(0);
             new ScriptToGroovyVisitor(source).visit();
             new StripTypesVisitor(source).visitClass(cn);
             new PathCompareVisitor(source).visitClass(cn);
@@ -387,7 +371,7 @@ public class ScriptCompiler {
 
         @Override
         public void addModule(ModuleNode module) {
-            // Use the script class name as the package name for declared typess
+            // Use the script class name as the package name for declared types
             var classes = module.getClasses();
             var scriptClass = classes.get(0);
             var packageName = scriptClass.getNameWithoutPackage();
