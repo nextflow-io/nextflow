@@ -16,6 +16,8 @@
 
 package nextflow.script
 
+import nextflow.util.TypeHelper
+
 import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -404,6 +406,10 @@ class ProcessEntryHandler {
             if( param.isOptional() )
                 return null
             throw new IllegalArgumentException("Missing required parameter: --${name}")
+        }
+
+        if( Record.class.isAssignableFrom(param.type) && value instanceof Map) {
+            return TypeHelper.asRecordType(value, param.type)
         }
 
         if( value !instanceof String )

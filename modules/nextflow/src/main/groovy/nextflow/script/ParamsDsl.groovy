@@ -25,8 +25,10 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.script.dsl.Types
+import nextflow.script.types.Record
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
+import nextflow.util.RecordMap
 import nextflow.util.TypeHelper
 import org.codehaus.groovy.runtime.typehandling.GroovyCastException
 /**
@@ -176,6 +178,10 @@ class ParamsDsl {
 
         if( target == Integer.class )
             return source == BigInteger.class || source == Long.class || source == Integer.class
+
+        // When source is a RecordMap and target is a Record. They are assignable.
+        if( source == RecordMap.class && Record.class.isAssignableFrom(target))
+            return true
 
         return target.isAssignableFrom(source)
     }
