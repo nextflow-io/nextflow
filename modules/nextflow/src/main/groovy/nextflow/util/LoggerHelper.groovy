@@ -718,7 +718,7 @@ class LoggerHelper {
                 final observer = session?.logObserver
                 if( observer ) {
                     if( !observer.started || observer.stopped )
-                        System.out.println(message)
+                        System.err.println(message)
                     else if( event.marker == STICKY )
                         observer.appendSticky(message)
                     else if( event.level==Level.ERROR )
@@ -729,7 +729,7 @@ class LoggerHelper {
                         observer.appendInfo(message)
                 }
                 else {
-                    System.out.println(message)
+                    System.err.println(message)
                 }
             }
             catch (Throwable e) {

@@ -129,6 +129,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
                 .workDir(session.workDir?.toUriString())
         final request = new CreateRunRequest()
                 .provider(seqeraConfig.provider)
+                .strategy(seqeraConfig.strategy)
                 .region(seqeraConfig.region)
                 .name(session.runName)
                 .machineRequirement(SchemaMapperUtil.toMachineRequirement(seqeraConfig.machineRequirement))
@@ -137,6 +138,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
                 .pipeline(pipeline)
                 .predictionModel(predictionModel)
                 .computeEnvId(computeEnvId)
+                .shellEnabled(seqeraConfig.shellEnabled)
         log.debug "[SEQERA] Creating run: ${request}"
         final response = client.createRun(request)
         this.runId = response.getRunId()

@@ -20,13 +20,13 @@ import static java.nio.file.StandardCopyOption.*
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.util.function.Predicate
 import java.util.regex.Pattern
 
 import com.github.zafarkhaja.semver.Version
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.event.ExecutionAttemptedEvent
+import dev.failsafe.function.CheckedPredicate
 import dev.failsafe.function.CheckedSupplier
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -148,14 +148,36 @@ class PluginUpdater extends UpdateManager {
      * repository types to perform some data-loading optimisations.
      */
     void prefetchMetadata(List<PluginRef> plugins) {
+        // Skip plugins that are already installed at the requested pinned version: no remote
+        // metadata is needed to start them. This eliminates the registry round-trip on every
+        // Nextflow invocation in the common CI case (pinned versions, plugins already cached).
+        final needed = plugins.findAll { ref -> !isAlreadyInstalled(ref) }
+        if( !needed ) {
+            log.trace "All requested plugins are already installed - skipping registry metadata prefetch"
+            return
+        }
         // use direct field access to avoid the refresh() call in getRepositories()
         // which could fail anything which hasn't had a chance to prefetch yet
         for( def repo : this.@repositories ) {
             if( repo instanceof PrefetchUpdateRepository ) {
-                log.trace "Prefetching plugin metadata from repository: ${repo.getClass().getSimpleName()} [${repo.id}]; plugins=${plugins}"
-                repo.prefetch(plugins)
+                log.trace "Prefetching plugin metadata from repository: ${repo.getClass().getSimpleName()} [${repo.id}]; plugins=${needed}"
+                repo.prefetch(needed)
             }
         }
+    }
+
+    protected boolean isAlreadyInstalled(PluginRef ref) {
+        // Only skip when the user has pinned a version: an unpinned spec needs remote metadata
+        // to resolve the latest release.
+        if( !ref.version )
+            return false
+        // Check the on-disk plugin store rather than the runtime PluginManager: at prefetch
+        // time the local plugins have not been loaded into the manager yet (its per-run root
+        // is still empty), so pluginManager.getPlugin() would always return null. installPlugin()
+        // reuses the cached copy whenever the store directory exists (it only downloads when
+        // missing), so its presence is the authoritative signal that no remote metadata is
+        // required to start the plugin.
+        return pluginsStore != null && FilesEx.exists(pluginsStore.resolve("${ref.id}-${ref.version}"))
     }
 
     /**
@@ -268,11 +290,11 @@ class PluginUpdater extends UpdateManager {
         final listener = new dev.failsafe.event.EventListener<ExecutionAttemptedEvent<T>>() {
             @Override
             void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
-                log.debug("Failed to download plugin: $id; version: $version - attempt: ${event.attemptCount}", event.lastFailure)
+                log.debug("Failed to download plugin: $id; version: $version - attempt: ${event.attemptCount}", event.lastException)
             }
         }
 
-        final condition = new Predicate<Throwable>() {
+        final condition = new CheckedPredicate<Throwable>() {
             @Override
             boolean test(Throwable error) {
                 return error?.cause instanceof ConnectException

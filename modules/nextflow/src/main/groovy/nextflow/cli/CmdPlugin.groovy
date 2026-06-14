@@ -35,7 +35,7 @@ import org.eclipse.jgit.api.Git
  */
 @CompileStatic
 @Parameters(commandDescription = "Execute plugin-specific commands")
-class CmdPlugin extends CmdBase {
+class CmdPlugin extends CmdBase implements UsageAware {
 
     @Override
     String getName() {
@@ -51,10 +51,77 @@ class CmdPlugin extends CmdBase {
     @Parameter(names = ['-template'], description = 'Plugin template version to use', hidden = true)
     String templateVersion = 'v0.3.0'
 
+    /**
+     * Print the command usage help
+     */
+    @Override
+    void usage() {
+        usage(args)
+    }
+
+    /**
+     * Print the command usage help
+     *
+     * @param args The arguments as entered by the user
+     */
+    @Override
+    void usage(List<String> args) {
+        List<String> result = []
+        if( !args ) {
+            generalUsage(result)
+        }
+        else {
+            switch( args[0] ) {
+                case 'install':
+                    result << 'Install a plugin'
+                    result << 'Usage: nextflow plugin install <pluginId,...>'
+                    result << ''
+                    break
+                case 'create':
+                    result << 'Create a new plugin project from the official template'
+                    result << 'Usage: nextflow plugin create [<plugin name> <provider name> [project path]]'
+                    result << ''
+                    result << 'When no arguments are provided, the command prompts interactively for the required values.'
+                    result << ''
+                    break
+                default:
+                    if( args[0].contains(CMD_SEP) ) {
+                        result << 'Execute a plugin-specific command'
+                        result << 'Usage: nextflow plugin <plugin-name>:<command> [args]'
+                        result << ''
+                        result << 'See the documentation of the individual plugin for its available commands.'
+                        result << ''
+                    }
+                    else {
+                        // print the reason of the failure, then fall back to the general usage
+                        result << "Unknown plugin sub-command: ${args[0]}".toString()
+                        result << ''
+                        generalUsage(result)
+                    }
+            }
+        }
+        println result.join('\n').toString()
+    }
+
+    private void generalUsage(List<String> result) {
+        result << this.getClass().getAnnotation(Parameters).commandDescription()
+        result << 'Usage: nextflow plugin <sub-command> [options]'
+        result << ''
+        result << 'Commands:'
+        result << '  install <pluginId,...>            Install a plugin'
+        result << '  create [<name> <provider> [dir]]  Create a new plugin project from the template'
+        result << '  <plugin-name>:<command> [args]    Execute a plugin-specific command'
+        result << ''
+        result << 'See the documentation of an individual plugin for its plugin-specific commands.'
+        result << ''
+    }
+
     @Override
     void run() {
-        if( !args )
-            throw new AbortOperationException("Missing plugin command - usage: nextflow plugin install <pluginId,..>")
+        if( !args ) {
+            usage()
+            return
+        }
         // setup plugins system
         Plugins.init()
         Runtime.addShutdownHook((it)-> Plugins.stop())

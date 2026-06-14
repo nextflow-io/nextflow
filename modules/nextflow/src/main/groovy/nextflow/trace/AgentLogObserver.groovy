@@ -27,7 +27,7 @@ import nextflow.util.LoggerHelper
 
 /**
  * AI agent-friendly log observer that outputs minimal, structured information
- * to standard error, optimized for AI context windows.
+ * to standard output, optimized for AI context windows.
  *
  * Activated via environment variable {@code NXF_AGENT_MODE=1}.
  *
