@@ -8,6 +8,7 @@ export default async function createConfigAsync() {
   return createSeqeraConfig({
     clientModules: [
       require.resolve('./src/client-modules/cross-site-nav.js'),
+      require.resolve('./src/client-modules/posthog-search.js'),
       require.resolve('./src/client-modules/katex-css.js'),
     ],
     themes: ["@docusaurus/theme-mermaid"],
@@ -66,6 +67,13 @@ export default async function createConfigAsync() {
         await getSeqeraPresetOptions({
           docs: false,
           openapi: false,
+          gtag: {
+            trackingID: "G-NR1CNM213G",
+            anonymizeIP: true,
+          },
+          googleTagManager: {
+            containerId: "GTM-MBCJKK4",
+          },
           theme: {
             customCss: require.resolve("./src/custom.css"),
           },
