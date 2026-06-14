@@ -71,7 +71,7 @@ if [[ $TEST_MODE == 'test_docs' ]]; then
 
     (
       echo "Documentation tests"
-      cd ../docs/snippets/
+      cd ../docs/docs/snippets/
       bash test.sh
     )
 
