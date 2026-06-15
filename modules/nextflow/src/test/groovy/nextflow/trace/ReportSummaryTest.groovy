@@ -208,10 +208,16 @@ class ReportSummaryTest extends Specification {
         gpuUsage.maxLabel == 'gpu_proc-1'
 
         gpuMemPeak.min == quantile(GPU_MEM_PEAK, 0)
+        gpuMemPeak.q1 == quantile(GPU_MEM_PEAK, 25)
+        gpuMemPeak.q2 == quantile(GPU_MEM_PEAK, 50)
+        gpuMemPeak.q3 == quantile(GPU_MEM_PEAK, 75)
         gpuMemPeak.max == quantile(GPU_MEM_PEAK, 100)
         gpuMemPeak.mean == mean(GPU_MEM_PEAK)
 
         gpuMemAvg.min == quantile(GPU_MEM_AVG, 0)
+        gpuMemAvg.q1 == quantile(GPU_MEM_AVG, 25)
+        gpuMemAvg.q2 == quantile(GPU_MEM_AVG, 50)
+        gpuMemAvg.q3 == quantile(GPU_MEM_AVG, 75)
         gpuMemAvg.max == quantile(GPU_MEM_AVG, 100)
         gpuMemAvg.mean == mean(GPU_MEM_AVG)
     }

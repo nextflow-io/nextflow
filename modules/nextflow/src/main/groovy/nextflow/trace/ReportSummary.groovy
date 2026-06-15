@@ -63,8 +63,6 @@ class ReportSummary {
             return realtime / request * 100 as Double
         }
 
-        // GPU series read the Fusion trace `gpu` block carried as a transient
-        // field on TraceRecord (snake_case keys as emitted by Fusion trace.json)
         mappers.gpuUsage = { TraceRecord record -> record.getGpuMetrics()?.get('pct') as Double }
         mappers.gpuMemPeak = { TraceRecord record -> record.getGpuMetrics()?.get('peak_mem_used') as Double }
         mappers.gpuMemAvg = { TraceRecord record -> record.getGpuMetrics()?.get('avg_mem') as Double }
