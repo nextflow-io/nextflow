@@ -11,7 +11,7 @@ Nextflow uses UTF-8 as the default character encoding for source files. Make sur
 :::
 
 :::{warning}
-Nextflow scripts have a maximum size of 64 KiB. To avoid this limit for large pipelines, consider moving pipeline components into separate files and including them as modules.
+Nextflow scripts have a maximum size of 64 KiB. To avoid this limit for large pipelines, consider moving pipeline components into separate files and including them in the main script.
 :::
 
 ## Hello world
@@ -129,7 +129,7 @@ age = person.age
 is_alive = person.is_alive
 ```
 
-Records are immutable -- once a record is created, it cannot be modified. Use record operations to create new records instead. 
+Records are immutable -- once a record is created, it cannot be modified. Use record operations to create new records instead.
 
 For example:
 
@@ -532,7 +532,7 @@ When a closure takes a single parameter, the parameter can be omitted, in which 
 
 So far, we have been focusing on the basic building blocks of Nextflow code, like variables, lists, strings, and closures.
 
-In practice, however, Nextflow scripts are composed of *workflows*, *processes*, and *functions* (collectively known as *definitions*), and can *include*  definitions from other scripts.
+In practice, however, Nextflow scripts are composed of *workflows*, *processes*, and *functions* (collectively known as *definitions*), and can *include* definitions from other scripts.
 
 To transition a code snippet into a proper workflow script, simply wrap it in a `workflow` block:
 
@@ -544,7 +544,7 @@ workflow {
 
 This block is called the *entry workflow*. It serves as the entrypoint when the script is executed. A script can only have one entry workflow. Whenever a script contains only simple statements like `println 'Hello!'`, Nextflow simply treats it as an entry workflow.
 
-You can also break up code into functions, for example:
+You can break up code into functions, for example:
 
 ```nextflow
 def sayHello() {
@@ -561,4 +561,27 @@ workflow {
 }
 ```
 
-See {ref}`Workflows <workflow-page>`, {ref}`Processes <process-page>`, and {ref}`Modules <modules-page>` for more information about how to use these features in your Nextflow scripts.
+You can organize these definitions further by moving them to a separate script and including them in the main script:
+
+```nextflow
+// functions.nf
+def sayHello() {
+    println 'Hello!'
+}
+
+def add(a, b) {
+    a + b
+}
+```
+
+```nextflow
+// main.nf
+include { sayHello; add } from './functions.nf'
+
+workflow {
+    sayHello()
+    println "2 + 2 = ${add(2, 2)}!"
+}
+```
+
+See {ref}`Workflows <workflow-page>`, {ref}`Processes <process-page>`, and {ref}`Includes <syntax-include>` for more information about how to use these features in your Nextflow scripts.

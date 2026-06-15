@@ -196,7 +196,7 @@ workflow {
 
 In order for a script to be executable, it must either define an entry workflow or be a code snippet as described [above](#script-declarations).
 
-Entry workflow definitions are ignored when a script is included as a module. This way, the same script can be included as a module or executed as a pipeline.
+Entry workflow definitions are ignored when a script is included by another script. This way, the same script can be executed as a pipeline or included in another pipeline.
 
 (syntax-workflow-typed)=
 
@@ -249,7 +249,7 @@ process greet {
     errorStrategy 'retry'
     tag { "${greeting}/${name}" }
 
-    input: 
+    input:
     val greeting
     val name
 
@@ -280,7 +280,7 @@ The script section can be substituted with an exec section:
 
 ```nextflow
 process greet {
-    input: 
+    input:
     val greeting
     val name
 
@@ -306,7 +306,7 @@ A typed process is a process that uses static typing for inputs and outputs:
 nextflow.enable.types = true
 
 process greet {
-    input: 
+    input:
     greeting: String
     name: String
 
