@@ -35,14 +35,20 @@ class HintHelper {
     static final String PREFIX = 'seqera/'
     static final String MR_PREFIX = 'machineRequirement.'
 
+    /** Top-level task hint that overrides the run-level resource prediction model. */
+    static final String PREDICTION_MODEL_KEY = 'predictionModel'
+
     private static final List<Field> MR_FIELDS = Collections.unmodifiableList(
         MachineRequirementOpts.declaredFields
             .findAll { Field f -> f.isAnnotationPresent(ConfigOption) }
             .collect { Field f -> f.setAccessible(true); f } as List<Field>
     )
 
+    /** Recognized top-level (non machineRequirement) task hint keys. */
+    static final Set<String> TASK_KEYS = Set.of(PREDICTION_MODEL_KEY)
+
     static final Set<String> KNOWN_KEYS = Collections.unmodifiableSet(
-        MR_FIELDS.collect { MR_PREFIX + it.name }.toSet()
+        (MR_FIELDS.collect { MR_PREFIX + it.name } + (TASK_KEYS as List<String>)).toSet()
     )
 
     private static final String SUPPORTED_KEYS_MSG =
@@ -100,18 +106,22 @@ class HintHelper {
      * @return a new {@link MachineRequirementOpts} with hints overlaid
      */
     static MachineRequirementOpts overlayHints(MachineRequirementOpts baseOpts, Map<String, Object> hints) {
-        final seqeraHints = extractSeqeraHints(hints)
-        if( !seqeraHints )
+        // only machineRequirement.* hints contribute here; top-level task hints
+        // (e.g. predictionModel) are resolved separately
+        final mrHints = extractSeqeraHints(hints).findAll { it.key.startsWith(MR_PREFIX) }
+        if( !mrHints )
             return baseOpts
 
         final Map<String, Object> merged = new LinkedHashMap<>()
-        for( final field : MR_FIELDS ) {
-            final value = field.get(baseOpts)
-            if( value != null )
-                merged.put(field.name, value)
+        if( baseOpts != null ) {
+            for( final field : MR_FIELDS ) {
+                final value = field.get(baseOpts)
+                if( value != null )
+                    merged.put(field.name, value)
+            }
         }
 
-        for( Map.Entry<String, Object> entry : seqeraHints.entrySet() ) {
+        for( Map.Entry<String, Object> entry : mrHints.entrySet() ) {
             final fieldName = entry.key.substring(MR_PREFIX.length())
             final value = entry.value
             if( value == null ) {
@@ -122,6 +132,20 @@ class HintHelper {
         }
 
         return new MachineRequirementOpts(merged)
+    }
+
+    /**
+     * Resolve the task-level {@code predictionModel} hint, if specified. Returns the
+     * raw value (e.g. {@code "qr/v1"}, {@code "qr/v2"}, {@code "none"}) or {@code null}
+     * when no such hint is present, in which case the task inherits the run-level
+     * prediction model.
+     *
+     * @param hints the full hints map from task config
+     * @return the prediction model hint value, or {@code null} if not set
+     */
+    static String resolvePredictionModel(Map<String, Object> hints) {
+        final value = extractSeqeraHints(hints).get(PREDICTION_MODEL_KEY)
+        return value != null ? value.toString() : null
     }
 
 }
