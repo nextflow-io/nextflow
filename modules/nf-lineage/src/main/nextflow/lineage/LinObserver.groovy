@@ -19,6 +19,9 @@ package nextflow.lineage
 import nextflow.NextflowMeta
 import nextflow.extension.FilesEx
 import nextflow.lineage.exception.OutputRelativePathException
+import nextflow.module.ModuleInfo
+import nextflow.module.ModuleSpecFactory
+import nextflow.module.ModuleStorage
 
 import static nextflow.lineage.fs.LinPath.*
 
@@ -28,6 +31,7 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.time.OffsetDateTime
 
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.lineage.model.v1beta1.Checksum
@@ -270,7 +274,8 @@ class LinObserver implements TraceObserverV2 {
                 normalizer.normalizePath(p.normalize()),
                 Checksum.ofNextflow(p) )
             },
-            asUriString(executionHash)
+            asUriString(executionHash),
+            getTaskModuleId(task)
         )
 
         // store in the underlying persistence
@@ -281,6 +286,44 @@ class LinObserver implements TraceObserverV2 {
 
     protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
         return new TaskHasher(task).getTaskGlobalVars()
+    }
+
+    protected String getTaskModuleId(TaskRun task) {
+        final ownerScript = task.processor?.getOwnerScript()
+        if( !ownerScript )
+            return null
+
+        final scriptMeta = ScriptMeta.get(ownerScript)
+        if( !scriptMeta || !scriptMeta.isModule() )
+            return null
+        return extractModuleInfo(scriptMeta.getScriptPath())
+    }
+
+    @Memoized
+    protected String extractModuleInfo(Path scriptPath) {
+        if( !scriptPath )
+            return null
+        final moduleDir = scriptPath.getParent()
+        if( !moduleDir )
+            return null
+        final manifestPath = moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
+        // presence of the `.module-info` marker is how we identify a directory as
+        // a Nextflow-managed remote module (vs. any directory that contains a meta.yml)
+        final infoPath = moduleDir.resolve(ModuleInfo.MODULE_INFO_FILE)
+        if( !manifestPath.exists() || !infoPath.exists() )
+            return null
+        try {
+            final spec = ModuleSpecFactory.fromYaml(manifestPath)
+            if( !spec.name || !spec.version ) {
+                log.debug("Incomplete module manifest '${manifestPath.toUriString()}': missing name or version")
+                return null
+            }
+            return "${spec.name}@${spec.version}".toString()
+        }
+        catch( Exception e ) {
+            log.warn("Unable to read module manifest '${manifestPath.toUriString()}': ${e.message}")
+            return null
+        }
     }
 
     protected List<Path> getTaskBinEntries(TaskRun task) {

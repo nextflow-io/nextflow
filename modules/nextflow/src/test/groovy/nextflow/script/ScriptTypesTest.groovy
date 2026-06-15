@@ -296,6 +296,52 @@ class ScriptTypesTest extends Dsl2Spec {
         folder?.deleteDir()
     }
 
+    def 'should stage path fields of an included record type' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('types.nf').text = '''\
+            record Pair {
+                id: String
+                r1: Path
+                r2: Path
+            }
+            '''.stripIndent()
+
+        def file = folder.resolve('main.nf')
+        file.text = '''\
+            nextflow.enable.types = true
+
+            include { Pair } from './types.nf'
+
+            process CONSUME {
+                input:
+                rec: Pair
+
+                script:
+                """
+                cat ${rec.r1} ${rec.r2}
+                """
+            }
+
+            workflow {
+            }
+            '''.stripIndent()
+
+        when:
+        runScript(file)
+        and:
+        def process = ScriptMeta.get(ScriptMeta.getScriptByPath(file)).getProcess('CONSUME')
+        def inputs = process.getProcessConfig().getInputs()
+
+        then:
+        // the `r1` and `r2` record fields should be staged as input files
+        inputs.getFiles().size() == 2
+
+        cleanup:
+        folder.deleteDir()
+    }
+
     def 'should expose type annotations via reflection'() {
         when:
         def script = loadScript(

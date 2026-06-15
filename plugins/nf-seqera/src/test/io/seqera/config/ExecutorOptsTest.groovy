@@ -44,10 +44,22 @@ class ExecutorOptsTest extends Specification {
         config.region == null
         config.provider == null
         config.keyPairName == null
-        config.batchFlushInterval == Duration.of('1 sec')
+        config.batchFlushInterval == Duration.of('5 sec')
         config.machineRequirement != null
         config.machineRequirement.provisioning == null
         !config.autoLabels
+        !config.shellEnabled
+    }
+
+    def 'should enable on-demand shell access when set' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            shellEnabled: true
+        ])
+
+        then:
+        config.shellEnabled
     }
 
     def 'should create config with custom region' () {
