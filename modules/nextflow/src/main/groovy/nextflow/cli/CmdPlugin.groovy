@@ -49,7 +49,7 @@ class CmdPlugin extends CmdBase {
     List<String> args
 
     @Parameter(names = ['-template'], description = 'Plugin template version to use', hidden = true)
-    String templateVersion = 'v0.3.0'
+    String templateVersion = 'v0.4.0'
 
     @Override
     void run() {
