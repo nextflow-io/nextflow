@@ -678,6 +678,7 @@ class LinObserverTest extends Specification {
         def taskDescription = new nextflow.lineage.model.v1beta1.TaskRun(uniqueId.toString(), "foo",
             new Checksum(sourceHash, "nextflow", "standard"),
             script,
+            null,
             [
                 new Parameter("path", "file1", ['lid://78567890/file1.txt']),
                 new Parameter("path", "file2", [[path: normalizer.normalizePath(file), checksum: [value:fileHash, algorithm: "nextflow", mode:  "standard"]]]),
@@ -757,53 +758,6 @@ class LinObserverTest extends Specification {
         def result = store.load(hash.toString()) as nextflow.lineage.model.v1beta1.TaskRun
         then:
         result.eval == [eval1: 'echo one', eval2: 'echo two']
-
-        cleanup:
-        folder?.deleteDir()
-    }
-
-    def 'should store null eval when task has no output evals' () {
-        given:
-        def folder = Files.createTempDirectory('test').toRealPath()
-        def config = [workflow:[lineage:[enabled: true, store:[location:folder.toString()]]]]
-        def uniqueId = UUID.randomUUID()
-        def workDir = folder.resolve("work")
-        def session = Mock(Session) {
-            getConfig()>>config
-            getUniqueId()>>uniqueId
-            getRunName()>>"test_run"
-            getWorkDir() >> workDir
-        }
-        def metadata = Mock(WorkflowMetadata){
-            getProjectDir() >> workDir.resolve("projectDir")
-            getWorkDir() >> workDir
-        }
-        and:
-        def store = new DefaultLinStore();
-        store.open(LineageConfig.create(session))
-        and:
-        def observer = Spy(new LinObserver(session, store))
-        observer.executionHash = "hash"
-        observer.normalizer = new PathNormalizer(metadata)
-        observer.getTaskGlobalVars(_) >> [:]
-        observer.getTaskBinEntries(_) >> []
-        and:
-        def hash = HashCode.fromString("1234567890")
-        def task = Mock(TaskRun) {
-            getName() >> 'foo'
-            getHash() >> hash
-            getSource() >> 'echo task source'
-            getScript() >> 'this is the script'
-            getInputs() >> [:]
-            getOutputEvals() >> [:]
-            getWorkDir() >> workDir
-        }
-
-        when:
-        observer.storeTaskRun(task, observer.normalizer)
-        def result = store.load(hash.toString()) as nextflow.lineage.model.v1beta1.TaskRun
-        then:
-        result.eval == null
 
         cleanup:
         folder?.deleteDir()

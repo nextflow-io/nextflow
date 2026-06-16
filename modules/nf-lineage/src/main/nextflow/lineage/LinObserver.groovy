@@ -260,6 +260,7 @@ class LinObserver implements TraceObserverV2 {
             task.getName(),
             codeChecksum,
             task.script,
+            getTaskOutputEvals(task),
             task.inputs ? manageTaskInputParameters(task.inputs, normalizer) : null,
             task.isContainerEnabled() ? task.getContainerFingerprint() : null,
             normalizer.normalizePath(task.getCondaEnv()),
@@ -270,8 +271,7 @@ class LinObserver implements TraceObserverV2 {
                 normalizer.normalizePath(p.normalize()),
                 Checksum.ofNextflow(p) )
             },
-            asUriString(executionHash),
-            getTaskOutputEvals(task)
+            asUriString(executionHash)
         )
 
         // store in the underlying persistence
