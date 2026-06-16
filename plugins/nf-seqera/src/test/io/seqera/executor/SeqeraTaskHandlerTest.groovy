@@ -23,6 +23,7 @@ import io.seqera.sched.api.schema.v1a1.DescribeTaskResponse
 import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
 import io.seqera.sched.api.schema.v1a1.MachineInfo
 import io.seqera.sched.api.schema.v1a1.NextflowTask
+import io.seqera.sched.api.schema.v1a1.PredictionModel
 import io.seqera.sched.api.schema.v1a1.PriceModel as SchedPriceModel
 import io.seqera.sched.api.schema.v1a1.ProvisioningModel
 import io.seqera.sched.api.schema.v1a1.ResourceLimit
@@ -892,6 +893,27 @@ class SeqeraTaskHandlerTest extends Specification {
         then:
         def e = thrown(IllegalArgumentException)
         e.message.contains('seqera/machineRequirement.bogus')
+    }
+
+    def 'submit sets Task.predictionModel from the predictionModel hint'() {
+        given:
+        Task captured = null
+        def handler = createSubmitHandler(
+            hints: hints,
+            onSubmit: { captured = it },
+        )
+
+        when:
+        handler.submit()
+        then:
+        captured.getPredictionModel() == expected
+
+        where:
+        hints                                | expected
+        ['seqera/predictionModel': 'none']   | PredictionModel.NONE
+        ['seqera/predictionModel': 'qr/v2']  | PredictionModel.QR_V2
+        ['predictionModel': 'qr/v1']         | PredictionModel.QR_V1
+        [:]                                  | null
     }
 
     private SeqeraTaskHandler createSubmitHandler(Map args) {

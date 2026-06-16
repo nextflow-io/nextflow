@@ -94,7 +94,7 @@ Version management MUST follow strict semantic versioning with calendar-based re
 
 - **Project versions** use calendar-based scheme: `YY.MM.PATCH` where April (`.04.`) and October (`.10.`) are stable releases, all other months use `-edge` suffix (e.g., `25.09.0-edge`)
 - **Plugin versions** MUST use semantic versioning (`MAJOR.MINOR.PATCH`)
-- Version changes MUST be documented in `changelog.txt` files (both project root and per-plugin)
+- Version changes MUST be documented in `CHANGELOG.md` files (both project root and per-plugin)
 - Breaking changes MUST increment MAJOR version for plugins and be clearly documented
 - Release process MUST follow the documented procedure in `CLAUDE.md` including: updating changelogs, version files, running `make releaseInfo`, using `[release]` tag in commit message
 

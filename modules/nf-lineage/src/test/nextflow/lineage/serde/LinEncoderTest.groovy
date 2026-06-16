@@ -204,7 +204,8 @@ class LinEncoderTest extends Specification{
         def taskRun = new TaskRun(
             uniqueId.toString(),"name", new Checksum("78910", "nextflow", "standard"), 'this is a script',
             [new Parameter("String", "param1", "value1")], "container:version", "conda", "spack", "amd64",
-            [a: "A", b: "B"], [new DataPath("path/to/file", new Checksum("78910", "nextflow", "standard"))]
+            [a: "A", b: "B"], [new DataPath("path/to/file", new Checksum("78910", "nextflow", "standard"))],
+            "lid://workflow-run", "nf-core/fastqc@1.0.0"
         )
         when:
         def encoded = encoder.encode(taskRun)
@@ -226,6 +227,8 @@ class LinEncoderTest extends Specification{
         result.binEntries.size() == 1
         result.binEntries.get(0).path == "path/to/file"
         result.binEntries.get(0).checksum.value == "78910"
+        result.workflowRun == "lid://workflow-run"
+        result.moduleId == "nf-core/fastqc@1.0.0"
     }
 
     def 'should encode and decode TaskOutputs'(){
