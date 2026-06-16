@@ -16,8 +16,17 @@
 
 package nextflow.lineage
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
+import groovy.runtime.metaclass.NextflowDelegatingMetaClass
+import org.slf4j.LoggerFactory
 import nextflow.extension.FilesEx
 import nextflow.lineage.exception.OutputRelativePathException
+import nextflow.plugin.extension.PluginExtensionProvider
+import nextflow.processor.TaskProcessor
+import nextflow.script.BaseScript
 
 import java.nio.file.Files
 import java.nio.file.Path
@@ -682,7 +691,7 @@ class LinObserverTest extends Specification {
                 new Parameter("path", "file1", ['lid://78567890/file1.txt']),
                 new Parameter("path", "file2", [[path: normalizer.normalizePath(file), checksum: [value:fileHash, algorithm: "nextflow", mode:  "standard"]]]),
                 new Parameter("val", "id", "value")
-            ], null, null, null, null, [:], [], "lid://hash")
+            ], null, null, null, null, [:], [], "lid://hash", null)
         def dataOutput1 = new FileOutput(outFile1.toString(), new Checksum(fileHash1, "nextflow", "standard"),
             "lid://1234567890", "lid://hash", "lid://1234567890", attrs1.size(), LinUtils.toDate(attrs1.creationTime()), LinUtils.toDate(attrs1.lastModifiedTime()) )
         def dataOutput2 = new FileOutput(outFile2.toString(), new Checksum(fileHash2, "nextflow", "standard"),
@@ -713,6 +722,182 @@ class LinObserverTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+    }
+
+    def 'should resolve task module from remote module manifest' () {
+        given:
+        def folder = Files.createTempDirectory('test').toRealPath()
+        def moduleDir = folder.resolve('modules/nf-core/fastqc')
+        Files.createDirectories(moduleDir)
+        def modulePath = moduleDir.resolve('main.nf')
+        modulePath.text = 'process FASTQC { script: "echo foo" }'
+        moduleDir.resolve('meta.yml').text = 'name: nf-core/fastqc\nversion: 1.0.0\n'
+        moduleDir.resolve('.module-info').text = '{}'
+        and:
+        NextflowDelegatingMetaClass.provider = Mock(PluginExtensionProvider) {
+            operatorNames() >> new HashSet<String>()
+        }
+        def script = Mock(BaseScript)
+        def meta = ScriptMeta.register(script)
+        meta.setScriptPath(modulePath)
+        meta.setModule(true)
+        and:
+        def processor = Mock(TaskProcessor){ getOwnerScript() >> script }
+        def task = Mock(TaskRun){ getProcessor() >> processor }
+        and:
+        def observer = new LinObserver(Mock(Session), Mock(LinStore))
+
+        expect:
+        observer.getTaskModuleId(task) == 'nf-core/fastqc@1.0.0'
+
+        cleanup:
+        NextflowDelegatingMetaClass.provider = null
+        ScriptMeta.reset()
+        folder?.deleteDir()
+    }
+
+    def 'should return null task module when no owner script' () {
+        given:
+        def task = Mock(TaskRun){ getProcessor() >> null }
+        def observer = new LinObserver(Mock(Session), Mock(LinStore))
+
+        expect:
+        observer.getTaskModuleId(task) == null
+    }
+
+    def 'should return null task module when script is not a remote module' () {
+        given:
+        def folder = Files.createTempDirectory('test').toRealPath()
+        def modulePath = folder.resolve('main.nf')
+        modulePath.text = 'process FOO { script: "echo foo" }'
+        and:
+        NextflowDelegatingMetaClass.provider = Mock(PluginExtensionProvider) {
+            operatorNames() >> new HashSet<String>()
+        }
+        def script = Mock(BaseScript)
+        ScriptMeta.register(script).setScriptPath(modulePath) // setModule(true) NOT called
+        and:
+        def processor = Mock(TaskProcessor){ getOwnerScript() >> script }
+        def task = Mock(TaskRun){ getProcessor() >> processor }
+        and:
+        def observer = new LinObserver(Mock(Session), Mock(LinStore))
+
+        expect:
+        observer.getTaskModuleId(task) == null
+
+        cleanup:
+        NextflowDelegatingMetaClass.provider = null
+        ScriptMeta.reset()
+        folder?.deleteDir()
+    }
+
+    def 'should return null task module for local include without manifest' () {
+        given: 'a script marked as module but with no meta.yml/.module-info alongside (local include)'
+        def folder = Files.createTempDirectory('test').toRealPath()
+        def modulePath = folder.resolve('local-module.nf')
+        modulePath.text = 'process FOO { script: "echo foo" }'
+        and:
+        NextflowDelegatingMetaClass.provider = Mock(PluginExtensionProvider) {
+            operatorNames() >> new HashSet<String>()
+        }
+        def script = Mock(BaseScript)
+        def meta = ScriptMeta.register(script)
+        meta.setScriptPath(modulePath)
+        meta.setModule(true)
+        and:
+        def processor = Mock(TaskProcessor){ getOwnerScript() >> script }
+        def task = Mock(TaskRun){ getProcessor() >> processor }
+        and:
+        def observer = new LinObserver(Mock(Session), Mock(LinStore))
+
+        expect:
+        observer.getTaskModuleId(task) == null
+
+        cleanup:
+        NextflowDelegatingMetaClass.provider = null
+        ScriptMeta.reset()
+        folder?.deleteDir()
+    }
+
+    def 'should return null and warn when module manifest is malformed' () {
+        given:
+        def folder = Files.createTempDirectory('test').toRealPath()
+        def moduleDir = folder.resolve('modules/nf-core/broken')
+        Files.createDirectories(moduleDir)
+        def modulePath = moduleDir.resolve('main.nf')
+        modulePath.text = 'process BROKEN { script: "echo foo" }'
+        moduleDir.resolve('meta.yml').text = ':\n  not valid yaml: [unterminated'
+        moduleDir.resolve('.module-info').text = '{}'
+        and:
+        NextflowDelegatingMetaClass.provider = Mock(PluginExtensionProvider) {
+            operatorNames() >> new HashSet<String>()
+        }
+        def script = Mock(BaseScript)
+        def meta = ScriptMeta.register(script)
+        meta.setScriptPath(modulePath)
+        meta.setModule(true)
+        and:
+        def processor = Mock(TaskProcessor){ getOwnerScript() >> script }
+        def task = Mock(TaskRun){ getProcessor() >> processor }
+        and:
+        def observer = new LinObserver(Mock(Session), Mock(LinStore))
+        and:
+        def appender = attachLogAppender(LinObserver)
+
+        expect:
+        observer.getTaskModuleId(task) == null
+        appender.list.any { it.level == Level.WARN && it.formattedMessage.contains('Unable to read module manifest') }
+
+        cleanup:
+        detachLogAppender(LinObserver, appender)
+        NextflowDelegatingMetaClass.provider = null
+        ScriptMeta.reset()
+        folder?.deleteDir()
+    }
+
+    def 'should return null when module manifest is incomplete' () {
+        given: 'a valid YAML manifest missing the name/version keys'
+        def folder = Files.createTempDirectory('test').toRealPath()
+        def moduleDir = folder.resolve('modules/nf-core/incomplete')
+        Files.createDirectories(moduleDir)
+        def modulePath = moduleDir.resolve('main.nf')
+        modulePath.text = 'process INCOMPLETE { script: "echo foo" }'
+        moduleDir.resolve('meta.yml').text = 'description: a module without name or version\n'
+        moduleDir.resolve('.module-info').text = '{}'
+        and:
+        NextflowDelegatingMetaClass.provider = Mock(PluginExtensionProvider) {
+            operatorNames() >> new HashSet<String>()
+        }
+        def script = Mock(BaseScript)
+        def meta = ScriptMeta.register(script)
+        meta.setScriptPath(modulePath)
+        meta.setModule(true)
+        and:
+        def processor = Mock(TaskProcessor){ getOwnerScript() >> script }
+        def task = Mock(TaskRun){ getProcessor() >> processor }
+        and:
+        def observer = new LinObserver(Mock(Session), Mock(LinStore))
+
+        expect:
+        observer.getTaskModuleId(task) == null
+
+        cleanup:
+        NextflowDelegatingMetaClass.provider = null
+        ScriptMeta.reset()
+        folder?.deleteDir()
+    }
+
+    private static ListAppender<ILoggingEvent> attachLogAppender(Class clazz) {
+        final logger = (Logger) LoggerFactory.getLogger(clazz)
+        final appender = new ListAppender<ILoggingEvent>()
+        appender.start()
+        logger.addAppender(appender)
+        return appender
+    }
+
+    private static void detachLogAppender(Class clazz, ListAppender<ILoggingEvent> appender) {
+        final logger = (Logger) LoggerFactory.getLogger(clazz)
+        logger.detachAppender(appender)
     }
 
     def 'should save task data output' () {
