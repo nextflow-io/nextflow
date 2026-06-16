@@ -139,6 +139,67 @@ class PluginUpdater extends UpdateManager {
         }
     }
 
+    /**
+     * Aggregate plugin metadata across all configured registries.
+     *
+     * The default {@link UpdateManager#getPluginsMap()} merges repositories with
+     * {@code Map.putAll}, so the last repository serving a given plugin id fully overwrites
+     * the earlier ones — silently discarding releases that exist only in an earlier-listed
+     * registry. Here the releases of each plugin id are instead unioned across all
+     * repositories. When the same {@code version} is served by more than one registry, the
+     * earlier-listed registry wins, matching the priority order in which the registries are
+     * declared (first listed = highest priority).
+     *
+     * @return a map of plugin id to its merged {@link PluginInfo}
+     */
+    @Override
+    Map<String, PluginInfo> getPluginsMap() {
+        final result = new LinkedHashMap<String, PluginInfo>()
+        for( UpdateRepository repo : getRepositories() ) {
+            for( Map.Entry<String, PluginInfo> entry : repo.getPlugins().entrySet() ) {
+                final merged = result.get(entry.key)
+                if( merged == null )
+                    result.put(entry.key, copyPluginInfo(entry.value))
+                else
+                    mergeReleases(merged, entry.value)
+            }
+        }
+        return result
+    }
+
+    /**
+     * Create a copy of a {@link PluginInfo} with its own releases list, so that merging across
+     * repositories does not mutate the metadata cached by each repository.
+     */
+    private static PluginInfo copyPluginInfo(PluginInfo src) {
+        final copy = new PluginInfo()
+        copy.id = src.id
+        copy.name = src.name
+        copy.description = src.description
+        copy.provider = src.provider
+        copy.projectUrl = src.projectUrl
+        copy.releases = src.releases != null
+            ? new ArrayList<PluginInfo.PluginRelease>(src.releases)
+            : new ArrayList<PluginInfo.PluginRelease>()
+        return copy
+    }
+
+    /**
+     * Append the releases of {@code src} to {@code target}, skipping any version already present.
+     * Releases already in {@code target} come from an earlier-listed (higher priority) registry
+     * and therefore take precedence on a version clash.
+     */
+    private static void mergeReleases(PluginInfo target, PluginInfo src) {
+        if( !src.releases )
+            return
+        final knownVersions = new HashSet<String>()
+        for( PluginInfo.PluginRelease r : target.releases )
+            knownVersions.add(r.version)
+        for( PluginInfo.PluginRelease r : src.releases )
+            if( knownVersions.add(r.version) )
+                target.releases.add(r)
+    }
+
     static private List<DefaultUpdateRepository> customRepos() {
         final repos = SysEnv.get('NXF_PLUGINS_TEST_REPOSITORY')
         if( !repos )

@@ -33,6 +33,7 @@ import org.pf4j.Plugin
 import org.pf4j.PluginDescriptor
 import org.pf4j.PluginRuntimeException
 import org.pf4j.PluginWrapper
+import org.pf4j.update.DefaultUpdateRepository
 import org.pf4j.update.PluginInfo
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -558,6 +559,30 @@ class PluginUpdaterTest extends Specification {
 
         then:
         updater.getRepositories().size() == before
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should union plugin releases across registries, first-listed wins' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and: 'two registries serving the same plugin id with overlapping versions'
+        def repoA = remoteRepository(folder.resolve('repoA'), ['1.0.0', '2.0.0'])
+        def repoB = remoteRepository(folder.resolve('repoB'), ['1.5.0', '2.0.0'])
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, repoA, false)
+        updater.addRepository(new DefaultUpdateRepository('repo-b', repoB))
+
+        when:
+        def releases = updater.getPluginsMap()['my-plugin'].releases
+
+        then: 'releases from both registries are unioned, de-duplicated by version'
+        releases.size() == 3
+        releases*.version.toSet() == ['1.0.0', '2.0.0', '1.5.0'].toSet()
+        and: 'on a version clash the earlier-listed registry (repoA) wins'
+        releases.find { it.version == '2.0.0' }.url.contains('repoA')
 
         cleanup:
         folder?.deleteDir()

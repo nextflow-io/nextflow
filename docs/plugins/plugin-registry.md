@@ -82,6 +82,8 @@ registry {
 
 The registries defined in `registry.url` are authoritative: when one or more are configured, Nextflow resolves plugins from exactly those, in the order they are listed, and the public registry is *not* added implicitly. To keep resolving plugins from the public registry as well, include its URL (`https://registry.nextflow.io/api`) in the list explicitly.
 
+When the same plugin is published in more than one configured registry, Nextflow combines the available versions across all of them. If a given version is served by multiple registries, the registry listed first takes precedence.
+
 See the {ref}`registry config scope <config-registry>` for the full reference.
 
 Alternatively, to override the default registry without using the `registry` scope, set the `NXF_PLUGINS_REGISTRY_URL` environment variable.
