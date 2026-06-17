@@ -197,7 +197,7 @@ class TowerClientTest extends Specification {
     def 'should build a PATCH request with content'() {
         given:
         def tower = new TowerClient()
-        def content = '{"schedulerRunId": "run-xyz"}'
+        def content = '{"schedRunId": "run-xyz"}'
 
         when:
         def request = tower.makeRequest('http://example.com/workflow/123', content, 'PATCH')

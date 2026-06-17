@@ -165,9 +165,9 @@ class TowerObserverTest extends Specification {
 
         when: 'the run id travels via PATCH /workflow, not on progress/heartbeat'
         then:
-        !observer.makeTasksReq([]).containsKey('schedulerRunId')
+        !observer.makeTasksReq([]).containsKey('schedRunId')
         and:
-        !observer.makeHeartbeatReq().containsKey('schedulerRunId')
+        !observer.makeHeartbeatReq().containsKey('schedRunId')
     }
 
     def 'should send the scheduler run id once via PATCH when assigned' () {
@@ -185,7 +185,7 @@ class TowerObserverTest extends Specification {
         observer.sendSchedulerRunId()
 
         then: 'the run id is patched exactly once'
-        1 * client.updateWorkflow([schedulerRunId: 'run-xyz'], 'ws-1', 'wf-123')
+        1 * client.updateWorkflow([schedRunId: 'run-xyz'], 'ws-1', 'wf-123')
     }
 
     def 'should not send the scheduler run id when not assigned' () {

@@ -142,8 +142,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         log.debug "[SEQERA] Creating run: ${request}"
         final response = client.createRun(request)
         this.runId = response.getRunId()
-        // publish the scheduler run id so the Tower observer can propagate it to Platform
-        // on trace progress/heartbeat requests (used for cost and resource accounting)
+        // Add runId to session workflow metadata to propagate it to Platform
         final scheduler = session.workflowMetadata?.scheduler
         if( scheduler != null )
             scheduler.runId = runId

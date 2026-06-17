@@ -451,7 +451,7 @@ class TowerObserver implements TraceObserverV2 {
         final id = getSchedulerRunId()
         if( !id )
             return
-        client.updateWorkflow([schedulerRunId: id], workspaceId, workflowId)
+        client.updateWorkflow([schedRunId: id], workspaceId, workflowId)
         schedulerRunIdSent = true
     }
 
