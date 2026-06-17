@@ -1,5 +1,9 @@
 nf-tower changelog
 ===================
+1.28.1 - 17 Jun 2026
+- Improve Tower telemetry error handling on transient gateway failures (#7190) [3626f31a5]
+- Use a stop flag instead of thread interrupt to shut down the logs checkpoint (#7193) [d25d76bcf]
+
 1.28.0 - 28 May 2026
 - Expose dataset file size in seqera fs file attributes (#7141) [beac1e455]
 - Fix world-readable seqera-auth.config credential file (#7182) [41a5f24af]
