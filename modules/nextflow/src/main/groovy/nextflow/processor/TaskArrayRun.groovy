@@ -58,4 +58,9 @@ class TaskArrayRun extends TaskRun {
         return true
     }
 
+    @Override
+    List<String> getOutputFilesNames() {
+        return Collections.<String>emptyList()
+    }
+
 }

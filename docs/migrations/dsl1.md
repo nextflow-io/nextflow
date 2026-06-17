@@ -96,14 +96,14 @@ cheers
 
 Similarly, in DSL2, process outputs can be consumed by multiple consumers automatically, which makes workflow scripts much easier to read and write.
 
-## Modules
+## Includes
 
 In DSL1, the entire Nextflow pipeline must be defined in a single file. For example, `main.nf`. This restriction becomes cumbersome as a pipeline grows and hinders the sharing and reuse of pipeline components.
 
-DSL2 introduces the concept of "module scripts" (or "modules" for short), which are Nextflow scripts that can be "included" by other scripts. While modules are not essential to migrating to DSL2, nor are they mandatory in DSL2, modules can help you organize a large pipeline into multiple smaller files and take advantage of modules created by others. See {ref}`modules-page` to learn more about modules.
+DSL2 introduces the ability for scripts to *include* other scripts. While splitting a pipeline into multiple scripts is not mandatory in DSL2, it is useful for organizing a large pipeline and re-using modules created by others. See {ref}`modules-page` for more information.
 
 :::{note}
-DSL2 scripts cannot exceed 64 KB in size. Split large DSL1 scripts into modules to avoid this limit.
+DSL2 scripts cannot exceed 64 KB in size. Split large DSL1 scripts into multiple smaller scripts to avoid this limit.
 :::
 
 ## Deprecations
@@ -176,7 +176,7 @@ An early preview of DSL2 was available in 2020. Note that some of that early DSL
 
 - The `nextflow.preview.dsl=2` (and `nextflow.enable.dsl=1`) feature flags are no longer needed.
 
-- Anonymous and unwrapped includes are no longer supported. Use an explicit module inclusion instead.
+- Anonymous and unwrapped includes are no longer supported. Include each definition by name instead.
 
   For example:
 

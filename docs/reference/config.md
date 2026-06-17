@@ -1461,7 +1461,7 @@ The `seqera.executor` scope configures the Seqera scheduler service for the {ref
 The following settings are available:
 
 `seqera.executor.autoLabels`
-: When `true`, automatically adds workflow metadata labels to the session with the `nextflow.io/` prefix (default: `false`). The following labels are added: `projectName`, `userName`, `runName`, `sessionId`, `resume`, `revision`, `commitId`, `repository`, `manifestName`, `runtimeVersion`. A `seqera.io/runId` label is also added, computed as a SipHash of the session ID and run name.
+: Automatically attach workflow metadata labels to the session, using the `nextflow.io/` and `seqera.io/platform/` prefixes (default: `false`). Accepts `true` to include all available metadata labels, `false` to disable, or a list (or comma-separated string) of short names to include a subset (e.g. `['runName', 'projectName']` or `'runName,projectName'`). Valid names: `projectName`, `userName`, `runName`, `sessionId`, `resume`, `revision`, `commitId`, `repository`, `manifestName`, `runtimeVersion`, `workflowId`, `workspaceId`, `computeEnvId`.
 
 `seqera.executor.computeEnvId`
 : The Seqera Platform compute environment ID. When specified, the scheduler resolves the compute environment directly by this ID instead of inferring a suitable compute environment. Used as a fallback when the workflow launch does not include a compute environment reference.
@@ -1469,14 +1469,29 @@ The following settings are available:
 `seqera.executor.endpoint`
 : The Seqera scheduler service endpoint URL (required).
 
+`seqera.executor.keyPairName`
+: The EC2 key pair name for SSH access to instances.
+
+`seqera.executor.predictionModel`
+: The resource prediction model used to estimate task resource requirements from historical execution metrics. Supported values: `'qr/v1'`, `'qr/v2'` (quantile regression). When not set, no resource estimation is applied.
+
 `seqera.executor.provider`
 : The compute backend provider type (e.g. `'aws'`, `'local'`). When specified, used together with `region` to select the matching compute environment.
 
 `seqera.executor.region`
 : The cloud region for task execution.
 
+`seqera.executor.shellEnabled`
+: When `true`, enables on-demand interactive shell access (e.g. SSH) to the run's task containers for the VM and local backends (default: `false`). A running task can then be reached with `sched task ssh <task-id>` (or a plain `ssh <task-id>@<scheduler>`), and the connection survives task completion.
+
+`seqera.executor.strategy`
+: The execution strategy within the chosen `provider`. Narrows compute-environment selection when a provider offers multiple strategies (e.g. AWS supports `'ecs'` and `'vm'`). When omitted, the provider's canonical default strategy is used (AWS → `'ecs'`).
+
 `seqera.executor.taskEnvironment`
 : Custom environment variables to apply to all tasks submitted by the Seqera executor. These are merged with the Fusion environment variables, with Fusion variables taking precedence. For example: `taskEnvironment = [MY_VAR: 'value']`.
+
+`seqera.executor.machineRequirement.capacityMode`
+: The ECS capacity provider mode. Can be `'managed'` (default) for ECS Managed Instances, or `'asg'` for an Auto Scaling Group-backed capacity provider.
 
 `seqera.executor.machineRequirement.diskAllocation`
 : The disk allocation strategy. Can be `'task'` (default) for per-task EBS volumes, or `'node'` for per-node instance storage. When using `'node'` allocation, EBS-specific options (`diskType`, `diskIops`, `diskThroughputMiBps`, `diskEncrypted`) are not applicable.
@@ -1490,6 +1505,9 @@ The following settings are available:
 `seqera.executor.machineRequirement.diskMountPath`
 : The container path where the disk is mounted (default: `'/tmp'`). Applicable to all disk allocation strategies.
 
+`seqera.executor.machineRequirement.diskSize`
+: The disk size for session-level storage (e.g. `100.GB`).
+
 `seqera.executor.machineRequirement.diskThroughputMiBps`
 : The throughput in MiB/s for gp3 volumes (125-1000). Default: `325` (Fusion recommended). Only applicable when `diskAllocation` is `'task'`.
 
@@ -1497,7 +1515,7 @@ The following settings are available:
 : The EBS volume type for task scratch disk. Supported types: `'ebs/gp3'` (default), `'ebs/gp2'`, `'ebs/io1'`, `'ebs/io2'`, `'ebs/st1'`, `'ebs/sc1'`. Only applicable when `diskAllocation` is `'task'`.
 
 `seqera.executor.machineRequirement.machineTypes`
-: List of acceptable EC2 instance families. For example, `['m5', 'c5', 'r5']`.
+: List of acceptable machine type patterns. Supports exact types (e.g. `'t3.small'`), family prefixes (e.g. `'m5'` matches all m5 sizes), and glob wildcards (e.g. `'t*.small'`). For example, `['m5', 'c5', 'r5']`.
 
 `seqera.executor.machineRequirement.maxSpotAttempts`
 : The maximum number of spot retry attempts before falling back to on-demand. Only used when `provisioning` is `'spot'` or `'spotFirst'`.
