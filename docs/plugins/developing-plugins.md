@@ -237,6 +237,69 @@ class MyPluginConfig implements ConfigScope {
 }
 ```
 
+The top-level scope must also be registered as an extension point in `build.gradle`, so that Nextflow discovers it when validating the configuration:
+
+```groovy
+nextflowPlugin {
+    // ...
+    extensionPoints = [
+        'nextflow.myplugin.MyPluginConfig',
+        // other extension points...
+    ]
+}
+```
+
+Configuration options can be grouped by adding a nested `ConfigScope` as a field on the parent scope. Nextflow discovers nested scopes by walking fields whose declared type implements `ConfigScope`. The field itself does not need a `@ConfigOption` annotation. Only the top-level scope needs `@ScopeName`, a no-arg constructor, and an entry in `extensionPoints`.
+
+```groovy
+import java.nio.file.Path
+
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
+import nextflow.script.dsl.Description
+
+@ScopeName('myplugin')
+@Description('''
+    The `myplugin` scope allows you to configure the `nf-myplugin` plugin.
+''')
+class MyPluginConfig implements ConfigScope {
+
+    @Description('''
+        Configuration for the report file.
+    ''')
+    final ReportConfig report
+
+    // no-arg constructor is required to enable validation of config options
+    MyPluginConfig() {
+    }
+
+    MyPluginConfig(Map opts) {
+        this.report = new ReportConfig(opts.report as Map ?: [:])
+    }
+}
+
+@Description('''
+    The `myplugin.report` scope allows you to configure the report file.
+''')
+class ReportConfig implements ConfigScope {
+
+    @ConfigOption
+    @Description('''
+        Path to the report file.
+    ''')
+    final Path file
+
+    ReportConfig(Map opts) {
+        this.file = opts.file as Path
+    }
+}
+```
+
+:::{note}
+`@ConfigOption` fields are discovered with `Class.getDeclaredFields()`, which does not include inherited fields. Each `ConfigScope` class must declare its options directly, even if a shared parent class provides common logic.
+:::
+
 This approach is not required to support plugin config options. However, it allows Nextflow to recognize plugin definitions when validating the configuration. See {ref}`config-scopes-page` for more information.
 
 ### Executors
