@@ -69,6 +69,11 @@ The following environment variables control the configuration of the Nextflow ru
   :::
 : Defines the DSL version that should be used in not specified otherwise in the script of config file (default: `2`)
 
+`NXF_DEV`
+: :::{versionadded} 26.05.0-edge
+  :::
+: Use an automated development build of Nextflow, for testing purposes only. Set to `master` for the latest build of the master branch, or `pr-<number>` for the latest build of a pull request. Builds are published in the [nextflow-dev-builds](https://github.com/nextflow-io/nextflow-dev-builds) repository.
+
 `NXF_DISABLE_CHECK_LATEST`
 : :::{versionadded} 23.09.0-edge
   :::

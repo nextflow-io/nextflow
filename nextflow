@@ -16,6 +16,26 @@
 #
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
+
+# NXF_DEV selects an automated development build, for testing purposes only:
+# `NXF_DEV=master` for the latest build of the master branch, `NXF_DEV=pr-1234`
+# for the latest build of a pull request. See the repository below for details.
+if [[ $NXF_DEV ]]; then
+    NXF_DEV_REPO=${NXF_DEV_REPO:-'https://github.com/nextflow-io/nextflow-dev-builds'}
+    NXF_BASE=${NXF_BASE:-$NXF_DEV_REPO/releases/download}
+    if [[ ! $NXF_VER ]]; then
+        if command -v curl &>/dev/null; then
+            NXF_VER=$(curl -fsSL "$NXF_DEV_REPO/raw/master/latest/$NXF_DEV" 2>/dev/null)
+        elif command -v wget &>/dev/null; then
+            NXF_VER=$(wget -qO- "$NXF_DEV_REPO/raw/master/latest/$NXF_DEV" 2>/dev/null)
+        fi
+        if [[ ! $NXF_VER ]]; then
+            >&2 echo "ERROR: Cannot find a Nextflow dev build for '$NXF_DEV' -- check $NXF_DEV_REPO"
+            exit 1
+        fi
+    fi
+fi
+
 NXF_VER=${NXF_VER:-'26.04.3'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
@@ -264,6 +284,7 @@ while [[ $# != 0 ]]; do
       ;;
     -self-update|self-update)
       if [[ ! "$cmd" ]]; then
+      [[ $NXF_DEV ]] && die "Cannot self-update when NXF_DEV is set -- unset it and try again"
       [[ -z $NXF_EDGE && $NXF_VER = *-edge ]] && NXF_EDGE=1
       unset NXF_VER
       install "$0" update
