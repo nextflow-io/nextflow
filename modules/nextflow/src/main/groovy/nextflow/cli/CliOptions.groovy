@@ -72,7 +72,7 @@ class CliOptions {
     /**
      * Print out the 'help' and exit
      */
-    @Parameter(names = ['-h'], description = 'Print this help', help = true)
+    @Parameter(names = ['-h','-help'], description = 'Print this help', help = true)
     boolean help
 
     @Parameter(names = ['-q','-quiet'], description = 'Do not print information messages' )
