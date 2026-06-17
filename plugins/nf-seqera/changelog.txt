@@ -1,5 +1,8 @@
 nf-seqera changelog
 ====================
+0.21.0 - 17 Jun 2026
+- Add shellEnabled option and per-task prediction model to Seqera executor (#7204) [80c0a4cf2]
+
 0.20.1 - 28 May 2026
 - Force lib-httpx@2.3.0 to fix plugin classpath (#7181) [1c47215a8]
 
