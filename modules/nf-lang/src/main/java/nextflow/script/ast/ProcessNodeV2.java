@@ -18,7 +18,6 @@ package nextflow.script.ast;
 import java.lang.reflect.Modifier;
 
 import nextflow.script.types.Record;
-import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.Parameter;
@@ -40,19 +39,17 @@ public class ProcessNodeV2 extends ProcessNode {
     public final Statement stagers;
     public final Statement outputs;
     public final Statement topics;
-    public final Expression when;
     public final String type;
     public final Statement exec;
     public final Statement stub;
 
-    public ProcessNodeV2(String name, Statement directives, Parameter[] inputs, Statement stagers, Statement outputs, Statement topics, Expression when, String type, Statement exec, Statement stub) {
+    public ProcessNodeV2(String name, Statement directives, Parameter[] inputs, Statement stagers, Statement outputs, Statement topics, String type, Statement exec, Statement stub) {
         super(name, inputs, dummyReturnType(outputs));
         this.directives = directives;
         this.inputs = inputs;
         this.stagers = stagers;
         this.outputs = outputs;
         this.topics = topics;
-        this.when = when;
         this.type = type;
         this.exec = exec;
         this.stub = stub;

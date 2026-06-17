@@ -172,7 +172,6 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
         resolveTypedOutputs(node.outputs);
         resolver.visit(node.outputs);
         resolver.visit(node.topics);
-        resolver.visit(node.when);
         resolver.visit(node.exec);
         resolver.visit(node.stub);
     }

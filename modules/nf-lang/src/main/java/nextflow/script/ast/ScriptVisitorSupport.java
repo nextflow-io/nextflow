@@ -99,7 +99,6 @@ public abstract class ScriptVisitorSupport extends ClassCodeVisitorSupport imple
         visit(node.stagers);
         visit(node.outputs);
         visit(node.topics);
-        visit(node.when);
         visit(node.exec);
         visit(node.stub);
     }

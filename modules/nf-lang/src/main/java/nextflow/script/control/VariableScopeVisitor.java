@@ -342,17 +342,13 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         for( var input : asFlatParams(node.inputs) ) {
             vsc.declare(input, input);
 
-            // suppress "unused variable" warnings since Path inputs are implicity staged
+            // suppress "unused variable" warnings since Path inputs are implicitly staged
             vsc.findVariableDeclaration(input.getName(), input);
         }
 
         vsc.pushScope(ProcessDsl.StageDsl.class);
         visitDirectives(node.stagers, "stage directive", false);
         vsc.popScope();
-
-        if( !(node.when instanceof EmptyExpression) )
-            vsc.addWarning("Process `when` section will not be supported in a future version", "", node.when);
-        visit(node.when);
 
         visit(node.exec);
         visit(node.stub);

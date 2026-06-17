@@ -395,6 +395,28 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 0
     }
 
+    def 'should report error for invalid when section' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                when:
+                task.ext.when
+
+                exec:
+                println 'hello!'
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 4
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "The `when:` section is not supported in a typed process"
+    }
+
     def 'should report an error for invalid process tuple input' () {
         when:
         def errors = check(
