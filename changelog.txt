@@ -1,5 +1,21 @@
 NEXTFLOW CHANGE-LOG
 ===================
+26.04.4 - 17 Jun 2026
+- Add Nextflow module info to lineage TaskRun entry (#7160) [7b7678bf5]
+- Bump default plugin create template to v0.4.0 (#7234) [a12f27fe5]
+- Fix "No such variable" in typed output block with job arrays (#7221) [81c35b409]
+- Fix cast and instanceof with record types (#7185) [0dffb8a74]
+- Fix issue with workflow completion handler being called twice (#7191) [95c0daeb2]
+- Fix nxf_date for uutils coreutils (Ubuntu 26.04+) (#7118) [2e9ea0239]
+- Fix staging of Path fields of included record types (#7226) [6bc3510ae]
+- Preserve order of plugin declarations in config (#7227) [d33bee4b8]
+- Sample nxf_date seconds and nanoseconds atomically (#7207) [ea81fd029]
+- Bump nf-amazon@3.9.2
+- Bump nf-azure@1.22.6
+- Bump nf-codecommit@0.5.3
+- Bump nf-seqera@0.21.0
+- Bump nf-tower@1.28.1
+
 26.04.3 - 28 May 2026
 - Fix bucket cleanup in S3 test (#7172) [4fcc58355]
 - Fix docs CI on Python 3.14 by upgrading Sphinx (#7175) [71665de7a]
