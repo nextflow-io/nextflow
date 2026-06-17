@@ -111,6 +111,11 @@ class PluginUpdater extends UpdateManager {
      * fully replace the default registry repository. Users that want to keep resolving plugins
      * from the public registry must include its URL explicitly in {@code registry.url}.
      *
+     * Callers must only invoke this when {@code registry.url} is explicitly configured (see
+     * {@link PluginsFacade#applyRegistryConfig}); when it is empty or unset the default registry
+     * is left in place. {@link RegistryConfig#getAllUrls} always falls back to the default URL,
+     * so it is never empty here.
+     *
      * Safe to call after construction and before {@link #prefetchMetadata}, which initialises
      * each {@link HttpPluginRepository} with the metadata it actually needs.
      */
@@ -118,8 +123,6 @@ class PluginUpdater extends UpdateManager {
         if( offline || !registryConfig )
             return
         final urls = registryConfig.getAllUrls()
-        if( !urls )
-            return
         // the configured registries take over: drop the default registry repository so that
         // only the user-provided endpoints are queried
         for( String id : DEFAULT_REGISTRY_REPO_IDS )
