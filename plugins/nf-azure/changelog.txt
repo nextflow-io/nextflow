@@ -1,5 +1,9 @@
 nf-azure changelog
 ===================
+1.22.6 - 17 Jun 2026
+- Fix netty CVE-2026-44249 via AWS SDK bump and azure-core-http-netty pin (#7223) [ef830e951]
+- Improve Azure Batch VM image diagnostics and fix stale 24.04 docs (#7200) [cb8385f44]
+
 1.22.5 - 28 May 2026
 - Bump Failsafe to 3.3.2 (#7181) [1c47215a8]
 
