@@ -34,7 +34,16 @@ When updating from an edge release to a stable release, you must explicitly set 
 
 :::{warning}
 Nextflow will update its executable during the self-update process. The update can fail if the Nextflow executable is in a directory with restricted permissions.
+
+Do not run `nextflow self-update` with `sudo`. If the executable or framework directory becomes owned by `root`, subsequent Nextflow commands can fail with `Permission denied` errors for your normal user account.
 :::
+
+If `self-update` fails after a `sudo` install or update, recover the installation with the following steps:
+
+1. Remove the root-owned framework directory for the affected version, for example `sudo rm -rf ~/.nextflow/framework/<version>`.
+2. If needed, remove or replace a root-owned `nextflow` executable that was installed into a protected location such as `/usr/local/bin`.
+3. Reinstall Nextflow in a user-writable location such as `$HOME/.local/bin`.
+4. Run `nextflow info` or `nextflow -v` to confirm the installation works again.
 
 ## Version selection
 

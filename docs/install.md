@@ -94,6 +94,8 @@ To install Nextflow with the self-installing package:
 
     :::{warning}
     Nextflow updates its executable during the self-install process, therefore the update can fail if the executable is placed in a directory with restricted permissions.
+
+    Avoid installing the `nextflow` executable into a root-owned location such as `/usr/local/bin` with `sudo` if you plan to use `nextflow self-update`. If the executable is not writable by your normal user account, self-updates can fail and may leave the installation in a broken state. Prefer a user-writable location such as `$HOME/.local/bin`.
     :::
 
 4. Confirm Nextflow is installed correctly:
