@@ -32,6 +32,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
 import nextflow.SysEnv
+import nextflow.config.RegistryConfig
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FileMutex
@@ -98,6 +99,108 @@ class PluginUpdater extends UpdateManager {
             result.addAll(customRepos())
         }
         return result
+    }
+
+    /** Ids of the default registry repositories created by {@link #wrap} */
+    private static final List<String> DEFAULT_REGISTRY_REPO_IDS = ['registry', 'nextflow.io']
+
+    /**
+     * Apply the plugin registry endpoints declared in the {@code registry} config scope.
+     *
+     * The configured registries are authoritative: the URLs provided by {@link RegistryConfig}
+     * fully replace the default registry repository. Users that want to keep resolving plugins
+     * from the public registry must include its URL explicitly in {@code registry.url}.
+     *
+     * Callers must only invoke this when {@code registry.url} is explicitly configured (see
+     * {@link PluginsFacade#applyRegistryConfig}); when it is empty or unset the default registry
+     * is left in place. {@link RegistryConfig#getAllUrls} always falls back to the default URL,
+     * so it is never empty here.
+     *
+     * Safe to call after construction and before {@link #prefetchMetadata}, which initialises
+     * each {@link HttpPluginRepository} with the metadata it actually needs.
+     */
+    void addRegistryRepos(RegistryConfig registryConfig) {
+        if( offline || !registryConfig )
+            return
+        final urls = registryConfig.getAllUrls()
+        // the configured registries take over: drop the default registry repository so that
+        // only the user-provided endpoints are queried
+        for( String id : DEFAULT_REGISTRY_REPO_IDS )
+            removeRepository(id)
+        final existingIds = new HashSet<String>()
+        for( UpdateRepository repo : this.@repositories )
+            existingIds.add(repo.id)
+        int counter = 0
+        for( String url : urls ) {
+            String repoId = "registry-${counter++}"
+            while( repoId in existingIds )
+                repoId = "registry-${counter++}"
+            existingIds.add(repoId)
+            final repo = new HttpPluginRepository(repoId, URI.create(url))
+            log.debug "Adding plugin repository: ${repo.getClass().getSimpleName()} [${repo.id}]; url=${url}"
+            addRepository(repo)
+        }
+    }
+
+    /**
+     * Aggregate plugin metadata across all configured registries.
+     *
+     * The default {@link UpdateManager#getPluginsMap()} merges repositories with
+     * {@code Map.putAll}, so the last repository serving a given plugin id fully overwrites
+     * the earlier ones — silently discarding releases that exist only in an earlier-listed
+     * registry. Here the releases of each plugin id are instead unioned across all
+     * repositories. When the same {@code version} is served by more than one registry, the
+     * earlier-listed registry wins, matching the priority order in which the registries are
+     * declared (first listed = highest priority).
+     *
+     * @return a map of plugin id to its merged {@link PluginInfo}
+     */
+    @Override
+    Map<String, PluginInfo> getPluginsMap() {
+        final result = new LinkedHashMap<String, PluginInfo>()
+        for( UpdateRepository repo : getRepositories() ) {
+            for( Map.Entry<String, PluginInfo> entry : repo.getPlugins().entrySet() ) {
+                final merged = result.get(entry.key)
+                if( merged == null )
+                    result.put(entry.key, copyPluginInfo(entry.value))
+                else
+                    mergeReleases(merged, entry.value)
+            }
+        }
+        return result
+    }
+
+    /**
+     * Create a copy of a {@link PluginInfo} with its own releases list, so that merging across
+     * repositories does not mutate the metadata cached by each repository.
+     */
+    private static PluginInfo copyPluginInfo(PluginInfo src) {
+        final copy = new PluginInfo()
+        copy.id = src.id
+        copy.name = src.name
+        copy.description = src.description
+        copy.provider = src.provider
+        copy.projectUrl = src.projectUrl
+        copy.releases = src.releases != null
+            ? new ArrayList<PluginInfo.PluginRelease>(src.releases)
+            : new ArrayList<PluginInfo.PluginRelease>()
+        return copy
+    }
+
+    /**
+     * Append the releases of {@code src} to {@code target}, skipping any version already present.
+     * Releases already in {@code target} come from an earlier-listed (higher priority) registry
+     * and therefore take precedence on a version clash.
+     */
+    private static void mergeReleases(PluginInfo target, PluginInfo src) {
+        if( !src.releases )
+            return
+        final knownVersions = new HashSet<String>()
+        for( PluginInfo.PluginRelease r : target.releases )
+            knownVersions.add(r.version)
+        for( PluginInfo.PluginRelease r : src.releases )
+            if( knownVersions.add(r.version) )
+                target.releases.add(r)
     }
 
     static private List<DefaultUpdateRepository> customRepos() {

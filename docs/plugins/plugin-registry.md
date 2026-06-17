@@ -63,3 +63,35 @@ To create an API access token:
 6. Copy and past token somewhere safe, you won't be able to see it again.
 
 Once you have your token, see {ref}`gradle-plugin-publish` for instructions on how to use it.
+
+(plugin-registry-config)=
+
+## Configuring plugin registries
+
+:::{versionadded} 26.04.0
+:::
+
+By default, Nextflow resolves plugins from the public registry at `https://registry.nextflow.io`.
+Configure the plugin registries using the `registry` scope in your Nextflow configuration:
+
+```groovy
+registry {
+    url = 'https://registry.myorg.com'
+}
+```
+
+The registries defined in `registry.url` are authoritative: when one or more are configured, Nextflow resolves plugins from exactly those, in the order they are listed, and the public registry is *not* added implicitly. To keep resolving plugins from the public registry as well, include its URL (`https://registry.nextflow.io/api`) in the list explicitly.
+
+When the same plugin is published in more than one configured registry, Nextflow combines the available versions across all of them. If a given version is served by multiple registries, the registry listed first takes precedence.
+
+See the {ref}`registry config scope <config-registry>` for the full reference.
+
+Alternatively, to override the default registry without using the `registry` scope, set the `NXF_PLUGINS_REGISTRY_URL` environment variable.
+
+:::{note}
+Both `registry.url` and `NXF_PLUGINS_REGISTRY_URL` override the default plugin registry. When both are set, `registry.url` takes precedence. Unlike `registry.url` — which configures the registries for both modules and plugins — `NXF_PLUGINS_REGISTRY_URL` applies to plugin resolution only.
+:::
+
+:::{warning}
+The `registry` scope is only applied once the configuration has been resolved. Plugins required *before* that point — for example a filesystem provider for a remote pipeline script or an `includeConfig` location (such as `s3://`), or an SCM provider — are resolved against the default plugin registry (or `NXF_PLUGINS_REGISTRY_URL`). As a result, the default registry may still be fetched even when it is not listed in `registry.url`. Plugins needed at this early stage must be available in the default registry, set via `NXF_PLUGINS_REGISTRY_URL`, or pre-installed.
+:::
