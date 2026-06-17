@@ -42,7 +42,7 @@ import nextflow.exception.AbortOperationException
 @CompileStatic
 @Slf4j
 @Parameters(commandDescription = "Manage Nextflow modules")
-class CmdModule extends CmdBase implements UsageAware {
+class CmdModule extends CmdBase implements UsageAware, SubcommandAware {
 
     static final public String NAME = 'module'
 
@@ -120,6 +120,11 @@ class CmdModule extends CmdBase implements UsageAware {
         commands.find { it.name == name || name in it.aliases }
     }
 
+    @Override
+    List<SubcommandAware.Subcommand> getSubcommands() {
+        commands.collect { new SubcommandAware.Subcommand(name: it.name, command: it) }
+    }
+
     /**
      * Print the command usage help
      */
@@ -145,6 +150,7 @@ class CmdModule extends CmdBase implements UsageAware {
                 result << "  ${it.name.padRight(12)}${description}"
             }
             result << ''
+            result << Launcher.HELP_JSON_TIP
             println result.join('\n').toString()
         } else {
             final sub = findCmd(args[0])

@@ -44,7 +44,7 @@ import nextflow.plugin.Plugins
 @CompileStatic
 @Slf4j
 @Parameters(commandDescription = "Perform filesystem operations")
-class CmdFs extends CmdBase implements UsageAware {
+class CmdFs extends CmdBase implements UsageAware, SubcommandAware {
 
     static final public NAME = 'fs'
 
@@ -261,6 +261,11 @@ class CmdFs extends CmdBase implements UsageAware {
         commands.find { it.name == name }
     }
 
+    @Override
+    List<SubcommandAware.Subcommand> getSubcommands() {
+        commands.collect { new SubcommandAware.Subcommand(name: it.name, help: it.description) }
+    }
+
     private void traverse( String source, Closure op ) {
 
         // if it isn't a glob pattern simply return it a normalized absolute Path object
@@ -308,6 +313,7 @@ class CmdFs extends CmdBase implements UsageAware {
             result << "  ${it.name}\t${it.description}"
             }
             result << ''
+            result << Launcher.HELP_JSON_TIP
             println result.join('\n').toString()
         }
         else {

@@ -33,6 +33,12 @@ Available options:
 `-h`
 : Print available commands and options.
 
+`-help-json`
+: :::{versionadded} 26.06.0-edge
+  :::
+: Print the help and options as JSON, for consumption by tools and LLMs (see {ref}`cli-machine-readable-help`).
+: Works as a top-level option (`nextflow -help-json`) and on any command. For example, `nextflow run -help-json`.
+
 `-log`
 : Set Nextflow log file path (default: `.nextflow.log`). Must be a local path.
 

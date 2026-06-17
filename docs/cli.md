@@ -524,6 +524,30 @@ Use this to learn about command-specific options, refresh your memory about synt
 $ nextflow help run
 ```
 
+(cli-machine-readable-help)=
+
+### Machine-readable help
+
+:::{versionadded} 26.06.0-edge
+:::
+
+The `-help-json` option prints the help and options for a command as JSON instead of the human-formatted help text. This provides a stable, structured description of the CLI for tools and AI agents to consume, without scraping the rendered `-help` output.
+
+The option is contextual, following a progressive-disclosure model. At the top level, it returns the global options plus a recursive index of the whole command tree under a `subcommands` key — every command and its nested sub-commands (for example `module` → `create`, `install`, ...) by name and description. This is the map of the CLI, without per-command detail:
+
+```console
+$ nextflow -help-json
+```
+
+Add it to any command to get that command's full options and arguments. Commands that group sub-commands (such as `fs`, `secrets`, `plugin`, and `module`) nest those sub-commands under the same `subcommands` key, recursively, so a single call covers the whole command tree:
+
+```console
+$ nextflow run -help-json
+$ nextflow module -help-json
+```
+
+The output describes each option with its name, flags, type, help text, and default value (where applicable). Hidden options are included but flagged with `"hidden": true`, so tools can choose to surface or skip them. The schema is derived directly from the CLI definitions, so it stays in sync with the available commands and options.
+
 ### Version information
 
 The `-v` and `-version` options print Nextflow version information.

@@ -75,6 +75,9 @@ class CliOptions {
     @Parameter(names = ['-h','-help'], description = 'Print this help', help = true)
     boolean help
 
+    @Parameter(names = ['-help-json'], description = 'Print the command help and options as JSON (for tools and LLMs)', help = true)
+    boolean helpJson
+
     @Parameter(names = ['-q','-quiet'], description = 'Do not print information messages' )
     boolean quiet
 
