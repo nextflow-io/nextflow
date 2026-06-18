@@ -11,8 +11,13 @@
   # Directory to publish (output directory)
   publish = "build/"
 
-  # Ignore builds if no changes in docs directory
-  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF ."
+  # Ignore builds if no changes in the docs site or content.
+  # `.` is the base dir (.docusaurus_site/); `../docs` is the content
+  # directory, which is symlinked in as `.docusaurus_site/docs -> ../docs`.
+  # git tracks the content under the `docs/` path, so a diff scoped only to
+  # `.docusaurus_site/` cannot see through the symlink and would wrongly skip
+  # content-only commits. Watch both paths.
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF . ../docs"
 
 # Node.js version
 [build.environment]
