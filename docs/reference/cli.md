@@ -1480,9 +1480,12 @@ $ nextflow plugin <subcommand> [options]
 
 : Install a plugin. Multiple plugins can be specified as a comma-separated list. Each plugin id consists of a name and optional version separated by a `@`.
 
-`<plugin>:<subcommand> [options]`
+`<plugin[@version]>:<subcommand> [options]`
 
 : Execute a plugin-specific command.
+: :::{versionadded} 26.10.0
+  The plugin version can also be specified.
+  :::
 
 (cli-pull)=
 

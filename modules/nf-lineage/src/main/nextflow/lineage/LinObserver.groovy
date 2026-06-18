@@ -265,6 +265,7 @@ class LinObserver implements TraceObserverV2 {
             task.getName(),
             codeChecksum,
             task.script,
+            getTaskOutputEvals(task),
             task.inputs ? manageTaskInputParameters(task.inputs, normalizer) : null,
             task.isContainerEnabled() ? task.getContainerFingerprint() : null,
             normalizer.normalizePath(task.getCondaEnv()),
@@ -329,6 +330,11 @@ class LinObserver implements TraceObserverV2 {
 
     protected List<Path> getTaskBinEntries(TaskRun task) {
         return new TaskHasher(task).getTaskBinEntries(task.source)
+    }
+
+    protected Map<String,String> getTaskOutputEvals(TaskRun task) {
+        final outEvals = task.getOutputEvals()
+        return outEvals ? new LinkedHashMap<String,String>(outEvals) : null
     }
 
     protected String storeTaskOutput(TaskRun task, Path path) {
