@@ -36,7 +36,7 @@ import nextflow.SysEnv
 @CompileStatic
 @ToString(includeNames = true, includePackage = false)
 @EqualsAndHashCode
-class SchedulerMetadata {
+class SchedMetadata {
 
     /**
      * Name of the executor backed by the Seqera Intelligent Compute scheduler.
@@ -53,17 +53,17 @@ class SchedulerMetadata {
      * Volatile because it is written by the {@code SeqeraExecutor} on the executor thread
      * (lazily, on the first task submission) and read by the {@code TowerObserver} reporting
      * thread. It is propagated to Platform via a dedicated {@code PATCH /workflow/{workflowId}}
-     * request (the {@code schedulerRunId} workflow-extension field) once assigned. It also rides
+     * request (the {@code schedRunId} workflow-extension field) once assigned. It also rides
      * the {@code complete} request's workflow object via {@link #toMap()} (it is still unset at
      * begin), mirroring how {@code wave}/{@code fusion} appear there.
      */
     volatile String runId
 
-    SchedulerMetadata(Session session) {
+    SchedMetadata(Session session) {
         this( resolveExecutor(session) )
     }
 
-    SchedulerMetadata(String executorName) {
+    SchedMetadata(String executorName) {
         this.enabled = executorName == SEQERA_EXECUTOR
     }
 

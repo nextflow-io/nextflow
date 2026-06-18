@@ -25,7 +25,7 @@ import spock.lang.Unroll
  *
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
  */
-class SchedulerMetadataTest extends Specification {
+class SchedMetadataTest extends Specification {
 
     @Unroll
     def 'should set enabled from the resolved executor' () {
@@ -34,7 +34,7 @@ class SchedulerMetadataTest extends Specification {
         def session = Mock(Session) { getConfig()>>OPTS }
 
         expect:
-        new SchedulerMetadata(session).enabled == EXPECTED
+        new SchedMetadata(session).enabled == EXPECTED
 
         cleanup:
         SysEnv.pop()
@@ -54,15 +54,15 @@ class SchedulerMetadataTest extends Specification {
 
     def 'should set enabled from the executor name' () {
         expect:
-        new SchedulerMetadata('seqera').enabled
+        new SchedMetadata('seqera').enabled
         and:
-        !new SchedulerMetadata('local').enabled
-        !new SchedulerMetadata((String)null).enabled
+        !new SchedMetadata('local').enabled
+        !new SchedMetadata((String)null).enabled
     }
 
     def 'should hold a mutable run id' () {
         given:
-        def meta = new SchedulerMetadata('seqera')
+        def meta = new SchedMetadata('seqera')
 
         expect:
         meta.runId == null
@@ -75,7 +75,7 @@ class SchedulerMetadataTest extends Specification {
 
     def 'toMap should omit the run id until it is assigned' () {
         given:
-        def meta = new SchedulerMetadata('seqera')
+        def meta = new SchedMetadata('seqera')
 
         expect: 'unset run id (e.g. at begin) -> only enabled'
         meta.toMap() == [enabled: true]

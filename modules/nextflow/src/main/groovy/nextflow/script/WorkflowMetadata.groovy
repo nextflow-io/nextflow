@@ -221,7 +221,7 @@ class WorkflowMetadata {
      * Metadata specific to the Seqera Intelligent Compute scheduler, including:
      * <li>enabled: whether the scheduler (i.e. the {@code seqera} executor) is enabled
      */
-    SchedulerMetadata scheduler
+    SchedMetadata sched
 
     /**
      * Metadata specific to Seqera Platform, including:
@@ -291,6 +291,7 @@ class WorkflowMetadata {
         this.manifest = session.getManifest()
         this.wave = new WaveMetadata(session)
         this.fusion = new FusionMetadata(session)
+        this.sched = new SchedMetadata(session)
         this.failOnIgnore = session.failOnIgnore()
 
         // check if there's a onComplete action in the config file
@@ -519,14 +520,4 @@ class WorkflowMetadata {
         return platform
     }
 
-    SchedulerMetadata getScheduler() {
-        if( scheduler!=null )
-            return scheduler
-        synchronized (this) {
-            if( scheduler!=null )
-                return scheduler
-            scheduler = new SchedulerMetadata(session)
-        }
-        return scheduler
-    }
 }

@@ -29,7 +29,7 @@ import nextflow.container.DockerConfig
 import nextflow.container.resolver.ContainerMeta
 import nextflow.exception.AbortRunException
 import nextflow.script.PlatformMetadata
-import nextflow.script.SchedulerMetadata
+import nextflow.script.SchedMetadata
 import nextflow.script.ScriptBinding
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceRecord
@@ -155,9 +155,9 @@ class TowerObserverTest extends Specification {
 
     def 'should not add scheduler run id to progress requests' () {
         given:
-        def scheduler = new SchedulerMetadata('seqera')
-        scheduler.runId = 'run-xyz'
-        def meta = Mock(WorkflowMetadata) { getScheduler() >> scheduler }
+        def sched = new SchedMetadata('seqera')
+        sched.runId = 'run-xyz'
+        def meta = Mock(WorkflowMetadata) { getSched() >> sched }
         def session = Mock(Session) { getWorkflowMetadata() >> meta }
         def PROGRESS = Mock(WorkflowProgress)
         def observer = Spy(newObserver(session))
@@ -172,52 +172,52 @@ class TowerObserverTest extends Specification {
 
     def 'should send the scheduler run id once via PATCH when assigned' () {
         given:
-        def scheduler = new SchedulerMetadata('seqera')
-        scheduler.runId = 'run-xyz'
-        def meta = Mock(WorkflowMetadata) { getScheduler() >> scheduler }
+        def sched = new SchedMetadata('seqera')
+        sched.runId = 'run-xyz'
+        def meta = Mock(WorkflowMetadata) { getSched() >> sched }
         def session = Mock(Session) { getWorkflowMetadata() >> meta }
         def client = Mock(TowerClient)
         def observer = new TowerObserver(session, client, 'ws-1', [:])
         observer.@workflowId = 'wf-123'
 
         when: 'invoked repeatedly (once per sender loop iteration)'
-        observer.sendSchedulerRunId()
-        observer.sendSchedulerRunId()
+        observer.sendSchedRunId()
+        observer.sendSchedRunId()
 
         then: 'the run id is patched exactly once'
-        1 * client.updateWorkflow([schedRunId: 'run-xyz'], 'ws-1', 'wf-123')
+        1 * client.updateWorkflow([schedRunId: 'run-xyz'], 'ws-1', 'wf-123') >> new TowerClient.Response(200, 'ok')
     }
 
     def 'should not abort the run when the scheduler run id update fails' () {
         given:
-        def scheduler = new SchedulerMetadata('seqera')
-        scheduler.runId = 'run-xyz'
-        def meta = Mock(WorkflowMetadata) { getScheduler() >> scheduler }
+        def sched = new SchedMetadata('seqera')
+        sched.runId = 'run-xyz'
+        def meta = Mock(WorkflowMetadata) { getSched() >> sched }
         def session = Mock(Session) { getWorkflowMetadata() >> meta }
         def client = Mock(TowerClient)
         def observer = new TowerObserver(session, client, 'ws-1', [:])
         observer.@workflowId = 'wf-123'
 
-        when: 'the update fails and is then invoked again'
-        observer.sendSchedulerRunId()
-        observer.sendSchedulerRunId()
+        when: 'the update returns an error and is then invoked again'
+        observer.sendSchedRunId()
+        observer.sendSchedRunId()
 
-        then: 'the failure is swallowed (best-effort) and the attempt is made just once'
-        1 * client.updateWorkflow([schedRunId: 'run-xyz'], 'ws-1', 'wf-123') >> { throw new AbortRunException('boom') }
+        then: 'the error response does not abort the run and the attempt is made just once'
+        1 * client.updateWorkflow([schedRunId: 'run-xyz'], 'ws-1', 'wf-123') >> new TowerClient.Response(500, 'boom')
         noExceptionThrown()
     }
 
     def 'should not send the scheduler run id when not assigned' () {
         given:
-        def scheduler = new SchedulerMetadata('local')  // not scheduler-managed, runId stays null
-        def meta = Mock(WorkflowMetadata) { getScheduler() >> scheduler }
+        def sched = new SchedMetadata('local')  // not scheduler-managed, runId stays null
+        def meta = Mock(WorkflowMetadata) { getSched() >> sched }
         def session = Mock(Session) { getWorkflowMetadata() >> meta }
         def client = Mock(TowerClient)
         def observer = new TowerObserver(session, client, 'ws-1', [:])
         observer.@workflowId = 'wf-123'
 
         when:
-        observer.sendSchedulerRunId()
+        observer.sendSchedRunId()
 
         then:
         0 * client.updateWorkflow(_, _, _)

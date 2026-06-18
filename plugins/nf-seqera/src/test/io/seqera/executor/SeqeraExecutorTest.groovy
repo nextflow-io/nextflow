@@ -299,10 +299,10 @@ class SeqeraExecutorTest extends Specification {
         def mockClient = Mock(SchedClient) {
             createRun(_) >> new CreateRunResponse().runId('run-xyz')
         }
-        def scheduler = new nextflow.script.SchedulerMetadata('seqera')
+        def sched = new nextflow.script.SchedMetadata('seqera')
         def workflowMeta = Mock(WorkflowMetadata) {
             getPlatform() >> null
-            getScheduler() >> scheduler
+            getSched() >> sched
         }
         def session = Mock(Session) {
             getConfig() >> [tower: [:]]
@@ -322,7 +322,7 @@ class SeqeraExecutorTest extends Specification {
         then:
         executor.runId == 'run-xyz'
         and:
-        scheduler.runId == 'run-xyz'
+        sched.runId == 'run-xyz'
 
         cleanup:
         executor.batchSubmitter?.shutdown()

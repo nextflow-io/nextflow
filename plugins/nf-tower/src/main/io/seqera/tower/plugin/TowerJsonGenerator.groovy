@@ -26,7 +26,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.NextflowMeta
-import nextflow.script.SchedulerMetadata
+import nextflow.script.SchedMetadata
 import nextflow.trace.ProgressRecord
 import nextflow.util.Duration
 import org.apache.groovy.json.internal.CharBuf
@@ -48,7 +48,7 @@ class TowerJsonGenerator extends DefaultJsonGenerator {
                 .addConverter(Path) { Path p, String key -> p.toUriString() }
                 .addConverter(Duration) { Duration d, String key -> d.durationInMillis }
                 .addConverter(NextflowMeta) { NextflowMeta m, String key -> m.toJsonMap() }
-                .addConverter(SchedulerMetadata) { SchedulerMetadata m, String key -> m.toMap() }
+                .addConverter(SchedMetadata) { SchedMetadata m, String key -> m.toMap() }
                 .addConverter(OffsetDateTime) { it.toString() }
                 .addConverter(Instant) { it.toString() }
                 .dateFormat(Const.ISO_8601_DATETIME_FORMAT).timezone("UTC")

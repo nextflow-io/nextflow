@@ -155,19 +155,13 @@ class TowerClient {
     /**
      * Update workflow-extension metadata via the generic {@code PATCH /workflow/{workflowId}}
      * endpoint. Used to propagate the Seqera Intelligent Compute scheduler run id.
+     *
+     * <p>Returns the {@link Response} rather than throwing on error so the caller can decide how
+     * to react: propagating the run id is best-effort telemetry and must not abort the run.
      */
-    void updateWorkflow(Map req, String workspaceId, String workflowId) {
+    Response updateWorkflow(Map req, String workspaceId, String workflowId) {
         final url = getUrlWorkflowUpdate(workspaceId, workflowId)
-        final resp = sendHttpMessage(url, req, 'PATCH')
-        if( resp.error ) {
-            final message =  """\
-                Unexpected HTTP response
-                - endpoint    : $url
-                - status code : $resp.code
-                - response msg: $resp.message
-                """.stripIndent(true)
-            throw new AbortRunException(message)
-        }
+        return sendHttpMessage(url, req, 'PATCH')
     }
 
     protected Map sendAndProcessRequest(String url, Map req, String method){

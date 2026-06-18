@@ -22,7 +22,7 @@ import java.time.ZoneOffset
 import groovy.json.JsonGenerator
 import groovy.json.JsonSlurper
 import nextflow.container.resolver.ContainerMeta
-import nextflow.script.SchedulerMetadata
+import nextflow.script.SchedMetadata
 import nextflow.trace.ProgressRecord
 import nextflow.trace.WorkflowStats
 import spock.lang.Specification
@@ -76,20 +76,20 @@ class TowerJsonGeneratorTest extends Specification {
 
     def 'should serialise scheduler metadata via the converter' () {
         given:
-        // use the factory so the SchedulerMetadata converter is registered
+        // use the factory so the SchedMetadata converter is registered
         def gen = TowerJsonGenerator.create([:])
 
         when: 'run id unset (e.g. at begin) -> only enabled'
-        def begin = gen.toJson( [workflow: [scheduler: new SchedulerMetadata('seqera')]] )
+        def begin = gen.toJson( [workflow: [sched: new SchedMetadata('seqera')]] )
         then:
-        begin == '{"workflow":{"scheduler":{"enabled":true}}}'
+        begin == '{"workflow":{"sched":{"enabled":true}}}'
 
         when: 'run id assigned (e.g. at complete) -> enabled + runId'
-        def scheduler = new SchedulerMetadata('seqera')
-        scheduler.runId = 'run-xyz'
-        def complete = gen.toJson( [workflow: [scheduler: scheduler]] )
+        def sched = new SchedMetadata('seqera')
+        sched.runId = 'run-xyz'
+        def complete = gen.toJson( [workflow: [sched: sched]] )
         then:
-        complete == '{"workflow":{"scheduler":{"enabled":true,"runId":"run-xyz"}}}'
+        complete == '{"workflow":{"sched":{"enabled":true,"runId":"run-xyz"}}}'
     }
 
     def 'should serialise progress records' () {
