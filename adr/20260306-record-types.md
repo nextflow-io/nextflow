@@ -102,7 +102,7 @@ record Sample {
 }
 ```
 
-Fields in a record type are declared the same way as [typed parameters](https://nextflow.io/docs/latest/workflow.html#typed-parameters). All [standard types](https://nextflow.io/docs/latest/reference/stdlib-types.html) can be used. Fields can be marked as optional by appending a `?` to the field type.
+Fields in a record type are declared the same way as [typed parameters](https://docs.seqera.io/nextflow/workflow-typed#typed-parameters). All [standard types](https://docs.seqera.io/nextflow/reference/stdlib-types) can be used. Fields can be marked as optional by appending a `?` to the field type.
 
 The purpose of a record type is to specify a *minimum set of requirements* for a record *in a particular context*. A record created with the `record()` function simply has the type `Record` -- it makes no guarantees about which fields it provides. A *record type* can be used (e.g. in a workflow input) to make a stronger guarantee.
 

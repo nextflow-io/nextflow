@@ -43,7 +43,7 @@ public interface ScriptDsl extends DslScope {
     @Description("""
         The `channel` namespace contains the built-in channel factories.
 
-        [Read more](https://nextflow.io/docs/latest/reference/channel.html)
+        [Read more](https://docs.seqera.io/nextflow/reference/channel)
     """)
     ChannelNamespace getChannel();
 
@@ -51,7 +51,7 @@ public interface ScriptDsl extends DslScope {
     @Description("""
         The `log` namepsace contains functions for logging messages to the console.
 
-        [Read more](https://nextflow.io/docs/latest/reference/stdlib-namespaces.html#log)
+        [Read more](https://docs.seqera.io/nextflow/reference/stdlib-namespaces#log)
     """)
     LogNamespace getLog();
 
@@ -166,7 +166,7 @@ public interface ScriptDsl extends DslScope {
     Collection<Path> files(String filePattern);
 
     @Description("""
-        Create a grouping key to use with the [groupTuple](https://nextflow.io/docs/latest/operator.html#grouptuple) operator.
+        Create a grouping key to use with the [groupTuple](https://docs.seqera.io/nextflow/reference/operator#grouptuple) operator.
     """)
     Object groupKey(Object key, int size);
 
