@@ -23,6 +23,13 @@ understood on its own. This file documents the hooks that are currently wired up
   skips silently if it is not present)
 - **`async: true`**: runs in the background so formatting never blocks the conversation
 
+### 2. Build check (Stop + SubagentStop)
+- **Script**: `hooks/check-build.sh`
+- **Trigger**: when Claude (or a subagent) finishes responding
+- **Action**: runs `make compile` to catch syntax/compilation errors early
+- **Failure mode**: blocking — feeds a parsed error summary back to Claude so it
+  can fix the breakage before yielding
+
 ## Enabling / disabling
 
 Hooks are configured in `.claude/settings.json`. Disable one by removing its entry;
