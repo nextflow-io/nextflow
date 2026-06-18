@@ -3,7 +3,7 @@
 # No deployment previews unless the docs are edited
 [build]
   # Base directory for the build
-  base = "docs/"
+  base = ".docusaurus_site/"
 
   # Build command
   command = "npm run build"

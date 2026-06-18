@@ -1,5 +1,5 @@
-#!/bin/bash 
-set -e 
+#!/bin/bash
+set -e
 
 get_abs_filename() {
   echo "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
@@ -71,7 +71,7 @@ if [[ $TEST_MODE == 'test_docs' ]]; then
 
     (
       echo "Documentation tests"
-      cd ../docs/docs/snippets/
+      cd ../docs/snippets/
       bash test.sh
     )
 
