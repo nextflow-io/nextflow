@@ -16,6 +16,19 @@ export default async function createConfigAsync() {
       mermaid: true,
     },
     plugins: [
+      // The `docs` directory is a symlink to ../docs. By default webpack/rspack
+      // resolves symlinks to their real path, which lands outside this site
+      // directory and bypasses the content-docs MDX loader rules (remark-math,
+      // rehype-katex, etc.), breaking `$$...$$` math blocks. Keep symlinked
+      // paths as-is so the loader `include` rules still match.
+      function disableSymlinkResolution() {
+        return {
+          name: 'disable-symlink-resolution',
+          configureWebpack() {
+            return { resolve: { symlinks: false } };
+          },
+        };
+      },
       ['docusaurus-plugin-llms', {
         id: 'llms-nextflow',
         docsDir: 'docs',
