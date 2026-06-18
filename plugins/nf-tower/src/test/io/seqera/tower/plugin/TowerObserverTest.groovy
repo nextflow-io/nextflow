@@ -188,6 +188,25 @@ class TowerObserverTest extends Specification {
         1 * client.updateWorkflow([schedRunId: 'run-xyz'], 'ws-1', 'wf-123')
     }
 
+    def 'should not abort the run when the scheduler run id update fails' () {
+        given:
+        def scheduler = new SchedulerMetadata('seqera')
+        scheduler.runId = 'run-xyz'
+        def meta = Mock(WorkflowMetadata) { getScheduler() >> scheduler }
+        def session = Mock(Session) { getWorkflowMetadata() >> meta }
+        def client = Mock(TowerClient)
+        def observer = new TowerObserver(session, client, 'ws-1', [:])
+        observer.@workflowId = 'wf-123'
+
+        when: 'the update fails and is then invoked again'
+        observer.sendSchedulerRunId()
+        observer.sendSchedulerRunId()
+
+        then: 'the failure is swallowed (best-effort) and the attempt is made just once'
+        1 * client.updateWorkflow([schedRunId: 'run-xyz'], 'ws-1', 'wf-123') >> { throw new AbortRunException('boom') }
+        noExceptionThrown()
+    }
+
     def 'should not send the scheduler run id when not assigned' () {
         given:
         def scheduler = new SchedulerMetadata('local')  // not scheduler-managed, runId stays null

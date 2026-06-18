@@ -444,6 +444,9 @@ class TowerObserver implements TraceObserverV2 {
      * as soon as it is available (assigned on the first task submission). The id is stable for the
      * life of the run, so it is sent exactly once; Platform stores it as a workflow-extension field
      * used for cost and resource accounting.
+     *
+     * <p>This is best-effort telemetry: a failure only means Platform shows less information, so the
+     * error is logged and the run carries on instead of aborting. The attempt is made just once.
      */
     protected void sendSchedulerRunId() {
         if( schedulerRunIdSent )
@@ -451,7 +454,12 @@ class TowerObserver implements TraceObserverV2 {
         final id = getSchedulerRunId()
         if( !id )
             return
-        client.updateWorkflow([schedRunId: id], workspaceId, workflowId)
+        try {
+            client.updateWorkflow([schedRunId: id], workspaceId, workflowId)
+        }
+        catch( Exception e ) {
+            log.debug("Unable to propagate Seqera scheduler run id to Platform -- cause: ${e.message ?: e}")
+        }
         schedulerRunIdSent = true
     }
 
