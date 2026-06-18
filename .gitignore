@@ -1,48 +1,73 @@
-.idea/**
-.gradle
-.*.log*
-.cache/*
-.vagrant/*
-.cache/*
-.nextflow*
-.node-nextflow*
-.devcontainer
-.vscode/*
-.lineage/
-*/*/bin/*
-**/build/**
-build/**
-modules/**/build/
+# IDE and Editor
+.devcontainer/
+.idea/
+.vscode/
 modules/**/*.iml
-modules/nextflow/work/
-**/out/*
-tmp/*
-work/*
 nextflow.eml
 nextflow.iml
+
+# Build System
+.gradle/
+.launch.classpath
+**/build/
+**/out/
+
+# Nextflow Runtime
+.lineage/
+.nextflow*
+.node-nextflow*
+modules/nextflow/work/
+work/
+
+# Logs and Cache
+.*.log*
+.cache/
+
+# Temporary Files
+temp/
+tmp/
+
+# Development and Testing
+.vagrant/
 Vagrantfile
-resources/*
-test/*
-tools/*
-tests_other
-other
-docs/_build/
-./*.txt
+docker-test/
 errors/
 misc/
-cloud/my-*
-docker-test
-docker/dist
-docker/nextflow
-temp
+other/
+tests_other/
+
+# Docker Artifacts
 .dockerignore
-.launch.classpath
-plugins-prod
-/minio
-/sandbox
-/wave-tests
-/test-sched
-/test-module
-/results
-/x/*
+docker/dist/
+docker/nextflow
+
+# Cloud Configuration
+cloud/my-*
+
+# Documentation
+docs/_build/
+
+# Build and Distribution
+*/*/bin/
+plugins-prod/
+
+# Project-Specific Directories
+/minio/
+/results/
+/sandbox/
+/test-module/
+/test-sched/
+/wave-tests/
+/x/
+
+# Broad Patterns
+resources/
+test/
+tools/
+
+# Root-Level Text Files
+/*.txt
+!changelog.txt
+
+# Configuration
 mise.toml
