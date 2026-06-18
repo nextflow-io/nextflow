@@ -49,7 +49,7 @@ class WorkflowConfig implements ConfigScope {
     @Description("""
         The `workflow.output` scope provides options for publishing workflow outputs.
 
-        [Read more](https://nextflow.io/docs/latest/reference/config.html#workflow)
+        [Read more](https://docs.seqera.io/nextflow/reference/config#workflow)
     """)
     final WorkflowOutputConfig output
 
