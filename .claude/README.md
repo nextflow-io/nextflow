@@ -30,6 +30,19 @@ understood on its own. This file documents the hooks that are currently wired up
 - **Failure mode**: blocking — feeds a parsed error summary back to Claude so it
   can fix the breakage before yielding
 
+### 3. Test runner (PostToolUse)
+- **Script**: `hooks/run-tests.sh`
+- **Trigger**: after an `Edit`/`Write`/`MultiEdit` on a `.groovy`/`.java` file under
+  `modules/` or `plugins/`
+- **Action**: maps the edited file to its test class and runs it, e.g.
+  `modules/nextflow/.../cache/CacheDB.groovy` → `./gradlew :nextflow:test --tests "*CacheDBTest"`
+  (test files run themselves)
+- **Failure mode**: blocking — feeds the test-failure summary back to Claude
+- **Scoping**: the script itself decides what is testable (`.groovy`/`.java` under
+  `modules/` or `plugins/`, mapped to a gradle module). This covers all three edit tools
+  without gaps, so no declarative `if` is used here. Runs per edit, so the timeout is
+  generous (300s); narrow the matcher if per-edit test runs are too heavy.
+
 ## Enabling / disabling
 
 Hooks are configured in `.claude/settings.json`. Disable one by removing its entry;

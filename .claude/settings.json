@@ -9,6 +9,11 @@
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/format-editorconfig.sh",
             "timeout": 30,
             "async": true
+          },
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-tests.sh",
+            "timeout": 300
           }
         ]
       }
