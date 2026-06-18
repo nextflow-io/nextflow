@@ -14,7 +14,7 @@ This directory contains the official Nextflow documentation, built with [Docusau
 ## Quick start
 
 ```bash
-cd docs
+cd .docusaurus_site
 npm install
 npm start
 ```
@@ -34,26 +34,27 @@ This starts a local development server at `http://localhost:3000` with hot reloa
 ## Directory structure
 
 ```
-docs/
-├── docs/                    # Documentation content (.mdx files)
-│   ├── _static/            # Static assets for documentation pages
-│   ├── developer/          # Developer/contributor documentation
-│   ├── guides/             # How-to guides
-│   ├── migrations/         # Version migration guides
-│   ├── plugins/            # Plugin documentation
-│   ├── reference/          # Language and runtime reference
-│   ├── snippets/           # Code snippet examples
-│   └── tutorials/          # Step-by-step tutorials
-├── src/                    # Custom React components and styling
-│   ├── components/         # Custom React components
-│   └── custom.css          # Custom CSS styles
-├── static/                 # Static assets served at root
-├── build/                  # Generated static site (git-ignored)
-├── docusaurus.config.js    # Main Docusaurus configuration
-├── sidebars.js             # Sidebar navigation structure
-└── package.json            # Node.js dependencies
+.docusaurus_site/            # Docusaurus project root
+├── docs -> ../docs          # Symlink to the documentation content (at repo root)
+├── src/                     # Custom React components and styling
+│   └── custom.css           # Custom CSS styles
+├── static/                  # Static assets served at root
+├── build/                   # Generated static site (git-ignored)
+├── docusaurus.config.js     # Main Docusaurus configuration
+├── sidebars.js              # Sidebar navigation structure
+└── package.json             # Node.js dependencies
 
-../netlify.toml             # Netlify deployment configuration (at repo root)
+docs/                        # Documentation content (.mdx files), at repo root
+├── _static/                 # Static assets for documentation pages
+├── developer/               # Developer/contributor documentation
+├── guides/                  # How-to guides
+├── migrations/              # Version migration guides
+├── plugins/                 # Plugin documentation
+├── reference/               # Language and runtime reference
+├── snippets/                # Code snippet examples
+└── tutorials/               # Step-by-step tutorials
+
+netlify.toml                 # Netlify deployment configuration (at repo root)
 ```
 
 ## Writing documentation

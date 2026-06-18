@@ -4,6 +4,7 @@ on:
     types: [opened, reopened, synchronize]
     paths:
       - 'docs/**'
+      - '.docusaurus_site/**'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
@@ -23,16 +24,16 @@ jobs:
       contents: read
     defaults:
       run:
-        working-directory: docs
+        working-directory: .docusaurus_site
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           persist-credentials: false
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
-          node-version: '20'
+          node-version: '22'
           cache: 'npm'
-          cache-dependency-path: docs/package-lock.json
+          cache-dependency-path: .docusaurus_site/package-lock.json
 
       - name: Install dependencies
         run: npm ci
