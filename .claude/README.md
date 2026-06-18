@@ -52,6 +52,20 @@ understood on its own. This file documents the hooks that are currently wired up
 - **`async: true`**: runs in the background; non-blocking — skips silently if IDEA is not
   installed and only warns (never blocks) if the formatter errors
 
+### 5. Integration test runner (PostToolUse, asyncRewake)
+- **Script**: `hooks/run-integration-test.sh`
+- **Trigger**: editing an integration case `tests/<name>.nf` (scoped declaratively via
+  `if: "Edit(tests/*.nf)"` / `Write(...)` / `MultiEdit(...)` — one entry per edit tool,
+  since `if` patterns are tool-qualified)
+- **Action**: runs just that one case through the existing runner
+  (`tests/checks/run.sh ../<name>.nf`) rather than the full ~115-case suite. Uses the
+  dev launcher (`launch.sh`) and enables Docker only when it is available.
+- **`asyncRewake: true`**: runs in the background (never blocks the conversation) and, on
+  failure (exit code 2), wakes Claude with the failure output so it can react.
+- **Requirements**: a built dev launcher (`make compile`) and, for Docker-only cases,
+  Docker. The runner writes scratch/output dirs under `tests/checks/`; `tests/cleanup.sh`
+  clears them.
+
 ## Enabling / disabling
 
 Hooks are configured in `.claude/settings.json`. Disable one by removing its entry;

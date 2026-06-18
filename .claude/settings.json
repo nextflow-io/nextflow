@@ -20,6 +20,27 @@
             "type": "command",
             "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-tests.sh",
             "timeout": 300
+          },
+          {
+            "type": "command",
+            "if": "Edit(tests/*.nf)",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-integration-test.sh",
+            "timeout": 600,
+            "asyncRewake": true
+          },
+          {
+            "type": "command",
+            "if": "Write(tests/*.nf)",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-integration-test.sh",
+            "timeout": 600,
+            "asyncRewake": true
+          },
+          {
+            "type": "command",
+            "if": "MultiEdit(tests/*.nf)",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/run-integration-test.sh",
+            "timeout": 600,
+            "asyncRewake": true
           }
         ]
       }
