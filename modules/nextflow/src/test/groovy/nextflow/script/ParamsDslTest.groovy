@@ -239,6 +239,31 @@ class ParamsDslTest extends Specification {
         result[2].id == 3
     }
 
+    def 'should validate record param from nested map'() {
+        when: 'a script is invoked as `nextflow run module.nf --sample.id a --sample.greeting hola`'
+        def result = runScript(
+            '''\
+            params {
+                sample: Sample
+            }
+
+            record Sample {
+                id: String
+                greeting: String
+            }
+
+            workflow {
+                params.sample
+            }
+            ''',
+            params: [sample: [id: 'a', greeting: 'hola']]
+        )
+        then: 'the nested map is converted into a Sample record and assigned'
+        result instanceof Record
+        result.id == 'a'
+        result.greeting == 'hola'
+    }
+
     def 'should report error for invalid record type'() {
         when:
         runScript(
