@@ -43,6 +43,15 @@ understood on its own. This file documents the hooks that are currently wired up
   without gaps, so no declarative `if` is used here. Runs per edit, so the timeout is
   generous (300s); narrow the matcher if per-edit test runs are too heavy.
 
+### 4. IntelliJ IDEA formatter (PostToolUse, async)
+- **Script**: `hooks/format-idea.sh`
+- **Trigger**: after an `Edit`/`Write`/`MultiEdit` on a `.groovy` file
+- **Action**: runs IntelliJ IDEA's headless formatter to match project code style
+- **Dependencies**: IntelliJ IDEA (Community or Ultimate). Located via the `IDEA_SH`
+  environment variable or common macOS/Linux/JetBrains-Toolbox install paths
+- **`async: true`**: runs in the background; non-blocking — skips silently if IDEA is not
+  installed and only warns (never blocks) if the formatter errors
+
 ## Enabling / disabling
 
 Hooks are configured in `.claude/settings.json`. Disable one by removing its entry;
