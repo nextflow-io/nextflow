@@ -293,16 +293,14 @@ class SeqeraExecutorTest extends Specification {
         executor.batchSubmitter?.shutdown()
     }
 
-    def 'createRun publishes the run id to the workflow scheduler metadata'() {
+    def 'createRun publishes the run id to the workflow metadata'() {
         given:
         SysEnv.push([:])
         def mockClient = Mock(SchedClient) {
             createRun(_) >> new CreateRunResponse().runId('run-xyz')
         }
-        def sched = new nextflow.script.SchedMetadata('seqera')
         def workflowMeta = Mock(WorkflowMetadata) {
             getPlatform() >> null
-            getSched() >> sched
         }
         def session = Mock(Session) {
             getConfig() >> [tower: [:]]
@@ -322,7 +320,7 @@ class SeqeraExecutorTest extends Specification {
         then:
         executor.runId == 'run-xyz'
         and:
-        sched.runId == 'run-xyz'
+        1 * workflowMeta.setSchedRunId('run-xyz')
 
         cleanup:
         executor.batchSubmitter?.shutdown()

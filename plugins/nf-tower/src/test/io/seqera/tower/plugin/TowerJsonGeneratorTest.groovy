@@ -22,7 +22,6 @@ import java.time.ZoneOffset
 import groovy.json.JsonGenerator
 import groovy.json.JsonSlurper
 import nextflow.container.resolver.ContainerMeta
-import nextflow.script.SchedMetadata
 import nextflow.trace.ProgressRecord
 import nextflow.trace.WorkflowStats
 import spock.lang.Specification
@@ -72,24 +71,6 @@ class TowerJsonGeneratorTest extends Specification {
         json = gen.toJson( [workflow: [manifest: [gitmodules: '123456789012345']]] )
         then:
         json == '{"workflow":{"manifest":{"gitmodules":"1234567890"}}}'
-    }
-
-    def 'should serialise scheduler metadata via the converter' () {
-        given:
-        // use the factory so the SchedMetadata converter is registered
-        def gen = TowerJsonGenerator.create([:])
-
-        when: 'run id unset (e.g. at begin) -> only enabled'
-        def begin = gen.toJson( [workflow: [sched: new SchedMetadata('seqera')]] )
-        then:
-        begin == '{"workflow":{"sched":{"enabled":true}}}'
-
-        when: 'run id assigned (e.g. at complete) -> enabled + runId'
-        def sched = new SchedMetadata('seqera')
-        sched.runId = 'run-xyz'
-        def complete = gen.toJson( [workflow: [sched: sched]] )
-        then:
-        complete == '{"workflow":{"sched":{"enabled":true,"runId":"run-xyz"}}}'
     }
 
     def 'should serialise progress records' () {

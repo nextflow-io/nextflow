@@ -142,10 +142,8 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         log.debug "[SEQERA] Creating run: ${request}"
         final response = client.createRun(request)
         this.runId = response.getRunId()
-        // Add runId to session workflow metadata to propagate it to Platform
-        final sched = session.workflowMetadata?.sched
-        if( sched != null )
-            sched.runId = runId
+        // publish the scheduler run id so the Tower observer can propagate it to Platform
+        session.workflowMetadata?.setSchedRunId(runId)
         log.debug "[SEQERA] Run created id: ${runId}; workflowId: '${workflowId}'; workflowUrl: '${workflowUrl}'"
         // Initialize and start batch submitter with error callback to abort on fatal errors
         this.batchSubmitter = new SeqeraBatchSubmitter(

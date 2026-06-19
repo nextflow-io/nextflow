@@ -29,7 +29,6 @@ import nextflow.container.DockerConfig
 import nextflow.container.resolver.ContainerMeta
 import nextflow.exception.AbortRunException
 import nextflow.script.PlatformMetadata
-import nextflow.script.SchedMetadata
 import nextflow.script.ScriptBinding
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceRecord
@@ -155,9 +154,7 @@ class TowerObserverTest extends Specification {
 
     def 'should not add scheduler run id to progress requests' () {
         given:
-        def sched = new SchedMetadata('seqera')
-        sched.runId = 'run-xyz'
-        def meta = Mock(WorkflowMetadata) { getSched() >> sched }
+        def meta = Mock(WorkflowMetadata) { getSchedRunId() >> 'run-xyz' }
         def session = Mock(Session) { getWorkflowMetadata() >> meta }
         def PROGRESS = Mock(WorkflowProgress)
         def observer = Spy(newObserver(session))
@@ -172,9 +169,7 @@ class TowerObserverTest extends Specification {
 
     def 'should send the scheduler run id once via PATCH when assigned' () {
         given:
-        def sched = new SchedMetadata('seqera')
-        sched.runId = 'run-xyz'
-        def meta = Mock(WorkflowMetadata) { getSched() >> sched }
+        def meta = Mock(WorkflowMetadata) { getSchedRunId() >> 'run-xyz' }
         def session = Mock(Session) { getWorkflowMetadata() >> meta }
         def client = Mock(TowerClient)
         def observer = new TowerObserver(session, client, 'ws-1', [:])
@@ -190,9 +185,7 @@ class TowerObserverTest extends Specification {
 
     def 'should not abort the run when the scheduler run id update fails' () {
         given:
-        def sched = new SchedMetadata('seqera')
-        sched.runId = 'run-xyz'
-        def meta = Mock(WorkflowMetadata) { getSched() >> sched }
+        def meta = Mock(WorkflowMetadata) { getSchedRunId() >> 'run-xyz' }
         def session = Mock(Session) { getWorkflowMetadata() >> meta }
         def client = Mock(TowerClient)
         def observer = new TowerObserver(session, client, 'ws-1', [:])
@@ -209,8 +202,7 @@ class TowerObserverTest extends Specification {
 
     def 'should not send the scheduler run id when not assigned' () {
         given:
-        def sched = new SchedMetadata('local')  // not scheduler-managed, runId stays null
-        def meta = Mock(WorkflowMetadata) { getSched() >> sched }
+        def meta = Mock(WorkflowMetadata) { getSchedRunId() >> null }  // not scheduler-managed
         def session = Mock(Session) { getWorkflowMetadata() >> meta }
         def client = Mock(TowerClient)
         def observer = new TowerObserver(session, client, 'ws-1', [:])

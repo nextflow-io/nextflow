@@ -218,10 +218,15 @@ class WorkflowMetadata {
     FusionMetadata fusion
 
     /**
-     * Metadata specific to the Seqera Intelligent Compute scheduler, including:
-     * <li>enabled: whether the scheduler (i.e. the {@code seqera} executor) is enabled
+     * The Seqera Intelligent Compute scheduler run identifier.
+     *
+     * <p>Written by the {@code SeqeraExecutor} on the executor thread (lazily, on the first task
+     * submission) and read by the {@code TowerObserver} reporting thread — hence {@code volatile}.
+     * It is an internal hand-off only: it is propagated to Platform via a dedicated
+     * {@code PATCH /workflow/{workflowId}} request and is therefore excluded from {@link #toMap()}
+     * (it is not serialized on the workflow object of begin/complete requests).
      */
-    SchedMetadata sched
+    volatile String schedRunId
 
     /**
      * Metadata specific to Seqera Platform, including:
@@ -291,7 +296,6 @@ class WorkflowMetadata {
         this.manifest = session.getManifest()
         this.wave = new WaveMetadata(session)
         this.fusion = new FusionMetadata(session)
-        this.sched = new SchedMetadata(session)
         this.failOnIgnore = session.failOnIgnore()
 
         // check if there's a onComplete action in the config file
@@ -459,6 +463,9 @@ class WorkflowMetadata {
         final result = new LinkedHashMap(allProperties.size())
         for( MetaProperty property : allProperties ) {
             if( property.name == 'class' || !Modifier.isPublic(property.modifiers) )
+                continue
+            // the scheduler run id is an internal hand-off propagated via PATCH /workflow, not serialized here
+            if( property.name == 'schedRunId' )
                 continue
             try {
                 result[property.name] = property.getProperty(this)

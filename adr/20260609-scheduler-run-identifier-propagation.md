@@ -11,143 +11,97 @@
 When a workflow runs on the Seqera Intelligent Compute scheduler (the `seqera` executor),
 the scheduler assigns a run identifier that Platform currently has no way to associate with
 its workflow record. This ADR covers the **Nextflow side**: capturing that run identifier and
-propagating it to Platform on trace requests, plus exposing a config-derived flag that marks a
-run as scheduler-managed.
+propagating it to Platform via a dedicated `PATCH /workflow/{workflowId}` request.
 
 ## Problem Statement
 
-Platform needs to know, per workflow, (a) whether the run was executed via the Intelligent
-Compute scheduler and (b) the scheduler's run identifier. These are required to retrieve
-authoritative cost and resource-usage metrics (settled cost, VM types, etc.) from the scheduler
-after completion. Today neither value reaches Platform:
-
-- The scheduler `runId` is created inside `SeqeraExecutor` (lazily, on the first task
-  submission) and never leaves the executor.
-- There is no "scheduler enabled" marker analogous to the existing Wave/Fusion flags.
+Platform needs the scheduler's run identifier, per workflow, to retrieve authoritative cost and
+resource-usage metrics (settled cost, VM types, etc.) from the scheduler after completion. Today
+the scheduler `runId` is created inside `SeqeraExecutor` (lazily, on the first task submission) and
+never leaves the executor.
 
 ## Goals or Decision Drivers
 
 - Make the run identifier available to Platform **as early as possible** — the first task
   submission both assigns the id and drives the trace sender loop, so it is reported (via the
   `PATCH /workflow/{id}` endpoint) at the earliest moment it exists, well before completion.
-- Mark scheduler-managed runs with an `enabled` flag available at workflow create/begin time,
-  mirroring the existing Wave and Fusion metadata.
 - Keep `nextflow` core free of any dependency on the `nf-seqera` plugin.
-- Reuse existing patterns (metadata value classes, the `platform`/`sched` shared metadata,
-  the `TowerJsonGenerator` field-stripping hook) rather than introducing new mechanisms.
+- Reuse existing patterns (`WorkflowMetadata`, the `TowerObserver` sender loop, `TowerClient`)
+  rather than introducing new mechanisms.
 
 ## Non-goals
 
-- The Platform-side changes (the `scheduler_enabled` column, the `tw_workflow_ext` satellite table,
-  the `PATCH /workflow/{workflowId}` endpoint, and the cost-retrieval cron). Those are the Platform
+- The Platform-side changes (the `tw_workflow_ext` satellite table, the
+  `PATCH /workflow/{workflowId}` endpoint, and the cost-retrieval cron). Those are the Platform
   half of this work.
 - Per-task cost or VM attribution and workspace-level rollups (out of scope for the consumer
   feature's v1).
+- A separate "scheduler enabled" flag. An earlier iteration carried a config-derived `enabled`
+  boolean on the workflow object; it was dropped because (a) it is never consumed inside Nextflow,
+  (b) deriving it from run-level config is unreliable (it misses per-process `withName:{ executor }`
+  overrides, so it could report `false` for a run that does use the scheduler and sends a `runId`),
+  and (c) the presence of `schedRunId` already tells Platform the run is scheduler-managed.
 
 ## Solution or decision outcome
 
-Add a `SchedMetadata` value class to core, attached to `WorkflowMetadata` as `sched`
-(peer of `wave`/`fusion`). It carries:
+The scheduler run id is held on `WorkflowMetadata` as a single `volatile String schedRunId` field
+and delivered to Platform via a one-off `PATCH /workflow/{workflowId}` request with body
+`{ "schedRunId": "…" }`.
 
-- `enabled` — config-derived (the run-level executor resolves to `seqera`), serialized on the
-  workflow object of **begin/complete** requests via `WorkflowMetadata.toMap()`.
-- `runId` — set by `SeqeraExecutor` on the first task submission. Delivered via a dedicated
-  `PATCH /workflow/{workflowId}` request (the generic workflow-extension endpoint) once assigned,
-  and — once assigned — also on the `workflow.sched` object of the **complete** request (via
-  `toMap()`'s omit-when-null rule).
+- `SeqeraExecutor.createRun()` assigns the run id on the first task submission and publishes it to
+  `WorkflowMetadata.schedRunId` (`session.workflowMetadata?.setSchedRunId(runId)`).
+- `TowerObserver` reads it and sends the `PATCH` exactly once, at the earliest moment the id exists.
 
 ## Rationale & discussion
 
-### Why the `enabled` flag is config-derived
-
-The lifecycle is `onFlowCreate` → `onFlowBegin` → `callIgniters()` (workflow runs, executors
-register, tasks submit). The `seqera` executor is therefore **not registered yet** at
-create/begin time, so the flag cannot be read from the executor. It is instead derived from the
-configuration (`process.executor`, then `executor.name`, then `NXF_EXECUTOR`), exactly the way
-`WaveMetadata`/`FusionMetadata` read their `enabled` state from config. Limitation: per-process
-executor overrides (`withName:… { executor='seqera' }`) are not reflected — the flag describes
-the run-level executor selection. The literal `'seqera'` is used to avoid a core → plugin
-dependency.
-
-The Trace **create** request is a minimal "hello" that does not carry the workflow object, so —
-like Wave/Fusion — the flag rides on **begin** (and complete) via `toMap()`, not on create.
-
 ### How the `runId` is carried
 
-`runId` is conceptually scheduler metadata, so it is a (`volatile`) field of `SchedMetadata`,
-written by `SeqeraExecutor.createRun()` on the executor thread and read by the `TowerObserver`
-reporting thread. `sched` is initialized eagerly in the `WorkflowMetadata` constructor (like
-`wave`/`fusion`), so the instance is always available for the executor to populate; the
-`volatile` `runId` field guarantees that write is visible to the reporting thread.
+`schedRunId` is written by `SeqeraExecutor.createRun()` on the executor thread and read by the
+`TowerObserver` reporting thread, so the field is `volatile` to publish that write across threads.
+It is purely an internal hand-off: it is **excluded from `WorkflowMetadata.toMap()`** and therefore
+is not serialized on the workflow object of begin/complete (or lineage) requests — Platform receives
+it only through the dedicated `PATCH` endpoint.
 
-`SchedMetadata` owns a `toMap()` that exposes `enabled` and includes `runId` **only when
-assigned**. Rather than coupling the serializer to the field name, nf-tower registers a converter in
-`TowerJsonGenerator.create()` — `addConverter(SchedMetadata){ m -> m.toMap() }`, exactly like the
-existing `NextflowMeta` converter. Because the id is assigned on the first task submission, this
-"omit-when-null" rule means it naturally falls out of every place the workflow object is serialized
-*before* the id exists, and appears only where it does:
+The `TowerObserver` delivers the id via `PATCH /workflow/{workflowId}` (`client.updateWorkflow`) with
+body `{ schedRunId }`. It is sent **exactly once**: the sender thread (`sendTasks0`) calls
+`sendSchedRunId()` each loop iteration, which fires the PATCH the first time the id is non-null and
+then latches. The id is assigned on the first task submission — the same trigger that starts the
+sender loop — so it is propagated at the earliest moment it exists, well before completion. (The run
+id is stable for the life of the run, so re-sending is unnecessary; Platform also treats an identical
+re-supply as idempotent and rejects a *conflicting* value with `400`.)
 
-- **begin** — id unset → `sched: {enabled}` only.
-- **complete** — id set → `sched: {enabled, runId}`, giving Platform a clean entity-level
-  persistence point (the embedded scheduler meta, alongside `wave`/`fusion`).
+### Best-effort delivery
 
-Independently — and **earliest** — the `TowerObserver` delivers the id via a dedicated
-`PATCH /workflow/{workflowId}` request (`client.updateWorkflow`) with body `{ schedRunId }`,
-the generic workflow-extension update endpoint Platform exposes. It is sent **exactly once**: the
-sender thread (`sendTasks0`) calls `sendSchedRunId()` each loop iteration, which fires the PATCH
-the first time the id is non-null and then latches. The id is assigned on the first task submission —
-the same trigger that starts the sender loop — so it is propagated at the earliest moment it exists,
-well before completion. (The run id is stable for the life of the run, so re-sending is unnecessary;
-Platform also treats an identical re-supply as idempotent and rejects a *conflicting* value with
-`400`.)
-
-The id therefore travels in two shapes — a top-level `schedRunId` via `PATCH /workflow/{id}`
-(early signal, stored in Platform's workflow-extension satellite table), and nested
-`workflow.sched.runId` on complete (final, entity-persistable) — read by different Platform
-handlers.
-
-### Lineage consumes the same `toMap()`
-
-`nf-lineage` also builds its workflow-run record from `WorkflowMetadata.toMap()`, and it collects
-at `onFlowBegin` (before the first task), so `runId` is unset there — and the record is fed into the
-lineage execution hash. `LinObserver.collectWorkflowMetadata()` converts the `sched` entry via
-`SchedMetadata.toMap()`, mirroring its existing `nextflow → toJsonMap()` handling; the
-omit-when-null rule keeps the (then-unset) `runId` out of the lineage provenance.
+Propagating the run id is best-effort telemetry. `TowerClient.updateWorkflow` returns the HTTP
+`Response` rather than throwing, and `sendSchedRunId()` logs a failed update and lets the run carry
+on instead of aborting. Transient failures are already retried at the HTTP-client layer
+(`retryConfig`), so the single attempt latches only once that retry policy is exhausted.
 
 ### Resulting wire contract
 
 ```
-# begin request (workflow object, via toMap) — id not yet assigned
-workflow: { …, wave: {enabled}, fusion: {enabled, version}, sched: {enabled} }
-
-# PATCH /workflow/{workflowId} — earliest carrier, sent once when the id is assigned
+# PATCH /workflow/{workflowId} — sole carrier, sent once when the id is assigned
 { schedRunId: "run-xyz" }      // not sent when not scheduler-managed / not yet assigned
-
-# complete request (workflow object, via toMap) — id assigned by now
-workflow: { …, sched: {enabled, runId: "run-xyz"} }
 ```
+
+The begin/complete workflow object carries no scheduler-specific data.
 
 ### Components changed (Nextflow side)
 
-- `modules/nextflow` — new `SchedMetadata`; `WorkflowMetadata.sched` field eagerly initialized
-  in the constructor (like `wave`/`fusion`).
+- `modules/nextflow` — `WorkflowMetadata.schedRunId` (`volatile`) field, excluded from `toMap()`.
 - `nf-seqera` — `SeqeraExecutor.createRun()` publishes `runId` to
-  `session.workflowMetadata.sched`.
+  `session.workflowMetadata.schedRunId`.
 - `nf-tower` — `TowerObserver` sends the run id once via `PATCH /workflow/{workflowId}`
-  (`TowerClient.updateWorkflow`); `TowerClient` gains the `updateWorkflow` method, its URL builder,
-  and `PATCH` support in `makeRequest`. `TowerJsonGenerator` registers a `SchedMetadata → toMap()`
-  converter.
-- `nf-lineage` — `LinObserver.collectWorkflowMetadata()` converts the `sched` entry via
-  `SchedMetadata.toMap()`.
+  (`TowerClient.updateWorkflow`, best-effort); `TowerClient` gains the `updateWorkflow` method, its
+  URL builder, and `PATCH` support in `makeRequest`.
 
 ### Platform-side dependency / risk
 
-Platform stores the `enabled` flag as a plain `scheduler_enabled` column on the `Workflow` entity
-(read from the begin request) and the `runId` in a `tw_workflow_ext` workflow-extension satellite
-table written by the new `PATCH /workflow/{workflowId}` endpoint. Until that endpoint ships, the
-PATCH request would be rejected; the `enabled` flag on the begin/complete `workflow.sched` object
-relies on the receiver ignoring unknown JSON properties (Micronaut's default). This Nextflow change
-should therefore be coordinated with — and land alongside — the Platform endpoint.
+Platform stores the `runId` in a `tw_workflow_ext` workflow-extension satellite table written by the
+new `PATCH /workflow/{workflowId}` endpoint. Until that endpoint ships, the PATCH request would be
+rejected — but because delivery is best-effort (the failure is logged and the run continues), this no
+longer creates a hard Nextflow ↔ Platform version dependency. The change should still be coordinated
+with the Platform endpoint so the id is actually persisted.
 
 ## Links
 
