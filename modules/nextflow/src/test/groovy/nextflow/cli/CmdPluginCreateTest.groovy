@@ -63,7 +63,7 @@ class CmdPluginCreateTest extends Specification {
         Path.of(folder.resolve('hello/build.gradle').toUri()).text.contains("'foo.plugin.HelloWorldExtension'")
         Path.of(folder.resolve('hello/build.gradle').toUri()).text.contains("'foo.plugin.HelloWorldFactory'")
         and:
-        Path.of(folder.resolve('hello/README.md').toUri()).text.contains("# hello-world-plugin plugin")
+        Path.of(folder.resolve('hello/README.md').toUri()).text.contains("# hello-world-plugin")
         Path.of(folder.resolve('hello/README.md').toUri()).text.contains("nextflow run hello -plugins hello-world-plugin@0.1.0")
         cleanup:
         folder?.deleteDir()

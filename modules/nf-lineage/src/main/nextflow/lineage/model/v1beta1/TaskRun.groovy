@@ -45,6 +45,11 @@ class TaskRun implements LinSerializable {
      */
     String script
     /**
+     * Output eval commands executed by the task run, mapped by output name.
+     * Both the name and the command feed the task hash, so both are recorded.
+     */
+    Map<String,String> eval
+    /**
      * Task run input
      */
     List<Parameter> input

@@ -202,7 +202,7 @@ class LinEncoderTest extends Specification{
         and:
         def uniqueId = UUID.randomUUID()
         def taskRun = new TaskRun(
-            uniqueId.toString(),"name", new Checksum("78910", "nextflow", "standard"), 'this is a script',
+            uniqueId.toString(),"name", new Checksum("78910", "nextflow", "standard"), 'this is a script', [eval1: "eval_1"],
             [new Parameter("String", "param1", "value1")], "container:version", "conda", "spack", "amd64",
             [a: "A", b: "B"], [new DataPath("path/to/file", new Checksum("78910", "nextflow", "standard"))],
             "lid://workflow-run", "nf-core/fastqc@1.0.0"
@@ -217,6 +217,7 @@ class LinEncoderTest extends Specification{
         result.name == "name"
         result.codeChecksum.value == "78910"
         result.script == "this is a script"
+        result.eval.get("eval1") == "eval_1"
         result.input.size() == 1
         result.input.get(0).name == "param1"
         result.container == "container:version"

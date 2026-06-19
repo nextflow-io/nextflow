@@ -5,10 +5,74 @@ The `nextflow.scm` package defines the Git provider interface and implements sev
 
 ## Class Diagram
 
-```{mermaid} diagrams/nextflow.scm.mmd
+```mermaid
+classDiagram
+    %%
+    %% nextflow.scm
+    %%
+    direction LR
+
+    CmdRun --> AssetManager : run
+
+    class AssetManager {
+        project : String
+        mainScript : String
+        provider : RepositoryProvider
+        strategy : RepositoryStrategy
+        hub : String
+        providerConfigs : List~ProviderConfig~
+    }
+
+    class RepositoryStrategyType {
+        <<enumeration>>
+        LEGACY
+        MULTI_REVISION
+    }
+
+    AssetManager --> RepositoryStrategyType
+    AssetManager "1" --o "1" RepositoryStrategy
+    AssetManager "1" --o "1" RepositoryProvider
+    AssetManager "1" --* "*" ProviderConfig
+
+    class RepositoryStrategy {
+        <<interface>>
+    }
+    class AbstractRepositoryStrategy {
+        <<abstract>>
+        project : String
+        provider : RepositoryProvider
+        root : File
+    }
+    class LegacyRepositoryStrategy {
+        localPath : File
+    }
+    class MultiRevisionRepositoryStrategy {
+        revision : String
+        bareRepo : File
+        commitPath : File
+        revisionSubdir : File
+    }
+
+    RepositoryStrategy <|-- AbstractRepositoryStrategy
+    AbstractRepositoryStrategy <|-- LegacyRepositoryStrategy
+    AbstractRepositoryStrategy <|-- MultiRevisionRepositoryStrategy
+
+    class RepositoryProvider {
+        <<abstract>>
+    }
+
+    RepositoryStrategy --> RepositoryProvider
+
+    RepositoryProvider <|-- AzureRepositoryProvider
+    RepositoryProvider <|-- BitbucketRepositoryProvider
+    RepositoryProvider <|-- BitbucketServerRepositoryProvider
+    RepositoryProvider <|-- GiteaRepositoryProvider
+    RepositoryProvider <|-- GithubRepositoryProvider
+    RepositoryProvider <|-- GitlabRepositoryProvider
+    RepositoryProvider <|-- LocalRepositoryProvider
 ```
 
-```{note}
+```note
 Some classes may be excluded from the above diagram for brevity.
 ```
 
@@ -60,4 +124,3 @@ Interface defining for repository management operations:
 - `drop()`: Delete local copies
 - `getLocalPath()`: Get path to working directory
 - `getGit()`: Access JGit repository instance
-
