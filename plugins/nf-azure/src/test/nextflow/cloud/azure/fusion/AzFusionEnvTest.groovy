@@ -19,6 +19,8 @@ package nextflow.cloud.azure.fusion
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.cloud.azure.nio.AzFileSystemProvider
+import nextflow.cloud.azure.nio.AzPath
 import nextflow.fusion.FusionConfig
 
 import spock.lang.Specification
@@ -46,7 +48,7 @@ class AzFusionEnvTest extends Specification {
         env == Collections.emptyMap()
     }
 
-    def 'should return env environment with SAS token config when accountKey is provided'() {
+    def 'should return env environment with account-wide SAS token when accountKey is provided'() {
         given:
         def NAME = 'myaccount'
         def KEY = 'myaccountkey'
@@ -57,16 +59,16 @@ class AzFusionEnvTest extends Specification {
         when:
         def config = Mock(FusionConfig)
         def fusionEnv = Spy(AzFusionEnv)
-        1 * fusionEnv.getOrCreateSasToken() >> 'generatedSasToken'
+        fusionEnv.generateAccountSas(_) >> 'account-sas-token'
         def env = fusionEnv.getEnvironment('az', config)
 
         then:
-        env.AZURE_STORAGE_ACCOUNT == NAME
-        env.AZURE_STORAGE_SAS_TOKEN
+        env['AZURE_STORAGE_ACCOUNT'] == NAME
+        env['AZURE_STORAGE_SAS_TOKEN'] == 'account-sas-token'
         env.size() == 2
     }
 
-    def 'should return env environment with SAS token config when a Service Principal is provided'() {
+    def 'should return env environment with per-container SAS tokens when a Service Principal is provided'() {
         given:
         def NAME = 'myaccount'
         def CLIENT_ID = 'myclientid'
@@ -86,20 +88,23 @@ class AzFusionEnvTest extends Specification {
                 ]
             ]
         }
+        def provider = Mock(AzFileSystemProvider)
+        provider.getContainerSasTokens() >> ['mycontainer': 'sas-mycontainer']
 
         when:
         def config = Mock(FusionConfig)
         def fusionEnv = Spy(AzFusionEnv)
-        1 * fusionEnv.getOrCreateSasToken() >> 'generatedSasToken'
+        fusionEnv.azProvider() >> provider
         def env = fusionEnv.getEnvironment('az', config)
 
         then:
-        env.AZURE_STORAGE_ACCOUNT == NAME
-        env.AZURE_STORAGE_SAS_TOKEN == 'generatedSasToken'
+        env['AZURE_STORAGE_ACCOUNT'] == NAME
+        env['AZURE_STORAGE_SAS_TOKEN_MYCONTAINER'] == 'sas-mycontainer'
+        !env['AZURE_STORAGE_SAS_TOKEN']
         env.size() == 2
     }
 
-    def 'should return env environment with SAS token config when a user-assigned Managed Identity is provided'() {
+    def 'should return env environment with per-container SAS tokens when a user-assigned Managed Identity is provided'() {
         given:
         def NAME = 'myaccount'
         def CLIENT_ID = 'myclientid'
@@ -115,20 +120,23 @@ class AzFusionEnvTest extends Specification {
                 ]
             ]
         }
+        def provider = Mock(AzFileSystemProvider)
+        provider.getContainerSasTokens() >> ['mycontainer': 'sas-mycontainer']
 
         when:
         def config = Mock(FusionConfig)
         def fusionEnv = Spy(AzFusionEnv)
-        1 * fusionEnv.getOrCreateSasToken() >> 'generatedSasToken'
+        fusionEnv.azProvider() >> provider
         def env = fusionEnv.getEnvironment('az', config)
 
         then:
-        env.AZURE_STORAGE_ACCOUNT == NAME
-        env.AZURE_STORAGE_SAS_TOKEN == 'generatedSasToken'
+        env['AZURE_STORAGE_ACCOUNT'] == NAME
+        env['AZURE_STORAGE_SAS_TOKEN_MYCONTAINER'] == 'sas-mycontainer'
+        !env['AZURE_STORAGE_SAS_TOKEN']
         env.size() == 2
     }
 
-    def 'should return env environment with SAS token config when a system-assigned Managed Identity is provided'() {
+    def 'should return env environment with per-container SAS tokens when a system-assigned Managed Identity is provided'() {
         given:
         def NAME = 'myaccount'
         Global.session = Mock(Session) {
@@ -143,16 +151,19 @@ class AzFusionEnvTest extends Specification {
                 ]
             ]
         }
+        def provider = Mock(AzFileSystemProvider)
+        provider.getContainerSasTokens() >> ['mycontainer': 'sas-mycontainer']
 
         when:
         def config = Mock(FusionConfig)
         def fusionEnv = Spy(AzFusionEnv)
-        1 * fusionEnv.getOrCreateSasToken() >> 'generatedSasToken'
+        fusionEnv.azProvider() >> provider
         def env = fusionEnv.getEnvironment('az', config)
 
         then:
-        env.AZURE_STORAGE_ACCOUNT == NAME
-        env.AZURE_STORAGE_SAS_TOKEN == 'generatedSasToken'
+        env['AZURE_STORAGE_ACCOUNT'] == NAME
+        env['AZURE_STORAGE_SAS_TOKEN_MYCONTAINER'] == 'sas-mycontainer'
+        !env['AZURE_STORAGE_SAS_TOKEN']
         env.size() == 2
     }
 

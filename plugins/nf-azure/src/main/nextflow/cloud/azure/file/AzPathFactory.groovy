@@ -24,6 +24,7 @@ import groovy.util.logging.Slf4j
 import nextflow.cloud.azure.AzurePlugin
 import nextflow.cloud.azure.batch.AzFileCopyStrategy
 import nextflow.cloud.azure.config.AzConfig
+import nextflow.cloud.azure.nio.AzFileSystemProvider
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.file.FileHelper
 import nextflow.file.FileSystemPathFactory
@@ -97,7 +98,12 @@ class AzPathFactory extends FileSystemPathFactory {
 
     @Override
     protected String getUploadCmd(String source, Path target) {
-        return target instanceof AzPath ?  AzFileCopyStrategy.uploadCmd(source, target) : null
+        if( !(target instanceof AzPath) )
+            return null
+        final azPath = (AzPath)target
+        final provider = (AzFileSystemProvider) azPath.fileSystem.provider()
+        final sas = provider.getSasToken(azPath.getContainerName() as String)
+        return AzFileCopyStrategy.uploadCmdWithSas(source, target, sas)
     }
 
 }
