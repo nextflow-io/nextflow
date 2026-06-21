@@ -1,0 +1,25 @@
+name: 'Sync master with upstream'
+on:
+  schedule:
+    - cron: '0 2,14 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Merge upstream master into origin
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git remote add upstream https://github.com/nextflow-io/nextflow.git
+          git fetch upstream master
+          # ff when nothing local; merge commit otherwise; fails loudly on real conflicts
+          git merge --no-edit upstream/master
+          git push origin master
