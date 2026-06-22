@@ -48,7 +48,7 @@ class ConfigParserV2 implements ConfigParser {
 
     private List<String> appliedProfiles
 
-    private Set<String> declaredProfiles
+    private Set<String> declaredProfiles = new HashSet<>()
 
     private Map<String,Object> declaredParams
 
@@ -133,7 +133,7 @@ class ConfigParserV2 implements ConfigParser {
             script.run()
 
             final target = script.getTarget()
-            declaredProfiles = script.getDeclaredProfiles()
+            declaredProfiles.addAll(script.getDeclaredProfiles())
             declaredParams = script.getDeclaredParams()
             return Bolts.toConfigObject(target)
         }

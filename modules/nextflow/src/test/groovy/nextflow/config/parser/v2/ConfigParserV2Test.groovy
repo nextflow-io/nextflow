@@ -375,6 +375,36 @@ class ConfigParserV2Test extends Specification {
         slurper.getDeclaredProfiles() == ['alpha','beta'] as Set
     }
 
+    def 'should accumulate declared profiles across multiple config files' () {
+        // a single parser instance is reused to parse all config files (see ConfigBuilder),
+        // so the set of declared profiles must accumulate rather than be overwritten by the
+        // last file parsed -- otherwise profiles defined in an earlier file are reported as
+        // "Unknown configuration profile" when a later file declares none
+        given:
+        def withProfiles = '''
+            profiles {
+                alpha {
+                    a = 1
+                }
+                beta {
+                    b = 2
+                }
+            }
+            '''
+        def withoutProfiles = '''
+            tower {
+                enabled = true
+            }
+            '''
+
+        when:
+        def slurper = new ConfigParserV2().setProfiles(['alpha'])
+        slurper.parse(withProfiles)
+        slurper.parse(withoutProfiles)
+        then:
+        slurper.getDeclaredProfiles() == ['alpha','beta'] as Set
+    }
+
     def 'should return the map of declared params' () {
 
         given:
