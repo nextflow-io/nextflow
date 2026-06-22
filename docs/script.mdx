@@ -131,9 +131,9 @@ Records are immutable -- once a record is created, it cannot be modified. Use re
 For example:
 
 ```nextflow
-person + record(age: 43) - ['is_alive']
+person + record(age: 43)
 
-// record(name: 'Alice', age: 43)
+// record(name: 'Alice', age: 43, is_alive: true)
 ```
 
 See [Record][stdlib-types-record] for the set of available record operations.

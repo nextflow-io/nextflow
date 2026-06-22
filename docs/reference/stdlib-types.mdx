@@ -123,7 +123,7 @@ A float is a floating-point number (i.e. real number) that can be positive or ne
 The following operations are supported for floats:
 
 - `+, -, *, /`: addition, subtraction, multiplication, division
-- `**`: exponentation
+- `**`: exponentiation
 
 :::note
 Floats in Nextflow can be backed by any of the following Java types: `float`, `double`, `Float`, `Double`.
@@ -137,7 +137,7 @@ The following operations are supported for integers:
 
 - `+, -, *, /`: addition, subtraction, multiplication, integer division
 - `%`: remainder of integer division (i.e. modulus)
-- `**`: exponentation
+- `**`: exponentiation
 - `&`, `|`, `^`, `~`: bitwise AND, OR, XOR, NOT
 - `<<`, `>>`: left and right bit-shift
 
@@ -273,7 +273,7 @@ The closure should accept two parameters and return a negative integer, zero, or
 
 Returns a shallow copy of the iterable with duplicate elements excluded.
 
-**`toUnique( comparator: (E) -> R ) -> Iterable<E>`**
+##### `toUnique( comparator: (E) -> R ) -> Iterable<E>`
 
 ##### `toUnique( comparator: (E,E) -> Integer ) -> Iterable<E>`
 
@@ -529,7 +529,7 @@ These methods are also available as `getBytes()`, `getGiga()`, `getKilo()`, and 
 
 ## Path
 
-A Path is a handle for hierarchichal paths such as local files and directories, HTTP/FTP URLs, and object storage paths (e.g. Amazon S3).
+A Path is a handle for hierarchical paths such as local files and directories, HTTP/FTP URLs, and object storage paths (e.g. Amazon S3).
 
 The `file()` function can be used to get a Path for a given filename or URL:
 
@@ -552,8 +552,6 @@ The following sections describe the methods that are available for paths.
 :::note
 Paths in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/Path.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/nio/file/Path.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
 :::
-
-<h3>Operations</h3>
 
 The following operations are supported for paths:
 
@@ -943,7 +941,7 @@ Given two records, returns a new record containing the fields and values of both
 
 The following methods are available for a record:
 
-###### `subMap( keys: Iterable<String> ) -> Record`
+##### `subMap( keys: Iterable<String> ) -> Record`
 
 Returns a new record containing only the given fields.
 
@@ -1244,7 +1242,7 @@ if( !nextflow.version.matches('>=23.10') ) {
 
 Multiple constraints can be specified as a comma-separated list, e.g. `>=23.10, <=24.10`.
 
-Alternatively, the version can be postfixed with `+`, which is similar to `==` but also allows the last version part to be greater. For example, `23.10.1+` is satisfied by `23.10.1` and `23.10.2`, but not `23.11.x` or `23.09.x`. Additionally, `23.10.+` is equivalent to `23.10.0+`. This operator is a useful way to enforce a specific version while allowing for newer patch releases.
+Alternatively, the version can be suffixed with `+`, which is similar to `==` but also allows the last version part to be greater. For example, `23.10.1+` is satisfied by `23.10.1` and `23.10.2`, but not `23.11.x` or `23.09.x`. Additionally, `23.10.+` is equivalent to `23.10.0+`. This operator is a useful way to enforce a specific version while allowing for newer patch releases.
 
 [cache-nondeterministic-inputs]: ../cache-and-resume#non-deterministic-process-inputs
 [dataflow-page]: ../workflow#dataflow
