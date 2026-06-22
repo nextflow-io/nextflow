@@ -36,11 +36,12 @@ import org.pf4j.Extension
  *
  * When the request declares no tools, the runner does a single-shot chat
  * (optionally constraining the model to a structured-output JSON schema). When
- * the request declares one or more tools, the runner instead drives a manual
- * tool-call loop: it advertises the tool specifications on each chat request and,
- * for every tool-execution request the model emits, dispatches the call back into
- * core (which runs the real module) and feeds the result to the model, looping
- * until the model returns a final text answer or the iteration cap is reached.
+ * the request declares one or more tools, the runner uses a langchain4j {@code AiServices}
+ * proxy which registers the tool specifications with their executors. For each
+ * tool-execution request the model emits, the executor delegates to the dispatch
+ * callback (which runs the real module), and the proxy feeds the result back to
+ * the model, looping until the model returns a final text answer or the iteration
+ * cap is reached.
  *
  * For Phase 2 tools and structured-output are mutually exclusive: when tools are
  * in play no {@code responseFormat} is forced on the model.
