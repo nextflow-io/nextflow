@@ -18,6 +18,7 @@ package nextflow.agent
 import dev.langchain4j.agent.tool.ToolExecutionRequest
 import dev.langchain4j.data.message.AiMessage
 import dev.langchain4j.data.message.ChatMessage
+import dev.langchain4j.data.message.SystemMessage
 import dev.langchain4j.data.message.ToolExecutionResultMessage
 import dev.langchain4j.data.message.UserMessage
 import dev.langchain4j.model.chat.ChatModel
@@ -26,6 +27,14 @@ import dev.langchain4j.model.chat.request.json.JsonSchema
 import dev.langchain4j.model.chat.response.ChatResponse
 import spock.lang.Specification
 
+/**
+ * Exercises {@link LangChainAgentRunner#runWithTools} which is now driven by a
+ * langchain4j {@code AiServices} proxy. AiServices routes the LLM call through
+ * {@code ChatModel.chat(ChatRequest)}, so a Groovy-closure-coerced ChatModel
+ * mock overriding that overload remains the injection seam. AiServices builds
+ * each ChatRequest from the shared (seeded) chat memory, so each request's
+ * {@code messages()} snapshot reflects the accumulating memory contents.
+ */
 class LangChainAgentToolLoopTest extends Specification {
 
     private static final Map GREET_INPUT_SCHEMA = [
@@ -42,14 +51,14 @@ class LangChainAgentToolLoopTest extends Specification {
         additionalProperties: false,
     ]
 
-    def 'should drive the tool loop: call dispatch then return the final text'() {
+    def 'should drive the AiServices tool loop: call dispatch then return the final text'() {
         given: 'a mock model that requests the greet tool first, then answers'
         List<ChatRequest> capturedRequests = []
         int calls = 0
-        // ChatModel has no single abstract method (all chat overloads are default);
-        // the tool loop calls chat(ChatRequest), so override that overload.
+        // AiServices invokes chat(ChatRequest); override only that overload.
         ChatModel model = [
             chat: { ChatRequest req ->
+                // snapshot the memory-derived messages as the proxy sees them
                 capturedRequests << req
                 calls++
                 if( calls == 1 ) {
@@ -107,7 +116,7 @@ class LangChainAgentToolLoopTest extends Specification {
         and: 'the dispatcher was called exactly once with the right name and args'
         dispatched == [['greet', '{"name":"Ada"}']]
 
-        and: 'the model was chatted twice'
+        and: 'the model was chatted twice (one round-trip per tool turn plus the final)'
         calls == 2
 
         and: 'tools were advertised on every request, including the greet spec'
@@ -118,18 +127,68 @@ class LangChainAgentToolLoopTest extends Specification {
         factoryCalled
         capturedSchema == null
 
-        and: 'the second request carried the tool result message after the assistant turn'
+        and: 'the FIRST request memory held exactly: system message + one user message (full prompt)'
+        List<ChatMessage> first = capturedRequests[0].messages()
+        first.count { it instanceof SystemMessage } == 1
+        first.count { it instanceof UserMessage } == 1
+        (first.find { it instanceof SystemMessage } as SystemMessage).text() == 'Use the greet tool.'
+        (first.find { it instanceof UserMessage } as UserMessage).singleText() == 'greet Ada'
+
+        and: 'the SECOND request memory grew with the assistant tool-request turn and the tool result'
         List<ChatMessage> second = capturedRequests[1].messages()
+        // still exactly one user message — no prompt duplication
+        second.count { it instanceof UserMessage } == 1
+        // the assistant turn carrying the tool request is present
+        second.find { it instanceof AiMessage && (it as AiMessage).hasToolExecutionRequests() } != null
+        // the tool result message was fed back with the right name and JSON payload
         def resultMsg = second.find { it instanceof ToolExecutionResultMessage } as ToolExecutionResultMessage
         resultMsg != null
         resultMsg.toolName() == 'greet'
         resultMsg.text() == '{"greeting":"Hello Ada!"}'
 
-        and: 'the second request still carried the original user prompt'
-        second.find { it instanceof UserMessage && (it as UserMessage).singleText().contains('greet Ada') } != null
+        and: 'the original user prompt persisted unchanged across the loop'
+        (second.find { it instanceof UserMessage } as UserMessage).singleText() == 'greet Ada'
     }
 
-    def 'should throw when the iteration cap is exceeded without a final answer'() {
+    def 'should compose user text with the input JSON as a single user message'() {
+        given: 'a model that answers immediately on the first turn'
+        List<ChatRequest> capturedRequests = []
+        ChatModel model = [
+            chat: { ChatRequest req ->
+                capturedRequests << req
+                return ChatResponse.builder().aiMessage(AiMessage.from('done')).build()
+            }
+        ] as ChatModel
+
+        and:
+        ToolDispatcher dispatch = { String name, String args -> '{}' } as ToolDispatcher
+        def factory = Stub(ChatModelFactory) { createModel(_, _, _) >> model }
+        def runner = new LangChainAgentRunner(modelFactory: factory)
+        def descriptor = new ToolDescriptor('greet', 'greet someone', GREET_INPUT_SCHEMA, null)
+        def req = new AgentRunnerRequest(
+            'openai/gpt-5-mini',
+            'sys',
+            'do it',
+            5,
+            [],
+            null,
+            '{"k":"v"}',
+            [descriptor],
+            dispatch)
+
+        when:
+        def answer = runner.run(req)
+
+        then: 'the answer is returned'
+        answer == 'done'
+
+        and: 'exactly one user message carrying prompt + input JSON'
+        List<ChatMessage> msgs = capturedRequests[0].messages()
+        msgs.count { it instanceof UserMessage } == 1
+        (msgs.find { it instanceof UserMessage } as UserMessage).singleText() == 'do it\n\nInput (JSON):\n{"k":"v"}'
+    }
+
+    def 'should throw IllegalStateException when the iteration cap is exceeded without a final answer'() {
         given: 'a model that always requests the tool, never answering'
         ChatModel model = [
             chat: { ChatRequest req ->
@@ -154,10 +213,8 @@ class LangChainAgentToolLoopTest extends Specification {
         when:
         runner.run(req)
 
-        then:
-        thrown(IllegalStateException)
-
-        and: 'the dispatcher ran once per iteration up to the cap'
-        dispatchCalls == 2
+        then: 'the cap RuntimeException is surfaced as the historical IllegalStateException'
+        def e = thrown(IllegalStateException)
+        e.message == 'Agent exceeded the maximum number of tool-call iterations (2)'
     }
 }

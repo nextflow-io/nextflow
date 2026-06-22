@@ -15,17 +15,20 @@
  */
 package nextflow.agent
 
+import java.util.function.Function
+
 import dev.langchain4j.agent.tool.ToolExecutionRequest
 import dev.langchain4j.agent.tool.ToolSpecification
-import dev.langchain4j.data.message.AiMessage
 import dev.langchain4j.data.message.ChatMessage
 import dev.langchain4j.data.message.SystemMessage
-import dev.langchain4j.data.message.ToolExecutionResultMessage
 import dev.langchain4j.data.message.UserMessage
+import dev.langchain4j.memory.ChatMemory
+import dev.langchain4j.memory.chat.MessageWindowChatMemory
 import dev.langchain4j.model.chat.ChatModel
-import dev.langchain4j.model.chat.request.ChatRequest
 import dev.langchain4j.model.chat.request.json.JsonSchema
 import dev.langchain4j.model.chat.response.ChatResponse
+import dev.langchain4j.service.AiServices
+import dev.langchain4j.service.tool.ToolExecutor
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import org.pf4j.Extension
@@ -95,46 +98,88 @@ class LangChainAgentRunner implements AgentRunner {
     }
 
     /**
-     * Manual tool-call loop. The tool specifications are advertised on every
-     * chat request; for each tool-execution request the model emits, the dispatch
-     * callback runs the real module and its result is fed back to the model. The
-     * loop ends when the model returns a final text answer (no tool requests) or
-     * the iteration cap is reached.
+     * Tool-call loop driven by a langchain4j {@code AiServices} proxy. The tool
+     * specifications are registered with their executors; for each tool-execution
+     * request the model emits, the executor delegates to the dispatch callback
+     * which runs the real module, and the proxy feeds the result back to the
+     * model — looping until the model returns a final text answer or the
+     * iteration cap is reached.
+     *
+     * Tool calls are dispatched sequentially on the calling thread (the
+     * AiServices default); {@code executeToolsConcurrently} is never enabled.
+     *
+     * Prompt composition: only the optional {@link SystemMessage} is seeded into
+     * the chat memory; the full composed user text (prompt plus input JSON) is
+     * passed to {@code chat(...)} so the conversation holds exactly one
+     * {@link UserMessage}.
      */
     private String runWithTools(AgentRunnerRequest request) {
         // Phase 2: tools XOR structured-output — do NOT force a responseFormat
         // when tools are in play (pass a null schema to the model factory).
-        final model = modelFactory.createModel(request.model, timeoutSeconds(request), null)
+        final ChatModel model = modelFactory.createModel(request.model, timeoutSeconds(request), null)
 
-        final List<ToolSpecification> specs = request.toolSpecs.collect { ModuleToolAdapter.toToolSpecification(it) }
-        final List<ChatMessage> messages = composeMessages(request)
         final int maxIterations = request.maxIterations > 0 ? request.maxIterations : DEFAULT_MAX_ITERATIONS
 
-        log.debug "Running agent model=${request.model}; tools=${specs*.name()}; maxIterations=${maxIterations}"
-
-        AiMessage ai = null
-        for( int i = 0; i < maxIterations; i++ ) {
-            final ChatRequest req = ChatRequest.builder()
-                .messages(messages)
-                .toolSpecifications(specs)
-                .build()
-            final ChatResponse response = model.chat(req)
-            ai = response.aiMessage()
-            if( !ai.hasToolExecutionRequests() ) {
-                // final answer
-                return ai.text()
-            }
-            // append the assistant turn (carrying the tool requests) ...
-            messages.add(ai)
-            // ... then run each requested tool and append its result
-            for( ToolExecutionRequest ter : ai.toolExecutionRequests() ) {
+        // Build one ToolSpecification->ToolExecutor entry per declared tool.
+        // Each executor delegates to the core dispatch callback (which runs the
+        // real module) using the langchain4j 2-arg executor signature.
+        final Map<ToolSpecification,ToolExecutor> tools = new LinkedHashMap<>()
+        for( final descriptor : request.toolSpecs ) {
+            final ToolSpecification spec = ModuleToolAdapter.toToolSpecification(descriptor)
+            final ToolExecutor executor = { ToolExecutionRequest ter, Object memoryId ->
                 log.debug "Agent tool call name=${ter.name()}; args=${ter.arguments()}"
-                final String result = request.dispatch.call(ter.name(), ter.arguments())
-                messages.add(ToolExecutionResultMessage.from(ter, result))
-            }
+                return request.dispatch.call(ter.name(), ter.arguments())
+            } as ToolExecutor
+            tools.put(spec, executor)
         }
 
-        throw new IllegalStateException("Agent exceeded the maximum number of tool-call iterations (${maxIterations})")
+        // Seed memory with ONLY the system message; the user text is passed to chat().
+        final ChatMemory memory = MessageWindowChatMemory.withMaxMessages(Integer.MAX_VALUE)
+        if( request.instruction )
+            memory.add(SystemMessage.from(request.instruction))
+
+        // The full composed user text (prompt + input JSON) becomes the single user message.
+        final String userText = composeUserText(request)
+
+        log.debug "Running agent model=${request.model}; tools=${tools.keySet()*.name()}; maxIterations=${maxIterations}"
+
+        // A cap of N permits only N-1 model round-trips, so pass maxIterations+1.
+        final Function<Object,String> systemMessageProvider = { Object memoryId -> request.instruction } as Function<Object,String>
+        final AgentService agent = AiServices.builder(AgentService)
+            .chatModel(model)
+            .tools(tools)
+            .chatMemory(memory)
+            .systemMessageProvider(systemMessageProvider)
+            .maxSequentialToolsInvocations(maxIterations + 1)
+            .build()
+
+        try {
+            return agent.chat(userText)
+        }
+        catch( IllegalStateException e ) {
+            // Let any genuine IllegalStateException (e.g. from ChatModelFactory or
+            // our own code) propagate unchanged.
+            throw e
+        }
+        catch( RuntimeException e ) {
+            // langchain4j 1.16.3 throws a plain RuntimeException on cap exceed
+            // (dev.langchain4j.internal.Exceptions.runtime, message "Something is
+            // wrong, exceeded %s tool calling round trips ..."). Re-throw with the
+            // historical IllegalStateException message/shape.
+            throw new IllegalStateException("Agent exceeded the maximum number of tool-call iterations (${maxIterations})", e)
+        }
+    }
+
+    /**
+     * Compose the user text: the rendered prompt, plus the input record
+     * serialized as JSON when present. This is the single user message passed
+     * to the AiServices proxy.
+     */
+    private static String composeUserText(AgentRunnerRequest request) {
+        String userText = request.prompt
+        if( request.inputJson )
+            userText += "\n\nInput (JSON):\n" + request.inputJson
+        return userText
     }
 
     /**
@@ -143,14 +188,10 @@ class LangChainAgentRunner implements AgentRunner {
      * when present).
      */
     private static List<ChatMessage> composeMessages(AgentRunnerRequest request) {
-        String userText = request.prompt
-        if( request.inputJson )
-            userText += "\n\nInput (JSON):\n" + request.inputJson
-
         final List<ChatMessage> messages = new ArrayList<ChatMessage>()
         if( request.instruction )
             messages.add(SystemMessage.from(request.instruction))
-        messages.add(UserMessage.from(userText))
+        messages.add(UserMessage.from(composeUserText(request)))
         return messages
     }
 }
