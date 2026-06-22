@@ -331,7 +331,7 @@ JSON fields should be additive over time. Initial fields:
 6. Recursively expand subworkflows until `--depth`, cycle detection, or unresolved boundary.
 7. Render text, JSON, or DOT.
 
-This can start as a static parser feature. Later, it can share more code with the language server outline/call-hierarchy implementation if those APIs become public.
+This can start as a static parser feature that reuses the `lint` command's script-parsing infrastructure rather than re-implementing parsing. The language server's [`WorkspacePreviewProvider`](https://github.com/nextflow-io/language-server/blob/main/src/main/java/nextflow/lsp/services/script/WorkspacePreviewProvider.java) already assembles the project tree for the editor outline and is the closest prior art; `nextflow tree` can converge on shared APIs as they become public.
 
 ## Example project shapes
 
@@ -398,4 +398,4 @@ warnings:
 
 - Should `module` mean only included process components, or all process calls including local processes? This ADR recommends using `module` for all process calls because it is more useful to agents.
 - Should the default root include all workflows or only the executable entry workflow? This ADR recommends entry workflow only, with `--all` for complete listings.
-- Should `nextflow tree` live in core CLI or a plugin first? Core CLI is preferred because it depends on parser semantics and should be available to agents without project-specific setup.
+- Should `nextflow tree` live in core CLI or a plugin first? It could instead be delivered as a plugin command (`nextflow plugin nf-tree:run`) reusing the `lint` command's parsing infrastructure, which would decouple it from the core release cycle and allow faster iteration. This ADR still prefers core CLI as the eventual home, because the feature depends on parser semantics and should be discoverable to agents without project-specific setup — but a plugin command is a viable way to prototype it first.
