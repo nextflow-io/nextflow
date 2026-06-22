@@ -188,6 +188,50 @@ class LangChainAgentToolLoopTest extends Specification {
         (msgs.find { it instanceof UserMessage } as UserMessage).singleText() == 'do it\n\nInput (JSON):\n{"k":"v"}'
     }
 
+    def 'should succeed with exactly one tool round-trip when maxIterations=1 (verifies the +1 cap offset)'() {
+        // Rationale: maxIterations=1 → maxSequentialToolsInvocations is passed as 2.
+        // A cap of 2 permits one tool round-trip (tool call + final answer).
+        // If the code wrongly passed maxIterations (=1) the cap would be 1, which
+        // allows zero round-trips, and the run would throw before the tool executes.
+        // This test therefore fails if the "+1" in maxIterations+1 is dropped.
+        given: 'a model that requests the greet tool on the first call, then answers'
+        int calls = 0
+        ChatModel model = [
+            chat: { ChatRequest req ->
+                calls++
+                if( calls == 1 ) {
+                    final ter = ToolExecutionRequest.builder()
+                        .id('call-boundary')
+                        .name('greet')
+                        .arguments('{"name":"Boundary"}')
+                        .build()
+                    return ChatResponse.builder().aiMessage(AiMessage.from([ter])).build()
+                }
+                // second turn: final plain-text answer
+                return ChatResponse.builder().aiMessage(AiMessage.from('Boundary answer')).build()
+            }
+        ] as ChatModel
+
+        and:
+        int dispatchCalls = 0
+        ToolDispatcher dispatch = { String name, String args -> dispatchCalls++; '{"greeting":"Hello Boundary!"}' } as ToolDispatcher
+        def runner = new LangChainAgentRunner(modelFactory: Stub(ChatModelFactory) {
+            createModel(_, _, _) >> model
+        })
+        def descriptor = new ToolDescriptor('greet', 'greet someone', GREET_INPUT_SCHEMA, null)
+        // maxIterations=1: only one tool round-trip is permitted
+        def req = new AgentRunnerRequest('openai/gpt-5-mini', null, 'greet Boundary', 1, [], null, null, [descriptor], dispatch)
+
+        when:
+        def answer = runner.run(req)
+
+        then: 'the run succeeds and returns the final text'
+        answer == 'Boundary answer'
+
+        and: 'the dispatcher was called exactly once'
+        dispatchCalls == 1
+    }
+
     def 'should throw IllegalStateException when the iteration cap is exceeded without a final answer'() {
         given: 'a model that always requests the tool, never answering'
         ChatModel model = [

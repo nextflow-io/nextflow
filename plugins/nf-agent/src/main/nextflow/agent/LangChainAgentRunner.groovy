@@ -15,8 +15,6 @@
  */
 package nextflow.agent
 
-import java.util.function.Function
-
 import dev.langchain4j.agent.tool.ToolExecutionRequest
 import dev.langchain4j.agent.tool.ToolSpecification
 import dev.langchain4j.data.message.ChatMessage
@@ -144,12 +142,12 @@ class LangChainAgentRunner implements AgentRunner {
         log.debug "Running agent model=${request.model}; tools=${tools.keySet()*.name()}; maxIterations=${maxIterations}"
 
         // A cap of N permits only N-1 model round-trips, so pass maxIterations+1.
-        final Function<Object,String> systemMessageProvider = { Object memoryId -> request.instruction } as Function<Object,String>
+        // The system message is seeded directly into the chat memory above;
+        // no systemMessageProvider is needed (that would double-add it).
         final AgentService agent = AiServices.builder(AgentService)
             .chatModel(model)
             .tools(tools)
             .chatMemory(memory)
-            .systemMessageProvider(systemMessageProvider)
             .maxSequentialToolsInvocations(maxIterations + 1)
             .build()
 
