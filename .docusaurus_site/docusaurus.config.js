@@ -53,6 +53,16 @@ export default async function createConfigAsync() {
           routeBasePath: "/nextflow",
           path: "docs",
           sidebarPath: "./sidebars.js",
+          // Internal agent planning/spec docs live under docs/superpowers/ for
+          // version control but are not published product docs (and their code-ish
+          // angle brackets break MDX). Keep Docusaurus defaults and skip that tree.
+          exclude: [
+            "**/_*.{js,jsx,ts,tsx,md,mdx}",
+            "**/_*/**",
+            "**/*.test.{js,jsx,ts,tsx}",
+            "**/__tests__/**",
+            "superpowers/**",
+          ],
           showLastUpdateAuthor: false,
           showLastUpdateTime: false,
           // For PR Previews we want to see the latest doc-set with expected changes.
