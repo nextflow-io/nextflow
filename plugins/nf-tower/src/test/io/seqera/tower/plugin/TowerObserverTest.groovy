@@ -21,12 +21,14 @@ import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
 
+import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.container.DockerConfig
 import nextflow.container.resolver.ContainerMeta
+import nextflow.dag.DAG
 import nextflow.exception.AbortRunException
 import nextflow.script.PlatformMetadata
 import nextflow.script.ScriptBinding
@@ -568,6 +570,99 @@ class TowerObserverTest extends Specification {
         req.tasks[0].gpuMetrics.mem == 15360
         req.tasks[0].gpuMetrics.pct == 75
         req.tasks[0].gpuMetrics.peak == 100
+    }
+
+    def 'should include dag in begin request' () {
+        given:
+        def session = Mock(Session)
+        def meta = Mock(WorkflowMetadata)
+        def observer = Spy(newObserver(session))
+        def dagMap = [
+            vertices: [[id: '0', type: 'PROCESS', label: 'foo', scope: null]],
+            edges   : [[source: '0', target: '1', label: 'ch']]
+        ]
+
+        when:
+        def req = observer.makeBeginReq(session)
+        then:
+        1 * session.getWorkflowMetadata() >> meta
+        1 * meta.toMap() >> [:]
+        1 * session.getParams() >> new ScriptBinding.ParamsMap()
+        1 * observer.getWorkflowId() >> 'wf-1'
+        1 * observer.renderDag(session) >> dagMap
+        1 * observer.getOperationId() >> null
+        1 * observer.getLogFile() >> null
+        1 * observer.getOutFile() >> null
+        and:
+        req.workflow.id == 'wf-1'
+        req.dag == dagMap
+        and:
+        aroundNow(req.instant)
+    }
+
+    def 'should omit dag from begin request when not available' () {
+        given:
+        def session = Mock(Session)
+        def meta = Mock(WorkflowMetadata)
+        def observer = Spy(newObserver(session))
+
+        when:
+        def req = observer.makeBeginReq(session)
+        then:
+        1 * session.getWorkflowMetadata() >> meta
+        1 * meta.toMap() >> [:]
+        1 * session.getParams() >> new ScriptBinding.ParamsMap()
+        1 * observer.getWorkflowId() >> 'wf-1'
+        1 * observer.renderDag(session) >> null
+        1 * observer.getOperationId() >> null
+        1 * observer.getLogFile() >> null
+        1 * observer.getOutFile() >> null
+        and:
+        !req.containsKey('dag')
+    }
+
+    def 'renderDag should return null for an empty dag' () {
+        given:
+        def dag = new DAG()
+        def session = Mock(Session) { getDag() >> dag }
+        def observer = newObserver(session)
+
+        expect:
+        observer.renderDag(session) == null
+    }
+
+    def 'renderDag should swallow exceptions and return null' () {
+        given:
+        def session = Mock(Session) { getDag() >> { throw new RuntimeException('boom') } }
+        def observer = newObserver(session)
+
+        expect:
+        observer.renderDag(session) == null
+    }
+
+    def 'renderDag should serialize a populated dag preserving operators' () {
+        given:
+        new Session()
+        and:
+        def c1 = new DataflowQueue()
+        def c2 = new DataflowQueue()
+        def c3 = new DataflowQueue()
+        def dag = new DAG()
+        // op1 --c2--> op2 : the operator chain must be preserved end-to-end
+        dag.addOperatorNode('op1', c1, c2)
+        dag.addOperatorNode('op2', c2, c3)
+        and:
+        def session = Mock(Session) { getDag() >> dag }
+        def observer = newObserver(session)
+
+        when:
+        def result = observer.renderDag(session)
+        then:
+        result.vertices.findAll { it.type == 'OPERATOR' }*.label.containsAll(['op1', 'op2'])
+        and:
+        def op1 = result.vertices.find { it.label == 'op1' }
+        def op2 = result.vertices.find { it.label == 'op2' }
+        result.edges.find { it.source == op1.id && it.target == op2.id }
     }
 
     def 'should throw AbortRunException if workflow id is not found'() {

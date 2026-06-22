@@ -327,7 +327,7 @@ class ConfigDsl extends Script {
 
         void id(String value) {
             final target = dsl.getTarget()
-            final plugins = (Set) target.computeIfAbsent('plugins', (k) -> new HashSet<>())
+            final plugins = (Set) target.computeIfAbsent('plugins', (k) -> new LinkedHashSet<>())
             plugins.add(value)
         }
     }

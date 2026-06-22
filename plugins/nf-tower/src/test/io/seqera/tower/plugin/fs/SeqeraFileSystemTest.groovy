@@ -20,11 +20,11 @@ import java.nio.file.NoSuchFileException
 
 import groovy.json.JsonOutput
 import io.seqera.tower.plugin.TowerClient
-import io.seqera.tower.plugin.dataset.SeqeraDatasetClient
 import spock.lang.Specification
 
 /**
- * Tests for {@link SeqeraFileSystem} caching and workspace resolution using a mock {@link TowerClient}.
+ * Tests for {@link SeqeraFileSystem} org/workspace cache and handler registry.
+ * Resource-specific caches (datasets, data-links) are tested against their handlers.
  */
 class SeqeraFileSystemTest extends Specification {
 
@@ -53,7 +53,7 @@ class SeqeraFileSystemTest extends Specification {
     }
 
     private SeqeraFileSystem buildFs(TowerClient tc) {
-        new SeqeraFileSystem(new SeqeraFileSystemProvider(), new SeqeraDatasetClient(tc))
+        return new SeqeraFileSystem(new SeqeraFileSystemProvider(), tc)
     }
 
     // ---- cache loading ----
@@ -70,6 +70,21 @@ class SeqeraFileSystemTest extends Specification {
         then:
         1 * tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         1 * tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
+    }
+
+    def "getUserId is cached across multiple calls (single /user-info request)"() {
+        given:
+        def tc = spyTower()
+        final fs = buildFs(tc)
+
+        when:
+        def first = fs.getUserId()
+        def second = fs.getUserId()
+
+        then:
+        1 * tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
+        first == 42L
+        second == 42L
     }
 
     def "listOrgNames returns distinct org names from cache"() {
@@ -147,58 +162,21 @@ class SeqeraFileSystemTest extends Specification {
         thrown(NoSuchFileException)
     }
 
-    // ---- dataset cache ----
+    // ---- handler registry ----
 
-    def "resolveDatasets populates cache and returns datasets"() {
+    def "registerHandler stores and looks up by resource type"() {
         given:
-        def tc = spyTower()
-        tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >>
-            ok(JsonOutput.toJson([datasets: [
-                [id: 'ds-1', name: 'samples', version: 1L, mediaType: 'text/csv',
-                 dateCreated: '2024-01-01T00:00:00Z', lastUpdated: '2024-01-02T00:00:00Z']
-            ], totalSize: 1]))
-        final fs = buildFs(tc)
+        def fs = new SeqeraFileSystem(new SeqeraFileSystemProvider(), Mock(TowerClient))
+        def handler = Mock(ResourceTypeHandler) {
+            getResourceType() >> 'datasets'
+        }
 
         when:
-        def datasets = fs.resolveDatasets(10L)
+        fs.registerHandler(handler)
 
         then:
-        datasets.size() == 1
-        datasets[0].name == 'samples'
-    }
-
-    def "resolveDatasets returns cached result on second call without extra API request"() {
-        given:
-        def tc = spyTower()
-        final datasetsJson = JsonOutput.toJson([datasets: [
-            [id: 'ds-1', name: 'samples', version: 1L, mediaType: 'text/csv',
-             dateCreated: '2024-01-01T00:00:00Z', lastUpdated: '2024-01-02T00:00:00Z']
-        ], totalSize: 1])
-        final fs = buildFs(tc)
-
-        when:
-        fs.resolveDatasets(10L)
-        fs.resolveDatasets(10L)
-
-        then:
-        1 * tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >> ok(datasetsJson)
-    }
-
-    def "invalidateDatasetCache forces re-fetch on next resolveDatasets call"() {
-        given:
-        def tc = spyTower()
-        final datasetsJson = JsonOutput.toJson([datasets: [
-            [id: 'ds-1', name: 'samples', version: 1L, mediaType: 'text/csv',
-             dateCreated: '2024-01-01T00:00:00Z', lastUpdated: '2024-01-02T00:00:00Z']
-        ], totalSize: 1])
-        final fs = buildFs(tc)
-
-        when:
-        fs.resolveDatasets(10L)
-        fs.invalidateDatasetCache(10L)
-        fs.resolveDatasets(10L)
-
-        then:
-        2 * tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >> ok(datasetsJson)
+        fs.getHandler('datasets') === handler
+        fs.getHandler('unknown') == null
+        fs.getResourceTypes() == ['datasets'] as Set
     }
 }

@@ -75,6 +75,15 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         createClient()
     }
 
+    /**
+     * Force the default Fusion client version for the Seqera executor.
+     *
+     * @deprecated The default Fusion version is now {@code 2.6} (see
+     * {@link nextflow.fusion.FusionConfig}), so pinning it here is redundant. To target a
+     * specific Fusion version, set the {@code fusion.targetVersion} config option instead.
+     * This method will be removed in a future release.
+     */
+    @Deprecated
     protected void applyFusionDefaults() {
         final fusionConfig = session.config.fusion as Map
         if( fusionConfig!=null && !fusionConfig.containerConfigUrl ) {
@@ -138,6 +147,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
                 .pipeline(pipeline)
                 .predictionModel(predictionModel)
                 .computeEnvId(computeEnvId)
+                .shellEnabled(seqeraConfig.shellEnabled)
         log.debug "[SEQERA] Creating run: ${request}"
         final response = client.createRun(request)
         this.runId = response.getRunId()

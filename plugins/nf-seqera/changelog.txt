@@ -1,5 +1,9 @@
 nf-seqera changelog
 ====================
+0.22.0 - 19 Jun 2026
+- Bump default Fusion version to 2.6 (#7246) [b56ef1a45]
+- Add shellEnabled option and per-task prediction model to Seqera executor (#7204) [810fd1654]
+
 0.20.1 - 28 May 2026
 - Force lib-httpx@2.3.0 to fix plugin classpath (#7181) [1c47215a8]
 
