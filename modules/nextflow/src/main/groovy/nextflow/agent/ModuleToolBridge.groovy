@@ -22,6 +22,7 @@ import java.nio.file.Path
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowReadChannel
@@ -248,6 +249,10 @@ class ModuleToolBridge implements ToolDispatcher {
             descriptors.add(ModuleRunToolSchema.descriptor(new ArrayList<String>(resolved.keySet()), moduleHints))
         if( filesystemEnabled )
             descriptors.add(FilesystemToolSchema.descriptor())
+        // M1: warn when module_run was requested but no processes are in scope — the LLM will
+        // see a module_run tool with an empty module enum and no runnable modules
+        if( moduleRunEnabled && tools.isEmpty() )
+            log.warn("agent module_run: 'module_run' capability requested but no processes are in scope / included — the LLM will have no runnable modules")
     }
 
     // -------------------------------------------------------------------------
@@ -624,27 +629,45 @@ class ModuleToolBridge implements ToolDispatcher {
             return JsonOutput.toJson([error: "module_run: unknown module '${moduleName}' - available: ${tools.keySet()}".toString()])
         final String result = tool.spec != null ? callSpec(tool, args) : callScalar(tool, args)
         // after the module task completes, scan the result for file path strings and whitelist
-        // their parent dirs in the dispatch context so the filesystem tool can read module outputs
-        whitelistOutputDirs(result)
+        // their parent dirs in the dispatch context so the filesystem tool can read module outputs.
+        // ONLY whitelist on a non-error result: a failed module returns {"error":"..."}, and if
+        // that error message contains an absolute path the parent dir must NOT be whitelisted —
+        // that would silently widen the sandbox with data from an error string, not an output.
+        final Object resultParsed = parseResultJson(result)
+        if( !(resultParsed instanceof Map && ((Map) resultParsed).containsKey('error')) )
+            whitelistOutputDirs(resultParsed)
         return result
     }
 
     /**
-     * Scan a JSON result string for absolute file path values and add each file's parent
-     * directory to the dispatch context's readable-dirs whitelist. Called after a
-     * {@code module_run} task completes. No-op when no dispatch context is active.
+     * Parse a JSON result string silently. Returns the parsed object (Map, List, String, …)
+     * or {@code null} if the string is null/blank/unparseable.
      */
-    private static void whitelistOutputDirs(String resultJson) {
-        final DispatchContext ctx = context()
-        if( ctx == null || resultJson == null )
-            return
+    private static Object parseResultJson(String resultJson) {
+        if( resultJson == null || resultJson.isBlank() )
+            return null
         try {
-            final Object parsed = new JsonSlurper().parseText(resultJson)
-            collectPathsFromValue(parsed, ctx)
+            return new JsonSlurper().parseText(resultJson)
         }
         catch( Exception ignored ) {
-            // result is not valid JSON or has no path strings -- safe to ignore
+            return null
         }
+    }
+
+    /**
+     * Scan an already-parsed JSON result value for absolute file path strings and add each
+     * file's parent directory to the dispatch context's readable-dirs whitelist. Called after a
+     * {@code module_run} task completes successfully (callers must skip error results).
+     * No-op when no dispatch context is active or the parsed value is null.
+     *
+     * <p>Package-visible for unit testing; not part of the public API.</p>
+     */
+    @PackageScope
+    static void whitelistOutputDirs(Object parsed) {
+        final DispatchContext ctx = context()
+        if( ctx == null || parsed == null )
+            return
+        collectPathsFromValue(parsed, ctx)
     }
 
     private static void collectPathsFromValue(Object value, DispatchContext ctx) {
