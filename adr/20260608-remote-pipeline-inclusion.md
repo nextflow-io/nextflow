@@ -9,7 +9,7 @@
 ## Updates
 
 ### Version 1.1 (2026-06-22)
-- **Separate remote pipelines from remote workflows**: Workflows are treated separately by the [Workflow modules ADR](./20260608-workflow-modules.md).
+- **Separate remote pipelines from remote workflows**: Workflows are treated separately by the [Workflow modules ADR](20260608-workflow-modules.md).
 - **Replace core workflow distinction with pipeline inclusion**: Instead of isolating the *core workflow* of a pipeline, the include syntax is extended to support *pipeline inclusion*, in which the `params` / `workflow` / `output` trio is imported and used like a named workflow.
 
 ## Summary
@@ -20,7 +20,7 @@ Add the ability to include a remote pipeline into a *meta-pipeline*.
 
 Nextflow supports reusing process definitions via remote *module* inclusion (e.g. `include { BWA_MEM } from 'nf-core/bwa/mem'`), but there is no standard mechanism to reuse an entire *pipeline* as a building block. Users must either fork and copy code, or compose/chain multiple `nextflow run` sessions which forfeits dataflow composition.
 
-The [module system](20251114-module-system.md) and [workflow module](20260608-workflow-modules.md) ADRs define how standalone *processes* and *workflows* should be distributed as modules through the Nextflow registry. This ADR defines how *pipelines* -- workflows with a deployment shell -- should be composed into larger *meta-pipelines*.
+The [module system](20251114-module-system.md) and [workflow modules](20260608-workflow-modules.md) ADRs define how standalone *processes* and *workflows* should be distributed as modules through the Nextflow registry. This ADR defines how *pipelines* -- workflows with a deployment shell -- should be composed into larger *meta-pipelines*.
 
 ## Goals
 
@@ -82,7 +82,7 @@ workflow {
 
 Notes:
 
-- The pipeline must included using the `workflow` keyword and aliased to a specific name (`RNASEQ`).
+- The pipeline must be included using the `workflow` keyword and aliased to a specific name (`RNASEQ`).
 - The `params` block becomes the `take:` section and the `output` block becomes the `emit:` section.
 - The workflow is called using named arguments so that defaults can be omitted.
 - All outputs are either a `Channel` or wrapped as `Value<T>`, allowing them to be used in regular dataflow logic.
@@ -101,7 +101,7 @@ include { workflow as NFCORE_RNASEQ } from 'nf-core/rnaseq'
 
 When a pipeline is included from the registry, it is vendored into the including project under `pipelines/<scope>/<name>/`. Included pipelines are isolated -- each included pipeline has its own `modules/` directory. This way, two pipelines can use different versions of the same module without compromising reproducibility.
 
-Included pipelines should be committed to the meta-pipeline repository. The pipeline should have a *pipeline spec* (`nextflow_spec.json`) which specifies the pipeline version, so that Nextflow can track local changes.
+Included pipelines should be committed to the meta-pipeline repository. The pipeline version and checksum should be saved in a helper file (`.pipeline-info`) so that Nextflow can track local changes.
 
 ### Best practices for including pipelines
 
@@ -211,6 +211,7 @@ Pipeline chaining can be practical for certain use cases, such as simple chains 
 - Related: [Module system](20251114-module-system.md)
 - Related: [Workflow params](20250825-workflow-params.md)
 - Related: [Workflow outputs](20251020-workflow-outputs.md)
+- Related: [Workflow modules](20260608-workflow-modules.md)
 
 ## Appendix
 
@@ -349,3 +350,12 @@ process {
 ```
 
 Both the meta-pipeline developer and users can override whatever they want from config.
+
+In practice, the meta-pipeline will likely need to recreate the configuration shell used by the inner pipelines:
+
+- Config params (`outdir`, `publish_dir_mode`, `max_cpus`, etc)
+- Resource settings (`cpus`, `memory`, `time`, etc)
+- Environment profiles (executors, software dependencies, test profiles)
+- Reports (execution, timeline, trace)
+- Manifest (name, authors, description, etc)
+- Plugins
