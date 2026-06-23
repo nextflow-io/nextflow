@@ -32,7 +32,7 @@ import groovy.util.logging.Slf4j
 @CompileStatic
 class AgentBuilder {
 
-    static final List<String> DIRECTIVES = ['model', 'instruction', 'tools', 'maxIterations']
+    static final List<String> DIRECTIVES = ['model', 'instruction', 'goal', 'tools', 'maxIterations']
 
     private BaseScript ownerScript
     private String agentName

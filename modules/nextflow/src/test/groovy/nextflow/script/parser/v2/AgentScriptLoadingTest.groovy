@@ -174,4 +174,48 @@ class AgentScriptLoadingTest extends Dsl2Spec {
         cleanup:
         file.parent.deleteDir()
     }
+
+    def 'should load a script with a goal directive and expose it via getGoal()'() {
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+        def file = Files.createTempDirectory('test').resolve('main.nf')
+        file.text = '''
+            nextflow.enable.types = true
+
+            agent qa {
+                model 'openai/gpt-5-mini'
+                instruction 'be concise'
+                goal 'answer the question accurately'
+
+                input:
+                    question: String
+
+                output:
+                    answer: String
+
+                prompt:
+                """
+                ${question}
+                """
+            }
+
+            workflow {
+            }
+            '''.stripIndent()
+
+        when:
+        parser.parse(file)
+        parser.runScript()
+
+        then:
+        def definitions = ScriptMeta.get(parser.script).getDefinitions()
+        def agent = definitions.find { it instanceof AgentDef && it.name == 'qa' } as AgentDef
+        agent != null
+        agent.goal == 'answer the question accurately'
+        agent.instruction == 'be concise'
+
+        cleanup:
+        file.parent.deleteDir()
+    }
 }

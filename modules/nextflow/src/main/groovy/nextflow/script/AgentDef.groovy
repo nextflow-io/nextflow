@@ -94,6 +94,7 @@ class AgentDef extends BindableDef implements ChainableDef {
 
     String getModel() { directives.get('model') as String }
     String getInstruction() { directives.get('instruction') as String }
+    String getGoal() { directives.get('goal') as String }
     List getTools() {
         final value = directives.get('tools')
         if( value == null )

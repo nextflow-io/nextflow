@@ -38,6 +38,11 @@ public interface AgentDsl extends DslScope {
         void instruction(String value);
 
         @Description("""
+            The `goal` directive states a high-level objective that steers the agent's multi-turn loop. It is advisory: the model is encouraged to keep working until the goal is met, while `maxIterations` remains the hard cap.
+        """)
+        void goal(String value);
+
+        @Description("""
             The `tools` directive declares the modules the agent may invoke as tools.
         """)
         void tools(Object... values);

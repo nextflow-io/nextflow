@@ -64,4 +64,23 @@ class AgentDefTest extends Specification {
         renamed.name == 'bar'
         agent.name == 'foo' // original untouched
     }
+
+    def 'should expose the goal directive'() {
+        given:
+        def directives = [model: 'openai/gpt-5-mini', instruction: 'be careful', goal: 'assemble then QC'] as Map<String,Object>
+        def prompt = new PromptDef({ -> 'hi' }, 'hi')
+        def agent = new AgentDef(Mock(BaseScript), 'a', directives, [], [], prompt)
+
+        expect:
+        agent.goal == 'assemble then QC'
+        agent.instruction == 'be careful'
+    }
+
+    def 'should return null goal when not declared'() {
+        given:
+        def agent = new AgentDef(Mock(BaseScript), 'a', [model: 'openai/gpt-5-mini'] as Map<String,Object>, [], [],
+            new PromptDef({ -> 'hi' }, 'hi'))
+        expect:
+        agent.goal == null
+    }
 }
