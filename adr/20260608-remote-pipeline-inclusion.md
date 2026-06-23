@@ -358,3 +358,63 @@ In practice, the meta-pipeline will likely need to recreate the configuration sh
 - Reports (execution, timeline, trace)
 - Manifest (name, authors, description, etc)
 - Plugins
+
+### Reducing params/output boilerplate
+
+In the example above, the meta-pipeline re-declares the params and outputs from each included pipeline. This boilerplate can be avoided by importing each pipeline's `params` block and `output` block as *record types*:
+
+```groovy
+include {
+    params as FetchngsParams;
+    workflow as NFCORE_FETCHNGS
+} from 'nf-core/fetchngs'
+
+include {
+    params as RnaseqParams;
+    workflow as NFCORE_RNASEQ;
+    output as RnaseqOutput
+} from 'nf-core/rnaseq'
+
+params {
+    fetchngs: FetchngsParams        // input
+    strandedness: String = 'auto'   // unique to meta-pipeline
+    rnaseq: RnaseqParams            // input, aligner, fasta
+}
+
+workflow {
+    main:
+    // fetch FASTQ samples from NCBI SRA
+    fetchngs = NFCORE_FETCHNGS( params.fetchngs )
+
+    // adapt fetchngs output to rnaseq input (add strandedness)
+    ch_samples = fetchngs.samples.map { r ->
+        r + record(strandedness: params.strandedness)
+    }
+
+    // perform RNAseq analysis (ch_samples overrides params.rnaseq.input)
+    rnaseq = NFCORE_RNASEQ( params.rnaseq + record(input: ch_samples) )
+
+    publish:
+    rnaseq = rnaseq
+}
+
+output {
+    rnaseq: RnaseqOutput {}
+}
+```
+
+`RnaseqParams` is a *partial record type* -- all of its fields are nullable and defaulted fields keep their defaults. The user can provide any rnaseq param as `--rnaseq.<name>`, the meta-pipeline can override specific params (`params.rnaseq + record(input: ch_samples)`), and the `NFCORE_RNASEQ()` call validates that all required params are present.
+
+`RnaseqOutput` is a record type of the rnaseq outputs which preserves their output directives (`path`, `index`). Declaring a top-level output with this type (`rnaseq: RnaseqOutput`) is equivalent to redeclaring each rnaseq output.
+
+This way, the developer only needs to declare one param for each included pipeline (`fetchngs: FetchngsParams`, `rnaseq: RnaseqParams`), and one output for each pipeline whose outputs should be published (`rnaseq: RnaseqOutput`).
+
+Notes:
+
+- `rnaseq.input` is always overridden by the dataflow, so a user-supplied value (`--rnaseq.input`) would be silently discarded. Nextflow can warn when a phantom input is set.
+
+- `rnaseq.fasta` must still be provided by the user, but the error surfaces at the `NFCORE_RNASEQ()` call rather than at launch.
+
+- The fetchngs outputs were not published in the base example, so they are not published here either.
+
+- Output record types are all-or-nothing. If the developer wants to publish only some outputs or publish them in a different way, they need to redeclare each output like normal.
