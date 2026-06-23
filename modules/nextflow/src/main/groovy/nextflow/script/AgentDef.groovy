@@ -343,8 +343,7 @@ class AgentDef extends BindableDef implements ChainableDef {
         if( moduleRunEnabled ) {
             final allProcNames = new LinkedHashSet<String>()
             if( meta != null ) {
-                allProcNames.addAll(meta.getProcessNames())           // locally-defined
-                allProcNames.addAll(meta.getIncludedProcessNames())   // brought via include
+                allProcNames.addAll(meta.getProcessNames())
             }
             for( final procName : allProcNames ) {
                 if( resolved.containsKey(procName) )
