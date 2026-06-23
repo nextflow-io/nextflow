@@ -42,6 +42,9 @@ class AgentRunnerRequestTest extends Specification {
         req.inputJson == '{}'
         req.requestTimeoutSeconds == 30
         req.goal == 'reach the objective'
+        req.tools == []
+        req.outputSchema == null
+        req.toolSpecs == null
     }
 
     def 'should default goal to null when omitted'() {

@@ -219,6 +219,8 @@ class AgentRunIntegrationTest extends Dsl2Spec {
         result.val == 'result'
         and:
         captured.goal == 'do the thing'
+        captured.model == 'openai/gpt-5-mini'
+        captured.maxIterations == 20
     }
 
     def 'should let agent directives override the config scope defaults'() {
