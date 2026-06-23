@@ -130,7 +130,18 @@ class ModuleSpecToolSchema {
         final type = param.type?.toLowerCase()
         final desc = param.description
         final Map<String,Object> fragment = new LinkedHashMap<String,Object>()
-        if( type == 'map' ) {
+        if( type == 'map' && 'meta'.equalsIgnoreCase(param.name) ) {
+            fragment.put('type', 'object')
+            fragment.put('description', desc ?: 'sample metadata')
+            final idProp = new LinkedHashMap<String,Object>()
+            idProp.put('type', 'string')
+            idProp.put('description', 'sample identifier')
+            final props = new LinkedHashMap<String,Object>()
+            props.put('id', idProp)
+            fragment.put('properties', props)
+            fragment.put('additionalProperties', true)
+        }
+        else if( type == 'map' ) {
             fragment.put('type', 'object')
             fragment.put('additionalProperties', true)
             if( desc )

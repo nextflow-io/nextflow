@@ -739,15 +739,11 @@ class ModuleToolBridge implements ToolDispatcher {
                 return ModuleMetadataToolSchema.description(metadata)
             if( spec != null ) {
                 final Map schema = ModuleSpecToolSchema.inputSchema(spec)
-                final props = schema.get('properties')
-                final keys = (props instanceof Map) ? ((Map) props).keySet().join(', ') : '(none)'
-                return "inputs: ${keys}\n${ModuleSpecToolSchema.outputDescription(spec)}".toString()
+                return "Input schema (JSON): ${JsonOutput.toJson(schema.get('properties'))}\n${ModuleSpecToolSchema.outputDescription(spec)}".toString()
             }
             // scalar typed process
             final Map schema = ProcessToolSchema.inputSchema(proc)
-            final props = schema.get('properties')
-            final keys = (props instanceof Map) ? ((Map) props).keySet().join(', ') : '(none)'
-            return "inputs: ${keys}".toString()
+            return "Input schema (JSON): ${JsonOutput.toJson(schema.get('properties'))}".toString()
         }
         catch( Exception e ) {
             return "inputs: (unavailable - ${e.message})".toString()

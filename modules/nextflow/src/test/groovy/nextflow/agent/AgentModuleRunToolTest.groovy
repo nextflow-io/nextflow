@@ -238,6 +238,12 @@ class AgentModuleRunToolTest extends Dsl2Spec {
             assert req.toolSpecs[0].name == 'module_run'
             // the module enum must include FOO (discovered from included module)
             assert req.toolSpecs[0].inputSchema.properties.module.enum == ['FOO']
+            // The hint must carry the FULL schema (types + descriptions + meta.id), not just names
+            final desc = req.toolSpecs[0].description
+            assert desc.contains('"reads"')
+            assert desc.contains('"type":"string"')   // reads is file -> string
+            assert desc.contains('"meta"')
+            assert desc.contains('"id"')             // meta.id convention conveyed
             return 'done'
         } as AgentRunner
 

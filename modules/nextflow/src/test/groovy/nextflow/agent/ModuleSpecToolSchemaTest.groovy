@@ -59,9 +59,32 @@ class ModuleSpecToolSchemaTest extends Specification {
         schema.properties.meta.type == 'object'
         schema.properties.meta.additionalProperties == true
         schema.properties.meta.description == 'sample meta'
+        // nf-core meta.id convention: meta input carries a nested `id` property
+        schema.properties.meta.properties.id.type == 'string'
+        schema.properties.meta.properties.id.description == 'sample identifier'
         and:
         schema.properties.reads.type == 'string'
         schema.properties.reads.description == 'input reads (file path)'
+    }
+
+    def 'should apply nf-core meta.id convention for map input named meta'() {
+        given:
+        def spec = new ModuleSpec(
+            name: 'fastqc',
+            inputs: [ tuple(param('meta', 'map', 'sample meta'), param('reads', 'file', 'input reads')) ]
+        )
+
+        when:
+        def schema = ModuleSpecToolSchema.inputSchema(spec)
+
+        then:
+        schema.properties.meta.type == 'object'
+        schema.properties.meta.description == 'sample meta'
+        schema.properties.meta.properties.id.type == 'string'
+        schema.properties.meta.properties.id.description == 'sample identifier'
+        schema.properties.meta.additionalProperties == true
+        and:
+        schema.properties.reads.type == 'string'
     }
 
     def 'should map scalar / integer / boolean input types leniently'() {
