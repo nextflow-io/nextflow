@@ -68,6 +68,10 @@ record Isolate {
 
 agent triage {
     model 'openai/gpt-5-mini'
+    // `goal` states the high-level objective; it is folded into the system message
+    // alongside `instruction` to steer the multi-turn module_run loop. It is
+    // advisory — `maxIterations` remains the hard cap on the tool-calling loop.
+    goal 'Assemble the isolate, QC-gate the assembly, annotate only if it passes, and report a clear PASS/FAIL verdict with a short written summary.'
     // NOTE: the QC thresholds below are deliberately LENIENT so the bundled demo
     // reads (a small ggal fragment that assembles to N50≈863, ~24 contigs) PASS the
     // gate and the annotation branch (prokka) runs. For a real bacterial isolate use
