@@ -11,31 +11,41 @@ record AssemblyRequest {
 }
 
 /*
- * An agent that assembles a microbial genome by calling the real nf-core/skesa
- * module as a tool.
+ * Include the nf-core/skesa module so its process is in scope. Under the
+ * capability model the `tools 'module_run'` directive discovers all in-scope
+ * processes (both included modules and locally-defined ones) and surfaces them
+ * to the LLM as a single `module_run(module, args)` tool with a `module` enum.
+ * No tool-by-name `tools 'nf-core/skesa'` string is needed.
+ */
+include { skesa } from 'nf-core/skesa'
+
+/*
+ * An agent that assembles a microbial genome by calling the nf-core/skesa
+ * module as a tool via the `module_run` capability.
  *
- *   - `tools 'nf-core/skesa'` resolves the module from the registry. Its tool
- *     input schema is derived from skesa's meta.yml: the input tuple is FLATTENED
- *     to top-level properties { meta (object), fastq (string/path) }, each carrying
- *     skesa's own field descriptions — the LLM gets a documented tool for free.
+ *   - `tools 'module_run'` enables the generic `module_run(module, args)` tool.
+ *     The runnable modules are discovered from the script's `include` statements
+ *     and any locally-defined processes. Here `skesa` is the sole included module,
+ *     so the LLM's `module` enum has one entry.
  *
- *   - The LLM reads this agent's prompt (built from `AssemblyRequest`) and SYNTHESIZES
- *     the skesa call, e.g. skesa({ "meta": {"id": "sample1"}, "fastq": "/data/sample1.fastq.gz" }).
- *     It maps `sample_id` -> meta.id and `reads` -> fastq itself; the two structures
- *     never have to match.
+ *   - The LLM reads this agent's prompt (built from `AssemblyRequest`) and
+ *     SYNTHESISES the module_run call, e.g.:
+ *       module_run({"module":"skesa","args":{"meta":{"id":"sample1"},"fastq":"/data/sample1.fastq.gz"}})
+ *     It maps `sample_id` -> args.meta.id and `reads` -> args.fastq; the two
+ *     structures never have to match.
  *
- *   - skesa runs as a real dataflow node (its container, work dir, caching), and its
- *     `fasta` output { meta, *.fa } comes back to the LLM as JSON with the FASTA path
- *     as an absolute path handle.
+ *   - skesa runs as a real dataflow node (its container, work dir, caching), and
+ *     its `fasta` output { meta, *.fa } comes back to the LLM as JSON with the
+ *     FASTA path as an absolute path handle.
  *
- * NOTE: an agent that declares `tools` must use a PLAIN output type (here `String`) —
- * combining tools with a structured record output is not supported in v1.
+ * NOTE: an agent that declares `tools` must use a PLAIN output type (here `Path`)
+ * — combining tools with a structured record output is not supported in v1.
  */
 agent assembler {
     model 'openai/gpt-5-mini'
     instruction 'Assemble the genome from the provided sequencing reads and report the path to the assembled contigs.'
 
-    tools 'nf-core/skesa'
+    tools 'module_run'
 
     input:
         req: AssemblyRequest

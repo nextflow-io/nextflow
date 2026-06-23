@@ -175,6 +175,57 @@ class AgentScriptLoadingTest extends Dsl2Spec {
         file.parent.deleteDir()
     }
 
+    def 'should load a script with capability tools (module_run + filesystem) and expose them via getTools()'() {
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+        def file = Files.createTempDirectory('test').resolve('main.nf')
+        file.text = '''
+            nextflow.enable.types = true
+
+            process word_stats {
+                input:  text: String
+                output: stats: String
+                exec:   stats = "{}"
+            }
+
+            agent analyst {
+                model 'openai/gpt-5-mini'
+                instruction 'Analyse text.'
+
+                tools 'module_run', 'filesystem'
+
+                input:
+                    text: String
+                output:
+                    summary: String
+
+                prompt:
+                """
+                Analyse: ${text}
+                """
+            }
+
+            workflow {
+            }
+            '''.stripIndent()
+
+        when:
+        parser.parse(file)
+        parser.runScript()
+
+        then:
+        def definitions = ScriptMeta.get(parser.script).getDefinitions()
+        def agent = definitions.find { it instanceof AgentDef && it.name == 'analyst' } as AgentDef
+        agent != null
+        agent.tools.contains('module_run')
+        agent.tools.contains('filesystem')
+        agent.tools.size() == 2
+
+        cleanup:
+        file.parent.deleteDir()
+    }
+
     def 'should load a script with a goal directive and expose it via getGoal()'() {
         given:
         def session = new Session()

@@ -12,10 +12,24 @@ nextflow.enable.types = true
  *  the path through the tools is decided at run time from intermediate results,
  *  not hard-wired in the DAG.
  *
- *  The agent has three nf-core tools, all resolved from the module registry:
+ *  Three nf-core modules are included so they are discoverable by `module_run`:
  *    1. nf-core/skesa        — assemble reads -> contigs (a FASTA file handle)
  *    2. nf-core/assemblyscan — compute assembly statistics -> a small JSON file
  *    3. nf-core/prokka       — annotate contigs -> annotation files
+ *
+ *  TWO CAPABILITY TOOLS:
+ *  -----------------------------------------------------------------------
+ *  `tools 'module_run', 'filesystem'`
+ *
+ *  `module_run` exposes a single generic tool whose `module` enum lists every
+ *  in-scope process (all three included modules above). The LLM picks which
+ *  module to run and in what order — the adaptive QC gate is a reasoning step,
+ *  not a hard-coded edge in the DAG.
+ *
+ *  `filesystem` gives the agent a sandboxed read/write/list/exists tool scoped
+ *  to its per-invocation work directory (plus module-output paths). The agent
+ *  uses it to write a short triage summary JSON to the work dir alongside the
+ *  verdict it emits on the output channel.
  *
  *  TWO KINDS OF TOOL OUTPUT (why this works with the LLM-tool model):
  *  -------------------------------------------------------------------
@@ -32,14 +46,19 @@ nextflow.enable.types = true
  *  not annotate anything for this: it is inferred from the output file's format
  *  and size at run time.
  *
- *  SELF-DESCRIBING TOOLS: each nf-core tool describes itself to the LLM from the
- *  module-registry metadata — its tool description and input schema (including
- *  the `meta` map and its `id`) are fetched and wired into the tool spec
- *  automatically. That is why the `instruction` below is a purely HIGH-LEVEL
- *  functional goal: it never names a tool, an argument shape, or `meta.id` — the
- *  LLM learns all of that from the tool schemas, exactly as a user would from
- *  `nextflow module run <name> --help`.
+ *  SELF-DESCRIBING TOOLS: each nf-core module describes itself to the LLM from
+ *  its meta.yml — the tool description and input schema (including the `meta` map
+ *  and its `id`) are wired into the module_run tool spec automatically. That is
+ *  why the `instruction` below is a purely HIGH-LEVEL functional goal: it never
+ *  names a tool, an argument shape, or `meta.id` — the LLM learns all of that
+ *  from the module schemas surfaced via `module_run`.
  */
+
+// Include the three nf-core modules; they are discovered by `module_run` at
+// agent-run time and surfaced as the `module` enum in the single tool.
+include { skesa }        from 'nf-core/skesa'
+include { assemblyscan } from 'nf-core/assemblyscan'
+include { prokka }       from 'nf-core/prokka'
 
 record Isolate {
     sample_id: String
@@ -55,20 +74,24 @@ agent triage {
     // realistic values, e.g. "N50 below 20000 bp OR more than 500 contigs".
     instruction '''\
         You triage bacterial isolate assemblies. Work step by step:
-          1. Assemble the isolate's sequencing reads into contigs.
-          2. Compute assembly QC statistics from the contigs.
+          1. Assemble the isolate's sequencing reads into contigs using module_run.
+          2. Compute assembly QC statistics from the contigs using module_run.
           3. QC GATE: read the assembly statistics and decide. If the assembly is
              too fragmented — N50 below 500 bp OR more than 1000 contigs — it
-             FAILS QC: reply
+             FAILS QC: write a brief summary JSON to the work directory using the
+             filesystem tool, then reply
              "FAIL <sample>: fragmented (N50=<n50>, contigs=<contigs>), needs manual review"
              and DO NOT annotate.
-          4. Otherwise the assembly PASSES QC: annotate the contigs, then reply
+          4. Otherwise the assembly PASSES QC: annotate the contigs using module_run,
+             write a brief summary JSON to the work directory using the filesystem tool,
+             then reply
              "PASS <sample>: N50=<n50>, contigs=<contigs>, annotation=<path to the annotation file>".
         '''.stripIndent()
 
-    // `tools` is varargs; here all three are nf-core registry modules. Each is
-    // resolved from the registry and wired as a self-describing LLM tool.
-    tools 'nf-core/skesa', 'nf-core/assemblyscan', 'nf-core/prokka'
+    // `module_run` discovers all included modules (skesa, assemblyscan, prokka)
+    // and surfaces them as a single tool with a `module` enum.
+    // `filesystem` enables sandboxed file read/write/list/exists in the agent work dir.
+    tools 'module_run', 'filesystem'
 
     input:
         isolate: Isolate
