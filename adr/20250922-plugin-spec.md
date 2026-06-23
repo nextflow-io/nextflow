@@ -54,7 +54,7 @@ Define a plugin spec for every plugin release which is stored and served by the 
 
 Define a plugin spec for every plugin release which is stored and served by the plugin registry as JSON.
 
-- Plugin developers only need to define [extension points](https://nextflow.io/docs/latest/plugins/developing-plugins.html#extension-points) as usual, and the Gradle plugin will extract the plugin spec and store it in the plugin registry as part of each plugin release.
+- Plugin developers only need to define [extension points](https://docs.seqera.io/nextflow/plugins/developing-plugins#extension-points) as usual, and the Gradle plugin will extract the plugin spec and store it in the plugin registry as part of each plugin release.
 
 - The language server can infer which third-party plugins are required from the `plugins` block in a config file. It will retrieve the appropriate plugin specs from the plugin registry.
 

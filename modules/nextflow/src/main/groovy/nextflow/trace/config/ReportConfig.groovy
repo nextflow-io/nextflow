@@ -24,7 +24,7 @@ import nextflow.trace.TraceHelper
 
 @ScopeName("report")
 @Description("""
-    The `report` scope allows you to configure the workflow [execution report](https://nextflow.io/docs/latest/tracing.html#execution-report).
+    The `report` scope allows you to configure the workflow [execution report](https://docs.seqera.io/nextflow/reports#execution-report).
 """)
 @CompileStatic
 class ReportConfig implements ConfigScope {

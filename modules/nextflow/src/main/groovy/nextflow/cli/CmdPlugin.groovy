@@ -35,7 +35,7 @@ import org.eclipse.jgit.api.Git
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-@Parameters(commandDescription = "Execute plugin-specific commands")
+@Parameters(commandDescription = "Execute plugin-specific commands", commandNames = ['plugins'])
 class CmdPlugin extends CmdBase implements UsageAware {
 
     @Override

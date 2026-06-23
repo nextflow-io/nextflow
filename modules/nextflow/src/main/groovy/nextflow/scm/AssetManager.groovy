@@ -1130,7 +1130,7 @@ class AssetManager implements Closeable {
 
         final result = domain ? providerConfigs.find { it -> it.domain == domain } : (ProviderConfig)null
         if( !result && failFast ) {
-            def message = "Can't find any configured provider for git server `$domain` -- Make sure to have specified it in your `scm` file. For details check https://www.nextflow.io/docs/latest/sharing.html#scm-configuration-file"
+            def message = "Can't find any configured provider for git server `$domain` -- Make sure to have specified it in your `scm` file. For details check https://docs.seqera.io/nextflow/sharing#git-configuration"
             throw new AbortOperationException(message)
         }
 
