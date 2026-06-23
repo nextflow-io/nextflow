@@ -188,4 +188,28 @@ class ScriptMetaTest extends Dsl2Spec {
         bundle.getEntries() == ['foo.txt', 'bar.txt'] as Set
 
     }
+
+    def 'should return included process names only' () {
+        given:
+        def script1 = new FooScript(new ScriptBinding())
+        def script2 = new FooScript(new ScriptBinding())
+        def meta1 = new ScriptMeta(script1)
+        def meta2 = new ScriptMeta(script2)
+
+        // local process in script1
+        def localProc = createProcessDef(script1, 'localProc')
+        meta1.addDefinition(localProc)
+
+        // process in script2 that will be imported
+        def importedProc = createProcessDef(script2, 'importedProc')
+        meta2.addDefinition(importedProc)
+
+        when:
+        meta1.addModule(meta2, 'importedProc', null)
+
+        then:
+        meta1.getLocalProcessNames() == ['localProc'] as Set
+        meta1.getProcessNames() == ['localProc', 'importedProc'] as Set
+        meta1.getIncludedProcessNames() == ['importedProc'] as Set
+    }
 }
