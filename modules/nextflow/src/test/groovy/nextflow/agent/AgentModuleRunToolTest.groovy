@@ -258,6 +258,110 @@ class AgentModuleRunToolTest extends Dsl2Spec {
         captured != null
     }
 
+    def 'module_run: registry fetch failure falls back to meta.yml spec without exception'() {
+        given: 'a temp dir with a registry-installed module layout (has .module-info marker) + meta.yml'
+        final dir = Files.createTempDirectory('test')
+        final work = dir.resolve('work'); Files.createDirectories(work)
+
+        // pre-install a module in the registry layout so recoverModuleRef succeeds
+        final moduleDir = dir.resolve('modules').resolve('offline-test').resolve('mymod')
+        Files.createDirectories(moduleDir)
+        // write the .module-info marker so recoverModuleRef recognises it as a registry install
+        moduleDir.resolve('.module-info').text = 'checksum=dummy'
+
+        // classic untyped module with meta.yml (the fallback schema source)
+        moduleDir.resolve('main.nf').text = '''\
+            process MYMOD {
+                input:
+                tuple val(meta), path(reads)
+
+                output:
+                tuple val(meta), path('out.txt')
+
+                script:
+                \'\'\'
+                touch out.txt
+                \'\'\'
+            }
+            '''.stripIndent()
+
+        moduleDir.resolve('meta.yml').text = '''\
+            name: MYMOD
+            description: Offline test module
+            input:
+              - - name: meta
+                  type: map
+                  description: sample meta
+                - name: reads
+                  type: file
+                  description: input reads
+            output:
+              - - name: meta
+                  type: map
+                  description: sample meta
+                - name: outfile
+                  type: file
+                  description: output file
+            '''.stripIndent()
+
+        final main = dir.resolve('main.nf')
+        main.text = """\
+            include { MYMOD } from './modules/offline-test/mymod/main.nf'
+
+            agent assistant {
+                model 'm'
+                instruction 'i'
+                tools 'module_run'
+
+                input:
+                    request: String
+
+                output:
+                    answer: String
+
+                prompt:
+                \"\"\"
+                \${request}
+                \"\"\"
+            }
+
+            workflow {
+                assistant(channel.of('hi')).view { it }
+            }
+            """.stripIndent()
+
+        and:
+        AgentRunnerRequest captured = null
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
+            captured = req
+            // must have exactly one tool: module_run
+            assert req.toolSpecs.size() == 1
+            assert req.toolSpecs[0].name == 'module_run'
+            // MYMOD should be in the enum even though registry fetch fails
+            assert req.toolSpecs[0].inputSchema.properties.module.enum == ['MYMOD']
+            // The hint must carry the meta.yml schema as fallback (reads + meta)
+            final desc = req.toolSpecs[0].description
+            assert desc.contains('"reads"')
+            assert desc.contains('"meta"')
+            return 'done'
+        } as AgentRunner
+
+        when: 'the registry URL is unreachable so fetchModuleMetadata throws; fallback to meta.yml must happen'
+        // configure an unreachable registry URL to force the fetch to throw an exception
+        final runner = new ScriptRunner([
+            process: [executor: 'local'],
+            workDir: work.toString(),
+            registry: [url: 'http://localhost:0']   // guaranteed to fail immediately
+        ])
+        runner.setScript(new ScriptFile(main))
+        runner.execute()
+
+        then: 'bridge is built using meta.yml spec without throwing'
+        noExceptionThrown()
+        and:
+        captured != null
+    }
+
     def 'module_run and filesystem capabilities together produce two tool descriptors'() {
         given:
         AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->

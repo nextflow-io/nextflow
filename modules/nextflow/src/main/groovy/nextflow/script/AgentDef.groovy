@@ -47,6 +47,8 @@ import nextflow.agent.ToolDescriptor
 import nextflow.agent.ToolDispatcher
 import nextflow.exception.ScriptRuntimeException
 import nextflow.file.FileHelper
+import nextflow.module.ModuleInfo
+import nextflow.module.ModuleReference
 import nextflow.util.CacheHelper
 import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
@@ -346,6 +348,8 @@ class AgentDef extends BindableDef implements ChainableDef {
                 // module_run enumerates all in-scope processes (local + included): getProcessNames() is the correct scope
                 allProcNames.addAll(meta.getProcessNames())
             }
+            // registry client is built lazily and reused across all include-discovered modules
+            def lazyClient = null
             for( final procName : allProcNames ) {
                 if( resolved.containsKey(procName) )
                     continue  // already wired (e.g. an explicit tools entry)
@@ -358,6 +362,27 @@ class AgentDef extends BindableDef implements ChainableDef {
                 final spec = loadSiblingSpec(proc)
                 if( spec != null )
                     specs.put(procName, spec)
+                // prefer the registry ModuleMetadata (richer: full input schema, nf-core meta.id,
+                // output description) when the included module is a registry install. The marker
+                // file (.module-info) identifies registry installs; local-file includes return null.
+                final moduleDir = resolveIncludedModuleDir(proc)
+                final moduleRef = recoverModuleRef(moduleDir)
+                if( moduleRef != null ) {
+                    try {
+                        if( lazyClient == null ) {
+                            final session = Global.session as Session
+                            final registryConfig = new nextflow.config.RegistryConfig(
+                                (session?.config?.registry as Map) ?: Collections.emptyMap())
+                            lazyClient = nextflow.module.RegistryClientFactory.forConfig(registryConfig)
+                        }
+                        final regMetadata = fetchModuleMetadata(lazyClient, moduleRef, null)
+                        if( regMetadata != null )
+                            metadatas.put(procName, new ModuleToolBridge.RegistryMeta(regMetadata, moduleRef.scope == 'nf-core'))
+                    }
+                    catch( Exception e ) {
+                        log.debug("Agent `${name}` module_run: could not fetch registry metadata for `${moduleRef.fullName}` (${e.message}) — falling back to meta.yml spec")
+                    }
+                }
             }
         }
         // Build a bridge when ANY module or capability is declared (so 'filesystem' alone
@@ -404,6 +429,49 @@ class AgentDef extends BindableDef implements ChainableDef {
         if( scriptMeta == null )
             return null
         return scriptMeta.getModuleDir()
+    }
+
+    /**
+     * Recover a {@link nextflow.module.ModuleReference} from an included module's install dir
+     * when it is a registry install. A registry install is identified by the presence of the
+     * {@link nextflow.module.ModuleInfo#MODULE_INFO_FILE} marker ({@code .module-info}) inside the
+     * module dir, AND the directory layout {@code <base>/modules/<scope>/<name>} (depth ≥ 2 relative
+     * to the markers parent's parent so both {@code scope} and {@code name} components exist).
+     *
+     * <p>Returns {@code null} for any case where recovery is infeasible or unsafe:
+     * <ul>
+     *   <li>the {@code moduleDir} is null;</li>
+     *   <li>the {@code .module-info} marker is not present;</li>
+     *   <li>the parent chain does not have a grandparent named {@code modules};</li>
+     *   <li>any exception during path inspection.</li>
+     * </ul>
+     * Local-file {@code include} statements (no marker file) fall through to {@code null}.
+     */
+    private static ModuleReference recoverModuleRef(Path moduleDir) {
+        if( moduleDir == null )
+            return null
+        try {
+            // must have the .module-info marker to be a registry install
+            if( !Files.exists(moduleDir.resolve(ModuleInfo.MODULE_INFO_FILE)) )
+                return null
+            // layout: <anything>/modules/<scope>/<name>
+            // dir.fileName = <name>, dir.parent.fileName = <scope>, dir.parent.parent.fileName = modules
+            final nameComp = moduleDir.fileName
+            final scopeDir = moduleDir.parent
+            if( nameComp == null || scopeDir == null )
+                return null
+            final scopeComp = scopeDir.fileName
+            final modulesDir = scopeDir.parent
+            if( scopeComp == null || modulesDir == null )
+                return null
+            if( modulesDir.fileName?.toString() != 'modules' )
+                return null
+            return new ModuleReference(scopeComp.toString(), nameComp.toString())
+        }
+        catch( Exception e ) {
+            log.debug("recoverModuleRef: could not recover module reference from `${moduleDir}`: ${e.message}")
+            return null
+        }
     }
 
     /**
