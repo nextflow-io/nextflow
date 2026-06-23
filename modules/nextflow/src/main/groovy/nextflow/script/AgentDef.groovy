@@ -29,6 +29,8 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.expression.DataflowExpression
 import groovyx.gpars.dataflow.operator.DataflowEventAdapter
 import groovyx.gpars.dataflow.operator.DataflowProcessor
+import java.nio.file.Files
+
 import nextflow.Channel
 import nextflow.Global
 import nextflow.Session
@@ -36,11 +38,15 @@ import nextflow.agent.AgentConfig
 import nextflow.agent.AgentRunner
 import nextflow.agent.AgentRunnerProvider
 import nextflow.agent.AgentRunnerRequest
+import nextflow.agent.DispatchContext
+import nextflow.agent.FilesystemToolSchema
 import nextflow.agent.ModuleToolBridge
 import nextflow.agent.RecordSchema
 import nextflow.agent.ToolDescriptor
 import nextflow.agent.ToolDispatcher
 import nextflow.exception.ScriptRuntimeException
+import nextflow.file.FileHelper
+import nextflow.util.CacheHelper
 import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
 import nextflow.script.AgentBuilder.AgentInput
@@ -187,6 +193,9 @@ class AgentDef extends BindableDef implements ChainableDef {
         if( bridge != null )
             bridge.setMaxInlineBytes(agentConfig.maxToolOutputInlineBytes())
         final List<ToolDescriptor> toolSpecs = bridge != null ? bridge.descriptors() : null
+        // capture the session for use in the mapper closure (work dir allocation)
+        final Session session0 = Global.session as Session
+        final boolean needsSandbox = bridge != null && bridge.filesystemEnabled
 
         final mapper = { Object item ->
             final cl = (Closure) promptDef.closure.clone()
@@ -213,10 +222,27 @@ class AgentDef extends BindableDef implements ChainableDef {
             final int idx = invocations.incrementAndGet()
             log.info "Submitted agent > ${name} (${idx})"
 
-            final result = runner.run(req)
+            // when the filesystem tool is enabled, allocate a per-invocation work dir and
+            // set the dispatch context on the current thread (AiServices dispatches tool calls
+            // sequentially on this thread, so the ThreadLocal is safe across all tool calls
+            // within a single runner.run invocation). The context is always cleared in finally.
+            if( needsSandbox && session0?.workDir != null ) {
+                final agentWorkDir = FileHelper.getWorkFolder(session0.workDir,
+                    CacheHelper.hasher([session0.uniqueId?.toString(), name, idx, inputJson]).hash())
+                Files.createDirectories(agentWorkDir)
+                ModuleToolBridge.setContext(new DispatchContext(agentWorkDir))
+            }
+            Object result = null
+            try {
+                result = runner.run(req)
+            }
+            finally {
+                if( needsSandbox )
+                    ModuleToolBridge.clearContext()
+            }
             if( !structured )
                 return result
-            final map = new JsonSlurper().parseText(stripFences(result)) as Map
+            final map = new JsonSlurper().parseText(stripFences(result as String)) as Map
             return TypeHelper.asRecordType(map, outputClass)
         }
 
@@ -257,8 +283,14 @@ class AgentDef extends BindableDef implements ChainableDef {
         // sourced from it; the value is wrapped together with the nf-core scope flag (for the
         // `meta.id` convention). Tools missing here fall back to the sibling meta.yml ModuleSpec.
         final metadatas = new LinkedHashMap<String, ModuleToolBridge.RegistryMeta>()
+        boolean filesystemEnabled = false
         for( final entry : declared ) {
             final toolRef = entry?.toString()
+            // 0) capability string: 'filesystem' enables the generic filesystem tool
+            if( toolRef == FilesystemToolSchema.NAME ) {
+                filesystemEnabled = true
+                continue
+            }
             // 1) an in-scope process name (Phase 2, unchanged)
             final inScope = meta?.getProcess(toolRef)
             if( inScope != null ) {
@@ -291,10 +323,14 @@ class AgentDef extends BindableDef implements ChainableDef {
                     specs.put(toolName, spec)
                 continue
             }
-            // 4) otherwise: not a process in scope, not a path, not a registry ref
+            // 4) otherwise: not a capability string, not a process in scope, not a path, not a registry ref
             throw new ScriptRuntimeException("Agent `${name}` tool `${toolRef}` is not a process in scope")
         }
-        return new ModuleToolBridge(resolved, specs, metadatas)
+        // Build a bridge when ANY module or capability is declared (so 'filesystem' alone
+        // returns a non-null bridge with no wired module processes).
+        if( resolved.isEmpty() && !filesystemEnabled )
+            return null
+        return new ModuleToolBridge(resolved, specs, metadatas, filesystemEnabled)
     }
 
     /**

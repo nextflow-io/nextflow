@@ -15,6 +15,8 @@
  */
 package nextflow.agent
 
+import java.nio.charset.StandardCharsets
+import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.json.JsonOutput
@@ -111,11 +113,39 @@ class ModuleToolBridge implements ToolDispatcher {
         final boolean nfCore
     }
 
+    /**
+     * Per-agent-invocation dispatch context: a sandbox work dir and the readable dirs that the
+     * {@code filesystem} tool may access. Stored in a {@link ThreadLocal} so the shared,
+     * pre-ignition bridge instance is stateless across records: per-record state lives ONLY here,
+     * never as an instance field.
+     *
+     * <p><b>Threading invariant</b>: AiServices dispatches tool calls sequentially on the calling
+     * (agent operator) thread — {@code executeToolsConcurrently} is never enabled — so the
+     * ThreadLocal value set by {@link #setContext} before a {@code runner.run(req)} call is
+     * always the correct context when {@code call()} executes inside that run, regardless of the
+     * number of tool calls within a single invocation.
+     */
+    private static final ThreadLocal<DispatchContext> CONTEXT = new ThreadLocal<DispatchContext>()
+
+    /** Set the per-invocation dispatch context on the current thread. Call before {@code runner.run}. */
+    static void setContext(DispatchContext ctx) { CONTEXT.set(ctx) }
+
+    /** Clear the per-invocation dispatch context from the current thread. Call in a finally block after {@code runner.run}. */
+    static void clearContext() { CONTEXT.remove() }
+
+    /** Retrieve the per-invocation dispatch context for the current thread. May return {@code null} when called outside a dispatched invocation. */
+    private static DispatchContext context() { return CONTEXT.get() }
+
     private final Map<String,Tool> tools = new LinkedHashMap<String,Tool>()
 
     private final List<ToolDescriptor> descriptors = new ArrayList<ToolDescriptor>()
 
     private boolean closed
+
+    /** When {@code true}, the {@code filesystem} tool is included in the tool descriptors and
+     * its calls are routed to {@link #callFilesystem}. Set via the constructor when the agent
+     * declares the {@code 'filesystem'} capability string. */
+    boolean filesystemEnabled
 
     /** The maximum size (in bytes) of a structured file output whose content is inlined to the
      * LLM; larger or non text-like/binary outputs stay opaque path handles. Defaults to 32 KB. */
@@ -159,6 +189,22 @@ class ModuleToolBridge implements ToolDispatcher {
      *                   descriptor is sourced from the registry metadata (description + schema)
      */
     ModuleToolBridge(Map<String,ProcessDef> resolved, Map<String,ModuleSpec> specs, Map<String,RegistryMeta> metadatas) {
+        this(resolved, specs, metadatas, false)
+    }
+
+    /**
+     * Build the bridge with optional {@code filesystem} tool capability. When {@code filesystemEnabled}
+     * is {@code true}, the {@code filesystem} tool descriptor is added and calls routed to
+     * {@link #callFilesystem}. This constructor is the canonical one; all others delegate to it.
+     *
+     * @param resolved          a name -> ProcessDef map of the resolved tools the agent declared
+     * @param specs             a name -> ModuleSpec map; tools present here use spec-driven marshalling
+     * @param metadatas         a name -> {@link RegistryMeta} map; for a spec-driven tool present here the
+     *                          descriptor is sourced from the registry metadata (description + schema)
+     * @param filesystemEnabled when {@code true}, include and route the generic {@code filesystem} tool
+     */
+    ModuleToolBridge(Map<String,ProcessDef> resolved, Map<String,ModuleSpec> specs, Map<String,RegistryMeta> metadatas, boolean filesystemEnabled) {
+        this.filesystemEnabled = filesystemEnabled
         for( final entry : resolved.entrySet() ) {
             final spec = specs?.get(entry.key)
             final registryMeta = metadatas?.get(entry.key)
@@ -167,6 +213,8 @@ class ModuleToolBridge implements ToolDispatcher {
             else
                 wireScalar(entry.key, entry.value)
         }
+        if( filesystemEnabled )
+            descriptors.add(FilesystemToolSchema.descriptor())
     }
 
     // -------------------------------------------------------------------------
@@ -388,6 +436,11 @@ class ModuleToolBridge implements ToolDispatcher {
     @Override
     synchronized String call(String toolName, String argsJson) {
         try {
+            // Route the generic filesystem tool BEFORE the module lookup so that a bridge
+            // with no wired modules but filesystemEnabled=true still dispatches correctly.
+            if( toolName == FilesystemToolSchema.NAME )
+                return callFilesystem(parseArgs(toolName, argsJson))
+
             final tool = tools.get(toolName)
             if( tool == null )
                 throw new IllegalArgumentException("Unknown agent tool `${toolName}` - available tools: ${tools.keySet()}")
@@ -404,6 +457,102 @@ class ModuleToolBridge implements ToolDispatcher {
             final message = "Agent tool `${toolName}` failed - ${e.message ?: e.toString()}".toString()
             log.warn(message, e)
             return JsonOutput.toJson([error: message])
+        }
+    }
+
+    /**
+     * Implement the generic {@code filesystem} tool. Resolves the LLM-supplied {@code path}
+     * against the dispatch context's work dir when relative; gates all operations through
+     * {@link SandboxGuard}; dispatches to read/write/list/exists file operations.
+     *
+     * <p>Returns {@code {"error": "..."}} when:
+     * <ul>
+     *   <li>no dispatch context is active on the current thread (called outside a sandboxed invocation)</li>
+     *   <li>the context work dir is not a local {@code file:} path</li>
+     *   <li>the resolved path is outside the sandbox (workDir or whitelisted readable dirs)</li>
+     * </ul>
+     *
+     * <p><b>Threading note</b>: called from within {@link #call} which is {@code synchronized};
+     * reads the ThreadLocal context set by {@link #setContext} on the same thread before
+     * {@code runner.run(req)} — safe because AiServices dispatches tool calls sequentially on
+     * the calling thread ({@code executeToolsConcurrently} is never enabled).
+     *
+     * @param args the parsed LLM arguments: {@code path}, {@code operation}, optional {@code content}
+     * @return a JSON object string with the operation result or an {@code {"error": "..."}} JSON
+     */
+    private String callFilesystem(Map args) {
+        final DispatchContext ctx = context()
+        if( ctx == null )
+            return JsonOutput.toJson([error: 'filesystem tool unavailable: no sandbox context'])
+
+        final Path workDir = ctx.workDir
+        if( workDir == null )
+            return JsonOutput.toJson([error: 'filesystem tool unavailable: no work dir in sandbox context'])
+
+        // Only local file: paths are supported; cloud/remote work dirs are not supported yet
+        if( workDir.getClass().getName() != 'sun.nio.fs.UnixPath' && workDir.toUri().getScheme() != 'file' ) {
+            // More portable: check if Files.exists/createFile is available => it is for local paths.
+            // Actually check the URI scheme directly
+        }
+        try { workDir.toUri() } catch( UnsupportedOperationException e ) {
+            return JsonOutput.toJson([error: "filesystem tool unavailable: work dir scheme is not a local file path"])
+        }
+        final scheme = workDir.toUri()?.getScheme()
+        if( scheme != null && scheme != 'file' )
+            return JsonOutput.toJson([error: "filesystem tool unavailable: work dir scheme '${scheme}' is not supported (only local file: paths)"])
+
+        final String pathStr = args.path?.toString()
+        if( !pathStr )
+            return JsonOutput.toJson([error: 'filesystem tool: missing required argument: path'])
+        final String operation = args.operation?.toString()
+        if( !operation )
+            return JsonOutput.toJson([error: 'filesystem tool: missing required argument: operation'])
+
+        // Resolve path: relative paths are resolved against the work dir
+        Path resolved = Path.of(pathStr)
+        if( !resolved.isAbsolute() )
+            resolved = workDir.resolve(pathStr).normalize()
+
+        final boolean isWrite = operation == 'write'
+        if( !SandboxGuard.isAllowed(resolved, workDir, ctx.readableDirs, isWrite) )
+            return JsonOutput.toJson([error: "path outside sandbox: ${pathStr}".toString()])
+
+        switch( operation ) {
+            case 'exists':
+                return JsonOutput.toJson([exists: Files.exists(resolved)])
+
+            case 'write':
+                final String content = args.content?.toString() ?: ''
+                final byte[] bytes = content.getBytes(StandardCharsets.UTF_8)
+                // Ensure parent directory exists
+                final parent = resolved.getParent()
+                if( parent != null )
+                    Files.createDirectories(parent)
+                Files.write(resolved, bytes)
+                return JsonOutput.toJson([path: resolved.toAbsolutePath().toString(), bytes: bytes.length])
+
+            case 'read':
+                if( !Files.exists(resolved) )
+                    return JsonOutput.toJson([error: "file not found: ${pathStr}".toString()])
+                if( Files.isDirectory(resolved) )
+                    return JsonOutput.toJson([error: "path is a directory, not a file: ${pathStr}".toString()])
+                final Object readResult = ToolOutputReader.readOrHandle(resolved, maxInlineBytes)
+                // Wrap inlined string content under 'content' key; path handles and annotated maps pass through
+                if( readResult instanceof String )
+                    return JsonOutput.toJson([content: readResult])
+                return JsonOutput.toJson(readResult)
+
+            case 'list':
+                if( !Files.exists(resolved) )
+                    return JsonOutput.toJson([error: "directory not found: ${pathStr}".toString()])
+                if( !Files.isDirectory(resolved) )
+                    return JsonOutput.toJson([error: "path is not a directory: ${pathStr}".toString()])
+                final entries = new ArrayList<String>()
+                Files.list(resolved).sorted().forEach { Path p -> entries.add(p.getFileName().toString()) }
+                return JsonOutput.toJson([entries: entries])
+
+            default:
+                return JsonOutput.toJson([error: "filesystem tool: unknown operation '${operation}'; supported: read, write, list, exists".toString()])
         }
     }
 
