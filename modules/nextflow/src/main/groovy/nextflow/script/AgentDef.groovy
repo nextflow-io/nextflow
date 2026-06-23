@@ -343,6 +343,7 @@ class AgentDef extends BindableDef implements ChainableDef {
         if( moduleRunEnabled ) {
             final allProcNames = new LinkedHashSet<String>()
             if( meta != null ) {
+                // module_run enumerates all in-scope processes (local + included): getProcessNames() is the correct scope
                 allProcNames.addAll(meta.getProcessNames())
             }
             for( final procName : allProcNames ) {

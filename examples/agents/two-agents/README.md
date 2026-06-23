@@ -57,4 +57,4 @@ critique : Testable via a randomized crossover trial; control for habitual
 - Exactly one input and one output per agent; OpenAI provider only.
 - Chaining requires stage-1's output type to equal stage-2's input type.
 
-See `docs/agent.md` for the full reference.
+See `docs/agent.mdx` for the full reference.
