@@ -465,17 +465,24 @@ class ModuleToolBridge implements ToolDispatcher {
      * wrong, so the LLM can see the failure and retry rather than the agent loop being aborted
      * by an exception escaping the dispatcher.
      *
-     * <p><b>Limitation (documented, future hardening):</b> a failure of the underlying tool
-     * <i>process task</i> (the Nextflow task the tool runs as) is NOT recovered here. Such a
-     * failure surfaces through the process's own dataflow operator and aborts the session via
-     * the standard error model; intercepting it as a recoverable tool result fights the runtime
-     * and is deferred to a future phase. Only DISPATCH-level errors (unknown tool / argument
-     * parsing / argument marshalling) are turned into a tool-result error here.
+     * <p><b>Task failure is fatal, not recoverable.</b> When the underlying tool <i>process task</i>
+     * (the Nextflow task the tool runs as) hard-fails (exit ≠ 0), the session aborts the dataflow
+     * network and interrupts the agent operator thread that is blocked on the tool's output channel
+     * {@code .val} ({@link groovyx.gpars.dataflow.expression.DataflowExpression#getVal} throws
+     * {@link InterruptedException}). This is NOT recoverable by the LLM: the run is already being
+     * torn down. Such an {@link InterruptedException} is caught here, the thread's interrupt flag is
+     * restored, and it is re-thrown as an {@link AgentToolFatalError} (an {@link Error}, NOT an
+     * {@link Exception}) so it escapes langchain4j's tool-execution {@code try/catch(Exception)} and
+     * propagates out of {@code agent.chat(...)} to the agent operator's {@code onException}
+     * listener, which aborts the run cleanly — instead of being fed back to the model as an error
+     * tool result that loops to the iteration cap.
      *
      * @param toolName the name of the tool to invoke
      * @param argsJson the LLM-supplied arguments as a JSON object string
-     * @return the tool result serialized as a JSON object string; on any dispatch-level failure
+     * @return the tool result serialized as a JSON object string; on a dispatch-level failure
      *         a {@code {"error": "..."}} JSON object so the LLM can recover
+     * @throws AgentToolFatalError when the underlying process task fails and the session aborts
+     *         (the blocking output pull is interrupted) — the run is torn down, not retried
      */
     @Override
     synchronized String call(String toolName, String argsJson) {
@@ -500,6 +507,17 @@ class ModuleToolBridge implements ToolDispatcher {
             return tool.spec != null
                 ? callSpec(tool, parsed)
                 : callScalar(tool, parsed)
+        }
+        catch( InterruptedException ie ) {
+            // FATAL: the blocking output pull was interrupted. This happens when the underlying
+            // process task hard-fails (exit ≠ 0) and the session aborts the dataflow network,
+            // interrupting this agent operator thread. The run is being torn down — do NOT swallow
+            // this into a {"error":...} tool result (that would feed the failure back to the model
+            // and loop to maxIterations). Restore the interrupt flag and re-throw as an Error so it
+            // escapes langchain4j's tool-execution try/catch(Exception) and aborts the run cleanly.
+            Thread.currentThread().interrupt()
+            log.debug("Agent tool `${toolName}` interrupted by session abort (underlying task failure) - aborting agent run", ie)
+            throw new AgentToolFatalError("Agent tool `${toolName}` aborted - the underlying process task failed", ie)
         }
         catch( Exception e ) {
             // dispatch-level failure (unknown tool / arg parsing / arg marshalling): return it
