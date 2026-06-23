@@ -169,6 +169,7 @@ class AgentDef extends BindableDef implements ChainableDef {
         // are null the existing required-model error fires downstream (in the runner)
         final agentModel = this.model ?: agentConfig.defaultModel
         final agentInstruction = this.instruction
+        final agentGoal = this.goal
         final agentTools = this.tools
         // effective max iterations: directive first, else the configured default, else 20
         final agentMaxIter = (this.maxIterations != null
@@ -193,7 +194,18 @@ class AgentDef extends BindableDef implements ChainableDef {
             cl.setResolveStrategy(Closure.DELEGATE_FIRST)
             final promptText = cl.call()?.toString()
             final inputJson = toJson(item)
-            final req = new AgentRunnerRequest(agentModel, agentInstruction, promptText, agentMaxIter, agentTools, outputSchema, inputJson, toolSpecs, (bridge as ToolDispatcher), agentTimeoutSecs)
+            final req = new AgentRunnerRequest(
+                model: agentModel,
+                instruction: agentInstruction,
+                prompt: promptText,
+                maxIterations: agentMaxIter,
+                tools: agentTools,
+                outputSchema: outputSchema,
+                inputJson: inputJson,
+                toolSpecs: toolSpecs,
+                dispatch: (bridge as ToolDispatcher),
+                requestTimeoutSeconds: agentTimeoutSecs,
+                goal: agentGoal)
 
             // report the invocation on the console; deliberately NOT hash-prefixed
             // (like a task `[ab/123456] ...` line) so the ANSI log observer does not

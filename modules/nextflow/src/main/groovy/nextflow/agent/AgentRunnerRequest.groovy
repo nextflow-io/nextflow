@@ -23,14 +23,14 @@ import groovy.transform.CompileStatic
  * system instruction, the rendered user prompt, the iteration cap, the
  * (currently unused) tool list for forward compatibility, the JSON schema
  * describing the expected structured output, the input record serialized as
- * JSON, the descriptors of the tools the LLM may call, and the callback used to
- * execute them.
+ * JSON, the descriptors of the tools the LLM may call, the callback used to
+ * execute them, and the optional high-level goal.
  *
  * The {@code toolSpecs} and {@code dispatch} fields are in-JVM only (they carry
  * a live {@link ToolDispatcher} callback) and are never serialized.
  *
  * Being {@code @Canonical}, the positional constructor order is:
- * {@code (model, instruction, prompt, maxIterations, tools, outputSchema, inputJson, toolSpecs, dispatch, requestTimeoutSeconds)}.
+ * {@code (model, instruction, prompt, maxIterations, tools, outputSchema, inputJson, toolSpecs, dispatch, requestTimeoutSeconds, goal)}.
  *
  * The {@code requestTimeoutSeconds} carries the configured per-request LLM chat
  * timeout (from the {@code agent.requestTimeout} config option); when {@code 0}
@@ -51,4 +51,5 @@ class AgentRunnerRequest {
     List<ToolDescriptor> toolSpecs
     ToolDispatcher dispatch
     int requestTimeoutSeconds
+    String goal
 }

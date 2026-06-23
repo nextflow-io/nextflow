@@ -184,6 +184,43 @@ class AgentRunIntegrationTest extends Dsl2Spec {
         captured.requestTimeoutSeconds == 90
     }
 
+    def 'should propagate the goal directive into the AgentRunnerRequest'() {
+        given:
+        AgentRunnerRequest captured = null
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req -> captured = req; 'result' } as AgentRunner
+
+        when:
+        def result = runScript('''
+            nextflow.enable.types = true
+
+            agent summarise {
+                model 'openai/gpt-5-mini'
+                goal 'do the thing'
+                tools()
+
+                input:
+                    text: String
+
+                output:
+                    summary: String
+
+                prompt:
+                """
+                Summarise: ${text}
+                """
+            }
+
+            workflow {
+                summarise(channel.of('hello'))
+            }
+            ''')
+
+        then:
+        result.val == 'result'
+        and:
+        captured.goal == 'do the thing'
+    }
+
     def 'should let agent directives override the config scope defaults'() {
         given:
         AgentRunnerRequest captured = null
