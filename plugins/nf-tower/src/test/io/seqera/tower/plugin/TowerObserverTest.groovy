@@ -152,6 +152,73 @@ class TowerObserverTest extends Specification {
         aroundNow(req.instant)
     }
 
+    def 'should not add scheduler run id to progress requests' () {
+        given:
+        def platform = Mock(PlatformMetadata) { getSchedRunId() >> 'run-xyz' }
+        def meta = Mock(WorkflowMetadata) { getPlatform() >> platform }
+        def session = Mock(Session) { getWorkflowMetadata() >> meta }
+        def PROGRESS = Mock(WorkflowProgress)
+        def observer = Spy(newObserver(session))
+        observer.getWorkflowProgress(true) >> PROGRESS
+
+        when: 'the run id travels via PATCH /workflow, not on progress/heartbeat'
+        then:
+        !observer.makeTasksReq([]).containsKey('schedRunId')
+        and:
+        !observer.makeHeartbeatReq().containsKey('schedRunId')
+    }
+
+    def 'should send the scheduler run id once via PATCH when assigned' () {
+        given:
+        def platform = Mock(PlatformMetadata) { getSchedRunId() >> 'run-xyz' }
+        def meta = Mock(WorkflowMetadata) { getPlatform() >> platform }
+        def session = Mock(Session) { getWorkflowMetadata() >> meta }
+        def client = Mock(TowerClient)
+        def observer = new TowerObserver(session, client, 'ws-1', [:])
+        observer.@workflowId = 'wf-123'
+
+        when: 'invoked repeatedly (once per sender loop iteration)'
+        observer.sendSchedRunId()
+        observer.sendSchedRunId()
+
+        then: 'the run id is patched exactly once'
+        1 * client.updateWorkflow([schedRunId: 'run-xyz'], 'ws-1', 'wf-123') >> new TowerClient.Response(200, 'ok')
+    }
+
+    def 'should not abort the run when the scheduler run id update fails' () {
+        given:
+        def platform = Mock(PlatformMetadata) { getSchedRunId() >> 'run-xyz' }
+        def meta = Mock(WorkflowMetadata) { getPlatform() >> platform }
+        def session = Mock(Session) { getWorkflowMetadata() >> meta }
+        def client = Mock(TowerClient)
+        def observer = new TowerObserver(session, client, 'ws-1', [:])
+        observer.@workflowId = 'wf-123'
+
+        when: 'the update returns an error and is then invoked again'
+        observer.sendSchedRunId()
+        observer.sendSchedRunId()
+
+        then: 'the error response does not abort the run and the attempt is made just once'
+        1 * client.updateWorkflow([schedRunId: 'run-xyz'], 'ws-1', 'wf-123') >> new TowerClient.Response(500, 'boom')
+        noExceptionThrown()
+    }
+
+    def 'should not send the scheduler run id when not assigned' () {
+        given:
+        def platform = Mock(PlatformMetadata) { getSchedRunId() >> null }  // not scheduler-managed
+        def meta = Mock(WorkflowMetadata) { getPlatform() >> platform }
+        def session = Mock(Session) { getWorkflowMetadata() >> meta }
+        def client = Mock(TowerClient)
+        def observer = new TowerObserver(session, client, 'ws-1', [:])
+        observer.@workflowId = 'wf-123'
+
+        when:
+        observer.sendSchedRunId()
+
+        then:
+        0 * client.updateWorkflow(_, _, _)
+    }
+
     static now_millis = System.currentTimeMillis()
     static now_instant = OffsetDateTime.ofInstant(Instant.ofEpochMilli(now_millis), ZoneId.systemDefault())
 
