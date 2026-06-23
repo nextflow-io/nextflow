@@ -154,7 +154,8 @@ class TowerObserverTest extends Specification {
 
     def 'should not add scheduler run id to progress requests' () {
         given:
-        def meta = Mock(WorkflowMetadata) { getSchedRunId() >> 'run-xyz' }
+        def platform = Mock(PlatformMetadata) { getSchedRunId() >> 'run-xyz' }
+        def meta = Mock(WorkflowMetadata) { getPlatform() >> platform }
         def session = Mock(Session) { getWorkflowMetadata() >> meta }
         def PROGRESS = Mock(WorkflowProgress)
         def observer = Spy(newObserver(session))
@@ -169,7 +170,8 @@ class TowerObserverTest extends Specification {
 
     def 'should send the scheduler run id once via PATCH when assigned' () {
         given:
-        def meta = Mock(WorkflowMetadata) { getSchedRunId() >> 'run-xyz' }
+        def platform = Mock(PlatformMetadata) { getSchedRunId() >> 'run-xyz' }
+        def meta = Mock(WorkflowMetadata) { getPlatform() >> platform }
         def session = Mock(Session) { getWorkflowMetadata() >> meta }
         def client = Mock(TowerClient)
         def observer = new TowerObserver(session, client, 'ws-1', [:])
@@ -185,7 +187,8 @@ class TowerObserverTest extends Specification {
 
     def 'should not abort the run when the scheduler run id update fails' () {
         given:
-        def meta = Mock(WorkflowMetadata) { getSchedRunId() >> 'run-xyz' }
+        def platform = Mock(PlatformMetadata) { getSchedRunId() >> 'run-xyz' }
+        def meta = Mock(WorkflowMetadata) { getPlatform() >> platform }
         def session = Mock(Session) { getWorkflowMetadata() >> meta }
         def client = Mock(TowerClient)
         def observer = new TowerObserver(session, client, 'ws-1', [:])
@@ -202,7 +205,8 @@ class TowerObserverTest extends Specification {
 
     def 'should not send the scheduler run id when not assigned' () {
         given:
-        def meta = Mock(WorkflowMetadata) { getSchedRunId() >> null }  // not scheduler-managed
+        def platform = Mock(PlatformMetadata) { getSchedRunId() >> null }  // not scheduler-managed
+        def meta = Mock(WorkflowMetadata) { getPlatform() >> platform }
         def session = Mock(Session) { getWorkflowMetadata() >> meta }
         def client = Mock(TowerClient)
         def observer = new TowerObserver(session, client, 'ws-1', [:])
