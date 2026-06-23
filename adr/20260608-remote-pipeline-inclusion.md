@@ -4,6 +4,13 @@
 - Status: draft
 - Date: 2026-06-08
 - Tags: pipelines, modules, dsl, registry
+- Version: 1.1
+
+## Updates
+
+### Version 1.1 (2026-06-22)
+- **Separate remote pipelines from remote workflows**: Workflows are treated separately by the [Workflow modules ADR](./20260608-workflow-modules.md).
+- **Replace core workflow distinction with pipeline inclusion**: Instead of isolating the *core workflow* of a pipeline, the include syntax is extended to support *pipeline inclusion*, in which the `params` / `workflow` / `output` trio is imported and used like a named workflow.
 
 ## Summary
 
