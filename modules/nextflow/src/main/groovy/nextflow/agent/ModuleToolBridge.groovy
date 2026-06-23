@@ -147,6 +147,11 @@ class ModuleToolBridge implements ToolDispatcher {
      * declares the {@code 'filesystem'} capability string. */
     boolean filesystemEnabled
 
+    /** When {@code true}, the wired module tools are NOT individually advertised; instead, a
+     * single {@code module_run} tool (an enum of module names + generic args) is exposed. Set
+     * via the constructor when the agent declares the {@code 'module_run'} capability string. */
+    boolean moduleRunEnabled
+
     /** The maximum size (in bytes) of a structured file output whose content is inlined to the
      * LLM; larger or non text-like/binary outputs stay opaque path handles. Defaults to 32 KB. */
     private long maxInlineBytes = ToolOutputReader.DEFAULT_INLINE_BYTES
@@ -195,7 +200,7 @@ class ModuleToolBridge implements ToolDispatcher {
     /**
      * Build the bridge with optional {@code filesystem} tool capability. When {@code filesystemEnabled}
      * is {@code true}, the {@code filesystem} tool descriptor is added and calls routed to
-     * {@link #callFilesystem}. This constructor is the canonical one; all others delegate to it.
+     * {@link #callFilesystem}. Delegates to the 5-argument constructor with {@code moduleRunEnabled=false}.
      *
      * @param resolved          a name -> ProcessDef map of the resolved tools the agent declared
      * @param specs             a name -> ModuleSpec map; tools present here use spec-driven marshalling
@@ -204,7 +209,31 @@ class ModuleToolBridge implements ToolDispatcher {
      * @param filesystemEnabled when {@code true}, include and route the generic {@code filesystem} tool
      */
     ModuleToolBridge(Map<String,ProcessDef> resolved, Map<String,ModuleSpec> specs, Map<String,RegistryMeta> metadatas, boolean filesystemEnabled) {
+        this(resolved, specs, metadatas, filesystemEnabled, false)
+    }
+
+    /**
+     * Build the bridge with optional {@code filesystem} and/or {@code module_run} tool capabilities.
+     * This constructor is the canonical one; all others delegate to it.
+     *
+     * <p>When {@code moduleRunEnabled} is {@code true}, the wired module tools are NOT individually
+     * advertised as per-tool descriptors; instead, a single {@code module_run} descriptor (with a
+     * {@code module} enum + generic {@code args} object) is added so the LLM calls one tool and
+     * picks the module by name. The dispatch is routed to {@link #callModuleRun}.
+     *
+     * @param resolved          a name -> ProcessDef map of the resolved tools the agent declared
+     * @param specs             a name -> ModuleSpec map; tools present here use spec-driven marshalling
+     * @param metadatas         a name -> {@link RegistryMeta} map; for a spec-driven tool present here the
+     *                          descriptor is sourced from the registry metadata (description + schema)
+     * @param filesystemEnabled when {@code true}, include and route the generic {@code filesystem} tool
+     * @param moduleRunEnabled  when {@code true}, expose all wired modules as one {@code module_run}
+     *                          tool instead of individual per-module descriptors
+     */
+    ModuleToolBridge(Map<String,ProcessDef> resolved, Map<String,ModuleSpec> specs, Map<String,RegistryMeta> metadatas, boolean filesystemEnabled, boolean moduleRunEnabled) {
         this.filesystemEnabled = filesystemEnabled
+        this.moduleRunEnabled = moduleRunEnabled
+        // build per-module hints for the module_run descriptor (when moduleRunEnabled)
+        final Map<String,String> moduleHints = moduleRunEnabled ? new LinkedHashMap<String,String>() : null
         for( final entry : resolved.entrySet() ) {
             final spec = specs?.get(entry.key)
             final registryMeta = metadatas?.get(entry.key)
@@ -212,7 +241,11 @@ class ModuleToolBridge implements ToolDispatcher {
                 wireSpec(entry.key, entry.value, spec, registryMeta?.metadata, registryMeta != null ? registryMeta.nfCore : false)
             else
                 wireScalar(entry.key, entry.value)
+            if( moduleRunEnabled )
+                moduleHints.put(entry.key, buildModuleHint(entry.key, entry.value, spec, registryMeta?.metadata, registryMeta != null ? registryMeta.nfCore : false))
         }
+        if( moduleRunEnabled && !resolved.isEmpty() )
+            descriptors.add(ModuleRunToolSchema.descriptor(new ArrayList<String>(resolved.keySet()), moduleHints))
         if( filesystemEnabled )
             descriptors.add(FilesystemToolSchema.descriptor())
     }
@@ -261,7 +294,10 @@ class ModuleToolBridge implements ToolDispatcher {
             toolOut: toolOut,
             outputParamName: outputParamName )
         tools.put(name, tool)
-        descriptors.add(descriptor)
+        // when module_run mode is active, the individual per-tool descriptor is NOT advertised;
+        // a single module_run descriptor aggregating all module names is added after wiring
+        if( !moduleRunEnabled )
+            descriptors.add(descriptor)
     }
 
     // -------------------------------------------------------------------------
@@ -323,7 +359,10 @@ class ModuleToolBridge implements ToolDispatcher {
             outReadChannels: outReadChannels,
             processDef: cloned )
         tools.put(name, tool)
-        descriptors.add(descriptor)
+        // when module_run mode is active, the individual per-tool descriptor is NOT advertised;
+        // a single module_run descriptor aggregating all module names is added after wiring
+        if( !moduleRunEnabled )
+            descriptors.add(descriptor)
     }
 
     /**
@@ -441,6 +480,12 @@ class ModuleToolBridge implements ToolDispatcher {
             if( toolName == FilesystemToolSchema.NAME )
                 return callFilesystem(parseArgs(toolName, argsJson))
 
+            // Route the module_run capability tool: parses module name + args from the JSON
+            // and delegates to the named internal tool (callSpec or callScalar) + whitelists
+            // produced output dirs in the dispatch context.
+            if( toolName == ModuleRunToolSchema.NAME )
+                return callModuleRun(parseArgs(toolName, argsJson))
+
             final tool = tools.get(toolName)
             if( tool == null )
                 throw new IllegalArgumentException("Unknown agent tool `${toolName}` - available tools: ${tools.keySet()}")
@@ -553,6 +598,104 @@ class ModuleToolBridge implements ToolDispatcher {
 
             default:
                 return JsonOutput.toJson([error: "filesystem tool: unknown operation '${operation}'; supported: read, write, list, exists".toString()])
+        }
+    }
+
+    /**
+     * Implement the {@code module_run} tool. Reads the {@code module} string (the module name)
+     * and {@code args} object from the parsed LLM arguments, looks up the named internal tool,
+     * delegates to the existing {@link #callSpec} or {@link #callScalar} dispatch, and — after
+     * the module task completes — scans the result JSON for absolute file path strings to add
+     * their parent directories to the dispatch context's readable-dirs whitelist (so the
+     * {@code filesystem} tool may read module outputs).
+     *
+     * @param parsed the parsed LLM arguments; must contain {@code module} (String) and
+     *               {@code args} (Map)
+     * @return the tool result JSON; on dispatch failure a {@code {"error":"..."}} object
+     */
+    private String callModuleRun(Map parsed) {
+        final String moduleName = parsed.get('module')?.toString()
+        if( !moduleName )
+            return JsonOutput.toJson([error: 'module_run: missing required argument: module'])
+        final Object argsRaw = parsed.get('args')
+        final Map args = (argsRaw instanceof Map) ? (Map) argsRaw : Collections.emptyMap()
+        final tool = tools.get(moduleName)
+        if( tool == null )
+            return JsonOutput.toJson([error: "module_run: unknown module '${moduleName}' - available: ${tools.keySet()}".toString()])
+        final String result = tool.spec != null ? callSpec(tool, args) : callScalar(tool, args)
+        // after the module task completes, scan the result for file path strings and whitelist
+        // their parent dirs in the dispatch context so the filesystem tool can read module outputs
+        whitelistOutputDirs(result)
+        return result
+    }
+
+    /**
+     * Scan a JSON result string for absolute file path values and add each file's parent
+     * directory to the dispatch context's readable-dirs whitelist. Called after a
+     * {@code module_run} task completes. No-op when no dispatch context is active.
+     */
+    private static void whitelistOutputDirs(String resultJson) {
+        final DispatchContext ctx = context()
+        if( ctx == null || resultJson == null )
+            return
+        try {
+            final Object parsed = new JsonSlurper().parseText(resultJson)
+            collectPathsFromValue(parsed, ctx)
+        }
+        catch( Exception ignored ) {
+            // result is not valid JSON or has no path strings -- safe to ignore
+        }
+    }
+
+    private static void collectPathsFromValue(Object value, DispatchContext ctx) {
+        if( value instanceof Map ) {
+            for( final v : ((Map) value).values() )
+                collectPathsFromValue(v, ctx)
+        }
+        else if( value instanceof List ) {
+            for( final v : (List) value )
+                collectPathsFromValue(v, ctx)
+        }
+        else if( value instanceof String ) {
+            final s = (String) value
+            if( s.startsWith('/') ) {
+                try {
+                    final parent = Path.of(s).getParent()
+                    if( parent != null )
+                        ctx.addReadableDir(parent)
+                }
+                catch( Exception ignored ) { /* not a valid path */ }
+            }
+        }
+    }
+
+    /**
+     * Build a human-readable hint string describing the inputs of a module for inclusion in
+     * the aggregated {@code module_run} tool description. Priority: registry {@link ModuleMetadata}
+     * (richest, from the public registry) > sibling {@link ModuleSpec} (offline/local meta.yml) >
+     * typed scalar {@link ProcessDef} ({@link ProcessToolSchema}) > fallback prose.
+     *
+     * <p>Errors are caught and reported as a terse fallback so a single bad module does not abort
+     * the whole bridge construction.
+     */
+    private static String buildModuleHint(String name, ProcessDef proc, ModuleSpec spec, ModuleMetadata metadata, boolean nfCore) {
+        try {
+            if( metadata != null )
+                return ModuleMetadataToolSchema.description(metadata)
+            if( spec != null ) {
+                final Map schema = ModuleSpecToolSchema.inputSchema(spec)
+                final props = schema.get('properties')
+                final keys = (props instanceof Map) ? ((Map) props).keySet().join(', ') : '(none)'
+                return "inputs: ${keys}\n${ModuleSpecToolSchema.outputDescription(spec)}".toString()
+            }
+            // scalar typed process
+            final Map schema = ProcessToolSchema.inputSchema(proc)
+            final props = schema.get('properties')
+            final keys = (props instanceof Map) ? ((Map) props).keySet().join(', ') : '(none)'
+            return "inputs: ${keys}".toString()
+        }
+        catch( Exception e ) {
+            return "inputs: (unavailable - ${e.message})".toString()
         }
     }
 

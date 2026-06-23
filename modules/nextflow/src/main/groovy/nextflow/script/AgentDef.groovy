@@ -40,6 +40,7 @@ import nextflow.agent.AgentRunnerProvider
 import nextflow.agent.AgentRunnerRequest
 import nextflow.agent.DispatchContext
 import nextflow.agent.FilesystemToolSchema
+import nextflow.agent.ModuleRunToolSchema
 import nextflow.agent.ModuleToolBridge
 import nextflow.agent.RecordSchema
 import nextflow.agent.ToolDescriptor
@@ -286,11 +287,18 @@ class AgentDef extends BindableDef implements ChainableDef {
         // `meta.id` convention). Tools missing here fall back to the sibling meta.yml ModuleSpec.
         final metadatas = new LinkedHashMap<String, ModuleToolBridge.RegistryMeta>()
         boolean filesystemEnabled = false
+        boolean moduleRunEnabled = false
         for( final entry : declared ) {
             final toolRef = entry?.toString()
-            // 0) capability string: 'filesystem' enables the generic filesystem tool
+            // 0a) capability string: 'filesystem' enables the generic filesystem tool
             if( toolRef == FilesystemToolSchema.NAME ) {
                 filesystemEnabled = true
+                continue
+            }
+            // 0b) capability string: 'module_run' enables the single generic module_run tool;
+            //     the wired modules are discovered from the script's includes (see below)
+            if( toolRef == ModuleRunToolSchema.NAME ) {
+                moduleRunEnabled = true
                 continue
             }
             // 1) an in-scope process name (Phase 2, unchanged)
@@ -328,11 +336,35 @@ class AgentDef extends BindableDef implements ChainableDef {
             // 4) otherwise: not a capability string, not a process in scope, not a path, not a registry ref
             throw new ScriptRuntimeException("Agent `${name}` tool `${toolRef}` is not a process in scope")
         }
+        // When 'module_run' is declared, enumerate all processes visible in this script (both
+        // locally-defined and brought in via include statements) and wire each as an internal tool.
+        // These modules are NOT individually advertised as tool descriptors; instead the bridge
+        // exposes a single 'module_run' tool with a 'module' enum so the LLM picks by name.
+        if( moduleRunEnabled ) {
+            final allProcNames = new LinkedHashSet<String>()
+            if( meta != null ) {
+                allProcNames.addAll(meta.getProcessNames())           // locally-defined
+                allProcNames.addAll(meta.getIncludedProcessNames())   // brought via include
+            }
+            for( final procName : allProcNames ) {
+                if( resolved.containsKey(procName) )
+                    continue  // already wired (e.g. an explicit tools entry)
+                final proc = meta?.getProcess(procName)
+                if( proc == null )
+                    continue
+                resolved.put(procName, proc)
+                // try to load a sibling meta.yml for spec-driven marshalling; may return null
+                // for locally-defined processes (no source path tracked in compiledModulePaths)
+                final spec = loadSiblingSpec(proc)
+                if( spec != null )
+                    specs.put(procName, spec)
+            }
+        }
         // Build a bridge when ANY module or capability is declared (so 'filesystem' alone
         // returns a non-null bridge with no wired module processes).
-        if( resolved.isEmpty() && !filesystemEnabled )
+        if( resolved.isEmpty() && !filesystemEnabled && !moduleRunEnabled )
             return null
-        return new ModuleToolBridge(resolved, specs, metadatas, filesystemEnabled)
+        return new ModuleToolBridge(resolved, specs, metadatas, filesystemEnabled, moduleRunEnabled)
     }
 
     /**
