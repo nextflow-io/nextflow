@@ -15,7 +15,11 @@
  */
 package nextflow.agent
 
+import java.nio.file.Files
+
 import groovy.json.JsonSlurper
+import nextflow.script.ScriptFile
+import nextflow.script.ScriptRunner
 import spock.lang.Timeout
 import test.Dsl2Spec
 
@@ -155,6 +159,97 @@ class AgentModuleRunToolTest extends Dsl2Spec {
         and:
         dispatchError != null
         new JsonSlurper().parseText(dispatchError).error.contains('nope')
+    }
+
+    def 'should expose included classic module with sibling meta.yml via module_run without typed-process error'() {
+        given:
+        final dir = Files.createTempDirectory('test')
+        final work = dir.resolve('work'); Files.createDirectories(work)
+        final moduleDir = dir.resolve('module'); Files.createDirectories(moduleDir)
+
+        // a CLASSIC untyped module mimicking nf-core tuple shape
+        moduleDir.resolve('main.nf').text = '''\
+            process FOO {
+                input:
+                tuple val(meta), path(reads)
+
+                output:
+                tuple val(meta), path('out.txt')
+
+                script:
+                \'\'\'
+                touch out.txt
+                \'\'\'
+            }
+            '''.stripIndent()
+
+        // sibling meta.yml describing the tuple I/O (nf-core style)
+        moduleDir.resolve('meta.yml').text = '''\
+            name: FOO
+            description: Classic nf-core style module
+            input:
+              - - name: meta
+                  type: map
+                  description: sample meta
+                - name: reads
+                  type: file
+                  description: input reads
+            output:
+              - - name: meta
+                  type: map
+                  description: sample meta
+                - name: outfile
+                  type: file
+                  description: output file
+            '''.stripIndent()
+
+        final main = dir.resolve('main.nf')
+        main.text = """\
+            include { FOO } from './module/main.nf'
+
+            agent assistant {
+                model 'm'
+                instruction 'i'
+                tools 'module_run'
+
+                input:
+                    request: String
+
+                output:
+                    answer: String
+
+                prompt:
+                \"\"\"
+                \${request}
+                \"\"\"
+            }
+
+            workflow {
+                assistant(channel.of('hi')).view { it }
+            }
+            """.stripIndent()
+
+        and:
+        AgentRunnerRequest captured = null
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
+            captured = req
+            // must have exactly one tool: module_run
+            assert req.toolSpecs.size() == 1
+            assert req.toolSpecs[0].name == 'module_run'
+            // the module enum must include FOO (discovered from included module)
+            assert req.toolSpecs[0].inputSchema.properties.module.enum == ['FOO']
+            return 'done'
+        } as AgentRunner
+
+        when:
+        final runner = new ScriptRunner([process: [executor: 'local'], workDir: work.toString()])
+        runner.setScript(new ScriptFile(main))
+        runner.execute()
+
+        then:
+        noExceptionThrown()
+        and:
+        captured != null
     }
 
     def 'module_run and filesystem capabilities together produce two tool descriptors'() {

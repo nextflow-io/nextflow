@@ -375,16 +375,35 @@ class AgentDef extends BindableDef implements ChainableDef {
      */
     @CompileDynamic
     private nextflow.module.ModuleSpec loadSiblingSpec(ProcessDef proc) {
+        // Source 1: legacy file/registry tools path (compiledModulePaths is populated by compileModuleProcess)
         final modPath = compiledModulePaths.get(proc)
-        if( modPath == null )
+        final dir = modPath != null
+            ? modPath.getParent()
+            : resolveIncludedModuleDir(proc)
+        if( dir == null )
             return null
-        final dir = modPath.getParent()
         for( final candidate : ['meta.yml', 'meta.yaml'] ) {
             final specPath = dir.resolve(candidate)
             if( specPath.toFile().exists() )
                 return nextflow.module.ModuleSpecFactory.fromYaml(specPath)
         }
         return null
+    }
+
+    /**
+     * Fallback directory resolution for included modules (brought in via {@code include { X } from '...'}).
+     * For these, {@link #compiledModulePaths} is never populated, so we derive the module dir from
+     * the {@link ScriptMeta} of the script that defines the process. Returns {@code null} when the
+     * owner, its ScriptMeta, or its module dir cannot be resolved.
+     */
+    private static Path resolveIncludedModuleDir(ProcessDef proc) {
+        final BaseScript owner = proc.getOwner()
+        if( owner == null )
+            return null
+        final ScriptMeta scriptMeta = ScriptMeta.get(owner)
+        if( scriptMeta == null )
+            return null
+        return scriptMeta.getModuleDir()
     }
 
     /**
