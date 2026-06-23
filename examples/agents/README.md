@@ -52,8 +52,10 @@ tool-calling, sandboxed agents.
 - The `nf-agent` plugin (declared in each example's `nextflow.config`).
 - The tool examples that use `nf-core/*` modules (`skesa`, `isolate-triage`)
   also need a container runtime (Docker/Wave) — the modules run as real
-  containerized tasks. The `tool/` and `filesystem/` examples use `exec:`
-  processes and run without containers.
+  containerized tasks — **and a real input FASTQ at `<example>/data/sample.fastq`**
+  (the `data/` dir is gitignored; provide your own reads). The `tool/` and
+  `filesystem/` examples use `exec:` processes and run **fully offline** (no
+  container, no input data).
 
 ## Run (released Nextflow)
 

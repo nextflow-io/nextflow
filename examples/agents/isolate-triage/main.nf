@@ -56,9 +56,9 @@ nextflow.enable.types = true
 
 // Include the three nf-core modules; they are discovered by `module_run` at
 // agent-run time and surfaced as the `module` enum in the single tool.
-include { skesa }        from 'nf-core/skesa'
-include { assemblyscan } from 'nf-core/assemblyscan'
-include { prokka }       from 'nf-core/prokka'
+include { SKESA }        from 'nf-core/skesa'
+include { ASSEMBLYSCAN } from 'nf-core/assemblyscan'
+include { PROKKA }       from 'nf-core/prokka'
 
 record Isolate {
     sample_id: String
@@ -110,6 +110,9 @@ agent triage {
 }
 
 workflow {
+    // NOTE: this example needs a real FASTQ at `data/sample.fastq` (the `data/`
+    // dir is gitignored — provide your own reads). The nf-core modules run in
+    // containers, so a container runtime (Docker/Wave) is also required.
     triage(channel.of(
         record(sample_id: 'isolate_001', organism: 'Escherichia coli',
                reads: "${projectDir}/data/sample.fastq")

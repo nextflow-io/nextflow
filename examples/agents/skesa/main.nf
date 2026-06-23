@@ -17,7 +17,7 @@ record AssemblyRequest {
  * to the LLM as a single `module_run(module, args)` tool with a `module` enum.
  * No tool-by-name `tools 'nf-core/skesa'` string is needed.
  */
-include { skesa } from 'nf-core/skesa'
+include { SKESA } from 'nf-core/skesa'
 
 /*
  * An agent that assembles a microbial genome by calling the nf-core/skesa
@@ -25,12 +25,12 @@ include { skesa } from 'nf-core/skesa'
  *
  *   - `tools 'module_run'` enables the generic `module_run(module, args)` tool.
  *     The runnable modules are discovered from the script's `include` statements
- *     and any locally-defined processes. Here `skesa` is the sole included module,
- *     so the LLM's `module` enum has one entry.
+ *     and any locally-defined processes. The included process is named `SKESA`
+ *     (nf-core process names are upper-case), so the LLM's `module` enum is `["SKESA"]`.
  *
  *   - The LLM reads this agent's prompt (built from `AssemblyRequest`) and
  *     SYNTHESISES the module_run call, e.g.:
- *       module_run({"module":"skesa","args":{"meta":{"id":"sample1"},"fastq":"/data/sample1.fastq.gz"}})
+ *       module_run({"module":"SKESA","args":{"meta":{"id":"sample1"},"fastq":"/data/sample1.fastq.gz"}})
  *     It maps `sample_id` -> args.meta.id and `reads` -> args.fastq; the two
  *     structures never have to match.
  *
@@ -43,7 +43,7 @@ include { skesa } from 'nf-core/skesa'
  */
 agent assembler {
     model 'openai/gpt-5-mini'
-    instruction 'Use the module_run tool to run the skesa module on the provided reads, then report the path to the assembled contigs.'
+    instruction 'Use the module_run tool to run the SKESA module on the provided reads, then report the path to the assembled contigs.'
 
     tools 'module_run'
 
@@ -60,6 +60,9 @@ agent assembler {
 }
 
 workflow {
+    // NOTE: this example needs a real FASTQ at `data/sample.fastq` (the `data/`
+    // dir is gitignored — provide your own reads). nf-core/skesa runs in a
+    // container, so a container runtime (Docker/Wave) is also required.
     assembler(channel.of(
         record(sample_id: 'sample1', reads: "${projectDir}/data/sample.fastq")
     ))
