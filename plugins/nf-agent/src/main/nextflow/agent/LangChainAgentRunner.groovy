@@ -132,10 +132,12 @@ class LangChainAgentRunner implements AgentRunner {
             tools.put(spec, executor)
         }
 
-        // Seed memory with ONLY the system message; the user text is passed to chat().
+        // Seed memory with ONLY the system message (instruction + optional goal);
+        // the user text is passed to chat().
         final ChatMemory memory = MessageWindowChatMemory.withMaxMessages(Integer.MAX_VALUE)
-        if( request.instruction )
-            memory.add(SystemMessage.from(request.instruction))
+        final String systemMessage = composeSystemMessage(request)
+        if( systemMessage )
+            memory.add(SystemMessage.from(systemMessage))
 
         // The full composed user text (prompt + input JSON) becomes the single user message.
         final String userText = composeUserText(request)
@@ -170,6 +172,29 @@ class LangChainAgentRunner implements AgentRunner {
     }
 
     /**
+     * Compose the system message: the {@code instruction} (role/persona),
+     * followed by an optional {@code goal} section that steers the multi-turn
+     * loop toward an objective. Returns {@code null} when neither is set, so the
+     * caller seeds no {@link SystemMessage}.
+     */
+    private static String composeSystemMessage(AgentRunnerRequest request) {
+        final String instruction = request.instruction
+        final String goal = request.goal
+        if( !instruction && !goal )
+            return null
+        final StringBuilder sb = new StringBuilder()
+        if( instruction )
+            sb.append(instruction)
+        if( goal ) {
+            if( sb.length() > 0 )
+                sb.append('\n\n')
+            sb.append('Goal:\n').append(goal)
+              .append('\nYou are done when the goal is met; produce your final answer as plain text.')
+        }
+        return sb.toString()
+    }
+
+    /**
      * Compose the user text: the rendered prompt, plus the input record
      * serialized as JSON when present. This is the single user message passed
      * to the AiServices proxy.
@@ -188,8 +213,9 @@ class LangChainAgentRunner implements AgentRunner {
      */
     private static List<ChatMessage> composeMessages(AgentRunnerRequest request) {
         final List<ChatMessage> messages = new ArrayList<ChatMessage>()
-        if( request.instruction )
-            messages.add(SystemMessage.from(request.instruction))
+        final String systemMessage = composeSystemMessage(request)
+        if( systemMessage )
+            messages.add(SystemMessage.from(systemMessage))
         messages.add(UserMessage.from(composeUserText(request)))
         return messages
     }

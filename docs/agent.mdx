@@ -227,10 +227,13 @@ agent {
 |---|---|---|
 | `model` | yes | Model identifier as `provider/model`, e.g. `openai/gpt-5-mini`. The provider prefix selects the chat-model backend. Required at run time. |
 | `instruction` | no | System prompt describing the agent's role. Omitted if not set. |
+| `goal` | no | A high-level objective that steers the agent's multi-turn loop. Advisory: folded into the system message; the model is encouraged to keep working (calling tools) until the goal is met, while `maxIterations` remains the hard cap. |
 | `tools` | no | One or more modules the agent may call as tools, each named as a string: an in-scope process name (`tools 'uppercase'`), a local `.nf` module file path (`tools './mod.nf'`), or a registry reference (`tools 'nf-core/fastqc'`). Multiple are allowed (`tools 'uppercase', 'reverse'`). See [Tools (calling modules)](#tools-calling-modules). Requires a plain (non-record) output type. |
 | `maxIterations` | no | Cap on the LLM tool-calling loop (default 20). Applies when `tools` are declared. |
 
 Only the `prompt:` block is structurally required; `model` is additionally required when the agent runs.
+
+The optional `goal` directive states what the agent should accomplish, distinct from the per-input `prompt`. It is appended to the system message as a labelled `Goal:` section. It does not change the loop mechanics or raise `maxIterations`; it only guides the model toward an objective across turns.
 
 ## Inputs, outputs and prompt
 

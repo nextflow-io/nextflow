@@ -111,6 +111,43 @@ class LangChainAgentRunnerTest extends Specification {
         (captured[0] as UserMessage).singleText() == 'just a prompt'
     }
 
+    def 'should fold goal into the system message on the single-shot path'() {
+        given:
+        List<ChatMessage> captured = null
+        ChatModel model = [
+            chat: { List<ChatMessage> messages ->
+                captured = messages
+                ChatResponse.builder().aiMessage(AiMessage.from('result')).build()
+            }
+        ] as ChatModel
+
+        and:
+        def runner = new LangChainAgentRunner(modelFactory: Stub(ChatModelFactory) {
+            createModel(_, _, _) >> model
+        })
+        def req = new AgentRunnerRequest(
+            model: 'openai/gpt-5-mini', instruction: 'Be helpful.', prompt: 'do it',
+            maxIterations: 5, tools: [], outputSchema: null, inputJson: null,
+            toolSpecs: null, dispatch: null, requestTimeoutSeconds: 0,
+            goal: 'reach the summit')
+
+        when:
+        def answer = runner.run(req)
+
+        then:
+        answer == 'result'
+
+        and: 'exactly one system message carrying both instruction and goal'
+        captured.count { it instanceof SystemMessage } == 1
+        def sys = captured.find { it instanceof SystemMessage } as SystemMessage
+        sys.text().contains('Be helpful.')
+        sys.text().contains('reach the summit')
+
+        and: 'the user message follows'
+        captured.count { it instanceof UserMessage } == 1
+        (captured.find { it instanceof UserMessage } as UserMessage).singleText() == 'do it'
+    }
+
     def 'should fail when the model is missing'() {
         given:
         def runner = new LangChainAgentRunner()

@@ -261,4 +261,88 @@ class LangChainAgentToolLoopTest extends Specification {
         def e = thrown(IllegalStateException)
         e.message == 'Agent exceeded the maximum number of tool-call iterations (2)'
     }
+
+    def 'should fold goal into the single system message (tool path)'() {
+        given:
+        List<ChatRequest> capturedRequests = []
+        ChatModel model = [
+            chat: { ChatRequest req ->
+                capturedRequests << req
+                ChatResponse.builder()
+                    .aiMessage(AiMessage.from('done')).build()
+            }
+        ] as ChatModel
+        ToolDispatcher dispatch = { String n, String a -> '{}' } as ToolDispatcher
+        def factory = Stub(ChatModelFactory) { createModel(_, _, _) >> model }
+        def runner = new LangChainAgentRunner(modelFactory: factory)
+        def descriptor = new ToolDescriptor('greet', 'greet', [type:'object', properties:[name:[type:'string']], required:['name'], additionalProperties:false], null)
+        def req = new AgentRunnerRequest(
+            model: 'openai/gpt-5-mini', instruction: 'You are careful.', prompt: 'go',
+            maxIterations: 5, tools: [], outputSchema: null, inputJson: null,
+            toolSpecs: [descriptor], dispatch: dispatch, requestTimeoutSeconds: 0,
+            goal: 'assemble then QC')
+
+        when:
+        def answer = runner.run(req)
+
+        then:
+        answer == 'done'
+        def sys = capturedRequests[0].messages().find { it instanceof SystemMessage } as SystemMessage
+        capturedRequests[0].messages().count { it instanceof SystemMessage } == 1
+        sys.text().contains('You are careful.')
+        sys.text().contains('assemble then QC')
+    }
+
+    def 'should produce a system message from goal alone (no instruction)'() {
+        given:
+        List<ChatRequest> capturedRequests = []
+        ChatModel model = [
+            chat: { ChatRequest req ->
+                capturedRequests << req
+                ChatResponse.builder()
+                    .aiMessage(AiMessage.from('ok')).build()
+            }
+        ] as ChatModel
+        ToolDispatcher dispatch = { String n, String a -> '{}' } as ToolDispatcher
+        def runner = new LangChainAgentRunner(modelFactory: Stub(ChatModelFactory) { createModel(_, _, _) >> model })
+        def descriptor = new ToolDescriptor('greet', 'greet', [type:'object', properties:[name:[type:'string']], required:['name'], additionalProperties:false], null)
+        def req = new AgentRunnerRequest(
+            model: 'openai/gpt-5-mini', instruction: null, prompt: 'go',
+            maxIterations: 5, tools: [], outputSchema: null, inputJson: null,
+            toolSpecs: [descriptor], dispatch: dispatch, requestTimeoutSeconds: 0,
+            goal: 'reach the objective')
+
+        when:
+        runner.run(req)
+
+        then:
+        def msgs = capturedRequests[0].messages()
+        msgs.count { it instanceof SystemMessage } == 1
+        (msgs.find { it instanceof SystemMessage } as SystemMessage).text().contains('reach the objective')
+    }
+
+    def 'should seed no system message when neither instruction nor goal is set'() {
+        given:
+        List<ChatRequest> capturedRequests = []
+        ChatModel model = [
+            chat: { ChatRequest req ->
+                capturedRequests << req
+                ChatResponse.builder()
+                    .aiMessage(AiMessage.from('x')).build()
+            }
+        ] as ChatModel
+        ToolDispatcher dispatch = { String n, String a -> '{}' } as ToolDispatcher
+        def runner = new LangChainAgentRunner(modelFactory: Stub(ChatModelFactory) { createModel(_, _, _) >> model })
+        def descriptor = new ToolDescriptor('greet', 'greet', [type:'object', properties:[name:[type:'string']], required:['name'], additionalProperties:false], null)
+        def req = new AgentRunnerRequest(
+            model: 'openai/gpt-5-mini', instruction: null, prompt: 'go',
+            maxIterations: 5, tools: [], outputSchema: null, inputJson: null,
+            toolSpecs: [descriptor], dispatch: dispatch, requestTimeoutSeconds: 0, goal: null)
+
+        when:
+        runner.run(req)
+
+        then:
+        capturedRequests[0].messages().count { it instanceof SystemMessage } == 0
+    }
 }
