@@ -18,6 +18,7 @@ package nextflow.agent
 import java.nio.file.Files
 import java.nio.file.Path
 
+import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import spock.lang.Specification
 import spock.lang.TempDir
@@ -309,57 +310,71 @@ class ModuleToolBridgeFilesystemTest extends Specification {
     }
 
     // -------------------------------------------------------------------------
-    // I1: whitelistOutputDirs must NOT be called on error results
+    // I1: guard predicate isErrorResult detects error vs. non-error results
     // -------------------------------------------------------------------------
 
     /**
-     * Verifies Fix I1: when {@link ModuleToolBridge#whitelistOutputDirs} is called with a parsed
-     * result that IS an error map (contains the key {@code "error"}), any absolute path in the
-     * error message must NOT be added to the readable dirs whitelist — the sandbox must not be
-     * silently widened by a path that appears only in an error string.
+     * Tests the extracted guard predicate {@link ModuleToolBridge#isErrorResult}.
+     * This predicate is used in {@link ModuleToolBridge#callModuleRun} to skip
+     * {@code whitelistOutputDirs} when the result is an error, preventing absolute
+     * paths in error messages from widening the filesystem sandbox.
      */
-    def 'whitelistOutputDirs with error-containing path does NOT whitelist it'() {
-        given:
+    def 'isErrorResult detects error-shaped results (Map with error key)'() {
+        given: 'parse an error result JSON containing an absolute path in the error message'
+        def errorJson = '{"error":"module failed at /etc/secret/data.txt"}'
+        def parsed = new JsonSlurper().parseText(errorJson)
+
+        expect: 'isErrorResult returns true for error-shaped results'
+        ModuleToolBridge.isErrorResult(parsed) == true
+
+        and: 'whitelistOutputDirs must be skipped for error results (guarded by isErrorResult)'
+        // this is what callModuleRun checks; the guard prevents whitelistOutputDirs
+        // from being called on error results, so paths in error messages stay out of the whitelist
+    }
+
+    def 'isErrorResult returns false for non-error results'() {
+        given: 'parse a normal (non-error) result JSON with a file path'
+        def normalJson = '{"out":"/tmp/work/abc/result.fa"}'
+        def parsed = new JsonSlurper().parseText(normalJson)
+
+        expect: 'isErrorResult returns false for non-error results'
+        ModuleToolBridge.isErrorResult(parsed) == false
+
+        and: 'whitelistOutputDirs proceeds for non-error results (guarded by !isErrorResult)'
+        // this is what callModuleRun checks; when the result is NOT an error,
+        // whitelistOutputDirs is called to add output file paths to the whitelist
+    }
+
+    def 'whitelistOutputDirs auto-adds parent dir of non-error paths'() {
+        given: 'a sandbox work dir and a module output dir OUTSIDE the sandbox'
         def bridge = fsOnlyBridge()
         def tmp = workDir.getParent()
-        def sandboxDir = Files.createDirectories(tmp.resolve('err-sandbox-' + System.nanoTime()))
-        def sensitiveDir = Files.createDirectories(tmp.resolve('err-sensitive-' + System.nanoTime()))
-        Files.write(sensitiveDir.resolve('data.txt'), 'sensitive'.bytes)
+        def sandboxDir = Files.createDirectories(tmp.resolve('wl-sandbox-' + System.nanoTime()))
+        def moduleOutDir = Files.createDirectories(tmp.resolve('wl-module-out-' + System.nanoTime()))
 
+        // write the module output file outside the sandbox
+        def outputFile = moduleOutDir.resolve('result.txt')
+        Files.write(outputFile, 'module output content'.bytes)
+
+        // set up a dispatch context with the sandbox dir
         def ctx = new DispatchContext(sandboxDir)
         ModuleToolBridge.setContext(ctx)
 
-        when: 'whitelistOutputDirs is called with an error-result map containing an absolute path in the error message'
-        // This simulates what the fix prevents: an error result containing a path must NOT whitelist it.
-        // The production callModuleRun now skips whitelistOutputDirs entirely for error results, but
-        // we call whitelistOutputDirs directly here to confirm the method itself behaves safely when
-        // called with an error result (i.e., the error key is present — a defensive check).
-        // In practice the production code never reaches here for errors, but belt-and-suspenders.
-        def sensitiveFilePath = sensitiveDir.resolve('data.txt').toAbsolutePath().toString()
-        // a non-error result (should whitelist)
-        ModuleToolBridge.whitelistOutputDirs([output: sensitiveFilePath])
+        when: 'a non-error result JSON containing the output file path is parsed and whitelisted'
+        def resultJson = JsonOutput.toJson([output: outputFile.toAbsolutePath().toString()])
+        def resultParsed = new JsonSlurper().parseText(resultJson)
+        // guard check: the result is NOT an error, so whitelistOutputDirs IS called
+        if( !ModuleToolBridge.isErrorResult(resultParsed) )
+            ModuleToolBridge.whitelistOutputDirs(resultParsed)
 
-        then: 'the path IS whitelisted when not an error'
-        ctx.readableDirs.contains(sensitiveDir)
+        then: 'the output file parent dir is now in readableDirs'
+        ctx.readableDirs.contains(moduleOutDir)
 
-        // reset and verify the error-result path is NOT whitelisted
-        when: 'a fresh context and an error result with a path in the message'
-        def ctx2 = new DispatchContext(sandboxDir)
-        ModuleToolBridge.setContext(ctx2)
-        // The production fix skips calling whitelistOutputDirs for error results at the call site.
-        // Here we confirm the sentinel: after NOT calling whitelistOutputDirs (as the fix ensures),
-        // the dir is absent from readableDirs, so a read attempt fails.
-        // (We do NOT call whitelistOutputDirs here — that's the point of the fix.)
-
-        then: 'the sensitive dir is NOT in readableDirs (whitelistOutputDirs was not called)'
-        !ctx2.readableDirs.contains(sensitiveDir)
-
-        and: 'filesystem read of the sensitive file is REJECTED'
-        def rejectResult = parseJson(bridge.call('filesystem', argsJson([
-            path: sensitiveFilePath,
+        and: 'filesystem read of the output file SUCCEEDS (auto-whitelisted)'
+        def readResult = parseJson(bridge.call('filesystem', argsJson([
+            path: outputFile.toAbsolutePath().toString(),
             operation: 'read'
         ])))
-        rejectResult.error != null
-        rejectResult.error.contains('outside sandbox')
+        readResult.content == 'module output content'
     }
 }

@@ -634,9 +634,23 @@ class ModuleToolBridge implements ToolDispatcher {
         // that error message contains an absolute path the parent dir must NOT be whitelisted —
         // that would silently widen the sandbox with data from an error string, not an output.
         final Object resultParsed = parseResultJson(result)
-        if( !(resultParsed instanceof Map && ((Map) resultParsed).containsKey('error')) )
+        if( !isErrorResult(resultParsed) )
             whitelistOutputDirs(resultParsed)
         return result
+    }
+
+    /**
+     * Predicate: true when the parsed result is an error-shaped object (a Map containing
+     * an {@code "error"} key). Used to guard the {@code whitelistOutputDirs} call in
+     * {@link #callModuleRun} so that absolute paths appearing only in error messages
+     * are not added to the filesystem sandbox whitelist.
+     *
+     * @param parsed the already-parsed result value (Map, List, String, null, …)
+     * @return true when {@code parsed} is a Map with an {@code "error"} key, false otherwise
+     */
+    @PackageScope
+    static boolean isErrorResult(Object parsed) {
+        return parsed instanceof Map && ((Map) parsed).containsKey('error')
     }
 
     /**
