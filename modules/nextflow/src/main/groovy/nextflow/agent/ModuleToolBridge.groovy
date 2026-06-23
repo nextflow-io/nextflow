@@ -490,10 +490,6 @@ class ModuleToolBridge implements ToolDispatcher {
             return JsonOutput.toJson([error: 'filesystem tool unavailable: no work dir in sandbox context'])
 
         // Only local file: paths are supported; cloud/remote work dirs are not supported yet
-        if( workDir.getClass().getName() != 'sun.nio.fs.UnixPath' && workDir.toUri().getScheme() != 'file' ) {
-            // More portable: check if Files.exists/createFile is available => it is for local paths.
-            // Actually check the URI scheme directly
-        }
         try { workDir.toUri() } catch( UnsupportedOperationException e ) {
             return JsonOutput.toJson([error: "filesystem tool unavailable: work dir scheme is not a local file path"])
         }
@@ -508,10 +504,12 @@ class ModuleToolBridge implements ToolDispatcher {
         if( !operation )
             return JsonOutput.toJson([error: 'filesystem tool: missing required argument: operation'])
 
-        // Resolve path: relative paths are resolved against the work dir
+        // Resolve path: relative paths are resolved against the work dir; normalize for defensive correctness
         Path resolved = Path.of(pathStr)
         if( !resolved.isAbsolute() )
             resolved = workDir.resolve(pathStr).normalize()
+        else
+            resolved = resolved.normalize()
 
         final boolean isWrite = operation == 'write'
         if( !SandboxGuard.isAllowed(resolved, workDir, ctx.readableDirs, isWrite) )
@@ -548,7 +546,9 @@ class ModuleToolBridge implements ToolDispatcher {
                 if( !Files.isDirectory(resolved) )
                     return JsonOutput.toJson([error: "path is not a directory: ${pathStr}".toString()])
                 final entries = new ArrayList<String>()
-                Files.list(resolved).sorted().forEach { Path p -> entries.add(p.getFileName().toString()) }
+                Files.list(resolved).withCloseable { java.util.stream.Stream<Path> s ->
+                    s.sorted().forEach { Path p -> entries.add(p.getFileName().toString()) }
+                }
                 return JsonOutput.toJson([entries: entries])
 
             default:

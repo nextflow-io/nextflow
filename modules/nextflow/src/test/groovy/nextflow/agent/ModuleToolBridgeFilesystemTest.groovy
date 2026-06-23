@@ -201,24 +201,50 @@ class ModuleToolBridgeFilesystemTest extends Specification {
     }
 
     // -------------------------------------------------------------------------
-    // addReadableDir allows reads from module-output paths
+    // addReadableDir allows reads from module-output paths OUTSIDE workDir
     // -------------------------------------------------------------------------
 
-    def 'read from a whitelisted readable dir succeeds'() {
+    def 'read from a whitelisted readable dir outside workDir succeeds'() {
         given:
         def bridge = fsOnlyBridge()
-        def moduleOutputDir = Files.createDirectories(workDir.resolve('module-out'))
-        Files.write(moduleOutputDir.resolve('result.txt'), 'module result'.bytes)
-        def ctx = new DispatchContext(workDir)
-        ctx.addReadableDir(moduleOutputDir)
+        // Use a SIBLING of workDir so module-out-sibling is NOT inside workDir;
+        // this exercises the whitelist branch (not the isInside(workDir) branch).
+        def tmp = workDir.getParent()
+        def sandboxDir = Files.createDirectories(tmp.resolve('sandbox-' + System.nanoTime()))
+        def outsideDir = Files.createDirectories(tmp.resolve('module-out-sibling-' + System.nanoTime()))
+        Files.write(outsideDir.resolve('result.txt'), 'module result'.bytes)
+        def ctx = new DispatchContext(sandboxDir)
+        ctx.addReadableDir(outsideDir)
         ModuleToolBridge.setContext(ctx)
         when:
-        // Use absolute path for a file in module-output dir (not inside workDir itself)
+        // (a) read of a file inside the whitelisted outside dir SUCCEEDS
         def result = parseJson(bridge.call('filesystem', argsJson([
-            path: moduleOutputDir.resolve('result.txt').toAbsolutePath().toString(),
+            path: outsideDir.resolve('result.txt').toAbsolutePath().toString(),
             operation: 'read'
         ])))
         then:
         result.content == 'module result'
+    }
+
+    def 'read from a non-whitelisted outside dir returns error'() {
+        given:
+        def bridge = fsOnlyBridge()
+        // sandboxDir is the real workDir; outsideDir is a sibling NOT added to readableDirs
+        def tmp = workDir.getParent()
+        def sandboxDir = Files.createDirectories(tmp.resolve('sandbox2-' + System.nanoTime()))
+        def notWhitelisted = Files.createDirectories(tmp.resolve('not-whitelisted-' + System.nanoTime()))
+        Files.write(notWhitelisted.resolve('secret.txt'), 'secret'.bytes)
+        def ctx = new DispatchContext(sandboxDir)
+        // do NOT add notWhitelisted to ctx
+        ModuleToolBridge.setContext(ctx)
+        when:
+        // (b) read of a file in a DIFFERENT outside dir that is NOT whitelisted returns {"error":...}
+        def result = parseJson(bridge.call('filesystem', argsJson([
+            path: notWhitelisted.resolve('secret.txt').toAbsolutePath().toString(),
+            operation: 'read'
+        ])))
+        then:
+        result.error != null
+        result.error.contains('outside sandbox')
     }
 }

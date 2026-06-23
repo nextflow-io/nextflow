@@ -226,14 +226,16 @@ class AgentDef extends BindableDef implements ChainableDef {
             // set the dispatch context on the current thread (AiServices dispatches tool calls
             // sequentially on this thread, so the ThreadLocal is safe across all tool calls
             // within a single runner.run invocation). The context is always cleared in finally.
+            Path agentWorkDir = null
             if( needsSandbox && session0?.workDir != null ) {
-                final agentWorkDir = FileHelper.getWorkFolder(session0.workDir,
+                agentWorkDir = FileHelper.getWorkFolder(session0.workDir,
                     CacheHelper.hasher([session0.uniqueId?.toString(), name, idx, inputJson]).hash())
                 Files.createDirectories(agentWorkDir)
-                ModuleToolBridge.setContext(new DispatchContext(agentWorkDir))
             }
             Object result = null
             try {
+                if( agentWorkDir != null )
+                    ModuleToolBridge.setContext(new DispatchContext(agentWorkDir))
                 result = runner.run(req)
             }
             finally {
