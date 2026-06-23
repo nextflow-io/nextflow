@@ -44,23 +44,38 @@ never leaves the executor.
 
 ## Solution or decision outcome
 
-The scheduler run id is held on `WorkflowMetadata` as a single `volatile String schedRunId` field
-and delivered to Platform via a one-off `PATCH /workflow/{workflowId}` request with body
-`{ "schedRunId": "…" }`.
+The scheduler run id is held on `PlatformMetadata` as a single `volatile String schedRunId` field —
+i.e. `workflow.platform.schedRunId`, grouped with the other Platform identifiers (`workflowId`,
+`workflowUrl`) rather than promoted to a top-level `workflow.schedRunId` attribute. It is delivered to
+Platform via a one-off `PATCH /workflow/{workflowId}` request with body `{ "schedRunId": "…" }`.
 
 - `SeqeraExecutor.createRun()` assigns the run id on the first task submission and publishes it to
-  `WorkflowMetadata.schedRunId` (`session.workflowMetadata?.setSchedRunId(runId)`).
+  `PlatformMetadata.schedRunId` (`session.workflowMetadata?.platform?.setSchedRunId(runId)`).
 - `TowerObserver` reads it and sends the `PATCH` exactly once, at the earliest moment the id exists.
 
 ## Rationale & discussion
 
-### How the `runId` is carried
+### Where the `runId` lives
+
+The run id is held on `PlatformMetadata` (`workflow.platform.schedRunId`), next to the other
+Platform identifiers, rather than as a top-level `WorkflowMetadata.schedRunId` field. This is a
+deliberate choice:
+
+- **It is not a general workflow property.** The run id is meaningless outside a Seqera Platform /
+  Intelligent Compute run — it is a Platform-assigned identifier, conceptually a sibling of
+  `platform.workflowId`. Promoting it to a top-level `workflow` attribute would advertise it to every
+  pipeline as if it were portable run metadata (like `workflow.runName` or `workflow.sessionId`),
+  which it is not.
+- **It keeps the serialization behaviour coherent for free.** `TowerObserver.makeCompleteReq()`
+  already strips the whole `platform` sub-object before sending, and at `onFlowBegin` (when the begin
+  and lineage records capture `toMap()`) the id is always still null — it is assigned later, on the
+  first task submission. So nesting under `platform` means the id is never carried as a real value on
+  the begin/complete/lineage workflow object, **without** needing a special-case exclusion in
+  `WorkflowMetadata.toMap()`. Platform receives the actual value only through the dedicated `PATCH`
+  endpoint.
 
 `schedRunId` is written by `SeqeraExecutor.createRun()` on the executor thread and read by the
 `TowerObserver` reporting thread, so the field is `volatile` to publish that write across threads.
-It is purely an internal hand-off: it is **excluded from `WorkflowMetadata.toMap()`** and therefore
-is not serialized on the workflow object of begin/complete (or lineage) requests — Platform receives
-it only through the dedicated `PATCH` endpoint.
 
 The `TowerObserver` delivers the id via `PATCH /workflow/{workflowId}` (`client.updateWorkflow`) with
 body `{ schedRunId }`. It is sent **exactly once**: the sender thread (`sendTasks0`) calls
@@ -84,13 +99,15 @@ on instead of aborting. Transient failures are already retried at the HTTP-clien
 { schedRunId: "run-xyz" }      // not sent when not scheduler-managed / not yet assigned
 ```
 
-The begin/complete workflow object carries no scheduler-specific data.
+The begin/complete (and lineage) workflow object carries no scheduler run id: it is either stripped
+with the `platform` sub-object (complete) or still null at capture time (begin/lineage).
 
 ### Components changed (Nextflow side)
 
-- `modules/nextflow` — `WorkflowMetadata.schedRunId` (`volatile`) field, excluded from `toMap()`.
+- `modules/nextflow` — `PlatformMetadata.schedRunId` (`volatile`) field, grouped with the other
+  Platform identifiers. No change to `WorkflowMetadata.toMap()`.
 - `nf-seqera` — `SeqeraExecutor.createRun()` publishes `runId` to
-  `session.workflowMetadata.schedRunId`.
+  `session.workflowMetadata.platform.schedRunId`.
 - `nf-tower` — `TowerObserver` sends the run id once via `PATCH /workflow/{workflowId}`
   (`TowerClient.updateWorkflow`, best-effort); `TowerClient` gains the `updateWorkflow` method, its
   URL builder, and `PATCH` support in `makeRequest`.

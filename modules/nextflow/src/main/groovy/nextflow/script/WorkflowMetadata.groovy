@@ -218,17 +218,6 @@ class WorkflowMetadata {
     FusionMetadata fusion
 
     /**
-     * The Seqera Intelligent Compute scheduler run identifier.
-     *
-     * <p>Written by the {@code SeqeraExecutor} on the executor thread (lazily, on the first task
-     * submission) and read by the {@code TowerObserver} reporting thread — hence {@code volatile}.
-     * It is an internal hand-off only: it is propagated to Platform via a dedicated
-     * {@code PATCH /workflow/{workflowId}} request and is therefore excluded from {@link #toMap()}
-     * (it is not serialized on the workflow object of begin/complete requests).
-     */
-    volatile String schedRunId
-
-    /**
      * Metadata specific to Seqera Platform, including:
      * <li>workflowId: the Platform-assigned workflow identifier
      */
@@ -464,9 +453,6 @@ class WorkflowMetadata {
         for( MetaProperty property : allProperties ) {
             if( property.name == 'class' || !Modifier.isPublic(property.modifiers) )
                 continue
-            // the scheduler run id is an internal hand-off propagated via PATCH /workflow, not serialized here
-            if( property.name == 'schedRunId' )
-                continue
             try {
                 result[property.name] = property.getProperty(this)
             }
@@ -526,5 +512,4 @@ class WorkflowMetadata {
         }
         return platform
     }
-
 }

@@ -436,7 +436,7 @@ class TowerObserver implements TraceObserverV2 {
      * identifier has not been assigned yet (i.e. before the first task is submitted).
      */
     protected String getSchedRunId() {
-        return session.workflowMetadata?.schedRunId
+        return session.workflowMetadata?.platform?.schedRunId
     }
 
     /**
