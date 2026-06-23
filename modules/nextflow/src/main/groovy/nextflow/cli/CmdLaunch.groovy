@@ -175,7 +175,7 @@ class CmdLaunch extends CmdBase implements UsageAware {
         // Setup the plugins system and load the launch provider
         Plugins.init()
         // Load the config
-        Plugins.start('nf-tower')
+        Plugins.start('nf-seqera')
         // Get Launch command operations implementation from plugins
         return Plugins.getExtension(LaunchCommand)
     }

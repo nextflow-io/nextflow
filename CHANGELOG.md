@@ -1,5 +1,45 @@
 # Nextflow change-log
 
+## [Version 26.05.0-edge](https://github.com/nextflow-io/nextflow/releases/tag/v26.05.0-edge) - 19 Jun 2026
+
+- Add -help as alias for -h in top-level CLI options (#7238) [ea3f2aad4]
+- Add GPU metrics to workflow-level execution summary (#7229) [43da3f178]
+- Add hidden plural/singular aliases for noun subcommands (#7239) [fe3da84fd]
+- Add Nextflow module info to lineage TaskRun entry (#7160) [1be056177]
+- Add seqera:// data-links support to nf-tower filesystem (#7070) [7d6f8c494]
+- Add shellEnabled option and per-task prediction model to Seqera executor (#7204) [810fd1654]
+- Add workflow DAG reporting to nf-tower plugin (#7218) [3041af858]
+- Add `nextflow logfile` command (#7177) [c689c25ee]
+- ADR: data lineage (#7187) [ae58c915a]
+- Allow plugin version to be specified when running a plugin command (#7113) [7eeeb77bd]
+- Change `stdout` outputs to `stderr`, to not break piped output (#7121) [dd9c2eb82]
+- docs: Clarify distinction between modules and script inclusion (#7217) [2294ab1ad]
+- docs: Migrate docs to new build (#7119) [93b244449]
+- Fix "No such variable" in typed output block with job arrays (#7221) [064404b3e]
+- Fix cast and instanceof with record types (#7185) [0834c8360]
+- Fix issue with workflow completion handler being called twice (#7191) [93c2122ee]
+- Fix lineage records for stub-run and eval outputs (#7211) [52d62a781]
+- Fix netty CVE-2026-44249 via AWS SDK bump and azure-core-http-netty pin (#7223) [ab6a6e65e]
+- Fix nxf_date for uutils coreutils (Ubuntu 26.04+) (#7118) [5504f64b6]
+- Fix staging of Path fields of included record types (#7226) [72ab74963]
+- Improve Azure Batch VM image diagnostics and fix stale 24.04 docs (#7200) [8e5e61143]
+- Improve Tower telemetry error handling on transient gateway failures (#7190) [b0d7e335a]
+- Mirror test containers to public.cr.seqera.io to harden CI against quay.io outages (#7195) [539081bca]
+- Preserve order of plugin declarations in config (#7227) [3fa70ed65]
+- Promote 'latest' stable channel by version comparison instead of branch name [b5ac62e0c]
+- Refactor `changelog.txt` -> `CHANGELOG.md` (#7179) [c19a87e7c]
+- Remove deprecated `echo` process directive (#7206) [362f6fdfb]
+- Sample nxf_date seconds and nanoseconds atomically (#7207) [6636c8c70]
+- Support accelerator directive for local executor (#5850) [0285c3b27]
+- Support record type input with dot-notation CLI params (#7170) [48bf94f4f]
+- Use a stop flag instead of thread interrupt to shut down the logs checkpoint (#7193) [1faf69d6d]
+- `nextflow plugins -help`: show subcommands (#7197) [429fd8eef]
+- Bump nf-amazon@3.10.0
+- Bump nf-azure@1.23.0
+- Bump nf-codecommit@0.6.0
+- Bump nf-seqera@0.22.0
+- Bump nf-tower@1.29.0
+
 ## [Version 26.04.3](https://github.com/nextflow-io/nextflow/releases/tag/v26.04.3) - 28 May 2026
 
 - Fix bucket cleanup in S3 test (#7172) [4fcc58355]
