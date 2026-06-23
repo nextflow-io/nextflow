@@ -1713,6 +1713,8 @@ process make_blast_db {
 }
 ```
 
+Caveats:
+
 - The `env`, `eval`, and `stdout` output qualifiers cannot be used with `storeDir` because they rely on helper files in the task directory. Use `path` outputs instead.
 
 - If a process uses `storeDir` and all of its outputs are optional, the process will always be skipped, even if the store directory is empty. Avoid this issue by specifying at least one required file output.
