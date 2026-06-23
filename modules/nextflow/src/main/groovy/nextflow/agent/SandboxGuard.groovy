@@ -26,6 +26,10 @@ import groovy.transform.CompileStatic
  * of the per-invocation readable dirs (module-output dirs). Resolves symlinks and
  * normalizes so that {@code ..} traversal and symlink targets that escape the
  * sandbox are rejected.
+ *
+ * <p>TOCTOU note: path resolution is not atomic. The sandbox guarantee holds only if the
+ * filesystem beneath the checked paths is not concurrently mutated between this check and
+ * the subsequent file operation.
  */
 @CompileStatic
 class SandboxGuard {
@@ -40,6 +44,8 @@ class SandboxGuard {
         if( write )
             return false
         for( final Path dir : (readableDirs ?: Collections.<Path>emptyList()) ) {
+            if( dir == null )
+                continue
             if( isInside(real, realOf(dir)) )
                 return true
         }
@@ -64,7 +70,7 @@ class SandboxGuard {
             existing = existing.getParent()
         }
         if( existing == null )
-            return abs
+            return abs  // safe fallback: unresolved normalized abs path won't match any real workDir
         Path base = existing.toRealPath()
         for( final String seg : tail )
             base = base.resolve(seg)

@@ -68,4 +68,15 @@ class SandboxGuardTest extends Specification {
         expect:
         !SandboxGuard.isAllowed(link, work, [] as Set, false)
     }
+
+    def 'should handle null elements in readableDirs without throwing'() {
+        given:
+        def work = Files.createDirectories(tmp.resolve('work'))
+        def mod = Files.createDirectories(tmp.resolve('moduleout'))
+        def f = mod.resolve('result.fa')
+        def readableDirsWithNull = Arrays.asList(null, mod)
+        expect:
+        SandboxGuard.isAllowed(f, work, readableDirsWithNull, false)
+        !SandboxGuard.isAllowed(f, work, readableDirsWithNull, true)
+    }
 }
