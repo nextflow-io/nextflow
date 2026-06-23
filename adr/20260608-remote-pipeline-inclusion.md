@@ -267,13 +267,12 @@ output {
 ```groovy
 // nf-core/rnaseq — main.nf
 params {
-    input: Path // samplesheet
+    input: Channel<Sample> // samplesheet
     aligner: String = 'star_salmon'
     fasta: Path
 }
 workflow {
     main:
-    ch_samples = channel.fromPath(params.input).splitCsv()
     rnaseq = // ...
     publish:
     multiqc = rnaseq.multiqc
@@ -328,7 +327,7 @@ output {
 
 Notes:
 
-- **The handoff is a channel, not a file.** A pipeline chain blocks until fetchngs finishes before rnaseq starts. Here, `ch_samples` is a live channel: rnaseq begins aligning each sample the moment fetchngs emits it. This is the dataflow composition that motivates the meta-pipeline.
+- **The handoff is a channel, not a file.** rnaseq declares its samplesheet input as `Channel<Sample>` instead of `Path`, so that it can be executed directly from a CSV samplesheet or called by a meta-pipeline with a live channel. This new behavior is described in the [Workflow modules ADR](20260608-workflow-modules.md). It allows rnaseq to begin aligning each sample as soon as it is emitted by fetchngs, whereas a pipeline chain would block until fetchngs finished completely.
 
 - **Params and outputs are replicated, not inherited.** `--input` and `--strandedness` are declared in the meta-pipeline's own `params` block and passed explicitly into the core workflows. Similarly, any outputs must be declared as such in the meta-pipeline's `output` block. The included pipelines do not contribute any of their own params, entry workflows, or output blocks.
 
