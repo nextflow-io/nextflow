@@ -43,7 +43,7 @@ include { skesa } from 'nf-core/skesa'
  */
 agent assembler {
     model 'openai/gpt-5-mini'
-    instruction 'Assemble the genome from the provided sequencing reads and report the path to the assembled contigs.'
+    instruction 'Use the module_run tool to run the skesa module on the provided reads, then report the path to the assembled contigs.'
 
     tools 'module_run'
 
