@@ -1,21 +1,12 @@
 nextflow.enable.types = true
 
-/*
- * Input record. The agent receives one `Query` per channel item. The optional
- * `context` field (note the `?`) is honored on the input side.
- */
+// Input record — `context` is optional (note `?`).
 record Query {
     question: String
     context: String?
 }
 
-/*
- * Output record. Its structure is reflected into a JSON schema that constrains
- * the model's response (OpenAI structured output). The returned JSON is parsed
- * and bound to an `Analysis` record emitted on the channel. The field types
- * below exercise the full v1 schema deriver: String, Double, Boolean and a
- * List of strings.
- */
+// Output record — its fields become the model's JSON-schema contract (structured output).
 record Analysis {
     summary: String
     confidence: Double
@@ -42,8 +33,7 @@ agent analyst {
 }
 
 workflow {
-    // Typed DSL: invoke with the call form and chain operators with `.view { }`
-    // (the bare `| view` pipe is not used under `nextflow.enable.types = true`).
+    // Under typed DSL, use the call form; `| view` pipe is not available.
     analyst(channel.of(
         record(question: 'Is FASTQ a binary or a text format?', context: 'bioinformatics file formats')
     ))

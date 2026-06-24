@@ -13,7 +13,8 @@ tool-calling, sandboxed agents.
 - **`model`** — the LLM, as `provider/model` (e.g. `openai/gpt-5-mini`).
 - **`instruction`** — the agent's role/persona (system prompt).
 - **`goal`** *(optional)* — a high-level objective that steers the multi-turn
-  loop; advisory (it never raises `maxIterations`). See `isolate-triage`.
+  loop; advisory (it never raises `maxIterations`). See `goal-directed`,
+  `convergence-loop`, and `contig-filter`.
 - **`input:` / `output:`** — process-style typed I/O: a scalar, a `path`, or a
   named `record`. A **record output** opts into *structured output* (the record
   type becomes the model's JSON-schema contract). A plain output (e.g. `String`)
@@ -39,11 +40,14 @@ tool-calling, sandboxed agents.
 
 | Example | Tools | Demonstrates |
 |---|---|---|
-| [`main.nf`](main.nf) | none | A single agent with **record-typed structured output** (`Query` → `Analysis`). |
+| [`structured-output/`](structured-output/main.nf) | none | A single agent with **record-typed structured output** (`Query` → `Analysis`). |
 | [`two-agents/`](two-agents/main.nf) | none | Two no-tool agents **chained over a channel** — stage-1's output record type is stage-2's input type. |
 | [`tool/`](tool/main.nf) | `module_run` | The simplest tool agent: a **local in-scope process** auto-discovered and run via `module_run`. |
 | [`skesa/`](skesa/main.nf) | `module_run` | An **`include`d nf-core module** (`nf-core/skesa`) run as a tool; the LLM bridges the agent's input record to the module's tuple input. |
 | [`filesystem/`](filesystem/main.nf) | `module_run`, `filesystem` | Both capabilities together, **fully offline** (a trivial `exec:` process): run a module, then write/read a report file in the sandbox. |
+| [`goal-directed/`](goal-directed/main.nf) | `module_run`, `filesystem` | The **`goal` directive**: from a high-level `goal` (no step list, tools not named in the prompt) the agent plans and chains the tools itself — assemble → assembly-stats → judge against an N50 bar. Tool *composition* of distinct tools (contrast the iterative `convergence-loop`). |
+| [`convergence-loop/`](convergence-loop/main.nf) | `module_run` | A **convergence loop**, fully offline: the agent re-runs the **same** tool many times, varying one numeric parameter, reading the metric each call, and converging (coarse scan → refine) on the threshold that maximises F1. The tunable knob is a **declared input**, so iterative tuning needs no core change. |
+| [`contig-filter/`](contig-filter/main.nf) | `module_run` | The same **convergence loop on real module output**: SKESA assembles once, then the agent iterates a `filter_contigs(min_len)` tool to maximise N50 subject to a retained-length floor. (Small test assembly → coarse landscape; see the in-file caveat.) |
 | [`isolate-triage/`](isolate-triage/main.nf) | `module_run`, `filesystem` | A real-world **adaptive** agent: a `goal`, three nf-core modules, a data-driven QC gate (inline JSON stats), and a conditional annotation branch. |
 
 ## Requirements
@@ -53,9 +57,9 @@ tool-calling, sandboxed agents.
   export OPENAI_API_KEY="sk-..."
   ```
 - The `nf-agent` plugin (declared in each example's `nextflow.config`).
-- The tool examples that use `nf-core/*` modules (`skesa`, `isolate-triage`)
-  also need a container runtime (Docker/Wave) — the modules run as real
-  containerized tasks — **and an input FASTQ at `<example>/data/sample.fastq`**
+- The tool examples that use `nf-core/*` modules (`skesa`, `goal-directed`,
+  `contig-filter`, `isolate-triage`) also need a container runtime (Docker/Wave) — the modules
+  run as real containerized tasks — **and an input FASTQ at `<example>/data/sample.fastq`**
   (the `data/` dir is gitignored). Fetch the sarscov2 test dataset used for demos:
   ```bash
   mkdir -p data
@@ -68,8 +72,8 @@ tool-calling, sandboxed agents.
   and intended gate behaviour for this small viral read set. To exercise the PASS +
   PROKKA annotation branch, use a real bacterial isolate FASTQ or adjust the
   thresholds in `isolate-triage/main.nf`.
-  The `tool/` and `filesystem/` examples use `exec:` processes and run **fully
-  offline** (no container, no input data).
+  The `tool/`, `filesystem/`, and `convergence-loop/` examples use `exec:`
+  processes and run **fully offline** (no container, no input data).
 
 ## Run (released Nextflow)
 

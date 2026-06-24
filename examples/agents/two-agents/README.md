@@ -1,60 +1,86 @@
-# Two agents, no tools, connected by a channel
+# two-agents — composing agents over a channel
 
-Demonstrates **agent composition**: two no-tool agents chained over a channel,
-the output of the first feeding the input of the second.
+Two no-tool agents chained end to end: the first proposes a hypothesis, the
+second peer-reviews it. Shows how agents compose with the rest of a pipeline
+through the normal channel/workflow model.
 
-- `hypothesizer` — `input: question: String` → `output: hypothesis: Hypothesis`. Proposes a testable hypothesis.
-- `critic` — `input: hypothesis: Hypothesis` → `output: review: Review`. Peer-reviews it.
+## Purpose / What it demonstrates
 
-Neither agent declares `tools`, so each runs a **single-shot** LLM call (no tool-call loop). Both use **structured output** (the output record type is reflected into a JSON schema the model is constrained to).
+Agents are process-shaped: one typed input per channel item in, one typed output
+out. That means they **compose like processes** — the output channel of one
+agent can feed straight into another. This example chains two agents and
+highlights the one thing that makes the chain type-safe:
 
-The composition works because the first agent's **output type** (`Hypothesis`) is the second agent's **input type** — that shared record is the only contract between them. In the workflow the `ChannelOut` from `hypothesizer` is passed straight into `critic`; the `Hypothesis` records flow over the channel like any other dataflow value.
+> The first agent's **output record type** is the second agent's **input record
+> type**. That shared record is the entire contract between them — no tools, no
+> glue code, no manual parsing.
 
-```groovy
-def hypotheses = hypothesizer(channel.of( ...questions... ))
-critic(hypotheses).view { r -> "${r.verdict}: ${r.critique}" }
-```
+Both agents are **no-tool** agents (single-shot LLM calls, no tool-call loop) and
+both use **structured output** (their output record type is reflected into a JSON
+schema the model is constrained to). So structured data flows agent → agent over
+a plain Nextflow channel, exactly like any other dataflow value. It builds
+directly on [`structured-output`](../structured-output) (a single record-typed
+agent) by wiring two of them together.
 
-## Requirements
+## How it works
 
-- An OpenAI API key:
-  ```bash
-  export OPENAI_API_KEY="sk-..."
-  ```
-- The `nf-agent` plugin (declared in `nextflow.config`).
+1. **`Hypothesis`** is the shared contract — the record type that stage 1 emits
+   and stage 2 consumes:
+   - `statement: String` — the proposed hypothesis
+   - `rationale: String` — a brief justification
+   - `confidence: Double` — the author's self-reported confidence (0–1)
 
-## Run (released Nextflow)
+2. **`Review`** is the pipeline's final output:
+   - `verdict: String` — e.g. "plausible", "doubtful"
+   - `critique: String` — a concise peer-review note
+
+3. **Stage 1 — `hypothesizer`**: `input: question: String` →
+   `output: hypothesis: Hypothesis`. Given a question, it proposes one testable
+   hypothesis as a structured `Hypothesis` record.
+
+4. **Stage 2 — `critic`**: `input: hypothesis: Hypothesis` →
+   `output: review: Review`. It reads the `Hypothesis` fields in its prompt and
+   returns a structured `Review`.
+
+5. **The workflow** passes the `ChannelOut` of `hypothesizer` straight into
+   `critic`; the `Hypothesis` records flow over the channel and a `Review` is
+   emitted per input question:
+
+   ```groovy
+   def hypotheses = hypothesizer(channel.of( ...questions... ))
+   critic(hypotheses).view { r -> "${r.verdict}: ${r.critique}" }
+   ```
+
+   Under `nextflow.enable.types = true` the call form is used (the bare `|` pipe
+   is not used in the typed DSL).
+
+## Key concepts
+
+| Concept | In this example |
+|---|---|
+| Agent composition | Two agents chained over a channel |
+| Shared record contract | Stage-1 output type **==** stage-2 input type (`Hypothesis`) |
+| Structured output | Each agent's output record becomes a JSON-schema contract |
+| No tools | Both are single-shot calls — no `tools`, `goal`, or `maxIterations` |
+| Typed DSL | `nextflow.enable.types = true`; call form, not `|` |
+
+## Running it
+
+**Requirements:** an OpenAI API key and the `nf-agent` plugin. No container
+runtime or data file.
 
 ```bash
+export OPENAI_API_KEY="sk-..."
 nextflow run main.nf
 ```
 
-## Run from this repo (development build)
-
-```bash
-# from the repo root
-make compile
-./gradlew :plugins:nf-agent:jar :plugins:nf-agent:copyPluginManifest :plugins:nf-agent:copyPluginLibs
-
-# then, from this directory
-NXF_PLUGINS_MODE=dev OPENAI_API_KEY="$OPENAI_API_KEY" \
-  ../../launch.sh run main.nf
-```
-
-## Expected output
-
-One `Review` per input question, bound from the second agent's JSON, e.g.:
+Expected output — one `Review` per input question (values vary):
 
 ```
 verdict  : plausible
 critique : Testable via a randomized crossover trial; control for habitual
-           caffeine intake and time-of-day effects. Confidence seems high ...
+           caffeine intake and time-of-day effects …
 ```
 
-## Notes
-
-- This is the **no-tools** path for both agents — contrast with `../isolate-triage` (tools that run real modules) and `../main.nf` (a single record-typed agent).
-- Exactly one input and one output per agent; OpenAI provider only.
-- Chaining requires stage-1's output type to equal stage-2's input type.
-
-See `docs/agent.mdx` for the full reference.
+See [examples/agents/README.md](../README.md) for the dev-build (run-from-repo)
+instructions.

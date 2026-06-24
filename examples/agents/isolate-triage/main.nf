@@ -1,63 +1,10 @@
 nextflow.enable.types = true
 
-/*
- * ============================================================================
- *  REAL-WORLD USE CASE: autonomous bacterial-isolate triage
- * ============================================================================
- *
- *  A surveillance / clinical-micro lab receives short reads from a bacterial
- *  isolate. The agent is asked, in plain language, to assemble the genome and
- *  decide whether the assembly is good enough to annotate — and only then run
- *  the (expensive) annotation step. This is a DATA-DRIVEN, adaptive pipeline:
- *  the path through the tools is decided at run time from intermediate results,
- *  not hard-wired in the DAG.
- *
- *  Three nf-core modules are included so they are discoverable by `module_run`:
- *    1. nf-core/skesa        — assemble reads -> contigs (a FASTA file handle)
- *    2. nf-core/assemblyscan — compute assembly statistics -> a small JSON file
- *    3. nf-core/prokka       — annotate contigs -> annotation files
- *
- *  TWO CAPABILITY TOOLS:
- *  -----------------------------------------------------------------------
- *  `tools 'module_run', 'filesystem'`
- *
- *  `module_run` exposes EACH in-scope process as its OWN tool (all three
- *  included modules above become the tools SKESA, ASSEMBLYSCAN, PROKKA), each
- *  with its own enforced input schema. The LLM picks which module to run and in
- *  what order — the adaptive QC gate is a reasoning step, not a hard-coded edge
- *  in the DAG.
- *
- *  `filesystem` gives the agent a sandboxed read/write/list/exists tool scoped
- *  to its per-invocation work directory (plus module-output paths). The agent
- *  uses it to write a short triage summary JSON to the work dir alongside the
- *  verdict it emits on the output channel.
- *
- *  TWO KINDS OF TOOL OUTPUT (why this works with the LLM-tool model):
- *  -------------------------------------------------------------------
- *  Bulk/binary artifacts the LLM only forwards between tools — the skesa
- *  contigs, the prokka annotations — come back as OPAQUE ABSOLUTE-PATH HANDLES:
- *  the model never reads their bytes, it just passes the path to the next tool.
- *
- *  But the QC GATE needs the model to REASON OVER numbers (N50, #contigs), and
- *  assemblyscan emits those as a SMALL `.json` file. Nextflow detects that this
- *  output is a small, text/structured file (extension in a known set, size under
- *  the `agent.maxToolOutputInlineSize` cap, not binary) and INLINES ITS CONTENTS
- *  into the tool result the LLM receives — so the model reads the real stats and
- *  gates on them. A large or binary output would stay an opaque handle. You do
- *  not annotate anything for this: it is inferred from the output file's format
- *  and size at run time.
- *
- *  SELF-DESCRIBING TOOLS: each nf-core module describes itself to the LLM from
- *  its registry/meta.yml metadata — the tool description and input schema
- *  (including the `meta` map and its `id`) become that module's OWN tool's
- *  enforced parameters schema automatically. That is why the `instruction`
- *  below is a purely HIGH-LEVEL functional goal: it never names an argument
- *  shape or `meta.id` — the LLM learns all of that from the per-module tool
- *  schemas surfaced via `module_run`.
- */
-
-// Include the three nf-core modules; they are discovered by `module_run` at
-// agent-run time and each surfaced as its OWN tool (SKESA, ASSEMBLYSCAN, PROKKA).
+// Real-world adaptive agent: assemble (SKESA) → QC stats (ASSEMBLYSCAN) → a
+// data-driven QC gate → annotate (PROKKA) only if it passes, writing a summary via the
+// `filesystem` tool. The route through the tools is decided at run time, and
+// ASSEMBLYSCAN's small JSON stats are inlined into the tool result so the model can gate
+// on N50/#contigs. See README.md.
 include { SKESA }        from 'nf-core/skesa'
 include { ASSEMBLYSCAN } from 'nf-core/assemblyscan'
 include { PROKKA }       from 'nf-core/prokka'
@@ -70,16 +17,8 @@ record Isolate {
 
 agent triage {
     model 'openai/gpt-5-mini'
-    // `goal` states the high-level objective; it is folded into the system message
-    // alongside `instruction` to steer the multi-turn module_run loop. It is
-    // advisory — `maxIterations` remains the hard cap on the tool-calling loop.
+    // `goal` = high-level objective, folded into the system message (advisory).
     goal 'Assemble the isolate, QC-gate the assembly, annotate only if it passes, and report a clear PASS/FAIL verdict with a short written summary.'
-    // NOTE: the QC thresholds below are deliberately LENIENT (N50 < 500 bp OR
-    // more than 1000 contigs). With the sarscov2 test FASTQ (see workflow block
-    // below) the assembly reaches ~N50=310, ~6 contigs and CORRECTLY FAILS this
-    // gate — the agent returns a FAIL verdict and skips PROKKA annotation.
-    // To exercise the PASS + PROKKA branch, use a real bacterial isolate FASTQ
-    // (better-assembling reads) or tighten the thresholds to match the test data.
     instruction '''\
         You triage bacterial isolate assemblies. Work step by step:
           1. Assemble the isolate's sequencing reads into contigs using the SKESA tool.
