@@ -249,7 +249,10 @@ class ModuleToolBridge implements ToolDispatcher {
             throw new IllegalArgumentException("Agent tool `${name}` must declare exactly one output to be used as an agent tool (got ${outputParams.size()})")
         final outputParamName = outputKey((ProcessOutput) outputParams[0])
 
-        // -- portable schema descriptor
+        // -- portable schema descriptor. The tool name IS the process name: Nextflow process
+        //    identifiers are valid OpenAI function-name identifiers (alphanumeric + underscore),
+        //    so no sanitization is needed; uniqueness is guaranteed by the in-scope process
+        //    namespace (and the `tools` map / `descriptors` keying dedups by name).
         final descriptor = new ToolDescriptor(
             name,
             name,
@@ -302,6 +305,10 @@ class ModuleToolBridge implements ToolDispatcher {
             inputSchema = ModuleSpecToolSchema.inputSchema(spec)
             description = buildDescription(spec)
         }
+        // The tool name IS the process/module name (e.g. SKESA): Nextflow process identifiers are
+        // valid OpenAI function-name identifiers (alphanumeric + underscore), so no sanitization is
+        // needed; uniqueness is guaranteed by the in-scope process namespace (and the `tools` map /
+        // `descriptors` keying dedups by name).
         final descriptor = new ToolDescriptor(name, description, inputSchema, null)
 
         // -- the number of input queues = the PROCESS's declared input-channel count;

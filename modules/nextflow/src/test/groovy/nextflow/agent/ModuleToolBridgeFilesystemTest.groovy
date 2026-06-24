@@ -285,7 +285,7 @@ class ModuleToolBridgeFilesystemTest extends Specification {
         ModuleToolBridge.setContext(ctx)
 
         when: 'whitelistOutputDirs is called with a parsed result map containing the output file path'
-        // simulate what callModuleRun does after a successful module task: the parsed result
+        // simulate what call() does after a successful module-tool dispatch: the parsed result
         // contains the absolute path of the output file
         def resultMap = [output: outputFile.toAbsolutePath().toString()]
         ModuleToolBridge.whitelistOutputDirs(resultMap)
@@ -315,7 +315,7 @@ class ModuleToolBridgeFilesystemTest extends Specification {
 
     /**
      * Tests the extracted guard predicate {@link ModuleToolBridge#isErrorResult}.
-     * This predicate is used in {@link ModuleToolBridge#callModuleRun} to skip
+     * This predicate is used in {@link ModuleToolBridge#call} to skip
      * {@code whitelistOutputDirs} when the result is an error, preventing absolute
      * paths in error messages from widening the filesystem sandbox.
      */
@@ -328,7 +328,7 @@ class ModuleToolBridgeFilesystemTest extends Specification {
         ModuleToolBridge.isErrorResult(parsed) == true
 
         and: 'whitelistOutputDirs must be skipped for error results (guarded by isErrorResult)'
-        // this is what callModuleRun checks; the guard prevents whitelistOutputDirs
+        // this is what call() checks; the guard prevents whitelistOutputDirs
         // from being called on error results, so paths in error messages stay out of the whitelist
     }
 
@@ -341,7 +341,7 @@ class ModuleToolBridgeFilesystemTest extends Specification {
         ModuleToolBridge.isErrorResult(parsed) == false
 
         and: 'whitelistOutputDirs proceeds for non-error results (guarded by !isErrorResult)'
-        // this is what callModuleRun checks; when the result is NOT an error,
+        // this is what call() checks; when the result is NOT an error,
         // whitelistOutputDirs is called to add output file paths to the whitelist
     }
 
