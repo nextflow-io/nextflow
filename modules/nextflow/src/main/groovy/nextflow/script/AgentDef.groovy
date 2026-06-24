@@ -40,7 +40,6 @@ import nextflow.agent.AgentRunnerProvider
 import nextflow.agent.AgentRunnerRequest
 import nextflow.agent.DispatchContext
 import nextflow.agent.FilesystemToolSchema
-import nextflow.agent.ModuleRunToolSchema
 import nextflow.agent.ModuleToolBridge
 import nextflow.agent.RecordSchema
 import nextflow.agent.ToolDescriptor
@@ -69,6 +68,10 @@ import nextflow.util.TypeHelper
 class AgentDef extends BindableDef implements ChainableDef {
 
     static final String TYPE = 'agent'
+
+    /** Capability string enabling the script's include'd modules to be exposed as agent tools;
+     * each included module is advertised as its own tool with an enforced per-module schema. */
+    static final String MODULE_RUN_CAPABILITY = 'module_run'
 
     private BaseScript owner
     private String name
@@ -297,9 +300,10 @@ class AgentDef extends BindableDef implements ChainableDef {
                 filesystemEnabled = true
                 continue
             }
-            // 0b) capability string: 'module_run' enables the single generic module_run tool;
-            //     the wired modules are discovered from the script's includes (see below)
-            if( toolRef == ModuleRunToolSchema.NAME ) {
+            // 0b) capability string: 'module_run' exposes the script's include'd modules as agent
+            //     tools — each is advertised as its OWN tool with an enforced per-module schema
+            //     (see the include discovery below)
+            if( toolRef == MODULE_RUN_CAPABILITY ) {
                 moduleRunEnabled = true
                 continue
             }
@@ -339,9 +343,9 @@ class AgentDef extends BindableDef implements ChainableDef {
             throw new ScriptRuntimeException("Agent `${name}` tool `${toolRef}` is not a process in scope")
         }
         // When 'module_run' is declared, enumerate all processes visible in this script (both
-        // locally-defined and brought in via include statements) and wire each as an internal tool.
-        // These modules are NOT individually advertised as tool descriptors; instead the bridge
-        // exposes a single 'module_run' tool with a 'module' enum so the LLM picks by name.
+        // locally-defined and brought in via include statements) and wire each as a tool. Each
+        // module is advertised as its OWN tool with an enforced per-module input schema (sourced
+        // from the registry metadata when available, else the sibling meta.yml spec).
         if( moduleRunEnabled ) {
             final allProcNames = new LinkedHashSet<String>()
             if( meta != null ) {
@@ -389,7 +393,7 @@ class AgentDef extends BindableDef implements ChainableDef {
         // returns a non-null bridge with no wired module processes).
         if( resolved.isEmpty() && !filesystemEnabled && !moduleRunEnabled )
             return null
-        return new ModuleToolBridge(resolved, specs, metadatas, filesystemEnabled, moduleRunEnabled)
+        return new ModuleToolBridge(resolved, specs, metadatas, filesystemEnabled)
     }
 
     /**
