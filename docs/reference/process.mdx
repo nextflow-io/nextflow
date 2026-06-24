@@ -847,7 +847,7 @@ The above example produces:
 [4, D]
 ```
 
-### hints
+### `hints`
 
 The `hints` directive specifies executor-specific hints as key-value pairs. Each executor uses the hints it recognizes and ignores the rest. Hint values can be any raw value (i.e., numbers, strings, booleans, lists, and maps).
 
@@ -1713,13 +1713,13 @@ process make_blast_db {
 }
 ```
 
-:::warning
-If a process uses `storeDir` and all of its outputs are optional, the process will always be skipped, even if the store directory is empty. This issue can be avoided by specifying at least one required file output.
-:::
+Caveats:
 
-:::warning
-The `storeDir` directive should not be used to publish outputs. Use the [publishDir](#publishdir) directive or [workflow outputs][workflow-output-def] instead.
-:::
+- The `env`, `eval`, and `stdout` output qualifiers cannot be used with `storeDir` because they rely on helper files in the task directory. Use `path` outputs instead.
+
+- If a process uses `storeDir` and all of its outputs are optional, the process will always be skipped, even if the store directory is empty. Avoid this issue by specifying at least one required file output.
+
+- The `storeDir` directive is not a replacement for publishing outputs. Use the [publishDir](#publishdir) directive or [workflow outputs][workflow-output-def] instead.
 
 ### `tag`
 
