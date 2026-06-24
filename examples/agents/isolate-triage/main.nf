@@ -21,10 +21,11 @@ nextflow.enable.types = true
  *  -----------------------------------------------------------------------
  *  `tools 'module_run', 'filesystem'`
  *
- *  `module_run` exposes a single generic tool whose `module` enum lists every
- *  in-scope process (all three included modules above). The LLM picks which
- *  module to run and in what order — the adaptive QC gate is a reasoning step,
- *  not a hard-coded edge in the DAG.
+ *  `module_run` exposes EACH in-scope process as its OWN tool (all three
+ *  included modules above become the tools SKESA, ASSEMBLYSCAN, PROKKA), each
+ *  with its own enforced input schema. The LLM picks which module to run and in
+ *  what order — the adaptive QC gate is a reasoning step, not a hard-coded edge
+ *  in the DAG.
  *
  *  `filesystem` gives the agent a sandboxed read/write/list/exists tool scoped
  *  to its per-invocation work directory (plus module-output paths). The agent
@@ -47,15 +48,16 @@ nextflow.enable.types = true
  *  and size at run time.
  *
  *  SELF-DESCRIBING TOOLS: each nf-core module describes itself to the LLM from
- *  its meta.yml — the tool description and input schema (including the `meta` map
- *  and its `id`) are wired into the module_run tool spec automatically. That is
- *  why the `instruction` below is a purely HIGH-LEVEL functional goal: it never
- *  names a tool, an argument shape, or `meta.id` — the LLM learns all of that
- *  from the module schemas surfaced via `module_run`.
+ *  its registry/meta.yml metadata — the tool description and input schema
+ *  (including the `meta` map and its `id`) become that module's OWN tool's
+ *  enforced parameters schema automatically. That is why the `instruction`
+ *  below is a purely HIGH-LEVEL functional goal: it never names an argument
+ *  shape or `meta.id` — the LLM learns all of that from the per-module tool
+ *  schemas surfaced via `module_run`.
  */
 
 // Include the three nf-core modules; they are discovered by `module_run` at
-// agent-run time and surfaced as the `module` enum in the single tool.
+// agent-run time and each surfaced as its OWN tool (SKESA, ASSEMBLYSCAN, PROKKA).
 include { SKESA }        from 'nf-core/skesa'
 include { ASSEMBLYSCAN } from 'nf-core/assemblyscan'
 include { PROKKA }       from 'nf-core/prokka'
@@ -78,22 +80,23 @@ agent triage {
     // realistic values, e.g. "N50 below 20000 bp OR more than 500 contigs".
     instruction '''\
         You triage bacterial isolate assemblies. Work step by step:
-          1. Assemble the isolate's sequencing reads into contigs using module_run.
-          2. Compute assembly QC statistics from the contigs using module_run.
+          1. Assemble the isolate's sequencing reads into contigs using the SKESA tool.
+          2. Compute assembly QC statistics from the contigs using the ASSEMBLYSCAN tool.
           3. QC GATE: read the assembly statistics and decide. If the assembly is
              too fragmented — N50 below 500 bp OR more than 1000 contigs — it
              FAILS QC: write a brief summary JSON to the work directory using the
              filesystem tool, then reply
              "FAIL <sample>: fragmented (N50=<n50>, contigs=<contigs>), needs manual review"
              and DO NOT annotate.
-          4. Otherwise the assembly PASSES QC: annotate the contigs using module_run,
+          4. Otherwise the assembly PASSES QC: annotate the contigs using the PROKKA tool,
              write a brief summary JSON to the work directory using the filesystem tool,
              then reply
              "PASS <sample>: N50=<n50>, contigs=<contigs>, annotation=<path to the annotation file>".
         '''.stripIndent()
 
     // `module_run` discovers all included modules (skesa, assemblyscan, prokka)
-    // and surfaces them as a single tool with a `module` enum.
+    // and surfaces EACH as its OWN tool (SKESA, ASSEMBLYSCAN, PROKKA) with an
+    // enforced input schema.
     // `filesystem` enables sandboxed file read/write/list/exists in the agent work dir.
     tools 'module_run', 'filesystem'
 

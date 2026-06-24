@@ -109,21 +109,25 @@ Under the typed DSL (`nextflow.enable.types = true`), invoke the agent with the 
 
 An agent can call Nextflow modules and use built-in capabilities as **tools**. Declare one or more *capability strings* with the `tools` directive:
 
-- **`'module_run'`** — enables a single generic `module_run(module, args)` tool. The runnable modules are discovered automatically from the script's `include` statements and any locally-defined in-scope processes. The model sees a `module` enum listing all available modules and calls the one it needs.
+- **`'module_run'`** — exposes **each** in-scope module/process as its **own** tool, named after the module. The runnable modules are discovered automatically from the script's `include` statements and any locally-defined in-scope processes. Every such module is advertised to the model as a distinct function whose `parameters` schema **is** that module's flattened input schema (required fields, `additionalProperties:false`, the nf-core `meta.id` convention). The model calls a module directly by its name (e.g. `SKESA`) with arguments matching that schema.
 - **`'filesystem'`** — enables a sandboxed `filesystem` tool with `read`, `write`, `list`, and `exists` operations. Access is restricted to the agent's per-invocation work directory and any module-output paths. The model can write intermediate files (e.g. a triage summary) and read them back within the same invocation.
 
-To make a module available to `module_run`, either **include** it with an `include` statement or **define** a process in the same script. Both forms are discovered automatically — no extra annotation is needed.
+To make a module available, either **include** it with an `include` statement or **define** a process in the same script. Both forms are discovered automatically — no extra annotation is needed. The tool's name is the module/process name exactly as it appears in scope (nf-core process names are upper-case, e.g. `SKESA`).
 
-When the model calls `module_run`, Nextflow marshals the model's JSON arguments into channel values, runs the chosen module as a **real dataflow node** (through the normal executor / container / cache machinery — the task runs in its own work directory), and serializes the module's outputs back to the model as a JSON object so it can continue the conversation and produce a final answer. File outputs are returned as **absolute path-handle strings**, never file contents — so the model passes opaque path handles between tool calls and never sees the bytes of a file.
+When the model calls a module tool, Nextflow marshals the model's JSON arguments into channel values, runs that module as a **real dataflow node** (through the normal executor / container / cache machinery — the task runs in its own work directory), and serializes the module's outputs back to the model as a JSON object so it can continue the conversation and produce a final answer. File outputs are returned as **absolute path-handle strings**, never file contents — so the model passes opaque path handles between tool calls and never sees the bytes of a file.
 
 :::note
-`bash` and `nextflow run` are **not** available as agent tools. Agents interact with the pipeline only through the `module_run` and `filesystem` capabilities.
+**Why one tool per module (not a single aggregate tool).** Earlier drafts exposed a single generic `module_run(module, args)` tool. Because the `args` of such an aggregate tool must be a free `{type:object, additionalProperties:true}` object, OpenAI function-calling **cannot enforce the field names inside it** — the per-module schema could only be described in prose. In practice the model hallucinated input names (e.g. sending `reads` when every metadata source — the process `path(fastq)` declaration, the `meta.yml`, and the registry — names the input `fastq`), and the marshaller silently defaulted the missing required path, so the module ran with empty input and failed. Advertising each module as its **own** tool puts the module's schema in that tool's function `parameters`, so OpenAI generates and validates the call against it (required `fastq`, `additionalProperties:false`) — the model cannot omit or rename fields. That schema-level enforcement is the reliability mechanism, and it is only achievable with one tool per module. The trade-off — more tools advertised (one per included module) instead of one aggregate — is negligible for typical agents (e.g. `isolate-triage` exposes three modules).
+:::
+
+:::note
+`bash` and `nextflow run` are **not** available as agent tools. Agents interact with the pipeline only through the module tools (`'module_run'` capability) and the `filesystem` capability.
 :::
 
 ```groovy
 nextflow.enable.types = true
 
-// `uppercase` is an in-scope process; `module_run` discovers it automatically.
+// `uppercase` is an in-scope process; `module_run` exposes it as a tool named `uppercase`.
 process uppercase {
     input:  text: String
     output: result: String
@@ -132,7 +136,7 @@ process uppercase {
 
 agent shouty {
     model 'openai/gpt-5-mini'
-    instruction 'To uppercase text you MUST call module_run with {"module":"uppercase","args":{"text":"<input>"}}, then reply with only the result.'
+    instruction 'To uppercase text you MUST call the `uppercase` tool with {"text":"<input>"}, then reply with only the result.'
     tools 'module_run'
 
     input:  request: String
@@ -147,25 +151,25 @@ workflow {
 }
 ```
 
-When the model calls `module_run` with `{"module":"uppercase","args":{"text":"hello"}}`, the process executes as a dataflow node and its result flows back to the model, which produces the final `answer` (here, `HELLO`).
+The model sees a tool named `uppercase` whose `parameters` schema is `{text}` (required). When it calls `uppercase({"text":"hello"})`, the process executes as a dataflow node and its result flows back to the model, which produces the final `answer` (here, `HELLO`).
 
 #### Using included modules
 
-For modules sourced from the nf-core registry (or any other module file), add an `include` statement so the process is in scope. Multiple included modules all become entries in the `module_run` enum:
+For modules sourced from the nf-core registry (or any other module file), add an `include` statement so the process is in scope. Each included module becomes its own tool:
 
 ```groovy
 nextflow.enable.types = true
 
-include { skesa }        from 'nf-core/skesa'
-include { assemblyscan } from 'nf-core/assemblyscan'
-include { prokka }       from 'nf-core/prokka'
+include { SKESA }        from 'nf-core/skesa'
+include { ASSEMBLYSCAN } from 'nf-core/assemblyscan'
+include { PROKKA }       from 'nf-core/prokka'
 
 agent triage {
     model 'openai/gpt-5-mini'
     instruction '''
         Assemble reads, check QC, and annotate if the assembly passes.
-        Use module_run for each step; use the filesystem tool to write a
-        summary report.
+        Call the SKESA, ASSEMBLYSCAN, and PROKKA tools by name; use the
+        filesystem tool to write a summary report.
     '''
     tools 'module_run', 'filesystem'
 
@@ -176,11 +180,11 @@ agent triage {
 }
 ```
 
-The `module` enum exposed to the LLM lists `skesa`, `assemblyscan`, and `prokka`. The model picks which to call and in what order — the adaptive logic is a reasoning step, not a hard-coded DAG edge.
+The model is advertised three distinct tools — `SKESA`, `ASSEMBLYSCAN`, and `PROKKA` — each with its own schema derived from the module's `meta.yml`/registry metadata. It picks which to call and in what order — the adaptive logic is a reasoning step, not a hard-coded DAG edge.
 
 #### The filesystem tool
 
-When `'filesystem'` is declared, the model gains four file operations sandboxed to its per-invocation work directory (plus module-output paths returned by `module_run`):
+When `'filesystem'` is declared, the model gains four file operations sandboxed to its per-invocation work directory (plus module-output paths returned by the module tools):
 
 | Operation | Description |
 |---|---|
@@ -189,14 +193,14 @@ When `'filesystem'` is declared, the model gains four file operations sandboxed 
 | `list(path)` | List the contents of a directory. |
 | `exists(path)` | Check whether a path exists. |
 
-This is useful for reading small structured outputs (JSON, TSV) that `module_run` produces and for writing intermediate or summary files within a single agent invocation.
+This is useful for reading small structured outputs (JSON, TSV) that a module tool produces and for writing intermediate or summary files within a single agent invocation.
 
 #### Tool input/output schema
 
-The `module_run` tool advertises a JSON schema for each module's arguments so the model knows how to call it:
+Each module tool advertises a JSON schema for its arguments as the tool's function `parameters`, so the model knows how to call it — and so OpenAI function-calling **enforces** the field names and required-ness (the model cannot omit or rename a field):
 
-- **From a sibling `meta.yml`** — when a module has a sibling `meta.yml`, its input/output spec drives the per-module argument schema, including per-item **descriptions**. Tuple inputs are *flattened* to top-level properties: a `tuple(val(meta), path(reads))` input becomes `{meta, reads}`, where `meta` is an object and `reads` is a path-handle string. The model passes `{"meta": {...}, "reads": "/abs/path"}` rather than a nested array; on the way back, tuple/file outputs are serialized to a JSON object with file values as absolute path strings.
-- **From a typed process** — when no `meta.yml` is present, the schema is derived from the typed process's declared scalar I/O: each input parameter `name: Type` becomes a property, and the single scalar output is returned under its name. Tuple/`path`/`meta` process I/O without a `meta.yml` is not supported and fails loudly.
+- **From the registry or a sibling `meta.yml`** — when a module's metadata is available from the nf-core registry (preferred) or a sibling `meta.yml`, its input/output spec drives the tool's argument schema, including per-item **descriptions** and the nf-core `meta.id` convention. Tuple inputs are *flattened* to top-level properties: a `tuple(val(meta), path(fastq))` input becomes `{meta, fastq}`, where `meta` is an object and `fastq` is a path-handle string. Required fields are marked required and `additionalProperties` is `false`, so the model must pass exactly `{"meta": {...}, "fastq": "/abs/path"}` — it cannot send a hallucinated name such as `reads`. On the way back, tuple/file outputs are serialized to a JSON object with file values as absolute path strings.
+- **From a typed process** — when no module metadata is present, the schema is derived from the typed process's declared scalar I/O: each input parameter `name: Type` becomes a required property, and the single scalar output is returned under its name. Tuple/`path`/`meta` process I/O without metadata is not supported and fails loudly.
 
 :::note
 When an agent declares `tools`, the model's free-text final answer is emitted, so the **output must be a plain (non-record) type** such as `String`. Combining `tools` with a `record` (structured) output is rejected at run time — structured output and tools are mutually exclusive in this release.
@@ -238,12 +242,14 @@ agent {
 | `model` | yes | Model identifier as `provider/model`, e.g. `openai/gpt-5-mini`. The provider prefix selects the chat-model backend. Required at run time. |
 | `instruction` | no | System prompt describing the agent's role. Omitted if not set. |
 | `goal` | no | A high-level objective that steers the agent's multi-turn loop. Advisory: folded into the system message; the model is encouraged to keep working (calling tools) until the goal is met, while `maxIterations` remains the hard cap. |
-| `tools` | no | One or more capability strings enabling tools the agent may call. `'module_run'` enables the generic `module_run(module, args)` tool that runs any in-scope process (discovered from `include` statements and locally-defined processes). `'filesystem'` enables a sandboxed read/write/list/exists tool. Multiple capabilities are allowed: `tools 'module_run', 'filesystem'`. Requires a plain (non-record) output type. See [Tools (calling modules)](#tools-calling-modules). |
+| `tools` | no | One or more capability strings enabling tools the agent may call. `'module_run'` exposes **each** in-scope process as its **own** tool, named after the module (discovered from `include` statements and locally-defined processes), with the module's input schema as the tool's enforced `parameters`. `'filesystem'` enables a sandboxed read/write/list/exists tool. Multiple capabilities are allowed: `tools 'module_run', 'filesystem'`. Requires a plain (non-record) output type. See [Tools (calling modules)](#tools-calling-modules). |
 | `maxIterations` | no | Cap on the LLM tool-calling loop (default 20). Applies when `tools` are declared. |
 
 Only the `prompt:` block is structurally required; `model` is additionally required when the agent runs.
 
 The optional `goal` directive states what the agent should accomplish, distinct from the per-input `prompt`. It is appended to the system message as a labelled `Goal:` section. It does not change the loop mechanics or raise `maxIterations`; it only guides the model toward an objective across turns.
+
+When the `goal` directive references the `module_run` loop, note that it is the loop over the per-module tools (one tool per included module), not a single aggregate tool.
 
 ## Inputs, outputs and prompt
 
@@ -270,6 +276,6 @@ Under OpenAI strict structured output, langchain4j promotes **all** output prope
 - Declaring `tools` requires a plain (non-record) **agent** output type — tools and structured (record) agent output are mutually exclusive.
 - Tool calls are **serialized** (single-threaded): one call runs to completion before the next is dispatched, so inputs and outputs stay correlated. Parallel and correlated tool calls are deferred.
 - A failure of the underlying tool **process task** aborts the run via the standard error model. Only *dispatch-level* errors (an unknown tool name, or unparseable / malformed arguments) are returned to the model as a `{"error": ...}` tool result so it can recover and retry.
-- `bash` and `nextflow run` are **not** available as agent tools. The only way an agent interacts with pipeline execution is through the `module_run` and `filesystem` capabilities.
+- `bash` and `nextflow run` are **not** available as agent tools. The only way an agent interacts with pipeline execution is through the module tools (the `'module_run'` capability) and the `filesystem` capability.
 - The legacy `tools` form with module-reference strings (e.g. `tools 'nf-core/skesa'`, `tools './mod.nf'`, `tools 'uppercase'`) is **deprecated** in favour of `tools 'module_run'` (with modules declared via `include` or as in-scope processes). The legacy form continues to work but will be removed in a future release.
 - Streaming is not supported yet.

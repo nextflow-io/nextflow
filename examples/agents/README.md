@@ -19,12 +19,15 @@ tool-calling, sandboxed agents.
   type becomes the model's JSON-schema contract). A plain output (e.g. `String`)
   emits the model's text.
 - **`tools`** — a list of **capabilities** (not module names):
-  - **`'module_run'`** — exposes a single `module_run(module, args)` tool whose
-    `module` enum is every process in scope: `include`d modules **and**
-    locally-defined processes. The LLM picks which to run; it executes as a real
-    dataflow node (container / work dir / cache) and its outputs return as JSON
-    (files as absolute path handles; small text/JSON outputs are inlined so the
-    model can reason over them).
+  - **`'module_run'`** — exposes **each** process in scope as its **own** tool,
+    named after the module: `include`d modules **and** locally-defined
+    processes. Each tool's `parameters` schema IS that module's flattened input
+    schema (required fields, `additionalProperties:false`, the nf-core `meta.id`
+    convention), so OpenAI function-calling enforces the field names and the
+    model cannot omit or rename a field. The LLM picks which to call; it executes
+    as a real dataflow node (container / work dir / cache) and its outputs return
+    as JSON (files as absolute path handles; small text/JSON outputs are inlined
+    so the model can reason over them).
   - **`'filesystem'`** — a sandboxed read/write/list/exists tool scoped to the
     agent's per-invocation work directory (plus the output paths of modules it
     ran). Writes stay inside the sandbox.
