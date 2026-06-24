@@ -13,6 +13,8 @@ When creating a container image to use with Nextflow, make sure that Bash (3.x o
 
 ## Apple container
 
+<AddedInVersion version="26.04.0" />
+
 [Apple container](https://github.com/apple/container) is a lightweight container runtime that uses the [Virtualization framework](https://developer.apple.com/documentation/virtualization) to run each container inside its own virtual machine on macOS.
 
 ### Prerequisites
@@ -144,7 +146,7 @@ Unlike Docker, Nextflow does not automatically mount host paths in the container
 When a process input is a *symbolic link* file, make sure the linked file is stored in a host folder that is accessible from a bind path defined in your Apptainer installation. Otherwise the process execution will fail because the launched container won't be able to access the linked file.
 :::
 
-<ChangedInVersion version="23.07.0-edge">
+<ChangedInVersion version="23.10.0">
 Nextflow no longer mounts the home directory when launching an Apptainer container. To re-enable the old behavior, set the environment variable `NXF_APPTAINER_HOME_MOUNT` to `true`.
 </ChangedInVersion>
 
@@ -218,9 +220,8 @@ Apptainer advanced configuration settings are described in[Apptainer][config-app
 
 ## Charliecloud
 
-<ChangedInVersion version="22.09.0-edge">
-Requires Charliecloud 0.28 or later.
-</ChangedInVersion>
+:::note{title="Requires Charliecloud 0.28 or later."}
+:::
 
 :::warning{title="Experimental: not recommended for production environments."}
 :::
@@ -628,15 +629,15 @@ Unlike Docker, Nextflow does not automatically mount host paths in the container
 When a process input is a *symbolic link* file, make sure the linked file is stored in a host folder that is accessible from a bind path defined in your Singularity installation. Otherwise the process execution will fail because the launched container won't be able to access the linked file.
 :::
 
-<ChangedInVersion version="23.07.0-edge">
+<ChangedInVersion version="23.10.0">
 Nextflow no longer mounts the home directory when launching a Singularity container. To re-enable the old behavior, set the environment variable `NXF_SINGULARITY_HOME_MOUNT` to `true`.
 </ChangedInVersion>
 
-<ChangedInVersion version="23.09.0-edge">
+<ChangedInVersion version="23.10.0">
 Nextflow automatically mounts the required host paths in the container. To re-enable the old behavior, set the environment variable `NXF_SINGULARITY_AUTO_MOUNTS` to `false` or set `singularity.autoMounts=false` in the Nextflow configuration file.
 </ChangedInVersion>
 
-<ChangedInVersion version="23.09.0-edge">
+<ChangedInVersion version="23.10.0">
 The execution command for Singularity/Apptainer containers can be set to `run` by means of the environment variable `NXF_SINGULARITY_RUN_COMMAND` (default command is `exec`).
 </ChangedInVersion>
 

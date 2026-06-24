@@ -40,7 +40,7 @@ Defines the directory where downloaded pipeline repositories are stored (default
 
 ##### `NXF_CACHE_DIR`
 
-<AddedInVersion version="24.02.0-edge" />
+<AddedInVersion version="24.04.0" />
 
 Defines the base cache directory when using the default cache store (default: `"$launchDir/.nextflow"`).
 
@@ -50,7 +50,7 @@ Directory where remote Charliecloud images are stored. When using a computing cl
 
 ##### `NXF_CLOUDCACHE_PATH`
 
-<AddedInVersion version="23.07.0-edge" />
+<AddedInVersion version="23.10.0" />
 
 Defines the base cache path when using the cloud cache store.
 
@@ -64,8 +64,6 @@ Directory where Conda environments are stored. When using a computing cluster it
 
 ##### `NXF_CONDA_ENABLED`
 
-<AddedInVersion version="22.08.0-edge" />
-
 Enable the use of Conda recipes defined by using the [conda][process-conda] directive. (default: `false`).
 
 ##### `NXF_CONTAINER_ENTRYPOINT_OVERRIDE`
@@ -76,19 +74,19 @@ When `true`, override the container entrypoint with `/bin/bash` (default: `false
 
 ##### `NXF_DATE_FORMAT`
 
-<AddedInVersion version="25.07.0-edge" />
+<AddedInVersion version="25.10.0" />
 
 Defines the format for date and time representations in notifications and reports. Supports custom formats (e.g., `yyyy-MM-dd HH:mm:ss`) or `iso` for ISO 8601 format with timezone (default: `dd-MMM-yyyy HH:mm:ss`).
 
 ##### `NXF_DEFAULT_DSL`
 
-<AddedInVersion version="22.03.0-edge" />
+<DeprecatedInVersion version="25.04.0" />
 
 Defines the DSL version that should be used in not specified otherwise in the script of config file (default: `2`)
 
 ##### `NXF_DISABLE_CHECK_LATEST`
 
-<AddedInVersion version="23.09.0-edge" />
+<AddedInVersion version="23.10.0" />
 
 Nextflow automatically checks for a newer version of itself unless this option is enabled (default: `false`).
 
@@ -98,19 +96,19 @@ Disables the cancellation of child jobs on workflow execution termination.
 
 ##### `NXF_DISABLE_PARAMS_TYPE_DETECTION`
 
-<AddedInVersion version="23.07.0-edge" />
+<AddedInVersion version="23.10.0" />
 
 Disables the automatic type detection of command line parameters.
 
 ##### `NXF_DISABLE_WAVE_SERVICE`
 
-<AddedInVersion version="23.08.0-edge" />
+<AddedInVersion version="23.10.0" />
 
 Disables the requirement for Wave service when enabling the Fusion file system.
 
 ##### `NXF_ENABLE_AWS_SES`
 
-<AddedInVersion version="23.06.0-edge" />
+<AddedInVersion version="23.10.0" />
 
 Enable to use of AWS SES native API for sending emails in place of legacy SMTP settings (default: `false`)
 
@@ -126,13 +124,13 @@ Enable Nextflow secrets features (default: `true`)
 
 ##### `NXF_ENABLE_STRICT`
 
-<AddedInVersion version="22.05.0-edge" />
+<DeprecatedInVersion version="26.04.0" />
 
 Enable Nextflow *strict* execution mode (default: `false`)
 
 ##### `NXF_ENABLE_VIRTUAL_THREADS`
 
-<AddedInVersion version="23.05.0-edge" />
+<AddedInVersion version="23.10.0" />
 
 Enable the use of virtual threads in the Nextflow runtime (default: `false`)
 
@@ -142,7 +140,7 @@ Defines the default process executor, e.g. `sge`
 
 ##### `NXF_FILE_ROOT`
 
-<AddedInVersion version="23.05.0-edge" />
+<AddedInVersion version="23.10.0" />
 
 The file storage path against which relative file paths are resolved.
 
@@ -174,11 +172,11 @@ The filename of the Nextflow log (default: `.nextflow.log`).
 
 When `true` prevents Nextflow from automatically downloading and updating remote project repositories (default: `false`).
 
-<ChangedInVersion version="23.09.0-edge">
+<ChangedInVersion version="23.10.0">
 This option also disables the automatic version check (see `NXF_DISABLE_CHECK_LATEST`).
 </ChangedInVersion>
 
-<ChangedInVersion version="23.11.0-edge">
+<ChangedInVersion version="24.04.0">
 This option also prevents plugins from being downloaded. Plugin versions must be specified in offline mode, or else Nextflow will fail.
 </ChangedInVersion>
 
@@ -214,7 +212,7 @@ The path where the plugin archives are loaded and stored (default: `$NXF_HOME/pl
 
 ##### `NXF_PLUGINS_REGISTRY_URL`
 
-<AddedInVersion version="25.08.0-edge" />
+<AddedInVersion version="25.10.0" />
 
 Specifies the URL of the plugin registry used to download and resolve plugins. This allows using custom or private plugin registries instead of the default public registry.
 
@@ -232,31 +230,31 @@ Defines the default behavior of `publishDir.failOnError` setting. See [publishDi
 
 ##### `NXF_RETRY_POLICY_DELAY`
 
-<AddedInVersion version="25.06.0-edge" />
+<AddedInVersion version="25.10.0" />
 
 Delay used for HTTP retryable operations (default: `350ms`).
 
 ##### `NXF_RETRY_POLICY_JITTER`
 
-<AddedInVersion version="25.06.0-edge" />
+<AddedInVersion version="25.10.0" />
 
 Jitter value used for HTTP retryable operations (default: `0.25`).
 
 ##### `NXF_RETRY_POLICY_MAX_ATTEMPTS`
 
-<AddedInVersion version="25.06.0-edge" />
+<AddedInVersion version="25.10.0" />
 
 Max number of attempts used for HTTP retryable operations (default: `5`).
 
 ##### `NXF_RETRY_POLICY_MAX_DELAY`
 
-<AddedInVersion version="25.06.0-edge" />
+<AddedInVersion version="25.10.0" />
 
 Max delay used for HTTP retryable operations (default: `90s`).
 
 ##### `NXF_RETRY_POLICY_MULTIPLIER`
 
-<AddedInVersion version="25.08.0-edge" />
+<AddedInVersion version="25.10.0" />
 
 Delay multiplier used for HTTP retryable operations (default: `2.0`).
 
@@ -278,7 +276,7 @@ Directory where Spack environments are stored. When using a computing cluster it
 
 ##### `NXF_SPACK_ENABLED`
 
-<AddedInVersion version="23.02.0-edge" />
+<AddedInVersion version="23.04.0" />
 
 Enable the use of Spack recipes defined by using the [spack][process-spack] directive. (default: `false`).
 
@@ -312,7 +310,7 @@ Directory where working files are stored (usually your *scratch* directory)
 
 ##### `NXF_WRAPPER_STAGE_FILE_THRESHOLD`
 
-<AddedInVersion version="23.05.0-edge" />
+<AddedInVersion version="23.10.0" />
 
 Enables writing large staging scripts to a separate `.command.stage` file. The value defines the minimum size of the `.command.run` staging script for it to be written to the separate file (default when enabled: `'1 MB'`).
 

@@ -70,7 +70,7 @@ To assign roles to a managed identity or service principal, see the [Azure docum
 
 ### Managed identities
 
-<AddedInVersion version="24.05.0-edge" />
+<AddedInVersion version="24.10.0" />
 
 
 [Managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) is the recommended authentication method when running Nextflow within Azure. It automatically manages credentials without requiring you to store secrets.
@@ -485,7 +485,7 @@ The `azure.batch.pools.<pool-name>.scaleFormula` setting can be used to specify 
 
 By default, Nextflow creates SAS tokens for specific containers and passes them to tasks to enable file operations with Azure Storage. SAS tokens expire after a set period of time. The expiration time is 48 hours by default and can be configured using `azure.storage.tokenDuration` in your configuration.
 
-<AddedInVersion version="25.05.0-edge" />
+<AddedInVersion version="25.10.0" />
 
 :::warning
 Only available when using [Fusion filesystem](./fusion.mdx).
