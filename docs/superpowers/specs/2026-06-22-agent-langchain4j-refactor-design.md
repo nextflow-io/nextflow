@@ -17,9 +17,11 @@ artifact), in three independently-shippable milestones:
 2. **Goal-directed loop** — one optional `goal` directive folded into the system
    message to steer the existing multi-turn loop toward a declared objective.
 3. **Target refactor** — a per-invocation **work-dir sandbox**, a generic
-   **`filesystem`** tool (read/write/list/exists), and a single generic
-   **`module_run`** tool whose available modules are inferred from the script's
-   `include` statements. The `tools` directive lists **generic capabilities only**.
+   **`filesystem`** tool (read/write/list/exists), and a **`module_run`** capability
+   that exposes the script's `include`d modules as agent tools — **one enforced tool
+   per module** (each module advertised as its own tool whose function `parameters`
+   schema IS that module's flattened input schema). The `tools` directive lists
+   **generic capabilities only**.
 
 The agent stays a process-shaped primitive (one record in → one record out);
 Nextflow channels/workflows remain the multi-agent composition layer. We do **not**
@@ -53,11 +55,14 @@ of the agent model, the dataflow tool bridge, or the I/O binding rules.
 3. **`tools` lists generic capabilities only** (`'filesystem'`, `'module_run'`;
    `'bash'` deferred). The **specific modules are inferred solely from the script's
    `include` statements** — never enumerated in `tools`. Enabling `'module_run'`
-   exposes **one** generic `module_run(module, args)` tool whose `module` enum is the
-   set of `include`d modules.
+   advertises **one tool per included module** — each module is its own
+   langchain4j/OpenAI tool whose function `parameters` schema IS that module's
+   flattened input schema (required fields, `additionalProperties:false`, the nf-core
+   `meta.id` convention). This is what lets OpenAI function-calling **enforce** field
+   names/required-ness against the module schema; see the design note below.
 4. **Module execution stays native**, via the existing `ModuleToolBridge` (run a
-   process as a real dataflow node) and its binding rules — now invoked behind the
-   single `module_run` tool. `bash` and a `nextflow run` CLI tool are **deferred**.
+   process as a real dataflow node) and its binding rules — now invoked behind each
+   per-module tool. `bash` and a `nextflow run` CLI tool are **deferred**.
 
 ## Architecture after the refactor
 
@@ -79,7 +84,7 @@ of the agent model, the dataflow tool bridge, or the I/O binding rules.
   `ToolExecutor`s, and runs the `AiServices` proxy.
 
 The plugin sees a **uniform descriptor list and one dispatch callback** and cannot
-tell `module_run` from `filesystem` — all `type` discrimination lives in core's
+tell a module tool from `filesystem` — all routing (by tool name) lives in core's
 `ModuleToolBridge.call()`.
 
 ### Where AiServices sits
@@ -101,26 +106,50 @@ documented hard invariant with a test asserting tools execute on the calling thr
 Module tools are wired into the dataflow graph as operators **before network
 ignition** (`AgentDef.createToolBridge()` runs in the workflow body; post-fire node
 creation deadlocks). The **full module set must be known at agent-construction time**
-— so when `module_run` is enabled, **every `include`d module is pre-wired** as a
-candidate (the LLM may select any of them; `module_run` dispatch routes to the chosen
-one by name). No mid-loop langchain4j `ToolProvider`. The `filesystem` capability adds
-no dataflow node.
+— so when `module_run` is enabled, **every `include`d module is pre-wired** and
+advertised as its **own** tool (the LLM may call any of them by name; dispatch in
+`ModuleToolBridge.call(toolName, argsJson)` routes to the matching pre-wired module).
+No mid-loop langchain4j `ToolProvider`. The `filesystem` capability adds no dataflow
+node.
 
 ### Tool taxonomy
 
-The LLM is shown at most two tools, gated by the `tools` directive:
+The LLM is shown the `filesystem` tool (when enabled) plus **one tool per `include`d
+module** (when `module_run` is enabled), gated by the `tools` directive:
 
 | | `module_run` capability | `filesystem` capability |
 |---|---|---|
 | DSL | `tools 'module_run'` | `tools 'filesystem'` |
-| LLM-facing tool | one `module_run(module, args)`; `module` is an **enum of the script's `include`d module names**; `args` is a generic object | one `filesystem(path, operation, content?)` |
-| Per-module hints | the tool **description** aggregates each available module's one-line summary + input fields (reusing `ModuleMetadataToolSchema`/`ModuleSpecToolSchema`) | n/a |
-| `ToolDescriptor.type` | `'module_run'` | `'filesystem'` |
-| Execution | parse `{module, args}` → look up the pre-wired bridge for `module` → marshal `args` via the **existing binding rules** (`ProcessEntryHandler.getProcessArguments`) → run as a dataflow node → serialize outputs to JSON | read/write/list/exists confined by `SandboxGuard` to the agent work dir (+ module output dirs for reads) |
-| Lives in | core `ModuleToolBridge.callModuleRun` (routes by module name) | core `ModuleToolBridge.callFilesystem` |
+| LLM-facing tool(s) | **one tool per included module** — the tool name IS the module/process name (e.g. `SKESA`, `ASSEMBLYSCAN`); its function `parameters` schema IS that module's **flattened input schema** (required fields, `additionalProperties:false`, the nf-core `meta.id` convention) | one `filesystem(path, operation, content?)` |
+| Per-module schema | each module's input schema is the **tool's `parameters`** (sourced from the registry `ModuleMetadata` when available, else the sibling `meta.yml` `ModuleSpec`), so OpenAI **generates/validates** the call against it — the model cannot omit or rename fields | n/a |
+| `ToolDescriptor.type` | per-module descriptor (one per wired module) | `'filesystem'` |
+| Execution | the called tool name resolves the pre-wired bridge for that module → marshal args via the **existing binding rules** (`ProcessEntryHandler.getProcessArguments`) → run as a dataflow node → serialize outputs to JSON | read/write/list/exists confined by `SandboxGuard` to the agent work dir (+ module output dirs for reads) |
+| Lives in | core `ModuleToolBridge.call` (routes by tool/module name to `callScalar`/`callSpec`) | core `ModuleToolBridge.callFilesystem` |
 
-Bad `module` names or malformed `args` are returned to the LLM as `{"error":…}` tool
+Unknown tool names or malformed args are returned to the LLM as `{"error":…}` tool
 results (the existing dispatch-level-error mechanism), so it can recover and retry.
+
+### Design note: per-module tools vs single `module_run`
+
+The earlier draft of this milestone advertised **one aggregate** `module_run(module,
+args)` tool (a `module` enum + a generic `args` object). The implemented design
+instead advertises **one tool per included module**. The rationale:
+
+- A single `module_run` tool must use a generic `args:{type:object,
+  additionalProperties:true}`; OpenAI function-calling **cannot enforce field names
+  inside a free object**, so the per-module schema was demoted to description prose.
+  In practice the model **hallucinated input names** (it sent `reads` though every
+  metadata source — the process `path(fastq)`, the `meta.yml`, and the registry —
+  names the input `fastq`), and the marshaller silently defaulted the missing
+  required path to `[]` → the module ran with empty input and failed.
+- The per-module approach puts each module's schema in the tool's function
+  `parameters`, so OpenAI **generates/validates** the call against it (required
+  `fastq`, `additionalProperties:false`) — the model cannot omit/rename fields. That
+  enforcement is the reliability mechanism and is **only achievable with one tool per
+  module**.
+- **Trade accepted:** more tools advertised (one per included module) vs one
+  aggregate. For typical agents (e.g. `isolate-triage` = 3 modules) this is
+  negligible.
 
 ---
 
@@ -277,9 +306,12 @@ as advisory. The agent operator thread is held for the whole (now-longer) conver
 - A generic **`filesystem`** tool — read/write/list/exists — confined to the sandbox
   (writes) and the sandbox + module output dirs (reads), enforced by a new
   `SandboxGuard`.
-- A single generic **`module_run`** tool: `module_run(module, args)`, where `module`
-  is an enum of the script's `include`d modules and `args` is marshalled per the
-  chosen module's existing binding rules.
+- A **`module_run`** capability that advertises **one enforced tool per `include`d
+  module**: the tool name is the module/process name and its function `parameters`
+  schema IS that module's flattened input schema; args are marshalled per that
+  module's existing binding rules. (See the *Design note: per-module tools vs single
+  `module_run`* in the Architecture section for why this replaced the earlier
+  aggregate `module_run(module, args)` tool.)
 - `tools` becomes a **capability list** (`'filesystem'`, `'module_run'`). The module
   set is inferred from `include` statements — no module enumeration in `tools`, no
   symbol resolution.
@@ -298,7 +330,8 @@ agent triage {
     output: report: String
     prompt: "Process isolate ${isolate.sample_id}."
 }
-// The LLM sees: module_run(module: enum[skesa, assemblyscan], args), filesystem(...)
+// The LLM sees one tool per included module: SKESA(meta, fastq), ASSEMBLYSCAN(meta, fasta), filesystem(...)
+// Each module tool's parameters schema IS that module's flattened input schema (enforced by OpenAI).
 ```
 
 ### Must-fix items (gating this milestone)
@@ -321,8 +354,10 @@ agent triage {
    capability list; update `@Description` to document the reserved capabilities. Add
    validation that each entry is a known capability. No grammar / visitor / lowering
    change.
-2. **`modules/nextflow/.../agent/ToolDescriptor.groovy`** — add `String type`
-   (default `'module_run'` for module tools / set per generic tool).
+2. **`modules/nextflow/.../agent/ToolDescriptor.groovy`** — no `type` field is needed;
+   `ModuleToolBridge.call()` routes by tool name (the `filesystem` tool name vs a
+   pre-wired module name). (The earlier draft added a `type` discriminator for the
+   aggregate `module_run`; per-module tools make it unnecessary.)
 3. **`modules/nextflow/.../agent/AgentRunnerRequest.groovy`** — append
    `Path agentWorkDir` (in-JVM only, never serialized; like `dispatch`). Construction
    is already named-args after Milestone 2.
@@ -336,48 +371,55 @@ agent triage {
    returning a `ToolDescriptor` of `type='filesystem'` with schema
    `{path:string, operation:enum[read,write,list,exists], content:string?}`. The work
    dir is bound by the dispatcher per call, never supplied by the LLM.
-6. **New `modules/nextflow/.../agent/ModuleRunToolSchema.groovy`** — static factory
-   building the single `module_run` `ToolDescriptor` (`type='module_run'`): `module`
-   is a string **enum of the included module names**; `args` is a generic object. The
-   description aggregates, per available module, its one-line summary + input fields
-   (reuse `ModuleMetadataToolSchema`/`ModuleSpecToolSchema` to render compact text, not
-   per-tool JSON schemas).
+6. **Per-module descriptors (no aggregate schema class).** Each `include`d module is
+   wired as its **own** tool whose `ToolDescriptor.inputSchema` IS that module's
+   flattened input schema, sourced from `ModuleMetadataToolSchema.inputSchema(...)`
+   (registry metadata, with the nf-core `meta.id` convention) when available, else
+   `ModuleSpecToolSchema.inputSchema(...)` (the sibling `meta.yml` spec). There is
+   **no** `ModuleRunToolSchema` class and **no** aggregate `module_run(module, args)`
+   descriptor: the per-module schema is the enforcement mechanism (see the design
+   note), so it must be the tool's function `parameters`, not description prose.
 7. **`modules/nextflow/.../script/AgentDef.groovy`** —
    - **Module discovery:** when `'module_run'` is enabled, collect the candidate
      modules from the script's `include` statements via `ScriptMeta` (the resolved
      included `ProcessDef`s / module references), instead of from `tools` strings.
    - **Pre-wire** each candidate module's bridge before ignition (as today), keyed by
-     module name; build the `module_run` descriptor with the name enum.
+     module name; each wired module contributes its **own** `ToolDescriptor` (its
+     flattened input schema) — no aggregate descriptor is built.
    - When `'filesystem'` is enabled, register the `FilesystemToolSchema` descriptor.
    - In `run()` allocate the per-invocation sandbox under an `agent/`-scoped bucket of
      `session.workDir` (reuse the hashed `work/xx/yy` scheme, keyed by `[name, idx,
      inputJson]`), `mkdirs()`, and pass it into the **per-call dispatch context**.
    - `afterStop`: delete the sandbox only when `session.config.cleanup` is set.
 8. **`modules/nextflow/.../agent/ModuleToolBridge.groovy`** — keep `call()`
-   `synchronized`. Route on tool `type`:
-   - `module_run` → new `callModuleRun(argsJson)`: parse `{module, args}`, resolve the
-     pre-wired bridge for `module` (return `{"error":…}` if unknown), marshal `args`
-     via `ProcessEntryHandler.getProcessArguments` (the existing rules), run, serialize
-     outputs to JSON. Collect that call's serialized output file parents into the
-     **per-request** read whitelist.
-   - `filesystem` → new `callFilesystem`: read the **per-call context** (sandbox +
-     module-output read whitelist), return the same `{...}`/`{"error":…}` JSON contract.
-9. **Plugin — no change.** `ModuleToolAdapter` maps any `ToolDescriptor` Map (including
-   the `module_run` enum and `filesystem` schema); `LangChainAgentRunner` builds one
-   tool map with both capabilities side by side.
+   `synchronized`. Route by tool name:
+   - the `filesystem` tool name → `callFilesystem`: read the **per-call context**
+     (sandbox + module-output read whitelist), return the `{...}`/`{"error":…}` JSON
+     contract.
+   - any other tool name → look up the pre-wired module by name (return `{"error":…}`
+     if unknown), marshal args via `ProcessEntryHandler.getProcessArguments` (the
+     existing rules — `callSpec`/`callScalar`), run, serialize outputs to JSON. After a
+     non-error result, collect that call's serialized output file parents into the
+     **per-request** read whitelist (`whitelistOutputDirs`). There is **no**
+     `callModuleRun` and **no** `{module, args}` unwrapping: the called tool name is the
+     module name and the args ARE the module's flattened inputs.
+9. **Plugin — no change.** `ModuleToolAdapter` maps any `ToolDescriptor` Map (each
+   per-module flattened input schema and the `filesystem` schema); `LangChainAgentRunner`
+   builds one tool map with every module tool plus `filesystem` side by side.
 
 ### Check-in / exit criteria
 - Unit (no network): `SandboxGuardTest` (accept sandbox + module-output paths; reject
   `..`, absolute-outside, **symlink escape**); `ModuleToolBridgeGenericTest`
   (`filesystem` read/write/list/exists in an injected temp dir; `{"error":…}` on
-  out-of-sandbox; `module_run` routes to the right module, marshals args via the
-  existing rules, serializes outputs; `{"error":…}` on unknown module / malformed
-  args); `AgentDefToolResolutionTest` (`tools 'module_run','filesystem'` registers both
-  capabilities; `module` enum == the included module names; unknown capability errors).
+  out-of-sandbox; a per-module tool call routes to the right module, marshals args via
+  the existing rules, serializes outputs; `{"error":…}` on unknown tool name /
+  malformed args); `AgentDefToolResolutionTest` (`tools 'module_run','filesystem'`
+  registers the `filesystem` tool plus one descriptor per included module, each with
+  its flattened input schema; unknown capability errors).
 - Regression: existing examples/tests are **migrated** from `tools 'nf-core/skesa'`
   (module strings) to `include { skesa } …` + `tools 'module_run'`; the migrated
   examples pass.
-- **Gated real-LLM run**: the `triage` agent calls `module_run(module:'skesa', …)`,
+- **Gated real-LLM run**: the `triage` agent calls the per-module `SKESA(…)` tool,
   reads a module output via `filesystem`, writes a summary file in its sandbox, the
   sandbox exists then is cleaned per `cleanup`, and **no record sees another record's
   sandbox or module-output dir** (isolation assertion).
@@ -429,8 +471,10 @@ lands first; append new fields; pin field order with a unit test.
 
 - `tools` = generic capabilities only (`'filesystem'`, `'module_run'`); unknown
   capability → error.
-- Modules inferred from `include` statements; `module_run` is a single tool with a
-  `module` enum + generic `args`; per-module hints in the tool description.
+- Modules inferred from `include` statements; `module_run` advertises **one enforced
+  tool per included module** (the tool's `parameters` schema IS the module's flattened
+  input schema), NOT a single aggregate `module_run(module, args)` tool — see the
+  *Design note: per-module tools vs single `module_run`*.
 - The legacy module-reference string forms in `tools` are removed; examples migrated.
 - `maxIterations` default **unchanged** under `goal`.
 - `filesystem` is read **and** write (write confined to the agent work dir).
@@ -438,13 +482,12 @@ lands first; append new fields; pin field order with a unit test.
 
 ## Open questions (none blocking)
 
-- Whether in-scope processes (defined in the same script, not `include`d) should also
-  be `module_run` candidates, or strictly includes-only (current default:
-  includes-only; the `tool`/`uppercase` toy example migrates to a module file).
+- The implemented `module_run` discovery enumerates **all in-scope processes**
+  (`ScriptMeta.getProcessNames()` — both locally-defined and `include`d) and wires each
+  as its own tool. Whether to restrict to includes-only remains open; today both are
+  candidates.
 - Final `filesystem` schema details (`write` content size cap; whether `list` returns
   names or stat records).
-- How richly to render per-module hints in the `module_run` description (one-line vs
-  full input-field listing) — a prompt-quality tuning question.
 
 ## Testing strategy (cross-cutting)
 
