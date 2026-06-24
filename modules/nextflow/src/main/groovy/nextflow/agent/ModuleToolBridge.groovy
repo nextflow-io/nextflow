@@ -490,24 +490,39 @@ class ModuleToolBridge implements ToolDispatcher {
                 whitelistOutputDirs(resultParsed)
             return result
         }
-        catch( InterruptedException ie ) {
-            // FATAL: the blocking output pull was interrupted. This happens when the underlying
-            // process task hard-fails (exit ≠ 0) and the session aborts the dataflow network,
-            // interrupting this agent operator thread. The run is being torn down — do NOT swallow
-            // this into a {"error":...} tool result (that would feed the failure back to the model
-            // and loop to maxIterations). Restore the interrupt flag and re-throw as an Error so it
-            // escapes langchain4j's tool-execution try/catch(Exception) and aborts the run cleanly.
-            Thread.currentThread().interrupt()
-            log.debug("Agent tool `${toolName}` interrupted by session abort (underlying task failure) - aborting agent run", ie)
-            throw new AgentToolFatalError("Agent tool `${toolName}` aborted - the underlying process task failed", ie)
-        }
         catch( Exception e ) {
+            // A genuine underlying-task failure / session abort surfaces as an InterruptedException —
+            // which GPars WRAPS in a RuntimeException (e.g. RuntimeException(cause=InterruptedException)
+            // from DataflowStreamReadAdapter.getVal), so a bare `catch(InterruptedException)` misses it.
+            // That case is FATAL: the run is being torn down — do NOT swallow it into a {"error":...}
+            // tool result (that feeds the failure back to the model and loops to maxIterations).
+            // Detect it via the cause chain, restore the interrupt flag, and re-throw as an Error so it
+            // escapes langchain4j's tool-execution catch(Exception) and aborts the run cleanly.
+            if( isInterrupted(e) ) {
+                Thread.currentThread().interrupt()
+                log.debug("Agent tool `${toolName}` aborted by session interrupt (underlying task failure)", e)
+                throw new AgentToolFatalError("Agent tool `${toolName}` aborted - the underlying process task failed", e)
+            }
             // dispatch-level failure (unknown tool / arg parsing / arg marshalling): return it
             // as a tool result so the LLM can recover, rather than letting it abort the loop
             final message = "Agent tool `${toolName}` failed - ${e.message ?: e.toString()}".toString()
             log.warn(message, e)
             return JsonOutput.toJson([error: message])
         }
+    }
+
+    /**
+     * True when {@code t} is, or wraps anywhere in its cause chain, an {@link InterruptedException}.
+     * A failed underlying task makes the session abort and interrupt this operator's blocking output
+     * pull; GPars surfaces that as a {@link RuntimeException} wrapping the {@link InterruptedException}
+     * (e.g. {@code DataflowStreamReadAdapter.getVal}), so a bare {@code instanceof} check misses it.
+     */
+    private static boolean isInterrupted(Throwable t) {
+        for( Throwable c = t; c != null; c = c.getCause() ) {
+            if( c instanceof InterruptedException )
+                return true
+        }
+        return false
     }
 
     /**
