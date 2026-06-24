@@ -29,7 +29,7 @@ This option is not supported for remote work directories, such as Amazon S3, Goo
 
 ##### `outputDir`
 
-<AddedInVersion version="24.10.0" />
+<AddedInVersion version="24.10" />
 
 The pipeline output directory. Equivalent to the `-output-dir` option of the `run` command.
 
@@ -123,7 +123,7 @@ Pull the Apptainer image with http protocol (default`false`).
 
 ##### `apptainer.ociAutoPull`
 
-<AddedInVersion version="24.04.0" />
+<AddedInVersion version="24.04" />
 
 When enabled, OCI (and Docker) container images are pulled and converted to the SIF format by the Apptainer run command, instead of Nextflow (default`false`).
 
@@ -179,7 +179,7 @@ The AWS Batch [Execution Role](https://docs.aws.amazon.com/batch/latest/userguid
 
 ##### `aws.batch.forceGlacierTransfer`
 
-<AddedInVersion version="26.04.0" />
+<AddedInVersion version="26.04" />
 
 When `true`, add the `--force-glacier-transfer` flag to AWS CLI S3 download commands (default`false`).
 
@@ -199,7 +199,7 @@ Max parallel upload/download transfer operations *per job* (default`4`).
 
 ##### `aws.batch.maxSpotAttempts`
 
-<ChangedInVersion version="24.10.0">
+<ChangedInVersion version="24.10">
 The default value was changed from `5` to `0`.
 </ChangedInVersion>
 
@@ -227,7 +227,7 @@ The share identifier for all tasks when using [fair-share scheduling](https://aw
 
 ##### `aws.batch.terminateUnschedulableJobs`
 
-<AddedInVersion version="25.04.0" />
+<AddedInVersion version="25.04" />
 
 When `true`, jobs that cannot be scheduled due to lack of resources or misconfiguration are terminated and handled as task failures (default`false`).
 
@@ -261,19 +261,19 @@ The maximum number of retry attempts for failed retryable requests (default`-1`)
 
 ##### `aws.client.minimumPartSize`
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 The minimum part size used for multipart S3 transfers (default: `8 MB`).
 
 ##### `aws.client.multipartThreshold`
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 The object size threshold used for multipart S3 transfers (default: same as `aws.cllient.minimumPartSize`).
 
 ##### `aws.client.protocol`
 
-<DeprecatedInVersion version="25.10.0">
+<DeprecatedInVersion version="25.10">
 This option is no longer supported.
 </DeprecatedInVersion>
 
@@ -293,7 +293,7 @@ The port to use when connecting through a proxy.
 
 ##### `aws.client.proxyScheme`
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 The protocol scheme to use when connecting through a proxy. Can be `http` or `https` (default`'http'`).
 
@@ -303,7 +303,7 @@ The user name to use when connecting through a proxy.
 
 ##### `aws.client.requesterPays`
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 Use [Requester Pays](https://docs.aws.amazon.com/AmazonS3/latest/userguide/RequesterPaysBuckets.html) for S3 buckets (default`false`).
 
@@ -317,7 +317,7 @@ Use the path-based access model to access objects in S3-compatible storage syste
 
 ##### `aws.client.signerOverride`
 
-<DeprecatedInVersion version="25.10.0">
+<DeprecatedInVersion version="25.10">
 This option is no longer supported.
 </DeprecatedInVersion>
 
@@ -325,7 +325,7 @@ The name of the signature algorithm to use for signing requests made by the clie
 
 ##### `aws.client.socketSendBufferSizeHint`
 
-<DeprecatedInVersion version="25.10.0">
+<DeprecatedInVersion version="25.10">
 This option is no longer supported.
 </DeprecatedInVersion>
 
@@ -333,7 +333,7 @@ The Size hint (in bytes) for the low level TCP send buffer (default`0`).
 
 ##### `aws.client.socketRecvBufferSizeHint`
 
-<DeprecatedInVersion version="25.10.0">
+<DeprecatedInVersion version="25.10">
 This option is no longer supported.
 </DeprecatedInVersion>
 
@@ -341,7 +341,7 @@ The Size hint (in bytes) for the low level TCP receive buffer (default`0`).
 
 ##### `aws.client.socketTimeout`
 
-<ChangedInVersion version="25.10.0">
+<ChangedInVersion version="25.10">
 The default socket timeout changed from `50000` to `30000`.
 </ChangedInVersion>
 
@@ -361,13 +361,13 @@ The AWS KMS key Id to be used to encrypt files stored in the target S3 bucket.
 
 ##### `aws.client.targetThroughputInGbps`
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 The target network throughput (in Gbps) used for S3 uploads and downloads (default`10`).
 
 ##### `aws.client.userAgent`
 
-<DeprecatedInVersion version="25.10.0">
+<DeprecatedInVersion version="25.10">
 This option is no longer supported.
 </DeprecatedInVersion>
 
@@ -375,7 +375,7 @@ The HTTP user agent header passed with all HTTP requests.
 
 ##### `aws.client.uploadChunkSize`
 
-<DeprecatedInVersion version="25.10.0">
+<DeprecatedInVersion version="25.10">
 This option is no longer supported.
 </DeprecatedInVersion>
 
@@ -383,7 +383,7 @@ The size of a single part in a multipart upload (default`100 MB`).
 
 ##### `aws.client.uploadMaxAttempts`
 
-<DeprecatedInVersion version="25.10.0">
+<DeprecatedInVersion version="25.10">
 This option is no longer supported.
 </DeprecatedInVersion>
 
@@ -391,7 +391,7 @@ The maximum number of upload attempts after which a multipart upload returns an 
 
 ##### `aws.client.uploadMaxThreads`
 
-<DeprecatedInVersion version="25.10.0">
+<DeprecatedInVersion version="25.10">
 This option is no longer supported.
 </DeprecatedInVersion>
 
@@ -399,7 +399,7 @@ The maximum number of threads used for multipart upload (default`10`).
 
 ##### `aws.client.uploadRetrySleep`
 
-<DeprecatedInVersion version="25.10.0">
+<DeprecatedInVersion version="25.10">
 This option is no longer supported.
 </DeprecatedInVersion>
 
@@ -471,7 +471,7 @@ The `azcopy` tool is not installed.
 
 ##### `azure.batch.deleteJobsOnCompletion`
 
-<ChangedInVersion version="23.10.0">
+<ChangedInVersion version="23.10">
 Default value was changed from `true` to `false`.
 </ChangedInVersion>
 
@@ -483,7 +483,7 @@ Delete all compute node pools when the workflow completes (default`false`).
 
 ##### `azure.batch.deleteTasksOnCompletion`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 Delete each task when it completes (default`true`).
 Although this setting is enabled by default, failed tasks will not be deleted unless it is explicitly enabled. This way, the default behavior is that successful tasks are deleted while failed tasks are preserved for debugging purposes.
@@ -494,7 +494,7 @@ The batch service endpoint e.g. `https://nfbatch1.westeurope.batch.azure.com`.
 
 ##### `azure.batch.jobMaxWallClockTime`
 
-<AddedInVersion version="25.04.0" />
+<AddedInVersion version="25.04" />
 
 The maximum elapsed time that jobs may run, measured from the time they are created (default`30d`).
 If jobs do not complete within this time limit, the Batch service terminates them and any tasks still running.
@@ -505,7 +505,7 @@ The name of the batch service region, e.g. `westeurope` or `eastus2`. Not needed
 
 ##### `azure.batch.poolIdentityClientId`
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 The client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) that is available on all Azure Batch node pools. This identity is used by Fusion to authenticate to Azure storage. If set to `'auto'`, Fusion will use the first available managed identity.
 
@@ -567,19 +567,19 @@ The ID of the Compute Node agent SKU which the pool identified with `<name>` sup
 
 ##### `azure.batch.pools.<name>.startTask.privileged`
 
-<AddedInVersion version="25.04.0" />
+<AddedInVersion version="25.04" />
 
 Enable the `startTask` to run with elevated access (default`false`).
 
 ##### `azure.batch.pools.<name>.startTask.script`
 
-<AddedInVersion version="25.04.0" />
+<AddedInVersion version="25.04" />
 
 The `startTask` that is executed as the node joins the Azure Batch node pool.
 
 ##### `azure.batch.pools.<name>.virtualNetwork`
 
-<AddedInVersion version="23.04.0" />
+<AddedInVersion version="23.04" />
 
 The subnet ID of a virtual network in which to create the pool.
 
@@ -593,7 +593,7 @@ The virtual machine type used by the pool identified with `<name>`.
 
 ##### `azure.batch.terminateJobsOnCompletion`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 When the workflow completes, set all jobs to terminate on task completion (default`true`).
 
@@ -712,7 +712,7 @@ The path where Conda environments are stored. It should be accessible from all c
 
 ##### `conda.channels`
 
-<ChangedInVersion version="26.04.0">
+<ChangedInVersion version="26.04">
 The default was changed to `'conda-forge,bioconda'`.
 </ChangedInVersion>
 
@@ -746,7 +746,7 @@ The following settings are available:
 
 ##### `dag.depth`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 *Supported by the HTML and Mermaid renderers.*
 
@@ -754,7 +754,7 @@ Controls the maximum depth at which to render sub-workflows (defaultno limit).
 
 ##### `dag.direction`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 *Supported by the Graphviz, DOT, HTML and Mermaid renderers.*
 
@@ -810,7 +810,7 @@ When `true` overwrites any existing DAG file with the same name (default`false`)
 
 ##### `dag.verbose`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 *Only supported by the HTML and Mermaid renderers.*
 
@@ -852,7 +852,7 @@ The registry from where Docker images are pulled. It should be only used to spec
 
 ##### `docker.registryOverride`
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 When `true`, forces the override of the registry name in fully qualified container image names with the registry specified by `docker.registry` (default`false`).
 This setting allows you to redirect container image pulls from their original registry to a different registry, such as a private mirror or proxy.
@@ -913,7 +913,7 @@ The following settings are available:
 
 ##### `executor.account`
 
-<AddedInVersion version="24.04.0" />
+<AddedInVersion version="24.04" />
 
 *Used only by the [SLURM][slurm-executor], [LSF][lsf-executor], [PBS/Torque][pbs-executor] and [PBS Pro][pbspro-executor] executors.*
 
@@ -963,7 +963,7 @@ The name of the executor to be used (default`local`).
 
 ##### `executor.perCpuMemAllocation`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 *Used only by the [SLURM][slurm-executor] executor.*
 
@@ -971,7 +971,7 @@ When `true`, memory allocations for SLURM jobs are specified as `--mem-per-cpu <
 
 ##### `executor.onlyJobState`
 
-<AddedInVersion version="26.04.0" />
+<AddedInVersion version="26.04" />
 
 *Used only by the [SLURM][slurm-executor] executor.*
 
@@ -997,7 +997,7 @@ Determines how often to check for process termination. Default varies for each e
 
 ##### `executor.queueGlobalStatus`
 
-<AddedInVersion version="23.04.0" />
+<AddedInVersion version="23.04" />
 
 Determines how job status is retrieved. When `false` only the queue associated with the job execution is queried. When `true` the job status is queried globally i.e. irrespective of the submission queue (default`false`).
 
@@ -1041,7 +1041,7 @@ Max delay when retrying failed job submissions (default`30s`).
 
 ##### `executor.retry.reason`
 
-<ChangedInVersion version="25.10.0">
+<ChangedInVersion version="25.10">
 This option was renamed from `executor.submit.retry.reason` to `executor.retry.reason`.
 </ChangedInVersion>
 
@@ -1095,7 +1095,7 @@ The following settings are available:
 
 ##### `fusion.cacheSize`
 
-<AddedInVersion version="24.04.0" />
+<AddedInVersion version="24.04" />
 
 The maximum size of the local cache used by the Fusion client.
 
@@ -1135,14 +1135,14 @@ The output location of the Fusion log.
 
 ##### `fusion.privileged`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 Enable privileged containers for Fusion (default`true`).
 Non-privileged use is supported only on Kubernetes with the [k8s-fuse-plugin](https://github.com/nextflow-io/k8s-fuse-plugin) or a similar FUSE device plugin.
 
 ##### `fusion.snapshots`
 
-<AddedInVersion version="25.04.0" />
+<AddedInVersion version="25.04" />
 
 *Currently only supported for AWS Batch*
 
@@ -1166,13 +1166,13 @@ Use the given Google Cloud project ID as the billing project for storage access 
 
 ##### `google.httpConnectTimeout`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 The HTTP connection timeout for Cloud Storage API requests (default`'60s'`).
 
 ##### `google.httpReadTimeout`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 The HTTP read timeout for Cloud Storage API requests (default`'60s'`).
 
@@ -1190,14 +1190,14 @@ The set of [allowed locations](https://cloud.google.com/batch/docs/reference/res
 
 ##### `google.batch.autoRetryExitCodes`
 
-<AddedInVersion version="24.10.0" />
+<AddedInVersion version="24.10" />
 
 The list of exit codes that should be automatically retried by Google Batch when `google.batch.maxSpotAttempts` is greater than 0 (default`[50001]`).
 See [Google Batch documentation](https://cloud.google.com/batch/docs/troubleshooting#reserved-exit-codes) for the complete list of retryable exit codes.
 
 ##### `google.batch.bootDiskImage`
 
-<AddedInVersion version="24.10.0" />
+<AddedInVersion version="24.10" />
 
 The image URI of the virtual machine boot disk, e.g `batch-debian` (defaultnone).
 See [Google documentation](https://cloud.google.com/batch/docs/vm-os-environment-overview#vm-os-image-options) for details.
@@ -1212,7 +1212,7 @@ The [minimum CPU Platform](https://cloud.google.com/compute/docs/instances/speci
 
 ##### `google.batch.gcsfuseOptions`
 
-<AddedInVersion version="25.04.0" />
+<AddedInVersion version="25.04" />
 
 List of custom mount options for `gcsfuse` (default`['-o rw', '-implicit-dirs']`).
 
@@ -1229,7 +1229,7 @@ The default Container-Optimized OS (`batch-cos`) is not compatible with the Ops 
 
 ##### `google.batch.logsPath`
 
-<AddedInVersion version="26.04.0" />
+<AddedInVersion version="26.04" />
 
 The Google Cloud Storage path where job logs should be stored, e.g. `gs://my-logs-bucket/logs`.
 When specified, Google Batch will write job logs to this location instead of [Cloud Logging](https://cloud.google.com/logging/docs). The bucket must be accessible and writable by the service account.
@@ -1237,7 +1237,7 @@ When specified, Google Batch will write job logs to this location instead of [Cl
 ##### `google.batch.maxSpotAttempts`
 
 
-<AddedInVersion version="24.10.0">
+<AddedInVersion version="24.10">
 The default value was changed from `5` to `0`.
 </AddedInVersion>
 
@@ -1285,19 +1285,19 @@ When this option is enabled, jobs can only load Docker images from Google Contai
 
 ##### `google.storage.retryPolicy.maxAttempts`
 
-<AddedInVersion version="24.10.0" />
+<AddedInVersion version="24.10" />
 
 Max attempts when retrying failed API requests to Cloud Storage (default`10`).
 
 ##### `google.storage.retryPolicy.maxDelay`
 
-<AddedInVersion version="24.10.0" />
+<AddedInVersion version="24.10" />
 
 Max delay when retrying failed API requests to Cloud Storage (default`'90s'`).
 
 ##### `google.storage.retryPolicy.multiplier`
 
-<AddedInVersion version="24.10.0" />
+<AddedInVersion version="24.10" />
 
 Delay multiplier when retrying failed API requests to Cloud Storage (default`2.0`).
 
@@ -1336,7 +1336,7 @@ Available options:
 
 ##### `k8s.clientRefreshInterval`
 
-<AddedInVersion version="26.04.0" />
+<AddedInVersion version="26.04" />
 
 The interval after which the Kubernetes client configuration is refreshed (default: `50m`).
 
@@ -1352,7 +1352,7 @@ The Kubernetes [configuration context](https://kubernetes.io/docs/tasks/access-a
 
 ##### `k8s.cpuLimits`
 
-<AddedInVersion version="24.04.0" />
+<AddedInVersion version="24.04" />
 
 When `true`, set both the pod CPUs `request` and `limit` to the value specified by the `cpus` directive, otherwise set only the `request` (default`false`).
 This setting is useful when a K8s cluster requires a CPU limit to be defined through a [LimitRange](https://kubernetes.io/docs/concepts/policy/limit-range/).
@@ -1363,7 +1363,7 @@ Include the hostname of each task in the execution trace (default`false`).
 
 ##### `k8s.fuseDevicePlugin`
 
-<AddedInVersion version="24.04.0" />
+<AddedInVersion version="24.04" />
 
 The FUSE device plugin to be used when enabling Fusion in unprivileged mode (default`['nextflow.io/fuse'1]`).
 
@@ -1508,7 +1508,7 @@ The following settings are available:
 
 ##### `manifest.author`
 
-<DeprecatedInVersion version="24.10.0">
+<DeprecatedInVersion version="24.10">
 Use `manifest.contributors` instead.
 </DeprecatedInVersion>
 
@@ -1516,7 +1516,7 @@ Project author name (use a comma to separate multiple names).
 
 ##### `manifest.contributors`
 
-<AddedInVersion version="24.10.0" />
+<AddedInVersion version="24.10" />
 
 List of project contributors. Should be a list of maps.
 
@@ -1548,7 +1548,7 @@ The contributor [ORCID](https://orcid.org/) URL.
 
 ##### `manifest.defaultBranch`
 
-<DeprecatedInVersion version="26.04.0">
+<DeprecatedInVersion version="26.04">
 Nextflow can automatically detect the default branch when using a remote pipeline.
 </DeprecatedInVersion>
 
@@ -1622,11 +1622,11 @@ Project version number.
 
 ## `nextflow`
 
-<ChangedInVersion version="24.10.0">
+<ChangedInVersion version="24.10">
 The `nextflow.publish.retryPolicy` settings were moved to `workflow.output.retryPolicy`.
 </ChangedInVersion>
 
-<ChangedInVersion version="25.10.0">
+<ChangedInVersion version="25.10">
 The `workflow.output.retryPolicy` settings were moved to `nextflow.retryPolicy`.
 </ChangedInVersion>
 
@@ -1753,7 +1753,7 @@ Allocates a pseudo-tty (default`false`).
 
 ## `seqera`
 
-<AddedInVersion version="26.04.0" />
+<AddedInVersion version="26.04" />
 
 :::warning
 Preview feature: may change in a future release.
@@ -1895,7 +1895,7 @@ The following settings are available:
 
 ##### `singularity.autoMounts`
 
-<ChangedInVersion version="23.10.0">
+<ChangedInVersion version="23.10">
 Default value was changed from `false` to `true`.
 </ChangedInVersion>
 
@@ -1927,7 +1927,7 @@ Pull the Singularity image with http protocol (default`false`).
 
 ##### `singularity.ociAutoPull`
 
-<AddedInVersion version="24.04.0" />
+<AddedInVersion version="24.04" />
 
 *Requires Singularity 3.11 or later*
 
@@ -1939,7 +1939,7 @@ Leave `ociAutoPull` disabled if willing to build a Singularity native image with
 
 ##### `singularity.ociMode`
 
-<AddedInVersion version="24.04.0" />
+<AddedInVersion version="24.04" />
 
 *Requires Singularity 4 or later*
 
@@ -2035,13 +2035,13 @@ The endpoint of your Seqera Platform instance (default`https://api.cloud.seqera.
 
 ##### `tower.httpConnectTimeout`
 
-<AddedInVersion version="26.04.0" />
+<AddedInVersion version="26.04" />
 
 The HTTP connection timeout for Seqera Platform API requests (default: `'60s'`).
 
 ##### `tower.httpReadTimeout`
 
-<AddedInVersion version="26.04.0" />
+<AddedInVersion version="26.04" />
 
 The HTTP read timeout for Seqera Platform API requests (default: `'60s'`).
 
@@ -2267,7 +2267,7 @@ The Wave service endpoint (default`https://wave.seqera.io`).
 
 ##### `wave.freeze`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 Enable Wave container freezing (default`false`). Wave will provision a non-ephemeral container image that will be pushed to a container repository of your choice.
 The target registry must be specified using the `wave.build.repository` setting. It is also recommended to specify a custom cache repository using `wave.build.cacheRepository`.
@@ -2278,7 +2278,7 @@ The container registry authentication must be managed by the underlying infrastr
 
 ##### `wave.mirror`
 
-<AddedInVersion version="24.10.0" />
+<AddedInVersion version="24.10" />
 
 Enable Wave container mirroring (default`false`). Wave will mirror (i.e., copy) the containers in your pipeline to a container registry of your choice, so that pipeline tasks can pull the containers from this registry instead of the original one.
 
@@ -2303,25 +2303,25 @@ The corresponding credentials must be provided in your Seqera Platform account.
 
 ##### `wave.build.compression.mode`
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 The compression algorithm that should be used when building the container. Allowed values are`gzip`, `estargz` and `zstd` (default`gzip`).
 
 ##### `wave.build.compression.level`
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 Level of compression used when building a container depending the chosen algorithmgzip, estargz (0-9) and zstd (0-22).
 
 ##### `wave.build.compression.force`
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 Forcefully apply compression option to all layers, including already existing layers (default`false`).
 
 ##### `wave.build.conda.baseImage`
 
-<AddedInVersion version="24.04.0" />
+<AddedInVersion version="24.04" />
 
 The base image for the final stage in multi-stage Conda container builds (default`ubuntu:24.04`). This option only applies when using `wave.build.template` set to `conda/micromamba:v2` or `conda/pixi:v1`.
 
@@ -2345,7 +2345,7 @@ The corresponding credentials must be provided in your Seqera Platform account.
 
 ##### `wave.build.template`
 
-<AddedInVersion version="26.04.0" />
+<AddedInVersion version="26.04" />
 
 The build template to use for container builds (default`conda/micromamba:v1`). Supported values:
 
@@ -2362,7 +2362,7 @@ The connection timeout for the Wave HTTP client (default`30s`).
 
 ##### `wave.httpClient.maxRate`
 
-<AddedInVersion version="25.04.0" />
+<AddedInVersion version="25.04" />
 
 The maximum request rate for the Wave HTTP client (default`1/sec`).
 
@@ -2384,7 +2384,7 @@ The max delay when a failing HTTP request is retried (default`90s`).
 
 ##### `wave.scan.allowedLevels`
 
-<AddedInVersion version="24.10.0" />
+<AddedInVersion version="24.10" />
 
 Comma-separated list of allowed vulnerability levels when scanning containers for security vulnerabilities in `required` mode.
 
@@ -2394,7 +2394,7 @@ This option requires `wave.scan.mode = 'required'`.
 
 ##### `wave.scan.mode`
 
-<AddedInVersion version="24.10.0" />
+<AddedInVersion version="24.10" />
 
 Enable Wave container security scanning. Wave will scan the containers in your pipeline for security vulnerabilities.
 
@@ -2414,7 +2414,7 @@ The containers used by your pipeline are scanned for security vulnerabilities. T
 
 ## `workflow`
 
-<AddedInVersion version="24.10.0" />
+<AddedInVersion version="24.10" />
 
 The `workflow` scope provides workflow execution options.
 
@@ -2422,7 +2422,7 @@ The following settings are available:
 
 ##### `workflow.failOnIgnore`
 
-<AddedInVersion version="24.10.0" />
+<AddedInVersion version="24.10" />
 
 When `true`, the pipeline will exit with a non-zero exit code if any failed tasks are ignored using the `ignore` [error strategy][process-error-strategy] (default`false`).
 
@@ -2442,7 +2442,7 @@ Specify the media type, also known as [MIME type](https://developer.mozilla.org/
 
 ##### `workflow.output.copyAttributes`
 
-<AddedInVersion version="25.04.0" />
+<AddedInVersion version="25.04" />
 
 *Currently only supported for local and shared filesystems.*
 

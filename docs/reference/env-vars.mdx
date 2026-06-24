@@ -21,7 +21,7 @@ Defines the path location of the Java VM installation used to run Nextflow.
 
 ##### `NXF_AGENT_MODE`
 
-<AddedInVersion version="26.04.0" />
+<AddedInVersion version="26.04" />
 
 When `true`, enables agent output mode. In this mode, Nextflow replaces the interactive ANSI log with minimal, structured output optimized for AI agents and non-interactive environments.
 The output uses tagged lines such as `[PIPELINE]`, `[PROCESS]`, `[WARN]`, `[ERROR]`, and `[SUCCESS]`/`[FAILED]` written to standard output (default: `false`).
@@ -40,7 +40,7 @@ Defines the directory where downloaded pipeline repositories are stored (default
 
 ##### `NXF_CACHE_DIR`
 
-<AddedInVersion version="24.04.0" />
+<AddedInVersion version="24.04" />
 
 Defines the base cache directory when using the default cache store (default: `"$launchDir/.nextflow"`).
 
@@ -50,7 +50,7 @@ Directory where remote Charliecloud images are stored. When using a computing cl
 
 ##### `NXF_CLOUDCACHE_PATH`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 Defines the base cache path when using the cloud cache store.
 
@@ -68,25 +68,25 @@ Enable the use of Conda recipes defined by using the [conda][process-conda] dire
 
 ##### `NXF_CONTAINER_ENTRYPOINT_OVERRIDE`
 
-<DeprecatedInVersion version="22.10.0" />
+<DeprecatedInVersion version="22.10" />
 
 When `true`, override the container entrypoint with `/bin/bash` (default: `false`).
 
 ##### `NXF_DATE_FORMAT`
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 Defines the format for date and time representations in notifications and reports. Supports custom formats (e.g., `yyyy-MM-dd HH:mm:ss`) or `iso` for ISO 8601 format with timezone (default: `dd-MMM-yyyy HH:mm:ss`).
 
 ##### `NXF_DEFAULT_DSL`
 
-<DeprecatedInVersion version="25.04.0" />
+<DeprecatedInVersion version="25.04" />
 
 Defines the DSL version that should be used in not specified otherwise in the script of config file (default: `2`)
 
 ##### `NXF_DISABLE_CHECK_LATEST`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 Nextflow automatically checks for a newer version of itself unless this option is enabled (default: `false`).
 
@@ -96,25 +96,25 @@ Disables the cancellation of child jobs on workflow execution termination.
 
 ##### `NXF_DISABLE_PARAMS_TYPE_DETECTION`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 Disables the automatic type detection of command line parameters.
 
 ##### `NXF_DISABLE_WAVE_SERVICE`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 Disables the requirement for Wave service when enabling the Fusion file system.
 
 ##### `NXF_ENABLE_AWS_SES`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 Enable to use of AWS SES native API for sending emails in place of legacy SMTP settings (default: `false`)
 
 ##### `NXF_ENABLE_FS_SYNC`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 When enabled the job script will execute Linux `sync` command on job completion. This may be useful to synchronize the job state over shared file systems (default: `false`)
 
@@ -124,13 +124,13 @@ Enable Nextflow secrets features (default: `true`)
 
 ##### `NXF_ENABLE_STRICT`
 
-<DeprecatedInVersion version="26.04.0" />
+<DeprecatedInVersion version="26.04" />
 
 Enable Nextflow *strict* execution mode (default: `false`)
 
 ##### `NXF_ENABLE_VIRTUAL_THREADS`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 Enable the use of virtual threads in the Nextflow runtime (default: `false`)
 
@@ -140,7 +140,7 @@ Defines the default process executor, e.g. `sge`
 
 ##### `NXF_FILE_ROOT`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 The file storage path against which relative file paths are resolved.
 
@@ -148,7 +148,7 @@ For example, with `NXF_FILE_ROOT=/some/root/path`, the use of `file('hello')` wi
 
 ##### `NXF_FUSION_TRACE`
 
-<AddedInVersion version="26.04.0" />
+<AddedInVersion version="26.04" />
 
 When set to `true`, collect task resource metrics (CPU, memory, I/O) from the Fusion trace file (`.fusion/trace.json`) produced in the task work directory, replacing the metrics collected by the default bash command-trace wrapper. Requires Fusion to be enabled. GPU metrics from Fusion are always collected regardless of this setting (default: `false`).
 
@@ -172,11 +172,11 @@ The filename of the Nextflow log (default: `.nextflow.log`).
 
 When `true` prevents Nextflow from automatically downloading and updating remote project repositories (default: `false`).
 
-<ChangedInVersion version="23.10.0">
+<ChangedInVersion version="23.10">
 This option also disables the automatic version check (see `NXF_DISABLE_CHECK_LATEST`).
 </ChangedInVersion>
 
-<ChangedInVersion version="24.04.0">
+<ChangedInVersion version="24.04">
 This option also prevents plugins from being downloaded. Plugin versions must be specified in offline mode, or else Nextflow will fail.
 </ChangedInVersion>
 
@@ -198,7 +198,7 @@ Name of the file where the process PID is saved when Nextflow is launched in bac
 
 ##### `NXF_PLUGINS_ALLOWED`
 
-<AddedInVersion version="25.04.0" />
+<AddedInVersion version="25.04" />
 
 Comma separated list of plugin IDs that can be used in a workflow executions e.g. `NXF_PLUGINS_ALLOWED=nf-amazon,nf-seqera,nf-wave`. Use empty string to disallow all plugins.
 
@@ -212,49 +212,49 @@ The path where the plugin archives are loaded and stored (default: `$NXF_HOME/pl
 
 ##### `NXF_PLUGINS_REGISTRY_URL`
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 Specifies the URL of the plugin registry used to download and resolve plugins. This allows using custom or private plugin registries instead of the default public registry.
 
 ##### `NXF_PLUGINS_TEST_REPOSITORY`
 
-<AddedInVersion version="23.04.0" />
+<AddedInVersion version="23.04" />
 
 Defines a custom plugin registry or plugin release URL for testing plugins outside of the main registry.
 
 ##### `NXF_PUBLISH_FAIL_ON_ERROR`
 
-<AddedInVersion version="24.04.3" />
+<AddedInVersion version="24.04" />
 
 Defines the default behavior of `publishDir.failOnError` setting. See [publishDir][process-publishdir] directive for more information.
 
 ##### `NXF_RETRY_POLICY_DELAY`
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 Delay used for HTTP retryable operations (default: `350ms`).
 
 ##### `NXF_RETRY_POLICY_JITTER`
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 Jitter value used for HTTP retryable operations (default: `0.25`).
 
 ##### `NXF_RETRY_POLICY_MAX_ATTEMPTS`
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 Max number of attempts used for HTTP retryable operations (default: `5`).
 
 ##### `NXF_RETRY_POLICY_MAX_DELAY`
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 Max delay used for HTTP retryable operations (default: `90s`).
 
 ##### `NXF_RETRY_POLICY_MULTIPLIER`
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 Delay multiplier used for HTTP retryable operations (default: `2.0`).
 
@@ -276,17 +276,17 @@ Directory where Spack environments are stored. When using a computing cluster it
 
 ##### `NXF_SPACK_ENABLED`
 
-<AddedInVersion version="23.04.0" />
+<AddedInVersion version="23.04" />
 
 Enable the use of Spack recipes defined by using the [spack][process-spack] directive. (default: `false`).
 
 ##### `NXF_SYNTAX_PARSER`
 
-<AddedInVersion version="25.04.0">
+<AddedInVersion version="25.04">
 The strict parser is disabled by default.
 </AddedInVersion>
 
-<ChangedInVersion version="26.04.0">
+<ChangedInVersion version="26.04">
 The strict parser is enabled by default.
 </ChangedInVersion>
 
@@ -310,7 +310,7 @@ Directory where working files are stored (usually your *scratch* directory)
 
 ##### `NXF_WRAPPER_STAGE_FILE_THRESHOLD`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 Enables writing large staging scripts to a separate `.command.stage` file. The value defines the minimum size of the `.command.run` staging script for it to be written to the separate file (default when enabled: `'1 MB'`).
 
@@ -328,13 +328,13 @@ The Seqera Platform API endpoint (default: `https://api.cloud.seqera.io`). Can a
 
 ##### `TOWER_AUTH_DOMAIN`
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 The Auth0 domain for authenticating with Seqera Platform when connecting to a custom endpoint. When specified, this value takes precedence over the built-in mappings for known Seqera endpoints. Must be used in conjunction with `TOWER_AUTH_CLIENT_ID`.
 
 ##### `TOWER_AUTH_CLIENT_ID`
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 The Auth0 client ID for authenticating with a custom Seqera Platform endpoint. Must be used in conjunction with `TOWER_AUTH_DOMAIN`.
 
