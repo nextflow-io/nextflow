@@ -74,10 +74,12 @@ agent triage {
     // alongside `instruction` to steer the multi-turn module_run loop. It is
     // advisory — `maxIterations` remains the hard cap on the tool-calling loop.
     goal 'Assemble the isolate, QC-gate the assembly, annotate only if it passes, and report a clear PASS/FAIL verdict with a short written summary.'
-    // NOTE: the QC thresholds below are deliberately LENIENT so the bundled demo
-    // reads (a small ggal fragment that assembles to N50≈863, ~24 contigs) PASS the
-    // gate and the annotation branch (prokka) runs. For a real bacterial isolate use
-    // realistic values, e.g. "N50 below 20000 bp OR more than 500 contigs".
+    // NOTE: the QC thresholds below are deliberately LENIENT (N50 < 500 bp OR
+    // more than 1000 contigs). With the sarscov2 test FASTQ (see workflow block
+    // below) the assembly reaches ~N50=310, ~6 contigs and CORRECTLY FAILS this
+    // gate — the agent returns a FAIL verdict and skips PROKKA annotation.
+    // To exercise the PASS + PROKKA branch, use a real bacterial isolate FASTQ
+    // (better-assembling reads) or tighten the thresholds to match the test data.
     instruction '''\
         You triage bacterial isolate assemblies. Work step by step:
           1. Assemble the isolate's sequencing reads into contigs using the SKESA tool.
@@ -113,9 +115,18 @@ agent triage {
 }
 
 workflow {
-    // NOTE: this example needs a real FASTQ at `data/sample.fastq` (the `data/`
-    // dir is gitignored — provide your own reads). The nf-core modules run in
-    // containers, so a container runtime (Docker/Wave) is also required.
+    // NOTE: this example needs a FASTQ at `data/sample.fastq` (the `data/` dir is
+    // gitignored). Fetch the sarscov2 test dataset used here:
+    //   mkdir -p data && curl -sL https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/genomics/sarscov2/illumina/fastq/sarscov2_mus-musculus.fastq.gz | gunzip > data/sample.fastq
+    // The nf-core modules run in containers, so Docker + Wave (or another container
+    // runtime) is also required.
+    //
+    // EXPECTED BEHAVIOUR with the sarscov2 test FASTQ: the assembly assembles to
+    // ~N50=310, ~6 contigs — which FAILS the lenient gate (N50 < 500), so the agent
+    // returns a FAIL verdict and skips PROKKA annotation. That is the correct and
+    // intended gate behaviour for this small viral read set. To exercise the PASS +
+    // PROKKA branch, use a real bacterial isolate FASTQ or adjust the N50/contig
+    // thresholds in the `instruction` above.
     triage(channel.of(
         record(sample_id: 'isolate_001', organism: 'Escherichia coli',
                reads: "${projectDir}/data/sample.fastq")

@@ -39,8 +39,22 @@ import static test.ScriptHelper.runScript
  * <p>The test runs inside a live session (via {@code runScript} + a mock runner) so the bridge is
  * REAL and wired, then deterministically drives {@code call()} through the interrupt path (no
  * executor-timing dependency) by reflectively replacing the wired tool's captured output read
- * channel with a stub whose {@code getVal()} throws {@link InterruptedException} — exactly what a
- * session abort produces on the blocked operator thread.
+ * channel with a stub whose {@code getVal()} throws the interrupt — exactly what a session abort
+ * produces on the blocked operator thread.
+ *
+ * <p>Two forms are tested:
+ * <ul>
+ *   <li><b>bare</b> — {@code getVal()} throws a raw {@link InterruptedException} (the classic
+ *       {@link groovyx.gpars.dataflow.expression.DataflowExpression#getVal} path).</li>
+ *   <li><b>wrapped</b> — {@code getVal()} throws a {@link RuntimeException} whose cause is an
+ *       {@link InterruptedException}, mirroring the actual GPars
+ *       {@link groovyx.gpars.dataflow.stream.DataflowStreamReadAdapter#getVal} behaviour. This is
+ *       the form the original stub-only test MISSED: a bare {@code catch(InterruptedException)}
+ *       would not catch it, so the wrapped exception would fall through to the generic
+ *       {@code catch(Exception)} and be returned as a {@code {"error":...}} tool result instead of
+ *       aborting the run. The fix detects it via {@code isInterrupted()} (cause-chain walk) and
+ *       re-throws as {@link AgentToolFatalError}.</li>
+ * </ul>
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -135,6 +149,49 @@ class ModuleToolBridgeTaskFailureTest extends Dsl2Spec {
         thrownByDispatch instanceof AgentToolFatalError
         thrownByDispatch.message.contains('greet')
         thrownByDispatch.cause instanceof InterruptedException
+
+        and: 'the thread interrupt flag was restored so the abort/teardown machinery observes it'
+        interruptFlagAfter
+    }
+
+    def 'should abort (throw AgentToolFatalError) when the blocking output pull throws a RuntimeException wrapping an InterruptedException (the GPars DataflowStreamReadAdapter form)'() {
+        given: 'a mock runner that stubs the wired tool output to throw RuntimeException(cause=InterruptedException) — the form GPars DataflowStreamReadAdapter.getVal actually throws on session abort'
+        Throwable thrownByDispatch = null
+        boolean interruptFlagAfter = false
+        String dispatchResult = null
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
+            final bridge = (ModuleToolBridge) req.dispatch
+            final throwing = Stub(DataflowReadChannel) {
+                // GPars DataflowStreamReadAdapter.getVal wraps InterruptedException in RuntimeException —
+                // a bare `catch(InterruptedException)` in the pre-fix code would NOT catch this,
+                // so it would fall through to the generic `catch(Exception)` and be swallowed into
+                // a {"error":...} tool result. The fix uses isInterrupted() (cause-chain walk)
+                // to detect it and re-throw as AgentToolFatalError.
+                getVal() >> { throw new RuntimeException(new InterruptedException()) }
+            }
+            replaceToolOut(bridge, 'greet', throwing)
+            Thread.interrupted() // start from a clean interrupt status
+            try {
+                dispatchResult = req.dispatch.call('greet', '{"name":"Ada"}')
+            }
+            catch( Throwable t ) {
+                thrownByDispatch = t
+                interruptFlagAfter = Thread.currentThread().isInterrupted()
+                Thread.interrupted() // clear so the operator can unwind cleanly
+            }
+            return 'done'
+        } as AgentRunner
+
+        when:
+        runScript(SCRIPT)
+
+        then: 'the WRAPPED RuntimeException(cause=InterruptedException) is detected and re-thrown as AgentToolFatalError, not swallowed into a {"error":...} result'
+        dispatchResult == null
+        thrownByDispatch instanceof AgentToolFatalError
+        thrownByDispatch.message.contains('greet')
+        // The cause chain: AgentToolFatalError.cause == RuntimeException, whose cause == InterruptedException
+        thrownByDispatch.cause instanceof RuntimeException
+        thrownByDispatch.cause.cause instanceof InterruptedException
 
         and: 'the thread interrupt flag was restored so the abort/teardown machinery observes it'
         interruptFlagAfter

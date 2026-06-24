@@ -55,10 +55,21 @@ tool-calling, sandboxed agents.
 - The `nf-agent` plugin (declared in each example's `nextflow.config`).
 - The tool examples that use `nf-core/*` modules (`skesa`, `isolate-triage`)
   also need a container runtime (Docker/Wave) — the modules run as real
-  containerized tasks — **and a real input FASTQ at `<example>/data/sample.fastq`**
-  (the `data/` dir is gitignored; provide your own reads). The `tool/` and
-  `filesystem/` examples use `exec:` processes and run **fully offline** (no
-  container, no input data).
+  containerized tasks — **and an input FASTQ at `<example>/data/sample.fastq`**
+  (the `data/` dir is gitignored). Fetch the sarscov2 test dataset used for demos:
+  ```bash
+  mkdir -p data
+  curl -sL https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/genomics/sarscov2/illumina/fastq/sarscov2_mus-musculus.fastq.gz \
+    | gunzip > data/sample.fastq
+  ```
+  **Note for `isolate-triage`:** the sarscov2 test FASTQ assembles to ~N50=310,
+  ~6 contigs, which **correctly FAILS** the lenient QC gate (N50 < 500 bp), so the
+  agent returns a FAIL verdict and skips PROKKA annotation. This is the expected
+  and intended gate behaviour for this small viral read set. To exercise the PASS +
+  PROKKA annotation branch, use a real bacterial isolate FASTQ or adjust the
+  thresholds in `isolate-triage/main.nf`.
+  The `tool/` and `filesystem/` examples use `exec:` processes and run **fully
+  offline** (no container, no input data).
 
 ## Run (released Nextflow)
 

@@ -63,9 +63,11 @@ agent assembler {
 }
 
 workflow {
-    // NOTE: this example needs a real FASTQ at `data/sample.fastq` (the `data/`
-    // dir is gitignored — provide your own reads). nf-core/skesa runs in a
-    // container, so a container runtime (Docker/Wave) is also required.
+    // NOTE: this example needs a FASTQ at `data/sample.fastq` (the `data/` dir is
+    // gitignored). Fetch the sarscov2 test dataset used for demos:
+    //   mkdir -p data && curl -sL https://raw.githubusercontent.com/nf-core/test-datasets/modules/data/genomics/sarscov2/illumina/fastq/sarscov2_mus-musculus.fastq.gz | gunzip > data/sample.fastq
+    // nf-core/skesa runs in a container, so Docker + Wave (or another container
+    // runtime) is also required.
     assembler(channel.of(
         record(sample_id: 'sample1', reads: "${projectDir}/data/sample.fastq")
     ))
