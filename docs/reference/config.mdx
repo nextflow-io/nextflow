@@ -513,6 +513,12 @@ The client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/
 
 Enable autoscaling feature for the pool identified with `<name>`.
 
+##### `azure.batch.pools.<name>.ephemeralOsDisk`
+
+<AddedInVersion version="26.10.0" />
+
+Use an ephemeral OS disk for the compute nodes in the pool identified with `<name>`. The OS disk is placed on the node's local/cache storage instead of remote Azure storage, which can improve performance and reduce cost, but the disk and its data are lost when the node is deallocated. The VM size must support an ephemeral OS disk with a cache large enough for the OS image (default`false`).
+
 ##### `azure.batch.pools.<name>.fileShareRootPath`
 
 The internal root mount point when mounting File Shares. Must be `/mnt/resource/batch/tasks/fsmounts` for CentOS nodes or `/mnt/batch/tasks/fsmounts` for Ubuntu nodes (defaultCentOS).
