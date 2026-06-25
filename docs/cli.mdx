@@ -83,7 +83,7 @@ nextflow run nextflow-io/hello -r dev-branch
 nextflow run nextflow-io/hello -r a3f5c8e
 ```
 
-<AddedInVersion version="25.12.0-edge" />
+<AddedInVersion version="26.04" />
 
 Nextflow downloads and stores each explicitly requested Git branch, tag, or commit ID in a separate directory path, enabling you to run multiple revisions of the same pipeline simultaneously. Downloaded revisions are stored in a subdirectory of the local project: `$NXF_ASSETS/.repos/<org>/<repo>/clones/<commitId>`.
 
@@ -259,7 +259,7 @@ See [drop][cli-drop] for more information.
 
 ## Module management
 
-<AddedInVersion version="26.04.0" />
+<AddedInVersion version="26.04" />
 
 The `module` command allows you to discover, install, and run modules through a centralized module registry. See [Using modules][using-modules-page] and the [`module`][cli-module] command reference for more information.
 
@@ -380,7 +380,7 @@ See [clean][cli-clean] for more information.
 
 ### Data lineage
 
-<AddedInVersion version="25.04.0" />
+<AddedInVersion version="25.04" />
 
 :::warning
 *Experimental: may change in a future release.*
@@ -404,7 +404,7 @@ Use these commands to authenticate with Seqera Platform and launch workflows dir
 
 ### Platform authentication
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 The `auth` command manages authentication credentials for Seqera Platform, saving access tokens for API interactions.
 
@@ -426,7 +426,7 @@ See [auth][cli-auth] for more information.
 
 ### Platform workflow submission
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 The `launch` command submits a workflow to run on Seqera Platform's infrastructure instead of your local machine.
 
@@ -477,7 +477,7 @@ See [plugin][cli-plugin] for more information.
 
 **Plugin creation**
 
-<AddedInVersion version="25.04.0" />
+<AddedInVersion version="25.04" />
 
 Use the `create` subcommand to create a new plugin scaffold for development:
 
