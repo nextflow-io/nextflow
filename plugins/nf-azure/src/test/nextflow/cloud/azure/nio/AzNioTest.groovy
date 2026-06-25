@@ -944,4 +944,51 @@ class AzNioTest extends Specification implements AzBaseSpec {
         deleteBucket(bucket1)
     }
 
+    def 'should detect directory with hdi_isfolder metadata' () {
+        given:
+        def bucketName = createBucket()
+        def dirPath = "$bucketName/test-dir"
+        
+        when:
+        // Create a directory marker with hdi_isfolder metadata
+        def containerClient = storageClient.getBlobContainerClient(bucketName)
+        def blobClient = containerClient.getBlobClient("test-dir/")
+        blobClient.upload(new ByteArrayInputStream(new byte[0]), 0)
+        blobClient.setMetadata(['hdi_isfolder': 'true'])
+        
+        and:
+        def path = Paths.get(new URI("az://$dirPath/"))
+        def attrs = Files.readAttributes(path, BasicFileAttributes)
+        
+        then:
+        attrs.isDirectory()
+        !attrs.isRegularFile()
+        
+        cleanup:
+        deleteBucket(bucketName)
+    }
+
+    def 'should not treat file with trailing slash as directory without metadata' () {
+        given:
+        def bucketName = createBucket()
+        
+        when:
+        // Create a file with trailing slash but no directory metadata
+        def containerClient = storageClient.getBlobContainerClient(bucketName)
+        def blobClient = containerClient.getBlobClient("test-file/")
+        blobClient.upload(new ByteArrayInputStream("content".bytes), "content".length())
+        
+        and:
+        def path = Paths.get(new URI("az://$bucketName/test-file/"))
+        def attrs = Files.readAttributes(path, BasicFileAttributes)
+        
+        then:
+        // Without metadata or isPrefix, it should be treated as a file
+        attrs.isRegularFile()
+        !attrs.isDirectory()
+        
+        cleanup:
+        deleteBucket(bucketName)
+    }
+
 }
