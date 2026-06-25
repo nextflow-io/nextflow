@@ -208,6 +208,7 @@ Pipeline chaining can be practical for certain use cases, such as simple chains 
 
 ## Links
 
+- Community issues: [#6474](https://github.com/nextflow-io/nextflow/issues/6474)
 - Related: [Module system](20251114-module-system.md)
 - Related: [Workflow params](20250825-workflow-params.md)
 - Related: [Workflow outputs](20251020-workflow-outputs.md)

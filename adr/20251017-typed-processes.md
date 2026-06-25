@@ -399,6 +399,6 @@ This pattern provides the best balance of continuity with the old way and consis
 ## Links
 
 - [Nextflow standard types](https://nextflow.io/docs/latest/reference/stdlib-types.html)
-- Community issues: #1694, #2678
+- Community issues: [#1694](https://github.com/nextflow-io/nextflow/issues/1694), [#2678](https://github.com/nextflow-io/nextflow/issues/2678)
 - Related nf-core discussion: https://github.com/nf-core/modules/issues/4311
-- Original implementation: #4553
+- Original implementation: [#4553](https://github.com/nextflow-io/nextflow/pull/4553)
