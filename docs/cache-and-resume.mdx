@@ -138,7 +138,7 @@ To resolve this issue, avoid declaring global variables in closures:
 channel.of(1,2,3).map { v -> def X=v; X+=2 }.view { v -> "ch1 = $v" }
 ```
 
-<AddedInVersion version="25.04.0">
+<AddedInVersion version="25.04">
 The [strict parser][strict-syntax-page] does not allow global variables to be declared in closures.
 </AddedInVersion>
 
@@ -232,7 +232,7 @@ diff run_1.tasks.log run_2.tasks.log
 
 You can then view the `diff` output or use a graphical diff viewer to compare `run_1.tasks.log` and `run_2.tasks.log`.
 
-<AddedInVersion version="25.04.0">
+<AddedInVersion version="25.04">
 Nextflow now has a built-in way to compare two task runs. See the [Data lineage][data-lineage-page] guide for details.
 </AddedInVersion>
 
