@@ -116,7 +116,7 @@ process other_task {
 }
 ```
 
-<AddedInVersion version="23.02.0-edge" />
+<AddedInVersion version="23.04" />
 
 The `machineType` directive can also be a comma-separated list of patterns. The pattern can contain a `*` to match any
 number of characters and `?` to match any single character. Examples of valid patterns: `c2-*`, `m?-standard*`, `n*`.
@@ -134,7 +134,7 @@ process my_task {
 }
 ```
 
-<AddedInVersion version="23.12.0-edge" />
+<AddedInVersion version="24.04" />
 
 The `machineType` directive can also be an [Instance Template](https://cloud.google.com/compute/docs/instance-templates),
 specified as `template://<instance-template>`. For example:
@@ -162,7 +162,7 @@ To use an instance template with GPUs, you must also set the `google.batch.insta
 To use an instance template with Fusion, the instance template must include a `local-ssd` disk named `fusion` with 375 GB.
 See the [Google Batch documentation](https://cloud.google.com/compute/docs/disks/local-ssd) for more details about local SSDs.
 
-<AddedInVersion version="23.06.0-edge" />
+<AddedInVersion version="23.10" />
 
 The `disk` directive can be used to set the boot disk size or provision a disk for scratch storage. If the disk type is specified with the `type` option, a new disk will be mounted to the task VM at `/tmp` with the requested size and type. Otherwise, it will set the boot disk size, overriding the `google.batch.bootDiskSize` config option. See the [Google Batch documentation](https://cloud.google.com/compute/docs/disks) for more information about the available disk types.
 
@@ -207,7 +207,7 @@ google {
 }
 ```
 
-<AddedInVersion version="23.11.0-edge" />
+<AddedInVersion version="24.04" />
 
 Since this type of virtual machines can be retired by the provider before the job completion, it is advisable to add the following retry strategy to your config file to instruct Nextflow to automatically re-execute a job if the virtual machine was terminated preemptively:
 
@@ -220,7 +220,7 @@ process {
 
 ### Fusion file system
 
-<AddedInVersion version="23.02.0-edge" />
+<AddedInVersion version="23.04" />
 
 The Google Batch executor supports the use of [Fusion][fusion-page]. Fusion allows the use of Google Cloud Storage as a virtual distributed file system, optimizing the data transfer and speeding up most job I/O operations.
 

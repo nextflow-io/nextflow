@@ -118,7 +118,7 @@ The following functions are globally available in a Nextflow configuration file:
 
 ##### `env( name: String ) -> String`
 
-<AddedInVersion version="25.04.0" />
+<AddedInVersion version="25.04" />
 
 Get the value of the environment variable with the specified name in the Nextflow launch environment.
 
@@ -311,13 +311,13 @@ nextflow run main.nf -profile standard,cloud
 
 Nextflow applies config profiles in the order in which they were defined in the config, regardless of the order you specify them on the command line.
 
-<AddedInVersion version="25.04.0">
+<AddedInVersion version="25.04">
 When using the [strict parser][strict-syntax-page], Nextflow applies profiles in the order you specify them on the command line.
 </AddedInVersion>
 
 ## Workflow handlers
 
-<deprecatedInVersion version="25.10.0">
+<deprecatedInVersion version="25.10">
 Use a trace observer in a plugin to add custom workflow handlers to a pipeline via configuration.
 </deprecatedInVersion>
 
