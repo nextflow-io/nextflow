@@ -590,7 +590,8 @@ class AgentDef extends BindableDef implements ChainableDef {
             nextflow.module.ModuleReference.parse(refNoVer)
             return true
         }
-        catch( Exception ignored ) {
+        catch( Exception e ) {
+            log.trace("tool ref `${ref}` is not a registry reference: ${e.message}")
             return false
         }
     }

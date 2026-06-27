@@ -524,6 +524,7 @@ class ModuleToolBridge implements ToolDispatcher {
 
         // Only local file: paths are supported; cloud/remote work dirs are not supported yet
         try { workDir.toUri() } catch( UnsupportedOperationException e ) {
+            log.debug("Agent filesystem tool: work dir `${workDir}` has no URI (non-local scheme): ${e.message}")
             return JsonOutput.toJson([error: "filesystem tool unavailable: work dir scheme is not a local file path"])
         }
         final scheme = workDir.toUri()?.getScheme()
@@ -619,7 +620,8 @@ class ModuleToolBridge implements ToolDispatcher {
         try {
             return new JsonSlurper().parseText(resultJson)
         }
-        catch( Exception ignored ) {
+        catch( Exception e ) {
+            log.trace("Agent tool result is not parsable JSON, treating as no result: ${e.message}")
             return null
         }
     }
@@ -662,7 +664,9 @@ class ModuleToolBridge implements ToolDispatcher {
                             ctx.addReadableDir(parent)
                     }
                 }
-                catch( Exception ignored ) { /* not a valid path */ }
+                catch( Exception e ) {
+                    log.trace("Agent filesystem whitelist: skipping non-path output value `${s}`: ${e.message}")
+                }
             }
         }
     }
