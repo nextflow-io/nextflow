@@ -295,105 +295,114 @@ class AgentDef extends BindableDef implements ChainableDef {
         boolean moduleRunEnabled = false
         for( final entry : declared ) {
             final toolRef = entry?.toString()
-            // 0a) capability string: 'filesystem' enables the generic filesystem tool
-            if( toolRef == FilesystemToolSchema.NAME ) {
+            // capability strings: 'filesystem' enables the generic filesystem tool; 'module_run'
+            // exposes the script's include'd modules as per-module tools (enumerated below).
+            // Anything else is a declared tool reference resolved by resolveDeclaredTool.
+            if( toolRef == FilesystemToolSchema.NAME )
                 filesystemEnabled = true
-                continue
-            }
-            // 0b) capability string: 'module_run' exposes the script's include'd modules as agent
-            //     tools — each is advertised as its OWN tool with an enforced per-module schema
-            //     (see the include discovery below)
-            if( toolRef == MODULE_RUN_CAPABILITY ) {
+            else if( toolRef == MODULE_RUN_CAPABILITY )
                 moduleRunEnabled = true
-                continue
-            }
-            // 1) an in-scope process name (Phase 2, unchanged)
-            final inScope = meta?.getProcess(toolRef)
-            if( inScope != null ) {
-                resolved.put(toolRef, inScope)
-                continue
-            }
-            // 2) a local module file path -> compile to a ProcessDef (Phase 3.1);
-            //    when a sibling meta.yml is present, drive the schema/marshalling from
-            //    its ModuleSpec (Phase 3.2)
-            if( looksLikeModulePath(toolRef) ) {
-                final entry2 = resolveModuleTool(meta, toolRef)
-                final toolName = entry2.key
-                resolved.put(toolName, entry2.value)
-                final spec = loadSiblingSpec(entry2.value)
-                if( spec != null )
-                    specs.put(toolName, spec)
-                continue
-            }
-            // 3) a registry reference (e.g. `nf-core/fastqc`, optionally `@version`) -> resolve
-            //    via the module registry (ModuleResolver), compile the resolved main.nf to a
-            //    ProcessDef (the Phase 3.1 recipe) and, when an installed sibling meta.yml is
-            //    present, drive the schema/marshalling from its ModuleSpec (Phase 3.2). The
-            //    descriptor is sourced from the public registry `ModuleMetadata` when available.
-            if( looksLikeRegistryRef(toolRef) ) {
-                final entry3 = resolveRegistryTool(toolRef, metadatas)
-                final toolName = entry3.key
-                resolved.put(toolName, entry3.value)
-                final spec = loadSiblingSpec(entry3.value)
-                if( spec != null )
-                    specs.put(toolName, spec)
-                continue
-            }
-            // 4) otherwise: not a capability string, not a process in scope, not a path, not a registry ref
-            throw new ScriptRuntimeException("Agent `${name}` tool `${toolRef}` is not a process in scope")
+            else
+                resolveDeclaredTool(meta, toolRef, resolved, specs, metadatas)
         }
-        // When 'module_run' is declared, enumerate all processes visible in this script (both
-        // locally-defined and brought in via include statements) and wire each as a tool. Each
-        // module is advertised as its OWN tool with an enforced per-module input schema (sourced
-        // from the registry metadata when available, else the sibling meta.yml spec).
-        if( moduleRunEnabled ) {
-            final allProcNames = new LinkedHashSet<String>()
-            if( meta != null ) {
-                // module_run enumerates all in-scope processes (local + included): getProcessNames() is the correct scope
-                allProcNames.addAll(meta.getProcessNames())
-            }
-            // registry client is built lazily and reused across all include-discovered modules
-            def lazyClient = null
-            for( final procName : allProcNames ) {
-                if( resolved.containsKey(procName) )
-                    continue  // already wired (e.g. an explicit tools entry)
-                final proc = meta?.getProcess(procName)
-                if( proc == null )
-                    continue
-                resolved.put(procName, proc)
-                // try to load a sibling meta.yml for spec-driven marshalling; may return null
-                // for locally-defined processes (no source path tracked in compiledModulePaths)
-                final spec = loadSiblingSpec(proc)
-                if( spec != null )
-                    specs.put(procName, spec)
-                // prefer the registry ModuleMetadata (richer: full input schema, nf-core meta.id,
-                // output description) when the included module is a registry install. The marker
-                // file (.module-info) identifies registry installs; local-file includes return null.
-                final moduleDir = resolveIncludedModuleDir(proc)
-                final moduleRef = recoverModuleRef(moduleDir)
-                if( moduleRef != null ) {
-                    try {
-                        if( lazyClient == null ) {
-                            final session = Global.session as Session
-                            final registryConfig = new nextflow.config.RegistryConfig(
-                                (session?.config?.registry as Map) ?: Collections.emptyMap())
-                            lazyClient = nextflow.module.RegistryClientFactory.forConfig(registryConfig)
-                        }
-                        final regMetadata = fetchModuleMetadata(lazyClient, moduleRef, null)
-                        if( regMetadata != null )
-                            metadatas.put(procName, new ModuleToolBridge.RegistryMeta(regMetadata, moduleRef.scope == 'nf-core'))
-                    }
-                    catch( Exception e ) {
-                        log.debug("Agent `${name}` module_run: could not fetch registry metadata for `${moduleRef.fullName}` (${e.message}) — falling back to meta.yml spec")
-                    }
-                }
-            }
-        }
+        if( moduleRunEnabled )
+            addModuleRunTools(meta, resolved, specs, metadatas)
         // Build a bridge when ANY module or capability is declared (so 'filesystem' alone
         // returns a non-null bridge with no wired module processes).
         if( resolved.isEmpty() && !filesystemEnabled && !moduleRunEnabled )
             return null
         return new ModuleToolBridge(resolved, specs, metadatas, filesystemEnabled)
+    }
+
+    /**
+     * Resolve a single declared {@code tools} entry (not a capability string) to a {@link ProcessDef}
+     * and wire it into the accumulators. An entry is, in order: an <b>in-scope process name</b>
+     * (Phase 2); a <b>local module file path</b> compiled at agent-run time (Phase 3.1, + sibling
+     * {@code meta.yml} Phase 3.2); or a <b>registry reference</b> resolved through the module registry
+     * (Phase 3.3). Anything else raises a {@link ScriptRuntimeException}.
+     */
+    @CompileDynamic
+    private void resolveDeclaredTool(ScriptMeta meta, String toolRef, Map<String,ProcessDef> resolved,
+                                     Map<String,nextflow.module.ModuleSpec> specs,
+                                     Map<String,ModuleToolBridge.RegistryMeta> metadatas) {
+        final inScope = meta?.getProcess(toolRef)
+        if( inScope != null ) {
+            resolved.put(toolRef, inScope)
+            return
+        }
+        if( looksLikeModulePath(toolRef) ) {
+            wireResolvedTool(resolveModuleTool(meta, toolRef), resolved, specs)
+            return
+        }
+        if( looksLikeRegistryRef(toolRef) ) {
+            wireResolvedTool(resolveRegistryTool(toolRef, metadatas), resolved, specs)
+            return
+        }
+        throw new ScriptRuntimeException("Agent `${name}` tool `${toolRef}` is not a process in scope")
+    }
+
+    /**
+     * Register a resolved {@code toolName -> ProcessDef} entry, loading its sibling {@code meta.yml}
+     * {@link nextflow.module.ModuleSpec} (when present) for spec-driven marshalling (Phase 3.2).
+     */
+    @CompileDynamic
+    private void wireResolvedTool(Map.Entry<String,ProcessDef> entry, Map<String,ProcessDef> resolved,
+                                  Map<String,nextflow.module.ModuleSpec> specs) {
+        resolved.put(entry.key, entry.value)
+        final spec = loadSiblingSpec(entry.value)
+        if( spec != null )
+            specs.put(entry.key, spec)
+    }
+
+    /**
+     * Enumerate every process visible in this script (local + include'd) and wire each as its own
+     * tool with an enforced per-module schema. The descriptor is sourced from the public registry
+     * {@link io.seqera.npr.api.schema.v1.ModuleMetadata} when the module is a registry install
+     * (richer), else from the sibling {@code meta.yml} {@link nextflow.module.ModuleSpec}. Processes
+     * already wired (e.g. an explicit {@code tools} entry) are skipped. The registry client is built
+     * lazily and reused, so a purely-local {@code module_run} never constructs one.
+     */
+    @CompileDynamic
+    private void addModuleRunTools(ScriptMeta meta, Map<String,ProcessDef> resolved,
+                                   Map<String,nextflow.module.ModuleSpec> specs,
+                                   Map<String,ModuleToolBridge.RegistryMeta> metadatas) {
+        if( meta == null )
+            return
+        def lazyClient = null
+        for( final procName : meta.getProcessNames() ) {
+            if( resolved.containsKey(procName) )
+                continue  // already wired (e.g. an explicit tools entry)
+            final proc = meta.getProcess(procName)
+            if( proc == null )
+                continue
+            resolved.put(procName, proc)
+            // sibling meta.yml for spec-driven marshalling; null for locally-defined processes
+            final spec = loadSiblingSpec(proc)
+            if( spec != null )
+                specs.put(procName, spec)
+            // prefer the richer registry ModuleMetadata when the included module is a registry
+            // install (the .module-info marker); local-file includes return null and fall back
+            final moduleRef = recoverModuleRef(resolveIncludedModuleDir(proc))
+            if( moduleRef == null )
+                continue
+            try {
+                if( lazyClient == null )
+                    lazyClient = newRegistryClient(Global.session as Session)
+                final regMetadata = fetchModuleMetadata(lazyClient, moduleRef, null)
+                if( regMetadata != null )
+                    metadatas.put(procName, new ModuleToolBridge.RegistryMeta(regMetadata, moduleRef.scope == 'nf-core'))
+            }
+            catch( Exception e ) {
+                log.debug("Agent `${name}` module_run: could not fetch registry metadata for `${moduleRef.fullName}` (${e.message}) — falling back to meta.yml spec")
+            }
+        }
+    }
+
+    /** Build a {@link io.seqera.npr.client.RegistryClient} from the session's {@code registry} config scope. */
+    @CompileDynamic
+    private static newRegistryClient(Session session) {
+        final registryConfig = new nextflow.config.RegistryConfig((session?.config?.registry as Map) ?: Collections.emptyMap())
+        return nextflow.module.RegistryClientFactory.forConfig(registryConfig)
     }
 
     /**
@@ -627,10 +636,9 @@ class AgentDef extends BindableDef implements ChainableDef {
 
         // -- the modules/ dir lives at the project (base) root; mirror CmdModuleRun
         final baseDir = session.baseDir ?: Path.of('.').toAbsolutePath().normalize()
-        final registryConfig = new nextflow.config.RegistryConfig((session.config?.registry as Map) ?: Collections.emptyMap())
 
         // -- resolve (local install first, else auto-install via the registry client)
-        final client = nextflow.module.RegistryClientFactory.forConfig(registryConfig)
+        final client = newRegistryClient(session)
         final Path modPath
         try {
             final resolver = new nextflow.module.ModuleResolver(baseDir, client)

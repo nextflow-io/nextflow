@@ -157,63 +157,28 @@ class ModuleToolBridge implements ToolDispatcher {
     void setMaxInlineBytes(long bytes) { this.maxInlineBytes = bytes > 0 ? bytes : ToolOutputReader.DEFAULT_INLINE_BYTES }
 
     /**
-     * Build the bridge by pre-wiring each in-scope process tool into the dataflow
-     * network (scalar mode). Must be invoked in the workflow body before ignition.
+     * Build the bridge by pre-wiring each resolved tool into the dataflow network (must be invoked
+     * in the workflow body, before ignition). A tool with a {@link ModuleSpec} (e.g. a sibling
+     * {@code meta.yml}) uses spec-driven marshalling; one without uses the scalar typed-I/O path.
+     * When a {@link RegistryMeta} is present its public registry {@link ModuleMetadata} is the
+     * descriptor source (richer schema); marshalling stays spec-driven. Every wired module is
+     * advertised as its OWN tool whose {@code parameters} schema IS that module's flattened input
+     * schema, so OpenAI function-calling enforces field names/required-ness per module (an aggregate
+     * tool could only use a generic {@code additionalProperties:true} object, which it cannot enforce).
      *
-     * @param resolved a name -> ProcessDef map of the in-scope tools the agent declared
-     */
-    ModuleToolBridge(Map<String,ProcessDef> resolved) {
-        this(resolved, Collections.<String,ModuleSpec>emptyMap())
-    }
-
-    /**
-     * Build the bridge, using spec-driven marshalling for any tool that has a
-     * {@link ModuleSpec} (e.g. a sibling {@code meta.yml}) and the scalar typed-I/O
-     * marshalling otherwise.
-     *
-     * @param resolved a name -> ProcessDef map of the resolved tools the agent declared
-     * @param specs    a name -> ModuleSpec map; tools present here use spec-driven marshalling
-     */
-    ModuleToolBridge(Map<String,ProcessDef> resolved, Map<String,ModuleSpec> specs) {
-        this(resolved, specs, Collections.<String,RegistryMeta>emptyMap())
-    }
-
-    /**
-     * Build the bridge, sourcing the tool DESCRIPTOR from the public registry
-     * {@link ModuleMetadata} when present (Task 3) and otherwise from the sibling {@code meta.yml}
-     * {@link ModuleSpec}. Marshalling/output is always spec-driven (the spec + ProcessDef) for a
-     * tool that has a {@link ModuleSpec}; tools with neither use the scalar typed-I/O path.
-     *
-     * @param resolved   a name -> ProcessDef map of the resolved tools the agent declared
-     * @param specs      a name -> ModuleSpec map; tools present here use spec-driven marshalling
-     * @param metadatas  a name -> {@link RegistryMeta} map; for a spec-driven tool present here the
-     *                   descriptor is sourced from the registry metadata (description + schema)
-     */
-    ModuleToolBridge(Map<String,ProcessDef> resolved, Map<String,ModuleSpec> specs, Map<String,RegistryMeta> metadatas) {
-        this(resolved, specs, metadatas, false)
-    }
-
-    /**
-     * Build the bridge with optional {@code filesystem} tool capability. This constructor is the
-     * canonical one; all others delegate to it.
-     *
-     * <p>Every wired module is advertised as its OWN langchain4j/OpenAI tool whose function
-     * {@code parameters} schema IS that module's flattened input schema (required fields,
-     * {@code additionalProperties:false}, the nf-core {@code meta.id} convention). This per-module
-     * enforcement is what lets OpenAI function-calling validate field names/required-ness against
-     * the module schema (a single aggregate {@code module_run} tool could only use a generic
-     * {@code args:{additionalProperties:true}} object, which OpenAI cannot enforce).
-     *
-     * <p>When {@code filesystemEnabled} is {@code true}, the {@code filesystem} tool descriptor is
-     * added and calls are routed to {@link #callFilesystem}.
+     * <p>The default-valued args generate the convenience overloads (resolved-only, +specs,
+     * +metadatas) via Groovy; when {@code filesystemEnabled} is {@code true} the {@code filesystem}
+     * tool descriptor is added and its calls are routed to {@link #callFilesystem}.
      *
      * @param resolved          a name -> ProcessDef map of the resolved tools the agent declared
      * @param specs             a name -> ModuleSpec map; tools present here use spec-driven marshalling
-     * @param metadatas         a name -> {@link RegistryMeta} map; for a spec-driven tool present here the
-     *                          descriptor is sourced from the registry metadata (description + schema)
+     * @param metadatas         a name -> {@link RegistryMeta} map; sources the descriptor from registry metadata
      * @param filesystemEnabled when {@code true}, include and route the generic {@code filesystem} tool
      */
-    ModuleToolBridge(Map<String,ProcessDef> resolved, Map<String,ModuleSpec> specs, Map<String,RegistryMeta> metadatas, boolean filesystemEnabled) {
+    ModuleToolBridge(Map<String,ProcessDef> resolved,
+                     Map<String,ModuleSpec> specs = Collections.<String,ModuleSpec>emptyMap(),
+                     Map<String,RegistryMeta> metadatas = Collections.<String,RegistryMeta>emptyMap(),
+                     boolean filesystemEnabled = false) {
         this.filesystemEnabled = filesystemEnabled
         for( final entry : resolved.entrySet() ) {
             final spec = specs?.get(entry.key)
@@ -581,44 +546,50 @@ class ModuleToolBridge implements ToolDispatcher {
             return JsonOutput.toJson([error: "path outside sandbox: ${pathStr}".toString()])
 
         switch( operation ) {
-            case 'exists':
-                return JsonOutput.toJson([exists: Files.exists(resolved)])
-
-            case 'write':
-                final String content = args.content?.toString() ?: ''
-                final byte[] bytes = content.getBytes(StandardCharsets.UTF_8)
-                // Ensure parent directory exists
-                final parent = resolved.getParent()
-                if( parent != null )
-                    Files.createDirectories(parent)
-                Files.write(resolved, bytes)
-                return JsonOutput.toJson([path: resolved.toAbsolutePath().toString(), bytes: bytes.length])
-
-            case 'read':
-                if( !Files.exists(resolved) )
-                    return JsonOutput.toJson([error: "file not found: ${pathStr}".toString()])
-                if( Files.isDirectory(resolved) )
-                    return JsonOutput.toJson([error: "path is a directory, not a file: ${pathStr}".toString()])
-                final Object readResult = ToolOutputReader.readOrHandle(resolved, maxInlineBytes)
-                // Wrap inlined string content under 'content' key; path handles and annotated maps pass through
-                if( readResult instanceof String )
-                    return JsonOutput.toJson([content: readResult])
-                return JsonOutput.toJson(readResult)
-
-            case 'list':
-                if( !Files.exists(resolved) )
-                    return JsonOutput.toJson([error: "directory not found: ${pathStr}".toString()])
-                if( !Files.isDirectory(resolved) )
-                    return JsonOutput.toJson([error: "path is not a directory: ${pathStr}".toString()])
-                final entries = new ArrayList<String>()
-                Files.list(resolved).withCloseable { java.util.stream.Stream<Path> s ->
-                    s.sorted().forEach { Path p -> entries.add(p.getFileName().toString()) }
-                }
-                return JsonOutput.toJson([entries: entries])
-
+            case 'exists': return fsExists(resolved)
+            case 'write':  return fsWrite(resolved, args)
+            case 'read':   return fsRead(resolved, pathStr)
+            case 'list':   return fsList(resolved, pathStr)
             default:
                 return JsonOutput.toJson([error: "filesystem tool: unknown operation '${operation}'; supported: read, write, list, exists".toString()])
         }
+    }
+
+    private static String fsExists(Path resolved) {
+        return JsonOutput.toJson([exists: Files.exists(resolved)])
+    }
+
+    private static String fsWrite(Path resolved, Map args) {
+        final byte[] bytes = (args.content?.toString() ?: '').getBytes(StandardCharsets.UTF_8)
+        final parent = resolved.getParent()
+        if( parent != null )
+            Files.createDirectories(parent)
+        Files.write(resolved, bytes)
+        return JsonOutput.toJson([path: resolved.toAbsolutePath().toString(), bytes: bytes.length])
+    }
+
+    private String fsRead(Path resolved, String pathStr) {
+        if( !Files.exists(resolved) )
+            return JsonOutput.toJson([error: "file not found: ${pathStr}".toString()])
+        if( Files.isDirectory(resolved) )
+            return JsonOutput.toJson([error: "path is a directory, not a file: ${pathStr}".toString()])
+        final Object readResult = ToolOutputReader.readOrHandle(resolved, maxInlineBytes)
+        // inlined string content goes under 'content'; path handles / annotated maps pass through
+        if( readResult instanceof String )
+            return JsonOutput.toJson([content: readResult])
+        return JsonOutput.toJson(readResult)
+    }
+
+    private static String fsList(Path resolved, String pathStr) {
+        if( !Files.exists(resolved) )
+            return JsonOutput.toJson([error: "directory not found: ${pathStr}".toString()])
+        if( !Files.isDirectory(resolved) )
+            return JsonOutput.toJson([error: "path is not a directory: ${pathStr}".toString()])
+        final entries = new ArrayList<String>()
+        Files.list(resolved).withCloseable { java.util.stream.Stream<Path> s ->
+            s.sorted().forEach { Path p -> entries.add(p.getFileName().toString()) }
+        }
+        return JsonOutput.toJson([entries: entries])
     }
 
     /**

@@ -294,20 +294,6 @@ class ScriptMeta {
         return result
     }
 
-    /**
-     * @return the names of the processes brought into this script via
-     * {@code include} statements (the imported components), excluding processes
-     * defined locally in this script.
-     */
-    Set<String> getIncludedProcessNames() {
-        def result = new HashSet(imports.size())
-        for( def item : imports.values() ) {
-            if( item instanceof ProcessDef )
-                result.add(item.name)
-        }
-        return result
-    }
-
     Set<String> getLocalWorkflowNames() {
         def result = new HashSet(definitions.size())
         for( def item : definitions.values() ) {
