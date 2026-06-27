@@ -6,5 +6,4 @@ nf-console@1.3.0
 nf-google@1.27.3
 nf-k8s@1.5.4
 nf-seqera@0.22.0
-nf-tower@1.29.0
 nf-wave@1.21.0

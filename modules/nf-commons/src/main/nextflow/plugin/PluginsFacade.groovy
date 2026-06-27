@@ -450,15 +450,12 @@ class PluginsFacade implements PluginStateListener {
             log.debug "Plugins default=$defSpecs"
         }
 
-        // add tower plugin when config contains tower options
-        if( (Bolts.navigate(config,'tower.enabled') || Bolts.navigate(config,'fusion.enabled') || env.TOWER_ACCESS_TOKEN ) && !specs.find {it.id == 'nf-tower' } ) {
-            specs << defaultPlugins.getPlugin('nf-tower')
+        // add seqera plugin when config contains tower options or uses the seqera executor
+        if( (Bolts.navigate(config,'tower.enabled') || Bolts.navigate(config,'fusion.enabled') || env.TOWER_ACCESS_TOKEN || Bolts.navigate(config,'process.executor')=='seqera' ) && !specs.find {it.id == 'nf-seqera' } ) {
+            specs << defaultPlugins.getPlugin('nf-seqera')
         }
         if( (Bolts.navigate(config,'wave.enabled') || Bolts.navigate(config,'fusion.enabled')) && !specs.find {it.id == 'nf-wave' } ) {
             specs << defaultPlugins.getPlugin('nf-wave')
-        }
-        if( Bolts.navigate(config,'process.executor')=='seqera') {
-            specs << defaultPlugins.getPlugin('nf-seqera')
         }
 
         // add cloudcache plugin when cloudcache is enabled in the config

@@ -98,9 +98,9 @@ This is a danger warning
 Use custom version tags for tracking feature changes:
 
 ```jsx
-<AddedInVersion version="25.10.0" />
-<ChangedInVersion version="25.10.0" />
-<DeprecatedInVersion version="25.04.0" />
+<AddedInVersion version="25.10" />
+<ChangedInVersion version="25.10" />
+<DeprecatedInVersion version="25.04" />
 ```
 
 ### Code blocks
