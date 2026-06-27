@@ -191,6 +191,9 @@ class AgentDef extends BindableDef implements ChainableDef {
         final agentTimeoutSecs = (agentConfig.requestTimeout != null
             ? agentConfig.requestTimeout.seconds
             : 120L) as int
+        // when enabled (via `-with-agent-trace` / `agent.trace`), the runner logs a readable
+        // trace of turns, model reasoning and tool invocations at INFO level
+        final boolean agentTrace = agentConfig.traceEnabled()
         final promptDef = this.prompt
 
         // resolve declared `tools` to in-scope processes and pre-wire them into the
@@ -220,7 +223,9 @@ class AgentDef extends BindableDef implements ChainableDef {
                 toolSpecs: toolSpecs,
                 dispatch: (bridge as ToolDispatcher),
                 requestTimeoutSeconds: agentTimeoutSecs,
-                goal: agentGoal)
+                goal: agentGoal,
+                agentName: name,
+                trace: agentTrace)
 
             // report the invocation on the console; deliberately NOT hash-prefixed
             // (like a task `[ab/123456] ...` line) so the ANSI log observer does not

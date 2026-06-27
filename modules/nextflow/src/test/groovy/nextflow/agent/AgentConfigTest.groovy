@@ -49,6 +49,16 @@ class AgentConfigTest extends Specification {
         config.maxIterationsDefault == null
         config.requestTimeout == null
         config.maxToolOutputInlineBytes() == 32768
+        and:
+        config.trace == null
+        !config.traceEnabled()
+    }
+
+    def 'should read the trace option'() {
+        expect:
+        new AgentConfig([trace: true]).traceEnabled()
+        and:
+        !new AgentConfig([trace: false]).traceEnabled()
     }
 
     def 'should be a recognized config scope'() {
@@ -58,7 +68,8 @@ class AgentConfigTest extends Specification {
                 defaultModel: 'openai/gpt-5-mini',
                 maxIterationsDefault: 7,
                 requestTimeout: '90s',
-                maxToolOutputInlineSize: '64 KB'
+                maxToolOutputInlineSize: '64 KB',
+                trace: true
             ]
         ])
         then:

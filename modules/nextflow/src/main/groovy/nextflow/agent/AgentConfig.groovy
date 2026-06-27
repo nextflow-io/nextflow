@@ -63,6 +63,12 @@ class AgentConfig implements ConfigScope {
     """)
     final MemoryUnit maxToolOutputInlineSize
 
+    @ConfigOption
+    @Description("""
+        When `true`, log a readable trace of each agent's execution - the turns, the model reasoning and the tool invocations - at INFO level; the tool inputs and outputs are logged at DEBUG. Enabled by the `-with-agent-trace` run option (default: `false`).
+    """)
+    final Boolean trace
+
     /* required by extension point -- do not remove */
     AgentConfig() {}
 
@@ -71,6 +77,7 @@ class AgentConfig implements ConfigScope {
         maxIterationsDefault = opts.maxIterationsDefault != null ? opts.maxIterationsDefault as Integer : null
         requestTimeout = opts.requestTimeout != null ? opts.requestTimeout as Duration : null
         maxToolOutputInlineSize = opts.maxToolOutputInlineSize != null ? opts.maxToolOutputInlineSize as MemoryUnit : null
+        trace = opts.trace != null ? opts.trace as Boolean : null
     }
 
     String getDefaultModel() { defaultModel }
@@ -81,9 +88,14 @@ class AgentConfig implements ConfigScope {
 
     MemoryUnit getMaxToolOutputInlineSize() { maxToolOutputInlineSize }
 
+    Boolean getTrace() { trace }
+
     /**
      * The effective maximum size, in bytes, of a structured tool-output file whose contents
      * are inlined for the LLM; defaults to 32 KB when not configured.
      */
     long maxToolOutputInlineBytes() { maxToolOutputInlineSize != null ? maxToolOutputInlineSize.toBytes() : ToolOutputReader.DEFAULT_INLINE_BYTES }
+
+    /** Whether execution tracing is enabled (defaults to {@code false} when not configured). */
+    boolean traceEnabled() { trace != null && trace }
 }

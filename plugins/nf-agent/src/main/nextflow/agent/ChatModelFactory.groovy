@@ -18,6 +18,7 @@ package nextflow.agent
 import java.time.Duration
 
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.chat.listener.ChatModelListener
 import dev.langchain4j.model.chat.request.ResponseFormat
 import dev.langchain4j.model.chat.request.ResponseFormatType
 import dev.langchain4j.model.chat.request.json.JsonSchema
@@ -60,8 +61,10 @@ class ChatModelFactory {
      * @param timeoutSeconds the request timeout in seconds
      * @param schema         the structured-output JSON schema, or {@code null}
      *                       for free-form text output
+     * @param listeners      optional chat-model listeners (e.g. the execution
+     *                       tracer), or {@code null} for none
      */
-    ChatModel createModel(String modelId, int timeoutSeconds, JsonSchema schema) {
+    ChatModel createModel(String modelId, int timeoutSeconds, JsonSchema schema, List<ChatModelListener> listeners = null) {
         final provider = providerOf(modelId)
         if( provider != 'openai' )
             throw new IllegalArgumentException("Unsupported agent model provider `${provider}` - v1 supports `openai`")
@@ -71,6 +74,8 @@ class ChatModelFactory {
             .apiKey(apiKey)
             .modelName(modelOf(modelId))
             .timeout(Duration.ofSeconds(timeoutSeconds))
+        if( listeners )
+            builder.listeners(listeners)
         if( schema != null ) {
             final responseFormat = ResponseFormat.builder()
                 .type(ResponseFormatType.JSON)

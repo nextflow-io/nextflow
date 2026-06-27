@@ -52,4 +52,9 @@ class AgentRunnerRequest {
     ToolDispatcher dispatch
     int requestTimeoutSeconds
     String goal
+    /** The agent name, used only to label the execution trace. */
+    String agentName
+    /** When {@code true}, the runner logs a readable execution trace (turns, model
+     * reasoning, tool invocations with inputs/outputs) at INFO level. */
+    boolean trace
 }

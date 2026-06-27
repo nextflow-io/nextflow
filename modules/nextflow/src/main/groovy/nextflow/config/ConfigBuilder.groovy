@@ -662,6 +662,13 @@ class ConfigBuilder {
                 config.trace.file = cmdRun.withTrace
         }
 
+        // -- sets agent execution trace option
+        if( cmdRun.withAgentTrace ) {
+            if( !(config.agent instanceof Map) )
+                config.agent = [:]
+            config.agent.trace = true
+        }
+
         // -- sets report report options
         if( cmdRun.withReport ) {
             if( !(config.report instanceof Map) )

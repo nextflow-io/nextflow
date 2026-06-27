@@ -663,6 +663,14 @@ class ConfigBuilderTest extends Specification {
 
     }
 
+    def 'run with agent trace flag sets agent.trace'() {
+        when:
+        def run = new CmdRun(withAgentTrace: true)
+        def config = new ConfigBuilder().setOptions(new CliOptions()).setCmdRun(run).build()
+        then:
+        config.agent.trace == true
+    }
+
     def 'run with docker 2'() {
 
         given:

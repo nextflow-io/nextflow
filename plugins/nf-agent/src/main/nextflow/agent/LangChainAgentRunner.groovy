@@ -23,6 +23,7 @@ import dev.langchain4j.data.message.UserMessage
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.memory.chat.MessageWindowChatMemory
 import dev.langchain4j.model.chat.ChatModel
+import dev.langchain4j.model.chat.listener.ChatModelListener
 import dev.langchain4j.model.chat.request.json.JsonSchema
 import dev.langchain4j.model.chat.response.ChatResponse
 import dev.langchain4j.service.AiServices
@@ -113,9 +114,17 @@ class LangChainAgentRunner implements AgentRunner {
      * {@link UserMessage}.
      */
     private String runWithTools(AgentRunnerRequest request) {
+        // optional execution tracer: a ChatModelListener that logs the turns and
+        // model reasoning, paired with per-tool input/output lines below
+        final AgentTrace trace = request.trace ? new AgentTrace(request.agentName) : null
+        final List<ChatModelListener> listeners = trace != null ? Collections.<ChatModelListener>singletonList(trace) : null
+
         // Phase 2: tools XOR structured-output — do NOT force a responseFormat
-        // when tools are in play (pass a null schema to the model factory).
-        final ChatModel model = modelFactory.createModel(request.model, timeoutSeconds(request), null)
+        // when tools are in play (pass a null schema to the model factory). The model is
+        // built with listeners only when tracing, keeping the default path on the 3-arg call.
+        final ChatModel model = listeners
+            ? modelFactory.createModel(request.model, timeoutSeconds(request), null, listeners)
+            : modelFactory.createModel(request.model, timeoutSeconds(request), null)
 
         final int maxIterations = request.maxIterations > 0 ? request.maxIterations : DEFAULT_MAX_ITERATIONS
 
@@ -127,7 +136,10 @@ class LangChainAgentRunner implements AgentRunner {
             final ToolSpecification spec = ModuleToolAdapter.toToolSpecification(descriptor)
             final ToolExecutor executor = { ToolExecutionRequest ter, Object memoryId ->
                 log.debug "Agent tool call name=${ter.name()}; args=${ter.arguments()}"
-                return request.dispatch.call(ter.name(), ter.arguments())
+                final String result = request.dispatch.call(ter.name(), ter.arguments())
+                if( trace != null )
+                    trace.tool(ter.name(), ter.arguments(), result)
+                return result
             } as ToolExecutor
             tools.put(spec, executor)
         }
@@ -143,6 +155,8 @@ class LangChainAgentRunner implements AgentRunner {
         final String userText = composeUserText(request)
 
         log.debug "Running agent model=${request.model}; tools=${tools.keySet()*.name()}; maxIterations=${maxIterations}"
+        if( trace != null )
+            trace.begin(request.model, tools.keySet()*.name())
 
         // A cap of N permits only N-1 model round-trips, so pass maxIterations+1.
         // The system message is seeded directly into the chat memory above;
@@ -155,7 +169,10 @@ class LangChainAgentRunner implements AgentRunner {
             .build()
 
         try {
-            return agent.chat(userText)
+            final String answer = agent.chat(userText)
+            if( trace != null )
+                trace.end(answer)
+            return answer
         }
         catch( IllegalStateException e ) {
             // Let any genuine IllegalStateException (e.g. from ChatModelFactory or
