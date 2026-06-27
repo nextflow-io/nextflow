@@ -726,6 +726,9 @@ class AgentDef extends BindableDef implements ChainableDef {
             }
             @Override
             boolean onException(final DataflowProcessor processor, final Throwable t) {
+                // a fatal tool abort restores this thread's interrupt flag before throwing; consume
+                // it here so the pooled operator thread is not left interrupted for the next task
+                Thread.interrupted()
                 // poison tools so the network can unwind even on failure
                 bridge?.close()
                 log.error("@unknown", t)

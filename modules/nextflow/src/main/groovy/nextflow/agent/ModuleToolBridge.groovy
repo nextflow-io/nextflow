@@ -15,6 +15,7 @@
  */
 package nextflow.agent
 
+import java.nio.channels.ClosedByInterruptException
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
@@ -484,7 +485,9 @@ class ModuleToolBridge implements ToolDispatcher {
      */
     private static boolean isInterrupted(Throwable t) {
         for( Throwable c = t; c != null; c = c.getCause() ) {
-            if( c instanceof InterruptedException )
+            // ClosedByInterruptException is the IOException form raised when an abort interrupts
+            // in-flight (interruptible) file I/O — also fatal, also outside InterruptedException
+            if( c instanceof InterruptedException || c instanceof ClosedByInterruptException )
                 return true
         }
         return false
@@ -650,9 +653,14 @@ class ModuleToolBridge implements ToolDispatcher {
             final s = (String) value
             if( s.startsWith('/') ) {
                 try {
-                    final parent = Path.of(s).getParent()
-                    if( parent != null )
-                        ctx.addReadableDir(parent)
+                    final p = Path.of(s)
+                    // only whitelist the parent of a REAL produced output path — not an arbitrary
+                    // path-shaped string, and never a filesystem root (that would widen reads to all)
+                    if( Files.exists(p) ) {
+                        final parent = p.getParent()
+                        if( parent != null && parent.getNameCount() > 0 )
+                            ctx.addReadableDir(parent)
+                    }
                 }
                 catch( Exception ignored ) { /* not a valid path */ }
             }
