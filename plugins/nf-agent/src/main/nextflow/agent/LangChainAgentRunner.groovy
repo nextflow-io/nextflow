@@ -195,20 +195,26 @@ class LangChainAgentRunner implements AgentRunner {
      * caller seeds no {@link SystemMessage}.
      */
     private static String composeSystemMessage(AgentRunnerRequest request) {
-        final String instruction = request.instruction
-        final String goal = request.goal
-        if( !instruction && !goal )
-            return null
         final StringBuilder sb = new StringBuilder()
-        if( instruction )
-            sb.append(instruction)
-        if( goal ) {
+        if( request.instruction )
+            sb.append(request.instruction)
+        if( request.goal ) {
             if( sb.length() > 0 )
                 sb.append('\n\n')
-            sb.append('Goal:\n').append(goal)
+            sb.append('Goal:\n').append(request.goal)
               .append('\nYou are done when the goal is met; produce your final answer as plain text.')
         }
-        return sb.toString()
+        // when tracing a TOOL run, ask the model to narrate its reasoning so the trace can surface
+        // it: OpenAI emits no reasoning on the wire for tool-call turns, so a one-line rationale in
+        // the message content is the only way to make the "thinking" visible. Gated on toolSpecs so
+        // it never touches the single-shot / structured-output path; trace-only, so normal runs are
+        // unaffected. It nudges the model to think out loud, which generally aids tool selection.
+        if( request.trace && request.toolSpecs ) {
+            if( sb.length() > 0 )
+                sb.append('\n\n')
+            sb.append('Before each tool call, briefly state your reasoning for the call in one short sentence.')
+        }
+        return sb.length() > 0 ? sb.toString() : null
     }
 
     /**

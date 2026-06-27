@@ -345,4 +345,59 @@ class LangChainAgentToolLoopTest extends Specification {
         then:
         capturedRequests[0].messages().count { it instanceof SystemMessage } == 0
     }
+
+    def 'should add the reasoning-narration directive to the system message when tracing'() {
+        given:
+        List<ChatRequest> capturedRequests = []
+        ChatModel model = [
+            chat: { ChatRequest req ->
+                capturedRequests << req
+                ChatResponse.builder().aiMessage(AiMessage.from('done')).build()
+            }
+        ] as ChatModel
+        ToolDispatcher dispatch = { String n, String a -> '{}' } as ToolDispatcher
+        // tracing builds the model via the 4-arg createModel (with listeners)
+        def runner = new LangChainAgentRunner(modelFactory: Stub(ChatModelFactory) { createModel(_, _, _, _) >> model })
+        def descriptor = new ToolDescriptor('greet', 'greet', [type:'object', properties:[name:[type:'string']], required:['name'], additionalProperties:false], null)
+        def req = new AgentRunnerRequest(
+            model: 'openai/gpt-5-mini', instruction: 'You are careful.', prompt: 'go',
+            maxIterations: 5, tools: [], outputSchema: null, inputJson: null,
+            toolSpecs: [descriptor], dispatch: dispatch, requestTimeoutSeconds: 0,
+            goal: null, agentName: 't', trace: true)
+
+        when:
+        runner.run(req)
+
+        then:
+        def sys = capturedRequests[0].messages().find { it instanceof SystemMessage } as SystemMessage
+        sys.text().contains('You are careful.')
+        sys.text().contains('briefly state your reasoning')
+    }
+
+    def 'should not add the narration directive when not tracing'() {
+        given:
+        List<ChatRequest> capturedRequests = []
+        ChatModel model = [
+            chat: { ChatRequest req ->
+                capturedRequests << req
+                ChatResponse.builder().aiMessage(AiMessage.from('done')).build()
+            }
+        ] as ChatModel
+        ToolDispatcher dispatch = { String n, String a -> '{}' } as ToolDispatcher
+        def runner = new LangChainAgentRunner(modelFactory: Stub(ChatModelFactory) { createModel(_, _, _) >> model })
+        def descriptor = new ToolDescriptor('greet', 'greet', [type:'object', properties:[name:[type:'string']], required:['name'], additionalProperties:false], null)
+        def req = new AgentRunnerRequest(
+            model: 'openai/gpt-5-mini', instruction: 'You are careful.', prompt: 'go',
+            maxIterations: 5, tools: [], outputSchema: null, inputJson: null,
+            toolSpecs: [descriptor], dispatch: dispatch, requestTimeoutSeconds: 0,
+            goal: null)
+
+        when:
+        runner.run(req)
+
+        then:
+        def sys = capturedRequests[0].messages().find { it instanceof SystemMessage } as SystemMessage
+        sys.text().contains('You are careful.')
+        !sys.text().contains('briefly state your reasoning')
+    }
 }

@@ -74,8 +74,15 @@ class ChatModelFactory {
             .apiKey(apiKey)
             .modelName(modelOf(modelId))
             .timeout(Duration.ofSeconds(timeoutSeconds))
-        if( listeners )
+        if( listeners ) {
             builder.listeners(listeners)
+            // also request the model's reasoning content: it is parsed into AiMessage.thinking()
+            // for models/providers that return it (reasoning models, or providers exposing
+            // `reasoning_content`), and is absent otherwise. Only returnThinking is set —
+            // sendThinking stays false, so the reasoning is never echoed back to the model on
+            // later turns (no risk of chat-completions rejecting an echoed reasoning field).
+            builder.returnThinking(true)
+        }
         if( schema != null ) {
             final responseFormat = ResponseFormat.builder()
                 .type(ResponseFormatType.JSON)
