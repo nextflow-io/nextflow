@@ -21,7 +21,7 @@ workflow.onComplete {
 }
 ```
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 Entry workflows can define an `onComplete` section instead of using `workflow.onComplete`:
 
@@ -50,7 +50,7 @@ workflow.onError {
 Both the `onError` and `onComplete` handlers are invoked when an error condition is encountered. The `onError` handler is called as soon as the error is raised, while `onComplete` is called just before the pipeline execution is about to terminate. When using the `finish` [errorStrategy][process-error-strategy], there may be a significant gap between the two, depending on the time required to complete any pending job.
 :::
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 Entry workflows can define an `onError` section instead of using `workflow.onError`:
 
@@ -239,7 +239,7 @@ See the [mail scope][config-mail] section to learn more the mail server configur
 
 ### AWS SES configuration
 
-<AddedInVersion version="23.06.0-edge" />
+<AddedInVersion version="23.10" />
 
 Nextflow supports the [AWS Simple Email Service](https://aws.amazon.com/ses/) API as an alternative provider to send emails in place of an SMTP server.
 

@@ -36,7 +36,7 @@ Alias of `workflow.projectDir`.
 
 ##### `secrets: Map<String,String>`
 
-<AddedInVersion version="24.02.0-edge" />
+<AddedInVersion version="24.04" />
 
 Map of pipeline secrets. See [Secrets][secrets-page] for more information.
 
@@ -52,7 +52,7 @@ Create a branch criteria to use with the [branch][operator-branch] operator.
 
 ##### `env( name: String ) -> String`
 
-<AddedInVersion version="25.04.0" />
+<AddedInVersion version="25.04" />
 
 Get the value of the environment variable with the specified name in the Nextflow launch environment.
 
@@ -62,7 +62,7 @@ Throw a script runtime error with an optional error message.
 
 ##### `exit( exitCode: int = 0, message: String = null )`
 
-<DeprecatedInVersion version="22.06.0-edge">
+<DeprecatedInVersion version="22.10">
 Use `error()` instead
 </DeprecatedInVersion>
 
@@ -239,7 +239,7 @@ Exit status of the task that caused the workflow execution to fail.
 
 ##### `failOnIgnore: boolean`
 
-<AddedInVersion version="24.05.0-edge" />
+<AddedInVersion version="24.10" />
 Whether the `workflow.failOnIgnore` config option was enabled.
 
 See also: [errorStrategy][process-error-strategy]
@@ -272,13 +272,13 @@ Namespace corresponding to the [`manifest`][config-manifest] config scope.
 
 ##### `outputDir: Path`
 
-<AddedInVersion version="24.10.0" />
+<AddedInVersion version="24.10" />
 
 Workflow output directory.
 
 ##### `preview: boolean`
 
-<AddedInVersion version="24.04.0" />
+<AddedInVersion version="24.04" />
 
 Whether the current workflow run is a preview run.
 

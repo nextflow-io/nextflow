@@ -40,7 +40,6 @@ rootProject.children.each { prj ->
 include 'plugins'
 include 'plugins:nf-amazon'
 include 'plugins:nf-google'
-include 'plugins:nf-tower'
 include 'plugins:nf-console'
 include 'plugins:nf-azure'
 include 'plugins:nf-codecommit'

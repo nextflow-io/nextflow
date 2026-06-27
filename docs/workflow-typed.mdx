@@ -21,7 +21,7 @@ See [Workflow (typed)][syntax-workflow-typed] for the complete syntax reference 
 
 ## Typed parameters
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 A script can declare parameters using the `params` block:
 
@@ -47,13 +47,13 @@ The default value can be overridden by the command line, params file, or config 
 
 A parameter that doesn't specify a default value is a *required* parameter. If a required parameter is not given a value at runtime, the run will fail.
 
-<AddedInVersion version="26.04.0" />
+<AddedInVersion version="26.04" />
 
 Boolean parameters that don't specify a default value will default to `false`.
 
 ## Typed outputs
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 Workflow outputs can use type annotations:
 
@@ -117,7 +117,7 @@ Outputs that receive a dataflow value can be declared as `Value<V>` or `V` for s
 
 ## Typed workflows
 
-<AddedInVersion version="26.04.0" />
+<AddedInVersion version="26.04" />
 
 :::warning
 Typed workflows are a preview feature. The syntax and behavior may change in future releases.

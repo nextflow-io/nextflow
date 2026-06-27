@@ -41,7 +41,7 @@ The task name.
 
 ##### `task.previousException`
 
-<AddedInVersion version="24.10.0" />
+<AddedInVersion version="24.10" />
 
 The exception reported by the previous task attempt.
 
@@ -49,7 +49,7 @@ Since the exception is available after a failed task attempt, it can only be acc
 
 ##### `task.previousTrace`
 
-<AddedInVersion version="24.10.0" />
+<AddedInVersion version="24.10" />
 
 The trace record associated with the previous task attempt.
 
@@ -75,7 +75,7 @@ The unique directory path for the task.
 
 ## Inputs and outputs (typed)
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 :::note
 Typed processes require the `nextflow.enable.types` feature flag to be enabled in every script that uses them.
@@ -167,7 +167,7 @@ Declare a variable input. The received value can be any type, and it will be mad
 
 ##### `file( identifier | stageName )`
 
-<DeprecatedInVersion version="19.10.0">
+<DeprecatedInVersion version="19.10">
 Use `path` instead.
 </DeprecatedInVersion>
 
@@ -189,7 +189,7 @@ Available options:
 
 ###### `arity`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 Specify the number of expected files. Can be a number, e.g. `'1'`, or a range, e.g. `'1..*'`. If a task receives an invalid number of files for this `path` input, it will fail.
 
@@ -223,7 +223,7 @@ Declare a variable output. The argument can be any value, and it can reference a
 
 ##### `file( pattern )`
 
-<DeprecatedInVersion version="19.10.0">
+<DeprecatedInVersion version="19.10">
 Use `path` instead.
 </DeprecatedInVersion>
 
@@ -239,7 +239,7 @@ Available options:
 
 ###### `arity`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 Specify the number of expected files. Can be a number or a range. If a task produces an invalid number of files for this `path` output, it will fail.
 
@@ -277,7 +277,7 @@ Type of paths returned, either `file`, `dir` or `any` (default: `any`, or `file`
 
 Declare an environment variable output. It receives the value of the environment variable (given by `name`) from the task environment.
 
-<ChangedInVersion version="24.04.0">
+<ChangedInVersion version="24.04">
 Prior to this version, if the environment variable contained multiple lines of output, the output would be compressed to a single line by converting newlines to spaces.
 </ChangedInVersion>
 
@@ -287,7 +287,7 @@ Declare a `stdout` output. It receives the standard output of the task script.
 
 ##### `eval( command )`
 
-<AddedInVersion version="24.04.0" />
+<AddedInVersion version="24.04" />
 
 Declare an `eval` output. It receives the standard output of the given command, which is executed in the task environment after the task script.
 
@@ -311,7 +311,7 @@ When `true`, the task will not fail if the specified output is missing (default:
 
 ##### `topic: <name>`
 
-<AddedInVersion version="25.04.0" />
+<AddedInVersion version="25.04" />
 
 Send the output to a [topic channel][channel-topic] with the given name.
 
@@ -400,7 +400,7 @@ Examples of values for the architecture `target` option are `cascadelake`, `icel
 
 ### `array`
 
-<AddedInVersion version="24.04.0" />
+<AddedInVersion version="24.04" />
 
 The `array` directive submits tasks as *job arrays* for executors that support it.
 
@@ -525,7 +525,7 @@ process hello {
 }
 ```
 
-<ChangedInVersion version="24.04.0">
+<ChangedInVersion version="24.04">
 Prior to this version, grid executors that require each option to be on a separate line in the job script would attempt to split multiple options using a variety of different conventions. Multiple options can now be specified more clearly using a string list as shown below.
 </ChangedInVersion>
 
@@ -813,7 +813,7 @@ process.ext.args = '--alpha --beta'
 
 ### `fair`
 
-<AddedInVersion version="23.04.0" />
+<AddedInVersion version="23.04" />
 
 The `fair` directive, when enabled, guarantees that process outputs will be emitted in the order in which they were received. For example:
 
@@ -847,7 +847,7 @@ The above example produces:
 [4, D]
 ```
 
-### hints
+### `hints`
 
 The `hints` directive specifies executor-specific hints as key-value pairs. Each executor uses the hints it recognizes and ignores the rest. Hint values can be any raw value (i.e., numbers, strings, booleans, lists, and maps).
 
@@ -1187,7 +1187,7 @@ Defines an environment variable with the given name and value.
 
 ##### `hostPath: '/host/absolute/path', mountPath: '</pod/absolute/path>'`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 *Can be specified multiple times*
 
@@ -1281,7 +1281,7 @@ tolerations:
 
 ##### `ttlSecondsAfterFinished`
 
-<AddedInVersion version="24.04.0" />
+<AddedInVersion version="24.04" />
 
 Specifies the [TTL mechanism](https://kubernetes.io/docs/concepts/workloads/controllers/job/#ttl-mechanism-for-finished-jobs) for finished jobs in seconds. Applies to both successful and failed jobs.
 
@@ -1347,8 +1347,6 @@ Available options:
 
 ##### `contentType`
 
-<AddedInVersion version="22.10.0" />
-
 *Experimental: currently only supported for S3.*
 
 Allow specifying the media content type of the published file a.k.a. [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types). If set to `true`, the content type is inferred from the file extension (default: `false`).
@@ -1359,7 +1357,7 @@ Enable or disable the publish rule depending on the boolean value specified (def
 
 ##### `failOnError`
 
-<ChangedInVersion version="24.04.0">
+<ChangedInVersion version="24.04">
 The default value was changed from `false` to `true`
 </ChangedInVersion>
 
@@ -1394,7 +1392,7 @@ A closure which, given the name of the file being published, returns the actual 
 
 ##### `storageClass`
 
-<AddedInVersion version="23.04.0" />
+<AddedInVersion version="23.04" />
 
 *Experimental: currently only supported for S3.*
 
@@ -1461,7 +1459,7 @@ Resource labels are currently supported by the following executors:
 The limits and the syntax of the corresponding executor should be taken into consideration when using resource labels.
 :::
 
-<AddedInVersion version="23.10.0">
+<AddedInVersion version="23.10">
 Resource labels in Azure are added to auto-pools, rather than jobs, in order to facilitate cost analysis. A new pool will be created for each new set of resource labels. Therefore, it is recommended to also set `azure.batch.deletePoolsOnCompletion = true` when using process-specific resource labels.
 </AddedInVersion>
 
@@ -1469,7 +1467,7 @@ See also: [label](#label) (for shared process configuration), [tag](#tag) (for p
 
 ### `resourceLimits`
 
-<AddedInVersion version="24.04.0" />
+<AddedInVersion version="24.04" />
 
 The `resourceLimits` directive defines environment-specific limits for task resource requests.
 
@@ -1667,7 +1665,7 @@ Output files are copied from the scratch directory to the work directory.
 
 ##### `'fcp'`
 
-<AddedInVersion version="23.04.0" />
+<AddedInVersion version="23.04" />
 
 Output files are copied from the scratch directory to the work directory by using the [fcp](https://github.com/Svetlitski/fcp) utility (note: it must be available in the task environment).
 
@@ -1677,7 +1675,7 @@ Output files are moved from the scratch directory to the work directory.
 
 ##### `'rclone'`
 
-<AddedInVersion version="23.04.0" />
+<AddedInVersion version="23.04" />
 
 Output files are copied from the scratch directory to the work directory by using the [rclone](https://rclone.org) utility (note: it must be available in the task environment).
 
@@ -1713,13 +1711,13 @@ process make_blast_db {
 }
 ```
 
-:::warning
-If a process uses `storeDir` and all of its outputs are optional, the process will always be skipped, even if the store directory is empty. This issue can be avoided by specifying at least one required file output.
-:::
+Caveats:
 
-:::warning
-The `storeDir` directive should not be used to publish outputs. Use the [publishDir](#publishdir) directive or [workflow outputs][workflow-output-def] instead.
-:::
+- The `env`, `eval`, and `stdout` output qualifiers cannot be used with `storeDir` because they rely on helper files in the task directory. Use `path` outputs instead.
+
+- If a process uses `storeDir` and all of its outputs are optional, the process will always be skipped, even if the store directory is empty. Avoid this issue by specifying at least one required file output.
+
+- The `storeDir` directive is not a replacement for publishing outputs. Use the [publishDir](#publishdir) directive or [workflow outputs][workflow-output-def] instead.
 
 ### `tag`
 
