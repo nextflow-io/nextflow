@@ -70,7 +70,7 @@ To assign roles to a managed identity or service principal, see the [Azure docum
 
 ### Managed identities
 
-<AddedInVersion version="24.05.0-edge" />
+<AddedInVersion version="24.10" />
 
 
 [Managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) is the recommended authentication method when running Nextflow within Azure. It automatically manages credentials without requiring you to store secrets.
@@ -485,7 +485,7 @@ The `azure.batch.pools.<pool-name>.scaleFormula` setting can be used to specify 
 
 By default, Nextflow creates SAS tokens for specific containers and passes them to tasks to enable file operations with Azure Storage. SAS tokens expire after a set period of time. The expiration time is 48 hours by default and can be configured using `azure.storage.tokenDuration` in your configuration.
 
-<AddedInVersion version="25.05.0-edge" />
+<AddedInVersion version="25.10" />
 
 :::warning
 Only available when using [Fusion filesystem](./fusion.mdx).
@@ -524,6 +524,8 @@ Resource overprovisioning can occur if tasks consume more than their allocated s
 :::warning
 Azure virtual machines come with fixed storage disks that are not expandable. Tasks will fail if the tasks running concurrently on a node use more storage than the machine has available.
 :::
+
+By default, Docker and containerd store image layers on the OS disk, which can fill up quickly when pulling large container images. On VMs with an attached data disk (e.g., `Standard_E16ds_v5`), you can use a pool [start task](#start-tasks) to relocate Docker and containerd storage to `$AZ_BATCH_NODE_ROOT_DIR`, which uses the larger data disk.
 
 ### Task containers
 

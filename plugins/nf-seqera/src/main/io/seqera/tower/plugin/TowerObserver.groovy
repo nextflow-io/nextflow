@@ -106,6 +106,8 @@ class TowerObserver implements TraceObserverV2 {
 
     private Map<String,Boolean> allContainers = new ConcurrentHashMap<>()
 
+    private boolean schedRunIdSent
+
     TowerObserver(Session session, TowerClient client, String workspaceId, Map env) {
         this.session = session
         this.workspaceId = workspaceId
@@ -460,6 +462,36 @@ class TowerObserver implements TraceObserverV2 {
         return result
     }
 
+    /**
+     * @return the Seqera Intelligent Compute scheduler run identifier for the current
+     * execution, or {@code null} when the run is not managed by the scheduler or the
+     * identifier has not been assigned yet (i.e. before the first task is submitted).
+     */
+    protected String getSchedRunId() {
+        return session.workflowMetadata?.platform?.schedRunId
+    }
+
+    /**
+     * Propagate the scheduler run id to Platform via a one-off {@code PATCH /workflow/{workflowId}}
+     * as soon as it is available (assigned on the first task submission). The id is stable for the
+     * life of the run, so it is sent exactly once; Platform stores it as a workflow-extension field
+     * used for cost and resource accounting.
+     *
+     * <p>This is best-effort telemetry: a failure only means Platform shows less information, so the
+     * error is logged and the run carries on instead of aborting. The attempt is made just once.
+     */
+    protected void sendSchedRunId() {
+        if( schedRunIdSent )
+            return
+        final id = getSchedRunId()
+        if( !id )
+            return
+        final resp = client.updateWorkflow([schedRunId: id], workspaceId, workflowId)
+        if( resp.error )
+            log.debug("Unable to propagate Seqera scheduler run id to Platform -- ${resp.code}: ${resp.message}")
+        schedRunIdSent = true
+    }
+
     protected String mapToString(def obj) {
         if( obj == null )
             return null
@@ -579,6 +611,9 @@ class TowerObserver implements TraceObserverV2 {
                     if( ev.completed )
                         complete = true
                 }
+
+                // propagate the scheduler run id once it is available (sent exactly once)
+                sendSchedRunId()
 
                 // check if there's something to send
                 final now = System.currentTimeMillis()
