@@ -88,6 +88,23 @@ class ValueImplTest extends Specification {
         result.val == CH.stop()
     }
 
+    def testFlatMapError() {
+
+        when:
+        runScript(
+            '''\
+            nextflow.enable.types = true
+
+            workflow {
+                channel.value(tuple(1,2)).flatMap()
+            }
+            '''
+        )
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains 'Operator `flatMap` expected an Iterable but received a tuple'
+    }
+
     def testMap() {
         when:
         def result = runDataflow {

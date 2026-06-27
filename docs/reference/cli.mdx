@@ -33,7 +33,7 @@ Comma-separated list of configuration files which are added to the configuration
 
 ##### `-d, -dockerize`
 
-<DeprecatedInVersion version="23.10.0" />
+<DeprecatedInVersion version="23.10" />
 
 Launch Nextflow via Docker (experimental).
 
@@ -71,7 +71,7 @@ Print the program version.
 
 ### `auth`
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 Manage Seqera Platform authentication.
 
@@ -346,7 +346,7 @@ Print config using Java properties notation.
 
 ##### `-r, -revision`
 
-<AddedInVersion version="25.12.0-edge" />
+<AddedInVersion version="26.04" />
 
 Project revision. Can be a git branch, tag, or commit SHA number.
 
@@ -360,7 +360,7 @@ Sort config attributes.
 
 ##### `-value`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 Print the value of a config option, or fail if the option is not defined.
 
@@ -481,7 +481,7 @@ Print the command usage.
 
 ##### `-r, -revision`
 
-<AddedInVersion version="25.12.0-edge" />
+<AddedInVersion version="26.04" />
 
 Project revision to drop. Can be a git branch, tag, or commit SHA number.
 
@@ -551,7 +551,7 @@ Delete a file or directory:
 $ nextflow fs rm <path>
 ```
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 Print file or directory attributes:
 
@@ -664,7 +664,7 @@ $ nextflow info nextflow-io/hello
 
 ### `inspect`
 
-<AddedInVersion version="23.10.0" />
+<AddedInVersion version="23.10" />
 
 Inspect process settings in a pipeline project. Currently only supports the `container` directive.
 
@@ -818,7 +818,7 @@ $ nextflow kuberun nextflow-io/hello
 
 ### `launch`
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 Launch a workflow in [Seqera Platform](https://seqera.io/platform/).
 
@@ -884,7 +884,7 @@ Whether to replace scripts with command stubs when executing the run.
 
 ##### `-user-secret`
 
-<AddedInVersion version="26.04.0" />
+<AddedInVersion version="26.04" />
 
 Name of user secret to use in the pipeline. Can be specified multiple times.
 
@@ -898,7 +898,7 @@ The Seqera Platform workspace name.
 
 ##### `-workspace-secret`
 
-<AddedInVersion version="26.04.0" />
+<AddedInVersion version="26.04" />
 
 Name of workspace secret to use in the pipeline. Can be specified multiple times.
 
@@ -912,7 +912,7 @@ $ nextflow launch nextflow-io/hello
 
 ### `lineage`
 
-<AddedInVersion version="25.04.0" />
+<AddedInVersion version="25.04" />
 
 :::warning
 *Experimental: may change in a future release.*
@@ -990,7 +990,7 @@ Can be specified multiple times.
 
 ##### `-files-from`
 
-<AddedInVersion version="26.04.0" />
+<AddedInVersion version="26.04" />
 
 Read list of paths to lint from a text file. Use `-` to read from standard input.
 
@@ -1004,7 +1004,7 @@ Output mode for reporting errors: `full`, `extended`, `concise`, `json`, `markdo
 
 ##### `-project-dir`
 
-<AddedInVersion version="26.04.0" />
+<AddedInVersion version="26.04" />
 
 Path to project directory (default: `'.'`). Used to locate project-level assets such as the lib directory and modules directory.
 
@@ -1321,7 +1321,7 @@ $ nextflow logfile -n 10 -f
 
 ### `module`
 
-<AddedInVersion version="26.04.0" />
+<AddedInVersion version="26.04" />
 
 Manage Nextflow modules.
 
@@ -1614,7 +1614,7 @@ $ nextflow plugin <subcommand> [options]
 
 ##### `create`
 
-<AddedInVersion version="25.04.0" />
+<AddedInVersion version="25.04" />
 
 Create a plugin scaffold using the [Nextflow plugin template](https://github.com/nextflow-io/nf-plugin-template/). See [Creating a plugin][gradle-plugin-create] for more information.
 
@@ -1648,7 +1648,7 @@ Update all downloaded projects.
 
 ##### `-d, -deep`
 
-<DeprecatedInVersion version="25.12.0-edge">
+<DeprecatedInVersion version="26.04">
 Ignored for new multi-revision asset management strategy. Still used in legacy assets.
 </DeprecatedInVersion>
 
@@ -1664,7 +1664,7 @@ Service hub where the project is hosted. Options: `gitlab` or `bitbucket`
 
 ##### `-migrate`
 
-<AddedInVersion version="25.12.0-edge" />
+<AddedInVersion version="26.04" />
 
 Update the project asset to new multi-revision strategy.
 
@@ -1743,7 +1743,7 @@ Enable/disable processes caching.
 
 ##### `-d, -deep`
 
-<DeprecatedInVersion version="25.12.0-edge">
+<DeprecatedInVersion version="26.04">
 Ignored for new multi-revision asset management strategy. Still used in legacy assets.
 </DeprecatedInVersion>
 
@@ -1755,13 +1755,13 @@ Prevent the cancellation of child jobs on execution termination
 
 ##### `-dsl1`
 
-<DeprecatedInVersion version="23.10.0" />
+<DeprecatedInVersion version="23.10" />
 
 Execute the workflow using DSL1 syntax.
 
 ##### `-dsl2`
 
-<DeprecatedInVersion version="23.10.0" />
+<DeprecatedInVersion version="23.10" />
 
 Execute the workflow using DSL2 syntax.
 
@@ -1773,7 +1773,7 @@ Dump channels for debugging purpose. Optionally accepts a comma-separated list o
 
 Dump task hash keys for debugging purposes.
 
-<AddedInVersion version="23.10.0">
+<AddedInVersion version="23.10">
 You can use `-dump-hashes json` to dump the task hash keys as JSON for easier post-processing. See the [caching and resuming tips][cache-compare-hashes] for more details.
 </AddedInVersion>
 
@@ -1783,7 +1783,7 @@ Add the specified variable to execution environment.
 
 ##### `-entry`
 
-<DeprecatedInVersion version="24.10.0">
+<DeprecatedInVersion version="24.10">
 Use params in the entry workflow to call different workflows from the command line.
 </DeprecatedInVersion>
 
@@ -1821,12 +1821,12 @@ Do not check for remote project updates.
 
 ##### `-o, -output-dir` (`results`)
 
-<AddedInVersion version="24.10.0" />
+<AddedInVersion version="24.10" />
 
 Directory where workflow outputs are stored.
 
 #####`-output-format`
-<AddedInVersion version="26.04.0" />
+<AddedInVersion version="26.04" />
 
 Output format for printing workflow outputs. Options: `text` (default), `json`, `none`.
 
@@ -1896,7 +1896,7 @@ Use the specified Conda environment package or file (must end with `.yml` or `.y
 
 Create pipeline DAG file.
 
-<ChangedInVersion version="23.10.0">
+<ChangedInVersion version="23.10">
 The default format was changed from `dot` to `html`.
 </ChangedInVersion>
 
@@ -2139,7 +2139,7 @@ Hide header line.
 
 ##### `-r, -revision`
 
-<AddedInVersion version="25.12.0-edge" />
+<AddedInVersion version="26.04" />
 
 Project revision. Can be a git branch, tag, or commit SHA number.
 
