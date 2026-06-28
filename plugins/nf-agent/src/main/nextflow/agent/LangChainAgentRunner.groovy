@@ -28,6 +28,7 @@ import dev.langchain4j.model.chat.listener.ChatModelListener
 import dev.langchain4j.model.chat.request.json.JsonSchema
 import dev.langchain4j.model.chat.response.ChatResponse
 import dev.langchain4j.service.AiServices
+import dev.langchain4j.skills.Skills
 import dev.langchain4j.service.tool.ToolExecutionResult
 import dev.langchain4j.service.tool.ToolExecutor
 import dev.langchain4j.service.tool.ToolProvider
@@ -120,93 +121,141 @@ class LangChainAgentRunner implements AgentRunner {
      * {@link UserMessage}.
      */
     private String runWithTools(AgentRunnerRequest request) {
-        // optional execution tracer: a ChatModelListener that logs the turns and
-        // model reasoning, paired with per-tool input/output lines below
         final AgentTrace trace = request.trace ? new AgentTrace(request.agentName) : null
-        final List<ChatModelListener> listeners = trace != null ? Collections.<ChatModelListener>singletonList(trace) : null
+        final int maxIterations = effectiveMaxIterations(request)
 
-        // Phase 2: tools XOR structured-output — do NOT force a responseFormat
-        // when tools are in play (pass a null schema to the model factory). The model is
-        // built with listeners only when tracing, keeping the default path on the 3-arg call.
-        final ChatModel model = listeners
-            ? modelFactory.createModel(request.model, timeoutSeconds(request), null, listeners)
-            : modelFactory.createModel(request.model, timeoutSeconds(request), null)
+        final ChatModel model = buildChatModel(request, trace)
+        final Map<ToolSpecification,ToolExecutor> moduleTools = moduleTools(request, trace)
+        final Skills skills = skillsOf(request)
 
-        final int maxIterations = request.maxIterations > 0 ? request.maxIterations : DEFAULT_MAX_ITERATIONS
-
-        // Build one ToolSpecification->ToolExecutor entry per declared tool.
-        // Each executor delegates to the core dispatch callback (which runs the
-        // real module) using the langchain4j 2-arg executor signature. May be empty
-        // for a skills-only agent.
-        final Map<ToolSpecification,ToolExecutor> tools = new LinkedHashMap<>()
-        if( request.toolSpecs ) {
-            for( final descriptor : request.toolSpecs ) {
-                final ToolSpecification spec = ModuleToolAdapter.toToolSpecification(descriptor)
-                final ToolExecutor executor = { ToolExecutionRequest ter, Object memoryId ->
-                    log.debug "Agent tool call name=${ter.name()}; args=${ter.arguments()}"
-                    final String result = request.dispatch.call(ter.name(), ter.arguments())
-                    if( trace != null )
-                        trace.tool(ter.name(), ter.arguments(), result)
-                    return result
-                } as ToolExecutor
-                tools.put(spec, executor)
-            }
-        }
-
-        // Map declared skills onto a langchain4j Skills container (Tool Mode); its tool provider
-        // adds the activate_skill/read_skill_resource tools alongside the static module tools.
-        final dev.langchain4j.skills.Skills skills = request.skills
-            ? SkillAdapter.toSkills(request.skills as List<SkillDescriptor>)
-            : null
-
-        // Seed memory with ONLY the system message (instruction + optional goal); for a skills run
-        // append the available-skills catalog so the model knows which skills it can activate (the
-        // activate_skill `skill_name` parameter is free text, not an enum). The user text is passed
-        // to chat().
-        final ChatMemory memory = MessageWindowChatMemory.withMaxMessages(Integer.MAX_VALUE)
-        String systemMessage = composeSystemMessage(request)
-        if( skills != null ) {
-            final String catalog = skills.formatAvailableSkills()
-            systemMessage = systemMessage ? (systemMessage + '\n\n' + catalog) : catalog
-        }
-        if( systemMessage )
-            memory.add(SystemMessage.from(systemMessage))
-
-        // The full composed user text (prompt + input JSON) becomes the single user message.
+        final ChatMemory memory = seededMemory(request, skills)
+        final ToolProvider skillProvider = skillToolProvider(skills, trace)
         final String userText = composeUserText(request)
 
-        // The skills tool provider (activate_skill / read_skill_resource). When tracing, wrap it so
-        // each skill-tool invocation is reported like a module tool; also enumerate its tool names
-        // (best-effort) so they appear in the run header alongside the static module tools.
-        final List<String> skillToolNames = new ArrayList<>()
-        ToolProvider skillProvider = null
-        if( skills != null ) {
-            skillProvider = skills.toolProvider()
-            if( trace != null ) {
-                skillToolNames.addAll(enumerateSkillTools(skillProvider, userText))
-                skillProvider = tracingSkillProvider(skillProvider, trace)
-            }
-        }
+        traceBegin(trace, request, moduleTools, skills, userText)
 
-        log.debug "Running agent model=${request.model}; tools=${tools.keySet()*.name()}; skills=${skillToolNames}; maxIterations=${maxIterations}"
-        if( trace != null )
-            trace.begin(request.model, (tools.keySet()*.name() as List<String>) + skillToolNames)
+        final AgentService agent = buildAgent(model, memory, moduleTools, skillProvider, maxIterations)
+        return runChat(agent, userText, trace, maxIterations)
+    }
 
-        // A cap of N permits only N-1 model round-trips, so pass maxIterations+1.
-        // The system message is seeded directly into the chat memory above;
-        // no systemMessageProvider is needed (that would double-add it).
-        // In langchain4j 1.17 static .tools(map) and .toolProvider(...) coexist and merge, so the
-        // skills provider is additive; .tools(...) is skipped when there are no static module tools.
+    /** The effective tool-call iteration cap: the request value, or the built-in default. */
+    private static int effectiveMaxIterations(AgentRunnerRequest request) {
+        return request.maxIterations > 0 ? request.maxIterations : DEFAULT_MAX_ITERATIONS
+    }
+
+    /**
+     * Build the chat model for a tool/skill run. Tools and structured output are mutually exclusive,
+     * so no {@code responseFormat} is forced (null schema). The execution tracer is attached as a
+     * {@link ChatModelListener} only when tracing.
+     */
+    private ChatModel buildChatModel(AgentRunnerRequest request, AgentTrace trace) {
+        final List<ChatModelListener> listeners = trace != null
+            ? Collections.<ChatModelListener>singletonList(trace)
+            : null
+        return listeners
+            ? modelFactory.createModel(request.model, timeoutSeconds(request), null, listeners)
+            : modelFactory.createModel(request.model, timeoutSeconds(request), null)
+    }
+
+    /**
+     * The static module tools: one {@link ToolSpecification} per declared tool, all sharing a single
+     * executor that dispatches by tool name back to the core callback. Empty for a skills-only agent.
+     */
+    private static Map<ToolSpecification,ToolExecutor> moduleTools(AgentRunnerRequest request, AgentTrace trace) {
+        final Map<ToolSpecification,ToolExecutor> tools = new LinkedHashMap<>()
+        if( !request.toolSpecs )
+            return tools
+        final ToolExecutor executor = moduleToolExecutor(request, trace)
+        for( final descriptor : request.toolSpecs )
+            tools.put(ModuleToolAdapter.toToolSpecification(descriptor), executor)
+        return tools
+    }
+
+    /** The executor shared by every module tool: dispatch by name to the core callback, trace the call. */
+    private static ToolExecutor moduleToolExecutor(AgentRunnerRequest request, AgentTrace trace) {
+        return { ToolExecutionRequest ter, Object memoryId ->
+            log.debug "Agent tool call name=${ter.name()}; args=${ter.arguments()}"
+            final String result = request.dispatch.call(ter.name(), ter.arguments())
+            if( trace != null )
+                trace.tool(ter.name(), ter.arguments(), result)
+            return result
+        } as ToolExecutor
+    }
+
+    /** Map the request's declared skills onto a langchain4j {@link Skills} container, or null when none. */
+    private static Skills skillsOf(AgentRunnerRequest request) {
+        return request.skills ? SkillAdapter.toSkills(request.skills as List<SkillDescriptor>) : null
+    }
+
+    /**
+     * Chat memory seeded with the single system message — the instruction/goal plus, for a skills run,
+     * the available-skills catalog (the user text is passed to {@code chat()}, not seeded here).
+     */
+    private static ChatMemory seededMemory(AgentRunnerRequest request, Skills skills) {
+        final ChatMemory memory = MessageWindowChatMemory.withMaxMessages(Integer.MAX_VALUE)
+        final String systemMessage = systemMessageWithSkillCatalog(request, skills)
+        if( systemMessage )
+            memory.add(SystemMessage.from(systemMessage))
+        return memory
+    }
+
+    /**
+     * The system message with the available-skills catalog appended when skills are present, so the
+     * model knows which skills it can activate (the {@code activate_skill} arg is free text, not an enum).
+     */
+    private static String systemMessageWithSkillCatalog(AgentRunnerRequest request, Skills skills) {
+        final String base = composeSystemMessage(request)
+        if( skills == null )
+            return base
+        final String catalog = skills.formatAvailableSkills()
+        return base ? (base + '\n\n' + catalog) : catalog
+    }
+
+    /**
+     * The skills tool provider ({@code activate_skill}/{@code read_skill_resource}), or null when no
+     * skills. When tracing, wrapped so each skill-tool call is itemized like a module tool.
+     */
+    private static ToolProvider skillToolProvider(Skills skills, AgentTrace trace) {
+        if( skills == null )
+            return null
+        final ToolProvider provider = skills.toolProvider()
+        return trace != null ? tracingSkillProvider(provider, trace) : provider
+    }
+
+    /** Emit the trace run header listing the module and skill tool names the agent may call. */
+    private static void traceBegin(AgentTrace trace, AgentRunnerRequest request, Map<ToolSpecification,ToolExecutor> moduleTools, Skills skills, String userText) {
+        if( trace == null )
+            return
+        final List<String> toolNames = new ArrayList<String>(moduleTools.keySet()*.name() as List<String>)
+        if( skills != null )
+            toolNames.addAll(enumerateSkillTools(skills.toolProvider(), userText))
+        trace.begin(request.model, toolNames)
+    }
+
+    /**
+     * Assemble the {@code AiServices} agent. A cap of N permits only N-1 round-trips, so pass
+     * maxIterations+1. In langchain4j 1.17 static {@code .tools(map)} and {@code .toolProvider(...)}
+     * coexist and merge, so the skills provider is additive; {@code .tools(...)} is skipped when there
+     * are no module tools.
+     */
+    private static AgentService buildAgent(ChatModel model, ChatMemory memory, Map<ToolSpecification,ToolExecutor> moduleTools, ToolProvider skillProvider, int maxIterations) {
         final AiServices<AgentService> builder = AiServices.builder(AgentService)
             .chatModel(model)
             .chatMemory(memory)
             .maxSequentialToolsInvocations(maxIterations + 1)
-        if( !tools.isEmpty() )
-            builder.tools(tools)
+        if( !moduleTools.isEmpty() )
+            builder.tools(moduleTools)
         if( skillProvider != null )
             builder.toolProvider(skillProvider)
-        final AgentService agent = builder.build()
+        return builder.build()
+    }
 
+    /**
+     * Drive the chat to a final answer. langchain4j throws a plain {@code RuntimeException} on cap
+     * exceed; re-throw it with the historical {@link IllegalStateException} shape, while letting any
+     * genuine {@code IllegalStateException} propagate unchanged.
+     */
+    private static String runChat(AgentService agent, String userText, AgentTrace trace, int maxIterations) {
         try {
             final String answer = agent.chat(userText)
             if( trace != null )
@@ -214,15 +263,9 @@ class LangChainAgentRunner implements AgentRunner {
             return answer
         }
         catch( IllegalStateException e ) {
-            // Let any genuine IllegalStateException (e.g. from ChatModelFactory or
-            // our own code) propagate unchanged.
             throw e
         }
         catch( RuntimeException e ) {
-            // langchain4j 1.16.3 throws a plain RuntimeException on cap exceed
-            // (dev.langchain4j.internal.Exceptions.runtime, message "Something is
-            // wrong, exceeded %s tool calling round trips ..."). Re-throw with the
-            // historical IllegalStateException message/shape.
             throw new IllegalStateException("Agent exceeded the maximum number of tool-call iterations (${maxIterations})", e)
         }
     }
