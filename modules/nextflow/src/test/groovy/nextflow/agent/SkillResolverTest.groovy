@@ -143,4 +143,56 @@ class SkillResolverTest extends Specification {
         then:
         thrown(ScriptRuntimeException)
     }
+
+    // -- remote reference disambiguation --
+
+    def 'should recognize explicit github refs as remote and bare names/registry refs as local'() {
+        expect:
+        SkillResolver.isRemoteRef('https://github.com/org/repo')
+        SkillResolver.isRemoteRef('github.com/org/repo@v1')
+        SkillResolver.isRemoteRef('git@github.com:org/repo')
+        and: 'a bare name and a bare org/repo (registry-style) are NOT remote'
+        !SkillResolver.isRemoteRef('greet')
+        !SkillResolver.isRemoteRef('nf-core/fastqc')
+        !SkillResolver.isRemoteRef(null)
+    }
+
+    def 'should parse a remote ref into clone url, repo and rev'() {
+        when:
+        def p = SkillResolver.parseRemoteRef('github.com/org/myrepo@abc123')
+        then:
+        p.url == 'https://github.com/org/myrepo.git'
+        p.repo == 'myrepo'
+        p.rev == 'abc123'
+    }
+
+    // -- remote fetch (offline, via a file:// clone) --
+
+    def 'should fetch a remote skill via a file:// clone and reuse the cache'() {
+        given: 'a local git repo acting as the remote, containing a skill'
+        def remote = Files.createDirectories(tmp.resolve('remote'))
+        def git = org.eclipse.jgit.api.Git.init().setDirectory(remote.toFile()).call()
+        Files.writeString(remote.resolve('SKILL.md'), "---\nname: remoteskill\ndescription: from git\n---\nremote instructions")
+        git.add().addFilepattern('.').call()
+        git.commit().setMessage('init').setSign(false).setAuthor('t','t@t').setCommitter('t','t@t').call()
+        git.close()
+        def base = Files.createDirectories(tmp.resolve('proj'))
+        def url = "file://${remote.toAbsolutePath()}/.git".toString()
+
+        when:
+        def list = SkillResolver.loadRemoteUrl(base, url, 'myrepo', null)
+
+        then:
+        list.size() == 1
+        list[0].name == 'remoteskill'
+        list[0].content == 'remote instructions'
+        Files.isDirectory(base.resolve('skills/myrepo'))
+
+        when: 'called again with a bogus url, the existing cache dir is reused (no re-clone)'
+        def list2 = SkillResolver.loadRemoteUrl(base, 'file:///does/not/exist.git', 'myrepo', null)
+
+        then:
+        list2.size() == 1
+        list2[0].name == 'remoteskill'
+    }
 }

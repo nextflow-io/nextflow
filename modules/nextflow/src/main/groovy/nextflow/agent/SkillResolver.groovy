@@ -18,11 +18,14 @@ package nextflow.agent
 import java.nio.charset.StandardCharsets
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
+import java.util.regex.Matcher
 import java.util.stream.Stream
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.ScriptRuntimeException
+import org.eclipse.jgit.api.Git
 import org.yaml.snakeyaml.Yaml
 
 /**
@@ -188,5 +191,93 @@ class SkillResolver {
         if( result.isEmpty() )
             throw new ScriptRuntimeException("Agent skill `${label}` has no ${SKILL_FILE} (looked in `${dir}` and its subdirectories)")
         return result
+    }
+
+    // -- remote (GitHub) resolution --
+
+    private static final java.util.regex.Pattern REMOTE_REF =
+        ~/^(https:\/\/github\.com\/|git@github\.com:|github\.com\/)([^\/@:]+)\/([^\/@:]+?)(?:@(.+))?$/
+
+    /**
+     * Whether a {@code skills} entry is a remote GitHub reference. Only explicit GitHub
+     * forms qualify ({@code https://github.com/<org>/<repo>}, {@code git@github.com:<org>/<repo>},
+     * {@code github.com/<org>/<repo>}, each optionally {@code @rev}); a bare {@code <org>/<repo>}
+     * is NOT remote (that shape is reserved for registry-style module refs) — anything that is
+     * not remote is treated as a local skill name.
+     */
+    static boolean isRemoteRef(String ref) {
+        if( !ref )
+            return false
+        return REMOTE_REF.matcher(ref).matches()
+    }
+
+    /** Parse a remote GitHub ref into {@code [url, repo, rev]} (rev may be null). */
+    static Map parseRemoteRef(String ref) {
+        final Matcher m = REMOTE_REF.matcher(ref)
+        if( !m.matches() )
+            throw new ScriptRuntimeException("Invalid remote skill reference `${ref}` - expected github.com/<org>/<repo>[@rev]")
+        final String prefix = m.group(1)
+        final String org = m.group(2)
+        String repo = m.group(3)
+        if( repo.endsWith('.git') )
+            repo = repo.substring(0, repo.length() - 4)
+        final String rev = m.group(4)
+        final String url = prefix == 'git@github.com:'
+            ? "git@github.com:${org}/${repo}.git".toString()
+            : "https://github.com/${org}/${repo}.git".toString()
+        return [url: url, repo: repo, rev: rev]
+    }
+
+    /**
+     * Resolve a remote GitHub skill reference: clone (and cache) the repo into the local
+     * {@code skills/} directory, then load the skill(s) it contains.
+     */
+    static List<SkillDescriptor> loadRemote(Path baseDir, String ref) {
+        final Map parsed = parseRemoteRef(ref)
+        return loadRemoteUrl(baseDir, parsed.url as String, parsed.repo as String, parsed.rev as String)
+    }
+
+    /**
+     * Low-level remote fetch: clone {@code cloneUrl} (checking out {@code rev} when given) into a
+     * rev-keyed cache dir under {@code <baseDir>/skills/}, reusing it when present, then scan it for
+     * skills. The cache dir is keyed by repo name and {@code @rev} so a pinned revision is never
+     * silently served from a cache populated for a different revision.
+     */
+    static List<SkillDescriptor> loadRemoteUrl(Path baseDir, String cloneUrl, String repoName, String rev) {
+        final String cacheName = rev ? "${repoName}@${rev}".toString() : repoName
+        final Path cacheDir = baseDir.resolve(SKILLS_DIR).resolve(cacheName)
+        if( !Files.isDirectory(cacheDir) )
+            cloneInto(cloneUrl, rev, cacheDir)
+        return scanSkillRoot(cacheDir, repoName)
+    }
+
+    /**
+     * Clone into a sibling temp dir then atomically rename into {@code cacheDir}, so an
+     * interrupted/failed clone never leaves a half-populated cache. A shallow clone is used only
+     * for a moving (default-branch) remote ref; a pinned {@code rev} or a local {@code file://}
+     * source is full-cloned so the requested commit is reachable.
+     */
+    private static void cloneInto(String cloneUrl, String rev, Path cacheDir) {
+        Files.createDirectories(cacheDir.parent)
+        final Path tmp = Files.createTempDirectory(cacheDir.parent, '.skill-clone-')
+        Files.delete(tmp)  // JGit creates the directory itself
+        try {
+            final clone = Git.cloneRepository().setURI(cloneUrl).setDirectory(tmp.toFile())
+            if( !rev && !cloneUrl.startsWith('file:') )
+                clone.setDepth(1)
+            final Git git = clone.call()
+            try {
+                if( rev )
+                    git.checkout().setName(rev).call()
+            }
+            finally {
+                git.close()
+            }
+            Files.move(tmp, cacheDir, StandardCopyOption.ATOMIC_MOVE)
+        }
+        catch( Exception e ) {
+            try { tmp.toFile().deleteDir() } catch( Exception ignore ) {}
+            throw new ScriptRuntimeException("Unable to fetch remote skill from `${cloneUrl}`${rev ? " (@${rev})" : ''}: ${e.message}", e)
+        }
     }
 }
