@@ -216,6 +216,52 @@ Run it:
 nextflow run main.nf
 ```
 
+### Skills (instruction packs)
+
+An agent can also use **skills** — Anthropic-style `SKILL.md` folders that
+progressively disclose expert instructions to the model. Where `tools` let the
+model *run code*, `skills` give it *expert instructions on demand*. Declare them
+with the `skills` directive:
+
+```nextflow
+agent reporter {
+    model 'openai/gpt-5-mini'
+    instruction 'You summarize sequencing results.'
+    skills 'sequence-report'
+
+    input:  request: String
+    output: answer: String
+    prompt: "${request}"
+}
+```
+
+Each entry resolves to a skill folder containing a `SKILL.md` (YAML frontmatter
+with `name` + `description`, then a Markdown body of instructions):
+
+- **Local** — a bare name (e.g. `sequence-report`) resolves to `skills/<name>/`,
+  a `skills/` directory beside the script's `main.nf`.
+- **Remote** — a GitHub reference (`github.com/<org>/<repo>[@rev]`,
+  `https://github.com/...`, or `git@github.com:...`) is cloned and **cached**
+  into that same `skills/` directory, then loaded like a local skill.
+
+The model is shown each skill's `name` + `description` up front and reads the
+full instructions on demand (langchain4j Tool Mode: `activate_skill`); bundled
+reference files are read via `read_skill_resource`. Skills run **no code** at
+inference. The skills directory location can be overridden with the
+`agent.skillsDir` config option.
+
+:::warning
+A remote skill's `SKILL.md` becomes model instructions, so activating a remote
+skill means trusting its authors. **Pin a commit SHA** (`@<sha>`) rather than a
+moving branch so the content cannot change under you.
+:::
+
+:::note
+Like `tools`, declaring `skills` makes the model's free-text answer the output,
+so the **output must be a plain (non-record) type**; combining `skills` with a
+`record` output is rejected at run time.
+:::
+
 ## Configuration
 
 The `agent` configuration scope sets defaults applied to agents that do not declare the corresponding directive. An agent's own directives always take precedence; the scope only fills in a value the agent omitted.
@@ -234,6 +280,7 @@ agent {
 | `defaultModel` | Default model (`provider/model`) for an agent that does not declare a `model` directive. |
 | `maxIterationsDefault` | Default cap on the tool-calling loop for an agent that does not declare `maxIterations` (built-in default `20`). |
 | `requestTimeout` | Time to wait for a single LLM chat request before failing (built-in default `120 sec`). |
+| `skillsDir` | Directory holding agent skills declared via `skills` (relative to the script dir, or absolute); remote skills are cached here too (built-in default `skills`). |
 
 ## Directives
 
@@ -243,7 +290,8 @@ agent {
 | `instruction` | no | System prompt describing the agent's role. Omitted if not set. |
 | `goal` | no | A high-level objective that steers the agent's multi-turn loop. Advisory: folded into the system message; the model is encouraged to keep working (calling tools) until the goal is met, while `maxIterations` remains the hard cap. |
 | `tools` | no | One or more capability strings enabling tools the agent may call. `'module_run'` exposes **each** in-scope process as its **own** tool, named after the module (discovered from `include` statements and locally-defined processes), with the module's input schema as the tool's enforced `parameters`. `'filesystem'` enables a sandboxed read/write/list/exists tool. Multiple capabilities are allowed: `tools 'module_run', 'filesystem'`. Requires a plain (non-record) output type. See [Tools (calling modules)](#tools-calling-modules). |
-| `maxIterations` | no | Cap on the LLM tool-calling loop (default 20). Applies when `tools` are declared. |
+| `skills` | no | One or more skills (`SKILL.md` folders) the agent may use. Each entry is a local skill name (resolved under `skills/` beside the script) or a remote GitHub reference (`github.com/<org>/<repo>[@rev]`) cloned and cached there. Requires a plain (non-record) output type. See [Skills (instruction packs)](#skills-instruction-packs). |
+| `maxIterations` | no | Cap on the LLM tool-calling loop (default 20). Applies when `tools` or `skills` are declared. |
 
 Only the `prompt:` block is structurally required; `model` is additionally required when the agent runs.
 
