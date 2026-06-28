@@ -102,11 +102,11 @@ class ToolOutputReader {
      * return {@code true} if any byte is a NUL (0x00).
      */
     static boolean looksBinary(Path file) {
-        InputStream in = null
+        InputStream inStream = null
         try {
-            in = Files.newInputStream(file)
+            inStream = Files.newInputStream(file)
             final buf = new byte[SNIFF_BYTES]
-            final n = in.read(buf)
+            final n = inStream.read(buf)
             for( int i=0; i<n; i++ ) {
                 if( buf[i] == (byte) 0 )
                     return true
@@ -114,7 +114,7 @@ class ToolOutputReader {
             return false
         }
         finally {
-            in?.close()
+            inStream?.close()
         }
     }
 
