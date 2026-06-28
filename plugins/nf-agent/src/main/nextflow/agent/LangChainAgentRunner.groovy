@@ -20,6 +20,7 @@ import dev.langchain4j.agent.tool.ToolSpecification
 import dev.langchain4j.data.message.ChatMessage
 import dev.langchain4j.data.message.SystemMessage
 import dev.langchain4j.data.message.UserMessage
+import dev.langchain4j.invocation.InvocationContext
 import dev.langchain4j.memory.ChatMemory
 import dev.langchain4j.memory.chat.MessageWindowChatMemory
 import dev.langchain4j.model.chat.ChatModel
@@ -27,8 +28,13 @@ import dev.langchain4j.model.chat.listener.ChatModelListener
 import dev.langchain4j.model.chat.request.json.JsonSchema
 import dev.langchain4j.model.chat.response.ChatResponse
 import dev.langchain4j.service.AiServices
+import dev.langchain4j.service.tool.ToolExecutionResult
 import dev.langchain4j.service.tool.ToolExecutor
+import dev.langchain4j.service.tool.ToolProvider
+import dev.langchain4j.service.tool.ToolProviderRequest
+import dev.langchain4j.service.tool.ToolProviderResult
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import org.pf4j.Extension
 
@@ -169,9 +175,22 @@ class LangChainAgentRunner implements AgentRunner {
         // The full composed user text (prompt + input JSON) becomes the single user message.
         final String userText = composeUserText(request)
 
-        log.debug "Running agent model=${request.model}; tools=${tools.keySet()*.name()}; maxIterations=${maxIterations}"
+        // The skills tool provider (activate_skill / read_skill_resource). When tracing, wrap it so
+        // each skill-tool invocation is reported like a module tool; also enumerate its tool names
+        // (best-effort) so they appear in the run header alongside the static module tools.
+        final List<String> skillToolNames = new ArrayList<>()
+        ToolProvider skillProvider = null
+        if( skills != null ) {
+            skillProvider = skills.toolProvider()
+            if( trace != null ) {
+                skillToolNames.addAll(enumerateSkillTools(skillProvider, userText))
+                skillProvider = tracingSkillProvider(skillProvider, trace)
+            }
+        }
+
+        log.debug "Running agent model=${request.model}; tools=${tools.keySet()*.name()}; skills=${skillToolNames}; maxIterations=${maxIterations}"
         if( trace != null )
-            trace.begin(request.model, tools.keySet()*.name())
+            trace.begin(request.model, (tools.keySet()*.name() as List<String>) + skillToolNames)
 
         // A cap of N permits only N-1 model round-trips, so pass maxIterations+1.
         // The system message is seeded directly into the chat memory above;
@@ -184,8 +203,8 @@ class LangChainAgentRunner implements AgentRunner {
             .maxSequentialToolsInvocations(maxIterations + 1)
         if( !tools.isEmpty() )
             builder.tools(tools)
-        if( skills != null )
-            builder.toolProvider(skills.toolProvider())
+        if( skillProvider != null )
+            builder.toolProvider(skillProvider)
         final AgentService agent = builder.build()
 
         try {
@@ -205,6 +224,61 @@ class LangChainAgentRunner implements AgentRunner {
             // wrong, exceeded %s tool calling round trips ..."). Re-throw with the
             // historical IllegalStateException message/shape.
             throw new IllegalStateException("Agent exceeded the maximum number of tool-call iterations (${maxIterations})", e)
+        }
+    }
+
+    /**
+     * Wrap a skills {@link ToolProvider} so each skill-tool invocation is reported to the
+     * {@link AgentTrace} (the {@code → activate_skill(...)} line), the same way module-tool executors
+     * report theirs. langchain4j-skills' executors carry their real logic in {@code executeWithContext}
+     * (it reads activation state from the chat-message history via the {@link InvocationContext}), and
+     * AiServices invokes {@code executeWithContext} — so the wrapper MUST override and delegate that
+     * method (not just {@code execute}), or skill activation would break. {@code isDynamic()} is also
+     * delegated so the provider's invocation cadence is preserved.
+     */
+    @PackageScope
+    static ToolProvider tracingSkillProvider(ToolProvider delegate, AgentTrace trace) {
+        return new ToolProvider() {
+            @Override
+            boolean isDynamic() { return delegate.isDynamic() }
+
+            @Override
+            ToolProviderResult provideTools(ToolProviderRequest request) {
+                final ToolProviderResult res = delegate.provideTools(request)
+                final Map<ToolSpecification,ToolExecutor> wrapped = new LinkedHashMap<>()
+                for( final Map.Entry<ToolSpecification,ToolExecutor> entry : res.tools().entrySet() ) {
+                    final ToolExecutor inner = entry.value
+                    wrapped.put(entry.key, new ToolExecutor() {
+                        @Override
+                        String execute(ToolExecutionRequest req, Object memoryId) {
+                            return inner.execute(req, memoryId)
+                        }
+                        @Override
+                        ToolExecutionResult executeWithContext(ToolExecutionRequest req, InvocationContext ctx) {
+                            final ToolExecutionResult result = inner.executeWithContext(req, ctx)
+                            trace.tool(req.name(), req.arguments(), result?.resultText())
+                            return result
+                        }
+                    })
+                }
+                return new ToolProviderResult(wrapped)
+            }
+        }
+    }
+
+    /**
+     * Best-effort enumeration of a skills provider's tool names (e.g. {@code activate_skill},
+     * {@code read_skill_resource}) for the trace header. Failures degrade to an empty list — the
+     * per-call itemization above does not depend on this.
+     */
+    private static List<String> enumerateSkillTools(ToolProvider provider, String userText) {
+        try {
+            final ToolProviderRequest req = new ToolProviderRequest(null, UserMessage.from(userText))
+            return new ArrayList<String>(provider.provideTools(req).tools().keySet()*.name())
+        }
+        catch( Exception e ) {
+            log.debug("Agent trace: could not enumerate skill tool names: ${e.message}")
+            return Collections.<String>emptyList()
         }
     }
 
