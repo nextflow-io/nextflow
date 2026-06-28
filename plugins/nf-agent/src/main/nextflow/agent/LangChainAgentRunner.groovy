@@ -65,7 +65,7 @@ class LangChainAgentRunner implements AgentRunner {
         if( !request.model )
             throw new IllegalArgumentException("Agent `model` directive is required")
 
-        return request.toolSpecs
+        return (request.toolSpecs || request.skills)
             ? runWithTools(request)
             : runSingleShot(request)
     }
@@ -130,24 +130,39 @@ class LangChainAgentRunner implements AgentRunner {
 
         // Build one ToolSpecification->ToolExecutor entry per declared tool.
         // Each executor delegates to the core dispatch callback (which runs the
-        // real module) using the langchain4j 2-arg executor signature.
+        // real module) using the langchain4j 2-arg executor signature. May be empty
+        // for a skills-only agent.
         final Map<ToolSpecification,ToolExecutor> tools = new LinkedHashMap<>()
-        for( final descriptor : request.toolSpecs ) {
-            final ToolSpecification spec = ModuleToolAdapter.toToolSpecification(descriptor)
-            final ToolExecutor executor = { ToolExecutionRequest ter, Object memoryId ->
-                log.debug "Agent tool call name=${ter.name()}; args=${ter.arguments()}"
-                final String result = request.dispatch.call(ter.name(), ter.arguments())
-                if( trace != null )
-                    trace.tool(ter.name(), ter.arguments(), result)
-                return result
-            } as ToolExecutor
-            tools.put(spec, executor)
+        if( request.toolSpecs ) {
+            for( final descriptor : request.toolSpecs ) {
+                final ToolSpecification spec = ModuleToolAdapter.toToolSpecification(descriptor)
+                final ToolExecutor executor = { ToolExecutionRequest ter, Object memoryId ->
+                    log.debug "Agent tool call name=${ter.name()}; args=${ter.arguments()}"
+                    final String result = request.dispatch.call(ter.name(), ter.arguments())
+                    if( trace != null )
+                        trace.tool(ter.name(), ter.arguments(), result)
+                    return result
+                } as ToolExecutor
+                tools.put(spec, executor)
+            }
         }
 
-        // Seed memory with ONLY the system message (instruction + optional goal);
-        // the user text is passed to chat().
+        // Map declared skills onto a langchain4j Skills container (Tool Mode); its tool provider
+        // adds the activate_skill/read_skill_resource tools alongside the static module tools.
+        final dev.langchain4j.skills.Skills skills = request.skills
+            ? SkillAdapter.toSkills(request.skills as List<SkillDescriptor>)
+            : null
+
+        // Seed memory with ONLY the system message (instruction + optional goal); for a skills run
+        // append the available-skills catalog so the model knows which skills it can activate (the
+        // activate_skill `skill_name` parameter is free text, not an enum). The user text is passed
+        // to chat().
         final ChatMemory memory = MessageWindowChatMemory.withMaxMessages(Integer.MAX_VALUE)
-        final String systemMessage = composeSystemMessage(request)
+        String systemMessage = composeSystemMessage(request)
+        if( skills != null ) {
+            final String catalog = skills.formatAvailableSkills()
+            systemMessage = systemMessage ? (systemMessage + '\n\n' + catalog) : catalog
+        }
         if( systemMessage )
             memory.add(SystemMessage.from(systemMessage))
 
@@ -161,12 +176,17 @@ class LangChainAgentRunner implements AgentRunner {
         // A cap of N permits only N-1 model round-trips, so pass maxIterations+1.
         // The system message is seeded directly into the chat memory above;
         // no systemMessageProvider is needed (that would double-add it).
-        final AgentService agent = AiServices.builder(AgentService)
+        // In langchain4j 1.17 static .tools(map) and .toolProvider(...) coexist and merge, so the
+        // skills provider is additive; .tools(...) is skipped when there are no static module tools.
+        final AiServices<AgentService> builder = AiServices.builder(AgentService)
             .chatModel(model)
-            .tools(tools)
             .chatMemory(memory)
             .maxSequentialToolsInvocations(maxIterations + 1)
-            .build()
+        if( !tools.isEmpty() )
+            builder.tools(tools)
+        if( skills != null )
+            builder.toolProvider(skills.toolProvider())
+        final AgentService agent = builder.build()
 
         try {
             final String answer = agent.chat(userText)
@@ -209,7 +229,7 @@ class LangChainAgentRunner implements AgentRunner {
         // the message content is the only way to make the "thinking" visible. Gated on toolSpecs so
         // it never touches the single-shot / structured-output path; trace-only, so normal runs are
         // unaffected. It nudges the model to think out loud, which generally aids tool selection.
-        if( request.trace && request.toolSpecs ) {
+        if( request.trace && (request.toolSpecs || request.skills) ) {
             if( sb.length() > 0 )
                 sb.append('\n\n')
             sb.append('Before each tool call, briefly state your reasoning for the call in one short sentence.')

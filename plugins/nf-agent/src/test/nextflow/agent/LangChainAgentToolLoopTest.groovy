@@ -150,6 +150,40 @@ class LangChainAgentToolLoopTest extends Specification {
         (second.find { it instanceof UserMessage } as UserMessage).singleText() == 'greet Ada'
     }
 
+    def 'should enter the tool loop for a skills-only request and inject the available-skills catalog'() {
+        given: 'a mock model that answers immediately (no tool calls) and captures the request'
+        List<ChatRequest> capturedRequests = []
+        ChatModel model = [
+            chat: { ChatRequest req ->
+                capturedRequests << req
+                ChatResponse.builder().aiMessage(AiMessage.from('answered')).build()
+            }
+        ] as ChatModel
+
+        and: 'a runner with a skills-only request (no toolSpecs, no dispatch)'
+        def runner = new LangChainAgentRunner(modelFactory: Stub(ChatModelFactory) { createModel(_, _, _) >> model })
+        def skill = new SkillDescriptor('greet', 'a greeting skill', 'say hi politely', [])
+        def req = new AgentRunnerRequest(
+            model: 'openai/gpt-5-mini', instruction: 'You are helpful.', prompt: 'greet Ada',
+            maxIterations: 5, tools: [], outputSchema: null, inputJson: null,
+            toolSpecs: null, dispatch: null, requestTimeoutSeconds: 0, goal: null,
+            skills: [skill])
+
+        when:
+        def answer = runner.run(req)
+
+        then: 'the runWithTools path ran (model chatted) and returned the final text'
+        answer == 'answered'
+        capturedRequests.size() >= 1
+
+        and: 'the system message carries the instruction + the available-skills catalog'
+        def sys = capturedRequests[0].messages().find { it instanceof SystemMessage } as SystemMessage
+        sys != null
+        sys.text().contains('You are helpful.')
+        sys.text().contains('greet')
+        sys.text().contains('a greeting skill')
+    }
+
     def 'should compose user text with the input JSON as a single user message'() {
         given: 'a model that answers immediately on the first turn'
         List<ChatRequest> capturedRequests = []
