@@ -148,6 +148,6 @@ class AgentToolBridgeIntegrationTest extends Dsl2Spec {
 
         then:
         def e = thrown(ScriptRuntimeException)
-        e.message == 'Agent `assistant`: combining tools with a record (structured) output is not yet supported - use a plain output type (e.g. String) when declaring tools'
+        e.message == 'Agent `assistant`: combining tools or skills with a record (structured) output is not yet supported - use a plain output type (e.g. String) when declaring tools or skills'
     }
 }
