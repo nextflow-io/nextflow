@@ -158,11 +158,12 @@ class SkillResolver {
     }
 
     /**
-     * Resolve a local skill by name: {@code <baseDir>/skills/<name>/}. The directory itself
-     * may be a single skill (has a {@code SKILL.md}) or hold multiple skills in subdirectories.
+     * Resolve a local skill by name under the given skills-root directory ({@code <skillsRoot>/<name>/}).
+     * That directory itself may be a single skill (has a {@code SKILL.md}) or hold multiple skills in
+     * subdirectories.
      */
-    static List<SkillDescriptor> loadLocal(Path baseDir, String name) {
-        final Path dir = baseDir.resolve(SKILLS_DIR).resolve(name)
+    static List<SkillDescriptor> loadLocal(Path skillsRoot, String name) {
+        final Path dir = skillsRoot.resolve(name)
         if( !Files.isDirectory(dir) )
             throw new ScriptRuntimeException("Agent skill `${name}` not found: no directory `${dir}`")
         return scanSkillRoot(dir, name)
@@ -229,23 +230,23 @@ class SkillResolver {
     }
 
     /**
-     * Resolve a remote GitHub skill reference: clone (and cache) the repo into the local
-     * {@code skills/} directory, then load the skill(s) it contains.
+     * Resolve a remote GitHub skill reference: clone (and cache) the repo into the given
+     * skills-root directory, then load the skill(s) it contains.
      */
-    static List<SkillDescriptor> loadRemote(Path baseDir, String ref) {
+    static List<SkillDescriptor> loadRemote(Path skillsRoot, String ref) {
         final Map parsed = parseRemoteRef(ref)
-        return loadRemoteUrl(baseDir, parsed.url as String, parsed.repo as String, parsed.rev as String)
+        return loadRemoteUrl(skillsRoot, parsed.url as String, parsed.repo as String, parsed.rev as String)
     }
 
     /**
      * Low-level remote fetch: clone {@code cloneUrl} (checking out {@code rev} when given) into a
-     * rev-keyed cache dir under {@code <baseDir>/skills/}, reusing it when present, then scan it for
-     * skills. The cache dir is keyed by repo name and {@code @rev} so a pinned revision is never
-     * silently served from a cache populated for a different revision.
+     * rev-keyed cache dir under {@code skillsRoot}, reusing it when present, then scan it for skills.
+     * The cache dir is keyed by repo name and {@code @rev} so a pinned revision is never silently
+     * served from a cache populated for a different revision.
      */
-    static List<SkillDescriptor> loadRemoteUrl(Path baseDir, String cloneUrl, String repoName, String rev) {
+    static List<SkillDescriptor> loadRemoteUrl(Path skillsRoot, String cloneUrl, String repoName, String rev) {
         final String cacheName = rev ? "${repoName}@${rev}".toString() : repoName
-        final Path cacheDir = baseDir.resolve(SKILLS_DIR).resolve(cacheName)
+        final Path cacheDir = skillsRoot.resolve(cacheName)
         if( !Files.isDirectory(cacheDir) )
             cloneInto(cloneUrl, rev, cacheDir)
         return scanSkillRoot(cacheDir, repoName)

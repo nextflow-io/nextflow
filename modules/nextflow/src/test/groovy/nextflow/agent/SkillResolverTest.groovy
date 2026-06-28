@@ -117,7 +117,7 @@ class SkillResolverTest extends Specification {
         Files.writeString(dir.resolve('SKILL.md'), "---\nname: greet\ndescription: greets\n---\ninstructions")
 
         when:
-        def list = SkillResolver.loadLocal(base, 'greet')
+        def list = SkillResolver.loadLocal(base.resolve('skills'), 'greet')
 
         then:
         list.size() == 1
@@ -129,7 +129,7 @@ class SkillResolverTest extends Specification {
         given:
         def base = Files.createDirectories(tmp.resolve('proj'))
         when:
-        SkillResolver.loadLocal(base, 'nope')
+        SkillResolver.loadLocal(base.resolve('skills'), 'nope')
         then:
         thrown(ScriptRuntimeException)
     }
@@ -139,7 +139,7 @@ class SkillResolverTest extends Specification {
         def base = Files.createDirectories(tmp.resolve('proj'))
         Files.createDirectories(base.resolve('skills/empty'))
         when:
-        SkillResolver.loadLocal(base, 'empty')
+        SkillResolver.loadLocal(base.resolve('skills'), 'empty')
         then:
         thrown(ScriptRuntimeException)
     }
@@ -180,7 +180,7 @@ class SkillResolverTest extends Specification {
         def url = "file://${remote.toAbsolutePath()}/.git".toString()
 
         when:
-        def list = SkillResolver.loadRemoteUrl(base, url, 'myrepo', null)
+        def list = SkillResolver.loadRemoteUrl(base.resolve('skills'), url, 'myrepo', null)
 
         then:
         list.size() == 1
@@ -189,7 +189,7 @@ class SkillResolverTest extends Specification {
         Files.isDirectory(base.resolve('skills/myrepo'))
 
         when: 'called again with a bogus url, the existing cache dir is reused (no re-clone)'
-        def list2 = SkillResolver.loadRemoteUrl(base, 'file:///does/not/exist.git', 'myrepo', null)
+        def list2 = SkillResolver.loadRemoteUrl(base.resolve('skills'), 'file:///does/not/exist.git', 'myrepo', null)
 
         then:
         list2.size() == 1

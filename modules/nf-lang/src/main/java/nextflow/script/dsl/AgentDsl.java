@@ -48,6 +48,11 @@ public interface AgentDsl extends DslScope {
         void tools(Object... values);
 
         @Description("""
+            The `skills` directive declares the agent skills (SKILL.md folders) the agent may use. Each entry is a local skill name (resolved under the `skills/` directory beside the script) or a remote GitHub reference (`github.com/<org>/<repo>[@rev]`) cloned and cached into that same `skills/` directory.
+        """)
+        void skills(Object... values);
+
+        @Description("""
             The `maxIterations` directive caps the LLM tool-calling loop.
         """)
         void maxIterations(Integer value);

@@ -100,6 +100,29 @@ class AgentDefTest extends Specification {
         agent.goal == null
     }
 
+    static class TestRec implements nextflow.script.types.Record {}
+
+    def 'should expose the skills directive (single, list, none)'() {
+        expect:
+        new AgentDef(Mock(BaseScript), 'a', [skills: 'greet'] as Map<String,Object>, [], [], new PromptDef({ -> 'h' }, 'h')).skills == ['greet']
+        new AgentDef(Mock(BaseScript), 'a', [skills: ['a', 'b']] as Map<String,Object>, [], [], new PromptDef({ -> 'h' }, 'h')).skills == ['a', 'b']
+        new AgentDef(Mock(BaseScript), 'a', [:] as Map<String,Object>, [], [], new PromptDef({ -> 'h' }, 'h')).skills == []
+    }
+
+    def 'should reject skills combined with a record (structured) output'() {
+        given:
+        def inp = new AgentBuilder.AgentInput('q', String)
+        def out = new AgentBuilder.AgentOutput('a', TestRec)
+        def agent = new AgentDef(Mock(BaseScript), 'a', [skills: 'greet'] as Map<String,Object>, [inp], [out], new PromptDef({ -> 'h' }, 'h'))
+
+        when:
+        agent.run(['x'] as Object[])
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains('skills')
+    }
+
     // -----------------------------------------------------------------------
     // recoverModuleRef unit tests (offline-safe — no network involved)
     // -----------------------------------------------------------------------

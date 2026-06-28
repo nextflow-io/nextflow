@@ -45,6 +45,24 @@ class AgentBuilderTest extends Specification {
         agent.prompt.source == 'Question: ${question}'
     }
 
+    def 'should capture the skills directive (single and list)'() {
+        given:
+        def builder = new AgentBuilder(null, 'a')
+        def b2 = new AgentBuilder(null, 'b')
+
+        when:
+        builder.skills('greet')
+        builder._input_('q', String); builder._output_('a', String)
+        def a1 = builder.withPrompt(new PromptDef({ 'x' }, 'x')).build()
+        b2.skills('greet', 'github.com/org/repo')
+        b2._input_('q', String); b2._output_('a', String)
+        def a2 = b2.withPrompt(new PromptDef({ 'x' }, 'x')).build()
+
+        then:
+        a1.skills == ['greet']
+        a2.skills == ['greet', 'github.com/org/repo']
+    }
+
     def 'should reject an unknown directive'() {
         given:
         def builder = new AgentBuilder(null, 'a')

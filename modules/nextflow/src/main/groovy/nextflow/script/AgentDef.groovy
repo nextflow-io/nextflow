@@ -42,6 +42,8 @@ import nextflow.agent.DispatchContext
 import nextflow.agent.FilesystemToolSchema
 import nextflow.agent.ModuleToolBridge
 import nextflow.agent.RecordSchema
+import nextflow.agent.SkillDescriptor
+import nextflow.agent.SkillResolver
 import nextflow.agent.ToolDescriptor
 import nextflow.agent.ToolDispatcher
 import nextflow.exception.ScriptRuntimeException
@@ -113,6 +115,12 @@ class AgentDef extends BindableDef implements ChainableDef {
             return []
         return value instanceof List ? (List) value : [value]
     }
+    List getSkills() {
+        final value = directives.get('skills')
+        if( value == null )
+            return []
+        return value instanceof List ? (List) value : [value]
+    }
     Integer getMaxIterations() { directives.get('maxIterations') as Integer }
     List<AgentInput> getInputs() { inputs }
     List<AgentOutput> getOutputs() { outputs }
@@ -168,8 +176,8 @@ class AgentDef extends BindableDef implements ChainableDef {
         // tool loop drives the conversation and ignores any responseFormat, so the final
         // answer is free text. Binding that text to a record (structured) output would fail
         // at JSON-parse time - reject the combination up front with a clear message.
-        if( this.tools && structured )
-            throw new ScriptRuntimeException("Agent `${name}`: combining tools with a record (structured) output is not yet supported - use a plain output type (e.g. String) when declaring tools")
+        if( (this.tools || this.skills) && structured )
+            throw new ScriptRuntimeException("Agent `${name}`: combining tools or skills with a record (structured) output is not yet supported - use a plain output type (e.g. String) when declaring tools or skills")
         final outputSchema = structured ? RecordSchema.of(outputClass) : null
         final source = createSourceChannel(args[0])
         final AgentRunner runner = AgentRunnerProvider.get()
@@ -202,6 +210,11 @@ class AgentDef extends BindableDef implements ChainableDef {
         if( bridge != null )
             bridge.setMaxInlineBytes(agentConfig.maxToolOutputInlineBytes())
         final List<ToolDescriptor> toolSpecs = bridge != null ? bridge.descriptors() : null
+        // resolve declared skills ONCE, pre-ignition and independently of the tool bridge: local
+        // skills under the `skills/` dir beside the script, remote GitHub refs cloned + cached there.
+        // A skills-only agent therefore has a null bridge (no dataflow tool nodes) yet still carries
+        // its resolved skills on every request.
+        final List<SkillDescriptor> skillDescriptors = resolveSkills(agentConfig)
         // capture the session for use in the mapper closure (work dir allocation)
         final Session session0 = Global.session as Session
         final boolean needsSandbox = bridge != null && bridge.filesystemEnabled
@@ -225,7 +238,8 @@ class AgentDef extends BindableDef implements ChainableDef {
                 requestTimeoutSeconds: agentTimeoutSecs,
                 goal: agentGoal,
                 agentName: name,
-                trace: agentTrace)
+                trace: agentTrace,
+                skills: skillDescriptors)
 
             // report the invocation on the console; deliberately NOT hash-prefixed
             // (like a task `[ab/123456] ...` line) so the ANSI log observer does not
@@ -283,6 +297,38 @@ class AgentDef extends BindableDef implements ChainableDef {
      * @return a {@link ModuleToolBridge} wiring the resolved processes, or {@code null} when
      *         no tools are declared
      */
+    /**
+     * Resolve the declared {@code skills} entries to portable {@link SkillDescriptor}s once,
+     * pre-ignition. Each entry is either a remote GitHub reference (cloned + cached) or a local
+     * skill name resolved under the skills-root directory ({@code <baseDir>/skills} by default, or the
+     * {@code agent.skillsDir} override, relative to the script dir or absolute). Returns {@code null}
+     * when no skills are declared; rejects duplicate skill names across all entries.
+     */
+    private List<SkillDescriptor> resolveSkills(AgentConfig agentConfig) {
+        final declared = this.skills
+        if( !declared )
+            return null
+        final session = Global.session as Session
+        final meta = ScriptMeta.get(owner)
+        final Path skillsRoot = ownerBaseDir(meta, session).resolve(agentConfig.skillsDir ?: SkillResolver.SKILLS_DIR)
+        final List<SkillDescriptor> result = new ArrayList<>()
+        final Set<String> seen = new HashSet<>()
+        for( final entry : declared ) {
+            final ref = entry?.toString()
+            if( !ref )
+                continue
+            final List<SkillDescriptor> resolved = SkillResolver.isRemoteRef(ref)
+                ? SkillResolver.loadRemote(skillsRoot, ref)
+                : SkillResolver.loadLocal(skillsRoot, ref)
+            for( final SkillDescriptor d : resolved ) {
+                if( !seen.add(d.name) )
+                    throw new ScriptRuntimeException("Agent `${name}`: duplicate skill name `${d.name}` - skills must have unique names")
+                result.add(d)
+            }
+        }
+        return result
+    }
+
     @CompileDynamic
     private ModuleToolBridge createToolBridge() {
         final declared = this.tools
