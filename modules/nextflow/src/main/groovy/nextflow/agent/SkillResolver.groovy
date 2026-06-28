@@ -54,38 +54,69 @@ class SkillResolver {
     static final String SKILL_FILE = 'SKILL.md'
     static final String SKILLS_DIR = 'skills'
 
+    /** The {@code ---} delimiter line that fences the YAML frontmatter block. */
+    private static final String FENCE = '---'
+
     private static final int MAX_RESOURCE_FILES = 64
     private static final long MAX_RESOURCE_BYTES = 256 * 1024
 
     /**
-     * Parse {@code SKILL.md} text into {@code [name, description, content]}. Tolerates a
-     * leading BOM, CRLF line endings and leading blank lines. Throws when the frontmatter
-     * is missing/unterminated or {@code name}/{@code description} are absent.
+     * Parse {@code SKILL.md} text into {@code [name, description, content]}: normalize the text,
+     * locate the {@code ---}…{@code ---} frontmatter fences, then extract and validate the fields.
+     * Tolerates a leading BOM, CRLF line endings and leading blank lines. Throws when the frontmatter
+     * is missing/unterminated or {@code name}/{@code description}/body are absent.
      */
     static Map parseFrontmatter(String raw) {
+        final List<String> lines = normalizedLines(raw)
+        final int open = skipBlankLines(lines, 0)
+        if( open >= lines.size() || lines[open].trim() != FENCE )
+            throw new ScriptRuntimeException("Invalid SKILL.md: missing YAML frontmatter (expected a leading '${FENCE}' line)")
+        final int close = indexOfFence(lines, open + 1)
+        if( close < 0 )
+            throw new ScriptRuntimeException("Invalid SKILL.md: unterminated YAML frontmatter (missing closing '${FENCE}')")
+        final String yaml = lines.subList(open + 1, close).join('\n')
+        final String body = joinFrom(lines, close + 1).trim()
+        return frontmatterFields(yaml, body)
+    }
+
+    /** Strip a leading BOM, normalize CRLF/CR to LF, and split into lines. */
+    private static List<String> normalizedLines(String raw) {
         if( raw == null )
             throw new ScriptRuntimeException("Invalid SKILL.md: empty content")
-        String text = raw
-        if( text.startsWith('﻿') )
-            text = text.substring(1)
-        text = text.replace('\r\n', '\n').replace('\r', '\n')
-        final List<String> lines = text.split('\n', -1) as List<String>
-        int i = 0
+        final String text = (raw.startsWith('﻿') ? raw.substring(1) : raw)
+            .replace('\r\n', '\n').replace('\r', '\n')
+        return text.split('\n', -1) as List<String>
+    }
+
+    /** Index of the first non-blank line at or after {@code from}. */
+    private static int skipBlankLines(List<String> lines, int from) {
+        int i = from
         while( i < lines.size() && lines[i].trim().isEmpty() )
             i++
-        if( i >= lines.size() || lines[i].trim() != '---' )
-            throw new ScriptRuntimeException("Invalid SKILL.md: missing YAML frontmatter (expected a leading '---' line)")
-        i++
-        final StringBuilder fm = new StringBuilder()
-        boolean closed = false
-        while( i < lines.size() ) {
-            if( lines[i].trim() == '---' ) { closed = true; i++; break }
-            fm.append(lines[i]).append('\n')
-            i++
-        }
-        if( !closed )
-            throw new ScriptRuntimeException("Invalid SKILL.md: unterminated YAML frontmatter (missing closing '---')")
-        final Object loaded = new Yaml().load(fm.toString())
+        return i
+    }
+
+    /** Index of the next {@code ---} fence line at or after {@code from}, or {@code -1} if none. */
+    private static int indexOfFence(List<String> lines, int from) {
+        for( int i = from; i < lines.size(); i++ )
+            if( lines[i].trim() == FENCE )
+                return i
+        return -1
+    }
+
+    /** Join lines from {@code from} to the end with LF, or empty when {@code from} is past the end. */
+    private static String joinFrom(List<String> lines, int from) {
+        return from < lines.size() ? lines.subList(from, lines.size()).join('\n') : ''
+    }
+
+    /**
+     * Extract and validate the frontmatter fields. {@code name}/{@code description} come from the YAML
+     * block; the {@code body} is the skill content. Validating the body here (core, langchain4j-free)
+     * makes an empty SKILL.md fail with a clear Nextflow error naming the skill, rather than a raw
+     * langchain4j {@code IllegalArgumentException} later.
+     */
+    private static Map frontmatterFields(String yaml, String body) {
+        final Object loaded = new Yaml().load(yaml)
         final Map data = loaded instanceof Map ? (Map) loaded : [:]
         final String name = data.get('name')?.toString()?.trim()
         final String description = data.get('description')?.toString()?.trim()
@@ -93,12 +124,9 @@ class SkillResolver {
             throw new ScriptRuntimeException("Invalid SKILL.md: missing 'name' in frontmatter")
         if( !description )
             throw new ScriptRuntimeException("Invalid SKILL.md: missing 'description' in frontmatter")
-        final String content = (i < lines.size() ? lines.subList(i, lines.size()).join('\n') : '').trim()
-        // validate the body here (core, langchain4j-free) so an empty SKILL.md fails with a clear
-        // Nextflow error naming the skill - not a raw langchain4j IllegalArgumentException later
-        if( !content )
+        if( !body )
             throw new ScriptRuntimeException("Invalid SKILL.md: skill `${name}` has an empty body (no instructions)")
-        return [name: name, description: description, content: content]
+        return [name: name, description: description, content: body]
     }
 
     /**
@@ -120,34 +148,57 @@ class SkillResolver {
      * files / {@value #MAX_RESOURCE_BYTES} bytes total.
      */
     static List<SkillResource> loadResources(Path skillDir) {
+        return readUnderCaps(skillDir, eligibleResourceFiles(skillDir))
+    }
+
+    /**
+     * The bundled files eligible to be skill resources, in deterministic (lexicographic-by-relative-path)
+     * order so the same skill yields the same resource set on every host. Excludes the top-level
+     * {@code SKILL.md}, symlinks, anything under {@code .git/}, and any path escaping the skill dir.
+     */
+    private static List<Path> eligibleResourceFiles(Path skillDir) {
         final Path root = skillDir.toRealPath()
-        // collect eligible files first, then select deterministically (lexicographic) under the caps
-        // so the same skill yields the same resource set on every host (reproducibility)
         final List<Path> files = new ArrayList<>()
         final Stream<Path> walk = Files.walk(skillDir)
         try {
             final Iterator<Path> it = walk.iterator()
             while( it.hasNext() ) {
                 final Path p = it.next()
-                if( !Files.isRegularFile(p) || Files.isSymbolicLink(p) )
-                    continue
-                if( p.fileName?.toString() == SKILL_FILE && skillDir == p.parent )
-                    continue
-                if( hasGitSegment(skillDir.relativize(p)) )
-                    continue
-                if( !p.toRealPath().startsWith(root) )
-                    continue
-                files.add(p)
+                if( isEligibleResource(p, skillDir, root) )
+                    files.add(p)
             }
         }
         finally {
             walk.close()
         }
-        files.sort(new Comparator<Path>() {
+        files.sort(byRelativePath(skillDir))
+        return files
+    }
+
+    private static boolean isEligibleResource(Path p, Path skillDir, Path root) {
+        if( !Files.isRegularFile(p) || Files.isSymbolicLink(p) )
+            return false
+        if( p.fileName?.toString() == SKILL_FILE && skillDir == p.parent )
+            return false
+        if( hasGitSegment(skillDir.relativize(p)) )
+            return false
+        return p.toRealPath().startsWith(root)
+    }
+
+    private static Comparator<Path> byRelativePath(Path skillDir) {
+        return new Comparator<Path>() {
             int compare(Path a, Path b) {
                 return skillDir.relativize(a).toString() <=> skillDir.relativize(b).toString()
             }
-        })
+        }
+    }
+
+    /**
+     * Read the given files into resources, enforcing the file-count and total-byte caps. Each file's
+     * size is stat'd BEFORE reading so an oversized file is never loaded into memory (DoS-safe); an
+     * over-budget file is skipped (not a hard stop) so smaller later files are still included.
+     */
+    private static List<SkillResource> readUnderCaps(Path skillDir, List<Path> files) {
         final List<SkillResource> result = new ArrayList<>()
         long totalBytes = 0
         for( final Path p : files ) {
@@ -155,8 +206,6 @@ class SkillResolver {
                 log.warn("Skill `${skillDir.fileName}`: more than ${MAX_RESOURCE_FILES} resource files - ignoring the rest")
                 break
             }
-            // stat the size BEFORE reading so an oversized file is never loaded into memory (DoS-safe);
-            // skip (don't break) so smaller resources later in the set are still included
             final long size = Files.size(p)
             if( totalBytes + size > MAX_RESOURCE_BYTES ) {
                 log.warn("Skill `${skillDir.fileName}`: skipping resource `${skillDir.relativize(p)}` - would exceed the ${MAX_RESOURCE_BYTES}-byte resource budget")
@@ -266,17 +315,26 @@ class SkillResolver {
      * served from a cache populated for a different revision.
      */
     static List<SkillDescriptor> loadRemoteUrl(Path skillsRoot, String cloneUrl, String repoName, String rev) {
-        // sanitize the rev for the on-disk cache-dir NAME only (a rev may contain '/' or '..',
-        // e.g. `feature/x`, `refs/tags/v1`); the real rev is still passed to git checkout below.
-        // This keeps the cache a single flat segment and prevents path traversal out of skillsRoot.
+        final Path cacheDir = cacheDirFor(skillsRoot, repoName, rev)
+        if( !Files.isDirectory(cacheDir) )
+            cloneInto(cloneUrl, rev, cacheDir)
+        return scanSkillRoot(cacheDir, repoName)
+    }
+
+    /**
+     * The rev-keyed cache dir under {@code skillsRoot}, so a pinned revision is never served from a
+     * cache populated for a different one. The rev is sanitized for the on-disk NAME only (it may
+     * contain {@code /} or {@code ..}, e.g. {@code feature/x}, {@code refs/tags/v1}) — keeping the
+     * cache a single flat segment and preventing path traversal out of {@code skillsRoot}; the real
+     * rev still drives the git checkout.
+     */
+    private static Path cacheDirFor(Path skillsRoot, String repoName, String rev) {
         final String safeRev = rev ? rev.replaceAll(/[^A-Za-z0-9._-]/, '_') : null
         final String cacheName = safeRev ? "${repoName}@${safeRev}".toString() : repoName
         final Path cacheDir = skillsRoot.resolve(cacheName).normalize()
         if( cacheDir.parent == null || !cacheDir.startsWith(skillsRoot.normalize()) )
             throw new ScriptRuntimeException("Invalid skills cache path `${cacheDir}` for skill repo `${repoName}`")
-        if( !Files.isDirectory(cacheDir) )
-            cloneInto(cloneUrl, rev, cacheDir)
-        return scanSkillRoot(cacheDir, repoName)
+        return cacheDir
     }
 
     /**
@@ -290,38 +348,63 @@ class SkillResolver {
         final Path tmp = Files.createTempDirectory(cacheDir.parent, '.skill-clone-')
         Files.delete(tmp)  // JGit creates the directory itself
         try {
-            final clone = Git.cloneRepository().setURI(cloneUrl).setDirectory(tmp.toFile())
-            if( !rev && !cloneUrl.startsWith('file:') )
-                clone.setDepth(1)
-            final Git git = clone.call()
-            try {
-                if( rev ) {
-                    // resolve the rev to a concrete commit so a SHA, a tag, OR a branch all work:
-                    // a fresh clone exposes branches only as remote-tracking refs (origin/<branch>),
-                    // so a bare `checkout(branch)` would fail - resolve then checkout the ObjectId.
-                    org.eclipse.jgit.lib.ObjectId id = git.repository.resolve(rev)
-                    if( id == null )
-                        id = git.repository.resolve("origin/${rev}".toString())
-                    if( id == null )
-                        throw new ScriptRuntimeException("Revision `${rev}` not found in the remote repository")
-                    git.checkout().setName(id.name()).call()
-                }
-            }
-            finally {
-                git.close()
-            }
-            try {
-                Files.move(tmp, cacheDir, StandardCopyOption.ATOMIC_MOVE)
-            }
-            catch( FileAlreadyExistsException | DirectoryNotEmptyException raced ) {
-                // a concurrent run populated the cache dir first - discard our clone and use theirs
-                tmp.toFile().deleteDir()
-            }
+            cloneAndCheckout(cloneUrl, rev, tmp)
+            publishClone(tmp, cacheDir)
         }
         catch( Exception e ) {
-            try { tmp.toFile().deleteDir() } catch( Exception ignore ) {}
+            deleteQuietly(tmp)
             throw new ScriptRuntimeException("Unable to fetch remote skill from `${redactUrl(cloneUrl)}`${rev ? " (@${rev})" : ''}: ${e.message}", e)
         }
+    }
+
+    /**
+     * Clone {@code cloneUrl} into {@code target} and check out {@code rev} when given. A shallow clone
+     * is used only for a moving (default-branch) remote ref; a pinned {@code rev} or a {@code file://}
+     * source is full-cloned so the requested commit is reachable.
+     */
+    private static void cloneAndCheckout(String cloneUrl, String rev, Path target) {
+        final clone = Git.cloneRepository().setURI(cloneUrl).setDirectory(target.toFile())
+        if( !rev && !cloneUrl.startsWith('file:') )
+            clone.setDepth(1)
+        final Git git = clone.call()
+        try {
+            if( rev )
+                checkoutRev(git, rev)
+        }
+        finally {
+            git.close()
+        }
+    }
+
+    /**
+     * Check out a rev so a SHA, a tag, OR a branch all work: a fresh clone exposes branches only as
+     * remote-tracking refs ({@code origin/<branch>}), so a bare {@code checkout(branch)} would fail —
+     * resolve the rev to a concrete {@code ObjectId} and check that out.
+     */
+    private static void checkoutRev(Git git, String rev) {
+        org.eclipse.jgit.lib.ObjectId id = git.repository.resolve(rev)
+        if( id == null )
+            id = git.repository.resolve("origin/${rev}".toString())
+        if( id == null )
+            throw new ScriptRuntimeException("Revision `${rev}` not found in the remote repository")
+        git.checkout().setName(id.name()).call()
+    }
+
+    /**
+     * Atomically rename the temp clone into the cache dir. If a concurrent run populated the cache
+     * first, discard our clone and use theirs (the atomic move guarantees no half-populated cache).
+     */
+    private static void publishClone(Path tmp, Path cacheDir) {
+        try {
+            Files.move(tmp, cacheDir, StandardCopyOption.ATOMIC_MOVE)
+        }
+        catch( FileAlreadyExistsException | DirectoryNotEmptyException raced ) {
+            deleteQuietly(tmp)
+        }
+    }
+
+    private static void deleteQuietly(Path dir) {
+        try { dir.toFile().deleteDir() } catch( Exception ignore ) {}
     }
 
     /** Redact any {@code user:token@} userinfo from a URL before it appears in an error/log message. */
