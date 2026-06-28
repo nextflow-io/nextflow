@@ -57,6 +57,8 @@ class SkillResolverTest extends Specification {
             "---\nname: x\ndescription: y\nBODY",             // unterminated (no closing ---)
             "---\ndescription: y\n---\nbody",                 // missing name
             "---\nname: x\n---\nbody",                        // missing description
+            "---\nname: x\ndescription: y\n---\n",            // empty body
+            "---\nname: x\ndescription: y\n---\n   \n",       // whitespace-only body
         ]
     }
 
@@ -106,6 +108,22 @@ class SkillResolverTest extends Specification {
 
         then:
         d.resources.size() <= 64
+    }
+
+    def 'should skip an oversized resource but keep the smaller ones (sorted so the big one is first)'() {
+        given:
+        def dir = Files.createDirectories(tmp.resolve('skills/foo'))
+        Files.writeString(dir.resolve('SKILL.md'), "---\nname: foo\ndescription: d\n---\nbody")
+        // names chosen so the oversized file sorts BEFORE the small one: proves skip (continue), not break
+        Files.write(dir.resolve('a-big.bin'), new byte[300 * 1024])
+        Files.writeString(dir.resolve('b-small.txt'), 'keep me')
+
+        when:
+        def d = SkillResolver.parseSkillDir(dir)
+
+        then:
+        d.resources*.relativePath == ['b-small.txt']
+        d.resources[0].content == 'keep me'
     }
 
     // -- local resolution --
@@ -194,5 +212,28 @@ class SkillResolverTest extends Specification {
         then:
         list2.size() == 1
         list2[0].name == 'remoteskill'
+    }
+
+    def 'should sanitize a slash-bearing rev into a flat cache dir name (no path traversal/nesting)'() {
+        given: 'a remote repo with a branch whose name contains a slash'
+        def remote = Files.createDirectories(tmp.resolve('remote'))
+        def git = org.eclipse.jgit.api.Git.init().setDirectory(remote.toFile()).call()
+        Files.writeString(remote.resolve('SKILL.md'), "---\nname: branchskill\ndescription: from a branch\n---\nbranch instructions")
+        git.add().addFilepattern('.').call()
+        git.commit().setMessage('init').setSign(false).setAuthor('t','t@t').setCommitter('t','t@t').call()
+        git.branchCreate().setName('feature/x').call()
+        git.close()
+        def base = Files.createDirectories(tmp.resolve('proj'))
+        def url = "file://${remote.toAbsolutePath()}/.git".toString()
+        def skillsRoot = base.resolve('skills')
+
+        when:
+        def list = SkillResolver.loadRemoteUrl(skillsRoot, url, 'repo', 'feature/x')
+
+        then: 'the cache dir is a single flat segment with the slash sanitized'
+        list[0].name == 'branchskill'
+        Files.isDirectory(skillsRoot.resolve('repo@feature_x'))
+        and: 'no nested repo@feature/x path was created'
+        !Files.exists(skillsRoot.resolve('repo@feature'))
     }
 }

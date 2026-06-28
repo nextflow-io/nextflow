@@ -52,3 +52,8 @@ the `activate_skill` call in the execution trace.
 > **Trust note:** a remote skill's `SKILL.md` becomes model instructions, so
 > activating a remote skill means trusting its authors. Pin a commit SHA
 > (`@<sha>`) rather than a moving branch so the content can't change under you.
+
+> **Caching note:** remote skills are cloned into this `skills/` directory (a full
+> git clone, including its `.git`). Add the cached clone directories to your
+> `.gitignore`, or point `agent.skillsDir` at a location outside your repo, to
+> avoid committing third-party code into your project.

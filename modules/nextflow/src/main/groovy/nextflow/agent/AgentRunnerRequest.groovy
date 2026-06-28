@@ -29,8 +29,11 @@ import groovy.transform.CompileStatic
  * The {@code toolSpecs} and {@code dispatch} fields are in-JVM only (they carry
  * a live {@link ToolDispatcher} callback) and are never serialized.
  *
- * Being {@code @Canonical}, the positional constructor order is:
- * {@code (model, instruction, prompt, maxIterations, tools, outputSchema, inputJson, toolSpecs, dispatch, requestTimeoutSeconds, goal)}.
+ * Being {@code @Canonical}, the positional constructor order follows the field
+ * declaration order below:
+ * {@code (model, instruction, prompt, maxIterations, tools, outputSchema, inputJson, toolSpecs, dispatch, requestTimeoutSeconds, goal, agentName, trace, skills)}.
+ * In practice the request is built with named arguments, so the order is not
+ * relied upon at the call site.
  *
  * The {@code requestTimeoutSeconds} carries the configured per-request LLM chat
  * timeout (from the {@code agent.requestTimeout} config option); when {@code 0}

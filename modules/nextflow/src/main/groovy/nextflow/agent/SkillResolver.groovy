@@ -16,6 +16,8 @@
 package nextflow.agent
 
 import java.nio.charset.StandardCharsets
+import java.nio.file.DirectoryNotEmptyException
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardCopyOption
@@ -92,6 +94,10 @@ class SkillResolver {
         if( !description )
             throw new ScriptRuntimeException("Invalid SKILL.md: missing 'description' in frontmatter")
         final String content = (i < lines.size() ? lines.subList(i, lines.size()).join('\n') : '').trim()
+        // validate the body here (core, langchain4j-free) so an empty SKILL.md fails with a clear
+        // Nextflow error naming the skill - not a raw langchain4j IllegalArgumentException later
+        if( !content )
+            throw new ScriptRuntimeException("Invalid SKILL.md: skill `${name}` has an empty body (no instructions)")
         return [name: name, description: description, content: content]
     }
 
@@ -115,8 +121,9 @@ class SkillResolver {
      */
     static List<SkillResource> loadResources(Path skillDir) {
         final Path root = skillDir.toRealPath()
-        final List<SkillResource> result = new ArrayList<>()
-        long totalBytes = 0
+        // collect eligible files first, then select deterministically (lexicographic) under the caps
+        // so the same skill yields the same resource set on every host (reproducibility)
+        final List<Path> files = new ArrayList<>()
         final Stream<Path> walk = Files.walk(skillDir)
         try {
             final Iterator<Path> it = walk.iterator()
@@ -130,21 +137,33 @@ class SkillResolver {
                     continue
                 if( !p.toRealPath().startsWith(root) )
                     continue
-                if( result.size() >= MAX_RESOURCE_FILES ) {
-                    log.warn("Skill `${skillDir.fileName}`: more than ${MAX_RESOURCE_FILES} resource files - ignoring the rest")
-                    break
-                }
-                final byte[] bytes = Files.readAllBytes(p)
-                if( totalBytes + bytes.length > MAX_RESOURCE_BYTES ) {
-                    log.warn("Skill `${skillDir.fileName}`: resource files exceed ${MAX_RESOURCE_BYTES} bytes - ignoring `${skillDir.relativize(p)}` and the rest")
-                    break
-                }
-                totalBytes += bytes.length
-                result.add(new SkillResource(skillDir.relativize(p).toString(), new String(bytes, StandardCharsets.UTF_8)))
+                files.add(p)
             }
         }
         finally {
             walk.close()
+        }
+        files.sort(new Comparator<Path>() {
+            int compare(Path a, Path b) {
+                return skillDir.relativize(a).toString() <=> skillDir.relativize(b).toString()
+            }
+        })
+        final List<SkillResource> result = new ArrayList<>()
+        long totalBytes = 0
+        for( final Path p : files ) {
+            if( result.size() >= MAX_RESOURCE_FILES ) {
+                log.warn("Skill `${skillDir.fileName}`: more than ${MAX_RESOURCE_FILES} resource files - ignoring the rest")
+                break
+            }
+            // stat the size BEFORE reading so an oversized file is never loaded into memory (DoS-safe);
+            // skip (don't break) so smaller resources later in the set are still included
+            final long size = Files.size(p)
+            if( totalBytes + size > MAX_RESOURCE_BYTES ) {
+                log.warn("Skill `${skillDir.fileName}`: skipping resource `${skillDir.relativize(p)}` - would exceed the ${MAX_RESOURCE_BYTES}-byte resource budget")
+                continue
+            }
+            totalBytes += size
+            result.add(new SkillResource(skillDir.relativize(p).toString(), new String(Files.readAllBytes(p), StandardCharsets.UTF_8)))
         }
         return result
     }
@@ -235,6 +254,8 @@ class SkillResolver {
      */
     static List<SkillDescriptor> loadRemote(Path skillsRoot, String ref) {
         final Map parsed = parseRemoteRef(ref)
+        if( !parsed.rev )
+            log.warn("Agent skill `${ref}` is not pinned to a commit - its instructions may change between runs; pin a commit SHA (e.g. `${ref}@<sha>`) for reproducibility")
         return loadRemoteUrl(skillsRoot, parsed.url as String, parsed.repo as String, parsed.rev as String)
     }
 
@@ -245,8 +266,14 @@ class SkillResolver {
      * served from a cache populated for a different revision.
      */
     static List<SkillDescriptor> loadRemoteUrl(Path skillsRoot, String cloneUrl, String repoName, String rev) {
-        final String cacheName = rev ? "${repoName}@${rev}".toString() : repoName
-        final Path cacheDir = skillsRoot.resolve(cacheName)
+        // sanitize the rev for the on-disk cache-dir NAME only (a rev may contain '/' or '..',
+        // e.g. `feature/x`, `refs/tags/v1`); the real rev is still passed to git checkout below.
+        // This keeps the cache a single flat segment and prevents path traversal out of skillsRoot.
+        final String safeRev = rev ? rev.replaceAll(/[^A-Za-z0-9._-]/, '_') : null
+        final String cacheName = safeRev ? "${repoName}@${safeRev}".toString() : repoName
+        final Path cacheDir = skillsRoot.resolve(cacheName).normalize()
+        if( cacheDir.parent == null || !cacheDir.startsWith(skillsRoot.normalize()) )
+            throw new ScriptRuntimeException("Invalid skills cache path `${cacheDir}` for skill repo `${repoName}`")
         if( !Files.isDirectory(cacheDir) )
             cloneInto(cloneUrl, rev, cacheDir)
         return scanSkillRoot(cacheDir, repoName)
@@ -268,17 +295,37 @@ class SkillResolver {
                 clone.setDepth(1)
             final Git git = clone.call()
             try {
-                if( rev )
-                    git.checkout().setName(rev).call()
+                if( rev ) {
+                    // resolve the rev to a concrete commit so a SHA, a tag, OR a branch all work:
+                    // a fresh clone exposes branches only as remote-tracking refs (origin/<branch>),
+                    // so a bare `checkout(branch)` would fail - resolve then checkout the ObjectId.
+                    org.eclipse.jgit.lib.ObjectId id = git.repository.resolve(rev)
+                    if( id == null )
+                        id = git.repository.resolve("origin/${rev}".toString())
+                    if( id == null )
+                        throw new ScriptRuntimeException("Revision `${rev}` not found in the remote repository")
+                    git.checkout().setName(id.name()).call()
+                }
             }
             finally {
                 git.close()
             }
-            Files.move(tmp, cacheDir, StandardCopyOption.ATOMIC_MOVE)
+            try {
+                Files.move(tmp, cacheDir, StandardCopyOption.ATOMIC_MOVE)
+            }
+            catch( FileAlreadyExistsException | DirectoryNotEmptyException raced ) {
+                // a concurrent run populated the cache dir first - discard our clone and use theirs
+                tmp.toFile().deleteDir()
+            }
         }
         catch( Exception e ) {
             try { tmp.toFile().deleteDir() } catch( Exception ignore ) {}
-            throw new ScriptRuntimeException("Unable to fetch remote skill from `${cloneUrl}`${rev ? " (@${rev})" : ''}: ${e.message}", e)
+            throw new ScriptRuntimeException("Unable to fetch remote skill from `${redactUrl(cloneUrl)}`${rev ? " (@${rev})" : ''}: ${e.message}", e)
         }
+    }
+
+    /** Redact any {@code user:token@} userinfo from a URL before it appears in an error/log message. */
+    private static String redactUrl(String url) {
+        return url?.replaceAll('//[^@/]+@', '//***@')
     }
 }
