@@ -32,7 +32,8 @@ class AgentRunnerRequestTest extends Specification {
             toolSpecs: null,
             dispatch: null,
             requestTimeoutSeconds: 30,
-            goal: 'reach the objective')
+            goal: 'reach the objective',
+            skills: [new SkillDescriptor('greet', 'a greeting skill', 'say hi', [])])
 
         then:
         req.model == 'openai/gpt-5-mini'
@@ -45,6 +46,15 @@ class AgentRunnerRequestTest extends Specification {
         req.tools == []
         req.outputSchema == null
         req.toolSpecs == null
+        req.skills.size() == 1
+        req.skills[0].name == 'greet'
+    }
+
+    def 'should default skills to null when omitted'() {
+        when:
+        def req = new AgentRunnerRequest(model: 'm', prompt: 'p')
+        then:
+        req.skills == null
     }
 
     def 'should default goal to null when omitted'() {

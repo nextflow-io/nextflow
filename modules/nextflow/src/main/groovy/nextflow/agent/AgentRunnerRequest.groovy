@@ -57,4 +57,8 @@ class AgentRunnerRequest {
     /** When {@code true}, the runner logs a readable execution trace (turns, model
      * reasoning, tool invocations with inputs/outputs) at INFO level. */
     boolean trace
+    /** Portable descriptors of the agent's declared skills (langchain4j-free); the
+     * runner maps them onto langchain4j {@code Skill}s and exposes them via the
+     * skills tool provider. Empty/null when no {@code skills} directive is declared. */
+    List<SkillDescriptor> skills
 }
