@@ -69,12 +69,6 @@ class AgentConfig implements ConfigScope {
     """)
     final Boolean trace
 
-    @ConfigOption
-    @Description("""
-        The directory (relative to the script directory, or absolute) holding the agent skills declared via the `skills` directive; remote skills are also cached here (default: `skills`).
-    """)
-    final String skillsDir
-
     /* required by extension point -- do not remove */
     AgentConfig() {}
 
@@ -84,7 +78,6 @@ class AgentConfig implements ConfigScope {
         requestTimeout = opts.requestTimeout != null ? opts.requestTimeout as Duration : null
         maxToolOutputInlineSize = opts.maxToolOutputInlineSize != null ? opts.maxToolOutputInlineSize as MemoryUnit : null
         trace = opts.trace != null ? opts.trace as Boolean : null
-        skillsDir = opts.skillsDir as String
     }
 
     String getDefaultModel() { defaultModel }
@@ -96,8 +89,6 @@ class AgentConfig implements ConfigScope {
     MemoryUnit getMaxToolOutputInlineSize() { maxToolOutputInlineSize }
 
     Boolean getTrace() { trace }
-
-    String getSkillsDir() { skillsDir }
 
     /**
      * The effective maximum size, in bytes, of a structured tool-output file whose contents

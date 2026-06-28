@@ -55,5 +55,4 @@ the `activate_skill` call in the execution trace.
 
 > **Caching note:** remote skills are cloned into this `skills/` directory (a full
 > git clone, including its `.git`). Add the cached clone directories to your
-> `.gitignore`, or point `agent.skillsDir` at a location outside your repo, to
-> avoid committing third-party code into your project.
+> `.gitignore` to avoid committing third-party code into your project.

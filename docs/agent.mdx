@@ -247,8 +247,7 @@ with `name` + `description`, then a Markdown body of instructions):
 The model is shown each skill's `name` + `description` up front and reads the
 full instructions on demand (langchain4j Tool Mode: `activate_skill`); bundled
 reference files are read via `read_skill_resource`. Skills run **no code** at
-inference. The skills directory location can be overridden with the
-`agent.skillsDir` config option.
+inference.
 
 :::warning
 A remote skill's `SKILL.md` becomes model instructions, so activating a remote
@@ -280,7 +279,6 @@ agent {
 | `defaultModel` | Default model (`provider/model`) for an agent that does not declare a `model` directive. |
 | `maxIterationsDefault` | Default cap on the tool-calling loop for an agent that does not declare `maxIterations` (built-in default `20`). |
 | `requestTimeout` | Time to wait for a single LLM chat request before failing (built-in default `120 sec`). |
-| `skillsDir` | Directory holding agent skills declared via `skills` (relative to the script dir, or absolute); remote skills are cached here too (built-in default `skills`). |
 
 ## Directives
 

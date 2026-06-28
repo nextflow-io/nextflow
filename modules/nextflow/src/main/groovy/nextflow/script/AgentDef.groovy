@@ -214,7 +214,7 @@ class AgentDef extends BindableDef implements ChainableDef {
         // skills under the `skills/` dir beside the script, remote GitHub refs cloned + cached there.
         // A skills-only agent therefore has a null bridge (no dataflow tool nodes) yet still carries
         // its resolved skills on every request.
-        final List<SkillDescriptor> skillDescriptors = resolveSkills(agentConfig)
+        final List<SkillDescriptor> skillDescriptors = resolveSkills()
         // capture the session for use in the mapper closure (work dir allocation)
         final Session session0 = Global.session as Session
         final boolean needsSandbox = bridge != null && bridge.filesystemEnabled
@@ -300,17 +300,16 @@ class AgentDef extends BindableDef implements ChainableDef {
     /**
      * Resolve the declared {@code skills} entries to portable {@link SkillDescriptor}s once,
      * pre-ignition. Each entry is either a remote GitHub reference (cloned + cached) or a local
-     * skill name resolved under the skills-root directory ({@code <baseDir>/skills} by default, or the
-     * {@code agent.skillsDir} override, relative to the script dir or absolute). Returns {@code null}
+     * skill name resolved under the {@code skills/} directory beside the script. Returns {@code null}
      * when no skills are declared; rejects duplicate skill names across all entries.
      */
-    private List<SkillDescriptor> resolveSkills(AgentConfig agentConfig) {
+    private List<SkillDescriptor> resolveSkills() {
         final declared = this.skills
         if( !declared )
             return null
         final session = Global.session as Session
         final meta = ScriptMeta.get(owner)
-        final Path skillsRoot = ownerBaseDir(meta, session).resolve(agentConfig.skillsDir ?: SkillResolver.SKILLS_DIR)
+        final Path skillsRoot = ownerBaseDir(meta, session).resolve(SkillResolver.SKILLS_DIR)
         final List<SkillDescriptor> result = new ArrayList<>()
         final Set<String> seen = new HashSet<>()
         for( final entry : declared ) {
