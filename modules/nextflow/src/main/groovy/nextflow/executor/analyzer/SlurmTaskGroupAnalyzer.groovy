@@ -21,7 +21,6 @@ import nextflow.util.MemoryUnit
 class SlurmTaskGroupAnalyzer {
 
     private Session session
-    private DAG dag
     private int nodeMaxCpus
     private MemoryUnit nodeMaxMemory
     private Duration nodeMaxTime
@@ -140,7 +139,7 @@ class SlurmTaskGroupAnalyzer {
      * @param processVertices the list of process vertices to include in the graph
      */
     private DependencyGraph buildDependencyGraph(List<DAG.Vertex> processVertices) {
-        DependencyGraph dependencyGraph = new DependencyGraph(this.session)
+        DependencyGraph dependencyGraph = new DependencyGraph(this.dag)
 
         // Add all process nodes to the graph
         for( DAG.Vertex vertex : processVertices ) {
@@ -164,28 +163,4 @@ class SlurmTaskGroupAnalyzer {
         log.debug "[SLURM TASK GROUPING] Analyzing vertex: ${vertex.label} — cpus=${node.getCpus()}, memory=${node.getMemory()}, time=${node.getTime()}"
         return node
     } 
-
-    /**
-     * Identify parallelizable tasks based on dependency graph levels.
-     * Tasks at the same level have no dependency relationship with 
-     * each other and can potentially be executed in parallel.
-     * Uses iterative topological sort (Kahn's algorithm) for O(V+E) performance.
-     *
-     * @param dependencyGraph the graph representing process dependencies
-     * @return a map of level to list of TaskNode IDs that can be grouped together
-     */
-    Map<Integer, List<Long>> identifyParallelTasks(DependencyGraph dependencyGraph) {
-        // Use iterative topological sort for better performance
-        dependencyGraph.assignLevelsIteratively()
-        
-        final Map<Integer, List<Long>> groups = dependencyGraph.groupByLevels()
-        
-        // Log summary of grouping results
-        for (Map.Entry<Integer, List<Long>> entry : groups.entrySet()) {
-            log.debug "[SLURM TASK GROUPING] Level ${entry.getKey()}: ${entry.getValue().size()} task(s)"
-        }
-        
-        return groups
-    }
-
 }

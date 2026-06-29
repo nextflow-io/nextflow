@@ -18,12 +18,10 @@ class DependencyGraph {
 
     private Map<Long, TaskNode> nodes // Map of vertex ID to TaskNode representing each process in the DAG
     private DAG dag // Reference to the workflow DAG for analysis
-    private Session session 
 
-    DependencyGraph(Session session) {
+    DependencyGraph(DAG dag) {
         this.nodes = new HashMap<>()
-        this.session = session
-        this.dag = session.dag
+        this.dag = dag
     }
 
     Map<Long, TaskNode> getNodes() {
@@ -50,7 +48,6 @@ class DependencyGraph {
         // For each PROCESS node, find all upstream and downstream PROCESS dependencies
         for (TaskNode node : this.nodes.values()) {
             final Set<Long> upstreamProcesses = findUpstreamProcesses(node.getVertex())
-            final Set<Long> downstreamProcesses = findDownstreamProcesses(node.getVertex())
             
             for (Long upstreamId : upstreamProcesses) {
                 node.addUpstreamDependency(upstreamId)
@@ -89,42 +86,6 @@ class DependencyGraph {
                         } else {
                             // Continue traversing through non-PROCESS vertices
                             queue.offer(edge.from)
-                        }
-                    }
-                }
-            }
-        }
-        
-        return result
-    }
-    
-    /**
-     * Find all downstream PROCESS vertices by traversing forward through the DAG.
-     * @param vertex The starting vertex
-     * @return Set of vertex IDs of downstream PROCESS vertices
-     */
-    private Set<Long> findDownstreamProcesses(DAG.Vertex vertex) {
-        final Set<Long> result = new HashSet<>()
-        final Set<Long> visited = new HashSet<>()
-        final Queue<DAG.Vertex> queue = new LinkedList<>()
-        queue.offer(vertex)
-        visited.add(vertex.id)
-        
-        while (!queue.isEmpty()) {
-            final DAG.Vertex current = queue.poll()
-            
-            // Find all edges starting from this vertex
-            for (DAG.Edge edge : this.dag.edges) {
-                if (edge.from?.id == current.id && edge.to != null) {
-                    if (!visited.contains(edge.to.id)) {
-                        visited.add(edge.to.id)
-                        
-                        if (edge.to.type == DAG.Type.PROCESS && edge.to.id != vertex.id) {
-                            // Found a downstream PROCESS vertex
-                            result.add(edge.to.id)
-                        } else {
-                            // Continue traversing through non-PROCESS vertices
-                            queue.offer(edge.to)
                         }
                     }
                 }
