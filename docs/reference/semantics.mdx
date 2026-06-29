@@ -1,0 +1,688 @@
+---
+title: Semantics
+description: Reference for the semantics of Nextflow language constructs.
+---
+
+# Semantics
+
+This page describes the *semantics* of the Nextflow language -- that is, the meaning and behavior of each language construct. It is a companion to the [Syntax][syntax-page] reference, which describes the *grammar* of the language (how constructs are written). See the [Scripts][script-page] page for a practical introduction to the language.
+
+## Truthiness
+
+Many constructs -- [if/else](#ifelse) conditions, [assertions](#assertions), [conditional operators](#conditional-operators), and the logical operators -- coerce their operands to a boolean. A value that coerces to `true` is *truthy*, and a value that coerces to `false` is *falsy*.
+
+The truthiness of a value depends on its type:
+
+| Type            | Falsy values                      | Truthy values        |
+| --------------- | --------------------------------- | -------------------- |
+| Boolean         | `false`                           | `true`               |
+| Numbers         | zero (`0`, `0.0`)                 | any non-zero number  |
+| String          | empty string (`''`), `null`       | any non-empty string |
+| Collections     | empty map (`[]`), `null`          | any non-empty collection |
+| Map             | empty map (`[:]`), `null`         | any non-empty map    |
+| `null`          | `null`                            | (always falsy)       |
+| Everything else | --                                | any non-null value   |
+
+For example:
+
+```nextflow
+assert true
+assert 42
+assert 'hello'
+assert [1, 2, 3]
+assert [key: 'value']
+
+assert !false
+assert !0
+assert !''
+assert ![]
+assert ![:]
+assert !null
+```
+
+Truthiness is what makes the [Elvis operator](#conditional-operators) useful for providing default values:
+
+```nextflow
+def name = params.name ?: 'default'
+// uses 'default' if params.name is null or empty
+```
+
+:::warning
+A non-empty string is always truthy, including the string `'false'`. When a parameter may be supplied on the command line as a string, convert it explicitly before testing it as a boolean.
+
+```nextflow
+// 'false' is a non-empty string, so this branch is taken
+if( params.skip_qc )    // params.skip_qc == 'false'
+    println 'skipping'   // <- executed!
+
+// convert the string to a boolean first
+if( params.skip_qc.toBoolean() )
+    println 'skipping'
+```
+:::
+
+## String interpolation
+
+A double-quoted [string](./syntax#string) supports *interpolation* -- embedded expressions are evaluated and their results inserted into the string. A single-quoted string is a literal and is never interpolated:
+
+```nextflow
+def name = 'world'
+println "Hello, ${name}!"   // -> Hello, world!
+println 'Hello, ${name}!'   // -> Hello, ${name}!
+```
+
+An interpolated expression is written as `${expression}`. The curly braces can be omitted for a simple variable or property reference:
+
+```nextflow
+def sample = [id: 'A', count: 42]
+println "Sample $sample.id has $sample.count reads"
+// -> Sample A has 42 reads
+```
+
+Each interpolated expression is evaluated when the string is created, and its result is converted to a string using the value's `toString()` method. Interpolation is *eager*: the expression is evaluated immediately, not deferred:
+
+```nextflow
+def x = 1
+def s = "x is ${x}"
+x = 2
+println s   // -> x is 1
+```
+
+:::warning
+In process script blocks, Nextflow string interpolation (`$foo`) and Bash variable expansion (`$foo`) use the same syntax. To reference a Bash variable in a double-quoted script string, escape the dollar sign as `\$foo` so that it is passed through to the shell instead of being interpolated by Nextflow. Alternatively, use a single-quoted script string, which is not interpolated by Nextflow. See [Processes][process-page] for details.
+:::
+
+See [String interpolation][script-string-interpolation] for more examples.
+
+## Tuples and destructuring
+
+A *tuple* is a fixed sequence of values, which may have different types. In Nextflow, a tuple is created using the `tuple()` function:
+
+```nextflow
+def pair = tuple('sample_1', file('sample_1.fastq'))
+```
+
+A tuple can be *destructured* -- that is, its elements can be assigned to multiple variables in a single statement. The number of variables must match the number of elements:
+
+```nextflow
+def (id, reads) = tuple('sample_1', file('sample_1.fastq'))
+// id    -> 'sample_1'
+// reads -> file('sample_1.fastq')
+```
+
+The most common use of destructuring is in [closure](./syntax#closure) parameters. When a closure is applied to a collection of tuples, the tuple elements can be unpacked directly into named parameters:
+
+```nextflow
+def samples = [
+    tuple('sample_1', 100),
+    tuple('sample_2', 200),
+]
+
+samples.each { id, count ->
+    println "${id}: ${count}"
+}
+```
+
+This pattern is especially useful in workflows, where channels often emit tuples of a sample identifier and associated files:
+
+```nextflow
+ch_reads.map { id, reads ->
+    tuple(id, reads.countFastq())
+}
+```
+
+See [Tuples][script-tuples] for more information.
+
+## Operators
+
+An *operator* is a symbol that performs an operation on one or two operands. The full set of operators and their grammar is listed in the [Syntax][syntax-operators] reference; this section describes their semantics, grouped by category.
+
+:::note
+The operators described here are language operators, which apply to ordinary values. They are different from *channel operators*, which are functions for manipulating [channels](#dataflow). See [Operators][operator-page] for channel operators.
+:::
+
+### Arithmetic operators
+
+Arithmetic operators perform numeric computation:
+
+| Operator | Operation                  | Example          |
+| -------- | -------------------------- | ---------------- |
+| `+`      | addition                   | `2 + 3` -> `5`   |
+| `-`      | subtraction                | `5 - 2` -> `3`   |
+| `*`      | multiplication             | `2 * 3` -> `6`   |
+| `/`      | division                   | `7 / 2` -> `3.5` |
+| `%`      | remainder (modulo)         | `7 % 3` -> `1`   |
+| `**`     | power (exponentiation)     | `2 ** 8` -> `256`|
+
+Division of two integers produces a floating-point result (`7 / 2` is `3.5`, not `3`). To perform integer division, use the `intdiv` method: `7.intdiv(2)` is `3`.
+
+Some arithmetic operators are *overloaded* for non-numeric types. In particular, `+` concatenates strings, lists, and maps:
+
+```nextflow
+assert 'foo' + 'bar' == 'foobar'
+assert [1, 2] + [3, 4] == [1, 2, 3, 4]
+assert [a: 1] + [b: 2] == [a: 1, b: 2]
+```
+
+### Relational operators
+
+Relational operators compare two values and produce a boolean:
+
+| Operator      | Operation                       |
+| ------------- | ------------------------------- |
+| `==`          | equal to                        |
+| `!=`          | not equal to                    |
+| `<`           | less than                       |
+| `>`           | greater than                    |
+| `<=`          | less than or equal to           |
+| `>=`          | greater than or equal to        |
+| `<=>`         | three-way comparison (spaceship)|
+
+In Nextflow, `==` tests *value equality*, not object identity -- two distinct objects with the same contents are equal:
+
+```nextflow
+assert [1, 2, 3] == [1, 2, 3]
+assert 'hello' == 'hello'
+```
+
+Ordering operators (`<`, `>`, `<=`, `>=`) compare values according to their natural order: numbers numerically, strings alphabetically, and so on. The spaceship operator `<=>` returns `-1`, `0`, or `1` depending on whether the left operand is less than, equal to, or greater than the right operand, and is useful for defining custom sort comparators:
+
+```nextflow
+def items = ['banana', 'apple', 'cherry']
+items.toSorted { a, b -> a <=> b }
+// -> ['apple', 'banana', 'cherry']
+```
+
+### Logical operators
+
+Logical operators combine boolean values. Their operands are coerced using [truthiness](#truthiness):
+
+| Operator | Operation   |
+| -------- | ----------- |
+| `&&`     | logical AND |
+| `\|\|`   | logical OR  |
+| `!`      | logical NOT |
+
+The `&&` and `||` operators *short-circuit*: the right operand is evaluated only if necessary. For `&&`, the right operand is evaluated only if the left is truthy; for `||`, only if the left is falsy. This allows the right operand to safely depend on the left:
+
+```nextflow
+if( reads != null && reads.size() > 0 )
+    // reads.size() is only evaluated if reads is not null
+```
+
+### Bitwise operators
+
+Bitwise operators operate on the individual bits of integer values:
+
+| Operator | Operation              |
+| -------- | ---------------------- |
+| `&`      | bitwise AND            |
+| `\|`     | bitwise OR             |
+| `^`      | bitwise XOR            |
+| `~`      | bitwise NOT            |
+| `<<`     | left shift             |
+| `>>`     | right shift            |
+| `>>>`    | unsigned right shift   |
+
+```nextflow
+assert (0b1100 & 0b1010) == 0b1000   // -> 8
+assert (0b1100 | 0b1010) == 0b1110   // -> 14
+assert (1 << 4) == 16
+```
+
+:::note
+The `>>` operator is also used in [typed processes](./syntax#process-typed) to emit values to a topic, and in [workflow outputs](../workflow#publishing-files) to publish files.
+:::
+
+### Conditional operators
+
+Conditional operators select a value based on a condition:
+
+- The *ternary operator* `cond ? a : b` evaluates `cond` (using [truthiness](#truthiness)) and returns `a` if it is truthy, otherwise `b`:
+
+  ```nextflow
+  def label = sample.single_end ? 'single' : 'paired'
+  ```
+
+- The *Elvis operator* `a ?: b` is a shorthand that returns `a` if it is truthy, otherwise `b`. It is commonly used to supply a default value:
+
+  ```nextflow
+  def threads = params.threads ?: 1
+  ```
+
+In both cases, only the selected branch is evaluated.
+
+### Navigation operators
+
+Navigation operators access properties and methods of a value:
+
+- The *dot operator* `a.b` accesses the property `b` (or calls the method `b()`) of `a`:
+
+  ```nextflow
+  myFile.name
+  myFile.getName()
+  ```
+
+- The *safe navigation operator* `a?.b` returns `null` if `a` is `null`, instead of raising a null reference error. This avoids the need for explicit null checks:
+
+  ```nextflow
+  def name = sample?.reads?.name
+  // null if sample or sample.reads is null
+  ```
+
+- The *spread operator* `a*.b` applies the property access or method call to each element of a collection, returning a list of the results:
+
+  ```nextflow
+  def files = [file('a.txt'), file('b.txt')]
+  files*.name
+  // -> ['a.txt', 'b.txt']
+  // equivalent to: files.collect { f -> f.name }
+  ```
+
+### Other operators
+
+The following operators perform various other operations:
+
+| Operator      | Operation                                                       |
+| ------------- | --------------------------------------------------------------- |
+| `..`          | inclusive range, e.g. `1..5` is `[1, 2, 3, 4, 5]`               |
+| `..<`         | right-exclusive range, e.g. `1..<5` is `[1, 2, 3, 4]`           |
+| `in`          | membership: `x in coll` is true if `coll` contains `x`          |
+| `!in`         | negated membership                                              |
+| `as`          | type cast (see [Types](#types))                                 |
+| `instanceof`  | type test: `x instanceof T` is true if `x` has type `T`         |
+| `!instanceof` | negated type test                                               |
+| `=~`          | regex find: true if the pattern occurs anywhere in the string   |
+| `==~`         | regex match: true if the string matches the pattern exactly     |
+
+```nextflow
+assert 2 in [1, 2, 3]
+assert 'foo' instanceof String
+assert 'hello world' =~ /world/
+assert '2.7.3' ==~ /\d+\.\d+\.\d+/
+```
+
+See [Regular expressions][script-regex] for more information on the regex operators.
+
+### Operator precedence
+
+When an expression contains multiple operators, *precedence* determines the order in which they are applied. Operators with higher precedence are applied before those with lower precedence. For example, `*` has higher precedence than `+`, so `1 + 2 * 3` is `7`, not `9`.
+
+The full precedence order, from highest to lowest, is listed in the [Syntax][syntax-precedence] reference. The most important rules to remember are:
+
+- Property access, method calls, and index expressions bind most tightly.
+- Unary operators (`!`, `~`, unary `-`) bind more tightly than binary arithmetic.
+- Arithmetic binds more tightly than comparison, which binds more tightly than the logical operators.
+- The conditional operators (`?:`) have the lowest precedence.
+
+When in doubt, use parentheses to make the intended grouping explicit:
+
+```nextflow
+(1 + 2) * 3   // -> 9
+1 + 2 * 3     // -> 7
+```
+
+## Control flow
+
+### if/else
+
+An [if/else statement](./syntax#ifelse) conditionally executes one of two branches based on a boolean condition. The condition does not need to be a boolean value -- it is coerced to a boolean using [truthiness](#truthiness):
+
+```nextflow
+def files = file('*.txt')
+if( files ) {
+    println "Found ${files.size()} files"
+}
+else {
+    println 'No files found'
+}
+```
+
+An if/else statement is a *statement*, not an *expression* -- it does not produce a value. To select between two values based on a condition, use a [conditional expression](#conditional-operators) instead:
+
+```nextflow
+def message = files ? "Found ${files.size()} files" : 'No files found'
+```
+
+A variable declared with `def` inside an if or else branch exists only within that branch. To use a value computed in a branch after the if/else statement, declare the variable beforehand:
+
+```nextflow
+def label
+if( sample.single_end )
+    label = 'single'
+else
+    label = 'paired'
+println label
+```
+
+### Loops
+
+Nextflow does not support imperative loop statements such as `for` and `while`. Instead, iteration is expressed declaratively using *higher-order functions* -- methods that take a [closure](./syntax#closure) and apply it to each element of a collection.
+
+For example, instead of a `for` loop:
+
+```groovy
+// Groovy (not supported in Nextflow)
+def result = []
+for( x in [1, 2, 3] ) {
+    result.add(x * x)
+}
+```
+
+Use the `collect` method to transform each element:
+
+```nextflow
+def result = [1, 2, 3].collect { x -> x * x }
+// -> [1, 4, 9]
+```
+
+Higher-order functions make the *intent* of the iteration explicit. Common operations include:
+
+- `each`: perform a side effect for each element
+- `collect`: transform each element into a new value (i.e. *map*)
+- `find` / `findAll`: select the first / all elements that satisfy a condition (i.e. *filter*)
+- `inject`: combine all elements into a single value (i.e. *reduce* or *fold*)
+- `any` / `every`: test whether any / all elements satisfy a condition
+
+```nextflow
+def numbers = [1, 2, 3, 4, 5]
+
+numbers.each { v -> println v }             // print each number
+numbers.collect { v -> v * 2 }              // -> [2, 4, 6, 8, 10]
+numbers.findAll { v -> v % 2 == 0 }         // -> [2, 4]
+numbers.inject(0) { acc, v -> acc + v }     // -> 15
+numbers.every { v -> v > 0 }                // -> true
+```
+
+A higher-order function returns a value rather than mutating external state, which makes it easier to reason about and avoids common sources of error. For example, `inject` accumulates a result without an external accumulator variable:
+
+```nextflow
+// instead of mutating an external variable
+def total = 0
+[1, 2, 3].each { v -> total += v }
+
+// accumulate the result directly
+def total = [1, 2, 3].inject(0) { acc, v -> acc + v }
+```
+
+See [Iterable\<E\>][stdlib-types-iterable] for the full set of higher-order functions.
+
+:::note
+Higher-order functions operate on regular collections such as lists and sets. To process the values in a [channel](#dataflow), use [operators][operator-page] such as `map`, `filter`, and `reduce` instead.
+:::
+
+## Error handling
+
+When an error occurs at runtime, an *exception* is raised. An exception propagates up through the call stack until it is caught by an enclosing [try/catch statement](./syntax#trycatch), or else it reaches the Nextflow runtime and terminates the pipeline.
+
+### Raising errors
+
+The recommended way to raise an error in pipeline code is the [`error`][stdlib-error] function, which stops the pipeline with a clear error message:
+
+```nextflow
+if( params.aligner !in ['bowtie2', 'bwamem'] )
+    error "Unsupported aligner: ${params.aligner}"
+```
+
+The lower-level [`throw`](./syntax#throw) statement can be used to raise a specific exception type, but `error` should be preferred for reporting pipeline errors, as it produces a cleaner message and does not require constructing an exception:
+
+```nextflow
+// preferred
+error 'Something failed!'
+
+// equivalent, but more verbose
+throw new Exception('Something failed!')
+```
+
+### Catching errors
+
+A try/catch statement is appropriate when an error is *expected* and can be handled in pipeline logic -- for example, falling back to a default value when an optional file cannot be read:
+
+```nextflow
+def config
+try {
+    config = file('custom.config').text
+}
+catch( e: IOException ) {
+    log.warn 'Could not read custom.config, using defaults'
+    config = ''
+}
+```
+
+A catch clause matches an exception if the raised exception is an instance of the declared type. If no catch clause matches, the exception propagates to the next enclosing try/catch statement, or terminates the pipeline.
+
+Use try/catch only for errors you intend to recover from. Do not use it to suppress errors that should halt the pipeline -- in that case, let the error propagate so the failure is visible.
+
+### Distinguishing error handling concerns
+
+Nextflow provides three distinct mechanisms for handling errors, each at a different level:
+
+- **`error` / `throw` / try-catch** operate within *pipeline code* (functions, closures, the workflow body). They handle errors that occur while building and connecting the dataflow graph -- for example, validating parameters or reading a configuration file.
+
+- **The [`errorStrategy`][process-error-strategy] directive** operates at the *task* level. It determines what happens when a process *task* fails (e.g. a command exits with a non-zero status): the task can be retried, ignored, or cause the pipeline to terminate. This is the appropriate mechanism for handling failures of the underlying tools that a process executes.
+
+```nextflow
+process align {
+    errorStrategy 'retry'
+    maxRetries 3
+    // ...
+}
+```
+
+- **The [`onError`][workflow-handlers] workflow handler** runs when the pipeline as a whole fails, allowing for cleanup or notification.
+
+In short: use `errorStrategy` to handle *task command* failures, and use `error` / try-catch to handle errors in *pipeline logic*.
+
+## Assertions
+
+An [assert statement](./syntax#assert) evaluates a boolean condition and raises an error if the condition is false. Like an if condition, the asserted expression is coerced to a boolean using [truthiness](#truthiness):
+
+```nextflow
+assert params.input != null : 'The --input parameter is required'
+```
+
+If the condition is false, an error is raised. The optional message after the colon is included in the error. If no message is given, Nextflow reports the values of the sub-expressions in the condition (a *power assertion*), which makes it easy to see why the assertion failed:
+
+```nextflow
+assert 2 + 2 == 5
+// Assertion failed:
+// assert 2 + 2 == 5
+//          |    |
+//          4    false
+```
+
+Assertions are intended for verifying invariants -- conditions that should always hold if the code is correct. They are commonly used in tests and for sanity checks. To validate user inputs or report expected error conditions, use the [`error`](#raising-errors) function instead, which produces a cleaner message without the assertion trace.
+
+## Functions
+
+A [function](./syntax#function) is a named, reusable block of code that takes zero or more parameters and may return a value. The same semantics apply to [closures](./syntax#closure), which are anonymous functions.
+
+A function returns the value of its last evaluated expression, or the value of an explicit [`return`](./syntax#return) statement:
+
+```nextflow
+def add(a, b) {
+    a + b       // implicit return
+}
+
+def addExplicit(a, b) {
+    return a + b
+}
+```
+
+Arguments are passed *by reference* -- the function receives a reference to the same object, not a copy. Mutating a mutable argument (such as a list or map) inside a function affects the caller's object:
+
+```nextflow
+def addItem(list, item) {
+    list.add(item)
+}
+
+def items = [1, 2]
+addItem(items, 3)
+println items   // -> [1, 2, 3]
+```
+
+To avoid this, create a copy before mutating, or use operations that return a new value (e.g. `list + [item]` instead of `list.add(item)`).
+
+### Default parameter values
+
+A function parameter can declare a *default value*, which is used when the caller does not supply an argument for that parameter:
+
+```nextflow
+def greet(name, greeting = 'Hello') {
+    "${greeting}, ${name}!"
+}
+
+greet('world')              // -> Hello, world!
+greet('world', 'Hi')        // -> Hi, world!
+```
+
+Parameters with default values must come after parameters without defaults. A default value can be any expression, and is evaluated each time the function is called without that argument.
+
+### Named arguments
+
+A [function call](./syntax#function-call) may use *named arguments* -- arguments specified by name rather than position. Named arguments are collected into a map and passed as the first positional argument to the function:
+
+```nextflow
+file('hello.txt', checkIfExists: true)
+```
+
+is equivalent to:
+
+```nextflow
+file([checkIfExists: true], 'hello.txt')
+```
+
+Named arguments are commonly used by built-in functions and process directives to specify optional settings:
+
+```nextflow
+// process directive with named options
+accelerator 4, type: 'nvidia-tesla-v100'
+
+// channel factory with named options
+channel.fromPath('*.txt', checkIfExists: true)
+```
+
+Because named arguments are collected into a single map, their order does not matter, and they can be freely mixed with positional arguments. A function that accepts named arguments must declare a `Map` as its first parameter.
+
+## Dataflow
+
+A Nextflow workflow describes a *dataflow* -- a graph of [processes][process-page] and [operators][operator-page] connected by channels. Understanding the distinction between *defining* the dataflow and *executing* it is essential to reasoning about how a workflow behaves.
+
+### Definition vs execution
+
+A workflow body is not executed step by step like an ordinary function. Instead, it is evaluated *once*, up front, to *construct* the dataflow graph. The statements in a workflow body declare how processes, operators, and channels are wired together; the actual computation happens *afterward*, asynchronously, as data flows through the graph.
+
+In this sense, a workflow definition behaves like a *compile-time macro*: it runs once to build the dataflow graph, and the operations it describes (process tasks, operator logic) execute later as data becomes available.
+
+Consider:
+
+```nextflow
+workflow {
+    ch_input = channel.of(1, 2, 3)
+    ch_result = ch_input.map { v -> expensive(v) }
+    ch_result.view()
+}
+```
+
+When the workflow body runs:
+
+1. `channel.of(1, 2, 3)` creates a channel.
+2. `.map { ... }` connects a `map` operator to that channel and returns a new channel. The closure is *not* called yet -- it is registered to run later, once per value.
+3. `.view()` connects a `view` operator.
+
+Only after the entire graph is constructed does Nextflow begin executing it: the channel emits its values, the `map` closure runs for each value, and `view` prints each result.
+
+This has several important consequences:
+
+- **Channel contents cannot be accessed directly.** Because the workflow body runs before any data flows, you cannot inspect the values in a channel from within the workflow body. You must use an operator or process to act on each value:
+
+  ```nextflow
+  // does NOT work -- the channel has no values yet when this runs
+  def first = ch_input[0]
+
+  // correct -- the closure runs later, for each value
+  ch_input.map { v -> transform(v) }
+  ```
+
+- **Operator closures run asynchronously.** The closure passed to an operator such as `map` or `filter` is invoked later, once per channel value, and possibly out of order. It should not depend on mutable state shared with other closures.
+
+- **The order of statements describes connections, not execution order.** Two independent branches of a workflow are constructed in the order written, but their tasks may execute concurrently.
+
+This is the fundamental difference between the *workflow definition* (evaluated synchronously to build the graph) and the *workflow execution* (runs the graph asynchronously). See [Dataflow][workflow-dataflow] for more information.
+
+## Types
+
+Every value in Nextflow has a *type*, which determines the set of operations that can be performed on it. The available types are described in the [Types][stdlib-types] reference.
+
+Nextflow supports two styles of typing:
+
+- **Dynamic typing** (the default): variables and parameters do not declare a type, and the type of each value is determined at runtime. This is the traditional behavior.
+
+- **Static typing** (opt-in): variables, parameters, process inputs/outputs, and workflow inputs/outputs can declare a type, which is checked at compile time. Static typing is enabled with the `nextflow.enable.types` feature flag.
+
+A type annotation is written after the name, separated by a colon:
+
+```nextflow
+def count: Integer = 0
+def name: String = 'sample'
+def reads: List<Path> = []
+```
+
+Values are converted between types either implicitly (e.g. an integer to a floating-point number in arithmetic) or explicitly with the [`as` cast operator](#other-operators):
+
+```nextflow
+def x = '1h' as Duration
+def n = '42' as Integer
+```
+
+The value must be convertible to the target type when performing a hard cast, or an error is raised.
+
+### Nullable types
+
+A type annotation can be suffixed with `?` to indicate that the value may be `null`:
+
+```nextflow
+def x: String? = null
+```
+
+### Generic type arguments
+
+Some types are *generic* -- they are parameterized by one or more *type arguments* that specify the types of their contents. A type argument is written in angle brackets after the type name:
+
+- `List<E>` is a list whose elements have type `E`
+- `Channel<E>` is a channel whose values have type `E`
+- `Map<K,V>` is a map whose keys have type `K` and values have type `V`
+
+For example:
+
+```nextflow
+// a list of strings
+def sequences: List<String> = ['ATCG', 'GCTA']
+
+// a map from string keys to integer values
+def counts: Map<String,Integer> = [sample1: 1000, sample2: 1500]
+
+// a channel of file paths
+def ch_bams: Channel<Path> = channel.fromPath('*.bam')
+```
+
+Generic type arguments allow the type checker to verify that the contents of a collection or channel are used consistently -- for example, that a list of `Path` is not mistakenly treated as a list of `String`.
+
+[migrating-static-types]: ../migrations/25-10#static-typing-preview
+[operator-page]: ./operator
+[process-error-strategy]: ./process#errorstrategy
+[process-page]: ../process
+[script-page]: ../script
+[script-regex]: ../script#regular-expressions
+[script-string-interpolation]: ../script#string-interpolation
+[script-tuples]: ../script#tuples
+[stdlib-error]: ./stdlib-namespaces
+[stdlib-types]: ./stdlib-types
+[stdlib-types-list]: ./stdlib-types#liste
+[strict-syntax-page]: ../strict-syntax
+[strict-syntax-truthy]: ../strict-syntax#using-legacy-parameter-declarations
+[syntax-operators]: ./syntax#binary-expressions
+[syntax-page]: ./syntax
+[syntax-precedence]: ./syntax#precedence
+[workflow-dataflow]: ../workflow#dataflow
+[workflow-handlers]: ../notifications#workflow-handlers
