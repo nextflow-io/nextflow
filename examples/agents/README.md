@@ -6,7 +6,7 @@ takes one typed input per channel item, renders a prompt, runs a language model
 with processes and other agents through the normal channel/workflow model.
 
 These examples build up from a single no-tool agent to multi-module,
-tool-calling, sandboxed agents.
+tool-calling, sandboxed, and skill-equipped agents.
 
 ## The model in one minute
 
@@ -32,9 +32,18 @@ tool-calling, sandboxed agents.
   - **`'filesystem'`** — a sandboxed read/write/list/exists tool scoped to the
     agent's per-invocation work directory (plus the output paths of modules it
     ran). Writes stay inside the sandbox.
+- **`skills`** *(optional)* — a list of **skills** (Anthropic-style `SKILL.md`
+  folders) the agent may use. A skill packages expert instructions (plus optional
+  reference files) the model loads *on demand* (langchain4j Tool Mode:
+  `activate_skill` / `read_skill_resource`) — where `tools` let the agent *run
+  code*, `skills` give it *instructions*. Each entry is a **local** name (resolved
+  under `skills/<name>/` beside the script) or a **remote** GitHub ref
+  (`github.com/<org>/<repo>[@rev]`) cloned and cached into that same `skills/`
+  directory. No code runs at inference. See `skills/`.
 
-  Declaring `tools` requires a **plain** (non-record) output — tools and
-  structured record output are mutually exclusive in v1.
+  Declaring `tools` **or `skills`** requires a **plain** (non-record) output — a
+  tool/skill run emits the model's text, so it is mutually exclusive with
+  structured record output in v1.
 
 ## The examples (simple → complex)
 
@@ -42,6 +51,7 @@ tool-calling, sandboxed agents.
 |---|---|---|
 | [`structured-output/`](structured-output/main.nf) | none | A single agent with **record-typed structured output** (`Query` → `Analysis`). |
 | [`two-agents/`](two-agents/main.nf) | none | Two no-tool agents **chained over a channel** — stage-1's output record type is stage-2's input type. |
+| [`skills/`](skills/main.nf) | `skills` | A **local skill** (`sequence-report`): the model activates the `SKILL.md` on demand and follows its instructions — emitting a fixed report format it would not otherwise produce. Fully offline (no module, no container). |
 | [`tool/`](tool/main.nf) | `module_run` | The simplest tool agent: a **local in-scope process** auto-discovered and run via `module_run`. |
 | [`skesa/`](skesa/main.nf) | `module_run` | An **`include`d nf-core module** (`nf-core/skesa`) run as a tool; the LLM bridges the agent's input record to the module's tuple input. |
 | [`filesystem/`](filesystem/main.nf) | `module_run`, `filesystem` | Both capabilities together, **fully offline** (a trivial `exec:` process): run a module, then write/read a report file in the sandbox. |
@@ -73,7 +83,10 @@ tool-calling, sandboxed agents.
   PROKKA annotation branch, use a real bacterial isolate FASTQ or adjust the
   thresholds in `isolate-triage/main.nf`.
   The `tool/`, `filesystem/`, and `convergence-loop/` examples use `exec:`
-  processes and run **fully offline** (no container, no input data).
+  processes and run **fully offline** (no container, no input data); `skills/`
+  runs offline too (a pure-LLM agent with a local skill — only the OpenAI key is
+  needed). A **remote** skill ref additionally needs network access to clone the
+  GitHub repo on first use (it is then cached locally).
 
 ## Run (released Nextflow)
 
@@ -109,5 +122,10 @@ NXF_PLUGINS_MODE=dev OPENAI_API_KEY="$OPENAI_API_KEY" \
 - `bash` / `nextflow run` tools are not available in this release. The legacy
   `tools '<module-ref>'` string form still works but is deprecated in favor of
   `include` + `'module_run'`.
+- **Skills** run in *Tool Mode* only — instructions plus bundled resources, no code
+  execution at inference. A **remote** skill's `SKILL.md` becomes model
+  instructions, so treat it as untrusted and **pin a commit SHA** rather than a
+  moving branch; cached clones land in the local `skills/` dir (add them to
+  `.gitignore`). Skills resolve from `skills/` beside the script.
 
 See [`docs/agent.mdx`](../../docs/agent.mdx) for the full reference.
