@@ -100,6 +100,7 @@ import nextflow.script.types.Record
 import nextflow.script.types.Tuple
 import nextflow.trace.TraceRecord
 import nextflow.util.Escape
+import nextflow.processor.hash.TaskHasherFactory
 import nextflow.util.HashBuilder
 import nextflow.util.LockManager
 import nextflow.util.RecordMap
@@ -672,7 +673,7 @@ class TaskProcessor {
         // -- download foreign files
         session.filePorter.transfer(foreignFiles)
 
-        final hash = new TaskHasher(task).compute()
+        final hash = TaskHasherFactory.create(task).compute()
         checkCachedOrLaunchTask(task, hash, resumable)
     }
 
