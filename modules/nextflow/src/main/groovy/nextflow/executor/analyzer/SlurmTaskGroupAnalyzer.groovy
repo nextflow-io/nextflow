@@ -31,26 +31,6 @@ class SlurmTaskGroupAnalyzer {
 
     SlurmTaskGroupAnalyzer(Session session) {
         this.session = session
-        this.dag = session.dag  // Access the DAG from the session for analysis
-    }
-
-    /**
-     * Main method to perform analysis for Slurm task grouping.
-     * It checks if task grouping is enabled, collects process vertices, builds a dependency graph,
-     * and identifies parallelizable tasks based on their levels in the graph.
-     */
-    void analyze() {
-        final DependencyGraph dependencyGraph = analyzeDependencyGraph()
-        if( dependencyGraph == null )
-            return
-
-        try {
-            Map<Integer, List<Long>> parallelTasks = identifyParallelTasks(dependencyGraph)
-            log.debug "[SLURM TASK GROUPING] Tasks grouped by levels: ${parallelTasks.collect { k, v -> "Level $k: ${v.size()} tasks" }.join(', ')}"
-        }
-        catch( Exception e ) {
-            log.error "[SLURM TASK GROUPING] Error during analysis: ${e.message}", e
-        }
     }
 
     /**
@@ -69,7 +49,7 @@ class SlurmTaskGroupAnalyzer {
         log.debug "[SLURM TASK GROUPING] Task grouping enabled. Starting Slurm Analyzer"
         readNodeCapacity()
 
-        if( this.dag == null ) {
+        if( session.dag == null ) {
             log.debug "[SLURM TASK GROUPING] No DAG available for analysis"
             return null
         }
@@ -126,7 +106,7 @@ class SlurmTaskGroupAnalyzer {
      */
     private List<DAG.Vertex> collectProcessVertices() {
         final List<DAG.Vertex> result = []
-        for (DAG.Vertex vertex : this.dag.vertices) {
+        for (DAG.Vertex vertex : session.dag.vertices) {
             if (vertex.type == DAG.Type.PROCESS && vertex.process != null) {
                 result << vertex
             }
@@ -139,7 +119,7 @@ class SlurmTaskGroupAnalyzer {
      * @param processVertices the list of process vertices to include in the graph
      */
     private DependencyGraph buildDependencyGraph(List<DAG.Vertex> processVertices) {
-        DependencyGraph dependencyGraph = new DependencyGraph(this.dag)
+        DependencyGraph dependencyGraph = new DependencyGraph(session.dag)
 
         // Add all process nodes to the graph
         for( DAG.Vertex vertex : processVertices ) {
