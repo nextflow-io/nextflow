@@ -505,14 +505,6 @@ def result = counts.values().inject { sum, v -> sum + v }
 
 This way, the closure is fully "self-contained" because it doesn't access or mutate any variables outside of its scope.
 
-:::note
-When a closure takes a single parameter, the parameter can be omitted, in which case the implicit `it` parameter will be used:
-
-```nextflow
-[1, 2, 3].each { println it }
-```
-:::
-
 ## Script definitions
 
 So far, we have been focusing on the basic building blocks of Nextflow code, like variables, lists, strings, and closures.
