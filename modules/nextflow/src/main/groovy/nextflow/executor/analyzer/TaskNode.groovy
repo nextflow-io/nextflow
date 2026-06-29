@@ -21,7 +21,6 @@ class TaskNode {
 
     enum ProcessingState {
     UNVISITED,    // Not yet processed
-    VISITING,     // Currently being processed 
     VISITED       // Fully processed
     }
 
@@ -33,11 +32,9 @@ class TaskNode {
     private int cpus
     private MemoryUnit memory
     private Duration time
-    private MemoryUnit disk
     private String queue
     private List<Long> upstreamDependencies // List of vertex ids of upstream process dependencies
     private List<Long> downstreamDependencies // List of vertex ids of downstream process dependencies
-    private boolean isParallelizable // Flag indicating if the process is parallelizable based on resources
     private int level // Dependency level in the DAG 
 
     TaskNode(DAG.Vertex vertex, TaskProcessor processor) {
@@ -50,14 +47,12 @@ class TaskNode {
             this.cpus = config.getCpus()
             this.memory = config.getMemory()
             this.time = config.getTime()
-            this.disk = config.getDisk()
             this.queue = config.queue as String
         }
         catch( IllegalStateException e ) {
             log.warn "[SLURM TASK GROUPING] Process '${vertex.label}' uses dynamic resource directives — static grouping will use defaults: ${e.message}"
             if( !this.cpus ) this.cpus = 1
         }
-        this.isParallelizable = false // Default value
         this.upstreamDependencies = new ArrayList<>()
         this.downstreamDependencies = new ArrayList<>()
         this.level = 0
@@ -86,8 +81,6 @@ class TaskNode {
 
     Duration getTime() { return this.time }
 
-    MemoryUnit getDisk() { return this.disk }
-
     String getQueue() { return this.queue }
 
     List<Long> getUpstreamDependencies() {
@@ -98,20 +91,12 @@ class TaskNode {
         return this.downstreamDependencies
     }
 
-    boolean getIsParallelizable() {
-        return this.isParallelizable
-    }
-
     void setUpstreamDependencies(List<Long> dependencies) {
         this.upstreamDependencies = dependencies
     }
 
     void setDownstreamDependencies(List<Long> dependencies) {
         this.downstreamDependencies = dependencies
-    }
-
-    void setIsParallelizable(boolean parallelizable) {
-        this.isParallelizable = parallelizable
     }
 
     int getLevel() {
@@ -135,9 +120,6 @@ class TaskNode {
      * @param vertexId the vertex ID of the upstream dependency
      */
     void addUpstreamDependency(long vertexId) {
-        if (this.upstreamDependencies == null) {
-            this.upstreamDependencies = new ArrayList<>()
-        }
         this.upstreamDependencies.add(vertexId)
     }
 
@@ -146,9 +128,6 @@ class TaskNode {
      * @param vertexId the vertex ID of the downstream dependency
      */
     void addDownstreamDependency(long vertexId) {
-        if (this.downstreamDependencies == null) {
-            this.downstreamDependencies = new ArrayList<>()
-        }
         this.downstreamDependencies.add(vertexId)
     }
 }
