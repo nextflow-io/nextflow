@@ -30,17 +30,8 @@ process hello {
 }
 ```
 
-To use this feature:
-
-1. Enable the [strict parser][strict-syntax-page] by setting the `NXF_SYNTAX_PARSER` environment variable to `v2`:
-
-    ```bash
-    export NXF_SYNTAX_PARSER=v2
-    ```
-
-2. Set `nextflow.enable.types = true` in every script that uses typed processes.
-
-See [Process (typed)][syntax-process-typed] for the complete syntax reference and [Migrating to static typing][migrating-static-types] to migrate existing code to static typing.
+For an overview of static typing and how to enable it, see [Static typing](./static-typing.mdx).
+For the complete syntax reference, see [Process (typed)][syntax-process-typed].
 
 ## Inputs
 
@@ -389,5 +380,4 @@ Directives behave the same way as [legacy processes][process-directives].
 [process-script]: ./process#script
 [process-stub]: ./process#stub
 [stdlib-types]: ./reference/stdlib-types
-[strict-syntax-page]: ./strict-syntax
 [syntax-process-typed]: ./reference/syntax#process-typed

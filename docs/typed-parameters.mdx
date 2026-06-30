@@ -1,0 +1,41 @@
+---
+title: Typed parameters
+description: Declare statically typed pipeline parameters in Nextflow using the params block.
+---
+
+# Typed parameters
+
+<AddedInVersion version="25.10.0" />
+
+A script can declare parameters using the `params` block:
+
+```nextflow
+params {
+    // Path to input data.
+    input: Path
+
+    // Whether to save intermediate files.
+    save_intermeds: Boolean
+}
+
+workflow {
+    analyze(params.input, params.save_intermeds)
+}
+```
+
+## Features
+
+Parameters can use all [standard types][stdlib-types] except the dataflow types (`Channel` and `Value`).
+
+Typed parameters should only be referenced in the entry workflow or `output` block. Parameters can be passed to workflows and processes as explicit inputs.
+
+The command line, params file, or config file can override the default value. Parameters from multiple sources are resolved in the order described in [Pipeline parameters][cli-params]. Nextflow converts command-line parameters to the type set by their annotation.
+
+A parameter that doesn't specify a default value is a *required* parameter. If a required parameter has no value at runtime, the run fails.
+
+<AddedInVersion version="26.04.0" />
+
+Boolean parameters that don't specify a default value default to `false`.
+
+[cli-params]: ./cli#pipeline-parameters
+[stdlib-types]: ./reference/stdlib-types
