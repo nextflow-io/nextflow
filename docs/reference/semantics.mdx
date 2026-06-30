@@ -94,7 +94,18 @@ x = 2
 println s   // -> x is 1
 ```
 
+Single-quoted strings are not interpolated:
+
+```nextflow
+println 'Hello, ${name}!'
+// -> Hello, ${name}!
+```
+
 See [String][stdlib-types-string] for the available operations.
+
+### Null
+
+The special value `null` represents the absence of a value. Accessing a property or calling a method on `null` raises a *null reference* error, so `null` is best avoided where possible. The [safe navigation operator](#navigation-operators) can be used to access a property that may be `null`.
 
 ### Collections
 
@@ -207,7 +218,7 @@ def square = { v -> v * v }
 assert square.call(9) == 81
 ```
 
-The body returns the value of its last expression, in the same way as a [function](#functions).
+Closures have the same parameter and return semantics as [function](#functions).
 
 A closure can access variables from the enclosing scope, and can declare local variables that exist only for the duration of each invocation:
 
@@ -228,6 +239,8 @@ samples.each { id, count ->
     println "${id}: ${count}"
 }
 ```
+
+Within a nested closure, `return` exits the nearest enclosing closure, not the outer function.
 
 The primary use of a closure is as an argument to a *higher-order function* -- a function that takes a closure and applies it, such as the [iteration](#iteration) methods of a collection or the [operators][operator-page] of a channel.
 
@@ -693,19 +706,19 @@ The `error` function and try/catch handle errors in *pipeline code* (functions, 
 
 ## Functions
 
-A [function](./syntax#function) is a named, reusable block of code that takes zero or more parameters and may return a value. Functions and [closures](#closures) share the same body semantics.
-
-A function returns the value of its last evaluated expression, or the value of an explicit [`return`](./syntax#return) statement:
+A [function](./syntax#function) is a named, reusable block of code that takes zero or more parameters and may return a value:
 
 ```nextflow
-def add(a, b) {
-    a + b       // implicit return
+def sayHello(name: String) {
+    println "Hello, ${name}!"
 }
 
-def addExplicit(a, b) {
-    return a + b
+def add(a: Integer, b: Integer) -> Integer {
+    a + b
 }
 ```
+
+### Parameters
 
 Arguments are passed *by reference* -- the function receives a reference to the same object, not a copy. Mutating a mutable argument (such as a list or map) inside a function affects the caller's object:
 
@@ -774,9 +787,47 @@ channel.fromPath('*.txt', checkIfExists: true)
 
 Because named arguments are collected into a single map, their order does not matter, and they can be freely mixed with positional arguments. A function that accepts named arguments must declare a `Map` as its first parameter.
 
+### Returns
+
+A function returns the value of its last evaluated expression, or the value of an explicit [`return`](./syntax#return) statement:
+
+```nextflow
+def add(a, b) {
+    a + b       // implicit return
+}
+
+def addExplicit(a, b) {
+    return a + b
+}
+```
+
+If a function has multiple return statements (including implicit returns), they must either all return a value or all return nothing. When a value is returned, every conditional branch must return a value:
+
+```nextflow
+def isEven1(n) {
+    if( n % 2 == 1 )
+        return          // error: a return value is required here
+    return true
+}
+
+def isEven2(n) {
+    if( n % 2 == 0 )
+        return true
+                        // error: a return value is required here
+}
+```
+
+If the last statement of a function is not a return or expression statement, it is equivalent to a bare `return` with no value.
+
+## Processes
+
+A process defines a task that runs in an isolated environment. A process is *called* like a function from a workflow, but instead of running immediately, each call adds a node to the [dataflow graph](#workflows). Nextflow creates a separate *task* for each input (or combination of inputs) and executes these tasks asynchronously as their inputs become available, potentially in parallel and on distributed compute.
+
+See [Processes][process-page] for a full description of how to define and use processes.
+
 ## Workflows
 
-A Nextflow workflow describes a *dataflow* -- a graph of [processes][process-page] and [operators][operator-page] connected by channels. See [Processes][process-page] and [Workflows][workflow-page] for a full description of how to define and compose them. This section describes the execution semantics that distinguish a workflow from an ordinary function.
+A Nextflow workflow describes a *dataflow* -- a graph of [processes][process-page] and [operators][operator-page] connected by channels. See [Processes][process-page] and [Workflows][workflow-page] for a full description of how to define and compose them.
 
 ### Definition vs execution
 
@@ -819,6 +870,34 @@ This has several important consequences:
 - **The order of statements describes connections, not execution order.** Two independent branches of a workflow are constructed in the order written, but their tasks may execute concurrently.
 
 This is the fundamental difference between the *workflow definition* (evaluated synchronously to build the graph) and the *workflow execution* (runs the graph asynchronously). See [Dataflow][workflow-dataflow] for more information.
+
+## Scripts
+
+A script is a single Nextflow source file. It consists of [script declarations](./syntax#script-declarations) -- such as workflows, processes, functions, and types -- and may use declarations from other scripts.
+
+### Execution
+
+When a script is executed, its *entry workflow* -- the workflow with no name -- serves as the entrypoint. A script that contains only [statements](#statements), with no declarations, is treated as the body of an implicit entry workflow. To be executable, a script must either be a code snippet or define an entry workflow.
+
+### Inclusion
+
+A script can use the definitions of another script through an [include declaration](./syntax#include):
+
+```nextflow
+include { hallo as sayHello } from './some/module'
+```
+
+The include source should refer to either a local path (e.g. `./module.nf`), a registry module (e.g. `nf-core/fastq`), or a plugin (e.g. `plugin/nf-hello`).
+
+The following definitions can be included from a script:
+
+- Functions
+- Processes
+- Named workflows
+- *New in 26.04:* Record types
+- *New in 26.04:* Enum types
+
+The entry workflow of an included script is ignored. This allows the same script to be executed directly or included by another script.
 
 ## Types
 
