@@ -199,10 +199,10 @@ class TaskInputResolverTest extends Specification {
 
     }
 
-    def 'should return absolute store path for native (exec) tasks'() {
+    def 'should return absolute store path for exec processes'() {
         // see issue #378: a `path` input in an `exec:` block must resolve to the
         // absolute, symlink-resolved real path so that e.g. `.exists()` works,
-        // not the relative stage name (which is never materialised for native tasks)
+        // not the relative stage name (which is never materialized for native tasks)
         given:
         def file1 = Files.createTempFile('test1', '.txt')
         def file2 = Files.createTempFile('test2', '.txt')
