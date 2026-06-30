@@ -199,6 +199,34 @@ class TaskInputResolverTest extends Specification {
 
     }
 
+    def 'should return absolute store path for native (exec) tasks'() {
+        // see issue #378: a `path` input in an `exec:` block must resolve to the
+        // absolute, symlink-resolved real path so that e.g. `.exists()` works,
+        // not the relative stage name (which is never materialised for native tasks)
+        given:
+        def file1 = Files.createTempFile('test1', '.txt')
+        def file2 = Files.createTempFile('test2', '.txt')
+
+        when:
+        def list = [ FileHolder.get(file1, 'staged_1.txt') ]
+        def result = TaskInputResolver.singleItemOrList(list, true, ScriptType.GROOVY)
+        then:
+        result == file1.toRealPath()
+        result.isAbsolute()
+        result.exists()
+
+        when:
+        list = [ FileHolder.get(file1, 'staged_1.txt'), FileHolder.get(file2, 'staged_2.txt') ]
+        result = TaskInputResolver.singleItemOrList(list, false, ScriptType.GROOVY)
+        then:
+        result*.toString() == [ file1.toRealPath().toString(), file2.toRealPath().toString() ]
+        result.every { it.isAbsolute() && it.exists() }
+
+        cleanup:
+        Files.deleteIfExists(file1)
+        Files.deleteIfExists(file2)
+    }
+
 
     def 'should expand wildcards'() {
 
