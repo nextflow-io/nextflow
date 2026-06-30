@@ -7,7 +7,7 @@ description: A practical introduction to writing Nextflow scripts with variables
 
 Nextflow is a workflow language that runs on the Java virtual machine (JVM). Nextflow's syntax is very similar to [Groovy](https://groovy-lang.org/), a scripting language for the JVM. However, Nextflow is specialized for writing computational pipelines in a declarative manner.
 
-This page is a practical introduction to the Nextflow language. See [Syntax][syntax-page] for the language grammar, [Semantics][semantics-page] for a comprehensive description of language behavior, and [Standard library][stdlib-page] for the built-in types and functions available to every script.
+This page is a practical introduction to the Nextflow language. See [Syntax][syntax-page] for the language grammar, [Semantics][semantics-page] for the meaning and behavior of each language construct, and [Standard library][stdlib-page] for the built-in types and functions available to every script.
 
 :::warning
 Nextflow uses UTF-8 as the default character encoding for source files. Make sure to use UTF-8 encoding when editing Nextflow scripts with your preferred text editor.
@@ -160,7 +160,7 @@ assert [2, 2] != [4]
 ```
 
 :::tip
-The `assert` keyword simply tests a condition and raises an error if the condition is false. Every assert that you see on this page will succeed if executed.
+The `assert` keyword tests a condition and raises an error if the condition is false. Every assert on this page succeeds when executed.
 :::
 
 Comparison operators compare two values:
@@ -178,7 +178,7 @@ assert (true || false) == true    // logical OR
 assert (!true) == false           // logical NOT
 ```
 
-The `in` operator tests *membership*, i.e. whether a collection contains a value:
+The `in` operator tests *membership*, i.e., whether a collection contains a value:
 
 ```nextflow
 assert 2 in [1, 2, 3]
@@ -298,11 +298,11 @@ See [Closures][semantics-closures] and [Iteration][semantics-iteration] for more
 
 ## Script definitions
 
-So far, we have been focusing on the basic building blocks of Nextflow code, like variables, strings, collections, and closures.
+The previous sections covered the basic building blocks of Nextflow code: variables, strings, collections, and closures.
 
-In practice, however, Nextflow scripts are composed of *workflows*, *processes*, and *functions* (collectively known as *definitions*), and can *include* definitions from other scripts.
+In practice, Nextflow scripts are composed of *workflows*, *processes*, and *functions* (collectively known as *definitions*), and can *include* definitions from other scripts.
 
-To transition a code snippet into a proper workflow script, simply wrap it in a `workflow` block:
+To turn a code snippet into a workflow script, wrap it in a `workflow` block:
 
 ```nextflow
 workflow {
@@ -310,7 +310,7 @@ workflow {
 }
 ```
 
-This block is called the *entry workflow*. It serves as the entrypoint when the script is executed. Whenever a script contains only simple statements like `println 'Hello!'`, Nextflow simply treats it as an entry workflow.
+This block is called the *entry workflow*. It is the entrypoint when the script is executed. Whenever a script contains only simple statements like `println 'Hello!'`, Nextflow treats it as an entry workflow.
 
 You can break up code into functions, for example:
 
