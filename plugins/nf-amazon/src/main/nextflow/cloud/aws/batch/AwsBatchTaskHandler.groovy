@@ -37,6 +37,7 @@ import nextflow.exception.ProcessException
 import nextflow.exception.ProcessSubmitException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
+import nextflow.executor.ExitStatusAwaiter
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionConfig
 import nextflow.processor.BatchContext
@@ -47,6 +48,7 @@ import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
 import nextflow.util.CacheHelper
+import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import nextflow.util.TestOnly
 import software.amazon.awssdk.services.batch.BatchClient
@@ -107,6 +109,8 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     private final Path traceFile
 
+    private ExitStatusAwaiter exitAwaiter = new ExitStatusAwaiter(Duration.of('270sec'))
+
     private AwsBatchExecutor executor
 
     private BatchClient client
@@ -155,6 +159,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
         this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
         this.traceFile = task.workDir.resolve(TaskRun.CMD_TRACE)
+        this.exitAwaiter = new ExitStatusAwaiter(executor.config?.getExitReadTimeout(executor.name) ?: Duration.of('270sec'))
     }
 
     protected String getJobId() { jobId }
@@ -310,7 +315,19 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
             // take the exit code from the `.exitcode` file create by nextflow
             // the rationale of this is that, in case of error, the exit code return
             // by the batch API is more reliable.
-            task.exitStatus = job.container()?.exitCode() != null ? job.container().exitCode() : readExitFile()
+            final containerExitCode = job.container()?.exitCode()
+            if( containerExitCode != null ) {
+                task.exitStatus = containerExitCode
+            }
+            else {
+                // the `.exitcode` file may not be visible yet (e.g. S3-backed work directory
+                // propagation delay) even though the job has terminated -- wait for it instead
+                // of failing the task
+                final exitStatus = readExitFile()
+                if( exitStatus == null )
+                    return false
+                task.exitStatus = exitStatus
+            }
             // finalize the task
             task.stdout = outputFile
             if( job?.status() == JobStatus.FAILED || task.exitStatus==Integer.MAX_VALUE ) {
@@ -329,14 +346,15 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return false
     }
 
-    protected int readExitFile() {
-        try {
-            exitFile.text as Integer
-        }
-        catch( Exception e ) {
-            log.debug "[AWS BATCH] Cannot read exit status for task: `${task.lazyName()}` | ${e.message}"
-            return Integer.MAX_VALUE
-        }
+    /**
+     * @return
+     *      the exit status read from the {@code .exitcode} file, {@code null} if the
+     *      file is missing or empty but still within the retry window (the caller
+     *      should treat the task as not-yet-complete), or {@link Integer#MAX_VALUE}
+     *      once the retry window has elapsed without finding usable content.
+     */
+    protected Integer readExitFile() {
+        exitAwaiter.read(exitFile)
     }
 
     /**

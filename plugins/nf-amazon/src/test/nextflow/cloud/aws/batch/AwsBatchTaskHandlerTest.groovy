@@ -1336,6 +1336,28 @@ class AwsBatchTaskHandlerTest extends Specification {
 
     }
 
+    def 'should wait for completion when the exit file is not yet visible'() {
+        given:
+        def task = new TaskRun()
+        task.name = 'hello'
+        def jobId = 'job-123'
+        def handler = Spy(new AwsBatchTaskHandler(task: task, jobId: jobId, status: TaskStatus.RUNNING))
+        and:
+
+        def job = JobDetail.builder().container(ContainerDetail.builder().build())
+            .status(JobStatus.SUCCEEDED)
+            .build()
+
+        when: 'the .exitcode file has not propagated yet'
+        def result = handler.checkIfCompleted()
+        then:
+        1 * handler.describeJob('job-123') >> job
+        1 * handler.readExitFile() >> null   // still within the retry window
+        and:
+        result == false
+        handler.status != TaskStatus.COMPLETED
+    }
+
     def 'should check if completed no container exit code neither .exitcode file'() {
         given:
         def task = new TaskRun()
