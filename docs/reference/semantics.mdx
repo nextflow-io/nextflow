@@ -5,7 +5,7 @@ description: Reference for the semantics of Nextflow language constructs.
 
 # Semantics
 
-This page describes the *semantics* of the Nextflow language -- that is, the meaning and behavior of each language construct. It is a companion to the [Syntax][syntax-page] reference, which describes the *grammar* of the language (how constructs are written). See the [Scripts][script-page] page for a practical introduction to the language.
+The *semantics* of the Nextflow language are the meaning and behavior of each language construct. This page is a companion to the [Syntax][syntax-page] reference, which describes the *grammar* of the language (how constructs are written). See the [Scripts][script-page] page for a practical introduction to the language.
 
 ## Values
 
@@ -105,7 +105,7 @@ See [String][stdlib-types-string] for the available operations.
 
 ### Null
 
-The special value `null` represents the absence of a value. Accessing a property or calling a method on `null` raises a *null reference* error, so `null` is best avoided where possible. The [safe navigation operator](#navigation-operators) can be used to access a property that may be `null`.
+The special value `null` represents the absence of a value. Accessing a property or calling a method on `null` raises a *null reference* error. Avoid `null` where possible. The [safe navigation operator](#navigation-operators) can be used to access a property that may be `null`.
 
 ### Collections
 
@@ -246,7 +246,7 @@ The primary use of a closure is as an argument to a *higher-order function* -- a
 
 ## Operators
 
-An *operator* is a symbol that performs an operation on one or two operands. The full set of operators and their grammar is listed in the [Syntax][syntax-operators] reference; this section describes their semantics, grouped by category.
+An *operator* is a symbol that performs an operation on one or two operands. The full set of operators and their grammar is listed in the [Syntax][syntax-operators] reference. This section describes their semantics, grouped by category.
 
 :::note
 The operators described here are language operators, which apply to ordinary values. They are different from *channel operators*, which are functions for manipulating [channels](#workflows). See [Operators][operator-page] for channel operators.
@@ -296,7 +296,7 @@ assert [1, 2, 3] == [1, 2, 3]
 assert 'hello' == 'hello'
 ```
 
-Ordering operators (`<`, `>`, `<=`, `>=`) compare values according to their natural order: numbers numerically, strings alphabetically, and so on. The spaceship operator `<=>` returns `-1`, `0`, or `1` depending on whether the left operand is less than, equal to, or greater than the right operand, and is useful for defining custom sort comparators:
+Ordering operators (`<`, `>`, `<=`, `>=`) compare values according to their natural order: numbers numerically and strings alphabetically. The spaceship operator `<=>` returns `-1`, `0`, or `1` depending on whether the left operand is less than, equal to, or greater than the right operand, and is useful for defining custom sort comparators:
 
 ```nextflow
 def items = ['banana', 'apple', 'cherry']
@@ -314,7 +314,7 @@ Logical operators combine boolean values. Their operands are coerced based on [t
 | `\|\|`   | logical OR  |
 | `!`      | logical NOT |
 
-The `&&` and `||` operators *short-circuit*: the right operand is evaluated only if necessary. For `&&`, the right operand is evaluated only if the left is truthy; for `||`, only if the left is falsy. This allows the right operand to safely depend on the left:
+The `&&` and `||` operators *short-circuit*: the right operand is evaluated only if necessary. For `&&`, the right operand is evaluated only if the left is truthy. For `||`, it is evaluated only if the left is falsy. This allows the right operand to safely depend on the left:
 
 ```nextflow
 if( reads != null && reads.size() > 0 )
@@ -627,7 +627,7 @@ numbers.inject(0) { acc, v -> acc + v }     // -> 15
 numbers.every { v -> v > 0 }                // -> true
 ```
 
-A higher-order function returns a value rather than mutating external state, which makes it easier to reason about and avoids common sources of error. For example, `inject` accumulates a result without an external accumulator variable:
+A higher-order function returns a value rather than mutating external state. This makes it easier to reason about and avoids common errors. For example, `inject` accumulates a result without an external accumulator variable:
 
 ```nextflow
 // instead of mutating an external variable
@@ -648,7 +648,7 @@ An [assert statement](./syntax#assert) evaluates a boolean condition and raises 
 assert params.input != null : 'The --input parameter is required'
 ```
 
-If the condition is false, an error is raised. The optional message after the colon is included in the error. If no message is given, Nextflow reports the values of the sub-expressions in the condition (a *power assertion*), which makes it easy to see why the assertion failed:
+If the condition is false, an error is raised. The optional message after the colon is included in the error. If no message is given, Nextflow reports the values of the sub-expressions in the condition (a *power assertion*). This makes it easy to see why the assertion failed:
 
 ```nextflow
 assert 2 + 2 == 5
@@ -734,7 +734,7 @@ println items   // -> [1, 2, 3]
 
 To avoid this, create a copy before mutating, or use operations that return a new value (e.g. `list + [item]` instead of `list.add(item)`).
 
-*Reassigning* a parameter, on the other hand, does not affect the caller. The parameter is a separate reference to the same object, so assigning a new value to it changes only the function's local reference:
+*Reassigning* a parameter, on the other hand, does not affect the caller. The parameter is a separate reference to the same object. Assigning a new value to it changes only the function's local reference:
 
 ```nextflow
 def replace(list) {
@@ -831,7 +831,7 @@ A Nextflow workflow describes a *dataflow* -- a graph of [processes][process-pag
 
 ### Definition vs execution
 
-A workflow body is not executed step by step like an ordinary function. Instead, it is evaluated *once*, up front, to *construct* the dataflow graph. The statements in a workflow body declare how processes, operators, and channels are wired together; the actual computation happens *afterward*, asynchronously, as data flows through the graph.
+A workflow body is not executed step by step like an ordinary function. Instead, it is evaluated *once*, up front, to *construct* the dataflow graph. The statements in a workflow body declare how processes, operators, and channels are wired together. The actual computation happens *afterward*, asynchronously, as data flows through the graph.
 
 In this sense, a workflow definition behaves like a *compile-time macro*: it runs once to build the dataflow graph, and the operations it describes (process tasks, operator logic) execute later as data becomes available.
 
@@ -853,7 +853,7 @@ When the workflow body runs:
 
 Only after the entire graph is constructed does Nextflow begin executing it: the channel emits its values, the `map` closure runs for each value, and `view` prints each result.
 
-This has several important consequences:
+This has several consequences:
 
 - **Channel contents cannot be accessed directly.** Because the workflow body runs before any data flows, you cannot inspect the values in a channel from within the workflow body. You must use an operator or process to act on each value:
 
