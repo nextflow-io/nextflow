@@ -32,9 +32,7 @@ module.exports = {
                 "script",
                 "working-with-files",
                 "process",
-                "process-typed",
                 "workflow",
-                "workflow-typed",
                 "notifications",
                 "secrets",
                 "sharing",
@@ -43,10 +41,31 @@ module.exports = {
         },
         {
             type: "category",
+            label: "Static typing",
+            collapsed: true,
+            link: { type: "doc", id: "static-typing" },
+            items: [
+                "process-typed",
+                {
+                    type: "category",
+                    label: "Workflows (typed)",
+                    collapsed: true,
+                    link: { type: "doc", id: "workflow-typed" },
+                    items: [
+                        "typed-parameters",
+                        "typed-outputs",
+                        "typed-workflows"
+                    ]
+                },
+                "reference/operator-typed"
+            ]
+        },
+        {
+            type: "category",
             label: "Modules",
             collapsed: true,
+            link: { type: "doc", id: "modules/modules" },
             items: [
-                "modules/modules",
                 "modules/using-modules",
                 "modules/developing-modules",
                 "modules/module-registry"
@@ -107,7 +126,6 @@ module.exports = {
                 },
                 "reference/process",
                 "reference/channel",
-                "reference/operator-typed",
                 "reference/operator"
             ]
         },
