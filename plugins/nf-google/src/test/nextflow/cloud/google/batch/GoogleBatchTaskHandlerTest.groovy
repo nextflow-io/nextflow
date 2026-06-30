@@ -756,6 +756,31 @@ class GoogleBatchTaskHandlerTest extends Specification {
 
      }
 
+    def 'should wait for completion when the exit file is not yet visible' () {
+        given:
+        def jobId = '1'
+        def taskId = '1'
+        def client = Mock(BatchClient){
+            getTaskInArrayStatus(jobId, taskId) >> makeTaskStatus(TaskStatus.State.FAILED, "", null)
+            getTaskStatus(jobId, taskId) >> makeTaskStatus(TaskStatus.State.FAILED, "", null)
+            getJobStatus(jobId) >> makeJobStatus(JobStatus.State.FAILED, "")
+        }
+        def logging = Mock(BatchLogging)
+        def executor = Mock(GoogleBatchExecutor){
+            getLogging() >> logging
+        }
+        def task = new TaskRun()
+        task.name = 'hello'
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, client: client, task: task, status: nextflow.processor.TaskStatus.RUNNING, executor: executor))
+
+        when: 'the .exitcode file has not propagated yet'
+        def result = handler.checkIfCompleted()
+        then:
+        1 * handler.readExitFile() >> null   // still within the retry window
+        result == false
+        handler.status != nextflow.processor.TaskStatus.COMPLETED
+    }
+
     def 'should check if completed from read file' () {
         given:
         def jobId = '1'

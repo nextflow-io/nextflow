@@ -26,11 +26,13 @@ import groovy.util.logging.Slf4j
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
+import nextflow.executor.ExitStatusAwaiter
 import nextflow.fusion.FusionAwareTask
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
+import nextflow.util.Duration
 /**
  * Implements a task handler for Azure Batch service
  *
@@ -56,12 +58,15 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private CloudMachineInfo machineInfo
 
+    private ExitStatusAwaiter exitAwaiter = new ExitStatusAwaiter(Duration.of('270sec'))
+
     AzBatchTaskHandler(TaskRun task, AzBatchExecutor executor) {
         super(task)
         this.executor = executor
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
+        this.exitAwaiter = new ExitStatusAwaiter(executor.config?.getExitReadTimeout(executor.name) ?: Duration.of('270sec'))
         validateConfiguration()
     }
 
@@ -116,7 +121,18 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             // finalize the task
             final info = batchService.getTask(taskKey).executionInfo
             // Try to get exit code from Azure batch API and fallback to .exitcode
-            task.exitStatus = info?.exitCode != null ? info.exitCode : readExitFile()
+            if( info?.exitCode != null ) {
+                task.exitStatus = info.exitCode
+            }
+            else {
+                // the `.exitcode` file may not be visible yet (e.g. Azure Files-backed work
+                // directory propagation delay) even though the task has terminated -- wait
+                // for it instead of failing the task
+                final exitStatus = readExitFile()
+                if( exitStatus == null )
+                    return false
+                task.exitStatus = exitStatus
+            }
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
@@ -170,14 +186,15 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         return taskState
     }
 
-    protected int readExitFile() {
-        try {
-            exitFile.text as Integer
-        }
-        catch( Exception e ) {
-            log.debug "[AZURE BATCH] Cannot read exit status for task: `$task.name` | ${e.message}"
-            return Integer.MAX_VALUE
-        }
+    /**
+     * @return
+     *      the exit status read from the {@code .exitcode} file, {@code null} if the
+     *      file is missing or empty but still within the retry window (the caller
+     *      should treat the task as not-yet-complete), or {@link Integer#MAX_VALUE}
+     *      once the retry window has elapsed without finding usable content.
+     */
+    protected Integer readExitFile() {
+        exitAwaiter.read(exitFile)
     }
 
     @Override

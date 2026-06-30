@@ -32,6 +32,7 @@ import nextflow.exception.NodeTerminationException
 import nextflow.k8s.client.PodUnschedulableException
 import nextflow.exception.ProcessSubmitException
 import nextflow.executor.BashWrapperBuilder
+import nextflow.executor.ExitStatusAwaiter
 import nextflow.fusion.FusionAwareTask
 import nextflow.k8s.client.K8sClient
 import nextflow.k8s.client.K8sResponseException
@@ -43,6 +44,7 @@ import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
+import nextflow.util.Duration
 import nextflow.util.Escape
 import nextflow.util.PathTrie
 import nextflow.util.TestOnly
@@ -88,6 +90,8 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private String runsOnNode = null
 
+    private ExitStatusAwaiter exitAwaiter = new ExitStatusAwaiter(Duration.of('270sec'))
+
     K8sTaskHandler( TaskRun task, K8sExecutor executor ) {
         super(task)
         this.executor = executor
@@ -95,6 +99,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
         this.resourceType = executor.k8sConfig.useJobResource() ? ResourceType.Job : ResourceType.Pod
+        this.exitAwaiter = new ExitStatusAwaiter(executor.config?.getExitReadTimeout(executor.name) ?: Duration.of('270sec'))
     }
 
     @TestOnly
@@ -439,7 +444,17 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                 // https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.30/#containerstateterminated-v1-core
                 log.trace("[k8s] Container Terminated state ${state.terminated}")
                 final k8sExitCode = (state.terminated as Map)?.exitCode as Integer
-                task.exitStatus = k8sExitCode != null ? k8sExitCode : readExitFile()
+                if( k8sExitCode != null ) {
+                    task.exitStatus = k8sExitCode
+                }
+                else {
+                    // the `.exitcode` file may not be visible yet (e.g. PVC propagation delay) even
+                    // though the container has terminated -- wait for it instead of failing the task
+                    final exitStatus = readExitFile()
+                    if( exitStatus == null )
+                        return false
+                    task.exitStatus = exitStatus
+                }
                 task.stdout = outputFile
                 task.stderr = errorFile
             }
@@ -479,14 +494,15 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         }
     }
 
-    protected int readExitFile() {
-        try {
-            exitFile.text as Integer
-        }
-        catch( Exception e ) {
-            log.debug "[K8s] Cannot read exitstatus for task: `$task.name` | ${e.message}"
-            return Integer.MAX_VALUE
-        }
+    /**
+     * @return
+     *      the exit status read from the {@code .exitcode} file, {@code null} if the
+     *      file is missing or empty but still within the retry window (the caller
+     *      should treat the task as not-yet-complete), or {@link Integer#MAX_VALUE}
+     *      once the retry window has elapsed without finding usable content.
+     */
+    protected Integer readExitFile() {
+        exitAwaiter.read(exitFile)
     }
 
     /**
