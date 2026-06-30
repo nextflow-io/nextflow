@@ -17,6 +17,7 @@
 package io.seqera.tower.plugin
 
 import nextflow.Session
+import nextflow.exception.AbortOperationException
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -41,6 +42,25 @@ class TowerFactoryTest extends Specification {
         observer = factory.create(session)[0] as TowerObserver
         then:
         observer.@client.endpoint == 'http://foo.com/api'
+    }
+
+    @Unroll
+    def 'should fail when enabled but no access token is provided' () {
+        given:
+        def factory = new TowerFactory(env: [:])
+        def session = Mock(Session) { getConfig() >> CONFIG }
+
+        when:
+        factory.create(session)
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('access token is required')
+        e.message.contains('TOWER_ACCESS_TOKEN')
+
+        where:
+        CONFIG                          | _
+        [fusion: [enabled: true]]       | _
+        [tower: [enabled: true]]        | _
     }
 
     def 'should not create a tower observer' () {
