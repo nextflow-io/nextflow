@@ -67,7 +67,7 @@ Module parameters are declared in a module-level `params {}` block, reusing the 
 | `enum` | No | scalar / tool option | Allowed values (validated) |
 | `group` | No | all (**Option A only**) | Namespace → `params.<group>.<name>` |
 | `fields` | When record-typed | record / `ToolArgs` (**Option B only**) | Nested member declarations |
-| `<Type>:<key>` | No | custom types | Type-specific attribute, e.g. `ToolArg:prefix` / `ToolOpt:prefix` |
+| `<Type>:<key>` | No | custom types | Type-specific attribute, e.g. `ToolArg:prefix`/`ToolOpt:prefix`, `ToolArg:separator`/`ToolOpt:separator` |
 
 `description`, `example`, and `enum` are documentation/validation metadata that live only in `meta.yaml`; the script `params {}` block carries only `name: Type = default`. The `meta.yaml` spec and the script declarations are expected to agree — how divergence is handled is an [open question](#open-questions).
 
@@ -118,7 +118,7 @@ Tool-argument types are instances of an open mechanism. A custom parameter type 
 - **parse**: `String → value` — how a CLI/config string is coerced into the typed value.
 - **serialize**: `value → String` — how the value renders when interpolated into a script.
 
-A custom type may also extend the `meta.yaml` param spec with its own attributes, namespaced as `<Type>:<key>` (valid YAML, since a colon not followed by a space is part of the key). Nextflow passes the collected `<Type>:*` keys to that type's logic; unknown namespaces are an error. Both options use this to override a tool option's CLI prefix (`ToolArg:prefix` / `ToolOpt:prefix`).
+A custom type may also extend the `meta.yaml` param spec with its own attributes, namespaced as `<Type>:<key>` (valid YAML, since a colon not followed by a space is part of the key). Nextflow passes the collected `<Type>:*` keys to that type's logic; unknown namespaces are an error. Both options use this to override a tool option's CLI prefix (`ToolArg:prefix` / `ToolOpt:prefix`) and the separator placed between the flag and its value (`ToolArg:separator` / `ToolOpt:separator`).
 
 ### Parameter semantics
 
@@ -150,9 +150,15 @@ A single tool-option value, whatever the type is named, renders to its command-l
 | `K = 100000000` | `-K 100000000` |
 | `Y = true` | `-Y` |
 | `output_fmt = "cram"` | `--output_fmt cram` |
+| `O = 2` with `:separator ''` | `-O2` (glued) |
+| `name = "x"` with `:separator '='` | `--name=x` |
 | unset / null / false | `` (omitted) |
 
-**Prefix inference** (overridable via `<Type>:prefix`): a single-character name uses `-`; a name of two or more characters uses `--`. **Boolean** `true` emits only `prefix+name`. An `enum` constrains the allowed values; a `default` supplies the value when unset. Components are accessible via `.name` and `.value`.
+**Prefix inference** (overridable via `<Type>:prefix`): a single-character name uses `-`; a name of two or more characters uses `--`. **Boolean** `true` emits only `prefix+name`.
+
+**Separator** (overridable via `<Type>:separator`, default a single space): the string placed between `prefix+name` and the value. The default yields `-K 100000000`; an empty string yields the glued forms `-O2` / `-j4`; `'='` yields `--name=value`. Booleans ignore the separator (they emit only `prefix+name`).
+
+An `enum` constrains the allowed values; a `default` supplies the value when unset. Components are accessible via `.name` and `.value`.
 
 ### Programmatic access
 
