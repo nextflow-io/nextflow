@@ -624,6 +624,28 @@ A *slashy string* is enclosed by slashes instead of quotes:
 A slashy string cannot be empty because it would become a line comment.
 :::
 
+In single- and double-quoted strings (including their triple-quoted forms), the backslash character (`\`) can be used to escape characters that would otherwise have special meaning, or to insert special characters:
+
+| Escape | Character |
+| ------ | --------- |
+| `\b` | Backspace |
+| `\t` | Tab (horizontal) |
+| `\n` | Newline (line feed) |
+| `\f` | Form feed |
+| `\r` | Carriage return |
+| `\s` | Space |
+| `\"` | Double quote |
+| `\'` | Single quote |
+| `\\` | Backslash |
+| `\$` | Dollar sign (prevents interpolation) |
+| `\`*newline* | Line continuation (the newline is removed) |
+| `\u`*HHHH* | Unicode character with the given hexadecimal code point (e.g. `é`) |
+| `\`*NNN* | Character with the given octal value (e.g. `\101`) |
+
+A backslash followed by any other character is a syntax error. To include a literal backslash, escape it as `\\`.
+
+A slashy string does not interpret any of the above escapes, which makes it well-suited for regular expressions. The only exception is `\/`, which escapes a forward slash so that it does not terminate the string.
+
 ### Dynamic string
 
 Double-quoted strings can be interpolated using the `${}` placeholder with an expression:
