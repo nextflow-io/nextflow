@@ -136,7 +136,7 @@ Plugins can define custom CLI commands that are executable with the `nextflow pl
 To implement a plugin-specific command, implement the `PluginExecAware` interface in your plugin entry point (the class that extends `BasePlugin`). Alternatively, implement the `PluginAbstractExec` trait, which provides an abstract implementation with some boilerplate code. This trait requires you to implement the `getCommands()` and `exec()` methods. For example:
 
 ```groovy
-import nextflow.cli.PluginAbstractExec
+import nextflow.plugin.cli.PluginAbstractExec
 import nextflow.plugin.BasePlugin
 
 class MyPlugin extends BasePlugin implements PluginAbstractExec {
