@@ -5,7 +5,7 @@ description: Add type annotations to the take and emit sections of Nextflow work
 
 # Typed workflows
 
-<AddedInVersion version="26.04.0" />
+<AddedInVersion version="26.04" />
 
 :::warning
 Typed workflows are a preview feature. The syntax and behavior may change in future releases.
@@ -29,7 +29,7 @@ workflow hello_bye {
 }
 ```
 
-In the above example, `hello_bye` takes a channel of files (`Channel<Path>`) and emits a dataflow value with a single file (`Value<Path>`). See [Types][stdlib-types] for the list of available types.
+In the above example, `hello_bye` takes a channel of files (`Channel<Path>`) and emits a dataflow value with a single file (`Value<Path>`). For more information about the available types, see [Types][stdlib-types].
 
 ## Restricted syntax
 
@@ -45,13 +45,13 @@ The following syntax patterns are no longer supported in typed workflows:
 
 - Accessing process and workflow outputs via `.out` (use standard assignments instead)
 
-See [Preparing for static typing][preparing-static-types].
+For more information about preparing existing code, see [Preparing for static typing][preparing-static-types].
 
 ## Operators
 
 The operator library supports static typing and records. All operators work in both typed and legacy workflows, but only a [core subset][operator-typed-page] of operators is recommended for static typing.
 
-See [Using operators with static typing][migrating-static-types-operators] for best practices when migrating existing code.
+For more information about best practices when migrating existing code, see [Using operators with static typing][migrating-static-types-operators].
 
 [migrating-static-types-operators]: ./tutorials/static-types-operators
 [operator-typed-page]: ./reference/operator-typed

@@ -5,7 +5,7 @@ description: Annotate workflow outputs in Nextflow using type annotations in the
 
 # Typed outputs
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 Workflow outputs can use type annotations:
 
@@ -68,3 +68,7 @@ In the above example, the workflow declares two outputs:
 Type annotations document the structure of each workflow output, and the language server uses them to validate the type of each published output.
 
 Outputs that receive a dataflow value can be declared as `Value<V>` or `V` for short. In this example, the `summary_report` is declared with type `Path` as a shorthand for `Value<Path>`.
+
+For more information about standard types, see [Types][stdlib-types].
+
+[stdlib-types]: ./reference/stdlib-types

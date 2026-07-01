@@ -45,13 +45,13 @@ Static typing requires two settings:
 
     The `params` block and `output` block work without this flag.
 
-A script with `nextflow.enable.types = true` cannot also contain legacy process or workflow definitions. See [Feature flags][feature-flags-page].
+A script with `nextflow.enable.types = true` cannot also contain legacy process or workflow definitions. For more information about feature flags, see [Feature flags][feature-flags-page].
 
 ## Migrating existing pipelines
 
 Static typing is opt-in, and you can adopt it incrementally. To migrate an existing pipeline:
 
-1. Make sure your code is compatible with the [strict parser][strict-syntax-page] and refactor any patterns that aren't supported in typed workflows. See [Preparing for static typing][preparing-static-types].
+1. Make sure your code is compatible with the [strict parser][strict-syntax-page] and refactor any patterns that aren't supported in typed workflows. For more information about preparing existing code, see [Preparing for static typing][preparing-static-types].
 2. Follow the [migration tutorial][migrating-static-types] to convert parameters, processes, and workflows to the typed syntax.
 3. Replace legacy operators with their typed equivalents using [Using operators with static typing][migrating-static-types-operators].
 

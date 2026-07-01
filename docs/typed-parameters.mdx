@@ -5,7 +5,7 @@ description: Declare statically typed pipeline parameters in Nextflow using the 
 
 # Typed parameters
 
-<AddedInVersion version="25.10.0" />
+<AddedInVersion version="25.10" />
 
 A script can declare parameters using the `params` block:
 
@@ -33,9 +33,13 @@ The command line, params file, or config file can override the default value. Pa
 
 A parameter that doesn't specify a default value is a *required* parameter. If a required parameter has no value at runtime, the run fails.
 
-<AddedInVersion version="26.04.0" />
+For more information about standard types, see [Types][stdlib-types].
+
+<AddedInVersion version="26.04">
 
 Boolean parameters that don't specify a default value default to `false`.
+
+</AddedInVersion>
 
 [cli-params]: ./cli#pipeline-parameters
 [stdlib-types]: ./reference/stdlib-types
