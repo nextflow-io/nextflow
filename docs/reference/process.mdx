@@ -1447,6 +1447,18 @@ process hello {
 
 Resource labels are attached to underlying resources such as cloud VMs, and are intended for operational purposes such as cost tracking. They are not recorded in lineage metadata.
 
+When `resourceLabels` is specified multiple times in the config, only the last setting is used. Additionally, when `resourceLabels` is specified both in the config and the process definition, only the process definition is used.
+
+As a best practice, define all resource labels in a single config setting:
+
+```groovy
+process {
+    resourceLabels = [ region: 'some-region', user: 'some-username' ]
+}
+```
+
+Use process selectors (`withName:` or `withLabel:`) to override resource labels for a specific process.
+
 Resource labels are currently supported by the following executors:
 
 - [AWS Batch][awsbatch-executor]
