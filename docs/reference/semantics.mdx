@@ -627,7 +627,7 @@ numbers.inject(0) { acc, v -> acc + v }     // -> 15
 numbers.every { v -> v > 0 }                // -> true
 ```
 
-A higher-order function returns a value rather than mutating external state. This makes it easier to reason about and avoids common errors. For example, `inject` accumulates a result without an external accumulator variable:
+A higher-order function returns a value rather than mutating external state, which makes it easier to reason about and avoids common errors. For example, `inject` accumulates a result without an external accumulator variable:
 
 ```nextflow
 // instead of mutating an external variable
@@ -648,7 +648,7 @@ An [assert statement](./syntax#assert) evaluates a boolean condition and raises 
 assert params.input != null : 'The --input parameter is required'
 ```
 
-If the condition is false, an error is raised. The optional message after the colon is included in the error. If no message is given, Nextflow reports the values of the sub-expressions in the condition (a *power assertion*). This makes it easy to see why the assertion failed:
+If the condition is false, an error is raised. The optional message after the colon is included in the error. If no message is given, Nextflow reports the values of the sub-expressions in the condition:
 
 ```nextflow
 assert 2 + 2 == 5
@@ -734,7 +734,7 @@ println items   // -> [1, 2, 3]
 
 To avoid this, create a copy before mutating, or use operations that return a new value (e.g. `list + [item]` instead of `list.add(item)`).
 
-*Reassigning* a parameter, on the other hand, does not affect the caller. The parameter is a separate reference to the same object. Assigning a new value to it changes only the function's local reference:
+*Reassigning* a parameter, on the other hand, does not affect the caller. The parameter is a separate reference to the same object, so assigning a new value to it changes only the function's local reference:
 
 ```nextflow
 def replace(list) {
