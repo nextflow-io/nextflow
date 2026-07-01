@@ -50,11 +50,11 @@ class SimpleFileCopyStrategyTest extends Specification {
         lines[2] == "rm -f seq_2.fa"
         lines[3] == "rm -f seq\\ 3.fa"
         lines[4] == "rm -f sub/dir/seq_4.fa"
-        lines[5] == "ln -s /home/data/sequences file.txt"
-        lines[6] == "ln -s /home/data/file1 seq_1.fa"
-        lines[7] == "ln -s /home/data/file2 seq_2.fa"
-        lines[8] == "ln -s /home/data/file\\ 3 seq\\ 3.fa"
-        lines[9] == "mkdir -p sub/dir && ln -s /home\\'data/file4 sub/dir/seq_4.fa"
+        lines[5] == "ln -sf /home/data/sequences file.txt"
+        lines[6] == "ln -sf /home/data/file1 seq_1.fa"
+        lines[7] == "ln -sf /home/data/file2 seq_2.fa"
+        lines[8] == "ln -sf /home/data/file\\ 3 seq\\ 3.fa"
+        lines[9] == "mkdir -p sub/dir && ln -sf /home\\'data/file4 sub/dir/seq_4.fa"
         lines.size() == 10
 
 
@@ -67,7 +67,7 @@ class SimpleFileCopyStrategyTest extends Specification {
         lines = script.readLines()
 
         then:
-        lines[0] == "rm -f file.txt; rm -f seq_1.fa; ln -s /data/file file.txt; ln -s /data/seq seq_1.fa"
+        lines[0] == "rm -f file.txt; rm -f seq_1.fa; ln -sf /data/file file.txt; ln -sf /data/seq seq_1.fa"
         lines.size() == 1
 
     }
@@ -110,23 +110,23 @@ class SimpleFileCopyStrategyTest extends Specification {
 
         where:
         source                      | target               | mode              | result
-        'some/path/to/file.txt'     | 'file.txt'           | null              | 'ln -s some/path/to/file.txt file.txt'
-        "some/path/to/file'3.txt"   | 'file\'3.txt'        | null              | "ln -s some/path/to/file\\'3.txt file\\'3.txt"
-        'some/path/to/file.txt'     | 'file.txt'           | 'link'            | 'ln some/path/to/file.txt file.txt'
+        'some/path/to/file.txt'     | 'file.txt'           | null              | 'ln -sf some/path/to/file.txt file.txt'
+        "some/path/to/file'3.txt"   | 'file\'3.txt'        | null              | "ln -sf some/path/to/file\\'3.txt file\\'3.txt"
+        'some/path/to/file.txt'     | 'file.txt'           | 'link'            | 'ln -f some/path/to/file.txt file.txt'
         '/some/path/to/file.txt'    | 'file.txt'           | 'copy'            | 'cp -fRL /some/path/to/file.txt file.txt'
         '/some/path/to/file.txt'    | 'here/to/abc.txt'    | 'copy'            | 'cp -fRL /some/path/to/file.txt here/to/abc.txt'
 
         // Check the various combinations of relative/absolute inputs to
         // rellink when workDir is defined:
-        '/some/path/to/file.txt'    | 'abc.txt'            | 'rellink' | 'ln -s ../../../some/path/to/file.txt abc.txt'
-        '/some/path/to/file.txt'    | 'xyz/abc.txt'        | 'rellink' | 'ln -s ../../../../some/path/to/file.txt xyz/abc.txt'
-        'some/path/to/file.txt'     | 'abc.txt'            | 'rellink' | 'ln -s some/path/to/file.txt abc.txt'
-        '/my/other/file.txt'        | 'abc.txt'            | 'rellink' | 'ln -s ../../other/file.txt abc.txt'
-        '/my/work/dir/file.txt'     | 'abc.txt'            | 'rellink' | 'ln -s file.txt abc.txt'
+        '/some/path/to/file.txt'    | 'abc.txt'            | 'rellink' | 'ln -sf ../../../some/path/to/file.txt abc.txt'
+        '/some/path/to/file.txt'    | 'xyz/abc.txt'        | 'rellink' | 'ln -sf ../../../../some/path/to/file.txt xyz/abc.txt'
+        'some/path/to/file.txt'     | 'abc.txt'            | 'rellink' | 'ln -sf some/path/to/file.txt abc.txt'
+        '/my/other/file.txt'        | 'abc.txt'            | 'rellink' | 'ln -sf ../../other/file.txt abc.txt'
+        '/my/work/dir/file.txt'     | 'abc.txt'            | 'rellink' | 'ln -sf file.txt abc.txt'
 
         // Check that the 'symlink' mode is default and uses absolute paths
-        '/some/path/to/file.txt'    | 'abc.txt'            | null              | 'ln -s /some/path/to/file.txt abc.txt'
-        '/some/path/to/file.txt'    | 'abc.txt'            | 'symlink'         | 'ln -s /some/path/to/file.txt abc.txt'
+        '/some/path/to/file.txt'    | 'abc.txt'            | null              | 'ln -sf /some/path/to/file.txt abc.txt'
+        '/some/path/to/file.txt'    | 'abc.txt'            | 'symlink'         | 'ln -sf /some/path/to/file.txt abc.txt'
 
     }
 
@@ -228,8 +228,8 @@ class SimpleFileCopyStrategyTest extends Specification {
         script == '''
                 rm -f hello.txt
                 rm -f dir/to/file.txt
-                ln -s /some/file.txt hello.txt
-                mkdir -p dir/to && ln -s /other/file.txt dir/to/file.txt
+                ln -sf /some/file.txt hello.txt
+                mkdir -p dir/to && ln -sf /other/file.txt dir/to/file.txt
                 '''
                 .stripIndent().trim()
 
