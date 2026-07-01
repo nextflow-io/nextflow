@@ -47,6 +47,12 @@ class ExitStatusAwaiter {
         this.timeoutMillis = timeout.toMillis()
     }
 
+    /** Clears accumulated missing/empty timestamps so the next read() starts fresh. */
+    void reset() {
+        missingSinceMillis = 0
+        emptySinceMillis = 0
+    }
+
     /**
      * @param exitFile The path to the task's {@code .exitcode} file
      * @return

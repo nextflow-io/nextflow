@@ -90,7 +90,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private String runsOnNode = null
 
-    private ExitStatusAwaiter exitAwaiter = new ExitStatusAwaiter(Duration.of('270sec'))
+    private ExitStatusAwaiter exitAwaiter
 
     K8sTaskHandler( TaskRun task, K8sExecutor executor ) {
         super(task)
@@ -103,7 +103,9 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     @TestOnly
-    protected K8sTaskHandler() {}
+    protected K8sTaskHandler() {
+        this.exitAwaiter = new ExitStatusAwaiter(Duration.of('270sec'))
+    }
 
     /**
      * @return The workflow execution unique run name

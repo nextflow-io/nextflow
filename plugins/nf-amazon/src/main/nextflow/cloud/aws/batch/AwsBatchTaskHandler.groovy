@@ -109,7 +109,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
 
     private final Path traceFile
 
-    private ExitStatusAwaiter exitAwaiter = new ExitStatusAwaiter(Duration.of('270sec'))
+    private ExitStatusAwaiter exitAwaiter
 
     private AwsBatchExecutor executor
 
@@ -138,7 +138,9 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     private BatchContext<String,JobDetail> context
 
     @TestOnly
-    protected AwsBatchTaskHandler() {}
+    protected AwsBatchTaskHandler() {
+        this.exitAwaiter = new ExitStatusAwaiter(Duration.of('270sec'))
+    }
 
     /**
      * Create a new Batch task handler

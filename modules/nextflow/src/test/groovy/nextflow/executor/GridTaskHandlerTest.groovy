@@ -16,6 +16,7 @@
 
 package nextflow.executor
 
+import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
@@ -27,6 +28,7 @@ import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
+import nextflow.util.Duration
 import spock.lang.Specification
 import test.TestHelper
 /**
@@ -132,6 +134,128 @@ class GridTaskHandlerTest extends Specification {
                 #$ directive=one
                 docker run -i -e "FUSION_WORK=/fusion/http/foo.com/some/dir" -e "FUSION_TAGS=[.command.*|.exitcode|.fusion.*](nextflow.io/metadata=true),[*](nextflow.io/temporary=true)" --this=that ubuntu:latest /usr/bin/fusion bash '/fusion/http/foo.com/some/dir/.command.run'
                 '''.stripIndent(true)
+    }
+
+    def 'should defer readExitStatus while job is active (awaiter is reset each cycle)'() {
+        given:
+        def workDir = Files.createTempDirectory('nf-grid-test')
+        def task = Mock(TaskRun) {
+            getName() >> 'foo'
+            getWorkDir() >> workDir
+            getConfig() >> Mock(TaskConfig) { getQueue() >> 'normal' }
+        }
+        def exec = Mock(AbstractGridExecutor) {
+            getConfig() >> new ExecutorConfig([:])
+            getName() >> 'test'
+            checkActiveStatus(_, _) >> true
+        }
+        def handler = new GridTaskHandler(task, exec)
+        // startedMillis stays at 0 so elapsed >> queueInterval (null → grace period skipped)
+        handler.@exitAwaiter = new ExitStatusAwaiter(Duration.of('100ms'))
+
+        when: 'job is still active and exit file is absent'
+        def r1 = handler.readExitStatus()
+        then:
+        r1 == null
+
+        when: 'called again after more time — awaiter should have been reset, so still no timeout'
+        sleep(150)
+        def r2 = handler.readExitStatus()
+        then:
+        r2 == null  // reset() means the 100 ms clock never accumulated
+
+        cleanup:
+        workDir.toFile().deleteDir()
+    }
+
+    def 'should defer readExitStatus when job inactive but exit file not yet visible'() {
+        given:
+        def workDir = Files.createTempDirectory('nf-grid-test')
+        def task = Mock(TaskRun) {
+            getName() >> 'foo'
+            getWorkDir() >> workDir
+            getConfig() >> Mock(TaskConfig) { getQueue() >> 'normal' }
+        }
+        def exec = Mock(AbstractGridExecutor) {
+            getConfig() >> new ExecutorConfig([:])
+            getName() >> 'test'
+            checkActiveStatus(_, _) >> false
+        }
+        def handler = new GridTaskHandler(task, exec)
+        handler.@exitAwaiter = new ExitStatusAwaiter(Duration.of('2sec'))
+
+        when: 'exit file still absent within timeout window'
+        def result = handler.readExitStatus()
+
+        then:
+        result == null
+
+        cleanup:
+        workDir.toFile().deleteDir()
+    }
+
+    def 'should return MAX_VALUE when inactive job exit file stays absent past timeout'() {
+        given:
+        def workDir = Files.createTempDirectory('nf-grid-test')
+        def task = Mock(TaskRun) {
+            getName() >> 'foo'
+            getWorkDir() >> workDir
+            getConfig() >> Mock(TaskConfig) { getQueue() >> 'normal' }
+        }
+        def exec = Mock(AbstractGridExecutor) {
+            getConfig() >> new ExecutorConfig([:])
+            getName() >> 'test'
+            checkActiveStatus(_, _) >> false
+            dumpQueueStatus() >> null
+        }
+        def handler = new GridTaskHandler(task, exec)
+        handler.@exitAwaiter = new ExitStatusAwaiter(Duration.of('100ms'))
+
+        when: 'first call starts the missing-file clock'
+        def r1 = handler.readExitStatus()
+        then:
+        r1 == null
+
+        when: 'second call after timeout has elapsed'
+        sleep(150)
+        def r2 = handler.readExitStatus()
+        then:
+        r2 == Integer.MAX_VALUE
+
+        cleanup:
+        workDir.toFile().deleteDir()
+    }
+
+    def 'should parse exit code once file appears after initial absence'() {
+        given:
+        def workDir = Files.createTempDirectory('nf-grid-test')
+        def exitFile = workDir.resolve(TaskRun.CMD_EXIT)
+        def task = Mock(TaskRun) {
+            getName() >> 'foo'
+            getWorkDir() >> workDir
+            getConfig() >> Mock(TaskConfig) { getQueue() >> 'normal' }
+        }
+        def exec = Mock(AbstractGridExecutor) {
+            getConfig() >> new ExecutorConfig([:])
+            getName() >> 'test'
+            checkActiveStatus(_, _) >> false
+        }
+        def handler = new GridTaskHandler(task, exec)
+        handler.@exitAwaiter = new ExitStatusAwaiter(Duration.of('2sec'))
+
+        when: 'exit file is absent on first poll'
+        def r1 = handler.readExitStatus()
+        then:
+        r1 == null
+
+        when: 'exit file appears with exit code 0'
+        exitFile.text = '0'
+        def r2 = handler.readExitStatus()
+        then:
+        r2 == 0
+
+        cleanup:
+        workDir.toFile().deleteDir()
     }
 
     def 'should create launch command' () {

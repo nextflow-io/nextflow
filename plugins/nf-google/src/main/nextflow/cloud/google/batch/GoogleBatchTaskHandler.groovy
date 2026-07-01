@@ -86,7 +86,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private Path exitFile
 
-    private ExitStatusAwaiter exitAwaiter = new ExitStatusAwaiter(nextflow.util.Duration.of('270sec'))
+    private ExitStatusAwaiter exitAwaiter
 
     private Path outputFile
 
@@ -144,7 +144,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     @TestOnly
-    protected GoogleBatchTaskHandler() {}
+    protected GoogleBatchTaskHandler() {
+        this.exitAwaiter = new ExitStatusAwaiter(nextflow.util.Duration.of('270sec'))
+    }
 
     /**
      * Resolve the `jobName` property defined in the nextflow config file

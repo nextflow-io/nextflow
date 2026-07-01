@@ -58,7 +58,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private CloudMachineInfo machineInfo
 
-    private ExitStatusAwaiter exitAwaiter = new ExitStatusAwaiter(Duration.of('270sec'))
+    private ExitStatusAwaiter exitAwaiter
 
     AzBatchTaskHandler(TaskRun task, AzBatchExecutor executor) {
         super(task)
