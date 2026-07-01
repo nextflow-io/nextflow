@@ -62,6 +62,11 @@ class CmdLineHelperTest extends Specification{
         '--foo 1 -bar 2'        | '[option{foo: [1, -bar, 2]}]'
         and:
         '--foo-name 1 --bar-opt 2' | '[option{foo-name: [1]}, option{bar-opt: [2]}]'
+        and:
+        // inline value using the `=` separator (GH #5190)
+        '--shm-size=1000000000'    | '[option{shm-size: [1000000000]}]'
+        '--foo=1'                  | '[option{foo: [1]}]'
+        '-a=1'                     | '[option{a: [1]}]'
     }
 
 }
