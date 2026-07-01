@@ -46,6 +46,7 @@ class AzPoolOptsTest extends Specification {
         !opts.password
         !opts.virtualNetwork
         !opts.lowPriority
+        !opts.ephemeralOsDisk
         !opts.startTask.script
         !opts.startTask.privileged
     }
@@ -70,6 +71,7 @@ class AzPoolOptsTest extends Specification {
             password: 'some-pwd',
             virtualNetwork: 'some-vnet',
             lowPriority: true,
+            ephemeralOsDisk: true,
             startTask: [
                 script: 'echo hello-world',
                 privileged: true
@@ -94,6 +96,7 @@ class AzPoolOptsTest extends Specification {
         opts.password == 'some-pwd'
         opts.virtualNetwork == 'some-vnet'
         opts.lowPriority
+        opts.ephemeralOsDisk
         opts.startTask.script == 'echo hello-world'
         opts.startTask.privileged
     }

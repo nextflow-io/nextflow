@@ -47,6 +47,9 @@ import com.azure.compute.batch.models.BatchTaskContainerSettings
 import com.azure.compute.batch.models.BatchTaskCreateContent
 import com.azure.compute.batch.models.BatchTaskSchedulingPolicy
 import com.azure.compute.batch.models.ContainerConfiguration
+import com.azure.compute.batch.models.DiffDiskPlacement
+import com.azure.compute.batch.models.DiffDiskSettings
+import com.azure.compute.batch.models.OSDisk
 import com.azure.compute.batch.models.ContainerRegistryReference
 import com.azure.compute.batch.models.ContainerType
 import com.azure.compute.batch.models.ElevationLevel
@@ -858,8 +861,18 @@ class AzBatchService implements Closeable {
 
         final image = getImage(opts)
 
-        new VirtualMachineConfiguration(image.imageReference, image.nodeAgentSkuId)
+        final vmConfig = new VirtualMachineConfiguration(image.imageReference, image.nodeAgentSkuId)
                 .setContainerConfiguration(containerConfig)
+
+        // use an ephemeral OS disk placed on the node's local cache disk instead of remote storage
+        if( opts.ephemeralOsDisk ) {
+            log.debug "[AZURE BATCH] Enabling ephemeral OS disk for Azure Batch pool"
+            vmConfig.setOsDisk(
+                    new OSDisk().setEphemeralOSDiskSettings(
+                            new DiffDiskSettings().setPlacement(DiffDiskPlacement.CACHE_DISK) ) )
+        }
+
+        return vmConfig
     }
 
 

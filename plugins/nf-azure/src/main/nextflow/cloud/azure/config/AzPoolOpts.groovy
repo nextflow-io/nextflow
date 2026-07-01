@@ -66,6 +66,12 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
 
     @ConfigOption
     @Description("""
+        Use an ephemeral OS disk for the compute nodes in the pool identified with `<name>`. The OS disk is placed on the node's local/cache storage instead of remote Azure storage, which can improve performance and reduce cost, but the disk and its data are lost when the node is deallocated. The VM size must support an ephemeral OS disk with a cache large enough for the OS image (default: `false`).
+    """)
+    final boolean ephemeralOsDisk
+
+    @ConfigOption
+    @Description("""
         The max number of virtual machines when using auto scaling.
     """)
     final Integer maxVmCount
@@ -175,6 +181,7 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
         this.password = opts.password
         this.virtualNetwork = opts.virtualNetwork
         this.lowPriority = opts.lowPriority as boolean
+        this.ephemeralOsDisk = opts.ephemeralOsDisk as boolean
     }
 
     @Override
@@ -195,6 +202,7 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
         hasher.putUnencodedChars(schedulePolicy ?: '')
         hasher.putUnencodedChars(virtualNetwork ?: '')
         hasher.putBoolean(lowPriority)
+        hasher.putBoolean(ephemeralOsDisk)
         hasher.putUnencodedChars(startTask.script ?: '')
         hasher.putBoolean(startTask.privileged)
         return hasher

@@ -24,11 +24,14 @@ import dev.failsafe.function.CheckedPredicate
 
 import com.azure.compute.batch.models.BatchPool
 import com.azure.compute.batch.models.BatchJobCreateContent
+import com.azure.compute.batch.models.BatchSupportedImage
+import com.azure.compute.batch.models.DiffDiskPlacement
 import com.azure.compute.batch.models.ElevationLevel
 import com.azure.compute.batch.models.EnvironmentSetting
 import com.azure.core.exception.HttpResponseException
 import com.azure.core.http.HttpResponse
 import com.azure.identity.ManagedIdentityCredential
+import com.azure.json.JsonProviders
 import com.google.common.hash.HashCode
 import nextflow.Global
 import nextflow.Session
@@ -516,7 +519,7 @@ class AzBatchServiceTest extends Specification {
         then:
         1 * svc.guessBestVm(LOC, CPUS, MEM, null, TYPE) >> VM
         and:
-        spec.poolId == 'nf-pool-42f3635f3fb8b71160900efa959f7809-Standard_X1'
+        spec.poolId == 'nf-pool-e3a346bceb6506d94e3da8f523d68cb6-Standard_X1'
         spec.metadata == [foo: 'bar']
 
     }
@@ -1184,5 +1187,39 @@ class AzBatchServiceTest extends Specification {
         then:
         thrown(IllegalArgumentException)
         createCalls == 1
+    }
+
+    private static BatchSupportedImage supportedImage() {
+        final json = '{"nodeAgentSKUId":"batch.node.ubuntu 24.04","imageReference":{"publisher":"microsoft-dsvm","offer":"ubuntu-hpc","sku":"2204"}}'
+        JsonProviders.createReader(json).withCloseable { BatchSupportedImage.fromJson(it) }
+    }
+
+    def 'should not set OS disk when ephemeralOsDisk is disabled' () {
+        given:
+        def exec = createExecutor()
+        AzBatchService svc = Spy(new AzBatchService(exec))
+        def opts = new AzPoolOpts([:])
+
+        when:
+        def result = svc.poolVmConfig(opts)
+        then:
+        1 * svc.getImage(opts) >> supportedImage()
+        and:
+        result.osDisk == null
+    }
+
+    def 'should set ephemeral OS disk when ephemeralOsDisk is enabled' () {
+        given:
+        def exec = createExecutor()
+        AzBatchService svc = Spy(new AzBatchService(exec))
+        def opts = new AzPoolOpts([ephemeralOsDisk: true])
+
+        when:
+        def result = svc.poolVmConfig(opts)
+        then:
+        1 * svc.getImage(opts) >> supportedImage()
+        and:
+        result.osDisk != null
+        result.osDisk.ephemeralOSDiskSettings.placement == DiffDiskPlacement.CACHE_DISK
     }
 }
