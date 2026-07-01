@@ -79,9 +79,9 @@ dependencies {
     api "com.fasterxml.jackson.core:jackson-databind:2.21.4"
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.31"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.31"
-    testImplementation "org.apache.groovy:groovy-json:4.0.31"
+    testImplementation "org.apache.groovy:groovy:5.0.7"
+    testImplementation "org.apache.groovy:groovy-nio:5.0.7"
+    testImplementation "org.apache.groovy:groovy-json:5.0.7"
     // wiremock required by TowerFusionEnvTest; use the self-contained
     // distribution which shades its dependencies (incl. handlebars) to
     // avoid pulling vulnerable transitive deps (GHSA-r4gv-qr8j-p3pg)

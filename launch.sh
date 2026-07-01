@@ -73,6 +73,8 @@ if [[ ! $JAVA_VER =~ $version_check ]]; then
     exit 1
 fi
 JVM_ARGS+=" -Dfile.encoding=UTF-8 -XX:+TieredCompilation -XX:TieredStopAtLevel=1"
+# preserve Groovy 4 file/path truthiness (a non-null File/Path is truthy regardless of existence) -- see GROOVY-11996
+JVM_ARGS+=" -Dgroovy.truth.file.exists.enabled=false"
 JVM_ARGS+=" --add-opens=java.base/java.lang=ALL-UNNAMED --add-opens=java.base/java.io=ALL-UNNAMED --add-opens=java.base/java.nio=ALL-UNNAMED --add-opens=java.base/java.net=ALL-UNNAMED --add-opens=java.base/java.nio.file.spi=ALL-UNNAMED --add-opens=java.base/java.util=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.locks=ALL-UNNAMED --add-opens=java.base/java.util.concurrent.atomic=ALL-UNNAMED --add-opens=java.base/sun.nio.ch=ALL-UNNAMED --add-opens=java.base/sun.nio.fs=ALL-UNNAMED --add-opens=java.base/sun.net.www.protocol.http=ALL-UNNAMED --add-opens=java.base/sun.net.www.protocol.https=ALL-UNNAMED --add-opens=java.base/sun.net.www.protocol.ftp=ALL-UNNAMED --add-opens=java.base/sun.net.www.protocol.file=ALL-UNNAMED --add-opens=java.base/jdk.internal.misc=ALL-UNNAMED --add-opens=java.base/jdk.internal.vm=ALL-UNNAMED --add-opens=java.base/java.util.regex=ALL-UNNAMED"
 [[ "$JAVA_VER" =~ ^(24|25|26) ]]&& JVM_ARGS+=" --enable-native-access=ALL-UNNAMED --sun-misc-unsafe-memory-access=allow"
 [[ $NXF_ENABLE_VIRTUAL_THREADS == 'true' ]] && [[ "$JAVA_VER" =~ ^(19|20) ]] && JVM_ARGS+=" --enable-preview"

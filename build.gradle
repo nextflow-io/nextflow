@@ -113,8 +113,8 @@ allprojects {
 
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:2.4.0'
-        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.31"
-        groovyDoc "org.apache.groovy:groovy-ant:4.0.31"
+        groovyDoc "org.apache.groovy:groovy-groovydoc:5.0.7"
+        groovyDoc "org.apache.groovy:groovy-ant:5.0.7"
     }
 
     test {
@@ -152,6 +152,8 @@ allprojects {
     tasks.withType(Test) {
         jvmArgs ([
             '--enable-preview',
+            // preserve Groovy 4 file/path truthiness (a non-null File/Path is truthy regardless of existence) -- see GROOVY-11996
+            '-Dgroovy.truth.file.exists.enabled=false',
             '--add-opens=java.base/java.lang=ALL-UNNAMED',
             '--add-opens=java.base/java.io=ALL-UNNAMED',
             '--add-opens=java.base/java.nio=ALL-UNNAMED',

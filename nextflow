@@ -470,6 +470,8 @@ else
     launcher+=(--add-opens=java.base/jdk.internal.misc=ALL-UNNAMED)
     launcher+=(--add-opens=java.base/jdk.internal.vm=ALL-UNNAMED)
     launcher+=(--add-opens=java.base/java.util.regex=ALL-UNNAMED)
+    # preserve Groovy 4 file/path truthiness (a non-null File/Path is truthy regardless of existence) -- see GROOVY-11996
+    launcher+=(-Dgroovy.truth.file.exists.enabled=false)
     if [[ "$JAVA_VER" =~ ^(24|25|26) ]]; then
         launcher+=(--enable-native-access=ALL-UNNAMED)
         launcher+=(--sun-misc-unsafe-memory-access=allow)
