@@ -1262,6 +1262,9 @@ Network tags are ignored when using instance templates.
 ##### `google.batch.serviceAccountEmail`
 
 The Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.
+
+The service account must have the IAM roles listed in the [Google Cloud Batch documentation for Nextflow](https://cloud.google.com/batch/docs/nextflow), otherwise Cloud Batch jobs can remain stuck in the `SCHEDULED` state indefinitely.
+
 This service account will only be used for tasks submitted by Nextflow, not for Nextflow itself. See [Credentials][google-credentials] for more information on Google Cloud credentials.
 
 ##### `google.batch.spot`
