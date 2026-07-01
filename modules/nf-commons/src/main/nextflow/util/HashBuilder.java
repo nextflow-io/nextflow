@@ -19,6 +19,8 @@ package nextflow.util;
 import java.io.File;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -29,6 +31,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
@@ -47,6 +50,7 @@ import nextflow.extension.Bolts;
 import nextflow.extension.FilesEx;
 import nextflow.io.SerializableMarker;
 import nextflow.script.types.Bag;
+import nextflow.script.types.Record;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import static nextflow.Const.DEFAULT_ROOT;
@@ -149,20 +153,19 @@ public class HashBuilder {
         else if( value instanceof CacheFunnel )
             ((CacheFunnel)value).funnel(hasher, mode);
 
-        else if( value instanceof Map )
-            hashUnorderedCollection(hasher, ((Map) value).entrySet(), mode);
+        else if( value instanceof Map<?,?> map )
+            hashUnorderedCollection(hasher, map.entrySet(), mode, basePath);
 
-        else if( value instanceof Map.Entry ) {
-            Map.Entry entry = (Map.Entry)value;
+        else if( value instanceof Map.Entry<?,?> entry ) {
             with(entry.getKey());
             with(entry.getValue());
         }
 
-        else if( value instanceof Bag || value instanceof Set )
-            hashUnorderedCollection(hasher, (Collection) value, mode);
+        else if( value instanceof Bag<?> || value instanceof Set<?> )
+            hashUnorderedCollection(hasher, (Collection<?>) value, mode, basePath);
 
-        else if( value instanceof Collection)
-            for( Object item : ((Collection)value) )
+        else if( value instanceof Collection<?> collection)
+            for( Object item : collection )
                 with(item);
 
         else if( value instanceof Path )
@@ -178,6 +181,9 @@ public class HashBuilder {
 
         else if( value instanceof VersionNumber )
             hasher.putInt( value.hashCode() );
+
+        else if( value instanceof Record )
+            hashUnorderedCollection(hasher, recordFields((Record)value).entrySet(), mode, basePath);
 
         else if( value instanceof SerializableMarker)
             hasher.putInt( value.hashCode() );
@@ -461,11 +467,11 @@ public class HashBuilder {
         return hashFileContent(hasher, file).hash();
     }
 
-    static private Hasher hashUnorderedCollection(Hasher hasher, Collection collection, HashMode mode)  {
+    static private Hasher hashUnorderedCollection(Hasher hasher, Collection<?> collection, HashMode mode, Path basePath)  {
         byte[] resultBytes = new byte[HASH_BYTES];
         for (Object item : collection) {
             // hash ghe collection item
-            byte[] nextBytes = hashBytes(item, mode);
+            byte[] nextBytes = hashBytes(item, mode, basePath);
             // sum the hash bytes to the "resultBytes" accumulator
             // since the sum is a commutative operation the order does not matter
             sumBytes(resultBytes, nextBytes);
@@ -475,7 +481,33 @@ public class HashBuilder {
     }
 
     static private byte[] hashBytes(Object item, HashMode mode) {
-        return hasher(defaultHasher(), item, mode).hash().asBytes();
+        return hashBytes(item, mode, null);
+    }
+
+    static private byte[] hashBytes(Object item, HashMode mode, Path basePath) {
+        return new HashBuilder()
+                .withHasher(defaultHasher())
+                .withMode(mode)
+                .withBasePath(basePath)
+                .with(item)
+                .getHasher()
+                .hash()
+                .asBytes();
+    }
+
+    static private Map<String,Object> recordFields(Record record) {
+        final Map<String,Object> result = new TreeMap<>();
+        for( Field field : record.getClass().getFields() ) {
+            if( Modifier.isStatic(field.getModifiers()) || field.isSynthetic() )
+                continue;
+            try {
+                result.put(field.getName(), field.get(record));
+            }
+            catch( IllegalAccessException e ) {
+                throw new IllegalStateException("Unable to access record field: " + field.getName(), e);
+            }
+        }
+        return result;
     }
 
     /**
