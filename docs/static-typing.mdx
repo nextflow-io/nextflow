@@ -5,21 +5,19 @@ description: Overview of static typing in Nextflow, including typed processes, t
 
 # Static typing
 
+**Static typing is optional. All existing code continues to work.**
+
 Static typing lets you model and validate the structure of your data as it flows through a pipeline. You add [standard Nextflow types][stdlib-types] to inputs and outputs at every level, from pipeline parameters to process and workflow outputs. The Nextflow language server uses those annotations to catch type-related errors as you write code.
 
 :::warning
-Static typing is a preview feature. The syntax and behavior may change in future releases.
-:::
-
-:::note
-Static typing is optional. All existing code continues to work.
+Some static typing features are previews. The syntax and behavior may change in future releases.
 :::
 
 ## Static typing features
 
 Static typing is a set of related language features. Each one applies type annotations at a different stage of a pipeline, and you can adopt them independently or together:
 
-| Page | What it covers |
+| Page | Description |
 | ---- | -------------- |
 | [Processes&nbsp;(typed)][process-typed-page] | Type annotations for process inputs and outputs, the `stage:` section, records, and tuples. |
 | [Workflows&nbsp;(typed)][workflow-typed-page] | Type annotations across a workflow, covering [Typed parameters][typed-parameters-page] (the `params` block), [Typed outputs][typed-outputs-page] (the `output` block), and [Typed workflows][typed-workflows-page] (the `take:` and `emit:` sections). |

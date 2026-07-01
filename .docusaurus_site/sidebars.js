@@ -41,6 +41,17 @@ module.exports = {
         },
         {
             type: "category",
+            label: "Modules",
+            collapsed: true,
+            link: { type: "doc", id: "modules/modules" },
+            items: [
+                "modules/using-modules",
+                "modules/developing-modules",
+                "modules/module-registry"
+            ]
+        },
+        {
+            type: "category",
             label: "Static typing",
             collapsed: true,
             link: { type: "doc", id: "static-typing" },
@@ -58,17 +69,6 @@ module.exports = {
                     ]
                 },
                 "reference/operator-typed"
-            ]
-        },
-        {
-            type: "category",
-            label: "Modules",
-            collapsed: true,
-            link: { type: "doc", id: "modules/modules" },
-            items: [
-                "modules/using-modules",
-                "modules/developing-modules",
-                "modules/module-registry"
             ]
         },
         {
