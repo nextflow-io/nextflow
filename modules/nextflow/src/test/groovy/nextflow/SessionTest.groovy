@@ -20,20 +20,21 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.attribute.PosixFilePermission
 
-import nextflow.config.Manifest
+import com.google.common.hash.HashCode
+import nextflow.cache.CacheDB
 import nextflow.container.ContainerConfig
 import nextflow.container.DockerConfig
 import nextflow.container.PodmanConfig
 import nextflow.container.SarusConfig
-import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
+import nextflow.processor.TaskHandler
+import nextflow.processor.TaskRun
 import nextflow.script.ScriptFile
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceHelper
+import nextflow.trace.TraceRecord
 import nextflow.trace.WorkflowStatsObserver
-import nextflow.util.Duration
-import nextflow.util.VersionNumber
 import spock.lang.Specification
 import spock.lang.Unroll
 import test.TestHelper
@@ -45,6 +46,81 @@ import static test.ScriptHelper.*
  */
 class SessionTest extends Specification {
 
+
+    def 'should write hash index when a completed task is notified'() {
+        given:
+        def session = new Session()
+        def cache = Mock(CacheDB)
+        session.@cache = cache
+        and:
+        def content = HashCode.fromInt(1)
+        def finalHash = HashCode.fromInt(2)
+        def task = new TaskRun(hash: finalHash, contentHash: content)
+        def trace = new TraceRecord([status: 'COMPLETED'])
+        def handler = Mock(TaskHandler) { getTask() >> task; safeTraceRecord() >> trace }
+
+        when:
+        session.notifyTaskComplete(handler)
+        then:
+        1 * cache.putTaskAsync(handler, trace)
+        1 * cache.putSuccessfulHashAsync(content, finalHash)
+    }
+
+    def 'should not write hash index when the task is not completed'() {
+        given:
+        def session = new Session()
+        def cache = Mock(CacheDB)
+        session.@cache = cache
+        and:
+        def task = new TaskRun(hash: HashCode.fromInt(2), contentHash: HashCode.fromInt(1))
+        def trace = new TraceRecord([status: 'FAILED'])
+        def handler = Mock(TaskHandler) { getTask() >> task; safeTraceRecord() >> trace }
+
+        when:
+        session.notifyTaskComplete(handler)
+        then:
+        1 * cache.putTaskAsync(handler, trace)
+        0 * cache.putSuccessfulHashAsync(_, _)
+    }
+
+    def 'should refresh the hash index on a scan-path resume'() {
+        given:
+        def session = new Session()
+        def cache = Mock(CacheDB)
+        session.@cache = cache
+        and:
+        def content = HashCode.fromInt(1)
+        def finalHash = HashCode.fromInt(2)
+        // resumedFromIndex defaults to false -> scan-path resume
+        def task = new TaskRun(hash: finalHash, contentHash: content)
+        def trace = new TraceRecord([status: 'COMPLETED'])
+        def handler = Mock(TaskHandler) { getTask() >> task; getTraceRecord() >> trace }
+
+        when:
+        session.notifyTaskCached(handler)
+        then: 'the pointer is (re)written to self-heal / upgrade to the fast-path'
+        1 * cache.cacheTaskAsync(handler)
+        1 * cache.putSuccessfulHashAsync(content, finalHash)
+    }
+
+    def 'should not refresh the hash index when resumed from the index fast-path'() {
+        given:
+        def session = new Session()
+        def cache = Mock(CacheDB)
+        session.@cache = cache
+        and:
+        def content = HashCode.fromInt(1)
+        def finalHash = HashCode.fromInt(2)
+        def task = new TaskRun(hash: finalHash, contentHash: content, resumedFromIndex: true)
+        def trace = new TraceRecord([status: 'COMPLETED'])
+        def handler = Mock(TaskHandler) { getTask() >> task; getTraceRecord() >> trace }
+
+        when:
+        session.notifyTaskCached(handler)
+        then: 'the pointer is already correct, so the redundant rewrite is skipped'
+        1 * cache.cacheTaskAsync(handler)
+        0 * cache.putSuccessfulHashAsync(_, _)
+    }
 
     def 'test baseDir and binDir'() {
 

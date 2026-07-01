@@ -1041,6 +1041,11 @@ class Session implements ISession {
         final trace = handler.safeTraceRecord()
         cache.putTaskAsync(handler, trace)
 
+        // -- update the successful-hash index so a later resume resolves this
+        //    task in a single lookup, even if it succeeded after retries
+        if( trace?.isCompleted() && handler.task.contentHash && handler.task.hash )
+            cache.putSuccessfulHashAsync(handler.task.contentHash, handler.task.hash)
+
         // set the pipeline to return non-exit code if specified
         if( handler.task.errorAction == ErrorStrategy.IGNORE && failOnIgnore() ) {
             log.debug "Setting fail-on-ignore flag due to ignored task '${handler.task.lazyName()}'"
@@ -1057,6 +1062,12 @@ class Session implements ISession {
         // otherwise it means that the event is trigger by a `stored dir` driven task
         if( trace ) {
             cache.cacheTaskAsync(handler)
+            // -- refresh the successful-hash index (self-heals a stale pointer
+            //    and upgrades a scan-path resume to a fast-path resume); skip it
+            //    when the resume already came from the index, where the pointer
+            //    is known to be correct and the rewrite would be redundant
+            if( !handler.task.resumedFromIndex && handler.task.contentHash && handler.task.hash )
+                cache.putSuccessfulHashAsync(handler.task.contentHash, handler.task.hash)
         }
 
         notifyEvent(observersV1, ob -> ob.onProcessCached(handler, trace))

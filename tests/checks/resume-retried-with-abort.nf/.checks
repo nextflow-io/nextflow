@@ -1,0 +1,36 @@
+set -e
+
+#
+# run with abort -- abort while the retried attempt is still sleeping (window ~5-15s)
+#
+echo ''
+timeout --signal=INT 8 $NXF_RUN | tee stdout || true
+
+[[ `< .nextflow.log grep -c 'Submitted process > SMALL_SLEEP_RETRY'` == 1 ]] || false
+
+#
+# RESUME mode with fail and abort -- abort again mid retried attempt (window ~5-15s)
+#
+echo ''
+timeout --signal=INT 8 $NXF_RUN -resume | tee stdout || true
+
+[[ `< .nextflow.log grep -c 'Submitted process > SMALL_SLEEP_RETRY'` == 1 ]] || false
+[[ `< .nextflow.log grep -c 'Re-submitted process > SMALL_SLEEP_RETRY'` == 1 ]] || false
+
+#
+# RESUME mode with completed and abort -- let the retried attempt complete (~15s)
+# then abort while LONG_SLEEP is still running (window ~15-30s)
+#
+echo ''
+timeout --signal=INT 20 $NXF_RUN -resume | tee stdout || true
+
+[[ `< .nextflow.log grep -c 'Submitted process > SMALL_SLEEP_RETRY'` == 1 ]] || false
+[[ `< .nextflow.log grep -c 'Re-submitted process > SMALL_SLEEP_RETRY'` == 1 ]] || false
+
+#
+# RESUME mode with cached and finish
+#
+echo ''
+$NXF_RUN -resume | tee stdout
+
+[[ `< .nextflow.log grep -c 'Cached process > SMALL_SLEEP_RETRY'` == 1 ]] || false
