@@ -152,6 +152,8 @@ allprojects {
     tasks.withType(Test) {
         jvmArgs ([
             '--enable-preview',
+            // preserve Groovy 4 file/path truthiness (a non-null File/Path is truthy regardless of existence) -- see GROOVY-11996
+            '-Dgroovy.truth.file.exists.enabled=false',
             '--add-opens=java.base/java.lang=ALL-UNNAMED',
             '--add-opens=java.base/java.io=ALL-UNNAMED',
             '--add-opens=java.base/java.nio=ALL-UNNAMED',
