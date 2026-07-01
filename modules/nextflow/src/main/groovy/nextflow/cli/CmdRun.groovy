@@ -39,6 +39,7 @@ import nextflow.config.ConfigBuilder
 import nextflow.config.ConfigMap
 import nextflow.config.ConfigValidator
 import nextflow.config.Manifest
+import nextflow.config.SchemaParamsHelper
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.plugin.Plugins
@@ -339,6 +340,8 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- load command line params
         final baseDir = scriptFile.parent
         final cliParams = parsedParams(ConfigBuilder.getConfigVars(baseDir, null))
+        // under v2 syntax parser, CLI args arrive as strings; coerce via nextflow_schema.json types if available
+        SchemaParamsHelper.applySchemaTypes(baseDir, cliParams)
 
         /*
          * 2-PHASE CONFIGURATION LOADING STRATEGY
