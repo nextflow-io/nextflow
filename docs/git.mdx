@@ -30,17 +30,13 @@ The following configuration properties are supported for each provider configura
 
 User name required to access private repositories on the SCM server.
 
-##### `providers.<provider>.token`
+##### `providers.<provider>.password`
 
-*Required only for private Gitlab servers and supported for BitBucket*
-
-Private API access token.
-
-User password required to access private repositories on the SCM server.
+User password required to access private repositories on the SCM server. For BitBucket, use your API token as the `token` value instead — app passwords are deprecated.
 
 ##### `providers.<provider>.token`
 
-*Required only for private Gitlab servers.*
+*Required only for private Gitlab servers and supported for BitBucket.*
 
 Private API access token.
 
@@ -66,23 +62,29 @@ SCM API `endpoint` URL, e.g., `https://api.github.com` (default: the same as `pr
 
 ### Bitbucket
 
-Create a `bitbucket` entry in the [SCM configuration file](#git-configuration) specifying your user name and either an API token or app password, as shown below:
+Create a `bitbucket` entry in the [SCM configuration file](#git-configuration) specifying your credentials and an API token, as shown below:
 
 ```groovy
 providers {
     bitbucket {
-        user = 'me'
+        user = 'me@my-email.com'
         token = 'my-api-token'
     }
 }
 ```
+
+:::warning
+For the Bitbucket Cloud REST API, `user` must be your **Atlassian account email** (listed under *Personal settings > Email aliases* in Bitbucket), *not* your Bitbucket username. Using the username results in a `401 Not authorized` error.
+:::
+
+When creating the [API token](https://id.atlassian.com/manage-profile/security/api-tokens), select **Create API token with scopes** and grant at least `read:repository:bitbucket` (add `write:repository:bitbucket` if you also push). A token without Bitbucket scopes — for example one created only for Jira or Confluence — is rejected with `401 Not authorized`.
 
 <AddedInVersion version="25.10">
 API tokens are supported for BitBucket authentication. When both `token` and `password` are provided, the API token takes priority over the app password.
 </AddedInVersion>
 
 :::note
-API tokens are substitute passwords for a user account which you can use for scripts and integrating tools in order to avoid putting your real password into configuration files. Learn more about [app passwords](https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/) and [API tokens](https://support.atlassian.com/bitbucket-cloud/docs/using-api-tokens/).
+[App passwords](https://support.atlassian.com/bitbucket-cloud/docs/app-passwords/) are deprecated and stop working on June 9, 2026. Use [API tokens](https://support.atlassian.com/bitbucket-cloud/docs/using-api-tokens/) instead. An API token is a substitute password you can use in scripts and tools to avoid putting your real password into configuration files.
 :::
 
 ### Bitbucket Server
