@@ -1,0 +1,172 @@
+name: Nextflow e2e
+# Launches the Seqera Platform "showcase" end-to-end test. Reusable workflow,
+# triggered two ways:
+#   - workflow_call    : from build.yml (commit [e2e ...] tag / dispatch input)
+#                        and from pr-commands.yml (a maintainer's /e2e-* comment).
+#   - workflow_dispatch: run e2e standalone (no build/test gate) for a chosen env.
+#
+# When invoked from a comment, github.event.comment.* is inherited from the
+# caller, so the environment is parsed from the comment and the result is posted
+# back to the PR. Otherwise the environment comes from the `environment` input.
+#
+# What it does: builds a snapshot Nextflow launcher container, then dispatches
+# seqera-showcase-<env>.yml in seqeralabs/showcase-automation and surfaces the
+# resulting run URL (see .github/scripts/e2e-launch.sh).
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Platform environment to test against (production|staging). Omit to parse a /e2e-* PR comment.'
+        type: string
+        required: false
+        default: ''
+    secrets:
+      SEQERA_PUBLIC_CR_PASSWORD:
+        description: 'Seqera public container registry password (docker login)'
+        required: true
+      AUTOMATION_GITHUB_TOKEN:
+        description: 'Token used to dispatch & read the showcase-automation run'
+        required: true
+    outputs:
+      environment:
+        description: 'Environment the e2e test ran against'
+        value: ${{ jobs.e2e.outputs.environment }}
+      launcher_image:
+        description: 'Wave launcher image used for the test'
+        value: ${{ jobs.e2e.outputs.launcher_image }}
+      showcase_url:
+        description: 'URL of the dispatched showcase-automation run'
+        value: ${{ jobs.e2e.outputs.showcase_url }}
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Platform environment to test against'
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+    outputs:
+      environment: ${{ steps.launch.outputs.environment }}
+      launcher_image: ${{ steps.launch.outputs.launcher_image }}
+      showcase_url: ${{ steps.launch.outputs.showcase_url }}
+    steps:
+      - name: Resolve environment
+        id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_ENVIRONMENT: ${{ inputs.environment }}
+          # Passed via env (not inlined) to avoid script injection from comments.
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          # Prefer the explicit input (build.yml / workflow_dispatch); note that
+          # github.event_name is the *caller's* event, so a comment-triggered call
+          # arrives as 'issue_comment' here, not 'workflow_call'.
+          environment="$INPUT_ENVIRONMENT"
+          if [ -z "$environment" ] && [ "$EVENT_NAME" = "issue_comment" ]; then
+            # match a line that *starts* with /e2e-prod or /e2e-stage
+            if printf '%s\n' "$COMMENT_BODY" | grep -qE '^[[:space:]]*/e2e-prod\b'; then
+              environment="production"
+            elif printf '%s\n' "$COMMENT_BODY" | grep -qE '^[[:space:]]*/e2e-stage\b'; then
+              environment="staging"
+            fi
+          fi
+          if [ -z "$environment" ]; then
+            echo "No e2e command matched — nothing to do."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "Resolved environment: $environment"
+          echo "environment=$environment" >> "$GITHUB_OUTPUT"
+          echo "should_run=true" >> "$GITHUB_OUTPUT"
+
+      - name: Acknowledge comment
+        if: ${{ github.event_name == 'issue_comment' && steps.resolve.outputs.should_run == 'true' }}
+        continue-on-error: true  # cosmetic reaction; never fail the run over it
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+        run: |
+          gh api --method POST "repos/$REPO/issues/comments/$COMMENT_ID/reactions" -f content=eyes
+
+      - name: Resolve PR head
+        id: pr
+        if: ${{ github.event_name == 'issue_comment' && steps.resolve.outputs.should_run == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          sha=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json headRefOid --jq '.headRefOid')
+          repo=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json headRepositoryOwner,headRepository --jq '.headRepositoryOwner.login + "/" + .headRepository.name')
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "repo=$repo" >> "$GITHUB_OUTPUT"
+
+      - name: Checkout
+        if: ${{ steps.resolve.outputs.should_run == 'true' }}
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          fetch-depth: 1
+          submodules: true
+          persist-credentials: false
+          repository: ${{ steps.pr.outputs.repo || github.repository }}
+          ref: ${{ steps.pr.outputs.sha || github.ref }}
+
+      - name: Setup Java 17
+        if: ${{ steps.resolve.outputs.should_run == 'true' }}
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          java-version: 17
+          distribution: 'temurin'
+          architecture: x64
+          cache: gradle
+
+      - name: Install Wave CLI
+        if: ${{ steps.resolve.outputs.should_run == 'true' }}
+        run: |
+          wget -q -O wave https://github.com/seqeralabs/wave-cli/releases/download/v1.4.1/wave-1.4.1-linux-x86_64
+          chmod +x wave
+          mv wave /usr/local/bin/
+
+      - name: Docker Login to Seqera public CR
+        if: ${{ steps.resolve.outputs.should_run == 'true' }}
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: "public.cr.seqera.io"
+          username: "public-cr-admin"
+          password: ${{ secrets.SEQERA_PUBLIC_CR_PASSWORD }}
+
+      - name: Launch e2e test
+        id: launch
+        if: ${{ steps.resolve.outputs.should_run == 'true' }}
+        run: bash .github/scripts/e2e-launch.sh
+        env:
+          ENVIRONMENT: ${{ steps.resolve.outputs.environment }}
+          GITHUB_TOKEN: ${{ secrets.AUTOMATION_GITHUB_TOKEN }}
+          GRADLE_OPTS: '-Dorg.gradle.daemon=false'
+
+      - name: Post result to pull request
+        if: ${{ github.event_name == 'issue_comment' && steps.resolve.outputs.should_run == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+          E2E_ENV: ${{ steps.launch.outputs.environment }}
+          LAUNCHER_IMAGE: ${{ steps.launch.outputs.launcher_image }}
+          SHOWCASE_URL: ${{ steps.launch.outputs.showcase_url }}
+        run: |
+          gh pr comment "$PR_NUMBER" --repo "$REPO" --body \
+            "🚀 e2e showcase launched against \`${E2E_ENV}\`: [showcase run](${SHOWCASE_URL}) (launcher \`${LAUNCHER_IMAGE}\`). CI only launches the test — open the run to confirm it passed."
