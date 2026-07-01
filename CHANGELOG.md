@@ -1,5 +1,21 @@
 # Nextflow change-log
 
+## [Version 26.06.0-edge](https://github.com/nextflow-io/nextflow/releases/tag/v26.06.0-edge) - 30 Jun 2026
+
+- Add docs tip for relocating Docker storage on Azure Batch nodes (#6937) [d2ecd7a50]
+- Add Fibonacci and Pareto to the run name generator (#7255) [c9e9cfb7c]
+- Consolidate nf-tower plugin into nf-seqera (#7252) [1cdd0bc17]
+- docs: Clarify storeDir caveats with env, eval, stdout outputs (#7235) [e97f33757]
+- docs: Normalize version callouts (#7256) [85b945e70]
+- Fail with a clear error when Fusion is enabled without an access token (#7263) [83d452a51]
+- Fix docs example for record operations (#7250) [e30c38017]
+- Fix failing unit tests with clean build (#7264) [e3a44ba3e]
+- Fix flatMap tuple error for dataflow value (#7254) [e4e9a2cad]
+- fix: lower trace-access.nf memory to fit CI runner capacity (#7266) [fcf52e54d]
+- Propagate Seqera Intelligent Compute scheduler run identifier to Platform (#7228) [e2a673f8c]
+- Remove uncommitted specs [ci skip] (#7267) [22894f776]
+- Bump nf-seqera@1.0.0
+
 ## [Version 26.05.0-edge](https://github.com/nextflow-io/nextflow/releases/tag/v26.05.0-edge) - 19 Jun 2026
 
 - Add -help as alias for -h in top-level CLI options (#7238) [ea3f2aad4]
