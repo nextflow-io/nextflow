@@ -104,10 +104,24 @@ nxf_fs_fcp() {
 }
 
 on_exit() {
-    ## Capture possible errors.
-    ## Can be caused either by the task script, unstage script or after script if defined
+    ## This is invoked via `trap on_exit EXIT` at the end of nxf_main, therefore
+    ## $? here is the exit status of the very last command run by nxf_main, i.e.
+    ## nxf_unstage_controls (or {{after_script}}, if the task defines one).
+    ## It's kept as a last-resort fallback ONLY: nxf_main_ret and nxf_unstage_ret
+    ## below already capture the two "expected" failure points (the task command
+    ## and the output unstaging step), so last_err only wins when the failure
+    ## happened somewhere else, e.g. in nxf_unstage_controls, in the after script,
+    ## or the trap fired directly because of `set -e`/`set -u` without either
+    ## variable being set.
     local last_err=$?
-    ## capture the task error first or fallback to unstage error
+    ## Exit status precedence (first non-zero wins):
+    ##   1) nxf_main_ret    - exit status of the user task script, set by
+    ##                        `wait $pid || nxf_main_ret=$?` once nxf_launch completes.
+    ##   2) nxf_unstage_ret - exit status of the nxf_unstage_outputs pipeline, set in
+    ##                        nxf_unstage() when copying declared outputs back fails.
+    ##                        Only meaningful when nxf_main_ret==0, since outputs are
+    ##                        not unstaged if the task itself already failed.
+    ##   3) last_err        - fallback for anything else, see above.
     local exit_status=${nxf_main_ret:=0}
     [[ ${exit_status} -eq 0 && ${nxf_unstage_ret:=0} -ne 0 ]] && exit_status=${nxf_unstage_ret:=0}
     [[ ${exit_status} -eq 0 && ${last_err} -ne 0 ]] && exit_status=${last_err}
@@ -143,12 +157,26 @@ nxf_unstage_controls() {
 }
 
 nxf_unstage() {
-    ## Deactivate fast failure to allow uploading stdout and stderr files later
+    ## Only unstage the task outputs if the task command itself succeeded;
+    ## if nxf_main_ret is non-zero, there is nothing new to copy back and
+    ## nxf_unstage_ret is left unset (defaults to 0) so it can't mask the
+    ## task's own error in on_exit.
     if [[ ${nxf_main_ret:=0} == 0 ]]; then
-        ## Data unstaging redirecting stdout and stderr with append mode
+        ## Run the outputs-unstaging script in its own subshell with
+        ## `set -e -o pipefail` (fast failure is off in the outer script at
+        ## this point, see nxf_main) so that a failed copy/upload is caught
+        ## via `nxf_unstage_ret=$?` below instead of silently continuing.
+        ## stdout/stderr of the subshell are appended to .command.out/.err
+        ## (rather than replacing them) so any output produced while
+        ## unstaging is visible next to the task's own output.
         (set -e -o pipefail; (nxf_unstage_outputs | tee -a {{stdout_file}}) 3>&1 1>&2 2>&3 | tee -a {{stderr_file}})
         nxf_unstage_ret=$?
     fi
+    ## Control files (.command.out/.err/.log/...) are unstaged unconditionally,
+    ## even if the task or the outputs unstaging above failed, so the logs
+    ## needed to diagnose the failure are always copied back. Its own exit
+    ## status is intentionally NOT captured into nxf_unstage_ret: it becomes
+    ## the generic `last_err` fallback in on_exit instead (see there).
     nxf_unstage_controls
 }
 
