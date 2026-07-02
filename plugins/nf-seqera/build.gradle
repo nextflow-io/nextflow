@@ -73,15 +73,19 @@ dependencies {
     api('io.seqera:tower-api:1.158.0') {
         exclude group: 'io.micronaut.servlet'
     }
-    api "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.21.1"
-    api "com.fasterxml.jackson.core:jackson-databind:2.21.1"
+    // jackson 2.21.4 addresses GHSA-rmj7-2vxq-3g9f and GHSA-j3rv-43j4-c7qm
+    // (PolymorphicTypeValidator bypasses)
+    api "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.21.4"
+    api "com.fasterxml.jackson.core:jackson-databind:2.21.4"
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation "org.apache.groovy:groovy:4.0.31"
     testImplementation "org.apache.groovy:groovy-nio:4.0.31"
     testImplementation "org.apache.groovy:groovy-json:4.0.31"
-    // wiremock required by TowerFusionEnvTest
-    testImplementation "org.wiremock:wiremock:3.13.2"
+    // wiremock required by TowerFusionEnvTest; use the self-contained
+    // distribution which shades its dependencies (incl. handlebars) to
+    // avoid pulling vulnerable transitive deps (GHSA-r4gv-qr8j-p3pg)
+    testImplementation "org.wiremock:wiremock-standalone:3.13.2"
     // Address security vulnerabilities CVE-2022-45688 and CVE-2023-5072
     testImplementation 'org.json:json:20240303'
 }
