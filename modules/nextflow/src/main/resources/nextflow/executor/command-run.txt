@@ -111,10 +111,10 @@ on_exit() {
     local exit_status=${nxf_main_ret:=0}
     [[ ${exit_status} -eq 0 && ${nxf_unstage_ret:=0} -ne 0 ]] && exit_status=${nxf_unstage_ret:=0}
     [[ ${exit_status} -eq 0 && ${last_err} -ne 0 ]] && exit_status=${last_err}
+    {{sync_cmd}}
     printf -- $exit_status {{exit_file}}
     set +u
     {{cleanup_cmd}}
-    {{sync_cmd}}
     exit $exit_status
 }
 
