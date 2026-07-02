@@ -1606,7 +1606,11 @@ class TaskProcessor {
         // add the taskConfig environment entries
         if( session.config.env instanceof Map ) {
             session.config.env.each { name, value ->
-                result.put( name, value?.toString() )
+                // skip entries with a null value (e.g. `env(HOST_VAR)` referencing a
+                // host environment variable that is not set) instead of exporting
+                // them as an empty string with a spurious warning -- see #5722
+                if( value != null )
+                    result.put( name, value.toString() )
             }
         }
         else {

@@ -73,7 +73,7 @@ class TaskProcessorTest extends Specification {
         binFolder.mkdirs()
 
         when:
-        def session = new Session([env: [X:"1", Y:"2"]])
+        def session = new Session([env: [X:"1", Y:"2", Z:null]])
         session.setBaseDir(home)
         def processor = createProcessor('task1', session)
         def builder = new ProcessBuilder()
@@ -83,6 +83,7 @@ class TaskProcessorTest extends Specification {
         builder.environment().X == '1'
         builder.environment().Y == '2'
         builder.environment().PATH == "\$PATH:${binFolder.toString()}"
+        !builder.environment().containsKey('Z')
 
         when:
         session = new Session([env: [X:"1", Y:"2", PATH:'/some']])
