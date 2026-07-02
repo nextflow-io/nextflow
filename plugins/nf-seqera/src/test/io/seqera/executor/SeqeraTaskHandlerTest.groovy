@@ -411,6 +411,135 @@ class SeqeraTaskHandlerTest extends Specification {
         capturedError == null
     }
 
+    def 'should fall back to scheduler API exit code when exit file is not available on a failed task'() {
+        given:
+        Throwable capturedError = null
+        Integer capturedExitStatus = null
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> Mock(TaskConfig)
+            lazyName() >> 'test_task'
+            setExitStatus(_) >> { args -> capturedExitStatus = args[0] }
+            getExitStatus() >> { capturedExitStatus }
+            setError(_) >> { args -> capturedError = args[0] }
+            setStdout(_) >> {}
+            setStderr(_) >> {}
+        }
+        def taskState = new SchedTaskState()
+            .status(SchedTaskStatus.FAILED)
+            .exitCode(137)
+        def describeResponse = new DescribeTaskResponse().taskState(taskState)
+        def client = Mock(SchedClient) {
+            describeTask(_) >> describeResponse
+            getTaskLogs(_) >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> client
+            getRunResourceLabels() >> [:]
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            readExitFile() >> Integer.MAX_VALUE
+        }
+        handler.setBatchTaskId('task-oom')
+        handler.status = TaskStatus.RUNNING
+
+        when:
+        def completed = handler.checkIfCompleted()
+
+        then:
+        completed
+        // the .exitcode file was unavailable, so the exit status comes from the scheduler API
+        capturedExitStatus == 137
+        // a real exit code is now present, so no generic error is set
+        capturedError == null
+    }
+
+    def 'should fall back to scheduler API exit code when exit file is not available on a succeeded task'() {
+        given:
+        Throwable capturedError = null
+        Integer capturedExitStatus = null
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> Mock(TaskConfig)
+            lazyName() >> 'test_task'
+            setExitStatus(_) >> { args -> capturedExitStatus = args[0] }
+            getExitStatus() >> { capturedExitStatus }
+            setError(_) >> { args -> capturedError = args[0] }
+            setStdout(_) >> {}
+            setStderr(_) >> {}
+        }
+        def taskState = new SchedTaskState()
+            .status(SchedTaskStatus.SUCCEEDED)
+            .exitCode(0)
+        def describeResponse = new DescribeTaskResponse().taskState(taskState)
+        def client = Mock(SchedClient) {
+            describeTask(_) >> describeResponse
+            getTaskLogs(_) >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> client
+            getRunResourceLabels() >> [:]
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            readExitFile() >> Integer.MAX_VALUE
+        }
+        handler.setBatchTaskId('task-ok')
+        handler.status = TaskStatus.RUNNING
+
+        when:
+        def completed = handler.checkIfCompleted()
+
+        then:
+        completed
+        capturedExitStatus == 0
+        capturedError == null
+    }
+
+    def 'should prefer the exit file over the scheduler API exit code when the file is available'() {
+        given:
+        Throwable capturedError = null
+        Integer capturedExitStatus = null
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> Mock(TaskConfig)
+            lazyName() >> 'test_task'
+            setExitStatus(_) >> { args -> capturedExitStatus = args[0] }
+            getExitStatus() >> { capturedExitStatus }
+            setError(_) >> { args -> capturedError = args[0] }
+            setStdout(_) >> {}
+            setStderr(_) >> {}
+        }
+        def taskState = new SchedTaskState()
+            .status(SchedTaskStatus.FAILED)
+            .exitCode(137)
+        def describeResponse = new DescribeTaskResponse().taskState(taskState)
+        def client = Mock(SchedClient) {
+            describeTask(_) >> describeResponse
+            getTaskLogs(_) >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> client
+            getRunResourceLabels() >> [:]
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            readExitFile() >> 2
+        }
+        handler.setBatchTaskId('task-file')
+        handler.status = TaskStatus.RUNNING
+
+        when:
+        def completed = handler.checkIfCompleted()
+
+        then:
+        completed
+        // the .exitcode file (2) takes precedence over the scheduler API value (137)
+        capturedExitStatus == 2
+        capturedError == null
+    }
+
     def 'should set index and hash on submitted task'() {
         given:
         Task capturedTask = null
