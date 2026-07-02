@@ -518,7 +518,7 @@ class BashWrapperBuilderTest extends Specification {
         when:
         def binding = newBashWrapperBuilder().makeBinding()
         then:
-        binding.sync_cmd == 'sync || true'
+        binding.sync_cmd == 'sync --file-system /work/dir || true'
 
         cleanup:
         SysEnv.pop()
