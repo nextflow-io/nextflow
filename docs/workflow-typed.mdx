@@ -5,115 +5,29 @@ description: Use typed workflows in Nextflow to define statically typed inputs a
 
 # Workflows (typed)
 
-Typed workflows use a new syntax for inputs and outputs that supports static typing.
+Typed workflows extend static typing to the workflow level. Type annotations apply to three parts of a workflow, and the Nextflow language server uses them to validate data as it enters, moves through, and leaves a pipeline.
 
-To use this feature:
+The features compose into an end-to-end chain. A value typed in the `params` block flows into a workflow's `take:` section, through its processes, and out through the `output` block. The language server checks each handoff as you write code.
 
-1. Enable the [strict parser][strict-syntax-page] by setting the `NXF_SYNTAX_PARSER` environment variable to `v2`:
-
-    ```bash
-    export NXF_SYNTAX_PARSER=v2
-    ```
-
-2. Set `nextflow.enable.types = true` in every script that uses typed workflows. The `params` block and `output` block can be used without this feature flag.
-
-See [Workflow (typed)][syntax-workflow-typed] for the complete syntax reference and [Migrating to static typing][migrating-static-types] to migrate existing code to static typing.
+:::note
+Typed workflows require static typing to be enabled. For more information about the required settings, see [Enabling static typing][enabling-static-typing].
+:::
 
 ## Typed parameters
 
 <AddedInVersion version="25.10" />
 
-A script can declare parameters using the `params` block:
+Type annotations on the `params` block type a pipeline's parameters. The language server validates each parameter reference against its declared type.
 
-```nextflow
-params {
-    // Path to input data.
-    input: Path
-
-    // Whether to save intermediate files.
-    save_intermeds: Boolean
-}
-
-workflow {
-    analyze(params.input, params.save_intermeds)
-}
-```
-
-All [standard types][stdlib-types] except for the dataflow types (`Channel` and `Value`) can be used for parameters.
-
-Typed parameters should only be referenced in the entry workflow or `output` block. Parameters can be passed to workflows and processes as explicit inputs.
-
-The default value can be overridden by the command line, params file, or config file. Parameters from multiple sources are resolved in the order described in [Pipeline parameters][cli-params]. Parameters specified on the command line are converted to the appropriate type based on the corresponding type annotation.
-
-A parameter that doesn't specify a default value is a *required* parameter. If a required parameter is not given a value at runtime, the run will fail.
-
-<AddedInVersion version="26.04" />
-
-Boolean parameters that don't specify a default value will default to `false`.
+See [Typed parameters][typed-parameters-page] for more information.
 
 ## Typed outputs
 
 <AddedInVersion version="25.10" />
 
-Workflow outputs can use type annotations:
+Type annotations on the `output` block type a workflow's published results. The language server validates each published output against its declared type.
 
-```nextflow
-nextflow.enable.types = true
-
-params {
-    input: String
-}
-
-process fastqc {
-    input:
-    reads: Path
-
-    output:
-    file('fastqc')
-
-    // ...
-}
-
-process summary {
-    input:
-    logs: Path
-
-    output:
-    file('report.html')
-
-    // ...
-}
-
-workflow {
-    main:
-    ch_reads = channel.fromPath(params.input)
-    ch_fastqc = fastqc(ch_reads)
-    summary_report = summary(ch_fastqc.collect())
-
-    publish:
-    fastqc = ch_fastqc
-    summary_report = summary_report
-}
-
-output {
-    fastqc: Channel<Path> {
-        path '.'
-    }
-
-    summary_report: Path {
-        path '.'
-    }
-}
-```
-
-In the above example, the workflow declares two outputs:
-
-- `fastqc`: a channel of FastQC results (`Channel<Path>`)
-- `summary_report`: a dataflow value containing a summary report (`Value<Path>` or `Path`)
-
-Type annotations are useful for documenting the structure of each workflow output, and they can be used by the language server to validate the type of each published output.
-
-Outputs that receive a dataflow value can be declared as `Value<V>` or `V` for short. In this example, the `summary_report` is declared with type `Path` as a shorthand for `Value<Path>`.
+See [Typed outputs][typed-outputs-page] for more information.
 
 ## Typed workflows
 
@@ -123,53 +37,17 @@ Outputs that receive a dataflow value can be declared as `Value<V>` or `V` for s
 Typed workflows are a preview feature. The syntax and behavior may change in future releases.
 :::
 
-Typed workflows can use type annotations in the `take:` and `emit:` sections:
+Type annotations in the `take:` and `emit:` sections type a workflow's inputs and outputs. The language server validates each input and output against its declared type.
 
-```nextflow
-nextflow.enable.types = true
+See [Typed workflows][typed-workflows-page] for more information.
 
-workflow hello_bye {
-    take:
-    samples: Channel<Path>
+## See also
 
-    main:
-    ch_hello = hello(samples)
-    val_bye = bye(ch_hello.collect())
+For the complete syntax reference, see [Workflow (typed)][syntax-workflow-typed]. For more information about converting existing code, see [Migrating to static typing][migrating-static-types].
 
-    emit:
-    result: Value<Path> = val_bye
-}
-```
-
-In the above example, `hello_bye` takes a channel of files (`Channel<Path>`) and emits a dataflow value with a single file (`Value<Path>`). See [Types][stdlib-types] for the list of available types.
-
-### Restricted syntax
-
-The following syntax patterns are no longer supported in typed workflows:
-
-- Using `Channel` to access channel factories (use `channel` instead)
-
-- Using implicit closure parameters (declare parameters explicitly instead)
-
-- Using `set` or `tap` to assign channels (use standard assignments instead)
-
-- Composing dataflow logic with `|` and `&` (use standard method calls instead)
-
-- Accessing process and workflow outputs via `.out` (use standard assignments instead)
-
-See [Preparing for static typing][preparing-static-types] for more information.
-
-### Operators
-
-The operator library has been updated to provide first-class support for static typing and records. All operators can be used in both typed workflows and legacy workflows. However, only a [core subset][operator-typed-page] of operators are recommended for use with static typing.
-
-See [Using operators with static typing][migrating-static-types-operators] for best practice guidelines when migrating existing code.
-
-[cli-params]: ./cli#pipeline-parameters
+[enabling-static-typing]: ./static-typing#enabling-static-typing
 [migrating-static-types]: ./tutorials/static-types
-[migrating-static-types-operators]: ./tutorials/static-types-operators
-[operator-typed-page]: ./reference/operator-typed
-[preparing-static-types]: ./tutorials/static-types#preparing-for-static-typing
-[stdlib-types]: ./reference/stdlib-types
-[strict-syntax-page]: ./strict-syntax
 [syntax-workflow-typed]: ./reference/syntax#workflow-typed
+[typed-outputs-page]: ./typed-outputs
+[typed-parameters-page]: ./typed-parameters
+[typed-workflows-page]: ./typed-workflows

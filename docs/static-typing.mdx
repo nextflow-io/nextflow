@@ -1,0 +1,77 @@
+---
+title: Static typing
+description: Overview of static typing in Nextflow, including typed processes, typed workflows, records, and how to migrate existing pipelines.
+---
+
+# Static typing
+
+**Static typing is optional. All existing code continues to work.**
+
+Static typing lets you model and validate the structure of your data as it flows through a pipeline. You add [standard Nextflow types][stdlib-types] to inputs and outputs at every level, from pipeline parameters to process and workflow outputs. The Nextflow language server uses those annotations to catch type-related errors as you write code.
+
+:::warning
+Some static typing features are previews. The syntax and behavior may change in future releases.
+:::
+
+## Static typing features
+
+Static typing is a set of related language features. Each one applies type annotations at a different stage of a pipeline, and you can adopt them independently or together:
+
+| Page | Description |
+| ---- | -------------- |
+| [Processes&nbsp;(typed)][process-typed-page] | Type annotations for process inputs and outputs, the `stage:` section, records, and tuples. |
+| [Workflows&nbsp;(typed)][workflow-typed-page] | Type annotations across a workflow, covering [Typed parameters][typed-parameters-page] (the `params` block), [Typed outputs][typed-outputs-page] (the `output` block), and [Typed workflows][typed-workflows-page] (the `take:` and `emit:` sections). |
+| [Operators&nbsp;(typed)][operator-typed-page] | The core operators recommended for static typing. |
+
+## Enabling static typing
+
+Static typing requires two settings:
+
+1. Enable the [strict parser][strict-syntax-page] by setting the `NXF_SYNTAX_PARSER` environment variable to `v2`:
+
+    ```bash
+    export NXF_SYNTAX_PARSER=v2
+    ```
+
+    The strict parser is enabled by default in Nextflow 26.04 and later.
+
+2. Set `nextflow.enable.types = true` in every script that uses typed processes or typed workflows:
+
+    ```nextflow
+    nextflow.enable.types = true
+    ```
+
+    The `params` block and `output` block work without this flag.
+
+A script with `nextflow.enable.types = true` cannot also contain legacy process or workflow definitions. For more information about feature flags, see [Feature flags][feature-flags-page].
+
+## Migrating existing pipelines
+
+Static typing is opt-in, and you can adopt it incrementally. To migrate an existing pipeline:
+
+1. Make sure your code is compatible with the [strict parser][strict-syntax-page] and refactor any patterns that aren't supported in typed workflows. For more information about preparing existing code, see [Preparing for static typing][preparing-static-types].
+2. Follow the [migration tutorial][migrating-static-types] to convert parameters, processes, and workflows to the typed syntax.
+3. Replace legacy operators with their typed equivalents using [Using operators with static typing][migrating-static-types-operators].
+
+## See also
+
+Static typing builds on functionality documented in other sections:
+
+- [Types][stdlib-types]: The type system that the annotations draw from, including records, collections, and dataflow types.
+- [Strict syntax][strict-syntax-page]: The strict (`v2`) parser that static typing requires.
+- [Feature flags][feature-flags-page]: Documents the `nextflow.enable.types` flag and related settings.
+- [Syntax reference][syntax-page]: Gives the formal grammar for typed processes and workflows.
+
+[feature-flags-page]: ./reference/feature-flags
+[migrating-static-types]: ./tutorials/static-types
+[migrating-static-types-operators]: ./tutorials/static-types-operators
+[operator-typed-page]: ./reference/operator-typed
+[preparing-static-types]: ./tutorials/static-types#preparing-for-static-typing
+[process-typed-page]: ./process-typed
+[stdlib-types]: ./reference/stdlib-types
+[strict-syntax-page]: ./strict-syntax
+[syntax-page]: ./reference/syntax
+[typed-outputs-page]: ./typed-outputs
+[typed-parameters-page]: ./typed-parameters
+[typed-workflows-page]: ./typed-workflows
+[workflow-typed-page]: ./workflow-typed

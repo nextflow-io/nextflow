@@ -1,0 +1,74 @@
+---
+title: Typed outputs
+description: Annotate workflow outputs in Nextflow using type annotations in the output block.
+---
+
+# Typed outputs
+
+<AddedInVersion version="25.10" />
+
+Workflow outputs can use type annotations:
+
+```nextflow
+nextflow.enable.types = true
+
+params {
+    input: String
+}
+
+process fastqc {
+    input:
+    reads: Path
+
+    output:
+    file('fastqc')
+
+    // ...
+}
+
+process summary {
+    input:
+    logs: Path
+
+    output:
+    file('report.html')
+
+    // ...
+}
+
+workflow {
+    main:
+    ch_reads = channel.fromPath(params.input)
+    ch_fastqc = fastqc(ch_reads)
+    summary_report = summary(ch_fastqc.collect())
+
+    publish:
+    fastqc = ch_fastqc
+    summary_report = summary_report
+}
+
+output {
+    fastqc: Channel<Path> {
+        path '.'
+    }
+
+    summary_report: Path {
+        path '.'
+    }
+}
+```
+
+In the above example, the workflow declares two outputs:
+
+- `fastqc`: a channel of FastQC results (`Channel<Path>`)
+- `summary_report`: a dataflow value containing a summary report (`Value<Path>` or `Path`)
+
+## Features
+
+Type annotations document the structure of each workflow output, and the language server uses them to validate the type of each published output.
+
+Outputs that receive a dataflow value can be declared as `Value<V>` or `V` for short. In this example, the `summary_report` is declared with type `Path` as a shorthand for `Value<Path>`.
+
+For more information about standard types, see [Types][stdlib-types].
+
+[stdlib-types]: ./reference/stdlib-types

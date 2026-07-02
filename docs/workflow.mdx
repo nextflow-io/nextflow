@@ -13,6 +13,10 @@ In Nextflow, a **workflow** is a specialized function for composing [processes][
 
 - Both entry workflows and named workflows can contain [dataflow logic](#dataflow) such as calling processes, workflows, and channel operators.
 
+:::note
+This page describes the original workflow syntax. Nextflow also supports a [typed workflow syntax][workflow-typed-page] with statically typed inputs and outputs. See [Static typing][static-typing-page] for an overview.
+:::
+
 ## Entry workflow
 
 A script can define up to one *entry workflow*, which does not have a name and serves as the entrypoint of the script:
@@ -778,5 +782,7 @@ Workflows can also be invoked recursively:
 [stdlib-types-value]: ./reference/stdlib-types#valuev
 [syntax-include]: ./reference/syntax#include
 [workflow-outputs-first-preview]: ./migrations/24-04#workflow-outputs-first-preview
+[static-typing-page]: ./static-typing
 [workflow-outputs-second-preview]: ./migrations/24-10#workflow-outputs-second-preview
 [workflow-outputs-third-preview]: ./migrations/25-04#workflow-outputs-third-preview
+[workflow-typed-page]: ./workflow-typed
