@@ -32,7 +32,7 @@ User name required to access private repositories on the SCM server.
 
 ##### `providers.<provider>.password`
 
-User password required to access private repositories on the SCM server. For BitBucket, use your API token as the `token` value instead — app passwords are deprecated.
+User password required to access private repositories on the SCM server. For BitBucket, use your API token as the `token` value instead. App passwords are deprecated.
 
 ##### `providers.<provider>.token`
 
@@ -74,10 +74,10 @@ providers {
 ```
 
 :::warning
-For the Bitbucket Cloud REST API, `user` must be your **Atlassian account email** (listed under *Personal settings > Email aliases* in Bitbucket), *not* your Bitbucket username. Using the username results in a `401 Not authorized` error.
+For the Bitbucket Cloud REST API, `user` must be your **Atlassian account email** (listed under *Personal settings > Email aliases* in Bitbucket), not your Bitbucket username. Using the username results in a `401 Not authorized` error.
 :::
 
-When creating the [API token](https://id.atlassian.com/manage-profile/security/api-tokens), select **Create API token with scopes** and grant at least `read:repository:bitbucket` (add `write:repository:bitbucket` if you also push). A token without Bitbucket scopes — for example one created only for Jira or Confluence — is rejected with `401 Not authorized`.
+When you create the [API token](https://id.atlassian.com/manage-profile/security/api-tokens), select **Create API token with scopes** and grant at least `read:repository:bitbucket`. Add `write:repository:bitbucket` if you also push. A token without Bitbucket scopes (for example, one created only for Jira or Confluence) is rejected with `401 Not authorized`.
 
 <AddedInVersion version="25.10">
 API tokens are supported for BitBucket authentication. When both `token` and `password` are provided, the API token takes priority over the app password.
