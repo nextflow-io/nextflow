@@ -21,6 +21,7 @@ import java.nio.file.attribute.BasicFileAttributes
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.file.FileHelper
 import nextflow.util.Duration
 /**
@@ -82,7 +83,9 @@ class ExitStatusAwaiter {
         final status = exitFile.text?.trim()
         if( status ) {
             try {
-                return status.toInteger()
+                final result = status.toInteger()
+                refreshWorkDir(exitFile.parent)
+                return result
             }
             catch( Exception e ) {
                 log.warn "Unable to parse process exit file: ${exitFile.toUriString()} -- bad value: '$status'"
@@ -102,5 +105,10 @@ class ExitStatusAwaiter {
             return null
         log.warn "Exit status file is still empty after ${delta}ms: ${exitFile.toUriString()}"
         return Integer.MAX_VALUE
+    }
+
+    private void refreshWorkDir(Path workDir) {
+        if( Global.session && FileHelper.workDirIsSharedFS )
+            FileHelper.listDirectory(workDir)
     }
 }
