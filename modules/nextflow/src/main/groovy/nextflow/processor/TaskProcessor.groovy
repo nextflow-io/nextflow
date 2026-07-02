@@ -62,6 +62,7 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
 import nextflow.executor.StoredTaskHandler
+import nextflow.executor.TaskArrayExecutor
 import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
 import nextflow.file.FileHelper
@@ -298,8 +299,16 @@ class TaskProcessor {
         this.forksCount = maxForks ? new LongAdder() : null
         this.isFair0 = config.getFair()
         final arraySize = config.getArray()
-        this.arrayCollector = arraySize > 0 ? new TaskArrayCollector(this, executor, arraySize) : null
+        this.arrayCollector = createArrayCollector(arraySize)
         log.debug "Creating process '$name': maxForks=${maxForks}; fair=${isFair0}; array=${arraySize}"
+    }
+
+    private TaskArrayCollector createArrayCollector(int arraySize) {
+        if( arraySize > 0 && executor instanceof TaskArrayExecutor )
+            return new TaskArrayCollector(this, executor, arraySize)
+        if( arraySize > 0 )
+            log.warn "Executor '${executor.name}' does not support job arrays -- the array directive will be ignored for process '$name'"
+        return null
     }
 
     /**
