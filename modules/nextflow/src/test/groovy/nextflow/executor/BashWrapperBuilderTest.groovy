@@ -524,6 +524,19 @@ class BashWrapperBuilderTest extends Specification {
         SysEnv.pop()
     }
 
+    def 'should suppress sync command when NXF_ENABLE_FS_SYNC=false' () {
+        given:
+        SysEnv.push([NXF_ENABLE_FS_SYNC: 'false'])
+
+        when:
+        def binding = newBashWrapperBuilder().makeBinding()
+        then:
+        binding.sync_cmd == null
+
+        cleanup:
+        SysEnv.pop()
+    }
+
     def 'should unstage outputs' () {
         given:
         def folder = Paths.get('/work/dir')
