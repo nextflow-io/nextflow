@@ -20,6 +20,7 @@ import java.nio.file.Files
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.util.Duration
 import spock.lang.Specification
 /**
  *
@@ -121,25 +122,24 @@ class GridExecutorTest extends Specification {
         def executor = Mock(AbstractGridExecutor) {
             getConfig() >> new ExecutorConfig([:])
         }
-        executor.checkActiveStatus(_) >> { return true }
 
         when:
         def handler = new GridTaskHandler(task, executor)
         handler.status = TaskStatus.RUNNING
         handler.exitFile.text = ''
-        handler.exitStatusReadTimeoutMillis = 1000
+        // inject a fast-timeout awaiter so the test doesn't need to wait 270 seconds
+        handler.@exitAwaiter = new ExitStatusAwaiter(Duration.of('1sec'))
 
         then:
-        // the first try return false
+        // the first try return false (within timeout window)
         !handler.checkIfCompleted()
-        // wait more the timeout defined by the property 'exitStatusReadTimeoutMillis'
+        // wait past the 1-second timeout
         sleep 1_500
         // now 'checkIfCompleted' returns true
         handler.checkIfCompleted()
         handler.status == TaskStatus.COMPLETED
-        // but the 'exitStatus' is-1 to signal the '.exitcode' file was empty
-        // and allow the task to be retried
-        handler.task.exitStatus == -1
+        // exit status is Integer.MAX_VALUE when the .exitcode file was persistently empty
+        handler.task.exitStatus == Integer.MAX_VALUE
 
     }
 

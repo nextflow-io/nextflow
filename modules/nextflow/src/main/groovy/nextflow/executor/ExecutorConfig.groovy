@@ -193,7 +193,7 @@ class ExecutorConfig implements ConfigScope {
     }
 
     Duration getExitReadTimeout(String execName) {
-        getExecConfigProp(execName, 'exitReadTimeout', null) as Duration
+        getExecConfigProp(execName, 'exitReadTimeout', exitReadTimeout) as Duration
     }
 
     Duration getMonitorDumpInterval(String execName) {

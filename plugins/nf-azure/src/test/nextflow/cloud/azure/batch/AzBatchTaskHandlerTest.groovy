@@ -235,6 +235,41 @@ class AzBatchTaskHandlerTest extends Specification {
         handler.status == TaskStatus.COMPLETED
     }
 
+    def 'should wait for completion when the exit file is not yet visible'() {
+        given:
+        def task = Spy(new TaskRun()){
+            getContainer() >> 'ubuntu'
+        }
+        task.name = 'foo'
+        task.workDir = Path.of('/tmp/wdir')
+        def taskKey = new AzTaskKey('pool-123', 'job-456')
+        def azTask = new BatchTask()
+        def execInfo = new BatchTaskExecutionInfo(0,0)
+        azTask.executionInfo = execInfo
+        azTask.state = BatchTaskState.COMPLETED
+
+        def batchService = Mock(AzBatchService){
+            getTask(taskKey) >> azTask
+        }
+        def executor = Mock(AzBatchExecutor){
+            getBatchService() >> batchService
+        }
+        def handler = Spy(new AzBatchTaskHandler(task, executor)){
+            deleteTask(_,_) >> null
+        }
+        handler.status = TaskStatus.RUNNING
+        handler.taskKey = taskKey
+
+        when: 'the .exitcode file has not propagated yet'
+        def result = handler.checkIfCompleted()
+
+        then:
+        1 * handler.readExitFile() >> null   // still within the retry window
+        and:
+        result == false
+        handler.status != TaskStatus.COMPLETED
+    }
+
     def 'should check if completed and no scheduler exit code neither .exitcode file'() {
         given:
         def task = Spy(new TaskRun()){
