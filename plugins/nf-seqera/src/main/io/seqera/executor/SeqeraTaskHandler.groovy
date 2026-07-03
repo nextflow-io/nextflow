@@ -241,15 +241,13 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         if (isTerminated(schedStatus)) {
             log.debug "[SEQERA] Process `${task.lazyName()}` - terminated taskId=$taskId; status=$schedStatus"
             // finalize the task
-            task.exitStatus = readExitFile()
-            // Fallback: when the .exitcode file is not available (e.g. the container was killed
-            // before the wrapper's on_exit trap could write it — OOM, spot reclaim, timeout — or
-            // the file is not yet visible in the work dir), use the exit code reported by the
-            // scheduler API. The .exitcode file remains the source of truth when present.
-            if (task.exitStatus == Integer.MAX_VALUE && cachedTaskState?.getExitCode() != null) {
-                task.exitStatus = cachedTaskState.getExitCode()
-                log.debug "[SEQERA] Read exit code from scheduler API for taskId $taskId; exit=${task.exitStatus}"
-            }
+            // prefer the exit code reported by the scheduler API; fall back to the `.exitcode`
+            // file only when the API does not report one. On error (e.g. OOM, spot reclaim,
+            // timeout) the container may terminate before the wrapper's on_exit trap can write
+            // the file, so the scheduler exit code is the more reliable source — consistent with
+            // the K8s, AWS Batch and Azure Batch executors.
+            final apiExitCode = cachedTaskState?.getExitCode()
+            task.exitStatus = apiExitCode != null ? apiExitCode : readExitFile()
             if (isFailed(schedStatus)) {
                 // When no exit code available, get the error message from task state
                 if (task.exitStatus == Integer.MAX_VALUE) {
