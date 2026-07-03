@@ -133,6 +133,22 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
      */
     private BatchContext<String,JobDetail> context
 
+    /**
+     * Timestamp of the first poll of the current streak of polls for which the
+     * job status could not be resolved i.e. {@link #describeJob(String)}
+     * returned {@code null}; zero while the status is resolvable. Used to bound
+     * an unresolvable job status with {@link #exitReadTimeoutMillis} instead of
+     * polling forever -- see {@link #checkIfCompleted()}
+     */
+    private long unresolvedTimestampMillis
+
+    /**
+     * Max time to wait for the job status to become resolvable again before
+     * failing the task, from the `executor.exitReadTimeout` config option --
+     * the same setting bounding the analogous condition in the grid executors
+     */
+    private long exitReadTimeoutMillis
+
     @TestOnly
     protected AwsBatchTaskHandler() {}
 
@@ -155,6 +171,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
         this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
         this.traceFile = task.workDir.resolve(TaskRun.CMD_TRACE)
+        this.exitReadTimeoutMillis = executor.config.getExitReadTimeout(executor.name).toMillis()
     }
 
     protected String getJobId() { jobId }
@@ -304,7 +321,28 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         if( !isRunning() )
             return false
         final job = describeJob(jobId)
-        final done = job?.status() in [JobStatus.SUCCEEDED, JobStatus.FAILED]
+        if( job == null ) {
+            // the job status cannot be resolved -- either the describe request failed or
+            // the job is missing from the response (e.g. it aged out of the Batch job
+            // history, which retains jobs for ~24 hours). Bound this condition with
+            // `exitReadTimeout`, symmetrically with the grid executors, instead of
+            // polling forever -- see https://github.com/nextflow-io/nextflow/issues/7301
+            final now = System.currentTimeMillis()
+            if( !unresolvedTimestampMillis )
+                unresolvedTimestampMillis = now
+            final delta = now - unresolvedTimestampMillis
+            if( delta < exitReadTimeoutMillis )
+                return false
+            log.debug "[AWS BATCH] Failed to get status for job=$jobId -- exitReadTimeoutMillis: $exitReadTimeoutMillis; delta: $delta"
+            task.exitStatus = Integer.MAX_VALUE
+            task.error = new ProcessException("Task '${task.lazyName()}' status could not be resolved -- the job was missing from the DescribeJobs response for longer than `exitReadTimeout` ($exitReadTimeoutMillis ms). Likely it has been terminated by the external system")
+            task.stdout = outputFile
+            task.stderr = errorFile
+            status = TaskStatus.COMPLETED
+            return true
+        }
+        unresolvedTimestampMillis = 0
+        final done = job.status() in [JobStatus.SUCCEEDED, JobStatus.FAILED]
         if( done ) {
             // take the exit code of the container, if missing (null)
             // take the exit code from the `.exitcode` file create by nextflow

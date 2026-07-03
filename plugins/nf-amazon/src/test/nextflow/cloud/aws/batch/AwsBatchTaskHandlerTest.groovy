@@ -28,8 +28,10 @@ import nextflow.cloud.aws.config.AwsConfig
 import nextflow.cloud.aws.util.S3PathFactory
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
+import nextflow.exception.ProcessException
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
+import nextflow.executor.ExecutorConfig
 import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.Architecture
 import nextflow.processor.BatchContext
@@ -1237,7 +1239,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         def session = Mock(Session) {getConfig() >> config }
         def opts = new AwsOptions(session)
         and:
-        def executor = Mock(AwsBatchExecutor) { getAwsOptions() >> opts; isFusionEnabled()>>FUSION }
+        def executor = Mock(AwsBatchExecutor) { getAwsOptions() >> opts; isFusionEnabled()>>FUSION; getConfig() >> new ExecutorConfig([:]) }
         def proc = Mock(TaskProcessor) { getExecutor()>>executor }
         def task = Mock(TaskRun) {workDir>> Path.of('/foo'); getProcessor()>>proc }
         def handler = new AwsBatchTaskHandler(task, executor)
@@ -1363,6 +1365,67 @@ class AwsBatchTaskHandlerTest extends Specification {
         handler.task.exitStatus == Integer.MAX_VALUE
         handler.task.error.message == 'Unknown termination'
 
+    }
+
+    def 'should not fail the task while the job status is unresolvable within the exit read timeout'() {
+        given:
+        def task = new TaskRun()
+        task.name = 'hello'
+        def jobId = 'job-123'
+        def handler = Spy(new AwsBatchTaskHandler(task: task, jobId: jobId, status: TaskStatus.RUNNING, exitReadTimeoutMillis: 3_600_000))
+
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+        1 * handler.describeJob(jobId) >> null
+        and:
+        result == false
+        handler.status == TaskStatus.RUNNING
+        handler.@unresolvedTimestampMillis > 0
+    }
+
+    def 'should fail the task when the job status is unresolvable for longer than the exit read timeout'() {
+        given:
+        def task = new TaskRun()
+        task.name = 'hello'
+        def jobId = 'job-123'
+        def handler = Spy(new AwsBatchTaskHandler(task: task, jobId: jobId, status: TaskStatus.RUNNING, exitReadTimeoutMillis: 200))
+
+        when:
+        def result1 = handler.checkIfCompleted()
+        // wait longer than the timeout defined by `exitReadTimeoutMillis`
+        sleep 300
+        def result2 = handler.checkIfCompleted()
+        then:
+        2 * handler.describeJob(jobId) >> null
+        and:
+        result1 == false
+        result2 == true
+        handler.status == TaskStatus.COMPLETED
+        handler.task.exitStatus == Integer.MAX_VALUE
+        handler.task.error instanceof ProcessException
+        handler.task.error.message.contains('exitReadTimeout')
+    }
+
+    def 'should reset the unresolved status window when the job status becomes resolvable again'() {
+        given:
+        def task = new TaskRun()
+        task.name = 'hello'
+        def jobId = 'job-123'
+        def handler = Spy(new AwsBatchTaskHandler(task: task, jobId: jobId, status: TaskStatus.RUNNING, exitReadTimeoutMillis: 3_600_000))
+        and:
+        def job = JobDetail.builder().status(JobStatus.RUNNING).build()
+
+        when:
+        def result1 = handler.checkIfCompleted()
+        def result2 = handler.checkIfCompleted()
+        then:
+        2 * handler.describeJob(jobId) >>> [null, job]
+        and:
+        result1 == false
+        result2 == false
+        handler.status == TaskStatus.RUNNING
+        handler.@unresolvedTimestampMillis == 0L
     }
 
     def 'should return zero spot interruptions when no attempts or non-spot terminations exist'() {
