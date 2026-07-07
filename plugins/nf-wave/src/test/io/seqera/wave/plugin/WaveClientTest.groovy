@@ -1410,4 +1410,44 @@ class WaveClientTest extends Specification {
             cached: resp.cached )
     }
 
+    @Unroll
+    def 'should map package provider #provider to wave type #type' () {
+        given:
+        def wave = new WaveClient(Mock(Session) { getConfig() >> [wave:[:]] })
+
+        expect:
+        wave.mapProviderToWaveType(provider) == type
+
+        where:
+        provider     | type
+        'conda'      | PackagesSpec.Type.CONDA
+        'mamba'      | PackagesSpec.Type.CONDA
+        'micromamba' | PackagesSpec.Type.CONDA
+        'CONDA'      | PackagesSpec.Type.CONDA
+        'pixi'       | PackagesSpec.Type.CONDA
+        'uv'         | null
+        'nix'        | null
+        'guix'       | null
+        'pak'        | null
+        'install2r'  | null
+        null         | null
+    }
+
+    def 'should skip wave for local-only package providers' () {
+        given:
+        def wave = new WaveClient(Mock(Session) { getConfig() >> [wave:[:]] })
+
+        when: 'a local-only provider is used, wave is skipped (null spec)'
+        def local = wave.convertToWavePackagesSpec(new nextflow.packages.PackageSpec('uv', ['numpy']))
+        then:
+        local == null
+
+        when: 'a conda provider is converted to a conda wave spec'
+        def conda = wave.convertToWavePackagesSpec(new nextflow.packages.PackageSpec('conda', ['samtools']))
+        then:
+        conda != null
+        conda.type == PackagesSpec.Type.CONDA
+        conda.entries == ['samtools']
+    }
+
 }

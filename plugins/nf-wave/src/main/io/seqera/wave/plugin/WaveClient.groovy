@@ -785,14 +785,21 @@ class WaveClient {
      * Convert a Nextflow PackageSpec to Wave PackagesSpec
      */
     private PackagesSpec convertToWavePackagesSpec(nextflow.packages.PackageSpec spec) {
-        def waveSpec = new PackagesSpec()
-        
-        // Map provider to Wave PackagesSpec Type
+        // Map provider to Wave PackagesSpec Type. Wave can only build
+        // conda-based package environments; providers that Wave does not
+        // support (uv, nix, guix, ...) return null here so that Wave is
+        // skipped and the environment is created locally by their own
+        // provider plugin. This keeps mixed pipelines working, e.g. conda
+        // processes built by Wave alongside uv processes created locally.
         def waveType = mapProviderToWaveType(spec.provider)
-        if (waveType) {
-            waveSpec.withType(waveType)
+        if( waveType == null ) {
+            log.debug "Package provider '${spec.provider}' is not supported by Wave -- the environment will be created locally by the nf-${spec.provider} provider"
+            return null
         }
-        
+
+        def waveSpec = new PackagesSpec()
+        waveSpec.withType(waveType)
+
         // Set entries or environment
         if (spec.hasEntries()) {
             waveSpec.withEntries(spec.entries)
@@ -825,11 +832,14 @@ class WaveClient {
             case 'micromamba':
                 return PackagesSpec.Type.CONDA
             case 'pixi':
-                // Wave doesn't support pixi yet, so we'll use conda for now
+                // pixi resolves conda packages, so Wave builds them as conda
                 return PackagesSpec.Type.CONDA
             default:
-                log.warn "Unknown package provider for Wave: ${provider}, defaulting to CONDA"
-                return PackagesSpec.Type.CONDA
+                // Providers such as uv, nix, guix, pak and install2r create
+                // local environments that Wave cannot build into a container.
+                // Return null so the caller skips Wave and the provider plugin
+                // creates the environment locally instead.
+                return null
         }
     }
 }
