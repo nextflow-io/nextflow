@@ -48,3 +48,10 @@ dependencies {
     testImplementation ('org.wiremock:wiremock-standalone:3.13.2') { exclude module: 'groovy-all' }
 }
 
+test {
+    // Allow the Basic scheme on HTTPS proxy tunnelling, required by the authenticated
+    // proxy tests (see HttpClientHelperTest). At runtime this is set by the Nextflow
+    // launcher when the proxy configuration provides credentials.
+    systemProperty 'jdk.http.auth.tunneling.disabledSchemes', ''
+}
+

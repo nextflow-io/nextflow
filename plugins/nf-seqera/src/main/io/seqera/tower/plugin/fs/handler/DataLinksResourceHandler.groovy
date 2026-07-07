@@ -35,6 +35,7 @@ import io.seqera.tower.plugin.fs.ResourceTypeHandler
 import io.seqera.tower.plugin.fs.SeqeraFileAttributes
 import io.seqera.tower.plugin.fs.SeqeraFileSystem
 import io.seqera.tower.plugin.fs.SeqeraPath
+import nextflow.util.HttpClientHelper
 
 /**
  * {@link ResourceTypeHandler} for the {@code data-links} resource type.
@@ -58,9 +59,9 @@ class DataLinksResourceHandler implements ResourceTypeHandler {
     private final HttpClient httpClient
 
     DataLinksResourceHandler(SeqeraFileSystem fs, SeqeraDataLinkClient client) {
-        this(fs, client, HttpClient.newBuilder()
+        this(fs, client, HttpClientHelper.applyProxy(HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
-                .followRedirects(HttpClient.Redirect.NORMAL)
+                .followRedirects(HttpClient.Redirect.NORMAL))
                 .build())
     }
 

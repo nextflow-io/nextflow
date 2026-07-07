@@ -668,6 +668,7 @@ class Launcher {
                 if( proxy.authenticator() ) {
                     log.debug "Setting $qualifier proxy authenticator"
                     Authenticator.setDefault(proxy.authenticator())
+                    allowProxyAuthSchemes()
                 }
             }
         }
@@ -675,6 +676,25 @@ class Launcher {
             log.warn "Not a valid $qualifier proxy: '$str' -- Check the value of variable `$var` in your environment"
         }
 
+    }
+
+    /**
+     * Allow the JDK HTTP stack to send proxy credentials. By default the JDK
+     * disables the Basic scheme for HTTPS tunnelling via the property
+     * {@code jdk.http.auth.tunneling.disabledSchemes=Basic} (see
+     * {@code $JAVA_HOME/conf/net.properties}), so proxy credentials are silently
+     * dropped on the HTTPS CONNECT request even when an authenticator is set.
+     * When the proxy configuration provides credentials, default these properties
+     * to empty unless the user has already set them explicitly.
+     */
+    @PackageScope
+    static void allowProxyAuthSchemes() {
+        for( final name : ['jdk.http.auth.tunneling.disabledSchemes', 'jdk.http.auth.proxying.disabledSchemes'] ) {
+            if( System.getProperty(name) == null ) {
+                log.debug "Setting system property '$name' to empty to allow proxy authentication"
+                System.setProperty(name, '')
+            }
+        }
     }
 
     /**

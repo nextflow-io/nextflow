@@ -38,6 +38,7 @@ import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.exception.HttpResponseLengthExceedException
 import nextflow.exception.RateLimitExceededException
+import nextflow.util.HttpClientHelper
 import nextflow.util.RetryConfig
 import nextflow.util.Threads
 import org.eclipse.jgit.api.Git
@@ -510,6 +511,8 @@ abstract class RepositoryProvider {
             .version(HttpClient.Version.HTTP_1_1)
             .connectTimeout(Duration.ofSeconds(60))
             .followRedirects(HttpClient.Redirect.NORMAL)
+        // use the forward proxy defined in the environment, if any
+        HttpClientHelper.applyProxy(builder)
         // use virtual threads executor if enabled
         if( Threads.useVirtual() )
             builder.executor(Executors.newVirtualThreadPerTaskExecutor())

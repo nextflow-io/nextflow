@@ -420,6 +420,48 @@ class LauncherTest extends Specification {
     }
 
     @RestoreSystemProperties
+    def 'should clear proxy auth disabled schemes when the proxy defines credentials' () {
+
+        given:
+        System.clearProperty('jdk.http.auth.tunneling.disabledSchemes')
+        System.clearProperty('jdk.http.auth.proxying.disabledSchemes')
+
+        when:
+        Launcher.setProxy('https', [https_proxy: 'https://user:pass@proxy.com:8080'])
+        then:
+        System.getProperty('jdk.http.auth.tunneling.disabledSchemes') == ''
+        System.getProperty('jdk.http.auth.proxying.disabledSchemes') == ''
+    }
+
+    @RestoreSystemProperties
+    def 'should not override user provided proxy auth disabled schemes' () {
+
+        given:
+        System.setProperty('jdk.http.auth.tunneling.disabledSchemes', 'Digest')
+        System.setProperty('jdk.http.auth.proxying.disabledSchemes', 'Basic')
+
+        when:
+        Launcher.setProxy('https', [https_proxy: 'https://user:pass@proxy.com:8080'])
+        then:
+        System.getProperty('jdk.http.auth.tunneling.disabledSchemes') == 'Digest'
+        System.getProperty('jdk.http.auth.proxying.disabledSchemes') == 'Basic'
+    }
+
+    @RestoreSystemProperties
+    def 'should not touch proxy auth disabled schemes when the proxy has no credentials' () {
+
+        given:
+        System.clearProperty('jdk.http.auth.tunneling.disabledSchemes')
+        System.clearProperty('jdk.http.auth.proxying.disabledSchemes')
+
+        when:
+        Launcher.setProxy('https', [https_proxy: 'proxy.com:8080'])
+        then:
+        System.getProperty('jdk.http.auth.tunneling.disabledSchemes') == null
+        System.getProperty('jdk.http.auth.proxying.disabledSchemes') == null
+    }
+
+    @RestoreSystemProperties
     def 'should set no proxy property' () {
 
         given:

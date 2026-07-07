@@ -1,0 +1,84 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package test
+
+import java.lang.reflect.Method
+
+import groovy.transform.CompileDynamic
+
+/**
+ * Test helper to modify the process environment as seen by {@link System#getenv()}.
+ *
+ * This is needed to test code paths resolving their settings directly from the
+ * environment e.g. proxy configuration. It relies on reflection over
+ * {@code java.lang.ProcessEnvironment}, therefore it requires the test JVM to be
+ * launched with {@code --add-opens=java.base/java.lang=ALL-UNNAMED} and
+ * {@code --add-opens=java.base/java.util=ALL-UNNAMED} (already set by the
+ * project build).
+ *
+ * @author Phil Ewels <phil.ewels@seqera.io>
+ */
+@CompileDynamic
+class EnvHelper {
+
+    /**
+     * Run the given action with the specified variables applied to the process
+     * environment, restoring the original values on completion. A {@code null}
+     * value removes the variable.
+     *
+     * @param vars The environment variables to apply
+     * @param action The action to run
+     */
+    static void withEnv(Map<String,String> vars, Closure action) {
+        final Map<String,String> saved = new HashMap<>()
+        for( final entry : vars.entrySet() ) {
+            saved.put(entry.key, System.getenv(entry.key))
+            setEnv(entry.key, entry.value)
+        }
+        try {
+            action.call()
+        }
+        finally {
+            for( final entry : saved.entrySet() )
+                setEnv(entry.key, entry.value)
+        }
+    }
+
+    /**
+     * Set or remove ({@code value == null}) a variable in the process environment
+     */
+    static void setEnv(String name, String value) {
+        final env = environmentMap()
+        final varClass = Class.forName('java.lang.ProcessEnvironment$Variable')
+        final valClass = Class.forName('java.lang.ProcessEnvironment$Value')
+        final Method varOf = varClass.getDeclaredMethod('valueOf', String)
+        final Method valOf = valClass.getDeclaredMethod('valueOf', String)
+        varOf.setAccessible(true)
+        valOf.setAccessible(true)
+        if( value != null )
+            env.put(varOf.invoke(null, name), valOf.invoke(null, value))
+        else
+            env.remove(varOf.invoke(null, name))
+    }
+
+    private static Map environmentMap() {
+        final clazz = Class.forName('java.lang.ProcessEnvironment')
+        final field = clazz.getDeclaredField('theEnvironment')
+        field.setAccessible(true)
+        return (Map) field.get(null)
+    }
+}
