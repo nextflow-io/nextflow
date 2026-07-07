@@ -1,0 +1,9 @@
+Manifest-Version: 1.0
+Plugin-Class: nextflow.pak.PakPlugin
+Plugin-Id: nf-pak
+Plugin-Version: 0.1.0
+Plugin-Provider: Seqera Labs
+Plugin-Description: R pak package manager support for Nextflow
+Plugin-License: Apache-2.0
+Plugin-Requires: >=25.04.0
+Nextflow-Version: >=25.04.0
