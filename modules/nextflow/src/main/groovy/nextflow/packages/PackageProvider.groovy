@@ -64,8 +64,24 @@ interface PackageProvider {
 
     /**
      * Get provider-specific configuration
-     * 
+     *
      * @return Configuration object for this provider
      */
     Object getConfig()
+
+    /**
+     * The manifest / lock file names this provider can auto-detect in a process
+     * module directory (e.g. {@code ["environment.yml"]} for conda or
+     * {@code ["requirements.txt", "pyproject.toml"]} for uv).
+     *
+     * When the {@code package} directive is omitted and {@code packages.autoDetect}
+     * is enabled, the first matching file found in the module directory is used to
+     * build the package specification for this provider.
+     *
+     * @return the list of manifest file names, or an empty list if the provider
+     *         does not support manifest auto-detection
+     */
+    default List<String> getManifestFileNames() {
+        return Collections.<String>emptyList()
+    }
 }

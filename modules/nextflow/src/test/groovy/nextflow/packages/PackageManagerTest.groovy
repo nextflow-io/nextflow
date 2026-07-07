@@ -16,6 +16,8 @@
 
 package nextflow.packages
 
+import java.nio.file.Files
+
 import nextflow.ISession
 import spock.lang.Specification
 
@@ -108,6 +110,26 @@ class PackageManagerTest extends Specification {
         spec.channels == ['bioconda']
     }
 
+    def 'should parse the directive named-args form (leading options map)'() {
+        when:
+        // `package "numpy pandas", provider: "uv"` is delivered as [ [provider:'uv'], "numpy pandas" ]
+        def spec = PackageManager.parseSpec([[provider: 'uv'], 'numpy pandas'], 'conda')
+
+        then:
+        spec.provider == 'uv'
+        spec.entries == ['numpy pandas']
+    }
+
+    def 'should fall back to the default provider when none is given in the named-args form'() {
+        when:
+        def spec = PackageManager.parseSpec([[channels: ['bioconda']], 'samtools'], 'conda')
+
+        then:
+        spec.provider == 'conda'
+        spec.entries == ['samtools']
+        spec.channels == ['bioconda']
+    }
+
     def 'should throw error for invalid package definition'() {
         when:
         PackageManager.parseSpec(123, 'conda')
@@ -116,22 +138,102 @@ class PackageManagerTest extends Specification {
         thrown(IllegalArgumentException)
     }
 
-    // TODO: Fix mock setup for navigate extension method
-    // def 'should check if feature is enabled'() {
-    //     given:
-    //     def mockConfig = Mock(Map)
-    //     mockConfig.navigate('nextflow.preview.package', false) >> enabled
-    //     def session = Mock(ISession) {
-    //         getConfig() >> mockConfig
-    //     }
+    def 'should auto-detect a manifest file in the module directory'() {
+        given:
+        def dir = Files.createTempDirectory('test')
+        dir.resolve('environment.yml').text = 'name: test'
+        def manifests = [conda: ['environment.yml', 'environment.yaml'], uv: ['requirements.txt']]
 
-    //     expect:
-    //     PackageManager.isEnabled(session) == result
+        when:
+        def spec = PackageManager.findManifestSpec(dir, manifests)
 
-    //     where:
-    //     enabled | result
-    //     true    | true
-    //     false   | false
-    //     null    | false
-    // }
+        then:
+        spec.provider == 'conda'
+        spec.environment == dir.resolve('environment.yml').toAbsolutePath().toString()
+        spec.hasEnvironmentFile()
+
+        cleanup:
+        dir?.deleteDir()
+    }
+
+    def 'should auto-detect the uv manifest when only it is present'() {
+        given:
+        def dir = Files.createTempDirectory('test')
+        dir.resolve('requirements.txt').text = 'numpy'
+        def manifests = [conda: ['environment.yml'], uv: ['requirements.txt', 'pyproject.toml']]
+
+        when:
+        def spec = PackageManager.findManifestSpec(dir, manifests)
+
+        then:
+        spec.provider == 'uv'
+        spec.environment.endsWith('requirements.txt')
+
+        cleanup:
+        dir?.deleteDir()
+    }
+
+    def 'should prefer conda over uv when both manifests are present'() {
+        given:
+        def dir = Files.createTempDirectory('test')
+        dir.resolve('environment.yml').text = 'name: test'
+        dir.resolve('requirements.txt').text = 'numpy'
+        def manifests = [conda: ['environment.yml'], uv: ['requirements.txt']]
+
+        when:
+        def spec = PackageManager.findManifestSpec(dir, manifests)
+
+        then:
+        spec.provider == 'conda'
+
+        cleanup:
+        dir?.deleteDir()
+    }
+
+    def 'should return null when no manifest is found'() {
+        given:
+        def dir = Files.createTempDirectory('test')
+        def manifests = [conda: ['environment.yml'], uv: ['requirements.txt']]
+
+        expect:
+        PackageManager.findManifestSpec(dir, manifests) == null
+
+        cleanup:
+        dir?.deleteDir()
+    }
+
+    def 'should return null when module dir is null'() {
+        expect:
+        PackageManager.findManifestSpec(null, [conda: ['environment.yml']]) == null
+    }
+
+    def 'should check if the feature is enabled'() {
+        given:
+        // use a real config map so the `navigate` extension method resolves
+        // (mocking Map fails because `navigate` is a Groovy extension method)
+        def session = Mock(ISession) { getConfig() >> config }
+
+        expect:
+        PackageManager.isEnabled(session) == result
+
+        where:
+        config                                        | result
+        [nextflow: [preview: [package: true]]]        | true
+        [nextflow: [preview: [package: false]]]       | false
+        [nextflow: [preview: [:]]]                    | false
+        [:]                                           | false
+    }
+
+    def 'should check if the feature is enabled by the script feature flag'() {
+        given:
+        def session = Mock(ISession) { getConfig() >> [:] }
+
+        when: 'the `nextflow.preview.package` flag is set in the pipeline script'
+        nextflow.NextflowMeta.instance.preview.setPackage(true)
+        then:
+        PackageManager.isEnabled(session)
+
+        cleanup:
+        nextflow.NextflowMeta.instance.preview.setPackage(false)
+    }
 }

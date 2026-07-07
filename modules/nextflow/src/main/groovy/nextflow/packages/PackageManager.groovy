@@ -20,8 +20,10 @@ import java.nio.file.Path
 import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.ISession
+import nextflow.NextflowMeta
 import nextflow.plugin.Plugins
 
 /**
@@ -122,59 +124,128 @@ class PackageManager {
      * @return Parsed package specification
      */
     static PackageSpec parseSpec(Object packageDef, String provider = null) {
-        if (packageDef instanceof String) {
-            return new PackageSpec(provider, [packageDef])
-        } else if (packageDef instanceof List) {
-            return new PackageSpec(provider, packageDef as List<String>)
-        } else if (packageDef instanceof Map) {
+        // a plain value, e.g. `package "numpy pandas"` (String or GString)
+        if (packageDef instanceof CharSequence) {
+            return new PackageSpec(provider, [packageDef.toString()])
+        }
+        if (packageDef instanceof List) {
+            def list = packageDef as List
+            // Groovy named-args directive form: `package "numpy", provider: "uv"`
+            // is delivered as [ [provider:'uv', ...], "numpy", ... ] with the
+            // options map as the leading element -- merge it and recurse.
+            if (list && list[0] instanceof Map) {
+                def opts = new LinkedHashMap(list[0] as Map)
+                def values = list.size() > 1 ? list.subList(1, list.size()) : []
+                if (!opts.containsKey('packages') && !opts.containsKey('environment') && values)
+                    opts.put('packages', values.size() == 1 ? values[0] : values)
+                return parseSpec(opts, provider)
+            }
+            return new PackageSpec(provider, list.collect { it?.toString() } as List<String>)
+        }
+        if (packageDef instanceof Map) {
             def map = packageDef as Map
             def spec = new PackageSpec()
-            
+
             if (map.containsKey('provider')) {
                 spec.provider = map.provider as String
             } else if (provider) {
                 spec.provider = provider
             }
-            
+
             if (map.containsKey('packages')) {
                 def packages = map.packages
-                if (packages instanceof String) {
-                    spec.entries = [packages]
-                } else if (packages instanceof List) {
-                    spec.entries = packages as List<String>
+                if (packages instanceof List) {
+                    spec.entries = packages.collect { it?.toString() } as List<String>
+                } else if (packages != null) {
+                    spec.entries = [packages.toString()]
                 }
             }
-            
+
             if (map.containsKey('environment')) {
-                spec.environment = map.environment as String
+                spec.environment = map.environment?.toString()
             }
-            
+
             if (map.containsKey('channels')) {
                 def channels = map.channels
                 if (channels instanceof List) {
                     spec.channels = channels as List<String>
-                } else if (channels instanceof String) {
-                    spec.channels = [channels]
+                } else if (channels != null) {
+                    spec.channels = [channels.toString()]
                 }
             }
-            
+
             if (map.containsKey('options')) {
                 spec.options = map.options as Map<String, Object>
             }
-            
+
             return spec
         }
-        
+
         throw new IllegalArgumentException("Invalid package definition: ${packageDef}")
     }
 
     /**
-     * Check if the package manager feature is enabled
-     * 
+     * Auto-detect a package specification by scanning a module directory for a
+     * provider manifest file (e.g. {@code environment.yml}, {@code requirements.txt}).
+     *
+     * Only providers that are available on the system are considered; the manifest
+     * file names are contributed by each provider via {@link PackageProvider#getManifestFileNames()}.
+     *
+     * @param moduleDir the process module directory to scan
+     * @return a {@link PackageSpec} referencing the detected manifest file, or {@code null}
+     *         if no provider manifest is found
+     */
+    PackageSpec detectSpec(Path moduleDir) {
+        if( !moduleDir )
+            return null
+        final manifests = new LinkedHashMap<String, List<String>>()
+        for( String name : providers.keySet() )
+            manifests.put(name, providers.get(name).getManifestFileNames())
+        return findManifestSpec(moduleDir, manifests)
+    }
+
+    /**
+     * Pure detection helper: given a map of provider name to the manifest file
+     * names it supports, return a spec for the first manifest found in {@code moduleDir}.
+     * Providers are scanned in a deterministic (name-sorted) order.
+     *
+     * @param moduleDir the directory to scan
+     * @param providerManifests map of provider name to its manifest file names
+     * @return a {@link PackageSpec} for the first match, or {@code null}
+     */
+    @PackageScope
+    static PackageSpec findManifestSpec(Path moduleDir, Map<String, List<String>> providerManifests) {
+        if( !moduleDir || !providerManifests )
+            return null
+        for( String provider : providerManifests.keySet().sort() ) {
+            final files = providerManifests.get(provider)
+            if( !files )
+                continue
+            for( String file : files ) {
+                final candidate = moduleDir.resolve(file)
+                if( candidate.exists() ) {
+                    log.debug "Auto-detected ${provider} manifest file: ${candidate}"
+                    final spec = new PackageSpec()
+                    spec.provider = provider
+                    spec.environment = candidate.toAbsolutePath().toString()
+                    return spec
+                }
+            }
+        }
+        return null
+    }
+
+    /**
+     * Check if the package manager feature is enabled, either by the
+     * {@code nextflow.preview.package} feature flag in the pipeline script
+     * or by the same setting in the configuration file
+     *
      * @param session The current session
      * @return True if the feature is enabled
      */
     static boolean isEnabled(ISession session) {
+        if( NextflowMeta.instance.preview.getPackage() )
+            return true
         return session.config.navigate('nextflow.preview.package', false) as Boolean
     }
 }

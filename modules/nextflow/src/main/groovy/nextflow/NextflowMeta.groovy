@@ -50,11 +50,24 @@ class NextflowMeta {
         @Deprecated boolean strict
         boolean recursion
         boolean moduleBinaries
+        // holds the `nextflow.preview.package` flag -- the field cannot be
+        // named `package` because it is a Groovy/Java keyword
+        private boolean packageDirective
 
         void setRecursion(Boolean recursion) {
             if( recursion )
                 log.warn "NEXTFLOW RECURSION IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
             this.recursion = recursion
+        }
+
+        void setPackage(Boolean value) {
+            if( value )
+                log.warn "THE PACKAGE DIRECTIVE IS A PREVIEW FEATURE - SYNTAX AND FUNCTIONALITY CAN CHANGE IN FUTURE RELEASES"
+            this.packageDirective = value
+        }
+
+        boolean getPackage() {
+            packageDirective
         }
     }
 
