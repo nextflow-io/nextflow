@@ -17,6 +17,7 @@
 package nextflow.executor
 
 
+import java.nio.file.Files
 import java.nio.file.Paths
 
 import nextflow.processor.TaskBean
@@ -50,11 +51,11 @@ class SimpleFileCopyStrategyTest extends Specification {
         lines[2] == "rm -f seq_2.fa"
         lines[3] == "rm -f seq\\ 3.fa"
         lines[4] == "rm -f sub/dir/seq_4.fa"
-        lines[5] == "ln -sf /home/data/sequences file.txt"
-        lines[6] == "ln -sf /home/data/file1 seq_1.fa"
-        lines[7] == "ln -sf /home/data/file2 seq_2.fa"
-        lines[8] == "ln -sf /home/data/file\\ 3 seq\\ 3.fa"
-        lines[9] == "mkdir -p sub/dir && ln -sf /home\\'data/file4 sub/dir/seq_4.fa"
+        lines[5] == "ln -sfn /home/data/sequences file.txt"
+        lines[6] == "ln -sfn /home/data/file1 seq_1.fa"
+        lines[7] == "ln -sfn /home/data/file2 seq_2.fa"
+        lines[8] == "ln -sfn /home/data/file\\ 3 seq\\ 3.fa"
+        lines[9] == "mkdir -p sub/dir && ln -sfn /home\\'data/file4 sub/dir/seq_4.fa"
         lines.size() == 10
 
 
@@ -67,7 +68,7 @@ class SimpleFileCopyStrategyTest extends Specification {
         lines = script.readLines()
 
         then:
-        lines[0] == "rm -f file.txt; rm -f seq_1.fa; ln -sf /data/file file.txt; ln -sf /data/seq seq_1.fa"
+        lines[0] == "rm -f file.txt; rm -f seq_1.fa; ln -sfn /data/file file.txt; ln -sfn /data/seq seq_1.fa"
         lines.size() == 1
 
     }
@@ -110,23 +111,23 @@ class SimpleFileCopyStrategyTest extends Specification {
 
         where:
         source                      | target               | mode              | result
-        'some/path/to/file.txt'     | 'file.txt'           | null              | 'ln -sf some/path/to/file.txt file.txt'
-        "some/path/to/file'3.txt"   | 'file\'3.txt'        | null              | "ln -sf some/path/to/file\\'3.txt file\\'3.txt"
+        'some/path/to/file.txt'     | 'file.txt'           | null              | 'ln -sfn some/path/to/file.txt file.txt'
+        "some/path/to/file'3.txt"   | 'file\'3.txt'        | null              | "ln -sfn some/path/to/file\\'3.txt file\\'3.txt"
         'some/path/to/file.txt'     | 'file.txt'           | 'link'            | 'ln -f some/path/to/file.txt file.txt'
         '/some/path/to/file.txt'    | 'file.txt'           | 'copy'            | 'cp -fRL /some/path/to/file.txt file.txt'
         '/some/path/to/file.txt'    | 'here/to/abc.txt'    | 'copy'            | 'cp -fRL /some/path/to/file.txt here/to/abc.txt'
 
         // Check the various combinations of relative/absolute inputs to
         // rellink when workDir is defined:
-        '/some/path/to/file.txt'    | 'abc.txt'            | 'rellink' | 'ln -sf ../../../some/path/to/file.txt abc.txt'
-        '/some/path/to/file.txt'    | 'xyz/abc.txt'        | 'rellink' | 'ln -sf ../../../../some/path/to/file.txt xyz/abc.txt'
-        'some/path/to/file.txt'     | 'abc.txt'            | 'rellink' | 'ln -sf some/path/to/file.txt abc.txt'
-        '/my/other/file.txt'        | 'abc.txt'            | 'rellink' | 'ln -sf ../../other/file.txt abc.txt'
-        '/my/work/dir/file.txt'     | 'abc.txt'            | 'rellink' | 'ln -sf file.txt abc.txt'
+        '/some/path/to/file.txt'    | 'abc.txt'            | 'rellink' | 'ln -sfn ../../../some/path/to/file.txt abc.txt'
+        '/some/path/to/file.txt'    | 'xyz/abc.txt'        | 'rellink' | 'ln -sfn ../../../../some/path/to/file.txt xyz/abc.txt'
+        'some/path/to/file.txt'     | 'abc.txt'            | 'rellink' | 'ln -sfn some/path/to/file.txt abc.txt'
+        '/my/other/file.txt'        | 'abc.txt'            | 'rellink' | 'ln -sfn ../../other/file.txt abc.txt'
+        '/my/work/dir/file.txt'     | 'abc.txt'            | 'rellink' | 'ln -sfn file.txt abc.txt'
 
         // Check that the 'symlink' mode is default and uses absolute paths
-        '/some/path/to/file.txt'    | 'abc.txt'            | null              | 'ln -sf /some/path/to/file.txt abc.txt'
-        '/some/path/to/file.txt'    | 'abc.txt'            | 'symlink'         | 'ln -sf /some/path/to/file.txt abc.txt'
+        '/some/path/to/file.txt'    | 'abc.txt'            | null              | 'ln -sfn /some/path/to/file.txt abc.txt'
+        '/some/path/to/file.txt'    | 'abc.txt'            | 'symlink'         | 'ln -sfn /some/path/to/file.txt abc.txt'
 
     }
 
@@ -228,8 +229,8 @@ class SimpleFileCopyStrategyTest extends Specification {
         script == '''
                 rm -f hello.txt
                 rm -f dir/to/file.txt
-                ln -sf /some/file.txt hello.txt
-                mkdir -p dir/to && ln -sf /other/file.txt dir/to/file.txt
+                ln -sfn /some/file.txt hello.txt
+                mkdir -p dir/to && ln -sfn /other/file.txt dir/to/file.txt
                 '''
                 .stripIndent().trim()
 
@@ -331,6 +332,39 @@ class SimpleFileCopyStrategyTest extends Specification {
         expect:
         strategy.getStagingDir() == Paths.get('/work/stage')
 
+    }
+
+    def 'stage-in symlink command should replace a stale directory symlink on re-run' () {
+        // Regression test for #4971: re-running a task with a directory input
+        // must not fail nor nest a link inside the previously staged directory.
+        // Without `-n`, `ln -sf <src> <target>` dereferences an existing
+        // symlink-to-directory and creates the link *inside* it instead of
+        // replacing the stale symlink.
+        given:
+        def workDir = Files.createTempDirectory('stage-test')
+        def realDir1 = Files.createDirectory(workDir.resolve('realDir1'))
+        def realDir2 = Files.createDirectory(workDir.resolve('realDir2'))
+        and:
+        // simulate a previous run: 'inputDir' already staged as a symlink to realDir1
+        Files.createSymbolicLink(workDir.resolve('inputDir'), realDir1)
+        and:
+        def task = new TaskBean(workDir: workDir)
+        def strategy = new SimpleFileCopyStrategy(task)
+        def cmd = strategy.stageInCommand(realDir2.toString(), 'inputDir', 'symlink')
+
+        when:
+        def proc = ['bash', '-c', cmd].execute(null as List, workDir.toFile())
+        def exit = proc.waitFor()
+
+        then:
+        exit == 0
+        // the stale symlink is replaced, not dereferenced
+        Files.readSymbolicLink(workDir.resolve('inputDir')) == realDir2
+        // no nested link leaked into the previously staged directory
+        Files.list(realDir1).count() == 0
+
+        cleanup:
+        workDir?.toFile()?.deleteDir()
     }
 
 }

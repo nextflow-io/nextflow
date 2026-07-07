@@ -459,8 +459,8 @@ class BashWrapperBuilderTest extends Specification {
                 # stage input files
                 rm -f sample_1.fq
                 rm -f sample_2.fq
-                ln -sf /some/data/sample_1.fq sample_1.fq
-                ln -sf /some/data/sample_2.fq sample_2.fq
+                ln -sfn /some/data/sample_1.fq sample_1.fq
+                ln -sfn /some/data/sample_2.fq sample_2.fq
                 '''.stripIndent().rightTrim()
 
         when:
@@ -486,8 +486,8 @@ class BashWrapperBuilderTest extends Specification {
         def stageScript = '''\
                 rm -f sample_1.fq
                 rm -f sample_2.fq
-                ln -sf /some/data/sample_1.fq sample_1.fq
-                ln -sf /some/data/sample_2.fq sample_2.fq
+                ln -sfn /some/data/sample_1.fq sample_1.fq
+                ln -sfn /some/data/sample_2.fq sample_2.fq
                 '''.stripIndent().rightTrim()
         and:
         def builder = newBashWrapperBuilder([
