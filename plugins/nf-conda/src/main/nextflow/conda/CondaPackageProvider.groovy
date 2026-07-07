@@ -33,7 +33,7 @@ import nextflow.util.Escape
 @CompileStatic
 class CondaPackageProvider implements PackageProvider {
 
-    private final CondaCache cache
+    private CondaCache cache
     private final CondaConfig config
 
     CondaPackageProvider(CondaConfig config) {
@@ -75,12 +75,13 @@ class CondaPackageProvider implements PackageProvider {
             throw new IllegalArgumentException("Package spec must have either environment file or entries")
         }
 
-        return cache.getCachePathFor(condaEnv)
+        // per-process `options: [createOptions: '...']` overrides conda.createOptions
+        final createOptionsOverride = spec.options?.get('createOptions') as String
+        return cache.getCachePathFor(condaEnv, createOptionsOverride)
     }
 
     @Override
     String getActivationScript(Path envPath) {
-        def binaryName = cache.getBinaryName()
         final command = config.useMicromamba()
             ? 'eval "$(micromamba shell hook --shell bash)" && micromamba activate'
             : 'source $(conda info --json | awk \'/conda_prefix/ { gsub(/"|,/, "", $2); print $2 }\')/bin/activate'
@@ -98,5 +99,10 @@ class CondaPackageProvider implements PackageProvider {
     @Override
     Object getConfig() {
         return config
+    }
+
+    @Override
+    List<String> getManifestFileNames() {
+        return ['environment.yml', 'environment.yaml']
     }
 }
