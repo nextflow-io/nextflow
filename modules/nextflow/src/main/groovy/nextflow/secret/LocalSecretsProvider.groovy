@@ -19,6 +19,7 @@ package nextflow.secret
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.attribute.PosixFilePermissions
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -47,6 +48,8 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
 
     final private static String ONLY_OWNER_PERMS = 'rw-------'
 
+    final private static String ONLY_OWNER_DIR_PERMS = 'rwx------'
+
     private Map<String,String> env = SysEnv.get()
 
     private Map<String, Secret> secretsMap
@@ -67,8 +70,12 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
                 ? Paths.get(name)
                 : Const.APP_HOME_DIR.resolve(name)
         final path = secretFile.parent
-        if( path && !path.exists() && !path.mkdirs() )
-            throw new IllegalStateException("Cannot create directory '${path}' -- make sure a file with the same name doesn't already exist and you have write permissions")
+        if( path && !path.exists() ) {
+            if( !path.mkdirs() )
+                throw new IllegalStateException("Cannot create directory '${path}' -- make sure a file with the same name doesn't already exist and you have write permissions")
+            // restrict the secrets directory to the owner (defense in depth)
+            path.setPermissions(ONLY_OWNER_DIR_PERMS)
+        }
         return secretFile
     }
 
@@ -146,11 +153,20 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
         final parent = storeFile.getParent()
         if( !parent.exists() && !parent.mkdirs() )
             throw new IOException("Unable to create directory: $parent -- Check file system permissions" )
-        // save the secrets as JSON file
+        // restrict the parent directory to the owner (defense in depth)
+        parent.setPermissions(ONLY_OWNER_DIR_PERMS)
+        // Create the store file already restricted to the owner *before* writing any secret content.
+        // Writing the JSON first and only then applying the permissions leaves a race window in which
+        // the file is world-readable (e.g. 0644 under the common umask 022) while it already holds the
+        // secret values, allowing another local user to read them. Because 'rw-------' has no group/other
+        // bits, the umask cannot widen it, so the file is atomically created with owner-only access.
+        if( !storeFile.exists() )
+            Files.createFile(storeFile, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString(ONLY_OWNER_PERMS)))
+        // re-assert owner-only permissions in case the file already existed with broader access
+        storeFile.setPermissions(ONLY_OWNER_PERMS)
+        // save the secrets as JSON file into the now owner-only file
         final json = new GsonBuilder().setPrettyPrinting().create().toJson(secrets)
         Files.write(storeFile, json.getBytes('utf-8'))
-        // allow only the current user to read-write the file
-        storeFile.setPermissions(ONLY_OWNER_PERMS)
     }
 
     @Override
