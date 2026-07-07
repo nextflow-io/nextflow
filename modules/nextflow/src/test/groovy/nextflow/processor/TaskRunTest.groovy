@@ -28,6 +28,7 @@ import nextflow.container.resolver.ContainerInfo
 import nextflow.container.resolver.ContainerMeta
 import nextflow.container.resolver.ContainerResolver
 import nextflow.executor.Executor
+import nextflow.packages.PackageSpec
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
 import nextflow.script.ScriptBinding
@@ -978,5 +979,46 @@ class TaskRunTest extends Specification {
         task.source == 'echo ${say_hello}'
         task.template == file
         task.traceScript == 'echo Ciao mondo'
+    }
+
+    def 'should return a null package spec when the package feature is disabled' () {
+        given:
+        def task = new TaskRun()
+        task.processor = Mock(TaskProcessor) {
+            getSession() >> Mock(Session) { getConfig() >> [:] }
+        }
+
+        expect:
+        task.getPackageSpec() == null
+    }
+
+    def 'should parse an explicit package directive' () {
+        given:
+        def task = new TaskRun(config: new TaskConfig(['package': 'numpy pandas']))
+        task.processor = Mock(TaskProcessor) {
+            getSession() >> Mock(Session) {
+                getConfig() >> [nextflow: [preview: [package: true]], packages: [provider: 'uv']]
+            }
+        }
+
+        when:
+        def spec = task.getPackageSpec()
+        then:
+        spec != null
+        spec.provider == 'uv'
+        spec.entries == ['numpy pandas']
+    }
+
+    def 'should not auto-detect a manifest when auto-detection is disabled' () {
+        given: 'the feature is enabled but there is no package directive and auto-detect is off'
+        def task = new TaskRun(config: new TaskConfig([:]))
+        task.processor = Mock(TaskProcessor) {
+            getSession() >> Mock(Session) {
+                getConfig() >> [nextflow: [preview: [package: true]], packages: [autoDetect: false]]
+            }
+        }
+
+        expect:
+        task.getPackageSpec() == null
     }
 }

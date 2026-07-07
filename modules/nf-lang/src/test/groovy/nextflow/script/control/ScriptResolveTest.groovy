@@ -296,4 +296,35 @@ class ScriptResolveTest extends Specification {
         errors[0].getOriginalMessage() == 'Workflows cannot be called from within a closure'
     }
 
+    def 'should allow the `package` directive only in the process directive section' () {
+        when: 'used as a process directive, `package` is not flagged as unrecognized'
+        def errors = check(
+            '''\
+            process foo {
+                package 'numpy pandas'
+
+                script:
+                'echo hi'
+            }
+            '''
+        )
+        then:
+        errors.every { !it.getOriginalMessage().contains('Unrecognized') }
+
+        when: 'used as an output qualifier, `package` is still rejected'
+        errors = check(
+            '''\
+            process foo {
+                output:
+                package 'x'
+
+                script:
+                'echo hi'
+            }
+            '''
+        )
+        then:
+        errors.any { it.getOriginalMessage() == 'Unrecognized process output qualifier `package`' }
+    }
+
 }
