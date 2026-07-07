@@ -62,11 +62,11 @@ dependencies {
 
     // intelligent compute scheduler client
     api 'io.seqera:sched-client:0.63.0'
-    // Single lib-httpx declaration. Must stay 'api' at 2.3.0 to override the older lib-httpx
+    // Single lib-httpx declaration. Must stay 'api' at 2.4.0 to override the older lib-httpx
     // pulled transitively by sched-client, otherwise the plugin bundles failsafe-3.1.0 which
     // clashes with the failsafe-3.3.2 the plugin is compiled against (java.lang.NoSuchMethodError
     // on handleIf(CheckedPredicate) at runtime).
-    api 'io.seqera:lib-httpx:2.3.0'
+    api 'io.seqera:lib-httpx:2.4.0'
 
     // platform integration (formerly nf-tower)
     api 'io.seqera:lib-platform-oidc:0.1.0'
