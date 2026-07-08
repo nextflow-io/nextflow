@@ -65,6 +65,8 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     private volatile String runId
 
+    private volatile String workflowId
+
     private volatile Map<String,String> runResourceLabels = Collections.<String,String>emptyMap()
 
     private SeqeraBatchSubmitter batchSubmitter
@@ -113,6 +115,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
     protected void createRun() {
         final towerConfig = session.config.tower as Map ?: Collections.emptyMap()
         final workflowId = session.workflowMetadata?.platform?.workflowId
+        this.workflowId = workflowId
         final workflowUrl = session.workflowMetadata?.platform?.workflowUrl
         final workspaceId = PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get()) as Long
         final computeEnvId = PlatformHelper.getComputeEnvId(towerConfig, SysEnv.get()) ?: seqeraConfig.computeEnvId
@@ -209,6 +212,25 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     String getRunId() {
         return runId
+    }
+
+    /**
+     * The Platform workflow id for this run, used to build pipeline secret store references
+     * ({@code tower-<workflowId>/<name>}). {@code null} when running without a Platform workflow
+     * (bare scheduler), in which case secret references are not built.
+     */
+    String getWorkflowId() {
+        return workflowId
+    }
+
+    /**
+     * The Seqera executor is secret-native: pipeline secret values are resolved at the compute
+     * edge (the scheduler backend), so Nextflow must not emit the local-store {@code source}
+     * snippet. The task carries only the secret <em>reference</em>, never the value.
+     */
+    @Override
+    boolean isSecretNative() {
+        return true
     }
 
     Map<String,String> getRunResourceLabels() {
