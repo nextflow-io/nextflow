@@ -368,7 +368,7 @@ Defines the HTTP proxy server. Proxy authentication is supported by providing th
 Defines the HTTPS proxy server. Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `https://user:password@proxy-host.com:port`. Credentials containing special characters must be URL-encoded.
 
 :::note
-By default, the JVM disables the Basic authentication scheme for HTTPS proxy tunnelling (see the `jdk.http.auth.tunneling.disabledSchemes` property in `$JAVA_HOME/conf/net.properties`), which prevents proxy credentials from being sent with the HTTPS `CONNECT` request. When proxy credentials are provided, Nextflow automatically clears this restriction, unless the property has been set explicitly. To set it yourself, use the `NXF_OPTS` environment variable, e.g. `NXF_OPTS='-Djdk.http.auth.tunneling.disabledSchemes='`.
+By default, the JVM disables the Basic authentication scheme for HTTPS proxy tunnelling (see the `jdk.http.auth.tunneling.disabledSchemes` property in `$JAVA_HOME/conf/net.properties`). This prevents the JVM from sending proxy credentials with the HTTPS `CONNECT` request. When you provide proxy credentials, Nextflow clears this restriction automatically, unless you set the property explicitly. To set it yourself, use the `NXF_OPTS` environment variable. For example `NXF_OPTS='-Djdk.http.auth.tunneling.disabledSchemes='`.
 :::
 
 ##### `NO_COLOR`
