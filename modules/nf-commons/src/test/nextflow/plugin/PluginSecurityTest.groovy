@@ -138,4 +138,36 @@ class PluginSecurityTest extends Specification {
         VALUE << ['warn', 'strict', 'off']
     }
 
+    @Unroll
+    def 'should normalise the env value #VALUE to #EXPECTED' () {
+        given:
+        SysEnv.push([NXF_PLUGINS_STRICT_MODE: VALUE])
+        expect:
+        PluginSecurity.getMode() == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        VALUE      | EXPECTED
+        'STRICT'   | 'strict'
+        'Warn'     | 'warn'
+        '  off  '  | 'off'
+        ' Strict ' | 'strict'
+    }
+
+    @Unroll
+    def 'should fall back to warn for an unrecognised or blank env value #VALUE' () {
+        given:
+        SysEnv.push([NXF_PLUGINS_STRICT_MODE: VALUE])
+        expect:
+        PluginSecurity.getMode() == 'warn'
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        VALUE << ['bogus', 'strictly', '', '   ']
+    }
+
 }

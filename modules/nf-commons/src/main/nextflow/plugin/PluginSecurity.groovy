@@ -56,13 +56,27 @@ class PluginSecurity {
     static final String MODE_STRICT = 'strict'
     static final String MODE_OFF = 'off'
 
+    static final Set<String> MODES = [MODE_WARN, MODE_STRICT, MODE_OFF] as Set
+
     /**
      * Resolve the strict mode from the {@code NXF_PLUGINS_STRICT_MODE} environment variable.
+     *
+     * The value is normalised (lower-cased and trimmed) and validated against the known modes.
+     * An unset or blank value falls back to the default silently, while an unrecognised value
+     * (e.g. a typo) falls back to the default and logs a warning so it is not silently ignored.
      *
      * @return one of {@code warn} (default), {@code strict} or {@code off}
      */
     static String getMode() {
-        return SysEnv.get('NXF_PLUGINS_STRICT_MODE', MODE_WARN)
+        final raw = SysEnv.get('NXF_PLUGINS_STRICT_MODE')
+        final mode = raw?.toLowerCase()?.trim()
+        if( !mode )
+            return MODE_WARN
+        if( !MODES.contains(mode) ) {
+            log.warn "Invalid NXF_PLUGINS_STRICT_MODE value '${raw}' - expected one of ${MODES.join(', ')}; using default '${MODE_WARN}'"
+            return MODE_WARN
+        }
+        return mode
     }
 
     /**
