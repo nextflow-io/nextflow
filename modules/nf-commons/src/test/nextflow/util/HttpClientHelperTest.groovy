@@ -52,12 +52,6 @@ import test.MockAuthProxyServer
  */
 class HttpClientHelperTest extends Specification {
 
-    static final Map<String,String> NO_PROXY_VARS = [
-            HTTP_PROXY: null, http_proxy: null,
-            HTTPS_PROXY: null, https_proxy: null,
-            ALL_PROXY: null, all_proxy: null,
-            NO_PROXY: null, no_proxy: null ]
-
     @Shared
     Path tempDir
 
@@ -69,14 +63,6 @@ class HttpClientHelperTest extends Specification {
         tempDir?.deleteDir()
     }
 
-    private static Map<String,String> proxyEnv(MockAuthProxyServer proxy, String user='foo', String password='secret') {
-        final result = new HashMap<String,String>(NO_PROXY_VARS)
-        result.HTTP_PROXY = "http://${user}:${password}@${proxy.host}:${proxy.port}".toString()
-        result.HTTPS_PROXY = result.HTTP_PROXY
-        result.NO_PROXY = ''
-        return result
-    }
-
     @RestoreSystemProperties
     def 'should authenticate a plain http request against the proxy'() {
         given:
@@ -85,7 +71,7 @@ class HttpClientHelperTest extends Specification {
 
         when:
         HttpResponse<String> resp = null
-        EnvHelper.withEnv(proxyEnv(proxy)) {
+        EnvHelper.withEnv(proxy.proxyEnv()) {
             final client = HttpClientHelper
                     .applyProxy(HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1))
                     .build()
@@ -113,7 +99,7 @@ class HttpClientHelperTest extends Specification {
         def proxy = new MockAuthProxyServer('foo', 'secret').start()
 
         when:
-        EnvHelper.withEnv(proxyEnv(proxy, 'foo', 'wrong-pass')) {
+        EnvHelper.withEnv(proxy.proxyEnv('foo', 'wrong-pass')) {
             final client = HttpClientHelper
                     .applyProxy(HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1))
                     .build()
@@ -152,7 +138,7 @@ class HttpClientHelperTest extends Specification {
 
         when:
         HttpResponse<String> resp = null
-        EnvHelper.withEnv(proxyEnv(proxy)) {
+        EnvHelper.withEnv(proxy.proxyEnv()) {
             final client = HttpClientHelper
                     .applyProxy(HttpClient.newBuilder()
                         .version(HttpClient.Version.HTTP_1_1)
@@ -190,7 +176,7 @@ class HttpClientHelperTest extends Specification {
         and:
         def proxy = new MockAuthProxyServer('foo', 'secret').start()
         and:
-        final env = proxyEnv(proxy)
+        final env = proxy.proxyEnv()
         env.NO_PROXY = 'example.com,127.0.0.1'
 
         when:
@@ -226,7 +212,7 @@ class HttpClientHelperTest extends Specification {
 
         when:
         HttpClient client = null
-        EnvHelper.withEnv(NO_PROXY_VARS) {
+        EnvHelper.withEnv(MockAuthProxyServer.NO_PROXY_VARS) {
             client = HttpClientHelper.applyProxy(HttpClient.newBuilder()).build()
         }
 

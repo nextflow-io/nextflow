@@ -37,17 +37,9 @@ class WaveClientProxyTest extends Specification {
         def proxy = new MockAuthProxyServer('foo', 'secret').start()
         proxy.responseContentType = 'application/json'
         proxy.responseBody = '{"status":"OK"}'
-        and: 'proxy settings with credentials in the environment'
-        final env = [
-                HTTP_PROXY: "http://foo:secret@${proxy.host}:${proxy.port}".toString(),
-                HTTPS_PROXY: "http://foo:secret@${proxy.host}:${proxy.port}".toString(),
-                http_proxy: null, https_proxy: null,
-                ALL_PROXY: null, all_proxy: null,
-                NO_PROXY: '', no_proxy: null ]
-
-        when:
+        when: 'the proxy settings with credentials are defined in the environment'
         HttpResponse<String> resp = null
-        EnvHelper.withEnv(env) {
+        EnvHelper.withEnv(proxy.proxyEnv()) {
             final session = Mock(Session) { getConfig() >> [:] }
             final wave = new WaveClient(session)
             final client = wave.newHttpClient0()

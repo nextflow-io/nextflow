@@ -50,17 +50,9 @@ class HttpPluginRepositoryProxyTest extends Specification {
                 }
               ]
             }'''
-        and: 'proxy settings with credentials in the environment'
-        final env = [
-                HTTP_PROXY: "http://foo:secret@${proxy.host}:${proxy.port}".toString(),
-                HTTPS_PROXY: "http://foo:secret@${proxy.host}:${proxy.port}".toString(),
-                http_proxy: null, https_proxy: null,
-                ALL_PROXY: null, all_proxy: null,
-                NO_PROXY: '', no_proxy: null ]
-
         when: 'the registry host is only reachable via the proxy'
         PluginInfo info = null
-        EnvHelper.withEnv(env) {
+        EnvHelper.withEnv(proxy.proxyEnv()) {
             final repo = new HttpPluginRepository('test-repo', new URI('http://plugins.registry.internal/'))
             info = repo.getPlugin('nf-fake')
         }

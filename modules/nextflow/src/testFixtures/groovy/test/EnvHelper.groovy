@@ -35,6 +35,21 @@ import groovy.transform.CompileDynamic
 @CompileDynamic
 class EnvHelper {
 
+    private static final Map ENV_MAP
+    private static final Method VAR_OF
+    private static final Method VAL_OF
+
+    static {
+        final clazz = Class.forName('java.lang.ProcessEnvironment')
+        final field = clazz.getDeclaredField('theEnvironment')
+        field.setAccessible(true)
+        ENV_MAP = (Map) field.get(null)
+        VAR_OF = Class.forName('java.lang.ProcessEnvironment$Variable').getDeclaredMethod('valueOf', String)
+        VAL_OF = Class.forName('java.lang.ProcessEnvironment$Value').getDeclaredMethod('valueOf', String)
+        VAR_OF.setAccessible(true)
+        VAL_OF.setAccessible(true)
+    }
+
     /**
      * Run the given action with the specified variables applied to the process
      * environment, restoring the original values on completion. A {@code null}
@@ -62,23 +77,9 @@ class EnvHelper {
      * Set or remove ({@code value == null}) a variable in the process environment
      */
     static void setEnv(String name, String value) {
-        final env = environmentMap()
-        final varClass = Class.forName('java.lang.ProcessEnvironment$Variable')
-        final valClass = Class.forName('java.lang.ProcessEnvironment$Value')
-        final Method varOf = varClass.getDeclaredMethod('valueOf', String)
-        final Method valOf = valClass.getDeclaredMethod('valueOf', String)
-        varOf.setAccessible(true)
-        valOf.setAccessible(true)
         if( value != null )
-            env.put(varOf.invoke(null, name), valOf.invoke(null, value))
+            ENV_MAP.put(VAR_OF.invoke(null, name), VAL_OF.invoke(null, value))
         else
-            env.remove(varOf.invoke(null, name))
-    }
-
-    private static Map environmentMap() {
-        final clazz = Class.forName('java.lang.ProcessEnvironment')
-        final field = clazz.getDeclaredField('theEnvironment')
-        field.setAccessible(true)
-        return (Map) field.get(null)
+            ENV_MAP.remove(VAR_OF.invoke(null, name))
     }
 }

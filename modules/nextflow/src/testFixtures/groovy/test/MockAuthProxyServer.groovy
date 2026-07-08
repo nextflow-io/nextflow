@@ -38,8 +38,16 @@ import groovy.util.logging.Slf4j
 @CompileStatic
 class MockAuthProxyServer implements Closeable {
 
+    /** environment variables clearing any proxy configuration (both cases) */
+    public static final Map<String,String> NO_PROXY_VARS = Collections.unmodifiableMap([
+            HTTP_PROXY: null, http_proxy: null,
+            HTTPS_PROXY: null, https_proxy: null,
+            ALL_PROXY: null, all_proxy: null,
+            NO_PROXY: null, no_proxy: null ] as Map<String,String>)
+
     private final String username
     private final String password
+    private final String expectedAuth
     private ServerSocket server
     private Thread acceptor
     private volatile boolean running
@@ -52,11 +60,24 @@ class MockAuthProxyServer implements Closeable {
     final AtomicInteger unauthorizedCount = new AtomicInteger()
     final AtomicInteger proxiedCount = new AtomicInteger()
     final AtomicInteger connectCount = new AtomicInteger()
-    final List<String> requestLines = Collections.synchronizedList(new ArrayList<String>())
 
     MockAuthProxyServer(String username, String password) {
         this.username = username
         this.password = password
+        this.expectedAuth = 'Basic ' + Base64.getEncoder().encodeToString("${username}:${password}".getBytes('UTF-8'))
+    }
+
+    /**
+     * Environment variables routing all HTTP traffic through this proxy with the
+     * given credentials - by default the ones expected by the proxy - and clearing
+     * any other proxy settings inherited from the host environment
+     */
+    Map<String,String> proxyEnv(String user=username, String password=this.password) {
+        final result = new HashMap<String,String>(NO_PROXY_VARS)
+        result.put('HTTP_PROXY', "http://${user}:${password}@${host}:${port}".toString())
+        result.put('HTTPS_PROXY', result.get('HTTP_PROXY'))
+        result.put('NO_PROXY', '')
+        return result
     }
 
     MockAuthProxyServer start() {
@@ -103,7 +124,6 @@ class MockAuthProxyServer implements Closeable {
                         headers.put(line.substring(0,p).trim().toLowerCase(), line.substring(p+1).trim())
                 }
                 requestCount.incrementAndGet()
-                requestLines.add(requestLine)
                 log.debug "Mock proxy request: $requestLine"
 
                 if( !isAuthorized(headers) ) {
@@ -140,8 +160,7 @@ class MockAuthProxyServer implements Closeable {
     }
 
     private boolean isAuthorized(Map<String,String> headers) {
-        final expected = 'Basic ' + Base64.getEncoder().encodeToString("${username}:${password}".getBytes('UTF-8'))
-        return headers.get('proxy-authorization') == expected
+        return headers.get('proxy-authorization') == expectedAuth
     }
 
     private void tunnel(String requestLine, Socket socket, OutputStream output) {
