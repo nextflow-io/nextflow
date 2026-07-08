@@ -202,7 +202,7 @@ task dockerPack(type: Exec, dependsOn: ['packOne']) {
     dockerBase.mkdirs()
     def dockerFile = new File("$buildDir/docker/Dockerfile")
     dockerFile.text = """
-    FROM amazoncorretto:17-alpine-jdk
+    FROM amazoncorretto:25-alpine-jdk
     RUN apk update && apk add bash && apk add coreutils && apk add curl
     COPY .nextflow /.nextflow
     COPY nextflow /usr/local/bin/nextflow

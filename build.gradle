@@ -77,7 +77,7 @@ allprojects {
     java {
         // these settings apply to all jvm tooling, including groovy
         toolchain {
-            languageVersion = JavaLanguageVersion.of(21)
+            languageVersion = JavaLanguageVersion.of(25)
         }
         sourceCompatibility = 17
         targetCompatibility = 17
