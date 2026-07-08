@@ -60,6 +60,25 @@ class PluginSecurityTest extends Specification {
     }
 
     @Unroll
+    def 'should classify trust by owner and perms - owner=#OWNER user=#USER perms=#PERMS untrusted=#UNTRUSTED' () {
+        expect:
+        PluginSecurity.isUntrusted(PosixFilePermissions.fromString(PERMS), OWNER, USER) == UNTRUSTED
+
+        where:
+        OWNER      | USER     | PERMS       | UNTRUSTED
+        // trusted: private dir owned by the current user
+        'alice'    | 'alice'  | 'rwx------' | false
+        // trusted: admin-managed read-only shared cache (root-owned, not group/other writable)
+        'root'     | 'alice'  | 'rwxr-xr-x' | false
+        // untrusted owner: dir owned by another user, even with safe permissions (the PoC case)
+        'attacker' | 'victim' | 'rwx------' | true
+        'attacker' | 'victim' | 'rwxr-xr-x' | true
+        // untrusted perms: group/world writable even when owned by the current user
+        'alice'    | 'alice'  | 'rwxrwx---' | true
+        'alice'    | 'alice'  | 'rwxrwxrwx' | true
+    }
+
+    @Unroll
     def 'should reject a group/world-writable dir in strict mode - perms=#PERMS' () {
         given:
         def dir = tempDirWithPerms(PERMS)

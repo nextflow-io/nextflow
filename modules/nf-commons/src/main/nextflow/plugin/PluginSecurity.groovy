@@ -80,6 +80,23 @@ class PluginSecurity {
     }
 
     /**
+     * Determine whether a plugin directory should be considered untrusted.
+     *
+     * A directory is untrusted when it is writable by group or others, or when it is owned by a
+     * principal other than the current user or root.
+     *
+     * @param perms The POSIX permissions of the directory
+     * @param owner The name of the directory owner
+     * @param currentUser The name of the user running Nextflow
+     * @return {@code true} if the directory cannot be trusted
+     */
+    static boolean isUntrusted(Set<PosixFilePermission> perms, String owner, String currentUser) {
+        final writableByOthers = perms.contains(PosixFilePermission.GROUP_WRITE) || perms.contains(PosixFilePermission.OTHERS_WRITE)
+        final untrustedOwner = owner != currentUser && owner != 'root'
+        return writableByOthers || untrustedOwner
+    }
+
+    /**
      * Verify that the given plugin directory can be trusted, using the mode resolved from the
      * environment.
      *
@@ -108,10 +125,7 @@ class PluginSecurity {
             final owner = attrs.owner().name
             final me = System.getProperty('user.name')
 
-            final writableByOthers = perms.contains(PosixFilePermission.GROUP_WRITE) || perms.contains(PosixFilePermission.OTHERS_WRITE)
-            final untrustedOwner = owner != me && owner != 'root'
-
-            if( writableByOthers || untrustedOwner ) {
+            if( isUntrusted(perms, owner, me) ) {
                 final msg = "Plugin directory '${dir}' is not secure (owner=${owner}, mode=${PosixFilePermissions.toString(perms)}) " +
                         "- it may be modified by other users, which could allow untrusted plugin code to run in your Nextflow process"
                 if( mode == MODE_STRICT )
