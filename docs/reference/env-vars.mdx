@@ -216,6 +216,12 @@ The path where the plugin archives are loaded and stored (default: `$NXF_HOME/pl
 
 Specifies the URL of the plugin registry used to download and resolve plugins. This allows using custom or private plugin registries instead of the default public registry.
 
+##### `NXF_PLUGINS_STRICT_MODE`
+
+<AddedInVersion version="26.07" />
+
+Controls how Nextflow reacts when the plugins directory (`NXF_PLUGINS_DIR`) or a cached plugin directory is not a trusted location — i.e. it is owned by another user or writable by group or others. Such a directory could be modified by other users, allowing untrusted plugin code to run in your Nextflow process. Allowed values are `warn` (default, logs a warning and continues), `strict` (aborts the run) and `off` (disables the check). The check is skipped on filesystems that do not support POSIX permissions.
+
 ##### `NXF_PLUGINS_TEST_REPOSITORY`
 
 <AddedInVersion version="23.04" />

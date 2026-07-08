@@ -401,6 +401,10 @@ class PluginUpdater extends UpdateManager {
             log.warn("Plugin '${pluginPath.getFileName()}' installation looks corrupted - Delete the following directory and run nextflow again: $pluginPath")
         }
 
+        // verify the plugin dir is a trusted (private, non-shared) location before loading it,
+        // to avoid executing attacker-controlled content from a shared/writable plugin cache
+        PluginSecurity.checkTrustedDir(pluginPath)
+
         // load the plugin from the file system
         PluginWrapper wrapper = pluginManager.loadPluginFromPath(pluginPath)
 

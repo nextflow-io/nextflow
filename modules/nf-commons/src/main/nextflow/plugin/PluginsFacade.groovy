@@ -275,6 +275,9 @@ class PluginsFacade implements PluginStateListener {
         // make sure plugins dir exists
         if( mode!=DEV_MODE && !FilesEx.exists(root) && !FilesEx.mkdirs(root) )
             throw new IOException("Unable to create plugins dir: $root")
+        // verify the plugins dir is a trusted (private, non-shared) location
+        if( mode!=DEV_MODE )
+            PluginSecurity.checkTrustedDir(root)
 
         this.manager = createManager(root, embedded)
         this.updater = createUpdater(root, manager)
@@ -295,6 +298,9 @@ class PluginsFacade implements PluginStateListener {
         this.manager.addPluginStateListener(this)
         // setup the updater
         this.updater = createUpdater(root, manager)
+        // verify the plugins dir is a trusted (private, non-shared) location
+        if( mode!=DEV_MODE )
+            PluginSecurity.checkTrustedDir(root)
         // load plugins
         manager.loadPlugins()
         if( embedded ) {
