@@ -220,7 +220,13 @@ Specifies the URL of the plugin registry used to download and resolve plugins. T
 
 <AddedInVersion version="26.07" />
 
-Controls how Nextflow reacts when the plugins directory (`NXF_PLUGINS_DIR`) or a cached plugin directory is not a trusted location — i.e. it is owned by another user or writable by group or others. Such a directory could be modified by other users, allowing untrusted plugin code to run in your Nextflow process. Allowed values are `warn` (default, logs a warning and continues), `strict` (aborts the run) and `off` (disables the check). The check is skipped on filesystems that do not support POSIX permissions.
+Controls how Nextflow reacts when the plugins directory (`NXF_PLUGINS_DIR`) or a cached plugin directory is not a trusted location — i.e. it is owned by a user other than the one running Nextflow (compared by UID; `root` and any owner listed in `NXF_PLUGINS_TRUSTED_OWNERS` are trusted) or it is world-writable. Such a directory could be modified by other users, allowing untrusted plugin code to run in your Nextflow process. Allowed values are `warn` (default, logs a warning and continues), `strict` (aborts the run) and `off` (disables the check). The check is skipped on filesystems that do not support POSIX permissions, and when running as `root` only a world-writable directory is flagged.
+
+##### `NXF_PLUGINS_TRUSTED_OWNERS`
+
+<AddedInVersion version="26.07" />
+
+Comma-separated list of additional owners (numeric UIDs or user names) that are trusted to own the plugins directory or cached plugin directories, beyond the current user and `root`. Use this to allow an admin-managed shared plugin cache owned by a service account (e.g. `NXF_PLUGINS_TRUSTED_OWNERS=nextflow`) without triggering [`NXF_PLUGINS_STRICT_MODE`](#nxf_plugins_strict_mode).
 
 ##### `NXF_PLUGINS_TEST_REPOSITORY`
 

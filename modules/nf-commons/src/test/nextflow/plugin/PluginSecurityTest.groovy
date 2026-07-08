@@ -39,7 +39,34 @@ class PluginSecurityTest extends Specification {
     }
 
     @Unroll
-    def 'should accept a private dir owned by current user - mode=#MODE perms=#PERMS' () {
+    def 'should classify trust by uid and perms - owner=#OWNER current=#CUR perms=#PERMS trusted=#TRUSTED untrusted=#UNTRUSTED' () {
+        expect:
+        PluginSecurity.isUntrusted(PosixFilePermissions.fromString(PERMS), OWNER, CUR, TRUSTED) == UNTRUSTED
+
+        where:
+        OWNER  | CUR    | PERMS       | TRUSTED           | UNTRUSTED
+        // self-owned: private, read-only, or umask-002 group-writable -> trusted
+        1000L  | 1000L  | 'rwx------' | ([] as Set)       | false
+        1000L  | 1000L  | 'rwxr-xr-x' | ([] as Set)       | false
+        1000L  | 1000L  | 'rwxrwxr-x' | ([] as Set)       | false   // umask 002 default - the key regression
+        1000L  | 1000L  | 'rwxrwx---' | ([] as Set)       | false
+        // self-owned but world-writable -> untrusted
+        1000L  | 1000L  | 'rwxrwxrwx' | ([] as Set)       | true
+        // root-owned admin cache -> trusted; root-owned world-writable -> untrusted
+        0L     | 1000L  | 'rwxr-xr-x' | ([] as Set)       | false
+        0L     | 1000L  | 'rwxrwxrwx' | ([] as Set)       | true
+        // foreign owner -> untrusted even with safe perms (the PoC case)
+        1201L  | 1202L  | 'rwx------' | ([] as Set)       | true
+        1201L  | 1202L  | 'rwxr-xr-x' | ([] as Set)       | true
+        // foreign owner listed as trusted (service-account cache) -> trusted
+        1201L  | 1202L  | 'rwx------' | ([1201L] as Set)  | false
+        // running as root: trust any owner, but still flag world-writable
+        1201L  | 0L     | 'rwx------' | ([] as Set)       | false
+        1201L  | 0L     | 'rwxrwxrwx' | ([] as Set)       | true
+    }
+
+    @Unroll
+    def 'should accept a self-owned dir that is not world-writable - mode=#MODE perms=#PERMS' () {
         given:
         def dir = tempDirWithPerms(PERMS)
 
@@ -56,30 +83,12 @@ class PluginSecurityTest extends Specification {
         'strict' | 'rwx------'
         'warn'   | 'rwx------'
         'strict' | 'rwxr-xr-x'
-        'warn'   | 'rwxr-xr-x'
+        'strict' | 'rwxrwxr-x'   // umask-002 group-writable, owned by me
+        'warn'   | 'rwxrwx---'
     }
 
     @Unroll
-    def 'should classify trust by owner and perms - owner=#OWNER user=#USER perms=#PERMS untrusted=#UNTRUSTED' () {
-        expect:
-        PluginSecurity.isUntrusted(PosixFilePermissions.fromString(PERMS), OWNER, USER) == UNTRUSTED
-
-        where:
-        OWNER      | USER     | PERMS       | UNTRUSTED
-        // trusted: private dir owned by the current user
-        'alice'    | 'alice'  | 'rwx------' | false
-        // trusted: admin-managed read-only shared cache (root-owned, not group/other writable)
-        'root'     | 'alice'  | 'rwxr-xr-x' | false
-        // untrusted owner: dir owned by another user, even with safe permissions (the PoC case)
-        'attacker' | 'victim' | 'rwx------' | true
-        'attacker' | 'victim' | 'rwxr-xr-x' | true
-        // untrusted perms: group/world writable even when owned by the current user
-        'alice'    | 'alice'  | 'rwxrwx---' | true
-        'alice'    | 'alice'  | 'rwxrwxrwx' | true
-    }
-
-    @Unroll
-    def 'should reject a group/world-writable dir in strict mode - perms=#PERMS' () {
+    def 'should reject a world-writable dir in strict mode - perms=#PERMS' () {
         given:
         def dir = tempDirWithPerms(PERMS)
 
@@ -93,13 +102,12 @@ class PluginSecurityTest extends Specification {
         dir?.deleteDir()
 
         where:
-        PERMS << ['rwxrwx---', 'rwxrwxrwx', 'rwx-w----', 'rwx----w-']
+        PERMS << ['rwxrwxrwx', 'rwx----w-']
     }
 
-    @Unroll
-    def 'should only warn (not throw) for a group/world-writable dir in warn mode - perms=#PERMS' () {
+    def 'should only warn (not throw) for a world-writable dir in warn mode' () {
         given:
-        def dir = tempDirWithPerms(PERMS)
+        def dir = tempDirWithPerms('rwxrwxrwx')
 
         when:
         PluginSecurity.checkTrustedDir(dir, 'warn')
@@ -108,9 +116,6 @@ class PluginSecurityTest extends Specification {
 
         cleanup:
         dir?.deleteDir()
-
-        where:
-        PERMS << ['rwxrwx---', 'rwxrwxrwx']
     }
 
     def 'should skip the check entirely when mode is off' () {
@@ -187,6 +192,25 @@ class PluginSecurityTest extends Specification {
 
         where:
         VALUE << ['bogus', 'strictly', '', '   ']
+    }
+
+    @Unroll
+    def 'should parse NXF_PLUGINS_TRUSTED_OWNERS #VALUE' () {
+        given:
+        SysEnv.push(VALUE != null ? [NXF_PLUGINS_TRUSTED_OWNERS: VALUE] : [:])
+        expect:
+        PluginSecurity.getTrustedOwners() == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        VALUE              | EXPECTED
+        null               | ([] as Set)
+        ''                 | ([] as Set)
+        '1000'             | (['1000'] as Set)
+        'nextflow'         | (['nextflow'] as Set)
+        '1000, nextflow ,' | (['1000', 'nextflow'] as Set)
     }
 
 }
