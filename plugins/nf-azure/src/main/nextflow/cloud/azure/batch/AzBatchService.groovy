@@ -763,7 +763,7 @@ class AzBatchService implements Closeable {
      * errors can recover on the next resize, so submission should not be blocked.
      * Compared case-insensitively.
      */
-    private static final List<String> TRANSIENT_RESIZE_ERROR_CODES = ['allocationtimedout', 'allocationfailed']
+    private static final List<String> TRANSIENT_RESIZE_ERROR_CODES = ['AllocationTimedout', 'AllocationFailed']
 
     protected void checkPool(BatchPool pool, AzVmPoolSpec spec) {
         if( pool.state != BatchPoolState.ACTIVE ) {
@@ -791,9 +791,9 @@ class AzBatchService implements Closeable {
      * and every recorded resize error is a transient/retryable code.
      */
     protected boolean isRecoverableResizeError(BatchPool pool) {
-        return pool.isEnableAutoScale() \
-            && pool.allocationState == AllocationState.STEADY \
-            && pool.resizeErrors?.every { err -> err.code?.toLowerCase() in TRANSIENT_RESIZE_ERROR_CODES }
+        return pool.isEnableAutoScale() &&
+                pool.allocationState == AllocationState.STEADY &&
+                pool.resizeErrors?.every { err -> TRANSIENT_RESIZE_ERROR_CODES.any { it.equalsIgnoreCase(err.code) } }
     }
 
     protected void checkPoolId(String poolId) {

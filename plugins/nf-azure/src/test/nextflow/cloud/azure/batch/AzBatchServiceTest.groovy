@@ -1291,5 +1291,6 @@ class AzBatchServiceTest extends Specification {
         poolWithResizeError(allocationState: AllocationState.RESIZING)                  | false
         poolWithResizeError(resizeErrors: [ new ResizeError(code: 'AccountVMSeriesCoreQuotaReached') ]) | false
         poolWithResizeError(resizeErrors: [ new ResizeError(code: 'AllocationTimedout'), new ResizeError(code: 'AccountCoreQuotaReached') ]) | false
+        poolWithResizeError(resizeErrors: [ new ResizeError(code: null) ])              | false
     }
 }
