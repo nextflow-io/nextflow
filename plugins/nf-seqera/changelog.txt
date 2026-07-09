@@ -1,5 +1,10 @@
 nf-seqera changelog
 ====================
+0.22.0 - 9 Jul 2026
+- Bump sched-client@0.71.0 [22ae24804]
+- Propagate Seqera Intelligent Compute scheduler run identifier to Platform (#7228) [6c7547c5a]
+- Send pipeline-secret references to the Seqera Scheduler (M1) [a4ffbe937]
+
 0.21.0 - 17 Jun 2026
 - Add shellEnabled option and per-task prediction model to Seqera executor (#7204) [80c0a4cf2]
 
