@@ -1,5 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
+26.04.6 - 9 Jul 2026
+- Bump nf-seqera@0.21.1
+- Bump nf-tower@1.28.2
+
 26.04.5 - 9 Jul 2026
 - Add GPU metrics to workflow-level execution summary (#7229) [d72c88ef7]
 - Fix flatMap tuple error for dataflow value (#7254) [0df0bfb28]
