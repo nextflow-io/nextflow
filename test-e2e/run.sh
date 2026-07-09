@@ -47,7 +47,7 @@ echo "commit id: $commitId"
 # build a scratch container image with assembled nextflow runtime and plugins
 #
 tag=${version}-${commitId}
-base=${base:-'public.cr.seqera.io/platform/nf-launcher:j17-base'}
+base=${base:-'public.cr.seqera.io/platform/nf-launcher:j21-dind-base'}
 repository=${repository:-'public.cr.seqera.io/snapshots/nextflow-scratch'}
 image=${repository}:${tag}
 
