@@ -81,6 +81,31 @@ class LocalSecretsProviderTest extends Specification {
         folder.deleteDir()
     }
 
+    def 'should not change permissions of a pre-existing secrets directory' () {
+        given:
+        // a directory the user owns but did not create through the provider, e.g. a shared
+        // NXF_SECRETS_FILE parent deliberately left group-readable
+        def folder = Files.createTempDirectory('test')
+        folder.setPermissions('rwxr-x---')
+        def secretFile = folder.resolve('store.json')
+        and:
+        def provider = new LocalSecretsProvider(storeFile: secretFile)
+
+        when:
+        provider.storeSecrets( [new SecretImpl('foo', 'bar')] )
+        then:
+        noExceptionThrown()
+        and:
+        // the file must still be locked down to the owner ...
+        secretFile.getPermissions() == 'rw-------'
+        and:
+        // ... but the pre-existing directory must be left untouched
+        folder.getPermissions() == 'rwxr-x---'
+
+        cleanup:
+        folder.deleteDir()
+    }
+
     def 'should never expose secret content through world-readable permissions during write' () {
         given:
         def folder = Files.createTempDirectory('test')
