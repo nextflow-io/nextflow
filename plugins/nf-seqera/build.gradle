@@ -51,7 +51,7 @@ dependencies {
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
     compileOnly 'org.pf4j:pf4j:3.14.1'
-    api 'io.seqera:sched-client:0.69.0'
+    api 'io.seqera:sched-client:0.71.0-SNAPSHOT'
     // Override the old lib-httpx pulled transitively by sched-client, otherwise the plugin
     // bundles failsafe-3.1.0 which clashes with the failsafe-3.3.2 the plugin is compiled
     // against (java.lang.NoSuchMethodError on handleIf(CheckedPredicate) at runtime).
