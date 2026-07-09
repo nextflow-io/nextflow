@@ -1,5 +1,8 @@
 nf-tower changelog
 ===================
+1.29.0 - 9 Jul 2026
+- Propagate Seqera Intelligent Compute scheduler run identifier to Platform (#7228) [6c7547c5a]
+
 1.28.1 - 17 Jun 2026
 - Improve Tower telemetry error handling on transient gateway failures (#7190) [3626f31a5]
 - Use a stop flag instead of thread interrupt to shut down the logs checkpoint (#7193) [d25d76bcf]
