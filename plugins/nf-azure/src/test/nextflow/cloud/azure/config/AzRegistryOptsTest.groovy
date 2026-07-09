@@ -52,4 +52,38 @@ class AzRegistryOptsTest extends Specification {
         opts3.password == 'env-password'
     }
 
+    def 'should get managed identity resource id'() {
+        expect: 'config value is used'
+        new AzRegistryOpts([managedIdentityResourceId: 'res-id'], [:]).managedIdentityResourceId == 'res-id'
+
+        and: 'env fallback is used when config absent'
+        new AzRegistryOpts([:], [AZURE_REGISTRY_MANAGED_RESOURCE_ID: 'env-res-id']).managedIdentityResourceId == 'env-res-id'
+
+        and: 'config value wins over env'
+        new AzRegistryOpts([managedIdentityResourceId: 'res-id'], [AZURE_REGISTRY_MANAGED_RESOURCE_ID: 'env-res-id']).managedIdentityResourceId == 'res-id'
+
+        and: 'null when neither set'
+        new AzRegistryOpts([:], [:]).managedIdentityResourceId == null
+    }
+
+    def 'should validate isConfigured'() {
+        expect:
+        new AzRegistryOpts([:], [:]).isConfigured() == false
+        new AzRegistryOpts([userName: 'foo', password: 'bar'], [:]).isConfigured() == true
+        new AzRegistryOpts([managedIdentityResourceId: 'res-id'], [:]).isConfigured() == true
+        new AzRegistryOpts([managedIdentityResourceId: 'res-id'], [:]).usesManagedIdentity() == true
+        new AzRegistryOpts([userName: 'foo', password: 'bar'], [:]).usesManagedIdentity() == false
+
+        when: 'managed identity takes precedence over incomplete user/password'
+        def opts = new AzRegistryOpts([managedIdentityResourceId: 'res-id', userName: 'foo'], [:])
+        then:
+        opts.isConfigured() == true
+        opts.usesManagedIdentity() == true
+
+        when: 'partial user/password throws'
+        new AzRegistryOpts([userName: 'foo'], [:]).isConfigured()
+        then:
+        thrown(IllegalArgumentException)
+    }
+
 }

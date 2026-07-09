@@ -605,6 +605,14 @@ The client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/
 
 When `true`, use the system-assigned [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) to authenticate Azure resources. Defaults to environment variable `AZURE_MANAGED_IDENTITY_SYSTEM`.
 
+##### `azure.registry.managedIdentityResourceId`
+
+The ARM resource ID of a user-assigned managed identity used to authenticate to a private container registry, e.g. `/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.ManagedIdentity/userAssignedIdentities/<name>`. When set, it takes precedence over `azure.registry.userName` and `azure.registry.password`. Defaults to environment variable `AZURE_REGISTRY_MANAGED_RESOURCE_ID`.
+
+:::note
+The managed identity must already be attached to the pool nodes. Nextflow cannot attach an identity when auto-creating a pool, so this option requires a pre-existing pool (or an identity attached out-of-band).
+:::
+
 ##### `azure.registry.password`
 
 The password to connect to a private container registry.

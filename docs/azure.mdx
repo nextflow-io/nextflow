@@ -550,6 +550,23 @@ Nextflow uses the following environment variables if the registry credentials ar
 - `AZURE_REGISTRY_PASSWORD`: the password for Azure Container Registry authentication
 :::
 
+Alternatively, you can authenticate to a private registry with a user-assigned [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) instead of a username and password:
+
+```groovy
+azure {
+    registry {
+        server = '<registry-server>'     // e.g., 'myregistry.azurecr.io'
+        managedIdentityResourceId = '<managed-identity-resource-id>' // e.g., '/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.ManagedIdentity/userAssignedIdentities/<name>'
+    }
+}
+```
+
+The value is the full ARM resource ID of the managed identity, not its client ID. When set, it takes precedence over `userName` and `password`, and can also be provided via the `AZURE_REGISTRY_MANAGED_RESOURCE_ID` environment variable.
+
+:::note
+The managed identity must already be attached to the pool nodes. Nextflow cannot attach an identity when auto-creating a pool, so this option requires a pre-existing pool (or an identity attached out-of-band).
+:::
+
 Container images from public registries such as Docker Hub can be used without additional configuration, even when a private registry is specified in the `azure.registry` scope. The Docker runtime on Azure Batch VMs automatically uses the appropriate registry based on the container image specified for the task.
 
 ### VM images
