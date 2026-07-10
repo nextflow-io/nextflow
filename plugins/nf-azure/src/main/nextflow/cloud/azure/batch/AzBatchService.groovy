@@ -28,6 +28,7 @@ import dev.failsafe.function.CheckedPredicate
 
 import com.azure.compute.batch.BatchClient
 import com.azure.compute.batch.BatchClientBuilder
+import com.azure.compute.batch.models.AllocationState
 import com.azure.compute.batch.models.AutoUserScope
 import com.azure.compute.batch.models.AutoUserSpecification
 import com.azure.compute.batch.models.AzureFileShareConfiguration
@@ -757,16 +758,42 @@ class AzBatchService implements Closeable {
         return new AzVmPoolSpec(poolId: poolId, vmType: vmType, opts: opts, metadata: metadata)
     }
 
+    /**
+     * Resize error codes that are transient/retryable. A pool carrying only these
+     * errors can recover on the next resize, so submission should not be blocked.
+     * Compared case-insensitively.
+     */
+    private static final List<String> TRANSIENT_RESIZE_ERROR_CODES = ['AllocationTimedout', 'AllocationFailed']
+
     protected void checkPool(BatchPool pool, AzVmPoolSpec spec) {
         if( pool.state != BatchPoolState.ACTIVE ) {
             throw new IllegalStateException("Azure Batch pool '${pool.id}' not in active state")
         }
         else if ( pool.resizeErrors && pool.currentDedicatedNodes==0 && pool.currentLowPriorityNodes==0 ) {
-            throw new IllegalStateException("Azure Batch pool '${pool.id}' has resize errors and no agents are available")
+            // Azure Batch persists the last resize error on the pool and only clears it on the next resize.
+            // For a steady autoscale pool carrying only transient errors, submitting the task is what triggers
+            // a fresh resize (which clears the stale error), so warn and proceed instead of blocking recovery.
+            if( isRecoverableResizeError(pool) ) {
+                log.warn "Azure Batch pool '${pool.id}' has recoverable resize errors and no agents; submitting task to trigger a fresh resize - ${pool.resizeErrors*.code}"
+            }
+            else {
+                throw new IllegalStateException("Azure Batch pool '${pool.id}' has resize errors and no agents are available")
+            }
         }
         if( pool.taskSlotsPerNode != spec.vmType.numberOfCores ) {
             throw new IllegalStateException("Azure Batch pool '${pool.id}' slots per node does not match the VM num cores (slots: ${pool.taskSlotsPerNode}, cores: ${spec.vmType.numberOfCores})")
         }
+    }
+
+    /**
+     * A resize error is recoverable when the pool can clear it on its own: it is autoscale-enabled
+     * (so a new task will trigger a fresh resize), it is steady (not currently resizing/stopping),
+     * and every recorded resize error is a transient/retryable code.
+     */
+    protected boolean isRecoverableResizeError(BatchPool pool) {
+        return pool.isEnableAutoScale() &&
+                pool.allocationState == AllocationState.STEADY &&
+                pool.resizeErrors?.every { err -> TRANSIENT_RESIZE_ERROR_CODES.any { it.equalsIgnoreCase(err.code) } }
     }
 
     protected void checkPoolId(String poolId) {
