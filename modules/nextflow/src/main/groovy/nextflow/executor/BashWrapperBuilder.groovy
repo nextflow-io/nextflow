@@ -738,7 +738,8 @@ class BashWrapperBuilder {
         if( fixOwnership() )
             builder.addEnv( 'NXF_OWNER=$(id -u):$(id -g)' )
 
-        for( String var : containerConfig.getEnvWhitelist() ) {
+        final envWhitelist = new ArrayList<>(containerConfig.getEnvWhitelist())
+        for( String var : envWhitelist ) {
             builder.addEnv(var)
         }
 
