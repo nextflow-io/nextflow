@@ -51,6 +51,7 @@ import com.azure.compute.batch.models.ContainerConfiguration
 import com.azure.compute.batch.models.ContainerRegistryReference
 import com.azure.compute.batch.models.ContainerType
 import com.azure.compute.batch.models.ElevationLevel
+import com.azure.compute.batch.models.ImageReference
 import com.azure.compute.batch.models.MetadataItem
 import com.azure.compute.batch.models.MountConfiguration
 import com.azure.compute.batch.models.NetworkConfiguration
@@ -704,7 +705,7 @@ class AzBatchService implements Closeable {
                 continue
             if( it.osType != opts.osType )
                 continue
-            if( it.verificationType != opts.verification )
+            if( opts.verification != null && it.verificationType != opts.verification )
                 continue
             if( !it.imageReference.publisher.equalsIgnoreCase(opts.publisher) )
                 continue
@@ -712,8 +713,14 @@ class AzBatchService implements Closeable {
                 return it
         }
 
-        log.debug "[AZURE BATCH] No VM image matching sku=$opts.sku; publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; verification type=$opts.verification - supported images: $available"
-        throw new IllegalStateException("Cannot find a matching VM image with publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; verification type=$opts.verification")
+        log.debug "[AZURE BATCH] No VM image matching sku=$opts.sku; publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; verification type=${opts.verification ?: 'any'} - supported images: $available"
+        throw new IllegalStateException("Cannot find a matching VM image with publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; verification type=${opts.verification ?: 'any'}")
+    }
+
+    protected ImageReference customImageReference(AzPoolOpts opts) {
+        if( !opts.sku )
+            throw new IllegalArgumentException("Azure Batch pool option 'sku' is required when 'virtualMachineImageId' is set - it must be a valid node agent SKU id (e.g. 'batch.node.ubuntu 22.04')")
+        return new ImageReference().setVirtualMachineImageId(opts.virtualMachineImageId)
     }
 
     protected AzVmPoolSpec specFromPoolConfig(String poolId) {
@@ -883,9 +890,20 @@ class AzBatchService implements Closeable {
             log.debug "[AZURE BATCH] Connecting Azure Batch pool to Container Registry '$registryOpts.server'"
         }
 
-        final image = getImage(opts)
+        final ImageReference imageRef
+        final String nodeAgentSkuId
+        if( opts.virtualMachineImageId ) {
+            imageRef = customImageReference(opts)
+            nodeAgentSkuId = opts.sku
+            log.debug "[AZURE BATCH] Using custom VM image from Compute Gallery: $opts.virtualMachineImageId (node agent SKU: $nodeAgentSkuId)"
+        }
+        else {
+            final image = getImage(opts)
+            imageRef = image.imageReference
+            nodeAgentSkuId = image.nodeAgentSkuId
+        }
 
-        new VirtualMachineConfiguration(image.imageReference, image.nodeAgentSkuId)
+        new VirtualMachineConfiguration(imageRef, nodeAgentSkuId)
                 .setContainerConfiguration(containerConfig)
     }
 
@@ -951,6 +969,10 @@ class AzBatchService implements Closeable {
             if( !pol ) throw new IllegalArgumentException("Unknown Azure Batch scheduling policy: ${spec.opts.schedulePolicy}")
             poolParams.setTaskSchedulingPolicy( new BatchTaskSchedulingPolicy(pol) )
         }
+
+        // node communication mode
+        if( spec.opts.targetCommunicationMode )
+            poolParams.setTargetNodeCommunicationMode( spec.opts.targetCommunicationMode )
 
         // mount points
         if ( config.storage().fileShares ) {

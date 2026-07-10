@@ -16,6 +16,7 @@
 
 package nextflow.cloud.azure.config
 
+import com.azure.compute.batch.models.BatchNodeCommunicationMode
 import com.azure.compute.batch.models.ImageVerificationType
 import com.azure.compute.batch.models.OSType
 import com.google.common.hash.Hasher
@@ -144,8 +145,31 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
     """)
     final String vmType
 
-    OSType osType = DEFAULT_OS_TYPE
-    ImageVerificationType verification = ImageVerificationType.VERIFIED
+    @ConfigOption
+    @Description("""
+        The resource ID of a custom VM image from an Azure Compute Gallery to use for the pool nodes
+        (e.g. `/subscriptions/<id>/resourceGroups/<group>/providers/Microsoft.Compute/galleries/<gallery>/images/<definition>/versions/<version>`).
+        When set, `publisher` and `offer` are ignored, and `sku` must be set to the Batch node agent SKU id that matches the image OS (e.g. `batch.node.ubuntu 22.04`).
+    """)
+    final String virtualMachineImageId
+
+    @ConfigOption
+    @Description("""
+        The OS type of the pool nodes. Can be either `linux` or `windows` (default: `linux`).
+    """)
+    final OSType osType
+
+    @ConfigOption
+    @Description("""
+        The image verification type to match when resolving the VM image from the Batch supported-images list. Can be `verified`, `unverified`, or `any` (default: `verified`). Ignored when `virtualMachineImageId` is set.
+    """)
+    final ImageVerificationType verification
+
+    @ConfigOption
+    @Description("""
+        The node communication mode used by the pool. Can be either `classic` or `simplified` (default: `simplified`). In `simplified` mode the Batch service initiates communication with the compute nodes, reducing the outbound network access required by the nodes.
+    """)
+    final BatchNodeCommunicationMode targetCommunicationMode
 
     String registry
     String userName
@@ -175,6 +199,44 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
         this.password = opts.password
         this.virtualNetwork = opts.virtualNetwork
         this.lowPriority = opts.lowPriority as boolean
+        this.virtualMachineImageId = opts.virtualMachineImageId ?: null
+        this.osType = parseOsType(opts.osType)
+        this.verification = parseVerification(opts.verification)
+        this.targetCommunicationMode = parseCommunicationMode(opts.targetCommunicationMode)
+    }
+
+    protected static OSType parseOsType(value) {
+        if( value == null )
+            return DEFAULT_OS_TYPE
+        if( value instanceof OSType )
+            return value
+        final str = value.toString().toLowerCase()
+        if( str == 'linux' ) return OSType.LINUX
+        if( str == 'windows' ) return OSType.WINDOWS
+        throw new IllegalArgumentException("Invalid azure.batch.pools.<name>.osType value: '$value' - expected 'linux' or 'windows'")
+    }
+
+    protected static ImageVerificationType parseVerification(value) {
+        if( value == null )
+            return ImageVerificationType.VERIFIED
+        if( value instanceof ImageVerificationType )
+            return value
+        final str = value.toString().toLowerCase()
+        if( str == 'verified' ) return ImageVerificationType.VERIFIED
+        if( str == 'unverified' ) return ImageVerificationType.UNVERIFIED
+        if( str == 'any' ) return null
+        throw new IllegalArgumentException("Invalid azure.batch.pools.<name>.verification value: '$value' - expected 'verified', 'unverified' or 'any'")
+    }
+
+    protected static BatchNodeCommunicationMode parseCommunicationMode(value) {
+        if( value == null )
+            return BatchNodeCommunicationMode.SIMPLIFIED
+        if( value instanceof BatchNodeCommunicationMode )
+            return value
+        final str = value.toString().toLowerCase()
+        if( str == 'simplified' ) return BatchNodeCommunicationMode.SIMPLIFIED
+        if( str == 'classic' ) return BatchNodeCommunicationMode.CLASSIC
+        throw new IllegalArgumentException("Invalid azure.batch.pools.<name>.targetCommunicationMode value: '$value' - expected 'simplified' or 'classic'")
     }
 
     @Override
@@ -195,6 +257,10 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
         hasher.putUnencodedChars(schedulePolicy ?: '')
         hasher.putUnencodedChars(virtualNetwork ?: '')
         hasher.putBoolean(lowPriority)
+        hasher.putUnencodedChars(virtualMachineImageId ?: '')
+        hasher.putUnencodedChars(osType.toString())
+        hasher.putUnencodedChars(verification?.toString() ?: 'any')
+        hasher.putUnencodedChars(targetCommunicationMode.toString())
         hasher.putUnencodedChars(startTask.script ?: '')
         hasher.putBoolean(startTask.privileged)
         return hasher
