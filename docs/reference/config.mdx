@@ -537,6 +537,10 @@ The mount options for mounting the file shares (default`-o vers=3.0,dir_mode=077
 
 The offer type of the virtual machine type used by the pool identified with `<name>` (default`centos-container`).
 
+##### `azure.batch.pools.<name>.osType`
+
+The OS type of the pool nodes. Can be either `linux` or `windows` (default`linux`).
+
 ##### `azure.batch.pools.<name>.privileged`
 
 Enable the task to run with elevated access. Ignored if `runAs` is set (default`false`).
@@ -576,6 +580,18 @@ Enable the `startTask` to run with elevated access (default`false`).
 <AddedInVersion version="25.04" />
 
 The `startTask` that is executed as the node joins the Azure Batch node pool.
+
+##### `azure.batch.pools.<name>.targetCommunicationMode`
+
+The node communication mode used by the pool. Can be either `classic` or `simplified` (default`simplified`). In `simplified` mode the Batch service initiates communication with the compute nodes, reducing the outbound network access required by the nodes.
+
+##### `azure.batch.pools.<name>.verification`
+
+The image verification type to match when resolving the VM image from the Batch supported-images list. Can be `verified`, `unverified`, or `any` (default`verified`). Ignored when `virtualMachineImageId` is set.
+
+##### `azure.batch.pools.<name>.virtualMachineImageId`
+
+The resource ID of a custom VM image from an Azure Compute Gallery to use for the pool nodes (e.g. `/subscriptions/<id>/resourceGroups/<group>/providers/Microsoft.Compute/galleries/<gallery>/images/<definition>/versions/<version>`). When set, `publisher` and `offer` are ignored, and `sku` must be set to the Batch node agent SKU id that matches the image OS (e.g. `batch.node.ubuntu 22.04`).
 
 ##### `azure.batch.pools.<name>.virtualNetwork`
 

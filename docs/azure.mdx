@@ -597,6 +597,43 @@ azure {
 }
 ```
 
+**Custom images from an Azure Compute Gallery**
+
+You can provision pool nodes from a custom VM image published in an [Azure Compute Gallery](https://learn.microsoft.com/en-us/azure/virtual-machines/azure-compute-gallery) by setting `virtualMachineImageId` to the image version resource ID. When set, `publisher` and `offer` are ignored, and `sku` must be set to the Batch node agent SKU id that matches the image operating system.
+
+```groovy
+azure {
+    batch {
+        pools {
+            <pool-name> {
+                virtualMachineImageId = '/subscriptions/<subscription>/resourceGroups/<group>/providers/Microsoft.Compute/galleries/<gallery>/images/<definition>/versions/<version>'
+                sku = 'batch.node.ubuntu 22.04'
+            }
+        }
+    }
+}
+```
+
+:::note
+Custom images require Microsoft Entra authentication (service principal or managed identity). The Batch account identity must have read access to the gallery image, and the pool typically requires `virtualNetwork` to be set.
+:::
+
+**Image verification**
+
+By default, Nextflow only selects images that Azure Batch has formally verified. Set `verification` to `unverified` to also allow images that Azure Batch lists but has not verified, or to `any` to accept both. This setting is ignored when `virtualMachineImageId` is set.
+
+```groovy
+azure {
+    batch {
+        pools {
+            <pool-name> {
+                verification = 'unverified'  // 'verified' (default), 'unverified' or 'any'
+            }
+        }
+    }
+}
+```
+
 ### Advanced features
 
 **Virtual networks**
@@ -618,6 +655,14 @@ Nextflow can submit tasks to existing pools that are already attached to a virtu
 :::warning
 Virtual networks require Microsoft Entra authentication (service principal or managed identity).
 :::
+
+**Node communication mode**
+
+Pools can be configured to use [simplified compute node communication](https://learn.microsoft.com/en-us/azure/batch/simplified-compute-node-communication), which changes how the Batch service communicates with the compute nodes and reduces the outbound network access required by the nodes. The default is `simplified`; set it to `classic` to restore the legacy behavior.
+
+```groovy
+azure.batch.pools.<pool-name>.targetCommunicationMode = 'simplified'  // 'simplified' (default) or 'classic'
+```
 
 **Start tasks**
 
