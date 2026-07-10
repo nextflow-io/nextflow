@@ -871,22 +871,28 @@ class AzBatchService implements Closeable {
          * https://github.com/MicrosoftDocs/azure-docs/blob/master/articles/batch/batch-docker-container-workloads.md#:~:text=Run%20container%20applications%20on%20Azure,compatible%20containers%20on%20the%20nodes.
          */
         final containerConfig = new ContainerConfiguration(ContainerType.DOCKER_COMPATIBLE)
-        final registryOpts = config.registry()
-
-        if( registryOpts && registryOpts.isConfigured() ) {
-            final containerRegistries = new ArrayList<ContainerRegistryReference>(1)
-            containerRegistries << new ContainerRegistryReference()
-                    .setRegistryServer(registryOpts.server)
-                    .setUsername(registryOpts.userName)
-                    .setPassword(registryOpts.password)
+        final containerRegistries = containerRegistries()
+        if( containerRegistries )
             containerConfig.setContainerRegistries(containerRegistries)
-            log.debug "[AZURE BATCH] Connecting Azure Batch pool to Container Registry '$registryOpts.server'"
-        }
 
         final image = getImage(opts)
 
         new VirtualMachineConfiguration(image.imageReference, image.nodeAgentSkuId)
                 .setContainerConfiguration(containerConfig)
+    }
+
+    protected List<ContainerRegistryReference> containerRegistries() {
+        final result = new ArrayList<ContainerRegistryReference>()
+        for( final registryOpts : config.registries() ) {
+            if( !registryOpts.isConfigured() )
+                continue
+            result << new ContainerRegistryReference()
+                    .setRegistryServer(registryOpts.server)
+                    .setUsername(registryOpts.userName)
+                    .setPassword(registryOpts.password)
+            log.debug "[AZURE BATCH] Connecting Azure Batch pool to Container Registry '$registryOpts.server'"
+        }
+        return result
     }
 
 

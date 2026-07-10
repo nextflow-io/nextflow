@@ -26,6 +26,7 @@ import com.azure.compute.batch.models.AllocationState
 import com.azure.compute.batch.models.BatchPool
 import com.azure.compute.batch.models.BatchPoolState
 import com.azure.compute.batch.models.BatchJobCreateContent
+import com.azure.compute.batch.models.ContainerRegistryReference
 import com.azure.compute.batch.models.ElevationLevel
 import com.azure.compute.batch.models.EnvironmentSetting
 import com.azure.compute.batch.models.ResizeError
@@ -1292,5 +1293,63 @@ class AzBatchServiceTest extends Specification {
         poolWithResizeError(resizeErrors: [ new ResizeError(code: 'AccountVMSeriesCoreQuotaReached') ]) | false
         poolWithResizeError(resizeErrors: [ new ResizeError(code: 'AllocationTimedout'), new ResizeError(code: 'AccountCoreQuotaReached') ]) | false
         poolWithResizeError(resizeErrors: [ new ResizeError(code: null) ])              | false
+    }
+
+    def 'should return no container registries when none are configured' () {
+        given:
+        def exec = createExecutor(new AzConfig([:]))
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+
+        expect:
+        svc.containerRegistries() == []
+    }
+
+    def 'should build a container registry reference for a single registry' () {
+        given:
+        def exec = createExecutor(new AzConfig([registry: [server: 'foo.azurecr.io', userName: 'foo', password: 'bar']]))
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+
+        when:
+        def refs = svc.containerRegistries()
+        then:
+        refs.size() == 1
+        refs[0].registryServer == 'foo.azurecr.io'
+        refs[0].username == 'foo'
+        refs[0].password == 'bar'
+    }
+
+    def 'should build a container registry reference for each configured registry in a list' () {
+        given:
+        def exec = createExecutor(new AzConfig([registry: [
+                [server: 'foo.azurecr.io', userName: 'foo', password: 'p1'],
+                [server: 'bar.azurecr.io', userName: 'bar', password: 'p2'],
+        ]]))
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+
+        when:
+        def refs = svc.containerRegistries()
+        then:
+        refs.size() == 2
+        refs[0].registryServer == 'foo.azurecr.io'
+        refs[0].username == 'foo'
+        refs[0].password == 'p1'
+        refs[1].registryServer == 'bar.azurecr.io'
+        refs[1].username == 'bar'
+        refs[1].password == 'p2'
+    }
+
+    def 'should skip unconfigured registries in a list' () {
+        given:
+        def exec = createExecutor(new AzConfig([registry: [
+                [server: 'docker.io'],
+                [server: 'foo.azurecr.io', userName: 'foo', password: 'p1'],
+        ]]))
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+
+        when:
+        def refs = svc.containerRegistries()
+        then:
+        refs.size() == 1
+        refs[0].registryServer == 'foo.azurecr.io'
     }
 }

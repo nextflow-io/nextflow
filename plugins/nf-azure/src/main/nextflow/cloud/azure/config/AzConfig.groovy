@@ -19,6 +19,7 @@ package nextflow.cloud.azure.config
 import groovy.transform.CompileStatic
 import nextflow.Global
 import nextflow.Session
+import nextflow.config.spec.ConfigOption
 import nextflow.config.spec.ConfigScope
 import nextflow.config.spec.ScopeName
 import nextflow.script.dsl.Description
@@ -41,7 +42,11 @@ class AzConfig implements ConfigScope {
 
     private AzBatchOpts batch
 
-    private AzRegistryOpts registry
+    @ConfigOption(types=[Map, List])
+    @Description("""
+        The container registry from which to pull the Docker images. Accepts a single registry definition (`server`, `userName`, `password`), or a list of registry definitions to pull images from multiple Azure Container Registries.
+    """)
+    private final List<AzRegistryOpts> registry
 
     private AzRetryConfig retryPolicy
 
@@ -55,7 +60,7 @@ class AzConfig implements ConfigScope {
     AzConfig(Map azure) {
         this.batch = new AzBatchOpts( (Map)azure.batch ?: Collections.emptyMap() )
         this.storage = new AzStorageOpts( (Map)azure.storage ?: Collections.emptyMap() )
-        this.registry = new AzRegistryOpts( (Map)azure.registry ?: Collections.emptyMap() )
+        this.registry = parseRegistries(azure.registry)
         this.azcopy = new AzCopyOpts( (Map)azure.azcopy ?: Collections.emptyMap() )
         this.retryPolicy = new AzRetryConfig( (Map)azure.retryPolicy ?: Collections.emptyMap() )
         this.activeDirectory = new AzActiveDirectoryOpts((Map) azure.activeDirectory ?: Collections.emptyMap())
@@ -68,13 +73,19 @@ class AzConfig implements ConfigScope {
 
     AzStorageOpts storage() { storage }
 
-    AzRegistryOpts registry() { registry }
+    List<AzRegistryOpts> registries() { registry }
 
     AzRetryConfig retryConfig() { retryPolicy }
 
     AzActiveDirectoryOpts activeDirectory() { activeDirectory }
 
     AzManagedIdentityOpts managedIdentity() { managedIdentity }
+
+    private static List<AzRegistryOpts> parseRegistries(Object value) {
+        if( value instanceof List )
+            return ((List)value).collect { new AzRegistryOpts((Map)it ?: Collections.emptyMap()) }
+        return List.of( new AzRegistryOpts((Map)value ?: Collections.emptyMap()) )
+    }
 
     static AzConfig getConfig(Session session) {
         if( !session )

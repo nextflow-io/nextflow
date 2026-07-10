@@ -605,6 +605,10 @@ The client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/
 
 When `true`, use the system-assigned [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) to authenticate Azure resources. Defaults to environment variable `AZURE_MANAGED_IDENTITY_SYSTEM`.
 
+##### `azure.registry`
+
+The container registry from which to pull the Docker images. Accepts a single registry definition (`server`, `userName`, `password`), or a list of registry definitions to pull images from multiple Azure Container Registries.
+
 ##### `azure.registry.password`
 
 The password to connect to a private container registry.

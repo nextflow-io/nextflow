@@ -552,6 +552,17 @@ Nextflow uses the following environment variables if the registry credentials ar
 
 Container images from public registries such as Docker Hub can be used without additional configuration, even when a private registry is specified in the `azure.registry` scope. The Docker runtime on Azure Batch VMs automatically uses the appropriate registry based on the container image specified for the task.
 
+To pull images from multiple private registries, provide a list of registry definitions instead of a single block:
+
+```groovy
+azure {
+    registry = [
+        [server: 'myregistry.azurecr.io', userName: '<registry-user>', password: '<registry-password>'],
+        [server: 'otherregistry.azurecr.io', userName: '<other-user>', password: '<other-password>'],
+    ]
+}
+```
+
 ### VM images
 
 When Nextflow creates a pool of compute nodes, it selects:
