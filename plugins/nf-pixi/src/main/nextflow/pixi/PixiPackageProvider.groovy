@@ -16,6 +16,7 @@
 
 package nextflow.pixi
 
+import java.nio.file.Files
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
@@ -33,7 +34,7 @@ import nextflow.util.Escape
 @CompileStatic
 class PixiPackageProvider implements PackageProvider {
 
-    private final PixiCache cache
+    private PixiCache cache
     private final PixiConfig config
 
     PixiPackageProvider(PixiConfig config) {
@@ -75,16 +76,20 @@ class PixiPackageProvider implements PackageProvider {
             throw new IllegalArgumentException("Package spec must have either environment file or entries")
         }
 
-        return cache.getCachePathFor(pixiEnv)
+        // per-process `options: [createOptions: '...']` overrides pixi.createOptions
+        final createOptionsOverride = spec.options?.get('createOptions') as String
+        return cache.getCachePathFor(pixiEnv, createOptionsOverride)
     }
 
     @Override
     String getActivationScript(Path envPath) {
         def result = ""
 
-        // Check if there's a .pixi file that points to the project directory
+        // Check for a `.pixi` marker *file* that points to the project directory
+        // (written for the manifest-file case). Note: `pixi install` also creates
+        // a `.pixi` *directory* for the env itself, so test for a regular file.
         final pixiFile = envPath.resolve('.pixi')
-        if (pixiFile.exists()) {
+        if (Files.isRegularFile(pixiFile)) {
             // Read the project directory path
             final projectDir = pixiFile.text.trim()
             result += "cd ${Escape.path(projectDir as String)} && "
@@ -108,5 +113,10 @@ class PixiPackageProvider implements PackageProvider {
     @Override
     Object getConfig() {
         return config
+    }
+
+    @Override
+    List<String> getManifestFileNames() {
+        return ['pixi.toml']
     }
 }

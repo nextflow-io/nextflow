@@ -1,0 +1,14 @@
+nextflow_pipeline {
+
+    name "uv provider"
+    script "../scripts/uv.nf"
+    tag "package-providers"
+    tag "uv"
+
+    test("uv resolves a package list and runs the task") {
+        then {
+            assert workflow.success
+            assert workflow.stdout.any { it.contains('Hello uv') }
+        }
+    }
+}

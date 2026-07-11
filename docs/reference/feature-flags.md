@@ -49,6 +49,12 @@ Feature flags are used to introduce experimental or other opt-in features. They 
 : *Experimental: may change in a future release.*
 : When `true`, enables the use of the {ref}`workflow output definition <workflow-output-def>`.
 
+`nextflow.preview.package`
+: :::{versionadded} 25.07.0-edge
+  :::
+: *Experimental: may change in a future release.*
+: When `true`, enables the unified package management system with the {ref}`package <process-package>` process directive. See {ref}`package-page` for more information. Requires the {ref}`v2 syntax parser <strict-syntax-page>`.
+
 `nextflow.preview.recursion`
 : *Experimental: may change in a future release.*
 : When `true`, enables {ref}`process and workflow recursion <workflow-recursion>`.

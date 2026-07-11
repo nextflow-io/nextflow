@@ -1,0 +1,151 @@
+name: package-providers
+
+# nf-test suite for the unified `package` directive. One CI job per provider
+# (matrix); each job provisions only its own package-manager tool, then runs the
+# provider's tagged nf-test against a development build of Nextflow + the
+# freshly-built nf-<provider> plugins.
+#
+# NOTE: guix is intentionally excluded from CI -- unlike nix (which the
+# Determinate installer sets up cleanly on a runner, daemon included), guix has
+# no comparable turnkey provisioning for ephemeral runners. It is exercised
+# manually (see tests/nf-test/examples/package-providers-hello.nf).
+
+on:
+  push:
+    paths:
+      - 'plugins/nf-conda/**'
+      - 'plugins/nf-pixi/**'
+      - 'plugins/nf-uv/**'
+      - 'plugins/nf-nix/**'
+      - 'plugins/nf-pak/**'
+      - 'plugins/nf-install2r/**'
+      - 'modules/nextflow/src/main/groovy/nextflow/packages/**'
+      - 'tests/nf-test/**'
+      - '.github/workflows/package-providers.yml'
+  pull_request:
+    paths:
+      - 'plugins/nf-conda/**'
+      - 'plugins/nf-pixi/**'
+      - 'plugins/nf-uv/**'
+      - 'plugins/nf-nix/**'
+      - 'plugins/nf-pak/**'
+      - 'plugins/nf-install2r/**'
+      - 'modules/nextflow/src/main/groovy/nextflow/packages/**'
+      - 'tests/nf-test/**'
+      - '.github/workflows/package-providers.yml'
+  workflow_dispatch:
+
+jobs:
+  nf-test:
+    name: ${{ matrix.provider }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        provider: [conda, uv, pixi, nix, pak, install2r]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: 21
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Build Nextflow and provider plugins
+        # `make compile` compiles all subprojects (incl. plugin classes/resources)
+        # and runs exportClasspath, which generates the `.launch.classpath` the dev
+        # launcher needs.
+        run: make compile
+
+      # ---- per-provider tool provisioning -------------------------------------
+      - name: Provision conda
+        if: matrix.provider == 'conda'
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          channels: conda-forge,bioconda
+
+      - name: Put conda on PATH
+        if: matrix.provider == 'conda'
+        run: echo "$CONDA/bin" >> "$GITHUB_PATH"
+
+      - name: Provision uv
+        if: matrix.provider == 'uv'
+        uses: astral-sh/setup-uv@v6
+
+      - name: Provision pixi
+        if: matrix.provider == 'pixi'
+        uses: prefix-dev/setup-pixi@v0.8.10
+        with:
+          run-install: false
+
+      - name: Provision nix
+        if: matrix.provider == 'nix'
+        # Determinate installer: sets up the store + daemon on the runner and
+        # enables flakes out of the box (the provider resolves nixpkgs#<pkg>).
+        # @main is the tag Determinate documents for this action.
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: Provision R + pak
+        if: matrix.provider == 'pak'
+        uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - name: Install pak
+        if: matrix.provider == 'pak'
+        run: Rscript -e 'install.packages("pak", repos = sprintf("https://r-lib.github.io/p/pak/stable/%s/%s/%s", .Platform$pkgType, R.Version()$os, R.Version()$arch))'
+
+      - name: Provision R + install2.r
+        if: matrix.provider == 'install2r'
+        uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - name: Install littler (install2.r)
+        if: matrix.provider == 'install2r'
+        run: |
+          # install2.r ships with littler and depends on docopt; expose both the
+          # littler `r` interpreter (its shebang) and the install2.r script on PATH
+          Rscript -e 'install.packages(c("littler","docopt"), repos="https://cloud.r-project.org")'
+          RBIN=$(Rscript -e 'cat(system.file("bin","r",package="littler"))')
+          EX=$(Rscript -e 'cat(system.file("examples",package="littler"))')
+          sudo ln -sf "$RBIN" /usr/local/bin/r
+          sudo ln -sf "$EX/install2.r" /usr/local/bin/install2.r
+
+      # ---- nf-test ------------------------------------------------------------
+      - name: Install nf-test
+        env:
+          NFT_VERSION: "0.9.2"
+        run: |
+          # canonical installer (get.nf-test.com intermittently 504s); retry hard
+          curl -fsSL --retry 6 --retry-all-errors --retry-delay 10 \
+            https://code.askimed.com/install/nf-test | bash -s "$NFT_VERSION"
+          sudo mv nf-test /usr/local/bin/
+          # the launcher needs its jar alongside it (older releases ship a separate jar)
+          [ -f nf-test.jar ] && sudo mv nf-test.jar /usr/local/bin/ || true
+          nf-test version
+
+      - name: Use development Nextflow build
+        # Expose the source build of Nextflow as `nextflow` so nf-test runs it
+        # with the locally-built plugins. NXF_PLUGINS_MODE=dev makes Nextflow
+        # resolve the nf-<provider> plugins from plugins/*/build.
+        # (This is the one integration point to validate on the first green run.)
+        run: |
+          mkdir -p "$HOME/bin"
+          printf '#!/usr/bin/env bash\nexec "%s/launch.sh" "$@"\n' "$PWD" > "$HOME/bin/nextflow"
+          chmod +x "$HOME/bin/nextflow"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - name: Run nf-test (${{ matrix.provider }})
+        working-directory: tests/nf-test
+        env:
+          NXF_PLUGINS_MODE: dev
+          NXF_SYNTAX_PARSER: v2   # the `package` directive requires the v2 parser
+          COLUMNS: "80"           # avoid `tput cols 2>/dev/tty` failing on headless runners
+        run: nf-test test --tag ${{ matrix.provider }}

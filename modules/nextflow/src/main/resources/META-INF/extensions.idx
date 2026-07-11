@@ -35,6 +35,7 @@ nextflow.mail.MailConfig
 nextflow.mail.Notification
 nextflow.mail.SendMailProvider
 nextflow.mail.SimpleMailProvider
+nextflow.packages.PackagesConfig
 nextflow.processor.tip.DefaultTaskTipProvider
 nextflow.scm.RepositoryFactory
 nextflow.secret.LocalSecretsProvider

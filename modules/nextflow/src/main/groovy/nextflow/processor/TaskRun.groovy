@@ -54,6 +54,7 @@ import nextflow.script.params.StdInParam
 import nextflow.script.params.ValueOutParam
 import nextflow.packages.PackageManager
 import nextflow.packages.PackageSpec
+import nextflow.script.ScriptMeta
 import nextflow.spack.SpackCache
 /**
  * Models a task instance
@@ -690,21 +691,35 @@ class TaskRun implements Cloneable {
         if (!PackageManager.isEnabled(processor.session))
             return null
 
-        if (!config.package)
-            return null
-
         def packageManager = new PackageManager(processor.session)
-        
-        // Parse the package configuration
+
+        // No explicit `package` directive: optionally auto-detect a manifest
+        // file (e.g. environment.yml, requirements.txt) in the process module
+        // directory, analogous to how Wave auto-detects a Dockerfile.
+        if (!config.package) {
+            final autoDetect = processor.session.config.navigate('packages.autoDetect', true) as Boolean
+            if (!autoDetect)
+                return null
+            final moduleDir = getModuleDir()
+            return moduleDir ? packageManager.detectSpec(moduleDir) : null
+        }
+
+        // Parse the explicit package configuration
         def packageDef = config.package
         def defaultProvider = processor.session.config.navigate('packages.provider', 'conda') as String
-        
+
         try {
             return PackageManager.parseSpec(packageDef, defaultProvider)
         } catch (Exception e) {
             log.warn "Failed to parse package specification: ${e.message}"
             return null
         }
+    }
+
+    private Path getModuleDir() {
+        final script = processor.getOwnerScript()
+        final meta = script ? ScriptMeta.get(script) : null
+        return meta?.getModuleDir()
     }
 
     protected ContainerInfo containerInfo() {

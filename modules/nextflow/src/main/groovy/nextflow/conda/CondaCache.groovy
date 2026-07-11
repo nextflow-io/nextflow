@@ -173,7 +173,7 @@ class CondaCache {
      * @return the conda unique prefix {@link Path} where the env is created
      */
     @PackageScope
-    Path condaPrefixPath(String condaEnv) {
+    Path condaPrefixPath(String condaEnv, String createOptionsOverride = null) {
         assert condaEnv
 
         String content
@@ -225,6 +225,9 @@ class CondaCache {
             content = condaEnv
         }
 
+        // a per-process create-options override yields a distinct environment
+        if( createOptionsOverride ) content += "\nopts:$createOptionsOverride"
+
         final hash = CacheHelper.hasher(content).hash().toString()
         getCacheDir().resolve("$name-$hash")
     }
@@ -236,7 +239,7 @@ class CondaCache {
      * @return the conda environment prefix {@link Path}
      */
     @PackageScope
-    Path createLocalCondaEnv(String condaEnv, Path prefixPath) {
+    Path createLocalCondaEnv(String condaEnv, Path prefixPath, String createOptionsOverride = null) {
 
         if( prefixPath.isDirectory() ) {
             log.debug "${binaryName} found local env for environment=$condaEnv; path=$prefixPath"
@@ -249,7 +252,7 @@ class CondaCache {
 
         final mutex = new FileMutex(target: file, timeout: createTimeout, waitMessage: wait, errorMessage: err)
         try {
-            mutex .lock { createLocalCondaEnv0(condaEnv, prefixPath) }
+            mutex .lock { createLocalCondaEnv0(condaEnv, prefixPath, createOptionsOverride) }
         }
         finally {
             file.delete()
@@ -268,7 +271,7 @@ class CondaCache {
     }
 
     @PackageScope
-    Path createLocalCondaEnv0(String condaEnv, Path prefixPath) {
+    Path createLocalCondaEnv0(String condaEnv, Path prefixPath, String createOptionsOverride = null) {
         if( prefixPath.isDirectory() ) {
             log.debug "${binaryName} found local env for environment=$condaEnv; path=$prefixPath"
             return prefixPath
@@ -276,7 +279,9 @@ class CondaCache {
 
         log.info "Creating env using ${binaryName}: $condaEnv [cache $prefixPath]"
 
-        String opts = createOptions ? "$createOptions " : ''
+        // per-process `options` override the config-level `conda.createOptions`
+        final effectiveOptions = createOptionsOverride ?: createOptions
+        String opts = effectiveOptions ? "$effectiveOptions " : ''
 
         def cmd
         if( isYamlFilePath(condaEnv) ) {
@@ -346,8 +351,8 @@ class CondaCache {
      *      The {@link DataflowVariable} which hold (and pull) the local image file
      */
     @PackageScope
-    DataflowVariable<Path> getLazyImagePath(String condaEnv) {
-        final prefixPath = condaPrefixPath(condaEnv)
+    DataflowVariable<Path> getLazyImagePath(String condaEnv, String createOptionsOverride = null) {
+        final prefixPath = condaPrefixPath(condaEnv, createOptionsOverride)
         final condaEnvPath = prefixPath.toString()
         if( condaEnvPath in condaPrefixPaths ) {
             log.trace "${binaryName} found local environment `$condaEnv`"
@@ -357,7 +362,7 @@ class CondaCache {
         synchronized (condaPrefixPaths) {
             def result = condaPrefixPaths[condaEnvPath]
             if( result == null ) {
-                result = new LazyDataflowVariable<Path>({ createLocalCondaEnv(condaEnv, prefixPath) })
+                result = new LazyDataflowVariable<Path>({ createLocalCondaEnv(condaEnv, prefixPath, createOptionsOverride) })
                 condaPrefixPaths[condaEnvPath] = result
             }
             else {
@@ -376,8 +381,8 @@ class CondaCache {
      * @param condaEnv The conda environment string
      * @return the local environment path prefix {@link Path}
      */
-    Path getCachePathFor(String condaEnv) {
-        def promise = getLazyImagePath(condaEnv)
+    Path getCachePathFor(String condaEnv, String createOptionsOverride = null) {
+        def promise = getLazyImagePath(condaEnv, createOptionsOverride)
         def result = promise.getVal()
         if( promise.isError() )
             throw new IllegalStateException(promise.getError())

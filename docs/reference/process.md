@@ -993,6 +993,30 @@ process blast {
 }
 ```
 
+(process-package)=
+
+### package
+
+:::{versionadded} 25.07.0-edge
+:::
+
+*Experimental: may change in a future release. Requires the `nextflow.preview.package` {ref}`feature flag <config-feature-flags>` and the {ref}`v2 syntax parser <strict-syntax-page>`.*
+
+The `package` directive allows for the definition of the process dependencies using a pluggable package provider, e.g. Conda, Pixi, uv, Nix, Guix, or an R package manager. For example:
+
+```nextflow
+process hello {
+  package 'numpy pandas', provider: 'uv'
+
+  script:
+  """
+  your_command --here
+  """
+}
+```
+
+When no `provider` is specified, the default provider from the {ref}`packages <config-packages>` config scope is used. See the {ref}`package-page` page for the supported providers and further details.
+
 (process-penv)=
 
 ### penv
