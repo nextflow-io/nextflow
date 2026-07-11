@@ -1,0 +1,14 @@
+nextflow_pipeline {
+
+    name "nix provider"
+    script "../scripts/nix.nf"
+    tag "package-providers"
+    tag "nix"
+
+    test("nix resolves a package from nixpkgs and runs the task") {
+        then {
+            assert workflow.success
+            assert workflow.stdout.any { it.contains('Hello, world!') }
+        }
+    }
+}
