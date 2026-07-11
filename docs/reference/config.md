@@ -1284,6 +1284,27 @@ The following settings are available:
 `notification.to`
 : Recipient address for the email notification. Multiple addresses can be specified as a comma-separated list.
 
+(config-packages)=
+
+## `packages`
+
+:::{versionadded} 25.07.0-edge
+:::
+
+*Experimental: may change in a future release.*
+
+The `packages` scope controls the behavior of the {ref}`package <process-package>` process directive. It requires the `nextflow.preview.package` feature flag.
+
+The following settings are available:
+
+`packages.autoDetect`
+: Auto-detect a provider manifest file (e.g. `environment.yml`, `requirements.txt`) in the process module directory when a process does not declare a `package` directive (default: `true`).
+
+`packages.provider`
+: The default package provider used when a `package` directive does not specify one (default: `conda`).
+
+Each package provider is configured by its own scope, e.g. {ref}`conda <config-conda>` for the `conda` provider. See {ref}`package-page` for the supported providers.
+
 (config-podman)=
 
 ## `podman`

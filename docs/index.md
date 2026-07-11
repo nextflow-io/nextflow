@@ -94,6 +94,7 @@ vscode
 git
 container
 conda
+package
 spack
 wave
 ```
