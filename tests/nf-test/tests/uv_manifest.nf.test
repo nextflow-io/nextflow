@@ -1,0 +1,14 @@
+nextflow_pipeline {
+
+    name "uv provider (requirements.txt)"
+    script "../scripts/uv_manifest.nf"
+    tag "package-providers"
+    tag "uv"
+
+    test("uv resolves an explicit requirements.txt path") {
+        then {
+            assert workflow.success
+            assert workflow.stdout.any { it.contains('Hello uv (requirements.txt)') }
+        }
+    }
+}

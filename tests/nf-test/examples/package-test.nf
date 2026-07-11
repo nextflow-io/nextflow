@@ -45,8 +45,22 @@ process testDefault {
     """
 }
 
+// Test the new package directive with uv provider
+process testUv {
+    package "cowsay", provider: "uv"
+
+    output:
+    stdout
+
+    script:
+    """
+    cowsay --version
+    """
+}
+
 workflow {
     testConda() | view { "Conda: ${it.trim()}" }
     testPixi() | view { "Pixi: ${it.trim()}" }
     testDefault() | view { "Default: ${it.trim()}" }
+    testUv() | view { "uv: ${it.trim()}" }
 }
