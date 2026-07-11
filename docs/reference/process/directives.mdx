@@ -43,6 +43,7 @@ The following directives are available:
 | [`maxSubmitAwait`][max-submit-await] | How long a task can remain in the submission queue before failing. |
 | [`memory`][memory] | The amount of memory required by each task. |
 | [`module`][module] | The set of Environment Modules required by each task. |
+| [`package`][package] | The set of packages required by each task, resolved by a pluggable package provider. |
 | [`penv`][penv] | The parallel environment to use when submitting tasks to SGE. |
 | [`pod`][pod] | Pod-specific settings for the Kubernetes executor. |
 | [`publishDir`][publish-dir] | Publish matching process output files to a target directory. |
@@ -96,6 +97,7 @@ The following directives are available:
 [max-submit-await]: ./directives/max-submit-await
 [memory]: ./directives/memory
 [module]: ./directives/module
+[package]: ./directives/package
 [penv]: ./directives/penv
 [pod]: ./directives/pod
 [publish-dir]: ./directives/publish-dir

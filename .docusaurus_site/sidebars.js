@@ -112,6 +112,7 @@ module.exports = {
                     ]
                 },
                 "conda",
+                "package",
                 "spack",
                 "wave"
             ]
@@ -231,6 +232,7 @@ module.exports = {
                                     "reference/process/directives/max-submit-await",
                                     "reference/process/directives/memory",
                                     "reference/process/directives/module",
+                                    "reference/process/directives/package",
                                     "reference/process/directives/penv",
                                     "reference/process/directives/pod",
                                     "reference/process/directives/publish-dir",
@@ -313,6 +315,7 @@ module.exports = {
                         "reference/config/manifest",
                         "reference/config/nextflow",
                         "reference/config/notification",
+                        "reference/config/packages",
                         "reference/config/podman",
                         "reference/config/registry",
                         "reference/config/report",

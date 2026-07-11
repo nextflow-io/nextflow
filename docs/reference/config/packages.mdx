@@ -1,0 +1,27 @@
+---
+title: packages
+description: Reference for the packages config scope, which controls the behavior of the package process directive.
+---
+
+# `packages`
+
+<AddedInVersion version="26.08" />
+
+*Preview feature: the syntax and behavior may change in future releases.*
+
+The `packages` scope controls the behavior of the [`package`][process-package] process directive. It requires the `nextflow.preview.package` [feature flag][feature-flags].
+
+Each package provider is configured by its own scope, e.g. [`conda`][config-conda] for the `conda` provider. See [Package management][package-page] for the supported providers.
+
+##### `packages.autoDetect`
+
+Auto-detect a provider manifest file (e.g. `environment.yml`, `requirements.txt`) in the process module directory when a process does not declare a `package` directive (default: `true`).
+
+##### `packages.provider`
+
+The default package provider used when a `package` directive does not specify one (default: `conda`).
+
+[config-conda]: ./conda
+[feature-flags]: ../feature-flags
+[package-page]: ../../package
+[process-package]: ../process/directives/package

@@ -46,6 +46,7 @@ See [Blocks][config-blocks] for more information about the two forms.
 | [`manifest`][config-manifest] | Defines pipeline metadata that is useful when publishing or running your pipeline. |
 | [`nextflow`][config-nextflow] | Controls the retry policy used for retryable operations. |
 | [`notification`][config-notification] | Controls the automatic sending of an email notification on workflow completion. |
+| [`packages`][config-packages] | Controls the behavior of the [`package`][process-package] process directive. |
 | [`podman`][config-podman] | Controls how [Podman](https://podman.io/) containers are executed by Nextflow. |
 | [`registry`][config-registry] | Configures the registries used to resolve [modules][module-registry-page] and [plugins][plugin-registry-page]. |
 | [`report`][config-report] | Controls the generation of the [execution report][execution-report]. |
@@ -82,7 +83,9 @@ See [Blocks][config-blocks] for more information about the two forms.
 [config-nextflow]: ./config/nextflow
 [config-notification]: ./config/notification
 [config-page]: ../config
+[config-packages]: ./config/packages
 [config-podman]: ./config/podman
+[process-package]: ./process/directives/package
 [config-registry]: ./config/registry
 [config-report]: ./config/report
 [config-sarus]: ./config/sarus
