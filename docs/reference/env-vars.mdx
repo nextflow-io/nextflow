@@ -361,14 +361,16 @@ Defines the FTP proxy server. Proxy authentication is supported by providing the
 
 ##### `HTTP_PROXY`
 
-Defines the HTTP proxy server. Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `http://user:password@proxy-host.com:port`. Credentials containing special characters must be URL-encoded.
+Defines the HTTP proxy server. To authenticate, include the credentials in the proxy URL. For example, `http://user:password@proxy-host.com:port`. URL-encode any credentials that contain special characters.
 
 ##### `HTTPS_PROXY`
 
-Defines the HTTPS proxy server. Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `https://user:password@proxy-host.com:port`. Credentials containing special characters must be URL-encoded.
+Defines the HTTPS proxy server. To authenticate, include the credentials in the proxy URL, for example `https://user:password@proxy-host.com:port`. URL-encode any credentials that contain special characters.
 
 :::note
-By default, the JVM disables the Basic authentication scheme for HTTPS proxy tunnelling (see the `jdk.http.auth.tunneling.disabledSchemes` property in `$JAVA_HOME/conf/net.properties`). This prevents the JVM from sending proxy credentials with the HTTPS `CONNECT` request. When you provide proxy credentials, Nextflow clears this restriction automatically, unless you set the property explicitly. To set it yourself, use the `NXF_OPTS` environment variable. For example `NXF_OPTS='-Djdk.http.auth.tunneling.disabledSchemes='`.
+By default, the JVM disables Basic authentication for HTTPS proxy tunnelling. This prevents the JVM from sending proxy credentials with the HTTPS `CONNECT` request. See the `jdk.http.auth.tunneling.disabledSchemes` property in `$JAVA_HOME/conf/net.properties`.
+
+When you provide proxy credentials, Nextflow clears this restriction automatically unless you set the property explicitly. To set it yourself, use the `NXF_OPTS` environment variable. For example, `NXF_OPTS='-Djdk.http.auth.tunneling.disabledSchemes='`.
 :::
 
 ##### `NO_COLOR`
