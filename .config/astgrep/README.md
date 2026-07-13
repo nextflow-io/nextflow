@@ -16,6 +16,17 @@ ast-grep scan -c .config/astgrep/sgconfig.yml # scan the repo
 Requires [`ast-grep`](https://ast-grep.github.io/guide/quick-start.html) (>= 0.44) and a
 C compiler (`gcc`/`clang`).
 
+## Testing
+
+Each rule has a test file in `rule-tests/` with `valid` (should not match) and
+`invalid` (should match) cases. Run them with:
+
+```bash
+cd .config/astgrep && ast-grep test
+```
+
+After changing a rule, refresh the captured output with `ast-grep test -U`.
+
 ## How it works
 
 - **`build.sh`** fetches [dekobon/tree-sitter-groovy](https://github.com/dekobon/tree-sitter-groovy)
@@ -26,6 +37,8 @@ C compiler (`gcc`/`clang`).
 - **`sgconfig.yml`** registers `groovy` as an ast-grep custom language (`expandoChar: _`
   because Groovy uses `$` for GString interpolation; metavariables are still `$NAME` / `$$$`).
 - **`rules/`** holds one YAML lint rule per file.
+- **`rule-tests/`** holds one test file per rule (`valid` / `invalid` cases), with
+  captured output under `rule-tests/__snapshots__/`.
 
 `groovy.dylib` and `.grammar-build/` are gitignored; each checkout rebuilds the library locally.
 
