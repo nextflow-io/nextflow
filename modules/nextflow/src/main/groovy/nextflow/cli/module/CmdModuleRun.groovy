@@ -55,6 +55,9 @@ class CmdModuleRun extends CmdRun {
     }
 
     @Override
+    protected boolean isModuleRun() { true }
+
+    @Override
     void run() {
         if( !args ) {
             throw new AbortOperationException("Module name/path not provided")

@@ -25,6 +25,9 @@ import nextflow.script.params.TupleInParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessInputsDef
+import nextflow.script.params.v2.ProcessTupleInput
+import nextflow.script.types.Record
+import nextflow.util.RecordMap
 import spock.lang.Specification
 
 /**
@@ -33,102 +36,6 @@ import spock.lang.Specification
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ProcessEntryHandlerTest extends Specification {
-
-    def 'should parse complex parameters with dot notation' () {
-        given:
-        def session = Mock(Session)
-        def script = Mock(BaseScript)
-        def meta = Mock(ScriptMeta) {
-            getLocalProcessNames() >> [ 'hello' ]
-        }
-        def handler = new ProcessEntryHandler(script, session, meta)
-
-        when:
-        def result = handler.parseComplexParameters([
-            'meta.id': 'SAMPLE_001',
-            'meta.name': 'TestSample',
-            'meta.other': 'some-value',
-            'fasta': '/path/to/file.fa'
-        ])
-
-        then:
-        result.meta instanceof Map
-        result.meta.id == 'SAMPLE_001'
-        result.meta.name == 'TestSample'
-        result.meta.other == 'some-value'
-        result.fasta == '/path/to/file.fa'
-    }
-
-    def 'should parse nested dot notation parameters' () {
-        given:
-        def session = Mock(Session)
-        def script = Mock(BaseScript)
-        def meta = Mock(ScriptMeta) {
-            getLocalProcessNames() >> [ 'hello' ]
-        }
-        def handler = new ProcessEntryHandler(script, session, meta)
-
-        when:
-        def result = handler.parseComplexParameters([
-            'meta.sample.id': '123',
-            'meta.sample.name': 'test',
-            'meta.config.quality': 'high',
-            'output.dir': '/results'
-        ])
-
-        then:
-        result.meta instanceof Map
-        result.meta.sample instanceof Map
-        result.meta.sample.id == '123'
-        result.meta.sample.name == 'test'
-        result.meta.config instanceof Map
-        result.meta.config.quality == 'high'
-        result.output instanceof Map
-        result.output.dir == '/results'
-    }
-
-    def 'should handle simple parameters without dots' () {
-        given:
-        def session = Mock(Session)
-        def script = Mock(BaseScript)
-        def meta = Mock(ScriptMeta) {
-            getLocalProcessNames() >> [ 'hello' ]
-        }
-        def handler = new ProcessEntryHandler(script, session, meta)
-
-        when:
-        def result = handler.parseComplexParameters([
-            'sampleId': 'SAMPLE_001',
-            'threads': '4',
-            'dataFile': '/path/to/data.txt'
-        ])
-
-        then:
-        result.sampleId == 'SAMPLE_001'
-        result.threads == '4'
-        result.dataFile == '/path/to/data.txt'
-    }
-
-    def 'should handle dotted key overwriting plain value' () {
-        given:
-        def session = Mock(Session)
-        def script = Mock(BaseScript)
-        def meta = Mock(ScriptMeta) {
-            getLocalProcessNames() >> [ 'hello' ]
-        }
-        def handler = new ProcessEntryHandler(script, session, meta)
-
-        when:
-        'both --foo bar and --foo.id 1 are passed, the dotted key wins'
-        def result = handler.parseComplexParameters([
-            'foo': 'bar',
-            'foo.id': '1'
-        ])
-
-        then:
-        result.foo instanceof Map
-        result.foo.id == '1'
-    }
 
     def 'should get value for val input type' () {
         given:
@@ -203,9 +110,11 @@ class ProcessEntryHandlerTest extends Specification {
         given:
         def session = Mock(Session) {
             getParams() >> [
-                'meta.id': 'SAMPLE_001',
-                'meta.name': 'TestSample',
-                'meta.other': 'some-value',
+                'meta': [
+                    'id': 'SAMPLE_001',
+                    'name': 'TestSample',
+                    'other': 'some-value',
+                ],
                 'fasta': '/path/to/file.fa'
             ]
         }
@@ -226,7 +135,7 @@ class ProcessEntryHandlerTest extends Specification {
         }
 
         // Test the parameter mapping logic manually
-        def namedArgs = handler.parseComplexParameters(session.getParams())
+        def namedArgs = session.getParams()
         def tupleElements = []
 
         for( def innerParam : tupleParam.inner ) {
@@ -248,6 +157,74 @@ class ProcessEntryHandlerTest extends Specification {
         tupleElements[0].other == 'some-value'
         // tupleElements[1] should be a Path object (mocked)
         tupleElements[1].toString().contains('file.fa')
+    }
+
+    def 'should support destructured record input in typed process' () {
+        given:
+        def session = Mock(Session) {
+            getParams() >> ['id': 'abc', 'greeting': 'hello']
+        }
+        def script = Mock(BaseScript)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> ['RECORDS']
+        }
+        def handler = new ProcessEntryHandler(script, session, meta)
+
+        and: 'a ProcessTupleInput representing a record(id: String, greeting: String)'
+        def idInput = new ProcessInput('id', String, false)
+        def greetingInput = new ProcessInput('greeting', String, false)
+        def recordParam = new ProcessTupleInput([idInput, greetingInput], Record)
+
+        and: 'a V2 config declaring that one record input'
+        def inputsDef = new ProcessInputsDef()
+        inputsDef.addTupleParam([idInput, greetingInput], Record)
+        def processConfig = Mock(ProcessConfigV2) {
+            getInputs() >> inputsDef
+        }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> processConfig
+        }
+
+        when:
+        def args = handler.getProcessArguments(processDef, ['id': 'abc', 'greeting': 'hello'])
+
+        then: 'a single RecordMap is returned'
+        args.size() == 1
+        args[0] instanceof RecordMap
+        args[0].id == 'abc'
+        args[0].greeting == 'hello'
+    }
+
+    static class Sample implements Record {
+        String id
+        String text
+    }
+
+    def 'should support record type input in typed process' () {
+        given: 'a process with a record type input'
+        def session = Mock(Session)
+        def script = Mock(BaseScript)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> ['RECORDS']
+        }
+        def inputsDef = new ProcessInputsDef()
+        inputsDef.addParam('sample', Sample, false)
+        def processConfig = Mock(ProcessConfigV2) {
+            getInputs() >> inputsDef
+        }
+        def processDef = Mock(ProcessDef) {
+            getProcessConfig() >> processConfig
+        }
+        def handler = new ProcessEntryHandler(script, session, meta)
+
+        when:
+        def args = handler.getProcessArguments(processDef, ['sample': ['id': 'a', 'text': 'hello']])
+
+        then: 'the nested map is converted into a record of the declared type'
+        args.size() == 1
+        args[0] instanceof Record
+        args[0].id == 'a'
+        args[0].text == 'hello'
     }
 
     def 'should convert string parameter to type declared in module spec' () {
@@ -352,5 +329,76 @@ class ProcessEntryHandlerTest extends Specification {
         ' /path/to/file1.txt , /path/to/file2.txt , /path/to/file3.txt '  | [Path.of('/path/to/file1.txt'), Path.of('/path/to/file2.txt'), Path.of('/path/to/file3.txt')]
         '/path/to/file1.txt,,/path/to/file2.txt, ,/path/to/file3.txt'     | [Path.of('/path/to/file1.txt'), Path.of('/path/to/file2.txt'), Path.of('/path/to/file3.txt')]
         'file1.txt,file2.txt'                                             | [Path.of('file1.txt').toAbsolutePath(), Path.of('file2.txt').toAbsolutePath()]
+    }
+
+    def 'should return empty list for missing path input (v1)' () {
+        given:
+        def session = Mock(Session)
+        def script = Mock(BaseScript)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> [ 'hello' ]
+        }
+        def handler = new ProcessEntryHandler(script, session, meta)
+        def pathParam = Mock(FileInParam) { getName() >> 'intervals' }
+
+        when: 'the input is not present in params for a path input'
+        def result = handler.getValueForInputV1(pathParam, [:], [:])
+
+        then: 'returns an empty list instead of throwing'
+        result == []
+    }
+
+    def 'should throw error for missing val input (v1)' () {
+        given:
+        def session = Mock(Session)
+        def script = Mock(BaseScript)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> [ 'hello' ]
+        }
+        def handler = new ProcessEntryHandler(script, session, meta)
+        def valParam = Mock(ValueInParam) { getName() >> 'id' }
+
+        when: 'a val input is absent'
+        handler.getValueForInputV1(valParam, [:], [:])
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == 'Missing required parameter: --id'
+    }
+
+    def 'should return null for missing optional input (v2)' () {
+        // Regression test for https://github.com/nextflow-io/nextflow/issues/7161
+        given:
+        def session = Mock(Session)
+        def script = Mock(BaseScript)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> [ 'hello' ]
+        }
+        def handler = new ProcessEntryHandler(script, session, meta)
+        def param = new ProcessInput('gzi', Path, true)
+
+        when: 'a v2 optional path input is not provided'
+        def result = handler.getValueForInputV2(param, [:])
+
+        then: 'returns null instead of throwing'
+        result == null
+    }
+
+    def 'should throw error for missing required input (v2)' () {
+        given:
+        def session = Mock(Session)
+        def script = Mock(BaseScript)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> [ 'hello' ]
+        }
+        def handler = new ProcessEntryHandler(script, session, meta)
+        def param = new ProcessInput('reads', Path, false)
+
+        when:
+        handler.getValueForInputV2(param, [:])
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == 'Missing required parameter: --reads'
     }
 }

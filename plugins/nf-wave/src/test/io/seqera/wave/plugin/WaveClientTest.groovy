@@ -954,6 +954,46 @@ class WaveClientTest extends Specification {
                                                     | CONFIG_RESP.get('combined')
     }
 
+    def 'should resolve container config from local file' () {
+        given:
+        def folder = Files.createTempDirectory('wave-local-manifest')
+        def manifest = folder.resolve('manifest.json')
+        manifest.text = JsonOutput.toJson([entrypoint: ['entry.sh']])
+        and:
+        def session = Mock(Session) { getConfig() >> [fusion: [enabled: true, containerConfigUrl: manifest.toUri().toString()]] }
+        def client = new WaveClient(session)
+
+        expect:
+        client.resolveContainerConfig() == new ContainerConfig(entrypoint: ['entry.sh'])
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should reject unsupported scheme for container config' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:] }
+        def client = new WaveClient(session)
+
+        when:
+        client.fetchContainerConfig(new URI('ftp://example.com/manifest.json'))
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    @Unroll
+    def 'should replace fusion arch in URI' () {
+        expect:
+        WaveClient.replaceFusionArch(new URI(URI_VALUE), PLATFORM).toString() == EXPECTED
+
+        where:
+        URI_VALUE                                                  | PLATFORM      | EXPECTED
+        'https://fusionfs.seqera.io/releases/v2.5-amd64.json'      | 'linux/arm64' | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
+        'https://fusionfs.seqera.io/releases/v2.5-arm64.json'      | 'linux/amd64' | 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
+        'file:///tmp/local-manifest.json'                          | 'linux/arm64' | 'file:///tmp/local-manifest.json'
+    }
+
     @Unroll
     def 'should get fusion default url' () {
         given:
@@ -966,14 +1006,14 @@ class WaveClientTest extends Specification {
 
         where:
         ARCH                | SNAP  | EXPECTED
-        'linux/amd64'       | null  | 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
-        'linux/x86_64'      | null  | 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
-        'arm64'             | null  | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
-        'linux/arm64'       | null  | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
-        'linux/arm64/v8'    | null  | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
+        'linux/amd64'       | null  | 'https://fusionfs.seqera.io/releases/v2.6-amd64.json'
+        'linux/x86_64'      | null  | 'https://fusionfs.seqera.io/releases/v2.6-amd64.json'
+        'arm64'             | null  | 'https://fusionfs.seqera.io/releases/v2.6-arm64.json'
+        'linux/arm64'       | null  | 'https://fusionfs.seqera.io/releases/v2.6-arm64.json'
+        'linux/arm64/v8'    | null  | 'https://fusionfs.seqera.io/releases/v2.6-arm64.json'
         and:
-        'linux/amd64'       | true  | 'https://fusionfs.seqera.io/releases/v2.5-snap_amd64.json'
-        'linux/arm64'       | true  | 'https://fusionfs.seqera.io/releases/v2.5-snap_arm64.json'
+        'linux/amd64'       | true  | 'https://fusionfs.seqera.io/releases/v2.6-snap_amd64.json'
+        'linux/arm64'       | true  | 'https://fusionfs.seqera.io/releases/v2.6-snap_arm64.json'
     }
 
     @Unroll

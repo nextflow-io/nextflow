@@ -1,5 +1,11 @@
 nf-amazon changelog
 ===================
+3.10.0 - 19 Jun 2026
+- Fix netty CVE-2026-44249 via AWS SDK bump and azure-core-http-netty pin (#7223) [ab6a6e65e]
+
+3.9.1 - 11 May 2026
+- Address Netty CVEs by bumping AWS SDK and excluding micronaut-core-bom from test classpath (#7100) [f54039606]
+
 3.9.0 - 25 Apr 2026
 - Add hints process directive for executor-specific scheduling hints (#7034) [406358e03]
 

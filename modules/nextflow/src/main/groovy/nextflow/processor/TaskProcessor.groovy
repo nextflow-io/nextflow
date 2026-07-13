@@ -62,6 +62,7 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
 import nextflow.executor.StoredTaskHandler
+import nextflow.executor.TaskArrayExecutor
 import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
 import nextflow.file.FileHelper
@@ -298,8 +299,16 @@ class TaskProcessor {
         this.forksCount = maxForks ? new LongAdder() : null
         this.isFair0 = config.getFair()
         final arraySize = config.getArray()
-        this.arrayCollector = arraySize > 0 ? new TaskArrayCollector(this, executor, arraySize) : null
+        this.arrayCollector = createArrayCollector(arraySize)
         log.debug "Creating process '$name': maxForks=${maxForks}; fair=${isFair0}; array=${arraySize}"
+    }
+
+    private TaskArrayCollector createArrayCollector(int arraySize) {
+        if( arraySize > 0 && executor instanceof TaskArrayExecutor )
+            return new TaskArrayCollector(this, executor, arraySize)
+        if( arraySize > 0 )
+            log.warn "Executor '${executor.name}' does not support job arrays -- the array directive will be ignored for process '$name'"
+        return null
     }
 
     /**
@@ -1421,12 +1430,12 @@ class TaskProcessor {
         final resolver = new TaskOutputResolver(declaredOutputs.getFiles(), task)
 
         for( final param : declaredOutputs.getParams() ) {
-            final value = resolver.resolveLazy(param.getLazyValue())
+            final value = resolver.resolve(param.getLazyValue())
             task.setOutput(param, value)
         }
 
         for( final topic : declaredOutputs.getTopics() ) {
-            final value = resolver.resolveLazy(topic.getLazyValue())
+            final value = resolver.resolve(topic.getLazyValue())
             topic.getChannel().bind(value)
         }
 
@@ -1569,7 +1578,12 @@ class TaskProcessor {
     ResourcesBundle getModuleBundle() {
         final script = this.getOwnerScript()
         final meta = ScriptMeta.get(script)
-        return meta?.isModule() ? meta.getModuleBundle() : null
+        // No script meta registered (e.g. processors not tied to a loaded script): nothing to resolve.
+        if( meta == null )
+            return null
+        // Resolve the bundle when the owner script is either an included module,
+        // or the entry script of a `nextflow module run` invocation (see #7087).
+        return (meta.isModule() || session.isModuleRun()) ? meta.getModuleBundle() : null
     }
 
     @Memoized

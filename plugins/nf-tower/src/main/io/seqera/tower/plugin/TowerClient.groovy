@@ -18,6 +18,7 @@ package io.seqera.tower.plugin
 
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
+import java.util.regex.Matcher
 
 import groovy.json.JsonGenerator
 import groovy.json.JsonOutput
@@ -151,6 +152,18 @@ class TowerClient {
         }
     }
 
+    /**
+     * Update workflow-extension metadata via the generic {@code PATCH /workflow/{workflowId}}
+     * endpoint. Used to propagate the Seqera Intelligent Compute scheduler run id.
+     *
+     * <p>Returns the {@link Response} rather than throwing on error so the caller can decide how
+     * to react: propagating the run id is best-effort telemetry and must not abort the run.
+     */
+    Response updateWorkflow(Map req, String workspaceId, String workflowId) {
+        final url = getUrlWorkflowUpdate(workspaceId, workflowId)
+        return sendHttpMessage(url, req, 'PATCH')
+    }
+
     protected Map sendAndProcessRequest(String url, Map req, String method){
         final resp = sendHttpMessage(url, req, method)
         if( resp.error ) {
@@ -195,6 +208,13 @@ class TowerClient {
 
     protected String getUrlTraceProgress(String workspaceId, String workflowId) {
         def result = "$endpoint/trace/$workflowId/progress"
+        if( workspaceId )
+            result += "?workspaceId=$workspaceId"
+        return result
+    }
+
+    protected String getUrlWorkflowUpdate(String workspaceId, String workflowId) {
+        def result = "$endpoint/workflow/$workflowId"
         if( workspaceId )
             result += "?workspaceId=$workspaceId"
         return result
@@ -346,6 +366,9 @@ class TowerClient {
         if( verb == 'POST' )
             return builder.POST(HttpRequest.BodyPublishers.ofString(payload)).build()
 
+        if( verb == 'PATCH' )
+            return builder.method('PATCH', HttpRequest.BodyPublishers.ofString(payload)).build()
+
         throw new IllegalArgumentException("Unsupported HTTP verb: $verb")
     }
 
@@ -397,10 +420,27 @@ class TowerClient {
         }
         catch ( Exception ) {
             log.debug "Unable to parse error cause as JSON object: $cause"
-            return cause
+            // the response is not a JSON object e.g. an HTML error page returned by a
+            // gateway/proxy (such as a `502 Bad Gateway`). Reduce it to a concise reason
+            // instead of surfacing the whole markup payload as the failure cause.
+            return parseHtmlCause(cause) ?: cause
         }
     }
 
+    /**
+     * Extract a concise reason from an HTML error page (e.g. a `502 Bad Gateway`
+     * returned by a gateway/proxy), i.e. the text of the {@code <title>} element
+     * with internal whitespace collapsed onto a single line.
+     *
+     * @param cause The raw response body
+     * @return The {@code <title>} text, or {@code null} when no usable title is present
+     */
+    protected String parseHtmlCause(String cause) {
+        final Matcher title = cause =~ /(?is)<title\b[^>]*>\s*(.*?)\s*<\/title>/
+        if( title.find() )
+            return title.group(1)?.replaceAll(/\s+/, ' ')?.trim() ?: null
+        return null
+    }
 
     protected Map<String,Integer> loadSchema() {
         final props = new Properties()

@@ -191,6 +191,24 @@ class TaskConfigTest extends Specification {
         config.getErrorStrategy() == ErrorStrategy.RETRY
     }
 
+    def 'should get debug flag' () {
+        expect:
+        new TaskConfig(opts).getDebug() == expected
+
+        where:
+        opts            | expected
+        [:]             | false
+        [debug: false]  | false
+        [debug: true]   | true
+    }
+
+    def 'should ignore the removed echo directive' () {
+        // the deprecated `echo` directive has been removed and no longer
+        // enables the debug output
+        expect:
+        new TaskConfig([echo: true]).getDebug() == false
+    }
+
     def testMaxErrors() {
         when:
         def config = new TaskConfig()

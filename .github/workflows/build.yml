@@ -17,10 +17,22 @@ on:
     types: [opened, reopened, synchronize]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+# Cancel in-progress runs on the same ref when a new commit lands. Release
+# branches and master are not cancelled so we never abort a partial release.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     timeout-minutes: 100
     strategy:
       fail-fast: false
@@ -29,29 +41,30 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 1
           submodules: true
+          persist-credentials: false
 
       - name: Get the commit message
         id: get_commit_message
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
         run: |
-            if [ "${{ github.event_name }}" = "pull_request" ]; then
-                echo "GitHub event=pull_request"
-                COMMIT_SHA="${{ github.event.pull_request.head.sha }}"
-                COMMIT_MESSAGE="$(curl -s \
-                  -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                  https://api.github.com/repos/${{ github.repository }}/commits/$COMMIT_SHA | jq -r '.commit.message' | head -n 1)"
-                echo "Commit message=$(printf "%s" "$COMMIT_MESSAGE")"
-                echo "commit_message=$(printf "%s" "$COMMIT_MESSAGE")" >> $GITHUB_OUTPUT
-            else
-                echo "GitHub event=${{ github.event_name }}"
-                # Extract only the first line of the commit message
-                COMMIT_MESSAGE="$(git log -1 --pretty=format:'%s')"
-                echo "Commit message=$(printf "%s" "$COMMIT_MESSAGE")"
-                echo "commit_message=$(printf "%s" "$COMMIT_MESSAGE")" >> $GITHUB_OUTPUT
-            fi
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            echo "GitHub event=pull_request"
+            # `actions/checkout` fetches the PR merge ref, so `git log -1`
+            # gives the merge commit. Ask the API for the PR head instead.
+            COMMIT_MESSAGE=$(gh api "repos/$REPO/commits/$PR_HEAD_SHA" --jq '.commit.message' | head -n 1)
+          else
+            echo "GitHub event=$GITHUB_EVENT_NAME"
+            COMMIT_MESSAGE=$(git log -1 --pretty=format:'%s')
+          fi
+          echo "Commit message=$COMMIT_MESSAGE"
+          echo "commit_message=$COMMIT_MESSAGE" >> "$GITHUB_OUTPUT"
 
       - name: Setup env
         run: |
@@ -62,7 +75,7 @@ jobs:
           NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
 
       - name: Setup Java ${{ matrix.java_version }}
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           java-version: ${{matrix.java_version}}
           distribution: 'temurin'
@@ -74,11 +87,10 @@ jobs:
 
       - name: Test
         run: |
-            env | sort
             # configure test env
-            if [[ "$GOOGLE_SECRET" ]]; then
-            echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
-            export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
+            if [ -n "$GOOGLE_SECRET" ]; then
+              printf '%s' "$GOOGLE_SECRET" | base64 -d > "$RUNNER_TEMP/google_credentials.json"
+              export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/google_credentials.json"
             fi
             # run tests
             make test
@@ -99,7 +111,7 @@ jobs:
 
       - name: Publish tests report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: report-unit-tests-jdk-${{ matrix.java_version }}
           path: |
@@ -112,6 +124,8 @@ jobs:
     if: ${{ !contains(needs.build.outputs.commit_message, '[ci fast]') }}
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     timeout-minutes: 90
     strategy:
       fail-fast: false
@@ -120,10 +134,11 @@ jobs:
         test_mode: ["test_integration", "test_parser_v2", "test_docs", "test_aws", "test_azure", "test_google", "test_wave"]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 1
           submodules: true
+          persist-credentials: false
 
       - name: Setup env
         run: |
@@ -134,7 +149,7 @@ jobs:
           NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
 
       - name: Setup Java ${{ matrix.java_version }}
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           java-version: ${{matrix.java_version}}
           distribution: 'temurin'
@@ -143,13 +158,11 @@ jobs:
 
       - name: Run tests
         run: |
-          env | sort
           # configure test env
-          if [[ "$GOOGLE_SECRET" ]]; then
-          echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
-          export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
+          if [ -n "$GOOGLE_SECRET" ]; then
+            printf '%s' "$GOOGLE_SECRET" | base64 -d > "$RUNNER_TEMP/google_credentials.json"
+            export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/google_credentials.json"
           fi
-          cat $HOME/.nextflow/scm
           make clean assemble install
           bash test-ci.sh
         env:
@@ -177,7 +190,7 @@ jobs:
             tar -cvf validation-tests.tar.gz validation
 
       - name: Publish tests report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: report-${{ matrix.test_mode }}-jdk-${{ matrix.java_version }}
@@ -190,18 +203,16 @@ jobs:
       needs: build
       runs-on: ubuntu-latest
       timeout-minutes: 10
-      permissions:
-          actions: write  # Allow writing to actions
-          contents: write # Allow writing to repository contents
       steps:
           - name: Checkout
-            uses: actions/checkout@v4
+            uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
             with:
                 fetch-depth: 1
                 submodules: true
+                persist-credentials: false
                 
           - name: Setup Java 17
-            uses: actions/setup-java@v4
+            uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
             with:
                 java-version: 17
                 distribution: 'temurin'
@@ -209,14 +220,22 @@ jobs:
                 cache: gradle
 
           - name: Setup env
+            env:
+              NEEDS_BUILD_OUTPUTS_COMMIT_MESSAGE: ${{ needs.build.outputs.commit_message }}
             run: |
                 wget -q -O wave https://github.com/seqeralabs/wave-cli/releases/download/v1.4.1/wave-1.4.1-linux-x86_64
                 chmod +x wave
                 mv wave /usr/local/bin/
-                echo "COMMIT_MESSAGE=\"${{ needs.build.outputs.commit_message }}\"" >> $GITHUB_ENV
+                # Use heredoc-style delimiter so multi-line / quote-containing
+                # commit messages survive intact (run.sh greps for `[e2e prod]`).
+                {
+                  echo "COMMIT_MESSAGE<<NXF_EOF"
+                  echo "$NEEDS_BUILD_OUTPUTS_COMMIT_MESSAGE"
+                  echo "NXF_EOF"
+                } >> "$GITHUB_ENV"
 
           - name : Docker Login to Seqera public CR
-            uses : docker/login-action@v3
+            uses : docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
             with :
                 registry : "public.cr.seqera.io"
                 username : "public-cr-admin"
@@ -236,20 +255,20 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      actions: write
       contents: write
-      packages: write
-      pull-requests: write
-      issues: write
     steps:
+      # Intentionally persists credentials: the `release` task in
+      # packing.gradle runs `git push` and `git push origin vX.Y.Z` against
+      # this repo; both rely on actions/checkout having written the token
+      # into .git/config as http.extraheader.
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
           submodules: true
 
       - name: Setup Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           java-version: 17
           distribution: 'temurin'
@@ -257,18 +276,21 @@ jobs:
           cache: gradle
 
       - name: Configure Git
+        env:
+          GIT_USER_NAME: ${{ github.event.pusher.name || github.actor }}
+          GIT_USER_EMAIL: ${{ github.event.pusher.email || format('{0}@users.noreply.github.com', github.actor) }}
         run: |
-          git config --global user.name "${{ github.event.pusher.name || github.actor }}"
-          git config --global user.email "${{ github.event.pusher.email || format('{0}@users.noreply.github.com', github.actor) }}"
+          git config --global user.name "$GIT_USER_NAME"
+          git config --global user.email "$GIT_USER_EMAIL"
 
       - name: Docker Login to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Docker Login to Seqera public CR
-        uses: docker/login-action@v3
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
         with:
           registry: "public.cr.seqera.io"
           username: ${{ vars.SEQERA_PUBLIC_CR_USERNAME }}

@@ -19,7 +19,6 @@ package nextflow.script.dsl
 import java.util.regex.Pattern
 
 import groovy.transform.TypeChecked
-import groovy.util.logging.Slf4j
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.IllegalDirectiveException
 import nextflow.exception.ScriptRuntimeException
@@ -38,7 +37,6 @@ import nextflow.script.ProcessDef
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-@Slf4j
 @TypeChecked
 class ProcessBuilder {
 
@@ -200,18 +198,6 @@ class ProcessBuilder {
             config.put('disk', value)
         else
             config.put('disk', [request: value])
-    }
-
-    /**
-     * Implements the {@code echo} directive for backwards compatibility.
-     *
-     * note: without this method definition {@link BaseScript#echo} will be invoked
-     *
-     * @param value
-     */
-    void echo( value ) {
-        log.warn1('The `echo` directive has been deprecated - use `debug` instead')
-        config.put('debug', value)
     }
 
     /**

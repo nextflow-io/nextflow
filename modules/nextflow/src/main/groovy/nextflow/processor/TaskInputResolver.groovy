@@ -32,7 +32,9 @@ import nextflow.file.LogicalDataPath
 import nextflow.script.ScriptType
 import nextflow.script.params.FileInParam
 import nextflow.script.params.v2.ProcessFileInput
+import nextflow.script.types.Bag
 import nextflow.util.ArrayBag
+import nextflow.util.HashBag
 import nextflow.util.BlankSeparatedList
 import nextflow.util.RecordMap
 /**
@@ -108,12 +110,19 @@ class TaskInputResolver {
         }
 
         if( value instanceof Collection ) {
-            return value.collect { el -> normalizeValue(el, holders) }
+            final elements = value.collect { el -> normalizeValue(el, holders) }
+            return \
+                value instanceof List ? elements as List :
+                value instanceof Set ? elements as Set :
+                value instanceof Bag ? new HashBag<>(elements) :
+                elements
         }
 
         if( value instanceof Map ) {
             final normalized = value.collectEntries { k, v -> [k, normalizeValue(v, holders)] }
-            return value instanceof RecordMap ? new RecordMap(normalized as Map<String,?>) : normalized
+            return \
+                value instanceof RecordMap ? new RecordMap(normalized as Map<String,?>) :
+                normalized
         }
 
         return value
@@ -313,9 +322,8 @@ class TaskInputResolver {
         if( type == ScriptType.SCRIPTLET ) {
             return new TaskPath(holder)
         }
-        if( type == ScriptType.GROOVY) {
-            // the real path for the native task needs to be fixed -- see #378
-            return Path.of(holder.stageName)
+        if( type == ScriptType.GROOVY ) {
+            return holder.storePath
         }
         throw new IllegalStateException("Unknown task type: $type")
     }

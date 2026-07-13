@@ -62,6 +62,10 @@ class ReportSummary {
             if( !request ) return null
             return realtime / request * 100 as Double
         }
+
+        mappers.gpuUsage = { TraceRecord record -> record.getGpuMetrics()?.get('pct') as Double }
+        mappers.gpuMemPeak = { TraceRecord record -> record.getGpuMetrics()?.get('peak_mem_used') as Double }
+        mappers.gpuMemAvg = { TraceRecord record -> record.getGpuMetrics()?.get('avg_mem') as Double }
     }
 
     /**

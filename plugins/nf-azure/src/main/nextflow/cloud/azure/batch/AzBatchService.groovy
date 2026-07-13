@@ -24,10 +24,11 @@ import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeoutException
-import java.util.function.Predicate
+import dev.failsafe.function.CheckedPredicate
 
 import com.azure.compute.batch.BatchClient
 import com.azure.compute.batch.BatchClientBuilder
+import com.azure.compute.batch.models.AllocationState
 import com.azure.compute.batch.models.AutoUserScope
 import com.azure.compute.batch.models.AutoUserSpecification
 import com.azure.compute.batch.models.AzureFileShareConfiguration
@@ -460,7 +461,7 @@ class AzBatchService implements Closeable {
         final retryDelay = config.batch().jobQuotaRetryDelay
 
         // define retry condition for job quota errors
-        final cond = new Predicate<? extends Throwable>() {
+        final cond = new CheckedPredicate<? extends Throwable>() {
             @Override
             boolean test(Throwable t) {
                 return t instanceof HttpResponseException && isJobQuotaError((HttpResponseException) t)
@@ -696,7 +697,9 @@ class AzBatchService implements Closeable {
     protected BatchSupportedImage getImage(AzPoolOpts opts) {
         PagedIterable<BatchSupportedImage> images = apply(() -> client.listSupportedImages())
 
+        final available = new ArrayList<String>()
         for (BatchSupportedImage it : images) {
+            available.add("${it.imageReference.publisher}:${it.imageReference.offer}:${it.nodeAgentSkuId}:${it.osType}:${it.verificationType}".toString())
             if( !it.nodeAgentSkuId.equalsIgnoreCase(opts.sku) )
                 continue
             if( it.osType != opts.osType )
@@ -709,6 +712,7 @@ class AzBatchService implements Closeable {
                 return it
         }
 
+        log.debug "[AZURE BATCH] No VM image matching sku=$opts.sku; publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; verification type=$opts.verification - supported images: $available"
         throw new IllegalStateException("Cannot find a matching VM image with publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; verification type=$opts.verification")
     }
 
@@ -754,16 +758,42 @@ class AzBatchService implements Closeable {
         return new AzVmPoolSpec(poolId: poolId, vmType: vmType, opts: opts, metadata: metadata)
     }
 
+    /**
+     * Resize error codes that are transient/retryable. A pool carrying only these
+     * errors can recover on the next resize, so submission should not be blocked.
+     * Compared case-insensitively.
+     */
+    private static final List<String> TRANSIENT_RESIZE_ERROR_CODES = ['AllocationTimedout', 'AllocationFailed']
+
     protected void checkPool(BatchPool pool, AzVmPoolSpec spec) {
         if( pool.state != BatchPoolState.ACTIVE ) {
             throw new IllegalStateException("Azure Batch pool '${pool.id}' not in active state")
         }
         else if ( pool.resizeErrors && pool.currentDedicatedNodes==0 && pool.currentLowPriorityNodes==0 ) {
-            throw new IllegalStateException("Azure Batch pool '${pool.id}' has resize errors and no agents are available")
+            // Azure Batch persists the last resize error on the pool and only clears it on the next resize.
+            // For a steady autoscale pool carrying only transient errors, submitting the task is what triggers
+            // a fresh resize (which clears the stale error), so warn and proceed instead of blocking recovery.
+            if( isRecoverableResizeError(pool) ) {
+                log.warn "Azure Batch pool '${pool.id}' has recoverable resize errors and no agents; submitting task to trigger a fresh resize - ${pool.resizeErrors*.code}"
+            }
+            else {
+                throw new IllegalStateException("Azure Batch pool '${pool.id}' has resize errors and no agents are available")
+            }
         }
         if( pool.taskSlotsPerNode != spec.vmType.numberOfCores ) {
             throw new IllegalStateException("Azure Batch pool '${pool.id}' slots per node does not match the VM num cores (slots: ${pool.taskSlotsPerNode}, cores: ${spec.vmType.numberOfCores})")
         }
+    }
+
+    /**
+     * A resize error is recoverable when the pool can clear it on its own: it is autoscale-enabled
+     * (so a new task will trigger a fresh resize), it is steady (not currently resizing/stopping),
+     * and every recorded resize error is a transient/retryable code.
+     */
+    protected boolean isRecoverableResizeError(BatchPool pool) {
+        return pool.isEnableAutoScale() &&
+                pool.allocationState == AllocationState.STEADY &&
+                pool.resizeErrors?.every { err -> TRANSIENT_RESIZE_ERROR_CODES.any { it.equalsIgnoreCase(err.code) } }
     }
 
     protected void checkPoolId(String poolId) {
@@ -1111,12 +1141,12 @@ class AzBatchService implements Closeable {
      * @param cond A predicate that determines when a retry should be triggered
      * @return The {@link RetryPolicy} instance
      */
-    protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
+    protected <T> RetryPolicy<T> retryPolicy(CheckedPredicate<? extends Throwable> cond) {
         final cfg = config.retryConfig()
         final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
             @Override
             void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
-                log.debug("Azure TooManyRequests response error - attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}")
+                log.debug("Azure TooManyRequests response error - attempt: ${event.attemptCount}; reason: ${event.lastException.message}")
             }
         }
         return RetryPolicy.<T>builder()
@@ -1139,7 +1169,7 @@ class AzBatchService implements Closeable {
      */
     protected <T> T apply(CheckedSupplier<T> action) {
         // define the retry condition
-        final cond = new Predicate<? extends Throwable>() {
+        final cond = new CheckedPredicate<? extends Throwable>() {
             @Override
             boolean test(Throwable t) {
                 if( t instanceof HttpResponseException && t.response.statusCode in RETRY_CODES )

@@ -26,7 +26,6 @@ test/*
 tools/*
 tests_other
 other
-docs/_build/
 ./*.txt
 errors/
 misc/
@@ -46,3 +45,30 @@ plugins-prod
 /results
 /x/*
 mise.toml
+.netlify/
+
+# Dependencies
+node_modules
+
+# Production
+.docusaurus_site/build
+
+# Generated files
+.docusaurus
+.cache-loader
+.docusaurus_site/nextflow_stable
+.docusaurus_site/versioned_docs
+.docusaurus_site/versioned_sidebars
+.docusaurus_site/versions.json
+
+# Misc
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*

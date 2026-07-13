@@ -935,6 +935,28 @@ class TaskRunTest extends Specification {
         0 * task.resolveBody(_) >> null
     }
 
+    def 'should get stub source via method access' () {
+        given:
+        // a TaskClosure whose owner/delegate (the spec instance) has no `source` property:
+        // accessing `.source` as a property would resolve against the delegate and throw,
+        // so `getStubSource()` must call `getSource()` as a method instead
+        def stub = new TaskClosure({ -> 'echo hello' }, 'echo stub source')
+        def task = Spy(TaskRun)
+        task.config = Mock(TaskConfig) { getStubBlock() >> stub }
+
+        expect:
+        task.getStubSource() == 'echo stub source'
+    }
+
+    def 'should get null stub source when no stub block' () {
+        given:
+        def task = Spy(TaskRun)
+        task.config = Mock(TaskConfig) { getStubBlock() >> null }
+
+        expect:
+        task.getStubSource() == null
+    }
+
     def 'should get container info & meta' () {
         given:
         def image = 'my/container:latest'
