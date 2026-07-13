@@ -347,6 +347,77 @@ class TowerFusionEnvTest extends Specification {
             .withHeader('Authorization', WireMock.equalTo("Bearer ${config.accessToken}")))
     }
 
+    def 'should cache license tokens per product and version'() {
+        given:
+        def config = [
+            enabled    : true,
+            endpoint   : wireMockServer.baseUrl(),
+            accessToken: 'eyJ0aWQiOiAxMTkxN30uNWQ5MGFmYWU2YjhhNmFmY2FlNjVkMTQ4ZDFhM2ZlNzlmMmNjN2I4Mw==',
+            workspaceId: '67890'
+        ]
+        def session = Mock(Session)
+        def meta = new WorkflowMetadata(
+            session: session,
+            projectName: 'the-project-name',
+            repository: 'git://repo.com/foo')
+        session.getConfig() >> [ tower: config ]
+        session.getUniqueId() >> UUID.randomUUID()
+        session.getWorkflowMetadata() >> meta
+        and:
+        Global.session = session
+        def provider = new TowerFusionToken()
+        and: 'a mock endpoint at flow create'
+        wireMockServer.stubFor(
+            WireMock.post(urlEqualTo("/trace/create?workspaceId=${config.workspaceId}"))
+                .willReturn(
+                    WireMock.aResponse()
+                        .withStatus(200)
+                        .withBody('{"message": "", "workflowId": "1234"}')
+                )
+        )
+        and:
+        def observer = new TowerFactory().create(session)[0]
+        observer.onFlowCreate(session)
+
+        and: 'the license endpoint returns a distinct token per product'
+        final now = Instant.now()
+        final expirationDate = toJson(now.plus(1, ChronoUnit.DAYS))
+        wireMockServer.stubFor(
+            WireMock.post(urlEqualTo("/license/token/"))
+                .withRequestBody(matchingJsonPath('$.product', equalTo("product-a")))
+                .willReturn(
+                    WireMock.aResponse()
+                        .withStatus(200)
+                        .withHeader('Content-Type', 'application/json')
+                        .withBody('{"signedToken":"token-a", "expiresAt":' + expirationDate + '}')
+                )
+        )
+        wireMockServer.stubFor(
+            WireMock.post(urlEqualTo("/license/token/"))
+                .withRequestBody(matchingJsonPath('$.product', equalTo("product-b")))
+                .willReturn(
+                    WireMock.aResponse()
+                        .withStatus(200)
+                        .withHeader('Content-Type', 'application/json')
+                        .withBody('{"signedToken":"token-b", "expiresAt":' + expirationDate + '}')
+                )
+        )
+
+        when: 'a token is requested for two different products'
+        final tokenA = provider.getLicenseToken('product-a', 'v1')
+        final tokenB = provider.getLicenseToken('product-b', 'v1')
+
+        then: 'each product receives its own token rather than a shared cache entry'
+        tokenA == 'token-a'
+        tokenB == 'token-b'
+
+        and: 'both products reached the license endpoint'
+        wireMockServer.verify(1, WireMock.postRequestedFor(urlEqualTo("/license/token/"))
+            .withRequestBody(matchingJsonPath('$.product', equalTo("product-a"))))
+        wireMockServer.verify(1, WireMock.postRequestedFor(urlEqualTo("/license/token/"))
+            .withRequestBody(matchingJsonPath('$.product', equalTo("product-b"))))
+    }
+
     def 'should get a license token with environment'() {
         given:
         def accessToken = 'eyJ0aWQiOiAxMTkxN30uNWQ5MGFmYWU2YjhhNmFmY2FlNjVkMTQ4ZDFhM2ZlNzlmMmNjN2I4Mw=='
