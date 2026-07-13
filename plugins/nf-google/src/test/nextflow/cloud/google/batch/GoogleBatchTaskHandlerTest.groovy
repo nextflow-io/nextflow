@@ -634,7 +634,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         handler.isActive() >> false
         0 * executor.shouldDeleteJob('job1') >> true
         and:
-        0 * client.deleteJob('job1') >> null
+        0 * client.deleteJob('job1')
 
         when:
         handler.@jobId = 'job1'
@@ -643,7 +643,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         handler.isActive() >> true
         1 * executor.shouldDeleteJob('job1') >> true
         and:
-        1 * client.deleteJob('job1') >> null
+        1 * client.deleteJob('job1')
 
         when:
         handler.@jobId = 'job1'
@@ -652,7 +652,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         handler.isActive() >> true
         1 * executor.shouldDeleteJob('job1') >> false
         and:
-        0 * client.deleteJob('job1') >> null
+        0 * client.deleteJob('job1')
     }
 
     JobStatus makeJobStatus(JobStatus.State state, String desc = null) {

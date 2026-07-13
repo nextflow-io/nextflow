@@ -509,8 +509,8 @@ class K8sTaskHandlerTest extends Specification {
         then:
         1 * handler.getState() >> fullState
         1 * handler.updateTimestamps(termState)
-        1 * handler.deleteJobIfSuccessful(task) >> null
-        1 * handler.saveJobLogOnError(task) >> null
+        1 * handler.deleteJobIfSuccessful(task) >> { }
+        1 * handler.saveJobLogOnError(task) >> { }
         handler.task.exitStatus == 0
         handler.task.@stdout == OUT_FILE
         handler.task.@stderr == ERR_FILE
@@ -525,8 +525,8 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getState() >> noExitCodeState
         1 * handler.updateTimestamps(noExitCodeTermState)
         1 * handler.readExitFile() >> EXIT_STATUS
-        1 * handler.deleteJobIfSuccessful(task) >> null
-        1 * handler.saveJobLogOnError(task) >> null
+        1 * handler.deleteJobIfSuccessful(task) >> { }
+        1 * handler.saveJobLogOnError(task) >> { }
         handler.task.exitStatus == EXIT_STATUS
         handler.task.@stdout == OUT_FILE
         handler.task.@stderr == ERR_FILE
@@ -557,8 +557,8 @@ class K8sTaskHandlerTest extends Specification {
         1 * handler.getState() >> [terminated: termState]
         1 * handler.updateTimestamps(termState)
         0 * handler.readExitFile()
-        1 * handler.deleteJobIfSuccessful(task) >> null
-        1 * handler.saveJobLogOnError(task) >> null
+        1 * handler.deleteJobIfSuccessful(task) >> { }
+        1 * handler.saveJobLogOnError(task) >> { }
         handler.task.exitStatus == 137
         handler.status == TaskStatus.COMPLETED
         result == true

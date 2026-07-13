@@ -361,7 +361,9 @@ class AwsBatchTaskHandlerTest extends Specification {
             fusionEnabled() >> false
             getAwsOptions() >> Mock(AwsOptions) {
                 getRetryMode() >> RETRY_MODE
-                getMaxTransferAttempts() >> MAX_ATTEMPTS
+                // getMaxTransferAttempts() returns a primitive int; a null stub
+                // cannot be cast to int under Groovy 5, so map null (unset) to 0
+                getMaxTransferAttempts() >> (MAX_ATTEMPTS ?: 0)
             }
         }
 
@@ -951,7 +953,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * executor.shouldDeleteJob('job1') >> true
         and:
-        1 * handler.terminateJob('job1') >> null
+        1 * handler.terminateJob('job1') >> { }
 
         when:
         handler.@jobId = 'job1:task2'
@@ -959,7 +961,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * executor.shouldDeleteJob('job1') >> true
         and:
-        1 * handler.terminateJob('job1') >> null
+        1 * handler.terminateJob('job1') >> { }
 
         when:
         handler.@jobId = 'job1:task2'
@@ -967,7 +969,7 @@ class AwsBatchTaskHandlerTest extends Specification {
         then:
         1 * executor.shouldDeleteJob('job1') >> false
         and:
-        0 * handler.terminateJob('job1') >> null
+        0 * handler.terminateJob('job1')
     }
 
     def 'should create the trace record' () {
