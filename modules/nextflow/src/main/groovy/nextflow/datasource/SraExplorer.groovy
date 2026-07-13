@@ -285,12 +285,11 @@ class SraExplorer {
             .retryStatusCodes(RETRY_CODES)
             .build()
 
-        final jdkClient = HttpClient.newBuilder()
-                .version(HttpClient.Version.HTTP_1_1)
-                .followRedirects(HttpClient.Redirect.NORMAL)
-        ProxyConfig.configure(jdkClient)
         httpClient = HxClient.newBuilder()
-            .httpClient(jdkClient.build())
+            .version(HttpClient.Version.HTTP_1_1)
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            // route through the forward proxy when configured
+            .withProxyConfig(ProxyConfig.proxyConfig())
             .retryConfig(config)
             .build()
 

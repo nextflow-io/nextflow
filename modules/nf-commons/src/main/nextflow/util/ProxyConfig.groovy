@@ -16,7 +16,6 @@
 
 package nextflow.util
 
-import java.net.http.HttpClient
 import java.util.concurrent.ConcurrentHashMap
 
 import groovy.transform.CompileStatic
@@ -43,8 +42,8 @@ class ProxyConfig {
     String password
 
     // -- proxies resolved from the launch environment, keyed by protocol (http/https/ftp).
-    //    Populated once by nextflow.cli.Launcher during bootstrap and consumed by the
-    //    configure(...) helpers so that HxClient-based clients honour the same proxy settings.
+    //    Populated once by nextflow.cli.Launcher during bootstrap and exposed via proxyConfig()
+    //    so that HxClient-based clients honour the same proxy settings.
     private static final Map<String,ProxyConfig> resolved = new ConcurrentHashMap<>()
     private static volatile List<String> noProxyHosts = List.of()
 
@@ -122,7 +121,7 @@ class ProxyConfig {
 
     /**
      * Register a proxy resolved from the launch environment, so that it can be applied to
-     * HxClient-based clients via {@link #configure}.
+     * HxClient-based clients via {@link #proxyConfig}.
      */
     static void register(ProxyConfig proxy) {
         if( proxy?.protocol && proxy.host )
@@ -174,20 +173,5 @@ class ProxyConfig {
             log.warn("Ignoring invalid proxy port '$port' - using default $defaultPort")
             return defaultPort
         }
-    }
-
-    /**
-     * Applies the resolved proxy settings to a JDK {@link HttpClient.Builder}. Used for the inner
-     * clients that some HxClient consumers build and supply explicitly via {@code httpClient(...)},
-     * which HxClient would otherwise use verbatim without proxy settings.
-     */
-    static void configure(HttpClient.Builder builder) {
-        final cfg = proxyConfig()
-        if( !cfg )
-            return
-        builder.proxy(cfg.toProxySelector())
-        final auth = cfg.toAuthenticator()
-        if( auth )
-            builder.authenticator(auth)
     }
 }

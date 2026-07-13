@@ -16,8 +16,6 @@
 
 package nextflow.util
 
-import java.net.http.HttpClient
-
 import io.seqera.http.HxClient
 import spock.lang.Specification
 /**
@@ -118,28 +116,5 @@ class ProxyConfigTest extends Specification {
         then:
         client.config.proxySelector != null
         client.config.proxyAuthenticator != null
-    }
-
-    def 'configure should apply the resolved proxy to a JDK HttpClient builder'() {
-        given:
-        ProxyConfig.register(new ProxyConfig(protocol: 'https', host: 'proxy.example.com', port: '8080'))
-
-        when:
-        def builder = HttpClient.newBuilder()
-        ProxyConfig.configure(builder)
-        def client = builder.build()
-
-        then:
-        client.proxy().present
-    }
-
-    def 'configure should be a no-op when no proxy is registered'() {
-        when:
-        def builder = HttpClient.newBuilder()
-        ProxyConfig.configure(builder)
-        def client = builder.build()
-
-        then:
-        !client.proxy().present
     }
 }
