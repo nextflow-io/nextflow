@@ -1036,6 +1036,112 @@ class SeqeraTaskHandlerTest extends Specification {
         captured.getLabels() == [region: 'us-east-1']
     }
 
+    def 'submit maps secret directive names to tower-<workflowId> references'() {
+        given:
+        Task captured = null
+        def batchSubmitter = Mock(SeqeraBatchSubmitter) {
+            submit(_, _) >> { args -> captured = args[1] as Task }
+        }
+        def taskConfig = Mock(TaskConfig) {
+            getCpus() >> 1
+            getMemory() >> MemoryUnit.of('1 GB')
+            getAccelerator() >> null
+            getResourceLabels() >> [:]
+            getResourceLimit('memory') >> null
+            getResourceLimit('cpus') >> null
+            getDisk() >> null
+            getSecret() >> ['DB_PWD', 'API_KEY']
+        }
+        def taskRun = Mock(TaskRun) {
+            getConfig() >> taskConfig
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getContainer() >> 'docker.io/library/alpine:3'
+            getContainerPlatform() >> 'linux/amd64'
+            getId() >> TaskId.of(1)
+            getHash() >> HashCode.fromInt(1)
+            lazyName() >> 'sample_task'
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getBatchSubmitter() >> batchSubmitter
+            getSeqeraConfig() >> Mock(ExecutorOpts) {
+                getMachineRequirement() >> null
+                getTaskEnvironment() >> [:]
+            }
+            getRunResourceLabels() >> [:]
+            getWorkflowId() >> 'wf123'
+            ensureRunCreated() >> {}
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionEnabled() >> true
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [:]
+            }
+            fusionSubmitCli() >> ['/bin/sh', '-c', 'true']
+        }
+
+        when:
+        handler.submit()
+
+        then: 'each secret name maps to its cloud-store reference; no value is present'
+        captured != null
+        captured.getSecrets() == [DB_PWD: 'tower-wf123/DB_PWD', API_KEY: 'tower-wf123/API_KEY']
+    }
+
+    def 'submit sets no secrets when the secret directive is empty'() {
+        given:
+        Task captured = null
+        def batchSubmitter = Mock(SeqeraBatchSubmitter) {
+            submit(_, _) >> { args -> captured = args[1] as Task }
+        }
+        def taskConfig = Mock(TaskConfig) {
+            getCpus() >> 1
+            getMemory() >> MemoryUnit.of('1 GB')
+            getAccelerator() >> null
+            getResourceLabels() >> [:]
+            getResourceLimit('memory') >> null
+            getResourceLimit('cpus') >> null
+            getDisk() >> null
+            getSecret() >> []
+        }
+        def taskRun = Mock(TaskRun) {
+            getConfig() >> taskConfig
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getContainer() >> 'docker.io/library/alpine:3'
+            getContainerPlatform() >> 'linux/amd64'
+            getId() >> TaskId.of(1)
+            getHash() >> HashCode.fromInt(1)
+            lazyName() >> 'sample_task'
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getBatchSubmitter() >> batchSubmitter
+            getSeqeraConfig() >> Mock(ExecutorOpts) {
+                getMachineRequirement() >> null
+                getTaskEnvironment() >> [:]
+            }
+            getRunResourceLabels() >> [:]
+            getWorkflowId() >> 'wf123'
+            ensureRunCreated() >> {}
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionEnabled() >> true
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [:]
+            }
+            fusionSubmitCli() >> ['/bin/sh', '-c', 'true']
+        }
+
+        when:
+        handler.submit()
+
+        then:
+        captured != null
+        captured.getSecrets() == null
+    }
+
     def 'submit overlays seqera hints onto config-scope machine requirement'() {
         given:
         Task captured = null
