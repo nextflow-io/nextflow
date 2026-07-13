@@ -333,10 +333,13 @@ abstract class RepositoryProvider {
             throw new HttpResponseLengthExceedException("HTTP response '${response.uri()}' is too big - response length: ${length}; max allowed length: ${max}")
     }
 
-    protected <T> List<T> invokeAndResponseWithPaging(String request, Closure<T> parse) {
+    protected List invokeAndResponseWithPaging(String request, Closure parse) {
         // this is needed because apparently bytebuddy used by testing framework is not able
         // to handle properly this method signature using both generics and `@Memoized` annotation.
-        // therefore the `@Memoized` has been moved to the inner method invocation
+        // therefore the `@Memoized` has been moved to the inner method invocation.
+        // note: a method-level generic signature (`<T>`) must be avoided here because Groovy 5
+        // eagerly introspects the class via `java.beans.Introspector` on construction, which
+        // throws a NPE in the JDK `TypeResolver` for methods with method-level type variables.
         return invokeAndResponseWithPaging0(request, parse)
     }
 

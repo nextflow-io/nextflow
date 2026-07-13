@@ -132,6 +132,13 @@ class TaskConfig extends LazyMap implements Cloneable {
         return get(name)
     }
 
+    void setProperty(String name, Object value) {
+        // task directives are stored as map entries; route property
+        // assignment to `put` so read-only getters (e.g. `getShell`) do
+        // not cause a ReadOnlyPropertyException under Groovy 5
+        put(name, value)
+    }
+
     final getRawValue(String key) {
         return getTarget().get(key)
     }

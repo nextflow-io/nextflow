@@ -305,7 +305,7 @@ public class ScriptCompiler {
             // convert to Groovy
             var sn = (ScriptNode) source.getAST();
             for ( var type : DEFAULT_IMPORTS )
-                sn.addImport(null, type);
+                sn.addImport(type.getNameWithoutPackage(), type);
             sn.addStaticStarImport(null, ClassHelper.makeWithoutCaching("nextflow.Nextflow"));
 
             var channelNamespace = sn.isTypingEnabled()

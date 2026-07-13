@@ -167,7 +167,7 @@ final class BitbucketServerRepositoryProvider extends RepositoryProvider {
     }
 
     @Memoized
-    protected <T> List<T> invokeAndResponseWithPaging(String request, Closure<T> parse) {
+    protected List invokeAndResponseWithPaging(String request, Closure parse) {
         int start = 0
         final limit = 100
         final result = new ArrayList()
