@@ -1,0 +1,7 @@
+ruleDirs:
+  - rules
+customLanguages:
+  groovy:
+    libraryPath: groovy.dylib
+    extensions: [groovy, gradle]
+    expandoChar: _
