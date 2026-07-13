@@ -566,7 +566,7 @@ class AssetManager implements Closeable {
         def mainScript = scriptName ?: getMainScriptName()
         def result = new File(localPath, mainScript)
         if( !result.exists() )
-            throw new AbortOperationException("Missing project main script: $result")
+            throw new AbortOperationException("Missing project main script: ${result.canonicalPath}")
 
         return result
     }
