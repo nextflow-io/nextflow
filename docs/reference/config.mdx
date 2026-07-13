@@ -824,6 +824,8 @@ The following settings are available:
 
 ##### `docker.cpuLimits`
 
+<AddedInVersion version="26.10" />
+
 Use the `--cpus` flag to limit CPU usage instead of `--cpu-shares` (default`false`).
 
 Unlike `--cpu-shares`, which only affects the relative scheduling weight of a container, `--cpus` enforces a hard limit on the number of CPUs available to it. See the [Docker documentation](https://docs.docker.com/engine/containers/resource_constraints/#cpu) for details.
