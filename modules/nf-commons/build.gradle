@@ -26,7 +26,7 @@ sourceSets {
 
 dependencies {
     api(project(':nf-lang'))
-    api "ch.qos.logback:logback-classic:1.5.32"
+    api "ch.qos.logback:logback-classic:1.5.35"
     api "org.apache.groovy:groovy:4.0.31"
     api "org.apache.groovy:groovy-nio:4.0.31"
     api "org.apache.commons:commons-lang3:3.18.0"
@@ -45,6 +45,6 @@ dependencies {
     testFixturesImplementation(project(":nextflow"))
 
     testImplementation "org.apache.groovy:groovy-json:4.0.31" // needed by wiremock
-    testImplementation ('org.wiremock:wiremock:3.13.2') { exclude module: 'groovy-all' }
+    testImplementation ('org.wiremock:wiremock-standalone:3.13.2') { exclude module: 'groovy-all' }
 }
 
