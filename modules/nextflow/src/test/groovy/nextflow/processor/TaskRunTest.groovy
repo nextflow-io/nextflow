@@ -896,8 +896,8 @@ class TaskRunTest extends Specification {
         when:
         task.resolve(body)
         then:
-        1 * task.resolveBody(body) >> null
-        0 * task.resolveStub(_) >> null
+        1 * task.resolveBody(body) >> { }
+        0 * task.resolveStub(_)
     }
 
     def 'should resolve task body when no stub' () {
@@ -913,8 +913,8 @@ class TaskRunTest extends Specification {
         when:
         task.resolve(body)
         then:
-        1 * task.resolveBody(body) >> null
-        0 * task.resolveStub(_) >> null
+        1 * task.resolveBody(body) >> { }
+        0 * task.resolveStub(_)
     }
 
     def 'should resolve task stub' () {
@@ -931,8 +931,8 @@ class TaskRunTest extends Specification {
         when:
         task.resolve(body)
         then:
-        1 * task.resolveStub(stub) >> null
-        0 * task.resolveBody(_) >> null
+        1 * task.resolveStub(stub) >> { }
+        0 * task.resolveBody(_)
     }
 
     def 'should get stub source via method access' () {

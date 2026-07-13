@@ -73,8 +73,12 @@ class TaskConfig extends LazyMap implements Cloneable {
     TaskConfig setContext( Map context ) {
         assert context != null
 
-        // set the binding context for this map
-        this.binding = context
+        // set the binding context for this map -- call the setter explicitly
+        // rather than assigning `this.binding` (a private field of the LazyMap
+        // super-class): a bare property assignment would be routed through the
+        // overridden `setProperty` and stored as a directive instead of setting
+        // the binding.
+        setBinding(context)
 
         // clear cache to force re-compute dynamic entries
         this.cache.clear()
@@ -133,10 +137,16 @@ class TaskConfig extends LazyMap implements Cloneable {
     }
 
     void setProperty(String name, Object value) {
-        // task directives are stored as map entries; route property
-        // assignment to `put` so read-only getters (e.g. `getShell`) do
-        // not cause a ReadOnlyPropertyException under Groovy 5
-        put(name, value)
+        // if the class defines a real setter for this property (e.g.
+        // `setContext`, `setTarget`), use it; otherwise store the value as a
+        // task directive in the underlying map. Without the map fallback, a
+        // bare assignment to a read-only directive (getter but no setter, e.g.
+        // `shell`) would throw ReadOnlyPropertyException under Groovy 5.
+        final setter = 'set' + name.capitalize()
+        if( metaClass.respondsTo(this, setter, [value] as Object[]) )
+            metaClass.invokeMethod(this, setter, value)
+        else
+            put(name, value)
     }
 
     final getRawValue(String key) {
