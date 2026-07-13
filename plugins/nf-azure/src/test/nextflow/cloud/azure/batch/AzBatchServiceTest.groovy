@@ -22,10 +22,13 @@ import java.time.Instant
 import java.time.temporal.ChronoUnit
 import dev.failsafe.function.CheckedPredicate
 
+import com.azure.compute.batch.models.AllocationState
 import com.azure.compute.batch.models.BatchPool
+import com.azure.compute.batch.models.BatchPoolState
 import com.azure.compute.batch.models.BatchJobCreateContent
 import com.azure.compute.batch.models.ElevationLevel
 import com.azure.compute.batch.models.EnvironmentSetting
+import com.azure.compute.batch.models.ResizeError
 import com.azure.core.exception.HttpResponseException
 import com.azure.core.http.HttpResponse
 import com.azure.identity.ManagedIdentityCredential
@@ -1184,5 +1187,110 @@ class AzBatchServiceTest extends Specification {
         then:
         thrown(IllegalArgumentException)
         createCalls == 1
+    }
+
+    private BatchPool poolWithResizeError(Map opts=[:]) {
+        return new BatchPool(
+                id: opts.id ?: 'pool-1',
+                state: BatchPoolState.ACTIVE,
+                allocationState: opts.containsKey('allocationState') ? opts.allocationState : AllocationState.STEADY,
+                enableAutoScale: opts.containsKey('enableAutoScale') ? opts.enableAutoScale : true,
+                currentDedicatedNodes: opts.containsKey('currentDedicatedNodes') ? opts.currentDedicatedNodes : 0,
+                currentLowPriorityNodes: opts.containsKey('currentLowPriorityNodes') ? opts.currentLowPriorityNodes : 0,
+                taskSlotsPerNode: opts.containsKey('taskSlotsPerNode') ? opts.taskSlotsPerNode : 2,
+                resizeErrors: opts.containsKey('resizeErrors')
+                        ? opts.resizeErrors
+                        : [ new ResizeError(code: 'AllocationTimedout') ] )
+    }
+
+    def 'should allow submission for a stale transient resize error on a steady autoscale pool' () {
+        given:
+        def exec = createExecutor([batch:[location: 'northeurope']])
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+        def SPEC = new AzVmPoolSpec(poolId: 'pool-1', vmType: new AzVmType(name: 'Standard_D2_v2', numberOfCores: 2), opts: new AzPoolOpts([:]))
+        def POOL = poolWithResizeError()
+
+        when:
+        svc.checkPool(POOL, SPEC)
+
+        then:
+        noExceptionThrown()
+    }
+
+    def 'should throw for a resize error on a fixed-size pool' () {
+        given:
+        def exec = createExecutor([batch:[location: 'northeurope']])
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+        def SPEC = new AzVmPoolSpec(poolId: 'pool-1', vmType: new AzVmType(name: 'Standard_D2_v2', numberOfCores: 2), opts: new AzPoolOpts([:]))
+        def POOL = poolWithResizeError(enableAutoScale: false)
+
+        when:
+        svc.checkPool(POOL, SPEC)
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message.contains('has resize errors and no agents are available')
+    }
+
+    def 'should throw for a non-transient resize error on an autoscale pool' () {
+        given:
+        def exec = createExecutor([batch:[location: 'northeurope']])
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+        def SPEC = new AzVmPoolSpec(poolId: 'pool-1', vmType: new AzVmType(name: 'Standard_D2_v2', numberOfCores: 2), opts: new AzPoolOpts([:]))
+        def POOL = poolWithResizeError(resizeErrors: [ new ResizeError(code: 'AccountVMSeriesCoreQuotaReached') ])
+
+        when:
+        svc.checkPool(POOL, SPEC)
+
+        then:
+        thrown(IllegalStateException)
+    }
+
+    def 'should throw for a transient resize error while the pool is not steady' () {
+        given:
+        def exec = createExecutor([batch:[location: 'northeurope']])
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+        def SPEC = new AzVmPoolSpec(poolId: 'pool-1', vmType: new AzVmType(name: 'Standard_D2_v2', numberOfCores: 2), opts: new AzPoolOpts([:]))
+        def POOL = poolWithResizeError(allocationState: AllocationState.RESIZING)
+
+        when:
+        svc.checkPool(POOL, SPEC)
+
+        then:
+        thrown(IllegalStateException)
+    }
+
+    def 'should allow submission when nodes are present despite a resize error' () {
+        given:
+        def exec = createExecutor([batch:[location: 'northeurope']])
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+        def SPEC = new AzVmPoolSpec(poolId: 'pool-1', vmType: new AzVmType(name: 'Standard_D2_v2', numberOfCores: 2), opts: new AzPoolOpts([:]))
+        def POOL = poolWithResizeError(enableAutoScale: false, currentDedicatedNodes: 1)
+
+        when:
+        svc.checkPool(POOL, SPEC)
+
+        then:
+        noExceptionThrown()
+    }
+
+    def 'isRecoverableResizeError should classify resize errors by autoscale, state and code' () {
+        given:
+        def exec = createExecutor([batch:[location: 'northeurope']])
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+
+        expect:
+        svc.isRecoverableResizeError(POOL) == EXPECTED
+
+        where:
+        POOL                                                                            | EXPECTED
+        poolWithResizeError()                                                           | true
+        poolWithResizeError(resizeErrors: [ new ResizeError(code: 'AllocationFailed') ]) | true
+        poolWithResizeError(resizeErrors: [ new ResizeError(code: 'allocationtimedout') ]) | true
+        poolWithResizeError(enableAutoScale: false)                                     | false
+        poolWithResizeError(allocationState: AllocationState.RESIZING)                  | false
+        poolWithResizeError(resizeErrors: [ new ResizeError(code: 'AccountVMSeriesCoreQuotaReached') ]) | false
+        poolWithResizeError(resizeErrors: [ new ResizeError(code: 'AllocationTimedout'), new ResizeError(code: 'AccountCoreQuotaReached') ]) | false
+        poolWithResizeError(resizeErrors: [ new ResizeError(code: null) ])              | false
     }
 }
