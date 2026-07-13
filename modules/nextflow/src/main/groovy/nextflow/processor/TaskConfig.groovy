@@ -83,9 +83,11 @@ class TaskConfig extends LazyMap implements Cloneable {
         // clear cache to force re-compute dynamic entries
         this.cache.clear()
 
-        // set the binding context for 'ext' map
+        // set the binding context for 'ext' map -- call the setter explicitly:
+        // a bare `ext.binding = context` is not routed to the protected
+        // `setBinding` under Groovy 5 and would be stored as a map entry
         if( getTarget().ext instanceof LazyMap ext )
-            ext.binding = context
+            ext.setBinding(context)
 
         // set the this object in the task context in order to allow task properties to be resolved in process script
         context.put(TASK_CONTEXT_PROPERTY_NAME, this)
