@@ -36,6 +36,7 @@ import com.azure.compute.batch.models.BatchJobCreateContent
 import com.azure.compute.batch.models.BatchJobConstraints
 import com.azure.compute.batch.models.BatchJobUpdateContent
 import com.azure.compute.batch.models.BatchNodeFillType
+import com.azure.compute.batch.models.BatchNodeIdentityReference
 import com.azure.compute.batch.models.BatchPool
 import com.azure.compute.batch.models.BatchPoolCreateContent
 import com.azure.compute.batch.models.BatchPoolInfo
@@ -874,13 +875,20 @@ class AzBatchService implements Closeable {
         final registryOpts = config.registry()
 
         if( registryOpts && registryOpts.isConfigured() ) {
-            final containerRegistries = new ArrayList<ContainerRegistryReference>(1)
-            containerRegistries << new ContainerRegistryReference()
+            final registryRef = new ContainerRegistryReference()
                     .setRegistryServer(registryOpts.server)
-                    .setUsername(registryOpts.userName)
-                    .setPassword(registryOpts.password)
+            if( registryOpts.usesManagedIdentity() ) {
+                registryRef.setIdentityReference( new BatchNodeIdentityReference().setResourceId(registryOpts.managedIdentityResourceId) )
+                log.debug "[AZURE BATCH] Connecting Azure Batch pool to Container Registry '$registryOpts.server' using managed identity '$registryOpts.managedIdentityResourceId'"
+            }
+            else {
+                registryRef.setUsername(registryOpts.userName)
+                        .setPassword(registryOpts.password)
+                log.debug "[AZURE BATCH] Connecting Azure Batch pool to Container Registry '$registryOpts.server'"
+            }
+            final containerRegistries = new ArrayList<ContainerRegistryReference>(1)
+            containerRegistries << registryRef
             containerConfig.setContainerRegistries(containerRegistries)
-            log.debug "[AZURE BATCH] Connecting Azure Batch pool to Container Registry '$registryOpts.server'"
         }
 
         final image = getImage(opts)

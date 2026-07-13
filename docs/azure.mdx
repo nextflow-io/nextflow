@@ -550,6 +550,9 @@ Nextflow uses the following environment variables if the registry credentials ar
 - `AZURE_REGISTRY_PASSWORD`: the password for Azure Container Registry authentication
 :::
 
+To authenticate to a private registry with a user-assigned [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) instead of a username and password:
+
+
 Container images from public registries such as Docker Hub can be used without additional configuration, even when a private registry is specified in the `azure.registry` scope. The Docker runtime on Azure Batch VMs automatically uses the appropriate registry based on the container image specified for the task.
 
 ### VM images

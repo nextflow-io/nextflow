@@ -48,6 +48,12 @@ class AzRegistryOpts implements ConfigScope {
     """)
     final String password
 
+    @ConfigOption
+    @Description("""
+        The ARM resource ID of a user-assigned managed identity used to authenticate to a private container registry (e.g. `/subscriptions/<sub>/resourceGroups/<rg>/providers/Microsoft.ManagedIdentity/userAssignedIdentities/<name>`). When set, it takes precedence over `userName` and `password`. Defaults to environment variable `AZURE_REGISTRY_MANAGED_RESOURCE_ID`. Note: the managed identity must already be attached to the pool nodes.
+    """)
+    final String managedIdentityResourceId
+
     AzRegistryOpts() {
         this(Collections.emptyMap())
     }
@@ -57,14 +63,21 @@ class AzRegistryOpts implements ConfigScope {
         this.server = config.server ?: 'docker.io'
         this.userName = config.userName ?: env.get('AZURE_REGISTRY_USER_NAME')
         this.password = config.password ?: env.get('AZURE_REGISTRY_PASSWORD')
+        this.managedIdentityResourceId = config.managedIdentityResourceId ?: env.get('AZURE_REGISTRY_MANAGED_RESOURCE_ID')
+    }
+
+    boolean usesManagedIdentity() {
+        return managedIdentityResourceId as boolean
     }
 
     boolean isConfigured() {
+        if( managedIdentityResourceId )
+            return true
         if( userName && password )
             return true
         if( !userName && !password )
             return false
-        throw new IllegalArgumentException("Invalid Container Registry configuration - Make sure userName and password are set for Container Registry")
+        throw new IllegalArgumentException("Invalid Container Registry configuration - Make sure managedIdentityResourceId or userName and password are set for Container Registry")
     }
 
 }

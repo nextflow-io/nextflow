@@ -26,6 +26,7 @@ import com.azure.compute.batch.models.AllocationState
 import com.azure.compute.batch.models.BatchPool
 import com.azure.compute.batch.models.BatchPoolState
 import com.azure.compute.batch.models.BatchJobCreateContent
+import com.azure.compute.batch.models.BatchSupportedImage
 import com.azure.compute.batch.models.ElevationLevel
 import com.azure.compute.batch.models.EnvironmentSetting
 import com.azure.compute.batch.models.ResizeError
@@ -464,6 +465,43 @@ class AzBatchServiceTest extends Specification {
         and:
         ret == TYPE
 
+    }
+
+    def 'should configure container registry with username and password' () {
+        given:
+        def exec = createExecutor(new AzConfig([registry: [server: 'reg.azurecr.io', userName: 'foo', password: 'bar']]))
+        AzBatchService svc = Spy(AzBatchService, constructorArgs: [exec])
+
+        when:
+        def vmConfig = svc.poolVmConfig(new AzPoolOpts())
+        then:
+        1 * svc.getImage(_) >> BatchSupportedImage.fromJson(com.azure.json.JsonProviders.createReader('{"nodeAgentSKUId":"sku","imageReference":{}}'))
+        and:
+        def registries = vmConfig.containerConfiguration.containerRegistries
+        registries.size() == 1
+        registries[0].registryServer == 'reg.azurecr.io'
+        registries[0].username == 'foo'
+        registries[0].password == 'bar'
+        registries[0].identityReference == null
+    }
+
+    def 'should configure container registry with managed identity' () {
+        given:
+        def RESOURCE_ID = '/subscriptions/sub/resourceGroups/rg/providers/Microsoft.ManagedIdentity/userAssignedIdentities/name'
+        def exec = createExecutor(new AzConfig([registry: [server: 'reg.azurecr.io', userName: 'foo', password: 'bar', managedIdentityResourceId: RESOURCE_ID]]))
+        AzBatchService svc = Spy(AzBatchService, constructorArgs: [exec])
+
+        when:
+        def vmConfig = svc.poolVmConfig(new AzPoolOpts())
+        then:
+        1 * svc.getImage(_) >> BatchSupportedImage.fromJson(com.azure.json.JsonProviders.createReader('{"nodeAgentSKUId":"sku","imageReference":{}}'))
+        and: 'managed identity takes precedence over username/password'
+        def registries = vmConfig.containerConfiguration.containerRegistries
+        registries.size() == 1
+        registries[0].registryServer == 'reg.azurecr.io'
+        registries[0].identityReference.resourceId == RESOURCE_ID
+        registries[0].username == null
+        registries[0].password == null
     }
 
     def 'should check poolid' () {
