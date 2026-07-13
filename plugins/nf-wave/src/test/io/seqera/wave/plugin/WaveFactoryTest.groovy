@@ -39,7 +39,7 @@ class WaveFactoryTest extends Specification {
         then:
         CONFIG == EXPECTED
         and:
-        DISABLED * session.setDisableRemoteBinDir(true) >> null
+        DISABLED * session.setDisableRemoteBinDir(true)
 
         where:
         CONFIG                      | EXPECTED                  | DISABLED
@@ -113,7 +113,7 @@ class WaveFactoryTest extends Specification {
         then:
         noExceptionThrown()
         and:
-        0 * session.setDisableRemoteBinDir(true) >> null
+        0 * session.setDisableRemoteBinDir(true)
         and:
         CONFIG == [wave:[:], fusion:[enabled:true]]
 
