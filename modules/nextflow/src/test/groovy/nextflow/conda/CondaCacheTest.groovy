@@ -245,7 +245,7 @@ class CondaCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand( "conda create --yes --quiet --prefix $PREFIX $ENV" ) >> null
+        1 * cache.runCommand( "conda create --yes --quiet --prefix $PREFIX $ENV" ) >> 0
         result == PREFIX
     }
 
@@ -269,7 +269,7 @@ class CondaCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand("mamba create --yes --quiet --prefix $PREFIX $ENV") >> null
+        1 * cache.runCommand("mamba create --yes --quiet --prefix $PREFIX $ENV") >> 0
         result == PREFIX
     }
 
@@ -293,7 +293,7 @@ class CondaCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand("micromamba create --yes --quiet --prefix $PREFIX $ENV") >> null
+        1 * cache.runCommand("micromamba create --yes --quiet --prefix $PREFIX $ENV") >> 0
         result == PREFIX
     }
 
@@ -317,7 +317,7 @@ class CondaCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand("mamba env create --yes --prefix $PREFIX --file $ENV") >> null
+        1 * cache.runCommand("mamba env create --yes --prefix $PREFIX --file $ENV") >> 0
         result == PREFIX
     }
 
@@ -341,7 +341,7 @@ class CondaCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand("micromamba env create --yes --prefix $PREFIX --file $ENV") >> null
+        1 * cache.runCommand("micromamba env create --yes --prefix $PREFIX --file $ENV") >> 0
         result == PREFIX
     }
 
@@ -358,7 +358,7 @@ class CondaCacheTest extends Specification {
         1 * cache.isYamlFilePath(ENV)
         1 * cache.isExplicitFile(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand( "conda create --this --that --yes --quiet --prefix $PREFIX $ENV" ) >> null
+        1 * cache.runCommand( "conda create --this --that --yes --quiet --prefix $PREFIX $ENV" ) >> 0
         result == PREFIX
     }
 
@@ -375,7 +375,7 @@ class CondaCacheTest extends Specification {
         1 * cache.isYamlFilePath(ENV)
         1 * cache.isExplicitFile(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand("mamba create --this --that --yes --quiet --prefix $PREFIX $ENV") >> null
+        1 * cache.runCommand("mamba create --this --that --yes --quiet --prefix $PREFIX $ENV") >> 0
         result == PREFIX
     }
 
@@ -392,7 +392,7 @@ class CondaCacheTest extends Specification {
         1 * cache.isYamlFilePath(ENV)
         1 * cache.isExplicitFile(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand("micromamba create --this --that --yes --quiet --prefix $PREFIX $ENV") >> null
+        1 * cache.runCommand("micromamba create --this --that --yes --quiet --prefix $PREFIX $ENV") >> 0
         result == PREFIX
     }
 
@@ -409,7 +409,7 @@ class CondaCacheTest extends Specification {
         1 * cache.isYamlFilePath(ENV)
         1 * cache.isExplicitFile(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand("conda create --yes --quiet --prefix /foo/bar -c bioconda -c defaults bwa=1.1.1") >> null
+        1 * cache.runCommand("conda create --yes --quiet --prefix /foo/bar -c bioconda -c defaults bwa=1.1.1") >> 0
         result == PREFIX
     }
 
@@ -426,7 +426,7 @@ class CondaCacheTest extends Specification {
         1 * cache.isYamlFilePath(ENV)
         0 * cache.isExplicitFile(ENV)
         1 * cache.makeAbsolute(ENV) >> Paths.get('/usr/base').resolve(ENV)
-        1 * cache.runCommand( "conda env create --prefix $PREFIX --file /usr/base/foo.yml" ) >> null
+        1 * cache.runCommand( "conda env create --prefix $PREFIX --file /usr/base/foo.yml" ) >> 0
         result == PREFIX
 
     }
@@ -444,7 +444,7 @@ class CondaCacheTest extends Specification {
         1 * cache.isYamlFilePath(ENV)
         0 * cache.isExplicitFile(ENV)
         1 * cache.makeAbsolute(ENV) >> Paths.get('/usr/base').resolve(ENV)
-        1 * cache.runCommand( "micromamba env create --yes --prefix $PREFIX --file /usr/base/foo.yml" ) >> null
+        1 * cache.runCommand( "micromamba env create --yes --prefix $PREFIX --file /usr/base/foo.yml" ) >> 0
         result == PREFIX
 
     }
@@ -475,7 +475,7 @@ class CondaCacheTest extends Specification {
         1 * cache.isYamlFilePath(ENV)
         1 * cache.isExplicitFile(ENV)
         1 * cache.makeAbsolute(ENV) >> envFile.toAbsolutePath()
-        1 * cache.runCommand( "conda create --this --that --yes --quiet --prefix $PREFIX --file ${envFile.toAbsolutePath()}" ) >> null
+        1 * cache.runCommand( "conda create --this --that --yes --quiet --prefix $PREFIX --file ${envFile.toAbsolutePath()}" ) >> 0
         result == PREFIX
 
         cleanup:
@@ -507,7 +507,7 @@ class CondaCacheTest extends Specification {
         1 * cache.isYamlFilePath(ENV)
         1 * cache.isExplicitFile(ENV)
         1 * cache.makeAbsolute(ENV) >> envFile.toAbsolutePath()
-        1 * cache.runCommand( "micromamba create --this --that --yes --quiet --prefix $PREFIX --file ${envFile.toAbsolutePath()}" ) >> null
+        1 * cache.runCommand( "micromamba create --this --that --yes --quiet --prefix $PREFIX --file ${envFile.toAbsolutePath()}" ) >> 0
         result == PREFIX
 
         cleanup:

@@ -147,6 +147,14 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
 
     }
 
+    @Override
+    void setProperty( String name, Object value ) {
+        // process directives are stored as map entries; route property
+        // assignment to `put` so read-only getters (e.g. `getFair`) do not
+        // cause a ReadOnlyPropertyException under Groovy 5
+        put(name, value)
+    }
+
     BaseScript getOwnerScript() { ownerScript }
 
     String getProcessName() { processName }

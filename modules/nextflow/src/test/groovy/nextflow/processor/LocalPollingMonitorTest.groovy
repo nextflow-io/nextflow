@@ -60,7 +60,7 @@ class LocalPollingMonitorTest extends Specification {
         when:
         monitor.submit(handler)
         then:
-        session.notifyTaskSubmit(handler) >> null
+        session.notifyTaskSubmit(handler) >> { }
         monitor.getRunningQueue().size()==1
         monitor.availCpus == 7
         monitor.availMemory == MemoryUnit.of('18GB').toBytes()
@@ -106,8 +106,8 @@ class LocalPollingMonitorTest extends Specification {
         when:
         monitor.submit(handler)
         then:
-        1 * handler.submit() >> null
-        1 * session.notifyTaskSubmit(handler) >> null
+        1 * handler.submit() >> { }
+        1 * session.notifyTaskSubmit(handler) >> { }
         and:
         monitor.canSubmit(handler) == true
         monitor.availCpus == 6
@@ -116,8 +116,8 @@ class LocalPollingMonitorTest extends Specification {
         when:
         monitor.submit(handler)
         then:
-        1 * handler.submit() >> null
-        1 * session.notifyTaskSubmit(handler) >> null
+        1 * handler.submit() >> { }
+        1 * session.notifyTaskSubmit(handler) >> { }
         and:
         monitor.canSubmit(handler) == false
         monitor.availCpus == 2
@@ -153,8 +153,8 @@ class LocalPollingMonitorTest extends Specification {
         when:
         monitor.submit(handler)
         then:
-        1 * handler.submit() >> null
-        1 * session.notifyTaskSubmit(handler) >> null
+        1 * handler.submit() >> { }
+        1 * session.notifyTaskSubmit(handler) >> { }
         and:
         monitor.canSubmit(handler) == false
         monitor.availCpus == 0
