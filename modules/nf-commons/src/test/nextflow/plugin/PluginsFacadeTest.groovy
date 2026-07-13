@@ -107,6 +107,7 @@ class PluginsFacadeTest extends Specification {
                 'nf-cloudcache': new PluginRef('nf-cloudcache', '0.1.0'),
                 'nf-google': new PluginRef('nf-google', '0.1.0'),
                 'nf-seqera': new PluginRef('nf-seqera', '0.1.0'),
+                'nf-tower': new PluginRef('nf-tower', '0.1.0'),
                 'nf-wave': new PluginRef('nf-wave', '0.1.0')
         ])
         and:
@@ -133,20 +134,20 @@ class PluginsFacadeTest extends Specification {
         handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'true'])
         result = handler.pluginsRequirement([tower:[enabled:true]])
         then:
-        result == [ new PluginRef('nf-seqera', '0.1.0') ]
+        result == [ new PluginRef('nf-tower', '0.1.0') ]
 
         when:
         handler = new PluginsFacade(defaultPlugins: defaults, env: [TOWER_ACCESS_TOKEN:'xyz'])
         result = handler.pluginsRequirement([:])
         then:
-        result == [ new PluginRef('nf-seqera', '0.1.0') ]
+        result == [ new PluginRef('nf-tower', '0.1.0') ]
 
-        // fusion requires both nf-seqera and nf-wave
+        // fusion requires both nf-tower and nf-wave
         when:
         handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT:'true'])
         result = handler.pluginsRequirement([fusion:[enabled:true]])
         then:
-        result == [ new PluginRef('nf-seqera', '0.1.0'), new PluginRef('nf-wave', '0.1.0')  ]
+        result == [ new PluginRef('nf-tower', '0.1.0'), new PluginRef('nf-wave', '0.1.0')  ]
 
         when:
         handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
@@ -197,13 +198,6 @@ class PluginsFacadeTest extends Specification {
         then:
         result == [ new PluginRef('nf-seqera', '0.1.0') ]
 
-        // nf-seqera is added at most once even when both tower/fusion options and the seqera executor apply
-        when:
-        handler = new PluginsFacade(defaultPlugins: defaults, env: [:])
-        result = handler.pluginsRequirement([fusion:[enabled:true], process:[executor:'seqera']])
-        then:
-        result == [ new PluginRef('nf-seqera', '0.1.0'), new PluginRef('nf-wave', '0.1.0') ]
-
     }
 
     def 'should return default plugins given config' () {
@@ -214,7 +208,7 @@ class PluginsFacadeTest extends Specification {
                 'nf-amazon': new PluginRef('nf-amazon', '0.1.0'),
                 'nf-google': new PluginRef('nf-google', '0.1.0'),
                 'nf-azure': new PluginRef('nf-azure', '0.1.0'),
-                'nf-seqera': new PluginRef('nf-seqera', '0.1.0'),
+                'nf-tower': new PluginRef('nf-tower', '0.1.0'),
                 'nf-k8s': new PluginRef('nf-k8s', '0.1.0')
         ])
         and:
@@ -267,7 +261,7 @@ class PluginsFacadeTest extends Specification {
                 'nf-amazon': new PluginRef('nf-amazon', '0.1.0'),
                 'nf-google': new PluginRef('nf-google', '0.1.0'),
                 'nf-azure': new PluginRef('nf-azure', '0.1.0'),
-                'nf-seqera': new PluginRef('nf-seqera', '0.1.0')
+                'nf-tower': new PluginRef('nf-tower', '0.1.0')
         ])
         and:
         def handler = new PluginsFacade(defaultPlugins: defaults)
@@ -312,7 +306,7 @@ class PluginsFacadeTest extends Specification {
                 'nf-amazon': new PluginRef('nf-amazon', '0.1.0'),
                 'nf-google': new PluginRef('nf-google', '0.1.0'),
                 'nf-azure': new PluginRef('nf-azure', '0.1.0'),
-                'nf-seqera': new PluginRef('nf-seqera', '0.1.0')
+                'nf-tower': new PluginRef('nf-tower', '0.1.0')
         ])
         and:
         def handler = new PluginsFacade(defaultPlugins: defaults)
@@ -355,17 +349,17 @@ class PluginsFacadeTest extends Specification {
         def defaults = new DefaultPlugins(plugins: [
                 'nf-amazon': new PluginRef('nf-amazon', '0.1.0'),
                 'nf-google': new PluginRef('nf-google', '0.1.0'),
-                'nf-seqera': new PluginRef('nf-seqera', '0.1.0')
+                'nf-tower': new PluginRef('nf-tower', '0.1.0')
         ])
         and:
-        def handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT: 'nf-amazon,nf-seqera@1.0.1,nf-foo@2.2.0,nf-bar'])
+        def handler = new PluginsFacade(defaultPlugins: defaults, env: [NXF_PLUGINS_DEFAULT: 'nf-amazon,nf-tower@1.0.1,nf-foo@2.2.0,nf-bar'])
 
         when:
         def plugins = handler.defaultPluginsConf([:])
         then:
         plugins.size()==4
         plugins.find { it.id == 'nf-amazon' && it.version=='0.1.0' }    // <-- version from default
-        plugins.find { it.id == 'nf-seqera' && it.version=='1.0.1' }     // <-- version from the env var
+        plugins.find { it.id == 'nf-tower' && it.version=='1.0.1' }     // <-- version from the env var
         plugins.find { it.id == 'nf-foo' && it.version=='2.2.0' }       // <-- version from the env var
         plugins.find { it.id == 'nf-bar' && it.version==null }          // <-- no version
     }
