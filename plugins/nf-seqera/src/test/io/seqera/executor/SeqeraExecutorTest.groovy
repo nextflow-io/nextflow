@@ -145,6 +145,14 @@ class SeqeraExecutorTest extends Specification {
         fusionConfig.targetVersion == null
     }
 
+    def 'should be secret-native so Nextflow suppresses the local-store secrets snippet'() {
+        given:
+        SysEnv.push([:])
+
+        expect:
+        new SeqeraExecutor().isSecretNative()
+    }
+
     def 'should expose run resource labels coerced from config-level process.resourceLabels'() {
         given:
         SysEnv.push([:])
