@@ -1089,7 +1089,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final validCpus = FARGATE_MEM.keySet().findAll { it >= cpus }
         if( !validCpus )
             throw new ProcessUnrecoverableException("Requirement of $cpus CPUs is not allowed by Fargate -- Check process with name '${task.lazyName()}'")
-        return validCpus.min()
+        final result = validCpus.min()
+        if( result != cpus )
+            log.warn "Process '${task.lazyName()}' cpus requirement of ${cpus} is not allowed by Fargate and will be rounded up to ${result}"
+        return result
     }
 
     protected long normaliseFargateMem(Integer cpus, MemoryUnit mem) {
