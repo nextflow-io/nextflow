@@ -430,9 +430,6 @@ class NameGenerator {
             // Hypatia - Greek Alexandrine Neoplatonist philosopher in Egypt who was one of the earliest mothers of mathematics. https://en.wikipedia.org/wiki/Hypatia
             "hypatia",
 
-            // Jagadish Chandra Bose - Indian physicist, biologist, and biophysicist who pioneered the investigation of radio and microwave optics and made seminal contributions to plant biology. https://en.wikipedia.org/wiki/Jagadish_Chandra_Bose
-            "jagadish",
-
             // Yeong-Sil Jang was a Korean scientist and astronomer during the Joseon Dynasty; he invented the first metal printing press and water gauge. https://en.wikipedia.org/wiki/Jang_Yeong-sil
             "jang",
 
