@@ -39,6 +39,13 @@ dependencies {
     // patch gson dependency required by pf4j
     api 'com.google.code.gson:gson:2.13.1'
     api 'io.seqera:npr-api:0.22.0'
+    // jackson-databind is pulled transitively (npr-api). Bump it to the patched 2.21.5 via an
+    // api-scoped constraint — no direct dependency, and `api` scope propagates the fix to all
+    // downstream modules and their testFixtures classpaths. Addresses the high-severity
+    // PolymorphicTypeValidator bypasses (GHSA-rmj7-2vxq-3g9f, GHSA-j3rv-43j4-c7qm).
+    constraints {
+        api('com.fasterxml.jackson.core:jackson-databind:2.21.5') { because 'jackson-databind deserialization CVEs' }
+    }
 
     /* testImplementation inherited from top gradle build file */
     testImplementation(testFixtures(project(":nextflow")))

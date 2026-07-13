@@ -65,12 +65,19 @@ dependencies {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
 
-    // Force patched version to address GHSA-72hv-8253-57qq (jackson-core Number Length Constraint Bypass DoS)
-    runtimeOnly 'com.fasterxml.jackson.core:jackson-core:2.18.6'
-
-    // Pin azure-core-http-netty to a version that brings patched netty
-    // (4.1.135.Final) to address GHSA-3qp7-7mw8-wx86 / CVE-2026-44249
-    implementation 'com.azure:azure-core-http-netty:1.16.5'
+    // Bump vulnerable transitive dependencies of the Azure SDK across ALL classpaths —
+    // including testFixtures*, which implementation/runtimeOnly pins don't reach. Constraints
+    // raise the transitive version without adding a direct dependency; `api` scope is what
+    // reaches the consumer/testFixtures compile classpaths.
+    constraints {
+        // jackson kept on the 2.18 line required by the Azure SDK; addresses GHSA-72hv-8253-57qq
+        // (jackson-core DoS) and the jackson-databind deserialization advisories fixed in 2.18.9
+        api('com.fasterxml.jackson.core:jackson-databind:2.18.9') { because 'jackson-databind deserialization CVEs' }
+        api('com.fasterxml.jackson.core:jackson-core:2.18.9') { because 'GHSA-72hv-8253-57qq' }
+        api('com.fasterxml.jackson.core:jackson-annotations:2.18.9') { because 'keep jackson aligned' }
+        // azure-core-http-netty 1.16.5 brings patched netty 4.1.135 (GHSA-3qp7-7mw8-wx86 / CVE-2026-44249)
+        api('com.azure:azure-core-http-netty:1.16.5') { because 'brings patched netty 4.1.135' }
+    }
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')

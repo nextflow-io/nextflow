@@ -73,10 +73,14 @@ dependencies {
     api('io.seqera:tower-api:1.158.0') {
         exclude group: 'io.micronaut.servlet'
     }
-    // jackson 2.21.4 addresses GHSA-rmj7-2vxq-3g9f and GHSA-j3rv-43j4-c7qm
-    // (PolymorphicTypeValidator bypasses)
-    api "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.21.4"
-    api "com.fasterxml.jackson.core:jackson-databind:2.21.4"
+    // jackson-dataformat-yaml is required at runtime but is NOT pulled transitively, so it
+    // stays a direct dependency. jackson-databind IS transitive (tower-api / npr), so a
+    // constraint bumps it without adding a redundant dependency. Both at the patched 2.21.5 —
+    // addresses GHSA-rmj7-2vxq-3g9f, GHSA-j3rv-43j4-c7qm (PolymorphicTypeValidator bypasses).
+    api "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.21.5"
+    constraints {
+        api('com.fasterxml.jackson.core:jackson-databind:2.21.5') { because 'jackson-databind deserialization CVEs' }
+    }
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation "org.apache.groovy:groovy:4.0.31"
