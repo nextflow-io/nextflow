@@ -742,6 +742,11 @@ class BashWrapperBuilder {
             builder.addEnv(var)
         }
 
+        // for job arrays, propagate the array index variable (e.g. SLURM_ARRAY_TASK_ID)
+        // into the container environment
+        if( arrayIndexName )
+            builder.addEnv(arrayIndexName)
+
         // when secret are not managed by the execution platform natively
         // the secret names are added to the container env var white list
         if( !isSecretNative() && secretNames )  {
