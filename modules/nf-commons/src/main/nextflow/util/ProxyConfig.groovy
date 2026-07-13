@@ -16,8 +16,14 @@
 
 package nextflow.util
 
+import java.net.http.HttpClient
+import java.util.concurrent.ConcurrentHashMap
+
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
+import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
+import io.seqera.http.HxProxyConfig
 
 /**
  * Model a proxy configuration
@@ -26,6 +32,7 @@ import groovy.transform.EqualsAndHashCode
  * @author Stephen Kazakoff <sh.kazakoff@gmail.com>
  *
  */
+@Slf4j
 @EqualsAndHashCode
 @CompileStatic
 class ProxyConfig {
@@ -34,6 +41,12 @@ class ProxyConfig {
     String port
     String username
     String password
+
+    // -- proxies resolved from the launch environment, keyed by protocol (http/https/ftp).
+    //    Populated once by nextflow.cli.Launcher during bootstrap and consumed by the
+    //    configure(...) helpers so that HxClient-based clients honour the same proxy settings.
+    private static final Map<String,ProxyConfig> resolved = new ConcurrentHashMap<>()
+    private static volatile List<String> noProxyHosts = List.of()
 
     @Override
     String toString() {
@@ -105,5 +118,76 @@ class ProxyConfig {
         }
 
         return result
+    }
+
+    /**
+     * Register a proxy resolved from the launch environment, so that it can be applied to
+     * HxClient-based clients via {@link #configure}.
+     */
+    static void register(ProxyConfig proxy) {
+        if( proxy?.protocol && proxy.host )
+            resolved.put(proxy.protocol.toLowerCase(), proxy)
+    }
+
+    @PackageScope
+    static void reset() {
+        resolved.clear()
+        noProxyHosts = List.of()
+    }
+
+    /**
+     * Record the {@code NO_PROXY} host entries used to bypass the proxy for matching targets.
+     */
+    static void setNoProxyHosts(List<String> hosts) {
+        noProxyHosts = hosts != null
+                ? List.copyOf(hosts.collect { it.trim().toLowerCase() }.findAll { it } as List<String>)
+                : List.of()
+    }
+
+    /**
+     * @return An {@link HxProxyConfig} view of the resolved proxy environment — the HxClient
+     *      library type carrying the proxy selector and (proxy-only) authenticator — or
+     *      {@code null} when no proxy is configured. Apply it via
+     *      {@link HxClient.Builder#withProxyConfig(HxProxyConfig)}.
+     */
+    static HxProxyConfig proxyConfig() {
+        final http = resolved.get('http')
+        final https = resolved.get('https')
+        if( !http && !https )
+            return null
+        final builder = HxProxyConfig.newBuilder()
+        if( http )
+            builder.httpProxy(http.host, portAsInt(http.port, 80), http.username, http.password)
+        if( https )
+            builder.httpsProxy(https.host, portAsInt(https.port, 443), https.username, https.password)
+        builder.noProxy(noProxyHosts)
+        return builder.build()
+    }
+
+    private static int portAsInt(String port, int defaultPort) {
+        if( !port )
+            return defaultPort
+        try {
+            return Integer.parseInt(port.trim())
+        }
+        catch( NumberFormatException e ) {
+            log.warn("Ignoring invalid proxy port '$port' - using default $defaultPort")
+            return defaultPort
+        }
+    }
+
+    /**
+     * Applies the resolved proxy settings to a JDK {@link HttpClient.Builder}. Used for the inner
+     * clients that some HxClient consumers build and supply explicitly via {@code httpClient(...)},
+     * which HxClient would otherwise use verbatim without proxy settings.
+     */
+    static void configure(HttpClient.Builder builder) {
+        final cfg = proxyConfig()
+        if( !cfg )
+            return
+        builder.proxy(cfg.toProxySelector())
+        final auth = cfg.toAuthenticator()
+        if( auth )
+            builder.authenticator(auth)
     }
 }

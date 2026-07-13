@@ -38,6 +38,7 @@ import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
+import nextflow.util.ProxyConfig
 /**
  * Query NCBI SRA database and returns the retrieved FASTQs to the specified
  * target channel. Inspired to SRA-Explorer by Phil Ewels -- https://ewels.github.io/sra-explorer/
@@ -284,11 +285,12 @@ class SraExplorer {
             .retryStatusCodes(RETRY_CODES)
             .build()
 
-        httpClient = HxClient.newBuilder()
-            .httpClient(HttpClient.newBuilder()
+        final jdkClient = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .followRedirects(HttpClient.Redirect.NORMAL)
-                .build())
+        ProxyConfig.configure(jdkClient)
+        httpClient = HxClient.newBuilder()
+            .httpClient(jdkClient.build())
             .retryConfig(config)
             .build()
 

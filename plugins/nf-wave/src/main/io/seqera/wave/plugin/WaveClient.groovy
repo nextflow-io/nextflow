@@ -63,6 +63,7 @@ import nextflow.fusion.FusionConfig
 import nextflow.processor.Architecture
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.util.ProxyConfig
 import nextflow.util.SysHelper
 import nextflow.util.Threads
 import org.slf4j.Logger
@@ -152,6 +153,8 @@ class WaveClient {
         final refreshUrl = tower.refreshToken ? "${tower.endpoint}/oauth/access_token" : null
         return HxClient.newBuilder()
                 .httpClient(newHttpClient0())
+                // apply the proxy also to the token-refresh client (the main client is newHttpClient0())
+                .withProxyConfig(ProxyConfig.proxyConfig())
                 .bearerToken(tower.accessToken)
                 .refreshToken(tower.refreshToken)
                 .refreshTokenUrl(refreshUrl)
@@ -173,6 +176,8 @@ class WaveClient {
         // use virtual threads executor if enabled
         if( Threads.useVirtual() )
             builder.executor(Executors.newVirtualThreadPerTaskExecutor())
+        // route through the forward proxy when configured
+        ProxyConfig.configure(builder)
         // build and return the new client
         return builder.build()
     }

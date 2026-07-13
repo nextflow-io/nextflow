@@ -635,6 +635,8 @@ class Launcher {
         final noProxy = env.get('NO_PROXY') ?: env.get('no_proxy')
         if(noProxy) {
             System.setProperty('http.nonProxyHosts', noProxy.tokenize(',').join('|'))
+            // make the same entries available to HxClient-based clients via ProxyConfig
+            ProxyConfig.setNoProxyHosts(noProxy.tokenize(','))
         }
     }
 
@@ -669,6 +671,8 @@ class Launcher {
                     log.debug "Setting $qualifier proxy authenticator"
                     Authenticator.setDefault(proxy.authenticator())
                 }
+                // register so HxClient-based clients honour the same proxy (routing + credentials)
+                ProxyConfig.register(proxy)
             }
         }
         catch ( MalformedURLException e ) {
