@@ -20,10 +20,6 @@ import java.nio.file.NoSuchFileException
 
 import nextflow.util.RetryConfig
 import spock.lang.Specification
-/**
- *
- * @author Ben Sherman <bentshermann@gmail.com>
- */
 class TaskFileRetryTest extends Specification {
 
     private static final RetryConfig FAST_RETRY = new RetryConfig([delay: '20ms', maxDelay: '50ms', maxAttempts: 5])
