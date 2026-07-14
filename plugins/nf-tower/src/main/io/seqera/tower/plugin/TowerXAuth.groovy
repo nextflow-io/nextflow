@@ -43,6 +43,9 @@ class TowerXAuth implements XAuthProvider {
     private String accessToken
     private String refreshToken
     private CookieManager cookieManager
+    // Kept as a plain JDK HttpClient (not HxClient) on purpose: the token-refresh flow owns a
+    // CookieManager and reads the JWT / JWT_REFRESH_TOKEN cookies back out of it, but
+    // HxClient.Builder has no cookieHandler() hook. Proxy support is wired explicitly below.
     final private HttpClient httpClient
 
     TowerXAuth(String endpoint, String accessToken, String refreshToken) {
