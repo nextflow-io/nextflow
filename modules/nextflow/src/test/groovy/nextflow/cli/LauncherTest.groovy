@@ -344,6 +344,22 @@ class LauncherTest extends Specification {
     }
 
     @RestoreSystemProperties
+    def 'should fall back to ALL_PROXY when no scheme-specific proxy is set'() {
+
+        when: 'only ALL_PROXY (lowercase) is set — used as fallback for https'
+        Launcher.setProxy('https', [all_proxy: 'https://all.com:9090'])
+        then:
+        System.getProperty('https.proxyHost') == 'all.com'
+        System.getProperty('https.proxyPort') == '9090'
+
+        when: 'scheme-specific proxy takes precedence over ALL_PROXY'
+        Launcher.setProxy('HTTP', [HTTP_PROXY: 'specific.com:111', ALL_PROXY: 'all.com:999'])
+        then:
+        System.getProperty('http.proxyHost') == 'specific.com'
+        System.getProperty('http.proxyPort') == '111'
+    }
+
+    @RestoreSystemProperties
     def 'should setup proxy properties and configure the network authenticator'() {
 
         when:

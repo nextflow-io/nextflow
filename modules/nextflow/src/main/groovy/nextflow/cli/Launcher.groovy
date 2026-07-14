@@ -656,10 +656,12 @@ class Launcher {
         assert qualifier in ['http','https','ftp','HTTP','HTTPS','FTP']
         def str = null
         def var = "${qualifier}_" + (qualifier.isLowerCase() ? 'proxy' : 'PROXY')
+        // ALL_PROXY / all_proxy is the fallback when no scheme-specific variable is set
+        def allVar = qualifier.isLowerCase() ? 'all_proxy' : 'ALL_PROXY'
 
         // -- setup HTTP proxy
         try {
-            final proxy = ProxyConfig.parse(str = env.get(var.toString()))
+            final proxy = ProxyConfig.parse(str = env.get(var.toString()) ?: env.get(allVar))
             if( proxy ) {
                 // set the expected protocol
                 proxy.protocol = qualifier.toLowerCase()

@@ -104,8 +104,8 @@ class ProxyConfig {
             if( url.port > 0 )
                 result.port = url.port as String
             if( (p=url.userInfo?.indexOf(':') ?: -1) != -1 ) {
-                result.username = url.userInfo.substring(0,p)
-                result.password = url.userInfo.substring(p+1)
+                result.username = decodeUserInfo(url.userInfo.substring(0,p))
+                result.password = decodeUserInfo(url.userInfo.substring(p+1))
             }
         }
         else if( (p=value.indexOf(':')) != -1 ) {
@@ -161,6 +161,16 @@ class ProxyConfig {
             builder.httpsProxy(https.host, portAsInt(https.port, 443), https.username, https.password)
         builder.noProxy(noProxyHosts)
         return builder.build()
+    }
+
+    /**
+     * Percent-decode a userinfo component (username or password) per RFC 3986, so proxy
+     * credentials carrying special characters (e.g. {@code @}, {@code :}) work. A literal
+     * {@code +} is preserved — userinfo is not form-encoded — so it is shielded from the
+     * {@code +}→space rule of {@link URLDecoder}.
+     */
+    private static String decodeUserInfo(String s) {
+        return s != null ? URLDecoder.decode(s.replace('+', '%2B'), 'UTF-8') : null
     }
 
     private static int portAsInt(String port, int defaultPort) {

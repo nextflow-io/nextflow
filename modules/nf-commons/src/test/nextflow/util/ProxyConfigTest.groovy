@@ -56,6 +56,13 @@ class ProxyConfigTest extends Specification {
 
     }
 
+    def 'should url-decode proxy credentials'() {
+        expect: 'percent-encoded username/password are decoded'
+        ProxyConfig.parse('http://user%40corp:p%40ss%3Aword@domain:333') == new ProxyConfig(protocol: 'http', host: 'domain', port: '333', username: 'user@corp', password: 'p@ss:word')
+        and: 'a plus sign stays literal (RFC 3986 userinfo, not form encoding)'
+        ProxyConfig.parse('http://a+b:c+d@domain') == new ProxyConfig(protocol: 'http', host: 'domain', username: 'a+b', password: 'c+d')
+    }
+
     def 'authenticator should release credentials only for matching proxy challenges'() {
         given:
         def proxy = new ProxyConfig(protocol: 'https', host: 'proxy.example.com', port: '8080', username: 'foo', password: 'bar')
