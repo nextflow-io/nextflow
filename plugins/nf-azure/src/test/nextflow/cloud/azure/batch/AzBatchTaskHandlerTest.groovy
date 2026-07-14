@@ -17,6 +17,8 @@
 package nextflow.cloud.azure.batch
 
 import com.azure.compute.batch.models.BatchTask
+import com.azure.compute.batch.models.BatchTaskExecutionInfo
+import com.azure.compute.batch.models.BatchTaskState
 import com.azure.json.JsonProviders
 import com.sun.jna.platform.unix.X11
 import nextflow.processor.TaskStatus

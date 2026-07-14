@@ -37,7 +37,6 @@ import nextflow.util.RetryConfig
  * always indicates an incomplete write, while empty stdout can be a legitimate
  * result).
  *
- * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Slf4j
 @CompileStatic
