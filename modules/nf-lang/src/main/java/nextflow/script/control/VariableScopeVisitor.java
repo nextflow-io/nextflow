@@ -312,7 +312,11 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             var output = es.getExpression();
             VariableExpression target;
             if( output instanceof VariableExpression ve ) {
-                visit(ve);
+                // a bare name without a type (e.g. `x`) is an output expression
+                // and should be resolved as a variable reference; a name with a type
+                // (e.g. `x: String`) declares a named output and should not be visited
+                if( ClassHelper.isDynamicTyped(ve.getOriginType()) )
+                    visit(ve);
                 target = ve;
             }
             else if( output instanceof AssignmentExpression assign ) {
