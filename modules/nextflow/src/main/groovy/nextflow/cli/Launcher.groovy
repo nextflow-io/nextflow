@@ -672,6 +672,7 @@ class Launcher {
                 if( proxy.authenticator() ) {
                     log.debug "Setting $qualifier proxy authenticator"
                     Authenticator.setDefault(proxy.authenticator())
+                    enableBasicProxyTunneling()
                 }
                 // register so HxClient-based clients honour the same proxy (routing + credentials)
                 ProxyConfig.register(proxy)
@@ -681,6 +682,23 @@ class Launcher {
             log.warn "Not a valid $qualifier proxy: '$str' -- Check the value of variable `$var` in your environment"
         }
 
+    }
+
+    /**
+     * The JDK strips proxy credentials from the HTTPS {@code CONNECT} request for the auth schemes
+     * listed in {@code jdk.http.auth.tunneling.disabledSchemes} (default {@code Basic}, see
+     * {@code $JAVA_HOME/conf/net.properties}), so HTTPS targets behind an authenticating proxy fail
+     * with a 407 even when the authenticator is correctly wired. Clear the property so Basic proxy
+     * authentication works over the tunnel — but never override a value the user set explicitly
+     * (e.g. via {@code NXF_OPTS='-Djdk.http.auth.tunneling.disabledSchemes=...'}).
+     */
+    @PackageScope
+    static void enableBasicProxyTunneling() {
+        final key = 'jdk.http.auth.tunneling.disabledSchemes'
+        if( System.getProperty(key) == null ) {
+            log.debug "Clearing $key to allow Basic proxy authentication over HTTPS tunnelling"
+            System.setProperty(key, '')
+        }
     }
 
     /**

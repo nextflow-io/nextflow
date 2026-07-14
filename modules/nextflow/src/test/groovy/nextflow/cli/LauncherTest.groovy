@@ -360,6 +360,42 @@ class LauncherTest extends Specification {
     }
 
     @RestoreSystemProperties
+    def 'should clear jdk.http.auth.tunneling.disabledSchemes when the proxy has credentials'() {
+        given:
+        System.clearProperty('jdk.http.auth.tunneling.disabledSchemes')
+
+        when:
+        Launcher.setProxy('HTTPS', [HTTPS_PROXY: 'https://user:pass@proxy.com:8080'])
+
+        then: 'cleared so Basic proxy auth works over the HTTPS CONNECT tunnel'
+        System.getProperty('jdk.http.auth.tunneling.disabledSchemes') == ''
+    }
+
+    @RestoreSystemProperties
+    def 'should not touch disabledSchemes when the proxy has no credentials'() {
+        given:
+        System.clearProperty('jdk.http.auth.tunneling.disabledSchemes')
+
+        when:
+        Launcher.setProxy('HTTPS', [HTTPS_PROXY: 'proxy.com:8080'])
+
+        then:
+        System.getProperty('jdk.http.auth.tunneling.disabledSchemes') == null
+    }
+
+    @RestoreSystemProperties
+    def 'should never override a user-set disabledSchemes'() {
+        given:
+        System.setProperty('jdk.http.auth.tunneling.disabledSchemes', 'NTLM')
+
+        when:
+        Launcher.setProxy('HTTPS', [HTTPS_PROXY: 'https://user:pass@proxy.com:8080'])
+
+        then:
+        System.getProperty('jdk.http.auth.tunneling.disabledSchemes') == 'NTLM'
+    }
+
+    @RestoreSystemProperties
     def 'should setup proxy properties and configure the network authenticator'() {
 
         when:
