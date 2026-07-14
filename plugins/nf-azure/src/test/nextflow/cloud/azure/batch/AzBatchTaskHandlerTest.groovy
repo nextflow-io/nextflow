@@ -17,10 +17,7 @@
 package nextflow.cloud.azure.batch
 
 import com.azure.compute.batch.models.BatchTask
-import com.azure.compute.batch.models.BatchTaskExecutionInfo
-import com.azure.compute.batch.models.BatchTaskFailureInfo
-import com.azure.compute.batch.models.BatchTaskState
-import com.azure.compute.batch.models.ErrorCategory
+import com.azure.json.JsonProviders
 import com.sun.jna.platform.unix.X11
 import nextflow.processor.TaskStatus
 
@@ -132,11 +129,7 @@ class AzBatchTaskHandlerTest extends Specification {
         task.name = 'foo'
         task.workDir = Path.of('/tmp/wdir')
         def taskKey = new AzTaskKey('pool-123', 'job-456')
-        def azTask = new BatchTask()
-        def execInfo = new BatchTaskExecutionInfo(0,0)
-        execInfo.exitCode = 0
-        azTask.executionInfo = execInfo
-        azTask.state = BatchTaskState.COMPLETED
+        def azTask = BatchTask.fromJson(JsonProviders.createReader('{"state":"completed","executionInfo":{"retryCount":0,"requeueCount":0,"exitCode":0}}'))
 
         def batchService = Mock(AzBatchService){
             getTask(taskKey) >> azTask
@@ -169,11 +162,7 @@ class AzBatchTaskHandlerTest extends Specification {
         task.name = 'foo'
         task.workDir = Path.of('/tmp/wdir')
         def taskKey = new AzTaskKey('pool-123', 'job-456')
-        def azTask = new BatchTask()
-        def execInfo = new BatchTaskExecutionInfo(0,0)
-        execInfo.exitCode = 137
-        azTask.executionInfo = execInfo
-        azTask.state = BatchTaskState.COMPLETED
+        def azTask = BatchTask.fromJson(JsonProviders.createReader('{"state":"completed","executionInfo":{"retryCount":0,"requeueCount":0,"exitCode":137}}'))
 
         def batchService = Mock(AzBatchService){
             getTask(taskKey) >> azTask
@@ -207,10 +196,7 @@ class AzBatchTaskHandlerTest extends Specification {
         task.name = 'foo'
         task.workDir = Path.of('/tmp/wdir')
         def taskKey = new AzTaskKey('pool-123', 'job-456')
-        def azTask = new BatchTask()
-        def execInfo = new BatchTaskExecutionInfo(0,0)
-        azTask.executionInfo = execInfo
-        azTask.state = BatchTaskState.COMPLETED
+        def azTask = BatchTask.fromJson(JsonProviders.createReader('{"state":"completed","executionInfo":{"retryCount":0,"requeueCount":0}}'))
 
         def batchService = Mock(AzBatchService){
             getTask(taskKey) >> azTask
@@ -278,13 +264,7 @@ class AzBatchTaskHandlerTest extends Specification {
         task.name = 'foo'
         task.workDir = Path.of('/tmp/wdir')
         def taskKey = new AzTaskKey('pool-123', 'job-456')
-        def azTask = new BatchTask()
-        def execInfo = new BatchTaskExecutionInfo(0,0)
-        def failureInfo = new BatchTaskFailureInfo(ErrorCategory.USER_ERROR)
-        failureInfo.message = 'Unknown error'
-        execInfo.failureInfo = failureInfo
-        azTask.executionInfo = execInfo
-        azTask.state = BatchTaskState.COMPLETED
+        def azTask = BatchTask.fromJson(JsonProviders.createReader('{"state":"completed","executionInfo":{"retryCount":0,"requeueCount":0,"failureInfo":{"category":"userError","message":"Unknown error"}}}'))
 
         def batchService = Mock(AzBatchService){
             getTask(taskKey) >> azTask

@@ -20,7 +20,7 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '26.04.0'
+    nextflowVersion = '26.03.4-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Integrates with Seqera Platform for comprehensive workflow monitoring, resource tracking, and cache management capabilities'
@@ -28,16 +28,8 @@ nextflowPlugin {
     useDefaultDependencies = false
     generateSpec = false
     extensionPoints = [
-        // intelligent compute executor
         'io.seqera.executor.SeqeraExecutor',
-        'io.seqera.config.SeqeraConfig',
-        // platform integration (formerly nf-tower)
-        'io.seqera.tower.plugin.TowerConfig',
-        'io.seqera.tower.plugin.TowerFactory',
-        'io.seqera.tower.plugin.TowerFusionToken',
-        'io.seqera.tower.plugin.auth.AuthCommandImpl',
-        'io.seqera.tower.plugin.launch.LaunchCommandImpl',
-        'io.seqera.tower.plugin.fs.SeqeraPathFactory'
+        'io.seqera.config.SeqeraConfig'
     ]
 }
 
@@ -61,27 +53,17 @@ dependencies {
     compileOnly 'org.pf4j:pf4j:3.14.1'
 
     // intelligent compute scheduler client
-    api 'io.seqera:sched-client:0.63.0'
+    api 'io.seqera:sched-client:0.71.0'
     // Single lib-httpx declaration. Must stay 'api' at 2.3.0 to override the older lib-httpx
     // pulled transitively by sched-client, otherwise the plugin bundles failsafe-3.1.0 which
     // clashes with the failsafe-3.3.2 the plugin is compiled against (java.lang.NoSuchMethodError
     // on handleIf(CheckedPredicate) at runtime).
     api 'io.seqera:lib-httpx:2.3.0'
-
-    // platform integration (formerly nf-tower)
-    api 'io.seqera:lib-platform-oidc:0.1.0'
-    api('io.seqera:tower-api:1.158.0') {
-        exclude group: 'io.micronaut.servlet'
-    }
-    api "com.fasterxml.jackson.dataformat:jackson-dataformat-yaml:2.21.1"
-    api "com.fasterxml.jackson.core:jackson-databind:2.21.1"
+    // jackson 2.21.5 addresses GHSA-rmj7-2vxq-3g9f and GHSA-j3rv-43j4-c7qm
+    // (PolymorphicTypeValidator bypasses) and later deserialization advisories
+    api "com.fasterxml.jackson.core:jackson-databind:2.21.5"
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation "org.apache.groovy:groovy:4.0.31"
     testImplementation "org.apache.groovy:groovy-nio:4.0.31"
-    testImplementation "org.apache.groovy:groovy-json:4.0.31"
-    // wiremock required by TowerFusionEnvTest
-    testImplementation "org.wiremock:wiremock:3.13.2"
-    // Address security vulnerabilities CVE-2022-45688 and CVE-2023-5072
-    testImplementation 'org.json:json:20240303'
 }

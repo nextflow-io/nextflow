@@ -95,6 +95,7 @@ module.exports = {
             items: [
                 "reference/feature-flags",
                 "reference/syntax",
+                "reference/semantics",
                 {
                     type: "category",
                     label: "Standard library",
