@@ -73,7 +73,7 @@ class TaskProcessorTest extends Specification {
         binFolder.mkdirs()
 
         when:
-        def session = new Session([env: [X:"1", Y:"2", Z:null]])
+        def session = new Session([env: [X:"1", Y:"2", Z:null, W:'']])
         session.setBaseDir(home)
         def processor = createProcessor('task1', session)
         def builder = new ProcessBuilder()
@@ -84,6 +84,8 @@ class TaskProcessorTest extends Specification {
         builder.environment().Y == '2'
         builder.environment().PATH == "\$PATH:${binFolder.toString()}"
         !builder.environment().containsKey('Z')
+        // explicit empty-string values are retained (unlike null values) -- see #5722
+        builder.environment().W == ''
 
         when:
         session = new Session([env: [X:"1", Y:"2", PATH:'/some']])
