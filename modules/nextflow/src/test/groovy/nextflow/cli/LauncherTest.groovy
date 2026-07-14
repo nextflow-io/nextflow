@@ -20,6 +20,7 @@ import java.nio.file.Files
 
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
+import nextflow.util.ProxyConfig
 import spock.lang.Specification
 import spock.lang.Unroll
 import spock.util.environment.RestoreSystemProperties
@@ -32,6 +33,13 @@ class LauncherTest extends Specification {
 
     @org.junit.Rule
     OutputCapture capture = new OutputCapture()
+
+    def cleanup() {
+        // setProxy() populates the static ProxyConfig registry; clear it so a leaked proxy
+        // does not route later tests (e.g. AssetManagerTest via RepositoryProvider) through a
+        // dead proxy, which hangs the suite until the CI job timeout
+        ProxyConfig.reset()
+    }
 
     def 'should return `version` option' () {
 
