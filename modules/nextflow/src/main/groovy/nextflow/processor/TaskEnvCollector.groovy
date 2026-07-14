@@ -18,14 +18,8 @@ package nextflow.processor
 
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
-import java.time.temporal.ChronoUnit
 import java.util.regex.Matcher
 
-import dev.failsafe.Failsafe
-import dev.failsafe.FailsafeException
-import dev.failsafe.RetryPolicy
-import dev.failsafe.event.EventListener
-import dev.failsafe.event.ExecutionAttemptedEvent
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessEvalException
@@ -108,28 +102,8 @@ class TaskEnvCollector {
      */
     private String readEnvFile() {
         final envFile = workDir.resolve(TaskRun.CMD_ENV)
-        final listener = new EventListener<ExecutionAttemptedEvent>() {
-            @Override
-            void accept(ExecutionAttemptedEvent event) throws Throwable {
-                log.debug "Failed to read task env file: ${envFile.toUriString()} -- attempt: ${event.attemptCount}; reason: ${event.lastException.message}"
-            }
-        }
-        final retryPolicy = RetryPolicy.builder()
-            .handle(NoSuchFileException, EmptyEnvFileException)
-            .withBackoff(retryConfig.delay.toMillis(), retryConfig.maxDelay.toMillis(), ChronoUnit.MILLIS)
-            .withMaxAttempts(retryConfig.maxAttempts)
-            .withJitter(retryConfig.jitter)
-            .onRetry(listener)
-            .build()
-        try {
-            return Failsafe
-                .with(retryPolicy)
-                .get({it -> readEnvFile0(envFile)})
-        }
-        catch( FailsafeException e ) {
-            // unwrap to surface the original missing/empty-file error instead of
-            // the generic failsafe wrapper
-            throw e.cause ?: e
+        return TaskFileRetry.withRetry(retryConfig, [NoSuchFileException, EmptyEnvFileException], "task env file: ${envFile.toUriString()}") {
+            readEnvFile0(envFile)
         }
     }
 

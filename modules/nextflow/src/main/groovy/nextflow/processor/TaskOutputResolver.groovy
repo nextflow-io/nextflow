@@ -16,11 +16,13 @@
 
 package nextflow.processor
 
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import groovy.transform.CompileDynamic
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.exception.IllegalArityException
 import nextflow.exception.MissingFileException
@@ -29,6 +31,7 @@ import nextflow.script.params.v2.ProcessFileOutput
 import nextflow.script.types.Bag
 import nextflow.util.HashBag
 import nextflow.util.RecordMap
+import nextflow.util.RetryConfig
 /**
  * Implements the resolution of task outputs.
  *
@@ -42,12 +45,20 @@ class TaskOutputResolver implements Map<String,Object> {
 
     private TaskRun task
 
+    private RetryConfig retryConfig
+
     @Delegate
     private Map<String,Object> delegate
 
     TaskOutputResolver(Map<String,ProcessFileOutput> declaredFiles, TaskRun task) {
+        this(declaredFiles, task, RetryConfig.config())
+    }
+
+    @PackageScope
+    TaskOutputResolver(Map<String,ProcessFileOutput> declaredFiles, TaskRun task, RetryConfig retryConfig) {
         this.declaredFiles = declaredFiles
         this.task = task
+        this.retryConfig = retryConfig
         this.delegate = task.context
     }
 
@@ -184,10 +195,18 @@ class TaskOutputResolver implements Map<String,Object> {
         if( value == null )
             throw new IllegalArgumentException("Missing 'stdout' for process > ${task.lazyName()}")
 
-        if( value instanceof Path && !value.exists() )
-            throw new MissingFileException("Missing 'stdout' file: ${value.toUriString()} for process > ${task.lazyName()}")
+        if( value instanceof Path ) {
+            try {
+                return TaskFileRetry.withRetry(retryConfig, [NoSuchFileException], "stdout file: ${value.toUriString()}") {
+                    value.text
+                }
+            }
+            catch( NoSuchFileException e ) {
+                throw new MissingFileException("Missing 'stdout' file: ${value.toUriString()} for process > ${task.lazyName()}", e)
+            }
+        }
 
-        return value instanceof Path ? value.text : value?.toString()
+        return value?.toString()
     }
 
     /**

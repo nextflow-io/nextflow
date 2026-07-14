@@ -38,10 +38,13 @@ import nextflow.script.ProcessConfigV1
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.exception.MissingFileException
 import nextflow.script.params.FileInParam
 import nextflow.script.params.FileOutParam
+import nextflow.script.params.StdOutParam
 import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
+import nextflow.util.RetryConfig
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -661,5 +664,66 @@ class TaskProcessorTest extends Specification {
         and:
         0 * collector.collect(task)
         1 * exec.submit(task)
+    }
+
+    def 'should collect stdout from file' () {
+        given:
+        def workDir = Files.createTempDirectory('test')
+        def stdoutFile = workDir.resolve('.command.out')
+        stdoutFile.text = 'hello world'
+        and:
+        def proc = new TaskProcessor()
+        def task = new TaskRun(name: 'test_task', workDir: workDir)
+        def param = new StdOutParam(new Binding(), [])
+
+        when:
+        proc.collectStdOut(task, param, stdoutFile)
+        then:
+        task.outputs[param] == 'hello world'
+
+        cleanup:
+        workDir?.deleteDir()
+    }
+
+    def 'should retry and succeed once a missing stdout file appears' () {
+        given:
+        def workDir = Files.createTempDirectory('test')
+        def stdoutFile = workDir.resolve('.command.out')
+        Thread.start {
+            sleep(30)
+            stdoutFile.text = 'hello world'
+        }
+        and:
+        def proc = Spy(new TaskProcessor())
+        proc.retryConfig() >> new RetryConfig([delay: '20ms', maxDelay: '50ms', maxAttempts: 5])
+        def task = new TaskRun(name: 'test_task', workDir: workDir)
+        def param = new StdOutParam(new Binding(), [])
+
+        when:
+        proc.collectStdOut(task, param, stdoutFile)
+        then:
+        task.outputs[param] == 'hello world'
+
+        cleanup:
+        workDir?.deleteDir()
+    }
+
+    def 'should fail with MissingFileException after retries are exhausted' () {
+        given:
+        def workDir = Files.createTempDirectory('test')
+        def missingFile = workDir.resolve('missing.out')
+        and:
+        def proc = Spy(new TaskProcessor())
+        proc.retryConfig() >> new RetryConfig([delay: '20ms', maxDelay: '50ms', maxAttempts: 3])
+        def task = new TaskRun(name: 'test_task', workDir: workDir)
+        def param = new StdOutParam(new Binding(), [])
+
+        when:
+        proc.collectStdOut(task, param, missingFile)
+        then:
+        thrown(MissingFileException)
+
+        cleanup:
+        workDir?.deleteDir()
     }
 }
