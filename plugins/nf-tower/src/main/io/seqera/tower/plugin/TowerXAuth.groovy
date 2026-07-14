@@ -24,7 +24,9 @@ import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.http.HxProxyConfig
 import nextflow.file.http.XAuthProvider
+import nextflow.util.ProxyConfig
 
 /**
  * Implements Tower authentication strategy for resources accessed
@@ -52,12 +54,20 @@ class TowerXAuth implements XAuthProvider {
         // the cookie manager
         cookieManager = new CookieManager(null, CookiePolicy.ACCEPT_ALL)
         // create http client
-        this.httpClient = HttpClient.newBuilder()
+        final builder = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .followRedirects(HttpClient.Redirect.NORMAL)
                 .cookieHandler(cookieManager)
                 .connectTimeout(Duration.ofSeconds(10))
-                .build()
+        // route through the forward proxy when configured (this client is a plain JDK
+        // HttpClient, so apply the selector + proxy authenticator explicitly)
+        final HxProxyConfig proxy = ProxyConfig.proxyConfig()
+        if( proxy ) {
+            builder.proxy(proxy.toProxySelector())
+            if( proxy.hasCredentials() )
+                builder.authenticator(proxy.toAuthenticator())
+        }
+        this.httpClient = builder.build()
     }
 
     @Override
