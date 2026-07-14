@@ -37,7 +37,7 @@ class ResourceTypeAbstractionTest extends Specification {
         // Gradle test cwd may be the plugin module dir or the repo root.
         final candidates = [
                 'src/main/io/seqera/tower/plugin/fs',
-                'plugins/nf-seqera/src/main/io/seqera/tower/plugin/fs'
+                'plugins/nf-tower/src/main/io/seqera/tower/plugin/fs'
         ]
         for (String c : candidates) {
             final f = new File(c)

@@ -272,7 +272,7 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-preview'], description = "Run the workflow script skipping the execution of all processes")
     boolean preview
 
-    @Parameter(names=['-plugins'], description = 'Specify the plugins to be applied for this run e.g. nf-amazon,nf-seqera')
+    @Parameter(names=['-plugins'], description = 'Specify the plugins to be applied for this run e.g. nf-amazon,nf-tower')
     String plugins
 
     @Parameter(names=['-disable-jobs-cancellation'], description = 'Prevent the cancellation of child jobs on execution termination')
