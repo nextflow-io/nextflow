@@ -504,7 +504,9 @@ class BashWrapperBuilder {
         final lines = new StringBuilder()
         lines << '### ---\n'
         lines << "### name: '${bean.name}'\n"
-        if( bean.arrayIndexName ) {
+        // the array metadata block only applies to the array dispatcher task (which carries the
+        // child work-dirs); array children only carry the index name to expose it in the container
+        if( bean.arrayIndexName && bean.arrayWorkDirs ) {
             lines << '### array:\n'
             lines << "###   index-name: ${bean.arrayIndexName}\n"
             lines << "###   index-start: ${bean.arrayIndexStart}\n"
