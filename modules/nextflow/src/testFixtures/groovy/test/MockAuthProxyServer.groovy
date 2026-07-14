@@ -38,13 +38,6 @@ import groovy.util.logging.Slf4j
 @CompileStatic
 class MockAuthProxyServer implements Closeable {
 
-    /** environment variables clearing any proxy configuration (both cases) */
-    public static final Map<String,String> NO_PROXY_VARS = Collections.unmodifiableMap([
-            HTTP_PROXY: null, http_proxy: null,
-            HTTPS_PROXY: null, https_proxy: null,
-            ALL_PROXY: null, all_proxy: null,
-            NO_PROXY: null, no_proxy: null ] as Map<String,String>)
-
     private final String username
     private final String password
     private final String expectedAuth
@@ -69,14 +62,15 @@ class MockAuthProxyServer implements Closeable {
 
     /**
      * Environment variables routing all HTTP traffic through this proxy with the
-     * given credentials - by default the ones expected by the proxy - and clearing
-     * any other proxy settings inherited from the host environment
+     * given credentials - by default the ones expected by the proxy. Meant to be
+     * applied with {@code SysEnv.push()}, which replaces the environment map as
+     * seen by the code under test, so no other proxy settings can be inherited
+     * from the host environment
      */
     Map<String,String> proxyEnv(String user=username, String password=this.password) {
-        final result = new HashMap<String,String>(NO_PROXY_VARS)
+        final result = new HashMap<String,String>()
         result.put('HTTP_PROXY', "http://${user}:${password}@${host}:${port}".toString())
         result.put('HTTPS_PROXY', result.get('HTTP_PROXY'))
-        result.put('NO_PROXY', '')
         return result
     }
 
@@ -164,12 +158,12 @@ class MockAuthProxyServer implements Closeable {
     }
 
     private void tunnel(String requestLine, Socket socket, OutputStream output) {
-        // request line is expected as `CONNECT host:port HTTP/1.1`
+        // request line is expected as `CONNECT host:port HTTP/1.1` - the connection
+        // is always tunnelled to the loopback address since the target host names
+        // used by the tests are synthetic and cannot be resolved
         final target = requestLine.tokenize(' ')[1]
-        final p = target.lastIndexOf(':')
-        final host = target.substring(0,p)
-        final port = target.substring(p+1) as int
-        new Socket(host, port).withCloseable { upstream ->
+        final port = target.substring(target.lastIndexOf(':')+1) as int
+        new Socket('127.0.0.1', port).withCloseable { upstream ->
             output.write("HTTP/1.1 200 Connection established\r\n\r\n".getBytes('ISO-8859-1'))
             output.flush()
             final t1 = Thread.startDaemon("MockAuthProxyServer-up") { pump(socket.getInputStream(), upstream.getOutputStream()) }

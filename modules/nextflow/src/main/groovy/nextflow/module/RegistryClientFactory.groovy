@@ -20,6 +20,7 @@ import groovy.transform.CompileStatic
 import io.seqera.http.HxClient
 import io.seqera.npr.client.RegistryClient
 import nextflow.config.RegistryConfig
+import nextflow.util.HttpClientHelper
 import nextflow.util.RetryConfig
 
 import java.net.http.HttpClient
@@ -39,7 +40,7 @@ class RegistryClientFactory {
         return new RegistryClient(
             cfg.allUrls as List<String>,
             cfg.apiKey,
-            HxClient.newBuilder()
+            HttpClientHelper.applyProxy(HxClient.newBuilder())
                 .retryConfig(RetryConfig.config())
                 .followRedirects(HttpClient.Redirect.NORMAL)
                 .build()

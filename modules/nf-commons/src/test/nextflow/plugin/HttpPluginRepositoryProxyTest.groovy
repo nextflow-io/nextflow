@@ -16,15 +16,14 @@
 
 package nextflow.plugin
 
+import nextflow.SysEnv
 import org.pf4j.update.PluginInfo
 import spock.lang.Specification
-import test.EnvHelper
 import test.MockAuthProxyServer
 
 /**
- * Verify that HTTP clients created via a plain {@code HxClient.newBuilder()}
- * (e.g. the plugin registry client) automatically resolve the forward proxy
- * from the environment, including proxy credentials.
+ * Verify that the plugin registry client resolves the forward proxy from the
+ * environment, including proxy credentials.
  *
  * @author Phil Ewels <phil.ewels@seqera.io>
  */
@@ -50,12 +49,12 @@ class HttpPluginRepositoryProxyTest extends Specification {
                 }
               ]
             }'''
+        and: 'the proxy settings with credentials defined in the environment'
+        SysEnv.push(proxy.proxyEnv())
+
         when: 'the registry host is only reachable via the proxy'
-        PluginInfo info = null
-        EnvHelper.withEnv(proxy.proxyEnv()) {
-            final repo = new HttpPluginRepository('test-repo', new URI('http://plugins.registry.internal/'))
-            info = repo.getPlugin('nf-fake')
-        }
+        final repo = new HttpPluginRepository('test-repo', new URI('http://plugins.registry.internal/'))
+        final info = repo.getPlugin('nf-fake')
 
         then:
         info.id == 'nf-fake'
@@ -67,5 +66,6 @@ class HttpPluginRepositoryProxyTest extends Specification {
 
         cleanup:
         proxy?.close()
+        SysEnv.pop()
     }
 }

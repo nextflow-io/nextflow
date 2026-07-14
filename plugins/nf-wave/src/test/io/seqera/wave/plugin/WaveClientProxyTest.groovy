@@ -20,8 +20,8 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 
 import nextflow.Session
+import nextflow.SysEnv
 import spock.lang.Specification
-import test.EnvHelper
 import test.MockAuthProxyServer
 
 /**
@@ -37,22 +37,23 @@ class WaveClientProxyTest extends Specification {
         def proxy = new MockAuthProxyServer('foo', 'secret').start()
         proxy.responseContentType = 'application/json'
         proxy.responseBody = '{"status":"OK"}'
-        when: 'the proxy settings with credentials are defined in the environment'
-        HttpResponse<String> resp = null
-        EnvHelper.withEnv(proxy.proxyEnv()) {
-            final session = Mock(Session) { getConfig() >> [:] }
-            final wave = new WaveClient(session)
-            final client = wave.newHttpClient0()
-            assert client.proxy().isPresent()
-            assert client.authenticator().isPresent()
-            final request = HttpRequest.newBuilder()
-                    .uri(new URI('http://wave.proxy-test.internal/service-info'))
-                    .GET()
-                    .build()
-            resp = client.send(request, HttpResponse.BodyHandlers.ofString())
-        }
+        and: 'the proxy settings with credentials defined in the environment'
+        SysEnv.push(proxy.proxyEnv())
 
-        then: 'the request is answered by the proxy after the 407 challenge'
+        when:
+        final session = Mock(Session) { getConfig() >> [:] }
+        final wave = new WaveClient(session)
+        final client = wave.newHttpClient0()
+        final request = HttpRequest.newBuilder()
+                .uri(new URI('http://wave.proxy-test.internal/service-info'))
+                .GET()
+                .build()
+        final resp = client.send(request, HttpResponse.BodyHandlers.ofString())
+
+        then: 'the client is configured with the proxy and its credentials'
+        client.proxy().isPresent()
+        client.authenticator().isPresent()
+        and: 'the request is answered by the proxy after the 407 challenge'
         resp.statusCode() == 200
         resp.body() == '{"status":"OK"}'
         and:
@@ -61,5 +62,6 @@ class WaveClientProxyTest extends Specification {
 
         cleanup:
         proxy?.close()
+        SysEnv.pop()
     }
 }

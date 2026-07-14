@@ -47,4 +47,12 @@ class ProxyConfigTest extends Specification {
 
     }
 
+    def 'should url-decode username and password'( ) {
+
+        expect:
+        ProxyConfig.parse('http://user%40seqera.io:p%40ss%3Aword@domain:333') ==
+                new ProxyConfig(protocol: 'http', host: 'domain', port: '333', username: 'user@seqera.io', password: 'p@ss:word')
+
+    }
+
 }

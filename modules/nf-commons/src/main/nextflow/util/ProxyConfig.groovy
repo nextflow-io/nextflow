@@ -72,7 +72,8 @@ class ProxyConfig {
      * Parse a proxy URL string retrieving the host, port, username and password components
      *
      * @param value A proxy string e.g. {@code hostname}, {@code hostname:port}, {@code http://hostname:port},
-     *      {@code http://username:password@hostname:port}
+     *      {@code http://username:password@hostname:port}. Username and password may be URL-encoded
+     *      to escape special characters.
      * @return A map object containing at least the host name and, optionally, values for port, username and password.
      *      An empty map if the specified value is empty
      *
@@ -92,8 +93,8 @@ class ProxyConfig {
             if( url.port > 0 )
                 result.port = url.port as String
             if( (p=url.userInfo?.indexOf(':') ?: -1) != -1 ) {
-                result.username = url.userInfo.substring(0,p)
-                result.password = url.userInfo.substring(p+1)
+                result.username = URLDecoder.decode(url.userInfo.substring(0,p), 'UTF-8')
+                result.password = URLDecoder.decode(url.userInfo.substring(p+1), 'UTF-8')
             }
         }
         else if( (p=value.indexOf(':')) != -1 ) {

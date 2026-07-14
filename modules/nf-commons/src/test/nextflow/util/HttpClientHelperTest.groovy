@@ -28,13 +28,11 @@ import javax.net.ssl.KeyManagerFactory
 import javax.net.ssl.SSLContext
 import javax.net.ssl.TrustManagerFactory
 
-import com.sun.net.httpserver.HttpServer
 import com.sun.net.httpserver.HttpsConfigurator
 import com.sun.net.httpserver.HttpsServer
+import nextflow.SysEnv
 import spock.lang.Shared
 import spock.lang.Specification
-import spock.util.environment.RestoreSystemProperties
-import test.EnvHelper
 import test.MockAuthProxyServer
 
 /**
@@ -63,24 +61,64 @@ class HttpClientHelperTest extends Specification {
         tempDir?.deleteDir()
     }
 
-    @RestoreSystemProperties
+    def setup() {
+        SysEnv.push(new HashMap<String,String>())
+    }
+
+    def cleanup() {
+        SysEnv.pop()
+    }
+
+    def 'should resolve the proxy configuration from the environment'() {
+        when:
+        SysEnv.get().putAll(ENV)
+        final config = HttpClientHelper.proxyConfigFromEnv()
+
+        then:
+        (config != null) == EXPECTED
+        config?.hasCredentials() == CREDENTIALS
+
+        where:
+        ENV                                                 | EXPECTED | CREDENTIALS
+        [:]                                                 | false    | null
+        [HTTP_PROXY: 'http://proxy.internal:8080']          | true     | false
+        [https_proxy: 'https://proxy.internal:8443']        | true     | false
+        [ALL_PROXY: 'http://foo:bar@proxy.internal:8080']   | true     | true
+        [HTTPS_PROXY: 'http://foo:bar@proxy.internal:8080'] | true     | true
+    }
+
+    def 'should url-decode the proxy credentials'() {
+        given:
+        SysEnv.get().put('HTTPS_PROXY', 'http://user%40seqera.io:p%40ss%3Aword@proxy.internal:8080')
+
+        when:
+        final config = HttpClientHelper.proxyConfigFromEnv()
+
+        then:
+        config.hasCredentials()
+        and: 'the authenticator releases the decoded credentials for the proxy'
+        final pwd = config.toAuthenticator().requestPasswordAuthenticationInstance(
+                'proxy.internal', null, 8080, 'http', 'test', 'basic', null,
+                Authenticator.RequestorType.PROXY )
+        pwd.userName == 'user@seqera.io'
+        new String(pwd.password) == 'p@ss:word'
+    }
+
     def 'should authenticate a plain http request against the proxy'() {
         given:
         def proxy = new MockAuthProxyServer('foo', 'secret').start()
         proxy.responseBody = 'hello from proxy'
+        SysEnv.get().putAll(proxy.proxyEnv())
 
         when:
-        HttpResponse<String> resp = null
-        EnvHelper.withEnv(proxy.proxyEnv()) {
-            final client = HttpClientHelper
-                    .applyProxy(HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1))
-                    .build()
-            final request = HttpRequest.newBuilder()
-                    .uri(new URI('http://server.proxy-test.internal/hello'))
-                    .GET()
-                    .build()
-            resp = client.send(request, HttpResponse.BodyHandlers.ofString())
-        }
+        final client = HttpClientHelper
+                .applyProxy(HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1))
+                .build()
+        final request = HttpRequest.newBuilder()
+                .uri(new URI('http://server.proxy-test.internal/hello'))
+                .GET()
+                .build()
+        final resp = client.send(request, HttpResponse.BodyHandlers.ofString())
 
         then: 'the request is answered by the proxy after the 407 challenge'
         resp.statusCode() == 200
@@ -93,22 +131,20 @@ class HttpClientHelperTest extends Specification {
         proxy?.close()
     }
 
-    @RestoreSystemProperties
     def 'should fail when credentials are wrong'() {
         given:
         def proxy = new MockAuthProxyServer('foo', 'secret').start()
+        SysEnv.get().putAll(proxy.proxyEnv('foo', 'wrong-pass'))
 
         when:
-        EnvHelper.withEnv(proxy.proxyEnv('foo', 'wrong-pass')) {
-            final client = HttpClientHelper
-                    .applyProxy(HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1))
-                    .build()
-            final request = HttpRequest.newBuilder()
-                    .uri(new URI('http://server.proxy-test.internal/hello'))
-                    .GET()
-                    .build()
-            client.send(request, HttpResponse.BodyHandlers.ofString())
-        }
+        final client = HttpClientHelper
+                .applyProxy(HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1))
+                .build()
+        final request = HttpRequest.newBuilder()
+                .uri(new URI('http://server.proxy-test.internal/hello'))
+                .GET()
+                .build()
+        client.send(request, HttpResponse.BodyHandlers.ofString())
 
         then: 'the client gives up after the proxy rejects the credentials'
         thrown(IOException)
@@ -119,9 +155,8 @@ class HttpClientHelperTest extends Specification {
         proxy?.close()
     }
 
-    @RestoreSystemProperties
     def 'should authenticate a https request tunnelled via proxy connect'() {
-        given: 'a self-signed certificate for localhost'
+        given: 'a self-signed certificate for the origin host name'
         final keystore = tempDir.resolve('test-keystore.p12')
         def sslContexts = createSelfSignedContexts(keystore)
         and: 'a local https origin server'
@@ -135,21 +170,19 @@ class HttpClientHelperTest extends Specification {
         origin.start()
         and: 'an authenticating forward proxy'
         def proxy = new MockAuthProxyServer('foo', 'secret').start()
+        SysEnv.get().putAll(proxy.proxyEnv())
 
-        when:
-        HttpResponse<String> resp = null
-        EnvHelper.withEnv(proxy.proxyEnv()) {
-            final client = HttpClientHelper
-                    .applyProxy(HttpClient.newBuilder()
-                        .version(HttpClient.Version.HTTP_1_1)
-                        .sslContext(sslContexts.client))
-                    .build()
-            final request = HttpRequest.newBuilder()
-                    .uri(new URI("https://localhost:${origin.address.port}/secure"))
-                    .GET()
-                    .build()
-            resp = client.send(request, HttpResponse.BodyHandlers.ofString())
-        }
+        when: 'the origin is requested via a non-loopback host name, so it is only reachable through the proxy tunnel'
+        final client = HttpClientHelper
+                .applyProxy(HttpClient.newBuilder()
+                    .version(HttpClient.Version.HTTP_1_1)
+                    .sslContext(sslContexts.client))
+                .build()
+        final request = HttpRequest.newBuilder()
+                .uri(new URI("https://server.proxy-test.internal:${origin.address.port}/secure"))
+                .GET()
+                .build()
+        final resp = client.send(request, HttpResponse.BodyHandlers.ofString())
 
         then: 'the request is tunnelled through the proxy after the 407 challenge'
         resp.statusCode() == 200
@@ -163,58 +196,26 @@ class HttpClientHelperTest extends Specification {
         origin?.stop(0)
     }
 
-    @RestoreSystemProperties
     def 'should not use the proxy for hosts matching no_proxy'() {
-        given: 'a local http origin server'
-        def origin = HttpServer.create(new InetSocketAddress('127.0.0.1', 0), 0)
-        origin.createContext('/direct') { exchange ->
-            final body = 'direct hello'.getBytes('UTF-8')
-            exchange.sendResponseHeaders(200, body.length)
-            exchange.getResponseBody().withCloseable { it.write(body) }
-        }
-        origin.start()
-        and:
-        def proxy = new MockAuthProxyServer('foo', 'secret').start()
-        and:
-        final env = proxy.proxyEnv()
-        env.NO_PROXY = 'example.com,127.0.0.1'
+        given:
+        SysEnv.get().put('HTTPS_PROXY', 'http://foo:bar@proxy.internal:8080')
+        SysEnv.get().put('NO_PROXY', 'example.com')
 
         when:
-        HttpResponse<String> resp = null
-        EnvHelper.withEnv(env) {
-            final client = HttpClientHelper
-                    .applyProxy(HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1))
-                    .build()
-            final request = HttpRequest.newBuilder()
-                    .uri(new URI("http://127.0.0.1:${origin.address.port}/direct"))
-                    .GET()
-                    .build()
-            resp = client.send(request, HttpResponse.BodyHandlers.ofString())
-        }
+        final selector = HttpClientHelper.proxyConfigFromEnv().toProxySelector()
 
-        then: 'the origin is contacted directly, bypassing the proxy'
-        resp.statusCode() == 200
-        resp.body() == 'direct hello'
-        proxy.requestCount.get() == 0
-
-        cleanup:
-        proxy?.close()
-        origin?.stop(0)
+        then: 'hosts matching no_proxy are connected directly'
+        selector.select(new URI('https://example.com/foo'))*.type() == [Proxy.Type.DIRECT]
+        and: 'loopback addresses are always connected directly'
+        selector.select(new URI('http://127.0.0.1/foo'))*.type() == [Proxy.Type.DIRECT]
+        selector.select(new URI('https://localhost/foo'))*.type() == [Proxy.Type.DIRECT]
+        and: 'any other host goes through the proxy'
+        selector.select(new URI('https://seqera.io/foo'))*.type() == [Proxy.Type.HTTP]
     }
 
-    @RestoreSystemProperties
     def 'should not set any proxy when none is configured'() {
-        given:
-        System.clearProperty('http.proxyHost')
-        System.clearProperty('http.proxyPort')
-        System.clearProperty('https.proxyHost')
-        System.clearProperty('https.proxyPort')
-
         when:
-        HttpClient client = null
-        EnvHelper.withEnv(MockAuthProxyServer.NO_PROXY_VARS) {
-            client = HttpClientHelper.applyProxy(HttpClient.newBuilder()).build()
-        }
+        final client = HttpClientHelper.applyProxy(HttpClient.newBuilder()).build()
 
         then:
         !client.proxy().isPresent()
@@ -230,7 +231,7 @@ class HttpClientHelperTest extends Specification {
                 '-keyalg', 'RSA', '-keysize', '2048',
                 '-validity', '2',
                 '-dname', 'CN=localhost',
-                '-ext', 'SAN=DNS:localhost,IP:127.0.0.1',
+                '-ext', 'SAN=DNS:localhost,DNS:server.proxy-test.internal,IP:127.0.0.1',
                 '-keystore', keystore.toString(),
                 '-storetype', 'PKCS12',
                 '-storepass', password ].execute()
