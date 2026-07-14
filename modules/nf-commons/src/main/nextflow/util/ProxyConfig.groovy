@@ -48,6 +48,16 @@ class ProxyConfig {
         username && password
     }
 
+    /**
+     * The proxy port, defaulting to the standard port of the proxy protocol
+     * when not specified
+     */
+    int portOrDefault() {
+        if( port )
+            return port as int
+        return protocol == 'https' ? 443 : 80
+    }
+
     Authenticator authenticator() {
         if( !hasAuthentication() )
             return null

@@ -19,7 +19,6 @@ package nextflow.util
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.security.KeyStore
@@ -33,6 +32,7 @@ import com.sun.net.httpserver.HttpsServer
 import nextflow.SysEnv
 import spock.lang.Shared
 import spock.lang.Specification
+import spock.lang.TempDir
 import test.MockAuthProxyServer
 
 /**
@@ -50,16 +50,9 @@ import test.MockAuthProxyServer
  */
 class HttpClientHelperTest extends Specification {
 
+    @TempDir
     @Shared
     Path tempDir
-
-    def setupSpec() {
-        tempDir = Files.createTempDirectory('proxy-test')
-    }
-
-    def cleanupSpec() {
-        tempDir?.deleteDir()
-    }
 
     def setup() {
         SysEnv.push(new HashMap<String,String>())
@@ -111,14 +104,7 @@ class HttpClientHelperTest extends Specification {
         SysEnv.get().putAll(proxy.proxyEnv())
 
         when:
-        final client = HttpClientHelper
-                .applyProxy(HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1))
-                .build()
-        final request = HttpRequest.newBuilder()
-                .uri(new URI('http://server.proxy-test.internal/hello'))
-                .GET()
-                .build()
-        final resp = client.send(request, HttpResponse.BodyHandlers.ofString())
+        final resp = sendGet('http://server.proxy-test.internal/hello')
 
         then: 'the request is answered by the proxy after the 407 challenge'
         resp.statusCode() == 200
@@ -137,14 +123,7 @@ class HttpClientHelperTest extends Specification {
         SysEnv.get().putAll(proxy.proxyEnv('foo', 'wrong-pass'))
 
         when:
-        final client = HttpClientHelper
-                .applyProxy(HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1))
-                .build()
-        final request = HttpRequest.newBuilder()
-                .uri(new URI('http://server.proxy-test.internal/hello'))
-                .GET()
-                .build()
-        client.send(request, HttpResponse.BodyHandlers.ofString())
+        sendGet('http://server.proxy-test.internal/hello')
 
         then: 'the client gives up after the proxy rejects the credentials'
         thrown(IOException)
@@ -173,16 +152,7 @@ class HttpClientHelperTest extends Specification {
         SysEnv.get().putAll(proxy.proxyEnv())
 
         when: 'the origin is requested via a non-loopback host name, so it is only reachable through the proxy tunnel'
-        final client = HttpClientHelper
-                .applyProxy(HttpClient.newBuilder()
-                    .version(HttpClient.Version.HTTP_1_1)
-                    .sslContext(sslContexts.client))
-                .build()
-        final request = HttpRequest.newBuilder()
-                .uri(new URI("https://server.proxy-test.internal:${origin.address.port}/secure"))
-                .GET()
-                .build()
-        final resp = client.send(request, HttpResponse.BodyHandlers.ofString())
+        final resp = sendGet("https://server.proxy-test.internal:${origin.address.port}/secure", sslContexts.client)
 
         then: 'the request is tunnelled through the proxy after the 407 challenge'
         resp.statusCode() == 200
@@ -220,6 +190,22 @@ class HttpClientHelperTest extends Specification {
         then:
         !client.proxy().isPresent()
         !client.authenticator().isPresent()
+    }
+
+    /**
+     * Send a GET request to the given uri with a client configured via
+     * {@link HttpClientHelper#applyProxy}
+     */
+    private HttpResponse<String> sendGet(String uri, SSLContext sslContext=null) {
+        final builder = HttpClient.newBuilder().version(HttpClient.Version.HTTP_1_1)
+        if( sslContext )
+            builder.sslContext(sslContext)
+        final client = HttpClientHelper.applyProxy(builder).build()
+        final request = HttpRequest.newBuilder()
+                .uri(new URI(uri))
+                .GET()
+                .build()
+        return client.send(request, HttpResponse.BodyHandlers.ofString())
     }
 
     private Map<String,SSLContext> createSelfSignedContexts(Path keystore) {

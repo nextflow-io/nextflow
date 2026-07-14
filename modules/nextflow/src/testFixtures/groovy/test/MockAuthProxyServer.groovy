@@ -49,7 +49,6 @@ class MockAuthProxyServer implements Closeable {
     String responseBody = 'OK'
     String responseContentType = 'text/plain'
 
-    final AtomicInteger requestCount = new AtomicInteger()
     final AtomicInteger unauthorizedCount = new AtomicInteger()
     final AtomicInteger proxiedCount = new AtomicInteger()
     final AtomicInteger connectCount = new AtomicInteger()
@@ -105,7 +104,7 @@ class MockAuthProxyServer implements Closeable {
     private void handle(Socket socket) {
         try {
             socket.withCloseable {
-                final input = socket.getInputStream()
+                final input = new BufferedInputStream(socket.getInputStream())
                 final output = socket.getOutputStream()
                 final requestLine = readLine(input)
                 if( !requestLine )
@@ -117,7 +116,6 @@ class MockAuthProxyServer implements Closeable {
                     if( p!=-1 )
                         headers.put(line.substring(0,p).trim().toLowerCase(), line.substring(p+1).trim())
                 }
-                requestCount.incrementAndGet()
                 log.debug "Mock proxy request: $requestLine"
 
                 if( !isAuthorized(headers) ) {
@@ -133,7 +131,7 @@ class MockAuthProxyServer implements Closeable {
 
                 if( requestLine.startsWith('CONNECT ') ) {
                     connectCount.incrementAndGet()
-                    tunnel(requestLine, socket, output)
+                    tunnel(requestLine, socket, input, output)
                 }
                 else {
                     proxiedCount.incrementAndGet()
@@ -157,7 +155,7 @@ class MockAuthProxyServer implements Closeable {
         return headers.get('proxy-authorization') == expectedAuth
     }
 
-    private void tunnel(String requestLine, Socket socket, OutputStream output) {
+    private void tunnel(String requestLine, Socket socket, InputStream input, OutputStream output) {
         // request line is expected as `CONNECT host:port HTTP/1.1` - the connection
         // is always tunnelled to the loopback address since the target host names
         // used by the tests are synthetic and cannot be resolved
@@ -166,20 +164,16 @@ class MockAuthProxyServer implements Closeable {
         new Socket('127.0.0.1', port).withCloseable { upstream ->
             output.write("HTTP/1.1 200 Connection established\r\n\r\n".getBytes('ISO-8859-1'))
             output.flush()
-            final t1 = Thread.startDaemon("MockAuthProxyServer-up") { pump(socket.getInputStream(), upstream.getOutputStream()) }
+            Thread.startDaemon("MockAuthProxyServer-up") { pump(input, upstream.getOutputStream()) }
+            // when this pump returns the sockets are closed by the enclosing
+            // `withCloseable` blocks, which also unblocks the daemon pump thread
             pump(upstream.getInputStream(), socket.getOutputStream())
-            t1.join(5_000)
         }
     }
 
     private static void pump(InputStream input, OutputStream output) {
         try {
-            final buffer = new byte[8192]
-            int n
-            while( (n=input.read(buffer)) != -1 ) {
-                output.write(buffer, 0, n)
-                output.flush()
-            }
+            input.transferTo(output)
         }
         catch( IOException e ) {
             // ignore - connection closed by either side

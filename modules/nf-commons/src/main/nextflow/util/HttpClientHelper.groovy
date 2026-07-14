@@ -53,36 +53,36 @@ class HttpClientHelper {
      */
     static HxProxyConfig proxyConfigFromEnv() {
         final env = SysEnv.get()
-        final allProxy = env.get('ALL_PROXY') ?: env.get('all_proxy')
-        final httpProxy = parse(env.get('HTTP_PROXY') ?: env.get('http_proxy') ?: allProxy)
-        final httpsProxy = parse(env.get('HTTPS_PROXY') ?: env.get('https_proxy') ?: allProxy)
+        final allProxy = parse(env, 'ALL_PROXY')
+        final httpProxy = parse(env, 'HTTP_PROXY') ?: allProxy
+        final httpsProxy = parse(env, 'HTTPS_PROXY') ?: allProxy
         if( !httpProxy && !httpsProxy )
             return null
         final builder = HxProxyConfig.newBuilder()
         if( httpProxy )
-            builder.httpProxy(httpProxy.host, portOf(httpProxy), httpProxy.username, httpProxy.password)
+            builder.httpProxy(httpProxy.host, httpProxy.portOrDefault(), httpProxy.username, httpProxy.password)
         if( httpsProxy )
-            builder.httpsProxy(httpsProxy.host, portOf(httpsProxy), httpsProxy.username, httpsProxy.password)
+            builder.httpsProxy(httpsProxy.host, httpsProxy.portOrDefault(), httpsProxy.username, httpsProxy.password)
         final noProxy = env.get('NO_PROXY') ?: env.get('no_proxy')
         if( noProxy )
             builder.noProxy(noProxy.tokenize(',')*.trim())
         return builder.build()
     }
 
-    private static ProxyConfig parse(String value) {
+    /**
+     * Parse the proxy variable with the given name, looking up both the upper
+     * and lower case spelling
+     */
+    private static ProxyConfig parse(Map<String,String> env, String var) {
+        final name = env.get(var) != null ? var : var.toLowerCase()
+        final value = env.get(name)
         try {
             return ProxyConfig.parse(value)
         }
         catch( MalformedURLException e ) {
-            log.warn "Not a valid proxy URL: '$value' -- Check the value of the proxy variables in your environment"
+            log.warn "Not a valid proxy URL: '$value' -- Check the value of variable `$name` in your environment"
             return null
         }
-    }
-
-    private static int portOf(ProxyConfig proxy) {
-        if( proxy.port )
-            return proxy.port as int
-        return proxy.protocol == 'https' ? 443 : 80
     }
 
     /**

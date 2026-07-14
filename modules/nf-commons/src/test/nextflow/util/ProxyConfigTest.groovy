@@ -55,4 +55,14 @@ class ProxyConfigTest extends Specification {
 
     }
 
+    def 'should default the port to the standard one of the proxy protocol'( ) {
+
+        expect:
+        ProxyConfig.parse('http://domain:333').portOrDefault() == 333
+        ProxyConfig.parse('http://domain').portOrDefault() == 80
+        ProxyConfig.parse('https://domain').portOrDefault() == 443
+        ProxyConfig.parse('domain').portOrDefault() == 80
+
+    }
+
 }

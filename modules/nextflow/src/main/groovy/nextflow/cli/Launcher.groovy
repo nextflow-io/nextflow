@@ -38,6 +38,7 @@ import nextflow.exception.ScriptCompilationException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
+import nextflow.util.HttpClientHelper
 import nextflow.util.LoggerHelper
 import nextflow.util.ProxyConfig
 import nextflow.util.SpuriousDeps
@@ -608,6 +609,11 @@ class Launcher {
         setProxy('ftp',env)
 
         setNoProxy(env)
+
+        // HTTP clients also resolve the proxy credentials from the `ALL_PROXY`
+        // variable (see HttpClientHelper), which is not covered by `setProxy`
+        if( HttpClientHelper.proxyConfigFromEnv()?.hasCredentials() )
+            allowProxyAuthSchemes()
 
         setHttpClientProperties(env)
     }
