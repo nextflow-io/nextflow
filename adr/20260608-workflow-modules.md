@@ -1,7 +1,7 @@
 # Workflow modules
 
 - Authors: Ben Sherman
-- Status: draft
+- Status: proposed
 - Date: 2026-06-08
 - Tags: workflows, modules, registry
 
