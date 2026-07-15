@@ -358,6 +358,89 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         boolean requiresScratchVolume
     }
 
+    private static final String HINT_PREFIX = 'google-batch/'
+    private static final String PROVISIONING_MODEL_HINT = 'scheduling.provisioningModel'
+    private static final Set<String> KNOWN_HINTS = Set.of(PROVISIONING_MODEL_HINT)
+    private static final String SUPPORTED_HINTS_MSG =
+        KNOWN_HINTS.collect { HINT_PREFIX + it }.sort().join(', ')
+
+    /**
+     * Resolve the effective Google Batch {@link AllocationPolicy.ProvisioningModel} for a task.
+     *
+     * The per-process `scheduling.provisioningModel` hint overrides the global `google.batch.spot`
+     * / `google.batch.preemptible` config when set. The executor-prefixed form 
+     * `google-batch/scheduling.provisioningModel` takes precedence over the bare form.
+     *
+     * Hint value is a case-insensitive string naming a Google Batch provisioning model:
+     * `spot`, `standard` (aka `ondemand`), or `preemptible`. Any other value throws an
+     * {@link IllegalArgumentException} (strict validation, no fail-open).
+     *
+     * @param config The task config
+     * @return The effective provisioning model (never {@code null})
+     */
+    protected AllocationPolicy.ProvisioningModel resolveProvisioningModel(TaskConfig config) {
+        final hints = config.getHints()
+        if( !hints )
+            return globalProvisioningModel()
+        // a prefixed hint takes precedence over the unprefixed form
+        final value = hints.get(HINT_PREFIX + PROVISIONING_MODEL_HINT) ?: hints.get(PROVISIONING_MODEL_HINT)
+        if( value == null )
+            return globalProvisioningModel()
+        if( !(value instanceof CharSequence) )
+            throw new IllegalArgumentException("Invalid '${PROVISIONING_MODEL_HINT}' hint value: $value -- it must be one of: spot, standard (aka ondemand), preemptible")
+        final str = value.toString().trim().toLowerCase()
+        switch( str ) {
+            case 'spot':
+                return AllocationPolicy.ProvisioningModel.SPOT
+            case 'standard':
+            case 'ondemand':
+                // `standard` is Google's canonical enum term; `ondemand` is accepted as an
+                // alias and resolves to the same STANDARD model.
+                return AllocationPolicy.ProvisioningModel.STANDARD
+            case 'preemptible':
+                return AllocationPolicy.ProvisioningModel.PREEMPTIBLE
+            default:
+                throw new IllegalArgumentException("Invalid '${PROVISIONING_MODEL_HINT}' hint value: '$value' -- it must be one of: spot, standard (aka ondemand), preemptible")
+        }
+    }
+
+    /**
+     * The provisioning model implied by the global `google.batch` config. Spot takes precedence
+     * over preemptible (matching the previous ordering), and STANDARD (on-demand) is the default
+     * when neither is enabled.
+     *
+     * @return The effective provisioning model
+     */
+    private AllocationPolicy.ProvisioningModel globalProvisioningModel() {
+        if( batchConfig.spot )
+            return AllocationPolicy.ProvisioningModel.SPOT
+        if( batchConfig.preemptible )
+            return AllocationPolicy.ProvisioningModel.PREEMPTIBLE
+        return AllocationPolicy.ProvisioningModel.STANDARD
+    }
+
+    /**
+     * Validate `google-batch/`-prefixed hints against the set of hints supported by the Google
+     * Batch executor. Per the hints ADR, an unrecognized *prefixed* hint is a hard error, so this method
+     * throws {@link IllegalArgumentException}. Only hints explicitly routed to this executor are validated
+     * here.
+     *
+     * @param hints the full hints map from the task config
+     */
+    protected void validateHints(Map<String,Object> hints) {
+        if( !hints )
+            return
+        final unknown = []
+        for( final key : hints.keySet() ) {
+            if( !key?.startsWith(HINT_PREFIX) )
+                continue
+            if( !KNOWN_HINTS.contains(key.substring(HINT_PREFIX.length())) )
+                unknown.add(key)
+        }
+        if( unknown )
+            throw new IllegalArgumentException("Unknown Google Batch hint(s): ${unknown.collect { "'$it'" }.join(', ')} -- supported keys are: ${SUPPORTED_HINTS_MSG}")
+    }
+
     /**
      * Build the instance policy or template for job allocation.
      * Note: This method sets machineInfo field as a side effect.
@@ -392,6 +475,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
             if( batchConfig.spot )
                 log.warn1 'Config option `google.batch.spot` ignored because an instance template was specified'
+
+            final hints = task.config.getHints()
+            if( hints?.containsKey(PROVISIONING_MODEL_HINT) || hints?.containsKey(HINT_PREFIX + PROVISIONING_MODEL_HINT) )
+                log.warn1 "Google Batch hint '${PROVISIONING_MODEL_HINT}' ignored because an instance template was specified"
 
             instancePolicyOrTemplate
                 .setInstallGpuDrivers(batchConfig.getInstallGpuDrivers())
@@ -479,11 +566,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             if( batchConfig.cpuPlatform )
                 instancePolicy.setMinCpuPlatform(batchConfig.cpuPlatform)
 
-            if( batchConfig.preemptible )
-                instancePolicy.setProvisioningModel(AllocationPolicy.ProvisioningModel.PREEMPTIBLE)
-
-            if( batchConfig.spot )
-                instancePolicy.setProvisioningModel(AllocationPolicy.ProvisioningModel.SPOT)
+            // resolve the effective provisioning model
+            final provisioningModel = resolveProvisioningModel(task.config)
+            if( provisioningModel != AllocationPolicy.ProvisioningModel.STANDARD )
+                instancePolicy.setProvisioningModel(provisioningModel)
 
             instancePolicyOrTemplate.setPolicy(instancePolicy)
         }
@@ -553,6 +639,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected Job newSubmitRequest(TaskRun task, GoogleBatchLauncherSpec launcher) {
+        // validate the task's hints once per submission
+        validateHints(task.config.getHints())
+
         // container validation
         if( !task.container )
             throw new ProcessUnrecoverableException("Process `${task.lazyName()}` failed because the container image was not specified")
@@ -922,7 +1011,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final location = client.location
         final cpus = config.getCpus()
         final memory = config.getMemory() ? config.getMemory().toMega().toInteger() : 1024
-        final spot = batchConfig.spot ?: batchConfig.preemptible
+        // price as spot when the effective provisioning model is SPOT or PREEMPTIBLE
+        final provisioningModel = resolveProvisioningModel(config)
+        final spot = provisioningModel == AllocationPolicy.ProvisioningModel.SPOT \
+                  || provisioningModel == AllocationPolicy.ProvisioningModel.PREEMPTIBLE
         final machineType = config.getMachineType()
         final families = machineType ? machineType.tokenize(',') : List.<String>of()
         final priceModel = spot ? PriceModel.spot : PriceModel.standard
