@@ -143,6 +143,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
                 .provider(seqeraConfig.provider)
                 .strategy(seqeraConfig.strategy)
                 .region(seqeraConfig.region)
+                .providerConfig(seqeraConfig.providerConfig)
                 .name(session.runName)
                 .machineRequirement(SchemaMapperUtil.toMachineRequirement(seqeraConfig.machineRequirement))
                 .labels(labels.entries)

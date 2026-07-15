@@ -160,4 +160,23 @@ class ConfigValidatorTest extends Specification {
         !capture.toString().contains("Unrecognized config option 'cloudcache'")
     }
 
+    static class MapTypesFixture {
+        Map rawMap
+        Map<String,String> stringMap
+        String notAMap
+    }
+
+    def 'isMapType should recognise raw and parameterized map option types' () {
+        given:
+        def rawMap = MapTypesFixture.getDeclaredField('rawMap').genericType
+        def stringMap = MapTypesFixture.getDeclaredField('stringMap').genericType
+        def notAMap = MapTypesFixture.getDeclaredField('notAMap').genericType
+
+        expect:
+        ConfigValidator.isMapType([rawMap])
+        ConfigValidator.isMapType([stringMap])   // Map<String,String> is a ParameterizedType
+        !ConfigValidator.isMapType([notAMap])
+        !ConfigValidator.isMapType([])
+    }
+
 }
