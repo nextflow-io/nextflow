@@ -170,6 +170,65 @@ class ConfigParserV2Test extends Specification {
 
     }
 
+    def 'should apply params from an included config even when declared in the parent config' () {
+        // https://github.com/nextflow-io/nextflow/issues/6623
+        // a param declared in the parent config (e.g. given a default) must still be
+        // overridable by an included config. The v2 parser previously passed the parent
+        // config's accumulated params to the include parser as if they were CLI overrides,
+        // so the included assignment was silently skipped and the parent value survived.
+        given:
+        def folder = Files.createTempDirectory('test')
+        def main = folder.resolve('nextflow.config')
+        def snippet = folder.resolve('snippet.config')
+
+        main.text = """
+            params.reads = null
+
+            includeConfig "$snippet"
+            """
+
+        snippet.text = '''
+            params.reads = 'from_included'
+            '''
+
+        when:
+        def config = new ConfigParserV2().parse(main)
+        then:
+        config.params.reads == 'from_included'
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
+    def 'should let a real CLI param override win over an included config' () {
+        // the companion invariant to issue #6623: an actual CLI --param override must
+        // still take precedence over a value assigned in an included config file.
+        given:
+        def folder = Files.createTempDirectory('test')
+        def main = folder.resolve('nextflow.config')
+        def snippet = folder.resolve('snippet.config')
+
+        main.text = """
+            params.reads = null
+
+            includeConfig "$snippet"
+            """
+
+        snippet.text = '''
+            params.reads = 'from_included'
+            '''
+
+        when:
+        def config = new ConfigParserV2().setParams([reads: 'from_cli']).parse(main)
+        then:
+        config.params.reads == 'from_cli'
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
     def 'should parse multiple relative files' () {
 
         given:
@@ -371,6 +430,36 @@ class ConfigParserV2Test extends Specification {
         when:
         slurper = new ConfigParserV2().setProfiles(['omega'])
         slurper.parse(text)
+        then:
+        slurper.getDeclaredProfiles() == ['alpha','beta'] as Set
+    }
+
+    def 'should accumulate declared profiles across multiple config files' () {
+        // a single parser instance is reused to parse all config files (see ConfigBuilder),
+        // so the set of declared profiles must accumulate rather than be overwritten by the
+        // last file parsed -- otherwise profiles defined in an earlier file are reported as
+        // "Unknown configuration profile" when a later file declares none
+        given:
+        def withProfiles = '''
+            profiles {
+                alpha {
+                    a = 1
+                }
+                beta {
+                    b = 2
+                }
+            }
+            '''
+        def withoutProfiles = '''
+            tower {
+                enabled = true
+            }
+            '''
+
+        when:
+        def slurper = new ConfigParserV2().setProfiles(['alpha'])
+        slurper.parse(withProfiles)
+        slurper.parse(withoutProfiles)
         then:
         slurper.getDeclaredProfiles() == ['alpha','beta'] as Set
     }
