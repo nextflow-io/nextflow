@@ -1796,6 +1796,10 @@ The Seqera scheduler service endpoint URL (required).
 
 The EC2 key pair name for SSH access to instances.
 
+###### `seqera.executor.maxCpusPerUser`
+
+The maximum number of concurrent vCPUs a single user may consume across all of their runs on this compute environment. The limit is applied independently to each user sharing the compute environment. When not set, no CPU limit is enforced (unlimited).
+
 ###### `seqera.executor.predictionModel`
 
 The resource prediction model used to estimate task resource requirements from historical execution metrics. Supported values: `'qr/v1'`, `'qr/v2'` (quantile regression). When not set, no resource estimation is applied.

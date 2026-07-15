@@ -25,6 +25,7 @@ import io.seqera.util.SchemaMapperUtil
 import io.seqera.sched.api.schema.v1a1.CreateRunRequest
 import io.seqera.sched.api.schema.v1a1.PipelineSpec
 import io.seqera.sched.api.schema.v1a1.PredictionModel
+import io.seqera.sched.api.schema.v1a1.SchedulingRequirement
 import io.seqera.sched.client.SchedClient
 import io.seqera.sched.api.schema.v1a1.TerminateRunRequest
 import io.seqera.sched.client.SchedClientConfig
@@ -135,6 +136,9 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
             labels.withWorkflowMetadata(session.workflowMetadata, seqeraConfig.autoLabels)
         labels.withProcessResourceLabels(runResourceLabels)
         final predictionModel = seqeraConfig.predictionModel ? PredictionModel.fromValue(seqeraConfig.predictionModel) : null
+        final schedulingRequirement = seqeraConfig.maxCpusPerUser != null
+                ? new SchedulingRequirement().maxCpusPerUser(seqeraConfig.maxCpusPerUser)
+                : null
         final pipeline = new PipelineSpec()
                 .workflowId(workflowId)
                 .workflowUrl(workflowUrl)
@@ -149,6 +153,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
                 .workspaceId(workspaceId)
                 .pipeline(pipeline)
                 .predictionModel(predictionModel)
+                .schedulingRequirement(schedulingRequirement)
                 .computeEnvId(computeEnvId)
                 .shellEnabled(seqeraConfig.shellEnabled)
         log.debug "[SEQERA] Creating run: ${request}"

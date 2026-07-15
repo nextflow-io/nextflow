@@ -301,6 +301,84 @@ class SeqeraExecutorTest extends Specification {
         executor.batchSubmitter?.shutdown()
     }
 
+    def 'createRun passes maxCpusPerUser to CreateRunRequest.schedulingRequirement'() {
+        given:
+        SysEnv.push([:])
+        CreateRunRequest captured = null
+        def mockClient = Mock(SchedClient) {
+            createRun(_) >> { args ->
+                captured = args[0] as CreateRunRequest
+                new CreateRunResponse().runId('run-1')
+            }
+        }
+        def workflowMeta = Mock(WorkflowMetadata) {
+            getPlatform() >> null
+        }
+        def session = Mock(Session) {
+            getConfig() >> [tower: [:]]
+            getWorkflowMetadata() >> workflowMeta
+            getWorkDir() >> java.nio.file.Paths.get('/work')
+            getRunName() >> 'test-run'
+        }
+        def seqeraOpts = new ExecutorOpts(
+            endpoint: 'https://sched.example.com',
+            maxCpusPerUser: 16
+        )
+        def executor = new SeqeraExecutor()
+        executor.session = session
+        executor.@seqeraConfig = seqeraOpts
+        executor.@client = mockClient
+
+        when:
+        executor.createRun()
+
+        then:
+        captured != null
+        captured.getSchedulingRequirement() != null
+        captured.getSchedulingRequirement().getMaxCpusPerUser() == 16
+
+        cleanup:
+        executor.batchSubmitter?.shutdown()
+    }
+
+    def 'createRun omits schedulingRequirement when maxCpusPerUser is not set'() {
+        given:
+        SysEnv.push([:])
+        CreateRunRequest captured = null
+        def mockClient = Mock(SchedClient) {
+            createRun(_) >> { args ->
+                captured = args[0] as CreateRunRequest
+                new CreateRunResponse().runId('run-1')
+            }
+        }
+        def workflowMeta = Mock(WorkflowMetadata) {
+            getPlatform() >> null
+        }
+        def session = Mock(Session) {
+            getConfig() >> [tower: [:]]
+            getWorkflowMetadata() >> workflowMeta
+            getWorkDir() >> java.nio.file.Paths.get('/work')
+            getRunName() >> 'test-run'
+        }
+        def seqeraOpts = new ExecutorOpts(
+            endpoint: 'https://sched.example.com'
+        )
+        def executor = new SeqeraExecutor()
+        executor.session = session
+        executor.@seqeraConfig = seqeraOpts
+        executor.@client = mockClient
+
+        when:
+        executor.createRun()
+
+        then:
+        captured != null
+        captured.getSchedulingRequirement() == null
+
+        cleanup:
+        executor.batchSubmitter?.shutdown()
+    }
+
     def 'createRun publishes the run id to the platform metadata'() {
         given:
         SysEnv.push([:])
