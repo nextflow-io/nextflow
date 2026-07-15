@@ -1,12 +1,16 @@
-# Remote pipeline inclusion
+# Pipeline composition
 
 - Authors: Ben Sherman
-- Status: draft
+- Status: proposed
 - Date: 2026-06-08
 - Tags: pipelines, modules, dsl, registry
-- Version: 1.1
+- Version: 1.2
 
 ## Updates
+
+### Version 1.2 (2026-07-13)
+
+- **Reframe as pipeline composition**: the core feature is the ability to compose pipelines in a Nextflow-native manner. Meta-pipelines are the artifact. Remote pipelines and workflow modules are largely natural extensions of the module registry.
 
 ### Version 1.1 (2026-06-22)
 - **Separate remote pipelines from remote workflows**: Workflows are treated separately by the [Workflow modules ADR](20260608-workflow-modules.md).
@@ -14,17 +18,17 @@
 
 ## Summary
 
-Add the ability to include a remote pipeline into a *meta-pipeline*.
+Provide a way to compose pipelines using regular dataflow logic.
 
 ## Problem Statement
 
-Nextflow supports reusing process definitions via remote *module* inclusion (e.g. `include { BWA_MEM } from 'nf-core/bwa/mem'`), but there is no standard mechanism to reuse an entire *pipeline* as a building block. Users must either fork and copy code, or compose/chain multiple `nextflow run` sessions which forfeits dataflow composition.
+Processes and workflows can be composed into a larger workflow using dataflow logic. However, pipelines cannot be composed in the same way. The only way to call a pipeline is via `nextflow run`, which does not allow for dataflow composition.
 
-The [module system](20251114-module-system.md) and [workflow modules](20260608-workflow-modules.md) ADRs define how standalone *processes* and *workflows* should be distributed as modules through the Nextflow registry. This ADR defines how *pipelines* -- workflows with a deployment shell -- should be composed into larger *meta-pipelines*.
+This ADR defines how a pipeline can be included like a named workflow and composed with other pipelines with dataflow logic.
 
 ## Goals
 
-- **Preserve dataflow composition**: the included pipeline participates in the meta-pipeline's dataflow graph (same session, same DAG, same work dir), enabling incremental reaction to emitted outputs.
+- **Preserve dataflow composition**: the included pipeline participates in the including pipeline's dataflow graph (same session, same DAG, same work dir), enabling incremental reaction to emitted outputs.
 
 - **Preserve reproducibility**: an included pipeline should produce the exact same results as it would when executed directly. Transitive dependencies should not be silently altered to reduce duplication.
 
@@ -38,7 +42,9 @@ The [module system](20251114-module-system.md) and [workflow modules](20260608-w
 
 ## Decision
 
-Allow pipelines to be published and installed through the Nextflow registry, using the same namespacing conventions as modules. Store the included pipeline in the meta-pipeline repository under `pipelines/<scope>/<name>/` with its own subdirectories for modules and workflows. Provide a way to include an entire pipeline (`params` block, entry workflow, `output` block) as a named workflow to facilitate workflow composition.
+Provide a way to include an entire pipeline (`params` block, entry workflow, `output` block) as a named workflow to facilitate workflow composition.
+
+Allow pipelines to be published and installed through the Nextflow registry, using the same namespacing conventions as modules. Store the included pipeline in the including repository under `pipelines/<scope>/<name>/` with its own `modules/` directory for transitive dependencies.
 
 ## Core Capabilities
 
@@ -105,7 +111,7 @@ Included pipelines should be committed to the meta-pipeline repository. The pipe
 
 ### Best practices for including pipelines
 
-Pipeline inclusion only captures the pipeline's main script and included modules -- it does not capture external context such as config or the `lib` directory. As a result, the pipeline should be written in a way that works when included by a meta-pipeline:
+Pipeline inclusion only captures the pipeline's main script and included modules -- it does not capture external context such as config or the `lib` directory. As a result, the pipeline should be written in a way that works when included in another pipeline:
 
 1. Pipeline parameters should be defined in the script `params` block. The config should only declare *config params* (params that only affect config settings).
 
@@ -137,7 +143,7 @@ Alternatively, these core plugin dependencies could be specified in the pipeline
 
 ### Pipeline chaining
 
-An alternative to a meta-pipeline is a *pipeline chain*, in which multiple Nextflow pipelines are called in sequence via `nextflow run`.
+An alternative to pipeline composition is a *pipeline chain*, in which multiple Nextflow pipelines are called in sequence via `nextflow run`.
 
 For example, a fetchngs -> rnaseq pipeline chain can be implemented in a shell script:
 
@@ -209,9 +215,9 @@ Pipeline chaining can be practical for certain use cases, such as simple chains 
 ## Links
 
 - Community issues: [#6474](https://github.com/nextflow-io/nextflow/issues/6474)
-- Related: [Module system](20251114-module-system.md)
 - Related: [Workflow params](20250825-workflow-params.md)
 - Related: [Workflow outputs](20251020-workflow-outputs.md)
+- Related: [Module system](20251114-module-system.md)
 - Related: [Workflow modules](20260608-workflow-modules.md)
 
 ## Appendix
@@ -233,12 +239,12 @@ fetchngs-rnaseq/
 └── pipelines/
     └── nf-core/
         ├── fetchngs/
+        │   ├── .pipeline-info
         │   ├── main.nf
-        │   ├── nextflow_spec.json
         │   └── modules/
         └── rnaseq/
+            ├── .pipeline-info
             ├── main.nf
-            ├── nextflow_spec.json
             └── modules/
 ```
 
