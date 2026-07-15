@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.23.6 - 15 Jul 2026
+- Add support for latest-generation Google Cloud machine families (#6841) [8714c7c7c]
+
 1.23.5 - 10 Feb 2026
 - Add isCompleted check in getNumSpotInterruptions (#6806) [21390a1fb]
 
