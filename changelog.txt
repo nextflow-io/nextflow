@@ -1,5 +1,9 @@
 NEXTFLOW CHANGE-LOG
 ===================
+25.10.7 - 15 July 2026
+- Fix issues with v2 config parser (#7249) [0316e831d]
+- Bump nf-google@1.23.6
+
 25.10.6 - 4 June 2026
 - Bump nf-amazon@3.4.5
 - Bump nf-azure@1.20.3
