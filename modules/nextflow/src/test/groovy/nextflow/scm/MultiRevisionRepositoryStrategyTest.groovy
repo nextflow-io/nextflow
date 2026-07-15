@@ -295,7 +295,7 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         def work = Git.init().setDirectory(workDir).setInitialBranch('main').call()
         new File(workDir, 'a.txt').text = 'A'
         work.add().addFilepattern('a.txt').call()
-        def commitA = work.commit().setSign(false).setMessage('A').call()
+        def commitA = work.commit().setMessage('A').call()
         work.push().setRemote(upstreamDir.absolutePath).setRefSpecs(new RefSpec('refs/heads/main:refs/heads/main')).call()
         work.close()
 
@@ -323,7 +323,7 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         work = Git.open(workDir)
         new File(workDir, 'a.txt').text = 'B'
         work.add().addFilepattern('a.txt').call()
-        def commitB = work.commit().setSign(false).setAmend(true).setMessage('B').call()
+        def commitB = work.commit().setAmend(true).setMessage('B').call()
         work.push().setRemote(upstreamDir.absolutePath).setForce(true).setRefSpecs(new RefSpec('refs/heads/main:refs/heads/main')).call()
         work.close()
 

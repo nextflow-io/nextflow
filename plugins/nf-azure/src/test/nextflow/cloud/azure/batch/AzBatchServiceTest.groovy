@@ -24,13 +24,14 @@ import dev.failsafe.function.CheckedPredicate
 
 import com.azure.compute.batch.models.AllocationState
 import com.azure.compute.batch.models.BatchPool
+import com.azure.compute.batch.models.BatchJobCreateParameters
 import com.azure.compute.batch.models.BatchPoolState
-import com.azure.compute.batch.models.BatchJobCreateContent
 import com.azure.compute.batch.models.ElevationLevel
 import com.azure.compute.batch.models.EnvironmentSetting
 import com.azure.compute.batch.models.ResizeError
 import com.azure.core.exception.HttpResponseException
 import com.azure.core.http.HttpResponse
+import com.azure.json.JsonProviders
 import com.azure.identity.ManagedIdentityCredential
 import com.google.common.hash.HashCode
 import nextflow.Global
@@ -630,7 +631,7 @@ class AzBatchServiceTest extends Specification {
         when:
         def result = svc.specFromPoolConfig(POOL_ID)
         then:
-        1 * svc.getPool(_) >> new BatchPool(vmSize: 'Standard_D2_v2')
+        1 * svc.getPool(_) >> BatchPool.fromJson(JsonProviders.createReader('{"vmSize":"Standard_D2_v2"}'))
         and:
         result.vmType.name == 'Standard_D2_v2'
         result.vmType.numberOfCores == 2
@@ -1051,7 +1052,7 @@ class AzBatchServiceTest extends Specification {
         int createCalls = 0
         def service = new AzBatchService(exec) {
             @Override
-            protected void createJobRequest(BatchJobCreateContent content) {
+            protected void createJobRequest(BatchJobCreateParameters content) {
                 createCalls++
             }
         }
@@ -1071,7 +1072,7 @@ class AzBatchServiceTest extends Specification {
         int createCalls = 0
         def service = new AzBatchService(exec) {
             @Override
-            protected void createJobRequest(BatchJobCreateContent content) {
+            protected void createJobRequest(BatchJobCreateParameters content) {
                 createCalls++
                 if (createCalls == 1)
                     throw new HttpResponseException('first call', null)
@@ -1097,7 +1098,7 @@ class AzBatchServiceTest extends Specification {
         int createCalls = 0
         def service = new AzBatchService(exec) {
             @Override
-            protected void createJobRequest(BatchJobCreateContent content) {
+            protected void createJobRequest(BatchJobCreateParameters content) {
                 createCalls++
                 throw new HttpResponseException('quota error', null)
             }
@@ -1124,7 +1125,7 @@ class AzBatchServiceTest extends Specification {
         int createCalls = 0
         def service = new AzBatchService(exec) {
             @Override
-            protected void createJobRequest(BatchJobCreateContent content) {
+            protected void createJobRequest(BatchJobCreateParameters content) {
                 createCalls++
                 throw new HttpResponseException('quota error', null)
             }
@@ -1150,7 +1151,7 @@ class AzBatchServiceTest extends Specification {
         int createCalls = 0
         def service = new AzBatchService(exec) {
             @Override
-            protected void createJobRequest(BatchJobCreateContent content) {
+            protected void createJobRequest(BatchJobCreateParameters content) {
                 createCalls++
                 throw new HttpResponseException('Job already exists', null)
             }
@@ -1175,7 +1176,7 @@ class AzBatchServiceTest extends Specification {
         int createCalls = 0
         def service = new AzBatchService(exec) {
             @Override
-            protected void createJobRequest(BatchJobCreateContent content) {
+            protected void createJobRequest(BatchJobCreateParameters content) {
                 createCalls++
                 throw new IllegalArgumentException('unexpected error')
             }
