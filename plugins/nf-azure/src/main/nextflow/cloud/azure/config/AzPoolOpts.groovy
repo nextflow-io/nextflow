@@ -16,6 +16,7 @@
 
 package nextflow.cloud.azure.config
 
+import com.azure.compute.batch.models.BatchNodeCommunicationMode
 import com.azure.compute.batch.models.ImageVerificationType
 import com.azure.compute.batch.models.OSType
 import com.google.common.hash.Hasher
@@ -144,6 +145,12 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
     """)
     final String vmType
 
+    @ConfigOption
+    @Description("""
+        The node communication mode used by the pool. Can be either `classic` or `simplified`. When not set, the Azure Batch service selects the mode. In `simplified` mode the Batch service initiates communication with the compute nodes, reducing the outbound network access required by the nodes.
+    """)
+    final BatchNodeCommunicationMode targetCommunicationMode
+
     OSType osType = DEFAULT_OS_TYPE
     ImageVerificationType verification = ImageVerificationType.VERIFIED
 
@@ -175,6 +182,18 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
         this.password = opts.password
         this.virtualNetwork = opts.virtualNetwork
         this.lowPriority = opts.lowPriority as boolean
+        this.targetCommunicationMode = parseCommunicationMode(opts.targetCommunicationMode)
+    }
+
+    protected static BatchNodeCommunicationMode parseCommunicationMode(value) {
+        if( value == null )
+            return null
+        if( value instanceof BatchNodeCommunicationMode )
+            return value
+        final str = value.toString().toLowerCase()
+        if( str == 'simplified' ) return BatchNodeCommunicationMode.SIMPLIFIED
+        if( str == 'classic' ) return BatchNodeCommunicationMode.CLASSIC
+        throw new IllegalArgumentException("Invalid azure.batch.pools.<name>.targetCommunicationMode value: '$value' - expected 'simplified' or 'classic'")
     }
 
     @Override
@@ -195,6 +214,7 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
         hasher.putUnencodedChars(schedulePolicy ?: '')
         hasher.putUnencodedChars(virtualNetwork ?: '')
         hasher.putBoolean(lowPriority)
+        hasher.putUnencodedChars(targetCommunicationMode?.toString() ?: '')
         hasher.putUnencodedChars(startTask.script ?: '')
         hasher.putBoolean(startTask.privileged)
         return hasher

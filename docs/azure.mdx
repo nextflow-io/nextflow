@@ -619,6 +619,16 @@ Nextflow can submit tasks to existing pools that are already attached to a virtu
 Virtual networks require Microsoft Entra authentication (service principal or managed identity).
 :::
 
+**Node communication mode**
+
+Pools can be configured to use [simplified compute node communication](https://learn.microsoft.com/en-us/azure/batch/simplified-compute-node-communication), which changes how the Batch service communicates with the compute nodes and reduces the outbound network access required by the nodes.
+
+```groovy
+azure.batch.pools.<pool-name>.targetCommunicationMode = 'simplified'  // 'simplified' or 'classic'
+```
+
+When this option is not set, the Azure Batch service selects the communication mode.
+
 **Start tasks**
 
 Start tasks are optional commands that run when a node joins the pool. They are useful for setting up the node environment or for running other commands that need to be executed when the node is created.

@@ -952,6 +952,10 @@ class AzBatchService implements Closeable {
             poolParams.setTaskSchedulingPolicy( new BatchTaskSchedulingPolicy(pol) )
         }
 
+        // node communication mode
+        if( spec.opts.targetCommunicationMode )
+            poolParams.setTargetNodeCommunicationMode( spec.opts.targetCommunicationMode )
+
         // mount points
         if ( config.storage().fileShares ) {
             List<MountConfiguration> mountConfigs = new ArrayList(config.storage().fileShares.size())

@@ -577,6 +577,10 @@ Enable the `startTask` to run with elevated access (default`false`).
 
 The `startTask` that is executed as the node joins the Azure Batch node pool.
 
+##### `azure.batch.pools.<name>.targetCommunicationMode`
+
+The node communication mode used by the pool. Can be either `classic` or `simplified`. When not set, the Azure Batch service selects the mode. In `simplified` mode the Batch service initiates communication with the compute nodes, reducing the outbound network access required by the nodes.
+
 ##### `azure.batch.pools.<name>.virtualNetwork`
 
 <AddedInVersion version="23.04" />
