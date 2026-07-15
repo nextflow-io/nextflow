@@ -23,7 +23,7 @@ The module system should be extended to include both standalone *processes* and 
 
 - **Workflow execution**: allow workflows to be executed directly via `nextflow module run`.
 
-- **Reuse existing infrastructure**: the module system already defines a registry API and CLI for publishing and installing modules. Treating workflows as a separate concept would require duplicating much of this infrastructure.
+- **Reuse existing infrastructure**: the module system already defines a registry API and CLI for publishing and installing modules. Extend this system to include workflows instead of treating workflows as a separate concept.
 
 ## Non-goals
 
@@ -31,7 +31,7 @@ The module system should be extended to include both standalone *processes* and 
 
 ## Decision
 
-Extend the definition of *module* to include both standalone *processes* and standalone *workflows*. Allow workflow modules to be published, installed, included, and executed via the Nextflow registry. Store the included workflow in the including repository under `workflows/<scope>/<name>/`.
+Extend the definition of *module* to include both standalone *processes* and standalone *workflows*. Allow workflow modules to be published, installed, included, and executed via the Nextflow registry. Store installed workflows under `modules/<scope>/<name>/` alongside process modules. Allow each workflow module to have its own `modules` directory for transitive dependencies.
 
 ## Core Capabilities
 
@@ -51,15 +51,20 @@ The module spec is extended as follows in order to support standalone workflows:
 
 - A `requires.modules` field to specify *transitive dependencies*, since a workflow can depend on other processes and workflows.
 
-- Certain fields (`topics`, `tools`) cannot be specified for workflow modules because they are not applicable.
+- Fields that are relevant only to process modules (i.e. `topics`, `tools`) cannot be specified for workflow modules.
 
-For example:
+For example, [nf-core/fastq_align_star](https://github.com/nf-core/modules/tree/master/subworkflows/nf-core/fastq_align_star):
 
 ```yaml
 name: nf-core/fastq_align_star
 kind: Workflow
 version: 0.0.0-4e3e10e
-description: Align reads to a reference genome using bowtie2 then sort with samtools
+description: Align reads to a reference genome using STAR then sort, index, and compute statistics with samtools
+keywords:
+  - align
+  - fasta
+  - genome
+  - reference
 authors:
   - "@JoseEspinosa"
 license: MIT
@@ -67,12 +72,47 @@ requires:
   nextflow: ">=24.04.0"
   modules:
     - nf-core/star/align@0.0.0-4e3e10e
-    - nf-core/samtools/sort@0.0.0-4e3e10e
-    - nf-core/samtools/index@0.0.0-4e3e10e
-    - nf-core/samtools/stats@0.0.0-4e3e10e
-    - nf-core/samtools/idxstats@0.0.0-4e3e10e
-    - nf-core/samtools/flagstat@0.0.0-4e3e10e
     - nf-core/bam_sort_stats_samtools@0.0.0-4e3e10e
+```
+
+Inputs and outputs are derived from the workflow's `take:` and `emit:` sections. For example (outputs truncated for brevity):
+
+```yaml
+input:
+  - name: ch_reads
+    type: channel
+    description: List of input FastQ files of size 1 and 2 for single-end and paired-end data, respectively.
+  - name: index
+    type: directory
+    description: STAR genome index
+  - name: gtf
+    type: file
+    description: GTF file used to set the splice junctions with the --sjdbGTFfile flag
+  - name: star_ignore_sjdbgtf
+    type: boolean
+    description: If true the --sjdbGTFfile flag is set
+  - name: fasta_fai
+    type: file
+    description: Reference genome fasta file and index
+  - name: transcripts_fasta_fai
+    type: file
+    description: Optional reference genome fasta file and index
+output:
+  - name: bam
+    type: channel
+    description: BAM file ordered by samtools
+  - name: bai
+    type: channel
+    description: BAI index of the ordered BAM file
+  - name: stats
+    type: channel
+    description: File containing samtools stats output
+  - name: flagstat
+    type: channel
+    description: File containing samtools flagstat output
+  - name: idxstats
+    type: channel
+    description: File containing samtools idxstats output
 ```
 
 ### Workflow inclusion and storage
@@ -87,9 +127,57 @@ include { BWA_MEM } from 'nf-core/bwa/mem'
 include { FASTQ_ALIGN_STAR } from 'nf-core/fastq_align_star'
 ```
 
-When a workflow is included, it is vendored into the including project under `workflows/<scope>/<name>/`. Included workflows should be committed to the including repository.
+When a workflow is included, it is vendored into the including project under `modules/<scope>/<name>/`. Included workflows should be committed to the including repository.
 
-Transitive dependencies (specified by `requires.modules`) should also be installed in the `modules/` and `workflows/` directories alongside the included workflow. Since modules are flattened, it is not possible for a pipeline to use two different versions of the same process or workflow.
+Each workflow module should store its dependencies within its own `modules` directory. This way, two workflows can use different versions of the same module without introducing a version conflict. Dependencies are not bundled with the workflow module -- they are installed when the workflow module is installed.
+
+For example, installing `nf-core/fastq_align_star` would produce the following directory tree:
+
+```
+my-pipeline/
+├── main.nf                                 # include { FASTQ_ALIGN_STAR } from 'nf-core/fastq_align_star'
+├── nextflow.config
+└── modules/
+    └── nf-core/
+        └── fastq_align_star/
+            ├── .module-info
+            ├── main.nf                      # includes STAR_ALIGN, BAM_SORT_STATS_SAMTOOLS
+            ├── meta.yml
+            └── modules/
+                └── nf-core/
+                    ├── star/align/
+                    │   ├── .module-info
+                    │   ├── main.nf
+                    │   └── meta.yml
+                    └── bam_sort_stats_samtools/
+                        ├── .module-info
+                        ├── main.nf          # includes SAMTOOLS_SORT, SAMTOOLS_INDEX, SAMTOOLS_STATS, ...
+                        ├── meta.yml
+                        └── modules/
+                            └── nf-core/
+                                ├── samtools/sort/
+                                │   ├── .module-info
+                                │   ├── main.nf
+                                │   └── meta.yml
+                                ├── samtools/index/
+                                │   ├── .module-info
+                                │   ├── main.nf
+                                │   └── meta.yml
+                                ├── samtools/stats/
+                                │   ├── .module-info
+                                │   ├── main.nf
+                                │   └── meta.yml
+                                ├── samtools/idxstats/
+                                │   ├── .module-info
+                                │   ├── main.nf
+                                │   └── meta.yml
+                                └── samtools/flagstat/
+                                    ├── .module-info
+                                    ├── main.nf
+                                    └── meta.yml
+```
+
+Note that `fastq_align_star` declares only its *direct* dependencies (`star/align` and `bam_sort_stats_samtools`) in `requires.modules`. The `samtools` processes are transitive dependencies of `bam_sort_stats_samtools` and are vendored within *its* own `modules` directory, not directly under `fastq_align_star`. Because each workflow module vendors its own dependencies, the same module may appear more than once in the tree when it is used by multiple workflows.
 
 ### Workflow execution
 
@@ -172,7 +260,7 @@ One alternative is to treat workflows as a separate concept from modules, restri
 
 However, the broader meaning of *module* is a re-usable component, and both processes and workflows are re-usable components, so it makes more sense to extend the module system rather than introduce a parallel system for workflows. A parallel system would also require duplicating a lot of existing code (registry API, CLI, etc).
 
-Process modules and workflow modules can be distinguished by different specializations of the module spec (`kind: Process` vs `kind: Workflow`) and different storage locations (`modules/` vs `workflows/`).
+Process modules and workflow modules can be distinguished by different specializations of the module spec (`kind: Process` vs `kind: Workflow`).
 
 ### Workflows vs subworkflows
 
@@ -182,7 +270,7 @@ The nf-core community makes a distinction between *workflows* and *subworkflows*
 
 - Workflows are stored in the `workflows/` directory and are owned by a specific pipeline.
 
-Nextflow makes no such distinction, as there is no functional difference between a workflow and a subworkflow. Both are stored in the `workflows/` directory and both can be published and installed through the Nextflow registry.
+Nextflow makes no such distinction, as there is no functional difference between a workflow and a subworkflow. Both are stored in the `modules/` directory and both can be published and installed through the Nextflow registry.
 
 The Nextflow registry makes it easier for pipelines to share and reuse workflows, since the pipeline can be the source-of-truth rather than having to surrender ownership to the `nf-core/modules` repository.
 
@@ -192,8 +280,16 @@ One alternative is to treat all workflows as pipelines, restricting the definiti
 
 Aside from the problems mentioned under [Workflows vs processes](#workflows-vs-processes), this approach conflates two commonly-understood concepts: a *pipeline* which is an end-to-end analysis, and a *workflow* or *subworkflow* which is a component in a larger analysis. It is more congruent with conventional understanding to treat workflows (subworkflows) as a separate concept from pipelines.
 
+### Transitive dependencies
+
+Workflow modules, unlike process modules, can include other modules (both processes and workflows). As a result, we must address the *diamond dependency problem* -- what happens when two workflows depend on different versions of the same module?
+
+Currently, nf-core enforces a flat module structure. nf-core modules are currently versioned by commit hash and workflows pin exact versions. There is no way to resolve conflicts between workflows. Instead, all nf-core workflows are kept in sync at publish time. This approach places the maintenance burden on *module developers* -- when updating a module, you must also update all consuming workflows.
+
+Instead, the ADR avoids this problem entirely by allowing each workflow to have its own `modules` directory. The downside is that modules will be duplicated in the project, making the project larger and increasing the number of scripts to be parsed.
+
 ## Links
 
 - [nf-core terminology](https://nf-co.re/docs/usage/getting_started/terminology)
+- Community discussions: [#4112](https://github.com/nextflow-io/nextflow/issues/4112), [nf-core/modules#8](https://github.com/nf-core/modules/issues/8)
 - Refines: [Module system](20251114-module-system.md)
-- Related: [Remote pipeline inclusion](20260608-remote-pipeline-inclusion.md)
