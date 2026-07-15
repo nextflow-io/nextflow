@@ -1,5 +1,10 @@
 nf-azure changelog
 ===================
+1.23.1 - 15 Jul 2026
+- Bump jackson-databind to patched versions to fix deserialization CVEs (#7322) [8d4423e8a]
+- Tolerate stale/transient resize errors on autoscale Azure Batch pools (#7312) [46392e625]
+- Update dependency com.azure:azure-compute-batch to v1.0.0-beta.6 (#7128) [1c9841221]
+
 1.23.0 - 19 Jun 2026
 - Fix netty CVE-2026-44249 via AWS SDK bump and azure-core-http-netty pin (#7223) [ab6a6e65e]
 - Improve Azure Batch VM image diagnostics and fix stale 24.04 docs (#7200) [8e5e61143]
