@@ -46,7 +46,7 @@ The project follows a modular architecture with a plugin-based system for cloud 
 ### Plugin System (`plugins/`)
 - **Cloud providers**: nf-amazon (AWS), nf-azure (Azure), nf-google (GCP)
 - **Execution platforms**: nf-k8s (Kubernetes)
-- **Services**: nf-seqera (Seqera Platform + Intelligent Compute), nf-wave (container management)
+- **Services**: nf-tower (Seqera Platform), nf-wave (container management)
 - **Other**: nf-console (interactive interface), nf-cloudcache (cloud caching)
 
 ### Key Technologies
