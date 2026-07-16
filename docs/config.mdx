@@ -224,7 +224,9 @@ You don't need to enclose label and process names in quotes unless they contain 
 
 ### Selector expressions
 
-You can use regular expressions in process selectors to apply the same configuration to all processes matching the pattern:
+You can use regular expressions in process selectors to apply the same configuration to all processes matching the pattern.
+
+Use the `|` operator to select multiple names or labels:
 
 ```groovy
 process {
@@ -237,7 +239,7 @@ process {
 
 This configuration requests 2 CPUs and 4 GB of memory for processes labeled as `hello` or `bye`.
 
-You can negate a selector expression by prefixing it with the special character `!`:
+Use the `!` operator to negate a selector expression:
 
 ```groovy
 process {
@@ -247,7 +249,7 @@ process {
 }
 ```
 
-This configuration sets 2 CPUs for processes labeled as `hello` and 4 CPUs for all processes *not* labeled as `hello`. It also specifies the `long` queue for processes whose name does *not* start with `align`.
+This configuration requests 2 CPUs for processes labeled as `hello` and 4 CPUs for all processes *not* labeled as `hello`. It also specifies the `long` queue for processes whose name does *not* start with `align`.
 
 ### Selector priority
 
