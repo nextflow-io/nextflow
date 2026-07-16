@@ -34,20 +34,28 @@ class ConfigFormatterTest extends Specification {
         parser = new ConfigParser()
     }
 
-    String format(String contents) {
+    String format(FormattingOptions options, String contents) {
         def source = parser.parse('main.nf', contents)
         assert !source.getErrorCollector().hasErrors()
-        def formatter = new ConfigFormattingVisitor(source, new FormattingOptions(4, true))
+        def formatter = new ConfigFormattingVisitor(source, options, contents)
         formatter.visit()
         return formatter.toString()
     }
 
-    boolean checkFormat(String input, String output) {
+    String format(String contents) {
+        return format(new FormattingOptions(4, true), contents)
+    }
+
+    boolean checkFormat(FormattingOptions options, String input, String output) {
         input = input.stripIndent()
         output = output.stripIndent()
-        assert format(input) == output
-        assert format(output) == output
+        assert format(options, input) == output
+        assert format(options, output) == output
         return true
+    }
+
+    boolean checkFormat(String input, String output) {
+        return checkFormat(new FormattingOptions(4, true), input, output)
     }
 
     def 'should format a config assignment' () {

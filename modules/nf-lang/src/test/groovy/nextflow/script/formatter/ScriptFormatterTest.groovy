@@ -36,22 +36,30 @@ class ScriptFormatterTest extends Specification {
         scriptParser = new ScriptParser()
     }
 
-    String format(String contents) {
+    String format(FormattingOptions options, String contents) {
         scriptParser.compiler().getSources().clear()
         def source = scriptParser.parse('main.nf', contents)
         new ScriptResolveVisitor(source, scriptParser.compiler().compilationUnit(), Types.DEFAULT_SCRIPT_IMPORTS, Collections.emptyList()).visit()
         assert !TestUtils.hasSyntaxErrors(source)
-        def formatter = new ScriptFormattingVisitor(source, new FormattingOptions(4, true))
+        def formatter = new ScriptFormattingVisitor(source, options, contents)
         formatter.visit()
         return formatter.toString()
     }
 
-    boolean checkFormat(String input, String output) {
+    String format(String contents) {
+        return format(new FormattingOptions(4, true), contents)
+    }
+
+    boolean checkFormat(FormattingOptions options, String input, String output) {
         input = input.stripIndent()
         output = output.stripIndent()
-        assert format(input) == output
-        assert format(output) == output
+        assert format(options, input) == output
+        assert format(options, output) == output
         return true
+    }
+
+    boolean checkFormat(String input, String output) {
+        return checkFormat(new FormattingOptions(4, true), input, output)
     }
 
     boolean checkFormat(String source) {
@@ -1246,6 +1254,50 @@ class ScriptFormatterTest extends Specification {
 
             workflow {
                 x = 1
+            }
+            '''
+        )
+    }
+
+    // -- multi-line string re-indentation (issue #116)
+
+    def 'should re-indent multi-line strings' () {
+        expect:
+        // https://github.com/nextflow-io/language-server/issues/116
+        checkFormat(
+            new FormattingOptions(2, true, false, false, false, 120),
+            '''\
+            process foo {
+                script:
+                """
+                echo 'hello world!'
+                """
+            }
+            ''',
+            '''\
+            process foo {
+              script:
+              """
+              echo 'hello world!'
+              """
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            workflow {
+            x = """
+                line one
+                  line two
+                """
+            }
+            ''',
+            '''\
+            workflow {
+                x = """
+                    line one
+                      line two
+                    """
             }
             '''
         )

@@ -734,9 +734,62 @@ public class Formatter extends CodeVisitorSupport {
     public void visitConstantExpression(ConstantExpression node) {
         var text = (String) node.getNodeMetaData(ASTNodeMarker.VERBATIM_TEXT);
         if( text != null )
-            append(text);
+            append(reindentMultiLineString(text, indentDelta(node)));
         else
             append(node.getText());
+    }
+
+    /**
+     * The current column (0-based) at the end of the emitted text.
+     */
+    private int currentColumn() {
+        return builder.length() - builder.lastIndexOf("\n") - 1;
+    }
+
+    /**
+     * The difference between the column where a multi-line string is being
+     * emitted and the column where it appeared in the source, so that its
+     * interior lines can be shifted accordingly.
+     */
+    private int indentDelta(org.codehaus.groovy.ast.expr.Expression node) {
+        if( !options.insertSpaces() )
+            return 0;
+        if( node.getLineNumber() < 0 || node.getColumnNumber() < 0 )
+            return 0;
+        return currentColumn() - (node.getColumnNumber() - 1);
+    }
+
+    /**
+     * Shift the interior lines of a multi-line string so that its
+     * indentation follows the indentation of the emitted code. Blank lines
+     * are left untouched, and lines are never shifted past their first
+     * non-whitespace character.
+     */
+    private static String reindentMultiLineString(String text, int delta) {
+        if( delta == 0 || text.indexOf('\n') < 0 )
+            return text;
+        var lines = text.split("\n", -1);
+        var result = new StringBuilder(lines[0]);
+        for( int i = 1; i < lines.length; i++ ) {
+            result.append('\n');
+            var line = lines[i];
+            if( line.isEmpty() ) {
+                // empty lines are left untouched; whitespace-only lines are
+                // shifted since they carry the indentation of whatever
+                // follows (an interpolation or the closing quote)
+            }
+            else if( delta > 0 ) {
+                result.append(" ".repeat(delta));
+                result.append(line);
+            }
+            else {
+                int strip = 0;
+                while( strip < -delta && strip < line.length() && line.charAt(strip) == ' ' )
+                    strip++;
+                result.append(line.substring(strip));
+            }
+        }
+        return result.toString();
     }
 
     @Override
@@ -775,13 +828,15 @@ public class Formatter extends CodeVisitorSupport {
     public void visitGStringExpression(GStringExpression node) {
         // see also: GStringUtil.writeToImpl()
         var quoteChar = (String) node.getNodeMetaData(ASTNodeMarker.QUOTE_CHAR, k -> DQ_STR);
+        var delta = indentDelta(node);
         append(quoteChar);
         var ss = node.getStrings();
         var vs = node.getValues();
         for( int i = 0; i < ss.size(); i++ ) {
             var string = ss.get(i);
-            if( string.getNodeMetaData(ASTNodeMarker.VERBATIM_TEXT) != null )
-                visit(string);
+            var text = (String) string.getNodeMetaData(ASTNodeMarker.VERBATIM_TEXT);
+            if( text != null )
+                append(reindentMultiLineString(text, delta));
             if( i < vs.size() ) {
                 append("${");
                 visit(vs.get(i));
