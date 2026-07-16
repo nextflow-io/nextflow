@@ -691,8 +691,12 @@ public class CommentReattacher {
 
         // strip blank lines at the start of a block or section (the
         // formatter provides canonical spacing there); blank lines between
-        // two statements are preserved
-        if( !(prev instanceof ASTNode && next instanceof ASTNode) ) {
+        // two statements are preserved -- a compound statement (e.g. an
+        // if/else) counts as the previous statement even though its nested
+        // block regions come after it in slot order
+        var prevIsStatement = prev instanceof ASTNode
+            || (prev instanceof Region r && trailingPrev instanceof ASTNode anchor && r.end <= endOf(anchor));
+        if( !(prevIsStatement && next instanceof ASTNode) ) {
             while( !post.isEmpty() && isBlankLine(post.get(0)) )
                 post.remove(0);
         }

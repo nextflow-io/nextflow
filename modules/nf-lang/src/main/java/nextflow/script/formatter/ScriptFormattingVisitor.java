@@ -150,6 +150,11 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
         ASTNode prevDecl = null;
         for( var decl : declarations ) {
+            // a declaration that is sorted into first position may carry a
+            // blank-line prefix from its original location -- strip it so
+            // that the output does not start with blank lines
+            if( prevDecl == null )
+                stripLeadingBlankPrefix(decl);
             // enforce a blank line above blocks (process, workflow, ...)
             // and between declarations of different kinds; consecutive
             // declarations of the same kind (e.g. includes) may be grouped
@@ -223,6 +228,16 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             return false;
         // the list is in reverse source order
         return "\n".equals(comments.get(comments.size() - 1));
+    }
+
+    private void stripLeadingBlankPrefix(ASTNode decl) {
+        var comments = (List<String>) decl.getNodeMetaData(nextflow.script.ast.ASTNodeMarker.LEADING_COMMENTS);
+        if( comments == null )
+            return;
+        // the list is in reverse source order -- the blank lines emitted
+        // first are at the end of the list
+        while( !comments.isEmpty() && "\n".equals(comments.get(comments.size() - 1)) )
+            comments.remove(comments.size() - 1);
     }
 
     /**

@@ -1738,4 +1738,25 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    def 'should preserve blank lines after compound statements' () {
+        expect:
+        checkFormat(
+            '''\
+            def rule(file) {
+                if (file == 'file_1.txt') {
+                    return "alpha/${file}"
+                }
+
+                if (file == 'file_2.txt') {
+                    return null
+                }
+            }
+
+            workflow {
+                rule('file_1.txt')
+            }
+            '''
+        )
+    }
+
 }
