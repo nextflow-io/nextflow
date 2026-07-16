@@ -26,16 +26,17 @@ import java.nio.file.WatchService
 import com.azure.storage.blob.BlobClient
 import com.azure.storage.blob.BlobContainerClient
 import com.azure.storage.blob.models.BlobItem
-import com.azure.storage.blob.models.ListBlobsOptions
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
 
 /**
  * Implements Azure path object
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 @CompileStatic
 @EqualsAndHashCode(includes = 'fs,path,directory', includeFields = true)
 class AzPath implements Path {
@@ -95,34 +96,19 @@ class AzPath implements Path {
     }
 
     boolean isDirectory() {
-        if (directory) {
+        if( directory )
             return true
+        // A path without a trailing slash may still be a (virtual) directory in blob storage.
+        // Consult the file system, which resolves this via the blob metadata and listing (see
+        // AzFileSystem.readAttributes), instead of relying on the trailing slash alone (#6427).
+        try {
+            final attrs = fs.readAttributes(this)
+            return attrs != null && attrs.isDirectory()
         }
-
-        def blobNameStr = blobName()
-        if (blobNameStr) {
-            def containerClient = containerClient()
-            def blobClient = containerClient.getBlobClient(blobNameStr)
-
-            if (blobClient.exists()) {
-                def props = blobClient.getProperties()
-                def metadata = props.getMetadata()
-                def hasHdiFolderMetadata = metadata != null && metadata.containsKey("hdi_isfolder") && metadata.get("hdi_isfolder") == "true"
-                def isZeroByteBlob = props.getBlobSize() == 0
-
-                return hasHdiFolderMetadata || (isZeroByteBlob && hasChildrenInStorage(containerClient, blobNameStr))
-            } else {
-                return hasChildrenInStorage(containerClient, blobNameStr)
-            }
+        catch( Exception e ) {
+            log.debug "Unable to determine if Azure path is a directory: ${toUriString()} - ${e.message}"
+            return false
         }
-
-        return false
-    }
-
-    private boolean hasChildrenInStorage(BlobContainerClient containerClient, String blobNameStr) {
-        def prefix = blobNameStr.endsWith('/') ? blobNameStr : blobNameStr + '/'
-        def opts = new com.azure.storage.blob.models.ListBlobsOptions().setPrefix(prefix).setMaxResultsPerPage(1)
-        return containerClient.listBlobs(opts, null).stream().findFirst().isPresent()
     }
 
     String checkContainerName() {
@@ -242,17 +228,8 @@ class AzPath implements Path {
 
     @Override
     AzPath resolve(String other) {
-        if( other.startsWith('/') ) {
-            // For absolute paths, throw exception if cross-container rather than creating invalid paths
-            def otherPath = Paths.get(other)
-            if( otherPath.isAbsolute() && otherPath.nameCount > 0 ) {
-                def otherContainer = otherPath.getName(0).toString()
-                if( otherContainer != fs.containerName ) {
-                    throw new IllegalArgumentException("Cannot resolve cross-container path `$other` from container `${fs.containerName}`")
-                }
-            }
-            return new AzPath(fs, other)
-        }
+        if( other.startsWith('/') )
+            return (AzPath)fs.provider().getPath(new URI("$AzFileSystemProvider.SCHEME:/$other"))
 
         def dir = other.endsWith('/')
         def newPath = path.resolve(other)
@@ -266,35 +243,19 @@ class AzPath implements Path {
 
         final that = (AzPath)other
         def newPath = path.resolveSibling(that.path)
-        if( newPath.isAbsolute() ) {
-            // Check for cross-container paths and throw exception instead of session context error
-            if( newPath.nameCount > 0 ) {
-                def otherContainer = newPath.getName(0).toString()
-                if( otherContainer != fs.containerName ) {
-                    throw new IllegalArgumentException("Cannot resolve cross-container path `${newPath}` from container `${fs.containerName}`")
-                }
-            }
-            return new AzPath(fs, newPath.toString())
-        } else {
-            return new AzPath(fs, newPath, false)
-        }
+        if( newPath.isAbsolute() )
+            fs.getPath(newPath.toString())
+        else
+            new AzPath(fs, newPath, false)
     }
 
     @Override
     Path resolveSibling(String other) {
         def newPath = path.resolveSibling(other)
-        if( newPath.isAbsolute() ) {
-            // Check for cross-container paths and throw exception instead of session context error
-            if( newPath.nameCount > 0 ) {
-                def otherContainer = newPath.getName(0).toString()
-                if( otherContainer != fs.containerName ) {
-                    throw new IllegalArgumentException("Cannot resolve cross-container path `${newPath}` from container `${fs.containerName}`")
-                }
-            }
-            return new AzPath(fs, newPath.toString())
-        } else {
-            return new AzPath(fs, newPath, false)
-        }
+        if( newPath.isAbsolute() )
+            fs.getPath(newPath.toString())
+        else
+            new AzPath(fs, newPath, false)
     }
 
     @Override

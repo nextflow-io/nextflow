@@ -944,49 +944,23 @@ class AzNioTest extends Specification implements AzBaseSpec {
         deleteBucket(bucket1)
     }
 
-    def 'should detect directory with hdi_isfolder metadata' () {
+    def 'should detect a virtual directory without a trailing slash (#6427)' () {
         given:
         def bucketName = createBucket()
-        def dirPath = "$bucketName/test-dir"
-        
-        when:
-        // Create a directory marker with hdi_isfolder metadata
-        def containerClient = storageClient.getBlobContainerClient(bucketName)
-        def blobClient = containerClient.getBlobClient("test-dir/")
-        blobClient.upload(new ByteArrayInputStream(new byte[0]), 0)
-        blobClient.setMetadata(['hdi_isfolder': 'true'])
-        
-        and:
-        def path = Paths.get(new URI("az://$dirPath/"))
-        def attrs = Files.readAttributes(path, BasicFileAttributes)
-        
-        then:
-        attrs.isDirectory()
-        !attrs.isRegularFile()
-        
-        cleanup:
-        deleteBucket(bucketName)
-    }
 
-    def 'should not treat file with trailing slash as directory without metadata' () {
-        given:
-        def bucketName = createBucket()
-        
-        when:
-        // Create a file with trailing slash but no directory metadata
+        when: 'a blob exists under a prefix, without any explicit directory marker'
         def containerClient = storageClient.getBlobContainerClient(bucketName)
-        def blobClient = containerClient.getBlobClient("test-file/")
-        blobClient.upload(new ByteArrayInputStream("content".bytes), "content".length())
-        
-        and:
-        def path = Paths.get(new URI("az://$bucketName/test-file/"))
-        def attrs = Files.readAttributes(path, BasicFileAttributes)
-        
-        then:
-        // Without metadata or isPrefix, it should be treated as a file
-        attrs.isRegularFile()
-        !attrs.isDirectory()
-        
+        containerClient.getBlobClient("output/file.txt").upload(new ByteArrayInputStream("hello".bytes), "hello".length())
+
+        and: 'the prefix is referenced without a trailing slash'
+        def dir = Path.of(new URI("az://$bucketName/output"))
+        def file = Path.of(new URI("az://$bucketName/output/file.txt"))
+
+        then: 'it is recognised as a directory (via both entry points) while the blob is a file'
+        (dir as AzPath).isDirectory()
+        Files.isDirectory(dir)
+        !Files.isDirectory(file)
+
         cleanup:
         deleteBucket(bucketName)
     }

@@ -58,42 +58,23 @@ class AzFileAttributes implements BasicFileAttributes {
         objectId = "/${client.containerName}/${client.blobName}"
         creationTime = time(props.getCreationTime())
         updateTime = time(props.getLastModified())
-        
-        // Determine if this is a directory using metadata only (most reliable):
+        directory = client.blobName.endsWith('/')
+        size = props.getBlobSize()
+
+        // Support for Azure Data Lake Storage Gen2 with hierarchical namespace enabled
         final meta = props.getMetadata()
-        if( meta != null && meta.containsKey("hdi_isfolder") && meta.get("hdi_isfolder") == "true" ){
-            directory = true
-            size = 0
-        }
-        else {
-            // Without metadata, default to treating as file
-            // This aligns with Azure SDK's approach where explicit directory markers are required
-            directory = false
-            size = props.getBlobSize()
+        if( meta.containsKey("hdi_isfolder") && size == 0 ){
+            directory = meta.get("hdi_isfolder")
         }
     }
 
     AzFileAttributes(String containerName, BlobItem item) {
         objectId = "/${containerName}/${item.name}"
-        
-        // Determine if this is a directory using reliable methods only:
-        // 1. Check if it's marked as a prefix (virtual directory) - Most reliable
-        if( item.isPrefix() != null && item.isPrefix() ) {
-            directory = true
-            // Virtual directories don't have properties like creation time
-            size = 0
-        }
-        // 2. Check metadata for hierarchical namespace (ADLS Gen2)
-        else if( item.getMetadata() != null && item.getMetadata().containsKey("hdi_isfolder") && item.getMetadata().get("hdi_isfolder") == "true" ) {
-            directory = true
-            size = 0
-        }
-        // 3. Default: treat as file
-        else {
-            directory = false
-            creationTime = time(item.getProperties().getCreationTime())
-            updateTime = time(item.getProperties().getLastModified())
-            size = item.getProperties().getContentLength()
+        directory = item.name.endsWith('/')
+        if( !directory ) {
+            creationTime = time(item.properties.getCreationTime())
+            updateTime = time(item.properties.getLastModified())
+            size = item.properties.getContentLength()
         }
     }
 
@@ -111,41 +92,9 @@ class AzFileAttributes implements BasicFileAttributes {
 
     protected AzFileAttributes(BlobContainerClient client, String blobName) {
         objectId = "/$client.blobContainerName/$blobName"
-
-        if (blobName.endsWith('/')) {
-            directory = true
-            size = 0
-            return
-        }
-
-        def blobClient = client.getBlobClient(blobName)
-        if (blobClient.exists()) {
-            def props = blobClient.getProperties()
-            def metadata = props.getMetadata()
-
-            creationTime = time(props.getCreationTime())
-            updateTime = time(props.getLastModified())
-
-            // Determine directory status using multiple indicators
-            def blobSize = props.getBlobSize()
-            def hasHdiFolderMetadata = metadata != null && metadata.containsKey("hdi_isfolder") && metadata.get("hdi_isfolder") == "true"
-            def isZeroByteBlob = blobSize == 0
-
-            // Check for directory indicators in order of reliability
-            directory = hasHdiFolderMetadata || (isZeroByteBlob && hasChildrenInStorage(client, blobName))
-            size = directory ? 0 : blobSize
-        } else {
-            // Virtual directory - check if it has children
-            directory = hasChildrenInStorage(client, blobName)
-            size = 0
-        }
+        directory = blobName.endsWith('/')
     }
 
-    private static boolean hasChildrenInStorage(BlobContainerClient client, String blobName) {
-        def prefix = blobName.endsWith('/') ? blobName : blobName + '/'
-        def opts = new com.azure.storage.blob.models.ListBlobsOptions().setPrefix(prefix).setMaxResultsPerPage(1)
-        return client.listBlobs(opts, null).stream().findFirst().isPresent()
-    }
 
     static protected FileTime time(Long millis) {
         millis ? FileTime.from(millis, TimeUnit.MILLISECONDS) : null
