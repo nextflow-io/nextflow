@@ -1352,4 +1352,59 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    // -- line-length wrapping (issue #26)
+
+    def 'should wrap lines that exceed the maximum line length' () {
+        given:
+        def options = new FormattingOptions(4, true, false, false, false, 60)
+
+        expect:
+        // https://github.com/nextflow-io/language-server/issues/26
+        checkFormat(options,
+            '''\
+            workflow {
+                ALIGN_AND_SORT(samples_channel, reference_genome, annotation_file, params.threads)
+            }
+            ''',
+            '''\
+            workflow {
+                ALIGN_AND_SORT(
+                    samples_channel,
+                    reference_genome,
+                    annotation_file,
+                    params.threads,
+                )
+            }
+            '''
+        )
+        checkFormat(options,
+            '''\
+            workflow {
+                result = Channel.fromPath(params.input).splitCsv(header: true).map { row -> row.sample }
+            }
+            ''',
+            '''\
+            workflow {
+                result = Channel
+                    .fromPath(params.input)
+                    .splitCsv(header: true)
+                    .map { row -> row.sample }
+            }
+            '''
+        )
+        // short lines are not wrapped
+        checkFormat(options,
+            '''\
+            workflow {
+                x = foo(a, b)
+            }
+            ''',
+            '''\
+            workflow {
+                x = foo(a, b)
+            }
+            '''
+        )
+    }
+
 }

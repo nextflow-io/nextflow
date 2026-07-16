@@ -224,6 +224,87 @@ public class Formatter extends CodeVisitorSupport {
         return builder.toString();
     }
 
+    // line-length wrapping
+
+    /**
+     * How aggressively expressions are being wrapped onto multiple lines,
+     * on top of preserving the wrapping in the source:
+     *
+     * NONE -- only expressions that were wrapped in the source are wrapped;
+     * TOP  -- the outermost wrappable construct of the statement is wrapped;
+     * ALL  -- every wrappable construct of the statement is wrapped.
+     */
+    private enum WrapMode {
+        NONE,
+        TOP,
+        ALL
+    }
+
+    private WrapMode wrapMode = WrapMode.NONE;
+
+    private int exprDepth = 0;
+
+    /**
+     * Emit a line of output, and if it exceeds the maximum line length,
+     * roll it back and re-emit it with expressions wrapped onto multiple
+     * lines -- first only the outermost construct, then, if the result
+     * still has an over-long line (e.g. deeply nested arguments), every
+     * construct.
+     */
+    public void emitWrappable(Runnable body) {
+        if( options.maxLineLength() <= 0 || wrapMode != WrapMode.NONE ) {
+            body.run();
+            return;
+        }
+        var mark = builder.length();
+        body.run();
+        if( !exceedsMaxLineLength(mark) )
+            return;
+        builder.setLength(mark);
+        wrapMode = WrapMode.TOP;
+        body.run();
+        if( exceedsMaxLineLength(mark) ) {
+            builder.setLength(mark);
+            wrapMode = WrapMode.ALL;
+            body.run();
+        }
+        wrapMode = WrapMode.NONE;
+    }
+
+    /**
+     * Determine whether any line emitted after the given position exceeds
+     * the maximum line length.
+     */
+    private boolean exceedsMaxLineLength(int from) {
+        var max = options.maxLineLength();
+        var lineStart = builder.lastIndexOf("\n", from - 1) + 1;
+        var col = 0;
+        for( int i = lineStart; i < builder.length(); i++ ) {
+            var c = builder.charAt(i);
+            if( c == '\n' )
+                col = 0;
+            else if( c == '\t' )
+                col += options.tabSize();
+            else
+                col++;
+            if( col > max )
+                return true;
+        }
+        return false;
+    }
+
+    /**
+     * Determine whether the current construct should be wrapped because of
+     * the line-length limit.
+     */
+    private boolean forceWrap() {
+        if( wrapMode == WrapMode.ALL )
+            return true;
+        if( wrapMode == WrapMode.TOP )
+            return exprDepth <= 2;
+        return false;
+    }
+
     // statements
 
     @Override
@@ -277,15 +358,17 @@ public class Formatter extends CodeVisitorSupport {
     public void visitExpressionStatement(ExpressionStatement node) {
         if( appendVerbatim(node) )
             return;
-        var cre = currentRootExpr;
-        currentRootExpr = node.getExpression();
         appendLeadingComments(node);
-        appendIndent();
-        visitStatementLabels(node);
-        visit(node.getExpression());
-        appendTrailingComment(node);
-        appendNewLine();
-        currentRootExpr = cre;
+        emitWrappable(() -> {
+            var cre = currentRootExpr;
+            currentRootExpr = node.getExpression();
+            appendIndent();
+            visitStatementLabels(node);
+            visit(node.getExpression());
+            appendTrailingComment(node);
+            appendNewLine();
+            currentRootExpr = cre;
+        });
     }
 
     private void visitStatementLabels(ExpressionStatement node) {
@@ -301,15 +384,17 @@ public class Formatter extends CodeVisitorSupport {
     public void visitReturnStatement(ReturnStatement node) {
         if( appendVerbatim(node) )
             return;
-        var cre = currentRootExpr;
-        currentRootExpr = node.getExpression();
         appendLeadingComments(node);
-        appendIndent();
-        append("return ");
-        visit(node.getExpression());
-        appendTrailingComment(node);
-        appendNewLine();
-        currentRootExpr = cre;
+        emitWrappable(() -> {
+            var cre = currentRootExpr;
+            currentRootExpr = node.getExpression();
+            appendIndent();
+            append("return ");
+            visit(node.getExpression());
+            appendTrailingComment(node);
+            appendNewLine();
+            currentRootExpr = cre;
+        });
     }
 
     @Override
@@ -317,15 +402,17 @@ public class Formatter extends CodeVisitorSupport {
         if( appendVerbatim(node) )
             return;
         appendLeadingComments(node);
-        appendIndent();
-        append("assert ");
-        visit(node.getBooleanExpression());
-        if( !(node.getMessageExpression() instanceof ConstantExpression ce && ce.isNullExpression()) ) {
-            append(" : ");
-            visit(node.getMessageExpression());
-        }
-        appendTrailingComment(node);
-        appendNewLine();
+        emitWrappable(() -> {
+            appendIndent();
+            append("assert ");
+            visit(node.getBooleanExpression());
+            if( !(node.getMessageExpression() instanceof ConstantExpression ce && ce.isNullExpression()) ) {
+                append(" : ");
+                visit(node.getMessageExpression());
+            }
+            appendTrailingComment(node);
+            appendNewLine();
+        });
     }
 
     @Override
@@ -352,11 +439,13 @@ public class Formatter extends CodeVisitorSupport {
         if( appendVerbatim(node) )
             return;
         appendLeadingComments(node);
-        appendIndent();
-        append("throw ");
-        visit(node.getExpression());
-        appendTrailingComment(node);
-        appendNewLine();
+        emitWrappable(() -> {
+            appendIndent();
+            append("throw ");
+            visit(node.getExpression());
+            appendTrailingComment(node);
+            appendNewLine();
+        });
     }
 
     @Override
@@ -642,7 +731,7 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitTupleExpression(TupleExpression node) {
-        var wrap = hasTrailingComma(node);
+        var wrap = hasTrailingComma(node) || (forceWrap() && node.getExpressions().size() > 1);
         append('(');
         if( wrap )
             incIndent();
@@ -657,7 +746,7 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitListExpression(ListExpression node) {
-        var wrap = hasTrailingComma(node);
+        var wrap = hasTrailingComma(node) || (forceWrap() && node.getExpressions().size() > 1);
         append('[');
         if( wrap )
             incIndent();
@@ -690,7 +779,7 @@ public class Formatter extends CodeVisitorSupport {
             append("[:]");
             return;
         }
-        var wrap = hasTrailingComma(node);
+        var wrap = hasTrailingComma(node) || (forceWrap() && node.getMapEntryExpressions().size() > 1);
         append('[');
         if( wrap )
             incIndent();
@@ -881,7 +970,9 @@ public class Formatter extends CodeVisitorSupport {
         var number = (Number) node.getNodeMetaData(ASTNodeMarker.INSIDE_PARENTHESES_LEVEL);
         if( number != null && number.intValue() > 0 )
             append('(');
+        exprDepth++;
         super.visit(node);
+        exprDepth--;
         if( number != null && number.intValue() > 0 )
             append(')');
     }
@@ -905,11 +996,13 @@ public class Formatter extends CodeVisitorSupport {
     }
 
     private boolean shouldWrapExpression(Expression node) {
-        return node.getLineNumber() < node.getLastLineNumber();
+        return node.getLineNumber() < node.getLastLineNumber() || forceWrap();
     }
 
     private boolean shouldWrapMethodCall(MethodCallExpression node) {
         if( hasTrailingComma(node.getArguments()) )
+            return true;
+        if( forceWrap() && asMethodCallArguments(node).size() > 0 )
             return true;
         var start = node.getMethod();
         var end = node.getArguments();
@@ -928,6 +1021,9 @@ public class Formatter extends CodeVisitorSupport {
             root = mce.getObjectExpression();
             depth += 1;
         }
+
+        if( wrapMode != WrapMode.NONE )
+            return depth >= 2;
 
         return shouldWrapExpression(root)
             ? false
