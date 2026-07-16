@@ -35,6 +35,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.script.control.Compiler
 import nextflow.script.control.ParanoidWarning
 import nextflow.script.control.ScriptParser
+import nextflow.script.formatter.CommentReattacher
 import nextflow.script.formatter.FormattingOptions
 import nextflow.script.formatter.ScriptFormattingVisitor
 import nextflow.script.parser.v2.ErrorListener
@@ -309,9 +310,10 @@ class CmdLint extends CmdBase {
         log.debug "Formatting script ${file}"
         errorListener.beforeFormat(file)
 
-        final formatter = new ScriptFormattingVisitor(source, formattingOptions)
+        final text = file.text
+        final formatter = new ScriptFormattingVisitor(source, formattingOptions, text)
         formatter.visit()
-        return formatter.toString()
+        return checkCommentsPreserved(file, text, formatter.toString(), false)
     }
 
     private String formatConfig(File file) {
@@ -324,9 +326,22 @@ class CmdLint extends CmdBase {
         log.debug "Formatting config ${file}"
         errorListener.beforeFormat(file)
 
-        final formatter = new ConfigFormattingVisitor(source, formattingOptions)
+        final text = file.text
+        final formatter = new ConfigFormattingVisitor(source, formattingOptions, text)
         formatter.visit()
-        return formatter.toString()
+        return checkCommentsPreserved(file, text, formatter.toString(), true)
+    }
+
+    /**
+     * Verify that formatting neither removed, duplicated nor altered any
+     * comment, and refuse to format the file otherwise.
+     */
+    private String checkCommentsPreserved(File file, String before, String after, boolean configFile) {
+        if( CommentReattacher.commentTexts(before, configFile) != CommentReattacher.commentTexts(after, configFile) ) {
+            log.warn "Refusing to format ${file}: formatting would remove or alter comments -- please report this as a bug"
+            return null
+        }
+        return after
     }
 
 }
