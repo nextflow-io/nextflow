@@ -1229,7 +1229,22 @@ public class CommentReattacher {
 
         Region build(ScriptNode scriptNode) {
             var root = new Region(scriptNode, 0, Long.MAX_VALUE, SlotMode.STATEMENTS);
+            var entry = scriptNode.getEntry();
+            if( entry != null && entry.isCodeSnippet() && entry.main instanceof BlockStatement block ) {
+                // a code snippet is a synthetic workflow without a source
+                // position of its own -- anchor its top-level statements
+                // directly in the file region so that their comments are
+                // re-derived like any other statements
+                for( var stmt : block.getStatements() ) {
+                    if( !isPositioned(stmt) )
+                        continue;
+                    root.addAnchor(stmt);
+                    addStatementRegions(root, stmt);
+                }
+            }
             for( var decl : scriptNode.getDeclarations() ) {
+                if( decl == entry && entry.isCodeSnippet() )
+                    continue;
                 if( !isPositioned(decl) )
                     continue;
                 root.addAnchor(decl);

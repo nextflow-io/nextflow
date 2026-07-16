@@ -1718,4 +1718,24 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    def 'should preserve comments in a code snippet' () {
+        expect:
+        checkFormat(
+            '''\
+            // emit some letters
+            channel.of('a'..'z') | view
+
+            // emit some numbers
+            channel.of(1..9) | view
+            ''',
+            '''\
+            // emit some letters
+            channel.of('a'..'z') | view
+
+            // emit some numbers
+            channel.of(1..9) | view
+            '''
+        )
+    }
+
 }
