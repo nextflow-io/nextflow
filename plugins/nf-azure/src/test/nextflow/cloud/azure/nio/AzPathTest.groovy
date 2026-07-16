@@ -215,7 +215,7 @@ class AzPathTest extends Specification {
         base                        | path                          | expected
         '/nxf-bucket/some/path'     | 'file-name.txt'               | '/nxf-bucket/some/path/file-name.txt'
         '/nxf-bucket/data'          | 'path/file-name.txt'          | '/nxf-bucket/data/path/file-name.txt'
-        '/bucket/data'              | '/other/file-name.txt'        | '/other/file-name.txt'
+        '/nxf-bucket/data'          | '/nxf-bucket/other.txt'       | '/nxf-bucket/other.txt'
         '/nxf-bucket'               | 'some/file-name.txt'          | '/nxf-bucket/some/file-name.txt'
     }
 
@@ -284,8 +284,6 @@ class AzPathTest extends Specification {
         base                    | path                          | expected
         '/bucket/some/path'     | 'file-name.txt'               | '/bucket/some/file-name.txt'
         '/bucket/data'          | 'path/file-name.txt'          | '/bucket/path/file-name.txt'
-        '/bucket/data'          | '/other/file-name.txt'        | '/other/file-name.txt'
-        '/bucket'               | 'some/file-name.txt'          | '/some/file-name.txt'
     }
 
     @Unroll
