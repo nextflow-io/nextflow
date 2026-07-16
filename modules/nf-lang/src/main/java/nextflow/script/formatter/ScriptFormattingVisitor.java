@@ -533,6 +533,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             : 0;
 
         for( var stmt : outputs ) {
+            if( fmt.appendVerbatim(stmt) )
+                continue;
             var stmtX = (ExpressionStatement)stmt;
             var output = stmtX.getExpression();
             var target =
@@ -562,6 +564,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             : 0;
 
         for( var stmt : publishers ) {
+            if( fmt.appendVerbatim(stmt) )
+                continue;
             var stmtX = (ExpressionStatement)stmt;
             var emit = (AssignmentExpression)stmtX.getExpression();
             var target = (VariableExpression)emit.getLeftExpression();
@@ -650,15 +654,20 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             }
         }
         if( !(node.when instanceof EmptyExpression) ) {
-            fmt.appendLeadingComments(node.when);
-            fmt.appendIndent();
-            fmt.append("when:\n");
-            fmt.appendIndent();
-            fmt.visit(node.when);
-            fmt.appendTrailingComment(node.when);
-            fmt.appendNewLine();
-            fmt.appendDanglingAfter(node.when);
-            fmt.appendNewLine();
+            if( fmt.appendVerbatim(node.when) ) {
+                fmt.appendNewLine();
+            }
+            else {
+                fmt.appendLeadingComments(node.when);
+                fmt.appendIndent();
+                fmt.append("when:\n");
+                fmt.appendIndent();
+                fmt.visit(node.when);
+                fmt.appendTrailingComment(node.when);
+                fmt.appendNewLine();
+                fmt.appendDanglingAfter(node.when);
+                fmt.appendNewLine();
+            }
         }
         fmt.appendIndent();
         fmt.append(node.type);
@@ -724,15 +733,20 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             fmt.appendNewLine();
         }
         if( !(node.when instanceof EmptyExpression) ) {
-            fmt.appendLeadingComments(node.when);
-            fmt.appendIndent();
-            fmt.append("when:\n");
-            fmt.appendIndent();
-            fmt.visit(node.when);
-            fmt.appendTrailingComment(node.when);
-            fmt.appendNewLine();
-            fmt.appendDanglingAfter(node.when);
-            fmt.appendNewLine();
+            if( fmt.appendVerbatim(node.when) ) {
+                fmt.appendNewLine();
+            }
+            else {
+                fmt.appendLeadingComments(node.when);
+                fmt.appendIndent();
+                fmt.append("when:\n");
+                fmt.appendIndent();
+                fmt.visit(node.when);
+                fmt.appendTrailingComment(node.when);
+                fmt.appendNewLine();
+                fmt.appendDanglingAfter(node.when);
+                fmt.appendNewLine();
+            }
         }
         fmt.appendIndent();
         fmt.append(node.type);
@@ -801,6 +815,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.append(" {\n");
         fmt.incIndent();
         for( var fn : node.getFields() ) {
+            if( fmt.appendVerbatim(fn) )
+                continue;
             fmt.appendLeadingComments(fn);
             fmt.appendIndent();
             fmt.append(fn.getName());
@@ -827,6 +843,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.append(" {\n");
         fmt.incIndent();
         for( var fn : node.getFields() ) {
+            if( fmt.appendVerbatim(fn) )
+                continue;
             fmt.appendLeadingComments(fn);
             fmt.appendIndent();
             fmt.append(fn.getName());
@@ -880,6 +898,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     private void visitOutputBody(BlockStatement block) {
         asBlockStatements(block).forEach((stmt) -> {
+            if( fmt.appendVerbatim(stmt) )
+                return;
             var call = asMethodCallX(stmt);
             if( call == null )
                 return;
@@ -911,6 +931,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     private void visitDirectives(Statement statement) {
         asBlockStatements(statement).forEach((stmt) -> {
+            if( fmt.appendVerbatim(stmt) )
+                return;
             var call = asMethodCallX(stmt);
             if( call == null )
                 return;
