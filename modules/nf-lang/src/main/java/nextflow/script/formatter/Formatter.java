@@ -497,7 +497,8 @@ public class Formatter extends CodeVisitorSupport {
             visit(receiver);
             if( inWrappedMethodChain ) {
                 incIndent();
-                if( !nextflow.script.dsl.Types.isNamespace(receiver.getType()) || hasLeadingComments(node) ) {
+                if( !nextflow.script.dsl.Types.isNamespace(receiver.getType()) || hasLeadingComments(node) || hasTrailingComment(receiver) ) {
+                    appendTrailingComment(receiver);
                     appendNewLine();
                     appendLeadingComments(node);
                     appendIndent();
@@ -527,6 +528,7 @@ public class Formatter extends CodeVisitorSupport {
             visitArguments(parenArgs, wrap);
             if( wrap ) {
                 appendNewLine();
+                appendDanglingComments(node.getArguments());
                 decIndent();
                 appendIndent();
             }
@@ -638,12 +640,16 @@ public class Formatter extends CodeVisitorSupport {
     public void visitTernaryExpression(TernaryExpression node) {
         if( shouldWrapExpression(node) ) {
             visit(node.getBooleanExpression());
+            appendTrailingComment(node.getBooleanExpression());
             incIndent();
             appendNewLine();
+            appendLeadingComments(node.getTrueExpression());
             appendIndent();
             append("? ");
             visit(node.getTrueExpression());
+            appendTrailingComment(node.getTrueExpression());
             appendNewLine();
+            appendLeadingComments(node.getFalseExpression());
             appendIndent();
             append(": ");
             visit(node.getFalseExpression());
@@ -737,13 +743,14 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitTupleExpression(TupleExpression node) {
-        var wrap = hasTrailingComma(node) || (forceWrap() && node.getExpressions().size() > 1) || hasElementComments(node.getExpressions());
+        var wrap = hasTrailingComma(node) || (forceWrap() && node.getExpressions().size() > 1) || hasElementComments(node.getExpressions()) || hasDanglingComments(node);
         append('(');
         if( wrap )
             incIndent();
         visitPositionalArgs(node.getExpressions(), wrap);
         if( wrap ) {
             appendNewLine();
+            appendDanglingComments(node);
             decIndent();
             appendIndent();
         }
@@ -752,13 +759,14 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitListExpression(ListExpression node) {
-        var wrap = hasTrailingComma(node) || (forceWrap() && node.getExpressions().size() > 1) || hasElementComments(node.getExpressions());
+        var wrap = hasTrailingComma(node) || (forceWrap() && node.getExpressions().size() > 1) || hasElementComments(node.getExpressions()) || hasDanglingComments(node);
         append('[');
         if( wrap )
             incIndent();
         visitPositionalArgs(node.getExpressions(), wrap);
         if( wrap ) {
             appendNewLine();
+            appendDanglingComments(node);
             decIndent();
             appendIndent();
         }
@@ -777,6 +785,8 @@ public class Formatter extends CodeVisitorSupport {
             visit(args.get(i));
             if( trailingComma || i + 1 < args.size() )
                 append(comma);
+            if( wrap )
+                appendTrailingComment(args.get(i));
         }
     }
 
@@ -786,13 +796,14 @@ public class Formatter extends CodeVisitorSupport {
             append("[:]");
             return;
         }
-        var wrap = hasTrailingComma(node) || (forceWrap() && node.getMapEntryExpressions().size() > 1) || hasElementComments(node.getMapEntryExpressions());
+        var wrap = hasTrailingComma(node) || (forceWrap() && node.getMapEntryExpressions().size() > 1) || hasElementComments(node.getMapEntryExpressions()) || hasDanglingComments(node);
         append('[');
         if( wrap )
             incIndent();
         visitNamedArgs(node.getMapEntryExpressions(), wrap);
         if( wrap ) {
             appendNewLine();
+            appendDanglingComments(node);
             decIndent();
             appendIndent();
         }
@@ -811,6 +822,8 @@ public class Formatter extends CodeVisitorSupport {
             visit(args.get(i));
             if( trailingComma || i + 1 < args.size() )
                 append(comma);
+            if( wrap )
+                appendTrailingComment(args.get(i));
         }
     }
 
@@ -985,6 +998,18 @@ public class Formatter extends CodeVisitorSupport {
             append(')');
     }
 
+    /**
+     * Visit the root expression of a statement-like construct (the value
+     * of a param, config or output assignment, a when-expression, ...) so
+     * that a method chain at its root can be wrapped onto multiple lines.
+     */
+    public void visitRootExpression(Expression node) {
+        var cre = currentRootExpr;
+        currentRootExpr = node;
+        visit(node);
+        currentRootExpr = cre;
+    }
+
     // helpers
 
     private static boolean hasTrailingComma(Expression node) {
@@ -1012,8 +1037,10 @@ public class Formatter extends CodeVisitorSupport {
             return true;
         if( forceWrap() && asMethodCallArguments(node).size() > 0 )
             return true;
+        if( hasDanglingComments(node.getArguments()) )
+            return true;
         for( var arg : asMethodCallArguments(node) ) {
-            if( hasLeadingComments(arg) )
+            if( hasLeadingComments(arg) || hasTrailingComment(arg) )
                 return true;
             if( arg instanceof MapExpression named && hasElementComments(named.getMapEntryExpressions()) )
                 return true;
@@ -1053,7 +1080,7 @@ public class Formatter extends CodeVisitorSupport {
     private boolean chainHasComments(MethodCallExpression node) {
         Expression expr = node;
         while( expr instanceof MethodCallExpression mce && !mce.isImplicitThis() ) {
-            if( hasLeadingComments(mce) )
+            if( hasLeadingComments(mce) || hasTrailingComment(mce.getObjectExpression()) )
                 return true;
             expr = mce.getObjectExpression();
         }
@@ -1066,7 +1093,7 @@ public class Formatter extends CodeVisitorSupport {
      */
     private boolean hasElementComments(List<? extends ASTNode> elements) {
         for( var element : elements ) {
-            if( hasLeadingComments(element) )
+            if( hasLeadingComments(element) || hasTrailingComment(element) )
                 return true;
         }
         return false;

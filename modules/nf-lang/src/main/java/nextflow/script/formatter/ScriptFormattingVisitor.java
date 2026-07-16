@@ -363,18 +363,20 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             if( fmt.appendVerbatim(param) )
                 continue;
             fmt.appendLeadingComments(param);
-            fmt.appendIndent();
-            fmt.append(param.getName());
-            if( fmt.hasType(param) ) {
-                fmt.append(": ");
-                fmt.visitTypeAnnotation(param.getType());
-            }
-            if( param.hasInitialExpression() ) {
-                fmt.append(" = ");
-                fmt.visit(param.getInitialExpression());
-            }
-            fmt.appendTrailingComment(param);
-            fmt.appendNewLine();
+            fmt.emitWrappable(() -> {
+                fmt.appendIndent();
+                fmt.append(param.getName());
+                if( fmt.hasType(param) ) {
+                    fmt.append(": ");
+                    fmt.visitTypeAnnotation(param.getType());
+                }
+                if( param.hasInitialExpression() ) {
+                    fmt.append(" = ");
+                    fmt.visitRootExpression(param.getInitialExpression());
+                }
+                fmt.appendTrailingComment(param);
+                fmt.appendNewLine();
+            });
             fmt.appendDanglingAfter(param);
         }
         fmt.appendDanglingComments(node);
@@ -389,16 +391,18 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         if( fmt.appendVerbatim(node) )
             return;
         fmt.appendLeadingComments(node);
-        fmt.appendIndent();
-        fmt.visit(node.target);
-        if( maxParamWidth > 0 ) {
-            var padding = maxParamWidth - parameterWidth(node);
-            fmt.append(" ".repeat(padding));
-        }
-        fmt.append(" = ");
-        fmt.visit(node.value);
-        fmt.appendTrailingComment(node);
-        fmt.appendNewLine();
+        fmt.emitWrappable(() -> {
+            fmt.appendIndent();
+            fmt.visit(node.target);
+            if( maxParamWidth > 0 ) {
+                var padding = maxParamWidth - parameterWidth(node);
+                fmt.append(" ".repeat(padding));
+            }
+            fmt.append(" = ");
+            fmt.visitRootExpression(node.value);
+            fmt.appendTrailingComment(node);
+            fmt.appendNewLine();
+        });
     }
 
     private static int parameterWidth(ParamNodeV1 node) {
@@ -547,10 +551,12 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
             if( target != null ) {
                 fmt.appendLeadingComments(stmt);
-                fmt.appendIndent();
-                visitOutputAssignment(target, source, alignmentWidth);
-                fmt.appendTrailingComment(stmt);
-                fmt.appendNewLine();
+                fmt.emitWrappable(() -> {
+                    fmt.appendIndent();
+                    visitOutputAssignment(target, source, alignmentWidth);
+                    fmt.appendTrailingComment(stmt);
+                    fmt.appendNewLine();
+                });
             }
             else {
                 fmt.visit(stmt);
@@ -572,10 +578,12 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             var source = emit.getRightExpression();
 
             fmt.appendLeadingComments(stmt);
-            fmt.appendIndent();
-            visitOutputAssignment(target, source, alignmentWidth);
-            fmt.appendTrailingComment(stmt);
-            fmt.appendNewLine();
+            fmt.emitWrappable(() -> {
+                fmt.appendIndent();
+                visitOutputAssignment(target, source, alignmentWidth);
+                fmt.appendTrailingComment(stmt);
+                fmt.appendNewLine();
+            });
         }
     }
 
@@ -613,7 +621,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         }
         if( source != null ) {
             fmt.append(" = ");
-            fmt.visit(source);
+            fmt.visitRootExpression(source);
         }
     }
 
@@ -661,10 +669,15 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 fmt.appendLeadingComments(node.when);
                 fmt.appendIndent();
                 fmt.append("when:\n");
-                fmt.appendIndent();
-                fmt.visit(node.when);
-                fmt.appendTrailingComment(node.when);
-                fmt.appendNewLine();
+                fmt.emitWrappable(() -> {
+                    // NOTE: not visitRootExpression -- the when-expression
+                    // receives its own leading comments from the section
+                    // emission, so a wrapped chain would emit them twice
+                    fmt.appendIndent();
+                    fmt.visit(node.when);
+                    fmt.appendTrailingComment(node.when);
+                    fmt.appendNewLine();
+                });
                 fmt.appendDanglingAfter(node.when);
                 fmt.appendNewLine();
             }
@@ -740,10 +753,15 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 fmt.appendLeadingComments(node.when);
                 fmt.appendIndent();
                 fmt.append("when:\n");
-                fmt.appendIndent();
-                fmt.visit(node.when);
-                fmt.appendTrailingComment(node.when);
-                fmt.appendNewLine();
+                fmt.emitWrappable(() -> {
+                    // NOTE: not visitRootExpression -- the when-expression
+                    // receives its own leading comments from the section
+                    // emission, so a wrapped chain would emit them twice
+                    fmt.appendIndent();
+                    fmt.visit(node.when);
+                    fmt.appendTrailingComment(node.when);
+                    fmt.appendNewLine();
+                });
                 fmt.appendDanglingAfter(node.when);
                 fmt.appendNewLine();
             }

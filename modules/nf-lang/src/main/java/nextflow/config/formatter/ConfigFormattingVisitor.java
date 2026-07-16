@@ -164,7 +164,7 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
                 fmt.append(" ".repeat(padding));
             }
             fmt.append(" = ");
-            fmt.visit(node.value);
+            fmt.visitRootExpression(node.value);
             fmt.appendTrailingComment(node);
             fmt.appendNewLine();
         });

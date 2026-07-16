@@ -1496,4 +1496,192 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    def 'should keep trailing comments on wrapped elements and chain links' () {
+        expect:
+        // a comment on the same line as an element or chain link stays on
+        // that line
+        checkFormat(
+            '''\
+            workflow {
+                ALIGN(
+                    reads, // the raw reads
+                    genome, // the reference
+                )
+                ch = Channel.of(1, 2) // make a channel
+                    .map { v -> v * 2 } // double it
+                    .view()
+            }
+            ''',
+            '''\
+            workflow {
+                ALIGN(
+                    reads, // the raw reads
+                    genome, // the reference
+                )
+                ch = Channel
+                    .of(1, 2) // make a channel
+                    .map { v -> v * 2 } // double it
+                    .view()
+            }
+            '''
+        )
+    }
+
+    def 'should keep comments before the closing bracket of a construct' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                samples = [
+                    "a",
+                    "b",
+                    // more to come
+                ]
+                ALIGN(
+                    reads,
+                    genome,
+                    // add extra args here
+                )
+            }
+            ''',
+            '''\
+            workflow {
+                samples = [
+                    "a",
+                    "b",
+                    // more to come
+                ]
+                ALIGN(
+                    reads,
+                    genome,
+                    // add extra args here
+                )
+            }
+            '''
+        )
+    }
+
+    def 'should keep comments on the branches of a wrapped ternary' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                x = params.aligner == 'bwa' // check the aligner
+                    // use the fast path
+                    ? 'fast'
+                    // otherwise be safe
+                    : 'safe'
+            }
+            ''',
+            '''\
+            workflow {
+                x = params.aligner == 'bwa' // check the aligner
+                    // use the fast path
+                    ? 'fast'
+                    // otherwise be safe
+                    : 'safe'
+            }
+            '''
+        )
+    }
+
+    def 'should keep blank-line grouping around element comments' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                samples = [
+                    "a",
+                    "b",
+
+                    // the odd one
+                    "z",
+                ]
+            }
+            ''',
+            '''\
+            workflow {
+                samples = [
+                    "a",
+                    "b",
+
+                    // the odd one
+                    "z",
+                ]
+            }
+            '''
+        )
+    }
+
+    def 'should keep chain comments in section and param values' () {
+        expect:
+        // method chains in emit values, params and config values are
+        // wrapped so their comments stay at their links
+        checkFormat(
+            '''\
+            params {
+                input: String = 'default'
+                    // strip whitespace
+                    .trim()
+            }
+
+            workflow W {
+                main:
+                x = Channel.of(1)
+
+                emit:
+                out = x
+                    // squared values
+                    .map { v -> v * v }
+            }
+
+            workflow {
+                W()
+            }
+            ''',
+            '''\
+            params {
+                input: String = 'default'
+                    // strip whitespace
+                    .trim()
+            }
+
+            workflow W {
+
+                main:
+                x = Channel.of(1)
+
+                emit:
+                out = x
+                    // squared values
+                    .map { v -> v * v }
+            }
+
+            workflow {
+                W()
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            params.outdir = file(params.base)
+                // resolve the results dir
+                .resolve('results')
+
+            workflow {
+                println params.outdir
+            }
+            ''',
+            '''\
+            params.outdir = file(params.base)
+                // resolve the results dir
+                .resolve('results')
+
+            workflow {
+                println(params.outdir)
+            }
+            '''
+        )
+    }
+
 }

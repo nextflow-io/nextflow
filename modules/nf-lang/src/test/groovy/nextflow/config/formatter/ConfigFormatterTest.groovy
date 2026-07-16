@@ -164,4 +164,36 @@ class ConfigFormatterTest extends Specification {
         )
     }
 
+    def 'should keep comments in place inside wrapped config values' () {
+        expect:
+        checkFormat(
+            '''\
+            workDir = params.base
+                // keep work under scratch
+                .resolve('work')
+
+            process {
+                ext = [
+                    args: '--fast', // aligner options
+                    cpus: 4,
+                    // more to come
+                ]
+            }
+            ''',
+            '''\
+            workDir = params.base
+                // keep work under scratch
+                .resolve('work')
+
+            process {
+                ext = [
+                    args: '--fast', // aligner options
+                    cpus: 4,
+                    // more to come
+                ]
+            }
+            '''
+        )
+    }
+
 }

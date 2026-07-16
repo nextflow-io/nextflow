@@ -51,11 +51,13 @@ import org.codehaus.groovy.ast.expr.EmptyExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
+import org.codehaus.groovy.ast.expr.ElvisOperatorExpression;
 import org.codehaus.groovy.ast.expr.GStringExpression;
 import org.codehaus.groovy.ast.expr.ListExpression;
 import org.codehaus.groovy.ast.expr.MapExpression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.NamedArgumentListExpression;
+import org.codehaus.groovy.ast.expr.TernaryExpression;
 import org.codehaus.groovy.ast.expr.TupleExpression;
 import org.codehaus.groovy.ast.stmt.BlockStatement;
 import org.codehaus.groovy.ast.stmt.EmptyStatement;
@@ -848,33 +850,21 @@ public class CommentReattacher {
         if( !containsComment(interior) )
             return;
 
+        // group the interior tokens (comments and blank lines) by slot;
+        // comments that fall in no slot are hoisted
         var slots = collectExpressionSlots(anchor, mode);
-        var attached = new java.util.LinkedHashMap<ASTNode, List<String>>();
+        var bySlot = new java.util.LinkedHashMap<ExprSlot, List<NlToken>>();
         var leftover = new ArrayList<NlToken>();
         for( var token : interior ) {
-            if( !token.comment() )
-                continue;
             var slot = findSlot(slots, token);
             if( slot != null )
-                attached.computeIfAbsent(slot.target(), k -> new ArrayList<>()).add(token.normalized());
-            else
+                bySlot.computeIfAbsent(slot, k -> new ArrayList<>()).add(token);
+            else if( token.comment() )
                 leftover.add(token);
         }
 
-        // store slot comments following the leading comments convention:
-        // entries in reverse source order, each comment followed by its
-        // line terminator
-        for( var slotEntry : attached.entrySet() ) {
-            var entries = new ArrayList<String>();
-            for( var comment : slotEntry.getValue() ) {
-                entries.add(0, "\n");
-                entries.add(0, comment);
-            }
-            var reversed = new ArrayList<String>(entries.size());
-            for( int i = entries.size() - 1; i >= 0; i-- )
-                reversed.add(entries.get(i));
-            slotEntry.getKey().putNodeMetaData(ASTNodeMarker.LEADING_COMMENTS, reversed);
-        }
+        for( var slotEntry : bySlot.entrySet() )
+            assignSlot(slotEntry.getKey(), slotEntry.getValue());
 
         if( leftover.isEmpty() )
             return;
@@ -889,17 +879,56 @@ public class CommentReattacher {
             anchor.putNodeMetaData(ASTNodeMarker.LEADING_COMMENTS, entries);
     }
 
+    /**
+     * Assign the tokens that fall on an expression slot: a single-line
+     * comment on the same line as the end of the previous element becomes
+     * its trailing comment; the rest (comments and blank lines) become the
+     * leading comments of the slot target, or its dangling comments for
+     * the slot before the closing bracket of a construct.
+     */
+    private void assignSlot(ExprSlot slot, List<NlToken> gap) {
+        var trailingTarget = slot.prevTarget();
+        if( trailingTarget != null && !gap.isEmpty() ) {
+            var first = gap.get(0);
+            if( first.comment() && !first.multiLine()
+                    && first.line() == trailingTarget.getLastLineNumber()
+                    && trailingTarget.getNodeMetaData(ASTNodeMarker.TRAILING_COMMENT) == null ) {
+                trailingTarget.putNodeMetaData(ASTNodeMarker.TRAILING_COMMENT, first.normalized());
+                gap = gap.subList(1, gap.size());
+            }
+        }
+        if( !containsComment(gap) )
+            return;
+        if( slot.dangling() ) {
+            appendDangling(slot.target(), DANGLING_COMMENTS, gap);
+            return;
+        }
+        var copy = new ArrayList<NlToken>(gap);
+        // strip blank lines at the start of a construct (the formatter
+        // wraps the first element onto the line after the bracket)
+        if( slot.prevTarget() == null ) {
+            while( !copy.isEmpty() && isBlankLine(copy.get(0)) )
+                copy.remove(0);
+        }
+        setLeadingComments(slot.target(), copy);
+    }
+
     /// EXPRESSION SLOTS
 
     /**
      * A position range where comments can be emitted inside an expression:
      * comments in [start, end) are attached to the target node and emitted
-     * before it.
+     * before it (or, for the range between the last element of a construct
+     * and its closing bracket, as the dangling comments of the construct).
+     * A single-line comment on the same line as the end of the previous
+     * element is attached to that element as its trailing comment.
      */
     private record ExprSlot(
         long start,
         long end,
-        ASTNode target
+        ASTNode target,
+        ASTNode prevTarget,
+        boolean dangling
     ) {}
 
     private static ExprSlot findSlot(List<ExprSlot> slots, NlToken token) {
@@ -923,13 +952,13 @@ public class CommentReattacher {
         var slots = new ArrayList<ExprSlot>();
 
         // the links of the root method chain -- only a chain at the root of
-        // a regular statement can be wrapped by the formatter
+        // a statement or assignment value can be wrapped by the formatter
         if( mode == SlotMode.STATEMENTS ) {
             var expr = rootExpressionOf(anchor);
             while( expr instanceof MethodCallExpression mce && !mce.isImplicitThis() ) {
                 var receiver = mce.getObjectExpression();
                 if( isPositioned(receiver) && isPositioned(mce.getMethod()) )
-                    slots.add(new ExprSlot(endOf(receiver), startOf(mce.getMethod()), mce));
+                    slots.add(new ExprSlot(endOf(receiver), startOf(mce.getMethod()), mce, receiver, false));
                 expr = receiver;
             }
         }
@@ -955,12 +984,28 @@ public class CommentReattacher {
         return slots;
     }
 
+    /**
+     * The root expression of an anchor, whose method chain (if any) can be
+     * wrapped by the formatter: the expression of a regular statement, or
+     * the value of a param, config or output assignment (all of which are
+     * emitted with {@code Formatter#visitRootExpression}).
+     */
     private static Expression rootExpressionOf(ASTNode anchor) {
         Expression expr = null;
         if( anchor instanceof ExpressionStatement es )
             expr = es.getExpression();
         else if( anchor instanceof ReturnStatement rs )
             expr = rs.getExpression();
+        else if( anchor instanceof ConfigAssignNode can )
+            expr = can.value;
+        else if( anchor instanceof nextflow.script.ast.ParamNodeV1 pn )
+            expr = pn.value;
+        else if( anchor instanceof Parameter p )
+            expr = p.hasInitialExpression() ? p.getInitialExpression() : null;
+        // NOTE: an expression anchor (e.g. a process when-expression) is
+        // deliberately not treated as a chain root: it receives its own
+        // leading comments from the section emission, so comments assigned
+        // to its chain links would be emitted twice
         if( expr instanceof BinaryExpression be && be.getOperation().isA(org.codehaus.groovy.syntax.Types.ASSIGNMENT_OPERATOR) )
             expr = be.getRightExpression();
         return expr;
@@ -982,8 +1027,12 @@ public class CommentReattacher {
         @Override
         public void visitMethodCallExpression(MethodCallExpression node) {
             if( node.getArguments() instanceof TupleExpression args && isMultiLine(args) ) {
+                var exprs = args.getExpressions();
+                var lastClosure = !exprs.isEmpty() && exprs.get(exprs.size() - 1) instanceof ClosureExpression
+                    ? exprs.get(exprs.size() - 1)
+                    : null;
                 var elements = new ArrayList<Expression>();
-                for( var arg : args.getExpressions() ) {
+                for( var arg : exprs ) {
                     if( arg instanceof NamedArgumentListExpression named )
                         elements.addAll(named.getMapEntryExpressions());
                     else if( arg instanceof ClosureExpression )
@@ -991,7 +1040,13 @@ public class CommentReattacher {
                     else
                         elements.add(arg);
                 }
-                addElementSlots(endOf(node.getMethod()), elements);
+                // the formatter emits no parentheses for a bare trailing
+                // closure, so there is no dangling emission point there
+                var holder = elements.isEmpty() && lastClosure != null ? null : args;
+                var constructEnd = lastClosure != null && isPositioned(lastClosure)
+                    ? startOf(lastClosure)
+                    : endOf(node);
+                addElementSlots(endOf(node.getMethod()), constructEnd, holder, elements);
             }
             super.visitMethodCallExpression(node);
         }
@@ -999,15 +1054,31 @@ public class CommentReattacher {
         @Override
         public void visitListExpression(ListExpression node) {
             if( isMultiLine(node) )
-                addElementSlots(startOf(node), node.getExpressions());
+                addElementSlots(startOf(node), endOf(node), node, node.getExpressions());
             super.visitListExpression(node);
         }
 
         @Override
         public void visitMapExpression(MapExpression node) {
             if( !(node instanceof NamedArgumentListExpression) && isMultiLine(node) )
-                addElementSlots(startOf(node), node.getMapEntryExpressions());
+                addElementSlots(startOf(node), endOf(node), node, node.getMapEntryExpressions());
             super.visitMapExpression(node);
+        }
+
+        @Override
+        public void visitTernaryExpression(TernaryExpression node) {
+            // the two branches of a wrapped ternary are emitted on their
+            // own lines (elvis expressions are always emitted on one line)
+            if( !(node instanceof ElvisOperatorExpression) && isMultiLine(node) ) {
+                var bool = node.getBooleanExpression();
+                var trueX = node.getTrueExpression();
+                var falseX = node.getFalseExpression();
+                if( isPositioned(bool) && isPositioned(trueX) )
+                    slots.add(new ExprSlot(endOf(bool), startOf(trueX), trueX, bool, false));
+                if( isPositioned(trueX) && isPositioned(falseX) )
+                    slots.add(new ExprSlot(endOf(trueX), startOf(falseX), falseX, trueX, false));
+            }
+            super.visitTernaryExpression(node);
         }
 
         @Override
@@ -1025,7 +1096,7 @@ public class CommentReattacher {
             // do not descend -- nested blocks are separate regions
         }
 
-        private void addElementSlots(long constructStart, List<? extends Expression> elements) {
+        private void addElementSlots(long constructStart, long constructEnd, ASTNode danglingHolder, List<? extends Expression> elements) {
             var sorted = new ArrayList<Expression>();
             for( var element : elements ) {
                 if( isPositioned(element) )
@@ -1033,10 +1104,16 @@ public class CommentReattacher {
             }
             sorted.sort(Comparator.comparingLong(node -> startOf(node)));
             var gapStart = constructStart;
+            Expression prev = null;
             for( var element : sorted ) {
-                slots.add(new ExprSlot(gapStart, startOf(element), element));
+                slots.add(new ExprSlot(gapStart, startOf(element), element, prev, false));
                 gapStart = endOf(element);
+                prev = element;
             }
+            // comments between the last element and the closing bracket
+            // dangle off the construct
+            if( danglingHolder != null && gapStart < constructEnd )
+                slots.add(new ExprSlot(gapStart, constructEnd, danglingHolder, prev, true));
         }
 
         private static boolean isMultiLine(Expression node) {
@@ -1095,7 +1172,7 @@ public class CommentReattacher {
         final Set<ASTNode> sectionHeads = new HashSet<>();
 
         Region build(ScriptNode scriptNode) {
-            var root = new Region(scriptNode, 0, Long.MAX_VALUE, SlotMode.ELEMENTS);
+            var root = new Region(scriptNode, 0, Long.MAX_VALUE, SlotMode.STATEMENTS);
             for( var decl : scriptNode.getDeclarations() ) {
                 if( !isPositioned(decl) )
                     continue;
@@ -1125,15 +1202,15 @@ public class CommentReattacher {
             for( var take : node.getParameters() )
                 region.addAnchor(take);
             addBlockRegion(region, node.main, SlotMode.STATEMENTS);
-            addBlockRegion(region, node.emits, SlotMode.ELEMENTS);
-            addBlockRegion(region, node.publishers, SlotMode.ELEMENTS);
+            addBlockRegion(region, node.emits, SlotMode.STATEMENTS);
+            addBlockRegion(region, node.publishers, SlotMode.STATEMENTS);
             addBlockRegion(region, node.onComplete, SlotMode.STATEMENTS);
             addBlockRegion(region, node.onError, SlotMode.STATEMENTS);
             return region;
         }
 
         private Region processRegionV1(ProcessNodeV1 node) {
-            var region = new Region(node, startOf(node), endOf(node), SlotMode.ELEMENTS);
+            var region = new Region(node, startOf(node), endOf(node), SlotMode.STATEMENTS);
             addBlockRegion(region, node.directives, SlotMode.NONE);
             addBlockRegion(region, node.inputs, SlotMode.NONE);
             addBlockRegion(region, node.outputs, SlotMode.NONE);
@@ -1147,12 +1224,12 @@ public class CommentReattacher {
         }
 
         private Region processRegionV2(ProcessNodeV2 node) {
-            var region = new Region(node, startOf(node), endOf(node), SlotMode.ELEMENTS);
+            var region = new Region(node, startOf(node), endOf(node), SlotMode.STATEMENTS);
             addBlockRegion(region, node.directives, SlotMode.NONE);
             for( var input : node.inputs )
                 region.addAnchor(input);
             addBlockRegion(region, node.stagers, SlotMode.NONE);
-            addBlockRegion(region, node.outputs, SlotMode.ELEMENTS);
+            addBlockRegion(region, node.outputs, SlotMode.STATEMENTS);
             addBlockRegion(region, node.topics, SlotMode.STATEMENTS);
             if( isPositioned(node.when) ) {
                 region.addAnchor(node.when);
@@ -1170,7 +1247,7 @@ public class CommentReattacher {
         }
 
         private Region paramsRegion(ParamBlockNode node) {
-            var region = new Region(node, startOf(node), endOf(node), SlotMode.ELEMENTS);
+            var region = new Region(node, startOf(node), endOf(node), SlotMode.STATEMENTS);
             for( var param : node.declarations )
                 region.addAnchor(param);
             return region;
@@ -1347,7 +1424,7 @@ public class CommentReattacher {
     private static class ConfigRegionBuilder {
 
         Region build(ConfigNode configNode) {
-            var root = new Region(configNode, 0, Long.MAX_VALUE, SlotMode.ELEMENTS);
+            var root = new Region(configNode, 0, Long.MAX_VALUE, SlotMode.STATEMENTS);
             for( var stmt : configNode.getConfigStatements() )
                 addConfigStatement(root, stmt);
             return root;
@@ -1358,7 +1435,7 @@ public class CommentReattacher {
                 return;
             parent.addAnchor(stmt);
             if( stmt instanceof ConfigBlockNode block ) {
-                var region = new Region(block, startOf(block), endOf(block), SlotMode.ELEMENTS);
+                var region = new Region(block, startOf(block), endOf(block), SlotMode.STATEMENTS);
                 for( var child : block.statements )
                     addConfigStatement(region, child);
                 parent.addChild(region);
