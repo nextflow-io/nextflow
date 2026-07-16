@@ -365,16 +365,24 @@ public class CommentReattacher {
         // assign the tokens in each gap between consecutive slots
         long gapStart = region.start;
         Object prev = null;
+        Object trailingPrev = null;
         for( var slot : slots ) {
             var slotStart = slot instanceof Region r ? r.start : startOf((ASTNode) slot);
             var slotEnd = slot instanceof Region r ? r.end : endOf((ASTNode) slot);
-            assignGap(region, prev, slot, gapTokens(gapStart, slotStart));
+            assignGap(region, prev, trailingPrev, slot, gapTokens(gapStart, slotStart));
             if( slot instanceof ASTNode anchor )
                 hoistInteriorComments(anchor);
             gapStart = Math.max(gapStart, slotEnd);
             prev = slot;
+            // an anchor stays the trailing-comment candidate across the
+            // child regions nested within it (e.g. the branches of an
+            // if/else statement)
+            if( slot instanceof ASTNode anchor )
+                trailingPrev = anchor;
+            else if( slot instanceof Region r && !(trailingPrev instanceof ASTNode anchor && r.end <= endOf(anchor)) )
+                trailingPrev = r;
         }
-        assignGap(region, prev, null, gapTokens(gapStart, region.end));
+        assignGap(region, prev, trailingPrev, null, gapTokens(gapStart, region.end));
     }
 
     /**
@@ -407,13 +415,13 @@ public class CommentReattacher {
      *       slot, comments after it lead the next slot.</li>
      * </ul>
      */
-    private void assignGap(Region region, Object prev, Object next, List<NlToken> gap) {
+    private void assignGap(Region region, Object prev, Object trailingPrev, Object next, List<NlToken> gap) {
         if( gap.isEmpty() )
             return;
 
         // claim a single-line comment on the same line as the end of the
         // previous slot as its trailing comment
-        var trailingTarget = trailingTargetOf(prev);
+        var trailingTarget = trailingTargetOf(trailingPrev);
         if( trailingTarget != null ) {
             var first = gap.get(0);
             if( first.comment() && !first.multiLine()
@@ -570,10 +578,18 @@ public class CommentReattacher {
     private List<String> gapEntries(List<NlToken> gap) {
         var entries = new ArrayList<String>();
         for( var token : gap ) {
-            if( token.comment() )
+            if( token.comment() ) {
                 entries.add(token.normalized());
-            else if( !contentLines.contains(token.line()) )
+                // a comment that shares its line with code has no newline
+                // entry of its own (line terminators of code lines are
+                // dropped) -- give it one so that whatever the formatter
+                // emits next does not end up on the comment line
+                if( contentLines.contains(token.lastLine()) )
+                    entries.add("\n");
+            }
+            else if( !contentLines.contains(token.line()) ) {
                 entries.add("\n");
+            }
         }
         return entries;
     }
