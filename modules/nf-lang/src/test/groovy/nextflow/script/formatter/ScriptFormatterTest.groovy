@@ -823,21 +823,6 @@ class ScriptFormatterTest extends Specification {
             //   touch b.txt
             //   """
             // }
-            ''',
-            '''\
-            workflow {
-                Channel.of("a", "b", "c", "d") | view
-            }
-
-            // process something {
-            //   input:
-            //   val a
-            //
-            //   script:
-            //   """
-            //   touch b.txt
-            //   """
-            // }
             '''
         )
     }
@@ -846,15 +831,6 @@ class ScriptFormatterTest extends Specification {
         expect:
         // https://github.com/nextflow-io/language-server/issues/140
         checkFormat(
-            '''\
-            workflow {
-                fastq_files_ch.view()
-
-                // PROCESS_1(fastq_files_ch)
-                // new_ch = PROCESS_1.out
-                // PROCESS_2(new_ch)
-            }
-            ''',
             '''\
             workflow {
                 fastq_files_ch.view()
@@ -903,11 +879,6 @@ class ScriptFormatterTest extends Specification {
     def 'should preserve comments in an empty block' () {
         expect:
         checkFormat(
-            '''\
-            workflow {
-                // TODO: implement
-            }
-            ''',
             '''\
             workflow {
                 // TODO: implement
@@ -977,26 +948,6 @@ class ScriptFormatterTest extends Specification {
                 """
                 // after script
             }
-            ''',
-            '''\
-            process foo {
-                tag "sample"
-                // this used to be cpus 4
-
-                input:
-                // the sample id
-                val sample_id
-
-                output:
-                // the result
-                path "result.txt" // inline comment
-
-                script:
-                """
-                touch result.txt
-                """
-                // after script
-            }
             '''
         )
     }
@@ -1004,24 +955,6 @@ class ScriptFormatterTest extends Specification {
     def 'should preserve comments in workflow sections' () {
         expect:
         checkFormat(
-            '''\
-            workflow FOO {
-                take:
-                // the samples
-                samples // inline take
-                // after takes
-
-                main:
-                result = samples
-
-                emit:
-                // the first output
-                out1 = result
-                // the second output
-                out2 = result // inline emit
-                // after emits
-            }
-            ''',
             '''\
             workflow FOO {
                 take:
@@ -1252,21 +1185,6 @@ class ScriptFormatterTest extends Specification {
             workflow {
                 f()
             }
-            ''',
-            '''\
-            def f() {
-                try {
-                    g()
-                }
-                // when things go wrong
-                catch (e: Exception) {
-                    h()
-                }
-            }
-
-            workflow {
-                f()
-            }
             '''
         )
     }
@@ -1426,19 +1344,6 @@ class ScriptFormatterTest extends Specification {
 
                 b = 2
             }
-            ''',
-            '''\
-            workflow {
-                a = 1
-
-                // fmt: off
-                matrix = [
-                    [1, 0],
-                    [0, 1] ]
-                // fmt: on
-
-                b = 2
-            }
             '''
         )
     }
@@ -1485,11 +1390,6 @@ class ScriptFormatterTest extends Specification {
         )
         // short lines are not wrapped
         checkFormat(options,
-            '''\
-            workflow {
-                x = foo(a, b)
-            }
-            ''',
             '''\
             workflow {
                 x = foo(a, b)
@@ -1583,20 +1483,6 @@ class ScriptFormatterTest extends Specification {
                     // add extra args here
                 )
             }
-            ''',
-            '''\
-            workflow {
-                samples = [
-                    "a",
-                    "b",
-                    // more to come
-                ]
-                ALIGN(
-                    reads,
-                    genome,
-                    // add extra args here
-                )
-            }
             '''
         )
     }
@@ -1604,15 +1490,6 @@ class ScriptFormatterTest extends Specification {
     def 'should keep comments on the branches of a wrapped ternary' () {
         expect:
         checkFormat(
-            '''\
-            workflow {
-                x = params.aligner == 'bwa' // check the aligner
-                    // use the fast path
-                    ? 'fast'
-                    // otherwise be safe
-                    : 'safe'
-            }
-            ''',
             '''\
             workflow {
                 x = params.aligner == 'bwa' // check the aligner
@@ -1638,17 +1515,6 @@ class ScriptFormatterTest extends Specification {
                     "z",
                 ]
             }
-            ''',
-            '''\
-            workflow {
-                samples = [
-                    "a",
-                    "b",
-
-                    // the odd one
-                    "z",
-                ]
-            }
             '''
         )
     }
@@ -1658,27 +1524,6 @@ class ScriptFormatterTest extends Specification {
         // method chains in emit values, params and config values are
         // wrapped so their comments stay at their links
         checkFormat(
-            '''\
-            params {
-                input: String = 'default'
-                    // strip whitespace
-                    .trim()
-            }
-
-            workflow W {
-                main:
-                x = Channel.of(1)
-
-                emit:
-                out = x
-                    // squared values
-                    .map { v -> v * v }
-            }
-
-            workflow {
-                W()
-            }
-            ''',
             '''\
             params {
                 input: String = 'default'
@@ -1726,13 +1571,6 @@ class ScriptFormatterTest extends Specification {
     def 'should preserve comments in a code snippet' () {
         expect:
         checkFormat(
-            '''\
-            // emit some letters
-            channel.of('a'..'z') | view
-
-            // emit some numbers
-            channel.of(1..9) | view
-            ''',
             '''\
             // emit some letters
             channel.of('a'..'z') | view
@@ -2015,11 +1853,6 @@ class ScriptFormatterTest extends Specification {
         expect:
         checkFormat(
             new FormattingOptions(4, true, false, false, false, 0),
-            '''\
-            workflow {
-                ALIGN_AND_SORT(samples_channel, reference_genome, annotation_file, params.threads, params.aligner_options)
-            }
-            ''',
             '''\
             workflow {
                 ALIGN_AND_SORT(samples_channel, reference_genome, annotation_file, params.threads, params.aligner_options)

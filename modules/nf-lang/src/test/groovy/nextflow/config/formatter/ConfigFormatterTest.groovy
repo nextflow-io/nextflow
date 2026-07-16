@@ -116,33 +116,9 @@ class ConfigFormatterTest extends Specification {
 
             // trailing comment at EOF
             // process { memory = '8GB' }
-            ''',
-            '''\
-            // header comment
-            process {
-                cpus = 4 // inline comment
-                // dangling in block
-            }
-
-            // trailing comment at EOF
-            // process { memory = '8GB' }
             '''
         )
         checkFormat(
-            '''\
-            profiles {
-                // the test profile
-                test {
-                    params.x = 1
-                    // done
-                }
-                // dangling in profiles
-            }
-
-            process {
-                // nothing here yet
-            }
-            ''',
             '''\
             profiles {
                 // the test profile
@@ -173,19 +149,6 @@ class ConfigFormatterTest extends Specification {
     def 'should keep comments in place inside wrapped config values' () {
         expect:
         checkFormat(
-            '''\
-            workDir = params.base
-                // keep work under scratch
-                .resolve('work')
-
-            process {
-                ext = [
-                    args: '--fast', // aligner options
-                    cpus: 4,
-                    // more to come
-                ]
-            }
-            ''',
             '''\
             workDir = params.base
                 // keep work under scratch

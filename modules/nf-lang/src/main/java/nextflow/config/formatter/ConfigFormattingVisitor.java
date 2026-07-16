@@ -70,16 +70,11 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
     public void visit() {
         var moduleNode = sourceUnit.getAST();
         if( moduleNode instanceof ConfigNode cn ) {
-            // re-derive comment metadata from the source so that no comment is lost
-            if( sourceText == null ) {
-                try {
-                    sourceText = org.codehaus.groovy.runtime.IOGroovyMethods.getText(sourceUnit.getSource().getReader());
-                }
-                catch( java.io.IOException e ) {
-                    // source is not available -- fall back to the comment
-                    // metadata attached by the parser
-                }
-            }
+            // re-derive comment metadata from the source so that no comment
+            // is lost; if the source is not available, fall back to the
+            // comment metadata attached by the parser
+            if( sourceText == null )
+                sourceText = CommentReattacher.readSourceText(sourceUnit);
             if( sourceText != null )
                 CommentReattacher.apply(cn, sourceText);
             // enforce a blank line above config blocks and between
@@ -87,7 +82,7 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
             // (e.g. assignments) may be grouped
             ConfigStatement prevStmt = null;
             for( var stmt : cn.getConfigStatements() ) {
-                if( prevStmt != null && needsBlankLineBetween(prevStmt, stmt) && !leadingStartsWithBlankLine(stmt) )
+                if( prevStmt != null && needsBlankLineBetween(prevStmt, stmt) && !fmt.leadingStartsWithBlankLine(stmt) )
                     fmt.appendNewLine();
                 prevStmt = stmt;
                 super.visit(stmt);
@@ -105,14 +100,6 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
 
     private static boolean isBlockStatement(ConfigStatement stmt) {
         return stmt instanceof ConfigBlockNode || stmt instanceof ConfigApplyBlockNode;
-    }
-
-    private boolean leadingStartsWithBlankLine(ConfigStatement stmt) {
-        var comments = (java.util.List<String>) stmt.getNodeMetaData(nextflow.script.ast.ASTNodeMarker.LEADING_COMMENTS);
-        if( comments == null || comments.isEmpty() )
-            return false;
-        // the list is in reverse source order
-        return "\n".equals(comments.get(comments.size() - 1));
     }
 
     public String toString() {

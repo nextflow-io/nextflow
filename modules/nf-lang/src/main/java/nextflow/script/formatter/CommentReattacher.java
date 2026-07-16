@@ -15,11 +15,16 @@
  */
 package nextflow.script.formatter;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Pattern;
 
 import nextflow.config.ast.ConfigApplyBlockNode;
 import nextflow.config.ast.ConfigAssignNode;
@@ -32,6 +37,7 @@ import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.OutputBlockNode;
 import nextflow.script.ast.OutputNode;
 import nextflow.script.ast.ParamBlockNode;
+import nextflow.script.ast.ParamNodeV1;
 import nextflow.script.ast.ProcessNodeV1;
 import nextflow.script.ast.ProcessNodeV2;
 import nextflow.script.ast.RecordNode;
@@ -66,6 +72,9 @@ import org.codehaus.groovy.ast.stmt.IfStatement;
 import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.ast.stmt.TryCatchStatement;
+import org.codehaus.groovy.control.SourceUnit;
+import org.codehaus.groovy.runtime.IOGroovyMethods;
+import org.codehaus.groovy.syntax.Types;
 
 /**
  * Re-derive comment metadata for an AST from the original source text,
@@ -161,6 +170,22 @@ public class CommentReattacher {
     }
 
     /**
+     * Read the source text of a compilation unit, for callers that do not
+     * have it at hand (used to re-derive comment metadata when the
+     * formatting visitors are constructed without a source text).
+     *
+     * @return the source text, or null if it is not available
+     */
+    public static String readSourceText(SourceUnit sourceUnit) {
+        try {
+            return IOGroovyMethods.getText(sourceUnit.getSource().getReader());
+        }
+        catch( IOException e ) {
+            return null;
+        }
+    }
+
+    /**
      * Count the comments in a source text. Used as a safety check that
      * formatting neither removes nor duplicates comments. The shebang line
      * is not counted (it is stored separately from comments).
@@ -169,12 +194,7 @@ public class CommentReattacher {
      * @param configFile whether to lex as a config file instead of a script
      */
     public static int countComments(String sourceText, boolean configFile) {
-        int count = 0;
-        for( var token : lex(sourceText, configFile).tokens() ) {
-            if( token.comment() && !token.shebang() )
-                count++;
-        }
-        return count;
+        return commentTexts(sourceText, configFile).size();
     }
 
     /**
@@ -401,7 +421,7 @@ public class CommentReattacher {
 
     /// FORMATTER DIRECTIVES (fmt: skip / fmt: off / fmt: on)
 
-    private static final java.util.regex.Pattern FMT_DIRECTIVE = java.util.regex.Pattern.compile("//\\s*fmt:\\s*(skip|off|on)\\s*");
+    private static final Pattern FMT_DIRECTIVE = Pattern.compile("//\\s*fmt:\\s*(skip|off|on)\\s*");
 
     private static String fmtDirective(NlToken token) {
         if( !token.comment() || token.multiLine() )
@@ -492,7 +512,7 @@ public class CommentReattacher {
 
             // attach the verbatim text to the first anchor and suppress
             // the others
-            var text = String.join("\n", java.util.Arrays.copyOfRange(sourceLines, startLine - 1, endLine));
+            var text = String.join("\n", Arrays.copyOfRange(sourceLines, startLine - 1, endLine));
             intersecting.get(0).putNodeMetaData(VERBATIM_SOURCE, text);
             for( int i = 1; i < intersecting.size(); i++ )
                 intersecting.get(i).putNodeMetaData(VERBATIM_SUPPRESSED, Boolean.TRUE);
@@ -578,10 +598,31 @@ public class CommentReattacher {
             // if/else statement)
             if( slot instanceof ASTNode anchor )
                 trailingPrev = anchor;
-            else if( slot instanceof Region r && !(trailingPrev instanceof ASTNode anchor && r.end <= endOf(anchor)) )
+            else if( slot instanceof Region r && !nestedInAnchor(r, trailingPrev) )
                 trailingPrev = r;
         }
         assignGap(region, prev, trailingPrev, null, gapTokens(gapStart, region.end));
+    }
+
+    /**
+     * Find the index just after the last blank line of a token list (0 if
+     * there is no blank line).
+     */
+    private int splitAfterLastBlankLine(List<NlToken> tokens) {
+        for( int i = tokens.size() - 1; i >= 0; i-- ) {
+            if( isBlankLine(tokens.get(i)) )
+                return i + 1;
+        }
+        return 0;
+    }
+
+    /**
+     * Determine whether a region is nested within the current
+     * trailing-comment candidate anchor (e.g. the block regions of an
+     * if/else statement are nested within the statement anchor).
+     */
+    private static boolean nestedInAnchor(Region region, Object trailingPrev) {
+        return trailingPrev instanceof ASTNode anchor && region.end <= endOf(anchor);
     }
 
     /**
@@ -590,14 +631,23 @@ public class CommentReattacher {
      */
     private List<NlToken> gapTokens(long start, long end) {
         var result = new ArrayList<NlToken>();
-        for( int i = 0; i < tokens.size(); i++ ) {
+        // the tokens are sorted by start position -- binary-search the
+        // first token in range and scan forward until the end of the range
+        int lo = 0;
+        int hi = tokens.size();
+        while( lo < hi ) {
+            int mid = (lo + hi) >>> 1;
+            if( tokens.get(mid).start() < start )
+                lo = mid + 1;
+            else
+                hi = mid;
+        }
+        for( int i = lo; i < tokens.size() && tokens.get(i).start() < end; i++ ) {
             var token = tokens.get(i);
             if( claimed[i] || token.shebang() )
                 continue;
-            if( token.start() >= start && token.start() < end ) {
-                claimed[i] = true;
-                result.add(token);
-            }
+            claimed[i] = true;
+            result.add(token);
         }
         return result;
     }
@@ -620,16 +670,7 @@ public class CommentReattacher {
 
         // claim a single-line comment on the same line as the end of the
         // previous slot as its trailing comment
-        var trailingTarget = trailingTargetOf(trailingPrev);
-        if( trailingTarget != null ) {
-            var first = gap.get(0);
-            if( first.comment() && !first.multiLine()
-                    && first.line() == trailingTarget.getLastLineNumber()
-                    && trailingTarget.getNodeMetaData(ASTNodeMarker.TRAILING_COMMENT) == null ) {
-                trailingTarget.putNodeMetaData(ASTNodeMarker.TRAILING_COMMENT, first.normalized());
-                gap = gap.subList(1, gap.size());
-            }
-        }
+        gap = claimTrailingComment(trailingTargetOf(trailingPrev), gap);
 
         // the trailing gap of the region dangles as a whole; in a region
         // with a leading target (e.g. an empty catch block), comments
@@ -663,13 +704,7 @@ public class CommentReattacher {
         else if( containsComment(pre) ) {
             // comments adjacent to the next slot (after the last blank line)
             // also lead the next slot; the rest hang off the previous slot
-            int split = 0;
-            for( int i = pre.size() - 1; i >= 0; i-- ) {
-                if( isBlankLine(pre.get(i)) ) {
-                    split = i + 1;
-                    break;
-                }
-            }
+            int split = splitAfterLastBlankLine(pre);
             var head = pre.subList(0, split);
             var tail = pre.subList(split, pre.size());
             if( !containsComment(head) ) {
@@ -695,7 +730,7 @@ public class CommentReattacher {
         // if/else) counts as the previous statement even though its nested
         // block regions come after it in slot order
         var prevIsStatement = prev instanceof ASTNode
-            || (prev instanceof Region r && trailingPrev instanceof ASTNode anchor && r.end <= endOf(anchor));
+            || (prev instanceof Region r && nestedInAnchor(r, trailingPrev));
         if( !(prevIsStatement && next instanceof ASTNode) ) {
             while( !post.isEmpty() && isBlankLine(post.get(0)) )
                 post.remove(0);
@@ -710,13 +745,7 @@ public class CommentReattacher {
                 return;
             // comments separated from the section by a blank line hang off
             // the previous slot instead
-            int split = 0;
-            for( int i = post.size() - 1; i >= 0; i-- ) {
-                if( isBlankLine(post.get(i)) ) {
-                    split = i + 1;
-                    break;
-                }
-            }
+            int split = splitAfterLastBlankLine(post);
             var head = post.subList(0, split);
             if( prev != null && containsComment(head) ) {
                 if( prev instanceof Region prevRegion )
@@ -765,6 +794,23 @@ public class CommentReattacher {
             appendDangling(region.anchors.get(region.anchors.size() - 1), DANGLING_AFTER, gap);
         else if( !region.children.isEmpty() )
             appendRegionDangling(region.children.get(region.children.size() - 1), gap);
+    }
+
+    /**
+     * Claim a single-line comment on the same line as the end of the target
+     * node as its trailing comment, returning the remaining tokens.
+     */
+    private static List<NlToken> claimTrailingComment(ASTNode target, List<NlToken> gap) {
+        if( target == null || gap.isEmpty() )
+            return gap;
+        var first = gap.get(0);
+        if( first.comment() && !first.multiLine()
+                && first.line() == target.getLastLineNumber()
+                && target.getNodeMetaData(ASTNodeMarker.TRAILING_COMMENT) == null ) {
+            target.putNodeMetaData(ASTNodeMarker.TRAILING_COMMENT, first.normalized());
+            return gap.subList(1, gap.size());
+        }
+        return gap;
     }
 
     /**
@@ -861,9 +907,8 @@ public class CommentReattacher {
         var entries = gapEntries(gap);
         if( entries.isEmpty() )
             return;
-        var reversed = new ArrayList<String>(entries.size());
-        for( int i = entries.size() - 1; i >= 0; i-- )
-            reversed.add(entries.get(i));
+        var reversed = new ArrayList<String>(entries);
+        Collections.reverse(reversed);
         var existing = (List<String>) node.getNodeMetaData(ASTNodeMarker.LEADING_COMMENTS);
         if( existing != null ) {
             // entries stored earlier come later in the source, so the new
@@ -884,7 +929,7 @@ public class CommentReattacher {
         var entries = gapEntries(gap);
         while( !entries.isEmpty() && "\n".equals(entries.get(entries.size() - 1)) )
             entries.remove(entries.size() - 1);
-        if( entries.isEmpty() || !entries.stream().anyMatch(entry -> !"\n".equals(entry)) )
+        if( entries.isEmpty() )
             return;
 
         var existing = (List<String>) node.getNodeMetaData(key);
@@ -913,7 +958,7 @@ public class CommentReattacher {
         // group the interior tokens (comments and blank lines) by slot;
         // comments that fall in no slot are hoisted
         var slots = collectExpressionSlots(anchor, mode);
-        var bySlot = new java.util.LinkedHashMap<ExprSlot, List<NlToken>>();
+        var bySlot = new LinkedHashMap<ExprSlot, List<NlToken>>();
         var leftover = new ArrayList<NlToken>();
         for( var token : interior ) {
             var slot = findSlot(slots, token);
@@ -947,16 +992,7 @@ public class CommentReattacher {
      * the slot before the closing bracket of a construct.
      */
     private void assignSlot(ExprSlot slot, List<NlToken> gap) {
-        var trailingTarget = slot.prevTarget();
-        if( trailingTarget != null && !gap.isEmpty() ) {
-            var first = gap.get(0);
-            if( first.comment() && !first.multiLine()
-                    && first.line() == trailingTarget.getLastLineNumber()
-                    && trailingTarget.getNodeMetaData(ASTNodeMarker.TRAILING_COMMENT) == null ) {
-                trailingTarget.putNodeMetaData(ASTNodeMarker.TRAILING_COMMENT, first.normalized());
-                gap = gap.subList(1, gap.size());
-            }
-        }
+        gap = claimTrailingComment(slot.prevTarget(), gap);
         if( !containsComment(gap) )
             return;
         if( slot.dangling() ) {
@@ -1031,7 +1067,7 @@ public class CommentReattacher {
             can.value.visit(collector);
         else if( anchor instanceof ConfigIncludeNode cin )
             cin.source.visit(collector);
-        else if( anchor instanceof nextflow.script.ast.ParamNodeV1 pn )
+        else if( anchor instanceof ParamNodeV1 pn )
             pn.value.visit(collector);
         else if( anchor instanceof Statement stmt )
             stmt.visit(collector);
@@ -1058,7 +1094,7 @@ public class CommentReattacher {
             expr = rs.getExpression();
         else if( anchor instanceof ConfigAssignNode can )
             expr = can.value;
-        else if( anchor instanceof nextflow.script.ast.ParamNodeV1 pn )
+        else if( anchor instanceof ParamNodeV1 pn )
             expr = pn.value;
         else if( anchor instanceof Parameter p )
             expr = p.hasInitialExpression() ? p.getInitialExpression() : null;
@@ -1066,7 +1102,7 @@ public class CommentReattacher {
         // deliberately not treated as a chain root: it receives its own
         // leading comments from the section emission, so comments assigned
         // to its chain links would be emitted twice
-        if( expr instanceof BinaryExpression be && be.getOperation().isA(org.codehaus.groovy.syntax.Types.ASSIGNMENT_OPERATOR) )
+        if( expr instanceof BinaryExpression be && be.getOperation().isA(Types.ASSIGNMENT_OPERATOR) )
             expr = be.getRightExpression();
         return expr;
     }

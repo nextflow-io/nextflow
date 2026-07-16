@@ -15,9 +15,11 @@
  */
 package nextflow.script.formatter;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
+import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
@@ -94,16 +96,11 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             return;
         var scriptNode = (ScriptNode) moduleNode;
 
-        // re-derive comment metadata from the source so that no comment is lost
-        if( sourceText == null ) {
-            try {
-                sourceText = org.codehaus.groovy.runtime.IOGroovyMethods.getText(sourceUnit.getSource().getReader());
-            }
-            catch( java.io.IOException e ) {
-                // source is not available -- fall back to the comment
-                // metadata attached by the parser
-            }
-        }
+        // re-derive comment metadata from the source so that no comment is
+        // lost; if the source is not available, fall back to the comment
+        // metadata attached by the parser
+        if( sourceText == null )
+            sourceText = CommentReattacher.readSourceText(sourceUnit);
         var reattached = sourceText != null;
         if( reattached )
             CommentReattacher.apply(scriptNode, sourceText);
@@ -154,11 +151,11 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             // blank-line prefix from its original location -- strip it so
             // that the output does not start with blank lines
             if( prevDecl == null )
-                stripLeadingBlankPrefix(decl);
+                fmt.stripLeadingBlankPrefix(decl);
             // enforce a blank line above blocks (process, workflow, ...)
             // and between declarations of different kinds; consecutive
             // declarations of the same kind (e.g. includes) may be grouped
-            if( needsBlankLineBetween(prevDecl, decl) && !leadingStartsWithBlankLine(decl) )
+            if( needsBlankLineBetween(prevDecl, decl) && !fmt.leadingStartsWithBlankLine(decl) )
                 fmt.appendNewLine();
             prevDecl = decl;
 
@@ -222,24 +219,6 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         return DeclKind.BLOCK;
     }
 
-    private boolean leadingStartsWithBlankLine(ASTNode decl) {
-        var comments = (List<String>) decl.getNodeMetaData(nextflow.script.ast.ASTNodeMarker.LEADING_COMMENTS);
-        if( comments == null || comments.isEmpty() )
-            return false;
-        // the list is in reverse source order
-        return "\n".equals(comments.get(comments.size() - 1));
-    }
-
-    private void stripLeadingBlankPrefix(ASTNode decl) {
-        var comments = (List<String>) decl.getNodeMetaData(nextflow.script.ast.ASTNodeMarker.LEADING_COMMENTS);
-        if( comments == null )
-            return;
-        // the list is in reverse source order -- the blank lines emitted
-        // first are at the end of the list
-        while( !comments.isEmpty() && "\n".equals(comments.get(comments.size() - 1)) )
-            comments.remove(comments.size() - 1);
-    }
-
     /**
      * Sort includes alphabetically by module path within their blank-line
      * separated groups (see nextflow-io/language-server#54). Comments above
@@ -261,7 +240,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 i++;
             int groupStart = start;
             for( int j = start + 1; j <= i; j++ ) {
-                if( j == i || leadingStartsWithBlankLine(declarations.get(j)) ) {
+                if( j == i || fmt.leadingStartsWithBlankLine(declarations.get(j)) ) {
                     sortIncludeGroup(declarations, groupStart, j);
                     groupStart = j;
                 }
@@ -272,7 +251,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
     private void sortIncludeGroup(List<ASTNode> declarations, int start, int end) {
         if( end - start < 2 )
             return;
-        var group = new java.util.ArrayList<IncludeNode>();
+        var group = new ArrayList<IncludeNode>();
         for( int i = start; i < end; i++ )
             group.add((IncludeNode) declarations.get(i));
 
@@ -286,12 +265,12 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         // original first include) at the top of the group
         var newFirst = group.get(0);
         if( newFirst != originalFirst ) {
-            var marker = nextflow.script.ast.ASTNodeMarker.LEADING_COMMENTS;
+            var marker = ASTNodeMarker.LEADING_COMMENTS;
             var header = (List<String>) originalFirst.getNodeMetaData(marker);
             if( header != null ) {
                 originalFirst.removeNodeMetaData(marker);
                 var own = (List<String>) newFirst.getNodeMetaData(marker);
-                var combined = own != null ? new java.util.ArrayList<String>(own) : new java.util.ArrayList<String>();
+                var combined = own != null ? new ArrayList<String>(own) : new ArrayList<String>();
                 // lists are in reverse source order -- the header comes first
                 combined.addAll(header);
                 newFirst.putNodeMetaData(marker, combined);
@@ -678,27 +657,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 fmt.appendNewLine();
             }
         }
-        if( !(node.when instanceof EmptyExpression) ) {
-            if( fmt.appendVerbatim(node.when) ) {
-                fmt.appendNewLine();
-            }
-            else {
-                fmt.appendLeadingComments(node.when);
-                fmt.appendIndent();
-                fmt.append("when:\n");
-                fmt.emitWrappable(() -> {
-                    // NOTE: not visitRootExpression -- the when-expression
-                    // receives its own leading comments from the section
-                    // emission, so a wrapped chain would emit them twice
-                    fmt.appendIndent();
-                    fmt.visit(node.when);
-                    fmt.appendTrailingComment(node.when);
-                    fmt.appendNewLine();
-                });
-                fmt.appendDanglingAfter(node.when);
-                fmt.appendNewLine();
-            }
-        }
+        visitProcessWhen(node.when);
         fmt.appendIndent();
         fmt.append(node.type);
         fmt.append(":\n");
@@ -724,6 +683,30 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.append('}');
         fmt.appendTrailingComment(node);
         fmt.appendNewLine();
+    }
+
+    private void visitProcessWhen(Expression when) {
+        if( when instanceof EmptyExpression )
+            return;
+        if( fmt.appendVerbatim(when) ) {
+            fmt.appendNewLine();
+        }
+        else {
+            fmt.appendLeadingComments(when);
+            fmt.appendIndent();
+            fmt.append("when:\n");
+            fmt.emitWrappable(() -> {
+                // NOTE: not visitRootExpression -- the when-expression
+                // receives its own leading comments from the section
+                // emission, so a wrapped chain would emit them twice
+                fmt.appendIndent();
+                fmt.visit(when);
+                fmt.appendTrailingComment(when);
+                fmt.appendNewLine();
+            });
+            fmt.appendDanglingAfter(when);
+            fmt.appendNewLine();
+        }
     }
 
     private void visitProcessOutputs(Statement outputs) {
@@ -762,27 +745,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             visitProcessOutputsV1(node.outputs);
             fmt.appendNewLine();
         }
-        if( !(node.when instanceof EmptyExpression) ) {
-            if( fmt.appendVerbatim(node.when) ) {
-                fmt.appendNewLine();
-            }
-            else {
-                fmt.appendLeadingComments(node.when);
-                fmt.appendIndent();
-                fmt.append("when:\n");
-                fmt.emitWrappable(() -> {
-                    // NOTE: not visitRootExpression -- the when-expression
-                    // receives its own leading comments from the section
-                    // emission, so a wrapped chain would emit them twice
-                    fmt.appendIndent();
-                    fmt.visit(node.when);
-                    fmt.appendTrailingComment(node.when);
-                    fmt.appendNewLine();
-                });
-                fmt.appendDanglingAfter(node.when);
-                fmt.appendNewLine();
-            }
-        }
+        visitProcessWhen(node.when);
         fmt.appendIndent();
         fmt.append(node.type);
         fmt.append(":\n");

@@ -8,15 +8,27 @@ import nextflow.config.formatter.ConfigFormattingVisitor
 import nextflow.script.control.ScriptParser
 import nextflow.script.control.ScriptResolveVisitor
 import nextflow.script.dsl.Types
+import spock.lang.Shared
 import spock.lang.Specification
 import test.TestUtils
 
 /**
- * Scratch harness (not for CI): formats a corpus of realistic scripts and
- * configs under every option combination and asserts that no comment is
- * lost or altered and that formatting is idempotent.
+ * Formats a corpus of realistic scripts and configs (this repository's own
+ * test fixtures) under every option combination and asserts that no comment
+ * is lost or altered and that formatting is idempotent.
  */
 class FormatterCorpusHarness extends Specification {
+
+    @Shared
+    ScriptParser scriptParser
+
+    @Shared
+    ConfigParser configParser
+
+    def setupSpec() {
+        scriptParser = new ScriptParser()
+        configParser = new ConfigParser()
+    }
 
     static List<FormattingOptions> optionCombos() {
         def combos = []
@@ -30,7 +42,7 @@ class FormatterCorpusHarness extends Specification {
     }
 
     String formatScript(FormattingOptions options, String contents) {
-        def scriptParser = new ScriptParser()
+        scriptParser.compiler().getSources().clear()
         def source = scriptParser.parse('main.nf', contents)
         new ScriptResolveVisitor(source, scriptParser.compiler().compilationUnit(), Types.DEFAULT_SCRIPT_IMPORTS, Collections.emptyList()).visit()
         if( TestUtils.hasSyntaxErrors(source) )
@@ -41,8 +53,7 @@ class FormatterCorpusHarness extends Specification {
     }
 
     String formatConfig(FormattingOptions options, String contents) {
-        def parser = new ConfigParser()
-        def source = parser.parse('nextflow.config', contents)
+        def source = configParser.parse('nextflow.config', contents)
         if( source.getErrorCollector().hasErrors() )
             return null
         def formatter = new ConfigFormattingVisitor(source, options, contents)
@@ -78,26 +89,15 @@ class FormatterCorpusHarness extends Specification {
         for( def f : scripts + configs ) {
             def isConfig = f.name.endsWith('.config')
             def text = f.text
-            def first = null
-            try {
-                first = isConfig ? formatConfig(combos[0], text) : formatScript(combos[0], text)
-            }
-            catch( Exception e ) {
-                failures << "${f}: [parse/format crashed] ${e}"
-                continue
-            }
-            if( first == null ) {
-                skipped++
-                continue
-            }
+            def expected = CommentReattacher.commentTexts(text, isConfig)
             for( def options : combos ) {
                 try {
                     def formatted = isConfig ? formatConfig(options, text) : formatScript(options, text)
                     if( formatted == null ) {
-                        failures << "${f} ${options}: formatted output is null"
-                        continue
+                        skipped++ // parse errors -- skip the file entirely
+                        break
                     }
-                    if( CommentReattacher.commentTexts(text, isConfig) != CommentReattacher.commentTexts(formatted, isConfig) ) {
+                    if( CommentReattacher.commentTexts(formatted, isConfig) != expected ) {
                         failures << "${f} ${options}: COMMENTS LOST OR ALTERED"
                         continue
                     }

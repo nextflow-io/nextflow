@@ -136,6 +136,29 @@ public class Formatter extends CodeVisitorSupport {
         return comments != null && !comments.isEmpty();
     }
 
+    /**
+     * Determine whether the leading comments of a node begin with a blank
+     * line (the entries are in reverse source order, blank lines are "\n").
+     */
+    public boolean leadingStartsWithBlankLine(ASTNode node) {
+        var comments = (List<String>) node.getNodeMetaData(ASTNodeMarker.LEADING_COMMENTS);
+        if( comments == null || comments.isEmpty() )
+            return false;
+        return "\n".equals(comments.get(comments.size() - 1));
+    }
+
+    /**
+     * Remove the blank lines at the start of the leading comments of a node
+     * (the blank lines emitted first are at the end of the list).
+     */
+    public void stripLeadingBlankPrefix(ASTNode node) {
+        var comments = (List<String>) node.getNodeMetaData(ASTNodeMarker.LEADING_COMMENTS);
+        if( comments == null )
+            return;
+        while( !comments.isEmpty() && "\n".equals(comments.get(comments.size() - 1)) )
+            comments.remove(comments.size() - 1);
+    }
+
     public boolean hasTrailingComment(ASTNode node) {
         var comment = (String) node.getNodeMetaData(ASTNodeMarker.TRAILING_COMMENT);
         return comment != null;
@@ -457,7 +480,7 @@ public class Formatter extends CodeVisitorSupport {
     public void visitCatchStatement(CatchStatement node) {
         // format in K&R style ("} catch (...) {"), unless the catch clause
         // has leading comments that must be emitted on their own lines
-        if( node.getNodeMetaData(ASTNodeMarker.LEADING_COMMENTS) != null ) {
+        if( hasLeadingComments(node) ) {
             appendNewLine();
             appendLeadingComments(node);
             appendIndent();
@@ -720,7 +743,7 @@ public class Formatter extends CodeVisitorSupport {
      */
     private boolean hasComments(BlockStatement code, ExpressionStatement es) {
         return hasDanglingComments(code)
-            || es.getNodeMetaData(ASTNodeMarker.LEADING_COMMENTS) != null
+            || hasLeadingComments(es)
             || hasTrailingComment(es);
     }
 
@@ -743,7 +766,7 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitTupleExpression(TupleExpression node) {
-        var wrap = hasTrailingComma(node) || (forceWrap() && node.getExpressions().size() > 1) || hasElementComments(node.getExpressions()) || hasDanglingComments(node);
+        var wrap = shouldWrapConstruct(node, node.getExpressions());
         append('(');
         if( wrap )
             incIndent();
@@ -759,7 +782,7 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitListExpression(ListExpression node) {
-        var wrap = hasTrailingComma(node) || (forceWrap() && node.getExpressions().size() > 1) || hasElementComments(node.getExpressions()) || hasDanglingComments(node);
+        var wrap = shouldWrapConstruct(node, node.getExpressions());
         append('[');
         if( wrap )
             incIndent();
@@ -796,7 +819,7 @@ public class Formatter extends CodeVisitorSupport {
             append("[:]");
             return;
         }
-        var wrap = hasTrailingComma(node) || (forceWrap() && node.getMapEntryExpressions().size() > 1) || hasElementComments(node.getMapEntryExpressions()) || hasDanglingComments(node);
+        var wrap = shouldWrapConstruct(node, node.getMapEntryExpressions());
         append('[');
         if( wrap )
             incIndent();
@@ -891,7 +914,7 @@ public class Formatter extends CodeVisitorSupport {
      * emitted and the column where it appeared in the source, so that its
      * interior lines can be shifted accordingly.
      */
-    private int indentDelta(org.codehaus.groovy.ast.expr.Expression node) {
+    private int indentDelta(Expression node) {
         if( !options.insertSpaces() )
             return 0;
         if( node.getLineNumber() < 0 || node.getColumnNumber() < 0 )
@@ -1096,6 +1119,19 @@ public class Formatter extends CodeVisitorSupport {
             expr = mce.getObjectExpression();
         }
         return false;
+    }
+
+    /**
+     * Determine whether a construct (tuple, list, map) must be wrapped onto
+     * multiple lines: a trailing comma in the source forces wrapping, as do
+     * comments attached to the construct or its elements (which can only be
+     * emitted when the construct is wrapped).
+     */
+    private boolean shouldWrapConstruct(Expression node, List<? extends ASTNode> elements) {
+        return hasTrailingComma(node)
+            || (forceWrap() && elements.size() > 1)
+            || hasElementComments(elements)
+            || hasDanglingComments(node);
     }
 
     /**

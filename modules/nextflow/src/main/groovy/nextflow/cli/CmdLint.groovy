@@ -294,7 +294,7 @@ class CmdLint extends CmdBase {
             name.endsWith('.config') ? formatConfig(file) :
             null
 
-        if( result != null && file.text != result ) {
+        if( result != null ) {
             summary.filesFormatted += 1
             file.text = result
         }
@@ -334,9 +334,12 @@ class CmdLint extends CmdBase {
 
     /**
      * Verify that formatting neither removed, duplicated nor altered any
-     * comment, and refuse to format the file otherwise.
+     * comment, and refuse to format the file otherwise. Returns null if the
+     * check fails or the formatted text is unchanged.
      */
     private String checkCommentsPreserved(File file, String before, String after, boolean configFile) {
+        if( after == before )
+            return null
         if( CommentReattacher.commentTexts(before, configFile) != CommentReattacher.commentTexts(after, configFile) ) {
             log.warn "Refusing to format ${file}: formatting would remove or alter comments -- please report this as a bug"
             return null
