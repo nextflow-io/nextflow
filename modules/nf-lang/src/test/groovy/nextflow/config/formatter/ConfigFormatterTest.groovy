@@ -90,4 +90,70 @@ class ConfigFormatterTest extends Specification {
         )
     }
 
+    def 'should preserve comments when formatting a config file' () {
+        expect:
+        checkFormat(
+            '''\
+            // header comment
+            process {
+                cpus = 4 // inline comment
+                // dangling in block
+            }
+
+            // trailing comment at EOF
+            // process { memory = '8GB' }
+            ''',
+            '''\
+            // header comment
+            process {
+                cpus = 4 // inline comment
+                // dangling in block
+            }
+
+            // trailing comment at EOF
+            // process { memory = '8GB' }
+            '''
+        )
+        checkFormat(
+            '''\
+            profiles {
+                // the test profile
+                test {
+                    params.x = 1
+                    // done
+                }
+                // dangling in profiles
+            }
+
+            process {
+                // nothing here yet
+            }
+            ''',
+            '''\
+            profiles {
+                // the test profile
+                test {
+                    params.x = 1
+                    // done
+                }
+                // dangling in profiles
+            }
+
+            process {
+                // nothing here yet
+            }
+            '''
+        )
+        // CRLF line endings
+        checkFormat(
+            "process {\r\n    // why\r\n    cpus = 4\r\n}\r\n",
+            '''\
+            process {
+                // why
+                cpus = 4
+            }
+            '''
+        )
+    }
+
 }

@@ -16,7 +16,6 @@
 package nextflow.script.formatter;
 
 import java.util.List;
-import java.util.stream.Stream;
 
 import nextflow.script.ast.ASTNodeMarker;
 import org.codehaus.groovy.ast.ASTNode;
@@ -68,6 +67,21 @@ import static nextflow.script.ast.ASTUtils.*;
 /**
  * Transform an AST into formatted source code.
  *
+ * Formatting never removes comments (expects comment metadata prepared
+ * by {@link CommentReattacher}):
+ *
+ * <ul>
+ *   <li>trailing comments are emitted on the same line as their statement;</li>
+ *   <li>dangling comments (after the last statement of a block, or in an
+ *       empty block) are emitted before the closing brace;</li>
+ *   <li>closures with comments are always formatted as multi-line blocks
+ *       so that their comments can be emitted;</li>
+ *   <li>leading comments are normalized against Windows (CRLF) line
+ *       endings.</li>
+ * </ul>
+ *
+ * @see CommentReattacher
+ *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 public class Formatter extends CodeVisitorSupport {
@@ -107,12 +121,12 @@ public class Formatter extends CodeVisitorSupport {
             return;
 
         for( var line : DefaultGroovyMethods.asReversed(comments) ) {
-            if( "\n".equals(line) ) {
-                append(line);
+            if( isNewLine(line) ) {
+                appendNewLine();
             }
             else {
                 appendIndent();
-                append(line.stripLeading());
+                append(stripCarriageReturns(line.stripLeading()));
             }
         }
     }
@@ -126,8 +140,58 @@ public class Formatter extends CodeVisitorSupport {
         var comment = (String) node.getNodeMetaData(ASTNodeMarker.TRAILING_COMMENT);
         if( comment != null ) {
             append(' ');
-            append(comment);
+            append(stripCarriageReturns(comment));
         }
+    }
+
+    /**
+     * Emit the comments that follow the last statement of a block (or fill
+     * an otherwise-empty block), before the closing brace.
+     */
+    public void appendDanglingComments(ASTNode node) {
+        appendCommentList((List<String>) node.getNodeMetaData(CommentReattacher.DANGLING_COMMENTS));
+    }
+
+    /**
+     * Emit the comments that follow a node at the end of a section that has
+     * no block emission point (e.g. the last workflow take).
+     */
+    public void appendDanglingAfter(ASTNode node) {
+        appendCommentList((List<String>) node.getNodeMetaData(CommentReattacher.DANGLING_AFTER));
+    }
+
+    private void appendCommentList(List<String> comments) {
+        if( comments == null || comments.isEmpty() )
+            return;
+        var pendingNewLine = false;
+        for( var line : comments ) {
+            if( isNewLine(line) ) {
+                appendNewLine();
+                pendingNewLine = false;
+            }
+            else {
+                if( pendingNewLine )
+                    appendNewLine();
+                appendIndent();
+                append(stripCarriageReturns(line.stripLeading()));
+                pendingNewLine = true;
+            }
+        }
+        if( pendingNewLine )
+            appendNewLine();
+    }
+
+    public boolean hasDanglingComments(ASTNode node) {
+        var comments = (List<String>) node.getNodeMetaData(CommentReattacher.DANGLING_COMMENTS);
+        return comments != null && !comments.isEmpty();
+    }
+
+    private static boolean isNewLine(String line) {
+        return "\n".equals(line) || "\r\n".equals(line);
+    }
+
+    private static String stripCarriageReturns(String line) {
+        return line.replace("\r", "");
     }
 
     public void incIndent() {
@@ -143,6 +207,12 @@ public class Formatter extends CodeVisitorSupport {
     }
 
     // statements
+
+    @Override
+    public void visitBlockStatement(BlockStatement node) {
+        super.visitBlockStatement(node);
+        appendDanglingComments(node);
+    }
 
     @Override
     public void visitIfElse(IfStatement node) {
@@ -187,6 +257,7 @@ public class Formatter extends CodeVisitorSupport {
         appendIndent();
         visitStatementLabels(node);
         visit(node.getExpression());
+        appendTrailingComment(node);
         appendNewLine();
         currentRootExpr = cre;
     }
@@ -208,6 +279,7 @@ public class Formatter extends CodeVisitorSupport {
         appendIndent();
         append("return ");
         visit(node.getExpression());
+        appendTrailingComment(node);
         appendNewLine();
         currentRootExpr = cre;
     }
@@ -222,6 +294,7 @@ public class Formatter extends CodeVisitorSupport {
             append(" : ");
             visit(node.getMessageExpression());
         }
+        appendTrailingComment(node);
         appendNewLine();
     }
 
@@ -246,6 +319,7 @@ public class Formatter extends CodeVisitorSupport {
         appendIndent();
         append("throw ");
         visit(node.getExpression());
+        appendTrailingComment(node);
         appendNewLine();
     }
 
@@ -341,6 +415,14 @@ public class Formatter extends CodeVisitorSupport {
     }
 
     public void visitDirective(MethodCallExpression call) {
+        visitDirective(call, null);
+    }
+
+    /**
+     * Format a directive, emitting the trailing comment of the given source
+     * node (typically the enclosing statement) at the end of the line.
+     */
+    public void visitDirective(MethodCallExpression call, ASTNode trailingSource) {
         appendIndent();
         append(call.getMethodAsString());
         var arguments = asMethodCallArguments(call);
@@ -348,6 +430,8 @@ public class Formatter extends CodeVisitorSupport {
             append(' ');
             visitArguments(arguments, false);
         }
+        if( trailingSource != null )
+            appendTrailingComment(trailingSource);
         appendNewLine();
     }
 
@@ -462,10 +546,13 @@ public class Formatter extends CodeVisitorSupport {
             append(" ->");
         }
         var code = (BlockStatement) node.getCode();
-        if( code.getStatements().size() == 0 ) {
+        if( code.getStatements().size() == 0 && !hasDanglingComments(code) ) {
             append(" }");
         }
-        else if( code.getStatements().size() == 1 && code.getStatements().get(0) instanceof ExpressionStatement es && !shouldWrapExpression(node) ) {
+        else if( code.getStatements().size() == 1
+                && code.getStatements().get(0) instanceof ExpressionStatement es
+                && !shouldWrapExpression(node)
+                && !hasComments(code, es) ) {
             append(' ');
             visitStatementLabels(es);
             visit(es.getExpression());
@@ -479,6 +566,17 @@ public class Formatter extends CodeVisitorSupport {
             appendIndent();
             append('}');
         }
+    }
+
+    /**
+     * Determine whether a single-statement closure carries comments and
+     * must therefore be formatted as a multi-line block so that the
+     * comments can be emitted.
+     */
+    private boolean hasComments(BlockStatement code, ExpressionStatement es) {
+        return hasDanglingComments(code)
+            || es.getNodeMetaData(ASTNodeMarker.LEADING_COMMENTS) != null
+            || hasTrailingComment(es);
     }
 
     public void visitParameters(Parameter[] parameters) {

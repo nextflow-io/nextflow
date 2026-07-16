@@ -792,4 +792,326 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    // -- comment preservation (issues #111, #127, #140)
+
+    def 'should preserve comments at the end of the file' () {
+        expect:
+        // https://github.com/nextflow-io/language-server/issues/111
+        checkFormat(
+            '''\
+            workflow {
+                Channel.of("a", "b", "c", "d") | view
+            }
+
+            // process something {
+            //   input:
+            //   val a
+            //
+            //   script:
+            //   """
+            //   touch b.txt
+            //   """
+            // }
+            ''',
+            '''\
+            workflow {
+                Channel.of("a", "b", "c", "d") | view
+            }
+
+            // process something {
+            //   input:
+            //   val a
+            //
+            //   script:
+            //   """
+            //   touch b.txt
+            //   """
+            // }
+            '''
+        )
+    }
+
+    def 'should preserve comments at the end of a block' () {
+        expect:
+        // https://github.com/nextflow-io/language-server/issues/140
+        checkFormat(
+            '''\
+            workflow {
+                fastq_files_ch.view()
+
+                // PROCESS_1(fastq_files_ch)
+                // new_ch = PROCESS_1.out
+                // PROCESS_2(new_ch)
+            }
+            ''',
+            '''\
+            workflow {
+                fastq_files_ch.view()
+
+                // PROCESS_1(fastq_files_ch)
+                // new_ch = PROCESS_1.out
+                // PROCESS_2(new_ch)
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            def foo() {
+                return 42
+                // trailing note
+            }
+
+            workflow {
+                if( params.x ) {
+                    println 'hi'
+                    // done greeting
+                }
+                else {
+                    // nothing to do
+                }
+            }
+            ''',
+            '''\
+            def foo() {
+                return 42
+                // trailing note
+            }
+
+            workflow {
+                if (params.x) {
+                    println('hi')
+                    // done greeting
+                }
+                else {
+                    // nothing to do
+                }
+            }
+            '''
+        )
+    }
+
+    def 'should preserve comments in an empty block' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                // TODO: implement
+            }
+            ''',
+            '''\
+            workflow {
+                // TODO: implement
+            }
+            '''
+        )
+    }
+
+    def 'should keep trailing comments on the same line' () {
+        expect:
+        // https://github.com/nextflow-io/language-server/issues/140
+        checkFormat(
+            '''\
+            params.index_ref = null     // Path to index reference genome
+            params.other = 1
+
+            workflow {
+                x = 1 // set x
+                y = 2 // set y
+            }
+            ''',
+            '''\
+            params.index_ref = null // Path to index reference genome
+            params.other = 1
+
+            workflow {
+                x = 1 // set x
+                y = 2 // set y
+            }
+            '''
+        )
+    }
+
+    def 'should format leading comments in a file with CRLF line endings' () {
+        expect:
+        // https://github.com/nextflow-io/language-server/issues/127
+        checkFormat(
+            "workflow {\r\n    // ALIGN reads to reference genome\r\n    BWA_ALIGN(sample_id, library_id)\r\n}\r\n",
+            '''\
+            workflow {
+                // ALIGN reads to reference genome
+                BWA_ALIGN(sample_id, library_id)
+            }
+            '''
+        )
+    }
+
+    def 'should preserve comments in process sections' () {
+        expect:
+        checkFormat(
+            '''\
+            process foo {
+                tag "sample"
+                // this used to be cpus 4
+
+                input:
+                // the sample id
+                val sample_id
+
+                output:
+                // the result
+                path "result.txt" // inline comment
+
+                script:
+                """
+                touch result.txt
+                """
+                // after script
+            }
+            ''',
+            '''\
+            process foo {
+                tag "sample"
+                // this used to be cpus 4
+
+                input:
+                // the sample id
+                val sample_id
+
+                output:
+                // the result
+                path "result.txt" // inline comment
+
+                script:
+                """
+                touch result.txt
+                """
+                // after script
+            }
+            '''
+        )
+    }
+
+    def 'should preserve comments in workflow sections' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow FOO {
+                take:
+                // the samples
+                samples // inline take
+                // after takes
+
+                main:
+                result = samples
+
+                emit:
+                // the first output
+                out1 = result
+                // the second output
+                out2 = result // inline emit
+                // after emits
+            }
+            ''',
+            '''\
+            workflow FOO {
+                take:
+                // the samples
+                samples // inline take
+                // after takes
+
+                main:
+                result = samples
+
+                emit:
+                // the first output
+                out1 = result
+                // the second output
+                out2 = result // inline emit
+                // after emits
+            }
+            '''
+        )
+    }
+
+    def 'should preserve comments in a params block' () {
+        expect:
+        checkFormat(
+            '''\
+            params {
+                // the input file
+                input: Path
+                // an option
+                opt: String = 'default' // inline note
+                // dangling params comment
+            }
+
+            workflow {
+                println params.input
+            }
+            ''',
+            '''\
+            params {
+                // the input file
+                input: Path
+                // an option
+                opt: String = 'default' // inline note
+                // dangling params comment
+            }
+
+            workflow {
+                println(params.input)
+            }
+            '''
+        )
+    }
+
+    def 'should preserve comments in closures' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                ch = Channel.of(1, 2).map { v ->
+                    v + 1
+                    // add one
+                }
+            }
+            ''',
+            '''\
+            workflow {
+                ch = Channel
+                    .of(1, 2)
+                    .map { v ->
+                        v + 1
+                        // add one
+                    }
+            }
+            '''
+        )
+    }
+
+    def 'should preserve comments inside a multi-line expression' () {
+        expect:
+        // comments inside an expression cannot be emitted in place, so they
+        // are hoisted above the statement instead of being removed
+        checkFormat(
+            '''\
+            workflow {
+                ch = Channel.of(1, 2)
+                    // filter odd numbers
+                    .filter { v -> v % 2 == 0 }
+                    .map { v -> v * 2 }
+            }
+            ''',
+            '''\
+            workflow {
+                // filter odd numbers
+                ch = Channel
+                    .of(1, 2)
+                    .filter { v -> v % 2 == 0 }
+                    .map { v -> v * 2 }
+            }
+            '''
+        )
+    }
+
 }
