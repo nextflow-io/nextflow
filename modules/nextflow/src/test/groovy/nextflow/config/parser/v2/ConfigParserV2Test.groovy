@@ -81,6 +81,38 @@ class ConfigParserV2Test extends Specification {
         config.process.cpus == 1
     }
 
+    def 'should resolve multiple plugins block by replacement' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def main = folder.resolve('nextflow.config')
+        def snippet = folder.resolve('other.config')
+
+        main.text = """
+            includeConfig 'other.config'
+
+            plugins {
+                id 'nf-schema@2.6.1'
+            }
+            """
+
+        snippet.text = '''
+            plugins {
+                id 'nf-boost'
+                id 'nf-schema@2.5.1'
+            }
+            '''
+
+        when:
+        def config = new ConfigParserV2().parse(main)
+
+        then:
+        // the last `plugins` block wins
+        config.plugins == ['nf-schema@2.6.1'] as Set
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should parse composed config files' () {
 
         given:
