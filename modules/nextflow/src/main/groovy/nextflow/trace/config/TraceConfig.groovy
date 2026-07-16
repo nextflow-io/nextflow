@@ -64,6 +64,12 @@ class TraceConfig implements ConfigScope {
     """)
     final String file
 
+    @ConfigOption(types=[String])
+    @Description("""
+        List of custom trace observer class names to load from the pipeline `lib/` directory. Each class must implement `TraceObserver`/`TraceObserverV2` (or a matching factory).
+    """)
+    final List<String> observers
+
     @ConfigOption
     @Description("""
         Overwrite any existing trace file with the same name (default: `false`).
@@ -89,6 +95,7 @@ class TraceConfig implements ConfigScope {
         enabled = opts.enabled as boolean
         fields = parseFields(opts.fields)
         file = opts.file ?: defaultFileName()
+        observers = (opts.observers ?: []) as List<String>
         overwrite = opts.overwrite as boolean
         raw = opts.raw as boolean
         sep = opts.sep ?: '\t'

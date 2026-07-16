@@ -501,6 +501,13 @@ class Session implements ISession {
             log.debug "Observer factory: ${f.class.simpleName}"
             result.addAll(f.create(this))
         }
+        // -- user-provided observers from lib/ named in `trace.observers`
+        for( Object o : loadLibObservers() ) {
+            if( o instanceof TraceObserverFactory )
+                result.addAll(((TraceObserverFactory)o).create(this))
+            else if( o instanceof TraceObserver )
+                result.add((TraceObserver)o)
+        }
         return result
     }
 
@@ -512,6 +519,37 @@ class Session implements ISession {
         for( TraceObserverFactoryV2 f : Plugins.getExtensions(TraceObserverFactoryV2) ) {
             log.debug "Observer factory (v2): ${f.class.simpleName}"
             result.addAll(f.create(this))
+        }
+        // -- user-provided observers from lib/ named in `trace.observers`
+        for( Object o : loadLibObservers() ) {
+            if( o instanceof TraceObserverFactoryV2 )
+                result.addAll(((TraceObserverFactoryV2)o).create(this))
+            else if( o instanceof TraceObserverV2 )
+                result.add((TraceObserverV2)o)
+        }
+        return result
+    }
+
+    /**
+     * Instantiate observer classes named in the `trace.observers` config option,
+     * loaded from the pipeline {@code lib/} directory classloader. Each entry may be
+     * a {@link TraceObserver}/{@link TraceObserverV2} implementation or a matching
+     * factory; it is routed to the V1 or V2 observer list by the interface it implements.
+     *
+     * @return the instantiated objects (shared between the V1 and V2 builders)
+     */
+    @Memoized
+    protected List<Object> loadLibObservers() {
+        final names = (List) config.navigate('trace.observers', [])
+        final result = new ArrayList<Object>(names.size())
+        for( String name : names ) {
+            try {
+                final clazz = getClassLoader().loadClass(name)
+                result.add(clazz.getDeclaredConstructor().newInstance())
+            }
+            catch( Exception e ) {
+                throw new AbortOperationException("Cannot load trace observer class: $name -- ${e.message}", e)
+            }
         }
         return result
     }
