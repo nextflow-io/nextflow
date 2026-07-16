@@ -1759,4 +1759,18 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    def 'should keep a method chain with property links wrapped' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                foo()
+                foo.out
+                    .collect()
+                    .view { v -> "got: ${v}" }
+            }
+            '''
+        )
+    }
+
 }

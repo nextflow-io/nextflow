@@ -1058,11 +1058,22 @@ public class Formatter extends CodeVisitorSupport {
         if( !shouldWrapExpression(node) )
             return false;
 
+        // find the root of the chain, stepping through property links
+        // (e.g. `foo.out.bar()`) -- their multi-line-ness in the source
+        // comes from the chain layout, not from the root itself
         Expression root = node;
         int depth = 0;
-        while( root instanceof MethodCallExpression mce && !mce.isImplicitThis() ) {
-            root = mce.getObjectExpression();
-            depth += 1;
+        while( true ) {
+            if( root instanceof MethodCallExpression mce && !mce.isImplicitThis() ) {
+                root = mce.getObjectExpression();
+                depth += 1;
+            }
+            else if( root instanceof PropertyExpression pe ) {
+                root = pe.getObjectExpression();
+            }
+            else {
+                break;
+            }
         }
 
         if( wrapMode != WrapMode.NONE )
