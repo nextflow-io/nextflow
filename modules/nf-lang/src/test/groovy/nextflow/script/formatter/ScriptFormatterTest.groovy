@@ -1920,6 +1920,48 @@ class ScriptFormatterTest extends Specification {
             }
             '''
         )
+        // https://github.com/nextflow-io/language-server/issues/41
+        checkFormat(
+            '''\
+            workflow {
+                a = '\\\\'
+                b = "\\\\"
+                c = "\\\\ ${workflow}"
+                d = '$FOO'
+                e = "\\$FOO"
+                f = "\\$FOO ${workflow}"
+                g = \'\'\'
+                \\\\
+                \'\'\'
+                h = """
+                \\\\
+                """
+                i = """
+                \\\\ ${workflow}
+                """
+                j = /\\\\/
+                k = "hello \\"world\\""
+            }
+            '''
+        )
+        // https://github.com/nextflow-io/language-server/issues/55
+        checkFormat(
+            '''\
+            process foo {
+                input:
+                val x
+
+                script:
+                """
+                cat <<-END_VERSIONS > versions.yml
+                "${task.process}":
+                    python: \\$(python --version | sed 's/Python //g')
+                    pints: \\$(pints_caller --version)
+                END_VERSIONS
+                """
+            }
+            '''
+        )
     }
 
     // -- spread operator (issue #70)
@@ -2049,9 +2091,11 @@ class ScriptFormatterTest extends Specification {
     // -- mahesh form (issue #129)
 
     def 'should move process outputs after the script with mahesh form' () {
+        given:
+        def options = new FormattingOptions(4, true, false, true, false, 120)
+
         expect:
-        checkFormat(
-            new FormattingOptions(4, true, false, true, false, 120),
+        checkFormat(options,
             '''\
             process foo {
                 input:
@@ -2077,6 +2121,40 @@ class ScriptFormatterTest extends Specification {
             }
             '''
         )
+        // a when: section stays before the script and the output is valid
+        // (see language-server #129)
+        checkFormat(options,
+            '''\
+            process foo {
+                input:
+                val x
+
+                output:
+                path 'y.txt'
+
+                when:
+                task.ext.when == null || task.ext.when
+
+                script:
+                'true'
+            }
+            ''',
+            '''\
+            process foo {
+                input:
+                val x
+
+                when:
+                task.ext.when == null || task.ext.when
+
+                script:
+                'true'
+
+                output:
+                path 'y.txt'
+            }
+            '''
+        )
     }
 
     // -- comment safety check API
@@ -2090,6 +2168,174 @@ class ScriptFormatterTest extends Specification {
         // the shebang is not counted as a comment
         CommentReattacher.countComments('#!/usr/bin/env nextflow\n// a\n', false) == 1
         CommentReattacher.commentTexts('#!/usr/bin/env nextflow\n// a\n', false) == ['// a']
+    }
+
+    // -- magic trailing comma on lists (nextflow #7328)
+
+    def 'should keep a multi-line list wrapped only with a trailing comma' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                x = [
+                    meta,
+                    'partially-phased',
+                    false
+                ]
+                y = [
+                    meta,
+                    'partially-phased',
+                    false,
+                ]
+            }
+            ''',
+            '''\
+            workflow {
+                x = [meta, 'partially-phased', false]
+                y = [
+                    meta,
+                    'partially-phased',
+                    false,
+                ]
+            }
+            '''
+        )
+    }
+
+    // -- pipe expressions (nextflow #6971)
+
+    def 'should format a chained closure piped to a process' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                channel_A = channel.fromList([[[var_a: 1], 2], [[var_a: 3], 4]])
+                some_previous_chaining = channel.value(1)
+
+                channel_A
+                    .combine(some_previous_chaining)
+                    .map { meta, b, _c -> [meta + [var_b: b]] }
+                    | some_process
+            }
+
+            process some_process {
+                input:
+                val meta
+
+                script:
+                """
+                echo ${meta}
+                """
+            }
+            ''',
+            '''\
+            workflow {
+                channel_A = channel.fromList([[[var_a: 1], 2], [[var_a: 3], 4]])
+                some_previous_chaining = channel.value(1)
+
+                channel_A.combine(some_previous_chaining).map { meta, b, _c -> [meta + [var_b: b]] } | some_process
+            }
+
+            process some_process {
+                input:
+                val meta
+
+                script:
+                """
+                echo ${meta}
+                """
+            }
+            '''
+        )
+    }
+
+    // -- dynamic map keys (nextflow #6892)
+
+    def 'should preserve parentheses around dynamic map keys' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                map_map = [(params.abc): params.defg]
+            }
+            '''
+        )
+    }
+
+    // -- comments in chained closures (nextflow #6365)
+
+    def 'should preserve comments in chained closures' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                ch = channel.of('Hello', 'hai').map {
+                    v -> v.reverse() // a comment I would like to keep
+                }
+                ch.view()
+            }
+
+            // some more comments I want to keep
+            ''',
+            '''\
+            workflow {
+                ch = channel.of('Hello', 'hai')
+                    .map { v ->
+                        v.reverse() // a comment I would like to keep
+                    }
+                ch.view()
+            }
+
+            // some more comments I want to keep
+            '''
+        )
+    }
+
+    // -- comments on the elements of a params value (language-server #140)
+
+    def 'should preserve comments on the elements of a params list' () {
+        expect:
+        checkFormat(
+            '''\
+            params.ldt_domains = [
+                'IPR005490', // YkuD
+                'IPR007391', // VanW
+            ]
+
+            workflow {
+                println(params.ldt_domains)
+            }
+            '''
+        )
+    }
+
+    // -- commented-out elements in a wrapped call (language-server #67)
+
+    def 'should preserve commented-out elements in a wrapped call' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                channel.of(
+                    1,
+                    // 2,
+                    // 3,
+                    4,
+                ).view()
+            }
+            ''',
+            '''\
+            workflow {
+                channel.of(
+                        1,
+                        // 2,
+                        // 3,
+                        4,
+                    )
+                    .view()
+            }
+            '''
+        )
     }
 
 }
