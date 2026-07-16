@@ -1093,26 +1093,77 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
-    def 'should preserve comments inside a multi-line expression' () {
+    def 'should keep comments in place inside wrapped expressions' () {
         expect:
-        // comments inside an expression cannot be emitted in place, so they
-        // are hoisted above the statement instead of being removed
+        // comments before the links of a method chain stay at their links
         checkFormat(
             '''\
             workflow {
                 ch = Channel.of(1, 2)
                     // filter odd numbers
                     .filter { v -> v % 2 == 0 }
+                    // double the values
                     .map { v -> v * 2 }
             }
             ''',
             '''\
             workflow {
-                // filter odd numbers
                 ch = Channel
                     .of(1, 2)
+                    // filter odd numbers
                     .filter { v -> v % 2 == 0 }
+                    // double the values
                     .map { v -> v * 2 }
+            }
+            '''
+        )
+        // comments before the elements of a wrapped call or collection stay
+        // at their elements
+        checkFormat(
+            '''\
+            workflow {
+                PINTS_CALLER(
+                    // the grouped bams
+                    group_bam_bai,
+                    // the assay
+                    params.assay_type,
+                )
+                chromosomes = [
+                    // autosomes only
+                    "chr1",
+                    "chr2"]
+            }
+            ''',
+            '''\
+            workflow {
+                PINTS_CALLER(
+                    // the grouped bams
+                    group_bam_bai,
+                    // the assay
+                    params.assay_type,
+                )
+                chromosomes = [
+                    // autosomes only
+                    "chr1",
+                    "chr2",
+                ]
+            }
+            '''
+        )
+        // comments in positions the formatter cannot emit in place are
+        // hoisted above the statement instead of being removed
+        checkFormat(
+            '''\
+            workflow {
+                x = (1 +
+                    // half of it
+                    2)
+            }
+            ''',
+            '''\
+            workflow {
+                // half of it
+                x = (1 + 2)
             }
             '''
         )

@@ -49,9 +49,19 @@ import org.codehaus.groovy.ast.ModuleNode;
 import org.codehaus.groovy.ast.expr.ClosureExpression;
 import org.codehaus.groovy.ast.expr.EmptyExpression;
 import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.Parameter;
+import org.codehaus.groovy.ast.expr.BinaryExpression;
+import org.codehaus.groovy.ast.expr.GStringExpression;
+import org.codehaus.groovy.ast.expr.ListExpression;
+import org.codehaus.groovy.ast.expr.MapExpression;
+import org.codehaus.groovy.ast.expr.MethodCallExpression;
+import org.codehaus.groovy.ast.expr.NamedArgumentListExpression;
+import org.codehaus.groovy.ast.expr.TupleExpression;
 import org.codehaus.groovy.ast.stmt.BlockStatement;
 import org.codehaus.groovy.ast.stmt.EmptyStatement;
+import org.codehaus.groovy.ast.stmt.ExpressionStatement;
 import org.codehaus.groovy.ast.stmt.IfStatement;
+import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.ast.stmt.TryCatchStatement;
 
@@ -270,10 +280,25 @@ public class CommentReattacher {
      * trailing comments) and as the holder of its own interior region (so
      * it can receive dangling comments, emitted before its closing brace).
      */
+    /**
+     * Which expression slots the anchors of a region provide for comments
+     * inside multi-line expressions:
+     *
+     * NONE       -- none (e.g. directives, which are never wrapped);
+     * ELEMENTS   -- elements of wrapped calls, lists and maps;
+     * STATEMENTS -- elements and method-chain links (regular statements).
+     */
+    private enum SlotMode {
+        NONE,
+        ELEMENTS,
+        STATEMENTS
+    }
+
     private static class Region {
         ASTNode holder;         // receives DANGLING_COMMENTS
         long start;
         long end;
+        SlotMode slotMode = SlotMode.NONE;
         List<ASTNode> anchors = new ArrayList<>();
         List<Region> children = new ArrayList<>();
 
@@ -281,6 +306,11 @@ public class CommentReattacher {
             this.holder = holder;
             this.start = start;
             this.end = end;
+        }
+
+        Region(ASTNode holder, long start, long end, SlotMode slotMode) {
+            this(holder, start, end);
+            this.slotMode = slotMode;
         }
 
         void addAnchor(ASTNode node) {
@@ -516,7 +546,7 @@ public class CommentReattacher {
             var slotEnd = slot instanceof Region r ? r.end : endOf((ASTNode) slot);
             assignGap(region, prev, trailingPrev, slot, gapTokens(gapStart, slotStart));
             if( slot instanceof ASTNode anchor )
-                hoistInteriorComments(anchor);
+                assignInteriorComments(anchor, region.slotMode);
             gapStart = Math.max(gapStart, slotEnd);
             prev = slot;
             // an anchor stays the trailing-comment candidate across the
@@ -805,27 +835,213 @@ public class CommentReattacher {
     }
 
     /**
-     * Rescue comments inside an anchor (e.g. inside a multi-line expression
-     * or between the arguments of a call) that were not claimed by a child
-     * region. The formatter cannot emit comments inside arbitrary
-     * expressions, so they are hoisted into the anchor's leading comments
-     * rather than being dropped.
+     * Assign comments inside an anchor (e.g. inside a multi-line expression)
+     * that were not claimed by a child region. Comments that fall on an
+     * expression slot -- before a link of the root method chain, or before
+     * an element of a wrapped call, list or map -- are attached to that
+     * slot and emitted in place; the rest are hoisted into the anchor's
+     * leading comments rather than being dropped (the formatter cannot emit
+     * comments inside arbitrary expressions).
      */
-    private void hoistInteriorComments(ASTNode anchor) {
+    private void assignInteriorComments(ASTNode anchor, SlotMode mode) {
         var interior = gapTokens(startOf(anchor), endOf(anchor));
         if( !containsComment(interior) )
             return;
-        var existing = (List<String>) anchor.getNodeMetaData(ASTNodeMarker.LEADING_COMMENTS);
-        var entries = existing != null ? existing : new ArrayList<String>();
+
+        var slots = collectExpressionSlots(anchor, mode);
+        var attached = new java.util.LinkedHashMap<ASTNode, List<String>>();
+        var leftover = new ArrayList<NlToken>();
         for( var token : interior ) {
             if( !token.comment() )
                 continue;
+            var slot = findSlot(slots, token);
+            if( slot != null )
+                attached.computeIfAbsent(slot.target(), k -> new ArrayList<>()).add(token.normalized());
+            else
+                leftover.add(token);
+        }
+
+        // store slot comments following the leading comments convention:
+        // entries in reverse source order, each comment followed by its
+        // line terminator
+        for( var slotEntry : attached.entrySet() ) {
+            var entries = new ArrayList<String>();
+            for( var comment : slotEntry.getValue() ) {
+                entries.add(0, "\n");
+                entries.add(0, comment);
+            }
+            var reversed = new ArrayList<String>(entries.size());
+            for( int i = entries.size() - 1; i >= 0; i-- )
+                reversed.add(entries.get(i));
+            slotEntry.getKey().putNodeMetaData(ASTNodeMarker.LEADING_COMMENTS, reversed);
+        }
+
+        if( leftover.isEmpty() )
+            return;
+        var existing = (List<String>) anchor.getNodeMetaData(ASTNodeMarker.LEADING_COMMENTS);
+        var entries = existing != null ? existing : new ArrayList<String>();
+        for( var token : leftover ) {
             // prepend in reverse source order
             entries.add(0, "\n");
             entries.add(1, token.normalized());
         }
         if( existing == null )
             anchor.putNodeMetaData(ASTNodeMarker.LEADING_COMMENTS, entries);
+    }
+
+    /// EXPRESSION SLOTS
+
+    /**
+     * A position range where comments can be emitted inside an expression:
+     * comments in [start, end) are attached to the target node and emitted
+     * before it.
+     */
+    private record ExprSlot(
+        long start,
+        long end,
+        ASTNode target
+    ) {}
+
+    private static ExprSlot findSlot(List<ExprSlot> slots, NlToken token) {
+        for( var slot : slots ) {
+            if( token.start() >= slot.start() && token.start() < slot.end() )
+                return slot;
+        }
+        return null;
+    }
+
+    /**
+     * Collect the expression slots of an anchor: the links of the root
+     * method chain (which the formatter can wrap onto one line per link)
+     * and the elements of multi-line calls, lists and maps (which the
+     * formatter wraps onto one line per element).
+     */
+    private List<ExprSlot> collectExpressionSlots(ASTNode anchor, SlotMode mode) {
+        if( mode == SlotMode.NONE )
+            return List.of();
+
+        var slots = new ArrayList<ExprSlot>();
+
+        // the links of the root method chain -- only a chain at the root of
+        // a regular statement can be wrapped by the formatter
+        if( mode == SlotMode.STATEMENTS ) {
+            var expr = rootExpressionOf(anchor);
+            while( expr instanceof MethodCallExpression mce && !mce.isImplicitThis() ) {
+                var receiver = mce.getObjectExpression();
+                if( isPositioned(receiver) && isPositioned(mce.getMethod()) )
+                    slots.add(new ExprSlot(endOf(receiver), startOf(mce.getMethod()), mce));
+                expr = receiver;
+            }
+        }
+
+        // the elements of multi-line calls, lists and maps
+        // NOTE: config statements do not implement the Groovy code visitor,
+        // so they must be matched before the Statement branch
+        var collector = new ElementSlotCollector(slots);
+        if( anchor instanceof ConfigAssignNode can )
+            can.value.visit(collector);
+        else if( anchor instanceof ConfigIncludeNode cin )
+            cin.source.visit(collector);
+        else if( anchor instanceof nextflow.script.ast.ParamNodeV1 pn )
+            pn.value.visit(collector);
+        else if( anchor instanceof Statement stmt )
+            stmt.visit(collector);
+        else if( anchor instanceof Parameter p && p.hasInitialExpression() )
+            p.getInitialExpression().visit(collector);
+        else if( anchor instanceof Expression e )
+            e.visit(collector);
+
+        slots.sort(Comparator.comparingLong(ExprSlot::start));
+        return slots;
+    }
+
+    private static Expression rootExpressionOf(ASTNode anchor) {
+        Expression expr = null;
+        if( anchor instanceof ExpressionStatement es )
+            expr = es.getExpression();
+        else if( anchor instanceof ReturnStatement rs )
+            expr = rs.getExpression();
+        if( expr instanceof BinaryExpression be && be.getOperation().isA(org.codehaus.groovy.syntax.Types.ASSIGNMENT_OPERATOR) )
+            expr = be.getRightExpression();
+        return expr;
+    }
+
+    /**
+     * Collect element slots for the multi-line calls, lists and maps in an
+     * expression tree. Closure bodies are separate regions and GString
+     * interpolations cannot hold comments, so they are not descended into.
+     */
+    private static class ElementSlotCollector extends CodeVisitorSupport {
+
+        private final List<ExprSlot> slots;
+
+        ElementSlotCollector(List<ExprSlot> slots) {
+            this.slots = slots;
+        }
+
+        @Override
+        public void visitMethodCallExpression(MethodCallExpression node) {
+            if( node.getArguments() instanceof TupleExpression args && isMultiLine(args) ) {
+                var elements = new ArrayList<Expression>();
+                for( var arg : args.getExpressions() ) {
+                    if( arg instanceof NamedArgumentListExpression named )
+                        elements.addAll(named.getMapEntryExpressions());
+                    else if( arg instanceof ClosureExpression )
+                        continue;   // trailing closures are emitted outside the parentheses
+                    else
+                        elements.add(arg);
+                }
+                addElementSlots(endOf(node.getMethod()), elements);
+            }
+            super.visitMethodCallExpression(node);
+        }
+
+        @Override
+        public void visitListExpression(ListExpression node) {
+            if( isMultiLine(node) )
+                addElementSlots(startOf(node), node.getExpressions());
+            super.visitListExpression(node);
+        }
+
+        @Override
+        public void visitMapExpression(MapExpression node) {
+            if( !(node instanceof NamedArgumentListExpression) && isMultiLine(node) )
+                addElementSlots(startOf(node), node.getMapEntryExpressions());
+            super.visitMapExpression(node);
+        }
+
+        @Override
+        public void visitClosureExpression(ClosureExpression node) {
+            // do not descend -- closure bodies are separate regions
+        }
+
+        @Override
+        public void visitGStringExpression(GStringExpression node) {
+            // do not descend -- interpolations are emitted inline
+        }
+
+        @Override
+        public void visitBlockStatement(BlockStatement node) {
+            // do not descend -- nested blocks are separate regions
+        }
+
+        private void addElementSlots(long constructStart, List<? extends Expression> elements) {
+            var sorted = new ArrayList<Expression>();
+            for( var element : elements ) {
+                if( isPositioned(element) )
+                    sorted.add(element);
+            }
+            sorted.sort(Comparator.comparingLong(node -> startOf(node)));
+            var gapStart = constructStart;
+            for( var element : sorted ) {
+                slots.add(new ExprSlot(gapStart, startOf(element), element));
+                gapStart = endOf(element);
+            }
+        }
+
+        private static boolean isMultiLine(Expression node) {
+            return isPositioned(node) && node.getLineNumber() < node.getLastLineNumber();
+        }
     }
 
     private static boolean containsComment(List<NlToken> gap) {
@@ -879,7 +1095,7 @@ public class CommentReattacher {
         final Set<ASTNode> sectionHeads = new HashSet<>();
 
         Region build(ScriptNode scriptNode) {
-            var root = new Region(scriptNode, 0, Long.MAX_VALUE);
+            var root = new Region(scriptNode, 0, Long.MAX_VALUE, SlotMode.ELEMENTS);
             for( var decl : scriptNode.getDeclarations() ) {
                 if( !isPositioned(decl) )
                     continue;
@@ -905,56 +1121,56 @@ public class CommentReattacher {
         }
 
         private Region workflowRegion(WorkflowNode node) {
-            var region = new Region(node, startOf(node), endOf(node));
+            var region = new Region(node, startOf(node), endOf(node), SlotMode.ELEMENTS);
             for( var take : node.getParameters() )
                 region.addAnchor(take);
-            addBlockRegion(region, node.main);
-            addBlockRegion(region, node.emits);
-            addBlockRegion(region, node.publishers);
-            addBlockRegion(region, node.onComplete);
-            addBlockRegion(region, node.onError);
+            addBlockRegion(region, node.main, SlotMode.STATEMENTS);
+            addBlockRegion(region, node.emits, SlotMode.ELEMENTS);
+            addBlockRegion(region, node.publishers, SlotMode.ELEMENTS);
+            addBlockRegion(region, node.onComplete, SlotMode.STATEMENTS);
+            addBlockRegion(region, node.onError, SlotMode.STATEMENTS);
             return region;
         }
 
         private Region processRegionV1(ProcessNodeV1 node) {
-            var region = new Region(node, startOf(node), endOf(node));
-            addBlockRegion(region, node.directives);
-            addBlockRegion(region, node.inputs);
-            addBlockRegion(region, node.outputs);
+            var region = new Region(node, startOf(node), endOf(node), SlotMode.ELEMENTS);
+            addBlockRegion(region, node.directives, SlotMode.NONE);
+            addBlockRegion(region, node.inputs, SlotMode.NONE);
+            addBlockRegion(region, node.outputs, SlotMode.NONE);
             if( isPositioned(node.when) ) {
                 region.addAnchor(node.when);
                 sectionHeads.add(node.when);
             }
-            addBlockRegion(region, node.exec);
-            addBlockRegion(region, node.stub);
+            addBlockRegion(region, node.exec, SlotMode.STATEMENTS);
+            addBlockRegion(region, node.stub, SlotMode.STATEMENTS);
             return region;
         }
 
         private Region processRegionV2(ProcessNodeV2 node) {
-            var region = new Region(node, startOf(node), endOf(node));
-            addBlockRegion(region, node.directives);
+            var region = new Region(node, startOf(node), endOf(node), SlotMode.ELEMENTS);
+            addBlockRegion(region, node.directives, SlotMode.NONE);
             for( var input : node.inputs )
                 region.addAnchor(input);
-            addBlockRegion(region, node.stagers);
-            addBlockRegion(region, node.outputs);
-            addBlockRegion(region, node.topics);
+            addBlockRegion(region, node.stagers, SlotMode.NONE);
+            addBlockRegion(region, node.outputs, SlotMode.ELEMENTS);
+            addBlockRegion(region, node.topics, SlotMode.STATEMENTS);
             if( isPositioned(node.when) ) {
                 region.addAnchor(node.when);
                 sectionHeads.add(node.when);
             }
-            addBlockRegion(region, node.exec);
-            addBlockRegion(region, node.stub);
+            addBlockRegion(region, node.exec, SlotMode.STATEMENTS);
+            addBlockRegion(region, node.stub, SlotMode.STATEMENTS);
             return region;
         }
 
         private Region functionRegion(FunctionNode node) {
             var region = new Region(node, startOf(node), endOf(node));
-            addBlockRegion(region, node.getCode());
+            addBlockRegion(region, node.getCode(), SlotMode.STATEMENTS);
             return region;
         }
 
         private Region paramsRegion(ParamBlockNode node) {
-            var region = new Region(node, startOf(node), endOf(node));
+            var region = new Region(node, startOf(node), endOf(node), SlotMode.ELEMENTS);
             for( var param : node.declarations )
                 region.addAnchor(param);
             return region;
@@ -983,7 +1199,7 @@ public class CommentReattacher {
                 return null;
             var region = new Region(node, start, end);
             if( body != null )
-                region.addChild(blockRegion(body, startOf(body), endOf(body)));
+                region.addChild(blockRegion(body, startOf(body), endOf(body), SlotMode.NONE));
             return region;
         }
 
@@ -1006,17 +1222,21 @@ public class CommentReattacher {
          * section, function body, ...) with its statements as anchors,
          * recursing into nested blocks and closures.
          */
-        private void addBlockRegion(Region parent, Statement statement) {
+        private void addBlockRegion(Region parent, Statement statement, SlotMode slotMode) {
             if( !isPositionedBlock(statement) )
                 return;
             var block = (BlockStatement) statement;
             if( block.getStatements().isEmpty() )
                 return;
-            parent.addChild(blockRegion(block, startOf(block), endOf(block)));
+            parent.addChild(blockRegion(block, startOf(block), endOf(block), slotMode));
         }
 
         private Region blockRegion(BlockStatement block, long start, long end) {
-            var region = new Region(block, start, end);
+            return blockRegion(block, start, end, SlotMode.STATEMENTS);
+        }
+
+        private Region blockRegion(BlockStatement block, long start, long end, SlotMode slotMode) {
+            var region = new Region(block, start, end, slotMode);
             for( var stmt : block.getStatements() ) {
                 if( !isPositioned(stmt) )
                     continue;
@@ -1127,7 +1347,7 @@ public class CommentReattacher {
     private static class ConfigRegionBuilder {
 
         Region build(ConfigNode configNode) {
-            var root = new Region(configNode, 0, Long.MAX_VALUE);
+            var root = new Region(configNode, 0, Long.MAX_VALUE, SlotMode.ELEMENTS);
             for( var stmt : configNode.getConfigStatements() )
                 addConfigStatement(root, stmt);
             return root;
@@ -1138,13 +1358,13 @@ public class CommentReattacher {
                 return;
             parent.addAnchor(stmt);
             if( stmt instanceof ConfigBlockNode block ) {
-                var region = new Region(block, startOf(block), endOf(block));
+                var region = new Region(block, startOf(block), endOf(block), SlotMode.ELEMENTS);
                 for( var child : block.statements )
                     addConfigStatement(region, child);
                 parent.addChild(region);
             }
             else if( stmt instanceof ConfigApplyBlockNode block ) {
-                var region = new Region(block, startOf(block), endOf(block));
+                var region = new Region(block, startOf(block), endOf(block), SlotMode.NONE);
                 for( var child : block.statements )
                     addConfigStatement(region, child);
                 parent.addChild(region);
@@ -1169,7 +1389,7 @@ public class CommentReattacher {
         }
 
         private Region configClosureRegion(BlockStatement block, ClosureExpression closure) {
-            var region = new Region(block, startOf(closure), endOf(closure));
+            var region = new Region(block, startOf(closure), endOf(closure), SlotMode.STATEMENTS);
             for( var stmt : block.getStatements() ) {
                 if( !isPositioned(stmt) )
                     continue;

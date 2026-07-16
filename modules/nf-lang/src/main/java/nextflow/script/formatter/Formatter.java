@@ -131,6 +131,11 @@ public class Formatter extends CodeVisitorSupport {
         }
     }
 
+    public boolean hasLeadingComments(ASTNode node) {
+        var comments = (List<String>) node.getNodeMetaData(ASTNodeMarker.LEADING_COMMENTS);
+        return comments != null && !comments.isEmpty();
+    }
+
     public boolean hasTrailingComment(ASTNode node) {
         var comment = (String) node.getNodeMetaData(ASTNodeMarker.TRAILING_COMMENT);
         return comment != null;
@@ -492,8 +497,9 @@ public class Formatter extends CodeVisitorSupport {
             visit(receiver);
             if( inWrappedMethodChain ) {
                 incIndent();
-                if( !nextflow.script.dsl.Types.isNamespace(receiver.getType()) ) {
+                if( !nextflow.script.dsl.Types.isNamespace(receiver.getType()) || hasLeadingComments(node) ) {
                     appendNewLine();
+                    appendLeadingComments(node);
                     appendIndent();
                 }
             }
@@ -731,7 +737,7 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitTupleExpression(TupleExpression node) {
-        var wrap = hasTrailingComma(node) || (forceWrap() && node.getExpressions().size() > 1);
+        var wrap = hasTrailingComma(node) || (forceWrap() && node.getExpressions().size() > 1) || hasElementComments(node.getExpressions());
         append('(');
         if( wrap )
             incIndent();
@@ -746,7 +752,7 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitListExpression(ListExpression node) {
-        var wrap = hasTrailingComma(node) || (forceWrap() && node.getExpressions().size() > 1);
+        var wrap = hasTrailingComma(node) || (forceWrap() && node.getExpressions().size() > 1) || hasElementComments(node.getExpressions());
         append('[');
         if( wrap )
             incIndent();
@@ -765,6 +771,7 @@ public class Formatter extends CodeVisitorSupport {
         for( int i = 0; i < args.size(); i++ ) {
             if( wrap ) {
                 appendNewLine();
+                appendLeadingComments(args.get(i));
                 appendIndent();
             }
             visit(args.get(i));
@@ -779,7 +786,7 @@ public class Formatter extends CodeVisitorSupport {
             append("[:]");
             return;
         }
-        var wrap = hasTrailingComma(node) || (forceWrap() && node.getMapEntryExpressions().size() > 1);
+        var wrap = hasTrailingComma(node) || (forceWrap() && node.getMapEntryExpressions().size() > 1) || hasElementComments(node.getMapEntryExpressions());
         append('[');
         if( wrap )
             incIndent();
@@ -798,6 +805,7 @@ public class Formatter extends CodeVisitorSupport {
         for( int i = 0; i < args.size(); i++ ) {
             if( wrap ) {
                 appendNewLine();
+                appendLeadingComments(args.get(i));
                 appendIndent();
             }
             visit(args.get(i));
@@ -1004,6 +1012,12 @@ public class Formatter extends CodeVisitorSupport {
             return true;
         if( forceWrap() && asMethodCallArguments(node).size() > 0 )
             return true;
+        for( var arg : asMethodCallArguments(node) ) {
+            if( hasLeadingComments(arg) )
+                return true;
+            if( arg instanceof MapExpression named && hasElementComments(named.getMapEntryExpressions()) )
+                return true;
+        }
         var start = node.getMethod();
         var end = node.getArguments();
         return start.getLineNumber() < end.getLastLineNumber();
@@ -1012,6 +1026,8 @@ public class Formatter extends CodeVisitorSupport {
     private boolean shouldWrapMethodChain(MethodCallExpression node) {
         if( currentRootExpr != node )
             return false;
+        if( chainHasComments(node) )
+            return true;
         if( !shouldWrapExpression(node) )
             return false;
 
@@ -1028,6 +1044,32 @@ public class Formatter extends CodeVisitorSupport {
         return shouldWrapExpression(root)
             ? false
             : depth >= 2;
+    }
+
+    /**
+     * Determine whether any link of a method chain carries comments (which
+     * can only be emitted when the chain is wrapped).
+     */
+    private boolean chainHasComments(MethodCallExpression node) {
+        Expression expr = node;
+        while( expr instanceof MethodCallExpression mce && !mce.isImplicitThis() ) {
+            if( hasLeadingComments(mce) )
+                return true;
+            expr = mce.getObjectExpression();
+        }
+        return false;
+    }
+
+    /**
+     * Determine whether any element of a wrapped construct carries comments
+     * (which can only be emitted when the construct is wrapped).
+     */
+    private boolean hasElementComments(List<? extends ASTNode> elements) {
+        for( var element : elements ) {
+            if( hasLeadingComments(element) )
+                return true;
+        }
+        return false;
     }
 
     private static final String SLASH_STR = "/";
