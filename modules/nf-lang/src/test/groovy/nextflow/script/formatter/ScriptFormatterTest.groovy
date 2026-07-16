@@ -1229,6 +1229,40 @@ class ScriptFormatterTest extends Specification {
             }
             '''
         )
+        // a comment above a catch clause stays above it (the clause falls
+        // back to its own line so the comment can be emitted)
+        checkFormat(
+            '''\
+            def f() {
+                try {
+                    g()
+                }
+                // when things go wrong
+                catch (e: Exception) {
+                    h()
+                }
+            }
+
+            workflow {
+                f()
+            }
+            ''',
+            '''\
+            def f() {
+                try {
+                    g()
+                }
+                // when things go wrong
+                catch (e: Exception) {
+                    h()
+                }
+            }
+
+            workflow {
+                f()
+            }
+            '''
+        )
     }
 
     // -- blank line normalization (issues #115, #150)

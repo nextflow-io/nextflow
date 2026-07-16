@@ -298,6 +298,7 @@ public class CommentReattacher {
 
     private static class Region {
         ASTNode holder;         // receives DANGLING_COMMENTS
+        ASTNode leadingTarget;  // receives comments above the region (e.g. a catch clause)
         long start;
         long end;
         SlotMode slotMode = SlotMode.NONE;
@@ -500,6 +501,7 @@ public class CommentReattacher {
      */
     private void clearMetadata(Region region) {
         clearNodeMetadata(region.holder);
+        clearNodeMetadata(region.leadingTarget);
         for( var anchor : region.anchors )
             clearNodeMetadata(anchor);
         for( var child : region.children )
@@ -609,25 +611,36 @@ public class CommentReattacher {
             }
         }
 
-        // the trailing gap of the region dangles as a whole
+        // the trailing gap of the region dangles as a whole; in a region
+        // with a leading target (e.g. an empty catch block), comments
+        // above the block header lead the target instead
         if( next == null ) {
-            if( containsComment(gap) )
+            if( prev == null && region.leadingTarget != null ) {
+                var boundary = lastContentNewline(gap);
+                var pre = gap.subList(0, boundary + 1);
+                var post = gap.subList(boundary + 1, gap.size());
+                if( containsComment(pre) )
+                    setLeadingComments(region.leadingTarget, pre);
+                if( containsComment(post) )
+                    appendRegionDangling(region, post);
+            }
+            else if( containsComment(gap) )
                 appendRegionDangling(region, gap);
             return;
         }
 
         // split the gap at the last newline that terminates a line of code
         // (e.g. a section label): tokens after it lead the next slot
-        int boundary = -1;
-        for( int i = 0; i < gap.size(); i++ ) {
-            var token = gap.get(i);
-            if( !token.comment() && contentLines.contains(token.line()) )
-                boundary = i;
-        }
+        int boundary = lastContentNewline(gap);
         var pre = gap.subList(0, boundary + 1);
         var post = new ArrayList<NlToken>(gap.subList(boundary + 1, gap.size()));
 
-        if( containsComment(pre) ) {
+        if( containsComment(pre) && prev == null && region.leadingTarget != null ) {
+            // comments above the header of a region with a leading target
+            // (e.g. a catch clause) lead the target
+            setLeadingComments(region.leadingTarget, pre);
+        }
+        else if( containsComment(pre) ) {
             // comments adjacent to the next slot (after the last blank line)
             // also lead the next slot; the rest hang off the previous slot
             int split = 0;
@@ -691,7 +704,7 @@ public class CommentReattacher {
             if( !containsComment(post) )
                 return;
         }
-        var target = next instanceof ASTNode anchor ? anchor : firstAnchorOf((Region) next);
+        var target = next instanceof ASTNode anchor ? anchor : leadingTargetOf((Region) next);
         if( target != null ) {
             if( sectionHeads.contains(target) ) {
                 while( !post.isEmpty() && !post.get(0).comment() )
@@ -701,6 +714,20 @@ public class CommentReattacher {
         }
         else if( containsComment(post) )
             appendRegionDangling((Region) next, post);
+    }
+
+    /**
+     * The index of the last newline in a gap that terminates a line of
+     * code (e.g. a section label or block header), or -1 if there is none.
+     */
+    private int lastContentNewline(List<NlToken> gap) {
+        int boundary = -1;
+        for( int i = 0; i < gap.size(); i++ ) {
+            var token = gap.get(i);
+            if( !token.comment() && contentLines.contains(token.line()) )
+                boundary = i;
+        }
+        return boundary;
     }
 
     /**
@@ -739,6 +766,15 @@ public class CommentReattacher {
                 return trailingTargetOf(region.children.get(region.children.size() - 1));
         }
         return null;
+    }
+
+    /**
+     * The node that receives the leading comments of a region: an explicit
+     * leading target (e.g. the catch clause of a catch-block region),
+     * otherwise the first anchor.
+     */
+    private ASTNode leadingTargetOf(Region region) {
+        return region.leadingTarget != null ? region.leadingTarget : firstAnchorOf(region);
     }
 
     /**
@@ -1333,20 +1369,26 @@ public class CommentReattacher {
                 return;
             }
             if( stmt instanceof TryCatchStatement tcs ) {
+                // each catch region starts at the end of the previous block,
+                // so that comments above the catch clause fall in its own
+                // leading gap and are assigned to the clause (leadingTarget)
+                var catches = tcs.getCatchStatements();
+                long prevEnd = startOf(tcs);
                 if( isPositionedBlock(tcs.getTryStatement()) ) {
                     var tryBlock = (BlockStatement) tcs.getTryStatement();
-                    var end = tcs.getCatchStatements().isEmpty()
-                        ? endOf(tcs)
-                        : startOf(tcs.getCatchStatements().get(0));
+                    var end = catches.isEmpty() ? endOf(tcs) : endOf(tryBlock);
                     parent.addChild(blockRegion(tryBlock, startOf(tcs), end));
+                    prevEnd = endOf(tryBlock);
                 }
-                var catches = tcs.getCatchStatements();
                 for( int i = 0; i < catches.size(); i++ ) {
                     var cs = catches.get(i);
                     if( !isPositionedBlock(cs.getCode()) )
                         continue;
-                    var end = i + 1 < catches.size() ? startOf(catches.get(i + 1)) : endOf(tcs);
-                    parent.addChild(blockRegion((BlockStatement) cs.getCode(), startOf(cs), end));
+                    var end = i + 1 < catches.size() ? endOf(cs.getCode()) : endOf(tcs);
+                    var region = blockRegion((BlockStatement) cs.getCode(), prevEnd, end);
+                    region.leadingTarget = cs;
+                    parent.addChild(region);
+                    prevEnd = end;
                 }
                 return;
             }
