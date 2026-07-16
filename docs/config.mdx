@@ -201,22 +201,25 @@ You can use the `withName` selector to configure a specific process by its name:
 ```groovy
 process {
     withName: hello {
-cpus = 4
-memory = 8.GB
-queue = 'short'
+        cpus = 4
+        memory = 8.GB
+        queue = 'short'
     }
 }
 ```
 
-The `withName` selector matches both:
+When the selector is an unqualified process name, it matches both processes *defined* with than name and processes *included* under that alias. Selectors for an alias take priority over selectors for the original name. For example, if you define a process as `hello` and include it as `sayHello`, both `withName: hello` and `withName: sayHello` apply, with `withName: sayHello` taking priority.
 
-- Processes defined with that name
-- Processes included under that alias
+When the selector is a qualified process name, it matches only processes invoked with the exact fully-qualified name. For example, `withName: 'PARENT:hello'` matches `hello` invoked by `PARENT`. It does not match:
 
-When you include a process with an alias, selectors for the alias take priority over selectors for the original name. For example, if you define a process as `hello` and include it as `sayHello`, both `withName: hello` and `withName: sayHello` apply, with `withName: sayHello` taking priority.
+- `GRANDPARENT:PARENT:hello` (nested invocation)
+- `PARENT:sayHello` (different process alias)
+- `PARENT2:hello` (different workflow alias)
+
+In each case, use the fully-qualified process name instead.
 
 :::tip
-You don't need to enclose label and process names in quotes unless they contain special characters (`-`, `!`, etc.) or are keywords or built-in type identifiers.
+You don't need to enclose label and process names in quotes unless they contain special characters (`-`, `:`, `!`, etc.) or are keywords or built-in type identifiers.
 :::
 
 ### Selector expressions
