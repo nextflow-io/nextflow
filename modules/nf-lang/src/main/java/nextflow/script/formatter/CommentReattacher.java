@@ -309,6 +309,16 @@ public class CommentReattacher {
         this.commentLines = source.commentLines();
         this.sectionHeads = sectionHeads;
         this.claimed = new boolean[tokens.size()];
+        // claim the shebang and its line terminator -- the shebang is
+        // stored separately from comments and emitted by the formatter
+        // together with its own line break
+        for( int i = 0; i < tokens.size(); i++ ) {
+            if( tokens.get(i).shebang() ) {
+                claimed[i] = true;
+                if( i + 1 < tokens.size() && !tokens.get(i + 1).comment() && tokens.get(i + 1).line() == tokens.get(i).line() )
+                    claimed[i + 1] = true;
+            }
+        }
     }
 
     private void run(Region root) {
@@ -479,6 +489,14 @@ public class CommentReattacher {
             }
         }
 
+        // strip blank lines at the start of a block or section (the
+        // formatter provides canonical spacing there); blank lines between
+        // two statements are preserved
+        if( !(prev instanceof ASTNode && next instanceof ASTNode) ) {
+            while( !post.isEmpty() && isBlankLine(post.get(0)) )
+                post.remove(0);
+        }
+
         // assign the remaining tokens (comments and blank lines) as the
         // leading comments of the next slot; a blank-only gap before a
         // section is just the section separator, which the formatter
@@ -577,9 +595,11 @@ public class CommentReattacher {
      */
     private List<String> gapEntries(List<NlToken> gap) {
         var entries = new ArrayList<String>();
+        var prevBlank = false;
         for( var token : gap ) {
             if( token.comment() ) {
                 entries.add(token.normalized());
+                prevBlank = false;
                 // a comment that shares its line with code has no newline
                 // entry of its own (line terminators of code lines are
                 // dropped) -- give it one so that whatever the formatter
@@ -587,8 +607,20 @@ public class CommentReattacher {
                 if( contentLines.contains(token.lastLine()) )
                     entries.add("\n");
             }
-            else if( !contentLines.contains(token.line()) ) {
+            else if( contentLines.contains(token.line()) ) {
+                // line terminator of a line of code -- the formatter
+                // re-creates the line break itself
+            }
+            else if( commentLines.contains(token.line()) ) {
+                // line terminator of a comment line
                 entries.add("\n");
+                prevBlank = false;
+            }
+            else {
+                // blank line -- collapse consecutive blank lines into one
+                if( !prevBlank )
+                    entries.add("\n");
+                prevBlank = true;
             }
         }
         return entries;

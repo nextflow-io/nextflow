@@ -35,6 +35,7 @@ import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.TupleParameter;
 import nextflow.script.ast.WorkflowNode;
+import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.expr.EmptyExpression;
@@ -103,11 +104,17 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 // metadata attached by the parser
             }
         }
-        if( sourceText != null )
+        var reattached = sourceText != null;
+        if( reattached )
             CommentReattacher.apply(scriptNode, sourceText);
 
-        if( scriptNode.getShebang() != null )
+        if( scriptNode.getShebang() != null ) {
             fmt.append(scriptNode.getShebang());
+            // the line terminator is part of the comment metadata unless
+            // the comment metadata was re-derived
+            if( reattached )
+                fmt.appendNewLine();
+        }
 
         // format code snippet if applicable
         var entry = scriptNode.getEntry();
@@ -138,7 +145,15 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 .max(Integer::compare).orElse(0);
         }
 
+        ASTNode prevDecl = null;
         for( var decl : declarations ) {
+            // enforce a blank line above blocks (process, workflow, ...)
+            // and between declarations of different kinds; consecutive
+            // declarations of the same kind (e.g. includes) may be grouped
+            if( needsBlankLineBetween(prevDecl, decl) && !leadingStartsWithBlankLine(decl) )
+                fmt.appendNewLine();
+            prevDecl = decl;
+
             if( decl instanceof ClassNode cn && cn.isEnum() )
                 visitEnum(cn);
             else if( decl instanceof FeatureFlagNode ffn )
@@ -163,6 +178,48 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
         // emit comments at the end of the file
         fmt.appendDanglingComments(scriptNode);
+    }
+
+    /**
+     * Determine whether a blank line should separate two consecutive
+     * declarations: block declarations always get a blank line above, and
+     * simple declarations (includes, feature flags, legacy params) get one
+     * when the kind changes. The first declaration gets a blank line only
+     * after a shebang.
+     */
+    private boolean needsBlankLineBetween(ASTNode prevDecl, ASTNode decl) {
+        if( prevDecl == null ) {
+            var scriptNode = (ScriptNode) sourceUnit.getAST();
+            return scriptNode.getShebang() != null;
+        }
+        var prevKind = declKind(prevDecl);
+        var kind = declKind(decl);
+        return prevKind == DeclKind.BLOCK || kind == DeclKind.BLOCK || prevKind != kind;
+    }
+
+    private enum DeclKind {
+        FEATURE_FLAG,
+        INCLUDE,
+        PARAM_V1,
+        BLOCK
+    }
+
+    private static DeclKind declKind(ASTNode decl) {
+        if( decl instanceof FeatureFlagNode )
+            return DeclKind.FEATURE_FLAG;
+        if( decl instanceof IncludeNode )
+            return DeclKind.INCLUDE;
+        if( decl instanceof ParamNodeV1 )
+            return DeclKind.PARAM_V1;
+        return DeclKind.BLOCK;
+    }
+
+    private boolean leadingStartsWithBlankLine(ASTNode decl) {
+        var comments = (List<String>) decl.getNodeMetaData(nextflow.script.ast.ASTNodeMarker.LEADING_COMMENTS);
+        if( comments == null || comments.isEmpty() )
+            return false;
+        // the list is in reverse source order
+        return "\n".equals(comments.get(comments.size() - 1));
     }
 
     public String toString() {

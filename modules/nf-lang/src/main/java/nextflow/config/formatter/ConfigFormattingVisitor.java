@@ -23,6 +23,7 @@ import nextflow.config.ast.ConfigAssignNode;
 import nextflow.config.ast.ConfigBlockNode;
 import nextflow.config.ast.ConfigIncludeNode;
 import nextflow.config.ast.ConfigNode;
+import nextflow.config.ast.ConfigStatement;
 import nextflow.config.ast.ConfigVisitorSupport;
 import nextflow.script.formatter.CommentReattacher;
 import nextflow.script.formatter.Formatter;
@@ -81,10 +82,37 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
             }
             if( sourceText != null )
                 CommentReattacher.apply(cn, sourceText);
-            super.visit(cn);
+            // enforce a blank line above config blocks and between
+            // statements of different kinds; statements of the same kind
+            // (e.g. assignments) may be grouped
+            ConfigStatement prevStmt = null;
+            for( var stmt : cn.getConfigStatements() ) {
+                if( prevStmt != null && needsBlankLineBetween(prevStmt, stmt) && !leadingStartsWithBlankLine(stmt) )
+                    fmt.appendNewLine();
+                prevStmt = stmt;
+                super.visit(stmt);
+            }
             // emit comments at the end of the file
             fmt.appendDanglingComments(cn);
         }
+    }
+
+    private static boolean needsBlankLineBetween(ConfigStatement prevStmt, ConfigStatement stmt) {
+        var prevBlock = isBlockStatement(prevStmt);
+        var block = isBlockStatement(stmt);
+        return prevBlock || block || prevStmt.getClass() != stmt.getClass();
+    }
+
+    private static boolean isBlockStatement(ConfigStatement stmt) {
+        return stmt instanceof ConfigBlockNode || stmt instanceof ConfigApplyBlockNode;
+    }
+
+    private boolean leadingStartsWithBlankLine(ConfigStatement stmt) {
+        var comments = (java.util.List<String>) stmt.getNodeMetaData(nextflow.script.ast.ASTNodeMarker.LEADING_COMMENTS);
+        if( comments == null || comments.isEmpty() )
+            return false;
+        // the list is in reverse source order
+        return "\n".equals(comments.get(comments.size() - 1));
     }
 
     public String toString() {

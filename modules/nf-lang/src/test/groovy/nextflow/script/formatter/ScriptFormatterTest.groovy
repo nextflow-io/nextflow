@@ -1172,4 +1172,83 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    // -- blank line normalization (issues #115, #150)
+
+    def 'should normalize blank lines' () {
+        expect:
+        // https://github.com/nextflow-io/language-server/issues/115
+        // https://github.com/nextflow-io/language-server/issues/150
+        checkFormat(
+            '''\
+            include { A } from './a.nf'
+            include { B } from './b.nf'
+            params.x = 1
+            workflow FOO {
+                foo()
+            }
+            process bar {
+                script:
+                "true"
+            }
+            workflow {
+                FOO()
+            }
+            ''',
+            '''\
+            include { A } from './a.nf'
+            include { B } from './b.nf'
+
+            params.x = 1
+
+            workflow FOO {
+                foo()
+            }
+
+            process bar {
+                script:
+                "true"
+            }
+
+            workflow {
+                FOO()
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            workflow {
+
+                x = 1
+
+
+
+                y = 2
+
+            }
+            ''',
+            '''\
+            workflow {
+                x = 1
+
+                y = 2
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            #!/usr/bin/env nextflow
+            workflow {
+                x = 1
+            }
+            ''',
+            '''\
+            #!/usr/bin/env nextflow
+
+            workflow {
+                x = 1
+            }
+            '''
+        )
+    }
+
 }
