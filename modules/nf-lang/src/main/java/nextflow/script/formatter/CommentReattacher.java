@@ -177,6 +177,26 @@ public class CommentReattacher {
         return count;
     }
 
+    /**
+     * Collect the comments in a source text as a sorted list of normalized
+     * comment texts (LF line endings, surrounding whitespace stripped).
+     * Used as a safety check that formatting neither removes, duplicates
+     * nor alters comments. The shebang line is not included (it is stored
+     * separately from comments).
+     *
+     * @param sourceText
+     * @param configFile whether to lex as a config file instead of a script
+     */
+    public static List<String> commentTexts(String sourceText, boolean configFile) {
+        var texts = new ArrayList<String>();
+        for( var token : lex(sourceText, configFile).tokens() ) {
+            if( token.comment() && !token.shebang() )
+                texts.add(token.normalized().strip());
+        }
+        texts.sort(Comparator.naturalOrder());
+        return texts;
+    }
+
     /// LEXING
 
     private record NlToken(
