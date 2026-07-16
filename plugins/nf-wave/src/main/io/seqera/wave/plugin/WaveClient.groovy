@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package io.seqera.wave.plugin
@@ -23,6 +22,7 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -142,6 +142,12 @@ class WaveClient {
     /* only for testing */
     protected WaveClient() { }
 
+    /**
+     * Creates the main HTTP client for Wave/Tower API communication.
+     * This client includes Bearer token authentication for secure API calls.
+     *
+     * @return An {@link HxClient} configured with authentication tokens
+     */
     protected HxClient newHttpClient() {
         final refreshUrl = tower.refreshToken ? "${tower.endpoint}/oauth/access_token" : null
         return HxClient.newBuilder()
@@ -154,6 +160,11 @@ class WaveClient {
                 .build()
     }
 
+    /**
+     * Creates the underlying Java HTTP client with common configuration.
+     *
+     * @return A configured {@link HttpClient} instance
+     */
     protected HttpClient newHttpClient0() {
         final builder = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
@@ -164,6 +175,24 @@ class WaveClient {
             builder.executor(Executors.newVirtualThreadPerTaskExecutor())
         // build and return the new client
         return builder.build()
+    }
+
+    /**
+     * Creates an HTTP client without authentication for fetching external resources.
+     * <p>
+     * This client is used for requests to external URLs (e.g., public S3 buckets)
+     * that do not require or support Bearer token authentication. Services like
+     * AWS S3 reject requests with unsupported Authorization headers.
+     *
+     * @return An {@link HxClient} without authentication configuration
+     * @see #newHttpClient() for authenticated Wave/Tower API calls
+     */
+    @Memoized
+    protected HxClient plainHttpClient() {
+        return HxClient.newBuilder()
+                .httpClient(newHttpClient0())
+                .retryConfig(config.retryOpts())
+                .build()
     }
 
     WaveConfig config() { return config }
@@ -226,7 +255,8 @@ class WaveClient {
                 mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
                 scanLevels: config.scanAllowedLevels(),
-                buildCompression: config.buildCompression()
+                buildCompression: config.buildCompression(),
+                buildTemplate: config.buildTemplate()
         )
     }
 
@@ -254,7 +284,8 @@ class WaveClient {
                 mirror: config.mirrorMode(),
                 scanMode: config.scanMode(),
                 scanLevels: config.scanAllowedLevels(),
-                buildCompression: config.buildCompression()
+                buildCompression: config.buildCompression(),
+                buildTemplate: config.buildTemplate()
         )
         return sendRequest(request)
     }
@@ -353,15 +384,17 @@ class WaveClient {
     }
 
     protected URL fusionAmd64(boolean snapshots) {
-        return snapshots
-                ? URI.create(FusionConfig.DEFAULT_SNAPSHOT_AMD64_URL).toURL()
-                : URI.create(FusionConfig.DEFAULT_FUSION_AMD64_URL).toURL()
+        final url = snapshots
+                ? FusionConfig.DEFAULT_SNAPSHOT_AMD64_URL
+                : FusionConfig.DEFAULT_FUSION_AMD64_URL
+        return URI.create(fusion.targetFusionUrl(url)).toURL()
     }
 
     protected URL fusionArm64(boolean snapshots) {
-        return snapshots
-            ? URI.create(FusionConfig.DEFAULT_SNAPSHOT_ARM64_URL).toURL()
-            : URI.create(FusionConfig.DEFAULT_FUSION_ARM64_URL).toURL()
+        final url = snapshots
+            ? FusionConfig.DEFAULT_SNAPSHOT_ARM64_URL
+            : FusionConfig.DEFAULT_FUSION_ARM64_URL
+        return URI.create(fusion.targetFusionUrl(url)).toURL()
     }
 
     protected URL defaultS5cmdUrl(String platform) {
@@ -371,20 +404,34 @@ class WaveClient {
             : new URL(DEFAULT_S5CMD_AMD64_URL)
     }
 
+    protected static URI replaceFusionArch(URI uri, String platform) {
+        if( uri.scheme == 'file' )
+            return uri
+        final isArm = platform.tokenize('/')?.contains('arm64')
+        final targetArch = isArm ? 'arm64' : 'amd64'
+        final original = uri.toString()
+        final replaced = original.replaceAll(/(?<=[-_])(amd64|arm64)(?=\.)/, targetArch)
+        return replaced != original ? new URI(replaced) : uri
+    }
+
     ContainerConfig resolveContainerConfig(String platform = DEFAULT_DOCKER_PLATFORM) {
-        final urls = new ArrayList<URL>(config.containerConfigUrl())
+        final uris = new ArrayList<URI>(config.containerConfigUrl().collect { it.toURI() })
+        final platforms = platform ? platform.tokenize(',') : List.of(DEFAULT_DOCKER_PLATFORM)
         if( fusion.enabled() ) {
-            final fusionUrl = fusion.containerConfigUrl() ?: defaultFusionUrl(platform)
-            urls.add(fusionUrl)
+            final customUri = fusion.containerConfigURI()
+            for( String p : platforms ) {
+                final fusionUri = customUri ? replaceFusionArch(customUri, p.trim()) : defaultFusionUrl(p.trim()).toURI()
+                uris.add(fusionUri)
+            }
         }
         if( awsFargate ) {
             final s5cmdUrl = s5cmdConfigUrl ?: defaultS5cmdUrl(platform)
-            urls.add(s5cmdUrl)
+            uris.add(s5cmdUrl.toURI())
         }
-        if( !urls )
+        if( !uris )
             return null
         def result = new ContainerConfig()
-        for( URL it : urls ) {
+        for( URI it : uris ) {
             // append each config to the other - the last has priority
             result += fetchContainerConfig(it)
         }
@@ -392,7 +439,27 @@ class WaveClient {
     }
 
     @Memoized
-    synchronized protected ContainerConfig fetchContainerConfig(URL configUrl) {
+    synchronized protected ContainerConfig fetchContainerConfig(URI configURI) {
+        log.debug "Wave fetch container config: $configURI"
+        final scheme = configURI.scheme
+        if( scheme == 'http' || scheme == 'https' )
+            return fetchContainerConfig(configURI.toURL())
+        if( scheme == 'file' )
+            return fetchContainerConfig(Paths.get(configURI))
+        throw new IllegalArgumentException("Unsupported container config URI scheme: $scheme")
+    }
+
+    protected ContainerConfig fetchContainerConfig(Path configPath) {
+        log.debug "Wave read local container config: $configPath"
+        try {
+            return jsonToContainerConfig(configPath.text)
+        }
+        catch( Exception e ) {
+            throw new IllegalStateException("Cannot read Fusion container config from $configPath", e)
+        }
+    }
+
+    protected ContainerConfig fetchContainerConfig(URL configUrl) {
         log.debug "Wave request container config: $configUrl"
         final req = HttpRequest.newBuilder()
                 .uri(configUrl.toURI())
@@ -400,7 +467,7 @@ class WaveClient {
                 .GET()
                 .build()
 
-        final resp = httpClient.sendAsString(req)
+        final resp = plainHttpClient().sendAsString(req)
         final code = resp.statusCode()
         final body = resp.body()
         if( code>=200 && code<400 ) {
@@ -490,7 +557,7 @@ class WaveClient {
         return resolveAssets0(attrs, bundle, singularity, dockerArch)
     }
 
-    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String dockerArch) {
+    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String platform) {
 
         final scriptType = singularity ? 'singularityfile' : 'dockerfile'
         String containerScript = attrs.get(scriptType)
@@ -550,11 +617,6 @@ class WaveClient {
         final projectRes = config.bundleProjectResources() && session.binDir
                     ? projectResources(session.binDir)
                     : null
-
-        /*
-         * the container platform to be used
-         */
-        final platform = dockerArch
 
         // check is a valid container image
         WaveAssets.validateContainerName(containerImage)

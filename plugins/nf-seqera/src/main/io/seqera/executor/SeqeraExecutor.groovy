@@ -1,0 +1,275 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package io.seqera.executor
+
+import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
+import groovy.util.logging.Slf4j
+import io.seqera.config.SeqeraConfig
+import io.seqera.config.ExecutorOpts
+import io.seqera.util.SchemaMapperUtil
+import io.seqera.sched.api.schema.v1a1.CreateRunRequest
+import io.seqera.sched.api.schema.v1a1.PipelineSpec
+import io.seqera.sched.api.schema.v1a1.PredictionModel
+import io.seqera.sched.client.SchedClient
+import io.seqera.sched.api.schema.v1a1.TerminateRunRequest
+import io.seqera.sched.client.SchedClientConfig
+import nextflow.exception.AbortOperationException
+import nextflow.executor.Executor
+import nextflow.fusion.FusionHelper
+import nextflow.platform.PlatformHelper
+import nextflow.processor.TaskHandler
+import nextflow.processor.TaskMonitor
+import nextflow.processor.TaskPollingMonitor
+import nextflow.processor.TaskRun
+import nextflow.SysEnv
+import nextflow.util.Duration
+import nextflow.util.ServiceName
+import org.pf4j.ExtensionPoint
+
+/**
+ * Nextflow executor that delegates task execution to the Seqera scheduler API.
+ *
+ * <p>This executor creates a run on the Seqera scheduler, submits tasks in batches
+ * via {@link SeqeraBatchSubmitter}, and monitors their lifecycle through the scheduler API.
+ * It requires Fusion file system to be enabled and all processes to specify a container image.
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+@Slf4j
+@ServiceName(SEQERA)
+@CompileStatic
+class SeqeraExecutor extends Executor implements ExtensionPoint {
+
+    public static final String SEQERA = 'seqera'
+
+    private static final String DEFAULT_FUSION_VERSION = '2.6'
+
+    private ExecutorOpts seqeraConfig
+
+    private SchedClient client
+
+    private volatile String runId
+
+    private volatile String workflowId
+
+    private volatile Map<String,String> runResourceLabels = Collections.<String,String>emptyMap()
+
+    private SeqeraBatchSubmitter batchSubmitter
+
+    @Override
+    protected void register() {
+        applyFusionDefaults()
+        createClient()
+    }
+
+    /**
+     * Force the default Fusion client version for the Seqera executor.
+     *
+     * @deprecated The default Fusion version is now {@code 2.6} (see
+     * {@link nextflow.fusion.FusionConfig}), so pinning it here is redundant. To target a
+     * specific Fusion version, set the {@code fusion.targetVersion} config option instead.
+     * This method will be removed in a future release.
+     */
+    @Deprecated
+    protected void applyFusionDefaults() {
+        final fusionConfig = session.config.fusion as Map
+        if( fusionConfig!=null && !fusionConfig.containerConfigUrl ) {
+            fusionConfig.put('targetVersion', DEFAULT_FUSION_VERSION)
+        }
+    }
+
+    @Override
+    void shutdown() {
+        // Flush any pending batch jobs before terminating run
+        session.error
+        batchSubmitter?.shutdown()
+        terminateRun()
+    }
+
+    protected void createClient() {
+        final seqera = new SeqeraConfig(session.config.seqera as Map ?: Collections.<String,Object>emptyMap())
+        this.seqeraConfig = seqera.executor
+        if (!seqeraConfig)
+            throw new IllegalArgumentException("Missing Seqera executor configuration - make sure to specify 'seqera.executor' settings")
+        // Get access token and refresh token from tower config (shares authentication with Platform)
+        def towerConfig = session.config.tower as Map ?: Collections.emptyMap()
+        def accessToken = PlatformHelper.getAccessToken(towerConfig, SysEnv.get())
+        def refreshToken = PlatformHelper.getRefreshToken(towerConfig, SysEnv.get())
+        def platformUrl = PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
+        def clientConfig = SchedClientConfig.builder()
+                .endpoint(seqeraConfig.endpoint)
+                .platformUrl(platformUrl)
+                .accessToken(accessToken)
+                .refreshToken(refreshToken)
+                .retryConfig(seqeraConfig.retryOpts())
+                .build()
+        this.client = new SchedClient(clientConfig)
+    }
+
+    protected void createRun() {
+        final towerConfig = session.config.tower as Map ?: Collections.emptyMap()
+        final workflowId = session.workflowMetadata?.platform?.workflowId
+        this.workflowId = workflowId
+        final workflowUrl = session.workflowMetadata?.platform?.workflowUrl
+        final workspaceId = PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get()) as Long
+        final computeEnvId = PlatformHelper.getComputeEnvId(towerConfig, SysEnv.get()) ?: seqeraConfig.computeEnvId
+
+        computeRunResourceLabels()
+        final labels = new Labels()
+        if( seqeraConfig.autoLabels )
+            labels.withWorkflowMetadata(session.workflowMetadata, seqeraConfig.autoLabels)
+        labels.withProcessResourceLabels(runResourceLabels)
+        final predictionModel = seqeraConfig.predictionModel ? PredictionModel.fromValue(seqeraConfig.predictionModel) : null
+        final pipeline = new PipelineSpec()
+                .workflowId(workflowId)
+                .workflowUrl(workflowUrl)
+                .workDir(session.workDir?.toUriString())
+        final request = new CreateRunRequest()
+                .provider(seqeraConfig.provider)
+                .strategy(seqeraConfig.strategy)
+                .region(seqeraConfig.region)
+                .providerConfig(seqeraConfig.providerConfig)
+                .name(session.runName)
+                .machineRequirement(SchemaMapperUtil.toMachineRequirement(seqeraConfig.machineRequirement))
+                .labels(labels.entries)
+                .workspaceId(workspaceId)
+                .pipeline(pipeline)
+                .predictionModel(predictionModel)
+                .computeEnvId(computeEnvId)
+                .shellEnabled(seqeraConfig.shellEnabled)
+        log.debug "[SEQERA] Creating run: ${request}"
+        final response = client.createRun(request)
+        this.runId = response.getRunId()
+        // publish the scheduler run id so the Tower observer can propagate it to Platform
+        session.workflowMetadata?.platform?.setSchedRunId(runId)
+        log.debug "[SEQERA] Run created id: ${runId}; workflowId: '${workflowId}'; workflowUrl: '${workflowUrl}'"
+        // Initialize and start batch submitter with error callback to abort on fatal errors
+        this.batchSubmitter = new SeqeraBatchSubmitter(
+            client,
+            runId,
+            seqeraConfig.batchFlushInterval,
+            SeqeraBatchSubmitter.KEEP_ALIVE_INTERVAL,
+            { Throwable t -> session.abort(t) }
+        )
+        this.batchSubmitter.start()
+    }
+
+    protected void terminateRun() {
+        if (!runId) {
+            return
+        }
+        final stopReason = truncate(session.fault?.report, 10_000)
+        log.debug "[SEQERA] Terminating run: ${runId}; stopReason: ${stopReason}"
+        client.terminateRun(runId, new TerminateRunRequest().stopReason(stopReason))
+        log.debug "[SEQERA] Run terminated"
+    }
+
+    @Override
+    protected TaskMonitor createTaskMonitor() {
+        TaskPollingMonitor.create(session, config, name, 1000, Duration.of('10 sec'))
+    }
+
+    @Override
+    TaskHandler createTaskHandler(TaskRun task) {
+        return new SeqeraTaskHandler(task, this)
+    }
+
+    /**
+     * @return {@code true} whenever the containerization is managed by the executor itself
+     */
+    boolean isContainerNative() {
+        return true
+    }
+
+    @Override
+    boolean isFusionEnabled() {
+        final enabled = FusionHelper.isFusionEnabled(session)
+        if (!enabled)
+            throw new AbortOperationException("Seqera executor requires the use of Fusion file system")
+        return true
+    }
+
+    /**
+     * Lazily creates the run on first access, ensuring workflowId and labels
+     * are available (they are set by TowerClient.onFlowCreate before tasks are submitted).
+     */
+    void ensureRunCreated() {
+        if (runId) return
+        synchronized (this) {
+            if (runId) return
+            createRun()
+        }
+    }
+
+    SchedClient getClient() {
+        return client
+    }
+
+    String getRunId() {
+        return runId
+    }
+
+    /**
+     * The Platform workflow id for this run, used to build pipeline secret store references
+     * ({@code tower-<workflowId>/<name>}). {@code null} when running without a Platform workflow
+     * (bare scheduler), in which case secret references are not built.
+     */
+    String getWorkflowId() {
+        return workflowId
+    }
+
+    /**
+     * The Seqera executor is secret-native: pipeline secret values are resolved at the compute
+     * edge (the scheduler backend), so Nextflow must not emit the local-store {@code source}
+     * snippet. The task carries only the secret <em>reference</em>, never the value.
+     */
+    @Override
+    boolean isSecretNative() {
+        return true
+    }
+
+    Map<String,String> getRunResourceLabels() {
+        return Collections.unmodifiableMap(runResourceLabels)
+    }
+
+    @PackageScope
+    void computeRunResourceLabels() {
+        final processMap = session.config.process as Map
+        final value = processMap?.get('resourceLabels')
+        if( value instanceof Closure ) {
+            log.debug "Skipping run-level process.resourceLabels: dynamic (closure) values are only resolved per-task"
+            this.runResourceLabels = Collections.<String,String>emptyMap()
+            return
+        }
+        this.runResourceLabels = Labels.toStringMap(value)
+    }
+
+    SeqeraBatchSubmitter getBatchSubmitter() {
+        return batchSubmitter
+    }
+
+    ExecutorOpts getSeqeraConfig() {
+        return seqeraConfig
+    }
+
+    protected static String truncate(String value, int maxLen) {
+        if (!value || value.length() <= maxLen)
+            return value
+        return value.take(maxLen) + '\n.. [TRUNCATED]'
+    }
+}

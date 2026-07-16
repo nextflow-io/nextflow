@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -105,6 +105,20 @@ class TestUtils {
             .map(file -> file.toUri())
             .map(uri -> compiler.getSources().get(uri))
             .flatMap(source -> getErrors(source).stream())
+            .toList()
+    }
+
+    /**
+     * Get the list of compiler warnings for a source file.
+     *
+     * @param source
+     */
+    static List<String> getWarnings(SourceUnit source) {
+        final errorCollector = source.getErrorCollector()
+        if( !errorCollector.hasWarnings() )
+            return Collections.emptyList()
+        return errorCollector.getWarnings().stream()
+            .map(w -> w.getMessage())
             .toList()
     }
 

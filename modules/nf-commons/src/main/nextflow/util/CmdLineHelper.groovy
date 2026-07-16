@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,13 +22,13 @@ import java.util.regex.Pattern
 
 /**
  * Implement command line parsing helpers
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
 class CmdLineHelper {
 
-    static private Pattern CLI_OPT = ~/--([a-zA-Z_-]+)(?:\W.*)?$|-([a-zA-Z])(?:\W.*)?$/
+    static private Pattern CLI_OPT = ~/--([a-zA-Z_-]+)(?:=(.*))?$|-([a-zA-Z])(?:=(.*))?$/
 
     private List<String> args
 
@@ -128,7 +128,17 @@ class CmdLineHelper {
                 if( opt ) {
                     result.addOption(opt,'true')
                 }
-                opt = matcher.group(1) ?: matcher.group(2)
+                final name = matcher.group(1) ?: matcher.group(3)
+                final value = matcher.group(1) ? matcher.group(2) : matcher.group(4)
+                if( value ) {
+                    // the value was given inline as `--opt=value` or `-o=value`
+                    result.addOption(name, value)
+                    last = name
+                    opt = null
+                }
+                else {
+                    opt = name
+                }
             }
             else {
                 if( !opt ) {

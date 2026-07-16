@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -63,7 +63,7 @@ class CmdPluginCreateTest extends Specification {
         Path.of(folder.resolve('hello/build.gradle').toUri()).text.contains("'foo.plugin.HelloWorldExtension'")
         Path.of(folder.resolve('hello/build.gradle').toUri()).text.contains("'foo.plugin.HelloWorldFactory'")
         and:
-        Path.of(folder.resolve('hello/README.md').toUri()).text.contains("# hello-world-plugin plugin")
+        Path.of(folder.resolve('hello/README.md').toUri()).text.contains("# hello-world-plugin")
         Path.of(folder.resolve('hello/README.md').toUri()).text.contains("nextflow run hello -plugins hello-world-plugin@0.1.0")
         cleanup:
         folder?.deleteDir()

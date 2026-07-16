@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,13 +15,17 @@
  */
 
 package test
+
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.GZIPInputStream
 
 import com.google.common.jimfs.Configuration
 import com.google.common.jimfs.Jimfs
+import com.google.common.jimfs.JimfsPath
 import groovy.transform.Memoized
+import nextflow.util.KryoHelper
+import nextflow.util.PathSerializer
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -52,6 +56,13 @@ class TestHelper {
     }
 
     static private fs = Jimfs.newFileSystem(Configuration.unix());
+
+    static {
+        // Some tests failed after a Guava update (Guava 33.4+) when using Jimfs.
+        // Adding a default serializer for JimfsPaths to prevent Kryo's FieldSerializer from recursing into internal
+        // fields that may contain non-serializable objects such as lambdas
+        KryoHelper.kryo().addDefaultSerializer(JimfsPath.class, PathSerializer)
+    }
 
     static Path createInMemTempDir() {
         Path tmp = fs.getPath("/tmp");
@@ -97,5 +108,33 @@ class TestHelper {
         int port = socket.localPort
         socket.close()
         return port
+    }
+
+    /**
+     * Filter captured stdout/stderr output to remove log noise (DEBUG, INFO, WARN, plugin messages, pf4j dependency graph).
+     *
+     * @param capture The OutputCapture instance
+     * @param includeWarn Whether to also filter out WARN lines (default: false)
+     * @return List of filtered output lines
+     */
+    static List<String> filterLogNoise(OutputCapture capture, boolean includeWarn = false) {
+        filterLogNoise(capture.toString(), includeWarn)
+    }
+
+    /**
+     * Filter captured stdout/stderr output to remove log noise (DEBUG, INFO, WARN, plugin messages, pf4j dependency graph).
+     *
+     * @param output The captured output string
+     * @param includeWarn Whether to also filter out WARN lines (default: false)
+     * @return List of filtered output lines
+     */
+    static List<String> filterLogNoise(String output, boolean includeWarn = false) {
+        output.readLines().findAll { line ->
+            !line.contains('DEBUG') &&
+            !line.contains('INFO') &&
+            (!includeWarn || !line.contains('WARN')) &&
+            !line.contains('plugin') &&
+            !line.contains('-> [')  // pf4j dependency graph lines
+        }
     }
 }

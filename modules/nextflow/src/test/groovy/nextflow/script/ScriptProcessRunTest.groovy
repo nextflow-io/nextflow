@@ -1,9 +1,27 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.script
 
 import java.nio.file.Files
 
+import nextflow.Global
 import test.Dsl2Spec
-import test.MockScriptRunner
+
+import static test.ScriptHelper.*
 
 /**
  * Tests for single process execution feature that allows running processes
@@ -17,7 +35,7 @@ class ScriptProcessRunTest extends Dsl2Spec {
         given:
         def SCRIPT = '''
         params.sampleId = 'SAMPLE_001'
-        
+
         process testProcess {
             input: val sampleId
             output: val result
@@ -27,8 +45,7 @@ class ScriptProcessRunTest extends Dsl2Spec {
         '''
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
 
         then:
         // For single process execution, the result should contain the process output
@@ -42,7 +59,7 @@ class ScriptProcessRunTest extends Dsl2Spec {
         def tempFile = Files.createTempFile('test', '.txt')
         def SCRIPT = """
         params.dataFile = '${tempFile}'
-        
+
         process testProcess {
             input: path dataFile
             output: val result
@@ -52,8 +69,7 @@ class ScriptProcessRunTest extends Dsl2Spec {
         """
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
 
         then:
         result != null
@@ -64,43 +80,18 @@ class ScriptProcessRunTest extends Dsl2Spec {
         Files.deleteIfExists(tempFile)
     }
 
-    def 'should execute single process with tuple input' () {
-        given:
-        def SCRIPT = '''
-        params.'meta.id' = 'SAMPLE_001'
-        params.'meta.name' = 'test'
-        params.threads = 4
-        
-        process testProcess {
-            input: tuple val(meta), val(threads)
-            output: val result
-            exec:
-                result = "Sample: ${meta.id}, Threads: $threads"
-        }
-        '''
-
-        when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
-
-        then:
-        result != null
-        println "Tuple result: $result"
-        println "Tuple result class: ${result?.getClass()}"
-    }
-
     def 'should handle multiple processes by running the first one' () {
         given:
         def SCRIPT = '''
         params.input = 'test'
-        
+
         process firstProcess {
             input: val input
             output: val result
             exec:
                 result = "First: $input"
         }
-        
+
         process secondProcess {
             input: val input
             output: val result
@@ -110,8 +101,7 @@ class ScriptProcessRunTest extends Dsl2Spec {
         '''
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
+        def result = runScript(SCRIPT)
 
         then:
         result != null
@@ -131,37 +121,41 @@ class ScriptProcessRunTest extends Dsl2Spec {
         '''
 
         when:
-        def runner = new MockScriptRunner()
-        runner.setScript(SCRIPT).execute()
+        runScript(SCRIPT)
 
         then:
         def e = thrown(Exception)
         e.message.contains('Missing required parameter: --requiredParam')
     }
 
-    def 'should handle complex parameter mapping' () {
+    def 'should cast boolean parameter to boolean' () {
         given:
-        def SCRIPT = '''
-        params.'sample.id' = 'S001'
-        params.'sample.name' = 'TestSample'
-        params.'config.threads' = 8
-        
-        process complexProcess {
-            input: val sample
-            input: val config
-            output: val result
-            exec:
-                result = "Sample: ${sample.id}, Config: ${config.threads}"
-        }
-        '''
+        def folder = Files.createTempDirectory('test')
+
+        def module = folder.resolve('module.nf')
+        module.text = '''\
+            process quant {
+                input:
+                val alignment_mode
+
+                exec:
+                assert alignment_mode instanceof Boolean
+            }
+            '''
+
+        def spec = folder.resolve('meta.yml')
+        spec.text = '''\
+            input:
+            - name: alignment_mode
+              type: boolean
+            '''
 
         when:
-        def runner = new MockScriptRunner()
-        def result = runner.setScript(SCRIPT).execute()
-
+        runScript(module, config: [params: [alignment_mode: 'false']])
         then:
-        result != null
-        println "Complex result: $result"
-        println "Complex result class: ${result?.getClass()}"
+        Global.session.isSuccess()
+
+        cleanup:
+        folder?.deleteDir()
     }
 }

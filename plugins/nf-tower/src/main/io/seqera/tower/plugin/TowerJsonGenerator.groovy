@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package io.seqera.tower.plugin
@@ -40,7 +39,7 @@ import org.apache.groovy.json.internal.CharBuf
 @CompileStatic
 class TowerJsonGenerator extends DefaultJsonGenerator {
 
-    List<String> stack = new ArrayList<>(10)
+    private List<String> stack = new ArrayList<>(10)
     Map<String,Integer> scheme
 
     static TowerJsonGenerator create(Map<String,Integer> scheme) {
@@ -74,8 +73,8 @@ class TowerJsonGenerator extends DefaultJsonGenerator {
     }
 
     @Override
-    protected void writeObject(String key, Object object, CharBuf buffer) {
-        final pos=stack.size()
+    protected synchronized void writeObject(String key, Object object, CharBuf buffer) {
+        final pos = stack.size()
         if(key) stack.add(pos, key)
         final fqn = stack.join('.')
         try {

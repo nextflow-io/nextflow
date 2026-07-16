@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -459,8 +459,8 @@ class BashWrapperBuilderTest extends Specification {
                 # stage input files
                 rm -f sample_1.fq
                 rm -f sample_2.fq
-                ln -s /some/data/sample_1.fq sample_1.fq
-                ln -s /some/data/sample_2.fq sample_2.fq
+                ln -sfn /some/data/sample_1.fq sample_1.fq
+                ln -sfn /some/data/sample_2.fq sample_2.fq
                 '''.stripIndent().rightTrim()
 
         when:
@@ -473,7 +473,7 @@ class BashWrapperBuilderTest extends Specification {
         binding.stage_inputs == stageScript
     }
 
-    def 'should stage inputs to external file when enabled' () {
+    def 'should stage inputs to external file' () {
         given:
         SysEnv.push([NXF_WRAPPER_STAGE_FILE_THRESHOLD: '100'])
         and:
@@ -486,31 +486,24 @@ class BashWrapperBuilderTest extends Specification {
         def stageScript = '''\
                 rm -f sample_1.fq
                 rm -f sample_2.fq
-                ln -s /some/data/sample_1.fq sample_1.fq
-                ln -s /some/data/sample_2.fq sample_2.fq
+                ln -sfn /some/data/sample_1.fq sample_1.fq
+                ln -sfn /some/data/sample_2.fq sample_2.fq
                 '''.stripIndent().rightTrim()
-
-        when:
+        and:
         def builder = newBashWrapperBuilder([
                 workDir: folder,
                 targetDir: folder,
-                inputFiles: inputs ])
-        builder.build()
-        then:
-        builder.makeBinding().stage_inputs == "# stage input files\n${stageScript}"
-        and:
-        !folder.resolve('.command.stage').exists()
+                inputFiles: inputs,
+                stageFileEnabled: true ])
 
         when:
-        builder = newBashWrapperBuilder([
-                workDir: folder,
-                targetDir: folder,
-                inputFiles: inputs ])
-        builder.withStageFile(true)
+        def binding = builder.makeBinding()
+        then:
+        binding.stage_inputs == "# stage input files\nbash ${folder}/.command.stage"
+
+        when:
         builder.build()
         then:
-        builder.makeBinding().stage_inputs == "# stage input files\nbash ${folder}/.command.stage"
-        and:
         folder.resolve('.command.stage').text == stageScript
 
         cleanup:
@@ -775,7 +768,7 @@ class BashWrapperBuilderTest extends Specification {
                   local mod=$1
                   local ver=${2:-}
                   local new_module="$mod"; [[ $ver ]] && new_module+="/$ver"
-                
+
                   if [[ ! $(module list 2>&1 | grep -o "$new_module") ]]; then
                     old_module=$(module list 2>&1 | grep -Eow "$mod\\/[^\\( \\n]+" || true)
                     if [[ $ver && $old_module ]]; then
@@ -785,7 +778,7 @@ class BashWrapperBuilderTest extends Specification {
                     fi
                   fi
                 }
-                
+
                 '''.stripIndent()
     }
 
@@ -1134,7 +1127,7 @@ class BashWrapperBuilderTest extends Specification {
                 containerConfig: new SingularityConfig(enabled: true) ).makeBinding()
 
         then:
-        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${NXF_TASK_WORKDIR:+SINGULARITYENV_NXF_TASK_WORKDIR="$NXF_TASK_WORKDIR"} singularity exec --no-home --pid -B /work/dir docker://ubuntu:latest /bin/bash -c "cd $NXF_TASK_WORKDIR; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
+        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${NXF_TASK_WORKDIR:+SINGULARITYENV_NXF_TASK_WORKDIR="$NXF_TASK_WORKDIR"} singularity exec --no-home --pid -B /work/dir docker://ubuntu:latest /bin/bash -c "cd \\"$NXF_TASK_WORKDIR\\"; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == ""
         binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
     }
@@ -1148,7 +1141,7 @@ class BashWrapperBuilderTest extends Specification {
             containerConfig: new SingularityConfig(enabled: true) ).makeBinding()
 
         then:
-        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${NXF_TASK_WORKDIR:+SINGULARITYENV_NXF_TASK_WORKDIR="$NXF_TASK_WORKDIR"} singularity exec --no-home --pid -B /work/dir docker://ubuntu:latest /bin/bash -c "cd $NXF_TASK_WORKDIR; /bin/bash -ue /work/dir/.command.sh"'
+        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${NXF_TASK_WORKDIR:+SINGULARITYENV_NXF_TASK_WORKDIR="$NXF_TASK_WORKDIR"} singularity exec --no-home --pid -B /work/dir docker://ubuntu:latest /bin/bash -c "cd \\"$NXF_TASK_WORKDIR\\"; /bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == ""
         binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
     }
@@ -1162,7 +1155,7 @@ class BashWrapperBuilderTest extends Specification {
                 containerConfig: new SingularityConfig(enabled: true, entrypointOverride: true) ).makeBinding()
 
         then:
-        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${NXF_TASK_WORKDIR:+SINGULARITYENV_NXF_TASK_WORKDIR="$NXF_TASK_WORKDIR"} singularity exec --no-home --pid -B /work/dir docker://ubuntu:latest /bin/bash -c "cd $NXF_TASK_WORKDIR; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
+        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${NXF_TASK_WORKDIR:+SINGULARITYENV_NXF_TASK_WORKDIR="$NXF_TASK_WORKDIR"} singularity exec --no-home --pid -B /work/dir docker://ubuntu:latest /bin/bash -c "cd \\"$NXF_TASK_WORKDIR\\"; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == ""
         binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
     }
@@ -1176,7 +1169,7 @@ class BashWrapperBuilderTest extends Specification {
             containerConfig: new SingularityConfig(enabled: true, ociMode: true) ).makeBinding()
 
         then:
-        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${XDG_RUNTIME_DIR:+XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR"} ${DBUS_SESSION_BUS_ADDRESS:+DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS"} ${NXF_TASK_WORKDIR:+SINGULARITYENV_NXF_TASK_WORKDIR="$NXF_TASK_WORKDIR"} singularity exec --no-home --oci -B /work/dir docker://ubuntu:latest /bin/bash -c "cd $NXF_TASK_WORKDIR; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
+        binding.launch_cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} ${XDG_RUNTIME_DIR:+XDG_RUNTIME_DIR="$XDG_RUNTIME_DIR"} ${DBUS_SESSION_BUS_ADDRESS:+DBUS_SESSION_BUS_ADDRESS="$DBUS_SESSION_BUS_ADDRESS"} ${NXF_TASK_WORKDIR:+SINGULARITYENV_NXF_TASK_WORKDIR="$NXF_TASK_WORKDIR"} singularity exec --no-home --oci -B /work/dir docker://ubuntu:latest /bin/bash -c "cd \\"$NXF_TASK_WORKDIR\\"; eval $(nxf_container_env); /bin/bash -ue /work/dir/.command.sh"'
         binding.cleanup_cmd == ""
         binding.kill_cmd == '[[ "$pid" ]] && nxf_kill $pid'
     }
@@ -1273,7 +1266,7 @@ class BashWrapperBuilderTest extends Specification {
             set +u
             set +e
             cd "$NXF_TASK_WORKDIR"
-            
+
             nxf_eval_cmd() {
                 {
                     IFS=$'\\n' read -r -d '' "${1}";
@@ -1281,7 +1274,7 @@ class BashWrapperBuilderTest extends Specification {
                     (IFS=$'\\n' read -r -d '' _ERRNO_; return ${_ERRNO_});
                 } < <((printf '\\0%s\\0%d\\0' "$(((({ shift 2; "${@}"; echo "${?}" 1>&3-; } | tr -d '\\0' 1>&4-) 4>&2- 2>&1- | tr -d '\\0' 1>&4-) 3>&1- | exit "$(cat)") 4>&1-)" "${?}" 1>&2) 2>&1)
             }
-            
+
             echo '' > .command.env
             #
             echo FOO="${FOO[@]}" >> .command.env
@@ -1305,7 +1298,7 @@ class BashWrapperBuilderTest extends Specification {
             set +u
             set +e
             cd "$NXF_TASK_WORKDIR"
-            
+
             nxf_eval_cmd() {
                 {
                     IFS=$'\\n' read -r -d '' "${1}";
@@ -1313,7 +1306,7 @@ class BashWrapperBuilderTest extends Specification {
                     (IFS=$'\\n' read -r -d '' _ERRNO_; return ${_ERRNO_});
                 } < <((printf '\\0%s\\0%d\\0' "$(((({ shift 2; "${@}"; echo "${?}" 1>&3-; } | tr -d '\\0' 1>&4-) 4>&2- 2>&1- | tr -d '\\0' 1>&4-) 3>&1- | exit "$(cat)") 4>&1-)" "${?}" 1>&2) 2>&1)
             }
-            
+
             echo '' > .command.env
             #
             echo FOO="${FOO[@]}" >> .command.env
@@ -1452,6 +1445,42 @@ class BashWrapperBuilderTest extends Specification {
         binding.launch_cmd == 'podman run -i -e "NXF_TASK_WORKDIR" -v /work/dir:/work/dir -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
         binding.cleanup_cmd == 'rm -rf $NXF_SCRATCH || true\npodman rm $NXF_BOXID &>/dev/null || true\n'
         binding.kill_cmd == 'podman stop $NXF_BOXID'
+    }
+
+    def 'should skip trace wrapper when NXF_FUSION_TRACE is enabled and Fusion is active'() {
+        given:
+        SysEnv.push([NXF_FUSION_TRACE: 'true'])
+        def bean = new TaskBean()
+        bean.statsEnabled = true
+        bean.fusionEnabled = true
+        bean.workDir = Path.of('/work/xx/yy')
+        bean.script = 'echo hello'
+
+        def builder = new BashWrapperBuilder(bean)
+
+        expect:
+        !builder.isTraceRequired()
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should keep trace wrapper when NXF_FUSION_TRACE is disabled even with Fusion'() {
+        given:
+        SysEnv.push([NXF_FUSION_TRACE: 'false'])
+        def bean = new TaskBean()
+        bean.statsEnabled = true
+        bean.fusionEnabled = true
+        bean.workDir = Path.of('/work/xx/yy')
+        bean.script = 'echo hello'
+
+        def builder = new BashWrapperBuilder(bean)
+
+        expect:
+        builder.isTraceRequired()
+
+        cleanup:
+        SysEnv.pop()
     }
 
     @Unroll

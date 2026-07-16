@@ -1,0 +1,1350 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package io.seqera.executor
+
+import com.google.common.hash.HashCode
+import io.seqera.config.ExecutorOpts
+import io.seqera.config.MachineRequirementOpts
+import io.seqera.sched.api.schema.v1a1.DescribeTaskResponse
+import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
+import io.seqera.sched.api.schema.v1a1.MachineInfo
+import io.seqera.sched.api.schema.v1a1.NextflowTask
+import io.seqera.sched.api.schema.v1a1.PredictionModel
+import io.seqera.sched.api.schema.v1a1.PriceModel as SchedPriceModel
+import io.seqera.sched.api.schema.v1a1.ProvisioningModel
+import io.seqera.sched.api.schema.v1a1.ResourceLimit
+import io.seqera.sched.api.schema.v1a1.ResourceRequirement
+import io.seqera.sched.api.schema.v1a1.Task
+import io.seqera.sched.api.schema.v1a1.TaskAttempt
+import io.seqera.sched.api.schema.v1a1.TaskState as SchedTaskState
+import io.seqera.sched.api.schema.v1a1.TaskStatus as SchedTaskStatus
+import io.seqera.sched.client.SchedClient
+import nextflow.cloud.types.CloudMachineInfo
+import nextflow.cloud.types.PriceModel
+import nextflow.util.Duration
+import nextflow.util.MemoryUnit
+import nextflow.exception.ProcessException
+import nextflow.processor.TaskConfig
+import nextflow.processor.TaskId
+import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
+import nextflow.processor.TaskStatus
+import spock.lang.Specification
+
+import java.nio.file.Paths
+
+/**
+ * Tests for SeqeraTaskHandler metadata fetching functionality
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+class SeqeraTaskHandlerTest extends Specification {
+
+    def 'should return null for getMachineInfo when cachedTaskState is null'() {
+        given:
+        def handler = createHandler()
+
+        expect:
+        handler.getMachineInfo() == null
+    }
+
+    def 'should return null for getMachineInfo when attempts list is empty'() {
+        given:
+        def handler = createHandler()
+        handler.cachedTaskState = new SchedTaskState().attempts([])
+
+        expect:
+        handler.getMachineInfo() == null
+    }
+
+    def 'should return null for getMachineInfo when last attempt has no machine info'() {
+        given:
+        def handler = createHandler()
+        def attempt = new TaskAttempt()
+            .index(1)
+            .nativeId('arn:aws:ecs:us-east-1:123:task/abc')
+            .status(SchedTaskStatus.SUCCEEDED)
+        handler.cachedTaskState = new SchedTaskState().attempts([attempt])
+
+        expect:
+        handler.getMachineInfo() == null
+    }
+
+    def 'should extract machine info from last task attempt'() {
+        given:
+        def handler = createHandler()
+        def machineInfo = new MachineInfo()
+            .type('m5.large')
+            .zone('us-east-1a')
+            .priceModel(SchedPriceModel.SPOT)
+        def attempt = new TaskAttempt()
+            .index(1)
+            .nativeId('arn:aws:ecs:us-east-1:123:task/abc')
+            .status(SchedTaskStatus.SUCCEEDED)
+            .machineInfo(machineInfo)
+        handler.cachedTaskState = new SchedTaskState().attempts([attempt])
+
+        when:
+        def result = handler.getMachineInfo()
+
+        then:
+        result != null
+        result.type == 'm5.large'
+        result.zone == 'us-east-1a'
+        result.priceModel == PriceModel.spot
+    }
+
+    def 'should cache machine info after first retrieval'() {
+        given:
+        def handler = createHandler()
+        def machineInfo = new MachineInfo()
+            .type('c5.xlarge')
+            .zone('eu-west-1b')
+            .priceModel(SchedPriceModel.STANDARD)
+        def attempt = new TaskAttempt()
+            .index(1)
+            .nativeId('arn:aws:ecs:eu-west-1:123:task/xyz')
+            .status(SchedTaskStatus.SUCCEEDED)
+            .machineInfo(machineInfo)
+        handler.cachedTaskState = new SchedTaskState().attempts([attempt])
+
+        when:
+        def first = handler.getMachineInfo()
+        // Clear the cached task state
+        handler.cachedTaskState = null
+        def second = handler.getMachineInfo()
+
+        then:
+        first.is(second)
+    }
+
+    def 'should use last attempt when multiple attempts exist'() {
+        given:
+        def handler = createHandler()
+        def info1 = new MachineInfo().type('m5.large').zone('us-east-1a').priceModel(SchedPriceModel.SPOT)
+        def info2 = new MachineInfo().type('c5.xlarge').zone('us-east-1b').priceModel(SchedPriceModel.STANDARD)
+        def attempt1 = new TaskAttempt().index(1).nativeId('task-1').status(SchedTaskStatus.FAILED).machineInfo(info1)
+        def attempt2 = new TaskAttempt().index(2).nativeId('task-2').status(SchedTaskStatus.SUCCEEDED).machineInfo(info2)
+        handler.cachedTaskState = new SchedTaskState().attempts([attempt1, attempt2])
+
+        when:
+        def result = handler.getMachineInfo()
+
+        then:
+        result.type == 'c5.xlarge'
+        result.zone == 'us-east-1b'
+        result.priceModel == PriceModel.standard
+    }
+
+    def 'should return null for getNumSpotInterruptions when task not completed'() {
+        given:
+        def handler = createHandler()
+        handler.taskId = 'task-123'
+        handler.status = TaskStatus.RUNNING
+        handler.cachedTaskState = new SchedTaskState().numSpotInterruptions(2)
+
+        expect:
+        handler.getNumSpotInterruptions() == null
+    }
+
+    def 'should return null for getNumSpotInterruptions when cachedTaskState is null'() {
+        given:
+        def handler = createHandler()
+        handler.taskId = 'task-123'
+        handler.status = TaskStatus.COMPLETED
+
+        expect:
+        handler.getNumSpotInterruptions() == null
+    }
+
+    def 'should return spot interruptions count from task state'() {
+        given:
+        def handler = createHandler()
+        handler.taskId = 'task-123'
+        handler.status = TaskStatus.COMPLETED
+        handler.cachedTaskState = new SchedTaskState().numSpotInterruptions(3)
+
+        expect:
+        handler.getNumSpotInterruptions() == 3
+    }
+
+    def 'should return zero spot interruptions when none occurred'() {
+        given:
+        def handler = createHandler()
+        handler.taskId = 'task-123'
+        handler.status = TaskStatus.COMPLETED
+        handler.cachedTaskState = new SchedTaskState().numSpotInterruptions(0)
+
+        expect:
+        handler.getNumSpotInterruptions() == 0
+    }
+
+    def 'should return null for getLogStreamId when cachedTaskState is null'() {
+        given:
+        def handler = createHandler()
+
+        expect:
+        handler.getLogStreamId() == null
+    }
+
+    def 'should return log stream id from cached task state'() {
+        given:
+        def handler = createHandler()
+        handler.cachedTaskState = new SchedTaskState().logStreamId('log-stream-abc123')
+
+        expect:
+        handler.getLogStreamId() == 'log-stream-abc123'
+    }
+
+    def 'should return null for getNativeId when cachedTaskState is null'() {
+        given:
+        def handler = createHandler()
+
+        expect:
+        handler.getNativeId() == null
+    }
+
+    def 'should return task id from cached task state'() {
+        given:
+        def handler = createHandler()
+        handler.cachedTaskState = new SchedTaskState().id('tsk-abc123')
+
+        expect:
+        handler.getNativeId() == 'tsk-abc123'
+    }
+
+    def 'should populate trace record with metadata'() {
+        given:
+        def handler = createHandlerForTraceTest()
+        handler.taskId = 'task-123'
+        handler.status = TaskStatus.COMPLETED
+        def machineInfo = new MachineInfo()
+            .type('m5.large')
+            .zone('us-east-1a')
+            .priceModel(SchedPriceModel.SPOT)
+        def resources = new ResourceRequirement().cpuShares(2048).memoryMiB(4096)
+        def attempt = new TaskAttempt()
+            .index(1)
+            .nativeId('arn:aws:ecs:us-east-1:123:task/abc')
+            .status(SchedTaskStatus.SUCCEEDED)
+            .machineInfo(machineInfo)
+            .resources(resources)
+        handler.cachedTaskState = new SchedTaskState()
+            .id('tsk-xyz789')
+            .attempts([attempt])
+            .numSpotInterruptions(2)
+            .logStreamId('log-stream-xyz')
+
+        when:
+        def trace = handler.getTraceRecord()
+
+        then:
+        trace.get('native_id') == 'tsk-xyz789'
+        trace.getMachineInfo().type == 'm5.large'
+        trace.getNumSpotInterruptions() == 2
+        trace.getLogStreamId() == 'log-stream-xyz'
+        trace.getResourceAllocation() == [cpuShares: 2048, memoryMiB: 4096]
+        trace.getExecutorName() == 'seqera/aws'
+    }
+
+    def 'should detect completion when batch submission fails'() {
+        given:
+        def error = new RuntimeException('Batch submission failed')
+        def handler = createHandlerWithError(error)
+        // Simulate batch submission failure - task has error and status is COMPLETED but never went through RUNNING
+        handler.status = TaskStatus.COMPLETED
+
+        expect:
+        // checkIfCompleted should return true to allow proper error propagation
+        handler.checkIfCompleted() == true
+    }
+
+    def 'should not detect completion for normal pending task'() {
+        given:
+        def handler = createHandler()
+        // Normal task that has been submitted but not yet running
+        handler.status = TaskStatus.SUBMITTED
+
+        expect:
+        // checkIfCompleted should return false - task is still pending
+        handler.checkIfCompleted() == false
+    }
+
+    def 'should set task error with error message when failed with no exit code'() {
+        given:
+        Throwable capturedError = null
+        Integer capturedExitStatus = null
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> Mock(TaskConfig)
+            lazyName() >> 'test_task'
+            setExitStatus(_) >> { args -> capturedExitStatus = args[0] }
+            getExitStatus() >> { capturedExitStatus }
+            setError(_) >> { args -> capturedError = args[0] }
+            setStdout(_) >> {}
+            setStderr(_) >> {}
+        }
+        def taskState = new SchedTaskState()
+            .status(SchedTaskStatus.FAILED)
+            .errorMessage('Container terminated with OOMKilled')
+        def describeResponse = new DescribeTaskResponse().taskState(taskState)
+        def client = Mock(SchedClient) {
+            describeTask(_) >> describeResponse
+            getTaskLogs(_) >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> client
+            getRunResourceLabels() >> [:]
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            readExitFile() >> Integer.MAX_VALUE
+        }
+        handler.setBatchTaskId('task-123')
+        handler.status = TaskStatus.RUNNING
+
+        when:
+        def completed = handler.checkIfCompleted()
+
+        then:
+        completed
+        capturedExitStatus == Integer.MAX_VALUE
+        capturedError instanceof ProcessException
+        capturedError.message == 'Container terminated with OOMKilled'
+    }
+
+    def 'should set task error with fallback message when failed with no exit code and no error message'() {
+        given:
+        Throwable capturedError = null
+        Integer capturedExitStatus = null
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> Mock(TaskConfig)
+            lazyName() >> 'test_task'
+            setExitStatus(_) >> { args -> capturedExitStatus = args[0] }
+            getExitStatus() >> { capturedExitStatus }
+            setError(_) >> { args -> capturedError = args[0] }
+            setStdout(_) >> {}
+            setStderr(_) >> {}
+        }
+        def taskState = new SchedTaskState()
+            .status(SchedTaskStatus.FAILED)
+        def describeResponse = new DescribeTaskResponse().taskState(taskState)
+        def client = Mock(SchedClient) {
+            describeTask(_) >> describeResponse
+            getTaskLogs(_) >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> client
+            getRunResourceLabels() >> [:]
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            readExitFile() >> Integer.MAX_VALUE
+        }
+        handler.setBatchTaskId('task-456')
+        handler.status = TaskStatus.RUNNING
+
+        when:
+        def completed = handler.checkIfCompleted()
+
+        then:
+        completed
+        capturedExitStatus == Integer.MAX_VALUE
+        capturedError instanceof ProcessException
+        capturedError.message == 'Task failed for unknown reason'
+    }
+
+    def 'should not set task error when failed with valid exit code'() {
+        given:
+        Throwable capturedError = null
+        Integer capturedExitStatus = null
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> Mock(TaskConfig)
+            lazyName() >> 'test_task'
+            setExitStatus(_) >> { args -> capturedExitStatus = args[0] }
+            getExitStatus() >> { capturedExitStatus }
+            setError(_) >> { args -> capturedError = args[0] }
+            setStdout(_) >> {}
+            setStderr(_) >> {}
+        }
+        def taskState = new SchedTaskState()
+            .status(SchedTaskStatus.FAILED)
+            .errorMessage('Some error')
+        def describeResponse = new DescribeTaskResponse().taskState(taskState)
+        def client = Mock(SchedClient) {
+            describeTask(_) >> describeResponse
+            getTaskLogs(_) >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> client
+            getRunResourceLabels() >> [:]
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            readExitFile() >> 1
+        }
+        handler.setBatchTaskId('task-789')
+        handler.status = TaskStatus.RUNNING
+
+        when:
+        def completed = handler.checkIfCompleted()
+
+        then:
+        completed
+        capturedExitStatus == 1
+        capturedError == null
+    }
+
+    def 'should use scheduler API exit code when exit file is not available on a failed task'() {
+        given:
+        Throwable capturedError = null
+        Integer capturedExitStatus = null
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> Mock(TaskConfig)
+            lazyName() >> 'test_task'
+            setExitStatus(_) >> { args -> capturedExitStatus = args[0] }
+            getExitStatus() >> { capturedExitStatus }
+            setError(_) >> { args -> capturedError = args[0] }
+            setStdout(_) >> {}
+            setStderr(_) >> {}
+        }
+        def taskState = new SchedTaskState()
+            .status(SchedTaskStatus.FAILED)
+            .exitCode(137)
+        def describeResponse = new DescribeTaskResponse().taskState(taskState)
+        def client = Mock(SchedClient) {
+            describeTask(_) >> describeResponse
+            getTaskLogs(_) >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> client
+            getRunResourceLabels() >> [:]
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            readExitFile() >> Integer.MAX_VALUE
+        }
+        handler.setBatchTaskId('task-oom')
+        handler.status = TaskStatus.RUNNING
+
+        when:
+        def completed = handler.checkIfCompleted()
+
+        then:
+        completed
+        // the .exitcode file was unavailable, so the exit status comes from the scheduler API
+        capturedExitStatus == 137
+        // a real exit code is present, so no generic error is set
+        capturedError == null
+    }
+
+    def 'should use scheduler API exit code when exit file is not available on a succeeded task'() {
+        given:
+        Throwable capturedError = null
+        Integer capturedExitStatus = null
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> Mock(TaskConfig)
+            lazyName() >> 'test_task'
+            setExitStatus(_) >> { args -> capturedExitStatus = args[0] }
+            getExitStatus() >> { capturedExitStatus }
+            setError(_) >> { args -> capturedError = args[0] }
+            setStdout(_) >> {}
+            setStderr(_) >> {}
+        }
+        def taskState = new SchedTaskState()
+            .status(SchedTaskStatus.SUCCEEDED)
+            .exitCode(0)
+        def describeResponse = new DescribeTaskResponse().taskState(taskState)
+        def client = Mock(SchedClient) {
+            describeTask(_) >> describeResponse
+            getTaskLogs(_) >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> client
+            getRunResourceLabels() >> [:]
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            readExitFile() >> Integer.MAX_VALUE
+        }
+        handler.setBatchTaskId('task-ok')
+        handler.status = TaskStatus.RUNNING
+
+        when:
+        def completed = handler.checkIfCompleted()
+
+        then:
+        completed
+        capturedExitStatus == 0
+        capturedError == null
+    }
+
+    def 'should prefer the scheduler API exit code over the exit file when both are available'() {
+        given:
+        Throwable capturedError = null
+        Integer capturedExitStatus = null
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> Mock(TaskConfig)
+            lazyName() >> 'test_task'
+            setExitStatus(_) >> { args -> capturedExitStatus = args[0] }
+            getExitStatus() >> { capturedExitStatus }
+            setError(_) >> { args -> capturedError = args[0] }
+            setStdout(_) >> {}
+            setStderr(_) >> {}
+        }
+        def taskState = new SchedTaskState()
+            .status(SchedTaskStatus.FAILED)
+            .exitCode(137)
+        def describeResponse = new DescribeTaskResponse().taskState(taskState)
+        def client = Mock(SchedClient) {
+            describeTask(_) >> describeResponse
+            getTaskLogs(_) >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> client
+            getRunResourceLabels() >> [:]
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            readExitFile() >> 2
+        }
+        handler.setBatchTaskId('task-api')
+        handler.status = TaskStatus.RUNNING
+
+        when:
+        def completed = handler.checkIfCompleted()
+
+        then:
+        completed
+        // the scheduler API value (137) takes precedence over the .exitcode file (2)
+        capturedExitStatus == 137
+        capturedError == null
+        // the exit file is not even read when the scheduler API reports a code
+        0 * handler.readExitFile()
+    }
+
+    def 'should fall back to the exit file when the scheduler API reports no exit code'() {
+        given:
+        Throwable capturedError = null
+        Integer capturedExitStatus = null
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> Mock(TaskConfig)
+            lazyName() >> 'test_task'
+            setExitStatus(_) >> { args -> capturedExitStatus = args[0] }
+            getExitStatus() >> { capturedExitStatus }
+            setError(_) >> { args -> capturedError = args[0] }
+            setStdout(_) >> {}
+            setStderr(_) >> {}
+        }
+        def taskState = new SchedTaskState()
+            .status(SchedTaskStatus.SUCCEEDED)
+        def describeResponse = new DescribeTaskResponse().taskState(taskState)
+        def client = Mock(SchedClient) {
+            describeTask(_) >> describeResponse
+            getTaskLogs(_) >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> client
+            getRunResourceLabels() >> [:]
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            readExitFile() >> 5
+        }
+        handler.setBatchTaskId('task-file')
+        handler.status = TaskStatus.RUNNING
+
+        when:
+        def completed = handler.checkIfCompleted()
+
+        then:
+        completed
+        // the scheduler API reported no exit code, so the .exitcode file (5) is used
+        capturedExitStatus == 5
+        capturedError == null
+    }
+
+    def 'should set index and hash on submitted task'() {
+        given:
+        Task capturedTask = null
+        def batchSubmitter = Mock(SeqeraBatchSubmitter) {
+            submit(_, _) >> { handler, task -> capturedTask = task }
+        }
+        def seqeraConfig = Mock(ExecutorOpts) {
+            getMachineRequirement() >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getBatchSubmitter() >> batchSubmitter
+            getSeqeraConfig() >> seqeraConfig
+            getRunResourceLabels() >> [:]
+        }
+        def taskConfig = Mock(TaskConfig) {
+            getCpus() >> 1
+            getMemory() >> null
+            getAccelerator() >> null
+            getDisk() >> null
+        }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> taskConfig
+            getContainer() >> 'ubuntu:latest'
+            getContainerPlatform() >> null
+            lazyName() >> 'test_task'
+            getId() >> TaskId.of(42)
+            getHash() >> HashCode.fromString('abcd1234')
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionEnabled() >> true
+            fusionSubmitCli() >> ['bash', '-c', 'echo hello']
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [:]
+            }
+        }
+
+        when:
+        handler.submit()
+
+        then:
+        1 * executor.ensureRunCreated()
+        capturedTask != null
+        capturedTask.getNextflow() != null
+        capturedTask.getNextflow().getTaskId() == 42
+        capturedTask.getNextflow().getHash() == 'abcd1234'
+        capturedTask.getNextflow().getWorkDir() == '/work/ab/cd1234'
+    }
+
+    def 'should handle null task id and hash'() {
+        given:
+        Task capturedTask = null
+        def batchSubmitter = Mock(SeqeraBatchSubmitter) {
+            submit(_, _) >> { handler, task -> capturedTask = task }
+        }
+        def seqeraConfig = Mock(ExecutorOpts) {
+            getMachineRequirement() >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getBatchSubmitter() >> batchSubmitter
+            getSeqeraConfig() >> seqeraConfig
+            getRunResourceLabels() >> [:]
+        }
+        def taskConfig = Mock(TaskConfig) {
+            getCpus() >> 1
+            getMemory() >> null
+            getAccelerator() >> null
+            getDisk() >> null
+        }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> taskConfig
+            getContainer() >> 'ubuntu:latest'
+            getContainerPlatform() >> null
+            lazyName() >> 'test_task'
+            getId() >> null
+            getHash() >> null
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionEnabled() >> true
+            fusionSubmitCli() >> ['bash', '-c', 'echo hello']
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [:]
+            }
+        }
+
+        when:
+        handler.submit()
+
+        then:
+        capturedTask != null
+        capturedTask.getNextflow() != null
+        capturedTask.getNextflow().getTaskId() == null
+        capturedTask.getNextflow().getHash() == null
+        capturedTask.getNextflow().getWorkDir() == '/work/ab/cd1234'
+    }
+
+    def 'should return only fusion env when no config environment'() {
+        given:
+        def seqeraConfig = Mock(ExecutorOpts) {
+            getTaskEnvironment() >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getSeqeraConfig() >> seqeraConfig
+            getRunResourceLabels() >> [:]
+        }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getConfig() >> Mock(TaskConfig)
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [FUSION_KEY: 'fusion_val']
+            }
+        }
+
+        when:
+        def result = handler.getTaskEnvironment()
+
+        then:
+        result == [FUSION_KEY: 'fusion_val']
+    }
+
+    def 'should merge config environment with fusion env'() {
+        given:
+        def seqeraConfig = Mock(ExecutorOpts) {
+            getTaskEnvironment() >> [MY_VAR: 'my_val', OTHER: 'other_val']
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getSeqeraConfig() >> seqeraConfig
+            getRunResourceLabels() >> [:]
+        }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getConfig() >> Mock(TaskConfig)
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [FUSION_KEY: 'fusion_val']
+            }
+        }
+
+        when:
+        def result = handler.getTaskEnvironment()
+
+        then:
+        result == [MY_VAR: 'my_val', OTHER: 'other_val', FUSION_KEY: 'fusion_val']
+    }
+
+    def 'should give fusion env precedence over config environment'() {
+        given:
+        def seqeraConfig = Mock(ExecutorOpts) {
+            getTaskEnvironment() >> [SHARED_KEY: 'config_val', MY_VAR: 'my_val']
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getSeqeraConfig() >> seqeraConfig
+            getRunResourceLabels() >> [:]
+        }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getConfig() >> Mock(TaskConfig)
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [SHARED_KEY: 'fusion_val']
+            }
+        }
+
+        when:
+        def result = handler.getTaskEnvironment()
+
+        then:
+        result == [MY_VAR: 'my_val', SHARED_KEY: 'fusion_val']
+    }
+
+    def 'should return null for getResourceAllocation when cachedTaskState is null'() {
+        given:
+        def handler = createHandler()
+
+        expect:
+        handler.getResourceAllocation() == null
+    }
+
+    def 'should return allocated resources from last task attempt'() {
+        given:
+        def handler = createHandler()
+        def resources = new ResourceRequirement()
+            .cpuShares(2048)
+            .memoryMiB(4096)
+        def attempt = new TaskAttempt()
+            .index(1)
+            .nativeId('task-1')
+            .status(SchedTaskStatus.SUCCEEDED)
+            .resources(resources)
+        handler.cachedTaskState = new SchedTaskState().attempts([attempt])
+
+        when:
+        def result = handler.getResourceAllocation()
+
+        then:
+        result != null
+        result.cpuShares == 2048
+        result.memoryMiB == 4096
+    }
+
+    def 'should use last attempt resources when multiple attempts exist'() {
+        given:
+        def handler = createHandler()
+        def resources1 = new ResourceRequirement().cpuShares(1024).memoryMiB(2048)
+        def resources2 = new ResourceRequirement().cpuShares(4096).memoryMiB(8192)
+        def attempt1 = new TaskAttempt().index(1).nativeId('task-1').status(SchedTaskStatus.FAILED).resources(resources1)
+        def attempt2 = new TaskAttempt().index(2).nativeId('task-2').status(SchedTaskStatus.SUCCEEDED).resources(resources2)
+        handler.cachedTaskState = new SchedTaskState().attempts([attempt1, attempt2])
+
+        when:
+        def result = handler.getResourceAllocation()
+
+        then:
+        result.cpuShares == 4096
+        result.memoryMiB == 8192
+    }
+
+    def 'should fallback to taskState resourceRequirement when no attempts'() {
+        given:
+        def handler = createHandler()
+        def resources = new ResourceRequirement().cpuShares(1024).memoryMiB(2048).time('1h')
+        handler.cachedTaskState = new SchedTaskState()
+            .attempts([])
+            .resourceAllocation(resources)
+
+        when:
+        def result = handler.getResourceAllocation()
+
+        then:
+        result.cpuShares == 1024
+        result.memoryMiB == 2048
+        result.time == '1h'
+    }
+
+    def 'should fallback to taskState resourceRequirement when last attempt has no resources'() {
+        given:
+        def handler = createHandler()
+        def attempt = new TaskAttempt().index(1).nativeId('task-1').status(SchedTaskStatus.SUCCEEDED)
+        def resources = new ResourceRequirement().cpuShares(512).memoryMiB(1024)
+        handler.cachedTaskState = new SchedTaskState()
+            .attempts([attempt])
+            .resourceAllocation(resources)
+
+        when:
+        def result = handler.getResourceAllocation()
+
+        then:
+        result.cpuShares == 512
+        result.memoryMiB == 1024
+    }
+
+    def 'should return granted time from resource requirement'() {
+        given:
+        def handler = createHandler()
+        handler.cachedTaskState = new SchedTaskState()
+            .resourceAllocation(new ResourceRequirement().time('2h'))
+
+        expect:
+        handler.getGrantedTime() == Duration.of('2h').toMillis()
+    }
+
+    def 'should fallback to config time when cachedTaskState is null'() {
+        given:
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getConfig() >> Mock(TaskConfig) { getTime() >> Duration.of('6h') }
+        }
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient); getRunResourceLabels() >> [:] }
+        def handler = new SeqeraTaskHandler(taskRun, executor)
+
+        expect:
+        handler.getGrantedTime() == Duration.of('6h').toMillis()
+    }
+
+    def 'should build resource limit from task config'() {
+        given:
+        def taskConfig = Mock(TaskConfig) {
+            getResourceLimit('memory') >> MemoryUnit.of('2 GB')
+            getResourceLimit('cpus') >> 4
+        }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getConfig() >> taskConfig
+        }
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient); getRunResourceLabels() >> [:] }
+        def handler = new SeqeraTaskHandler(taskRun, executor)
+
+        when:
+        def result = handler.toResourceLimit()
+
+        then:
+        result != null
+        result.memoryMiB == 2048
+        result.cpuShares == 4096
+    }
+
+    def 'should build resource limit with only memory'() {
+        given:
+        def taskConfig = Mock(TaskConfig) {
+            getResourceLimit('memory') >> MemoryUnit.of('800 MB')
+            getResourceLimit('cpus') >> null
+        }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getConfig() >> taskConfig
+        }
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient); getRunResourceLabels() >> [:] }
+        def handler = new SeqeraTaskHandler(taskRun, executor)
+
+        when:
+        def result = handler.toResourceLimit()
+
+        then:
+        result != null
+        result.memoryMiB == 800
+        result.cpuShares == null
+    }
+
+    def 'should return null resource limit when no limits defined'() {
+        given:
+        def taskConfig = Mock(TaskConfig) {
+            getResourceLimit('memory') >> null
+            getResourceLimit('cpus') >> null
+        }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getConfig() >> taskConfig
+        }
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient); getRunResourceLabels() >> [:] }
+        def handler = new SeqeraTaskHandler(taskRun, executor)
+
+        when:
+        def result = handler.toResourceLimit()
+
+        then:
+        result == null
+    }
+
+    def 'should include resource limit in submitted task'() {
+        given:
+        Task capturedTask = null
+        def batchSubmitter = Mock(SeqeraBatchSubmitter) {
+            submit(_, _) >> { handler, task -> capturedTask = task }
+        }
+        def seqeraConfig = Mock(ExecutorOpts) {
+            getMachineRequirement() >> null
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getBatchSubmitter() >> batchSubmitter
+            getSeqeraConfig() >> seqeraConfig
+            getRunResourceLabels() >> [:]
+        }
+        def taskConfig = Mock(TaskConfig) {
+            getCpus() >> 1
+            getMemory() >> null
+            getAccelerator() >> null
+            getDisk() >> null
+            getResourceLimit('memory') >> MemoryUnit.of('2 GB')
+            getResourceLimit('cpus') >> null
+        }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> taskConfig
+            getContainer() >> 'ubuntu:latest'
+            getContainerPlatform() >> null
+            lazyName() >> 'test_task'
+            getId() >> TaskId.of(1)
+            getHash() >> HashCode.fromString('abcd1234')
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionEnabled() >> true
+            fusionSubmitCli() >> ['bash', '-c', 'echo hello']
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [:]
+            }
+        }
+
+        when:
+        handler.submit()
+
+        then:
+        capturedTask != null
+        capturedTask.getResourceLimit() != null
+        capturedTask.getResourceLimit().memoryMiB == 2048
+        capturedTask.getResourceLimit().cpuShares == null
+    }
+
+    def 'submit attaches Task.labels containing only the per-task delta'() {
+        given:
+        Task captured = null
+        def batchSubmitter = Mock(SeqeraBatchSubmitter) {
+            submit(_, _) >> { args -> captured = args[1] as Task }
+        }
+        def taskConfig = Mock(TaskConfig) {
+            getCpus() >> 2
+            getMemory() >> MemoryUnit.of('1 GB')
+            getAccelerator() >> null
+            getResourceLabels() >> [team: 'a', region: 'us-east-1']
+            getResourceLimit('memory') >> null
+            getResourceLimit('cpus') >> null
+            getDisk() >> null
+        }
+        def taskRun = Mock(TaskRun) {
+            getConfig() >> taskConfig
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getContainer() >> 'docker.io/library/alpine:3'
+            getContainerPlatform() >> 'linux/amd64'
+            getId() >> TaskId.of(1)
+            getHash() >> HashCode.fromInt(1)
+            lazyName() >> 'sample_task'
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getBatchSubmitter() >> batchSubmitter
+            getSeqeraConfig() >> Mock(ExecutorOpts) {
+                getMachineRequirement() >> null
+                getTaskEnvironment() >> [:]
+            }
+            getRunResourceLabels() >> [team: 'a']
+            ensureRunCreated() >> {}
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionEnabled() >> true
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [:]
+            }
+            fusionSubmitCli() >> ['/bin/sh', '-c', 'true']
+        }
+
+        when:
+        handler.submit()
+
+        then:
+        captured != null
+        captured.getLabels() == [region: 'us-east-1']
+    }
+
+    def 'submit maps secret directive names to tower-<workflowId> references'() {
+        given:
+        Task captured = null
+        def batchSubmitter = Mock(SeqeraBatchSubmitter) {
+            submit(_, _) >> { args -> captured = args[1] as Task }
+        }
+        def taskConfig = Mock(TaskConfig) {
+            getCpus() >> 1
+            getMemory() >> MemoryUnit.of('1 GB')
+            getAccelerator() >> null
+            getResourceLabels() >> [:]
+            getResourceLimit('memory') >> null
+            getResourceLimit('cpus') >> null
+            getDisk() >> null
+            getSecret() >> ['DB_PWD', 'API_KEY']
+        }
+        def taskRun = Mock(TaskRun) {
+            getConfig() >> taskConfig
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getContainer() >> 'docker.io/library/alpine:3'
+            getContainerPlatform() >> 'linux/amd64'
+            getId() >> TaskId.of(1)
+            getHash() >> HashCode.fromInt(1)
+            lazyName() >> 'sample_task'
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getBatchSubmitter() >> batchSubmitter
+            getSeqeraConfig() >> Mock(ExecutorOpts) {
+                getMachineRequirement() >> null
+                getTaskEnvironment() >> [:]
+            }
+            getRunResourceLabels() >> [:]
+            getWorkflowId() >> 'wf123'
+            ensureRunCreated() >> {}
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionEnabled() >> true
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [:]
+            }
+            fusionSubmitCli() >> ['/bin/sh', '-c', 'true']
+        }
+
+        when:
+        handler.submit()
+
+        then: 'each secret name maps to its cloud-store reference; no value is present'
+        captured != null
+        captured.getSecrets() == [DB_PWD: 'tower-wf123/DB_PWD', API_KEY: 'tower-wf123/API_KEY']
+    }
+
+    def 'submit sets no secrets when the secret directive is empty'() {
+        given:
+        Task captured = null
+        def batchSubmitter = Mock(SeqeraBatchSubmitter) {
+            submit(_, _) >> { args -> captured = args[1] as Task }
+        }
+        def taskConfig = Mock(TaskConfig) {
+            getCpus() >> 1
+            getMemory() >> MemoryUnit.of('1 GB')
+            getAccelerator() >> null
+            getResourceLabels() >> [:]
+            getResourceLimit('memory') >> null
+            getResourceLimit('cpus') >> null
+            getDisk() >> null
+            getSecret() >> []
+        }
+        def taskRun = Mock(TaskRun) {
+            getConfig() >> taskConfig
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getContainer() >> 'docker.io/library/alpine:3'
+            getContainerPlatform() >> 'linux/amd64'
+            getId() >> TaskId.of(1)
+            getHash() >> HashCode.fromInt(1)
+            lazyName() >> 'sample_task'
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getBatchSubmitter() >> batchSubmitter
+            getSeqeraConfig() >> Mock(ExecutorOpts) {
+                getMachineRequirement() >> null
+                getTaskEnvironment() >> [:]
+            }
+            getRunResourceLabels() >> [:]
+            getWorkflowId() >> 'wf123'
+            ensureRunCreated() >> {}
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionEnabled() >> true
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [:]
+            }
+            fusionSubmitCli() >> ['/bin/sh', '-c', 'true']
+        }
+
+        when:
+        handler.submit()
+
+        then:
+        captured != null
+        captured.getSecrets() == null
+    }
+
+    def 'submit overlays seqera hints onto config-scope machine requirement'() {
+        given:
+        Task captured = null
+        def handler = createSubmitHandler(
+            hints: hints,
+            baseMachineReq: new MachineRequirementOpts([provisioning: 'ondemand']),
+            onSubmit: { captured = it },
+        )
+
+        when:
+        handler.submit()
+        then:
+        captured.getMachineRequirement().getProvisioning() == expected
+
+        where:
+        hints                                                   | expected
+        ['seqera/machineRequirement.provisioning': 'spotFirst'] | ProvisioningModel.SPOT_FIRST
+        ['machineRequirement.provisioning': 'spotFirst']        | ProvisioningModel.SPOT_FIRST
+        ['awsbatch/consumableResources': 'license-a=1']         | ProvisioningModel.ONDEMAND
+    }
+
+    def 'submit fails on unknown seqera/-prefixed hint'() {
+        given:
+        def handler = createSubmitHandler(hints: ['seqera/machineRequirement.bogus': 'x'])
+
+        when:
+        handler.submit()
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('seqera/machineRequirement.bogus')
+    }
+
+    def 'submit sets Task.predictionModel from the predictionModel hint'() {
+        given:
+        Task captured = null
+        def handler = createSubmitHandler(
+            hints: hints,
+            onSubmit: { captured = it },
+        )
+
+        when:
+        handler.submit()
+        then:
+        captured.getPredictionModel() == expected
+
+        where:
+        hints                                | expected
+        ['seqera/predictionModel': 'none']   | PredictionModel.NONE
+        ['seqera/predictionModel': 'qr/v2']  | PredictionModel.QR_V2
+        ['predictionModel': 'qr/v1']         | PredictionModel.QR_V1
+        [:]                                  | null
+    }
+
+    private SeqeraTaskHandler createSubmitHandler(Map args) {
+        final hints = args.hints as Map<String,Object> ?: [:]
+        final baseMachineReq = args.baseMachineReq as MachineRequirementOpts
+        final Closure onSubmit = args.onSubmit as Closure ?: {}
+
+        def taskConfig = Mock(TaskConfig) {
+            getCpus() >> 1
+            getResourceLabels() >> [:]
+            getResourceLimit(_) >> null
+            getHints() >> hints
+        }
+        def taskRun = Mock(TaskRun) {
+            getConfig() >> taskConfig
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getContainer() >> 'ubuntu:latest'
+            getId() >> TaskId.of(1)
+            getHash() >> HashCode.fromInt(1)
+            lazyName() >> 'sample_task'
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getBatchSubmitter() >> Mock(SeqeraBatchSubmitter) {
+                submit(_, _) >> { a -> onSubmit.call(a[1] as Task) }
+            }
+            getSeqeraConfig() >> Mock(ExecutorOpts) {
+                getMachineRequirement() >> baseMachineReq
+            }
+            getRunResourceLabels() >> [:]
+        }
+        return Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionEnabled() >> true
+            fusionSubmitCli() >> ['/bin/sh', '-c', 'true']
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [:]
+            }
+        }
+    }
+
+    def 'submit leaves Task.labels unset when the task labels equal the run baseline'() {
+        given:
+        Task captured = null
+        def batchSubmitter = Mock(SeqeraBatchSubmitter) {
+            submit(_, _) >> { args -> captured = args[1] as Task }
+        }
+        def taskConfig = Mock(TaskConfig) {
+            getCpus() >> 2
+            getMemory() >> MemoryUnit.of('1 GB')
+            getAccelerator() >> null
+            getResourceLabels() >> [team: 'a']
+            getResourceLimit('memory') >> null
+            getResourceLimit('cpus') >> null
+            getDisk() >> null
+        }
+        def taskRun = Mock(TaskRun) {
+            getConfig() >> taskConfig
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getContainer() >> 'docker.io/library/alpine:3'
+            getContainerPlatform() >> 'linux/amd64'
+            getId() >> TaskId.of(1)
+            getHash() >> HashCode.fromInt(1)
+            lazyName() >> 'sample_task'
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getBatchSubmitter() >> batchSubmitter
+            getSeqeraConfig() >> Mock(ExecutorOpts) {
+                getMachineRequirement() >> null
+                getTaskEnvironment() >> [:]
+            }
+            getRunResourceLabels() >> [team: 'a']
+            ensureRunCreated() >> {}
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionEnabled() >> true
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [:]
+            }
+            fusionSubmitCli() >> ['/bin/sh', '-c', 'true']
+        }
+
+        when:
+        handler.submit()
+
+        then:
+        captured != null
+        captured.getLabels() == null
+    }
+
+    /**
+     * Creates a test handler with minimal mocked dependencies
+     */
+    private SeqeraTaskHandler createHandler() {
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getConfig() >> Mock(TaskConfig)
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getRunResourceLabels() >> [:]
+        }
+        return new SeqeraTaskHandler(taskRun, executor)
+    }
+
+    /**
+     * Creates a test handler with an error set on the task
+     */
+    private SeqeraTaskHandler createHandlerWithError(Throwable error) {
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getConfig() >> Mock(TaskConfig)
+            getError() >> error
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getRunResourceLabels() >> [:]
+        }
+        return new SeqeraTaskHandler(taskRun, executor)
+    }
+
+    /**
+     * Creates a test handler with mocks sufficient for getTraceRecord()
+     */
+    private SeqeraTaskHandler createHandlerForTraceTest() {
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getName() >> 'seqera'
+            getRunResourceLabels() >> [:]
+        }
+        def processor = Mock(TaskProcessor) {
+            getName() >> 'test_process'
+            getExecutor() >> executor
+        }
+        def taskConfig = new TaskConfig(attempt: 1, cpus: 1)
+        def taskRun = Mock(TaskRun) {
+            getId() >> TaskId.of(1)
+            getHashLog() >> 'ab/cd1234'
+            getName() >> 'test_task'
+            getExitStatus() >> 0
+            getProcessor() >> processor
+            getConfig() >> taskConfig
+            getContainer() >> 'ubuntu:latest'
+            getTraceScript() >> 'echo hello'
+            getScratch() >> null
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getEnvironmentStr() >> ''
+            containerMeta() >> null
+        }
+        return new SeqeraTaskHandler(taskRun, executor)
+    }
+}

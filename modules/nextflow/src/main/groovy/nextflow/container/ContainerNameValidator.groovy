@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ import java.util.regex.Pattern
  *
  * Credits
  * https://github.com/jenkinsci/docker-plugin/blob/4733aee58fbcb11b050cfdd9f97fb0980e19bb28/src/main/java/com/nirima/jenkins/plugins/docker/builder/DockerBuilderPublisher.java
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class ContainerNameValidator {

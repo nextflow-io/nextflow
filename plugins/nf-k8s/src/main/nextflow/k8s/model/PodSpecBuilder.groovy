@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -123,6 +123,8 @@ class PodSpecBuilder {
     String schedulerName
 
     Integer ttlSecondsAfterFinished
+
+    String runtimeClassName
 
     /**
      * @return A sequential volume unique identifier
@@ -284,7 +286,7 @@ class PodSpecBuilder {
     PodSpecBuilder withEmptyDir( PodMountEmptyDir emptyDir ) {
         this.emptyDirs.add(emptyDir)
         return this
-    } 
+    }
 
     PodSpecBuilder withSecrets( Collection<PodMountSecret> secrets ) {
         this.secrets.addAll(secrets)
@@ -353,7 +355,7 @@ class PodSpecBuilder {
         // -- secrets
         if( opts.getMountSecrets() )
             secrets.addAll( opts.getMountSecrets() )
-        // -- volume claims 
+        // -- volume claims
         if( opts.getVolumeClaims() )
             volumeClaims.addAll( opts.getVolumeClaims() )
         // -- labels
@@ -390,6 +392,9 @@ class PodSpecBuilder {
         // -- ttl seconds after finished (job)
         if( opts.ttlSecondsAfterFinished != null )
             ttlSecondsAfterFinished = opts.ttlSecondsAfterFinished
+        // runtime class name
+        if( opts.runtimeClassName != null )
+            runtimeClassName = opts.runtimeClassName
 
         return this
     }
@@ -487,6 +492,9 @@ class PodSpecBuilder {
         // time directive
         if ( activeDeadlineSeconds > 0)
             spec.activeDeadlineSeconds = activeDeadlineSeconds
+
+        if ( runtimeClassName )
+            spec.runtimeClassName = runtimeClassName
 
         final pod = [
                 apiVersion: 'v1',
@@ -751,7 +759,7 @@ class PodSpecBuilder {
 
     protected String sanitizeKey(String value, MetaType kind) {
         final parts = value.tokenize('/')
-        
+
         if (parts.size() == 2) {
             return "${sanitizeValue(parts[0], kind, SegmentType.PREFIX)}/${sanitizeValue(parts[1], kind, SegmentType.NAME)}"
         }

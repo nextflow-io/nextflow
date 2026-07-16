@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.aws.config
@@ -32,7 +31,7 @@ import nextflow.util.Duration
 
 /**
  * Model AWS Batch config settings
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -58,6 +57,12 @@ class AwsBatchConfig implements CloudTransferOptions, ConfigScope {
         The AWS Batch [Execution Role](https://docs.aws.amazon.com/batch/latest/userguide/execution-IAM-role.html) ARN that needs to be used to execute the Batch Job. It is mandatory when using AWS Fargate.
     """)
     final String executionRole
+
+    @ConfigOption
+    @Description("""
+        When `true`, add the `--force-glacier-transfer` flag to AWS CLI S3 download commands (default: `false`).
+    """)
+    final boolean forceGlacierTransfer
 
     @ConfigOption
     @Description("""
@@ -151,6 +156,7 @@ class AwsBatchConfig implements CloudTransferOptions, ConfigScope {
         schedulingPriority = opts.schedulingPriority as Integer ?: 0
         executionRole = opts.executionRole
         terminateUnschedulableJobs = opts.terminateUnschedulableJobs as boolean
+        forceGlacierTransfer = opts.forceGlacierTransfer as boolean
         if( retryMode == 'built-in' )
             retryMode = null // this force falling back on NF built-in retry mode instead of delegating to AWS CLI tool
         if( retryMode && retryMode !in AwsOptions.VALID_RETRY_MODES )

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,14 +69,15 @@ class HashBuilderTest extends Specification {
         path3.delete()
 
     }
-    
+
     def 'should validate is asset file'() {
         when:
         def BASE = Paths.get("/some/pipeline/dir")
+        def ROOT = new File("/some/pipeline/")
         and:
         Global.session = Mock(Session) { getBaseDir() >> BASE }
         then:
-        !HashBuilder.isAssetFile(BASE.resolve('foo'))
+        !HashBuilder.isAssetFile(BASE.resolve('foo'), ROOT)
 
 
         when:
@@ -85,9 +86,30 @@ class HashBuilderTest extends Specification {
             getCommitId() >> '123456'
         }
         then:
-        HashBuilder.isAssetFile(BASE.resolve('foo'))
+        HashBuilder.isAssetFile(BASE.resolve('foo'), ROOT)
         and:
-        !HashBuilder.isAssetFile(Paths.get('/other/dir'))
+        !HashBuilder.isAssetFile(Paths.get('/other/dir'), ROOT)
+    }
+
+    def 'should validate is asset file when not part of base directory'() {
+        given:
+        Global.session = Mock(Session) {
+            getBaseDir() >> Paths.get(BASE)
+            getCommitId() >> COMMIT_ID
+        }
+
+        expect:
+        HashBuilder.isAssetFile(Paths.get(PATH), new File(ROOT)) == EXPECTED
+
+        where:
+        BASE                  | ROOT              | COMMIT_ID | PATH                       | EXPECTED
+        "/some/pipeline/dir"  | "/some/pipeline/" | null      | "/some/pipeline/dir/foo"   | false
+        "/some/pipeline/dir"  | "/some/pipeline/" | '123456'  | '/other/dir'               | false
+        "/some/pipeline/dir"  | "/some/pipeline/" | '123456'  | '/some/pipeline/foo'       | true
+        and:
+        "/this/pipeline"      | "/that/pipeline/" | '123456'  | '/other/pipeline/foo'      | false
+        "/this/pipeline"      | "/that/pipeline/" | '123456'  | '/this/pipeline/foo'       | true
+        "/this/pipeline"      | "/that/pipeline/" | '123456'  | '/that/pipeline/foo'       | true
     }
 
     def 'should hash file content'() {
@@ -114,7 +136,7 @@ class HashBuilderTest extends Specification {
         folder.resolve('dir1/xxx/yyy/bar2').text = "I'm bar 2 within yyy"
         and:
         // create the same directory structure using a different
-        // creation order, the resulting hash should be the same 
+        // creation order, the resulting hash should be the same
         folder.resolve('dir2/bar').text = "I'm bar"
         folder.resolve('dir2/foo').text = "I'm foo"
         folder.resolve('dir2/xxx').mkdirs()

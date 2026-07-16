@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,11 @@ package nextflow.script
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import groovyx.gpars.dataflow.DataflowVariable
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
+import nextflow.extension.DumpHelper
 import nextflow.extension.PublishOp
 /**
  * Implements the DSL for publishing workflow outputs
@@ -33,7 +35,7 @@ class OutputDsl {
 
     private Map<String,Map> declarations = [:]
 
-    private volatile List<PublishOp> ops = []
+    private Map<String,DataflowVariable> dataflowOutputs = [:]
 
     void declare(String name, Closure closure) {
         if( declarations.containsKey(name) )
@@ -70,7 +72,18 @@ class OutputDsl {
             final opts = publishOptions(name, defaults, overrides)
 
             if( opts.enabled == null || opts.enabled )
-                ops << new PublishOp(session, name, CH.getReadChannel(source), opts).apply()
+                dataflowOutputs[name] = new PublishOp(session, name, CH.getReadChannel(source), opts).apply()
+        }
+
+        // print workflow outputs on run completion
+        session.workflowMetadata.onComplete {
+            if( !session.isSuccess() )
+                return
+            final output = getOutput()
+            if( session.outputFormat == 'json' )
+                session.printConsole(DumpHelper.prettyPrintJson(output), true)
+            else if( session.outputFormat == 'text' )
+                printOutput(session, output)
         }
     }
 
@@ -92,11 +105,48 @@ class OutputDsl {
         return opts
     }
 
-    boolean getComplete() {
-        for( final op : ops )
-            if( !op.complete )
-                return false
-        return true
+    private static void printOutput(Session session, Map<String,Object> output) {
+        if( output.size() == 1 && output.keySet().first() == '$out' ) {
+            session.printConsole(output.values().first().toString())
+            return
+        }
+        final outputDir = session.outputDir.toUriString()
+        final sb = new StringBuilder()
+        sb.append('\n')
+        sb.append("Outputs:\n")
+        sb.append('\n')
+        sb.append("  ${outputDir}\n")
+        for( final outputName : output.keySet() ) {
+            final outputValue = output[outputName]
+            sb.append('\n')
+            if( outputValue instanceof Collection ) {
+                final items = outputValue as List
+                final maxItems = items.size() > 20 ? 10 : items.size()
+                sb.append("  ${outputName}:\n")
+                for( final item : items.subList(0, maxItems) )
+                    sb.append("    - ${normalizeOutput(item, outputDir)}")
+                if( maxItems < items.size() )
+                    sb.append("    - ... (${items.size() - maxItems} more items)\n")
+            }
+            else if( outputValue instanceof Map ) {
+                sb.append("  ${outputName}:\n")
+                for( final mapEntry : outputValue.entrySet() )
+                    sb.append("    ${mapEntry.key}: ${normalizeOutput(mapEntry.value, outputDir)}")
+            }
+            else {
+                sb.append("  ${outputName}: ${normalizeOutput(outputValue, outputDir)}")
+            }
+        }
+        session.printConsole(sb.toString())
+    }
+
+    private static String normalizeOutput(Object value, String outputDir) {
+        return DumpHelper.prettyPrintYaml(value, style: 'flow')
+            .replace(outputDir + '/', '')
+    }
+
+    Map<String,Object> getOutput() {
+        dataflowOutputs.collectEntries { name, dv -> [name, dv.get()] }
     }
 
     static class DeclareDsl {

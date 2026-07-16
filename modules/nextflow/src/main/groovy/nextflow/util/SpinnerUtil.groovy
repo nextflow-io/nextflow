@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -95,8 +95,8 @@ class SpinnerUtil {
                     fmt.a("\r").eraseLine(Erase.ALL)
                     fmt.fg(parseColor(colorName)).a(spinnerChars[spinnerIndex]).reset()
                     fmt.a(" ").a(message)
-                    AnsiConsole.out.print(fmt.toString())
-                    AnsiConsole.out.flush()
+                    AnsiConsole.err.print(fmt.toString())
+                    AnsiConsole.err.flush()
                     spinnerIndex = (spinnerIndex + 1) % spinnerChars.length
                     Thread.sleep(SPINNER_UPDATE_MS)
                 }
@@ -211,8 +211,8 @@ class SpinnerUtil {
         if (ansiEnabled && clearLine) {
             def fmt = Ansi.ansi()
             fmt.a("\r").eraseLine(Erase.ALL)
-            AnsiConsole.out.print(fmt.toString())
-            AnsiConsole.out.flush()
+            AnsiConsole.err.print(fmt.toString())
+            AnsiConsole.err.flush()
         }
 
         spinnerThread = null
@@ -238,10 +238,10 @@ class SpinnerUtil {
             def fmt = Ansi.ansi()
             fmt.a("\r").eraseLine(Erase.ALL)
             fmt.a(finalMessage).a("\n")
-            AnsiConsole.out.print(fmt.toString())
-            AnsiConsole.out.flush()
+            AnsiConsole.err.print(fmt.toString())
+            AnsiConsole.err.flush()
         } else {
-            println finalMessage
+            System.err.println(finalMessage)
         }
 
         spinnerThread = null

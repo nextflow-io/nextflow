@@ -1,5 +1,5 @@
 /*
- * Copyright 2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -68,18 +68,35 @@ public class ProcessToGroovyVisitorV1 {
                 args(
                     closureX(null, node.exec),
                     constX(sgh.getSourceText(node.exec)),
-                    constX(node.type)
+                    constX(node.type),
+                    sgh.getVariableRefs(node.exec)
                 )
             ))
         )));
         return stmt(callThisX("process", args(constX(node.getName()), closure)));
     }
 
+    private static final List<String> NON_DYNAMIC_DIRECTIVES = List.of(
+        "executor",
+        "label",
+        "maxForks",
+        "module",
+        "pod",
+        "publishDir",
+        "secret"
+    );
+
     private void visitProcessDirectives(Statement directives) {
         asDirectives(directives).forEach((call) -> {
+            var name = call.getMethodAsString();
+            // don't wrap directives that can't be dynamic
+            if( NON_DYNAMIC_DIRECTIVES.contains(name) )
+                return;
+            // don't wrap directives with multiple arguments
             var arguments = asMethodCallArguments(call);
             if( arguments.size() != 1 )
                 return;
+            // don't wrap directives that already have a closure
             var firstArg = arguments.get(0);
             if( firstArg instanceof ClosureExpression )
                 return;

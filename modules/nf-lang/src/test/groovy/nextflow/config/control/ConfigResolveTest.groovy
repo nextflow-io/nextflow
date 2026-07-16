@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -61,6 +61,18 @@ class ConfigResolveTest extends Specification {
         errors[0].getStartLine() == 1
         errors[0].getStartColumn() == 36
         errors[0].getOriginalMessage() == '`process` is not defined'
+
+        when:
+        errors = check(
+            '''\
+            process.clusterOptions = "--cpus $PROCESS_CPUS"
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 34
+        errors[0].getOriginalMessage() == "`PROCESS_CPUS` is not defined (hint: use `env('...')` to access environment variable)"
     }
 
     def 'should report an error for an invalid config include' () {

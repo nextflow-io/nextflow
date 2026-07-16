@@ -1,5 +1,5 @@
 /*
- * Copyright 2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,8 @@
  */
 package nextflow.script.control;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -22,10 +24,12 @@ import org.codehaus.groovy.ast.CodeVisitorSupport;
 import org.codehaus.groovy.ast.Variable;
 import org.codehaus.groovy.ast.expr.ClosureExpression;
 import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.PropertyExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.control.SourceUnit;
 
+import static nextflow.script.ast.ASTUtils.*;
 import static org.codehaus.groovy.ast.tools.GeneralUtils.*;
 
 /**
@@ -39,6 +43,78 @@ public class ScriptToGroovyHelper {
 
     public ScriptToGroovyHelper(SourceUnit sourceUnit) {
         this.sourceUnit = sourceUnit;
+    }
+
+    /**
+     * Get the list of variable references in a statement.
+     *
+     * This method is used to collect variable references that are not
+     * declared as process inputs, so that they are included in the task
+     * hash. This covers:
+     *
+     * - task ext properties (e.g. `task.ext.args`)
+     * - script params (e.g. `params.x`)
+     *
+     * These properties are typically used like inputs, but are not
+     * explicitly declared, so they must be identified by their usage.
+     *
+     * The resulting list expression should be provided as the fourth
+     * argument of the BodyDef constructor.
+     *
+     * @param node
+     */
+    public Expression getVariableRefs(Statement node) {
+        var refs = new VariableRefCollector().collect(node).stream()
+            .map(name -> createX("nextflow.script.TokenValRef", constX(name)))
+            .toList();
+
+        return listX(refs);
+    }
+
+    private class VariableRefCollector extends CodeVisitorSupport {
+
+        private Set<String> variableRefs;
+
+        public Set<String> collect(Statement node) {
+            variableRefs = new HashSet<>();
+            visit(node);
+            return variableRefs;
+        }
+
+        @Override
+        public void visitPropertyExpression(PropertyExpression node) {
+            if( !isPropertyChain(node) ) {
+                super.visitPropertyExpression(node);
+                return;
+            }
+
+            var name = asPropertyChain(node);
+            if( name.startsWith("task.ext.") || name.startsWith("params.") )
+                variableRefs.add(name);
+        }
+
+        private static boolean isPropertyChain(PropertyExpression node) {
+            var target = node.getObjectExpression();
+            while( target instanceof PropertyExpression pe )
+                target = pe.getObjectExpression();
+            return target instanceof VariableExpression;
+        }
+
+        private static String asPropertyChain(PropertyExpression node) {
+            var list = new ArrayList<String>();
+            list.add(node.getPropertyAsString());
+
+            var target = node.getObjectExpression();
+            while( target instanceof PropertyExpression pe ) {
+                list.add(pe.getPropertyAsString());
+                target = pe.getObjectExpression();
+            }
+
+            list.add(target.getText());
+
+            Collections.reverse(list);
+            return String.join(".", list);
+        }
     }
 
     /**
@@ -107,8 +183,14 @@ public class ScriptToGroovyHelper {
                 builder.append( line.substring(0, k) );
             }
 
+            // determine range of current line
             var begin = (i == first) ? colx - 1 : 0;
             var end = (i == last) ? colz - 1 : line.length();
+
+            // skip trailing newline (e.g. for block statements)
+            if( i == last && begin == end )
+                continue;
+
             builder.append( line.substring(begin, end) ).append('\n');
         }
         return builder.toString();

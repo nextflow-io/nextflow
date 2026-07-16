@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,8 +23,8 @@ public class Config implements ConfigScope {
 
     @Description("""
         The `env` scope allows you to define environment variables that will be exported into the environment where workflow tasks are executed.
-    
-        [Read more](https://nextflow.io/docs/latest/reference/config.html#env)
+
+        [Read more](https://docs.seqera.io/nextflow/reference/config#env)
     """)
     public ConfigScope env;
 
@@ -33,16 +33,16 @@ public class Config implements ConfigScope {
 
     @Description("""
         The `params` scope allows you to define parameters that will be accessible in the pipeline script.
-    
-        [Read more](https://nextflow.io/docs/latest/reference/config.html#params)
+
+        [Read more](https://docs.seqera.io/nextflow/config#parameters)
     """)
     public ConfigScope params;
 
     @ConfigOption
     @Description("""
         The `plugins` scope allows you to include plugins at runtime.
-    
-        [Read more](https://nextflow.io/docs/latest/plugins.html)
+
+        [Read more](https://docs.seqera.io/nextflow/plugins)
     """)
     public PluginsDsl plugins;
 
@@ -51,8 +51,8 @@ public class Config implements ConfigScope {
 
     @Description("""
         The `profiles` block allows you to define configuration profiles. A profile is a set of configuration settings that can be applied at runtime with the `-profile` command line option.
-    
-        [Read more](https://nextflow.io/docs/latest/config.html#config-profiles)
+
+        [Read more](https://docs.seqera.io/nextflow/config#config-profiles)
     """)
     public ConfigScope profiles;
 

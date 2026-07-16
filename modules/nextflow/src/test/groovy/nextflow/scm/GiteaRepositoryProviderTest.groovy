@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,7 +54,10 @@ class GiteaRepositoryProviderTest extends Specification {
         new GiteaRepositoryProvider('pditommaso/hello', obj)
                 .setRevision('12345')
                 .getContentUrl('main.nf') == 'https://gitea.com/api/v1/repos/pditommaso/hello/raw/main.nf?ref=12345'
-
+        and:
+        new GiteaRepositoryProvider('pditommaso/hello', obj)
+                .setRevision('test/branch+with&strangecharacters')
+                .getContentUrl('main.nf') == 'https://gitea.com/api/v1/repos/pditommaso/hello/raw/main.nf?ref=test%2Fbranch%2Bwith%26strangecharacters'
     }
 
     @Unroll
@@ -71,6 +74,24 @@ class GiteaRepositoryProviderTest extends Specification {
         false       | new ProviderConfig('gitea').setUser('foo')
         true        | new ProviderConfig('gitea').setUser('foo').setPassword('bar')
         true        | new ProviderConfig('gitea').setToken('xyz')
+    }
+
+    @Unroll
+    def 'should return git credentials' () {
+        given:
+        def provider = new GiteaRepositoryProvider('pditommaso/tutorial', CONFIG)
+
+        when:
+        def credentials = provider.getGitCredentials()
+
+        then:
+        credentials != null
+
+        where:
+        CONFIG                                                                  | _
+        new ProviderConfig('gitea').setUser('foo').setPassword('bar')           | _
+        new ProviderConfig('gitea').setUser('foo').setToken('xyz')              | _
+        new ProviderConfig('gitea').setUser('foo').setPassword('bar').setToken('xyz') | _
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
@@ -92,6 +113,13 @@ class GiteaRepositoryProviderTest extends Specification {
 //        result = repo.readText('README.md')
 //        then:
 //        result.contains("foo branch")
+
+        when:
+        repo = new GiteaRepositoryProvider('pditommaso/test-hello', config)
+        repo.setRevision('test/branch+with&special-chars')
+        result = repo.readText('README.md')
+        then:
+        result.contains('Basic Nextflow script')
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
@@ -103,7 +131,7 @@ class GiteaRepositoryProviderTest extends Specification {
         def repo = new GiteaRepositoryProvider('pditommaso/test-hello', config)
         and:
         def DATA = this.class.getResourceAsStream('/test-asset.bin').bytes
-        
+
         when:
         def result = repo.readBytes('test/test-asset.bin')
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +25,7 @@ import nextflow.trace.config.TraceConfig
 
 /**
  * Creates Nextflow observes object
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
@@ -39,6 +39,7 @@ class DefaultObserverFactory implements TraceObserverFactoryV2 {
 
         final result = new ArrayList<TraceObserverV2>(5)
         createAnsiLogObserver(result)
+        createAgentLogObserver(result)
         createGraphObserver(result)
         createReportObserver(result)
         createTimelineObserver(result)
@@ -48,8 +49,18 @@ class DefaultObserverFactory implements TraceObserverFactoryV2 {
 
     protected void createAnsiLogObserver(Collection<TraceObserverV2> result) {
         if( session.ansiLog ) {
-            session.ansiLogObserver = new AnsiLogObserver()
-            result << session.ansiLogObserver
+            def observer = new AnsiLogObserver()
+            session.logObserver = observer
+            result << observer
+        }
+    }
+
+    protected void createAgentLogObserver(Collection<TraceObserverV2> result) {
+        if( session.agentLog ) {
+            def observer = new AgentLogObserver()
+            observer.setStatsObserver(session.statsObserver)
+            session.logObserver = observer
+            result << observer
         }
     }
 

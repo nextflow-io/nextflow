@@ -1,6 +1,5 @@
 /*
- * Copyright 2023, Seqera Labs
- * Copyright 2022, Google Inc.
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,11 +28,13 @@ import com.google.cloud.batch.v1.LifecyclePolicy
 import com.google.cloud.batch.v1.LogsPolicy
 import com.google.cloud.batch.v1.Runnable
 import com.google.cloud.batch.v1.ServiceAccount
+import com.google.cloud.batch.v1.StatusEvent
 import com.google.cloud.batch.v1.TaskGroup
 import com.google.cloud.batch.v1.TaskSpec
 import com.google.cloud.batch.v1.Volume
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import com.google.protobuf.Duration
+import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -46,6 +47,7 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.DiskResource
 import nextflow.fusion.FusionAwareTask
+import nextflow.fusion.FusionConfig
 import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskConfig
@@ -57,12 +59,21 @@ import nextflow.trace.TraceRecord
 import nextflow.util.TestOnly
 /**
  * Implements a task handler for Google Batch executor
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 @CompileStatic
 class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
+
+    /**
+     * Result of building the allocation policy, containing the policy and whether a scratch volume is needed
+     */
+    @Canonical
+    static class AllocationPolicyResult {
+        AllocationPolicy policy
+        boolean requiresScratchVolume
+    }
 
     private static final Pattern EXIT_CODE_REGEX = ~/exit code 500(\d\d)/
 
@@ -105,6 +116,11 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     private volatile CloudMachineInfo machineInfo
 
     private volatile long timestamp
+
+    /**
+     * Flag to indicate that the zone has been resolved from the status events
+     */
+    private volatile boolean zoneUpdated
 
     /**
      * A flag to indicate that the job has failed without launching any tasks
@@ -203,39 +219,104 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
     }
 
-    protected Job newSubmitRequest(TaskRun task, GoogleBatchLauncherSpec launcher) {
-        // resource requirements
-        final taskSpec = TaskSpec.newBuilder()
+    /**
+     * Build the compute resource configuration for a task
+     *
+     * @param config The task configuration
+     * @param disk The disk resource (may be null)
+     * @return The compute resource with CPU, memory, and boot disk settings
+     */
+    protected ComputeResource buildComputeResource(TaskConfig config, DiskResource disk) {
         final computeResource = ComputeResource.newBuilder()
+        computeResource.setCpuMilli(config.getCpus() * 1000)
 
-        computeResource.setCpuMilli( task.config.getCpus() * 1000 )
+        if( config.getMemory() )
+            computeResource.setMemoryMib(config.getMemory().getMega())
 
-        if( task.config.getMemory() )
-            computeResource.setMemoryMib( task.config.getMemory().getMega() )
-
-        if( task.config.getTime() )
-            taskSpec.setMaxRunDuration(
-                Duration.newBuilder()
-                    .setSeconds( task.config.getTime().toSeconds() )
-            )
-
-        def disk = task.config.getDiskResource()
         // apply disk directive to boot disk if type is not specified
         if( disk && !disk.type )
-            computeResource.setBootDiskMib( disk.request.getMega() )
+            computeResource.setBootDiskMib(disk.request.getMega())
         // otherwise use config setting
         else if( batchConfig.bootDiskSize )
-            computeResource.setBootDiskMib( batchConfig.bootDiskSize.getMega() )
+            computeResource.setBootDiskMib(batchConfig.bootDiskSize.getMega())
 
-        // container
-        if( !task.container )
-            throw new ProcessUnrecoverableException("Process `${task.lazyName()}` failed because the container image was not specified")
+        return computeResource.build()
+    }
 
+    /**
+     * Build the lifecycle policy for spot instance retry
+     *
+     * @return The lifecycle policy for retrying on spot reclaim
+     */
+    protected LifecyclePolicy buildSpotRetryPolicy() {
+        return LifecyclePolicy.newBuilder()
+            .setActionCondition(
+                LifecyclePolicy.ActionCondition.newBuilder()
+                    .addAllExitCodes(batchConfig.autoRetryExitCodes)
+            )
+            .setAction(LifecyclePolicy.Action.RETRY_TASK)
+            .build()
+    }
+
+    /**
+     * Build the network policy for the allocation
+     *
+     * @return The network policy or null if no network configuration is present
+     */
+    protected AllocationPolicy.NetworkPolicy buildNetworkPolicy() {
+        final networkInterface = AllocationPolicy.NetworkInterface.newBuilder()
+        def hasNetworkPolicy = false
+
+        if( batchConfig.network ) {
+            hasNetworkPolicy = true
+            networkInterface.setNetwork(batchConfig.network)
+        }
+        if( batchConfig.subnetwork ) {
+            hasNetworkPolicy = true
+            networkInterface.setSubnetwork(batchConfig.subnetwork)
+        }
+        if( batchConfig.usePrivateAddress ) {
+            hasNetworkPolicy = true
+            networkInterface.setNoExternalIpAddress(true)
+        }
+
+        return hasNetworkPolicy
+            ? AllocationPolicy.NetworkPolicy.newBuilder().addNetworkInterfaces(networkInterface).build()
+            : null
+    }
+
+    /**
+     * Build the task group for the job
+     *
+     * @param taskSpec The task specification
+     * @param task The task run
+     * @return The task group
+     */
+    protected TaskGroup buildTaskGroup(TaskSpec.Builder taskSpec, TaskRun task) {
+        final taskGroup = TaskGroup.newBuilder()
+            .setTaskSpec(taskSpec)
+
+        if( task instanceof TaskArrayRun ) {
+            final arraySize = task.getArraySize()
+            taskGroup.setTaskCount(arraySize)
+        }
+
+        return taskGroup.build()
+    }
+
+    /**
+     * Build the container runnable with environment
+     *
+     * @param task The task run
+     * @param launcher The launcher specification
+     * @return The runnable with container and environment configuration
+     */
+    protected Runnable buildContainerRunnable(TaskRun task, GoogleBatchLauncherSpec launcher) {
         final cmd = launcher.launchCommand()
         final container = Runnable.Container.newBuilder()
-            .setImageUri( task.container )
-            .addAllCommands( cmd )
-            .addAllVolumes( launcher.getContainerMounts() )
+            .setImageUri(task.container)
+            .addAllCommands(cmd)
+            .addAllVolumes(launcher.getContainerMounts())
 
         def containerOptions = task.config.getContainerOptions() ?: ''
         if( fusionEnabled() ) {
@@ -244,62 +325,50 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         if( containerOptions )
-            container.setOptions( containerOptions )
+            container.setOptions(containerOptions)
 
-        // task spec
-        final env = Environment
-                .newBuilder()
-                .putAllVariables( launcher.getEnvironment() )
-                .build()
+        final env = Environment.newBuilder()
+            .putAllVariables(launcher.getEnvironment())
+            .build()
 
-        taskSpec
-            .setComputeResource(computeResource)
-            .addRunnables(
-                Runnable.newBuilder()
-                    .setContainer(container)
-                    .setEnvironment(env)
-            )
-            .addAllVolumes( launcher.getVolumes() )
+        return Runnable.newBuilder()
+            .setContainer(container)
+            .setEnvironment(env)
+            .build()
+    }
 
-        // retry on spot reclaim
-        if( batchConfig.maxSpotAttempts ) {
-            // Note: Google Batch uses the special exit status 50001 to signal
-            // the execution was terminated due a spot reclaim. When this happens
-            // The policy re-execute the jobs automatically up to `maxSpotAttempts` times
-            taskSpec
-                .setMaxRetryCount( batchConfig.maxSpotAttempts )
-                .addLifecyclePolicies(
-                    LifecyclePolicy.newBuilder()
-                        .setActionCondition(
-                            LifecyclePolicy.ActionCondition.newBuilder()
-                                .addAllExitCodes(batchConfig.autoRetryExitCodes)
-                        )
-                        .setAction(LifecyclePolicy.Action.RETRY_TASK)
-                )
-        }
+    /**
+     * Build the scratch volume for disk mounting
+     *
+     * @return The scratch volume for /tmp mount, or null if not needed
+     */
+    protected Volume buildScratchVolume() {
+        return Volume.newBuilder()
+            .setDeviceName('scratch')
+            .setMountPath('/tmp')
+            .build()
+    }
 
-        // instance policy
-        // allocation policy
-        final allocationPolicy = AllocationPolicy.newBuilder()
+    /**
+     * Result of building the instance policy, containing the policy and whether a scratch volume is needed
+     */
+    @Canonical
+    static class InstancePolicyResult {
+        AllocationPolicy.InstancePolicyOrTemplate policy
+        boolean requiresScratchVolume
+    }
+
+    /**
+     * Build the instance policy or template for job allocation.
+     * Note: This method sets machineInfo field as a side effect.
+     *
+     * @param task The task run
+     * @param disk The disk resource (may be null, may be modified for fusion/local-ssd)
+     * @return The instance policy result containing the policy and scratch volume flag
+     */
+    protected InstancePolicyResult buildInstancePolicyOrTemplate(TaskRun task, DiskResource disk) {
         final instancePolicyOrTemplate = AllocationPolicy.InstancePolicyOrTemplate.newBuilder()
-
-        if( batchConfig.getAllowedLocations() )
-            allocationPolicy.setLocation(
-                AllocationPolicy.LocationPolicy.newBuilder()
-                    .addAllAllowedLocations( batchConfig.getAllowedLocations() )
-            )
-
-        if( batchConfig.serviceAccountEmail )
-            allocationPolicy.setServiceAccount(
-                ServiceAccount.newBuilder()
-                    .setEmail( batchConfig.serviceAccountEmail )
-            )
-
-        allocationPolicy.putAllLabels( task.config.getResourceLabels() )
-
-        // Add network tags if configured
-        if( batchConfig.networkTags )
-            allocationPolicy.addAllTags( batchConfig.networkTags )
+        boolean requiresScratchVolume = false
 
         // use instance template if specified
         if( task.config.getMachineType()?.startsWith('template://') ) {
@@ -325,19 +394,19 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 log.warn1 'Config option `google.batch.spot` ignored because an instance template was specified'
 
             instancePolicyOrTemplate
-                .setInstallGpuDrivers( batchConfig.getInstallGpuDrivers() )
-                .setInstanceTemplate( task.config.getMachineType().minus('template://') )
+                .setInstallGpuDrivers(batchConfig.getInstallGpuDrivers())
+                .setInstanceTemplate(task.config.getMachineType().minus('template://'))
         }
-
         // otherwise create instance policy
         else {
             final instancePolicy = AllocationPolicy.InstancePolicy.newBuilder()
 
-            if( batchConfig.getBootDiskImage() )
-                instancePolicy.setBootDisk( AllocationPolicy.Disk.newBuilder().setImage( batchConfig.getBootDiskImage() ) )
-
             if( fusionEnabled() && !disk ) {
-                disk = new DiskResource(request: '375 GB', type: 'local-ssd')
+                final reqMachineType = task.config.getMachineType()
+                disk = new DiskResource(
+                    request: '375 GB',
+                    type: reqMachineType ? chooseFusionDiskType(reqMachineType) : 'local-ssd'
+                )
                 log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - adding local volume as fusion scratch: $disk"
             }
 
@@ -346,21 +415,35 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             if( machineType ) {
                 instancePolicy.setMachineType(machineType.type)
                 instancePolicyOrTemplate.setInstallGpuDrivers(
-                        GoogleBatchMachineTypeSelector.INSTANCE.installGpuDrivers(machineType)
+                    GoogleBatchMachineTypeSelector.INSTANCE.installGpuDrivers(machineType)
                 )
                 machineInfo = new CloudMachineInfo(
-                        type: machineType.type,
-                        zone: machineType.location,
-                        priceModel: machineType.priceModel
+                    type: machineType.type,
+                    zone: machineType.location,
+                    priceModel: machineType.priceModel
                 )
             }
 
+            // Configure boot disk
+            final bootDisk = AllocationPolicy.Disk.newBuilder()
+            boolean setBoot = false
+            if( batchConfig.getBootDiskImage() ) {
+                bootDisk.setImage(batchConfig.getBootDiskImage())
+                setBoot = true
+            }
+            if( machineType && GoogleBatchMachineTypeSelector.INSTANCE.isHyperdiskOnly(machineType.type) ) {
+                bootDisk.setType('hyperdisk-balanced')
+                setBoot = true
+            }
+            if( setBoot )
+                instancePolicy.setBootDisk(bootDisk)
+
             if( task.config.getAccelerator() ) {
                 final accelerator = AllocationPolicy.Accelerator.newBuilder()
-                    .setCount( task.config.getAccelerator().getRequest() )
+                    .setCount(task.config.getAccelerator().getRequest())
 
                 if( task.config.getAccelerator().getType() )
-                    accelerator.setType( task.config.getAccelerator().getType() )
+                    accelerator.setType(task.config.getAccelerator().getType())
 
                 instancePolicy.addAccelerators(accelerator)
                 instancePolicyOrTemplate.setInstallGpuDrivers(true)
@@ -390,64 +473,124 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                         )
                         .setDeviceName('scratch')
                 )
-
-                taskSpec.addVolumes(
-                    Volume.newBuilder()
-                        .setDeviceName('scratch')
-                        .setMountPath('/tmp')
-                )
+                requiresScratchVolume = true
             }
 
             if( batchConfig.cpuPlatform )
-                instancePolicy.setMinCpuPlatform( batchConfig.cpuPlatform )
+                instancePolicy.setMinCpuPlatform(batchConfig.cpuPlatform)
 
             if( batchConfig.preemptible )
-                instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.PREEMPTIBLE )
+                instancePolicy.setProvisioningModel(AllocationPolicy.ProvisioningModel.PREEMPTIBLE)
 
             if( batchConfig.spot )
-                instancePolicy.setProvisioningModel( AllocationPolicy.ProvisioningModel.SPOT )
+                instancePolicy.setProvisioningModel(AllocationPolicy.ProvisioningModel.SPOT)
 
-            instancePolicyOrTemplate.setPolicy( instancePolicy )
+            instancePolicyOrTemplate.setPolicy(instancePolicy)
         }
 
-        allocationPolicy.addInstances(instancePolicyOrTemplate)
-
-        // network policy
-        final networkInterface = AllocationPolicy.NetworkInterface.newBuilder()
-        def hasNetworkPolicy = false
-
-        if( batchConfig.network ) {
-            hasNetworkPolicy = true
-            networkInterface.setNetwork( batchConfig.network )
-        }
-        if( batchConfig.subnetwork ) {
-            hasNetworkPolicy = true
-            networkInterface.setSubnetwork( batchConfig.subnetwork )
-        }
-        if( batchConfig.usePrivateAddress ) {
-            hasNetworkPolicy = true
-            networkInterface.setNoExternalIpAddress( true )
+        if( batchConfig.installOpsAgent ) {
+            if( !batchConfig.bootDiskImage?.toLowerCase()?.contains('debian') )
+                log.warn1 "The Ops Agent requires a compatible boot disk image. Set 'google.batch.bootDiskImage' to a batch-debian image."
+            instancePolicyOrTemplate.setInstallOpsAgent( true )
         }
 
-        if( hasNetworkPolicy )
-            allocationPolicy.setNetwork(
-                AllocationPolicy.NetworkPolicy.newBuilder()
-                    .addNetworkInterfaces(networkInterface)
+        return new InstancePolicyResult(instancePolicyOrTemplate.build(), requiresScratchVolume)
+    }
+
+    /**
+     * Choose the disk type for Fusion according to the machine or family.
+     * Preference is 'local-ssd', 'hyperdisk-balanced' and 'pd-balanced' other types can be set by setting disk directive
+     * @param machineTypeOrFamily
+     * @return Disk type
+     */
+    protected String chooseFusionDiskType(String machineTypeOrFamily){
+        if( !GoogleBatchMachineTypeSelector.unsupportedLocalSSD(machineTypeOrFamily) ){
+            return 'local-ssd'
+        } else if( GoogleBatchMachineTypeSelector.isPdOnly(machineTypeOrFamily) ){
+            return 'pd-balanced'
+        } else {
+            return 'hyperdisk-balanced'
+        }
+    }
+
+    /**
+     * Build the allocation policy for the job
+     *
+     * @param task The task run
+     * @param disk The disk resource
+     * @return The allocation policy result containing the policy and scratch volume flag
+     */
+    protected AllocationPolicyResult buildAllocationPolicy(TaskRun task, DiskResource disk) {
+        final allocationPolicy = AllocationPolicy.newBuilder()
+
+        if( batchConfig.getAllowedLocations() )
+            allocationPolicy.setLocation(
+                AllocationPolicy.LocationPolicy.newBuilder()
+                    .addAllAllowedLocations(batchConfig.getAllowedLocations())
             )
 
-        // task group
-        final taskGroup = TaskGroup.newBuilder()
-            .setTaskSpec(taskSpec)
+        if( batchConfig.serviceAccountEmail )
+            allocationPolicy.setServiceAccount(
+                ServiceAccount.newBuilder()
+                    .setEmail(batchConfig.serviceAccountEmail)
+            )
 
-        if( task instanceof TaskArrayRun ) {
-            final arraySize = task.getArraySize()
-            taskGroup.setTaskCount(arraySize)
+        allocationPolicy.putAllLabels(task.config.getResourceLabels())
+
+        if( batchConfig.networkTags )
+            allocationPolicy.addAllTags(batchConfig.networkTags)
+
+        // instance policy or template
+        final instanceResult = buildInstancePolicyOrTemplate(task, disk)
+        allocationPolicy.addInstances(instanceResult.policy)
+
+        // network policy
+        final networkPolicy = buildNetworkPolicy()
+        if( networkPolicy )
+            allocationPolicy.setNetwork(networkPolicy)
+
+        return new AllocationPolicyResult(allocationPolicy.build(), instanceResult.requiresScratchVolume)
+    }
+
+    protected Job newSubmitRequest(TaskRun task, GoogleBatchLauncherSpec launcher) {
+        // container validation
+        if( !task.container )
+            throw new ProcessUnrecoverableException("Process `${task.lazyName()}` failed because the container image was not specified")
+
+        // resource requirements
+        final disk = task.config.getDiskResource()
+        final taskSpec = TaskSpec.newBuilder()
+            .setComputeResource(buildComputeResource(task.config, disk))
+
+        if( task.config.getTime() )
+            taskSpec.setMaxRunDuration(
+                Duration.newBuilder()
+                    .setSeconds( task.config.getTime().toSeconds() )
+            )
+
+        taskSpec
+            .addRunnables(buildContainerRunnable(task, launcher))
+            .addAllVolumes(launcher.getVolumes())
+
+        // retry on spot reclaim
+        final attempts = maxSpotAttempts()
+        if( attempts > 0 ) {
+            taskSpec
+                .setMaxRetryCount(attempts)
+                .addLifecyclePolicies(buildSpotRetryPolicy())
         }
+
+        // allocation policy
+        final allocationResult = buildAllocationPolicy(task, disk)
+
+        // add scratch volume if needed by instance policy
+        if( allocationResult.requiresScratchVolume )
+            taskSpec.addVolumes(buildScratchVolume())
 
         // create the job
         return Job.newBuilder()
-            .addTaskGroups(taskGroup)
-            .setAllocationPolicy(allocationPolicy)
+            .addTaskGroups(buildTaskGroup(taskSpec, task))
+            .setAllocationPolicy(allocationResult.policy)
             .setLogsPolicy(createLogsPolicy())
             .putAllLabels(task.config.getResourceLabels())
             .build()
@@ -466,6 +609,15 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 .setDestination(LogsPolicy.Destination.CLOUD_LOGGING)
                 .build()
         }
+    }
+
+    protected int maxSpotAttempts() {
+        final result = batchConfig.maxSpotAttempts
+        if( result > 0 )
+            return result
+        // when fusion snapshot is enabled max attempt should be > 0
+        // to enable to allow snapshot retry the job execution in a new compute instance
+        return fusionEnabled() && fusionConfig().snapshotsEnabled() ? FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS : 0
     }
 
     /**
@@ -567,6 +719,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 task.stderr = executor.logging.stderr(uid, taskId) ?: errorFile
             }
             else {
+                // Retried spot instances could keep the 500xx exit code event when the automatic retied succeeds. In this case, we need to read the exit code from .exitcode
+                // https://github.com/nextflow-io/nextflow/issues/6779
+                if( task.exitStatus >= 50000 )
+                    task.exitStatus = readExitFile()
                 task.stdout = outputFile
                 task.stderr = errorFile
             }
@@ -586,17 +742,31 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
      *
      * @return exit code if found, otherwise Integer.MAX_VALUE
      */
-    private Integer getExitCode(){
+    protected Integer getExitCode(){
         final events = client.getTaskStatus(jobId, taskId)?.getStatusEventsList()
         if( events ) {
-            final batchExitCode = events.stream().filter(ev -> ev.hasTaskExecution())
-                .max( (ev1, ev2) -> Long.compare(ev1.getEventTime().seconds, ev2.getEventTime().seconds) )
-                .map(ev -> ev.getTaskExecution().getExitCode())
-                .orElse(null)
-            if( batchExitCode != null )
-                return batchExitCode
+            // Find the most recent event that contains a TaskExecution with an exit code.
+            // Events are not guaranteed to be in chronological order, so we iterate through
+            // all of them and track the one with the highest timestamp.
+            StatusEvent latestEvent = null
+            long latestTime = Long.MIN_VALUE
+            for( StatusEvent ev : events ) {
+                // Only consider events that have task execution info (which contains exit code)
+                if( ev.hasTaskExecution() ) {
+                    final long eventTime = ev.getEventTime().getSeconds()
+                    if( eventTime > latestTime ) {
+                        latestTime = eventTime
+                        latestEvent = ev
+                    }
+                }
+            }
+            // Return the exit code from the most recent task execution event
+            if( latestEvent?.getTaskExecution()?.getExitCode() != null ) {
+                return latestEvent.getTaskExecution().getExitCode()
+            }
         }
-        // fallback to read
+        // Fallback: if no exit code found from the Batch API (either no events or none with
+        // TaskExecution), read the .exitcode file that Nextflow generates in the work directory
         log.debug("[GOOGLE BATCH] Exit code not found from API. Checking .exitcode file...")
         return readExitFile()
     }
@@ -644,8 +814,94 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
     }
 
+    /**
+     * Regex pattern to extract zone from StatusEvent description.
+     * Matches the pattern: zones/<zone-name>/instances/<instance-id>
+     */
+    private static final Pattern ZONE_PATTERN = ~/zones\/([^\/]+)\/instances\//
+
     protected CloudMachineInfo getMachineInfo() {
+        if( machineInfo!=null && !zoneUpdated && isCompleted() )
+            updateZoneFromEvents()
         return machineInfo
+    }
+
+    /**
+     * Parse the actual execution zone from StatusEvent descriptions and update
+     * the machineInfo zone field accordingly.
+     *
+     * Google Batch status events include zone info in the description field with
+     * the format: {@code zones/<zone-name>/instances/<instance-id>}
+     */
+    private void updateZoneFromEvents() {
+        try {
+            final events = client.getTaskStatus(jobId, taskId)?.statusEventsList
+            final zone = resolveZoneFromEvents(events)
+            if( zone ) {
+                machineInfo = new CloudMachineInfo(
+                    type: machineInfo.type,
+                    zone: zone,
+                    priceModel: machineInfo.priceModel
+                )
+            }
+        }
+        catch( Exception e ) {
+            log.debug "[GOOGLE BATCH] Unable to resolve zone from events for task: `${task.lazyName()}` - ${e.message}"
+        }
+        finally {
+            zoneUpdated = true
+        }
+    }
+
+    @PackageScope
+    static String resolveZoneFromEvents(List<StatusEvent> events) {
+        if( !events )
+            return null
+        for( def event : events ) {
+            final matcher = ZONE_PATTERN.matcher(event.description ?: '')
+            if( matcher.find() )
+                return matcher.group(1)
+        }
+        return null
+    }
+
+    /**
+     * Count the number of spot instance reclamations for this task by examining
+     * the task status events and checking for preemption exit codes
+     *
+     * @param jobId The Google Batch Job Id
+     * @return The number of times this task was retried due to spot instance reclamation
+     */
+
+    protected Integer getNumSpotInterruptions(String jobId) {
+        if (!jobId || !taskId  || !isCompleted()) {
+            return null
+        }
+
+        try {
+            final status = client.getTaskStatus(jobId, taskId)
+
+            if (!status)
+                return null
+
+            // valid status but no events present means no interruptions occurred
+            if (!status?.statusEventsList)
+                return 0
+
+            int count = 0
+            for (def event : status.statusEventsList) {
+                // Google Batch uses exit code 50001 for spot preemption
+                // Check if the event has a task execution with exit code 50001
+                if (event.hasTaskExecution() && event.taskExecution.exitCode == 50001) {
+                    count++
+                }
+            }
+            return count
+
+        } catch (Exception e) {
+            log.debug "[GOOGLE BATCH] Unable to count spot interruptions for job=$jobId task=$taskId - ${e.message}"
+            return null
+        }
     }
 
     @Override
@@ -654,6 +910,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( jobId && uid )
             result.put('native_id', "$jobId/$taskId/$uid")
         result.machineInfo = getMachineInfo()
+        result.numSpotInterruptions = getNumSpotInterruptions(jobId)
         return result
     }
 

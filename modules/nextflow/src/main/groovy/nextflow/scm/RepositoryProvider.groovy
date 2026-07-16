@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -83,7 +83,7 @@ abstract class RepositoryProvider {
      * The client used to carry out http requests
      */
     private HxClient httpClient
-    
+
     /**
      * The retry options to be used for http requests
      */
@@ -395,10 +395,10 @@ abstract class RepositoryProvider {
      * @param path The relative path of the directory to list (empty string or null for root)
      * @param depth The maximum depth of traversal:
      *              - depth = 1: immediate children only
-     *              - depth = 2: children + grandchildren  
+     *              - depth = 2: children + grandchildren
      *              - depth = 3: children + grandchildren + great-grandchildren
      *              - larger values: traverse deeper accordingly
-     * 
+     *
      * Example: Given repository structure:
      * <pre>
      * /
@@ -561,11 +561,11 @@ abstract class RepositoryProvider {
 
         String relativePath = entryPath
         String normalizedBasePath = normalizePath(basePath)
-        
+
         if (normalizedBasePath && !normalizedBasePath.isEmpty()) {
             String normalizedEntry = entryPath.stripStart('/').stripEnd('/')
             normalizedBasePath = normalizedBasePath.stripEnd('/')
-            
+
             if (normalizedEntry.startsWith(normalizedBasePath + "/")) {
                 relativePath = normalizedEntry.substring(normalizedBasePath.length() + 1)
             } else if (normalizedEntry == normalizedBasePath) {
@@ -577,14 +577,14 @@ abstract class RepositoryProvider {
             // For root directory, use the entry path directly
             relativePath = entryPath.stripStart('/').stripEnd('/')
         }
-        
+
         if (relativePath.isEmpty()) {
             return false
         }
-        
+
         // Count directory levels in the relative path
         int entryDepth = relativePath.split("/").length - 1
-        
+
         // Include if within depth limit: depth=0 includes immediate children only
         return entryDepth <= depth
     }

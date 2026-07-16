@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -73,6 +73,8 @@ class TaskBean implements Serializable, Cloneable {
 
     boolean statsEnabled
 
+    boolean fusionEnabled
+
     List<String> outputEnvNames
 
     Map<String,String> outputEvals
@@ -114,6 +116,8 @@ class TaskBean implements Serializable, Cloneable {
     List<Path> arrayWorkDirs
 
     List<Path> arrayInputFiles
+
+    Boolean stageFileEnabled
 
     @PackageScope
     TaskBean() {
@@ -162,14 +166,15 @@ class TaskBean implements Serializable, Cloneable {
         this.outputEnvNames = task.getOutputEnvNames()
         this.outputEvals = task.getOutputEvals()
         this.statsEnabled = task.getProcessor().getSession().statsEnabled
+        this.fusionEnabled = task.getProcessor().isFusionEnabled()
 
         this.inputFiles = task.getInputFilesMap()
         this.outputFiles = task.getOutputFilesNames()
         this.binDirs = task.getProcessor().getBinDirs()
         this.stageInMode = task.config.getStageInMode()
         this.stageOutMode = task.config.getStageOutMode()
-
         this.resourceLabels = task.config.getResourceLabels()
+        this.stageFileEnabled = task.isStageFileEnabled()
 
         // job array
         if( task instanceof TaskArrayRun ) {

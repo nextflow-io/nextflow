@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -114,6 +114,28 @@ class ExecutorConfigTest extends Specification {
         config.getExecConfigProp( 'hazelcast', 'jobName', null ) ==  null
         config.getExecConfigProp( 'hazelcast', 'jobName', 'alpha') == 'alpha'
         config.getExecConfigProp( 'hazelcast', 'jobName', 'alpha', [NXF_EXECUTOR_JOBNAME:'hola']) == 'hola'
+    }
+
+    def 'test onlyJobState property'() {
+
+        when:
+        def config = new ExecutorConfig(['$slurm':[onlyJobState: true] ])
+        then:
+        config.getExecConfigProp('slurm', 'onlyJobState', false) == true
+        config.getExecConfigProp('lsf', 'onlyJobState', false) == false
+
+        when:
+        config = new ExecutorConfig([onlyJobState: true, '$slurm':[onlyJobState: false] ])
+        then:
+        config.getExecConfigProp('slurm', 'onlyJobState', false) == false
+        config.getExecConfigProp('lsf', 'onlyJobState', false) == true
+
+        when:
+        config = new ExecutorConfig([:])
+        then:
+        config.getExecConfigProp('slurm', 'onlyJobState', false) == false
+        config.getExecConfigProp('slurm', 'onlyJobState', true) == false  // Property exists and is false, so default is not used
+        config.getExecConfigProp('slurm', 'nonExistentProp', true) == true  // Non-existent property uses default
     }
 
 

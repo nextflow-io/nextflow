@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,6 +35,8 @@ import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
 import test.OutputCapture
+
+import static test.TestHelper.filterLogNoise
 /**
  * LID Path Tests
  * @author Jorge Ejarque <jorge.ejarque@seqera.io>
@@ -89,12 +91,7 @@ class LinPathTest extends Specification {
     def 'should warn if query is specified'() {
         when:
         new LinPath(fs, new URI("lid://1234/hola?query"))
-        def stdout = capture
-            .toString()
-            .readLines()// remove the log part
-            .findResults { line -> !line.contains('DEBUG') ? line : null }
-            .findResults { line -> !line.contains('INFO') ? line : null }
-            .findResults { line -> !line.contains('plugin') ? line : null }
+        def stdout = filterLogNoise(capture)
 
         then:
         stdout.size() == 1
@@ -433,7 +430,7 @@ class LinPathTest extends Specification {
         def lid2 = new LinPath(fs, '321/x/y/z')
         def rel1 = new LinPath(null, 'foo')
         def rel2 = new LinPath(null, 'bar/')
-        
+
         then:
         lid1.resolve(lid2) == lid2
         lid2.resolve(lid1) == lid1

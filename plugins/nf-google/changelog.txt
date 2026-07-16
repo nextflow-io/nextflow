@@ -1,5 +1,39 @@
 nf-google changelog
 ===================
+1.27.4 - 15 Jul 2026
+- Bump jackson-databind to patched versions to fix deserialization CVEs (#7322) [8d4423e8a]
+
+1.27.3 - 28 May 2026
+- Bump Failsafe to 3.3.2 and force lib-httpx@2.3.0 (#7181) [1c47215a8]
+
+1.27.2 - 25 Apr 2026
+- Replace current cloud info URL call with cloudInfo client (#7065) [629184251]
+
+1.27.1 - 26 Mar 2026
+- Fix netty and jackson vulnerabilities (#6955) [8dafdd95d]
+
+1.27.0 - 17 Mar 2026
+- Add support for latest-generation Google Cloud machine families (#6841) [27785b171]
+- Add support for GCP Ops Agent (#6608) [247a53bc0]
+- Fix Google Batch exit code when spot claim is successfully retried (#6926) [76927c27e]
+
+1.26.1 - 28 Feb 2026
+- Report actual GCP zone in Google Batch trace records (#6855) [465791294]
+
+1.26.0 - 8 Feb 2026
+- Fix isCompleted check in getNumSpotInterruptions (#6805) [76558481a]
+- Remove isCompleted() from getNumSpotInterruptions (#6729) [24cc59e27]
+- Refactor GoogleBatchTaskHandler.newSubmitRequest for reduced complexity (#6687) [38c39108c]
+
+1.25.0 - 19 Dec 2025
+- Add spot interruption tracking to trace records (#6606) [eecd81671]
+- Refactor Google Batch getExitCode to imperative style (#6649) [addd59e9f]
+- Add default maxSpotAttempts for fusion snapshots in Google Batch (#6652) [458ef97a9]
+
+1.24.0 - 28 Nov 2025
+- Add stageFileEnabled flag to control .command.stage file creation (#6618) [2d117cb59]
+- Add Google Batch LogsPolicy PATH option for logging to GCS (#6431) [5b61afe01]
+
 1.23.3 - 22 Oct 2025
 - Prioritize Google Batch API exit codes with fallback to .exitcode file (#6498) [6ac2efcba]
 

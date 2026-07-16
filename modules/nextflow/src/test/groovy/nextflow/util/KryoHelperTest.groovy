@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -156,6 +156,18 @@ class KryoHelperTest extends  Specification {
 
     }
 
+    def 'should serialise a record' () {
+
+        given:
+        def record = new RecordMap([foo: 1])
+
+        when:
+        def buffer = KryoHelper.serialize(record)
+        then:
+        KryoHelper.deserialize(buffer) instanceof RecordMap
+        KryoHelper.deserialize(buffer) == record
+    }
+
     def 'should serialise xpath' () {
         when:
         def file = FileHelper.asPath('http://host.com/foo.txt')
@@ -163,6 +175,24 @@ class KryoHelperTest extends  Specification {
         then:
         KryoHelper.deserialize(buffer).getClass().getName() == 'nextflow.file.http.XPath'
         KryoHelper.deserialize(buffer).toUri() == new URI('http://host.com/foo.txt')
+    }
+
+    def 'should serialise xpath preserving percent-encoding' () {
+        // regression test for https://github.com/nextflow-io/nextflow/issues/6109
+        // a percent-encoded URL (e.g. %23 for '#') must survive a serialize/deserialize
+        // round-trip without being decoded, otherwise the URL is corrupted on -resume
+        given:
+        def url = 'http://host.com/41741_2%237.sub.cram'
+        def file = FileHelper.asPath(url)
+
+        when:
+        def buffer = KryoHelper.serialize(file)
+        def copy = KryoHelper.deserialize(buffer)
+
+        then:
+        copy.getClass().getName() == 'nextflow.file.http.XPath'
+        copy == file
+        copy.toUri().toString() == url
     }
 
     def 'should serialise xfilesystem' () {

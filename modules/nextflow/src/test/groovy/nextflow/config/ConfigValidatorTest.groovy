@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -114,6 +114,28 @@ class ConfigValidatorTest extends Specification {
     def 'should support map options' () {
         when:
         new ConfigValidator().validate([
+            k8s: [
+                pod: [env: 'MESSAGE', value: 'hello world']
+            ]
+        ])
+        then:
+        !capture.toString().contains('Unrecognized config option')
+
+        when:
+        new ConfigValidator().validate([
+            process: [
+                publishDir: [
+                    path: { "results/foo" },
+                    mode: 'copy',
+                    saveAs: { filename -> filename }
+                ]
+            ]
+        ])
+        then:
+        !capture.toString().contains('Unrecognized config option')
+
+        when:
+        new ConfigValidator().validate([
             process: [
                 resourceLimits: [
                     cpus: 4,
@@ -124,6 +146,37 @@ class ConfigValidatorTest extends Specification {
         ])
         then:
         !capture.toString().contains('Unrecognized config option')
+    }
+
+    def 'should not validate core plugin config when plugin is not loaded' () {
+        when:
+        new ConfigValidator().validate([
+            cloudcache: [
+                enabled: true,
+                path: 's3://bucket/cache'
+            ]
+        ])
+        then:
+        !capture.toString().contains("Unrecognized config option 'cloudcache'")
+    }
+
+    static class MapTypesFixture {
+        Map rawMap
+        Map<String,String> stringMap
+        String notAMap
+    }
+
+    def 'isMapType should recognise raw and parameterized map option types' () {
+        given:
+        def rawMap = MapTypesFixture.getDeclaredField('rawMap').genericType
+        def stringMap = MapTypesFixture.getDeclaredField('stringMap').genericType
+        def notAMap = MapTypesFixture.getDeclaredField('notAMap').genericType
+
+        expect:
+        ConfigValidator.isMapType([rawMap])
+        ConfigValidator.isMapType([stringMap])   // Map<String,String> is a ParameterizedType
+        !ConfigValidator.isMapType([notAMap])
+        !ConfigValidator.isMapType([])
     }
 
 }

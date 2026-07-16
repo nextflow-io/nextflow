@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -579,6 +579,28 @@ class TaskRunTest extends Specification {
         isNative
     }
 
+    def 'should check stage file enabled flag' () {
+
+        given:
+        def executor = Mock(Executor)
+        def task = Spy(TaskRun)
+        task.processor = Mock(TaskProcessor)
+
+        when:
+        def enabled = task.isStageFileEnabled()
+        then:
+        1 * task.processor.getExecutor() >> executor
+        1 * executor.isStageFileEnabled() >> false
+        !enabled
+
+        when:
+        enabled = task.isStageFileEnabled()
+        then:
+        1 * task.processor.getExecutor() >> executor
+        1 * executor.isStageFileEnabled() >> true
+        enabled
+    }
+
     def 'should check container enabled flag' () {
 
         given:
@@ -738,7 +760,7 @@ class TaskRunTest extends Specification {
         def vars = task.getVariableNames()
         then:
         1 * task.context.getVariableNames() >> ['foo']
-        and: 
+        and:
         vars == ['foo'] as Set
     }
 
@@ -860,11 +882,13 @@ class TaskRunTest extends Specification {
         !task.isArray()
     }
 
+    // note: use `stubRun >> value` instead of `getStubRun() >> value` because
+    // Spock 2.4 requires property stubbing for direct property access (session.stubRun)
     def 'should resolve task body' () {
         given:
         def task = Spy(TaskRun)
         task.processor = Mock(TaskProcessor) {
-            getSession()>>Mock(Session) { getStubRun() >> false}
+            getSession()>>Mock(Session) { stubRun >> false}
         }
         and:
         def body = Mock(BodyDef)
@@ -880,7 +904,7 @@ class TaskRunTest extends Specification {
         given:
         def task = Spy(TaskRun)
         task.processor = Mock(TaskProcessor) {
-            getSession()>>Mock(Session) { getStubRun() >> true}
+            getSession()>>Mock(Session) { stubRun >> true}
         }
         task.config = Mock(TaskConfig) { getStubBlock()>> null }
         and:
@@ -901,7 +925,7 @@ class TaskRunTest extends Specification {
         def task = Spy(TaskRun)
         task.config = Mock(TaskConfig) { getStubBlock()>>stub }
         task.processor = Mock(TaskProcessor) {
-            getSession()>>Mock(Session) { getStubRun() >> true}
+            getSession()>>Mock(Session) { stubRun >> true}
         }
 
         when:
@@ -909,6 +933,28 @@ class TaskRunTest extends Specification {
         then:
         1 * task.resolveStub(stub) >> null
         0 * task.resolveBody(_) >> null
+    }
+
+    def 'should get stub source via method access' () {
+        given:
+        // a TaskClosure whose owner/delegate (the spec instance) has no `source` property:
+        // accessing `.source` as a property would resolve against the delegate and throw,
+        // so `getStubSource()` must call `getSource()` as a method instead
+        def stub = new TaskClosure({ -> 'echo hello' }, 'echo stub source')
+        def task = Spy(TaskRun)
+        task.config = Mock(TaskConfig) { getStubBlock() >> stub }
+
+        expect:
+        task.getStubSource() == 'echo stub source'
+    }
+
+    def 'should get null stub source when no stub block' () {
+        given:
+        def task = Spy(TaskRun)
+        task.config = Mock(TaskConfig) { getStubBlock() >> null }
+
+        expect:
+        task.getStubSource() == null
     }
 
     def 'should get container info & meta' () {
@@ -935,7 +981,7 @@ class TaskRunTest extends Specification {
         and:
         result2 == meta
     }
-    
+
     def 'should resolve task stub from template' () {
 
         given:

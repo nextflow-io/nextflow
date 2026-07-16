@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -206,7 +206,9 @@ class TaskContext implements Map<String,Object>, Cloneable {
     }
 
     static TaskContext deserialize(TaskProcessor processor, byte[] buffer) {
-        def map = (Map)KryoHelper.deserialize(buffer)
+        // use the script class loader so that Kryo can resolve user-defined types
+        final loader = processor.ownerScript?.getClass()?.getClassLoader()
+        final map = (Map)KryoHelper.deserialize(buffer, loader)
         new TaskContext(processor, map)
     }
 
@@ -330,7 +332,7 @@ class TaskContext implements Map<String,Object>, Cloneable {
             return path
 
         // make from the module dir
-        def module = NF.isDsl2() ? ScriptMeta.get(this.script)?.getModuleDir() : null
+        def module = ScriptMeta.get(script)?.getModuleDir()
         if( module ) {
             def target = module.resolve('templates').resolve(path)
             if (Files.exists(target))

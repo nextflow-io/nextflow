@@ -1,6 +1,5 @@
-package groovy.runtime.metaclass
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,6 +13,9 @@ package groovy.runtime.metaclass
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+package groovy.runtime.metaclass
+
 
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit

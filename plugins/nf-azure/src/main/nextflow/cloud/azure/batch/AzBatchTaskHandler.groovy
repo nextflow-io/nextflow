@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, Microsoft Corp
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package nextflow.cloud.azure.batch
 
 import nextflow.exception.ProcessException
+import nextflow.util.TestOnly
 
 import java.nio.file.Path
 
@@ -87,7 +88,7 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         // submit the task execution
         this.taskKey = batchService.submitTask(task)
         log.debug "[AZURE BATCH] Submitted task $task.name with taskId=$taskKey"
-        // update the status 
+        // update the status
         this.status = TaskStatus.SUBMITTED
     }
 
@@ -114,7 +115,8 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( done ) {
             // finalize the task
             final info = batchService.getTask(taskKey).executionInfo
-            task.exitStatus = info?.exitCode ?: readExitFile()
+            // Try to get exit code from Azure batch API and fallback to .exitcode
+            task.exitStatus = info?.exitCode != null ? info.exitCode : readExitFile()
             task.stdout = outputFile
             task.stderr = errorFile
             status = TaskStatus.COMPLETED
@@ -203,6 +205,11 @@ class AzBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             log.trace "[AZURE BATCH] task=$taskKey => machineInfo=$machineInfo"
         }
         return machineInfo
+    }
+
+    @TestOnly
+    protected setTaskKey(AzTaskKey key){
+        this.taskKey = key
     }
 
 }

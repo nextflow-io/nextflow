@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package nextflow.script.formatter
 
 import nextflow.script.control.ScriptParser
 import nextflow.script.control.ScriptResolveVisitor
-import nextflow.script.types.Types
+import nextflow.script.dsl.Types
 import spock.lang.Shared
 import spock.lang.Specification
 import test.TestUtils
@@ -111,7 +111,7 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
-    def 'should format a workflow definition' () {
+    def 'should format a legacy workflow definition' () {
         expect:
         checkFormat(
             '''\
@@ -151,14 +151,21 @@ class ScriptFormatterTest extends Specification {
             }
             '''
         )
+    }
 
+    def 'should format a typed workflow definition' () {
+        expect:
         checkFormat(
             '''\
+            nextflow.enable.types = true
+
             workflow hello{
             take: x:Integer ; y:Integer ; main: xy=x*y ; emit: result:Integer = xy
             }
             ''',
             '''\
+            nextflow.enable.types = true
+
             workflow hello {
                 take:
                 x: Integer
@@ -204,27 +211,51 @@ class ScriptFormatterTest extends Specification {
         expect:
         checkFormat(
             '''\
-            nextflow.preview.types=true
+            nextflow.enable.types=true
 
             process hello{
-            debug(true) ; input: (id,infile):Tuple<String,Path> ; index:Path ; stage: stageAs('input.txt',infile) ; output: result=tuple(id,file('output.txt')) ; script: 'cat input.txt > output.txt'
+            debug(true) ; input: tuple(id:String,infile:Path) ; index:Path ; stage: stageAs(infile,'input.txt') ; output: result=tuple(id,file('output.txt')) ; script: 'cat input.txt > output.txt'
             }
             ''',
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process hello {
                 debug true
 
                 input:
-                (id, infile): Tuple<String, Path>
+                tuple(id: String, infile: Path)
                 index: Path
 
                 stage:
-                stageAs 'input.txt', infile
+                stageAs infile, 'input.txt'
 
                 output:
                 result = tuple(id, file('output.txt'))
+
+                script:
+                'cat input.txt > output.txt'
+            }
+            '''
+        )
+
+        checkFormat(
+            '''\
+            nextflow.enable.types=true
+
+            process hello{
+            input: record(id:String,infile:Path) ; script: 'cat input.txt > output.txt'
+            }
+            ''',
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                record(
+                    id: String,
+                    infile: Path
+                )
 
                 script:
                 'cat input.txt > output.txt'
@@ -292,16 +323,37 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    def 'should format a record definition' () {
+        expect:
+        checkFormat(
+            '''\
+            record FastqPair{id:String;fastq_1: Path;fastq_2: Path?}
+            ''',
+            '''\
+            record FastqPair {
+                id: String
+                fastq_1: Path
+                fastq_2: Path?
+            }
+            '''
+        )
+    }
+
     def 'should format an output block' () {
         expect:
         checkFormat(
             '''\
+            workflow{}
+
             output{
             foo{path'foo'}
             bar{path'bar';index{path'index.csv'}}
             }
             ''',
             '''\
+            workflow {
+            }
+
             output {
                 foo {
                     path 'foo'
@@ -317,12 +369,17 @@ class ScriptFormatterTest extends Specification {
         )
         checkFormat(
             '''\
+            workflow{}
+
             output{
             foo:Path{path'foo'}
             bar:Channel<Path>{path'bar';index{path'index.csv'}}
             }
             ''',
             '''\
+            workflow {
+            }
+
             output {
                 foo: Path {
                     path 'foo'
@@ -340,7 +397,7 @@ class ScriptFormatterTest extends Specification {
 
     def 'should not sort script declarations by default' () {
         given:
-        def source = 
+        def source =
             '''\
             params.foo = 'bar'
 
@@ -385,9 +442,14 @@ class ScriptFormatterTest extends Specification {
             '''\
             def x=42
             def(x,y)=tuple(1,2)
+            def(
+            x,
+            y
+            )=tuple(1,2)
             ''',
             '''\
             def x = 42
+            def (x, y) = tuple(1, 2)
             def (x, y) = tuple(1, 2)
             '''
         )
@@ -419,11 +481,16 @@ class ScriptFormatterTest extends Specification {
             list[0]='first'
             map.key='value'
             (x,y)=tuple(1,2)
+            (
+            x,
+            y
+            )=tuple(1,2)
             ''',
             '''\
             v = 42
             list[0] = 'first'
             map.key = 'value'
+            (x, y) = tuple(1, 2)
             (x, y) = tuple(1, 2)
             '''
         )
@@ -610,6 +677,14 @@ class ScriptFormatterTest extends Specification {
             [(x): 1]
             '''
         )
+        checkFormat(
+            '''\
+            [(x.y):1]
+            ''',
+            '''\
+            [(x.y): 1]
+            '''
+        )
     }
 
     def 'should format a closure' () {
@@ -706,11 +781,13 @@ class ScriptFormatterTest extends Specification {
             !(2+2==4)
             (1+2)*3
             x%2==0?'x is even!':'x is odd!'
+            (false?'foo':true)?'bar':'baz'
             ''',
             '''\
             !(2 + 2 == 4)
             (1 + 2) * 3
             x % 2 == 0 ? 'x is even!' : 'x is odd!'
+            (false ? 'foo' : true) ? 'bar' : 'baz'
             '''
         )
     }

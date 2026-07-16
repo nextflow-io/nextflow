@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,7 +47,7 @@ import org.yaml.snakeyaml.Yaml
 
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeoutException
-import java.util.function.Predicate
+import dev.failsafe.function.CheckedPredicate
 
 /**
  * Kubernetes API client
@@ -241,7 +241,7 @@ class K8sClient {
         final podList = new K8sResponseJson(resp.text)
 
         // delete all pods in a job
-        if (podList.kind == "PodList") { 
+        if (podList.kind == "PodList") {
             for (item in podList.items) {
                 try {
                    podDelete(((item as Map).metadata as Map).name as String)
@@ -394,13 +394,13 @@ class K8sClient {
         if( podName ) {
             try {
                 return podState(podName)
-            } 
+            }
             /* pod might be deleted by control plane just after findPodNameForJob() call
              * so try fallback to jobState
-             */   
+             */
             catch (NodeTerminationException err) {
                 log.warn1("Job $jobName's Pod not found, probably cleaned by controlplane")
-                return jobStateFallback0(jobName)           
+                return jobStateFallback0(jobName)
             }
         }
         else {
@@ -419,7 +419,6 @@ class K8sClient {
                 log.warn1("Job $jobName already completed and Pod is gone")
                 final dummyPodStatus = [
                         terminated: [
-                                exitcode: 0,
                                 reason: "Completed",
                                 startedAt: jobStatus.startTime,
                                 finishedAt: jobStatus.completionTime,
@@ -736,12 +735,15 @@ class K8sClient {
      * @param cond A predicate that determines when a retry should be triggered
      * @return The {@link dev.failsafe.RetryPolicy} instance
      */
-    protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
+    protected <T> RetryPolicy<T> retryPolicy(CheckedPredicate<? extends Throwable> cond) {
         final cfg = config.retryConfig
         final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
             @Override
             void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
-                log.debug("K8s response error - attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}")
+                log.debug("K8s response error - attempt: ${event.attemptCount}; reason: ${event.lastException.message}")
+                final t = event.lastException
+                if( t instanceof K8sResponseException && t.response.code == 401 )
+                    refreshToken()
             }
         }
         return RetryPolicy.<T>builder()
@@ -751,6 +753,25 @@ class K8sClient {
             .withJitter(cfg.jitter)
             .onRetry(listener)
             .build()
+    }
+
+    /**
+     * Reload the service-account token from {@link ClientConfig#tokenPath} so that
+     * a request retried after a 401 picks up a token rotated in place by kubelet.
+     */
+    protected void refreshToken() {
+        if( !config.tokenPath )
+            return
+        try {
+            final newToken = config.tokenPath.getText('UTF-8')
+            if( newToken && newToken != config.token ) {
+                log.debug "[K8s] Refreshing service-account token from ${config.tokenPath}"
+                config.token = newToken
+            }
+        }
+        catch( Exception e ) {
+            log.warn "[K8s] Unable to refresh service-account token from ${config.tokenPath} - cause: ${e.message}"
+        }
     }
 
     final private static List<Integer> RETRY_CODES = List.of(408, 429, 500, 502, 503, 504)
@@ -763,10 +784,13 @@ class K8sClient {
      */
     protected <T> T apply(CheckedSupplier<T> action) {
         // define the retry condition
-        final cond = new Predicate<? extends Throwable>() {
+        final cond = new CheckedPredicate<? extends Throwable>() {
             @Override
             boolean test(Throwable t) {
                 if ( t instanceof K8sResponseException && t.response.code in RETRY_CODES )
+                    return true
+                // 401 is retried only when the token was loaded from a file and can be re-read from disk
+                if ( t instanceof K8sResponseException && t.response.code == 401 && config.tokenPath )
                     return true
                 if( t instanceof SocketException || t.cause instanceof SocketException )
                     return true

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -72,7 +72,7 @@ class CliOptions {
     /**
      * Print out the 'help' and exit
      */
-    @Parameter(names = ['-h'], description = 'Print this help', help = true)
+    @Parameter(names = ['-h','-help'], description = 'Print this help', help = true)
     boolean help
 
     @Parameter(names = ['-q','-quiet'], description = 'Do not print information messages' )
@@ -118,6 +118,12 @@ class CliOptions {
         if( noColor ) {
             return ansiLog = false
         }
+
+        // Disable ANSI log in agent mode for plain, parseable output
+        if( SysEnv.isAgentMode() ) {
+            return ansiLog = false
+        }
+
         return Ansi.isEnabled()
     }
 

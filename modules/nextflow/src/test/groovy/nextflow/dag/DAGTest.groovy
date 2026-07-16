@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -305,8 +305,8 @@ class DAGTest extends Specification {
         dag.addDataflowBroadcastPair(ch1r, ch1)
         dag.addDataflowBroadcastPair(ch2r, ch2)
 
-        dag.addSourceNode( 'Channel.from', ch1r)
-        dag.addSourceNode( 'Channel.from', ch2r)
+        dag.addSourceNode( 'channel.of', ch1r)
+        dag.addSourceNode( 'channel.of', ch2r)
 
         dag.addOperatorNode( 'combine', [ch1r, ch2r], chC )
 

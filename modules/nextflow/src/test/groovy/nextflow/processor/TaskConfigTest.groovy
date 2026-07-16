@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -189,6 +189,24 @@ class TaskConfigTest extends Specification {
         config.getMaxRetries() == 3
         config.errorStrategy == ErrorStrategy.RETRY
         config.getErrorStrategy() == ErrorStrategy.RETRY
+    }
+
+    def 'should get debug flag' () {
+        expect:
+        new TaskConfig(opts).getDebug() == expected
+
+        where:
+        opts            | expected
+        [:]             | false
+        [debug: false]  | false
+        [debug: true]   | true
+    }
+
+    def 'should ignore the removed echo directive' () {
+        // the deprecated `echo` directive has been removed and no longer
+        // enables the debug output
+        expect:
+        new TaskConfig([echo: true]).getDebug() == false
     }
 
     def testMaxErrors() {
@@ -499,7 +517,7 @@ class TaskConfigTest extends Specification {
         dsl.publishDir '/there', pattern: '*.fq'
         def dirs = process.createTaskConfig().getPublishDir()
         then:
-        dirs.size() == 2 
+        dirs.size() == 2
         dirs[0].path == Paths.get('/here')
         dirs[0].pattern == null
         dirs[1].path == Paths.get('/there')
@@ -551,7 +569,7 @@ class TaskConfigTest extends Specification {
         def dsl = new ProcessBuilder(process)
         dsl.pod secret: 'foo', mountPath: '/this'
         dsl.pod secret: 'bar', env: 'BAR_XXX'
-        
+
         then:
         process.get('pod') == [
                     [secret: 'foo', mountPath: '/this'],
@@ -572,7 +590,7 @@ class TaskConfigTest extends Specification {
         dsl.accelerator 5
         def res = process.createTaskConfig().getAccelerator()
         then:
-        res.limit == 5 
+        res.limit == 5
         res.request == 5
 
         when:
@@ -620,6 +638,49 @@ class TaskConfigTest extends Specification {
         then:
         config.getResourceLabels() == [region: 'eu-west-1', organization: 'A', user: 'this', team: 'that']
         config.getResourceLabelsAsString() == 'region=eu-west-1,organization=A,user=this,team=that'
+    }
+
+    def 'should configure hints options'()  {
+        given:
+        def script = Mock(BaseScript)
+
+        when:
+        def process = new ProcessConfig(script)
+        def dsl = new ProcessBuilder(process)
+        dsl.hints( 'seqera/machineRequirement.arch': 'arm64', consumableResources: ['my-license': 1] )
+
+        then:
+        process.get('hints') == ['seqera/machineRequirement.arch': 'arm64', consumableResources: ['my-license': 1]]
+
+        when:
+        def config = process.createTaskConfig()
+        then:
+        config.getHints() == ['seqera/machineRequirement.arch': 'arm64', consumableResources: ['my-license': 1]]
+    }
+
+    def 'should return empty map when no hints set'() {
+        when:
+        def config = new TaskConfig([:])
+        then:
+        config.getHints() == [:]
+    }
+
+    def 'should replace hints via config override'()  {
+        given:
+        def script = Mock(BaseScript)
+
+        when: 'set hints in process definition'
+        def process = new ProcessConfig(script)
+        def dsl = new ProcessBuilder(process)
+        dsl.hints( 'seqera/machineRequirement.arch': 'arm64', consumableResources: ['my-license': 1] )
+        then:
+        process.getHints() == ['seqera/machineRequirement.arch': 'arm64', consumableResources: ['my-license': 1]]
+
+        when: 'config override replaces the entire map'
+        def config = process.createTaskConfig()
+        config.put('hints', ['scheduling.priority': 5])
+        then:
+        config.getHints() == ['scheduling.priority': 5]
     }
 
     def 'should report error on negative cpus' () {

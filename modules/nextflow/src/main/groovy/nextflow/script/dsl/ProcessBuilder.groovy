@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,12 @@ package nextflow.script.dsl
 import java.util.regex.Pattern
 
 import groovy.transform.TypeChecked
-import groovy.util.logging.Slf4j
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.IllegalDirectiveException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.processor.ConfigList
 import nextflow.processor.ErrorStrategy
+import nextflow.processor.HintDefs
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
@@ -37,7 +37,6 @@ import nextflow.script.ProcessDef
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-@Slf4j
 @TypeChecked
 class ProcessBuilder {
 
@@ -59,6 +58,7 @@ class ProcessBuilder {
             'executor',
             'ext',
             'fair',
+            'hints',
             'label',
             'machineType',
             'maxErrors',
@@ -201,18 +201,6 @@ class ProcessBuilder {
     }
 
     /**
-     * Implements the {@code echo} directive for backwards compatibility.
-     *
-     * note: without this method definition {@link BaseScript#echo} will be invoked
-     *
-     * @param value
-     */
-    void echo( value ) {
-        log.warn1('The `echo` directive has been deprecated - use `debug` instead')
-        config.put('debug', value)
-    }
-
-    /**
      * Implements the {@code errorStrategy} directive.
      *
      * @param strategy
@@ -222,6 +210,26 @@ class ProcessBuilder {
             throw new IllegalArgumentException("Unknown error strategy '${strategy}' ― Available strategies are: ${ErrorStrategy.values().join(',').toLowerCase()}")
 
         config.put('errorStrategy', strategy)
+    }
+
+    /**
+     * Implements the {@code hints} directive.
+     *
+     * This directive can be specified (invoked) multiple times in
+     * the process definition. Multiple calls accumulate entries.
+     *
+     * @param map
+     */
+    void hints(Map<String, Object> map) {
+        if( !map ) return
+        HintDefs.validateHints(map)
+
+        def allHints = (Map)config.get('hints')
+        if( !allHints ) {
+            allHints = [:]
+        }
+        allHints += map
+        config.put('hints', allHints)
     }
 
     /**

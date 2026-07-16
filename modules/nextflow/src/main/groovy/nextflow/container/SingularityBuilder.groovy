@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -229,7 +229,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
         if( launcher ) {
             def result = getRunCommand()
-            result += entryPoint ? " $entryPoint -c \"cd \$NXF_TASK_WORKDIR; $launcher\"" : " $launcher"
+            result += entryPoint ? " $entryPoint -c \"cd \\\"\$NXF_TASK_WORKDIR\\\"; $launcher\"" : " $launcher"
             return result
         }
         return getRunCommand() + ' ' + launcher

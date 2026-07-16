@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -110,6 +110,14 @@ class ExecutorConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        *Used only by the SLURM executor.*
+
+        When `true`, job status queries use `squeue --only-job-state` without partition (`-p`) or user (`-u`) filters. This is required for SLURM installations where `squeue` only accepts the `--only-job-state` option (default: `false`).
+    """)
+    final boolean onlyJobState
+
+    @ConfigOption
+    @Description("""
         *Used only by the LSF executor.*
 
         Enables the *per-task* memory reserve mode for LSF jobs.
@@ -144,8 +152,8 @@ class ExecutorConfig implements ConfigScope {
 
     @Description("""
         The `executor.retry` scope controls the behavior of retrying failed job submissions.
-    
-        [Read more](https://nextflow.io/docs/latest/reference/config.html#executor)
+
+        [Read more](https://docs.seqera.io/nextflow/reference/config#executor)
     """)
     final ExecutorRetryConfig retry
 
@@ -171,6 +179,7 @@ class ExecutorConfig implements ConfigScope {
         name = opts.name
         perCpuMemAllocation = opts.perCpuMemAllocation as boolean
         perJobMemLimit = opts.perJobMemLimit as boolean
+        onlyJobState = opts.onlyJobState as boolean
         perTaskReserve = opts.perTaskReserve as boolean
         pollInterval = opts.pollInterval as Duration
         queueGlobalStatus = opts.queueGlobalStatus as boolean

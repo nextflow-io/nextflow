@@ -112,6 +112,7 @@ scriptDeclaration
     |   importDeclaration           #importDeclAlt
     |   paramsDef                   #paramsDefAlt
     |   paramDeclarationV1          #paramDeclV1Alt
+    |   recordDef                   #recordDefAlt
     |   enumDef                     #enumDefAlt
     |   processDef                  #processDefAlt
     |   workflowDef                 #workflowDefAlt
@@ -167,6 +168,17 @@ paramDeclaration
 // -- legacy parameter declaration
 paramDeclarationV1
     :   PARAMS (DOT identifier)+ nls ASSIGN nls expression
+    ;
+
+// -- record definition
+recordDef
+    :   RECORD identifier nls LBRACE
+        nls recordBody?
+        nls RBRACE
+    ;
+
+recordBody
+    :   nameTypePair (sep nameTypePair)*
     ;
 
 // -- enum definition
@@ -228,8 +240,17 @@ processInputs
 
 processInput
     :   identifier (COLON type)?
-    |   LPAREN identifier (COMMA identifier)+ rparen (COLON type)?
+    |   processRecordInput
+    |   processTupleInput
     |   statement
+    ;
+
+processRecordInput
+    :   RECORD LPAREN nls nameTypePair (COMMA nls nameTypePair)* COMMA? nls rparen
+    ;
+
+processTupleInput
+    :   TUPLE LPAREN nls nameTypePair (COMMA nls nameTypePair)* COMMA? nls rparen
     ;
 
 processStage
@@ -403,7 +424,7 @@ variableDeclaration
     ;
 
 nameTypePairs
-    :   LPAREN nameTypePair (COMMA nameTypePair)+ rparen
+    :   LPAREN nls nameTypePair (COMMA nls nameTypePair)+ nls rparen
     ;
 
 nameTypePair
@@ -416,7 +437,7 @@ multipleAssignmentStatement
     ;
 
 variableNames
-    :   LPAREN identifier (COMMA identifier)+ rparen
+    :   LPAREN nls identifier (COMMA nls identifier)+ nls rparen
     ;
 
 assignmentStatement
@@ -576,6 +597,7 @@ identifier
     |   NEXTFLOW
     |   PARAMS
     |   FROM
+    |   RECORD
     |   PROCESS
     |   EXEC
     |   INPUT
@@ -585,6 +607,7 @@ identifier
     |   STAGE
     |   STUB
     |   TOPIC
+    |   TUPLE
     |   WHEN
     |   WORKFLOW
     |   EMIT
@@ -778,6 +801,7 @@ keywords
     |   PARAMS
     |   INCLUDE
     |   FROM
+    |   RECORD
     |   PROCESS
     |   EXEC
     |   INPUT
@@ -787,6 +811,7 @@ keywords
     |   STAGE
     |   STUB
     |   TOPIC
+    |   TUPLE
     |   WHEN
     |   WORKFLOW
     |   EMIT

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,21 @@
 
 package nextflow.script
 
+import java.lang.reflect.Type
 import java.nio.file.Path
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.file.FileHelper
 import nextflow.exception.ScriptRuntimeException
-import nextflow.script.types.Types
+import nextflow.script.dsl.Types
+import nextflow.script.types.Record
+import nextflow.util.Duration
+import nextflow.util.MemoryUnit
+import nextflow.util.RecordMap
+import nextflow.util.TypeHelper
+import org.codehaus.groovy.runtime.typehandling.GroovyCastException
 /**
  * Implements the DSL for defining workflow params
  *
@@ -34,14 +40,19 @@ import nextflow.script.types.Types
 @CompileStatic
 class ParamsDsl {
 
+    private Class clazz
+
     private Map<String,Param> declarations = [:]
 
-    void declare(String name, Class type) {
-        declarations[name] = new Param(name, type, Optional.empty())
+    ParamsDsl(Class clazz) {
+        this.clazz = clazz
     }
 
-    void declare(String name, Class type, Object defaultValue) {
-        declarations[name] = new Param(name, type, Optional.of(defaultValue))
+    void declare(String name, boolean optional, Object defaultValue = null) {
+        final type = clazz.getField(name).getGenericType()
+        if( defaultValue == null && type == Boolean )
+            defaultValue = false
+        declarations[name] = new Param(name, type, optional, defaultValue)
     }
 
     void apply(Session session) {
@@ -56,26 +67,45 @@ class ParamsDsl {
         final params = new HashMap<String,?>()
         for( final name : declarations.keySet() ) {
             final decl = declarations[name]
-            if( cliParams.containsKey(name) )
+            if( cliParams.containsKey(name) ) {
                 params[name] = resolveFromCli(decl, cliParams[name])
-            else if( configParams.containsKey(name) )
+            }
+            else if( configParams.containsKey(name) ) {
                 params[name] = resolveFromCode(decl, configParams[name])
-            else if( decl.defaultValue.isPresent() )
-                params[name] = resolveFromCode(decl, decl.defaultValue.get())
-            else
+            }
+            else if( decl.defaultValue != null ) {
+                params[name] = resolveFromCode(decl, decl.defaultValue)
+            }
+            else if( decl.optional ) {
+                params[name] = null
+            }
+            else {
                 throw new ScriptRuntimeException("Parameter `$name` is required but was not specified on the command line, params file, or config")
+            }
 
-            final actualType = params[name].getClass()
-            if( !decl.type.isAssignableFrom(actualType) )
+            final expectedType = TypeHelper.getRawType(decl.type)
+            final actualType = params[name]?.getClass()
+            if( actualType != null && !isAssignableFrom(expectedType, actualType) )
                 throw new ScriptRuntimeException("Parameter `$name` with type ${Types.getName(decl.type)} cannot be assigned to ${params[name]} [${Types.getName(actualType)}]")
         }
 
-        session.binding.setParams(params, true)
+        // propagate resolved params to all scripts for legacy compatibility
+        if( !session.binding.getScriptPath() )
+            session.binding.setParams(params, true)
+        for( final scriptPath : ScriptMeta.allScriptNames().values() ) {
+            if( !scriptPath )
+                continue
+            final script = ScriptMeta.getScriptByPath(scriptPath)
+            script.binding.setParams(params, true)
+        }
     }
 
-    private Object resolveFromCli(Param decl, Object value) {
+    private static Object resolveFromCli(Param decl, Object value) {
         if( value == null )
             return null
+
+        if( value instanceof Collection || value instanceof Map )
+            return asType(value, decl)
 
         if( value !instanceof CharSequence )
             return value
@@ -90,35 +120,80 @@ class ParamsDsl {
         if( decl.type == Integer || decl.type == Float ) {
             if( str.isInteger() ) return str.toInteger()
             if( str.isLong() ) return str.toLong()
+            if( str.isBigInteger() ) return str.toBigInteger()
         }
 
         if( decl.type == Float ) {
             if( str.isFloat() ) return str.toFloat()
             if( str.isDouble() ) return str.toDouble()
+            if( str.isBigDecimal() ) return str.toBigDecimal()
+        }
+
+        if( decl.type == Duration ) {
+            return Duration.of(str)
+        }
+
+        if( decl.type == MemoryUnit ) {
+            return MemoryUnit.of(str)
         }
 
         if( decl.type == Path ) {
-            return FileHelper.asPath(str)
+            return TypeHelper.asPathType(str)
         }
 
         return value
     }
 
-    private Object resolveFromCode(Param decl, Object value) {
+    private static Object resolveFromCode(Param decl, Object value) {
         if( value == null )
             return null
 
-        if( decl.type == Path && value instanceof CharSequence )
-            return FileHelper.asPath(value.toString())
+        if( value instanceof Collection || value instanceof Map )
+            return asType(value, decl)
+
+        if( value !instanceof CharSequence )
+            return value
+
+        final str = value.toString()
+
+        if( decl.type == Path )
+            return TypeHelper.asPathType(str)
 
         return value
+    }
+
+    private static Object asType(Object value, Param decl) {
+        try {
+            return TypeHelper.asType(value, decl.type)
+        }
+        catch( GroovyCastException | UnsupportedOperationException e ) {
+            final actualType = value.getClass()
+            throw new ScriptRuntimeException("Parameter `${decl.name}` with type ${Types.getName(decl.type)} cannot be assigned to ${value} [${Types.getName(actualType)}]")
+        }
+    }
+
+    private static boolean isAssignableFrom(Class target, Class source) {
+        // any numeric value can be assigned to Float
+        if( target == Float.class )
+            return Number.class.isAssignableFrom(source)
+
+        // any integer value can be assigned to Integer
+        if( target == Integer.class )
+            return source == BigInteger.class || source == Long.class || source == Integer.class
+
+        // any record can be assigned to a record type (validation is handled by asType())
+        if( Record.class.isAssignableFrom(target) )
+            return source == RecordMap.class
+
+        return target.isAssignableFrom(source)
     }
 
     @Canonical
     private static class Param {
         String name
-        Class type
-        Optional<?> defaultValue
+        Type type
+        boolean optional
+        Object defaultValue
     }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -325,7 +325,7 @@ class ConfigDiscoveryTest extends Specification {
                 - name: experimenter
                   user:
                     password: some-password
-                    username: exp        
+                    username: exp
         '''.stripIndent()
 
         when:
@@ -387,6 +387,7 @@ class ConfigDiscoveryTest extends Specification {
         config.server == 'foo.com:4343'
         config.namespace == 'foo-namespace'
         config.token == 'my-token'
+        config.tokenPath == TOKEN_FILE
         config.sslCert == CERT_FILE.text.bytes
         config.isFromCluster
 

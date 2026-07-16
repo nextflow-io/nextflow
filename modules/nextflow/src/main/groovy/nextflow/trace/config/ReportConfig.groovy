@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@ import nextflow.trace.TraceHelper
 
 @ScopeName("report")
 @Description("""
-    The `report` scope allows you to configure the workflow [execution report](https://nextflow.io/docs/latest/tracing.html#execution-report).
+    The `report` scope allows you to configure the workflow [execution report](https://docs.seqera.io/nextflow/reports#execution-report).
 """)
 @CompileStatic
 class ReportConfig implements ConfigScope {

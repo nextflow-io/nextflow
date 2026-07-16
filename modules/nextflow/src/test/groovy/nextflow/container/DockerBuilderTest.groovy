@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -150,6 +150,11 @@ class DockerBuilderTest extends Specification {
                 .setCpus(1)
                 .build()
                 .runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
+
+        new DockerBuilder('fedora', new DockerConfig(cpuLimits: true))
+                .setCpus(2)
+                .build()
+                .runCommand == 'docker run -i --cpus 2 -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
         new DockerBuilder('fedora')
                 .setMemory('10g')

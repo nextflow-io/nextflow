@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.executor.local
@@ -80,6 +79,10 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private volatile TaskResult result
 
+    String acceleratorEnv
+
+    List<String> acceleratorIds
+
     LocalTaskHandler(TaskRun task, LocalExecutor executor) {
         super(task)
         // create the task handler
@@ -100,7 +103,7 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
         // create the process builder to run the task in the local computer
         final builder = createLaunchProcessBuilder()
         final logFile = builder.redirectOutput().file()
-        
+
         // run async via thread pool
         session.getExecService().submit( {
             try {
@@ -142,11 +145,13 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
         final workDir = task.workDir.toFile()
         final logFile = new File(workDir, TaskRun.CMD_LOG)
 
-        return new ProcessBuilder()
+        final pb = new ProcessBuilder()
                 .redirectErrorStream(true)
                 .redirectOutput(logFile)
                 .directory(workDir)
                 .command(cmd)
+        prepareAccelerators(pb)
+        return pb
     }
 
     protected ProcessBuilder fusionProcessBuilder() {
@@ -157,15 +162,23 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
         final launcher = fusionLauncher()
         final config = task.getContainerConfig()
         final containerOpts = task.config.getContainerOptions()
-        final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit)
+        final cmd = FusionHelper.runWithContainer(launcher, config, task.getContainer(), containerOpts, submit, task.getContainerPlatform())
         log.debug "Launch cmd line: ${cmd}"
 
         final logPath = Files.createTempFile('nf-task','.log')
 
-        return new ProcessBuilder()
+        final pb = new ProcessBuilder()
                 .redirectErrorStream(true)
                 .redirectOutput(logPath.toFile())
                 .command(List.of('sh','-c', cmd))
+        prepareAccelerators(pb)
+        return pb
+    }
+
+    protected void prepareAccelerators(ProcessBuilder pb) {
+        if( !acceleratorEnv )
+            return
+        pb.environment().put(acceleratorEnv, acceleratorIds.join(','))
     }
 
     protected ProcessBuilder createLaunchProcessBuilder() {
@@ -218,6 +231,7 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
              */
             if( elapsedTimeMillis() > wallTimeMillis ) {
                 destroy()
+                task.exitStatus = process.exitValue()
                 task.stdout = outputFile
                 task.stderr = errorFile
                 task.error = new ProcessException("Process exceeded running time limit (${task.config.getTime()})")

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -47,6 +47,9 @@ class CmdConfig extends CmdBase {
 
     @Parameter(description = 'project name')
     List<String> args = []
+
+    @Parameter(names=['-r','-revision'], description = 'Revision of the project (either a git branch, tag or commit SHA number)')
+    String revision
 
     @Parameter(names=['-a','-show-profiles'], description = 'Show all configuration profiles')
     boolean showAllProfiles
@@ -230,9 +233,13 @@ class CmdConfig extends CmdBase {
             return file.parent ?: Paths.get('/')
         }
 
-        final manager = new AssetManager(path)
-        manager.isLocal() ? manager.localPath.toPath() : manager.configFile?.parent
-
+        try (final manager = new AssetManager(path, revision)) {
+            if( revision && manager.isUsingLegacyStrategy() ){
+                log.warn("The local asset for ${path} does not support multi-revision - 'revision' option is ignored\n" +
+                    "Consider updating the project using 'nextflow pull ${path} -r $revision -migrate'")
+            }
+            return manager.isLocal() ? manager.localPath.toPath() : manager.configFile?.parent
+        }
     }
 
 }

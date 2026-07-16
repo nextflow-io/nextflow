@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package io.seqera.wave.plugin
@@ -955,6 +954,46 @@ class WaveClientTest extends Specification {
                                                     | CONFIG_RESP.get('combined')
     }
 
+    def 'should resolve container config from local file' () {
+        given:
+        def folder = Files.createTempDirectory('wave-local-manifest')
+        def manifest = folder.resolve('manifest.json')
+        manifest.text = JsonOutput.toJson([entrypoint: ['entry.sh']])
+        and:
+        def session = Mock(Session) { getConfig() >> [fusion: [enabled: true, containerConfigUrl: manifest.toUri().toString()]] }
+        def client = new WaveClient(session)
+
+        expect:
+        client.resolveContainerConfig() == new ContainerConfig(entrypoint: ['entry.sh'])
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should reject unsupported scheme for container config' () {
+        given:
+        def session = Mock(Session) { getConfig() >> [:] }
+        def client = new WaveClient(session)
+
+        when:
+        client.fetchContainerConfig(new URI('ftp://example.com/manifest.json'))
+
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    @Unroll
+    def 'should replace fusion arch in URI' () {
+        expect:
+        WaveClient.replaceFusionArch(new URI(URI_VALUE), PLATFORM).toString() == EXPECTED
+
+        where:
+        URI_VALUE                                                  | PLATFORM      | EXPECTED
+        'https://fusionfs.seqera.io/releases/v2.5-amd64.json'      | 'linux/arm64' | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
+        'https://fusionfs.seqera.io/releases/v2.5-arm64.json'      | 'linux/amd64' | 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
+        'file:///tmp/local-manifest.json'                          | 'linux/arm64' | 'file:///tmp/local-manifest.json'
+    }
+
     @Unroll
     def 'should get fusion default url' () {
         given:
@@ -964,17 +1003,36 @@ class WaveClientTest extends Specification {
 
         expect:
         wave.defaultFusionUrl(ARCH).toURI().toString() == EXPECTED
-        
+
         where:
         ARCH                | SNAP  | EXPECTED
-        'linux/amd64'       | null  | 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
-        'linux/x86_64'      | null  | 'https://fusionfs.seqera.io/releases/v2.5-amd64.json'
-        'arm64'             | null  | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
-        'linux/arm64'       | null  | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
-        'linux/arm64/v8'    | null  | 'https://fusionfs.seqera.io/releases/v2.5-arm64.json'
+        'linux/amd64'       | null  | 'https://fusionfs.seqera.io/releases/v2.6-amd64.json'
+        'linux/x86_64'      | null  | 'https://fusionfs.seqera.io/releases/v2.6-amd64.json'
+        'arm64'             | null  | 'https://fusionfs.seqera.io/releases/v2.6-arm64.json'
+        'linux/arm64'       | null  | 'https://fusionfs.seqera.io/releases/v2.6-arm64.json'
+        'linux/arm64/v8'    | null  | 'https://fusionfs.seqera.io/releases/v2.6-arm64.json'
         and:
-        'linux/amd64'       | true  | 'https://fusionfs.seqera.io/releases/v2.5-snap_amd64.json'
-        'linux/arm64'       | true  | 'https://fusionfs.seqera.io/releases/v2.5-snap_arm64.json'
+        'linux/amd64'       | true  | 'https://fusionfs.seqera.io/releases/v2.6-snap_amd64.json'
+        'linux/arm64'       | true  | 'https://fusionfs.seqera.io/releases/v2.6-snap_arm64.json'
+    }
+
+    @Unroll
+    def 'should get fusion default url with version override' () {
+        given:
+        def sess = Mock(Session) {getConfig() >> [fusion:[snapshots:SNAP, targetVersion:'2.6']] }
+        and:
+        def wave = Spy(new WaveClient(sess))
+
+        expect:
+        wave.defaultFusionUrl(ARCH).toURI().toString() == EXPECTED
+
+        where:
+        ARCH                | SNAP  | EXPECTED
+        'linux/amd64'       | null  | 'https://fusionfs.seqera.io/releases/v2.6-amd64.json'
+        'linux/arm64'       | null  | 'https://fusionfs.seqera.io/releases/v2.6-arm64.json'
+        and:
+        'linux/amd64'       | true  | 'https://fusionfs.seqera.io/releases/v2.6-snap_amd64.json'
+        'linux/arm64'       | true  | 'https://fusionfs.seqera.io/releases/v2.6-snap_arm64.json'
     }
 
     @Unroll
@@ -1159,7 +1217,7 @@ class WaveClientTest extends Specification {
         wave.checkBuildCompletion(new WaveClient.Handle(response,Instant.now().minusSeconds(10)))
         then:
         1 * wave.buildStatus(BUILD_ID) >> PENDING
-        
+
         then:
         def err = thrown(ProcessUnrecoverableException)
         err.message == "Wave provisioning for container 'my/container:latest' is exceeding max allowed duration (500ms) - check details here: https://wave.seqera.io/view/builds/build-123"
@@ -1408,6 +1466,49 @@ class WaveClientTest extends Specification {
             scanId: resp.scanId,
             freeze: resp.freeze,
             cached: resp.cached )
+    }
+
+    def 'should fetch container config without bearer token' () {
+        given: 'a server that rejects requests with Authorization header (like S3)'
+        def configJson = JsonOutput.toJson(new ContainerConfig(entrypoint: ['test.sh']))
+        HttpHandler handler = { HttpExchange exchange ->
+            // Check if Authorization header is present (like S3 would reject Bearer tokens)
+            def authHeader = exchange.requestHeaders.getFirst('Authorization')
+            if( authHeader ) {
+                // S3 returns 400 for unsupported auth types
+                def errorMsg = "Unsupported Authorization Type: ${authHeader}"
+                exchange.sendResponseHeaders(400, errorMsg.size())
+                exchange.getResponseBody() << errorMsg
+                exchange.getResponseBody().close()
+            }
+            else {
+                exchange.getResponseHeaders().add("Content-Type", "application/json")
+                exchange.sendResponseHeaders(200, configJson.size())
+                exchange.getResponseBody() << configJson
+                exchange.getResponseBody().close()
+            }
+        }
+
+        HttpServer server = HttpServer.create(new InetSocketAddress(9902), 0)
+        server.createContext("/", handler)
+        server.start()
+
+        and: 'a wave client configured with tower access token'
+        def config = [
+            wave: [containerConfigUrl: 'http://localhost:9902/config.json'],
+            tower: [accessToken: 'test-jwt-token', endpoint: 'https://tower.nf']
+        ]
+        def session = Mock(Session) { getConfig() >> config }
+        def client = new WaveClient(session)
+
+        when: 'fetching container config from URL that rejects Bearer tokens'
+        def result = client.resolveContainerConfig()
+
+        then: 'request succeeds because no Bearer token was sent'
+        result.entrypoint == ['test.sh']
+
+        cleanup:
+        server?.stop(0)
     }
 
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,7 @@ import nextflow.script.dsl.Description;
 @Description("""
     A `Duration` represents a duration of time.
 
-    [Read more](https://nextflow.io/docs/latest/reference/stdlib.html#duration)
+    [Read more](https://docs.seqera.io/nextflow/reference/stdlib-types#duration)
 """)
 public interface Duration {
 

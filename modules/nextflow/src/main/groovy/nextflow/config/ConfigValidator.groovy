@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,11 @@
 
 package nextflow.config
 
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
+
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.config.spec.ConfigScope
 import nextflow.config.spec.SpecNode
@@ -40,6 +44,7 @@ class ConfigValidator {
         'dumpChannels',
         'dumpHashes',
         'libDir',
+        'outputFormat',
         'poolSize',
         'preview',
         'runName',
@@ -53,6 +58,7 @@ class ConfigValidator {
     private static final List<String> CORE_PLUGIN_SCOPES = List.of(
         'aws',
         'azure',
+        'cloudcache',
         'google',
         'k8s',
         'tower',
@@ -178,8 +184,11 @@ class ConfigValidator {
     }
 
     /**
-     * Determine whether a config option is a map option or a
-     * property thereof.
+     * Determine whether a config option is a map option.
+     *
+     * This method is needed to distinguish between config scopes
+     * and config options that happen to be maps, since this distinction
+     * is lost when the config is resolved.
      *
      * @param names
      */
@@ -190,7 +199,24 @@ class ConfigValidator {
 
     private static boolean isMapOption0(SpecNode.Scope scope, List<String> names) {
         final node = scope.getOption(names)
-        return node != null && node.type() == Map.class
+        return node != null && isMapType(node.types())
+    }
+
+    /**
+     * Determine whether any of the given option types is a {@link Map}, resolving the raw
+     * type of parameterized types so that a declared {@code Map<K,V>} option (which reflects
+     * as a {@link ParameterizedType}, not {@code Map.class}) is recognised as a map option.
+     *
+     * @param types
+     */
+    @PackageScope
+    static boolean isMapType(List<Type> types) {
+        for( final type : types ) {
+            final raw = type instanceof ParameterizedType ? ((ParameterizedType) type).getRawType() : type
+            if( raw instanceof Class && Map.class.isAssignableFrom((Class) raw) )
+                return true
+        }
+        return false
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,13 +28,11 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
-import groovyx.gpars.dataflow.DataflowChannel
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowVariable
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import groovyx.gpars.dataflow.operator.ControlMessage
-import groovyx.gpars.dataflow.operator.PoisonPill
 import nextflow.dag.NodeMarker
 import nextflow.datasource.SraExplorer
 import nextflow.exception.AbortOperationException
@@ -63,7 +61,7 @@ import org.codehaus.groovy.runtime.NullObject
 @CompileStatic
 class Channel  {
 
-    static public ControlMessage STOP = PoisonPill.getInstance()
+    static public ControlMessage STOP = CH.stop()
 
     static public NullObject VOID = NullObject.getNullObject()
 
@@ -111,18 +109,6 @@ class Channel  {
         return "$i-th"
     }
 
-    /**
-     * Create an new channel
-     *
-     * @return The channel instance
-     */
-    @Deprecated
-    static DataflowChannel create() {
-        if( NF.isDsl2() )
-            throw new DeprecationException("Channel `create` method is not supported any more")
-        return CH.queue()
-    }
-
     static DataflowWriteChannel topic(String name) {
         return CH.topic(name)
     }
@@ -134,7 +120,7 @@ class Channel  {
      */
     static DataflowWriteChannel empty() {
         final result = CH.emit(CH.queue(), STOP)
-        NodeMarker.addSourceNode('Channel.empty', result)
+        NodeMarker.addSourceNode('channel.empty', result)
         return result
     }
 
@@ -151,7 +137,7 @@ class Channel  {
         }
         values.add(STOP)
         CH.emitValues(result, values)
-        NodeMarker.addSourceNode('Channel.of', result)
+        NodeMarker.addSourceNode('channel.of', result)
         return result
     }
 
@@ -175,7 +161,7 @@ class Channel  {
     @Deprecated
     static DataflowWriteChannel from( Collection items ) {
         final result = from0(items)
-        NodeMarker.addSourceNode('Channel.from', result)
+        NodeMarker.addSourceNode('channel.from', result)
         return result
     }
 
@@ -189,10 +175,10 @@ class Channel  {
     static DataflowWriteChannel fromList( Collection items ) {
         final result = CH.create()
         CH.emitAndClose(result, items as List)
-        NodeMarker.addSourceNode('Channel.fromList', result)
+        NodeMarker.addSourceNode('channel.fromList', result)
         return result
     }
-    
+
     /**
      * Creates a channel sending the items in the collection over it
      *
@@ -206,7 +192,7 @@ class Channel  {
             throw new IllegalArgumentException("channel.from argument is already a channel object")
 
         final result = from0(items as List)
-        NodeMarker.addSourceNode('Channel.from', result)
+        NodeMarker.addSourceNode('channel.from', result)
         return result
     }
 
@@ -223,7 +209,7 @@ class Channel  {
      */
     static DataflowWriteChannel interval(String duration) {
         final result = interval0( duration, { index -> index })
-        NodeMarker.addSourceNode('Channel.interval', result)
+        NodeMarker.addSourceNode('channel.interval', result)
         return result
     }
 
@@ -238,7 +224,7 @@ class Channel  {
 
     static DataflowWriteChannel interval(String duration, Closure closure ) {
         final result = interval0(duration, closure)
-        NodeMarker.addSourceNode('Channel.interval', result)
+        NodeMarker.addSourceNode('channel.interval', result)
         return result
     }
 
@@ -256,14 +242,13 @@ class Channel  {
             }
         }
 
-        if( NF.isDsl2() )
-            session.addIgniter { timer.schedule( task as TimerTask, 0, millis ) }  
-        else 
+        session.addIgniter {
             timer.schedule( task as TimerTask, 0, millis )
-        
+        }
+
         return result
     }
-    
+
     /*
      * valid parameters for fromPath operator
      */
@@ -296,39 +281,35 @@ class Channel  {
         checkParams( 'path', opts, VALID_FROM_PATH_PARAMS )
 
         final result = fromPath0(opts, pattern instanceof List ? pattern : [pattern])
-        NodeMarker.addSourceNode('Channel.fromPath', result)
+        NodeMarker.addSourceNode('channel.fromPath', result)
         return result
     }
 
     private static DataflowWriteChannel<Path> fromPath0( Map opts, List allPatterns ) {
 
         final result = CH.create()
-        if( NF.isDsl2() ) {
-            session.addIgniter { pumpFiles0(result, opts, allPatterns) }
-        }
-        else {
+        session.addIgniter {
             pumpFiles0(result, opts, allPatterns)
         }
         return result
     }
-    
+
     private static void pumpFiles0(DataflowWriteChannel result, Map opts, List allPatterns) {
-        
+
         def future = CompletableFuture.completedFuture(null)
         for( int index=0; index<allPatterns.size(); index++ ) {
             def factory = new PathVisitor(target: result, opts: opts)
             factory.closeChannelOnComplete = index==allPatterns.size()-1
             future = factory.applyAsync(future, allPatterns[index])
         }
-        
+
         // abort the execution when an exception is raised
-        fromPath0Future = future.exceptionally(Channel.&handlerException)
+        fromPath0Future = future.exceptionally(Channel.&handleException)
     }
 
-    static private void handlerException(Throwable e) {
+    static private void handleException(Throwable e) {
         final error = e.cause ?: e
         log.error(error.message, error)
-        final session = Global.session as Session
         session?.abort(error)
     }
 
@@ -342,12 +323,7 @@ class Channel  {
         watcher.onComplete { result.bind(STOP) }
         Global.onCleanup(it -> watcher.terminate())
 
-        if( NF.isDsl2() )  {
-            session.addIgniter {
-                watcher.apply { Path file -> result.bind(file.toAbsolutePath()) }   
-            }   
-        }
-        else {
+        session.addIgniter {
             watcher.apply { Path file -> result.bind(file.toAbsolutePath()) }
         }
 
@@ -377,7 +353,7 @@ class Channel  {
         def fs = FileHelper.fileSystemForScheme(splitter.scheme)
         def result = watchImpl( 'regex', splitter.parent, splitter.fileName, false, events, fs )
 
-        NodeMarker.addSourceNode('Channel.watchPath', result)
+        NodeMarker.addSourceNode('channel.watchPath', result)
         return result
     }
 
@@ -410,7 +386,7 @@ class Channel  {
         final pattern = splitter.fileName
         def result = watchImpl('glob', folder, pattern, pattern.startsWith('*'), events, fs)
 
-        NodeMarker.addSourceNode('Channel.watchPath', result)
+        NodeMarker.addSourceNode('channel.watchPath', result)
         return result
     }
 
@@ -421,13 +397,13 @@ class Channel  {
         final pattern = splitter.fileName
         final result = watchImpl('glob', folder, pattern, pattern.startsWith('*'), events, fs)
 
-        NodeMarker.addSourceNode('Channel.watchPath', result)
+        NodeMarker.addSourceNode('channel.watchPath', result)
         return result
     }
 
     /**
      * Implements the `fromFilePairs` channel factory method
-     * 
+     *
      * @param options
      *      A {@link Map} holding the optional parameters
      *      - type: either `file`, `dir` or `any`
@@ -451,7 +427,7 @@ class Channel  {
         }
 
         final result = fromFilePairs0(options, allPatterns, allGrouping)
-        NodeMarker.addSourceNode('Channel.fromFilePairs', result)
+        NodeMarker.addSourceNode('channel.fromFilePairs', result)
         return result
     }
 
@@ -483,7 +459,7 @@ class Channel  {
         }
 
         final result = fromFilePairs0(options, allPatterns, allGrouping)
-        NodeMarker.addSourceNode('Channel.fromFilePairs', result)
+        NodeMarker.addSourceNode('channel.fromFilePairs', result)
         return result
     }
 
@@ -495,10 +471,9 @@ class Channel  {
         // -- a channel from the path
         final fromOpts = fetchParams0(VALID_FROM_PATH_PARAMS, options)
         final files = new DataflowQueue()
-        if( NF.isDsl2() )
-            session.addIgniter { pumpFilePairs0(files,fromOpts,allPatterns) }
-        else 
-            pumpFilePairs0(files,fromOpts,allPatterns)
+        session.addIgniter {
+            pumpFilePairs0(files, fromOpts, allPatterns)
+        }
 
         // -- map the files to a tuple like ( ID, filePath )
         final mapper = { path, int index ->
@@ -513,8 +488,8 @@ class Channel  {
         for( int index=0; index<allPatterns.size(); index++ )  {
             anyPattern |= FilePatternSplitter.isMatchingPattern(allPatterns.get(index))
         }
-        
-        // -- result the files having the same ID        
+
+        // -- result the files having the same ID
         def DEF_SIZE = anyPattern ? 2 : 1
         def size = (options?.size ?: DEF_SIZE)
         def isFlat = options?.flat == true
@@ -552,9 +527,9 @@ class Channel  {
             future = factory.applyAsync( future, allPatterns.get(index) )
         }
         // abort the execution when an exception is raised
-        fromPath0Future = future.exceptionally(Channel.&handlerException)
+        fromPath0Future = future.exceptionally(Channel.&handleException)
     }
-    
+
     static private Map fetchParams0(Map valid, Map actual ) {
         if( actual==null ) return null
         def result = [:]
@@ -641,30 +616,26 @@ class Channel  {
 
         def target = new DataflowQueue()
         def explorer = new SraExplorer(target, opts).setQuery(query)
-        if( NF.isDsl2() ) {
-            session.addIgniter { fetchSraFiles0(explorer) }
-        }
-        else {
+        session.addIgniter {
             fetchSraFiles0(explorer)
         }
 
-        NodeMarker.addSourceNode('Channel.fromSRA', target)
+        NodeMarker.addSourceNode('channel.fromSRA', target)
         return target
     }
 
     static private void fetchSraFiles0(SraExplorer explorer) {
-        def future = CompletableFuture.runAsync ({ explorer.apply() } as Runnable)
-        fromPath0Future = future.exceptionally(Channel.&handlerException)
+        def future = CompletableFuture.runAsync(() -> {
+            explorer.apply()
+        })
+        fromPath0Future = future.exceptionally(Channel.&handleException)
     }
 
     static DataflowWriteChannel fromLineage(Map<String,?> params) {
         checkParams('fromLineage', params, LinExtension.PARAMS)
         final result = CH.create()
-        if( NF.isDsl2() ) {
-            session.addIgniter { fromLineage0(result, params) }
-        }
-        else {
-            fromLineage0(result, params )
+        session.addIgniter {
+            fromLineage0(result, params)
         }
         return result
     }
@@ -673,7 +644,10 @@ class Channel  {
         final linExt = Plugins.getExtension(LinExtension)
         if( !linExt )
             throw new IllegalStateException("Unable to load lineage extensions.")
-        final future = CompletableFuture.runAsync(() -> linExt.fromLineage(session, channel, params))
-        future.exceptionally(this.&handlerException)
+        final session = Global.session as Session
+        final future = CompletableFuture.runAsync(() -> {
+            linExt.fromLineage(session, channel, params)
+        })
+        future.exceptionally(Channel.&handleException)
     }
 }

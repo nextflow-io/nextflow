@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,6 +54,24 @@ class GitlabRepositoryProviderTest extends Specification {
         true        | new ProviderConfig('gitlab').setToken('xyz')
     }
 
+    @Unroll
+    def 'should return git credentials' () {
+        given:
+        def provider = new GitlabRepositoryProvider('pditommaso/tutorial', CONFIG)
+
+        when:
+        def credentials = provider.getGitCredentials()
+
+        then:
+        credentials != null
+
+        where:
+        CONFIG                                                                    | _
+        new ProviderConfig('gitlab').setUser('foo').setPassword('bar')            | _
+        new ProviderConfig('gitlab').setUser('foo').setToken('xyz')               | _
+        new ProviderConfig('gitlab').setUser('foo').setPassword('bar').setToken('xyz') | _
+    }
+
     @Requires({System.getenv('NXF_GITLAB_ACCESS_TOKEN')})
     def 'should return clone url'() {
         given:
@@ -75,6 +93,13 @@ class GitlabRepositoryProviderTest extends Specification {
         when:
         def repo = new GitlabRepositoryProvider('pditommaso/hello', config)
         def result = repo.readText('main.nf')
+        then:
+        result.trim().startsWith('#!/usr/bin/env nextflow')
+
+        when:
+        repo = new GitlabRepositoryProvider('pditommaso/hello', config)
+        repo.setRevision('test/branch+with&special-chars')
+        result = repo.readText('main.nf')
         then:
         result.trim().startsWith('#!/usr/bin/env nextflow')
     }
@@ -133,6 +158,11 @@ class GitlabRepositoryProviderTest extends Specification {
         new GitlabRepositoryProvider('pditommaso/hello', obj)
                 .setRevision('the-commit-id')
                 .getContentUrl('main.nf') == 'https://gitlab.com/api/v4/projects/pditommaso%2Fhello/repository/files/main.nf?ref=the-commit-id'
+
+        and:
+        new GitlabRepositoryProvider('pditommaso/hello', obj)
+                .setRevision('test/branch+with&strangecharacters')
+                .getContentUrl('main.nf') == 'https://gitlab.com/api/v4/projects/pditommaso%2Fhello/repository/files/main.nf?ref=test%2Fbranch%2Bwith%26strangecharacters'
 
         and:
         new GitlabRepositoryProvider('pditommaso/hello', obj)

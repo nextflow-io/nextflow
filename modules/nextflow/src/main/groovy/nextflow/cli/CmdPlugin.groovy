@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cli
@@ -26,17 +25,18 @@ import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import nextflow.exception.AbortOperationException
+import nextflow.plugin.PluginRef
 import nextflow.plugin.Plugins
 import nextflow.plugin.util.PluginRefactor
 import org.eclipse.jgit.api.Git
 /**
  * Plugin manager command
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-@Parameters(commandDescription = "Execute plugin-specific commands")
-class CmdPlugin extends CmdBase {
+@Parameters(commandDescription = "Execute plugin-specific commands", commandNames = ['plugins'])
+class CmdPlugin extends CmdBase implements UsageAware {
 
     @Override
     String getName() {
@@ -48,18 +48,85 @@ class CmdPlugin extends CmdBase {
 
     @Parameter(hidden = true)
     List<String> args
-    
+
     @Parameter(names = ['-template'], description = 'Plugin template version to use', hidden = true)
-    String templateVersion = 'v0.3.0'
+    String templateVersion = 'v0.4.0'
+
+    /**
+     * Print the command usage help
+     */
+    @Override
+    void usage() {
+        usage(args)
+    }
+
+    /**
+     * Print the command usage help
+     *
+     * @param args The arguments as entered by the user
+     */
+    @Override
+    void usage(List<String> args) {
+        List<String> result = []
+        if( !args ) {
+            generalUsage(result)
+        }
+        else {
+            switch( args[0] ) {
+                case 'install':
+                    result << 'Install a plugin'
+                    result << 'Usage: nextflow plugin install <pluginId,...>'
+                    result << ''
+                    break
+                case 'create':
+                    result << 'Create a new plugin project from the official template'
+                    result << 'Usage: nextflow plugin create [<plugin name> <provider name> [project path]]'
+                    result << ''
+                    result << 'When no arguments are provided, the command prompts interactively for the required values.'
+                    result << ''
+                    break
+                default:
+                    if( args[0].contains(CMD_SEP) ) {
+                        result << 'Execute a plugin-specific command'
+                        result << 'Usage: nextflow plugin <plugin-name>:<command> [args]'
+                        result << ''
+                        result << 'See the documentation of the individual plugin for its available commands.'
+                        result << ''
+                    }
+                    else {
+                        // print the reason of the failure, then fall back to the general usage
+                        result << "Unknown plugin sub-command: ${args[0]}".toString()
+                        result << ''
+                        generalUsage(result)
+                    }
+            }
+        }
+        println result.join('\n').toString()
+    }
+
+    private void generalUsage(List<String> result) {
+        result << this.getClass().getAnnotation(Parameters).commandDescription()
+        result << 'Usage: nextflow plugin <sub-command> [options]'
+        result << ''
+        result << 'Commands:'
+        result << '  install <pluginId,...>            Install a plugin'
+        result << '  create [<name> <provider> [dir]]  Create a new plugin project from the template'
+        result << '  <plugin-name>:<command> [args]    Execute a plugin-specific command'
+        result << ''
+        result << 'See the documentation of an individual plugin for its plugin-specific commands.'
+        result << ''
+    }
 
     @Override
     void run() {
-        if( !args )
-            throw new AbortOperationException("Missing plugin command - usage: nextflow plugin install <pluginId,..>")
+        if( !args ) {
+            usage()
+            return
+        }
         // setup plugins system
         Plugins.init()
         Runtime.addShutdownHook((it)-> Plugins.stop())
-        
+
         // check for the plugins install
         if( args[0] == 'install' ) {
             if( args.size()!=2 )
@@ -76,25 +143,7 @@ class CmdPlugin extends CmdBase {
             final target = items[0]
             final cmd = items[1] ? items[1..-1].join(CMD_SEP) : null
 
-            // push back the command as the first item
-            Plugins.start(target)
-            final wrapper = Plugins.manager.getPlugin(target)
-            if( !wrapper )
-                throw new AbortOperationException("Cannot find target plugin: $target")
-            final plugin = wrapper.getPlugin()
-            if( plugin instanceof PluginExecAware ) {
-                def mapped = [] as List<String>
-                params.entrySet().each{
-                    mapped << "--$it.key".toString()
-                    mapped << "$it.value".toString()
-                }
-                args.addAll(mapped)
-                final ret = plugin.exec(getLauncher(), target, cmd, args)
-                // use explicit exit to invoke the system shutdown hooks
-                System.exit(ret)
-            }
-            else
-                throw new AbortOperationException("Invalid target plugin: $target")
+            executePluginCommand(target, cmd)
         }
         else {
             throw new AbortOperationException("Invalid plugin command: ${args[0]}")
@@ -146,6 +195,40 @@ class CmdPlugin extends CmdBase {
         println "Plugin created successfully at path: $targetDir"
     }
 
+    /**
+     * Execute a plugin CLI command.
+     *
+     * @param target    The target plugin and optional version, e.g. `nf-somePlugin@1.0.0`
+     * @param cmd       The command that is passed to the plugin.
+     */
+    private void executePluginCommand(String target, String cmd) {
+        // start the plugin
+        Plugins.start(target)
+
+        // fetch started plugin
+        final pluginRef = PluginRef.parse(target)
+        final wrapper = Plugins.manager.getPlugin(pluginRef.id)
+        if( !wrapper )
+            throw new AbortOperationException("Cannot find target plugin: $target")
+        final plugin = wrapper.getPlugin()
+        if( plugin instanceof PluginExecAware ) {
+            // normalize `--key=value` arguments as `--key value`
+            final List<String> mapped = []
+            for( final entry : params.entrySet() ) {
+                mapped << "--${entry.key}".toString()
+                mapped << "${entry.value}".toString()
+            }
+            args.addAll(mapped)
+            // execute plugin command
+            final ret = plugin.exec(getLauncher(), target, cmd, args)
+            // use explicit exit to invoke the system shutdown hooks
+            System.exit(ret)
+        }
+        else {
+            throw new AbortOperationException("Invalid target plugin: $target")
+        }
+    }
+
     static private String readLine() {
         final console = System.console()
         return console != null
@@ -157,12 +240,12 @@ class CmdPlugin extends CmdBase {
         final templateUri = "https://github.com/nextflow-io/nf-plugin-template.git"
         final isTag = templateVersion.startsWith('v')
         final refSpec = isTag ? "refs/tags/$templateVersion".toString() : templateVersion
-        
+
         try {
             final gitCmd = Git.cloneRepository()
                 .setURI(templateUri)
                 .setDirectory(targetDir)
-            
+
             if (isTag) {
                 gitCmd.setBranchesToClone([refSpec])
                 gitCmd.setBranch(refSpec)
@@ -170,7 +253,7 @@ class CmdPlugin extends CmdBase {
                 // For branches, let Git handle the default behavior
                 gitCmd.setBranch(templateVersion)
             }
-            
+
             gitCmd.call()
         }
         catch (Exception e) {

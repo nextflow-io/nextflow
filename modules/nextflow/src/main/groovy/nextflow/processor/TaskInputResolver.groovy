@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -32,8 +32,11 @@ import nextflow.file.LogicalDataPath
 import nextflow.script.ScriptType
 import nextflow.script.params.FileInParam
 import nextflow.script.params.v2.ProcessFileInput
+import nextflow.script.types.Bag
 import nextflow.util.ArrayBag
+import nextflow.util.HashBag
 import nextflow.util.BlankSeparatedList
+import nextflow.util.RecordMap
 /**
  * Implements the resolution of input files for a task.
  *
@@ -89,15 +92,46 @@ class TaskInputResolver {
         final normalized = normalizeInputToFiles(value, count, true)
         final resolved = expandWildcards( fileInput.getFilePattern(ctx), normalized )
 
-        // update param value in task context if applicable
-        for( final param : task.inputs.keySet() ) {
-            if( task.inputs[param] == value )
-                ctx.put( param.name, singleItemOrList(resolved, value instanceof Path, task.type) )
-        }
-
         count += resolved.size()
 
         return resolved
+    }
+
+    /**
+     * Transform a value (i.e. path, collection, or map) by
+     * replacing any source paths with staged paths.
+     *
+     * @param value
+     * @param holders
+     */
+    Object normalizeValue(Object value, Map<Path,FileHolder> holders) {
+        if( value instanceof Path ) {
+            return normalizePath(value, holders)
+        }
+
+        if( value instanceof Collection ) {
+            final elements = value.collect { el -> normalizeValue(el, holders) }
+            return \
+                value instanceof List ? elements as List :
+                value instanceof Set ? elements as Set :
+                value instanceof Bag ? new HashBag<>(elements) :
+                elements
+        }
+
+        if( value instanceof Map ) {
+            final normalized = value.collectEntries { k, v -> [k, normalizeValue(v, holders)] }
+            return \
+                value instanceof RecordMap ? new RecordMap(normalized as Map<String,?>) :
+                normalized
+        }
+
+        return value
+    }
+
+    private Path normalizePath(Path value, Map<Path,FileHolder> holders) {
+        return holders.containsKey(value)
+            ? new TaskPath(holders[value])
+            : value
     }
 
     protected List<FileHolder> normalizeInputToFiles( Object obj, int count, boolean coerceToPath ) {
@@ -110,7 +144,7 @@ class TaskInputResolver {
         for( def item : allItems ) {
 
             if( item instanceof Path || coerceToPath ) {
-                final path = resolvePath(item)
+                final path = normalizeToPath(item)
                 final target = executor.isForeignFile(path) ? foreignFiles.addToForeign(path) : path
                 final holder = new FileHolder(path, target)
                 files << holder
@@ -123,20 +157,16 @@ class TaskInputResolver {
         return files
     }
 
-    protected static Path resolvePath(Object item) {
-        final result = normalizeToPath(item)
-        return result instanceof LogicalDataPath
-            ? result.toTargetPath()
-            : result
-    }
-
     protected static Path normalizeToPath( obj ) {
+        if( obj instanceof LogicalDataPath )
+            return obj.toTargetPath()
+
         if( obj instanceof Path )
             return obj
 
         if( obj == null )
             throw new ProcessUnrecoverableException("Path value cannot be null")
-        
+
         if( !(obj instanceof CharSequence) )
             throw new ProcessUnrecoverableException("Not a valid path value type: ${obj.getClass().getName()} ($obj)")
 
@@ -149,7 +179,7 @@ class TaskInputResolver {
             return FileHelper.asPath(str)
         if( !str )
             throw new ProcessUnrecoverableException("Path value cannot be empty")
-        
+
         throw new ProcessUnrecoverableException("Not a valid path value: '$str'")
     }
 
@@ -292,9 +322,8 @@ class TaskInputResolver {
         if( type == ScriptType.SCRIPTLET ) {
             return new TaskPath(holder)
         }
-        if( type == ScriptType.GROOVY) {
-            // the real path for the native task needs to be fixed -- see #378
-            return Path.of(holder.stageName)
+        if( type == ScriptType.GROOVY ) {
+            return holder.storePath
         }
         throw new IllegalStateException("Unknown task type: $type")
     }

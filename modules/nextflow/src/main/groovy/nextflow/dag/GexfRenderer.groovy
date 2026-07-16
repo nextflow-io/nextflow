@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2020, Université de Nantes, CNRS, INSERM, l’institut du thorax, F-44000 Nantes, France.
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -43,9 +43,9 @@ class GexfRenderer implements DagRenderer {
     @Override
     void renderDocument(DAG dag, Path file) {
         final Charset charset = Charset.defaultCharset()
-        Writer bw = Files.newBufferedWriter(file, charset) 
+        Writer bw = Files.newBufferedWriter(file, charset)
         final XMLOutputFactory xof = XMLOutputFactory.newFactory()
-        final XMLStreamWriter w = xof.createXMLStreamWriter(bw)    
+        final XMLStreamWriter w = xof.createXMLStreamWriter(bw)
         w.writeStartDocument(charset.displayName(),"1.0")
         w.writeStartElement("gexf")
         w.writeAttribute("xmlns",XMLNS)

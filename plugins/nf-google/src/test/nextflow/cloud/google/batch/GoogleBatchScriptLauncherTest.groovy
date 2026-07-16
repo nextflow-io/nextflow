@@ -1,5 +1,5 @@
 /*
- * Copyright 2022, Google Inc.
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.google.batch
@@ -22,6 +21,7 @@ import java.nio.file.Paths
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.cloud.google.GoogleOpts
 import nextflow.cloud.google.batch.client.BatchConfig
+import nextflow.processor.TaskRun
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -40,7 +40,7 @@ class GoogleBatchScriptLauncherTest extends Specification{
         def path = CloudStorageFileSystem.forBucket(BUCKET).getPath(PATH)
         launcher.toContainerMount(path, PARENT) == EXPECTED
         and:
-        launcher.getContainerMounts() == [MOUNTS] 
+        launcher.getContainerMounts() == [MOUNTS]
         where:
         BUCKET  | PATH          | PARENT    | EXPECTED                              | MOUNTS
         'foo'   | '/'           | false     | Paths.get('/mnt/disks/foo')           | '/mnt/disks/foo:/mnt/disks/foo:rw'
@@ -85,6 +85,19 @@ class GoogleBatchScriptLauncherTest extends Specification{
         volumes[1].getGcs().getRemotePath() == 'omega'
         volumes[1].getMountPath() == '/mnt/disks/omega'
         volumes[1].getMountOptionsList() == ['-o rw', '-implicit-dirs', '-o allow_other', '--uid=1000', '--billing-project my-project']
+    }
+
+    def 'should return target files in remote work dir' () {
+        given:
+        def launcher = new GoogleBatchScriptLauncher()
+        def workDir = CloudStorageFileSystem.forBucket('my-bucket').getPath('/work/dir')
+        launcher.@remoteWorkDir = workDir
+
+        expect:
+        launcher.targetInputFile() == workDir.resolve(TaskRun.CMD_INFILE)
+        launcher.targetScriptFile() == workDir.resolve(TaskRun.CMD_SCRIPT)
+        launcher.targetWrapperFile() == workDir.resolve(TaskRun.CMD_RUN)
+        launcher.targetStageFile() == workDir.resolve(TaskRun.CMD_STAGE)
     }
 
 }
