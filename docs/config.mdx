@@ -216,7 +216,7 @@ When the selector is a qualified process name, it matches only processes invoked
 - `PARENT:sayHello` (different process alias)
 - `PARENT2:hello` (different workflow alias)
 
-In each case, use the fully-qualified process name instead.
+In each case, use the fully-qualified process name instead. Alternatively, use a regular expression (e.g. `.*:PARENT:hello`) to match multiple variants.
 
 :::tip
 You don't need to enclose label and process names in quotes unless they contain special characters (`-`, `:`, `!`, etc.) or are keywords or built-in type identifiers.
