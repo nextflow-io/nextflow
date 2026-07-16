@@ -216,13 +216,19 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitIfElse(IfStatement node) {
+        appendLeadingComments(node);
+        appendIndent();
         visitIfElse(node, true);
+        appendTrailingComment(node);
+        appendNewLine();
     }
 
-    protected void visitIfElse(IfStatement node, boolean preIndent) {
-        appendLeadingComments(node);
-        if( preIndent )
-            appendIndent();
+    /**
+     * Format an if/else statement in K&R style ("} else {"), without the
+     * line terminator (the caller appends the trailing comment and newline
+     * after the final closing brace).
+     */
+    protected void visitIfElse(IfStatement node, boolean isFirst) {
         append("if ");
         visit(node.getBooleanExpression());
         append(" {\n");
@@ -230,20 +236,18 @@ public class Formatter extends CodeVisitorSupport {
         visit(node.getIfBlock());
         decIndent();
         appendIndent();
-        append("}\n");
+        append('}');
         if( node.getElseBlock() instanceof IfStatement is ) {
-            appendIndent();
-            append("else ");
+            append(" else ");
             visitIfElse(is, false);
         }
         else if( !(node.getElseBlock() instanceof EmptyStatement) ) {
-            appendIndent();
-            append("else {\n");
+            append(" else {\n");
             incIndent();
             visit(node.getElseBlock());
             decIndent();
             appendIndent();
-            append("}\n");
+            append('}');
         }
     }
 
@@ -307,10 +311,12 @@ public class Formatter extends CodeVisitorSupport {
         visit(node.getTryStatement());
         decIndent();
         appendIndent();
-        append("}\n");
+        append('}');
         for( var catchStatement : node.getCatchStatements() ) {
-            visit(catchStatement);
+            visitCatchStatement(catchStatement);
         }
+        appendTrailingComment(node);
+        appendNewLine();
     }
 
     @Override
@@ -325,8 +331,16 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitCatchStatement(CatchStatement node) {
-        appendLeadingComments(node);
-        appendIndent();
+        // format in K&R style ("} catch (...) {"), unless the catch clause
+        // has leading comments that must be emitted on their own lines
+        if( node.getNodeMetaData(ASTNodeMarker.LEADING_COMMENTS) != null ) {
+            appendNewLine();
+            appendLeadingComments(node);
+            appendIndent();
+        }
+        else {
+            append(' ');
+        }
         append("catch (");
 
         var variable = node.getVariable();
@@ -341,7 +355,7 @@ public class Formatter extends CodeVisitorSupport {
         visit(node.getCode());
         decIndent();
         appendIndent();
-        append("}\n");
+        append('}');
     }
 
     // expressions

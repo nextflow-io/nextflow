@@ -505,11 +505,9 @@ class ScriptFormatterTest extends Specification {
             '''\
             if (x < 0.5) {
                 println('You lost.')
-            }
-            else if (x > 0.5) {
+            } else if (x > 0.5) {
                 println('You won!')
-            }
-            else {
+            } else {
                 println('You tied?')
             }
             '''
@@ -534,8 +532,7 @@ class ScriptFormatterTest extends Specification {
             '''\
             try {
                 println(file('foo.txt').text)
-            }
-            catch (e: IOException) {
+            } catch (e: IOException) {
                 log.warn("Could not load foo.txt")
             }
             '''
@@ -881,8 +878,7 @@ class ScriptFormatterTest extends Specification {
                 if (params.x) {
                     println('hi')
                     // done greeting
-                }
-                else {
+                } else {
                     // nothing to do
                 }
             }
@@ -1109,6 +1105,68 @@ class ScriptFormatterTest extends Specification {
                     .of(1, 2)
                     .filter { v -> v % 2 == 0 }
                     .map { v -> v * 2 }
+            }
+            '''
+        )
+    }
+
+    // -- K&R style (issue #153)
+
+    def 'should format if-else and try-catch in K&R style' () {
+        expect:
+        // https://github.com/nextflow-io/language-server/issues/153
+        checkFormat(
+            '''\
+            workflow {
+                if( params.a ) {
+                    run_a()
+                }
+                else if( params.b ) {
+                    run_b()
+                }
+                else {
+                    run_c()
+                }
+            }
+            ''',
+            '''\
+            workflow {
+                if (params.a) {
+                    run_a()
+                } else if (params.b) {
+                    run_b()
+                } else {
+                    run_c()
+                }
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            def f() {
+                try {
+                    g()
+                }
+                catch( Exception e ) {
+                    h()
+                }
+            }
+
+            workflow {
+                f()
+            }
+            ''',
+            '''\
+            def f() {
+                try {
+                    g()
+                } catch (e: Exception) {
+                    h()
+                }
+            }
+
+            workflow {
+                f()
             }
             '''
         )
