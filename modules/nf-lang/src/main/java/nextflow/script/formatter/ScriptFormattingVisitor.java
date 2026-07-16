@@ -132,6 +132,9 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         if( !options.sortDeclarations() ) {
             declarations.sort(Comparator.comparing(node -> node.getLineNumber()));
         }
+        else {
+            sortIncludes(declarations);
+        }
 
         // -- prepare alignment widths if needed
         if( options.harshilAlignment() ) {
@@ -220,6 +223,68 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             return false;
         // the list is in reverse source order
         return "\n".equals(comments.get(comments.size() - 1));
+    }
+
+    /**
+     * Sort includes alphabetically by module path within their blank-line
+     * separated groups (see nextflow-io/language-server#54). Comments above
+     * the first include of a group are treated as the group header and
+     * stay at the top of the group; comments above other includes move
+     * with their include.
+     */
+    private void sortIncludes(List<ASTNode> declarations) {
+        int i = 0;
+        while( i < declarations.size() ) {
+            if( !(declarations.get(i) instanceof IncludeNode) ) {
+                i++;
+                continue;
+            }
+            // find a contiguous run of includes and split it into groups
+            // at blank lines
+            int start = i;
+            while( i < declarations.size() && declarations.get(i) instanceof IncludeNode )
+                i++;
+            int groupStart = start;
+            for( int j = start + 1; j <= i; j++ ) {
+                if( j == i || leadingStartsWithBlankLine(declarations.get(j)) ) {
+                    sortIncludeGroup(declarations, groupStart, j);
+                    groupStart = j;
+                }
+            }
+        }
+    }
+
+    private void sortIncludeGroup(List<ASTNode> declarations, int start, int end) {
+        if( end - start < 2 )
+            return;
+        var group = new java.util.ArrayList<IncludeNode>();
+        for( int i = start; i < end; i++ )
+            group.add((IncludeNode) declarations.get(i));
+
+        var originalFirst = group.get(0);
+        group.sort(
+            Comparator.comparing((IncludeNode in) -> in.source.getText(), String.CASE_INSENSITIVE_ORDER)
+                .thenComparing(in -> in.source.getText())
+        );
+
+        // keep the group header (the leading comments and blank line of the
+        // original first include) at the top of the group
+        var newFirst = group.get(0);
+        if( newFirst != originalFirst ) {
+            var marker = nextflow.script.ast.ASTNodeMarker.LEADING_COMMENTS;
+            var header = (List<String>) originalFirst.getNodeMetaData(marker);
+            if( header != null ) {
+                originalFirst.removeNodeMetaData(marker);
+                var own = (List<String>) newFirst.getNodeMetaData(marker);
+                var combined = own != null ? new java.util.ArrayList<String>(own) : new java.util.ArrayList<String>();
+                // lists are in reverse source order -- the header comes first
+                combined.addAll(header);
+                newFirst.putNodeMetaData(marker, combined);
+            }
+        }
+
+        for( int i = start; i < end; i++ )
+            declarations.set(i, group.get(i - start));
     }
 
     public String toString() {

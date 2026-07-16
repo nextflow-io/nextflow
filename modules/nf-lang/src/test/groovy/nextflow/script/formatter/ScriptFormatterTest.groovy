@@ -1407,4 +1407,42 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    // -- include sorting (issue #54)
+
+    def 'should sort includes within groups when sorting is enabled' () {
+        given:
+        def options = new FormattingOptions(4, true, false, false, true, 120)
+
+        expect:
+        // https://github.com/nextflow-io/language-server/issues/54
+        checkFormat(options,
+            '''\
+            // local modules
+            include { ZULU } from './modules/zulu.nf'
+            include { ALPHA } from './modules/alpha.nf'
+
+            // subworkflows
+            include { UTILS } from '../subworkflows/utils.nf'
+            include { BAM_SORT } from '../subworkflows/bam_sort.nf'
+
+            workflow {
+                ALPHA()
+            }
+            ''',
+            '''\
+            // local modules
+            include { ALPHA } from './modules/alpha.nf'
+            include { ZULU } from './modules/zulu.nf'
+
+            // subworkflows
+            include { BAM_SORT } from '../subworkflows/bam_sort.nf'
+            include { UTILS } from '../subworkflows/utils.nf'
+
+            workflow {
+                ALPHA()
+            }
+            '''
+        )
+    }
+
 }
