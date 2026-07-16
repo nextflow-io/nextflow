@@ -998,6 +998,14 @@ Read list of paths to lint from a text file. Use `-` to read from standard input
 
 Format scripts and config files that have no errors.
 
+Comments are always preserved. To exclude code from formatting, use `// fmt: skip` on the last line of a statement or declaration, or enclose a region with `// fmt: off` and `// fmt: on`.
+
+##### `-line-length`
+
+<AddedInVersion version="26.08" />
+
+Maximum line length when formatting (default: `120`). Use `0` to disable line wrapping.
+
 ##### `-o, -output`
 
 Output mode for reporting errors: `full`, `extended`, `concise`, `json`, `markdown` (default: `full`).

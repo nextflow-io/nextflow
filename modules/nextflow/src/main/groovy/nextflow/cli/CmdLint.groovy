@@ -102,6 +102,9 @@ class CmdLint extends CmdBase {
     @Parameter(names = ['-harshil-alignment'], description = 'Use Harshil alignment')
     boolean harhsilAlignment
 
+    @Parameter(names = ['-line-length'], description = 'Maximum line length when formatting (0 to disable line wrapping)')
+    int lineLength = FormattingOptions.DEFAULT_MAX_LINE_LENGTH
+
     @Parameter(names = ['-sort-declarations'], description = 'Sort script declarations in Nextflow scripts')
     boolean sortDeclarations
 
@@ -149,7 +152,10 @@ class CmdLint extends CmdBase {
             case 'markdown' -> new MarkdownErrorListener()
             default -> new StandardErrorListener(outputMode, launcher.options.ansiLog, launcher.options.quiet)
         }
-        formattingOptions = new FormattingOptions(spaces, !tabs, harhsilAlignment, false, sortDeclarations)
+        if( lineLength < 0 )
+            throw new AbortOperationException("Error: `-line-length` must be zero or greater")
+
+        formattingOptions = new FormattingOptions(spaces, !tabs, harhsilAlignment, false, sortDeclarations, lineLength)
 
         errorListener.beforeAll()
 
