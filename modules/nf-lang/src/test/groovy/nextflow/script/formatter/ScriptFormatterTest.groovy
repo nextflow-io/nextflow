@@ -68,6 +68,12 @@ class ScriptFormatterTest extends Specification {
         return true
     }
 
+    boolean checkFormat(FormattingOptions options, String source) {
+        source = source.stripIndent()
+        assert format(options, source) == source
+        return true
+    }
+
     def 'should format a code snippet' () {
         expect:
         checkFormat(
@@ -1798,6 +1804,292 @@ class ScriptFormatterTest extends Specification {
             }
             '''
         )
+    }
+
+    // -- trailing comments after compound statements
+
+    def 'should keep a trailing comment after a compound statement' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                if (params.check) {
+                    foo()
+                } // done checking
+                bar()
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            def f() {
+                try {
+                    g()
+                } catch (e: Exception) {
+                    h()
+                } // recovered
+                i()
+            }
+
+            workflow {
+                f()
+            }
+            '''
+        )
+    }
+
+    // -- fmt directives on section labels, directives and fields
+
+    def 'should not format directives and fields excluded with fmt directives' () {
+        expect:
+        // without the directive, the process directive is formatted
+        checkFormat(
+            '''\
+            process foo {
+                cpus 4*2
+
+                script:
+                'true'
+            }
+            ''',
+            '''\
+            process foo {
+                cpus 4 * 2
+
+                script:
+                'true'
+            }
+            '''
+        )
+        // process directive
+        checkFormat(
+            '''\
+            process foo {
+                cpus 4*2 // fmt: skip
+
+                input:
+                val x
+
+                script:
+                'true'
+            }
+            '''
+        )
+        // record field
+        checkFormat(
+            '''\
+            nextflow.enable.types = true
+
+            record Point {
+                x : Integer // fmt: skip
+                y: Integer
+            }
+
+            workflow {
+                println('ok')
+            }
+            '''
+        )
+        // when section
+        checkFormat(
+            '''\
+            process foo {
+                input:
+                val x
+
+                when:
+                x    <    1 // fmt: skip
+
+                script:
+                'true'
+            }
+            '''
+        )
+    }
+
+    // -- string escapes (issues #41, #55)
+
+    def 'should preserve string escapes' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                a = "quote \\" and backslash \\\\ and dollar \\$HOME"
+                b = 'single \\' quote'
+                c = "keep ${x} interp"
+            }
+            '''
+        )
+    }
+
+    // -- spread operator (issue #70)
+
+    def 'should preserve the spread operator in method calls' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                ch.map { it -> tuple(it[0], it[1]*.get(0)) }.view()
+            }
+            '''
+        )
+    }
+
+    // -- magic trailing comma (issues #60, #74)
+
+    def 'should keep source-wrapped calls wrapped and preserve trailing commas' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                foo(
+                    a,
+                    b
+                )
+                bar(
+                    a,
+                    b,
+                )
+            }
+            ''',
+            '''\
+            workflow {
+                foo(
+                    a,
+                    b,
+                )
+                bar(
+                    a,
+                    b,
+                )
+            }
+            '''
+        )
+    }
+
+    // -- line wrapping can be disabled
+
+    def 'should not wrap lines when the maximum line length is disabled' () {
+        expect:
+        checkFormat(
+            new FormattingOptions(4, true, false, false, false, 0),
+            '''\
+            workflow {
+                ALIGN_AND_SORT(samples_channel, reference_genome, annotation_file, params.threads, params.aligner_options)
+            }
+            ''',
+            '''\
+            workflow {
+                ALIGN_AND_SORT(samples_channel, reference_genome, annotation_file, params.threads, params.aligner_options)
+            }
+            '''
+        )
+    }
+
+    // -- harshil alignment (issues #71, #135)
+
+    def 'should align includes and emits with harshil alignment' () {
+        given:
+        def options = new FormattingOptions(4, true, true, false, false, 120)
+
+        expect:
+        checkFormat(options,
+            '''\
+            include { FOO } from './foo.nf'
+            include { LONGER_NAME } from './modules.nf'
+            ''',
+            '''\
+            include { FOO         } from './foo.nf'
+            include { LONGER_NAME } from './modules.nf'
+            '''
+        )
+        checkFormat(options,
+            '''\
+            workflow FOO {
+                main:
+                x = 1
+                result = 2
+
+                emit:
+                out = x
+                longer_name = result
+            }
+            ''',
+            '''\
+            workflow FOO {
+                main:
+                x = 1
+                result = 2
+
+                emit:
+                out         = x
+                longer_name = result
+            }
+            '''
+        )
+        // legacy process outputs are not aligned (see language-server #71):
+        // typed processes don't have this problem
+        checkFormat(options,
+            '''\
+            process bar {
+                input:
+                val x
+
+                output:
+                tuple val(x), path("*.txt"), emit: results
+                path "versions.yml", emit: versions
+
+                script:
+                'true'
+            }
+            '''
+        )
+    }
+
+    // -- mahesh form (issue #129)
+
+    def 'should move process outputs after the script with mahesh form' () {
+        expect:
+        checkFormat(
+            new FormattingOptions(4, true, false, true, false, 120),
+            '''\
+            process foo {
+                input:
+                val x
+
+                output:
+                path 'y.txt'
+
+                script:
+                'true'
+            }
+            ''',
+            '''\
+            process foo {
+                input:
+                val x
+
+                script:
+                'true'
+
+                output:
+                path 'y.txt'
+            }
+            '''
+        )
+    }
+
+    // -- comment safety check API
+
+    def 'should collect comment texts for the safety check' () {
+        expect:
+        CommentReattacher.countComments('// a\nx = 1 /* b */\n', false) == 2
+        CommentReattacher.commentTexts('// a\nx = 1 /* b */\n', false) == ['/* b */', '// a']
+        // CRLF line endings are normalized
+        CommentReattacher.commentTexts('// a\r\nx = 1 /* b\r\n c */\r\n', false) == ['/* b\n c */', '// a']
+        // the shebang is not counted as a comment
+        CommentReattacher.countComments('#!/usr/bin/env nextflow\n// a\n', false) == 1
+        CommentReattacher.commentTexts('#!/usr/bin/env nextflow\n// a\n', false) == ['// a']
     }
 
 }

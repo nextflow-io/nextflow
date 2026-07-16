@@ -58,6 +58,12 @@ class ConfigFormatterTest extends Specification {
         return checkFormat(new FormattingOptions(4, true), input, output)
     }
 
+    boolean checkFormat(String source) {
+        source = source.stripIndent()
+        assert format(source) == source
+        return true
+    }
+
     def 'should format a config assignment' () {
         expect:
         checkFormat(
@@ -192,6 +198,55 @@ class ConfigFormatterTest extends Specification {
                     // more to come
                 ]
             }
+            '''
+        )
+    }
+
+    def 'should align config assignments with harshil alignment' () {
+        expect:
+        checkFormat(
+            new FormattingOptions(4, true, true, false, false, 120),
+            '''\
+            process {
+                cpus = 4
+                memory = '8GB'
+            }
+            ''',
+            '''\
+            process {
+                cpus   = 4
+                memory = '8GB'
+            }
+            '''
+        )
+    }
+
+    def 'should not format config statements excluded with fmt directives' () {
+        expect:
+        checkFormat(
+            '''\
+            process {
+                cpus     = 4 // fmt: skip
+                memory='8GB'
+            }
+            ''',
+            '''\
+            process {
+                cpus     = 4 // fmt: skip
+                memory = '8GB'
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            // fmt: off
+            params {
+              x    = 1
+              yy   = 2
+            }
+            // fmt: on
+
+            params.z = 3
             '''
         )
     }
