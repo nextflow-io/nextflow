@@ -1681,7 +1681,6 @@ class ScriptFormatterTest extends Specification {
             }
 
             workflow W {
-
                 main:
                 x = Channel.of(1)
 
@@ -1768,6 +1767,34 @@ class ScriptFormatterTest extends Specification {
                 foo.out
                     .collect()
                     .view { v -> "got: ${v}" }
+            }
+            '''
+        )
+    }
+
+    // -- workflow completion handlers
+
+    def 'should emit the main label when a workflow has completion handlers' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                main:
+                foo()
+
+                onComplete:
+                println('done')
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            workflow {
+                main:
+                foo()
+
+                onError:
+                println('failed')
             }
             '''
         )

@@ -446,10 +446,12 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         }
         if( !node.main.isEmpty() ) {
             // NOTE: the main: label is also required when there is an
-            // onComplete/onError handler (fixes invalid output produced by
-            // the nf-lang formatter)
+            // onComplete/onError handler
             if( takes.length > 0 || !node.emits.isEmpty() || !node.publishers.isEmpty() || !node.onComplete.isEmpty() || !node.onError.isEmpty() ) {
-                fmt.appendNewLine();
+                // separate the main: section from the take: section above
+                // it, without emitting a blank line at the start of the body
+                if( takes.length > 0 )
+                    fmt.appendNewLine();
                 fmt.appendIndent();
                 fmt.append("main:\n");
             }
