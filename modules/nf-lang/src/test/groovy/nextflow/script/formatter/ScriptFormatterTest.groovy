@@ -1303,4 +1303,53 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    // -- fmt: skip / fmt: off / fmt: on (issue #75)
+
+    def 'should not format regions excluded with fmt directives' () {
+        expect:
+        // https://github.com/nextflow-io/language-server/issues/75
+        checkFormat(
+            '''\
+            workflow {
+                x  =  [1,  2,   3] // fmt: skip
+                y = [4,5]
+            }
+            ''',
+            '''\
+            workflow {
+                x  =  [1,  2,   3] // fmt: skip
+                y = [4, 5]
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            workflow {
+                a = 1
+
+                // fmt: off
+                matrix = [
+                    [1, 0],
+                    [0, 1] ]
+                // fmt: on
+
+                b = 2
+            }
+            ''',
+            '''\
+            workflow {
+                a = 1
+
+                // fmt: off
+                matrix = [
+                    [1, 0],
+                    [0, 1] ]
+                // fmt: on
+
+                b = 2
+            }
+            '''
+        )
+    }
+
 }

@@ -123,6 +123,8 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
 
     @Override
     public void visitConfigApplyBlock(ConfigApplyBlockNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.appendIndent();
         fmt.append(node.name);
@@ -142,12 +144,16 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
 
     @Override
     public void visitConfigApply(ConfigApplyNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.visitDirective(node, node);
     }
 
     @Override
     public void visitConfigAssign(ConfigAssignNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.appendIndent();
         var name = String.join(".", node.names);
@@ -168,6 +174,8 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
 
     @Override
     public void visitConfigBlock(ConfigBlockNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.appendIndent();
         if( node.kind != null ) {
@@ -215,6 +223,8 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
 
     @Override
     public void visitConfigInclude(ConfigIncludeNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.appendIndent();
         fmt.append("includeConfig ");

@@ -108,9 +108,24 @@ public class CommentReattacher {
      */
     public static final Object DANGLING_AFTER = Marker.DANGLING_AFTER;
 
+    /**
+     * Metadata key for a source region that is excluded from formatting
+     * with `// fmt: skip` or `// fmt: off` ... `// fmt: on` (the verbatim
+     * source text, emitted in place of the node).
+     */
+    public static final Object VERBATIM_SOURCE = Marker.VERBATIM_SOURCE;
+
+    /**
+     * Metadata key marking a node that is part of a verbatim region emitted
+     * by an earlier node (the node itself emits nothing).
+     */
+    public static final Object VERBATIM_SUPPRESSED = Marker.VERBATIM_SUPPRESSED;
+
     private enum Marker {
         DANGLING_COMMENTS,
-        DANGLING_AFTER
+        DANGLING_AFTER,
+        VERBATIM_SOURCE,
+        VERBATIM_SUPPRESSED
     }
 
     /**
@@ -124,12 +139,12 @@ public class CommentReattacher {
             var source = lex(sourceText, false);
             var builder = new ScriptRegionBuilder();
             var root = builder.build(sn);
-            new CommentReattacher(source, builder.sectionHeads).run(root);
+            new CommentReattacher(source, sourceText, builder.sectionHeads).run(root);
         }
         else if( moduleNode instanceof ConfigNode cn ) {
             var source = lex(sourceText, true);
             var root = new ConfigRegionBuilder().build(cn);
-            new CommentReattacher(source, Set.of()).run(root);
+            new CommentReattacher(source, sourceText, Set.of()).run(root);
         }
     }
 
@@ -301,13 +316,16 @@ public class CommentReattacher {
      */
     private final Set<ASTNode> sectionHeads;
 
+    private final String[] sourceLines;
+
     private final boolean[] claimed;
 
-    private CommentReattacher(TokenizedSource source, Set<ASTNode> sectionHeads) {
+    private CommentReattacher(TokenizedSource source, String sourceText, Set<ASTNode> sectionHeads) {
         this.tokens = source.tokens();
         this.contentLines = source.contentLines();
         this.commentLines = source.commentLines();
         this.sectionHeads = sectionHeads;
+        this.sourceLines = sourceText.replace("\r\n", "\n").replace("\r", "\n").split("\n", -1);
         this.claimed = new boolean[tokens.size()];
         // claim the shebang and its line terminator -- the shebang is
         // stored separately from comments and emitted by the formatter
@@ -324,7 +342,124 @@ public class CommentReattacher {
     private void run(Region root) {
         root.sortRecursive();
         clearMetadata(root);
+        applyFormatterDirectives(root);
         assignRegion(root);
+    }
+
+    /// FORMATTER DIRECTIVES (fmt: skip / fmt: off / fmt: on)
+
+    private static final java.util.regex.Pattern FMT_DIRECTIVE = java.util.regex.Pattern.compile("//\\s*fmt:\\s*(skip|off|on)\\s*");
+
+    private static String fmtDirective(NlToken token) {
+        if( !token.comment() || token.multiLine() )
+            return null;
+        var matcher = FMT_DIRECTIVE.matcher(token.normalized());
+        return matcher.matches() ? matcher.group(1) : null;
+    }
+
+    /**
+     * Apply `// fmt: skip` and `// fmt: off` ... `// fmt: on` directives:
+     * the statements and declarations they cover are emitted verbatim from
+     * the source text instead of being formatted.
+     *
+     * A `fmt: skip` comment applies to the statement that ends on its line.
+     * A `fmt: off` comment applies from its own line until the line of the
+     * next `fmt: on` comment (or the end of the file), and should enclose
+     * whole statements or declarations.
+     */
+    private void applyFormatterDirectives(Region root) {
+        // determine the line ranges excluded from formatting
+        var ranges = new ArrayList<int[]>();
+        int rangeStart = -1;
+        for( var token : tokens ) {
+            var directive = fmtDirective(token);
+            if( directive == null )
+                continue;
+            if( rangeStart >= 0 ) {
+                if( "on".equals(directive) ) {
+                    ranges.add(new int[] { rangeStart, token.line() });
+                    rangeStart = -1;
+                }
+            }
+            else if( "off".equals(directive) ) {
+                rangeStart = token.line();
+            }
+            else if( "skip".equals(directive) ) {
+                ranges.add(new int[] { token.line(), token.line() });
+            }
+        }
+        if( rangeStart >= 0 )
+            ranges.add(new int[] { rangeStart, Integer.MAX_VALUE });
+        if( ranges.isEmpty() )
+            return;
+
+        // collect all anchors in source order
+        var anchors = new ArrayList<ASTNode>();
+        collectAnchors(root, anchors);
+        anchors.sort(Comparator.comparingLong(node -> startOf(node)));
+
+        for( var range : ranges ) {
+            // find the anchors that intersect the range, extending the
+            // range to cover them completely
+            var startLine = range[0];
+            var endLine = range[1];
+            var overlapping = new ArrayList<ASTNode>();
+            for( var anchor : anchors ) {
+                if( anchor.getLineNumber() <= endLine && anchor.getLastLineNumber() >= startLine )
+                    overlapping.add(anchor);
+            }
+            // an anchor that merely encloses the range (e.g. the workflow
+            // around a `fmt: skip` statement) is not part of it -- keep
+            // enclosing anchors only when the range covers them entirely
+            var intersecting = new ArrayList<ASTNode>();
+            for( var anchor : overlapping ) {
+                var coveredByRange = anchor.getLineNumber() >= range[0] && anchor.getLastLineNumber() <= range[1];
+                if( !coveredByRange && containsAnother(anchor, overlapping) )
+                    continue;
+                intersecting.add(anchor);
+            }
+            if( intersecting.isEmpty() )
+                continue;
+            for( var anchor : intersecting ) {
+                startLine = Math.min(startLine, anchor.getLineNumber());
+                endLine = Math.max(endLine, anchor.getLastLineNumber());
+            }
+            endLine = Math.min(endLine, sourceLines.length);
+            // drop trailing empty lines (e.g. past the end of the file)
+            while( endLine > startLine && sourceLines[endLine - 1].isEmpty() )
+                endLine--;
+
+            // claim the comments and newlines within the range -- they are
+            // part of the verbatim text
+            for( int i = 0; i < tokens.size(); i++ ) {
+                var token = tokens.get(i);
+                if( token.line() >= startLine && token.line() <= endLine )
+                    claimed[i] = true;
+            }
+
+            // attach the verbatim text to the first anchor and suppress
+            // the others
+            var text = String.join("\n", java.util.Arrays.copyOfRange(sourceLines, startLine - 1, endLine));
+            intersecting.get(0).putNodeMetaData(VERBATIM_SOURCE, text);
+            for( int i = 1; i < intersecting.size(); i++ )
+                intersecting.get(i).putNodeMetaData(VERBATIM_SUPPRESSED, Boolean.TRUE);
+        }
+    }
+
+    private void collectAnchors(Region region, List<ASTNode> anchors) {
+        anchors.addAll(region.anchors);
+        for( var child : region.children )
+            collectAnchors(child, anchors);
+    }
+
+    private static boolean containsAnother(ASTNode anchor, List<ASTNode> anchors) {
+        for( var other : anchors ) {
+            if( other == anchor )
+                continue;
+            if( startOf(anchor) <= startOf(other) && endOf(other) <= endOf(anchor) )
+                return true;
+        }
+        return false;
     }
 
     /**

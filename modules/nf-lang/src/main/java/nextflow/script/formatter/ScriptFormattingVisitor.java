@@ -230,6 +230,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitFeatureFlag(FeatureFlagNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.append(node.name);
         fmt.append(" = ");
@@ -287,10 +289,14 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitParams(ParamBlockNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.append("params {\n");
         fmt.incIndent();
         for( var param : node.declarations ) {
+            if( fmt.appendVerbatim(param) )
+                continue;
             fmt.appendLeadingComments(param);
             fmt.appendIndent();
             fmt.append(param.getName());
@@ -315,6 +321,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitParamV1(ParamNodeV1 node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.appendIndent();
         fmt.visit(node.target);
@@ -336,6 +344,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitWorkflow(WorkflowNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.append("workflow");
         if( !node.isEntry() ) {
@@ -396,6 +406,10 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     private void visitTypedInputs(Parameter[] inputs) {
         for( var input : inputs ) {
+            if( fmt.appendVerbatim(input) ) {
+                fmt.appendDanglingAfter(input);
+                continue;
+            }
             fmt.appendLeadingComments(input);
             fmt.appendIndent();
             if( input instanceof TupleParameter tp ) {
@@ -536,6 +550,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitProcessV2(ProcessNodeV2 node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.append("process ");
         fmt.append(node.getName());
@@ -621,6 +637,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitProcessV1(ProcessNodeV1 node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.append("process ");
         fmt.append(node.getName());
@@ -680,6 +698,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitFunction(FunctionNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.append("def ");
         fmt.append(node.getName());
@@ -702,6 +722,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitRecord(RecordNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.append("record ");
         fmt.append(node.getName());
@@ -732,6 +754,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitEnum(ClassNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.append("enum ");
         fmt.append(node.getName());
@@ -754,6 +778,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitOutputs(OutputBlockNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.append("output {\n");
         fmt.incIndent();
@@ -767,6 +793,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitOutput(OutputNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.appendIndent();
         fmt.append(node.getName());

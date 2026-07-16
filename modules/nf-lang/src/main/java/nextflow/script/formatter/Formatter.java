@@ -186,6 +186,24 @@ public class Formatter extends CodeVisitorSupport {
         return comments != null && !comments.isEmpty();
     }
 
+    /**
+     * Emit a node excluded from formatting with `fmt: skip` or `fmt: off`
+     * verbatim from the source text (or nothing, if the node is part of a
+     * verbatim region emitted by an earlier node). Returns false if the
+     * node is not part of a verbatim region.
+     */
+    public boolean appendVerbatim(ASTNode node) {
+        if( node.getNodeMetaData(CommentReattacher.VERBATIM_SUPPRESSED) != null )
+            return true;
+        var text = (String) node.getNodeMetaData(CommentReattacher.VERBATIM_SOURCE);
+        if( text == null )
+            return false;
+        appendLeadingComments(node);
+        append(text);
+        appendNewLine();
+        return true;
+    }
+
     private static boolean isNewLine(String line) {
         return "\n".equals(line) || "\r\n".equals(line);
     }
@@ -216,6 +234,8 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitIfElse(IfStatement node) {
+        if( appendVerbatim(node) )
+            return;
         appendLeadingComments(node);
         appendIndent();
         visitIfElse(node, true);
@@ -255,6 +275,8 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitExpressionStatement(ExpressionStatement node) {
+        if( appendVerbatim(node) )
+            return;
         var cre = currentRootExpr;
         currentRootExpr = node.getExpression();
         appendLeadingComments(node);
@@ -277,6 +299,8 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitReturnStatement(ReturnStatement node) {
+        if( appendVerbatim(node) )
+            return;
         var cre = currentRootExpr;
         currentRootExpr = node.getExpression();
         appendLeadingComments(node);
@@ -290,6 +314,8 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitAssertStatement(AssertStatement node) {
+        if( appendVerbatim(node) )
+            return;
         appendLeadingComments(node);
         appendIndent();
         append("assert ");
@@ -304,6 +330,8 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitTryCatchFinally(TryCatchStatement node) {
+        if( appendVerbatim(node) )
+            return;
         appendLeadingComments(node);
         appendIndent();
         append("try {\n");
@@ -321,6 +349,8 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitThrowStatement(ThrowStatement node) {
+        if( appendVerbatim(node) )
+            return;
         appendLeadingComments(node);
         appendIndent();
         append("throw ");
