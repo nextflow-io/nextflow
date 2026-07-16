@@ -232,6 +232,14 @@ public class Formatter extends CodeVisitorSupport {
         return true;
     }
 
+    /**
+     * Determine whether a node is part of a verbatim region emitted by an
+     * earlier node, and therefore emits nothing itself.
+     */
+    public boolean isVerbatimSuppressed(ASTNode node) {
+        return node.getNodeMetaData(CommentReattacher.VERBATIM_SUPPRESSED) != null;
+    }
+
     private static boolean isNewLine(String line) {
         return "\n".equals(line) || "\r\n".equals(line);
     }
@@ -347,7 +355,7 @@ public class Formatter extends CodeVisitorSupport {
             return;
         appendLeadingComments(node);
         appendIndent();
-        visitIfElse(node, true);
+        appendIfElse(node);
         appendTrailingComment(node);
         appendNewLine();
     }
@@ -357,7 +365,7 @@ public class Formatter extends CodeVisitorSupport {
      * line terminator (the caller appends the trailing comment and newline
      * after the final closing brace).
      */
-    protected void visitIfElse(IfStatement node, boolean isFirst) {
+    private void appendIfElse(IfStatement node) {
         append("if ");
         visit(node.getBooleanExpression());
         append(" {\n");
@@ -368,7 +376,7 @@ public class Formatter extends CodeVisitorSupport {
         append('}');
         if( node.getElseBlock() instanceof IfStatement is ) {
             append(" else ");
-            visitIfElse(is, false);
+            appendIfElse(is);
         }
         else if( !(node.getElseBlock() instanceof EmptyStatement) ) {
             append(" else {\n");

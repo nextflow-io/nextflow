@@ -1348,6 +1348,83 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    def 'should keep a fmt off region spanning multiple declarations intact' () {
+        expect:
+        checkFormat(
+            '''\
+            // fmt: off
+            workflow AAA {
+                foo()
+            }
+
+            workflow BBB {
+                bar()
+            }
+            // fmt: on
+
+            workflow {
+                AAA()
+            }
+            '''
+        )
+    }
+
+    def 'should extend a fmt region that straddles declarations' () {
+        expect:
+        // a fmt region that starts in one declaration and ends in another
+        // is promoted to cover both declarations entirely, so that the
+        // formatter never emits mismatched braces
+        checkFormat(
+            '''\
+            workflow AAA {
+                foo()
+                // fmt: off
+                bar()
+            }
+
+            workflow BBB {
+                baz()
+                // fmt: on
+                qux()
+            }
+            '''
+        )
+    }
+
+    def 'should be stable when formatting the same AST twice' () {
+        given:
+        // the language server may format the same cached AST more than once
+        // without re-parsing -- re-deriving the comment metadata must be
+        // idempotent, including for comments inside wrapped expressions
+        def contents = '''\
+            workflow {
+                foo(
+                    // leading comment on element
+                    alpha,
+                    beta, // trailing comment on element
+                )
+                data
+                    // comment on chain link
+                    .map { x -> x }
+                    .view()
+            }
+            '''.stripIndent()
+        scriptParser.compiler().getSources().clear()
+        def source = scriptParser.parse('main.nf', contents)
+        new ScriptResolveVisitor(source, scriptParser.compiler().compilationUnit(), Types.DEFAULT_SCRIPT_IMPORTS, Collections.emptyList()).visit()
+        assert !TestUtils.hasSyntaxErrors(source)
+
+        when:
+        def first = new ScriptFormattingVisitor(source, new FormattingOptions(4, true), contents)
+        first.visit()
+        def second = new ScriptFormattingVisitor(source, new FormattingOptions(4, true), contents)
+        second.visit()
+
+        then:
+        first.toString() == contents
+        second.toString() == contents
+    }
+
     // -- line-length wrapping (issue #26)
 
     def 'should wrap lines that exceed the maximum line length' () {

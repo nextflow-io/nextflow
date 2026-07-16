@@ -20,9 +20,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -466,38 +468,18 @@ public class CommentReattacher {
         if( ranges.isEmpty() )
             return;
 
-        // collect all anchors in source order
+        // collect all anchors in source order, with the region they belong to
         var anchors = new ArrayList<ASTNode>();
-        collectAnchors(root, anchors);
+        var anchorRegions = new IdentityHashMap<ASTNode, Region>();
+        collectAnchors(root, anchors, anchorRegions);
         anchors.sort(Comparator.comparingLong(node -> startOf(node)));
 
         for( var range : ranges ) {
-            // find the anchors that intersect the range, extending the
-            // range to cover them completely
-            var startLine = range[0];
-            var endLine = range[1];
-            var overlapping = new ArrayList<ASTNode>();
-            for( var anchor : anchors ) {
-                if( anchor.getLineNumber() <= endLine && anchor.getLastLineNumber() >= startLine )
-                    overlapping.add(anchor);
-            }
-            // an anchor that merely encloses the range (e.g. the workflow
-            // around a `fmt: skip` statement) is not part of it -- keep
-            // enclosing anchors only when the range covers them entirely
-            var intersecting = new ArrayList<ASTNode>();
-            for( var anchor : overlapping ) {
-                var coveredByRange = anchor.getLineNumber() >= range[0] && anchor.getLastLineNumber() <= range[1];
-                if( !coveredByRange && containsAnother(anchor, overlapping) )
-                    continue;
-                intersecting.add(anchor);
-            }
+            var intersecting = resolveVerbatimRange(range, anchors, anchorRegions);
             if( intersecting.isEmpty() )
                 continue;
-            for( var anchor : intersecting ) {
-                startLine = Math.min(startLine, anchor.getLineNumber());
-                endLine = Math.max(endLine, anchor.getLastLineNumber());
-            }
-            endLine = Math.min(endLine, sourceLines.length);
+            var startLine = range[0];
+            var endLine = Math.min(range[1], sourceLines.length);
             // drop trailing empty lines (e.g. past the end of the file)
             while( endLine > startLine && sourceLines[endLine - 1].isEmpty() )
                 endLine--;
@@ -519,10 +501,78 @@ public class CommentReattacher {
         }
     }
 
-    private void collectAnchors(Region region, List<ASTNode> anchors) {
-        anchors.addAll(region.anchors);
+    private void collectAnchors(Region region, List<ASTNode> anchors, Map<ASTNode, Region> anchorRegions) {
+        for( var anchor : region.anchors ) {
+            anchors.add(anchor);
+            anchorRegions.put(anchor, region);
+        }
         for( var child : region.children )
-            collectAnchors(child, anchors);
+            collectAnchors(child, anchors, anchorRegions);
+    }
+
+    /**
+     * Find the anchors that a verbatim range covers, extending the range
+     * (in place) as needed so that the verbatim text lines up with a single
+     * emission point:
+     *
+     * <ul>
+     *   <li>the range is extended over any anchor that straddles one of its
+     *       boundaries (e.g. a multi-line statement that ends after the
+     *       {@code fmt: on} line);</li>
+     *   <li>if the outermost covered anchors span more than one region
+     *       (e.g. {@code fmt: off} in one workflow and {@code fmt: on} in
+     *       the next), the range is promoted to the smallest anchor that
+     *       encloses it, so that whole declarations are excluded from
+     *       formatting instead of emitting mismatched braces or section
+     *       labels;</li>
+     *   <li>an anchor that merely encloses the range (e.g. the workflow
+     *       around a {@code fmt: skip} statement) is not part of it.</li>
+     * </ul>
+     */
+    private static List<ASTNode> resolveVerbatimRange(int[] range, List<ASTNode> anchors, Map<ASTNode, Region> anchorRegions) {
+        while( true ) {
+            // extend the range over the anchors that are part of it: an
+            // anchor that contains the whole range as well as other
+            // overlapping anchors (e.g. the workflow around a `fmt: skip`
+            // statement) merely encloses the range; every other overlapping
+            // anchor is part of it
+            var changed = true;
+            while( changed ) {
+                changed = false;
+                var overlapping = new ArrayList<ASTNode>();
+                for( var anchor : anchors ) {
+                    if( anchor.getLineNumber() <= range[1] && anchor.getLastLineNumber() >= range[0] )
+                        overlapping.add(anchor);
+                }
+                for( var anchor : overlapping ) {
+                    var line = anchor.getLineNumber();
+                    var lastLine = anchor.getLastLineNumber();
+                    if( line >= range[0] && lastLine <= range[1] )
+                        continue;   // covered by the range
+                    var containsRange = line <= range[0] && lastLine >= range[1];
+                    if( containsRange && containsAnother(anchor, overlapping) )
+                        continue;   // encloses the range
+                    if( line < range[0] ) { range[0] = line; changed = true; }
+                    if( lastLine > range[1] ) { range[1] = lastLine; changed = true; }
+                }
+            }
+            // the anchors covered by the range
+            var intersecting = new ArrayList<ASTNode>();
+            for( var anchor : anchors ) {
+                if( anchor.getLineNumber() >= range[0] && anchor.getLastLineNumber() <= range[1] )
+                    intersecting.add(anchor);
+            }
+            if( intersecting.isEmpty() || inSameRegion(outermostAnchors(intersecting), anchorRegions) )
+                return intersecting;
+            // the outermost covered anchors span more than one region, so
+            // the verbatim text would not line up with a single emission
+            // point -- promote the range to the smallest enclosing anchor
+            var enclosing = smallestEnclosingAnchor(anchors, range);
+            if( enclosing == null )
+                return intersecting;
+            range[0] = Math.min(range[0], enclosing.getLineNumber());
+            range[1] = Math.max(range[1], enclosing.getLastLineNumber());
+        }
     }
 
     private static boolean containsAnother(ASTNode anchor, List<ASTNode> anchors) {
@@ -533,6 +583,60 @@ public class CommentReattacher {
                 return true;
         }
         return false;
+    }
+
+    /**
+     * The anchors of a list that are not contained within another anchor
+     * of the list.
+     */
+    private static List<ASTNode> outermostAnchors(List<ASTNode> anchors) {
+        var result = new ArrayList<ASTNode>();
+        for( var anchor : anchors ) {
+            if( !containedInAnother(anchor, anchors) )
+                result.add(anchor);
+        }
+        return result;
+    }
+
+    private static boolean containedInAnother(ASTNode anchor, List<ASTNode> anchors) {
+        for( var other : anchors ) {
+            if( other == anchor )
+                continue;
+            if( startOf(other) <= startOf(anchor) && endOf(anchor) <= endOf(other) )
+                return true;
+        }
+        return false;
+    }
+
+    private static boolean inSameRegion(List<ASTNode> anchors, Map<ASTNode, Region> anchorRegions) {
+        Region region = null;
+        for( var anchor : anchors ) {
+            var next = anchorRegions.get(anchor);
+            if( region == null )
+                region = next;
+            else if( region != next )
+                return false;
+        }
+        return true;
+    }
+
+    /**
+     * The smallest anchor that encloses a range and is strictly larger
+     * than it (so that promoting the range to it makes progress).
+     */
+    private static ASTNode smallestEnclosingAnchor(List<ASTNode> anchors, int[] range) {
+        ASTNode best = null;
+        for( var anchor : anchors ) {
+            var line = anchor.getLineNumber();
+            var lastLine = anchor.getLastLineNumber();
+            if( line > range[0] || lastLine < range[1] )
+                continue;   // does not enclose the range
+            if( line == range[0] && lastLine == range[1] )
+                continue;   // not strictly larger than the range
+            if( best == null || lastLine - line < best.getLastLineNumber() - best.getLineNumber() )
+                best = anchor;
+        }
+        return best;
     }
 
     /**
@@ -555,6 +659,8 @@ public class CommentReattacher {
         node.removeNodeMetaData(ASTNodeMarker.TRAILING_COMMENT);
         node.removeNodeMetaData(DANGLING_COMMENTS);
         node.removeNodeMetaData(DANGLING_AFTER);
+        node.removeNodeMetaData(VERBATIM_SOURCE);
+        node.removeNodeMetaData(VERBATIM_SUPPRESSED);
     }
 
     /**
@@ -958,6 +1064,15 @@ public class CommentReattacher {
         // group the interior tokens (comments and blank lines) by slot;
         // comments that fall in no slot are hoisted
         var slots = collectExpressionSlots(anchor, mode);
+        // the slot targets are interior expression nodes that clearMetadata
+        // does not see -- clear any stale metadata (e.g. from an earlier
+        // run on the same AST) before assigning, so that re-running the
+        // assignment does not duplicate comments
+        for( var slot : slots ) {
+            clearNodeMetadata(slot.target());
+            if( slot.prevTarget() != null )
+                slot.prevTarget().removeNodeMetaData(ASTNodeMarker.TRAILING_COMMENT);
+        }
         var bySlot = new LinkedHashMap<ExprSlot, List<NlToken>>();
         var leftover = new ArrayList<NlToken>();
         for( var token : interior ) {

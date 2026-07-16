@@ -147,6 +147,11 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
         ASTNode prevDecl = null;
         for( var decl : declarations ) {
+            // a declaration that is part of a verbatim region emitted by an
+            // earlier declaration emits nothing -- do not emit a blank line
+            // for it
+            if( fmt.isVerbatimSuppressed(decl) )
+                continue;
             // a declaration that is sorted into first position may carry a
             // blank-line prefix from its original location -- strip it so
             // that the output does not start with blank lines

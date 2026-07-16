@@ -82,6 +82,11 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
             // (e.g. assignments) may be grouped
             ConfigStatement prevStmt = null;
             for( var stmt : cn.getConfigStatements() ) {
+                // a statement that is part of a verbatim region emitted by
+                // an earlier statement emits nothing -- do not emit a blank
+                // line for it
+                if( fmt.isVerbatimSuppressed(stmt) )
+                    continue;
                 if( prevStmt != null && needsBlankLineBetween(prevStmt, stmt) && !fmt.leadingStartsWithBlankLine(stmt) )
                     fmt.appendNewLine();
                 prevStmt = stmt;
