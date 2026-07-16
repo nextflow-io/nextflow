@@ -286,6 +286,10 @@ class BuildOpts implements ConfigScope {
 
     final CondaOpts conda
 
+    @Description("""
+        Build image compression settings, e.g. `[mode: 'estargz']`. Supported keys: `mode`
+        (`gzip`, `estargz`, `zstd`), `level` and `force`.
+    """)
     final BuildCompression compression
 
     @ConfigOption

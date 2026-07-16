@@ -156,9 +156,36 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         final delta = Labels.delta(taskLabels, executor.runResourceLabels)
         if( delta )
             schedTask.labels(delta)
+        // attach pipeline secret references (never values) — resolved at the compute edge
+        final secretRefs = buildSecretRefs()
+        if( secretRefs )
+            schedTask.secrets(secretRefs)
         log.debug "[SEQERA] Enqueueing task for batch submission: ${schedTask}"
         // Enqueue for batch submission - status will be set by setBatchTaskId callback
         executor.getBatchSubmitter().submit(this, schedTask)
+    }
+
+    /**
+     * Build the map of container environment variable name to the pipeline secret store
+     * reference for each {@code secret} process directive.
+     *
+     * Platform stores the secret value in the cloud secret store under
+     * {@code tower-<workflowId>/<name>}; the executor sends only this reference and the
+     * scheduler backend resolves the value at the compute edge. The secret value never
+     * passes through Nextflow or the scheduler API.
+     *
+     * Returns {@code null} when there are no secret directives or no Platform workflow id
+     * (bare-scheduler usage has no store, so a missing reference is a no-op).
+     */
+    protected Map<String, String> buildSecretRefs() {
+        final names = task.config.getSecret()
+        final workflowId = executor.getWorkflowId()
+        if( !names || !workflowId )
+            return null
+        final result = new LinkedHashMap<String, String>()
+        for( String name : names )
+            result.put(name, "tower-${workflowId}/${name}".toString())
+        return result
     }
 
     /**
@@ -241,7 +268,13 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         if (isTerminated(schedStatus)) {
             log.debug "[SEQERA] Process `${task.lazyName()}` - terminated taskId=$taskId; status=$schedStatus"
             // finalize the task
-            task.exitStatus = readExitFile()
+            // prefer the exit code reported by the scheduler API; fall back to the `.exitcode`
+            // file only when the API does not report one. On error (e.g. OOM, spot reclaim,
+            // timeout) the container may terminate before the wrapper's on_exit trap can write
+            // the file, so the scheduler exit code is the more reliable source — consistent with
+            // the K8s, AWS Batch and Azure Batch executors.
+            final apiExitCode = cachedTaskState?.getExitCode()
+            task.exitStatus = apiExitCode != null ? apiExitCode : readExitFile()
             if (isFailed(schedStatus)) {
                 // When no exit code available, get the error message from task state
                 if (task.exitStatus == Integer.MAX_VALUE) {
