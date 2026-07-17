@@ -90,6 +90,7 @@ The project follows a modular architecture with a plugin-based system for cloud 
 
 - **DCO sign-off required**: All commits must be signed by adding a `Signed-off-by` line to the commit message or by using the `-s` option (see CONTRIBUTING.md for details).
 - **Always use sign-off**: Use `git commit -s` or `git commit --signoff` for commits to avoid DCO bot issues
+- **No AI co-authorship**: Do not add `Co-Authored-By: Claude ...` (or any AI co-authorship trailer) to commit messages. The author is ultimately accountable for the work; use only their own DCO sign-off.
 - **CI control tags**: Use special tags in commit messages to control CI behavior:
   - `[ci skip]` - Skip the execution of CI tests
   - `[ci fast]` - Run only unit tests and skip integration tests
