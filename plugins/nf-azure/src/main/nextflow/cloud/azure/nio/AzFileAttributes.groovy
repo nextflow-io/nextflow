@@ -61,10 +61,14 @@ class AzFileAttributes implements BasicFileAttributes {
         directory = client.blobName.endsWith('/')
         size = props.getBlobSize()
 
-        // Support for Azure Data Lake Storage Gen2 with hierarchical namespace enabled
+        // Support for Azure Data Lake Storage Gen2 with hierarchical namespace enabled.
+        // Honor the `hdi_isfolder` marker regardless of the reported blob size: some Storage
+        // account versions report a non-zero size for the directory marker blob, so gating on
+        // `size == 0` would misclassify it as a file.
         final meta = props.getMetadata()
-        if( meta.containsKey("hdi_isfolder") && size == 0 ){
-            directory = meta.get("hdi_isfolder") == "true"
+        if( meta != null && meta.get("hdi_isfolder") == "true" ){
+            directory = true
+            size = 0
         }
     }
 
