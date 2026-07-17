@@ -331,7 +331,7 @@ class AzPathTest extends Specification {
 
     }
 
-    def 'isDirectory should consult the attributes for a path without a trailing slash (#6427)'() {
+    def 'isDirectory should consult the attributes for a path without a trailing slash'() {
         given: 'a slashless path whose resolved attributes report a directory'
         def path = azpath('/pipeline/output')
         path.setAttributes(new AzFileAttributes(size: 0, objectId: '/pipeline/output', directory: true))

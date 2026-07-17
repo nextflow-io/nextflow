@@ -98,9 +98,8 @@ class AzPath implements Path {
     boolean isDirectory() {
         if( directory )
             return true
-        // A path without a trailing slash may still be a (virtual) directory in blob storage.
         // Consult the file system, which resolves this via the blob metadata and listing (see
-        // AzFileSystem.readAttributes), instead of relying on the trailing slash alone (#6427).
+        // AzFileSystem.readAttributes), instead of relying on the trailing slash alone.
         try {
             final attrs = fs.readAttributes(this)
             return attrs != null && attrs.isDirectory()

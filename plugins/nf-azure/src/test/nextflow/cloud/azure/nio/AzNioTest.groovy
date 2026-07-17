@@ -944,7 +944,7 @@ class AzNioTest extends Specification implements AzBaseSpec {
         deleteBucket(bucket1)
     }
 
-    def 'should detect a virtual directory without a trailing slash (#6427)' () {
+    def 'should detect a virtual directory without a trailing slash' () {
         given:
         def bucketName = createBucket()
 
