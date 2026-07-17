@@ -29,14 +29,12 @@ import com.azure.storage.blob.models.BlobItem
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.PackageScope
-import groovy.util.logging.Slf4j
 
 /**
  * Implements Azure path object
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
 @CompileStatic
 @EqualsAndHashCode(includes = 'fs,path,directory', includeFields = true)
 class AzPath implements Path {
@@ -49,6 +47,9 @@ class AzPath implements Path {
 
     @PackageScope
     boolean directory
+
+    @PackageScope
+    Boolean directoryResolved
 
     @PackageScope
     AzPath() {}
@@ -98,16 +99,12 @@ class AzPath implements Path {
     boolean isDirectory() {
         if( directory )
             return true
+        if( directoryResolved != null )
+            return directoryResolved
         // Consult the file system, which resolves this via the blob metadata and listing (see
         // AzFileSystem.readAttributes), instead of relying on the trailing slash alone.
-        try {
-            final attrs = fs.readAttributes(this)
-            return attrs != null && attrs.isDirectory()
-        }
-        catch( Exception e ) {
-            log.debug "Unable to determine if Azure path is a directory: ${toUriString()} - ${e.message}"
-            return false
-        }
+        final attrs = fs.readAttributes(this)
+        return directoryResolved = (attrs != null && attrs.isDirectory())
     }
 
     String checkContainerName() {

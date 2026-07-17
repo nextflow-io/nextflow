@@ -71,7 +71,7 @@ class AzFileAttributes implements BasicFileAttributes {
 
     AzFileAttributes(String containerName, BlobItem item) {
         objectId = "/${containerName}/${item.name}"
-        directory = item.name.endsWith('/')
+        directory = item.name.endsWith('/') || item.getMetadata()?.get("hdi_isfolder") == "true"
         if( !directory ) {
             creationTime = time(item.properties.getCreationTime())
             updateTime = time(item.properties.getLastModified())
