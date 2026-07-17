@@ -229,7 +229,7 @@ class AzPath implements Path {
     @Override
     AzPath resolve(String other) {
         if( other.startsWith('/') )
-            return new AzPath(fs, other)
+            return (AzPath)fs.provider().getPath(new URI("$AzFileSystemProvider.SCHEME:/$other"))
 
         def dir = other.endsWith('/')
         def newPath = path.resolve(other)
@@ -244,7 +244,7 @@ class AzPath implements Path {
         final that = (AzPath)other
         def newPath = path.resolveSibling(that.path)
         if( newPath.isAbsolute() )
-            new AzPath(fs, newPath.toString())
+            fs.getPath(newPath.toString())
         else
             new AzPath(fs, newPath, false)
     }
@@ -253,7 +253,7 @@ class AzPath implements Path {
     Path resolveSibling(String other) {
         def newPath = path.resolveSibling(other)
         if( newPath.isAbsolute() )
-            new AzPath(fs, newPath.toString())
+            fs.getPath(newPath.toString())
         else
             new AzPath(fs, newPath, false)
     }
