@@ -42,6 +42,7 @@ import nextflow.script.parser.v2.ErrorSummary
 import nextflow.script.parser.v2.StandardErrorListener
 import nextflow.util.ClassLoaderFactory
 import nextflow.util.PathUtils
+import nextflow.util.TestOnly
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
 import org.codehaus.groovy.control.messages.WarningMessage
@@ -120,6 +121,9 @@ class CmdLint extends CmdBase {
 
     private ErrorSummary summary = new ErrorSummary()
 
+    @TestOnly
+    protected Path root
+
     @Override
     String getName() { 'lint' }
 
@@ -156,8 +160,9 @@ class CmdLint extends CmdBase {
         final List<File> files = []
 
         for( final input : inputs ) {
+            final start = root != null ? root.resolve(input) : Path.of(input)
             PathUtils.visitFiles(
-                Path.of(input),
+                start,
                 (path) -> !PathUtils.isExcluded(path, excludePatterns),
                 (path) -> files.add(path.toFile()))
         }
@@ -229,6 +234,7 @@ class CmdLint extends CmdBase {
         compiler.getSources()
             .values()
             .stream()
+            .filter((source) -> !isExcludedSource(source))
             .sorted(Comparator.comparing((SourceUnit source) -> source.getSource().getURI()))
             .forEach((source) -> {
                 final errorCollector = source.getErrorCollector()
@@ -247,16 +253,42 @@ class CmdLint extends CmdBase {
             })
     }
 
+    /**
+     * Determine whether a source file should be excluded from lint
+     * reporting. Sources can be added to the compiler indirectly, e.g.
+     * by resolving an `include` statement into a script that lives
+     * under an excluded directory, so exclusion can't be determined
+     * solely from the initial file listing.
+     *
+     * @param source
+     */
+    private boolean isExcludedSource(SourceUnit source) {
+        final uri = source.getSource().getURI()
+        if( uri == null || uri.getScheme() != 'file' )
+            return false
+        for( Path path = Path.of(uri); path != null; path = path.getParent() ) {
+            if( PathUtils.isExcluded(path, excludePatterns) )
+                return true
+        }
+        return false
+    }
+
+    /**
+     * Report all errors and warnings for a source file.
+     *
+     * @param source
+     */
     private void printErrors(SourceUnit source) {
         errorListener.beforeErrors()
 
+        final name = relativeName(source)
         final errors = source.getErrorCollector().getErrors() ?: []
         errors.stream()
             .filter(message -> message instanceof SyntaxErrorMessage)
             .map(message -> ((SyntaxErrorMessage) message).getCause())
             .sorted(ERROR_COMPARATOR)
             .forEach((cause) -> {
-                errorListener.onError(cause, source.getName(), source)
+                errorListener.onError(cause, name, source)
                 summary.errors += 1
             })
 
@@ -265,11 +297,23 @@ class CmdLint extends CmdBase {
             .filter(warning -> warning !instanceof ParanoidWarning)
             .sorted(WARNING_COMPARATOR)
             .forEach((warning) -> {
-                errorListener.onWarning(warning, source.getName(), source)
+                errorListener.onWarning(warning, name, source)
                 summary.warnings += 1
             })
 
         errorListener.afterErrors()
+    }
+
+    /**
+     * Resolve the path for a source file, relative to the
+     * current working directory.
+     *
+     * @param source
+     */
+    private String relativeName(SourceUnit source) {
+        final uri = source.getSource().getURI()
+        final cwd = root ?: Path.of('.').toAbsolutePath().normalize()
+        return cwd.relativize(Path.of(uri)).toString()
     }
 
     private static final Comparator<SyntaxException> ERROR_COMPARATOR = (SyntaxException a, SyntaxException b) -> {
