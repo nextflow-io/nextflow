@@ -208,7 +208,7 @@ process {
 }
 ```
 
-When the selector is an unqualified process name, it matches both processes *defined* with than name and processes *included* under that alias. Selectors for an alias take priority over selectors for the original name. For example, if you define a process as `hello` and include it as `sayHello`, both `withName: hello` and `withName: sayHello` apply, with `withName: sayHello` taking priority.
+When the selector is an unqualified process name, it matches both processes *defined* with that name and processes *included* under that alias. Selectors for an alias take priority over selectors for the original name. For example, if you define a process as `hello` and include it as `sayHello`, both `withName: hello` and `withName: sayHello` apply, with `withName: sayHello` taking priority.
 
 When the selector is a qualified process name, it matches only processes invoked with the exact fully-qualified name. For example, `withName: 'PARENT:hello'` matches `hello` invoked by `PARENT`. It does not match:
 
