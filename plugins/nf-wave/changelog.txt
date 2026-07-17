@@ -1,5 +1,8 @@
 nf-wave changelog
 ==================
+1.21.1 - 15 Jul 2026
+- Recognize parameterized Map config options and wave.build.compression sub-keys in config validation (#7335) [5b8ce02da]
+
 1.21.0 - 28 May 2026
 - Support fetching local files in `FUSION_CONTAINER_CONFIG_URL` (#7142) [0d1ece8c9]
 - Bump lib-httpx@2.3.0 (#7181) [1c47215a8]

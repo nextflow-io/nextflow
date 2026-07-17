@@ -1800,6 +1800,10 @@ The EC2 key pair name for SSH access to instances.
 
 The resource prediction model used to estimate task resource requirements from historical execution metrics. Supported values: `'qr/v1'`, `'qr/v2'` (quantile regression). When not set, no resource estimation is applied.
 
+###### `seqera.executor.providerConfig`
+
+Backend-specific provider configuration merged into the compute cluster's backend properties (for cluster isolation). When omitted, the backend falls back to its environment variable configuration. For example: `providerConfig = [lazyPull: 'true']`.
+
 ###### `seqera.executor.provider`
 
 The compute backend provider type (e.g. `'aws'`, `'local'`). When specified, used together with `region` to select the matching compute environment.
