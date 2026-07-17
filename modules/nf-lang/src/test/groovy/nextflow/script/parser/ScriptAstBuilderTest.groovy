@@ -523,4 +523,73 @@ class ScriptAstBuilderTest extends Specification {
         errors[0].getOriginalMessage() == "Missing field type"
     }
 
+    def 'should report an error for an unexpected character in a gstring' () {
+        when:
+        // bare `$` not followed by an identifier or `{` in a triple-quoted gstring
+        def errors = check(
+            '''\
+            """
+            echo "$/"
+            """
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 2
+        errors[0].getStartColumn() == 7
+        errors[0].getOriginalMessage() == "Unexpected character: '\$'"
+
+        when:
+        // bare `$` in a double-quoted gstring
+        errors = check(
+            '''\
+            "abc $/ def"
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 6
+        errors[0].getOriginalMessage() == "Unexpected character: '\$'"
+
+        when:
+        // invalid escape sequence in a gstring (the `\\` matches no rule)
+        errors = check(
+            '''\
+            "abc \\q def"
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 6
+        errors[0].getOriginalMessage() == "Unexpected character: '\\'"
+    }
+
+    def 'should allow escaped and interpolated gstring characters' () {
+        when:
+        // escaped `\\$` renders as a literal `$`
+        def errors = check(
+            '''\
+            """
+            echo "\\$/"
+            """
+            '''
+        )
+        then:
+        errors.size() == 0
+
+        when:
+        // normal `${...}` interpolation
+        errors = check(
+            '''\
+            """
+            echo "${'hello'}"
+            """
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
 }
