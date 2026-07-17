@@ -295,4 +295,17 @@ class WaveConfigTest extends Specification {
         [mode:'zstd', level: 3,force:true]      | new BuildCompression().withMode(BuildCompression.Mode.zstd).withLevel(3).withForce(true)
     }
 
+    def 'should expose build map options so their keys are not flagged as unrecognized' () {
+        given:
+        def scope = nextflow.config.spec.SpecNode.Scope.of(WaveConfig, '')
+        def compression = scope.getOption(['build','compression'])
+        def conda = scope.getOption(['build','conda'])
+        expect:
+        compression != null
+        nextflow.config.ConfigValidator.isMapType(compression.types())
+        and:
+        conda != null
+        nextflow.config.ConfigValidator.isMapType(conda.types())
+    }
+
 }

@@ -284,8 +284,13 @@ class BuildOpts implements ConfigScope {
     """)
     final String template
 
+    @ConfigOption(types=[Map])
+    @Description("""
+        Conda build settings, e.g. `[mambaImage: '...', basePackages: '...', commands: [...]]`.
+    """)
     final CondaOpts conda
 
+    @ConfigOption(types=[Map])
     @Description("""
         Build image compression settings, e.g. `[mode: 'estargz']`. Supported keys: `mode`
         (`gzip`, `estargz`, `zstd`), `level` and `force`.
