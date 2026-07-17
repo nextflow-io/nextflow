@@ -87,14 +87,6 @@ class ConfigParserV2Test extends Specification {
         def main = folder.resolve('nextflow.config')
         def snippet = folder.resolve('other.config')
 
-        main.text = """
-            includeConfig 'other.config'
-
-            plugins {
-                id 'nf-schema@2.6.1'
-            }
-            """
-
         snippet.text = '''
             plugins {
                 id 'nf-boost'
@@ -103,11 +95,28 @@ class ConfigParserV2Test extends Specification {
             '''
 
         when:
-        def config = new ConfigParserV2().parse(main)
+        main.text = """
+            includeConfig 'other.config'
 
+            plugins {
+                id 'nf-schema@2.6.1'
+            }
+            """
+        def config = new ConfigParserV2().parse(main)
         then:
-        // the last `plugins` block wins
         config.plugins == ['nf-schema@2.6.1'] as Set
+
+        when:
+        main.text = """
+            plugins {
+                id 'nf-schema@2.6.1'
+            }
+
+            includeConfig 'other.config'
+            """
+        config = new ConfigParserV2().parse(main)
+        then:
+        config.plugins == ['nf-boost', 'nf-schema@2.5.1'] as Set
 
         cleanup:
         folder?.deleteDir()
