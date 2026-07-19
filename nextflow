@@ -155,6 +155,26 @@ function get_ver() {
     fi
 }
 
+function get_plugins() {
+    # Download and unpack the core plugins bundle of a dev build (see NXF_DEV).
+    # Unlike `get`, a failure here must not abort the launch, so that the caller
+    # can fall back on the released plugins from the plugin registry.
+    local url="$1" target="$2"
+    local tarfile=$(make_temp)
+    local tmpdir="${target}.tmp.$$"
+    if command -v curl &>/dev/null; then
+        curl -fsSL "$url" -o "$tarfile" || { rm -f "$tarfile"; return 1; }
+    else
+        wget -q "$url" -O "$tarfile" || { rm -f "$tarfile"; return 1; }
+    fi
+    mkdir -p "$tmpdir" && tar -xzf "$tarfile" -C "$tmpdir"
+    local status=$?
+    rm -f "$tarfile"
+    [ $status -eq 0 ] && [ ! -e "$target" ] && mv "$tmpdir" "$target"
+    rm -rf "$tmpdir"
+    [ -d "$target" ]
+}
+
 function make_temp() {
     local base=${NXF_TEMP:=$PWD}
     if [ "$(uname)" = 'Darwin' ]; then mktemp "${base}/nxf-tmp.XXXXXX" || exit $?
@@ -388,6 +408,20 @@ if [ ! -f "$NXF_BIN" ]; then
     tmpfile=$(make_temp)
     get "$NXF_URL" "$tmpfile" "$NXF_BIN"
     mv "$tmpfile" "$NXF_BIN"
+fi
+
+# When running a dev build (see NXF_DEV), use the core plugins compiled from
+# the same source instead of the released ones, so that plugin changes in the
+# build are exercised too. The plugins are unpacked next to the build's jar
+# and that directory is used as the plugins root: plugins present there take
+# precedence over the plugin registry, while any other plugin (e.g. from a
+# third party) is still downloaded from the registry as usual.
+if [[ $NXF_DEV && ! $NXF_PLUGINS_DIR ]]; then
+    if [ -d "$NXF_PATH/plugins" ] || get_plugins "$NXF_BASE/v$NXF_VER/nextflow-$NXF_VER-plugins.tar.gz" "$NXF_PATH/plugins"; then
+        NXF_PLUGINS_DIR="$NXF_PATH/plugins"
+    else
+        echo_yellow "WARN: Cannot download the bundled plugins for dev build '$NXF_VER' -- plugin changes in this build (if any) will NOT be applied, the released plugin versions will be used instead"
+    fi
 fi
 
 COLUMNS=${COLUMNS:-`tty -s && tput cols 2>/dev/null || true`}

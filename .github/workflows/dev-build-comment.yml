@@ -80,7 +80,9 @@ jobs:
           NXF_DEV=pr-${PR_NUMBER} nextflow run <pipeline>
           \`\`\`
 
-          Or, with Nextflow versions that don't support \`NXF_DEV\` yet:
+          This runs the Nextflow runtime *and* the core plugins compiled from this PR; third-party plugins are resolved from the plugin registry as usual.
+
+          Or, with Nextflow versions that don't support \`NXF_DEV\` yet (note: this form uses the *released* core plugins, so changes to core plugins in this PR are not applied):
 
           \`\`\`bash
           NXF_BASE=https://github.com/$DEV_REPO/releases/download \\
