@@ -67,7 +67,7 @@ println executorFactory.getExecutorNames()
 
 ## Resources
 
-- [Nextflow Console Documentation](https://nextflow.io/docs/latest/cli.html#console)
+- [Nextflow Console Documentation](https://docs.seqera.io/nextflow/cli#interactive-console)
 - [Groovy Console Guide](https://groovy-lang.org/groovyconsole.html)
 
 ## License
