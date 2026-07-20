@@ -489,6 +489,11 @@ class PublishDir {
     }
 
     protected boolean shouldOverwrite(Path source, Path target) {
+        // always overwrite when the existing file was published with a different mode
+        // (e.g. a symlink but now `copy`, or vice versa), even if its content matches
+        if( checkPublishModeMismatch(target) )
+            return true
+
         if( overwrite instanceof Boolean )
             return overwrite
 
@@ -497,6 +502,12 @@ class PublishDir {
         final targetHash = HashBuilder.hashPath(target, target.parent, hashMode)
         log.trace "comparing source and target with mode=${overwrite}, source=${sourceHash}, target=${targetHash}, should overwrite=${sourceHash != targetHash}"
         return sourceHash != targetHash
+    }
+
+    protected boolean checkPublishModeMismatch(Path target) {
+        if( target.fileSystem != FileSystems.default )
+            return false
+        return Files.isSymbolicLink(target) != isSymlinkMode()
     }
 
     protected void processFileImpl( Path source, Path destination ) {
