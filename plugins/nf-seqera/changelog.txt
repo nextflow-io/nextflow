@@ -1,5 +1,42 @@
 nf-seqera changelog
 ====================
+0.23.0 - 15 Jul 2026
+- Add seqera.executor.providerConfig option (#7335) [5b8ce02da]
+- Send pipeline-secret references to the Seqera Scheduler (#7314) [df61a13fa]
+- Use scheduler API exit code, fall back to .exitcode file (#7273) [751effc79]
+- Bump jackson-databind to patched versions to fix deserialization CVEs (#7322) [8d4423e8a]
+- Bump jackson 2.21.1 to 2.21.4 to fix high-severity CVEs (#7274) [a6fddfa8e]
+- Use wiremock self-contained distribution to drop vulnerable handlebars (#7275) [27646a707]
+
+0.22.0 - 19 Jun 2026
+- Bump default Fusion version to 2.6 (#7246) [b56ef1a45]
+- Add shellEnabled option and per-task prediction model to Seqera executor (#7204) [810fd1654]
+
+0.20.1 - 28 May 2026
+- Force lib-httpx@2.3.0 to fix plugin classpath (#7181) [1c47215a8]
+
+0.20.0 - 21 May 2026
+- Add strategy option to Seqera executor (#7132) [80905b89f]
+- Bump sched-client@0.59.0 [980d28b6c]
+
+0.19.1 - 11 May 2026
+- Bump sched-client@0.55.2 (#7130) [495d2eff7]
+
+0.19.0 - 25 Apr 2026
+- Add hints process directive for executor-specific scheduling hints (#7034) [406358e03]
+- Add workspaceId/computeEnvId to nf-seqera auto labels (#7059) [5e8276c00]
+- Remove arch config option from Seqera MachineRequirement (#7063) [da06e9a9d]
+- Fix IllegalArgumentException when process.resourceLabels is a closure (#7068) [944977e3f]
+
+0.18.0 - 20 Apr 2026
+- Honour process.resourceLabels in nf-seqera executor (#7048) [979f684ff]
+- Filter autoLabels to selected workflow-metadata fields (#7049) [ddc974fe6]
+
+0.17.0 - 7 Apr 2026
+- Add resourceAllocation field to trace record (#6973) [a2742939c]
+- Add compute env ID and provider support to Seqera executor (#6906) [4c2eb9390]
+- Bump sched-client@0.49.0 [784a14353]
+
 0.16.0 - 17 Mar 2026
 - Default Fusion to v2.6 for Seqera executor (#6933) [8a7e53957]
 

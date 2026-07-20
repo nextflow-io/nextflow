@@ -41,13 +41,25 @@ class ExecutorOptsTest extends Specification {
 
         then:
         config.endpoint == 'https://sched.example.com'
-        config.region == 'eu-central-1'  // default
+        config.region == null
+        config.provider == null
         config.keyPairName == null
-        config.batchFlushInterval == Duration.of('1 sec')
+        config.batchFlushInterval == Duration.of('5 sec')
         config.machineRequirement != null
-        config.machineRequirement.arch == null
         config.machineRequirement.provisioning == null
         !config.autoLabels
+        !config.shellEnabled
+    }
+
+    def 'should enable on-demand shell access when set' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            shellEnabled: true
+        ])
+
+        then:
+        config.shellEnabled
     }
 
     def 'should create config with custom region' () {
@@ -78,7 +90,6 @@ class ExecutorOptsTest extends Specification {
         def config = new ExecutorOpts([
             endpoint: 'https://sched.example.com',
             machineRequirement: [
-                arch: 'arm64',
                 provisioning: 'spotFirst',
                 maxSpotAttempts: 3,
                 machineTypes: ['m6g', 'c6g']
@@ -87,7 +98,6 @@ class ExecutorOptsTest extends Specification {
 
         then:
         config.machineRequirement != null
-        config.machineRequirement.arch == 'arm64'
         config.machineRequirement.provisioning == 'spotFirst'
         config.machineRequirement.maxSpotAttempts == 3
         config.machineRequirement.machineTypes == ['m6g', 'c6g']
@@ -113,7 +123,6 @@ class ExecutorOptsTest extends Specification {
             keyPairName: 'my-key',
             batchFlushInterval: '2 sec',
             machineRequirement: [
-                arch: 'x86_64',
                 provisioning: 'spot'
             ]
         ])
@@ -123,47 +132,10 @@ class ExecutorOptsTest extends Specification {
         config.region == 'eu-west-1'
         config.keyPairName == 'my-key'
         config.batchFlushInterval == Duration.of('2 sec')
-        config.machineRequirement.arch == 'x86_64'
         config.machineRequirement.provisioning == 'spot'
     }
 
-    def 'should create config with labels' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            labels: [
-                project: 'genomics',
-                team: 'research',
-                costCenter: 'CC-1234'
-            ]
-        ])
-
-        then:
-        config.labels == [project: 'genomics', team: 'research', costCenter: 'CC-1234']
-    }
-
-    def 'should handle null labels' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com'
-        ])
-
-        then:
-        config.labels == null
-    }
-
-    def 'should handle empty labels' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            labels: [:]
-        ])
-
-        then:
-        config.labels == [:]
-    }
-
-    def 'should enable auto labels' () {
+    def 'should enable all auto labels when set to true' () {
         when:
         def config = new ExecutorOpts([
             endpoint: 'https://sched.example.com',
@@ -171,7 +143,109 @@ class ExecutorOptsTest extends Specification {
         ])
 
         then:
-        config.autoLabels
+        config.autoLabels == ExecutorOpts.VALID_AUTO_LABELS
+    }
+
+    def 'should disable auto labels when set to false' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            autoLabels: false
+        ])
+
+        then:
+        config.autoLabels.isEmpty()
+    }
+
+    def 'should accept auto labels as a list of short names' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            autoLabels: ['runName', 'projectName']
+        ])
+
+        then:
+        config.autoLabels == ['runName', 'projectName'] as Set
+    }
+
+    def 'should accept workspaceId and computeEnvId in auto labels' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            autoLabels: ['workspaceId', 'computeEnvId']
+        ])
+
+        then:
+        config.autoLabels == ['workspaceId', 'computeEnvId'] as Set
+    }
+
+    def 'should trim whitespace in auto labels list entries' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            autoLabels: [' runName', 'projectName ']
+        ])
+
+        then:
+        config.autoLabels == ['runName', 'projectName'] as Set
+    }
+
+    def 'should accept auto labels as a comma-separated string' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            autoLabels: 'runName,projectName,workflowId'
+        ])
+
+        then:
+        config.autoLabels == ['runName', 'projectName', 'workflowId'] as Set
+    }
+
+    def 'should tolerate whitespace around comma-separated auto labels' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            autoLabels: 'runName, projectName ,workflowId'
+        ])
+
+        then:
+        config.autoLabels == ['runName', 'projectName', 'workflowId'] as Set
+    }
+
+    def 'should treat empty auto labels list as disabled' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            autoLabels: []
+        ])
+
+        then:
+        config.autoLabels.isEmpty()
+    }
+
+    def 'should treat empty auto labels string as disabled' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            autoLabels: ''
+        ])
+
+        then:
+        config.autoLabels.isEmpty()
+    }
+
+    def 'should reject unknown auto labels name' () {
+        when:
+        new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            autoLabels: ['runName', 'foo']
+        ])
+
+        then:
+        def err = thrown(IllegalArgumentException)
+        err.message.contains("'seqera.executor.autoLabels'")
+        err.message.contains('foo')
+        err.message.contains('valid names')
     }
 
     def 'should create config with prediction model' () {
@@ -227,6 +301,48 @@ class ExecutorOptsTest extends Specification {
         config.taskEnvironment == [:]
     }
 
+    def 'should create config with providerConfig' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            providerConfig: [subnetId: 'subnet-1', securityGroup: 'sg-2']
+        ])
+
+        then:
+        config.providerConfig == [subnetId: 'subnet-1', securityGroup: 'sg-2']
+    }
+
+    def 'should handle null providerConfig' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com'
+        ])
+
+        then:
+        config.providerConfig == null
+    }
+
+    def 'should create config with computeEnvId' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            computeEnvId: 'ce-12345'
+        ])
+
+        then:
+        config.computeEnvId == 'ce-12345'
+    }
+
+    def 'should default computeEnvId to null' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com'
+        ])
+
+        then:
+        config.computeEnvId == null
+    }
+
     def 'should create config with provider' () {
         when:
         def config = new ExecutorOpts([
@@ -261,17 +377,28 @@ class ExecutorOptsTest extends Specification {
         config.region == 'us-west-2'
     }
 
-    def 'should reject invalid prediction model' () {
+    def 'should create config with strategy' () {
         when:
-        new ExecutorOpts([
+        def config = new ExecutorOpts([
             endpoint: 'https://sched.example.com',
-            predictionModel: 'invalid'
+            provider: 'aws',
+            strategy: 'vm'
         ])
 
         then:
-        def e = thrown(IllegalArgumentException)
-        e.message.contains("Invalid prediction model 'invalid'")
-        e.message.contains('qr/v1')
+        config.provider == 'aws'
+        config.strategy == 'vm'
     }
+
+    def 'should default strategy to null' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com'
+        ])
+
+        then:
+        config.strategy == null
+    }
+
 
 }

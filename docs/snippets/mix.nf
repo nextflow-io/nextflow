@@ -1,5 +1,5 @@
-c1 = channel.of( 1, 2, 3 )
+c1 = channel.of( '1', '2', '3' )
 c2 = channel.of( 'a', 'b' )
-c3 = channel.of( 'z' )
+v3 = channel.value( 'z' )
 
-c1.mix(c2, c3).view()
+c1.mix(c2).mix(v3).view()

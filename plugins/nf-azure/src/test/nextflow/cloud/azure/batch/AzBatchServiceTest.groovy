@@ -20,14 +20,18 @@ import java.nio.ByteBuffer
 import java.nio.charset.StandardCharsets
 import java.time.Instant
 import java.time.temporal.ChronoUnit
-import java.util.function.Predicate
+import dev.failsafe.function.CheckedPredicate
 
+import com.azure.compute.batch.models.AllocationState
 import com.azure.compute.batch.models.BatchPool
-import com.azure.compute.batch.models.BatchJobCreateContent
+import com.azure.compute.batch.models.BatchJobCreateParameters
+import com.azure.compute.batch.models.BatchPoolState
 import com.azure.compute.batch.models.ElevationLevel
 import com.azure.compute.batch.models.EnvironmentSetting
+import com.azure.compute.batch.models.ResizeError
 import com.azure.core.exception.HttpResponseException
 import com.azure.core.http.HttpResponse
+import com.azure.json.JsonProviders
 import com.azure.identity.ManagedIdentityCredential
 import com.google.common.hash.HashCode
 import nextflow.Global
@@ -627,7 +631,7 @@ class AzBatchServiceTest extends Specification {
         when:
         def result = svc.specFromPoolConfig(POOL_ID)
         then:
-        1 * svc.getPool(_) >> new BatchPool(vmSize: 'Standard_D2_v2')
+        1 * svc.getPool(_) >> BatchPool.fromJson(JsonProviders.createReader('{"vmSize":"Standard_D2_v2"}'))
         and:
         result.vmType.name == 'Standard_D2_v2'
         result.vmType.numberOfCores == 2
@@ -643,7 +647,7 @@ class AzBatchServiceTest extends Specification {
         AzBatchService svc = Spy(new AzBatchService(exec))
 
         when:
-        final policy = svc.retryPolicy(Mock(Predicate))
+        final policy = svc.retryPolicy(Mock(CheckedPredicate))
         then:
         policy.config.delay.toMillis() == 100
         policy.config.maxDelay.toMillis() == 200
@@ -1048,7 +1052,7 @@ class AzBatchServiceTest extends Specification {
         int createCalls = 0
         def service = new AzBatchService(exec) {
             @Override
-            protected void createJobRequest(BatchJobCreateContent content) {
+            protected void createJobRequest(BatchJobCreateParameters content) {
                 createCalls++
             }
         }
@@ -1068,7 +1072,7 @@ class AzBatchServiceTest extends Specification {
         int createCalls = 0
         def service = new AzBatchService(exec) {
             @Override
-            protected void createJobRequest(BatchJobCreateContent content) {
+            protected void createJobRequest(BatchJobCreateParameters content) {
                 createCalls++
                 if (createCalls == 1)
                     throw new HttpResponseException('first call', null)
@@ -1094,7 +1098,7 @@ class AzBatchServiceTest extends Specification {
         int createCalls = 0
         def service = new AzBatchService(exec) {
             @Override
-            protected void createJobRequest(BatchJobCreateContent content) {
+            protected void createJobRequest(BatchJobCreateParameters content) {
                 createCalls++
                 throw new HttpResponseException('quota error', null)
             }
@@ -1121,7 +1125,7 @@ class AzBatchServiceTest extends Specification {
         int createCalls = 0
         def service = new AzBatchService(exec) {
             @Override
-            protected void createJobRequest(BatchJobCreateContent content) {
+            protected void createJobRequest(BatchJobCreateParameters content) {
                 createCalls++
                 throw new HttpResponseException('quota error', null)
             }
@@ -1147,7 +1151,7 @@ class AzBatchServiceTest extends Specification {
         int createCalls = 0
         def service = new AzBatchService(exec) {
             @Override
-            protected void createJobRequest(BatchJobCreateContent content) {
+            protected void createJobRequest(BatchJobCreateParameters content) {
                 createCalls++
                 throw new HttpResponseException('Job already exists', null)
             }
@@ -1172,7 +1176,7 @@ class AzBatchServiceTest extends Specification {
         int createCalls = 0
         def service = new AzBatchService(exec) {
             @Override
-            protected void createJobRequest(BatchJobCreateContent content) {
+            protected void createJobRequest(BatchJobCreateParameters content) {
                 createCalls++
                 throw new IllegalArgumentException('unexpected error')
             }
@@ -1184,5 +1188,110 @@ class AzBatchServiceTest extends Specification {
         then:
         thrown(IllegalArgumentException)
         createCalls == 1
+    }
+
+    private BatchPool poolWithResizeError(Map opts=[:]) {
+        return new BatchPool(
+                id: opts.id ?: 'pool-1',
+                state: BatchPoolState.ACTIVE,
+                allocationState: opts.containsKey('allocationState') ? opts.allocationState : AllocationState.STEADY,
+                enableAutoScale: opts.containsKey('enableAutoScale') ? opts.enableAutoScale : true,
+                currentDedicatedNodes: opts.containsKey('currentDedicatedNodes') ? opts.currentDedicatedNodes : 0,
+                currentLowPriorityNodes: opts.containsKey('currentLowPriorityNodes') ? opts.currentLowPriorityNodes : 0,
+                taskSlotsPerNode: opts.containsKey('taskSlotsPerNode') ? opts.taskSlotsPerNode : 2,
+                resizeErrors: opts.containsKey('resizeErrors')
+                        ? opts.resizeErrors
+                        : [ new ResizeError(code: 'AllocationTimedout') ] )
+    }
+
+    def 'should allow submission for a stale transient resize error on a steady autoscale pool' () {
+        given:
+        def exec = createExecutor([batch:[location: 'northeurope']])
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+        def SPEC = new AzVmPoolSpec(poolId: 'pool-1', vmType: new AzVmType(name: 'Standard_D2_v2', numberOfCores: 2), opts: new AzPoolOpts([:]))
+        def POOL = poolWithResizeError()
+
+        when:
+        svc.checkPool(POOL, SPEC)
+
+        then:
+        noExceptionThrown()
+    }
+
+    def 'should throw for a resize error on a fixed-size pool' () {
+        given:
+        def exec = createExecutor([batch:[location: 'northeurope']])
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+        def SPEC = new AzVmPoolSpec(poolId: 'pool-1', vmType: new AzVmType(name: 'Standard_D2_v2', numberOfCores: 2), opts: new AzPoolOpts([:]))
+        def POOL = poolWithResizeError(enableAutoScale: false)
+
+        when:
+        svc.checkPool(POOL, SPEC)
+
+        then:
+        def e = thrown(IllegalStateException)
+        e.message.contains('has resize errors and no agents are available')
+    }
+
+    def 'should throw for a non-transient resize error on an autoscale pool' () {
+        given:
+        def exec = createExecutor([batch:[location: 'northeurope']])
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+        def SPEC = new AzVmPoolSpec(poolId: 'pool-1', vmType: new AzVmType(name: 'Standard_D2_v2', numberOfCores: 2), opts: new AzPoolOpts([:]))
+        def POOL = poolWithResizeError(resizeErrors: [ new ResizeError(code: 'AccountVMSeriesCoreQuotaReached') ])
+
+        when:
+        svc.checkPool(POOL, SPEC)
+
+        then:
+        thrown(IllegalStateException)
+    }
+
+    def 'should throw for a transient resize error while the pool is not steady' () {
+        given:
+        def exec = createExecutor([batch:[location: 'northeurope']])
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+        def SPEC = new AzVmPoolSpec(poolId: 'pool-1', vmType: new AzVmType(name: 'Standard_D2_v2', numberOfCores: 2), opts: new AzPoolOpts([:]))
+        def POOL = poolWithResizeError(allocationState: AllocationState.RESIZING)
+
+        when:
+        svc.checkPool(POOL, SPEC)
+
+        then:
+        thrown(IllegalStateException)
+    }
+
+    def 'should allow submission when nodes are present despite a resize error' () {
+        given:
+        def exec = createExecutor([batch:[location: 'northeurope']])
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+        def SPEC = new AzVmPoolSpec(poolId: 'pool-1', vmType: new AzVmType(name: 'Standard_D2_v2', numberOfCores: 2), opts: new AzPoolOpts([:]))
+        def POOL = poolWithResizeError(enableAutoScale: false, currentDedicatedNodes: 1)
+
+        when:
+        svc.checkPool(POOL, SPEC)
+
+        then:
+        noExceptionThrown()
+    }
+
+    def 'isRecoverableResizeError should classify resize errors by autoscale, state and code' () {
+        given:
+        def exec = createExecutor([batch:[location: 'northeurope']])
+        AzBatchService svc = Spy(AzBatchService, constructorArgs:[exec])
+
+        expect:
+        svc.isRecoverableResizeError(POOL) == EXPECTED
+
+        where:
+        POOL                                                                            | EXPECTED
+        poolWithResizeError()                                                           | true
+        poolWithResizeError(resizeErrors: [ new ResizeError(code: 'AllocationFailed') ]) | true
+        poolWithResizeError(resizeErrors: [ new ResizeError(code: 'allocationtimedout') ]) | true
+        poolWithResizeError(enableAutoScale: false)                                     | false
+        poolWithResizeError(allocationState: AllocationState.RESIZING)                  | false
+        poolWithResizeError(resizeErrors: [ new ResizeError(code: 'AccountVMSeriesCoreQuotaReached') ]) | false
+        poolWithResizeError(resizeErrors: [ new ResizeError(code: 'AllocationTimedout'), new ResizeError(code: 'AccountCoreQuotaReached') ]) | false
+        poolWithResizeError(resizeErrors: [ new ResizeError(code: null) ])              | false
     }
 }

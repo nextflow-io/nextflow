@@ -248,6 +248,44 @@ class TowerJsonGeneratorTest extends Specification {
         }
     }
 
+    def 'should serialise the execution dag faithfully' () {
+        given:
+        def gen = TowerJsonGenerator.create([:])
+        and:
+        // a process -> operator -> process chain; the operator must survive serialization
+        def dag = [
+            vertices: [
+                [id: '0', type: 'PROCESS',  label: 'RNASEQ:FOO', scope: 'RNASEQ'],
+                [id: '1', type: 'OPERATOR', label: 'map',        scope: 'RNASEQ'],
+                [id: '2', type: 'PROCESS',  label: 'RNASEQ:BAR', scope: 'RNASEQ'],
+            ],
+            edges: [
+                [source: '0', target: '1', label: 'ch_reads'],
+                [source: '1', target: '2', label: null],
+            ]
+        ]
+
+        when:
+        def json = gen.toJson([dag: dag])
+        def copy = (Map) new JsonSlurper().parseText(json)
+
+        then:
+        // the operator vertex between the two processes is preserved, not dropped
+        copy.dag.vertices.size() == 3
+        copy.dag.vertices*.type == ['PROCESS', 'OPERATOR', 'PROCESS']
+        copy.dag.vertices.find { it.type == 'OPERATOR' && it.label == 'map' }
+        and:
+        // fully-qualified process labels and enclosing scope round-trip intact
+        copy.dag.vertices[0].label == 'RNASEQ:FOO'
+        copy.dag.vertices[0].scope == 'RNASEQ'
+        and:
+        // edges join vertices by id, optional channel label preserved
+        copy.dag.edges.size() == 2
+        copy.dag.edges[0] == [source: '0', target: '1', label: 'ch_reads']
+        copy.dag.edges[1].source == '1'
+        copy.dag.edges[1].target == '2'
+    }
+
     def 'should serialise container meta' () {
         given:
         def gen = TowerJsonGenerator.create([:])

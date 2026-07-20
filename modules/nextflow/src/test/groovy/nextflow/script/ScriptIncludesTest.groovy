@@ -927,7 +927,7 @@ class ScriptIncludesTest extends Dsl2Spec {
         folder?.deleteDir()
     }
 
-    def 'should load current params in included module' () {
+    def 'should load legacy params in included module' () {
         given:
         def folder = Files.createTempDirectory('test')
 
@@ -935,6 +935,37 @@ class ScriptIncludesTest extends Dsl2Spec {
             params.outdir = "results"
 
             include { echoParams } from './module.nf'
+
+            workflow {
+                echoParams()
+            }
+            '''
+
+        folder.resolve('module.nf').text = '''
+            def echoParams() {
+                return params
+            }
+            '''
+
+        when:
+        def result = runScript(folder.resolve('main.nf'))
+        then:
+        result == [outdir: 'results']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should load typed params in included module' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        folder.resolve('main.nf').text = '''
+            include { echoParams } from './module.nf'
+
+            params {
+                outdir: String = "results"
+            }
 
             workflow {
                 echoParams()
@@ -976,6 +1007,9 @@ class ScriptIncludesTest extends Dsl2Spec {
 
             params {
                 test2: String = "test2"
+            }
+
+            workflow {
             }
 
             def test2() {

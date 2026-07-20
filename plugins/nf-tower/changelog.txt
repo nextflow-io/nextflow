@@ -1,5 +1,45 @@
 nf-tower changelog
 ===================
+1.29.1 - 15 Jul 2026
+- Bump jackson-databind to patched versions to fix deserialization CVEs (#7322) [8d4423e8a]
+- Fix Fusion license token cache keying by product and version (#7320) [d95f5062c]
+
+1.29.0 - 19 Jun 2026
+- Add workflow DAG reporting to nf-tower plugin (#7218) [3041af858]
+- Add seqera:// data-links support to nf-tower filesystem (#7070) [7d6f8c494]
+- Use a stop flag instead of thread interrupt to shut down the logs checkpoint (#7193) [1faf69d6d]
+- Improve Tower telemetry error handling on transient gateway failures (#7190) [b0d7e335a]
+
+1.28.0 - 28 May 2026
+- Expose dataset file size in seqera fs file attributes (#7141) [beac1e455]
+- Fix world-readable seqera-auth.config credential file (#7182) [41a5f24af]
+- Bump lib-httpx@2.3.0 (#7181) [1c47215a8]
+
+1.27.0 - 28 Apr 2026
+- Add -user-secret and -workspace-secret flags to nextflow launch (#7040) [53045104d]
+
+1.26.0 - 25 Apr 2026
+- Abort execution when platform telemetry error (#6827) [b1ad3f720]
+- Add Seqera NIO filesystem for datasets and refactor TowerClient/TowerObserver (#6946) [433b10a1f]
+
+1.25.0 - 20 Apr 2026
+- Fix resolution of `-with-tower` with `TOWER_API_ENDPOINT` (#7045) [ce962e882]
+- Fusion GPU metrics collection (#7022) [6289635b8]
+- Fix saveCacheFiles early return skipping log file uploads (#7015) [6fb704838]
+
+1.24.0 - 7 Apr 2026
+- Add resourceAllocation field to trace record (#6973) [a2742939c]
+- Replace Auth0 with Platform OIDC PKCE for auth login (#6953) [f39afea97]
+- Use inline metadata from trace create response (#6976) [58736b7cc]
+
+1.23.0 - 26 Mar 2026
+- Skip launch metadata fetch for CLI-submitted runs (#6975) [3c9875720]
+- Add platform-related metadata to WorkflowRun lineage record (#6545) [fc4d7dd6e]
+- Add request timeout to tower client (#6950) [ff773ba72]
+- Fix LogsCheckpoint thread interrupt race condition (#6939) [9d65b9eea]
+- Fix typo in TowerRetryPolicy: maxAttemps -> maxAttempts (#6949) [97eb0d1b3]
+- Fix security vulnerabilities (#6938) [8b1ab40c4]
+
 1.22.0 - 17 Mar 2026
 - Add logStreamId to Tower task record (#6877) [df49fdb68]
 - Increase tasks.cloudZone width from 15 to 25 (#6907) [a217a459f]

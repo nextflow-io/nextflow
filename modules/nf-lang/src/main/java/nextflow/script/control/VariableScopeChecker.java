@@ -27,7 +27,6 @@ import nextflow.script.dsl.Constant;
 import nextflow.script.dsl.Operator;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.WorkflowNode;
-import nextflow.script.types.Record;
 import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
@@ -237,15 +236,9 @@ public class VariableScopeChecker {
     }
 
     private static ClassNode methodOutputType(MethodNode mn) {
-        if( !(mn instanceof ProcessNode || mn instanceof WorkflowNode) )
-            return mn.getReturnType();
-        var cn = new ClassNode(Record.class);
-        var fn = new FieldNode("out", mn.getModifiers() & 0xF, mn.getReturnType(), cn, null);
-        fn.setHasNoRealSourcePosition(true);
-        fn.setDeclaringClass(cn);
-        fn.setSynthetic(true);
-        cn.addField(fn);
-        return cn;
+        if( mn instanceof ProcessNode || mn instanceof WorkflowNode )
+            return ClassHelper.dynamicType();
+        return mn.getReturnType();
     }
 
     /**

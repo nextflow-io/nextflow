@@ -1,0 +1,22 @@
+set -e
+
+#
+# Regression test for https://github.com/nextflow-io/nextflow/issues/7116
+#
+# `nextflow inspect -format json` must emit only JSON on stdout so that the
+# output can be piped to JSON-consuming tools (e.g. `| jq`). Banner/progress
+# messages and log output (including the no-observer fallback path in
+# LoggerHelper) must be written to stderr instead.
+#
+
+$NXF_CMD inspect -format json $NXF_SCRIPT > stdout 2> stderr
+
+# stdout must be non-empty and parseable JSON containing the expected process
+python3 - <<'PY'
+import json, sys
+with open('stdout') as fh:
+    data = json.load(fh)
+assert 'processes' in data, "missing 'processes' key in inspect output"
+names = [p.get('name') for p in data['processes']]
+assert 'foo' in names, f"process 'foo' not found in inspect output: {names}"
+PY

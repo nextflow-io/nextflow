@@ -16,8 +16,10 @@
 
 package io.seqera.tower.plugin.auth
 
+import io.seqera.http.HxClient
+import io.seqera.platform.auth.oidc.OidcLoginFlow
 import io.seqera.tower.plugin.BaseCommandImpl
-import nextflow.util.SpinnerUtil
+import io.seqera.tower.plugin.TowerClient
 
 import java.awt.*
 import java.net.http.HttpRequest
@@ -25,12 +27,13 @@ import java.net.http.HttpResponse
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.StandardOpenOption
+import java.time.Duration
 import java.util.List
 
-import groovy.json.JsonBuilder
 import groovy.json.JsonSlurper
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
+import groovy.transform.InheritConstructors
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.SysEnv
@@ -49,29 +52,24 @@ import static nextflow.util.ColorUtil.colorize
  * configuration management, and status reporting for Nextflow integration
  * with Seqera Platform (formerly Tower).
  *
- * <p>The class supports both cloud-based authentication using Auth0 (OAuth2 device flow)
- * and enterprise authentication using Personal Access Tokens (PATs).
+ * <p>The class authenticates using the OIDC Authorization Code + PKCE flow against
+ * Seqera Platform acting as the identity provider.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
+@InheritConstructors
 @CompileStatic
 class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
-    static final int AUTH_POLL_TIMEOUT_RETRIES = 60
-    static final int AUTH_POLL_INTERVAL_SECONDS = 5
+    static final String OIDC_CLIENT_ID = 'nextflow_cli'
     static final int WORKSPACE_SELECTION_THRESHOLD = 8  // Max workspaces to show in single list; above this uses org-first selection
 
     /**
      * Authenticates with Seqera Platform and saves credentials to the Nextflow config.
      *
-     * <p>This method supports two authentication modes:
-     * <ul>
-     *   <li>Cloud endpoints: Uses Auth0 device authorization flow (OAuth2)</li>
-     *   <li>Enterprise endpoints: Prompts for Personal Access Token (PAT)</li>
-     * </ul>
-     *
-     * <p>Authentication credentials are stored in the seqera-auth.config file within
-     * the Nextflow home directory.
+     * <p>Uses OIDC Authorization Code + PKCE flow against the Platform's identity provider.
+     * After obtaining the OAuth access token, generates a Personal Access Token (PAT) and
+     * stores it in the seqera-auth.config file.
      *
      * @param apiUrl The Seqera Platform API endpoint URL (null uses default from config)
      * @throws AbortOperationException if authentication fails or is cancelled
@@ -104,110 +102,80 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         apiUrl = normalizeApiUrl(apiUrl)
         printColored(" - Seqera Platform API endpoint: $apiUrl (can be customised with '-url')", "dim")
 
-        // Check if this is a cloud endpoint or enterprise
-        final endpointInfo = getCloudEndpointInfo(apiUrl)
-        if( endpointInfo.isCloud ) {
-            try {
-                performAuth0Login(endpointInfo.endpoint as String, endpointInfo.auth as Map)
-            } catch( Exception e ) {
-                log.debug("Authentication failed", e)
-                throw new AbortOperationException("${e.message}")
-            }
-        } else {
-            // Enterprise endpoint - use PAT authentication
-            handleEnterpriseAuth(apiUrl)
+        try {
+            performOidcLogin(apiUrl)
+        } catch( Exception e ) {
+            log.debug("Authentication failed", e)
+            throw new AbortOperationException("${e.message}")
         }
     }
 
     /**
-     * Performs Auth0 device authorization flow for cloud-based authentication.
+     * Performs OIDC Authorization Code + PKCE login against the Platform.
      *
-     * <p>This method implements the OAuth2 device authorization grant flow:
+     * <p>This method:
      * <ol>
-     *   <li>Requests device code from Auth0</li>
-     *   <li>Displays user code and verification URL</li>
-     *   <li>Opens browser for user authentication</li>
-     *   <li>Polls for access token</li>
+     *   <li>Discovers OIDC endpoints from the Platform</li>
+     *   <li>Opens browser for user authentication with PKCE challenge</li>
+     *   <li>Receives authorization code via local callback server</li>
+     *   <li>Exchanges code for OAuth access token</li>
      *   <li>Generates and saves Personal Access Token</li>
      * </ol>
      *
      * @param apiUrl The Seqera Platform API endpoint URL
-     * @param auth0Config Map containing Auth0 configuration (domain, clientId)
      * @throws RuntimeException if authentication fails or times out
-     * @throws AbortOperationException if authentication is cancelled by user
      */
-    protected void performAuth0Login(String apiUrl, Map auth0Config) {
-
-        // Start device authorization flow
-        final deviceAuth = requestDeviceAuthorization(auth0Config)
-
+    protected void performOidcLogin(String apiUrl) {
         println ""
-        println "Confirmation code: $deviceAuth.user_code"
-        final urlWithCode = "${deviceAuth.verification_uri}?user_code=${deviceAuth.user_code}"
-        println "Authentication URL: $urlWithCode"
-        printColored("\n[ Press Enter to open in browser ]", "bold")
+        printColored("Opening browser for authentication...", "cyan bold")
 
-        // Wait for Enter key with proper interrupt handling
-        try {
-            final input = System.in.read()
-            if( input == -1 ) {
-                throw new AbortOperationException("Authentication cancelled")
+        final flow = OidcLoginFlow.builder()
+            .endpoint(apiUrl)
+            .clientId(OIDC_CLIENT_ID)
+            .build()
+        final accessToken = flow.login({ String url ->
+            println "Authentication URL: $url"
+            boolean browserOpened = openBrowser(url)
+            if( !browserOpened ) {
+                printColored("Could not open browser automatically. Please open the URL above in your browser.", "yellow")
             }
-        } catch( Exception e ) {
-            throw new AbortOperationException("Failed to read input: ${e.message}")
-        }
+            print("${colorize('Waiting for authentication...', 'dim', true)}")
+        })
 
-        // Try to open browser automatically
-        boolean browserOpened = openBrowser(urlWithCode)
+        // Verify login by calling /user-info
+        final userInfo = createTowerClient(apiUrl, accessToken).getUserInfo()
+        println "\n\n${colorize('✔', 'green', true)} Authentication successful ($userInfo.userName)"
 
-        if( !browserOpened ) {
-            printColored("Could not open browser automatically. Please copy the URL above and open it manually in your browser.", "yellow")
-        }
-        print("${colorize('Waiting for authentication...', 'dim', true)}")
+        // Generate PAT
+        final pat = generatePAT(accessToken, apiUrl)
 
+        // Save to config
+        saveAuthToConfig(pat, apiUrl)
+
+        // Automatically run configuration
         try {
-            // Poll for device token
-            final tokenData = pollForDeviceToken(deviceAuth.device_code as String, deviceAuth.interval as Integer ?: AUTH_POLL_INTERVAL_SECONDS, auth0Config)
-            final accessToken = tokenData['access_token'] as String
-
-            // Verify login by calling /user-info
-            final userInfo = getUserInfo(accessToken, apiUrl)
-            println "\n\n${colorize('✔', 'green', true)} Authentication successful"
-
-            // Generate PAT
-            final pat = generatePAT(accessToken, apiUrl)
-
-            // Save to config
-            saveAuthToConfig(pat, apiUrl)
-
-            // Automatically run configuration
-            try {
-                config(false)
-            } catch( Exception e ) {
-                printColored("Configuration setup failed: ${e.message}", "red")
-                printColored("You can run 'nextflow auth config' later to set up your configuration.", "dim")
-            }
-
+            config(false)
         } catch( Exception e ) {
-            throw new RuntimeException("Authentication failed: ${e.message}", e)
+            printColored("Configuration setup failed: ${e.message}", "red")
+            printColored("You can run 'nextflow auth config' later to set up your configuration.", "dim")
         }
     }
 
-    private boolean openBrowser(GString urlWithCode) {
+    private boolean openBrowser(String url) {
         def browserOpened = false
         try {
             // Method 1: Java Desktop API
             if( Desktop.isDesktopSupported() ) {
                 final desktop = Desktop.getDesktop()
                 if( desktop.isSupported(Desktop.Action.BROWSE) ) {
-                    desktop.browse(new URI(urlWithCode))
+                    desktop.browse(new URI(url))
                     browserOpened = true
                 }
             }
 
             // Method 2: Platform-specific commands
             if( !browserOpened ) {
-                browserOpened = runBrowserCommand(urlWithCode)
+                browserOpened = runBrowserCommand(url)
             }
         } catch( Exception e ) {
             log.debug("Exception opening browser", e)
@@ -215,7 +183,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         return browserOpened
     }
 
-    protected boolean runBrowserCommand(GString urlWithCode) {
+    protected boolean runBrowserCommand(String urlWithCode) {
         def command = []
         def browserOpened = false
         final os = System.getProperty("os.name").toLowerCase()
@@ -245,123 +213,23 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         return browserOpened
     }
 
-    private Map requestDeviceAuthorization(Map auth0Config) {
-        final params = [
-            'client_id': auth0Config.clientId,
-            'scope'    : 'openid profile email offline_access',
-            'audience' : 'platform'
-        ]
-        return performAuth0Request("https://${auth0Config.domain}/oauth/device/code", params)
-    }
-
-    private Map pollForDeviceToken(String deviceCode, int intervalSeconds, Map auth0Config) {
-        final tokenUrl = "https://${auth0Config.domain}/oauth/token"
-        def retryCount = 0
-        def spinner = new SpinnerUtil("Waiting for authentication...")
-        try {
-            spinner.start()
-            while( retryCount < AUTH_POLL_TIMEOUT_RETRIES ) {
-                final params = [
-                        'grant_type' : 'urn:ietf:params:oauth:grant-type:device_code',
-                        'device_code': deviceCode,
-                        'client_id'  : auth0Config.clientId
-                ]
-
-                try {
-                    final result = performAuth0Request(tokenUrl, params)
-                    return result
-                } catch( RuntimeException e ) {
-                    final message = e.message
-                    if( message.contains('authorization_pending') ) {
-                        // Continue waiting - spinner already shows progress
-                    } else if( message.contains('slow_down') ) {
-                        intervalSeconds += 5
-                        spinner.updateMessage("Waiting for authentication (slowing down polling)...")
-                    } else if( message.contains('expired_token') ) {
-                        spinner.stop()
-                        throw new RuntimeException("The device code has expired. Please try again.")
-                    } else if( message.contains('access_denied') ) {
-                        spinner.stop()
-                        throw new RuntimeException("Access denied by user")
-                    } else {
-                        spinner.stop()
-                        throw e
-                    }
-                }
-                Thread.sleep(intervalSeconds * 1000)
-                retryCount++
-            }
-            spinner.stop()
-            throw new RuntimeException("Authentication timed out. Please try again.")
-        } finally {
-            if( spinner.isRunning() ) {
-                spinner.stop()
-            }
-        }
-    }
-
-
-    /**
-     * Handles authentication for Seqera Platform Enterprise installations.
-     *
-     * <p>Prompts the user to generate and enter a Personal Access Token (PAT)
-     * from their enterprise Seqera Platform instance.
-     *
-     * @param apiUrl The enterprise Seqera Platform API endpoint URL
-     * @throws AbortOperationException if no PAT is provided
-     */
-    protected void handleEnterpriseAuth(String apiUrl) {
-        println ""
-        printColored("Please generate a Personal Access Token from your Seqera Platform instance.", "cyan bold")
-        println "You can create one at: ${colorize(getWebUrlFromApiEndpoint(apiUrl) + '/tokens', 'magenta')}"
-        println ""
-
-        final pat = promptPAT()
-
-        if( !pat ) {
-            throw new AbortOperationException("Personal Access Token is required for Seqera Platform Enterprise authentication")
-        }
-
-        // Save to config
-        saveAuthToConfig(pat, apiUrl)
-        printColored("Personal Access Token saved to Nextflow auth config (${getAuthFile().toString()})", "green")
-    }
-
-    private String promptPAT(){
-        System.out.print("Enter your Personal Access Token: ")
-        System.out.flush()
-
-        final console = System.console()
-        final pat = console ?
-            new String(console.readPassword()) :
-            new BufferedReader(new InputStreamReader(System.in)).readLine()
-        return pat.trim()
-    }
-
     private String generatePAT(String accessToken, String apiUrl) {
         final tokensUrl = "${apiUrl}/tokens"
         final username = System.getProperty("user.name")
         final timestamp = new Date().format("yyyy-MM-dd-HH-mm")
         final tokenName = "nextflow-auth-${username}-${timestamp}"
 
-        final requestBody = new JsonBuilder([name: tokenName]).toString()
-
-        final client = createHttpClient(accessToken)
+        final client = createTowerClient(apiUrl, accessToken)
         log.debug "Platform auth API - POST ${tokensUrl}"
-        final request = HttpRequest.newBuilder()
-            .uri(URI.create(tokensUrl))
-            .header('Content-Type', 'application/json')
-            .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-            .build()
 
-        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
+        final response = client.sendApiRequest(tokensUrl, [name: tokenName], 'POST' )
 
-        if( response.statusCode() != 200 ) {
-            final error = response.body() ?: "HTTP ${response.statusCode()}"
+        if( response.code != 200 ) {
+            final error = response.message ?: "HTTP ${response.code}"
             throw new RuntimeException("Failed to generate PAT: ${error}")
         }
 
-        final json = new JsonSlurper().parseText(response.body()) as Map
+        final json = new JsonSlurper().parseText(response.message) as Map
         return json.accessKey as String
     }
 
@@ -377,36 +245,6 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
             return 'https://' + url
         }
         return url
-    }
-
-    protected Map performAuth0Request(String url, Map params) {
-        final postData = params.collect { k, v ->
-            "${URLEncoder.encode(k.toString(), 'UTF-8')}=${URLEncoder.encode(v.toString(), 'UTF-8')}"
-        }.join('&')
-
-        final client = createHttpClient()
-        log.debug "Platform auth API - POST ${url}"
-        final request = HttpRequest.newBuilder()
-            .uri(URI.create(url))
-            .header('Content-Type', 'application/x-www-form-urlencoded')
-            .POST(HttpRequest.BodyPublishers.ofString(postData))
-            .build()
-
-        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
-
-        if( response.statusCode() == 200 ) {
-            final json = new JsonSlurper().parseText(response.body())
-            return json as Map
-        } else {
-            final errorBody = response.body()
-            if( errorBody ) {
-                final errorJson = new JsonSlurper().parseText(errorBody) as Map
-                final error = errorJson.error
-                throw new RuntimeException("${error}: ${errorJson.error_description ?: ''}")
-            } else {
-                throw new RuntimeException("Request failed: HTTP ${response.statusCode()}")
-            }
-        }
     }
 
     private void saveAuthToConfig(String accessToken, String apiUrl) {
@@ -469,23 +307,15 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
 
         // Validate token by calling /user-info API
         try {
-            final userInfo = getUserInfo(existingToken as String, apiUrl)
+            final userInfo = createTowerClient(apiUrl, existingToken as String).getUserInfo()
             printColored(" - Token is valid for user: $userInfo.userName", "dim")
         } catch( Exception e ) {
             printColored("Failed to validate token: ${e.message}", "red")
         }
 
-        // Check if we need to delete from platform
-        final shouldDeleteFromPlatform = isCloudEndpoint(apiUrl)
-
         printColored("\nRunning this command will:", "yellow bold")
         printColored("  • Remove local Nextflow configuration: ${colorize(authFile.toString(), 'magenta')}", "yellow")
-        if( shouldDeleteFromPlatform ) {
-            printColored("  • Delete the corresponding access token from Seqera Platform: ${colorize(apiUrl, 'magenta')}", "yellow")
-        } else {
-            println ""
-            printColored("Warning: Access token not deleted, as using enterprise installation: ${colorize(apiUrl, 'magenta')}", "yellow")
-        }
+        printColored("  • Delete the corresponding access token from Seqera Platform: ${colorize(apiUrl, 'magenta')}", "yellow")
 
         final confirmed = promptForYesNo("\n${colorize('Continue with logout?', 'bold')} (${colorize('Y', 'green')}/n): ", true)
 
@@ -494,14 +324,12 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
             return
         }
 
-        // Only delete PAT from platform if this is a cloud endpoint
-        if( shouldDeleteFromPlatform ) {
-            try {
-                final tokenId = decodeTokenId(existingToken as String)
-                deleteTokenViaApi(existingToken as String, apiUrl, tokenId)
-            } catch( Exception e ) {
-                printColored("Error removing token: ${e.message}", "red")
-            }
+        // Delete PAT from platform
+        try {
+            final tokenId = decodeTokenId(existingToken as String)
+            deleteTokenViaApi(existingToken as String, apiUrl, tokenId)
+        } catch( Exception e ) {
+            printColored("Error removing token: ${e.message}", "red")
         }
 
         removeAuthFromConfig()
@@ -527,18 +355,14 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
     }
 
     private void deleteTokenViaApi(String token, String apiUrl, String tokenId) {
-        final client = createHttpClient(token)
+        final client = createTowerClient(apiUrl, token)
         final url = "${apiUrl}/tokens/${tokenId}"
         log.debug "Platform auth API - DELETE ${url}"
-        final request = HttpRequest.newBuilder()
-            .uri(URI.create(url))
-            .DELETE()
-            .build()
 
-        final response = client.send(request, HttpResponse.BodyHandlers.ofString())
+        final response = client.sendApiRequest(url, null, 'DELETE')
 
-        if( response.statusCode() != 200 && response.statusCode() != 204 ) {
-            final error = response.body() ?: "HTTP ${response.statusCode()}"
+        if( response.code != 200 && response.code != 204 ) {
+            final error = response.message ?: "HTTP ${response.code}"
             throw new RuntimeException("Failed to delete token: ${error}")
         }
 
@@ -606,7 +430,8 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
 
         try {
             // Get user info to validate token and get user ID
-            final userInfo = getUserInfo(existingToken as String, endpoint as String)
+            final httpClient = createTowerClient(endpoint as String, existingToken as String)
+            final userInfo = httpClient.getUserInfo()
             printColored(" - Authenticated as: $userInfo.userName", "dim")
             println ""
 
@@ -617,7 +442,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
             configChanged |= configureEnabled(config)
 
             // Configure workspace
-            final workspaceResult = configureWorkspace(config, existingToken as String, endpoint as String, userInfo.id as String)
+            final workspaceResult = configureWorkspace(httpClient, config, userInfo.id as String)
             configChanged = configChanged || (workspaceResult.changed as boolean)
 
             // Configure compute environment for the workspace (always run after workspace selection)
@@ -625,7 +450,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
             def workspaceMetadata = workspaceResult.metadata as Map
             if( !workspaceMetadata && currentWorkspaceId ) {
                 // Get workspace metadata if not already available (e.g., when user kept existing workspace)
-                workspaceMetadata = getWorkspaceDetails(existingToken as String, endpoint as String, currentWorkspaceId)
+                workspaceMetadata = httpClient.getUserWorkspaceDetails(userInfo.id as String, currentWorkspaceId)
             }
             final computeEnvResult = configureComputeEnvironment(config as Map, existingToken as String, endpoint as String, currentWorkspaceId, workspaceMetadata)
             configChanged = configChanged || (computeEnvResult.changed as boolean)
@@ -671,13 +496,12 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
      * the user to select a default workspace. For large numbers of workspaces,
      * uses a two-stage selection process (organization first, then workspace).
      *
+     * @param client
      * @param config Configuration map to update
-     * @param accessToken Authentication token for API calls
-     * @param endpoint Seqera Platform API endpoint
      * @param userId User ID for fetching workspaces
      * @return Map containing 'changed' (boolean) and 'metadata' (workspace info)
      */
-    private Map configureWorkspace(Map config, String accessToken, String endpoint, String userId) {
+    private Map configureWorkspace(TowerClient client, Map config, String userId) {
         // Check if TOWER_WORKFLOW_ID environment variable is set
         final envWorkspaceId = SysEnv.get('TOWER_WORKFLOW_ID')
         if( envWorkspaceId ) {
@@ -687,7 +511,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         }
 
         // Get all workspaces for the user
-        final workspaces = listUserWorkspaces(accessToken, endpoint, userId)
+        final workspaces = listUserWorkspaces(client, userId)
 
         if( !workspaces ) {
             println "\nNo workspaces found for your account."
@@ -713,23 +537,21 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         }
     }
 
-    private String getCurrentWorkspaceName(List<Object> workspaces, currentWorkspaceId) {
+    private String getCurrentWorkspaceName(List<Map> workspaces, currentWorkspaceId) {
         final currentWorkspace = workspaces.find { ((Map) it).workspaceId.toString() == currentWorkspaceId?.toString() } as Map
         return currentWorkspace ? "${currentWorkspace.orgName} / ${currentWorkspace.workspaceName}" : "None (Personal workspace)"
     }
 
-    private Map selectWorkspaceFromAll(Map config, List workspaces, final currentWorkspaceId) {
+    private Map selectWorkspaceFromAll(Map config, List<Map> workspaces, final currentWorkspaceId) {
         println "\nAvailable workspaces:"
         final isPersonalWorkspace = !currentWorkspaceId
         final currentIndicator = isPersonalWorkspace ? colorize(' (current)', 'bold') : ''
         println "  0. ${colorize('None (Personal workspace)', 'cyan', true)} ${colorize('[no organization]', 'dim', true)}${currentIndicator}"
 
         // Sort workspaces by org name, then workspace name
-        final sortedWorkspaces = workspaces.sort { a, b ->
-            final aMap = a as Map
-            final bMap = b as Map
-            final orgCompare = (aMap.orgName as String ?: '').compareToIgnoreCase(bMap.orgName as String ?: '')
-            orgCompare != 0 ? orgCompare : (aMap.workspaceName as String ?: '').compareToIgnoreCase(bMap.workspaceName as String ?: '')
+        final sortedWorkspaces = workspaces.sort { Map a, Map b ->
+            final orgCompare = (a.orgName as String ?: '').compareToIgnoreCase(b.orgName as String ?: '')
+            orgCompare != 0 ? orgCompare : (a.workspaceName as String ?: '').compareToIgnoreCase(b.workspaceName as String ?: '')
         }
 
         sortedWorkspaces.eachWithIndex { workspace, index ->
@@ -770,9 +592,9 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
 
     private Map selectWorkspaceByOrg(Map config, Map orgWorkspaces, final currentWorkspaceId) {
         // Get current workspace info for prompts
-        final allWorkspaces = []
+        final allWorkspaces = [] as List<Map>
         orgWorkspaces.values().each { workspaceList ->
-            allWorkspaces.addAll(workspaceList as List)
+            allWorkspaces.addAll(workspaceList as List<Map>)
         }
         final currentWorkspaceDisplay = getCurrentWorkspaceName(allWorkspaces, currentWorkspaceId)
 
@@ -848,7 +670,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
     private Map configureComputeEnvironment(Map config, String accessToken, String endpoint, String workspaceId, Map workspaceMetadata) {
         try {
             // Get compute environments for the workspace
-            final computeEnvs = listComputeEnvironments(accessToken, endpoint, workspaceId)
+            final computeEnvs = listComputeEnvironments(createTowerClient(endpoint, accessToken), workspaceId)
 
             // If there are zero compute environments, log a warning and provide a link
             if( computeEnvs.isEmpty() ) {
@@ -1001,7 +823,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
 
         if( accessToken ) {
             try {
-                final userInfo = getUserInfo(accessToken, endpoint)
+                final userInfo = createTowerClient(endpoint, accessToken).getUserInfo()
                 final currentUser = userInfo.userName as String
                 status.table.add(['Authentication', "${colorize('✔ OK', 'green')} (user: $currentUser)".toString(), tokenSource])
             } catch( Exception e ) {
@@ -1023,7 +845,9 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
             // Try to get workspace name and roles from API if we have a token
             def workspaceDetails = null
             if( accessToken ) {
-                workspaceDetails = getWorkspaceDetails(accessToken, endpoint, workspaceId)
+                final httpClient = createTowerClient(endpoint, accessToken)
+                final userInfo = httpClient.getUserInfo()
+                workspaceDetails = httpClient.getUserWorkspaceDetails(userInfo.id as String, workspaceId)
             }
 
             if( workspaceDetails ) {
@@ -1046,11 +870,12 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         // Compute environment and work directory
         def computeEnv = null
         if( accessToken ) {
+            final httpClient = createTowerClient(endpoint, accessToken)
             try {
                 if( config['tower.computeEnvId'] ) {
-                    computeEnv = getComputeEnvironment(accessToken, endpoint, config['tower.computeEnvId'] as String, workspaceId)
+                    computeEnv = getComputeEnvironment(httpClient, config['tower.computeEnvId'] as String, workspaceId)
                 } else {
-                    final computeEnvs = listComputeEnvironments(accessToken, endpoint, workspaceId)
+                    final computeEnvs = listComputeEnvironments(httpClient, workspaceId)
                     computeEnv = computeEnvs.find { ((Map) it).primary == true } as Map
                 }
             } catch( Exception e ) {
@@ -1169,7 +994,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
 
     protected boolean checkApiConnection(String endpoint) {
         try {
-            final client = createHttpClient()
+            final client = HxClient.newBuilder().connectTimeout(Duration.ofMillis(API_TIMEOUT_MS)).build()
             final url = "${endpoint}/service-info"
             log.debug "Platform auth API - GET ${url}"
             final request = HttpRequest.newBuilder()
@@ -1195,39 +1020,6 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
             ? console.readLine()
             : new BufferedReader(new InputStreamReader(System.in)).readLine()
         return line?.trim()
-    }
-
-    private Map getCloudEndpointInfo(String apiUrl) {
-        // Check if this is a standard cloud endpoint
-        final authDomain = PlatformHelper.getAuthDomain(apiUrl)
-        if (authDomain) {
-            final clientId = PlatformHelper.getAuthClientId(apiUrl)
-            return [
-                isCloud: true,
-                endpoint: apiUrl,
-                auth: [domain: authDomain, clientId: clientId]
-            ]
-        }
-
-        // Check for legacy URL format (e.g., https://cloud.seqera.io/api)
-        if (apiUrl.contains('://cloud.') && apiUrl.endsWith('/api')) {
-            final legacyToStandard = apiUrl.replace('://cloud.', '://api.cloud.').replaceAll('/api$', '')
-            final legacyAuthDomain = PlatformHelper.getAuthDomain(legacyToStandard)
-            if (legacyAuthDomain) {
-                final clientId = PlatformHelper.getAuthClientId(legacyToStandard)
-                return [
-                    isCloud: true,
-                    endpoint: legacyToStandard,
-                    auth: [domain: legacyAuthDomain, clientId: clientId]
-                ]
-            }
-        }
-
-        return [isCloud: false, endpoint: apiUrl, auth: null]
-    }
-
-    private boolean isCloudEndpoint(String apiUrl) {
-        return getCloudEndpointInfo(apiUrl).isCloud
     }
 
     protected Path getConfigFile() {
@@ -1289,8 +1081,13 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         }
         authConfigText.append("}\n")
 
-        // Write the seqera-auth.config file
-        Files.writeString(authFile, authConfigText.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING)
+        // Write the seqera-auth.config file with owner-only permissions.
+        // Tighten the permissions *before* writing the bearer tokens so the
+        // file is never world-readable while it holds credential data.
+        Files.deleteIfExists(authFile)
+        Files.createFile(authFile)
+        authFile.setPermissions('rw-------')
+        Files.writeString(authFile, authConfigText.toString(), StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
 
         // Add includeConfig line to main config file if it doesn't exist
         addIncludeConfigToMainFile(configFile)

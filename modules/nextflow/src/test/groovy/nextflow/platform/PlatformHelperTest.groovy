@@ -95,4 +95,32 @@ class PlatformHelperTest extends Specification {
         cleanup:
         SysEnv.pop()
     }
+
+    def 'should get computeEnvId from config'() {
+        expect:
+        PlatformHelper.getComputeEnvId([computeEnvId: 'ce-123'], [:]) == 'ce-123'
+    }
+
+    def 'should get computeEnvId from env'() {
+        expect:
+        PlatformHelper.getComputeEnvId([:], [TOWER_COMPUTE_ENV_ID: 'ce-env']) == 'ce-env'
+    }
+
+    def 'should prefer config computeEnvId over env'() {
+        expect:
+        PlatformHelper.getComputeEnvId([computeEnvId: 'ce-config'], [TOWER_COMPUTE_ENV_ID: 'ce-env']) == 'ce-config'
+    }
+
+    def 'should use env computeEnvId when TOWER_WORKFLOW_ID is set'() {
+        expect:
+        PlatformHelper.getComputeEnvId(
+            [computeEnvId: 'ce-config'],
+            [TOWER_WORKFLOW_ID: 'wf-1', TOWER_COMPUTE_ENV_ID: 'ce-env']
+        ) == 'ce-env'
+    }
+
+    def 'should return null computeEnvId when not configured'() {
+        expect:
+        PlatformHelper.getComputeEnvId([:], [:]) == null
+    }
 }

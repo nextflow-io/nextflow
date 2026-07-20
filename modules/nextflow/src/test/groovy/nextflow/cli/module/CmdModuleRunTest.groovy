@@ -92,8 +92,8 @@ class CmdModuleRunTest extends Specification {
         def module = new Module()
         module.name = 'nf-core/test-module'
         module.latest = moduleRelease
-        mockClient.fetchModule(_) >> module  // Use wildcard to match any argument
-        mockClient.downloadModule(_, _, _) >> { String name, String version, Path dest ->
+        mockClient.getModule(_) >> module  // Use wildcard to match any argument
+        mockClient.downloadModuleRelease(_, _, _) >> { String name, String version, Path dest ->
             Files.write(dest, modulePackage)
             return dest
         }
@@ -111,6 +111,8 @@ class CmdModuleRunTest extends Specification {
         cmd.args = ['nf-core/test-module']
         cmd.root = tempDir
         cmd.workDir = tempDir.toString()
+        cmd.outputDir = tempDir.resolve('results').toString()
+        cmd.outputFormat = 'json'
         cmd.client = mockClient
 
         when:
@@ -158,7 +160,7 @@ class CmdModuleRunTest extends Specification {
         def modulePackage = createModulePackage(moduleScript)
 
         def mockClient = Mock(RegistryClient)
-        mockClient.downloadModule('nf-core/test-module', '2.0.0', _) >> { String name, String version, Path dest ->
+        mockClient.downloadModuleRelease('nf-core/test-module', '2.0.0', _) >> { String name, String version, Path dest ->
             Files.write(dest, modulePackage)
             return dest
         }
@@ -175,6 +177,8 @@ class CmdModuleRunTest extends Specification {
         cmd.version = '2.0.0'
         cmd.root = tempDir
         cmd.workDir = tempDir.toString()
+        cmd.outputDir = tempDir.resolve('results').toString()
+        cmd.outputFormat = 'json'
         cmd.client = mockClient
 
         when:
@@ -189,6 +193,73 @@ class CmdModuleRunTest extends Specification {
             .findResults { line -> !line.contains('plugin') ? line : null }.join(" ")
         assert (stdout =~ pattern).find()
 
+    }
+
+    def 'should run module from local path'() {
+        given:
+        def moduleScript = '''
+            process CREATE_LOCAL_FILE {
+                output:
+                path "local_output.txt"
+
+                script:
+                """
+                echo "Local module executed" > local_output.txt
+                """
+            }
+        '''.stripIndent()
+
+        and:
+        // Create a local module directory with main.nf
+        def moduleDir = tempDir.resolve('local-module')
+        Files.createDirectories(moduleDir)
+        moduleDir.resolve('main.nf').text = moduleScript
+
+        def escapedPath = Pattern.quote(tempDir.toString())
+        def pattern = ~/"${escapedPath}\/.+\/local_output\.txt"/
+
+        and:
+        def cmd = new CmdModuleRun()
+        def opts = new CliOptions()
+        opts.setQuiet(true)
+        cmd.launcher = Mock(Launcher) {
+            getOptions() >> opts
+            getCliString() >> "nextflow module run ${moduleDir}"
+        }
+        cmd.args = [moduleDir.toString()]
+        cmd.root = tempDir
+        cmd.workDir = tempDir.toString()
+        cmd.outputDir = tempDir.resolve('results').toString()
+        cmd.outputFormat = 'json'
+
+        when:
+        cmd.run()
+        def stdout = capture
+            .toString()
+            .readLines()// remove the log part
+            .findResults { line -> !line.contains('DEBUG') ? line : null }
+            .findResults { line -> !line.contains('INFO') ? line : null }.join(" ")
+
+        then:
+        assert (stdout =~ pattern).find()
+    }
+
+    def 'should fail when path and module do not exist'() {
+        given:
+        def nonExistentPath = tempDir.resolve('does-not-exist').toString()
+        def cmd = new CmdModuleRun()
+        cmd.launcher = Mock(Launcher) {
+            getOptions() >> null
+        }
+        cmd.args = [nonExistentPath]
+        cmd.root = tempDir
+
+        when:
+        cmd.run()
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('Invalid module path')
     }
 
     def 'should fail with no arguments'() {

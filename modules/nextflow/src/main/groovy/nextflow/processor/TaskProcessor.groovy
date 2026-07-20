@@ -62,6 +62,7 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.CachedTaskHandler
 import nextflow.executor.Executor
 import nextflow.executor.StoredTaskHandler
+import nextflow.executor.TaskArrayExecutor
 import nextflow.extension.CH
 import nextflow.extension.DataflowHelper
 import nextflow.file.FileHelper
@@ -75,6 +76,7 @@ import nextflow.script.ProcessConfigV2
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.script.dsl.Types
 import nextflow.script.params.BaseOutParam
 import nextflow.script.params.CmdEvalParam
 import nextflow.script.params.DefaultOutParam
@@ -96,12 +98,13 @@ import nextflow.script.params.ValueOutParam
 import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessTupleInput
 import nextflow.script.types.Record
-import nextflow.script.types.Types
+import nextflow.script.types.Tuple
 import nextflow.trace.TraceRecord
 import nextflow.util.Escape
 import nextflow.processor.hash.TaskHasherFactory
 import nextflow.util.HashBuilder
 import nextflow.util.LockManager
+import nextflow.util.RecordMap
 import nextflow.util.TestOnly
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -297,8 +300,16 @@ class TaskProcessor {
         this.forksCount = maxForks ? new LongAdder() : null
         this.isFair0 = config.getFair()
         final arraySize = config.getArray()
-        this.arrayCollector = arraySize > 0 ? new TaskArrayCollector(this, executor, arraySize) : null
+        this.arrayCollector = createArrayCollector(arraySize)
         log.debug "Creating process '$name': maxForks=${maxForks}; fair=${isFair0}; array=${arraySize}"
+    }
+
+    private TaskArrayCollector createArrayCollector(int arraySize) {
+        if( arraySize > 0 && executor instanceof TaskArrayExecutor )
+            return new TaskArrayCollector(this, executor, arraySize)
+        if( arraySize > 0 )
+            log.warn "Executor '${executor.name}' does not support job arrays -- the array directive will be ignored for process '$name'"
+        return null
     }
 
     /**
@@ -329,6 +340,8 @@ class TaskProcessor {
      * @return The {@link Executor} associated to this processor
      */
     Executor getExecutor() { executor }
+
+    boolean isFusionEnabled() { executor?.isFusionEnabled() ?: false }
 
     /**
      * @return The {@code DataflowOperator} underlying this process
@@ -395,7 +408,7 @@ class TaskProcessor {
     }
 
     protected void checkWarn(String msg, Map opts=null) {
-        if( NF.isStrictMode() )
+        if( NF.isSyntaxParserV2() || NF.isStrictMode() )
             throw new ProcessUnrecoverableException(msg)
         if( opts )
             log.warn1(opts, msg)
@@ -1418,12 +1431,12 @@ class TaskProcessor {
         final resolver = new TaskOutputResolver(declaredOutputs.getFiles(), task)
 
         for( final param : declaredOutputs.getParams() ) {
-            final value = resolver.resolveLazy(param.getLazyValue())
+            final value = resolver.resolve(param.getLazyValue())
             task.setOutput(param, value)
         }
 
         for( final topic : declaredOutputs.getTopics() ) {
-            final value = resolver.resolveLazy(topic.getLazyValue())
+            final value = resolver.resolve(topic.getLazyValue())
             topic.getChannel().bind(value)
         }
 
@@ -1566,7 +1579,12 @@ class TaskProcessor {
     ResourcesBundle getModuleBundle() {
         final script = this.getOwnerScript()
         final meta = ScriptMeta.get(script)
-        return meta?.isModule() ? meta.getModuleBundle() : null
+        // No script meta registered (e.g. processors not tied to a loaded script): nothing to resolve.
+        if( meta == null )
+            return null
+        // Resolve the bundle when the owner script is either an included module,
+        // or the entry script of a `nextflow module run` invocation (see #7087).
+        return (meta.isModule() || session.isModuleRun()) ? meta.getModuleBundle() : null
     }
 
     @Memoized
@@ -1598,7 +1616,11 @@ class TaskProcessor {
         // add the taskConfig environment entries
         if( session.config.env instanceof Map ) {
             session.config.env.each { name, value ->
-                result.put( name, value?.toString() )
+                // skip entries with a null value (e.g. `env(HOST_VAR)` referencing a
+                // host environment variable that is not set) instead of exporting
+                // them as an empty string with a spurious warning -- see #5722
+                if( value != null )
+                    result.put( name, value.toString() )
             }
         }
         else {
@@ -1768,7 +1790,9 @@ class TaskProcessor {
         for( int i = 0; i < declaredInputs.getParams().size(); i++ ) {
             final param = declaredInputs.getParams()[i]
             final value = values[i]
-            if( param instanceof ProcessTupleInput )
+            if( param instanceof ProcessTupleInput && param.getType() == Record.class )
+                assignTaskRecordInput(task, param, value, i)
+            else if( param instanceof ProcessTupleInput && param.getType() == Tuple.class )
                 assignTaskTupleInput(task, param, value, i)
             else
                 assignTaskInput(task, param, value, i)
@@ -1826,9 +1850,24 @@ class TaskProcessor {
     }
 
     @CompileStatic
+    private void assignTaskRecordInput(TaskRun task, ProcessTupleInput param, Object value, int index) {
+        if( value == null && !param.optional ) {
+            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} cannot be null")
+        }
+        if( value !instanceof RecordMap ) {
+            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} expected a record but received: ${value} [${value.class.simpleName}]")
+        }
+        final recordParams = param.getComponents()
+        final record = value as Map
+        for( final recordParam : recordParams ) {
+            assignTaskInput(task, recordParam, record[recordParam.getName()], index)
+        }
+    }
+
+    @CompileStatic
     private void assignTaskTupleInput(TaskRun task, ProcessTupleInput param, Object value, int index) {
         if( value == null && !param.optional ) {
-            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} cannot be null -- append `?` to the type annotation to mark it as nullable")
+            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} cannot be null")
         }
         if( value !instanceof List ) {
             throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} expected a tuple but received: ${value} [${value.class.simpleName}]")

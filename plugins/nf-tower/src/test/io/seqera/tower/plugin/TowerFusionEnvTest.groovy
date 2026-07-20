@@ -29,6 +29,7 @@ import io.seqera.tower.plugin.exception.UnauthorizedException
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.exception.AbortRunException
 import nextflow.script.WorkflowMetadata
 import nextflow.serde.gson.InstantAdapter
 import spock.lang.Shared
@@ -70,6 +71,7 @@ class TowerFusionEnvTest extends Specification {
 
     def 'should return the endpoint from the config'() {
         given: 'a session'
+        SysEnv.push(['TOWER_API_ENDPOINT': 'https://tower.nf', 'TOWER_ACCESS_TOKEN': 'abc123'])
         Global.session = Mock(Session) {
             config >> [
                 tower: [
@@ -83,11 +85,13 @@ class TowerFusionEnvTest extends Specification {
 
         then: 'the endpoint has the expected value'
         provider.endpoint == 'https://tower.nf'
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should return the endpoint from the environment'() {
         setup:
-        SysEnv.push(['TOWER_API_ENDPOINT': 'https://tower.nf'])
+        SysEnv.push(['TOWER_API_ENDPOINT': 'https://tower.nf', 'TOWER_ACCESS_TOKEN': 'abc123'])
         Global.session = Mock(Session) {
             config >> [:]
         }
@@ -103,6 +107,7 @@ class TowerFusionEnvTest extends Specification {
     }
 
     def 'should return the default endpoint'() {
+        SysEnv.push(['TOWER_ACCESS_TOKEN': 'abc123'])
         when: 'session config is empty'
         Global.session = Mock(Session) {
             config >> [
@@ -177,6 +182,9 @@ class TowerFusionEnvTest extends Specification {
 
         then: 'the endpoint has the expected value'
         provider.endpoint == TowerClient.DEF_ENDPOINT_URL
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should return the access token from the config'() {
@@ -249,7 +257,8 @@ class TowerFusionEnvTest extends Specification {
         def provider = new TowerFusionToken()
 
         then: 'the access token has the expected value'
-        provider.accessToken == null
+        def e = thrown(AbortRunException)
+        e.message.contains("Missing Seqera Platform access token")
 
         cleanup:
         SysEnv.pop()
@@ -307,8 +316,8 @@ class TowerFusionEnvTest extends Specification {
                 )
         )
         and:
-        def client = TowerFactory.client(session, SysEnv.get())
-        client.onFlowCreate(session)
+        def observer = new TowerFactory().create(session)[0]
+        observer.onFlowCreate(session)
 
         and: 'a mock endpoint returning a valid token'
         final now = Instant.now()
@@ -336,6 +345,77 @@ class TowerFusionEnvTest extends Specification {
         and: 'the request is correct'
         wireMockServer.verify(1, WireMock.postRequestedFor(WireMock.urlEqualTo("/license/token/"))
             .withHeader('Authorization', WireMock.equalTo("Bearer ${config.accessToken}")))
+    }
+
+    def 'should cache license tokens per product and version'() {
+        given:
+        def config = [
+            enabled    : true,
+            endpoint   : wireMockServer.baseUrl(),
+            accessToken: 'eyJ0aWQiOiAxMTkxN30uNWQ5MGFmYWU2YjhhNmFmY2FlNjVkMTQ4ZDFhM2ZlNzlmMmNjN2I4Mw==',
+            workspaceId: '67890'
+        ]
+        def session = Mock(Session)
+        def meta = new WorkflowMetadata(
+            session: session,
+            projectName: 'the-project-name',
+            repository: 'git://repo.com/foo')
+        session.getConfig() >> [ tower: config ]
+        session.getUniqueId() >> UUID.randomUUID()
+        session.getWorkflowMetadata() >> meta
+        and:
+        Global.session = session
+        def provider = new TowerFusionToken()
+        and: 'a mock endpoint at flow create'
+        wireMockServer.stubFor(
+            WireMock.post(urlEqualTo("/trace/create?workspaceId=${config.workspaceId}"))
+                .willReturn(
+                    WireMock.aResponse()
+                        .withStatus(200)
+                        .withBody('{"message": "", "workflowId": "1234"}')
+                )
+        )
+        and:
+        def observer = new TowerFactory().create(session)[0]
+        observer.onFlowCreate(session)
+
+        and: 'the license endpoint returns a distinct token per product'
+        final now = Instant.now()
+        final expirationDate = toJson(now.plus(1, ChronoUnit.DAYS))
+        wireMockServer.stubFor(
+            WireMock.post(urlEqualTo("/license/token/"))
+                .withRequestBody(matchingJsonPath('$.product', equalTo("product-a")))
+                .willReturn(
+                    WireMock.aResponse()
+                        .withStatus(200)
+                        .withHeader('Content-Type', 'application/json')
+                        .withBody('{"signedToken":"token-a", "expiresAt":' + expirationDate + '}')
+                )
+        )
+        wireMockServer.stubFor(
+            WireMock.post(urlEqualTo("/license/token/"))
+                .withRequestBody(matchingJsonPath('$.product', equalTo("product-b")))
+                .willReturn(
+                    WireMock.aResponse()
+                        .withStatus(200)
+                        .withHeader('Content-Type', 'application/json')
+                        .withBody('{"signedToken":"token-b", "expiresAt":' + expirationDate + '}')
+                )
+        )
+
+        when: 'a token is requested for two different products'
+        final tokenA = provider.getLicenseToken('product-a', 'v1')
+        final tokenB = provider.getLicenseToken('product-b', 'v1')
+
+        then: 'each product receives its own token rather than a shared cache entry'
+        tokenA == 'token-a'
+        tokenB == 'token-b'
+
+        and: 'both products reached the license endpoint'
+        wireMockServer.verify(1, WireMock.postRequestedFor(urlEqualTo("/license/token/"))
+            .withRequestBody(matchingJsonPath('$.product', equalTo("product-a"))))
+        wireMockServer.verify(1, WireMock.postRequestedFor(urlEqualTo("/license/token/"))
+            .withRequestBody(matchingJsonPath('$.product', equalTo("product-b"))))
     }
 
     def 'should get a license token with environment'() {
@@ -371,7 +451,7 @@ class TowerFusionEnvTest extends Specification {
                 )
         )
         and:
-        def client = TowerFactory.client(session, SysEnv.get())
+        def client = new TowerFactory().create(session)[0]
         client.onFlowCreate(session)
 
         and: 'a mock endpoint returning a valid token'
@@ -439,7 +519,7 @@ class TowerFusionEnvTest extends Specification {
                 )
         )
         and:
-        def client = TowerFactory.client(session, SysEnv.get())
+        def client = new TowerFactory().create(session)[0]
         client.onFlowCreate(session)
 
         and: 'prepare stubs'
@@ -531,7 +611,7 @@ class TowerFusionEnvTest extends Specification {
                 )
         )
         and:
-        def client = TowerFactory.client(session, SysEnv.get())
+        def client = new TowerFactory().create(session)[0]
         client.onFlowCreate(session)
         and: 'a mock endpoint returning an error'
         wireMockServer.stubFor(

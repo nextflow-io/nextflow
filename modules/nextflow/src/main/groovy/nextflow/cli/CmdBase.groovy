@@ -30,6 +30,8 @@ abstract class CmdBase implements Runnable {
 
     abstract String getName()
 
+    List<String> getAliases() { Collections.emptyList() }
+
     protected List<String> getUnknownOptions(){ return this.unknownOptions }
 
     void setUnknownOptions(List<String> options){ this.unknownOptions = options }

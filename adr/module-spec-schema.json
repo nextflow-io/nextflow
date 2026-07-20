@@ -75,13 +75,6 @@
         "$ref": "#/$defs/structuredParameter"
       }
     },
-    "params": {
-      "type": "array",
-      "description": "Module parameter specifications",
-      "items": {
-        "$ref": "#/$defs/paramSpec"
-      }
-    },
     "output": {
       "type": "array",
       "description": "Outputs of the module",
@@ -202,20 +195,17 @@
       ]
     },
     "structuredParameter": {
-      "type": "array",
-      "items": {
-        "oneOf": [
-          {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/paramSpec"
+        },
+        {
+          "type": "array",
+          "items": {
             "$ref": "#/$defs/paramSpec"
-          },
-          {
-            "type": "array",
-            "items": {
-              "$ref": "#/$defs/paramSpec"
-            }
           }
-        ]
-      }
+        }
+      ]
     },
     "paramSpec": {
       "type": "object",
@@ -274,7 +264,7 @@
           "uniqueItems": true
         }
       },
-      "required": ["name", "type", "description"]
+      "required": ["type", "description"]
     }
   },
   "allOf": [
@@ -316,49 +306,38 @@
       "input": [
         [
           {
-            "meta": {
-              "type": "map",
-              "description": "Groovy Map containing sample information"
-            }
+            "name": "meta",
+            "type": "map",
+            "description": "Groovy Map containing sample information"
           },
           {
-            "reads": {
-              "type": "file",
-              "description": "Input FastQ files",
-              "ontologies": []
-            }
+            "name": "reads",
+            "type": "file",
+            "description": "Input FastQ files",
+            "ontologies": []
           }
         ]
       ],
-      "output": {
-        "html": [
-          [
-            {
-              "meta": {
-                "type": "map",
-                "description": "Sample information"
-              }
-            },
-            {
-              "*.html": {
-                "type": "file",
-                "description": "FastQC report",
-                "pattern": "*_{fastqc.html}",
-                "ontologies": []
-              }
-            }
-          ]
-        ],
-        "versions": [
+      "output": [
+        [
           {
-            "versions.yml": {
-              "type": "file",
-              "description": "File containing software versions",
-              "pattern": "versions.yml"
-            }
+            "type": "map",
+            "description": "Sample information"
+          },
+          {
+            "type": "file",
+            "description": "FastQC report",
+            "pattern": "*_{fastqc.html}",
+            "ontologies": []
           }
-        ]
-      },
+        ],
+        {
+          "name": "versions",
+          "type": "file",
+          "description": "File containing software versions",
+          "pattern": "versions.yml"
+        }
+      ],
       "authors": ["@drpatelh", "@ewels"],
       "maintainers": ["@drpatelh", "@ewels"]
     },
@@ -389,79 +368,49 @@
           }
         }
       ],
-      "params": [
-        {
-          "name": "batch_size",
-          "type": "integer",
-          "description": "Process INT input bases in each batch",
-          "example": 100000000
-        },
-        {
-          "name": "use_soft_clipping",
-          "type": "boolean",
-          "description": "Use soft clipping for supplementary alignments"
-        },
-        {
-          "name": "output_format",
-          "type": "string",
-          "description": "Output format (sam, bam, or cram)"
-        }
-      ],
       "input": [
         [
           {
-            "meta": {
-              "type": "map",
-              "description": "Sample metadata map"
-            }
+            "name": "meta",
+            "type": "map",
+            "description": "Sample metadata map"
           },
           {
-            "reads": {
-              "type": "file",
-              "description": "Input FastQ files",
-              "ontologies": [
-                { "edam": "http://edamontology.org/format_1930" }
-              ]
-            }
+            "name": "reads",
+            "type": "file",
+            "description": "Input FastQ files",
+            "ontologies": [
+              { "edam": "http://edamontology.org/format_1930" }
+            ]
           }
         ],
         {
-          "index": {
-            "type": "directory",
-            "description": "BWA index directory"
-          }
+          "name": "index",
+          "type": "directory",
+          "description": "BWA index directory"
         }
       ],
-      "output": {
-        "bam": [
-          [
-            {
-              "meta": {
-                "type": "map",
-                "description": "Sample metadata"
-              }
-            },
-            {
-              "*.bam": {
-                "type": "file",
-                "description": "Aligned BAM file",
-                "pattern": "*.bam",
-                "ontologies": [
-                  { "edam": "http://edamontology.org/format_2572" }
-                ]
-              }
-            }
-          ]
-        ],
-        "versions": [
+      "output": [
+        [
           {
-            "versions.yml": {
-              "type": "file",
-              "description": "Software versions"
-            }
+            "type": "map",
+            "description": "Sample metadata"
+          },
+          {
+            "type": "file",
+            "description": "Aligned BAM file",
+            "pattern": "*.bam",
+            "ontologies": [
+              { "edam": "http://edamontology.org/format_2572" }
+            ]
           }
-        ]
-      }
+        ],
+        {
+          "name": "versions",
+          "type": "file",
+          "description": "Software versions"
+        }
+      ]
     }
   ]
 }

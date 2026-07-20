@@ -207,12 +207,13 @@ nxf_sleep() {
 }
 
 nxf_date() {
-    local ts=$(date +%s%3N);
-    if [[ ${#ts} == 10 ]]; then echo ${ts}000
-    elif [[ $ts == *%3N ]]; then echo ${ts/\%3N/000}
-    elif [[ $ts == *3N ]]; then echo ${ts/3N/000}
-    elif [[ ${#ts} == 13 ]]; then echo $ts
-    else echo "Unexpected timestamp value: $ts"; exit 1
+    local s n
+    read s n < <(date '+%s %N')
+    if [[ $n =~ ^[0-9]+$ ]]; then
+        n=$(printf '%09d' "$((10#$n))")
+        echo "$((s * 1000 + 10#${n:0:3}))"
+    else
+        echo "$((s * 1000))"
     fi
 }
 

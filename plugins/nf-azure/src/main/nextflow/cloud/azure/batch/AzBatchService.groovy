@@ -24,19 +24,20 @@ import java.time.Duration
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeoutException
-import java.util.function.Predicate
+import dev.failsafe.function.CheckedPredicate
 
 import com.azure.compute.batch.BatchClient
 import com.azure.compute.batch.BatchClientBuilder
+import com.azure.compute.batch.models.AllocationState
 import com.azure.compute.batch.models.AutoUserScope
 import com.azure.compute.batch.models.AutoUserSpecification
 import com.azure.compute.batch.models.AzureFileShareConfiguration
-import com.azure.compute.batch.models.BatchJobCreateContent
+import com.azure.compute.batch.models.BatchJobCreateParameters
 import com.azure.compute.batch.models.BatchJobConstraints
-import com.azure.compute.batch.models.BatchJobUpdateContent
+import com.azure.compute.batch.models.BatchJobUpdateParameters
 import com.azure.compute.batch.models.BatchNodeFillType
 import com.azure.compute.batch.models.BatchPool
-import com.azure.compute.batch.models.BatchPoolCreateContent
+import com.azure.compute.batch.models.BatchPoolCreateParameters
 import com.azure.compute.batch.models.BatchPoolInfo
 import com.azure.compute.batch.models.BatchPoolState
 import com.azure.compute.batch.models.BatchStartTask
@@ -44,16 +45,16 @@ import com.azure.compute.batch.models.BatchSupportedImage
 import com.azure.compute.batch.models.BatchTask
 import com.azure.compute.batch.models.BatchTaskConstraints
 import com.azure.compute.batch.models.BatchTaskContainerSettings
-import com.azure.compute.batch.models.BatchTaskCreateContent
+import com.azure.compute.batch.models.BatchTaskCreateParameters
 import com.azure.compute.batch.models.BatchTaskSchedulingPolicy
-import com.azure.compute.batch.models.ContainerConfiguration
+import com.azure.compute.batch.models.BatchContainerConfiguration
 import com.azure.compute.batch.models.ContainerRegistryReference
 import com.azure.compute.batch.models.ContainerType
 import com.azure.compute.batch.models.ElevationLevel
-import com.azure.compute.batch.models.MetadataItem
+import com.azure.compute.batch.models.BatchMetadataItem
 import com.azure.compute.batch.models.MountConfiguration
 import com.azure.compute.batch.models.NetworkConfiguration
-import com.azure.compute.batch.models.OnAllBatchTasksComplete
+import com.azure.compute.batch.models.BatchAllTasksCompleteMode
 import com.azure.compute.batch.models.OutputFile
 import com.azure.compute.batch.models.OutputFileBlobContainerDestination
 import com.azure.compute.batch.models.OutputFileDestination
@@ -445,7 +446,7 @@ class AzBatchService implements Closeable {
         log.debug "[AZURE BATCH] created job for ${task.processor.name} with pool ${poolId}"
         // create a batch job
         final jobId = makeJobId(task)
-        final content = new BatchJobCreateContent(jobId, new BatchPoolInfo(poolId: poolId))
+        final content = new BatchJobCreateParameters(jobId, new BatchPoolInfo(poolId: poolId))
 
         if (config.batch().jobMaxWallClockTime) {
             content.setConstraints(createJobConstraints(config.batch().jobMaxWallClockTime))
@@ -455,12 +456,12 @@ class AzBatchService implements Closeable {
         return jobId
     }
 
-    protected void applyCreateJob(BatchJobCreateContent content) {
+    protected void applyCreateJob(BatchJobCreateParameters content) {
         final maxRetries = config.batch().maxJobQuotaRetries
         final retryDelay = config.batch().jobQuotaRetryDelay
 
         // define retry condition for job quota errors
-        final cond = new Predicate<? extends Throwable>() {
+        final cond = new CheckedPredicate<? extends Throwable>() {
             @Override
             boolean test(Throwable t) {
                 return t instanceof HttpResponseException && isJobQuotaError((HttpResponseException) t)
@@ -492,7 +493,7 @@ class AzBatchService implements Closeable {
         }
     }
 
-    protected void createJobRequest(BatchJobCreateContent content) {
+    protected void createJobRequest(BatchJobCreateParameters content) {
         apply(() -> client.createJob(content))
     }
 
@@ -518,7 +519,7 @@ class AzBatchService implements Closeable {
         return key.size()>MAX_LEN ? key.substring(0,MAX_LEN) : key
     }
 
-    protected BatchTaskCreateContent createTask(String poolId, String jobId, TaskRun task) {
+    protected BatchTaskCreateParameters createTask(String poolId, String jobId, TaskRun task) {
         assert poolId, 'Missing Azure Batch poolId argument'
         assert jobId, 'Missing Azure Batch jobId argument'
         assert task, 'Missing Azure Batch task argument'
@@ -594,7 +595,7 @@ class AzBatchService implements Closeable {
         final constraints = taskConstraints(task)
 
         log.trace "[AZURE BATCH] Submitting task: $taskId, cpus=${task.config.getCpus()}, mem=${task.config.getMemory()?:'-'}, slots: $slots"
-        return new BatchTaskCreateContent(taskId, cmd)
+        return new BatchTaskCreateParameters(taskId, cmd)
                 .setUserIdentity(userIdentity(pool.opts.privileged, pool.opts.runAs, AutoUserScope.TASK))
                 .setContainerSettings(containerOpts)
                 .setResourceFiles(resourceFileUrls(task, sas))
@@ -696,7 +697,9 @@ class AzBatchService implements Closeable {
     protected BatchSupportedImage getImage(AzPoolOpts opts) {
         PagedIterable<BatchSupportedImage> images = apply(() -> client.listSupportedImages())
 
+        final available = new ArrayList<String>()
         for (BatchSupportedImage it : images) {
+            available.add("${it.imageReference.publisher}:${it.imageReference.offer}:${it.nodeAgentSkuId}:${it.osType}:${it.verificationType}".toString())
             if( !it.nodeAgentSkuId.equalsIgnoreCase(opts.sku) )
                 continue
             if( it.osType != opts.osType )
@@ -709,6 +712,7 @@ class AzBatchService implements Closeable {
                 return it
         }
 
+        log.debug "[AZURE BATCH] No VM image matching sku=$opts.sku; publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; verification type=$opts.verification - supported images: $available"
         throw new IllegalStateException("Cannot find a matching VM image with publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; verification type=$opts.verification")
     }
 
@@ -754,16 +758,42 @@ class AzBatchService implements Closeable {
         return new AzVmPoolSpec(poolId: poolId, vmType: vmType, opts: opts, metadata: metadata)
     }
 
+    /**
+     * Resize error codes that are transient/retryable. A pool carrying only these
+     * errors can recover on the next resize, so submission should not be blocked.
+     * Compared case-insensitively.
+     */
+    private static final List<String> TRANSIENT_RESIZE_ERROR_CODES = ['AllocationTimedout', 'AllocationFailed']
+
     protected void checkPool(BatchPool pool, AzVmPoolSpec spec) {
         if( pool.state != BatchPoolState.ACTIVE ) {
             throw new IllegalStateException("Azure Batch pool '${pool.id}' not in active state")
         }
         else if ( pool.resizeErrors && pool.currentDedicatedNodes==0 && pool.currentLowPriorityNodes==0 ) {
-            throw new IllegalStateException("Azure Batch pool '${pool.id}' has resize errors and no agents are available")
+            // Azure Batch persists the last resize error on the pool and only clears it on the next resize.
+            // For a steady autoscale pool carrying only transient errors, submitting the task is what triggers
+            // a fresh resize (which clears the stale error), so warn and proceed instead of blocking recovery.
+            if( isRecoverableResizeError(pool) ) {
+                log.warn "Azure Batch pool '${pool.id}' has recoverable resize errors and no agents; submitting task to trigger a fresh resize - ${pool.resizeErrors*.code}"
+            }
+            else {
+                throw new IllegalStateException("Azure Batch pool '${pool.id}' has resize errors and no agents are available")
+            }
         }
         if( pool.taskSlotsPerNode != spec.vmType.numberOfCores ) {
             throw new IllegalStateException("Azure Batch pool '${pool.id}' slots per node does not match the VM num cores (slots: ${pool.taskSlotsPerNode}, cores: ${spec.vmType.numberOfCores})")
         }
+    }
+
+    /**
+     * A resize error is recoverable when the pool can clear it on its own: it is autoscale-enabled
+     * (so a new task will trigger a fresh resize), it is steady (not currently resizing/stopping),
+     * and every recorded resize error is a transient/retryable code.
+     */
+    protected boolean isRecoverableResizeError(BatchPool pool) {
+        return pool.isEnableAutoScale() &&
+                pool.allocationState == AllocationState.STEADY &&
+                pool.resizeErrors?.every { err -> TRANSIENT_RESIZE_ERROR_CODES.any { it.equalsIgnoreCase(err.code) } }
     }
 
     protected void checkPoolId(String poolId) {
@@ -840,7 +870,7 @@ class AzBatchService implements Closeable {
          *
          * https://github.com/MicrosoftDocs/azure-docs/blob/master/articles/batch/batch-docker-container-workloads.md#:~:text=Run%20container%20applications%20on%20Azure,compatible%20containers%20on%20the%20nodes.
          */
-        final containerConfig = new ContainerConfiguration(ContainerType.DOCKER_COMPATIBLE)
+        final containerConfig = new BatchContainerConfiguration(ContainerType.DOCKER_COMPATIBLE)
         final registryOpts = config.registry()
 
         if( registryOpts && registryOpts.isConfigured() ) {
@@ -891,7 +921,7 @@ class AzBatchService implements Closeable {
 
     protected void createPool(AzVmPoolSpec spec) {
 
-        final poolParams = new BatchPoolCreateContent(spec.poolId, spec.vmType.name)
+        final poolParams = new BatchPoolCreateParameters(spec.poolId, spec.vmType.name)
                 .setVirtualMachineConfiguration(poolVmConfig(spec.opts))
                 // same as the number of cores
                 // maximum of 256, which is the limit on Azure Batch
@@ -906,7 +936,7 @@ class AzBatchService implements Closeable {
         // resource labels
         if( spec.metadata ) {
             final metadata = spec.metadata.collect { name, value ->
-                new MetadataItem(name, value)
+                new BatchMetadataItem(name, value)
             }
             poolParams.setMetadata(metadata)
         }
@@ -1036,8 +1066,8 @@ class AzBatchService implements Closeable {
                 final job = apply(() -> client.getJob(jobId))
                 final poolInfo = job.poolInfo
 
-                final jobParameter = new BatchJobUpdateContent()
-                        .setOnAllTasksComplete(OnAllBatchTasksComplete.TERMINATE_JOB)
+                final jobParameter = new BatchJobUpdateParameters()
+                        .setAllTasksCompleteMode(BatchAllTasksCompleteMode.TERMINATE_JOB)
                         .setPoolInfo(poolInfo)
 
                 apply(() -> client.updateJob(jobId, jobParameter))
@@ -1056,7 +1086,7 @@ class AzBatchService implements Closeable {
         for( String jobId : allJobIds.values() ) {
             try {
                 log.trace "Deleting Azure job ${jobId}"
-                apply(() -> client.deleteJob(jobId))
+                apply(() -> client.beginDeleteJob(jobId).waitForCompletion())
             }
             catch (Exception e) {
                 log.warn "Unable to delete Azure Batch job ${jobId} - Reason: ${e.message ?: e}"
@@ -1067,7 +1097,7 @@ class AzBatchService implements Closeable {
     protected void cleanupPools() {
         for( String poolId : allPools.keySet() ) {
             try {
-                apply(() -> client.deletePool(poolId))
+                apply(() -> client.beginDeletePool(poolId).waitForCompletion())
             }
             catch (Exception e) {
                 log.warn "Unable to delete Azure Batch pool ${poolId} - Reason: ${e.message ?: e}"
@@ -1111,12 +1141,12 @@ class AzBatchService implements Closeable {
      * @param cond A predicate that determines when a retry should be triggered
      * @return The {@link RetryPolicy} instance
      */
-    protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
+    protected <T> RetryPolicy<T> retryPolicy(CheckedPredicate<? extends Throwable> cond) {
         final cfg = config.retryConfig()
         final listener = new EventListener<ExecutionAttemptedEvent<T>>() {
             @Override
             void accept(ExecutionAttemptedEvent<T> event) throws Throwable {
-                log.debug("Azure TooManyRequests response error - attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}")
+                log.debug("Azure TooManyRequests response error - attempt: ${event.attemptCount}; reason: ${event.lastException.message}")
             }
         }
         return RetryPolicy.<T>builder()
@@ -1139,7 +1169,7 @@ class AzBatchService implements Closeable {
      */
     protected <T> T apply(CheckedSupplier<T> action) {
         // define the retry condition
-        final cond = new Predicate<? extends Throwable>() {
+        final cond = new CheckedPredicate<? extends Throwable>() {
             @Override
             boolean test(Throwable t) {
                 if( t instanceof HttpResponseException && t.response.statusCode in RETRY_CODES )

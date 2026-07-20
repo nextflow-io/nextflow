@@ -108,6 +108,15 @@ abstract class AbstractTaskHasher implements TaskHasher {
             keys.addAll(binEntries)
         }
 
+        // add the fingerprint of the module resources bundle (e.g. module binaries)
+        // since these files are not staged individually like the project bin dir
+        final moduleBundle = session.enableModuleBinaries() ? processor.getModuleBundle() : null
+        if( moduleBundle && moduleBundle.hasEntries() ) {
+            final fingerprint = moduleBundle.fingerprint()
+            log.trace "Task: ${task.processor.name} > Adding module bundle fingerprint: ${fingerprint}"
+            keys.add(fingerprint)
+        }
+
         // add environment modules (`module` directive)
         final modules = task.getConfig().getModule()
         if( modules ) {

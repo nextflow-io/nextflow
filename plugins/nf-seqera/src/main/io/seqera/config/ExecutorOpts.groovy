@@ -33,6 +33,12 @@ import nextflow.util.Duration
 @CompileStatic
 class ExecutorOpts implements ConfigScope {
 
+    static final Set<String> VALID_AUTO_LABELS = Collections.unmodifiableSet(new LinkedHashSet<>([
+        'projectName', 'userName', 'runName', 'sessionId', 'resume',
+        'revision', 'commitId', 'repository', 'manifestName',
+        'runtimeVersion', 'workflowId', 'workspaceId', 'computeEnvId'
+    ]))
+
     final RetryOpts retryPolicy
 
     @ConfigOption
@@ -50,6 +56,15 @@ class ExecutorOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        Execution strategy within the chosen provider.
+        Narrows compute-environment selection when a provider offers multiple strategies
+        (e.g. AWS supports `ecs` and `vm`). When omitted, the provider's canonical default
+        strategy is used (AWS → `ecs`).
+    """)
+    final String strategy
+
+    @ConfigOption
+    @Description("""
         The AWS region for task execution (default: `eu-central-1`).
     """)
     final String region
@@ -62,7 +77,7 @@ class ExecutorOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The interval for batching task submissions (default: `1 sec`).
+        The interval for batching task submissions (default: `5 sec`).
     """)
     final Duration batchFlushInterval
 
@@ -73,22 +88,22 @@ class ExecutorOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        Custom labels to apply to AWS resources for cost tracking and resource organization.
-        Labels are propagated to ECS tasks, capacity providers, and EC2 instances.
+        Automatically attach workflow metadata labels (with the `nextflow.io/` and
+        `seqera.io/platform/` prefixes) to the session. Accepts:
+          - `true`: include all available metadata labels
+          - `false` (default): disable
+          - a list or comma-separated string of short names: e.g.
+            `['runName', 'projectName']` or `'runName,projectName'`
+        Valid names: `projectName`, `userName`, `runName`, `sessionId`, `resume`,
+        `revision`, `commitId`, `repository`, `manifestName`, `runtimeVersion`,
+        `workflowId`, `workspaceId`, `computeEnvId`.
     """)
-    final Map<String, String> labels
-
-    @ConfigOption
-    @Description("""
-        When `true`, automatically adds workflow metadata labels (e.g. project name,
-        run name, session ID) with the `nextflow.io/` prefix to the session (default: `false`).
-    """)
-    final boolean autoLabels
+    final Set<String> autoLabels
 
     @ConfigOption
     @Description("""
         The resource prediction model to use for estimating task resource requirements
-        based on historical execution metrics. Supported values: `qr/v1` (quantile regression).
+        based on historical execution metrics. Supported values: `qr/v1`, `qr/v2` (quantile regression).
         When not set, no resource estimation is applied.
     """)
     final String predictionModel
@@ -99,6 +114,31 @@ class ExecutorOpts implements ConfigScope {
         These are merged with the Fusion environment variables, with Fusion variables taking precedence.
     """)
     final Map<String, String> taskEnvironment
+
+    @ConfigOption
+    @Description("""
+        Backend-specific provider configuration merged into the compute cluster's backend
+        properties (for cluster isolation). When omitted, the backend falls back to its
+        environment variable configuration.
+    """)
+    final Map<String, String> providerConfig
+
+    @ConfigOption
+    @Description("""
+        The Seqera Platform compute environment ID. When specified, the scheduler resolves
+        the compute environment directly by this ID instead of listing all workspace CEs.
+        Used as a fallback when the workflow launch does not include a CE reference.
+    """)
+    final String computeEnvId
+
+    @ConfigOption
+    @Description("""
+        Enable on-demand interactive shell access (e.g. SSH) to this run's task containers
+        (VM and local backends). When `true`, a running task can be reached with
+        `sched task ssh <task-id>` (or a plain `ssh <task-id>@<scheduler>`), and the
+        connection survives task completion. Default: `false`.
+    """)
+    final boolean shellEnabled
 
     /* required by config scope -- do not remove */
 
@@ -111,30 +151,25 @@ class ExecutorOpts implements ConfigScope {
             throw new IllegalArgumentException("Missing Seqera endpoint - make sure to specify 'seqera.executor.endpoint' settings")
 
         this.provider = opts.provider as String
-        this.region = opts.region as String ?: "eu-central-1"
+        this.strategy = opts.strategy as String
+        this.region = opts.region as String
         this.keyPairName = opts.keyPairName as String
         this.batchFlushInterval = opts.batchFlushInterval
             ? Duration.of(opts.batchFlushInterval as String)
-            : Duration.of('1 sec')
+            : Duration.of('5 sec')
         // machine requirement settings
         this.machineRequirement = new MachineRequirementOpts(opts.machineRequirement as Map ?: Map.of())
-        // labels for cost tracking
-        this.labels = opts.labels as Map<String, String>
-        this.autoLabels = opts.autoLabels as boolean ?: false
+        this.autoLabels = parseAutoLabels(opts.get('autoLabels'))
         // prediction model
-        this.predictionModel = parsePredictionModel(opts.predictionModel as String)
+        this.predictionModel = opts.predictionModel as String ?: null
         // custom task environment variables
         this.taskEnvironment = opts.taskEnvironment as Map<String, String>
-    }
-
-    private static final Set<String> VALID_PREDICTION_MODELS = Set.of('qr/v1')
-
-    private static String parsePredictionModel(String value) {
-        if( !value )
-            return null
-        if( !VALID_PREDICTION_MODELS.contains(value) )
-            throw new IllegalArgumentException("Invalid prediction model '${value}'. Supported values: ${VALID_PREDICTION_MODELS.join(', ')}")
-        return value
+        // backend-specific provider configuration
+        this.providerConfig = opts.providerConfig as Map<String, String>
+        // compute environment ID
+        this.computeEnvId = opts.computeEnvId as String
+        // on-demand shell access to task containers (default false)
+        this.shellEnabled = opts.shellEnabled as boolean
     }
 
     RetryOpts retryOpts() {
@@ -147,6 +182,10 @@ class ExecutorOpts implements ConfigScope {
 
     String getProvider() {
         return provider
+    }
+
+    String getStrategy() {
+        return strategy
     }
 
     String getRegion() {
@@ -165,12 +204,26 @@ class ExecutorOpts implements ConfigScope {
         return machineRequirement
     }
 
-    Map<String, String> getLabels() {
-        return labels
+    Set<String> getAutoLabels() {
+        return autoLabels
     }
 
-    boolean getAutoLabels() {
-        return autoLabels
+    protected static Set<String> parseAutoLabels(Object value) {
+        if( value == null || value == false )
+            return Collections.<String>emptySet()
+        if( value == true )
+            return VALID_AUTO_LABELS
+        List<String> raw
+        if( value instanceof CharSequence )
+            raw = value.toString().tokenize(',').collect { String s -> s.trim() }.findAll { String s -> s }
+        else if( value instanceof List )
+            raw = ((List) value).collect { it?.toString()?.trim() }.findAll { String s -> s } as List<String>
+        else
+            throw new IllegalArgumentException("Invalid 'seqera.executor.autoLabels' value '${value}' - expected true, false, a list, or a comma-separated string")
+        final invalid = raw.findAll { String s -> !(s in VALID_AUTO_LABELS) }
+        if( invalid )
+            throw new IllegalArgumentException("Invalid 'seqera.executor.autoLabels' name(s) ${invalid} - valid names are: ${VALID_AUTO_LABELS.join(', ')}")
+        return Collections.unmodifiableSet(new LinkedHashSet<>(raw))
     }
 
     String getPredictionModel() {
@@ -179,5 +232,17 @@ class ExecutorOpts implements ConfigScope {
 
     Map<String, String> getTaskEnvironment() {
         return taskEnvironment
+    }
+
+    Map<String, String> getProviderConfig() {
+        return providerConfig
+    }
+
+    String getComputeEnvId() {
+        return computeEnvId
+    }
+
+    boolean getShellEnabled() {
+        return shellEnabled
     }
 }

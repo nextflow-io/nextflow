@@ -22,50 +22,78 @@ import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import nextflow.extension.FilesEx
 import org.codehaus.groovy.runtime.InvokerHelper
+import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.Yaml
 /**
- * Helper converters for {@link DumpOp} operator
+ * Utility functions for printing (dumping) values to standard output.
  *
  * @author : jorge <jorge.aguilera@seqera.io>
  */
 @CompileStatic
 class DumpHelper {
 
-    static def deepConvertToString(value, nullValue = '') {
-        if( value instanceof Collection )
-            value.collect { it -> deepConvertToString(it) }
-
-        else if( value instanceof Map )
-            value.inject([:]) { accum, it ->
-                accum[it.key] = deepConvertToString(it.value)
-                accum
-            }
-
-        else if( value instanceof Path )
-            FilesEx.toUriString((Path)value)
-
-        else if( value == null )
-            nullValue
-
-        else
-            value.toString()
+    /**
+     * Normalize a value as follows:
+     *
+     * - file paths are serialized as URIs
+     * - nulls are serialized using the given null value
+     * - custom objects are serialized with toString()
+     *
+     * @param value
+     * @param nullValue
+     */
+    static Object normalize(Object value, Object nullValue = null) {
+        if( value instanceof Collection ) {
+            return value.collect { it -> normalize(it) }
+        }
+        if( value instanceof Map ) {
+            return value.collectEntries { k, v -> [k, normalize(v)] }
+        }
+        if( value instanceof Path ) {
+            return FilesEx.toUriString(value)
+        }
+        if( value == null ) {
+            return nullValue
+        }
+        return value
     }
 
-    static String prettyPrint(value) {
+    /**
+     * Serialize a value as a pretty-printed string.
+     *
+     * @param value
+     */
+    static String prettyPrint(Object value) {
         if( value instanceof Collection || value instanceof Map || value instanceof Path )
             return prettyPrintJson(value)
         else
             return InvokerHelper.inspect(value)
     }
 
-    static String prettyPrintJson(value) {
-        final converted = deepConvertToString(value)
-        return JsonOutput.prettyPrint(JsonOutput.toJson(converted))
+    /**
+     * Serialize a value to a pretty-printed JSON string.
+     *
+     * @param value
+     */
+    static String prettyPrintJson(Object value) {
+        return JsonOutput.prettyPrint(JsonOutput.toJson(normalize(value)))
     }
 
-    static String prettyPrintYaml(value) {
-        final converted = deepConvertToString(value)
-        return new Yaml().dump(converted)
+    /**
+     * Serialize a value to a pretty-printed YAML string.
+     *
+     * Set `opts.style` to 'block' or 'flow' to optionally control
+     * how arrays and objects are formatted.
+     *
+     * @param opts
+     * @param value
+     */
+    static String prettyPrintYaml(Map opts = [:], Object value) {
+        final dumperOptions = new DumperOptions()
+        if( opts.style )
+            dumperOptions.setDefaultFlowStyle(DumperOptions.FlowStyle.valueOf(opts.style.toString().toUpperCase()))
+        dumperOptions.setSplitLines(false)
+        return new Yaml(dumperOptions).dump(normalize(value))
     }
 
 }

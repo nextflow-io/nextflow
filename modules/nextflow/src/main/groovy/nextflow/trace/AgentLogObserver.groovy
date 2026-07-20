@@ -27,7 +27,7 @@ import nextflow.util.LoggerHelper
 
 /**
  * AI agent-friendly log observer that outputs minimal, structured information
- * to standard error, optimized for AI context windows.
+ * to standard output, optimized for AI context windows.
  *
  * Activated via environment variable {@code NXF_AGENT_MODE=1}.
  *
@@ -220,7 +220,8 @@ class AgentLogObserver implements TraceObserverV2, LogObserver {
         def cached = stats?.cachedCount ?: 0
         def completed = succeeded + failed
 
-        def status = failed > 0 ? 'FAILED' : 'SUCCESS'
+        def hasSessionError = session && !session.isSuccess()
+        def status = (failed > 0 || hasSessionError) ? 'FAILED' : 'SUCCESS'
         printLine("\n[${status}] completed=${completed} failed=${failed} cached=${cached}")
     }
 

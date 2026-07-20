@@ -98,7 +98,7 @@ class CmdModuleSearch extends CmdBase {
 
         try {
             println "Searching for '${query}'..."
-            final results = client.search(query, limit)
+            final results = client.searchModules(query, limit)
 
             if( !results || results.totalResults == 0 || !results.results || results.results.isEmpty() ) {
                 println "No modules found"
@@ -124,7 +124,7 @@ class CmdModuleSearch extends CmdBase {
 
     private void printFormattedResults(SearchModulesResponse response) {
         println ""
-        println "Found ${response.totalResults} module(s):"
+        println "Top ${response.totalResults} matching module(s):"
         println ""
 
         response.results.each { ModuleSearchResult result ->

@@ -114,12 +114,12 @@ class AssetManager implements Closeable {
         build(pipelineName, config)
     }
 
-    AssetManager( String pipelineName, String revision, HubOptions cliOpts = null ) {
+    AssetManager( String pipelineName, String revision, String mainScript = null, HubOptions cliOpts = null ) {
         assert pipelineName
-        // build the object
+        // read the default config file (if available)
         def config = ProviderConfig.getDefault()
         // build the object
-        build(pipelineName, config, cliOpts, revision)
+        build(pipelineName, config, cliOpts, revision, mainScript)
     }
 
     /**
@@ -131,23 +131,24 @@ class AssetManager implements Closeable {
      * @return The {@link AssetManager} object itself
      */
     @PackageScope
-    AssetManager build( String pipelineName, Map config = null, HubOptions cliOpts = null, String revision = null ) {
+    AssetManager build( String pipelineName, Map config = null, HubOptions cliOpts = null, String revision = null, String mainScript = null ) {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
         this.project = resolveName(pipelineName)
+        if( mainScript )
+            this.mainScript = mainScript
 
-        if( !isValidProjectName(this.project) ) {
-            throw new IllegalArgumentException("Not a valid project name: ${this.project}")
-        }
+        if( !isValidProjectName(project) )
+            throw new IllegalArgumentException("Not a valid project name: ${project}")
+
         // Initialize strategy based on environment and repository state
         initStrategy(revision)
         this.hub = checkHubProvider(cliOpts)
         this.provider = createHubProvider(hub)
 
-        if( revision ){
+        if( revision )
             setRevision(revision)
-        }
 
         strategy.setProvider(this.provider)
 
@@ -414,9 +415,12 @@ class AssetManager implements Closeable {
 
         def parts = name.split('/') as List<String>
         def last = parts[-1]
-        if( last.endsWith('.nf') || last.endsWith('.nxf') ) {
+        if( last.endsWith('.nf') ) {
             if( parts.size()==1 )
                 throw new AbortOperationException("Not a valid project name: $name")
+
+            if( mainScript )
+                throw new AbortOperationException("Not a valid project name: $name -- Project name must be a directory when main script is provided")
 
             if( parts.size()==2 ) {
                 mainScript = last
@@ -461,6 +465,9 @@ class AssetManager implements Closeable {
         final isUrl = repository.startsWith('http://') || repository.startsWith('https://') || repository.startsWith('file:/')
         if( !isUrl )
             return null
+
+        if( repository.endsWith('.nf') )
+            throw new AbortOperationException("Repository URL must not end with a script file extension (.nf) -- use `-main-script` to specify the relative script path")
 
         try {
             def url = new GitUrl(repository)
@@ -559,7 +566,7 @@ class AssetManager implements Closeable {
         def mainScript = scriptName ?: getMainScriptName()
         def result = new File(localPath, mainScript)
         if( !result.exists() )
-            throw new AbortOperationException("Missing project main script: $result")
+            throw new AbortOperationException("Missing project main script: ${result.canonicalPath}")
 
         return result
     }
@@ -646,6 +653,13 @@ class AssetManager implements Closeable {
 
     boolean isLocal() {
         return localPath && localPath.exists()
+    }
+
+    /**
+     * @return {@code true} when the SCM source points to a local file-system repository.
+     */
+    boolean isLocalScmSource() {
+        return provider instanceof LocalRepositoryProvider
     }
 
     /**
@@ -1116,7 +1130,7 @@ class AssetManager implements Closeable {
 
         final result = domain ? providerConfigs.find { it -> it.domain == domain } : (ProviderConfig)null
         if( !result && failFast ) {
-            def message = "Can't find any configured provider for git server `$domain` -- Make sure to have specified it in your `scm` file. For details check https://www.nextflow.io/docs/latest/sharing.html#scm-configuration-file"
+            def message = "Can't find any configured provider for git server `$domain` -- Make sure to have specified it in your `scm` file. For details check https://docs.seqera.io/nextflow/sharing#git-configuration"
             throw new AbortOperationException(message)
         }
 

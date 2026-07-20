@@ -246,13 +246,11 @@ processInput
     ;
 
 processRecordInput
-    :   identifier (COLON type)? nls LBRACE
-        nls recordBody?
-        nls RBRACE
+    :   RECORD LPAREN nls nameTypePair (COMMA nls nameTypePair)* COMMA? nls rparen
     ;
 
 processTupleInput
-    :   LPAREN identifier (COMMA identifier)* rparen (COLON type)?
+    :   TUPLE LPAREN nls nameTypePair (COMMA nls nameTypePair)* COMMA? nls rparen
     ;
 
 processStage
@@ -609,6 +607,7 @@ identifier
     |   STAGE
     |   STUB
     |   TOPIC
+    |   TUPLE
     |   WHEN
     |   WORKFLOW
     |   EMIT
@@ -812,6 +811,7 @@ keywords
     |   STAGE
     |   STUB
     |   TOPIC
+    |   TUPLE
     |   WHEN
     |   WORKFLOW
     |   EMIT

@@ -38,53 +38,87 @@ class LogsCheckpoint implements TraceObserverV2 {
     private Map config
     private Thread thread
     private Duration interval
+    private Duration terminateTimeout
     private LogsHandler handler
+    private volatile boolean stopped
+    private final Object lock = new Object()
 
     @Override
     void onFlowCreate(Session session) {
         this.session = session
         this.config = session.config
-        this.handler = new LogsHandler(session, SysEnv.get())
+        this.handler = createHandler()
         this.interval = config.navigate('tower.logs.checkpoint.interval', defaultInterval()) as Duration
+        this.terminateTimeout = config.navigate('tower.logs.checkpoint.terminateTimeout', defaultTerminateTimeout()) as Duration
         thread = Threads.start('tower-logs-checkpoint', this.&run)
+    }
+
+    protected LogsHandler createHandler() {
+        new LogsHandler(session, SysEnv.get())
     }
 
     private String defaultInterval() {
         SysEnv.get('TOWER_LOGS_CHECKPOINT_INTERVAL','90s')
     }
 
+    private String defaultTerminateTimeout() {
+        SysEnv.get('TOWER_LOGS_CHECKPOINT_TERMINATE_TIMEOUT','120s')
+    }
+
     @Override
     void onFlowComplete() {
-        thread.interrupt()
-        thread.join()
+        stop()
     }
 
     @Override
     void onFlowError(TaskEvent event) {
-        thread.interrupt()
-        thread.join()
+        stop()
+    }
+
+    protected void stop() {
+        if( thread == null )
+            return
+        synchronized(lock) {
+            if( stopped )
+                return
+            stopped = true
+            // wake up the checkpoint thread without relying on thread interruption
+            lock.notifyAll()
+        }
+        // wait a bounded amount of time for the thread to terminate; if a saveFiles()
+        // upload is genuinely hung the join times out and the daemon worker is abandoned
+        // so it cannot keep the JVM alive and the run can shut down
+        thread.join(terminateTimeout.toMillis())
+        if( thread.isAlive() )
+            log.warn "Logs checkpoint thread did not terminate within ${terminateTimeout} - abandoning it to allow the run to shut down"
     }
 
     protected void run() {
         log.debug "Starting logs checkpoint thread - interval: ${interval}"
         try {
-            while( !Thread.currentThread().isInterrupted() ) {
-                await(interval)
+            while( !stopped ) {
+                synchronized(lock) {
+                    // the stopped check must stay co-located with wait() under the same
+                    // lock acquisition, otherwise stop() could notify between the check
+                    // and the wait, causing a lost wake-up
+                    if( stopped )
+                        break
+                    // releases the lock and waits until the timeout elapses or stop() notifies
+                    lock.wait(interval.toMillis())
+                }
+                if( stopped )
+                    break
+                // saveFiles() runs outside the lock so a hung upload cannot block stop()
+                // from acquiring the lock to signal shutdown and reach the bounded join
                 handler.saveFiles()
             }
         }
+        catch( InterruptedException e ) {
+            log.debug "Interrupted logs checkpoint thread - cause: ${e.message}"
+            Thread.currentThread().interrupt()
+        }
         finally {
             log.debug "Terminating logs checkpoint thread"
-        }
-    }
-
-    protected void await(Duration interval) {
-        try {
-            Thread.sleep(interval.toMillis())
-        }
-        catch (InterruptedException e) {
-            log.debug "Interrupted logs checkpoint thread"
-            Thread.currentThread().interrupt()
         }
     }
 }

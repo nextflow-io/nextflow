@@ -52,6 +52,7 @@ class Manifest implements ConfigScope {
     """)
     final List<Contributor> contributors
 
+    @Deprecated
     @ConfigOption
     @Description("""
         Git repository default branch (default: `master`).

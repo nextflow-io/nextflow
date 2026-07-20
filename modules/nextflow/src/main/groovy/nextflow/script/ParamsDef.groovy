@@ -26,14 +26,17 @@ import nextflow.Session
 @CompileStatic
 class ParamsDef {
 
+    private Class clazz
+
     private Closure closure
 
-    ParamsDef(Closure closure) {
+    ParamsDef(Class clazz, Closure closure) {
+        this.clazz = clazz
         this.closure = closure
     }
 
     void apply(Session session) {
-        final dsl = new ParamsDsl()
+        final dsl = new ParamsDsl(clazz)
         final cl = (Closure)closure.clone()
         cl.setDelegate(dsl)
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)

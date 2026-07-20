@@ -661,9 +661,37 @@ tools:
 
 #### `input` and `output`
 
-The schema supports both nf-core patterns to ensure backward compatibility:
+The schema supports a simplified syntax for inputs and outputs. Tooling such as the `module` CLI and module registry supports both the module spec and nf-core syntax for backwards compatibility:
 
-**Module Pattern (Tuple-based):**
+**Module Spec:**
+```yaml
+input:
+  - - name: meta
+      type: map
+      description: Sample metadata
+    - name: reads
+      type: file
+      description: Input FastQ files
+      ontologies:
+        - edam: "http://edamontology.org/format_1930"
+  - name: index
+    type: directory
+    description: Reference index
+
+output:
+  - - name: meta
+      type: map
+      description: Sample metadata
+    - name: bam
+      type: file
+      description: Aligned BAM file
+      pattern: "*.bam"
+  - name: versions
+    type: file
+    description: Software versions
+```
+
+**nf-core module (legacy):**
 ```yaml
 input:
   - - meta:
@@ -693,7 +721,7 @@ output:
         description: Software versions
 ```
 
-**Channel Element Properties:**
+**Module Input/Output Properties:**
 
 | Property | Type | Description |
 |----------|------|-------------|
@@ -754,9 +782,9 @@ authors:
 maintainers:
   - "@drpatelh"
 input:
-  # ... unchanged
+  # ... modified as shown above
 output:
-  # ... unchanged
+  # ... modified as shown above
 ```
 
 #### Schema Validation
@@ -814,6 +842,13 @@ authors:
   - "@drpatelh"
 maintainers:
   - "@drpatelh"
+input:
+  - - meta:
+        type: map
+        description: Metadata map
+    - reads:
+        type: file
+        description: List of input FastQ files
 output:
   html:
     - "*.html":
@@ -860,38 +895,36 @@ maintainers:
   - "@maxulysse"
 
 input:
-  - - meta:
-        type: map
-        description: Sample metadata map (e.g., [ id:'sample1', single_end:false ])
-    - reads:
-        type: file
-        description: Input FastQ files
-        ontologies:
-          - edam: "http://edamontology.org/format_1930"
-  - - meta2:
-        type: map
-        description: Reference metadata
-    - index:
-        type: directory
-        description: BWA index directory
-        ontologies:
-          - edam: "http://edamontology.org/data_3210"
+  - - name: meta
+      type: map
+      description: Sample metadata map (e.g., [ id:'sample1', single_end:false ])
+    - name: reads
+      type: file
+      description: Input FastQ files
+      ontologies:
+        - edam: "http://edamontology.org/format_1930"
+  - - name: meta2
+      type: map
+      description: Reference metadata
+    - name: index
+      type: directory
+      description: BWA index directory
+      ontologies:
+        - edam: "http://edamontology.org/data_3210"
 
 output:
-  bam:
-    - - meta:
-          type: map
-          description: Sample metadata
-      - "*.bam":
-          type: file
-          description: Aligned BAM file
-          pattern: "*.bam"
-          ontologies:
-            - edam: "http://edamontology.org/format_2572"
-  versions:
-    - versions.yml:
-        type: file
-        description: Software versions
-        pattern: "versions.yml"
+  - - name: meta
+      type: map
+      description: Sample metadata
+    - name: bam
+      type: file
+      description: Aligned BAM file
+      pattern: "*.bam"
+      ontologies:
+        - edam: "http://edamontology.org/format_2572"
+  - name: versions
+    type: file
+    description: Software versions
+    pattern: "versions.yml"
 ```
 

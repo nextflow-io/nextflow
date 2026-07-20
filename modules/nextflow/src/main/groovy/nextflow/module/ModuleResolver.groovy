@@ -107,7 +107,7 @@ class ModuleResolver {
     }
 
     String resolveVersion(ModuleReference reference) {
-        final version = registryClient.fetchModule(reference.fullName)?.latest?.version
+        final version = registryClient.getModule(reference.fullName)?.latest?.version
         if( !version ) {
             throw new AbortOperationException("Module ${reference} has no published versions")
         }
@@ -123,17 +123,22 @@ class ModuleResolver {
      * @return Path to the installed module's main.nf file
      */
     Path installModule(ModuleReference reference, String version = null, boolean force = false) {
-        if( !version )
-            version = resolveVersion(reference)
-        // Check if already installed
+        // Check if already installed locally before hitting the registry
         if( storage.isInstalled(reference) ) {
             def installed = storage.getInstalledModule(reference)
+
+            // No specific version requested -- use the local module as-is
+            if( !version ) {
+                log.debug "Module ${reference}@${installed.installedVersion} is already installed locally"
+                return installed.mainFile
+            }
+
             if( installed.installedVersion == version ) {
                 log.debug "Module ${reference}@${installed.installedVersion} is already installed (version $version)"
                 return installed.mainFile
             }
 
-            // No desired version, check for local modifications
+            // Version mismatch -- check for local modifications before overwriting
             def integrity = installed.integrity
             if( integrity == ModuleIntegrity.MODIFIED && !force ) {
                 throw new AbortOperationException(
@@ -149,6 +154,8 @@ class ModuleResolver {
             }
         }
 
+        if( !version )
+            version = resolveVersion(reference)
 
         log.info "Installing module ${reference}@${version}..."
 
@@ -156,7 +163,7 @@ class ModuleResolver {
         Path tempFile = Files.createTempFile("nf-module-", ".tgz")
         try {
             // Download and validate integrity using server checksum
-            def downloadUrl = registryClient.downloadModule(reference.fullName, version, tempFile)
+            def downloadUrl = registryClient.downloadModuleRelease(reference.fullName, version, tempFile)
 
             // Install to modules directory (will compute directory checksum for future integrity checks)
             InstalledModule installed = storage.installModule(reference, version, tempFile, downloadUrl)

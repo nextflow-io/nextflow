@@ -108,6 +108,20 @@ class TestUtils {
             .toList()
     }
 
+    /**
+     * Get the list of compiler warnings for a source file.
+     *
+     * @param source
+     */
+    static List<String> getWarnings(SourceUnit source) {
+        final errorCollector = source.getErrorCollector()
+        if( !errorCollector.hasWarnings() )
+            return Collections.emptyList()
+        return errorCollector.getWarnings().stream()
+            .map(w -> w.getMessage())
+            .toList()
+    }
+
     static boolean hasSyntaxErrors(SourceUnit source) {
         return getErrors(source).stream()
             .filter(error -> error instanceof PhaseAware ? error.getPhase() == Phases.SYNTAX : true)

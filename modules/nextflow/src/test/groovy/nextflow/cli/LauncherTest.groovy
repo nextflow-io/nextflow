@@ -87,6 +87,16 @@ class LauncherTest extends Specification {
 
     }
 
+    def 'should resolve plural aliases to singular commands'() {
+
+        expect:
+        new Launcher().parseMainArgs('plugin').command instanceof CmdPlugin
+        new Launcher().parseMainArgs('plugins').command instanceof CmdPlugin
+        new Launcher().parseMainArgs('module').command instanceof CmdModule
+        new Launcher().parseMainArgs('modules').command instanceof CmdModule
+
+    }
+
     def 'should return `pull` command'() {
 
         when:

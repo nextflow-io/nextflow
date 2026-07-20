@@ -48,4 +48,9 @@ class WorkflowRun implements LinSerializable {
      * Resolved Configuration
      */
     Map config
+    /**
+     * Raw metadata
+     */
+    Map metadata
+
 }

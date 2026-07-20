@@ -47,25 +47,36 @@ sourceSets {
 configurations {
     // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
     runtimeClasspath.exclude group: 'org.slf4j', module: 'slf4j-api'
+    testRuntimeClasspath.exclude group: 'io.micronaut', module: 'micronaut-core-bom'
 }
 
 dependencies {
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
-    compileOnly 'org.pf4j:pf4j:3.12.0'
-    api('com.azure:azure-storage-blob:12.33.2') {
+    compileOnly 'org.pf4j:pf4j:3.14.1'
+    api('com.azure:azure-storage-blob:12.33.4') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
-    api('com.azure:azure-compute-batch:1.0.0-beta.3') {
+    api('com.azure:azure-compute-batch:1.0.0-beta.6') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
         exclude group: 'com.google.guava', module: 'guava'
     }
-    api('com.azure:azure-identity:1.18.2') {
+    api('com.azure:azure-identity:1.18.3') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
 
+    // Force patched jackson on the 2.18 line (required by the Azure SDK) to address
+    // GHSA-72hv-8253-57qq (jackson-core DoS) and the jackson-databind deserialization
+    // advisories fixed in 2.18.9 (PolymorphicTypeValidator and @JsonView/@JsonIgnore bypasses)
+    runtimeOnly 'com.fasterxml.jackson.core:jackson-core:2.18.9'
+    runtimeOnly 'com.fasterxml.jackson.core:jackson-databind:2.18.9'
+
+    // Pin azure-core-http-netty to a version that brings patched netty
+    // (4.1.135.Final) to address GHSA-3qp7-7mw8-wx86 / CVE-2026-44249
+    implementation 'com.azure:azure-core-http-netty:1.16.5'
+
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.apache.groovy:groovy:4.0.30"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.30"
+    testImplementation "org.apache.groovy:groovy:4.0.31"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.31"
 }

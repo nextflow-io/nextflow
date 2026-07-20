@@ -22,6 +22,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.exception.AbortOperationException
 import nextflow.file.http.XAuthProvider
 import nextflow.file.http.XAuthRegistry
 import nextflow.trace.TraceObserverFactoryV2
@@ -44,31 +45,27 @@ class TowerFactory implements TraceObserverFactoryV2 {
 
     @Override
     Collection<TraceObserverV2> create(Session session) {
-        final client = client(session, env)
-        if( !client )
+        final config = new TowerConfig(session.config.tower as Map ?: Collections.emptyMap(), env)
+        if( !isEnabled(session, config, env) )
             return Collections.emptyList()
-
+        // make sure the access token is available before the client is created, otherwise the
+        // missing-token error is thrown deep in the TowerClient constructor as an AbortRunException
+        // during session init and gets swallowed silently by the launcher
+        checkAccessToken(config)
         final result = new ArrayList<TraceObserverV2>(1)
-        // create the tower client
-        result.add(client)
+        // create the tower observer
+        result.add( new TowerObserver(session, client(session, env), config.workspaceId, env))
         // create the logs checkpoint
         if( session.cloudCachePath )
             result.add( new LogsCheckpoint() )
         return result
     }
 
-    static protected TowerClient createTowerClient0(Session session, TowerConfig config, Map env) {
+    @Memoized
+    static TowerClient client(Session session, Map env) {
         final opts = session.config.tower as Map ?: Collections.emptyMap()
-
-        Duration requestInterval = opts.requestInterval as Duration
-        Duration aliveInterval = opts.aliveInterval as Duration
-
-        final tower = new TowerClient(session, config).withEnvironment(env)
-        if( aliveInterval )
-            tower.aliveInterval = aliveInterval
-        if( requestInterval )
-            tower.requestInterval = requestInterval
-
+        final config = new TowerConfig(opts, env)
+        final tower = new TowerClient(config)
         // register auth provider
         // note: this is needed to authorize access to resources via XFileSystemProvider used by NF
         // it's not needed by the tower client logic
@@ -83,17 +80,25 @@ class TowerFactory implements TraceObserverFactoryV2 {
         return new TowerXAuth(endpoint, accessToken, refreshToken)
     }
 
-    @Memoized
-    static TowerClient client(Session session, Map<String,String> env) {
-        final opts = session.config.tower as Map ?: Collections.emptyMap()
-        final config = new TowerConfig(opts, env)
-        Boolean isEnabled = config.enabled || env.get('TOWER_WORKFLOW_ID') || session.config.navigate('fusion.enabled') as Boolean
-        return isEnabled
-            ? createTowerClient0(session, config, env)
-            : null
+    private static boolean isEnabled(Session session, TowerConfig config, Map<String,String> env) {
+        return config.enabled || env.get('TOWER_WORKFLOW_ID') || session.config.navigate('fusion.enabled') as Boolean
+    }
+
+    /**
+     * Verify a Seqera Platform access token is available before creating the observer.
+     *
+     * The Tower observer can be enabled solely because Fusion is enabled (see {@link #isEnabled}).
+     * Checking the token here and raising an {@link AbortOperationException} reports an actionable
+     * message to the user, instead of the silent {@code AbortRunException} thrown later by the
+     * {@link TowerClient} constructor.
+     */
+    protected void checkAccessToken(TowerConfig config) {
+        if( config.accessToken )
+            return
+        throw new AbortOperationException("Seqera Platform access token is required -- Provide it via the `tower.accessToken` config setting or the `TOWER_ACCESS_TOKEN` environment variable")
     }
 
     static TowerClient client() {
-        client(Global.session as Session, SysEnv.get())
+        return client(Global.session as Session, SysEnv.get())
     }
 }

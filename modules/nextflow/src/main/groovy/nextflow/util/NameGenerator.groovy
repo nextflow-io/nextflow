@@ -152,9 +152,6 @@ class NameGenerator {
             // André-Marie Ampère - French physicist and mathematician, one of the founders of the science of classical electromagnetism. https://en.wikipedia.org/wiki/Andr%C3%A9-Marie_Amp%C3%A8re
             "ampere",
 
-            // Piero Angela - Italian television host, science journalist, writer, and pianist. He is best known as the creator and presenter of broadcasting science outreach programmes modelled on BBC and David Attenborough documentaries, and also for his scientific journalism published in numerous publications. https://en.wikipedia.org/wiki/Piero_Angela
-            "angela",
-
             // Archimedes was a physicist, engineer and mathematician who invented too many things to list them here. https://en.wikipedia.org/wiki/Archimedes
             "archimedes",
 
@@ -355,6 +352,9 @@ class NameGenerator {
 
             // Richard Feynman was a key contributor to quantum mechanics and particle physics. https://en.wikipedia.org/wiki/Richard_Feynman
             "feynman",
+
+            // Leonardo Fibonacci, also known as Leonardo of Pisa, was an Italian mathematician who introduced the Hindu-Arabic numeral system to the Western world and is best known for the Fibonacci sequence. https://en.wikipedia.org/wiki/Fibonacci
+            "fibonacci",
 
             // Jean-Baptiste Joseph Fourier - a French mathematician and physicist, best known for initiating the investigation of Fourier series and their applications to problems of heat transfer and vibrations, is also generally credited with the discovery of the greenhouse effect. https://en.wikipedia.org/wiki/Joseph_Fourier
             "fourier",
@@ -640,6 +640,9 @@ class NameGenerator {
             // Ambroise Paré invented modern surgery. https://en.wikipedia.org/wiki/Ambroise_Par%C3%A9
             "pare",
 
+            // Vilfredo Pareto - Italian civil engineer, sociologist, and economist, known for the Pareto principle (the 80/20 rule) and the concept of Pareto efficiency. https://en.wikipedia.org/wiki/Vilfredo_Pareto
+            "pareto",
+
             // Louis Pasteur discovered vaccination, fermentation and pasteurization. https://en.wikipedia.org/wiki/Louis_Pasteur.
             "pasteur",
 
@@ -678,6 +681,9 @@ class NameGenerator {
 
             // Claudius Ptolemy - a Greco-Egyptian writer of Alexandria, known as a mathematician, astronomer, geographer, astrologer, and poet of a single epigram in the Greek Anthology. https://en.wikipedia.org/wiki/Ptolemy
             "ptolemy",
+
+            // Gopalasamudram Narayana Ramachandran - Indian physicist and biophysicist best known for the Ramachandran plot, a fundamental tool in structural biology for assessing protein backbone conformations. https://en.wikipedia.org/wiki/G._N._Ramachandran
+            "ramachandran",
 
             // C. V. Raman - Indian physicist who won the Nobel Prize in 1930 for proposing the Raman effect. https://en.wikipedia.org/wiki/C._V._Raman
             "raman",

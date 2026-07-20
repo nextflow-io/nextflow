@@ -1,5 +1,18 @@
 nf-wave changelog
 ==================
+1.21.1 - 15 Jul 2026
+- Recognize parameterized Map config options and wave.build.compression sub-keys in config validation (#7335) [5b8ce02da]
+
+1.21.0 - 28 May 2026
+- Support fetching local files in `FUSION_CONTAINER_CONFIG_URL` (#7142) [0d1ece8c9]
+- Bump lib-httpx@2.3.0 (#7181) [1c47215a8]
+
+1.20.0 - 25 Apr 2026
+- Add Apple container engine support (#7073) [2f7a3c455]
+
+1.19.1 - 20 Apr 2026
+- Fix resolution of `-with-tower` with `TOWER_API_ENDPOINT` (#7045) [ce962e882]
+
 1.19.0 - 17 Mar 2026
 - Add multi-arch support to arch process directive (#6897) [c7ca36902]
 - Default Fusion to v2.6 for Seqera executor (#6933) [8a7e53957]

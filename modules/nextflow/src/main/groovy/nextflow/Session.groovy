@@ -22,6 +22,7 @@ import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.Consumer
 
 import com.google.common.hash.HashCode
@@ -37,6 +38,7 @@ import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
 import nextflow.conda.CondaConfig
 import nextflow.config.Manifest
+import nextflow.container.AppleContainerConfig
 import nextflow.container.ApptainerConfig
 import nextflow.container.CharliecloudConfig
 import nextflow.container.ContainerConfig
@@ -47,12 +49,14 @@ import nextflow.container.ShifterConfig
 import nextflow.container.SingularityConfig
 import nextflow.dag.DAG
 import nextflow.exception.AbortOperationException
+import nextflow.exception.AbortRunException
 import nextflow.exception.AbortSignalException
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.MissingLibraryException
 import nextflow.exception.ScriptCompilationException
 import nextflow.executor.ExecutorFactory
 import nextflow.extension.CH
+import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FilePorter
 import nextflow.plugin.Plugins
@@ -81,8 +85,7 @@ import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.TaskEvent
 import nextflow.trace.event.WorkflowOutputEvent
 import nextflow.util.Barrier
-import nextflow.util.ConfigHelper
-import nextflow.util.Duration
+import nextflow.util.ClassLoaderFactory
 import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
 import nextflow.util.NameGenerator
@@ -149,6 +152,11 @@ class Session implements ISession {
      * The folder where workflow outputs are stored
      */
     Path outputDir
+
+    /**
+     * Output format for workflow outputs
+     */
+    String outputFormat
 
     /**
      * The folder where tasks temporary files are stored
@@ -270,7 +278,7 @@ class Session implements ISession {
 
     private volatile Throwable error
 
-    private volatile boolean shutdownInitiated
+    private final AtomicBoolean shutdownInitiated = new AtomicBoolean(false)
 
     private Queue<Runnable> shutdownCallbacks = new ConcurrentLinkedQueue<>()
 
@@ -418,6 +426,7 @@ class Session implements ISession {
 
         // -- init output dir
         this.outputDir = FileHelper.toCanonicalPath(config.outputDir ?: 'results')
+        this.outputFormat = config.outputFormat
 
         // -- init work dir
         this.workDir = FileHelper.toCanonicalPath(config.workDir ?: 'work')
@@ -447,7 +456,8 @@ class Session implements ISession {
      */
     Session init( ScriptFile scriptFile, List<String> args=null, Map<String,?> cliParams=null, Map<String,?> configParams=null ) {
 
-        if(!workDir.mkdirs()) throw new AbortOperationException("Cannot create work-dir: $workDir -- Make sure you have write permissions or specify a different directory by using the `-w` command line option")
+        if(!workDir.mkdirs())
+            throw new AbortOperationException("Cannot create work-dir '${FilesEx.toUriString(workDir)}' -- Make sure you have write permissions or specify a different directory by using the `-w` command line option")
         log.debug "Work-dir: ${workDir.toUriString()} [${FileHelper.getPathFsType(workDir)}]"
 
         if( config.bucketDir ) {
@@ -611,21 +621,8 @@ class Session implements ISession {
     ScriptBinding getBinding() { binding }
 
     @Memoized
-    ClassLoader getClassLoader() { getClassLoader0() }
-
-    @PackageScope
-    ClassLoader getClassLoader0() {
-        // extend the class-loader if required
-        final gcl = new GroovyClassLoader()
-        final libraries = ConfigHelper.resolveClassPaths(getLibDir())
-
-        for( Path lib : libraries ) {
-            def path = lib.complete()
-            log.debug "Adding to the classpath library: ${path}"
-            gcl.addClasspath(path.toString())
-        }
-
-        return gcl
+    ClassLoader getClassLoader() {
+        ClassLoaderFactory.create(getLibDir())
     }
 
     Barrier getBarrier() { monitorsBarrier }
@@ -772,15 +769,17 @@ class Session implements ISession {
     }
 
     final protected void shutdown0() {
-        log.trace "Shutdown: $shutdownCallbacks"
-        shutdownInitiated = true
+        // guard against adding shutdown hooks after shutdown, or calling shutdown more than once
+        if( !shutdownInitiated.compareAndSet(false, true) )
+            return
+        log.trace "Invoking ${shutdownCallbacks.size()} shutdown callbacks"
         while( shutdownCallbacks.size() ) {
             final hook = shutdownCallbacks.poll()
             try {
                 hook.run()
             }
             catch( Exception e ) {
-                log.debug "Failed to execute shutdown hook: $hook", e
+                log.debug "Failed to execute shutdown hook: ${hook.class.name}", e
             }
         }
 
@@ -915,6 +914,22 @@ class Session implements ISession {
         NF.isModuleBinariesEnabled()
     }
 
+    /**
+     * Whether the entry script was launched directly as a module via
+     * `nextflow module run`. Used to decide whether the entry script's
+     * `resources/` bundle (and module bin paths) should be picked up
+     * even though the script is not being loaded via `include`.
+     */
+    private volatile boolean moduleRun
+
+    boolean isModuleRun() {
+        return moduleRun
+    }
+
+    void setModuleRun(boolean value) {
+        this.moduleRun = value
+    }
+
     boolean failOnIgnore() {
         config.navigate('workflow.failOnIgnore', false) as boolean
     }
@@ -984,8 +999,8 @@ class Session implements ISession {
             log.warn "Shutdown hook cannot be null\n${ExceptionUtils.getStackTrace(new Exception())}"
             return
         }
-        if( shutdownInitiated )
-            throw new IllegalStateException("Session shutdown already initiated — Hook cannot be added: $hook")
+        if( shutdownInitiated.get() )
+            throw new IllegalStateException("Session shutdown already initiated -- Hook cannot be added: ${hook.class.name}")
         shutdownCallbacks.add(hook)
     }
 
@@ -1119,6 +1134,11 @@ class Session implements ISession {
             try {
                 action.accept(observer)
             }
+            catch (AbortRunException e) {
+                // AbortRunException are forwarded to produce an error in the execution
+                log.error("Abort exception produced when notifying an event - $e.message")
+                throw e
+            }
             catch ( Throwable e ) {
                 log.debug(e.getMessage(), e)
             }
@@ -1197,6 +1217,7 @@ class Session implements ISession {
             new SingularityConfig(config.singularity as Map ?: Collections.emptyMap()),
             new ApptainerConfig(config.apptainer as Map ?: Collections.emptyMap()),
             new CharliecloudConfig(config.charliecloud as Map ?: Collections.emptyMap()),
+            new AppleContainerConfig(config.appleContainer as Map ?: Collections.emptyMap()),
         ] as List<ContainerConfig>
 
         if( engine ) {

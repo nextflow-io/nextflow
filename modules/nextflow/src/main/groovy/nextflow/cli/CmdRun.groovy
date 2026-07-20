@@ -116,6 +116,9 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-o', '-output-dir'], description = 'Directory where workflow outputs are stored')
     String outputDir
 
+    @Parameter(names=['-output-format'], description = 'Output format for printing workflow outputs. Options: `text` (default), `json`, `none`')
+    String outputFormat = 'text'
+
     @Parameter(names=['-w', '-work-dir'], description = 'Directory where intermediate result files are stored')
     String workDir
 
@@ -321,6 +324,9 @@ class CmdRun extends CmdBase implements HubOptions {
         if( offline && latest )
             throw new AbortOperationException("Command line options `-latest` and `-offline` cannot be specified at the same time")
 
+        if( outputFormat !in ['text', 'json', 'none'] )
+            throw new AbortOperationException("Command line option `-output-format` should be either `text`, `json`, or `none`")
+
         checkRunName()
 
         printBanner()
@@ -408,11 +414,12 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.session.agentLog = SysEnv.isAgentMode()
         runner.session.debug = launcher.options.remoteDebug
         runner.session.disableJobsCancellation = getDisableJobsCancellation()
+        runner.session.setModuleRun(isModuleRun())
 
         final isTowerEnabled = config.navigate('tower.enabled') as Boolean
         final isDataEnabled = config.navigate("lineage.enabled") as Boolean
         if( isTowerEnabled || isDataEnabled || log.isTraceEnabled() )
-            runner.session.resolvedConfig = ConfigBuilder.resolveConfig(scriptFile.parent, this)
+            runner.session.resolvedConfig = ConfigBuilder.resolveConfig(scriptFile.parent, this, cliParams)
         // note config files are collected during the build process
         // this line should be after `ConfigBuilder#build`
         runner.session.configFiles = builder.parsedConfigFiles
@@ -463,7 +470,7 @@ class CmdRun extends CmdBase implements HubOptions {
             // Show Nextflow version
             fmt.a(Attribute.INTENSITY_FAINT).a("  ~  ").reset().a("version " + BuildInfo.version).reset()
             fmt.a("\n")
-            AnsiConsole.out.println(fmt.eraseLine())
+            AnsiConsole.err.println(fmt.eraseLine())
         }
         else {
             // Plain header to the console if ANSI is disabled
@@ -484,6 +491,12 @@ class CmdRun extends CmdBase implements HubOptions {
             : scriptFile.getScriptId()?.substring(0,10)
         printLaunchInfo(repo, head, revision)
     }
+
+    /**
+     * @return {@code true} when the entry script is being launched directly as a
+     * module via `nextflow module run`. Overridden by {@link nextflow.cli.module.CmdModuleRun}.
+     */
+    protected boolean isModuleRun() { false }
 
     static void detectModuleBinaryFeature(ConfigMap config) {
         final moduleBinaries = config.navigate('nextflow.enable.moduleBinaries', false)
@@ -521,7 +534,7 @@ class CmdRun extends CmdBase implements HubOptions {
             fmt.fg(Color.CYAN).a("revision: ").reset()
             fmt.fg(Color.CYAN).a(revision).reset()
             fmt.a("\n")
-            AnsiConsole.out().println(fmt.eraseLine())
+            AnsiConsole.err().println(fmt.eraseLine())
         }
         else {
             log.info "${head} [$runName] - revision: ${revision}"
@@ -583,7 +596,7 @@ class CmdRun extends CmdBase implements HubOptions {
          * read from the stdin
          */
         if( pipelineName == '-' ) {
-            def file = tryReadFromStdin()
+            final file = tryReadFromStdin()
             if( !file )
                 throw new AbortOperationException("Cannot access `stdin` stream")
 
@@ -597,7 +610,7 @@ class CmdRun extends CmdBase implements HubOptions {
          * look for a file with the specified pipeline name
          */
         def script = new File(pipelineName)
-        if( script.isDirectory()  ) {
+        if( script.isDirectory() ) {
             script = mainScript ? new File(mainScript) : new AssetManager().setLocalPath(script).getMainScriptFile()
         }
 
@@ -610,23 +623,22 @@ class CmdRun extends CmdBase implements HubOptions {
         /*
          * try to look for a pipeline in the repository
          */
-        try (def manager = new AssetManager(pipelineName, this)) {
-            if( revision )
-                manager.setRevision(revision)
-            def repo = manager.getProjectWithRevision()
+        try( final manager = new AssetManager(pipelineName, revision, mainScript, this) ) {
+            final repo = manager.getProjectWithRevision()
+            final remoteSource = !manager.isLocalScmSource()
 
             boolean checkForUpdate = true
             if( !manager.isRunnable() || latest ) {
-                if( offline )
+                if( offline && remoteSource )
                     throw new AbortOperationException("Unknown project `$repo` -- NOTE: automatic download from remote repositories is disabled")
                 log.info "Pulling $repo ..."
-                def result = manager.download(revision,deep)
+                final result = manager.download(revision,deep)
                 if( result )
                     log.info " $result"
                 checkForUpdate = false
             }
             // Warn if using legacy
-            if( manager.isUsingLegacyStrategy() ){
+            if( manager.isUsingLegacyStrategy() ) {
                 log.warn1 "This Nextflow version supports a new Multi-revision strategy for managing the SCM repositories, " +
                     "but '${repo}' is single-revision legacy strategy - Please consider to update the repository with the 'nextflow pull -migrate' command."
             }
@@ -635,7 +647,7 @@ class CmdRun extends CmdBase implements HubOptions {
                 manager.checkout(revision)
                 manager.updateModules()
                 final scriptFile = manager.getScriptFile(mainScript)
-                if( checkForUpdate && !offline )
+                if( checkForUpdate && !(offline && remoteSource) )
                     manager.checkRemoteStatus(scriptFile.revisionInfo)
                 // return the script file
                 return scriptFile

@@ -17,6 +17,7 @@
 package io.seqera.executor
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import io.seqera.config.SeqeraConfig
 import io.seqera.config.ExecutorOpts
@@ -64,6 +65,10 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     private volatile String runId
 
+    private volatile String workflowId
+
+    private volatile Map<String,String> runResourceLabels = Collections.<String,String>emptyMap()
+
     private SeqeraBatchSubmitter batchSubmitter
 
     @Override
@@ -72,6 +77,15 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         createClient()
     }
 
+    /**
+     * Force the default Fusion client version for the Seqera executor.
+     *
+     * @deprecated The default Fusion version is now {@code 2.6} (see
+     * {@link nextflow.fusion.FusionConfig}), so pinning it here is redundant. To target a
+     * specific Fusion version, set the {@code fusion.targetVersion} config option instead.
+     * This method will be removed in a future release.
+     */
+    @Deprecated
     protected void applyFusionDefaults() {
         final fusionConfig = session.config.fusion as Map
         if( fusionConfig!=null && !fusionConfig.containerConfigUrl ) {
@@ -110,11 +124,16 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
     protected void createRun() {
         final towerConfig = session.config.tower as Map ?: Collections.emptyMap()
         final workflowId = session.workflowMetadata?.platform?.workflowId
+        this.workflowId = workflowId
         final workflowUrl = session.workflowMetadata?.platform?.workflowUrl
+        final workspaceId = PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get()) as Long
+        final computeEnvId = PlatformHelper.getComputeEnvId(towerConfig, SysEnv.get()) ?: seqeraConfig.computeEnvId
+
+        computeRunResourceLabels()
         final labels = new Labels()
         if( seqeraConfig.autoLabels )
-            labels.withWorkflowMetadata(session.workflowMetadata)
-        labels.withUserLabels(seqeraConfig.labels)
+            labels.withWorkflowMetadata(session.workflowMetadata, seqeraConfig.autoLabels)
+        labels.withProcessResourceLabels(runResourceLabels)
         final predictionModel = seqeraConfig.predictionModel ? PredictionModel.fromValue(seqeraConfig.predictionModel) : null
         final pipeline = new PipelineSpec()
                 .workflowId(workflowId)
@@ -122,16 +141,22 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
                 .workDir(session.workDir?.toUriString())
         final request = new CreateRunRequest()
                 .provider(seqeraConfig.provider)
+                .strategy(seqeraConfig.strategy)
                 .region(seqeraConfig.region)
+                .providerConfig(seqeraConfig.providerConfig)
                 .name(session.runName)
                 .machineRequirement(SchemaMapperUtil.toMachineRequirement(seqeraConfig.machineRequirement))
                 .labels(labels.entries)
-                .workspaceId(PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get()) as Long)
+                .workspaceId(workspaceId)
                 .pipeline(pipeline)
                 .predictionModel(predictionModel)
+                .computeEnvId(computeEnvId)
+                .shellEnabled(seqeraConfig.shellEnabled)
         log.debug "[SEQERA] Creating run: ${request}"
         final response = client.createRun(request)
         this.runId = response.getRunId()
+        // publish the scheduler run id so the Tower observer can propagate it to Platform
+        session.workflowMetadata?.platform?.setSchedRunId(runId)
         log.debug "[SEQERA] Run created id: ${runId}; workflowId: '${workflowId}'; workflowUrl: '${workflowUrl}'"
         // Initialize and start batch submitter with error callback to abort on fatal errors
         this.batchSubmitter = new SeqeraBatchSubmitter(
@@ -197,6 +222,41 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     String getRunId() {
         return runId
+    }
+
+    /**
+     * The Platform workflow id for this run, used to build pipeline secret store references
+     * ({@code tower-<workflowId>/<name>}). {@code null} when running without a Platform workflow
+     * (bare scheduler), in which case secret references are not built.
+     */
+    String getWorkflowId() {
+        return workflowId
+    }
+
+    /**
+     * The Seqera executor is secret-native: pipeline secret values are resolved at the compute
+     * edge (the scheduler backend), so Nextflow must not emit the local-store {@code source}
+     * snippet. The task carries only the secret <em>reference</em>, never the value.
+     */
+    @Override
+    boolean isSecretNative() {
+        return true
+    }
+
+    Map<String,String> getRunResourceLabels() {
+        return Collections.unmodifiableMap(runResourceLabels)
+    }
+
+    @PackageScope
+    void computeRunResourceLabels() {
+        final processMap = session.config.process as Map
+        final value = processMap?.get('resourceLabels')
+        if( value instanceof Closure ) {
+            log.debug "Skipping run-level process.resourceLabels: dynamic (closure) values are only resolved per-task"
+            this.runResourceLabels = Collections.<String,String>emptyMap()
+            return
+        }
+        this.runResourceLabels = Labels.toStringMap(value)
     }
 
     SeqeraBatchSubmitter getBatchSubmitter() {

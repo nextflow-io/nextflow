@@ -26,7 +26,6 @@ import nextflow.Global
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
-import nextflow.extension.CombineOp
 import nextflow.processor.TaskProcessor
 import nextflow.script.dsl.ProcessConfigBuilder
 import nextflow.script.params.BaseInParam
@@ -212,11 +211,11 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         if( args.size() != declaredInputs.size() )
             throw new ScriptRuntimeException(missMatchErrMessage(processName, declaredInputs.size(), args.size()))
 
-        // set input channels
+        // set inputs
         for( int i = 0; i < declaredInputs.size(); i++ )
             declaredInputs[i].setChannel(createSourceChannel(args[i]))
 
-        // set output channels
+        // set outputs
         final singleton = declaredInputs.isSingleton()
 
         final feedbackChannels = getFeedbackChannels()

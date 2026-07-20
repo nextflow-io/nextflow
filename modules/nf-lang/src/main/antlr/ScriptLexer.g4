@@ -172,6 +172,10 @@ GStringExprStart
     :   '${' -> pushMode(DEFAULT_MODE)
     ;
 
+GStringUnexpectedChar
+    :   . { require(errorIgnored, "Unexpected character: '" + getText().replace("'", "\\'") + "'", -1, false); }
+    ;
+
 mode TDQ_GSTRING_MODE;
 TdqGStringEnd
     :   TdqStringQuotationMark -> popMode
@@ -187,6 +191,10 @@ TdqGStringText
 
 TdqGStringExprStart
     :   '${' -> pushMode(DEFAULT_MODE)
+    ;
+
+TdqGStringUnexpectedChar
+    :   . { require(errorIgnored, "Unexpected character: '" + getText().replace("'", "\\'") + "'", -1, false); }
     ;
 
 mode DEFAULT_MODE;
@@ -351,6 +359,7 @@ SHELL           : 'shell';
 STAGE           : 'stage';
 STUB            : 'stub';
 TOPIC           : 'topic';
+TUPLE           : 'tuple';
 WHEN            : 'when';
 
 // -- workflow definition

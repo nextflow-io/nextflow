@@ -38,6 +38,14 @@ interface LinStore extends Closeable {
 
     /**
      * Save a lineage entry in the store for in a given key.
+     *
+     * <p>The key is a hierarchical path-like identifier. Examples:
+     * <ul>
+     *   <li>{@code "78ab04"} — a workflow run or task run (hash-based)</li>
+     *   <li>{@code "78ab04#output"} — the output metadata for a workflow or task run</li>
+     *   <li>{@code "78ab04/samples/file1.txt"} — an individual output file</li>
+     * </ul>
+     *
      * @param key Entry key.
      * @param value Entry object.
      */
@@ -45,6 +53,14 @@ interface LinStore extends Closeable {
 
     /**
      * Load an entry for a given Lineage ID key.
+     *
+     * <p>The key is a hierarchical path-like identifier. Examples:
+     * <ul>
+     *   <li>{@code "78ab04"} — a workflow run or task run (hash-based)</li>
+     *   <li>{@code "78ab04#output"} — the output metadata for a workflow or task run</li>
+     *   <li>{@code "78ab04/samples/file1.txt"} — an individual output file</li>
+     * </ul>
+     *
      * @param key LID key.
      * @return entry value, or null if key does not exists
      */

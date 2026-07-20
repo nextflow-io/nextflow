@@ -598,6 +598,87 @@ class AwsBatchTaskHandlerTest extends Specification {
         result.containerProperties.mountPoints[0].readOnly()
         result.containerProperties.volumes[0].host().sourcePath() == '/home/conda'
         result.containerProperties.volumes[0].name() == 'aws-cli'
+        result.consumableResourceProperties == null
+    }
+
+    def 'should create a job definition with consumable resources from hints' () {
+        given: 'hints set through the real DSL → ProcessConfig → TaskConfig path'
+        def process = new ProcessConfig(Mock(BaseScript))
+        new nextflow.script.dsl.ProcessBuilder(process).hints(
+            'awsbatch/consumableResources': ['license-a': 1, 'license-b': 2],
+            foo: 'bar'
+        )
+        def taskConfig = process.createTaskConfig()
+        and:
+        def IMAGE = 'foo/bar:1.0'
+        def JOB_NAME = 'nf-foo-bar-1-0'
+        def task = Mock(TaskRun) {
+            getContainer() >> IMAGE
+            getConfig() >> taskConfig
+        }
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> task
+            fusionEnabled() >> false
+        }
+        handler.@executor = Mock(AwsBatchExecutor)
+
+        when:
+        def result = handler.makeJobDefRequest(task)
+        then:
+        1 * handler.normalizeJobDefinitionName(IMAGE) >> JOB_NAME
+        1 * handler.getAwsOptions() >> new AwsOptions()
+        result.consumableResourceProperties != null
+        result.consumableResourceProperties.consumableResourceList().size() == 2
+        result.consumableResourceProperties.consumableResourceList()[0].consumableResource() == 'license-a'
+        result.consumableResourceProperties.consumableResourceList()[0].quantity() == 1
+        result.consumableResourceProperties.consumableResourceList()[1].consumableResource() == 'license-b'
+        result.consumableResourceProperties.consumableResourceList()[1].quantity() == 2
+    }
+
+    def 'should apply awsbatch/-prefixed consumableResources over unprefixed' () {
+        given:
+        def handler = new AwsBatchTaskHandler()
+
+        when:
+        def result = handler.getConsumableResources([
+            consumableResources: ['legacy': 9],
+            'awsbatch/consumableResources': ['license-a': 1, 'license-b': 2],
+        ])
+        then:
+        result.consumableResourceList().size() == 2
+        result.consumableResourceList()[0].consumableResource() == 'license-a'
+        result.consumableResourceList()[0].quantity() == 1
+        result.consumableResourceList()[1].consumableResource() == 'license-b'
+        result.consumableResourceList()[1].quantity() == 2
+    }
+
+    def 'should return null when hints empty or no consumableResources' () {
+        given:
+        def handler = new AwsBatchTaskHandler()
+
+        expect:
+        handler.getConsumableResources(null) == null
+        handler.getConsumableResources([:]) == null
+        handler.getConsumableResources([foo: 'bar']) == null
+        handler.getConsumableResources([consumableResources: null]) == null
+        handler.getConsumableResources([consumableResources: [:]]) == null
+    }
+
+    def 'should fail with a clear error on invalid consumableResources value' () {
+        given:
+        def handler = new AwsBatchTaskHandler()
+
+        when: 'value is a string instead of a map'
+        handler.getConsumableResources([consumableResources: 'bad-string'])
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("expected a map")
+
+        when: 'quantity is not a number'
+        handler.getConsumableResources([consumableResources: ['license-a': 'not-a-number']])
+        then:
+        def e2 = thrown(IllegalArgumentException)
+        e2.message.contains("quantity must be a number")
     }
 
     def 'should create a fargate job definition' () {
@@ -1112,6 +1193,66 @@ class AwsBatchTaskHandlerTest extends Specification {
         16      | 60000     | 65536
         16      | 100000    | 106496
         16      | 200000    | 122880
+    }
+
+    def 'should round task cpus up to the next valid fargate cpu value' () {
+        given:
+        def task = Mock(TaskRun)
+        task.getName() >> 'ingress:minimap2_alignment (1)'
+        task.getConfig() >> new TaskConfig(memory: '16GB', cpus: 12)
+        and:
+        def handler = Spy(AwsBatchTaskHandler)
+
+        when:
+        def req = handler.newSubmitRequest(task)
+        then:
+        1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
+        1 * handler.maxSpotAttempts() >> 0
+        _ * handler.fusionEnabled() >> false
+        _ * handler.getTask() >> task
+        _ * handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/bin/aws', platformType: 'fargate'])) }
+        1 * handler.getJobQueue(task) >> 'queue1'
+        1 * handler.getJobDefinition(task) >> 'job-def:1'
+        and:
+        noExceptionThrown()
+        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.VCPU }.value() == '16'
+        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.MEMORY }.value() == '32768'
+    }
+
+    @Unroll
+    def 'should normalise fargate cpus' () {
+        given:
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> Mock(TaskRun) { lazyName() >> 'foo' }
+        }
+        expect:
+        handler.normaliseFargateCpus(CPUS) == EXPECTED
+
+        where:
+        CPUS  | EXPECTED
+        1     | 1
+        2     | 2
+        3     | 4
+        4     | 4
+        5     | 8
+        7     | 8
+        8     | 8
+        9     | 16
+        12    | 16
+        16    | 16
+    }
+
+    def 'should throw when fargate cpus exceed the max allowed' () {
+        given:
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> Mock(TaskRun) { lazyName() >> 'foo' }
+        }
+
+        when:
+        handler.normaliseFargateCpus(17)
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        e.message == "Requirement of 17 CPUs is not allowed by Fargate -- Check process with name 'foo'"
     }
 
     @Unroll

@@ -152,6 +152,64 @@ class ScriptAstBuilderTest extends Specification {
         errors[0].getOriginalMessage().contains "Statements cannot be mixed with script declarations"
     }
 
+    def 'should report an error for params block without an entry workflow' () {
+        when:
+        def errors = check(
+            '''\
+            params {
+                greeting: String
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 1
+        errors[0].getOriginalMessage() == "Params block cannot be defined without an entry workflow"
+
+        when:
+        errors = check(
+            '''\
+            params {
+                greeting: String
+            }
+
+            workflow {
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report an error for output block without an entry workflow' () {
+        when:
+        def errors = check(
+            '''\
+            output {
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 1
+        errors[0].getOriginalMessage() == "Output block cannot be defined without an entry workflow"
+
+        when:
+        errors = check(
+            '''\
+            workflow {
+            }
+
+            output {
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
     def 'should report an error for implicit process script section' () {
         when:
         def errors = check(
@@ -268,15 +326,15 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() >= 2
         errors[0].getStartLine() == 3
         errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Typed input declaration is not allowed in legacy process -- set `nextflow.preview.types = true` to use typed processes in this script"
+        errors[0].getOriginalMessage() == "Typed input declaration is not allowed in legacy process -- set `nextflow.enable.types = true` to use typed processes in this script"
         errors[1].getStartLine() == 6
         errors[1].getStartColumn() == 5
-        errors[1].getOriginalMessage() == "Typed output declaration is not allowed in legacy process -- set `nextflow.preview.types = true` to use typed processes in this script"
+        errors[1].getOriginalMessage() == "Typed output declaration is not allowed in legacy process -- set `nextflow.enable.types = true` to use typed processes in this script"
 
         when:
         errors = check(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process hello {
                 input:
@@ -298,7 +356,7 @@ class ScriptAstBuilderTest extends Specification {
         when:
         def errors = check(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process hello {
                 input:
@@ -341,31 +399,11 @@ class ScriptAstBuilderTest extends Specification {
         when:
         def errors = check(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process hello {
                 input:
-                (id): List
-
-                script:
-                ""
-            }
-            '''
-        )
-        then:
-        errors.size() == 1
-        errors[0].getStartLine() == 5
-        errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Process tuple input must have type `Tuple<...>`"
-
-        when:
-        errors = check(
-            '''\
-            nextflow.preview.types = true
-
-            process hello {
-                input:
-                (id): Tuple<String>
+                tuple(id: String)
 
                 script:
                 ""
@@ -381,31 +419,11 @@ class ScriptAstBuilderTest extends Specification {
         when:
         errors = check(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process hello {
                 input:
-                (id, fastq): Tuple<String>
-
-                script:
-                ""
-            }
-            '''
-        )
-        then:
-        errors.size() == 1
-        errors[0].getStartLine() == 5
-        errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Process tuple input type must have 2 type arguments (one for each tuple component)"
-
-        when:
-        errors = check(
-            '''\
-            nextflow.preview.types = true
-
-            process hello {
-                input:
-                (id, fastq): Tuple<String,Path>
+                tuple(id: String, fastq: Path)
 
                 script:
                 ""
@@ -420,57 +438,14 @@ class ScriptAstBuilderTest extends Specification {
         when:
         def errors = check(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process hello {
                 input:
-                sample: Map {
-                    id: String
-                    fastq: Path
-                }
-
-                script:
-                ""
-            }
-            '''
-        )
-        then:
-        errors.size() == 1
-        errors[0].getStartLine() == 5
-        errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Process record input must have type `Record`"
-
-        when:
-        errors = check(
-            '''\
-            nextflow.preview.types = true
-
-            process hello {
-                input:
-                sample: Record {}
-
-                script:
-                ""
-            }
-            '''
-        )
-        then:
-        errors.size() == 1
-        errors[0].getStartLine() == 5
-        errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Missing record body"
-
-        when:
-        errors = check(
-            '''\
-            nextflow.preview.types = true
-
-            process hello {
-                input:
-                sample: Record {
-                    id: String
-                    fastq: Path
-                }
+                record(
+                    id: String,
+                    fastq: Path,
+                )
 
                 script:
                 ""
@@ -485,7 +460,7 @@ class ScriptAstBuilderTest extends Specification {
         when:
         def errors = check(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process hello {
                 topic:
@@ -505,7 +480,7 @@ class ScriptAstBuilderTest extends Specification {
         when:
         errors = check(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process hello {
                 topic:
@@ -546,6 +521,75 @@ class ScriptAstBuilderTest extends Specification {
         errors[0].getStartLine() == 2
         errors[0].getStartColumn() == 5
         errors[0].getOriginalMessage() == "Missing field type"
+    }
+
+    def 'should report an error for an unexpected character in a gstring' () {
+        when:
+        // bare `$` not followed by an identifier or `{` in a triple-quoted gstring
+        def errors = check(
+            '''\
+            """
+            echo "$/"
+            """
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 2
+        errors[0].getStartColumn() == 7
+        errors[0].getOriginalMessage() == "Unexpected character: '\$'"
+
+        when:
+        // bare `$` in a double-quoted gstring
+        errors = check(
+            '''\
+            "abc $/ def"
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 6
+        errors[0].getOriginalMessage() == "Unexpected character: '\$'"
+
+        when:
+        // invalid escape sequence in a gstring (the `\\` matches no rule)
+        errors = check(
+            '''\
+            "abc \\q def"
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 6
+        errors[0].getOriginalMessage() == "Unexpected character: '\\'"
+    }
+
+    def 'should allow escaped and interpolated gstring characters' () {
+        when:
+        // escaped `\\$` renders as a literal `$`
+        def errors = check(
+            '''\
+            """
+            echo "\\$/"
+            """
+            '''
+        )
+        then:
+        errors.size() == 0
+
+        when:
+        // normal `${...}` interpolation
+        errors = check(
+            '''\
+            """
+            echo "${'hello'}"
+            """
+            '''
+        )
+        then:
+        errors.size() == 0
     }
 
 }

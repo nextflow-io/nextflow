@@ -483,11 +483,17 @@ abstract class XFileSystemProvider extends FileSystemProvider {
         if( conn instanceof FtpURLConnection ) {
             return new XFileAttributes(null,-1)
         }
-        if ( conn instanceof HttpURLConnection && conn.getResponseCode() in [200, 301, 302, 307, 308]) {
-            final header = conn.getHeaderFields()
-            return readHttpAttributes(header)
+        if( conn !instanceof HttpURLConnection ) {
+            return null
         }
-        return null
+        try {
+            if( conn.getResponseCode() in [200, 301, 302, 307, 308] )
+                return readHttpAttributes(conn.getHeaderFields())
+            return null
+        }
+        finally {
+            ((HttpURLConnection) conn).disconnect()
+        }
     }
 
     protected XFileAttributes readHttpAttributes(Map<String,List<String>> header) {

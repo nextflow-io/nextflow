@@ -21,8 +21,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 
 import groovy.lang.GroovyClassLoader;
+import nextflow.script.dsl.Types;
 import nextflow.script.parser.ScriptParserPluginFactory;
-import nextflow.script.types.Types;
 import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.messages.WarningMessage;
@@ -37,11 +37,13 @@ public class ScriptParser {
     private Path projectDir;
     private Compiler compiler;
 
-    public ScriptParser(Path projectDir) {
+    public ScriptParser(Path projectDir, GroovyClassLoader classLoader) {
         this.projectDir = projectDir;
-        var config = getConfig();
-        var classLoader = new GroovyClassLoader();
-        this.compiler = new Compiler(config, classLoader);
+        this.compiler = new Compiler(getConfig(), classLoader);
+    }
+
+    public ScriptParser(Path projectDir) {
+        this(projectDir, new GroovyClassLoader());
     }
 
     public ScriptParser() {

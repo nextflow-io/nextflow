@@ -16,7 +16,6 @@
 package nextflow.script.dsl;
 
 import java.util.List;
-import java.util.Map;
 
 import nextflow.script.types.ParamsMap;
 
@@ -35,7 +34,7 @@ public interface EntryWorkflowDsl extends WorkflowDsl {
 
     @Constant("params")
     @Description("""
-        Map of workflow parameters specified in the config file or as command line options.
+        Record of pipeline parameters specified in the config file or on the command line.
     """)
     ParamsMap getParams();
 }
