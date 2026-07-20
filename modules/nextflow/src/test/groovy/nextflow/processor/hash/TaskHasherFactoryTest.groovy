@@ -78,12 +78,32 @@ class TaskHasherFactoryTest extends Specification {
         SysEnv.pop()
     }
 
-    def 'should default to std/v2 when env var not set'() {
+    def 'should create v3 hasher when configured'() {
+        given:
+        def session = Mock(Session) {
+            getHashStrategy() >> TaskHasherFactory.Version.STD_V3
+        }
+        def processor = Mock(TaskProcessor) {
+            getSession() >> session
+        }
+        def task = Mock(TaskRun) {
+            getProcessor() >> processor
+        }
+
+        when:
+        def hasher = TaskHasherFactory.create(task)
+
+        then:
+        hasher instanceof TaskHasherV3
+        hasher.class == TaskHasherV3
+    }
+
+    def 'should default to std/v3 when env var not set'() {
         given:
         SysEnv.push([:])
 
         expect:
-        TaskHasherFactory.Version.DEFAULT() == TaskHasherFactory.Version.STD_V2
+        TaskHasherFactory.Version.DEFAULT() == TaskHasherFactory.Version.STD_V3
 
         cleanup:
         SysEnv.pop()
@@ -93,14 +113,17 @@ class TaskHasherFactoryTest extends Specification {
         expect:
         TaskHasherFactory.Version.STD_V1.value == 'std/v1'
         TaskHasherFactory.Version.STD_V2.value == 'std/v2'
+        TaskHasherFactory.Version.STD_V3.value == 'std/v3'
         TaskHasherFactory.Version.STD_V1.toString() == 'std/v1'
         TaskHasherFactory.Version.STD_V2.toString() == 'std/v2'
+        TaskHasherFactory.Version.STD_V3.toString() == 'std/v3'
     }
 
     def 'should resolve version from string value'() {
         expect:
         TaskHasherFactory.Version.of('std/v1') == TaskHasherFactory.Version.STD_V1
         TaskHasherFactory.Version.of('std/v2') == TaskHasherFactory.Version.STD_V2
+        TaskHasherFactory.Version.of('std/v3') == TaskHasherFactory.Version.STD_V3
     }
 
     def 'should throw on unknown version string'() {

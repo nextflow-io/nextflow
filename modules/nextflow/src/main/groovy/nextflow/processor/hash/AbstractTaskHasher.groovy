@@ -15,12 +15,9 @@
  */
 package nextflow.processor.hash
 
-import java.nio.file.Path
-
 import com.google.common.hash.HashCode
 import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
-import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.UnexpectedException
@@ -59,6 +56,27 @@ abstract class AbstractTaskHasher implements TaskHasher {
 
     @Override
     HashCode compute() {
+        final keys = collectKeys()
+
+        // compute task hash
+        final mode = task.processor.getConfig().getHashMode()
+        final hash = computeHash(keys, mode)
+
+        // log task hash entries if enabled
+        if( session.dumpHashes ) {
+            session.dumpHashes == 'json'
+                ? dumpHashEntriesJson(task, keys, mode, hash)
+                : dumpHashEntriesLegacy(task, keys, mode, hash)
+        }
+
+        return hash
+    }
+
+    /**
+     * Collect the list of values contributing to the task hash. Strategies may
+     * override this to add or remove keys (see {@link TaskHasherV3}).
+     */
+    protected List<Object> collectKeys() {
 
         final keys = new ArrayList<Object>()
 
@@ -101,13 +119,6 @@ abstract class AbstractTaskHasher implements TaskHasher {
             keys.add(vars.entrySet())
         }
 
-        // add bin scripts referenced in the task script
-        final binEntries = getTaskBinEntries(task.source)
-        if( binEntries ) {
-            log.trace "Task: ${task.processor.name} > Adding scripts on project bin path: ${-> binEntries.join('; ')}"
-            keys.addAll(binEntries)
-        }
-
         // add the fingerprint of the module resources bundle (e.g. module binaries)
         // since these files are not staged individually like the project bin dir
         final moduleBundle = session.enableModuleBinaries() ? processor.getModuleBundle() : null
@@ -146,18 +157,7 @@ abstract class AbstractTaskHasher implements TaskHasher {
             keys.add('stub-run')
         }
 
-        // compute task hash
-        final mode = task.processor.getConfig().getHashMode()
-        final hash = computeHash(keys, mode)
-
-        // log task hash entries if enabled
-        if( session.dumpHashes ) {
-            session.dumpHashes == 'json'
-                ? dumpHashEntriesJson(task, keys, mode, hash)
-                : dumpHashEntriesLegacy(task, keys, mode, hash)
-        }
-
-        return hash
+        return keys
     }
 
     /**
@@ -181,11 +181,6 @@ abstract class AbstractTaskHasher implements TaskHasher {
 
     protected Map<String,Object> getTaskGlobalVars() {
         return task.getTaskGlobalVars()
-    }
-
-    @Memoized
-    protected List<Path> getTaskBinEntries(String script) {
-        return task.getTaskBinEntries(script)
     }
 
     private String safeTaskName(TaskRun task) {

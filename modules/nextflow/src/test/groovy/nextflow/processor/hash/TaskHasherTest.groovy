@@ -16,9 +16,11 @@
 
 package nextflow.processor.hash
 
+import java.nio.file.Files
 import java.nio.file.Path
 
 import nextflow.Session
+import nextflow.util.CacheHelper
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
@@ -132,6 +134,48 @@ class TaskHasherTest extends Specification {
         hashA1 == hashA2
         and: 'a different bundle fingerprint invalidates the cache'
         hashA1 != hashB
+    }
+
+    def 'should hash bin entries only in V3' () {
+
+        given: 'a referenced bin script backed by a real file'
+        def tmp = Files.createTempFile('foo', '.sh')
+        tmp.text = 'echo A'
+        and:
+        def session = Mock(Session) {
+            getUniqueId() >> UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c')
+            enableModuleBinaries() >> false
+        }
+        def processor = Mock(TaskProcessor) {
+            getName() >> 'hello'
+            getSession() >> session
+            getConfig() >> Mock(ProcessConfig) { getHashMode() >> CacheHelper.HashMode.STANDARD }
+        }
+        def task = Mock(TaskRun) {
+            getSource() >> 'foo.sh'
+            isContainerEnabled() >> false
+            getConfig() >> Mock(TaskConfig)
+            getProcessor() >> processor
+            getTaskBinEntries('foo.sh') >> [tmp]
+        }
+        and:
+        def v2 = Spy(new TaskHasherV2(task)); v2.getTaskGlobalVars() >> [:]
+        def v3 = Spy(new TaskHasherV3(task)); v3.getTaskGlobalVars() >> [:]
+
+        when: 'the referenced bin script content changes between computations'
+        def v2before = v2.compute()
+        def v3before = v3.compute()
+        tmp.text = 'echo B'
+        def v2after = v2.compute()
+        def v3after = v3.compute()
+
+        then: 'V3 tracks the bin script content'
+        v3before != v3after
+        and: 'V2 ignores bin entries'
+        v2before == v2after
+
+        cleanup:
+        Files.deleteIfExists(tmp)
     }
 
     def 'should compute hash entries for eval outputs'() {

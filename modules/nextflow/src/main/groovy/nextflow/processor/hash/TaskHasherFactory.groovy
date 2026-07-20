@@ -28,7 +28,8 @@ class TaskHasherFactory {
 
     enum Version {
         STD_V1('std/v1'),
-        STD_V2('std/v2')
+        STD_V2('std/v2'),
+        STD_V3('std/v3')
 
         final String value
 
@@ -48,7 +49,7 @@ class TaskHasherFactory {
 
         static Version DEFAULT() {
             final val = SysEnv.get('NXF_TASK_HASH_VER')
-            return val ? of(val) : STD_V2
+            return val ? of(val) : STD_V3
         }
     }
 
@@ -59,6 +60,8 @@ class TaskHasherFactory {
                 return new TaskHasherV1(task)
             case Version.STD_V2:
                 return new TaskHasherV2(task)
+            case Version.STD_V3:
+                return new TaskHasherV3(task)
             default:
                 throw new IllegalArgumentException("Unknown task hasher version: ${version}")
         }
