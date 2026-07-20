@@ -85,7 +85,8 @@ class CmdModuleInstall extends CmdBase {
         def resolver = new ModuleResolver(baseDir, client ?: RegistryClientFactory.forConfig(registryConfig))
 
         try {
-            def installedMainFile = resolver.installModule(reference, version, force)
+            // Install the module together with its transitive requires.modules dependencies
+            def installedMainFile = resolver.installWithDependencies(reference, version, force)
             // Read the installed version from meta.yml to avoid a redundant registry call
             def installedVersion = ModuleSpecFactory.fromYaml(installedMainFile.parent.resolve('meta.yml')).version
 

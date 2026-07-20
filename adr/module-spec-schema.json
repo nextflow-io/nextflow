@@ -9,13 +9,18 @@
       "type": "string",
       "description": "Module name. Can be a simple identifier (e.g., 'fastqc', 'bwa_mem') for local/nf-core modules, or a fully qualified scoped name (e.g., 'nf-core/fastqc', 'myorg/custom') for registry modules.",
       "examples": ["fastqc", "bwa_mem", "nf-core/fastqc", "myorg/salmon-quant"],
-      "pattern": "^([a-z0-9][a-z0-9-]*/)?[a-z][a-z0-9_-]*$"
+      "pattern": "^([a-z0-9][a-z0-9._-]*/)?[a-z][a-z0-9._-]*(/[a-z][a-z0-9._-]*)*$"
     },
     "version": {
       "type": "string",
       "description": "Semantic version of the module (MAJOR.MINOR.PATCH). Required for registry publication",
       "pattern": "^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(-[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?(\\+[0-9A-Za-z-]+(\\.[0-9A-Za-z-]+)*)?$",
       "examples": ["1.0.0", "2.1.3", "1.0.0-beta.1"]
+    },
+    "kind": {
+      "type": "string",
+      "description": "Module kind: 'Process' (standalone process, default when absent) or 'Workflow' (standalone workflow / subworkflow). Metadata only; does not affect storage location.",
+      "enum": ["Process", "Workflow"]
     },
     "description": {
       "type": "string",
@@ -64,6 +69,15 @@
           "description": "Nextflow version constraint using comparison operators",
           "examples": [">=24.04.0", ">=24.04.0,<25.0.0"],
           "pattern": "^[<>=!]+[0-9]+\\.[0-9]+\\.[0-9]+(-[a-zA-Z0-9]+)?(,\\s*[<>=!]+[0-9]+\\.[0-9]+\\.[0-9]+(-[a-zA-Z0-9]+)?)*$"
+        },
+        "modules": {
+          "type": "array",
+          "description": "Direct module dependencies (workflow modules): 'scope/name@<version>' references pinned to an exact semver, including the git-sha pre-release form (e.g. 0.0.0-4e3e10e). Version constraints/ranges are NOT supported — under nested per-module vendoring each dependency is installed at its pinned version in isolation.",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9_/-]*@(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(-[0-9A-Za-z-.]+)?$"
+          },
+          "uniqueItems": true
         }
       },
       "additionalProperties": false

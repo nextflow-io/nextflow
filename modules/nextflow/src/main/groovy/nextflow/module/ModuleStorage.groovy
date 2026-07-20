@@ -79,6 +79,18 @@ class ModuleStorage {
     }
 
     /**
+     * Get a storage rooted at the given module's own directory, so that the
+     * module's vendored dependencies are installed/resolved under its nested
+     * {@code modules/} directory (nested per-module vendoring).
+     *
+     * @param reference the parent module
+     * @return a storage whose base directory is the parent module's directory
+     */
+    ModuleStorage nestedFor(ModuleReference reference) {
+        return new ModuleStorage(getModuleDir(reference))
+    }
+
+    /**
      * Get the module info path for a specific module
      *
      * @param reference The module reference

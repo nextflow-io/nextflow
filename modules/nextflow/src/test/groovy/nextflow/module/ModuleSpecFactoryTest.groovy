@@ -62,6 +62,129 @@ class ModuleSpecFactoryTest extends Specification {
         spec.requires == ['nextflow': '>=24.04.0']
     }
 
+    def 'should load a workflow module spec with kind and requires.modules' () {
+        given:
+        def metaYaml = tempDir.resolve('meta.yml')
+        metaYaml.text = '''\
+            name: nf-core/fastq_align_star
+            version: 0.0.0-4e3e10e
+            kind: Workflow
+            description: Align reads then sort with samtools
+            keywords:
+              - align
+              - star
+            license: MIT
+            requires:
+              nextflow: ">=24.04.0"
+              modules:
+                - nf-core/star/align@>=1.0.0
+                - nf-core/samtools/sort@>=1.2.0,<2.0.0
+            '''.stripIndent()
+
+        when:
+        def spec = ModuleSpecFactory.fromYaml(metaYaml)
+
+        then:
+        spec.name == 'nf-core/fastq_align_star'
+        spec.kind == 'Workflow'
+        spec.isWorkflow()
+        spec.requires == ['nextflow': '>=24.04.0']
+        spec.requiresModules == ['nf-core/star/align@>=1.0.0', 'nf-core/samtools/sort@>=1.2.0,<2.0.0']
+    }
+
+    def 'should default to process kind and empty requiresModules when absent' () {
+        given:
+        def metaYaml = tempDir.resolve('meta.yml')
+        metaYaml.text = '''\
+            name: nf-core/fastqc
+            version: 1.0.0
+            description: FastQC quality control
+            requires:
+              nextflow: ">=24.04.0"
+            '''.stripIndent()
+
+        when:
+        def spec = ModuleSpecFactory.fromYaml(metaYaml)
+
+        then:
+        spec.kind == null
+        !spec.isWorkflow()
+        spec.requiresModules == []
+        spec.requires == ['nextflow': '>=24.04.0']
+    }
+
+    def 'should round-trip kind and requires.modules through asMap' () {
+        given:
+        def spec = new ModuleSpec(
+            name: 'nf-core/fastq_align_star',
+            version: '0.0.0-abc',
+            kind: 'Workflow',
+            description: 'demo',
+            requires: ['nextflow': '>=24.04.0'],
+            requiresModules: ['nf-core/star/align@>=1.0.0']
+        )
+
+        when:
+        def map = spec.asMap()
+
+        then:
+        map['kind'] == 'Workflow'
+        map['requires'] == ['nextflow': '>=24.04.0', 'modules': ['nf-core/star/align@>=1.0.0']]
+    }
+
+    def 'definesWorkflow should return true for a workflow script' () {
+        given:
+        def nf = tempDir.resolve('main.nf')
+        nf.text = '''\
+            workflow FOO {
+                take:
+                ch_in
+                main:
+                ch_out = ch_in
+                emit:
+                ch_out
+            }
+            '''.stripIndent()
+
+        expect:
+        ModuleSpecFactory.definesWorkflow(nf)
+    }
+
+    def 'definesWorkflow should tolerate includes of not-yet-installed modules' () {
+        given:
+        def nf = tempDir.resolve('main.nf')
+        nf.text = '''\
+            include { MAFFT_ALIGN as MAFFT_ALIGN_MODULE } from 'nf-core/mafft/align'
+
+            workflow MAFFT_ALIGN {
+                take:
+                ch_fasta
+                main:
+                MAFFT_ALIGN_MODULE ( ch_fasta )
+                emit:
+                alignment = MAFFT_ALIGN_MODULE.out.fas
+            }
+            '''.stripIndent()
+
+        expect:
+        ModuleSpecFactory.definesWorkflow(nf)
+    }
+
+    def 'definesWorkflow should return false for a process-only script' () {
+        given:
+        def nf = tempDir.resolve('main.nf')
+        nf.text = '''\
+            process FOO {
+                """
+                echo hello
+                """
+            }
+            '''.stripIndent()
+
+        expect:
+        !ModuleSpecFactory.definesWorkflow(nf)
+    }
+
     def 'should fail to load non-existent spec' () {
         given:
         def metaYaml = tempDir.resolve('meta.yml')

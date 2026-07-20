@@ -1,0 +1,151 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package nextflow.module
+
+import java.nio.file.Files
+import java.nio.file.Path
+
+import io.seqera.npr.api.schema.v1.ListModuleReleasesResponse
+import io.seqera.npr.api.schema.v1.Module
+import io.seqera.npr.api.schema.v1.ModuleRelease
+import io.seqera.npr.client.RegistryClient
+import nextflow.exception.AbortOperationException
+import nextflow.util.VersionNumber
+import org.yaml.snakeyaml.Yaml
+import spock.lang.Specification
+import spock.lang.TempDir
+
+/**
+ * Tests for nested transitive dependency vendoring in
+ * {@link ModuleResolver#installWithDependencies} (ADR v2, PR #7342).
+ *
+ * @author Jorge Ejarque <jorge.ejarque@seqera.io>
+ */
+class ModuleResolverDependencyTest extends Specification {
+
+    @TempDir
+    Path tempDir
+
+    // module universe: fullName -> ( version -> requires.modules list )
+    private Map<String, Map<String, List<String>>> universe = [:]
+
+    private void module(String name, String version, List<String> requires = []) {
+        universe.computeIfAbsent(name, { [:] }).put(version, requires)
+    }
+
+    private void buildBundle(String name, String version, List<String> requires, Path dest) {
+        final dir = Files.createTempDirectory('mod')
+        dir.resolve('main.nf').text = "workflow FOO {\n}\n"
+        final meta = [name: name, version: version, kind: 'Workflow', description: "test module ${name}".toString(),
+                      requires: [nextflow: '>=24.04.0']]
+        if( requires )
+            meta.requires.modules = requires
+        dir.resolve('meta.yml').text = new Yaml().dump(meta)
+        ModuleStorage.createBundle(dir, dest)
+    }
+
+    private RegistryClient mockClient() {
+        final client = Mock(RegistryClient)
+        client.listModuleReleases(_) >> { String n ->
+            final resp = new ListModuleReleasesResponse()
+            resp.releases = universe.getOrDefault(n, [:]).keySet().collect { v -> new ModuleRelease().version(v) }
+            return resp
+        }
+        client.getModule(_) >> { String n ->
+            final versions = new ArrayList<String>(universe.getOrDefault(n, [:]).keySet())
+            final latest = versions.max { a, b -> new VersionNumber(a) <=> new VersionNumber(b) }
+            return new Module().latest(new ModuleRelease().version(latest))
+        }
+        client.downloadModuleRelease(_, _, _) >> { String n, String v, Path dest ->
+            buildBundle(n, v, universe[n][v], dest)
+            return "oci://${n}:${v}"
+        }
+        return client
+    }
+
+    private boolean installedAt(String relDir) {
+        return Files.exists(tempDir.resolve(relDir).resolve('main.nf'))
+    }
+
+    private String versionAt(String relDir) {
+        return ModuleSpecFactory.fromYaml(tempDir.resolve(relDir).resolve('meta.yml')).version
+    }
+
+    def 'should install a module and vendor its dependencies under its own nested modules/ dir' () {
+        given:
+        module('nf-core/aln', '1.0.0', ['nf-core/samtools/sort@1.0.0'])
+        module('nf-core/samtools/sort', '1.0.0')
+        def resolver = new ModuleResolver(tempDir, mockClient())
+
+        when:
+        resolver.installWithDependencies(ModuleReference.parse('nf-core/aln'), '1.0.0')
+
+        then:
+        installedAt('modules/nf-core/aln')
+        // dependency is vendored under the module's OWN nested modules/ directory
+        installedAt('modules/nf-core/aln/modules/nf-core/samtools/sort')
+    }
+
+    def 'should vendor a shared dependency independently per consumer (duplication, no flattening)' () {
+        given:
+        module('nf-core/top', '1.0.0', ['nf-core/a@1.0.0', 'nf-core/b@1.0.0'])
+        module('nf-core/a', '1.0.0', ['nf-core/c@1.0.0'])
+        module('nf-core/b', '1.0.0', ['nf-core/c@2.0.0'])  // different version -- no conflict under nested model
+        module('nf-core/c', '1.0.0')
+        module('nf-core/c', '2.0.0')
+        def resolver = new ModuleResolver(tempDir, mockClient())
+
+        when:
+        resolver.installWithDependencies(ModuleReference.parse('nf-core/top'), '1.0.0')
+
+        then:
+        // c is vendored twice -- once under a, once under b -- at each pinned version
+        versionAt('modules/nf-core/top/modules/nf-core/a/modules/nf-core/c') == '1.0.0'
+        versionAt('modules/nf-core/top/modules/nf-core/b/modules/nf-core/c') == '2.0.0'
+    }
+
+    def 'should detect a dependency cycle' () {
+        given:
+        module('nf-core/a', '1.0.0', ['nf-core/b@1.0.0'])
+        module('nf-core/b', '1.0.0', ['nf-core/a@1.0.0'])
+        def resolver = new ModuleResolver(tempDir, mockClient())
+
+        when:
+        resolver.installWithDependencies(ModuleReference.parse('nf-core/a'), '1.0.0')
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('cycle')
+    }
+
+    def 'resolve with autoInstall installs a workflow module and its nested deps' () {
+        given:
+        module('nf-core/mafft_align', '0.0.0-test001', ['nf-core/mafft/align@0.0.0-test001'])
+        module('nf-core/mafft/align', '0.0.0-test001')
+        def resolver = new ModuleResolver(tempDir, mockClient())
+
+        when:
+        // this is the include-resolution path (autoInstall = true, version = null)
+        def main = resolver.resolve(ModuleReference.parse('nf-core/mafft_align'), null, true)
+
+        then:
+        installedAt('modules/nf-core/mafft_align')
+        installedAt('modules/nf-core/mafft_align/modules/nf-core/mafft/align')
+        main.toString().endsWith('modules/nf-core/mafft_align/main.nf')
+    }
+
+}

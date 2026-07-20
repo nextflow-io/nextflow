@@ -43,6 +43,7 @@ class ModuleSpecFactory {
     private static final List<String> MODULE_SPEC_FIELDS = [
         'name',
         'version',
+        'kind',
         'description',
         'keywords',
         'license',
@@ -85,30 +86,22 @@ class ModuleSpecFactory {
         // create initial module spec
         final spec = new ModuleSpec()
         spec.version = opts.version as String ?: oldSpec.version
+        spec.kind = oldSpec.kind
         spec.description = opts.description as String ?: oldSpec.description
         spec.keywords = oldSpec.keywords
         spec.license = opts.license as String ?: oldSpec.license
         spec.authors = opts.authors as List<String> ?: oldSpec.authors
         spec.maintainers = oldSpec.maintainers
         spec.requires = oldSpec.requires
+        spec.requiresModules = oldSpec.requiresModules
         spec.tools = oldSpec.tools
         spec._passthrough = oldSpec._passthrough
 
-        // load script
-        final parser = new ScriptParser()
-        final sourceUnit = parser.parse(path.toFile())
-        parser.analyze()
-
-        final scriptNode = sourceUnit.getAST()
-        if( scriptNode !instanceof ScriptNode )
-            throw new AbortOperationException("Error parsing module script -- run `nextflow lint ${path}` to check for errors")
-
-        final errors = sourceUnit.getErrorCollector().getErrors()
-        if( errors != null && !errors.isEmpty() )
-            throw new AbortOperationException("Error parsing module script -- run `nextflow lint ${path}` to check for errors")
+        // load and parse the module script
+        final scriptNode = parseScript(path)
 
         // get process definition in script
-        final processes = ((ScriptNode) scriptNode).getProcesses()
+        final processes = scriptNode.getProcesses()
         if( processes.isEmpty() )
             throw new AbortOperationException("Module script does not define any processes: ${path}")
         if( processes.size() > 1 )
@@ -140,6 +133,39 @@ class ModuleSpecFactory {
     }
 
     /**
+     * Parse a module script and return its AST root, failing on parse errors.
+     *
+     * @param path    the module script
+     * @param analyze whether to run semantic analysis (include resolution etc.); disable it when
+     *                only the syntactic structure is needed, so that includes of not-yet-installed
+     *                modules do not cause a failure
+     */
+    private static ScriptNode parseScript(Path path, boolean analyze = true) {
+        final parser = new ScriptParser()
+        final sourceUnit = parser.parse(path.toFile())
+        if( analyze )
+            parser.analyze()
+
+        final scriptNode = sourceUnit.getAST()
+        if( scriptNode !instanceof ScriptNode )
+            throw new AbortOperationException("Error parsing module script -- run `nextflow lint ${path}` to check for errors")
+
+        final errors = sourceUnit.getErrorCollector().getErrors()
+        if( errors != null && !errors.isEmpty() )
+            throw new AbortOperationException("Error parsing module script -- run `nextflow lint ${path}` to check for errors")
+
+        return (ScriptNode) scriptNode
+    }
+
+    /**
+     * @return true if the given module script defines at least one workflow. Parsing is
+     * syntactic only, so a workflow that includes not-yet-installed modules still validates.
+     */
+    static boolean definesWorkflow(Path path) {
+        return !parseScript(path, false).getWorkflows().isEmpty()
+    }
+
+    /**
      * Load a module spec from a yaml file
      *
      * @param path
@@ -155,12 +181,13 @@ class ModuleSpecFactory {
             final spec = new ModuleSpec()
             spec.name = data.name as String
             spec.version = data.version as String
+            spec.kind = data.kind as String
             spec.description = data.description as String
             spec.keywords = data.keywords as List<String> ?: []
             spec.license = data.license as String
             spec.authors = data.authors as List<String> ?: []
             spec.maintainers = data.maintainers as List<String> ?: []
-            spec.requires = data.requires as Map<String, String> ?: [:]
+            parseRequires(data.requires, spec)
             spec.tools = data.tools as List<Map> ?: []
 
             final inputs = data.input
@@ -195,6 +222,39 @@ class ModuleSpecFactory {
         catch( Exception e ) {
             throw new AbortOperationException("Failed to parse module spec: ${path}", e)
         }
+    }
+
+    /**
+     * Parse the `requires` block, separating the transitive module dependency
+     * list (`requires.modules`) from scalar constraints (e.g. `requires.nextflow`).
+     *
+     * @param requires the raw `requires` value from the parsed yaml
+     * @param spec the module spec to populate
+     */
+    private static void parseRequires(Object requires, ModuleSpec spec) {
+        if( requires == null ) {
+            spec.requires = [:]
+            spec.requiresModules = []
+            return
+        }
+        if( requires !instanceof Map )
+            throw new Exception("invalid spec requires")
+        final reqMap = requires as Map<String, Object>
+        final mods = reqMap.get('modules')
+        if( mods instanceof List )
+            spec.requiresModules = mods.collect { it as String }
+        else if( mods != null )
+            throw new Exception("invalid spec requires.modules")
+        else
+            spec.requiresModules = []
+        final scalar = new LinkedHashMap<String, String>()
+        for( final entry : reqMap.entrySet() ) {
+            if( entry.key == 'modules' )
+                continue
+            if( entry.value != null )
+                scalar[entry.key as String] = entry.value as String
+        }
+        spec.requires = scalar
     }
 
     /**

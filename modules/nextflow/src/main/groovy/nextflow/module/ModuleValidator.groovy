@@ -59,16 +59,25 @@ class ModuleValidator {
         if( errors )
             return errors
 
-        // Level 3: validate module input/output spec against process definition
-        final scriptPath = moduleDir.resolve("main.nf")
-        final sourceSpec = ModuleSpecFactory.fromScript(scriptPath)
-        errors.addAll(validateInputsOutputs(spec, sourceSpec))
+        // Level 3: validate the module script against its kind
+        final scriptPath = moduleDir.resolve(Const.DEFAULT_MAIN_FILE_NAME)
+        if( spec.isWorkflow() ) {
+            // a workflow module's interface is defined by its take:/emit: sections and is not
+            // duplicated in meta.yml, so only require that the script defines a workflow
+            if( !ModuleSpecFactory.definesWorkflow(scriptPath) )
+                errors << "Workflow module '${spec.name}' must define a workflow in ${Const.DEFAULT_MAIN_FILE_NAME}".toString()
+        }
+        else {
+            final sourceSpec = ModuleSpecFactory.fromScript(scriptPath)
+            errors.addAll(validateInputsOutputs(spec, sourceSpec))
+        }
 
         return errors
     }
 
     static List<String> validate(Path moduleDir) {
-        return validate(moduleDir, ModuleSchemaValidator.DEFAULT_SCHEMA_URL)
+        final manifest = moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
+        return validate(moduleDir, ModuleSchemaValidator.resolveSchemaLocation(manifest, null))
     }
 
     /**

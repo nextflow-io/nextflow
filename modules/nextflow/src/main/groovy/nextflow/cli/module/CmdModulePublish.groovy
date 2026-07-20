@@ -27,6 +27,7 @@ import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleChecksum
 import nextflow.module.ModuleInfo
+import nextflow.module.ModuleSchemaValidator
 import nextflow.module.ModuleSpec
 import nextflow.module.ModuleSpecFactory
 import nextflow.module.ModuleReference
@@ -54,6 +55,9 @@ class CmdModulePublish extends CmdBase {
 
     @Parameter(names = ["-registry"], description = "Target registry URL.")
     String registryUrl
+
+    @Parameter(names = ["-schema"], description = "URL or local path of the JSON schema used to validate meta.yml")
+    String schema
 
     @Parameter(description = "Module directory path or scope/name")
     List<String> args
@@ -83,7 +87,9 @@ class CmdModulePublish extends CmdBase {
         log.info "Publishing module from: ${moduleDir}"
 
         // Step 1: Validate module structure and spec
-        def validationErrors = ModuleValidator.validate(moduleDir)
+        def manifestPath = moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
+        def schemaLocation = ModuleSchemaValidator.resolveSchemaLocation(manifestPath, schema)
+        def validationErrors = ModuleValidator.validate(moduleDir, schemaLocation)
         if (!validationErrors.isEmpty()) {
             throw new AbortOperationException(
                 "Module validation failed:\n" + validationErrors.collect { "  - ${it}" }.join('\n')
@@ -91,7 +97,6 @@ class CmdModulePublish extends CmdBase {
         }
 
         // Step 2: Load spec for publish metadata
-        def manifestPath = moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
         def spec = ModuleSpecFactory.fromYaml(manifestPath)
 
         log.info "Module validated: ${spec.name}@${spec.version}"

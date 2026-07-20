@@ -181,7 +181,11 @@ class IncludeDef {
     Path resolveRemoteModulePath(String moduleName) {
         // Use SPI to get the remote module resolver implementation
         def resolver = RemoteModuleResolverProvider.getInstance()
-        return resolver.resolve(moduleName, session.baseDir)
+        // Resolve relative to the including file's directory (context-relative) so that a
+        // workflow module's own dependencies are found under its nested `modules/` directory
+        // (nested vendoring, ADR v2). For the top-level script this is the project base dir.
+        final base = getOwnerPath()?.getParent() ?: session.baseDir
+        return resolver.resolve(moduleName, base)
     }
 
     @PackageScope

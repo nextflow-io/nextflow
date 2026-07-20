@@ -19,6 +19,7 @@ package nextflow.module
 import java.nio.file.Files
 import java.nio.file.Path
 
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import spock.lang.Specification
 import spock.lang.TempDir
@@ -163,5 +164,51 @@ class ModuleSchemaValidatorTest extends Specification {
         then:
         def e = thrown(AbortOperationException)
         e.message.contains('Cannot determine JSON Schema draft')
+    }
+
+    def 'resolveSchemaLocation: explicit value wins over env, meta and default' () {
+        given:
+        def meta = writeMeta('name: x\n$schema: /from/meta.json\n')
+        SysEnv.push([(ModuleSchemaValidator.SCHEMA_ENV_VAR): '/from/env.json'])
+
+        when:
+        def loc = ModuleSchemaValidator.resolveSchemaLocation(meta, '/explicit.json')
+
+        then:
+        loc == '/explicit.json'
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'resolveSchemaLocation: env var wins over meta $schema and default' () {
+        given:
+        def meta = writeMeta('name: x\n$schema: /from/meta.json\n')
+        SysEnv.push([(ModuleSchemaValidator.SCHEMA_ENV_VAR): '/from/env.json'])
+
+        when:
+        def loc = ModuleSchemaValidator.resolveSchemaLocation(meta, null)
+
+        then:
+        loc == '/from/env.json'
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'resolveSchemaLocation: meta $schema used when no explicit or env override' () {
+        given:
+        def meta = writeMeta('name: x\n$schema: /from/meta.json\n')
+
+        expect:
+        ModuleSchemaValidator.resolveSchemaLocation(meta, null) == '/from/meta.json'
+    }
+
+    def 'resolveSchemaLocation: falls back to the default schema url' () {
+        given:
+        def meta = writeMeta('name: x\n')
+
+        expect:
+        ModuleSchemaValidator.resolveSchemaLocation(meta, null) == ModuleSchemaValidator.DEFAULT_SCHEMA_URL
     }
 }
