@@ -7,7 +7,7 @@ description: Annotate workflow outputs in Nextflow using type annotations in the
 
 <AddedInVersion version="25.10" />
 
-Workflow outputs can use type annotations:
+Typed outputs let you declare the type of each top-level workflow output in the `output` block. The annotations document the structure of a pipeline's published results, and the Nextflow language server uses them to validate that each published value matches its declared type.
 
 ```nextflow
 nextflow.enable.types = true
@@ -61,14 +61,50 @@ output {
 In the above example, the workflow declares two outputs:
 
 - `fastqc`: a channel of FastQC results (`Channel<Path>`)
-- `summary_report`: a dataflow value containing a summary report (`Value<Path>` or `Path`)
+- `summary_report`: a dataflow value containing a summary report (`Value<Path>`, or `Path` for short)
 
-## Features
+The `output` block does not require the `nextflow.enable.types` feature flag. In this example the flag is set because the script also uses typed processes. For an overview of static typing and how to enable it, see [Static typing][static-typing-page]. For the complete syntax reference, see [Output block][syntax-output-block].
 
-Type annotations document the structure of each workflow output, and the language server uses them to validate the type of each published output.
+## Syntax
 
-Outputs that receive a dataflow value can be declared as `Value<V>` or `V` for short. In this example, the `summary_report` is declared with type `Path` as a shorthand for `Value<Path>`.
+An `output` block consists of one or more output declarations. Each declaration consists of a name, a type, and one or more output directives that define how the output is published:
 
-For more information about standard types, see [Types][stdlib-types].
+```nextflow
+output {
+    summary_report: Path {
+        path '.'
+    }
+}
+```
 
+Only one `output` block may be defined in a script.
+
+## Supported types
+
+Each output is a dataflow type:
+
+- Use `Channel<V>` for an output that receives a channel of values.
+- Use `Value<V>` for an output that receives a single dataflow value. You can write `V` as shorthand for `Value<V>`.
+
+The element type `V` can be any [standard type][stdlib-types], such as `Path`, `String`, or a record.
+
+## Publishing outputs
+
+Each output declared in the `output` block must be assigned in the `publish:` section of the entry workflow. The `publish:` section maps a workflow value to an output name, and the `output` block defines the type and the output directives (such as `path` and `index`) for that name.
+
+For the full set of output directives and publishing behavior, see [Workflow outputs][workflow-output-def].
+
+## Validation
+
+The language server validates each published output against its declared type. Publishing a value whose type does not match the declaration is reported as an error before the pipeline runs.
+
+## See also
+
+- [Static typing][static-typing-page]: Overview of static typing and how to enable it.
+- [Types][stdlib-types]: The standard types available for annotations.
+- [Workflow outputs][workflow-output-def]: Output directives and publishing behavior.
+
+[static-typing-page]: ./static-typing
 [stdlib-types]: ./reference/stdlib-types
+[syntax-output-block]: ./reference/syntax#output-block
+[workflow-output-def]: ./workflow#outputs

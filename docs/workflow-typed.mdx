@@ -13,33 +13,15 @@ The features compose into an end-to-end chain. A value typed in the `params` blo
 Typed workflows require static typing to be enabled. For more information about the required settings, see [Enabling static typing][enabling-static-typing].
 :::
 
-## Typed parameters
-
-<AddedInVersion version="25.10" />
-
-Type annotations on the `params` block type a pipeline's parameters. The language server validates each parameter reference against its declared type.
-
-See [Typed parameters][typed-parameters-page] for more information.
-
-## Typed outputs
-
-<AddedInVersion version="25.10" />
-
-Type annotations on the `output` block type a workflow's published results. The language server validates each published output against its declared type.
-
-See [Typed outputs][typed-outputs-page] for more information.
-
-## Typed workflows
-
-<AddedInVersion version="26.04" />
+| Feature | Available in | Description |
+| --- | --- | --- |
+| [Typed parameters][typed-parameters-page] | 25.10 | Type annotations on the `params` block type a pipeline's parameters. The language server validates each parameter reference against its declared type. |
+| [Typed outputs][typed-outputs-page] | 25.10 | Type annotations on the `output` block type a workflow's published results. The language server validates each published output against its declared type. |
+| [Typed workflows][typed-workflows-page] | 26.04 (preview) | Type annotations in the `take:` and `emit:` sections type a workflow's inputs and outputs. The language server validates each input and output against its declared type. |
 
 :::warning
 Typed workflows are a preview feature. The syntax and behavior may change in future releases.
 :::
-
-Type annotations in the `take:` and `emit:` sections type a workflow's inputs and outputs. The language server validates each input and output against its declared type.
-
-See [Typed workflows][typed-workflows-page] for more information.
 
 ## See also
 

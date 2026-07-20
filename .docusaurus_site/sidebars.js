@@ -60,7 +60,7 @@ module.exports = {
                 {
                     type: "category",
                     label: "Workflows (typed)",
-                    collapsed: true,
+                    collapsed: false,
                     link: { type: "doc", id: "workflow-typed" },
                     items: [
                         "typed-parameters",
