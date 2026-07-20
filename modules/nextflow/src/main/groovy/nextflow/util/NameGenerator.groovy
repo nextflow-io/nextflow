@@ -682,6 +682,9 @@ class NameGenerator {
             // Claudius Ptolemy - a Greco-Egyptian writer of Alexandria, known as a mathematician, astronomer, geographer, astrologer, and poet of a single epigram in the Greek Anthology. https://en.wikipedia.org/wiki/Ptolemy
             "ptolemy",
 
+            // Gopalasamudram Narayana Ramachandran - Indian physicist and biophysicist best known for the Ramachandran plot, a fundamental tool in structural biology for assessing protein backbone conformations. https://en.wikipedia.org/wiki/G._N._Ramachandran
+            "ramachandran",
+
             // C. V. Raman - Indian physicist who won the Nobel Prize in 1930 for proposing the Raman effect. https://en.wikipedia.org/wiki/C._V._Raman
             "raman",
 
