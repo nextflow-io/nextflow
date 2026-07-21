@@ -16,7 +16,6 @@
 
 package nextflow.config.spec
 
-import nextflow.script.dsl.Description
 import nextflow.script.types.Duration
 import nextflow.script.types.MemoryUnit
 import spock.lang.Specification
@@ -43,37 +42,4 @@ class SpecNodeTest extends Specification {
         scope.children.get('time').types == [ Duration ]
     }
 
-    def 'should derive a nested scope from a @NestedScope field' () {
-        given:
-        def scope = SpecNode.Scope.of(NestedScopeConfig, '')
-
-        expect:
-        // the annotated field becomes a nested scope, not an option
-        scope.getScope(['widget']) != null
-        scope.getOption(['widget']) == null
-        and:
-        // each instance field of the backing type becomes an option
-        scope.getOption(['widget','color']).types == [ String ]
-        scope.getOption(['widget','size']).types == [ Integer ]
-        and:
-        // static fields of the backing type are not exposed
-        scope.getOption(['widget','CONSTANT']) == null
-    }
-
-}
-
-/**
- * A plain type that does not implement {@link ConfigScope}, standing in for an
- * external library type referenced via {@link NestedScope}.
- */
-class Widget {
-    static final String CONSTANT = 'default'
-    String color
-    Integer size
-}
-
-class NestedScopeConfig implements ConfigScope {
-    @NestedScope
-    @Description('Widget settings')
-    Widget widget
 }

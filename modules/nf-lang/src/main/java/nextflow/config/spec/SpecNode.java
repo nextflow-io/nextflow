@@ -18,7 +18,6 @@ package nextflow.config.spec;
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -226,13 +225,8 @@ public sealed interface SpecNode {
                 var rawType = rawType(type);
                 var desc = annotatedDescription(field, description);
                 var placeholderName = field.getAnnotation(PlaceholderName.class);
-                // fields annotated with @NestedScope are nested scopes derived
-                // from the field type, even if it is not a ConfigScope
-                if( field.getAnnotation(NestedScope.class) != null ) {
-                    children.put(name, ofNested(rawType, desc));
-                }
                 // fields annotated with @ConfigOption are config options
-                else if( field.getAnnotation(ConfigOption.class) != null ) {
+                if( field.getAnnotation(ConfigOption.class) != null ) {
                     if( DslScope.class.isAssignableFrom(rawType) )
                         children.put(name, new DslOption(desc, rawType));
                     else
@@ -247,27 +241,6 @@ public sealed interface SpecNode {
                     var valueType = (Class<? extends ConfigScope>)pt.getActualTypeArguments()[1];
                     children.put(name, new Placeholder(desc, placeholderName.value(), Scope.of(valueType, desc)));
                 }
-            }
-            return new Scope(description, children);
-        }
-
-        /**
-         * Create a scope node from an arbitrary type by introspecting its
-         * instance fields, each of which becomes a config option. Used for
-         * fields annotated with {@link NestedScope} whose type does not
-         * implement {@link ConfigScope} (e.g. external library types).
-         *
-         * @param type
-         * @param description
-         */
-        public static Scope ofNested(Class<?> type, String description) {
-            var children = new HashMap<String, SpecNode>();
-            for( var field : type.getDeclaredFields() ) {
-                if( Modifier.isStatic(field.getModifiers()) || field.isSynthetic() )
-                    continue;
-                var name = field.getName();
-                var desc = annotatedDescription(field, "");
-                children.put(name, new Option(desc, optionTypes(field)));
             }
             return new Scope(description, children);
         }
