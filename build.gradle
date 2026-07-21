@@ -79,8 +79,19 @@ allprojects {
         toolchain {
             languageVersion = JavaLanguageVersion.of(25)
         }
-        sourceCompatibility = 17
-        targetCompatibility = 17
+    }
+
+    // Target Java 17. For Java sources use --release, which also constrains the
+    // API surface to the Java 17 stdlib (stronger than -source/-target). Groovy
+    // does not honor --release, so its bytecode level is pinned via source/target
+    // on GroovyCompile. Note: --release and -source/-target cannot be combined on
+    // the same javac task, hence the split across compile task types.
+    tasks.withType(JavaCompile).configureEach {
+        options.release = 17
+    }
+    tasks.withType(GroovyCompile).configureEach {
+        sourceCompatibility = '17'
+        targetCompatibility = '17'
     }
 
     idea {
