@@ -266,7 +266,15 @@ class CmdLint extends CmdBase {
         final uri = source.getSource().getURI()
         if( uri == null || uri.getScheme() != 'file' )
             return false
-        for( Path path = Path.of(uri); path != null; path = path.getParent() ) {
+        // Match exclude patterns only against path components *within* the
+        // project directory. Walking the absolute path would incorrectly match
+        // an ancestor directory above the project root, e.g. a project checked
+        // out under a directory named `work` (a default exclude pattern) or a
+        // CI checkout under `/home/runner/work/...`.
+        final base = cwd()
+        final absolute = Path.of(uri)
+        final start = absolute.startsWith(base) ? base.relativize(absolute) : absolute
+        for( Path path = start; path != null; path = path.getParent() ) {
             if( PathUtils.isExcluded(path, excludePatterns) )
                 return true
         }
@@ -312,8 +320,15 @@ class CmdLint extends CmdBase {
      */
     private String relativeName(SourceUnit source) {
         final uri = source.getSource().getURI()
-        final cwd = root ?: Path.of('.').toAbsolutePath().normalize()
-        return cwd.relativize(Path.of(uri)).toString()
+        return cwd().relativize(Path.of(uri)).toString()
+    }
+
+    /**
+     * The directory that source paths are resolved and reported against.
+     * Defaults to the current working directory; overridable in tests.
+     */
+    private Path cwd() {
+        return root ?: Path.of('.').toAbsolutePath().normalize()
     }
 
     private static final Comparator<SyntaxException> ERROR_COMPARATOR = (SyntaxException a, SyntaxException b) -> {
