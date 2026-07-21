@@ -191,8 +191,8 @@ public class VariableScopeChecker {
         var classScope = cn;
         while( cn != null ) {
             for( var mn : cn.getMethods() ) {
-                // processes, workflows, operators can be accessed as a variable in a workflow
-                if( isWorkflowScope(classScope) && isDataflowMethod(mn) && name.equals(mn.getName()) ) {
+                // processes, workflows, and operators can be accessed as variables, e.g. with pipes
+                if( isDataflowMethod(mn) && name.equals(mn.getName()) ) {
                     return wrapMethodAsVariable(mn, name);
                 }
                 // built-in constants and namespaces are methods annotated as @Constant
