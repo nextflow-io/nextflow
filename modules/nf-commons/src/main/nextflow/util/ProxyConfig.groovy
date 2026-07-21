@@ -70,8 +70,15 @@ class ProxyConfig {
                     return null
                 if( !getRequestingHost().equalsIgnoreCase(host) )
                     return null
-                if( protocol && !protocol.equalsIgnoreCase(getRequestingProtocol()) )
-                    return null
+                if( protocol && !protocol.equalsIgnoreCase(getRequestingProtocol()) ) {
+                    // For Basic proxy authentication the JDK hard-codes "http" as the requesting
+                    // protocol regardless of the destination scheme, so an https proxy config
+                    // must also accept an http requesting protocol, otherwise credentials for an
+                    // HTTPS CONNECT tunnel are discarded.
+                    final isHttpsTunnel = protocol.equalsIgnoreCase('https') && 'http'.equalsIgnoreCase(getRequestingProtocol())
+                    if( !isHttpsTunnel )
+                        return null
+                }
                 if( port && getRequestingPort() != Integer.parseInt(port) ) {
                     return null
                 }
