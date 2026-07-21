@@ -75,7 +75,7 @@ class ProxyConfig {
                     // protocol regardless of the destination scheme, so an https proxy config
                     // must also accept an http requesting protocol, otherwise credentials for an
                     // HTTPS CONNECT tunnel are discarded.
-                    final isHttpsTunnel = protocol.equalsIgnoreCase('https') && getRequestingProtocol().equalsIgnoreCase('http')
+                    final isHttpsTunnel = protocol.equalsIgnoreCase('https') && 'http'.equalsIgnoreCase(getRequestingProtocol())
                     if( !isHttpsTunnel )
                         return null
                 }
