@@ -25,6 +25,7 @@ import io.seqera.wave.api.ScanMode
 import io.seqera.wave.config.CondaOpts
 import nextflow.config.spec.ConfigOption
 import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.NestedScope
 import nextflow.config.spec.ScopeName
 import nextflow.script.dsl.Description
 import nextflow.file.FileHelper
@@ -284,16 +285,15 @@ class BuildOpts implements ConfigScope {
     """)
     final String template
 
-    @ConfigOption(types=[Map])
+    @NestedScope
     @Description("""
-        Conda build settings, e.g. `[mambaImage: '...', basePackages: '...', commands: [...]]`.
+        The `wave.build.conda` scope controls how Conda packages are built into containers, e.g. `wave.build.conda.basePackages = '...'`. Supported keys: `mambaImage`, `basePackages`, `commands`.
     """)
     final CondaOpts conda
 
-    @ConfigOption(types=[Map])
+    @NestedScope
     @Description("""
-        Build image compression settings, e.g. `[mode: 'estargz']`. Supported keys: `mode`
-        (`gzip`, `estargz`, `zstd`), `level` and `force`.
+        The `wave.build.compression` scope controls build image compression, e.g. `wave.build.compression.mode = 'estargz'`. Supported keys: `mode` (`gzip`, `estargz`, `zstd`), `level` and `force`.
     """)
     final BuildCompression compression
 

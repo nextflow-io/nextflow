@@ -295,17 +295,25 @@ class WaveConfigTest extends Specification {
         [mode:'zstd', level: 3,force:true]      | new BuildCompression().withMode(BuildCompression.Mode.zstd).withLevel(3).withForce(true)
     }
 
-    def 'should expose build map options so their keys are not flagged as unrecognized' () {
+    def 'should expose build compression and conda as nested scopes so their keys are recognized' () {
         given:
-        def scope = nextflow.config.spec.SpecNode.Scope.of(WaveConfig, '')
-        def compression = scope.getOption(['build','compression'])
-        def conda = scope.getOption(['build','conda'])
+        def root = nextflow.config.spec.SpecNode.Scope.of(WaveConfig, '')
         expect:
-        compression != null
-        nextflow.config.ConfigValidator.isMapType(compression.types())
+        // compression is a nested scope exposing its keys as options
+        root.getScope(['build','compression']) != null
+        root.getOption(['build','compression','mode']) != null
+        root.getOption(['build','compression','level']) != null
+        root.getOption(['build','compression','force']) != null
         and:
-        conda != null
-        nextflow.config.ConfigValidator.isMapType(conda.types())
+        // conda is a nested scope exposing its keys as options
+        root.getScope(['build','conda']) != null
+        root.getOption(['build','conda','mambaImage']) != null
+        root.getOption(['build','conda','basePackages']) != null
+        root.getOption(['build','conda','commands']) != null
+        and:
+        // static constants on the backing types are not exposed as options
+        root.getOption(['build','compression','gzip']) == null
+        root.getOption(['build','conda','DEFAULT_MAMBA_IMAGE']) == null
     }
 
 }

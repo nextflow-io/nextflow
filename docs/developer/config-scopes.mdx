@@ -69,6 +69,26 @@ The scope class referenced by the field type defines config options and scopes i
 
 See `ExecutorConfig` and `ExecutorRetryConfig` for an example of how a nested scope is defined and constructed.
 
+### Nested scopes from external types
+
+Sometimes a nested scope is backed by a type that cannot implement `ConfigScope`, such as a class from an external library. In this case, the field can be annotated with `@NestedScope` to mark it as a nested scope without requiring its type to implement `ConfigScope`.
+
+Each non-static instance field of the annotated field's type becomes a config option of the resulting scope. The field name determines the name of the nested scope, and the description (if any) is taken from the `@Description` annotation on the field.
+
+For example, in the `wave` scope the `build.conda` and `build.compression` options are backed by wave-api types (`CondaOpts` and `BuildCompression`) that live in an external library:
+
+```groovy
+    @NestedScope
+    @Description('''
+        The `wave.build.compression` scope controls build image compression, e.g. `wave.build.compression.mode = 'estargz'`.
+    ''')
+    final BuildCompression compression
+```
+
+This exposes `wave.build.compression.mode`, `wave.build.compression.level`, and `wave.build.compression.force` as recognized config options.
+
+Because the config options are derived from the external type's fields, inner field descriptions and inner nested scopes are not supported with `@NestedScope`. Prefer a dedicated `ConfigScope` class where possible.
+
 ### Placeholder scopes
 
 A *placeholder scope* is a config scope that applies to a collection of user-defined names.
