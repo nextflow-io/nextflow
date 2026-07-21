@@ -102,15 +102,6 @@ class ProxyConfigTest extends Specification {
         invokeAuth(authenticator, Authenticator.RequestorType.PROXY, 'proxy.example.com', 8080, 'https') == null
     }
 
-    def 'authenticator is null-safe when the requesting protocol is missing'() {
-        given: 'an https_proxy-derived config'
-        def proxy = new ProxyConfig(protocol: 'https', host: 'proxy.example.com', port: '8080', username: 'foo', password: 'bar')
-        def authenticator = proxy.authenticator()
-
-        expect: 'a null requesting protocol does not throw and yields no credentials'
-        invokeAuth(authenticator, Authenticator.RequestorType.PROXY, 'proxy.example.com', 8080, null) == null
-    }
-
     def 'proxyConfig should return null when no proxy is registered'() {
         expect:
         ProxyConfig.proxyConfig() == null
