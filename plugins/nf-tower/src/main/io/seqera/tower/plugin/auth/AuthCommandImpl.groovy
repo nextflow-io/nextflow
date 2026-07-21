@@ -41,6 +41,7 @@ import nextflow.cli.CmdAuth
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.platform.PlatformHelper
+import nextflow.util.ProxyConfig
 
 import static nextflow.util.ColorUtil.printColored
 import static nextflow.util.ColorUtil.colorize
@@ -994,7 +995,10 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
 
     protected boolean checkApiConnection(String endpoint) {
         try {
-            final client = HxClient.newBuilder().connectTimeout(Duration.ofMillis(API_TIMEOUT_MS)).build()
+            final client = HxClient.newBuilder()
+                    .withProxyConfig(ProxyConfig.proxyConfig())
+                    .connectTimeout(Duration.ofMillis(API_TIMEOUT_MS))
+                    .build()
             final url = "${endpoint}/service-info"
             log.debug "Platform auth API - GET ${url}"
             final request = HttpRequest.newBuilder()

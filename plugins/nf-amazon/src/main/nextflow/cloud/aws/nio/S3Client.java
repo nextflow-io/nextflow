@@ -591,12 +591,23 @@ public class S3Client {
         }
     }
 
-    public void copyFile(CopyObjectRequest.Builder reqBuilder, List<Tag> tags, String contentType, String storageClass) throws IOException {
-        if( tags !=null && !tags.isEmpty()) {
+    /**
+     * Apply the given tags to a copy request. Always use the {@code REPLACE} tagging directive so
+     * that the destination object gets exactly the requested tag set (empty = no tags) rather than
+     * inheriting the source object's tags, which is the S3 {@code COPY} directive default.
+     * This prevents transient tags (e.g. Fusion's {@code nextflow.io/temporary=true}) from being
+     * propagated to published outputs. See https://github.com/nextflow-io/nextflow/issues/7339
+     */
+    static void applyTagging(CopyObjectRequest.Builder reqBuilder, List<Tag> tags) {
+        reqBuilder.taggingDirective(TaggingDirective.REPLACE);
+        if( tags != null && !tags.isEmpty() ) {
             log.debug("Setting tags: {}", tags);
-            reqBuilder.taggingDirective(TaggingDirective.REPLACE);
             reqBuilder.tagging(Tagging.builder().tagSet(tags).build());
         }
+    }
+
+    public void copyFile(CopyObjectRequest.Builder reqBuilder, List<Tag> tags, String contentType, String storageClass) throws IOException {
+        applyTagging(reqBuilder, tags);
         if( cannedAcl != null ) {
             reqBuilder.acl(cannedAcl);
         }
