@@ -79,6 +79,20 @@ class ProxyConfigTest extends Specification {
         invokeAuth(authenticator, Authenticator.RequestorType.PROXY, 'other.example.com', 8080, 'https') == null
     }
 
+    def 'authenticator should release credentials for an https proxy over an http CONNECT tunnel'() {
+        given: 'an https_proxy-derived config (Launcher sets protocol=https from HTTPS_PROXY)'
+        def proxy = new ProxyConfig(protocol: 'https', host: 'proxy.example.com', port: '8080', username: 'foo', password: 'bar')
+        def authenticator = proxy.authenticator()
+
+        when: 'the JDK authenticates an HTTPS CONNECT tunnel — it reports requestingProtocol="http", not "https" (see #5634)'
+        def auth = invokeAuth(authenticator, Authenticator.RequestorType.PROXY, 'proxy.example.com', 8080, 'http')
+
+        then: 'credentials must still be released, otherwise HTTPS targets 407 behind an authenticating proxy'
+        auth != null
+        auth.userName == 'foo'
+        new String(auth.password) == 'bar'
+    }
+
     def 'proxyConfig should return null when no proxy is registered'() {
         expect:
         ProxyConfig.proxyConfig() == null
