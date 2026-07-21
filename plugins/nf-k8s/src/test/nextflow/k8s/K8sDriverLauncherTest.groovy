@@ -54,10 +54,10 @@ class K8sDriverLauncherTest extends Specification {
         1 * driver.makeK8sConfig(NF_CONFIG) >> K8S_CONFIG
         1 * driver.makeK8sClient(K8S_CONFIG) >> K8S_CLIENT
         1 * K8S_CONFIG.checkStorageAndPaths(K8S_CLIENT)
-        1 * driver.createK8sConfigMap() >> null
+        1 * driver.createK8sConfigMap() >> { }
         1 * driver.createK8sLauncherPod() >> null
-        1 * driver.waitPodStart() >> null
-        1 * driver.printK8sPodOutput() >> null
+        1 * driver.waitPodStart() >> { }
+        1 * driver.printK8sPodOutput() >> { }
 
         driver.pipelineName == NAME
         driver.interactive == false
@@ -650,7 +650,7 @@ class K8sDriverLauncherTest extends Specification {
         1 * driver.waitPodTermination() >> 0
         then:
         1 * config.getCleanup(true) >> true
-        1 * driver.deleteConfigMap() >> null
+        1 * driver.deleteConfigMap() >> { }
 
         when:
         driver.shutdown()
@@ -658,7 +658,7 @@ class K8sDriverLauncherTest extends Specification {
         1 * driver.waitPodTermination() >> 1
         then:
         1 * config.getCleanup(false) >> true
-        1 * driver.deleteConfigMap() >> null
+        1 * driver.deleteConfigMap() >> { }
 
         when:
         driver.shutdown()
@@ -666,7 +666,7 @@ class K8sDriverLauncherTest extends Specification {
         1 * driver.waitPodTermination() >> 1
         then:
         1 * config.getCleanup(false) >> false
-        0 * driver.deleteConfigMap() >> null
+        0 * driver.deleteConfigMap() >> { }
 
     }
 }

@@ -143,7 +143,7 @@ class ChannelImpl {
         return new ChannelImpl(target)
     }
 
-    ChannelImpl flatMap(Function<?,Iterable> transform = null) {
+    ChannelImpl flatMap(Function<Object,Iterable> transform = null) {
         final source = getReadChannel()
         final target = CH.create()
         final onNext = { value ->
@@ -218,7 +218,7 @@ class ChannelImpl {
         return new ChannelImpl(target)
     }
 
-    ValueImpl reduce(BiFunction<?,?,?> accumulator) {
+    ValueImpl reduce(BiFunction<Object,Object,Object> accumulator) {
         final source = getReadChannel()
         final target = CH.value()
 
@@ -246,7 +246,7 @@ class ChannelImpl {
         return new ValueImpl(target)
     }
 
-    ValueImpl reduce(Object seed, BiFunction<?,?,?> accumulator) {
+    ValueImpl reduce(Object seed, BiFunction<Object,Object,Object> accumulator) {
         final source = getReadChannel()
         final target = CH.value()
 

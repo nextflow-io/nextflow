@@ -46,8 +46,8 @@ class K8sClientTest extends Specification {
         def resp = client.makeRequest('GET', '/foo/bar')
         then:
         1 * client.createConnection0("https://host.com:443/foo/bar") >> HTTPS_CONN
-        1 * client.setupHttpsConn(HTTPS_CONN) >> null
-        1 * HTTPS_CONN.setRequestMethod('GET') >> null
+        1 * client.setupHttpsConn(HTTPS_CONN) >> { }
+        1 * HTTPS_CONN.setRequestMethod('GET') >> { }
         1 * HTTPS_CONN.setRequestProperty("Authorization", "Bearer $TOKEN")
         1 * HTTPS_CONN.setRequestProperty("Content-Type", "application/json")
         1 * HTTPS_CONN.getResponseCode() >> 200
@@ -61,8 +61,8 @@ class K8sClientTest extends Specification {
         client.makeRequest('POST', '/foo/bar')
         then:
         1 * client.createConnection0("http://my-server.com/foo/bar") >> HTTP_CONN
-        0 * client.setupHttpsConn(_) >> null
-        1 * HTTP_CONN.setRequestMethod('POST') >> null
+        0 * client.setupHttpsConn(_) >> { }
+        1 * HTTP_CONN.setRequestMethod('POST') >> { }
         1 * HTTP_CONN.getResponseCode() >> 401
         1 * HTTP_CONN.getErrorStream() >> { new ByteArrayInputStream('{"field_x":"oops.."}'.bytes) }
         def e = thrown(K8sResponseException)
@@ -1129,7 +1129,7 @@ class K8sClientTest extends Specification {
         then:
         // first attempt: stale token, 401
         2 * client.createConnection0("https://host.com:443/api/v1/pods/foo/status") >>> [CONN_401, CONN_200]
-        2 * client.setupHttpsConn(_) >> null
+        2 * client.setupHttpsConn(_) >> { }
         1 * CONN_401.setRequestProperty("Authorization", "Bearer stale-token")
         1 * CONN_401.setRequestMethod('GET')
         1 * CONN_401.setRequestProperty("Content-Type", "application/json")
@@ -1168,7 +1168,7 @@ class K8sClientTest extends Specification {
         then:
         // exactly one attempt — no retry because there's no file to re-read
         1 * client.createConnection0(_) >> CONN
-        1 * client.setupHttpsConn(_) >> null
+        1 * client.setupHttpsConn(_) >> { }
         1 * CONN.setRequestMethod('GET')
         1 * CONN.setRequestProperty("Authorization", "Bearer inline-token")
         1 * CONN.setRequestProperty("Content-Type", "application/json")

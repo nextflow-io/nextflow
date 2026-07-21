@@ -104,8 +104,8 @@ class TaskPollingMonitorTest extends Specification {
         then:
         1 * session.disableJobsCancellation >> false
         and:
-        1 * handler.kill() >> null
-        1 * session.notifyTaskComplete(handler) >> null
+        1 * handler.kill()
+        1 * session.notifyTaskComplete(handler)
     }
 
     def 'should not cancel running jobs' () {

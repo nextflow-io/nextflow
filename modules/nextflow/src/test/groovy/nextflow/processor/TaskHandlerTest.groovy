@@ -156,7 +156,9 @@ class TaskHandlerTest extends Specification {
         def handler = Spy(TaskHandler)
         handler.task = Mock(TaskRun) {
             getProcessor() >> Mock(TaskProcessor) {
-                getMaxForks() >> MAX
+                // getMaxForks() returns a primitive int; a null stub cannot be
+                // cast to int under Groovy 5, so map the `null` (unset) case to 0
+                getMaxForks() >> (MAX ?: 0)
                 getForksCount() >> { COUNT ? _adder(COUNT) : null }
             }
         }

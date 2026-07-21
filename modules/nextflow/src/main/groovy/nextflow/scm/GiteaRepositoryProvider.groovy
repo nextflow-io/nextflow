@@ -78,7 +78,7 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
     List<BranchInfo> getBranches() {
         // https://try.gitea.io/api/swagger#/repository/repoListBranches
         final url = "${config.endpoint}/repos/${project}/branches"
-        this.<BranchInfo>invokeAndResponseWithPaging(url, { Map branch -> new BranchInfo(branch.name as String, branch.commit?.id as String) })
+        invokeAndResponseWithPaging(url, { Map branch -> new BranchInfo(branch.name as String, branch.commit?.id as String) })
     }
 
     @Override
@@ -86,7 +86,7 @@ final class GiteaRepositoryProvider extends RepositoryProvider {
     List<TagInfo> getTags() {
         // https://try.gitea.io/api/swagger#/repository/repoListTags
         final url = "${config.endpoint}/repos/${project}/tags"
-        this.<TagInfo>invokeAndResponseWithPaging(url, { Map tag -> new TagInfo(tag.name as String, tag.commit?.sha as String) })
+        invokeAndResponseWithPaging(url, { Map tag -> new TagInfo(tag.name as String, tag.commit?.sha as String) })
     }
 
     /** {@inheritDoc} */

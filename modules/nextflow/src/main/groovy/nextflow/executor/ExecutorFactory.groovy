@@ -65,9 +65,9 @@ class ExecutorFactory {
 
     @PackageScope Map<String, Class<? extends Executor>> executorsMap
 
-    private Map<Class<? extends Executor>,? extends Executor> executors = new HashMap<>()
+    private Map<Class<? extends Executor>,Executor> executors = new HashMap<>()
 
-    @PackageScope Map<Class<? extends Executor>,? extends Executor> getExecutors() { executors }
+    @PackageScope Map<Class<? extends Executor>,Executor> getExecutors() { executors }
 
     ExecutorFactory() {
         init0(Collections.<Class<Executor>>emptyList())

@@ -118,8 +118,8 @@ final class BitbucketRepositoryProvider extends RepositoryProvider {
     }
 
     @Memoized
-    protected <T> List<T> invokeAndResponseWithPaging(String url, Closure<T> parse) {
-        final result = new ArrayList<T>(50)
+    protected List invokeAndResponseWithPaging(String url, Closure parse) {
+        final result = new ArrayList(50)
         do {
             final resp = invokeAndParseResponse(url)
             final tags = resp.values as List<Map>

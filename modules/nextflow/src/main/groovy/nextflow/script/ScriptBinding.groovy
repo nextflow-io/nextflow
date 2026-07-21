@@ -71,7 +71,8 @@ class ScriptBinding extends WorkflowBinding {
         // create and populate args
         args = new ArrayList<>()
         if( vars.args ) {
-            if( !(vars.args instanceof List<String>) ) throw new IllegalArgumentException("ScriptBinding 'args' must be a List value")
+            if( vars.args !instanceof List )
+                throw new IllegalArgumentException("ScriptBinding 'args' must be a List value")
             args.addAll((List<String>)vars.args)
         }
         vars.put('args', args)
@@ -79,7 +80,8 @@ class ScriptBinding extends WorkflowBinding {
         // create and populate params
         params = new ParamsMap()
         if( vars.params ) {
-            if( !(vars.params instanceof Map) ) throw new IllegalArgumentException("ScriptBinding 'params' must be a Map value")
+            if( vars.params !instanceof Map )
+                throw new IllegalArgumentException("ScriptBinding 'params' must be a Map value")
             params.putAll((Map)vars.params)
         }
         vars.params = params
@@ -211,6 +213,7 @@ class ScriptBinding extends WorkflowBinding {
     /**
      * Implements immutable params map
      */
+    @Slf4j
     @CompileStatic
     static class ParamsMap implements Record, Map<String,Object> {
 
@@ -245,7 +248,7 @@ class ScriptBinding extends WorkflowBinding {
                 final msg = "Access to undefined parameter `$key` -- Initialise it to a default value eg. `params.$key = some_value`"
                 if( NF.isStrictMode() )
                     throw new AbortOperationException(msg)
-                log.warn1(msg, firstOnly: true)
+                log.warn1(msg)
                 return null
             }
             return target.get(key)

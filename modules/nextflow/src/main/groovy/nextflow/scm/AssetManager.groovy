@@ -659,7 +659,13 @@ class AssetManager implements Closeable {
      * @return {@code true} when the SCM source points to a local file-system repository.
      */
     boolean isLocalScmSource() {
-        return provider instanceof LocalRepositoryProvider
+        // assign to a local before the `instanceof` check: under Groovy 5 the
+        // static compiler otherwise narrows the `provider` *field* type to
+        // LocalRepositoryProvider class-wide, inserting bogus casts in other
+        // methods (e.g. clone/getRemoteRevisions/updateModules) that fail with
+        // ClassCastException for non-local providers.
+        final p = provider
+        return p instanceof LocalRepositoryProvider
     }
 
     /**
@@ -1005,8 +1011,8 @@ class AssetManager implements Closeable {
             return
 
         List<String> filter = []
-        if( modules instanceof List<String> ) {
-            filter.addAll(modules)
+        if( modules instanceof List ) {
+            filter.addAll(modules as List<String>)
         }
         else if( modules instanceof String ) {
             filter.addAll( modules.tokenize(', ') )

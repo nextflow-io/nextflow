@@ -54,7 +54,7 @@ class RegistryConfig implements ConfigScope {
 
     RegistryConfig(Map opts) {
         final urlObject = opts.url ?: [DEFAULT_REGISTRY_URL]
-        if (urlObject instanceof Collection<String>)
+        if (urlObject instanceof Collection)
             this.url = (urlObject as Collection<String>).collect { it.replaceAll(/\/+$/, '') }
         else
             this.url = [urlObject.toString().replaceAll(/\/+$/, '')]

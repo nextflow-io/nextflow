@@ -145,15 +145,15 @@ class SplitOpTest extends Specification {
         1 * op.createSplitter(METHOD, [elem:-1, autoClose: false, into:out1] ) >> splitter1
         1 * op.createSplitter(METHOD, [elem:-2, autoClose: false, into:out2] ) >> splitter2
 
-        1 * op.applySplittingOperator(copy1, out1, splitter1) >> null
-        1 * op.applySplittingOperator(copy2, out2, splitter2) >> null
+        1 * op.applySplittingOperator(copy1, out1, splitter1) >> { }
+        1 * op.applySplittingOperator(copy2, out2, splitter2) >> { }
 
         1 * splitter1.setEmitSplitIndex(true)
         1 * splitter2.setEmitSplitIndex(true)
 
         1 * splitter1.setMultiSplit(true)
         1 * splitter2.setMultiSplit(true)
-        1 * op.applyMergingOperator([out1, out2], _ as DataflowBroadcast, [-1,-2]) >> null
+        1 * op.applyMergingOperator([out1, out2], _ as DataflowBroadcast, [-1,-2]) >> { }
         then:
         result instanceof DataflowBroadcast
     }

@@ -26,13 +26,22 @@ import spock.lang.Specification
  */
 class AbstractSplitterTest extends Specification {
 
+    // concrete subclass used to exercise AbstractSplitter's non-abstract
+    // methods. Note: `[:] as AbstractSplitter` no longer works under Groovy 5
+    // — the generated proxy does not delegate the concrete methods.
+    static class TestSplitter extends AbstractSplitter {
+        protected process(Object targetObject) { }
+        protected normalizeSource(object) { object }
+        protected CollectorStrategy createCollector() { null }
+    }
+
     private Path file(String name) { Paths.get(name) }
 
     def 'test invokeEachClosure method'() {
 
 
         when:
-        def splitter = [:] as AbstractSplitter
+        def splitter = new TestSplitter()
         then:
         splitter.invokeEachClosure(null, 'hola') == 'hola'
         splitter.invokeEachClosure({ x -> x.reverse() }, 'hola') == 'aloh'
@@ -63,56 +72,56 @@ class AbstractSplitterTest extends Specification {
         def splitter
 
         when:
-        splitter = [:] as AbstractSplitter
+        splitter = new TestSplitter()
         then:
         splitter.elem == null
         splitter.findSource([ 10, 20 ]) == 10
         splitter.elem == 0
 
         when:
-        splitter = [:] as AbstractSplitter
+        splitter = new TestSplitter()
         then:
         splitter.elem == null
         splitter.findSource([ 10, file('/hello') ]) == file('/hello')
         splitter.elem == 1
 
         when:
-        splitter = [:] as AbstractSplitter
+        splitter = new TestSplitter()
         splitter.elem = -2  // <-- find the second file
         then:
         splitter.findSource([ 10, 20, file('/hello'), 30, 40, file('/second'), file('/third') ]) == file('/second')
         splitter.elem == 5
 
         when:
-        splitter = [:] as AbstractSplitter
+        splitter = new TestSplitter()
         splitter.elem = -3  // <-- find the third file
         then:
         splitter.findSource([ 10, 20, file('/hello'), 30, 40, file('/second'), file('/third') ]) == file('/third')
         splitter.elem == 6
 
         when:
-        splitter = [:] as AbstractSplitter
+        splitter = new TestSplitter()
         splitter.elem = 1
         then:
         splitter.findSource([ 10, 20, file('/hello') ]) == 20
         splitter.elem == 1
 
         when:
-        splitter = [:] as AbstractSplitter
+        splitter = new TestSplitter()
         splitter.elem = 0
         then:
         splitter.findSource([ 10, 20, Paths.get('/hello') ]) == 10
         splitter.elem == 0
 
         when:
-        splitter = [:] as AbstractSplitter
+        splitter = new TestSplitter()
         splitter.elem = -1
         splitter.findSource([ 10, 20 ])
         then:
         thrown(IllegalArgumentException)
 
         when:
-        splitter = [:] as AbstractSplitter
+        splitter = new TestSplitter()
         splitter.elem = -2
         splitter.findSource([ 10, 20, Paths.get('/hello') ])
         then:

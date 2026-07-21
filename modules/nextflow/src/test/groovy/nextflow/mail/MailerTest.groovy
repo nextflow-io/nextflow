@@ -168,7 +168,7 @@ class MailerTest extends Specification {
         0 * mailer.getSysMailer() >> null
         1 * mailer.provider() >> provider
         1 * mailer.createMimeMessage(mail) >> MSG
-        1 * provider.send(MSG, mailer) >> null
+        1 * provider.send(MSG, mailer) >> { }
 
     }
 
@@ -185,7 +185,7 @@ class MailerTest extends Specification {
         then:
         1 * mailer.provider() >> provider
         1 * mailer.createMimeMessage(mail) >> MSG
-        1 * provider.send(MSG, mailer) >> null
+        1 * provider.send(MSG, mailer) >> { }
     }
 
     def 'should throw an exception' () {
@@ -211,7 +211,7 @@ class MailerTest extends Specification {
         then:
         1 * mailer.provider() >> provider
         1 * mailer.createTextMessage(mail) >> MSG
-        1 * provider.send(MSG, mailer) >> null
+        1 * provider.send(MSG, mailer) >> { }
     }
 
 
@@ -358,7 +358,7 @@ class MailerTest extends Specification {
         }
 
         then:
-        1 * mailer.send(Mail.of([to: 'paolo@dot.com', from:'yo@dot.com', subject: 'This is a test', body: 'Hello there'])) >> null
+        1 * mailer.send(Mail.of([to: 'paolo@dot.com', from:'yo@dot.com', subject: 'This is a test', body: 'Hello there'])) >> { }
 
     }
 
@@ -394,7 +394,7 @@ class MailerTest extends Specification {
         }
 
         then:
-        1 * mailer.send(Mail.of([to: 'you@dot.com', subject: 'foo', body: BODY])) >> null
+        1 * mailer.send(Mail.of([to: 'you@dot.com', subject: 'foo', body: BODY])) >> { }
 
     }
 
