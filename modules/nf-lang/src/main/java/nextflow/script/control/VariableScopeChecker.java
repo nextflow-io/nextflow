@@ -23,10 +23,11 @@ import java.util.Map;
 import java.util.Set;
 
 import nextflow.script.ast.ASTNodeMarker;
-import nextflow.script.dsl.Constant;
-import nextflow.script.dsl.Operator;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.WorkflowNode;
+import nextflow.script.dsl.Constant;
+import nextflow.script.dsl.Operator;
+import nextflow.script.dsl.WorkflowDsl;
 import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
@@ -187,10 +188,11 @@ public class VariableScopeChecker {
      * @param node
      */
     private Variable findDslVariable(ClassNode cn, String name, ASTNode node) {
+        var classScope = cn;
         while( cn != null ) {
             for( var mn : cn.getMethods() ) {
-                // processes, workflows, and operators can be accessed as variables, e.g. with pipes
-                if( isDataflowMethod(mn) && name.equals(mn.getName()) ) {
+                // processes, workflows, operators can be accessed as a variable in a workflow
+                if( isWorkflowScope(classScope) && isDataflowMethod(mn) && name.equals(mn.getName()) ) {
                     return wrapMethodAsVariable(mn, name);
                 }
                 // built-in constants and namespaces are methods annotated as @Constant
@@ -209,10 +211,16 @@ public class VariableScopeChecker {
                 : null;
         }
 
-        if( includes.get(name) instanceof MethodNode mn )
+        // an included definition can be accessed as a variable in a workflow
+        // (less strict here since plugin includes aren't resolved at this point)
+        if( isWorkflowScope(classScope) && includes.get(name) instanceof MethodNode mn )
             return wrapMethodAsVariable(mn, name);
 
         return null;
+    }
+
+    private static boolean isWorkflowScope(ClassNode cn) {
+        return cn != null && WorkflowDsl.class.isAssignableFrom(cn.getTypeClass());
     }
 
     public static boolean isDataflowMethod(MethodNode mn) {
