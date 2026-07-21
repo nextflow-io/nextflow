@@ -18,7 +18,9 @@ package nextflow.script.dsl
 
 import spock.lang.Specification
 
+import nextflow.SysEnv
 import nextflow.exception.IllegalDirectiveException
+import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
@@ -30,6 +32,10 @@ class ProcessBuilderTest extends Specification {
 
     def createBuilder() {
         new ProcessBuilder(new ProcessConfig([:]))
+    }
+
+    def createBuilder(BaseScript script) {
+        new ProcessBuilder(new ProcessConfig(script))
     }
 
     def 'should set directives' () {
@@ -98,6 +104,8 @@ class ProcessBuilderTest extends Specification {
     def 'should throw IllegalDirectiveException'() {
 
         given:
+        SysEnv.push([NXF_SYNTAX_PARSER: 'v1'])
+        and:
         def builder = createBuilder()
 
         when:
@@ -113,6 +121,9 @@ class ProcessBuilderTest extends Specification {
                         shell
                 '''
                 .stripIndent().trim()
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should set process secret'() {
@@ -353,5 +364,25 @@ class ProcessBuilderTest extends Specification {
 
         then:
         noExceptionThrown()
+    }
+
+    def 'should delegate non-directive method calls to the owner script' () {
+        given:
+        def owner = Mock(BaseScript)
+        def builder = createBuilder(owner)
+
+        // `container localTag()`
+        when:
+        def result = builder.localTag()
+        then:
+        1 * owner.invokeMethod('localTag', _) >> 'ubuntu:22.04'
+        result == 'ubuntu:22.04'
+
+        // `container imageTag('foo')`
+        when:
+        result = builder.imageTag('foo')
+        then:
+        1 * owner.invokeMethod('imageTag', { (it as List) == ['foo'] }) >> 'image-for-foo'
+        result == 'image-for-foo'
     }
 }
