@@ -62,7 +62,7 @@ import org.yaml.snakeyaml.Yaml
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Execute a pipeline project")
-class CmdRun extends CmdBase implements HubOptions {
+class CmdRun extends CmdBase implements HubAware {
 
     static final public Pattern RUN_NAME_PATTERN = Pattern.compile(/^[a-z](?:[a-z\d]|[-_](?=[a-z\d])){0,79}$/, Pattern.CASE_INSENSITIVE)
 
@@ -623,7 +623,7 @@ class CmdRun extends CmdBase implements HubOptions {
         /*
          * try to look for a pipeline in the repository
          */
-        try( final manager = new AssetManager(pipelineName, revision, mainScript, this) ) {
+        try( final manager = new AssetManager(pipelineName, revision, mainScript, toHubOptions()) ) {
             final repo = manager.getProjectWithRevision()
             final remoteSource = !manager.isLocalScmSource()
 
