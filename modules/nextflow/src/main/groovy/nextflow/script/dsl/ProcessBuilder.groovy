@@ -19,6 +19,7 @@ package nextflow.script.dsl
 import java.util.regex.Pattern
 
 import groovy.transform.TypeChecked
+import nextflow.NF
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.IllegalDirectiveException
 import nextflow.exception.ScriptRuntimeException
@@ -98,21 +99,35 @@ class ProcessBuilder {
         this.config = config
     }
 
+    // NOTE: replace with internal DSL after v1 parser is removed
     def methodMissing( String name, def args ) {
-        checkName(name)
+        if( DIRECTIVES.contains(name) || name == 'when' || name == 'stub' ) {
+            applyDirective(name, args)
+            return
+        }
 
+        // v1 parser: report error if method call is not a directive
+        if( !NF.isSyntaxParserV2() ) {
+            reportInvalidDirective(name)
+            return
+        }
+
+        // v2 parser: delegate method call to the script (which will report a
+        // missing method itself if the name is not a script-defined function)
+        if( ownerScript != null )
+            return ownerScript.invokeMethod(name, args)
+
+        throw new MissingMethodException(name, this.getClass(), args as Object[])
+    }
+
+    private void applyDirective(String name, def args) {
         if( args instanceof Object[] )
             config.put(name, args.size()==1 ? args[0] : args.toList())
         else
             config.put(name, args)
     }
 
-    private void checkName(String name) {
-        if( DIRECTIVES.contains(name) )
-            return
-        if( name == 'when' || name == 'stub' )
-            return
-
+    private void reportInvalidDirective(String name) {
         String message = "Unknown process directive: `$name`"
         def alternatives = DIRECTIVES.closest(name)
         if( alternatives.size()==1 ) {
