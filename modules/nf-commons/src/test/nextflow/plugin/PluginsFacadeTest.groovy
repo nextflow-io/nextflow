@@ -578,6 +578,22 @@ class PluginsFacadeTest extends Specification {
         facade.@registryConfig.allUrls == ['https://reg.example/api']
     }
 
+    def 'should apply registry config only once when invoked repeatedly' () {
+        given:
+        def updater = Mock(PluginUpdater)
+        def facade = new PluginsFacade(Paths.get('plugins'), 'prod')
+        facade.@updater = updater
+
+        when:
+        facade.applyRegistryConfig([registry: [url: ['https://reg.example/api']]])
+        facade.applyRegistryConfig([registry: [url: ['https://reg.example/api']]])
+
+        then: 're-entrant calls are idempotent: the registries are applied only once'
+        1 * updater.addRegistryRepos(_ as RegistryConfig)
+        and:
+        facade.@registryConfig != null
+    }
+
     @Unroll
     def 'should not apply registry config when url is not set' () {
         given:

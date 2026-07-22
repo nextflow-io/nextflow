@@ -123,13 +123,14 @@ class PluginUpdater extends UpdateManager {
         if( offline || !registryConfig )
             return
         final urls = registryConfig.getAllUrls()
-        // the configured registries take over: drop the default registry repository so that
-        // only the user-provided endpoints are queried
+        // the configured registries take over: drop the default registry repository(ies)
+        // that are actually present so only the user-provided endpoints are queried.
+        // Only existing ids are removed because wrap() creates just one of them and pf4j's
+        // removeRepository() logs a misleading warning when the id is not found.
+        final existingIds = this.@repositories*.id as Set
         for( String id : DEFAULT_REGISTRY_REPO_IDS )
-            removeRepository(id)
-        final existingIds = new HashSet<String>()
-        for( UpdateRepository repo : this.@repositories )
-            existingIds.add(repo.id)
+            if( existingIds.remove(id) )
+                removeRepository(id)
         int counter = 0
         for( String url : urls ) {
             String repoId = "registry-${counter++}"
@@ -181,6 +182,7 @@ class PluginUpdater extends UpdateManager {
         copy.description = src.description
         copy.provider = src.provider
         copy.projectUrl = src.projectUrl
+        copy.repositoryId = src.repositoryId
         copy.releases = src.releases != null
             ? new ArrayList<PluginInfo.PluginRelease>(src.releases)
             : new ArrayList<PluginInfo.PluginRelease>()

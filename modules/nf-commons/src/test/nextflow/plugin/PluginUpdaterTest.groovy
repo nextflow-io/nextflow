@@ -576,13 +576,16 @@ class PluginUpdaterTest extends Specification {
         updater.addRepository(new DefaultUpdateRepository('repo-b', repoB))
 
         when:
-        def releases = updater.getPluginsMap()['my-plugin'].releases
+        def merged = updater.getPluginsMap()['my-plugin']
+        def releases = merged.releases
 
         then: 'releases from both registries are unioned, de-duplicated by version'
         releases.size() == 3
         releases*.version.toSet() == ['1.0.0', '2.0.0', '1.5.0'].toSet()
         and: 'on a version clash the earlier-listed registry (repoA) wins'
         releases.find { it.version == '2.0.0' }.url.contains('repoA')
+        and: 'the copied PluginInfo keeps the source repositoryId for diagnostics'
+        merged.repositoryId == 'nextflow.io'
 
         cleanup:
         folder?.deleteDir()

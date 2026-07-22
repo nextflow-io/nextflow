@@ -325,6 +325,9 @@ class PluginsFacade implements PluginStateListener {
             log.warn "Plugin registry config is ignored in development mode -- plugins are resolved from the development classpath"
             return
         }
+        // keep re-entrant calls idempotent: the registries are applied only once
+        if( registryConfig != null )
+            return
         this.registryConfig = new RegistryConfig(registryMap)
         updater?.addRegistryRepos(registryConfig)
     }
