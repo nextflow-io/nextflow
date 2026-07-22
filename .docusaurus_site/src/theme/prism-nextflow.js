@@ -75,19 +75,19 @@ export default function(Prism) {
       alias: 'property'
     },
     'nextflow-keyword': {
-      pattern: /\b(?:process|workflow|params|input|output|stage|topic|publish|script|shell|exec|when|channel|emit|take|main|tuple|path|val|file|env|stdin|stdout|stderr|include|from|addParams|each|collect|collectFile|combine|concat|count|countBy|cross|distinct|dump|filter|first|flatMap|flatten|groupBy|groupTuple|join|last|map|max|merge|min|mix|multiMap|randomSample|reduce|set|splitCsv|splitFasta|splitFastq|splitJson|splitText|subscribe|take|toInteger|toList|toSortedList|transpose|unique|until|view)\b/,
+      pattern: /\b(?:process|workflow|params|input|output|stage|topic|publish|script|shell|exec|when|channel|emit|take|main|tuple|path|val|file|env|stdin|stdout|stderr|include|from)\b/,
       alias: 'keyword'
     },
     // Standard types used by static typing, including generic types such as
     // `Channel<Path>` and `Map<String, Path>`.
     'class-name': {
-      pattern: /\b(?:Bag|BigDecimal|BigInteger|Boolean|Byte|Channel|Character|Double|Duration|Float|Integer|Iterable|List|Long|Map|MemoryUnit|Number|Object|Path|Record|Set|Short|String|Tuple|Value|VersionNumber)\b(?:<[^<>\n]*(?:<[^<>\n]*>[^<>\n]*)*>)?/,
+      pattern: /\b(?:Bag|Boolean|Channel|Duration|Float|Integer|Iterable|List|Map|MemoryUnit|Path|Record|Set|String|Tuple|Value|VersionNumber)\b(?:<[^<>\n]*(?:<[^<>\n]*>[^<>\n]*)*>)?/,
       inside: {
-        'class-name': /\b(?:Bag|BigDecimal|BigInteger|Boolean|Byte|Channel|Character|Double|Duration|Float|Integer|Iterable|List|Long|Map|MemoryUnit|Number|Object|Path|Record|Set|Short|String|Tuple|Value|VersionNumber)\b/,
+        'class-name': /\b(?:Bag|Boolean|Channel|Duration|Float|Integer|Iterable|List|Map|MemoryUnit|Path|Record|Set|String|Tuple|Value|VersionNumber)\b/,
         'punctuation': /[<>,]/
       }
     },
-    'keyword': /\b(?:as|assert|break|case|catch|class|const|continue|def|default|do|else|enum|extends|finally|for|goto|if|implements|import|in|instanceof|interface|new|package|record|return|super|switch|this|throw|throws|trait|try|while|var)\b/,
+    'keyword': /\b(?:as|assert|catch|def|else|enum|if|in|instanceof|new|record|return|throw|try)\b/,
     'boolean': /\b(?:true|false|null)\b/,
     'number': /\b0x[\da-f]+\b|(?:\b\d+(?:\.\d*)?|\B\.\d+)(?:e[+-]?\d+)?[glidf]?\b/i,
     'operator': {
