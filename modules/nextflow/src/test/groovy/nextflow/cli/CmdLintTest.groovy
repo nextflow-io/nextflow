@@ -245,6 +245,29 @@ class CmdLintTest extends Specification {
         dir?.deleteDir()
     }
 
+    def 'should exclude sources based on their relative path in the project root' () {
+
+        given:
+        // simulate a project checked out under a directory named `work`,
+        // which is one of the default exclude patterns
+        def base = Files.createTempDirectory('test').resolve('work/myproject')
+        def file = base.resolve('modules/local/foo/main.nf')
+        Files.createDirectories(file.parent)
+        file.text = ''
+        and:
+        def cmd = createCmdLint()
+        cmd.root = base
+        // excludePatterns keeps the default value, which includes `work`
+
+        expect:
+        // the `work` ancestor is above the project root and must be ignored;
+        // only path components within the project should be matched
+        !cmd.isExcludedSource(fileSource(file))
+
+        cleanup:
+        base?.parent?.parent?.deleteDir()
+    }
+
     def 'should report indirectly-included sources with a relative path' () {
 
         given:

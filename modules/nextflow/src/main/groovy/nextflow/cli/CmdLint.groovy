@@ -257,8 +257,10 @@ class CmdLint extends CmdBase {
      * Determine whether a source file should be excluded from lint
      * reporting. Sources can be added to the compiler indirectly, e.g.
      * by resolving an `include` statement into a script that lives
-     * under an excluded directory, so exclusion can't be determined
-     * solely from the initial file listing.
+     * under an excluded directory.
+     *
+     * Match exclude patterns only against path components *within* the
+     * project directory.
      *
      * @param source
      */
@@ -266,7 +268,10 @@ class CmdLint extends CmdBase {
         final uri = source.getSource().getURI()
         if( uri == null || uri.getScheme() != 'file' )
             return false
-        for( Path path = Path.of(uri); path != null; path = path.getParent() ) {
+        final base = cwd()
+        final absolute = Path.of(uri)
+        final start = absolute.startsWith(base) ? base.relativize(absolute) : absolute
+        for( Path path = start; path != null; path = path.getParent() ) {
             if( PathUtils.isExcluded(path, excludePatterns) )
                 return true
         }
@@ -312,8 +317,15 @@ class CmdLint extends CmdBase {
      */
     private String relativeName(SourceUnit source) {
         final uri = source.getSource().getURI()
-        final cwd = root ?: Path.of('.').toAbsolutePath().normalize()
-        return cwd.relativize(Path.of(uri)).toString()
+        return cwd().relativize(Path.of(uri)).toString()
+    }
+
+    /**
+     * The directory that source paths are resolved and reported against.
+     * Defaults to the current working directory; overridable in tests.
+     */
+    private Path cwd() {
+        return root ?: Path.of('.').toAbsolutePath().normalize()
     }
 
     private static final Comparator<SyntaxException> ERROR_COMPARATOR = (SyntaxException a, SyntaxException b) -> {
