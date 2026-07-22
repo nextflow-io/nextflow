@@ -40,14 +40,21 @@ class CsvWriter {
         final result = new StringBuilder()
 
         if( columns )
-            result << columns.collect(column -> "\"${column}\"").join(sep) << '\n'
+            result << columns.collect(column -> formatCsvValue(column)).join(sep) << '\n'
 
         for( final record : records ) {
             final values = rowValues(record, columns)
-            result << values.collect(v -> "\"${toCsvString(v)}\"").join(sep) << '\n'
+            result << values.collect(v -> formatCsvValue(v)).join(sep) << '\n'
         }
 
         path.text = result.toString()
+    }
+
+    private String formatCsvValue(value) {
+        final str = toCsvString(value)
+        final escaped = str.replace('"', '""')
+        final needsQuote = escaped != str || str.contains(sep) || str.contains('\r') || str.contains('\n')
+        return needsQuote ? "\"${escaped}\"" : str
     }
 
     private static Collection columnHeaders(Object header, List records) {
