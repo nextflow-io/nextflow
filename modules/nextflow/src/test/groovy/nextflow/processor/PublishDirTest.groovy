@@ -455,6 +455,12 @@ class PublishDirTest extends Specification {
         then:
         Files.isSymbolicLink(destination)
 
+        when:
+        // explicit `overwrite false` is honored even on a mode mismatch
+        new PublishDir(mode: 'copy', overwrite: false, sourceDir: workDir).processFile(source, destination)
+        then:
+        Files.isSymbolicLink(destination)
+
         cleanup:
         folder?.deleteDir()
     }

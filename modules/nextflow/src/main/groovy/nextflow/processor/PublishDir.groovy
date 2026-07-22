@@ -489,13 +489,14 @@ class PublishDir {
     }
 
     protected boolean shouldOverwrite(Path source, Path target) {
-        // always overwrite when the existing file was published with a different mode
-        // (e.g. a symlink but now `copy`, or vice versa), even if its content matches
-        if( checkPublishModeMismatch(target) )
-            return true
-
         if( overwrite instanceof Boolean )
             return overwrite
+
+        // overwrite when the existing file was published with a different mode
+        // (e.g. a symlink but now `copy`, or vice versa), even if its content matches.
+        // placed after the explicit `overwrite` check so `overwrite false` is honored
+        if( checkPublishModeMismatch(target) )
+            return true
 
         final hashMode = HashMode.of(overwrite) ?: HashMode.DEFAULT()
         final sourceHash = HashBuilder.hashPath(source, source.parent, hashMode)
