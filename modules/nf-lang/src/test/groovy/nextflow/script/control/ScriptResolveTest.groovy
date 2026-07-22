@@ -16,10 +16,16 @@
 
 package nextflow.script.control
 
+import java.nio.file.Path
+
 import org.codehaus.groovy.syntax.SyntaxException
 import spock.lang.Shared
 import spock.lang.Specification
 import test.TestUtils
+
+import static test.TestUtils.deleteDir
+import static test.TestUtils.tempDir
+import static test.TestUtils.tempFile
 
 /**
  * @see nextflow.script.control.ScriptResolveVisitor
@@ -37,6 +43,11 @@ class ScriptResolveTest extends Specification {
 
     List<SyntaxException> check(String contents) {
         return TestUtils.check(scriptParser, contents)
+    }
+
+    List<SyntaxException> check(Path projectDir, List<Path> files) {
+        final parser = new ScriptParser(projectDir)
+        return TestUtils.check(parser, files)
     }
 
     def 'should report an error for conflicting declarations' () {
@@ -422,6 +433,105 @@ class ScriptResolveTest extends Specification {
         )
         then:
         errors.size() == 0
+    }
+
+    def 'should not resolve a callable as a variable outside a workflow' () {
+        given:
+        def root = tempDir()
+        def module = 'def basename(x) { \'hi\' }\n'
+
+        // an included function cannot be referenced as a variable
+        when:
+        def a = tempFile(root, 'a/main.nf',
+            '''\
+            include { basename } from './utils'
+
+            process FOO {
+                shell:
+                "echo ${basename}"
+            }
+
+            workflow { FOO() }
+            ''')
+        tempFile(root, 'a/utils.nf', module)
+        errors = check(root.resolve('a'), [a, root.resolve('a/utils.nf')])
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 5
+        errors[0].getOriginalMessage() == '`basename` is not defined'
+
+        // an implicit declaration in a process shadows an included name
+        when:
+        def b = tempFile(root, 'b/main.nf',
+            '''\
+            include { basename } from './utils'
+
+            process FOO {
+                shell:
+                basename = basename(task)
+                "echo ${basename}"
+            }
+
+            workflow { FOO() }
+            ''')
+        tempFile(root, 'b/utils.nf', module)
+        def errors = check(root.resolve('b'), [b, root.resolve('b/utils.nf')])
+        then:
+        errors.size() == 0
+
+        // an explicit declaration shadows an included function
+        when:
+        def c = tempFile(root, 'c/main.nf',
+            '''\
+            include { basename } from './utils'
+
+            process FOO {
+                shell:
+                def basename = basename(task)
+                "echo ${basename}"
+            }
+
+            workflow { FOO() }
+            ''')
+        tempFile(root, 'c/utils.nf', module)
+        errors = check(root.resolve('c'), [c, root.resolve('c/utils.nf')])
+        then:
+        errors.size() == 0
+
+        cleanup:
+        deleteDir(root)
+    }
+
+    def 'should resolve a callable as a variable in a workflow' () {
+        given:
+        def root = tempDir()
+        def main = tempFile(root, 'main.nf',
+            '''\
+            include { BAR } from './modules/bar'
+
+            workflow {
+                BAR()
+                BAR.out.view()
+            }
+            ''')
+        def module = tempFile(root, 'modules/bar/main.nf',
+            '''\
+            process BAR {
+                output:
+                stdout
+
+                script:
+                "echo bar"
+            }
+            ''')
+
+        when:
+        def errors = check(root, [main, module])
+        then:
+        errors.size() == 0
+
+        cleanup:
+        deleteDir(root)
     }
 
 }
