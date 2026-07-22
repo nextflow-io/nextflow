@@ -53,11 +53,11 @@ dependencies {
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
     compileOnly 'org.pf4j:pf4j:3.14.1'
     compileOnly 'io.seqera:lib-trace:0.1.0'
-    compileOnly 'io.seqera:lib-httpx:2.3.0'
+    compileOnly 'io.seqera:lib-httpx:2.4.0'
     compileOnly 'org.apache.commons:commons-lang3:3.18.0'
 
     // Force lib-httpx version to avoid conflicts with older versions from nf-commons
-    testImplementation 'io.seqera:lib-httpx:2.3.0'
+    testImplementation 'io.seqera:lib-httpx:2.4.0'
 
     api 'org.apache.commons:commons-compress:1.26.1'
     api 'com.google.code.gson:gson:2.13.1'
