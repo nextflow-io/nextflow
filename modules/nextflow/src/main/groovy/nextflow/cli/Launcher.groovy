@@ -40,7 +40,6 @@ import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
 import nextflow.util.LoggerHelper
 import nextflow.util.ProxyConfig
-import nextflow.util.SpuriousDeps
 import org.eclipse.jgit.api.errors.GitAPIException
 
 import static nextflow.util.SysHelper.dumpThreads
@@ -118,11 +117,6 @@ class Launcher {
 
         if(SecretsLoader.isEnabled())
             allCommands.add(new CmdSecret())
-
-        // legacy command
-        final cmdCloud = SpuriousDeps.cmdCloud()
-        if( cmdCloud )
-            allCommands.add(cmdCloud)
 
         options = new CliOptions()
         jcommander = new JCommander(options)
@@ -635,6 +629,8 @@ class Launcher {
         final noProxy = env.get('NO_PROXY') ?: env.get('no_proxy')
         if(noProxy) {
             System.setProperty('http.nonProxyHosts', noProxy.tokenize(',').join('|'))
+            // make the same entries available to HxClient-based clients via ProxyConfig
+            ProxyConfig.setNoProxyHosts(noProxy.tokenize(','))
         }
     }
 
@@ -654,10 +650,12 @@ class Launcher {
         assert qualifier in ['http','https','ftp','HTTP','HTTPS','FTP']
         def str = null
         def var = "${qualifier}_" + (qualifier.isLowerCase() ? 'proxy' : 'PROXY')
+        // ALL_PROXY / all_proxy is the fallback when no scheme-specific variable is set
+        def allVar = qualifier.isLowerCase() ? 'all_proxy' : 'ALL_PROXY'
 
         // -- setup HTTP proxy
         try {
-            final proxy = ProxyConfig.parse(str = env.get(var.toString()))
+            final proxy = ProxyConfig.parse(str = env.get(var.toString()) ?: env.get(allVar))
             if( proxy ) {
                 // set the expected protocol
                 proxy.protocol = qualifier.toLowerCase()
@@ -668,13 +666,33 @@ class Launcher {
                 if( proxy.authenticator() ) {
                     log.debug "Setting $qualifier proxy authenticator"
                     Authenticator.setDefault(proxy.authenticator())
+                    enableBasicProxyTunneling()
                 }
+                // register so HxClient-based clients honour the same proxy (routing + credentials)
+                ProxyConfig.register(proxy)
             }
         }
         catch ( MalformedURLException e ) {
             log.warn "Not a valid $qualifier proxy: '$str' -- Check the value of variable `$var` in your environment"
         }
 
+    }
+
+    /**
+     * The JDK strips proxy credentials from the HTTPS {@code CONNECT} request for the auth schemes
+     * listed in {@code jdk.http.auth.tunneling.disabledSchemes} (default {@code Basic}, see
+     * {@code $JAVA_HOME/conf/net.properties}), so HTTPS targets behind an authenticating proxy fail
+     * with a 407 even when the authenticator is correctly wired. Clear the property so Basic proxy
+     * authentication works over the tunnel — but never override a value the user set explicitly
+     * (e.g. via {@code NXF_OPTS='-Djdk.http.auth.tunneling.disabledSchemes=...'}).
+     */
+    @PackageScope
+    static void enableBasicProxyTunneling() {
+        final key = 'jdk.http.auth.tunneling.disabledSchemes'
+        if( System.getProperty(key) == null ) {
+            log.debug "Clearing $key to allow Basic proxy authentication over HTTPS tunnelling"
+            System.setProperty(key, '')
+        }
     }
 
     /**
