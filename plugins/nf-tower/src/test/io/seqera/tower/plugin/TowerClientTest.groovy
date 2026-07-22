@@ -153,6 +153,7 @@ class TowerClientTest extends Specification {
         client.getUrlTraceProgress(null, '12345') == 'https://api.cloud.seqera.io/trace/12345/progress'
         client.getUrlTraceHeartbeat(null, '12345') == 'https://api.cloud.seqera.io/trace/12345/heartbeat'
         client.getUrlTraceComplete(null, '12345') == 'https://api.cloud.seqera.io/trace/12345/complete'
+        client.getUrlWorkflowUpdate(null, '12345') == 'https://api.cloud.seqera.io/workflow/12345'
     }
 
     def 'should get trace endpoint with workspace' () {
@@ -166,6 +167,7 @@ class TowerClientTest extends Specification {
         client.getUrlTraceProgress('300', '12345') == 'https://api.cloud.seqera.io/trace/12345/progress?workspaceId=300'
         client.getUrlTraceHeartbeat('300', '12345') == 'https://api.cloud.seqera.io/trace/12345/heartbeat?workspaceId=300'
         client.getUrlTraceComplete('300', '12345') == 'https://api.cloud.seqera.io/trace/12345/complete?workspaceId=300'
+        client.getUrlWorkflowUpdate('300', '12345') == 'https://api.cloud.seqera.io/workflow/12345?workspaceId=300'
     }
 
     def 'should load schema col len' () {
@@ -190,6 +192,19 @@ class TowerClientTest extends Specification {
         request != null
         request.method() == 'POST'
         request.uri().toString() == 'http://example.com/test'
+    }
+
+    def 'should build a PATCH request with content'() {
+        given:
+        def tower = new TowerClient()
+        def content = '{"schedRunId": "run-xyz"}'
+
+        when:
+        def request = tower.makeRequest('http://example.com/workflow/123', content, 'PATCH')
+
+        then:
+        request.method() == 'PATCH'
+        request.uri().toString() == 'http://example.com/workflow/123'
     }
 
     def 'should send http message' () {

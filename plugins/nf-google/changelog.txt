@@ -1,5 +1,8 @@
 nf-google changelog
 ===================
+1.27.4 - 15 Jul 2026
+- Bump jackson-databind to patched versions to fix deserialization CVEs (#7322) [8d4423e8a]
+
 1.27.3 - 28 May 2026
 - Bump Failsafe to 3.3.2 and force lib-httpx@2.3.0 (#7181) [1c47215a8]
 

@@ -44,7 +44,7 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
     private kill = true
 
-    private boolean legacy = System.getenv('NXF_DOCKER_LEGACY')=='true'
+    private boolean legacy
 
     private String mountFlags0
 
@@ -52,8 +52,12 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
     private String capAdd
 
+    private boolean cpuLimits
+
     DockerBuilder(String name, DockerConfig config) {
         this.image = name
+
+        this.cpuLimits = config.cpuLimits
 
         if( config.engineOptions )
             addEngineOptions(config.engineOptions)
@@ -125,7 +129,9 @@ class DockerBuilder extends ContainerBuilder<DockerBuilder> {
 
         result << 'run -i '
 
-        if( cpus && !legacy )
+        if( cpus && cpuLimits )
+            result << "--cpus ${cpus} "
+        else if( cpus && !legacy )
             result << "--cpu-shares ${cpus * 1024} "
 
         if( cpuset ) {
