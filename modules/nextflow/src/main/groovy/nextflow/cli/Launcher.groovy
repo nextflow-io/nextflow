@@ -40,7 +40,6 @@ import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
 import nextflow.util.LoggerHelper
 import nextflow.util.ProxyConfig
-import nextflow.util.SpuriousDeps
 import org.eclipse.jgit.api.errors.GitAPIException
 
 import static nextflow.util.SysHelper.dumpThreads
@@ -118,11 +117,6 @@ class Launcher {
 
         if(SecretsLoader.isEnabled())
             allCommands.add(new CmdSecret())
-
-        // legacy command
-        final cmdCloud = SpuriousDeps.cmdCloud()
-        if( cmdCloud )
-            allCommands.add(cmdCloud)
 
         options = new CliOptions()
         jcommander = new JCommander(options)
