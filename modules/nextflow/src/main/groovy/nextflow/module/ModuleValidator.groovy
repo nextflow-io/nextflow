@@ -59,13 +59,15 @@ class ModuleValidator {
         if( errors )
             return errors
 
+        // Level 2c: validate that declared module dependencies are vendored at their pinned version
+        errors.addAll(validateRequiresModules(moduleDir, spec))
+        if( errors )
+            return errors
+
         // Level 3: validate the module script against its kind
         final scriptPath = moduleDir.resolve(Const.DEFAULT_MAIN_FILE_NAME)
         if( spec.isWorkflow() ) {
-            // a workflow module's interface is defined by its take:/emit: sections and is not
-            // duplicated in meta.yml, so only require that the script defines a workflow
-            if( !ModuleSpecFactory.definesWorkflow(scriptPath) )
-                errors << "Workflow module '${spec.name}' must define a workflow in ${Const.DEFAULT_MAIN_FILE_NAME}".toString()
+            errors.addAll(validateWorkflow(spec, scriptPath))
         }
         else {
             final sourceSpec = ModuleSpecFactory.fromScript(scriptPath)
@@ -142,6 +144,71 @@ class ModuleValidator {
             if( specTopics != sourceTopics )
                 errors << "Module spec has ${specTopics} topic emissions but module has ${sourceTopics} topic emissions".toString()
         }
+
+        return errors
+    }
+
+    /**
+     * Validate that every {@code requires.modules} dependency declared in the meta.yml is
+     * vendored under the module's own nested {@code modules/} directory at the pinned version.
+     *
+     * The publish bundle ships these vendored dependencies (nested per-module vendoring, ADR v2),
+     * so a dependency that is declared but not vendored -- or vendored at a different version --
+     * would produce a broken bundle. This check is local/offline (no registry access).
+     *
+     * @param moduleDir the module directory being validated
+     * @param spec      the parsed module spec
+     */
+    static List<String> validateRequiresModules(Path moduleDir, ModuleSpec spec) {
+        final errors = new ArrayList<String>()
+        final deps = spec.requiresModules
+        if( !deps )
+            return errors
+
+        final nested = new ModuleStorage(moduleDir)
+        for( final dep : deps ) {
+            final parsed = ModuleResolver.parseDependency(dep)
+            final ref = parsed.reference
+            final installed = nested.getInstalledModule(ref)
+            if( installed == null ) {
+                errors << ("Declared dependency '${dep}' is not vendored under modules/${ref.fullName} -- " +
+                    "run `nextflow module install ${dep}` from the module directory").toString()
+                continue
+            }
+            if( parsed.version && installed.installedVersion != parsed.version )
+                errors << "Declared dependency '${dep}' is vendored at version ${installed.installedVersion} but ${parsed.version} is required".toString()
+        }
+        return errors
+    }
+
+    /**
+     * Validate a workflow module's script and reconcile its {@code take:}/{@code emit:} interface
+     * with the meta.yml. A workflow module must define exactly one workflow; when the meta.yml also
+     * declares {@code input}/{@code output} (e.g. a typed workflow) the counts must match the
+     * workflow's take/emit arity. When the meta.yml omits them the take:/emit: sections are the sole
+     * source of truth and there is nothing to reconcile.
+     *
+     * @param spec       the parsed module spec
+     * @param scriptPath the module's main.nf
+     */
+    static List<String> validateWorkflow(ModuleSpec spec, Path scriptPath) {
+        final errors = new ArrayList<String>()
+
+        final interfaces = ModuleSpecFactory.workflowInterfaces(scriptPath)
+        if( interfaces.isEmpty() ) {
+            errors << "Workflow module '${spec.name}' must define a workflow in ${Const.DEFAULT_MAIN_FILE_NAME}".toString()
+            return errors
+        }
+        if( interfaces.size() > 1 ) {
+            errors << "Workflow module '${spec.name}' must define exactly one workflow in ${Const.DEFAULT_MAIN_FILE_NAME} (found ${interfaces.size()})".toString()
+            return errors
+        }
+
+        final iface = interfaces[0]
+        if( spec.inputs != null && spec.inputs.size() != iface.takes )
+            errors << "Module spec has ${spec.inputs.size()} inputs but workflow declares ${iface.takes} take(s)".toString()
+        if( spec.outputs != null && spec.outputs.size() != iface.emits )
+            errors << "Module spec has ${spec.outputs.size()} outputs but workflow declares ${iface.emits} emit(s)".toString()
 
         return errors
     }

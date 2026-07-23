@@ -25,10 +25,12 @@ import nextflow.exception.AbortOperationException
 import nextflow.script.ast.ProcessNodeV1
 import nextflow.script.ast.ProcessNodeV2
 import nextflow.script.ast.ScriptNode
+import nextflow.script.ast.WorkflowNode
 import nextflow.script.control.ScriptParser
 import org.yaml.snakeyaml.Yaml
 
 import static nextflow.module.ModuleSpec.ModuleParam
+import static nextflow.script.ast.ASTUtils.asBlockStatements
 
 /**
  * Factory methods for module specs.
@@ -163,6 +165,34 @@ class ModuleSpecFactory {
      */
     static boolean definesWorkflow(Path path) {
         return !parseScript(path, false).getWorkflows().isEmpty()
+    }
+
+    /**
+     * The take/emit arity of a workflow, used to reconcile a workflow module's
+     * {@code take:}/{@code emit:} interface with its meta.yml input/output.
+     */
+    static class WorkflowInterface {
+        final int takes
+        final int emits
+
+        WorkflowInterface(int takes, int emits) {
+            this.takes = takes
+            this.emits = emits
+        }
+    }
+
+    /**
+     * The take/emit arity of every workflow defined by the given script. Parsing is
+     * syntactic only, so a workflow that includes not-yet-installed modules still parses.
+     */
+    static List<WorkflowInterface> workflowInterfaces(Path path) {
+        final List<WorkflowInterface> result = []
+        for( final WorkflowNode wf : parseScript(path, false).getWorkflows() ) {
+            final takes = wf.getParameters() != null ? wf.getParameters().length : 0
+            final emits = asBlockStatements(wf.emits).size()
+            result.add(new WorkflowInterface(takes, emits))
+        }
+        return result
     }
 
     /**
