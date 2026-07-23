@@ -35,6 +35,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.script.control.Compiler
 import nextflow.script.control.ParanoidWarning
 import nextflow.script.control.ScriptParser
+import nextflow.script.formatter.CommentReattacher
 import nextflow.script.formatter.FormattingOptions
 import nextflow.script.formatter.ScriptFormattingVisitor
 import nextflow.script.parser.v2.ErrorListener
@@ -102,6 +103,9 @@ class CmdLint extends CmdBase {
     @Parameter(names = ['-harshil-alignment'], description = 'Use Harshil alignment')
     boolean harhsilAlignment
 
+    @Parameter(names = ['-line-length'], description = 'Maximum line length when formatting (0 to disable line wrapping)')
+    int lineLength = FormattingOptions.DEFAULT_MAX_LINE_LENGTH
+
     @Parameter(names = ['-sort-declarations'], description = 'Sort script declarations in Nextflow scripts')
     boolean sortDeclarations
 
@@ -152,7 +156,10 @@ class CmdLint extends CmdBase {
             case 'markdown' -> new MarkdownErrorListener()
             default -> new StandardErrorListener(outputMode, launcher.options.ansiLog, launcher.options.quiet)
         }
-        formattingOptions = new FormattingOptions(spaces, !tabs, harhsilAlignment, false, sortDeclarations)
+        if( lineLength < 0 )
+            throw new AbortOperationException("Error: `-line-length` must be zero or greater")
+
+        formattingOptions = new FormattingOptions(spaces, !tabs, harhsilAlignment, false, sortDeclarations, lineLength)
 
         errorListener.beforeAll()
 
@@ -349,7 +356,7 @@ class CmdLint extends CmdBase {
             name.endsWith('.config') ? formatConfig(file) :
             null
 
-        if( result != null && file.text != result ) {
+        if( result != null ) {
             summary.filesFormatted += 1
             file.text = result
         }
@@ -365,9 +372,10 @@ class CmdLint extends CmdBase {
         log.debug "Formatting script ${file}"
         errorListener.beforeFormat(file)
 
-        final formatter = new ScriptFormattingVisitor(source, formattingOptions)
+        final text = file.text
+        final formatter = new ScriptFormattingVisitor(source, formattingOptions, text)
         formatter.visit()
-        return formatter.toString()
+        return checkCommentsPreserved(file, text, formatter.toString(), false)
     }
 
     private String formatConfig(File file) {
@@ -380,9 +388,25 @@ class CmdLint extends CmdBase {
         log.debug "Formatting config ${file}"
         errorListener.beforeFormat(file)
 
-        final formatter = new ConfigFormattingVisitor(source, formattingOptions)
+        final text = file.text
+        final formatter = new ConfigFormattingVisitor(source, formattingOptions, text)
         formatter.visit()
-        return formatter.toString()
+        return checkCommentsPreserved(file, text, formatter.toString(), true)
+    }
+
+    /**
+     * Verify that formatting neither removed, duplicated nor altered any
+     * comment, and refuse to format the file otherwise. Returns null if the
+     * check fails or the formatted text is unchanged.
+     */
+    private String checkCommentsPreserved(File file, String before, String after, boolean configFile) {
+        if( after == before )
+            return null
+        if( CommentReattacher.commentTexts(before, configFile) != CommentReattacher.commentTexts(after, configFile) ) {
+            log.warn "Refusing to format ${file}: formatting would remove or alter comments -- please report this as a bug"
+            return null
+        }
+        return after
     }
 
 }

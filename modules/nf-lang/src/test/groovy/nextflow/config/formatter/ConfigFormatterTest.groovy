@@ -34,19 +34,33 @@ class ConfigFormatterTest extends Specification {
         parser = new ConfigParser()
     }
 
-    String format(String contents) {
+    String format(FormattingOptions options, String contents) {
         def source = parser.parse('main.nf', contents)
         assert !source.getErrorCollector().hasErrors()
-        def formatter = new ConfigFormattingVisitor(source, new FormattingOptions(4, true))
+        def formatter = new ConfigFormattingVisitor(source, options, contents)
         formatter.visit()
         return formatter.toString()
     }
 
-    boolean checkFormat(String input, String output) {
+    String format(String contents) {
+        return format(new FormattingOptions(4, true), contents)
+    }
+
+    boolean checkFormat(FormattingOptions options, String input, String output) {
         input = input.stripIndent()
         output = output.stripIndent()
-        assert format(input) == output
-        assert format(output) == output
+        assert format(options, input) == output
+        assert format(options, output) == output
+        return true
+    }
+
+    boolean checkFormat(String input, String output) {
+        return checkFormat(new FormattingOptions(4, true), input, output)
+    }
+
+    boolean checkFormat(String source) {
+        source = source.stripIndent()
+        assert format(source) == source
         return true
     }
 
@@ -86,6 +100,116 @@ class ConfigFormatterTest extends Specification {
             plugins {
                 id 'nf-hello'
             }
+            '''
+        )
+    }
+
+    def 'should preserve comments when formatting a config file' () {
+        expect:
+        checkFormat(
+            '''\
+            // header comment
+            process {
+                cpus = 4 // inline comment
+                // dangling in block
+            }
+
+            // trailing comment at EOF
+            // process { memory = '8GB' }
+            '''
+        )
+        checkFormat(
+            '''\
+            profiles {
+                // the test profile
+                test {
+                    params.x = 1
+                    // done
+                }
+                // dangling in profiles
+            }
+
+            process {
+                // nothing here yet
+            }
+            '''
+        )
+        // CRLF line endings
+        checkFormat(
+            "process {\r\n    // why\r\n    cpus = 4\r\n}\r\n",
+            '''\
+            process {
+                // why
+                cpus = 4
+            }
+            '''
+        )
+    }
+
+    def 'should keep comments in place inside wrapped config values' () {
+        expect:
+        checkFormat(
+            '''\
+            workDir = params.base
+                // keep work under scratch
+                .resolve('work')
+
+            process {
+                ext = [
+                    args: '--fast', // aligner options
+                    cpus: 4,
+                    // more to come
+                ]
+            }
+            '''
+        )
+    }
+
+    def 'should align config assignments with harshil alignment' () {
+        expect:
+        checkFormat(
+            new FormattingOptions(4, true, true, false, false, 120),
+            '''\
+            process {
+                cpus = 4
+                memory = '8GB'
+            }
+            ''',
+            '''\
+            process {
+                cpus   = 4
+                memory = '8GB'
+            }
+            '''
+        )
+    }
+
+    def 'should not format config statements excluded with fmt directives' () {
+        expect:
+        checkFormat(
+            '''\
+            process {
+                cpus     = 4 // fmt: skip
+                memory='8GB'
+            }
+            ''',
+            '''\
+            process {
+                cpus     = 4 // fmt: skip
+                memory = '8GB'
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            // fmt: off
+            params {
+              x    = 1
+              yy   = 2
+            }
+            // fmt: on
+
+            params.z = 3
             '''
         )
     }

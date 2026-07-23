@@ -23,16 +23,21 @@ import nextflow.config.ast.ConfigAssignNode;
 import nextflow.config.ast.ConfigBlockNode;
 import nextflow.config.ast.ConfigIncludeNode;
 import nextflow.config.ast.ConfigNode;
+import nextflow.config.ast.ConfigStatement;
 import nextflow.config.ast.ConfigVisitorSupport;
-import nextflow.script.formatter.FormattingOptions;
+import nextflow.script.formatter.CommentReattacher;
 import nextflow.script.formatter.Formatter;
+import nextflow.script.formatter.FormattingOptions;
 import org.codehaus.groovy.control.SourceUnit;
-import org.codehaus.groovy.runtime.IOGroovyMethods;
 
 import static nextflow.script.ast.ASTUtils.*;
 
 /**
  * Format a config file.
+ *
+ * All comments are preserved: comment metadata is re-derived from the
+ * source text with {@link CommentReattacher} and emitted as leading,
+ * trailing and dangling comments through {@link Formatter}.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
@@ -42,12 +47,19 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
 
     private FormattingOptions options;
 
+    private String sourceText;
+
     private Formatter fmt;
 
-    public ConfigFormattingVisitor(SourceUnit sourceUnit, FormattingOptions options) {
+    public ConfigFormattingVisitor(SourceUnit sourceUnit, FormattingOptions options, String sourceText) {
         this.sourceUnit = sourceUnit;
         this.options = options;
+        this.sourceText = sourceText;
         this.fmt = new Formatter(options);
+    }
+
+    public ConfigFormattingVisitor(SourceUnit sourceUnit, FormattingOptions options) {
+        this(sourceUnit, options, null);
     }
 
     @Override
@@ -57,8 +69,42 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
 
     public void visit() {
         var moduleNode = sourceUnit.getAST();
-        if( moduleNode instanceof ConfigNode cn )
-            super.visit(cn);
+        if( moduleNode instanceof ConfigNode cn ) {
+            // re-derive comment metadata from the source so that no comment
+            // is lost; if the source is not available, fall back to the
+            // comment metadata attached by the parser
+            if( sourceText == null )
+                sourceText = CommentReattacher.readSourceText(sourceUnit);
+            if( sourceText != null )
+                CommentReattacher.apply(cn, sourceText);
+            // enforce a blank line above config blocks and between
+            // statements of different kinds; statements of the same kind
+            // (e.g. assignments) may be grouped
+            ConfigStatement prevStmt = null;
+            for( var stmt : cn.getConfigStatements() ) {
+                // a statement that is part of a verbatim region emitted by
+                // an earlier statement emits nothing -- do not emit a blank
+                // line for it
+                if( fmt.isVerbatimSuppressed(stmt) )
+                    continue;
+                if( prevStmt != null && needsBlankLineBetween(prevStmt, stmt) && !fmt.leadingStartsWithBlankLine(stmt) )
+                    fmt.appendNewLine();
+                prevStmt = stmt;
+                super.visit(stmt);
+            }
+            // emit comments at the end of the file
+            fmt.appendDanglingComments(cn);
+        }
+    }
+
+    private static boolean needsBlankLineBetween(ConfigStatement prevStmt, ConfigStatement stmt) {
+        var prevBlock = isBlockStatement(prevStmt);
+        var block = isBlockStatement(stmt);
+        return prevBlock || block || prevStmt.getClass() != stmt.getClass();
+    }
+
+    private static boolean isBlockStatement(ConfigStatement stmt) {
+        return stmt instanceof ConfigBlockNode || stmt instanceof ConfigApplyBlockNode;
     }
 
     public String toString() {
@@ -69,6 +115,8 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
 
     @Override
     public void visitConfigApplyBlock(ConfigApplyBlockNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.appendIndent();
         fmt.append(node.name);
@@ -77,32 +125,41 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
 
         fmt.incIndent();
         super.visitConfigApplyBlock(node);
+        fmt.appendDanglingComments(node);
         fmt.decIndent();
 
         fmt.appendIndent();
         fmt.append('}');
+        fmt.appendTrailingComment(node);
         fmt.appendNewLine();
     }
 
     @Override
     public void visitConfigApply(ConfigApplyNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
-        fmt.visitDirective(node);
+        fmt.visitDirective(node, node);
     }
 
     @Override
     public void visitConfigAssign(ConfigAssignNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
-        fmt.appendIndent();
-        var name = String.join(".", node.names);
-        fmt.append(name);
-        if( currentAlignmentWidth > 0 ) {
-            var padding = currentAlignmentWidth - name.length();
-            fmt.append(" ".repeat(padding));
-        }
-        fmt.append(" = ");
-        fmt.visit(node.value);
-        fmt.appendNewLine();
+        fmt.emitWrappable(() -> {
+            fmt.appendIndent();
+            var name = String.join(".", node.names);
+            fmt.append(name);
+            if( currentAlignmentWidth > 0 ) {
+                var padding = currentAlignmentWidth - name.length();
+                fmt.append(" ".repeat(padding));
+            }
+            fmt.append(" = ");
+            fmt.visitRootExpression(node.value);
+            fmt.appendTrailingComment(node);
+            fmt.appendNewLine();
+        });
     }
 
     private static final Pattern IDENTIFIER = Pattern.compile("[a-zA-Z_]+[a-zA-Z0-9_]*");
@@ -111,6 +168,8 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
 
     @Override
     public void visitConfigBlock(ConfigBlockNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.appendIndent();
         if( node.kind != null ) {
@@ -144,6 +203,7 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
 
         fmt.incIndent();
         super.visitConfigBlock(node);
+        fmt.appendDanglingComments(node);
         fmt.decIndent();
 
         if( options.harshilAlignment() )
@@ -151,15 +211,19 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
 
         fmt.appendIndent();
         fmt.append('}');
+        fmt.appendTrailingComment(node);
         fmt.appendNewLine();
     }
 
     @Override
     public void visitConfigInclude(ConfigIncludeNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.appendIndent();
         fmt.append("includeConfig ");
         fmt.visit(node.source);
+        fmt.appendTrailingComment(node);
         fmt.appendNewLine();
     }
 

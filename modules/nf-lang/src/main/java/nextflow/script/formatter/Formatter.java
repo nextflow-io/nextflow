@@ -16,7 +16,6 @@
 package nextflow.script.formatter;
 
 import java.util.List;
-import java.util.stream.Stream;
 
 import nextflow.script.ast.ASTNodeMarker;
 import org.codehaus.groovy.ast.ASTNode;
@@ -68,6 +67,21 @@ import static nextflow.script.ast.ASTUtils.*;
 /**
  * Transform an AST into formatted source code.
  *
+ * Formatting never removes comments (expects comment metadata prepared
+ * by {@link CommentReattacher}):
+ *
+ * <ul>
+ *   <li>trailing comments are emitted on the same line as their statement;</li>
+ *   <li>dangling comments (after the last statement of a block, or in an
+ *       empty block) are emitted before the closing brace;</li>
+ *   <li>closures with comments are always formatted as multi-line blocks
+ *       so that their comments can be emitted;</li>
+ *   <li>leading comments are normalized against Windows (CRLF) line
+ *       endings.</li>
+ * </ul>
+ *
+ * @see CommentReattacher
+ *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 public class Formatter extends CodeVisitorSupport {
@@ -107,14 +121,42 @@ public class Formatter extends CodeVisitorSupport {
             return;
 
         for( var line : DefaultGroovyMethods.asReversed(comments) ) {
-            if( "\n".equals(line) ) {
-                append(line);
+            if( isNewLine(line) ) {
+                appendNewLine();
             }
             else {
                 appendIndent();
-                append(line.stripLeading());
+                append(stripCarriageReturns(line.stripLeading()));
             }
         }
+    }
+
+    public boolean hasLeadingComments(ASTNode node) {
+        var comments = (List<String>) node.getNodeMetaData(ASTNodeMarker.LEADING_COMMENTS);
+        return comments != null && !comments.isEmpty();
+    }
+
+    /**
+     * Determine whether the leading comments of a node begin with a blank
+     * line (the entries are in reverse source order, blank lines are "\n").
+     */
+    public boolean leadingStartsWithBlankLine(ASTNode node) {
+        var comments = (List<String>) node.getNodeMetaData(ASTNodeMarker.LEADING_COMMENTS);
+        if( comments == null || comments.isEmpty() )
+            return false;
+        return "\n".equals(comments.get(comments.size() - 1));
+    }
+
+    /**
+     * Remove the blank lines at the start of the leading comments of a node
+     * (the blank lines emitted first are at the end of the list).
+     */
+    public void stripLeadingBlankPrefix(ASTNode node) {
+        var comments = (List<String>) node.getNodeMetaData(ASTNodeMarker.LEADING_COMMENTS);
+        if( comments == null )
+            return;
+        while( !comments.isEmpty() && "\n".equals(comments.get(comments.size() - 1)) )
+            comments.remove(comments.size() - 1);
     }
 
     public boolean hasTrailingComment(ASTNode node) {
@@ -126,8 +168,84 @@ public class Formatter extends CodeVisitorSupport {
         var comment = (String) node.getNodeMetaData(ASTNodeMarker.TRAILING_COMMENT);
         if( comment != null ) {
             append(' ');
-            append(comment);
+            append(stripCarriageReturns(comment));
         }
+    }
+
+    /**
+     * Emit the comments that follow the last statement of a block (or fill
+     * an otherwise-empty block), before the closing brace.
+     */
+    public void appendDanglingComments(ASTNode node) {
+        appendCommentList((List<String>) node.getNodeMetaData(CommentReattacher.DANGLING_COMMENTS));
+    }
+
+    /**
+     * Emit the comments that follow a node at the end of a section that has
+     * no block emission point (e.g. the last workflow take).
+     */
+    public void appendDanglingAfter(ASTNode node) {
+        appendCommentList((List<String>) node.getNodeMetaData(CommentReattacher.DANGLING_AFTER));
+    }
+
+    private void appendCommentList(List<String> comments) {
+        if( comments == null || comments.isEmpty() )
+            return;
+        var pendingNewLine = false;
+        for( var line : comments ) {
+            if( isNewLine(line) ) {
+                appendNewLine();
+                pendingNewLine = false;
+            }
+            else {
+                if( pendingNewLine )
+                    appendNewLine();
+                appendIndent();
+                append(stripCarriageReturns(line.stripLeading()));
+                pendingNewLine = true;
+            }
+        }
+        if( pendingNewLine )
+            appendNewLine();
+    }
+
+    public boolean hasDanglingComments(ASTNode node) {
+        var comments = (List<String>) node.getNodeMetaData(CommentReattacher.DANGLING_COMMENTS);
+        return comments != null && !comments.isEmpty();
+    }
+
+    /**
+     * Emit a node excluded from formatting with `fmt: skip` or `fmt: off`
+     * verbatim from the source text (or nothing, if the node is part of a
+     * verbatim region emitted by an earlier node). Returns false if the
+     * node is not part of a verbatim region.
+     */
+    public boolean appendVerbatim(ASTNode node) {
+        if( node.getNodeMetaData(CommentReattacher.VERBATIM_SUPPRESSED) != null )
+            return true;
+        var text = (String) node.getNodeMetaData(CommentReattacher.VERBATIM_SOURCE);
+        if( text == null )
+            return false;
+        appendLeadingComments(node);
+        append(text);
+        appendNewLine();
+        return true;
+    }
+
+    /**
+     * Determine whether a node is part of a verbatim region emitted by an
+     * earlier node, and therefore emits nothing itself.
+     */
+    public boolean isVerbatimSuppressed(ASTNode node) {
+        return node.getNodeMetaData(CommentReattacher.VERBATIM_SUPPRESSED) != null;
+    }
+
+    private static boolean isNewLine(String line) {
+        return "\n".equals(line) || "\r\n".equals(line);
+    }
+
+    private static String stripCarriageReturns(String line) {
+        return line.replace("\r", "");
     }
 
     public void incIndent() {
@@ -142,17 +260,112 @@ public class Formatter extends CodeVisitorSupport {
         return builder.toString();
     }
 
+    // line-length wrapping
+
+    /**
+     * How aggressively expressions are being wrapped onto multiple lines,
+     * on top of preserving the wrapping in the source:
+     *
+     * NONE -- only expressions that were wrapped in the source are wrapped;
+     * TOP  -- the outermost wrappable construct of the statement is wrapped;
+     * ALL  -- every wrappable construct of the statement is wrapped.
+     */
+    private enum WrapMode {
+        NONE,
+        TOP,
+        ALL
+    }
+
+    private WrapMode wrapMode = WrapMode.NONE;
+
+    private int exprDepth = 0;
+
+    /**
+     * Emit a line of output, and if it exceeds the maximum line length,
+     * roll it back and re-emit it with expressions wrapped onto multiple
+     * lines -- first only the outermost construct, then, if the result
+     * still has an over-long line (e.g. deeply nested arguments), every
+     * construct.
+     */
+    public void emitWrappable(Runnable body) {
+        if( options.maxLineLength() <= 0 || wrapMode != WrapMode.NONE ) {
+            body.run();
+            return;
+        }
+        var mark = builder.length();
+        body.run();
+        if( !exceedsMaxLineLength(mark) )
+            return;
+        builder.setLength(mark);
+        wrapMode = WrapMode.TOP;
+        body.run();
+        if( exceedsMaxLineLength(mark) ) {
+            builder.setLength(mark);
+            wrapMode = WrapMode.ALL;
+            body.run();
+        }
+        wrapMode = WrapMode.NONE;
+    }
+
+    /**
+     * Determine whether any line emitted after the given position exceeds
+     * the maximum line length.
+     */
+    private boolean exceedsMaxLineLength(int from) {
+        var max = options.maxLineLength();
+        var lineStart = builder.lastIndexOf("\n", from - 1) + 1;
+        var col = 0;
+        for( int i = lineStart; i < builder.length(); i++ ) {
+            var c = builder.charAt(i);
+            if( c == '\n' )
+                col = 0;
+            else if( c == '\t' )
+                col += options.tabSize();
+            else
+                col++;
+            if( col > max )
+                return true;
+        }
+        return false;
+    }
+
+    /**
+     * Determine whether the current construct should be wrapped because of
+     * the line-length limit.
+     */
+    private boolean forceWrap() {
+        if( wrapMode == WrapMode.ALL )
+            return true;
+        if( wrapMode == WrapMode.TOP )
+            return exprDepth <= 2;
+        return false;
+    }
+
     // statements
 
     @Override
-    public void visitIfElse(IfStatement node) {
-        visitIfElse(node, true);
+    public void visitBlockStatement(BlockStatement node) {
+        super.visitBlockStatement(node);
+        appendDanglingComments(node);
     }
 
-    protected void visitIfElse(IfStatement node, boolean preIndent) {
+    @Override
+    public void visitIfElse(IfStatement node) {
+        if( appendVerbatim(node) )
+            return;
         appendLeadingComments(node);
-        if( preIndent )
-            appendIndent();
+        appendIndent();
+        appendIfElse(node);
+        appendTrailingComment(node);
+        appendNewLine();
+    }
+
+    /**
+     * Format an if/else statement in K&R style ("} else {"), without the
+     * line terminator (the caller appends the trailing comment and newline
+     * after the final closing brace).
+     */
+    private void appendIfElse(IfStatement node) {
         append("if ");
         visit(node.getBooleanExpression());
         append(" {\n");
@@ -160,20 +373,18 @@ public class Formatter extends CodeVisitorSupport {
         visit(node.getIfBlock());
         decIndent();
         appendIndent();
-        append("}\n");
+        append('}');
         if( node.getElseBlock() instanceof IfStatement is ) {
-            appendIndent();
-            append("else ");
-            visitIfElse(is, false);
+            append(" else ");
+            appendIfElse(is);
         }
         else if( !(node.getElseBlock() instanceof EmptyStatement) ) {
-            appendIndent();
-            append("else {\n");
+            append(" else {\n");
             incIndent();
             visit(node.getElseBlock());
             decIndent();
             appendIndent();
-            append("}\n");
+            append('}');
         }
     }
 
@@ -181,14 +392,19 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitExpressionStatement(ExpressionStatement node) {
-        var cre = currentRootExpr;
-        currentRootExpr = node.getExpression();
+        if( appendVerbatim(node) )
+            return;
         appendLeadingComments(node);
-        appendIndent();
-        visitStatementLabels(node);
-        visit(node.getExpression());
-        appendNewLine();
-        currentRootExpr = cre;
+        emitWrappable(() -> {
+            var cre = currentRootExpr;
+            currentRootExpr = node.getExpression();
+            appendIndent();
+            visitStatementLabels(node);
+            visit(node.getExpression());
+            appendTrailingComment(node);
+            appendNewLine();
+            currentRootExpr = cre;
+        });
     }
 
     private void visitStatementLabels(ExpressionStatement node) {
@@ -202,31 +418,43 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitReturnStatement(ReturnStatement node) {
-        var cre = currentRootExpr;
-        currentRootExpr = node.getExpression();
+        if( appendVerbatim(node) )
+            return;
         appendLeadingComments(node);
-        appendIndent();
-        append("return ");
-        visit(node.getExpression());
-        appendNewLine();
-        currentRootExpr = cre;
+        emitWrappable(() -> {
+            var cre = currentRootExpr;
+            currentRootExpr = node.getExpression();
+            appendIndent();
+            append("return ");
+            visit(node.getExpression());
+            appendTrailingComment(node);
+            appendNewLine();
+            currentRootExpr = cre;
+        });
     }
 
     @Override
     public void visitAssertStatement(AssertStatement node) {
+        if( appendVerbatim(node) )
+            return;
         appendLeadingComments(node);
-        appendIndent();
-        append("assert ");
-        visit(node.getBooleanExpression());
-        if( !(node.getMessageExpression() instanceof ConstantExpression ce && ce.isNullExpression()) ) {
-            append(" : ");
-            visit(node.getMessageExpression());
-        }
-        appendNewLine();
+        emitWrappable(() -> {
+            appendIndent();
+            append("assert ");
+            visit(node.getBooleanExpression());
+            if( !(node.getMessageExpression() instanceof ConstantExpression ce && ce.isNullExpression()) ) {
+                append(" : ");
+                visit(node.getMessageExpression());
+            }
+            appendTrailingComment(node);
+            appendNewLine();
+        });
     }
 
     @Override
     public void visitTryCatchFinally(TryCatchStatement node) {
+        if( appendVerbatim(node) )
+            return;
         appendLeadingComments(node);
         appendIndent();
         append("try {\n");
@@ -234,25 +462,40 @@ public class Formatter extends CodeVisitorSupport {
         visit(node.getTryStatement());
         decIndent();
         appendIndent();
-        append("}\n");
+        append('}');
         for( var catchStatement : node.getCatchStatements() ) {
-            visit(catchStatement);
+            visitCatchStatement(catchStatement);
         }
-    }
-
-    @Override
-    public void visitThrowStatement(ThrowStatement node) {
-        appendLeadingComments(node);
-        appendIndent();
-        append("throw ");
-        visit(node.getExpression());
+        appendTrailingComment(node);
         appendNewLine();
     }
 
     @Override
-    public void visitCatchStatement(CatchStatement node) {
+    public void visitThrowStatement(ThrowStatement node) {
+        if( appendVerbatim(node) )
+            return;
         appendLeadingComments(node);
-        appendIndent();
+        emitWrappable(() -> {
+            appendIndent();
+            append("throw ");
+            visit(node.getExpression());
+            appendTrailingComment(node);
+            appendNewLine();
+        });
+    }
+
+    @Override
+    public void visitCatchStatement(CatchStatement node) {
+        // format in K&R style ("} catch (...) {"), unless the catch clause
+        // has leading comments that must be emitted on their own lines
+        if( hasLeadingComments(node) ) {
+            appendNewLine();
+            appendLeadingComments(node);
+            appendIndent();
+        }
+        else {
+            append(' ');
+        }
         append("catch (");
 
         var variable = node.getVariable();
@@ -267,7 +510,7 @@ public class Formatter extends CodeVisitorSupport {
         visit(node.getCode());
         decIndent();
         appendIndent();
-        append("}\n");
+        append('}');
     }
 
     // expressions
@@ -285,8 +528,10 @@ public class Formatter extends CodeVisitorSupport {
             visit(receiver);
             if( inWrappedMethodChain ) {
                 incIndent();
-                if( !nextflow.script.dsl.Types.isNamespace(receiver.getType()) ) {
+                if( !nextflow.script.dsl.Types.isNamespace(receiver.getType()) || hasLeadingComments(node) || hasTrailingComment(receiver) ) {
+                    appendTrailingComment(receiver);
                     appendNewLine();
+                    appendLeadingComments(node);
                     appendIndent();
                 }
             }
@@ -314,6 +559,7 @@ public class Formatter extends CodeVisitorSupport {
             visitArguments(parenArgs, wrap);
             if( wrap ) {
                 appendNewLine();
+                appendDanglingComments(node.getArguments());
                 decIndent();
                 appendIndent();
             }
@@ -341,6 +587,14 @@ public class Formatter extends CodeVisitorSupport {
     }
 
     public void visitDirective(MethodCallExpression call) {
+        visitDirective(call, null);
+    }
+
+    /**
+     * Format a directive, emitting the trailing comment of the given source
+     * node (typically the enclosing statement) at the end of the line.
+     */
+    public void visitDirective(MethodCallExpression call, ASTNode trailingSource) {
         appendIndent();
         append(call.getMethodAsString());
         var arguments = asMethodCallArguments(call);
@@ -348,6 +602,8 @@ public class Formatter extends CodeVisitorSupport {
             append(' ');
             visitArguments(arguments, false);
         }
+        if( trailingSource != null )
+            appendTrailingComment(trailingSource);
         appendNewLine();
     }
 
@@ -415,12 +671,16 @@ public class Formatter extends CodeVisitorSupport {
     public void visitTernaryExpression(TernaryExpression node) {
         if( shouldWrapExpression(node) ) {
             visit(node.getBooleanExpression());
+            appendTrailingComment(node.getBooleanExpression());
             incIndent();
             appendNewLine();
+            appendLeadingComments(node.getTrueExpression());
             appendIndent();
             append("? ");
             visit(node.getTrueExpression());
+            appendTrailingComment(node.getTrueExpression());
             appendNewLine();
+            appendLeadingComments(node.getFalseExpression());
             appendIndent();
             append(": ");
             visit(node.getFalseExpression());
@@ -462,10 +722,13 @@ public class Formatter extends CodeVisitorSupport {
             append(" ->");
         }
         var code = (BlockStatement) node.getCode();
-        if( code.getStatements().size() == 0 ) {
+        if( code.getStatements().size() == 0 && !hasDanglingComments(code) ) {
             append(" }");
         }
-        else if( code.getStatements().size() == 1 && code.getStatements().get(0) instanceof ExpressionStatement es && !shouldWrapExpression(node) ) {
+        else if( code.getStatements().size() == 1
+                && code.getStatements().get(0) instanceof ExpressionStatement es
+                && !shouldWrapExpression(node)
+                && !hasComments(code, es) ) {
             append(' ');
             visitStatementLabels(es);
             visit(es.getExpression());
@@ -479,6 +742,17 @@ public class Formatter extends CodeVisitorSupport {
             appendIndent();
             append('}');
         }
+    }
+
+    /**
+     * Determine whether a single-statement closure carries comments and
+     * must therefore be formatted as a multi-line block so that the
+     * comments can be emitted.
+     */
+    private boolean hasComments(BlockStatement code, ExpressionStatement es) {
+        return hasDanglingComments(code)
+            || hasLeadingComments(es)
+            || hasTrailingComment(es);
     }
 
     public void visitParameters(Parameter[] parameters) {
@@ -500,13 +774,14 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitTupleExpression(TupleExpression node) {
-        var wrap = hasTrailingComma(node);
+        var wrap = shouldWrapConstruct(node, node.getExpressions());
         append('(');
         if( wrap )
             incIndent();
         visitPositionalArgs(node.getExpressions(), wrap);
         if( wrap ) {
             appendNewLine();
+            appendDanglingComments(node);
             decIndent();
             appendIndent();
         }
@@ -515,13 +790,14 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitListExpression(ListExpression node) {
-        var wrap = hasTrailingComma(node);
+        var wrap = shouldWrapConstruct(node, node.getExpressions());
         append('[');
         if( wrap )
             incIndent();
         visitPositionalArgs(node.getExpressions(), wrap);
         if( wrap ) {
             appendNewLine();
+            appendDanglingComments(node);
             decIndent();
             appendIndent();
         }
@@ -534,11 +810,14 @@ public class Formatter extends CodeVisitorSupport {
         for( int i = 0; i < args.size(); i++ ) {
             if( wrap ) {
                 appendNewLine();
+                appendLeadingComments(args.get(i));
                 appendIndent();
             }
             visit(args.get(i));
             if( trailingComma || i + 1 < args.size() )
                 append(comma);
+            if( wrap )
+                appendTrailingComment(args.get(i));
         }
     }
 
@@ -548,13 +827,14 @@ public class Formatter extends CodeVisitorSupport {
             append("[:]");
             return;
         }
-        var wrap = hasTrailingComma(node);
+        var wrap = shouldWrapConstruct(node, node.getMapEntryExpressions());
         append('[');
         if( wrap )
             incIndent();
         visitNamedArgs(node.getMapEntryExpressions(), wrap);
         if( wrap ) {
             appendNewLine();
+            appendDanglingComments(node);
             decIndent();
             appendIndent();
         }
@@ -567,11 +847,14 @@ public class Formatter extends CodeVisitorSupport {
         for( int i = 0; i < args.size(); i++ ) {
             if( wrap ) {
                 appendNewLine();
+                appendLeadingComments(args.get(i));
                 appendIndent();
             }
             visit(args.get(i));
             if( trailingComma || i + 1 < args.size() )
                 append(comma);
+            if( wrap )
+                appendTrailingComment(args.get(i));
         }
     }
 
@@ -622,9 +905,62 @@ public class Formatter extends CodeVisitorSupport {
     public void visitConstantExpression(ConstantExpression node) {
         var text = (String) node.getNodeMetaData(ASTNodeMarker.VERBATIM_TEXT);
         if( text != null )
-            append(text);
+            append(reindentMultiLineString(text, indentDelta(node)));
         else
             append(node.getText());
+    }
+
+    /**
+     * The current column (0-based) at the end of the emitted text.
+     */
+    private int currentColumn() {
+        return builder.length() - builder.lastIndexOf("\n") - 1;
+    }
+
+    /**
+     * The difference between the column where a multi-line string is being
+     * emitted and the column where it appeared in the source, so that its
+     * interior lines can be shifted accordingly.
+     */
+    private int indentDelta(Expression node) {
+        if( !options.insertSpaces() )
+            return 0;
+        if( node.getLineNumber() < 0 || node.getColumnNumber() < 0 )
+            return 0;
+        return currentColumn() - (node.getColumnNumber() - 1);
+    }
+
+    /**
+     * Shift the interior lines of a multi-line string so that its
+     * indentation follows the indentation of the emitted code. Blank lines
+     * are left untouched, and lines are never shifted past their first
+     * non-whitespace character.
+     */
+    private static String reindentMultiLineString(String text, int delta) {
+        if( delta == 0 || text.indexOf('\n') < 0 )
+            return text;
+        var lines = text.split("\n", -1);
+        var result = new StringBuilder(lines[0]);
+        for( int i = 1; i < lines.length; i++ ) {
+            result.append('\n');
+            var line = lines[i];
+            if( line.isEmpty() ) {
+                // empty lines are left untouched; whitespace-only lines are
+                // shifted since they carry the indentation of whatever
+                // follows (an interpolation or the closing quote)
+            }
+            else if( delta > 0 ) {
+                result.append(" ".repeat(delta));
+                result.append(line);
+            }
+            else {
+                int strip = 0;
+                while( strip < -delta && strip < line.length() && line.charAt(strip) == ' ' )
+                    strip++;
+                result.append(line.substring(strip));
+            }
+        }
+        return result.toString();
     }
 
     @Override
@@ -663,13 +999,15 @@ public class Formatter extends CodeVisitorSupport {
     public void visitGStringExpression(GStringExpression node) {
         // see also: GStringUtil.writeToImpl()
         var quoteChar = (String) node.getNodeMetaData(ASTNodeMarker.QUOTE_CHAR, k -> DQ_STR);
+        var delta = indentDelta(node);
         append(quoteChar);
         var ss = node.getStrings();
         var vs = node.getValues();
         for( int i = 0; i < ss.size(); i++ ) {
             var string = ss.get(i);
-            if( string.getNodeMetaData(ASTNodeMarker.VERBATIM_TEXT) != null )
-                visit(string);
+            var text = (String) string.getNodeMetaData(ASTNodeMarker.VERBATIM_TEXT);
+            if( text != null )
+                append(reindentMultiLineString(text, delta));
             if( i < vs.size() ) {
                 append("${");
                 visit(vs.get(i));
@@ -684,9 +1022,23 @@ public class Formatter extends CodeVisitorSupport {
         var number = (Number) node.getNodeMetaData(ASTNodeMarker.INSIDE_PARENTHESES_LEVEL);
         if( number != null && number.intValue() > 0 )
             append('(');
+        exprDepth++;
         super.visit(node);
+        exprDepth--;
         if( number != null && number.intValue() > 0 )
             append(')');
+    }
+
+    /**
+     * Visit the root expression of a statement-like construct (the value
+     * of a param, config or output assignment, a when-expression, ...) so
+     * that a method chain at its root can be wrapped onto multiple lines.
+     */
+    public void visitRootExpression(Expression node) {
+        var cre = currentRootExpr;
+        currentRootExpr = node;
+        visit(node);
+        currentRootExpr = cre;
     }
 
     // helpers
@@ -708,12 +1060,22 @@ public class Formatter extends CodeVisitorSupport {
     }
 
     private boolean shouldWrapExpression(Expression node) {
-        return node.getLineNumber() < node.getLastLineNumber();
+        return node.getLineNumber() < node.getLastLineNumber() || forceWrap();
     }
 
     private boolean shouldWrapMethodCall(MethodCallExpression node) {
         if( hasTrailingComma(node.getArguments()) )
             return true;
+        if( forceWrap() && asMethodCallArguments(node).size() > 0 )
+            return true;
+        if( hasDanglingComments(node.getArguments()) )
+            return true;
+        for( var arg : asMethodCallArguments(node) ) {
+            if( hasLeadingComments(arg) || hasTrailingComment(arg) )
+                return true;
+            if( arg instanceof MapExpression named && hasElementComments(named.getMapEntryExpressions()) )
+                return true;
+        }
         var start = node.getMethod();
         var end = node.getArguments();
         return start.getLineNumber() < end.getLastLineNumber();
@@ -722,19 +1084,74 @@ public class Formatter extends CodeVisitorSupport {
     private boolean shouldWrapMethodChain(MethodCallExpression node) {
         if( currentRootExpr != node )
             return false;
+        if( chainHasComments(node) )
+            return true;
         if( !shouldWrapExpression(node) )
             return false;
 
+        // find the root of the chain, stepping through property links
+        // (e.g. `foo.out.bar()`) -- their multi-line-ness in the source
+        // comes from the chain layout, not from the root itself
         Expression root = node;
         int depth = 0;
-        while( root instanceof MethodCallExpression mce && !mce.isImplicitThis() ) {
-            root = mce.getObjectExpression();
-            depth += 1;
+        while( true ) {
+            if( root instanceof MethodCallExpression mce && !mce.isImplicitThis() ) {
+                root = mce.getObjectExpression();
+                depth += 1;
+            }
+            else if( root instanceof PropertyExpression pe ) {
+                root = pe.getObjectExpression();
+            }
+            else {
+                break;
+            }
         }
+
+        if( wrapMode != WrapMode.NONE )
+            return depth >= 2;
 
         return shouldWrapExpression(root)
             ? false
             : depth >= 2;
+    }
+
+    /**
+     * Determine whether any link of a method chain carries comments (which
+     * can only be emitted when the chain is wrapped).
+     */
+    private boolean chainHasComments(MethodCallExpression node) {
+        Expression expr = node;
+        while( expr instanceof MethodCallExpression mce && !mce.isImplicitThis() ) {
+            if( hasLeadingComments(mce) || hasTrailingComment(mce.getObjectExpression()) )
+                return true;
+            expr = mce.getObjectExpression();
+        }
+        return false;
+    }
+
+    /**
+     * Determine whether a construct (tuple, list, map) must be wrapped onto
+     * multiple lines: a trailing comma in the source forces wrapping, as do
+     * comments attached to the construct or its elements (which can only be
+     * emitted when the construct is wrapped).
+     */
+    private boolean shouldWrapConstruct(Expression node, List<? extends ASTNode> elements) {
+        return hasTrailingComma(node)
+            || (forceWrap() && elements.size() > 1)
+            || hasElementComments(elements)
+            || hasDanglingComments(node);
+    }
+
+    /**
+     * Determine whether any element of a wrapped construct carries comments
+     * (which can only be emitted when the construct is wrapped).
+     */
+    private boolean hasElementComments(List<? extends ASTNode> elements) {
+        for( var element : elements ) {
+            if( hasLeadingComments(element) || hasTrailingComment(element) )
+                return true;
+        }
+        return false;
     }
 
     private static final String SLASH_STR = "/";
