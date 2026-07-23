@@ -1,0 +1,82 @@
+---
+title: Typed parameters
+description: Declare statically typed pipeline parameters in Nextflow using the params block.
+---
+
+# Typed parameters
+
+<AddedInVersion version="25.10" />
+
+Typed parameters let you declare a pipeline's parameters, their types, and their default values in a single `params` block. The Nextflow language server uses the annotations to validate every parameter reference against its declared type as you write code.
+
+```nextflow
+params {
+    // Path to input data.
+    input: Path
+
+    // Whether to save intermediate files.
+    save_intermeds: Boolean = false
+}
+
+workflow {
+    analyze(params.input, params.save_intermeds)
+}
+```
+
+The `params` block does not require the `nextflow.enable.types` feature flag. For an overview of static typing and how to enable it, see [Static typing][static-typing-page]. For the complete syntax reference, see [Params block][syntax-params-block].
+
+## Syntax
+
+A `params` block consists of one or more parameter declarations. Each declaration consists of a name, a type, and an optional default value:
+
+```nextflow
+params {
+    input: Path
+    save_intermeds: Boolean = false
+    max_cpus: Integer = 4
+}
+```
+
+Only one `params` block may be defined in a script.
+
+## Supported types
+
+Parameters can use any [standard type][stdlib-types] except the dataflow types (`Channel` and `Value`). This includes primitive types such as `Path`, `String`, `Integer`, and `Boolean`, as well as collections and records.
+
+## Default and required parameters
+
+A parameter's default value is optional:
+
+- A parameter that specifies a default value is *optional*. If no value is supplied at runtime, the default is used.
+- A parameter that does not specify a default value is *required*. If a required parameter has no value at runtime, the run fails.
+
+<AddedInVersion version="26.04">
+
+`Boolean` parameters that don't specify a default value default to `false` rather than being treated as required.
+
+</AddedInVersion>
+
+## Overriding parameters
+
+A parameter's default value can be overridden on the command line, in a params file, or in a config file. When a parameter is set from more than one source, Nextflow resolves the final value in the order described in [Pipeline parameters][cli-params].
+
+Nextflow converts command-line parameters to the type set by their annotation. For example, a parameter declared as `Integer` receives an integer value, not the string entered on the command line.
+
+## Referencing parameters
+
+Typed parameters should only be referenced in the entry workflow or the `output` block. To use a parameter elsewhere, pass it to a workflow or process as an explicit input.
+
+## Validation
+
+The language server validates each parameter reference against its declared type. Referencing a parameter in a context that expects a different type is reported as an error before the pipeline runs.
+
+## See also
+
+- [Static typing][static-typing-page]: Overview of static typing and how to enable it.
+- [Types][stdlib-types]: The standard types available for annotations.
+- [Pipeline parameters][cli-params]: How parameter values are resolved across sources.
+
+[cli-params]: ./cli#pipeline-parameters
+[static-typing-page]: ./static-typing
+[stdlib-types]: ./reference/stdlib-types
+[syntax-params-block]: ./reference/syntax#params-block
