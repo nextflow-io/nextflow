@@ -38,6 +38,7 @@ import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.exception.HttpResponseLengthExceedException
 import nextflow.exception.RateLimitExceededException
+import nextflow.util.ProxyConfig
 import nextflow.util.RetryConfig
 import nextflow.util.Threads
 import org.eclipse.jgit.api.Git
@@ -484,32 +485,27 @@ abstract class RepositoryProvider {
 
     @Deprecated
     protected HttpResponse<String> httpSend(HttpRequest request) {
-        if( httpClient==null ) {
-            httpClient = HxClient.newBuilder()
-                .httpClient(newHttpClient())
-                .retryConfig(retryConfig0())
-                .build()
-        }
+        if( httpClient==null )
+            httpClient = newHttpClient()
 
         return httpClient.send(request, HttpResponse.BodyHandlers.ofString())
     }
 
     private HttpResponse<byte[]> httpSend0(HttpRequest request) {
-        if( httpClient==null ) {
-            httpClient = HxClient.newBuilder()
-                .httpClient(newHttpClient())
-                .retryConfig(retryConfig0())
-                .build()
-        }
+        if( httpClient==null )
+            httpClient = newHttpClient()
 
         return httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray())
     }
 
-    private HttpClient newHttpClient() {
-        final builder = HttpClient.newBuilder()
+    private HxClient newHttpClient() {
+        final builder = HxClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
             .connectTimeout(Duration.ofSeconds(60))
             .followRedirects(HttpClient.Redirect.NORMAL)
+            // route through the forward proxy when configured
+            .withProxyConfig(ProxyConfig.proxyConfig())
+            .retryConfig(retryConfig0())
         // use virtual threads executor if enabled
         if( Threads.useVirtual() )
             builder.executor(Executors.newVirtualThreadPerTaskExecutor())
