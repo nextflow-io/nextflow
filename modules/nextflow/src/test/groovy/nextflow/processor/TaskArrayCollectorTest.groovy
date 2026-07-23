@@ -132,7 +132,8 @@ class TaskArrayCollectorTest extends Specification {
         taskArray.script == 'the-task-array-script'
         and:
         taskArray.getArraySize() == 3
-        taskArray.getContainerConfig().getEnvWhitelist() == [ 'ARRAY_JOB_INDEX' ]
+        and: 'the array index variable is no longer injected into the shared container config; it is added to the container env by the launcher (BashWrapperBuilder/FusionHelper)'
+        taskArray.getContainerConfig().getEnvWhitelist() == []
         taskArray.isContainerEnabled() == false
     }
 
