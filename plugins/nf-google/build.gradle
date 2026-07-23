@@ -65,11 +65,15 @@ dependencies {
     api 'io.seqera:lib-httpx:2.4.0'
     // Force patched version to address CVE-2025-55163 (MadeYouReset HTTP/2 DDoS vulnerability)
     runtimeOnly 'io.grpc:grpc-netty-shaded:1.75.0'
-    // Force patched jackson on the 2.18 line (required by the Google SDK) to address
-    // GHSA-72hv-8253-57qq (jackson-core DoS) and the jackson-databind deserialization
-    // advisories fixed in 2.18.9 (PolymorphicTypeValidator and @JsonView/@JsonIgnore bypasses)
-    runtimeOnly 'com.fasterxml.jackson.core:jackson-core:2.18.9'
-    runtimeOnly 'com.fasterxml.jackson.core:jackson-databind:2.18.9'
+    // Bump the jackson pulled transitively by the Google SDK to the patched 2.18 line across ALL
+    // configurations — including testFixtures*, which runtimeOnly/implementation pins don't reach.
+    // Addresses GHSA-72hv-8253-57qq (jackson-core DoS) and the jackson-databind deserialization
+    // advisories fixed in 2.18.9.
+    constraints {
+        api('com.fasterxml.jackson.core:jackson-databind:2.18.9') { because 'jackson-databind deserialization CVEs' }
+        api('com.fasterxml.jackson.core:jackson-core:2.18.9') { because 'GHSA-72hv-8253-57qq' }
+        api('com.fasterxml.jackson.core:jackson-annotations:2.18.9') { because 'keep jackson aligned' }
+    }
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation "org.apache.groovy:groovy:4.0.31"
