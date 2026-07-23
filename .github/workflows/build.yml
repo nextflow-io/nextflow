@@ -186,8 +186,8 @@ jobs:
       - name: Tar integration tests
         if: always()
         run: | 
-            tar -cvf integration-tests.tar.gz tests/checks
-            tar -cvf validation-tests.tar.gz validation
+            tar -cf integration-tests.tar.gz tests/checks
+            tar -cf validation-tests.tar.gz validation
 
       - name: Publish tests report
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
