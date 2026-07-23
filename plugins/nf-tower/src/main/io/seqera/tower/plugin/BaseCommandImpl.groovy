@@ -51,7 +51,6 @@ class BaseCommandImpl {
     }
 
     protected Map readConfig() {
-        // note: the Nextflow home config file is `$HOME/.nextflow/config` (not `nextflow.config`)
         final configFile = Const.APP_HOME_DIR.resolve('config')
         return new ConfigBuilder().build(configFile.exists() ? [ configFile ] : []).flatten()
     }
