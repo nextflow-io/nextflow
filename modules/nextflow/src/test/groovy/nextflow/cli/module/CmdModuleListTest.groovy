@@ -151,6 +151,49 @@ class CmdModuleListTest extends Specification {
         output.contains('myorg/custom')
     }
 
+    def 'should include the module kind in the listing'() {
+        given:
+        def storage = new ModuleStorage(tempDir)
+        createTestModule(storage, 'nf-core', 'fastqc', '1.0.0')                  // process (no kind)
+        createWorkflowModule(storage, 'nf-core', 'align_wf', '0.0.0-test')       // kind: Workflow
+
+        and:
+        def cmd = new CmdModuleList()
+        cmd.root = tempDir
+
+        when:
+        cmd.run()
+        def output = capture.toString()
+
+        then:
+        output.contains('Kind')
+        output.contains('Process')    // fastqc defaults to Process
+        output.contains('Workflow')   // align_wf declares kind: Workflow
+    }
+
+    private Path createWorkflowModule(ModuleStorage storage, String scope, String name, String version) {
+        def moduleDir = storage.getModuleDir(new ModuleReference(scope, name))
+        Files.createDirectories(moduleDir)
+        moduleDir.resolve('main.nf').text = """
+            workflow ${name.toUpperCase()} {
+                take:
+                ch_in
+                main:
+                ch_out = ch_in
+                emit:
+                out = ch_out
+            }
+        """.stripIndent()
+        moduleDir.resolve('meta.yml').text = """
+            name: ${scope}/${name}
+            version: ${version}
+            kind: Workflow
+            description: Test workflow module
+        """.stripIndent()
+        ModuleInfo.save(moduleDir, [checksum: ModuleChecksum.compute(moduleDir), registryUrl: 'http://registry.com'])
+        return moduleDir
+    }
+
     private Path createTestModule(ModuleStorage storage, String scope, String name, String version) {
         def moduleDir = storage.getModuleDir(new ModuleReference(scope, name))
         Files.createDirectories(moduleDir)
