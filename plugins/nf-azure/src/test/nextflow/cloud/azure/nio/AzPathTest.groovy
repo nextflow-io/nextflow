@@ -51,7 +51,7 @@ class AzPathTest extends Specification {
         def path = azpath(objectName)
         then:
         path.toString() == expected
-        path.directory == dir
+        path.@directory == dir
 
         where:
         objectName              | expected              | dir
@@ -67,6 +67,9 @@ class AzPathTest extends Specification {
     def 'should validate blob constructor and cached attributes'() {
         when:
         def path = azpath(PATH)
+        // pre-populate the attributes cache so the slashless case (no directory marker
+        // on the path itself) doesn't have to resolve a real blob over the network
+        path.setAttributes(new AzFileAttributes(directory: IS_DIRECTORY))
         then:
         path.containerName == CONTAINER
 //        path.objectName == BLOB
@@ -329,6 +332,27 @@ class AzPathTest extends Specification {
         itr.next() == azpath('file-name.txt')
         !itr.hasNext()
 
+    }
+
+    def 'isDirectory should consult the attributes for a path without a trailing slash'() {
+        given: 'a slashless path whose resolved attributes report a directory'
+        def path = azpath('/pipeline/output')
+        path.setAttributes(new AzFileAttributes(size: 0, objectId: '/pipeline/output', directory: true))
+
+        expect:
+        !path.@directory        // the trailing-slash field alone says "not a directory"
+        path.isDirectory()      // ...but the resolved attributes identify it as a directory
+    }
+
+    def 'isDirectory should propagate the error when the attribute lookup fails'() {
+        given: 'a relative path has no container, so the attribute lookup throws'
+        def path = azpath('some/file.txt')
+
+        when:
+        path.isDirectory()
+
+        then:
+        thrown(IllegalArgumentException)
     }
 
 }
