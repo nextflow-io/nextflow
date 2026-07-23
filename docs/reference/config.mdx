@@ -139,6 +139,12 @@ The amount of time the Apptainer pull can last, exceeding which the process is t
 
 The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
 
+##### `apptainer.resourceLimits`
+
+<AddedInVersion version="26.10" />
+
+Apply the task `cpus` and `memory` directives as container resource limits using the `--cpus` and `--memory` flags (default: `false`).
+
 ##### `apptainer.runOptions`
 
 Specify extra command line options supported by `apptainer exec`.
@@ -1973,6 +1979,12 @@ The amount of time the Singularity pull can last, after which the process is ter
 ##### `singularity.registry`
 
 The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
+
+##### `singularity.resourceLimits`
+
+<AddedInVersion version="26.10" />
+
+Apply the task `cpus` and `memory` directives as container resource limits using the `--cpus` and `--memory` flags (default: `false`).
 
 ##### `singularity.runOptions`
 

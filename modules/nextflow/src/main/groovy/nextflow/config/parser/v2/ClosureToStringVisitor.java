@@ -22,6 +22,7 @@ import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.expr.ArgumentListExpression;
 import org.codehaus.groovy.ast.expr.ClosureExpression;
 import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.ListExpression;
 import org.codehaus.groovy.ast.expr.MapExpression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.control.SourceUnit;
@@ -58,15 +59,33 @@ class ClosureToStringVisitor extends ClassCodeVisitorSupport {
             return;
 
         var secondArg = arguments.getExpression(1);
-        if( secondArg instanceof MapExpression me ) {
-            for( var entry : me.getMapEntryExpressions() ) {
-                if( entry.getValueExpression() instanceof ClosureExpression ce )
-                    entry.setValueExpression(wrapExprAsPlaceholder(ce));
-            }
+        var replaced = replaceClosures(secondArg);
+        if( replaced != secondArg )
+            node.setArguments(args(arguments.getExpression(0), replaced));
+    }
+
+    /**
+     * Recursively replace any closure expression -- whether it is the
+     * value being assigned directly, or nested inside a list and/or map
+     * literal at any depth (e.g. {@code publishDir = [[path: {...}], ...]})
+     * -- with a placeholder that preserves its source text.
+     */
+    protected Expression replaceClosures(Expression node) {
+        if( node instanceof ClosureExpression ce ) {
+            return wrapExprAsPlaceholder(ce);
         }
-        else if( secondArg instanceof ClosureExpression ce ) {
-            node.setArguments(args(arguments.getExpression(0), wrapExprAsPlaceholder(ce)));
+        if( node instanceof ListExpression le ) {
+            var items = le.getExpressions();
+            for( int i = 0; i < items.size(); i++ )
+                items.set(i, replaceClosures(items.get(i)));
+            return le;
         }
+        if( node instanceof MapExpression me ) {
+            for( var entry : me.getMapEntryExpressions() )
+                entry.setValueExpression(replaceClosures(entry.getValueExpression()));
+            return me;
+        }
+        return node;
     }
 
     protected Expression wrapExprAsPlaceholder(Expression node) {

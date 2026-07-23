@@ -41,6 +41,7 @@ import nextflow.cli.CmdAuth
 import nextflow.config.ConfigBuilder
 import nextflow.exception.AbortOperationException
 import nextflow.platform.PlatformHelper
+import nextflow.util.ProxyConfig
 
 import static nextflow.util.ColorUtil.printColored
 import static nextflow.util.ColorUtil.colorize
@@ -236,8 +237,8 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
     private String normalizeApiUrl(String url) {
         if( !url ) {
             // Read config to get the actual resolved endpoint value
-            final builder = new ConfigBuilder().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
-            final configObject = builder.buildConfigObject()
+            final configFile = Const.APP_HOME_DIR.resolve('config')
+            final configObject = new ConfigBuilder().build(configFile.exists() ? [ configFile ] : [])
             final towerConfig = configObject.navigate('tower') as Map ?: [:]
             return PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
         }
@@ -404,8 +405,8 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
     @Override
     void config(Boolean showHeader = true) {
         // Read from both main config and seqera-auth.config file
-        final builder = new ConfigBuilder().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
-        final configObject = builder.buildConfigObject()
+        final configFile = Const.APP_HOME_DIR.resolve('config')
+        final configObject = new ConfigBuilder().build(configFile.exists() ? [ configFile ] : [])
         final config = configObject.flatten()
 
         // Navigate to tower config section (returns map without 'tower.' prefix)
@@ -994,7 +995,10 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
 
     protected boolean checkApiConnection(String endpoint) {
         try {
-            final client = HxClient.newBuilder().connectTimeout(Duration.ofMillis(API_TIMEOUT_MS)).build()
+            final client = HxClient.newBuilder()
+                    .withProxyConfig(ProxyConfig.proxyConfig())
+                    .connectTimeout(Duration.ofMillis(API_TIMEOUT_MS))
+                    .build()
             final url = "${endpoint}/service-info"
             log.debug "Platform auth API - GET ${url}"
             final request = HttpRequest.newBuilder()
