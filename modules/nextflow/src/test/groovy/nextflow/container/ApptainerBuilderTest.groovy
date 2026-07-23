@@ -19,6 +19,7 @@ package nextflow.container
 import java.nio.file.Paths
 
 import nextflow.SysEnv
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -218,6 +219,21 @@ class ApptainerBuilderTest extends Specification {
         cmd = new ApptainerBuilder('ubuntu.img').params(entry:'/bin/sh').build().getRunCommand('bwa --this --that file.fastq')
         then:
         cmd == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --no-home --pid -B "$NXF_TASK_WORKDIR" ubuntu.img /bin/sh -c "cd \\"$NXF_TASK_WORKDIR\\"; bwa --this --that file.fastq"'
+    }
+
+    def 'should emit resource limits when enabled' () {
+        expect:
+        new ApptainerBuilder('busybox')
+                .setCpus(2)
+                .setMemory(new MemoryUnit('100M'))
+                .build()
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --no-home --pid -B "$NXF_TASK_WORKDIR" busybox'
+
+        new ApptainerBuilder('busybox', new ApptainerConfig(resourceLimits: true))
+                .setCpus(2)
+                .setMemory(new MemoryUnit('100M'))
+                .build()
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+APPTAINERENV_TMP="$TMP"} ${TMPDIR:+APPTAINERENV_TMPDIR="$TMPDIR"} apptainer exec --no-home --pid --cpus 2 --memory 100m -B "$NXF_TASK_WORKDIR" busybox'
     }
 
     @Unroll
