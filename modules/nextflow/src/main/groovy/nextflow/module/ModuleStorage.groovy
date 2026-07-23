@@ -48,6 +48,7 @@ import static nextflow.module.ModuleInfo.MODULE_INFO_FILE
 class ModuleStorage {
     public static final String MODULE_MANIFEST_FILE = "meta.yml"
     public static final String MODULE_README_FILE = "README.md"
+    public static final String MODULES_DIR = "modules"
     private final Path modulesDir
 
     /**
@@ -56,7 +57,7 @@ class ModuleStorage {
      * @param baseDir The base directory (usually project root)
      */
     ModuleStorage(Path baseDir) {
-        this.modulesDir = baseDir.resolve('modules')
+        this.modulesDir = baseDir.resolve(MODULES_DIR)
     }
 
     /**
@@ -427,6 +428,13 @@ class ModuleStorage {
             tarStream.each { Path path ->
                 // Skip .module-info file when creating bundle
                 if (path.fileName.toString() == MODULE_INFO_FILE) {
+                    return
+                }
+
+                // Skip the nested vendored dependencies directory (modules/) at the module root:
+                // a module's requires.modules dependencies are re-resolved from the registry at
+                // install time, so they must not be shipped inside the parent module's bundle
+                if (Files.isDirectory(path) && path == sourceDir.resolve(MODULES_DIR)) {
                     return
                 }
 
