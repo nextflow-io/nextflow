@@ -1,0 +1,20 @@
+id: no-wildcard-import
+snapshots:
+  import java.awt.*:
+    labels:
+    - source: import java.awt.*
+      style: primary
+      start: 0
+      end: 17
+  import javax.swing.*:
+    labels:
+    - source: import javax.swing.*
+      style: primary
+      start: 0
+      end: 20
+  import nextflow.processor.*:
+    labels:
+    - source: import nextflow.processor.*
+      style: primary
+      start: 0
+      end: 27

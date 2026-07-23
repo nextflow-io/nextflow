@@ -1,0 +1,9 @@
+ruleDirs:
+  - rules
+testConfigs:
+  - testDir: rule-tests
+customLanguages:
+  groovy:
+    libraryPath: groovy.dylib
+    extensions: [groovy, gradle]
+    expandoChar: _
