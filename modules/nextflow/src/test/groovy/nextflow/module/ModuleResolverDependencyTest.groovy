@@ -85,6 +85,55 @@ class ModuleResolverDependencyTest extends Specification {
         return ModuleSpecFactory.fromYaml(tempDir.resolve(relDir).resolve('meta.yml')).version
     }
 
+    def 'a freshly installed workflow module with dependencies reads as VALID' () {
+        given:
+        module('nf-core/aln', '1.0.0', ['nf-core/samtools/sort@1.0.0'])
+        module('nf-core/samtools/sort', '1.0.0')
+        def resolver = new ModuleResolver(tempDir, mockClient())
+        def storage = new ModuleStorage(tempDir)
+
+        when:
+        resolver.installWithDependencies(ModuleReference.parse('nf-core/aln'), '1.0.0')
+
+        then: 'the checksum covers the vendored subtree, so no false MODIFIED status'
+        storage.getInstalledModule(ModuleReference.parse('nf-core/aln')).integrity == ModuleIntegrity.VALID
+        and: 'the vendored dependency is itself VALID'
+        new ModuleStorage(tempDir.resolve('modules/nf-core/aln'))
+            .getInstalledModule(ModuleReference.parse('nf-core/samtools/sort')).integrity == ModuleIntegrity.VALID
+    }
+
+    def 'editing an installed module own file marks it MODIFIED' () {
+        given:
+        module('nf-core/aln', '1.0.0', ['nf-core/samtools/sort@1.0.0'])
+        module('nf-core/samtools/sort', '1.0.0')
+        def resolver = new ModuleResolver(tempDir, mockClient())
+        def storage = new ModuleStorage(tempDir)
+        resolver.installWithDependencies(ModuleReference.parse('nf-core/aln'), '1.0.0')
+
+        when:
+        def mainNf = tempDir.resolve('modules/nf-core/aln/main.nf')
+        mainNf.text = mainNf.text + "\n// local edit\n"
+
+        then:
+        storage.getInstalledModule(ModuleReference.parse('nf-core/aln')).integrity == ModuleIntegrity.MODIFIED
+    }
+
+    def 'editing a vendored dependency by hand marks the parent MODIFIED' () {
+        given:
+        module('nf-core/aln', '1.0.0', ['nf-core/samtools/sort@1.0.0'])
+        module('nf-core/samtools/sort', '1.0.0')
+        def resolver = new ModuleResolver(tempDir, mockClient())
+        def storage = new ModuleStorage(tempDir)
+        resolver.installWithDependencies(ModuleReference.parse('nf-core/aln'), '1.0.0')
+
+        when: 'a vendored dependency file is edited by hand'
+        def depMain = tempDir.resolve('modules/nf-core/aln/modules/nf-core/samtools/sort/main.nf')
+        depMain.text = depMain.text + "\n// hand edit of a vendored dep\n"
+
+        then: 'the change is surfaced through the parent module integrity (Option 1: subtree checksum)'
+        storage.getInstalledModule(ModuleReference.parse('nf-core/aln')).integrity == ModuleIntegrity.MODIFIED
+    }
+
     def 'should install a module and vendor its dependencies under its own nested modules/ dir' () {
         given:
         module('nf-core/aln', '1.0.0', ['nf-core/samtools/sort@1.0.0'])

@@ -249,6 +249,11 @@ class ModuleResolver {
         if( key in onStack )
             throw new AbortOperationException("Module dependency cycle detected: ${(onStack.toList() << key).join(' -> ')}")
 
+        // whether the module is already present at the requested version -- installInto will reuse
+        // it as-is, so we must not touch its checksum (preserving any local modification status)
+        final existing = store.getInstalledModule(reference)
+        final reused = existing != null && (!version || existing.installedVersion == version)
+
         // install this module at the current level
         final installed = installInto(store, reference, version, force)
 
@@ -263,6 +268,12 @@ class ModuleResolver {
             walkDependencies(nestedStore, parsed.reference, parsed.version, force, onStack)
         }
         onStack.remove(key)
+
+        // if this module was (re)installed in this run, refresh its checksum now that its nested
+        // dependencies are vendored, so the stored checksum covers the full subtree and a clean
+        // install reads as VALID (the checksum is saved by installModule *before* deps are present)
+        if( !reused )
+            store.refreshChecksum(reference)
 
         return installed.mainFile
     }

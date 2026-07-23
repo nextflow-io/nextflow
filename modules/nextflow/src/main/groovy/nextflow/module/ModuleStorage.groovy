@@ -113,6 +113,20 @@ class ModuleStorage {
     }
 
     /**
+     * Recompute and persist a module's integrity checksum after its nested dependencies have
+     * been vendored, so the stored checksum covers the module's full installed subtree (its own
+     * files plus vendored deps). The registry origin is preserved. This makes a freshly installed
+     * module read as VALID, while any later edit -- to the module's own files or to a vendored
+     * dependency -- is detected as a modification.
+     *
+     * @param reference The module reference
+     */
+    void refreshChecksum(ModuleReference reference) {
+        final moduleDir = getModuleDir(reference)
+        ModuleInfo.save(moduleDir, 'checksum', ModuleChecksum.compute(moduleDir))
+    }
+
+    /**
      * Get an installed module
      *
      * @param reference The module reference
