@@ -27,6 +27,7 @@ import nextflow.exception.ProcessException
 
 import java.nio.file.Path
 
+import com.google.cloud.batch.v1.AllocationPolicy
 import com.google.cloud.batch.v1.GCS
 import com.google.cloud.batch.v1.StatusEvent
 import com.google.cloud.batch.v1.TaskStatus
@@ -360,6 +361,53 @@ class GoogleBatchTaskHandlerTest extends Specification {
         and:
         taskGroup.getTaskSpec().getVolumesCount() == 1
         taskGroup.getTaskSpec().getVolumes(0) == GCS_VOL
+    }
+
+    def 'should use instance template and ignore the provisioningModel hint' () {
+        given:
+        def GCS_VOL = Volume.newBuilder().setGcs(GCS.newBuilder().setRemotePath('foo').build() ).build()
+        def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def CONTAINER_IMAGE = 'debian:latest'
+        def INSTANCE_TEMPLATE = 'instance-template'
+        def exec = Mock(GoogleBatchExecutor) {
+            getBatchConfig() >> Mock(BatchConfig) {
+                getInstallGpuDrivers() >> true
+            }
+        }
+        and:
+        def bean = new TaskBean(workDir: WORK_DIR, inputFiles: [:])
+        def task = Mock(TaskRun) {
+            toTaskBean() >> bean
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> WORK_DIR
+            getContainer() >> CONTAINER_IMAGE
+            getConfig() >> Mock(TaskConfig) {
+                getCpus() >> 2
+                getMachineType() >> "template://${INSTANCE_TEMPLATE}"
+                getResourceLabels() >> [:]
+                getHints() >> ['scheduling.provisioningModel': 'spot']
+            }
+        }
+        and:
+        def mounts = ['/mnt/disks/foo/scratch:/mnt/disks/foo/scratch:rw']
+        def volumes = [GCS_VOL]
+        def launcher = new GoogleBatchLauncherSpecMock('bash .command.run', mounts, volumes)
+
+        and:
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+
+        when:
+        def req = handler.newSubmitRequest(task, launcher)
+        then:
+        handler.fusionEnabled() >> false
+        handler.findBestMachineType(_, false) >> null
+
+        and:
+        // the template is honored wholesale; the provisioningModel hint is silently ignored (only warned)
+        def allocationPolicy = req.getAllocationPolicy()
+        def instancePolicyOrTemplate = allocationPolicy.getInstances(0)
+        instancePolicyOrTemplate.getInstanceTemplate() == INSTANCE_TEMPLATE
+        instancePolicyOrTemplate.getInstallGpuDrivers() == true
     }
 
     def 'should create the trace record' () {
@@ -908,6 +956,118 @@ class GoogleBatchTaskHandlerTest extends Specification {
         0        | true   | true      | 5    // <-- default to 5
         1        | true   | true      | 1
         2        | true   | true      | 2
+    }
+
+    def 'should resolve provisioning model from scheduling.provisioningModel hint' () {
+        given:
+        def task = Mock(TaskRun) { hashLog >> '1234567890'; getWorkDir() >> Path.of('/work/dir') }
+        def exec = Mock(GoogleBatchExecutor) {
+            getClient() >> Mock(BatchClient)
+            getBatchConfig() >> Mock(BatchConfig) {
+                getSpot() >> CONFIG_SPOT; isSpot() >> CONFIG_SPOT
+                getPreemptible() >> CONFIG_PREEMPTIBLE; isPreemptible() >> CONFIG_PREEMPTIBLE
+            }
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+        def config = Mock(TaskConfig) { getHints() >> HINTS }
+
+        expect:
+        handler.resolveProvisioningModel(config) == AllocationPolicy.ProvisioningModel.valueOf(EXPECTED)
+
+        where:
+        HINTS                                                              | CONFIG_SPOT | CONFIG_PREEMPTIBLE | EXPECTED
+        [:]                                                               | false       | false              | 'STANDARD'     // unset -> global default (on-demand)
+        [:]                                                               | true        | false              | 'SPOT'         // unset -> global spot
+        [:]                                                               | false       | true               | 'PREEMPTIBLE'  // unset -> global preemptible
+        [:]                                                               | true        | true               | 'SPOT'         // spot wins over preemptible
+        ['scheduling.provisioningModel': 'spot']                          | false       | false              | 'SPOT'         // bare hint enables spot
+        ['scheduling.provisioningModel': 'standard']                      | true        | false              | 'STANDARD'     // bare hint overrides global spot -> on-demand
+        ['scheduling.provisioningModel': 'preemptible']                   | false       | false              | 'PREEMPTIBLE'  // bare hint preemptible
+        ['google-batch/scheduling.provisioningModel': 'spot']             | false       | false              | 'SPOT'         // prefixed hint enables spot
+        ['google-batch/scheduling.provisioningModel': 'standard']         | true        | false              | 'STANDARD'     // prefixed hint overrides global spot
+        ['google-batch/scheduling.provisioningModel': 'standard',
+         'scheduling.provisioningModel': 'spot']                          | true        | false              | 'STANDARD'     // prefixed wins over bare
+        ['scheduling.provisioningModel': 'SPOT']                          | false       | false              | 'SPOT'         // value is case-insensitive
+        ['scheduling.provisioningModel': ' Preemptible ']                 | false       | false              | 'PREEMPTIBLE'  // value is trimmed
+        ['scheduling.provisioningModel': 'ondemand']                      | false       | false              | 'STANDARD'     // `ondemand` is an alias for `standard` (on-demand)
+        ['scheduling.provisioningModel': 'OnDemand']                      | true        | false              | 'STANDARD'     // `ondemand` alias is case-insensitive, overrides global spot
+    }
+
+    def 'should fail on invalid scheduling.provisioningModel hint value' () {
+        given:
+        def task = Mock(TaskRun) { hashLog >> '1234567890'; getWorkDir() >> Path.of('/work/dir') }
+        def exec = Mock(GoogleBatchExecutor) {
+            getClient() >> Mock(BatchClient)
+            getBatchConfig() >> Mock(BatchConfig) { getSpot() >> false; isSpot() >> false; getPreemptible() >> false; isPreemptible() >> false }
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+        def config = Mock(TaskConfig) { getHints() >> ['scheduling.provisioningModel': BAD_VALUE] }
+
+        when:
+        handler.resolveProvisioningModel(config)
+        then:
+        thrown(IllegalArgumentException)
+
+        where:
+        BAD_VALUE << [123, true, '', 'yes', '1', 'spotty', 'STANDARD_ISH']   // wrong type and bogus strings must throw, not fail open ('ondemand' is now a valid alias)
+    }
+
+    def 'should throw on unknown google-batch prefixed hint' () {
+        given:
+        def task = Mock(TaskRun) { hashLog >> '1234567890'; getWorkDir() >> Path.of('/work/dir') }
+        def exec = Mock(GoogleBatchExecutor) {
+            getClient() >> Mock(BatchClient)
+            getBatchConfig() >> Mock(BatchConfig) { getSpot() >> false; isSpot() >> false; getPreemptible() >> false; isPreemptible() >> false }
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+
+        when:
+        handler.validateHints(HINTS)
+        then:
+        thrown(IllegalArgumentException)
+
+        where:
+        HINTS                                                        | _
+        ['google-batch/scheduling.provisioningmodel': 'spot']       | _   // realistic case-typo of a known key
+        ['google-batch/bogus': 'x']                                 | _   // wholly unknown prefixed key
+    }
+
+    def 'should report all unknown google-batch hints together' () {
+        given:
+        def task = Mock(TaskRun) { hashLog >> '1234567890'; getWorkDir() >> Path.of('/work/dir') }
+        def exec = Mock(GoogleBatchExecutor) {
+            getClient() >> Mock(BatchClient)
+            getBatchConfig() >> Mock(BatchConfig) { getSpot() >> false; isSpot() >> false; getPreemptible() >> false; isPreemptible() >> false }
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+
+        when:
+        handler.validateHints(['google-batch/bogus': 'x', 'google-batch/scheduling.provisioningmodel': 'spot'])
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('google-batch/bogus')
+        e.message.contains('google-batch/scheduling.provisioningmodel')
+    }
+
+    def 'should ignore unknown bare and foreign-executor hints' () {
+        given:
+        def task = Mock(TaskRun) { hashLog >> '1234567890'; getWorkDir() >> Path.of('/work/dir') }
+        def exec = Mock(GoogleBatchExecutor) {
+            getClient() >> Mock(BatchClient)
+            getBatchConfig() >> Mock(BatchConfig) { getSpot() >> false; isSpot() >> false; getPreemptible() >> false; isPreemptible() >> false }
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+
+        when:
+        // only google-batch/-prefixed keys are validated; bare and foreign-executor keys are left untouched
+        handler.validateHints(HINTS)
+        then:
+        notThrown(IllegalArgumentException)
+
+        where:
+        HINTS                                          | _
+        ['scheduling.bogus': 'x']                      | _   // bare unknown key -> ignored here (owned by no specific executor)
+        ['awsbatch/consumableResources': [:]]          | _   // foreign-executor prefixed key -> not ours to validate
     }
 
     def 'should return zero when no status events exist'() {
