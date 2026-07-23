@@ -83,7 +83,7 @@ class CmdPull extends CmdBase implements HubAware {
 
         for( String proj : list ) {
             if( all ) {
-                try (def mgr = new AssetManager(proj, toHubOptions())) {
+                try (def mgr = new AssetManager(proj)) {
                     def branches = mgr.getBranchesAndTags(false).pulled as List<String>
                     branches.each { rev -> pullProjectRevision(proj, rev) }
                 }

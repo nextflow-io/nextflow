@@ -127,7 +127,7 @@ class AssetManager implements Closeable {
      *
      * @param pipelineName A project name or a project repository Git URL
      * @param config A {@link Map} holding the configuration properties defined in the {@link ProviderConfig#DEFAULT_SCM_FILE} file
-     * @param hubOpts User credentials provided on the command line. See {@link HubOptions} trait
+     * @param hubOpts The git provider credentials. See {@link HubOptions}
      * @return The {@link AssetManager} object itself
      */
     @PackageScope
@@ -321,12 +321,13 @@ class AssetManager implements Closeable {
     /**
      * Sets the user credentials on the {@link RepositoryProvider} object
      *
-     * @param hubOpts The user credentials specified on the program command line. See {@code HubOptions}
+     * @param hubOpts The git provider credentials. See {@link HubOptions}
      */
     @PackageScope
     void setupCredentials( HubOptions hubOpts ) {
-        if( hubOpts?.user() ) {
-            hubOpts = new HubOptions(hub, hubOpts.user())
+        if( hubOpts?.getUser() ) {
+            // rebind to the resolved hub provider so the password prompt names it correctly
+            hubOpts = hubOpts.withProvider(hub)
             final user = hubOpts.getUser()
             final pwd = hubOpts.getPassword()
             provider.setCredentials(user, pwd)
@@ -366,7 +367,7 @@ class AssetManager implements Closeable {
      * Find out the "hub provider" (i.e. the platform on which the remote repository is stored
      * for example: github, bitbucket, etc) and verifies that it is a known provider.
      *
-     * @param hubOpts The user hub info provider as command line options. See {@link HubOptions}
+     * @param hubOpts The git provider credentials. See {@link HubOptions}
      * @return The name of hub name e.g. {@code github}, {@code bitbucket}, etc.
      */
     @PackageScope
@@ -374,7 +375,7 @@ class AssetManager implements Closeable {
 
         def result = hub
         if( !result )
-            result = hubOpts?.provider()
+            result = hubOpts?.getProvider()
         if( !result )
             result = guessHubProviderFromGitConfig()
         if( !result )

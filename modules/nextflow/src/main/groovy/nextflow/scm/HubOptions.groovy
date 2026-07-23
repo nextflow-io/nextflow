@@ -23,18 +23,34 @@ import groovy.transform.CompileStatic
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-record HubOptions(
-    String provider,
-    String user
-) {
+class HubOptions {
+
+    private final String provider
+
+    private final String credentials
+
+    HubOptions(String provider, String credentials) {
+        this.provider = provider
+        this.credentials = credentials
+    }
+
+    String getProvider() { provider }
+
+    String getUser() {
+        if( !credentials )
+            return credentials
+
+        final p = credentials.indexOf(':')
+        return p != -1 ? credentials.substring(0, p) : credentials
+    }
 
     String getPassword() {
-        if( !user )
+        if( !credentials )
             return null
 
-        final p = user.indexOf(':')
+        final p = credentials.indexOf(':')
         if( p != -1 )
-            return user.substring(p + 1)
+            return credentials.substring(p + 1)
 
         final console = System.console()
         if( !console )
@@ -44,11 +60,13 @@ record HubOptions(
         return new String(console.readPassword())
     }
 
-    String getUser() {
-        if( !user )
-            return user
-
-        final p = user.indexOf(':')
-        return p != -1 ? user.substring(0, p) : user
+    /**
+     * @return A copy of these options bound to the given provider, used to resolve the
+     * actual hub provider name (e.g. for the password prompt) while preserving the raw
+     * credentials. Keeping {@code credentials} private avoids exposing the raw
+     * {@code user:password} string as a public accessor.
+     */
+    HubOptions withProvider(String provider) {
+        new HubOptions(provider, credentials)
     }
 }
