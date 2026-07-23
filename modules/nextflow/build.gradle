@@ -93,6 +93,15 @@ dependencies {
 test {
     minHeapSize = "512m"
     maxHeapSize = "4096m"
+    // Dev-mode plugin discovery reads plugins/*/build/resources/main/META-INF/MANIFEST.MF at
+    // runtime. Each plugin's copyPluginManifest task (re)writes that file by truncating and
+    // copying; when a full `gradle test` run schedules both, order this task after them so a
+    // manifest is never read mid-write, which otherwise surfaces intermittently as the pf4j
+    // error "Field 'id' cannot be empty". Ordering only (mustRunAfter), so running
+    // :nextflow:test on its own does not force every plugin to build.
+    mustRunAfter rootProject.subprojects
+            .findAll { it.path.startsWith(':plugins:') }
+            .collect { "${it.path}:copyPluginManifest" }
 }
 
 application {
