@@ -145,7 +145,7 @@ nxf_main() {
     nxf_stage
 
     set +e
-    (set -o pipefail; (nxf_launch | tee .command.out) 3>&1 1>&2 2>&3 | tee .command.err) &
+    (set -o pipefail; (nxf_launch | tee .command.out) 3>&1 1>&2 2>&3 | tee .command.err) 3>&1 1>&2 2>&3 &
     pid=$!
     wait $pid || nxf_main_ret=$?
     nxf_unstage

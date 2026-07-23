@@ -204,7 +204,7 @@ nxf_main() {
     {{stage_cmd}}
 
     set +e
-    (set -o pipefail; (nxf_launch | tee {{stdout_file}}) 3>&1 1>&2 2>&3 | tee {{stderr_file}}) &
+    (set -o pipefail; (nxf_launch | tee {{stdout_file}}) 3>&1 1>&2 2>&3 | tee {{stderr_file}}) 3>&1 1>&2 2>&3 &
     pid=$!
     wait $pid || nxf_main_ret=$?
     {{unstage_cmd}}
