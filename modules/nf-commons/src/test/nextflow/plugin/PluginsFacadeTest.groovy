@@ -572,26 +572,7 @@ class PluginsFacadeTest extends Specification {
         facade.applyRegistryConfig([registry: [url: ['https://reg.example/api']]])
 
         then: 'the configured registries are applied to the updater'
-        1 * updater.addRegistryRepos(_ as RegistryConfig)
-        and:
-        facade.@registryConfig != null
-        facade.@registryConfig.allUrls == ['https://reg.example/api']
-    }
-
-    def 'should apply registry config only once when invoked repeatedly' () {
-        given:
-        def updater = Mock(PluginUpdater)
-        def facade = new PluginsFacade(Paths.get('plugins'), 'prod')
-        facade.@updater = updater
-
-        when:
-        facade.applyRegistryConfig([registry: [url: ['https://reg.example/api']]])
-        facade.applyRegistryConfig([registry: [url: ['https://reg.example/api']]])
-
-        then: 're-entrant calls are idempotent: the registries are applied only once'
-        1 * updater.addRegistryRepos(_ as RegistryConfig)
-        and:
-        facade.@registryConfig != null
+        1 * updater.addRegistryRepos({ RegistryConfig cfg -> cfg.allUrls == ['https://reg.example/api'] })
     }
 
     @Unroll
@@ -606,8 +587,6 @@ class PluginsFacadeTest extends Specification {
 
         then: 'the updater is left untouched'
         0 * updater.addRegistryRepos(_)
-        and:
-        facade.@registryConfig == null
 
         where:
         CONFIG << [ [:], [registry: [:]], [registry: [url: []]] ]
@@ -624,8 +603,6 @@ class PluginsFacadeTest extends Specification {
 
         then: 'plugins are resolved from the dev classpath, so the registry scope is ignored'
         0 * updater.addRegistryRepos(_)
-        and:
-        facade.@registryConfig == null
     }
 
 }

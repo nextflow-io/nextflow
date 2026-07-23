@@ -564,6 +564,51 @@ class PluginUpdaterTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should apply the registry config only once when invoked repeatedly' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0'])
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, false)
+        and:
+        def cfg = new RegistryConfig([url: ['https://reg-a.example/api', 'https://reg-b.example/api']])
+
+        when:
+        updater.addRegistryRepos(cfg)
+        updater.addRegistryRepos(cfg)
+        def repos = updater.getRepositories()
+
+        then: 'the second call is a no-op: only the two configured registries remain, no duplicates'
+        repos.size() == 2
+        repos*.id == ['registry-0', 'registry-1']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should not let a later repository override the default on a version clash' () {
+        given: 'the default registry (first) plus a second repository, mirroring the NXF_PLUGINS_TEST_REPOSITORY layout [default, extra]'
+        def folder = Files.createTempDirectory('test')
+        def defaultRepo = remoteRepository(folder.resolve('default'), ['1.0.0'])
+        def extraRepo = remoteRepository(folder.resolve('extra'), ['1.0.0', '2.0.0'])
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, defaultRepo, false)
+        updater.addRepository(new DefaultUpdateRepository('extra', extraRepo))
+
+        when:
+        def releases = updater.getPluginsMap()['my-plugin'].releases
+
+        then: 'first-listed (default) wins the 1.0.0 clash; the extra repo only contributes 2.0.0'
+        releases.size() == 2
+        releases.find { it.version == '1.0.0' }.url.contains('default')
+        releases.find { it.version == '2.0.0' }.url.contains('extra')
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should union plugin releases across registries, first-listed wins' () {
         given:
         def folder = Files.createTempDirectory('test')

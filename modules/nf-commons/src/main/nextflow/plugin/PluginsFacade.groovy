@@ -58,7 +58,6 @@ class PluginsFacade implements PluginStateListener {
     private CustomPluginManager manager
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
     private String indexUrl
-    private RegistryConfig registryConfig
     private boolean embedded
 
     PluginsFacade() {
@@ -325,11 +324,9 @@ class PluginsFacade implements PluginStateListener {
             log.warn "Plugin registry config is ignored in development mode -- plugins are resolved from the development classpath"
             return
         }
-        // keep re-entrant calls idempotent: the registries are applied only once
-        if( registryConfig != null )
-            return
-        this.registryConfig = new RegistryConfig(registryMap)
-        updater?.addRegistryRepos(registryConfig)
+        // the updater owns the repositories and guards against re-applying the registry config,
+        // so re-entrant calls are safe by construction
+        updater?.addRegistryRepos(new RegistryConfig(registryMap))
     }
 
     synchronized void stop() {

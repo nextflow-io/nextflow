@@ -69,6 +69,8 @@ class PluginUpdater extends UpdateManager {
 
     private boolean offline
 
+    private boolean registryReposApplied
+
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
 
     protected PluginUpdater(CustomPluginManager pluginManager) {
@@ -118,10 +120,14 @@ class PluginUpdater extends UpdateManager {
      *
      * Safe to call after construction and before {@link #prefetchMetadata}, which initialises
      * each {@link HttpPluginRepository} with the metadata it actually needs.
+     *
+     * The registries are applied only once: repeated invocations are a no-op, so re-entrant
+     * callers (e.g. a second {@link PluginsFacade#load}) cannot mint duplicate repositories.
      */
     void addRegistryRepos(RegistryConfig registryConfig) {
-        if( offline || !registryConfig )
+        if( offline || !registryConfig || registryReposApplied )
             return
+        registryReposApplied = true
         final urls = registryConfig.getAllUrls()
         // the configured registries take over: drop the default registry repository(ies)
         // that are actually present so only the user-provided endpoints are queried.
