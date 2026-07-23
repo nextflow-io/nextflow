@@ -85,6 +85,19 @@ class ModuleResolverDependencyTest extends Specification {
         return ModuleSpecFactory.fromYaml(tempDir.resolve(relDir).resolve('meta.yml')).version
     }
 
+    // simulate a user hand-editing an installed module's meta.yml requires.modules
+    private void editRequires(String relDir, List<String> requires) {
+        final metaFile = tempDir.resolve(relDir).resolve('meta.yml')
+        final meta = new Yaml().load(metaFile.text) as Map
+        final req = (meta.requires ?: [:]) as Map
+        if( requires )
+            req.modules = requires
+        else
+            req.remove('modules')
+        meta.requires = req
+        metaFile.text = new Yaml().dump(meta)
+    }
+
     def 'a freshly installed workflow module with dependencies reads as VALID' () {
         given:
         module('nf-core/aln', '1.0.0', ['nf-core/samtools/sort@1.0.0'])
@@ -131,6 +144,94 @@ class ModuleResolverDependencyTest extends Specification {
         depMain.text = depMain.text + "\n// hand edit of a vendored dep\n"
 
         then: 'the change is surfaced through the parent module integrity (Option 1: subtree checksum)'
+        storage.getInstalledModule(ModuleReference.parse('nf-core/aln')).integrity == ModuleIntegrity.MODIFIED
+    }
+
+    def 'update-deps installs a newly declared dependency' () {
+        given:
+        module('nf-core/aln', '1.0.0', [])            // parent initially has no dependencies
+        module('nf-core/samtools/sort', '1.0.0')
+        def resolver = new ModuleResolver(tempDir, mockClient())
+        resolver.installWithDependencies(ModuleReference.parse('nf-core/aln'), '1.0.0')
+        assert !installedAt('modules/nf-core/aln/modules/nf-core/samtools/sort')
+
+        when: 'the user declares a dependency in meta.yml and updates deps'
+        editRequires('modules/nf-core/aln', ['nf-core/samtools/sort@1.0.0'])
+        resolver.updateDependencies(ModuleReference.parse('nf-core/aln'))
+
+        then:
+        installedAt('modules/nf-core/aln/modules/nf-core/samtools/sort')
+    }
+
+    def 'update-deps updates a dependency to the version declared in meta.yml' () {
+        given:
+        module('nf-core/aln', '1.0.0', ['nf-core/samtools/sort@1.0.0'])
+        module('nf-core/samtools/sort', '1.0.0')
+        module('nf-core/samtools/sort', '2.0.0')
+        def resolver = new ModuleResolver(tempDir, mockClient())
+        resolver.installWithDependencies(ModuleReference.parse('nf-core/aln'), '1.0.0')
+        assert versionAt('modules/nf-core/aln/modules/nf-core/samtools/sort') == '1.0.0'
+
+        when:
+        editRequires('modules/nf-core/aln', ['nf-core/samtools/sort@2.0.0'])
+        resolver.updateDependencies(ModuleReference.parse('nf-core/aln'))
+
+        then:
+        versionAt('modules/nf-core/aln/modules/nf-core/samtools/sort') == '2.0.0'
+    }
+
+    def 'update-deps prunes a dependency removed from meta.yml' () {
+        given:
+        module('nf-core/aln', '1.0.0', ['nf-core/samtools/sort@1.0.0'])
+        module('nf-core/samtools/sort', '1.0.0')
+        def resolver = new ModuleResolver(tempDir, mockClient())
+        resolver.installWithDependencies(ModuleReference.parse('nf-core/aln'), '1.0.0')
+        assert installedAt('modules/nf-core/aln/modules/nf-core/samtools/sort')
+
+        when: 'the dependency is removed from meta.yml and deps are updated'
+        editRequires('modules/nf-core/aln', [])
+        resolver.updateDependencies(ModuleReference.parse('nf-core/aln'))
+
+        then:
+        !installedAt('modules/nf-core/aln/modules/nf-core/samtools/sort')
+    }
+
+    def 'update-deps errors and keeps a removed dependency that has local modifications' () {
+        given:
+        module('nf-core/aln', '1.0.0', ['nf-core/samtools/sort@1.0.0'])
+        module('nf-core/samtools/sort', '1.0.0')
+        def resolver = new ModuleResolver(tempDir, mockClient())
+        resolver.installWithDependencies(ModuleReference.parse('nf-core/aln'), '1.0.0')
+        and: 'the vendored dependency is hand-edited'
+        def depMain = tempDir.resolve('modules/nf-core/aln/modules/nf-core/samtools/sort/main.nf')
+        depMain.text = depMain.text + "\n// local edit\n"
+
+        when: 'the dependency is removed from meta.yml and deps are updated'
+        editRequires('modules/nf-core/aln', [])
+        resolver.updateDependencies(ModuleReference.parse('nf-core/aln'))
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('local modifications')
+        and: 'the modified orphan is not removed'
+        installedAt('modules/nf-core/aln/modules/nf-core/samtools/sort')
+    }
+
+    def 'update-deps leaves the parent module untouched (stays MODIFIED)' () {
+        given:
+        module('nf-core/aln', '1.0.0', [])
+        module('nf-core/samtools/sort', '1.0.0')
+        def resolver = new ModuleResolver(tempDir, mockClient())
+        def storage = new ModuleStorage(tempDir)
+        resolver.installWithDependencies(ModuleReference.parse('nf-core/aln'), '1.0.0')
+
+        when: 'the user edits the parent meta.yml to add a dependency, then updates deps'
+        editRequires('modules/nf-core/aln', ['nf-core/samtools/sort@1.0.0'])
+        resolver.updateDependencies(ModuleReference.parse('nf-core/aln'))
+
+        then: 'the dependency is vendored'
+        installedAt('modules/nf-core/aln/modules/nf-core/samtools/sort')
+        and: 'the parent stays MODIFIED (unpublished meta.yml edit; checksum not refreshed)'
         storage.getInstalledModule(ModuleReference.parse('nf-core/aln')).integrity == ModuleIntegrity.MODIFIED
     }
 

@@ -148,6 +148,22 @@ Use the `-force` flag to overwrite local changes:
 $ nextflow module install nf-core/fastqc -version 0.0.0-c9h0bv4 -force
 ```
 
+### Updating a workflow module's dependencies
+
+A workflow module declares its dependencies in `meta.yml` (`requires.modules`), and they are vendored
+under the module's own nested `modules/` directory. If you edit the declared dependency versions of an
+already-installed module by hand, use `-update-deps` to re-vendor them to match the edited `meta.yml`,
+without reinstalling the module itself:
+
+```console
+$ nextflow module install nf-core/my-workflow -update-deps
+```
+
+This installs newly declared dependencies, updates changed versions, and removes dependencies that are no
+longer declared. A vendored dependency with local modifications is not overwritten or removed; an error is
+raised instead. The module itself is left untouched, so its local (unpublished) modification status is
+preserved. The flag is ignored if the module is not installed, and cannot be combined with `-force`.
+
 ## Removing modules
 
 Use the `module remove` command to uninstall a module from your project:

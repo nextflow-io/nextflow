@@ -239,6 +239,70 @@ class ModuleResolver {
         return walkDependencies(storage, reference, version, force, new LinkedHashSet<String>())
     }
 
+    /**
+     * @return true if the given module is installed at this resolver's base directory.
+     */
+    boolean isInstalled(ModuleReference reference) {
+        return storage.isInstalled(reference)
+    }
+
+    /**
+     * Update the vendored dependencies of an already-installed module so that its nested
+     * {@code modules/} directory matches the module's (possibly locally-edited) meta.yml
+     * {@code requires.modules}, without reinstalling the module itself.
+     *
+     * This automates the manual workflow of editing a module's meta.yml dependency versions and
+     * then re-vendoring them. The parent module is left untouched -- in particular its checksum is
+     * not refreshed -- so its (unpublished) modification status is preserved. Each declared
+     * dependency is installed/updated at its pinned version (transitively); a locally-modified
+     * dependency is not silently overwritten (an error is raised instead). A vendored dependency
+     * that is no longer declared is pruned, unless it has local modifications, in which case an
+     * error is raised rather than discarding the changes.
+     *
+     * @param reference the installed module whose dependencies should be updated
+     */
+    void updateDependencies(ModuleReference reference) {
+        final installed = storage.getInstalledModule(reference)
+        if( installed == null )
+            throw new AbortOperationException("Module ${reference} is not installed")
+
+        // declared direct dependencies from the installed (possibly locally-edited) meta.yml
+        final deps = ModuleSpecFactory.fromYaml(installed.manifestFile).requiresModules
+        final nestedStore = storage.nestedFor(reference)
+
+        // remove vendored dependencies that are no longer declared
+        pruneOrphanDependencies(nestedStore, deps)
+
+        // install/update each declared dependency at its pinned version (transitively)
+        final onStack = new LinkedHashSet<String>()
+        onStack.add(reference.fullName)
+        for( final dep : deps ) {
+            final parsed = parseDependency(dep)
+            walkDependencies(nestedStore, parsed.reference, parsed.version, false, onStack)
+        }
+    }
+
+    /**
+     * Remove vendored dependencies under {@code nestedStore} that are not in {@code declaredDeps}.
+     * A modified orphan is not removed -- an error is raised so the user can reconcile it.
+     */
+    private static void pruneOrphanDependencies(ModuleStorage nestedStore, List<String> declaredDeps) {
+        final declared = new HashSet<String>()
+        for( final dep : declaredDeps )
+            declared.add(parseDependency(dep).reference.fullName)
+
+        for( final vendored : nestedStore.listInstalled() ) {
+            if( vendored.reference.fullName in declared )
+                continue
+            if( vendored.integrity == ModuleIntegrity.MODIFIED )
+                throw new AbortOperationException(
+                    "Vendored dependency '${vendored.reference}' has local modifications and is no longer " +
+                        "declared in meta.yml -- refusing to remove it. Restore it in meta.yml or discard the changes.")
+            log.info "Removing dependency no longer declared in meta.yml: ${vendored.reference}"
+            nestedStore.removeModule(vendored.reference, true)
+        }
+    }
+
     private Path walkDependencies(ModuleStorage store, ModuleReference reference, String version, boolean force,
                                   Set<String> onStack) {
         // cycle detection keys on the module name only (ignoring version): this guarantees
