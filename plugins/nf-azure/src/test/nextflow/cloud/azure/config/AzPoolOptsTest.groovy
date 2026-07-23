@@ -16,6 +16,9 @@
 
 package nextflow.cloud.azure.config
 
+import com.azure.compute.batch.models.BatchNodeCommunicationMode
+import com.google.common.hash.Hashing
+import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import spock.lang.Specification
 /**
@@ -48,6 +51,39 @@ class AzPoolOptsTest extends Specification {
         !opts.lowPriority
         !opts.startTask.script
         !opts.startTask.privileged
+        opts.targetCommunicationMode == null
+    }
+
+    def 'should parse the target communication mode' () {
+        expect:
+        new AzPoolOpts([targetCommunicationMode: VALUE]).targetCommunicationMode == EXPECTED
+        where:
+        VALUE         | EXPECTED
+        null          | null
+        'simplified'  | BatchNodeCommunicationMode.SIMPLIFIED
+        'classic'     | BatchNodeCommunicationMode.CLASSIC
+        'SIMPLIFIED'  | BatchNodeCommunicationMode.SIMPLIFIED
+        'CLASSIC'     | BatchNodeCommunicationMode.CLASSIC
+    }
+
+    def 'should reject an invalid target communication mode' () {
+        when:
+        new AzPoolOpts([targetCommunicationMode: 'bogus'])
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('targetCommunicationMode')
+    }
+
+    private static String hash(AzPoolOpts opts) {
+        opts.funnel(Hashing.murmur3_128().newHasher(), CacheHelper.HashMode.STANDARD).hash().toString()
+    }
+
+    def 'pool hash should differ when communication mode differs' () {
+        given:
+        def base = new AzPoolOpts()
+        def classic = new AzPoolOpts([targetCommunicationMode: 'classic'])
+        expect:
+        hash(base) != hash(classic)
     }
 
     def 'should create pool with custom options' () {
