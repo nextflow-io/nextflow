@@ -22,6 +22,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
+import nextflow.script.ast.ProcessNode
 import nextflow.script.ast.ProcessNodeV1
 import nextflow.script.ast.ProcessNodeV2
 import nextflow.script.ast.ScriptNode
@@ -88,7 +89,6 @@ class ModuleSpecFactory {
         // create initial module spec
         final spec = new ModuleSpec()
         spec.version = opts.version as String ?: oldSpec.version
-        spec.kind = oldSpec.kind
         spec.description = opts.description as String ?: oldSpec.description
         spec.keywords = oldSpec.keywords
         spec.license = opts.license as String ?: oldSpec.license
@@ -99,19 +99,28 @@ class ModuleSpecFactory {
         spec.tools = oldSpec.tools
         spec._passthrough = oldSpec._passthrough
 
-        // load and parse the module script
+        // parse with semantic analysis so that statically-typed declarations resolve their types
+        // (an unresolved type cannot be inferred and is rendered as a TODO placeholder)
         final scriptNode = parseScript(path)
-
-        // get process definition in script
         final processes = scriptNode.getProcesses()
-        if( processes.isEmpty() )
-            throw new AbortOperationException("Module script does not define any processes: ${path}")
+        // ignore the (unnamed) entry workflow -- a module publishes a named workflow
+        final List<WorkflowNode> workflows = scriptNode.getWorkflows().findAll { WorkflowNode w -> !w.isEntry() }
+
+        if( !processes.isEmpty() )
+            return fromProcessScript(opts, path, oldSpec, spec, processes)
+        if( !workflows.isEmpty() )
+            return fromWorkflowScript(opts, oldSpec, spec, workflows)
+
+        throw new AbortOperationException("Module script does not define any process or workflow: ${path}")
+    }
+
+    private static ModuleSpec fromProcessScript(Map opts, Path path, ModuleSpec oldSpec, ModuleSpec spec, List<ProcessNode> processes) {
         if( processes.size() > 1 )
             throw new AbortOperationException("Module script defines multiple processes: ${path}")
 
         // infer module spec properties from process definition
         final process = processes[0]
-
+        spec.kind = oldSpec.kind
         spec.name = opts.name ?: "${opts.namespace}/${process.name.toLowerCase()}"
 
         if( process instanceof ProcessNodeV1 ) {
@@ -126,6 +135,23 @@ class ModuleSpecFactory {
             spec.outputs = visitor.visitOutputs(process)
             spec.topics = visitor.visitTopics(process)
         }
+
+        return spec
+    }
+
+    private static ModuleSpec fromWorkflowScript(Map opts, ModuleSpec oldSpec, ModuleSpec spec, List<WorkflowNode> workflows) {
+        if( workflows.size() > 1 )
+            throw new AbortOperationException("Module script defines multiple workflows")
+
+        // infer module spec properties from the workflow's take:/emit: interface. Types are taken
+        // from the source when statically typed; an untyped take/emit renders a TODO placeholder.
+        final workflow = workflows[0]
+        spec.kind = ModuleSpec.KIND_WORKFLOW
+        spec.name = opts.name ?: "${opts.namespace}/${workflow.name.toLowerCase()}"
+
+        final visitor = new ModuleSpecVisitorV2(oldSpec)
+        spec.inputs = visitor.visitTakes(workflow)
+        spec.outputs = visitor.visitEmits(workflow)
 
         return spec
     }

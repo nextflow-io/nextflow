@@ -21,6 +21,7 @@ import groovy.util.logging.Slf4j
 import nextflow.script.ast.AssignmentExpression
 import nextflow.script.ast.ProcessNodeV2
 import nextflow.script.ast.TupleParameter
+import nextflow.script.ast.WorkflowNode
 import org.codehaus.groovy.ast.ClassHelper
 import org.codehaus.groovy.ast.ClassNode
 import org.codehaus.groovy.ast.Parameter
@@ -60,6 +61,22 @@ class ModuleSpecVisitorV2 {
 
     List<ModuleParam> visitTopics(ProcessNodeV2 node) {
         return moduleTopics(asBlockStatements(node.topics), oldSpec.topics)
+    }
+
+    /**
+     * Extract the module inputs from a workflow's {@code take:} parameters. An untyped take
+     * yields a null type, which is rendered as a {@code TODO: Add type} placeholder.
+     */
+    List<ModuleParam> visitTakes(WorkflowNode node) {
+        return moduleInputs(node.getParameters(), oldSpec.inputs)
+    }
+
+    /**
+     * Extract the module outputs from a workflow's {@code emit:} statements. An untyped emit
+     * yields a null type, which is rendered as a {@code TODO: Add type} placeholder.
+     */
+    List<ModuleParam> visitEmits(WorkflowNode node) {
+        return moduleOutputs(asBlockStatements(node.emits), oldSpec.outputs)
     }
 
     private static List<ModuleParam> moduleInputs(Parameter[] params, List<ModuleParam> oldParams) {
@@ -201,9 +218,21 @@ class ModuleSpecVisitorV2 {
     }
 
     private static final ClassNode PATH_TYPE = ClassHelper.makeCached(java.nio.file.Path)
+    private static final ClassNode CHANNEL_TYPE = ClassHelper.makeCached(nextflow.script.types.Channel)
+    private static final ClassNode RECORD_TYPE = ClassHelper.makeCached(nextflow.script.types.Record)
 
     private static String paramType(ClassNode type) {
-        if( !type || !type.isResolved() )
+        if( !type )
+            return null
+
+        // generic documentation tags for statically-typed declarations -- the authoritative
+        // types live in the source take:/emit: and typed input/output (parsed at `module run`)
+        if( isChannelType(type) )
+            return 'channel'
+        if( isRecordType(type) )
+            return 'custom-record'
+
+        if( !type.isResolved() )
             return null
 
         if( type.implementsInterface(ClassHelper.ITERABLE_TYPE) && !type.equals(PATH_TYPE) ) {
@@ -229,6 +258,14 @@ class ModuleSpecVisitorV2 {
             default:
                 return null
         }
+    }
+
+    private static boolean isChannelType(ClassNode type) {
+        return type.equals(CHANNEL_TYPE) || type.implementsInterface(CHANNEL_TYPE)
+    }
+
+    private static boolean isRecordType(ClassNode type) {
+        return type.equals(RECORD_TYPE) || type.implementsInterface(RECORD_TYPE)
     }
 
     private static String paramType(Expression node) {

@@ -1337,9 +1337,19 @@ The `module` command provides a comprehensive system for managing registry-based
 
 #### Subcommands
 
-##### `create [namespace/name]` {#module-create}
+##### `create [options] [namespace/name]` {#module-create}
 
 Create a new module with a basic `main.nf`, `meta.yml`, and `README.md`.
+
+The following options are available:
+
+###### `-kind` (`Process`)
+
+The kind of module to scaffold: `Process` (default) or `Workflow`.
+
+###### `-typed`
+
+Scaffold a statically-typed module: adds `nextflow.enable.types = true` and typed `input`/`output` (process) or `take`/`emit` (workflow) declarations using basic types. A typed workflow module can be executed directly with `nextflow module run`; an untyped workflow module can only be included in a pipeline.
 
 ##### `install [options] [namespace/name]` {#module-install}
 
@@ -1360,7 +1370,7 @@ Force reinstall even if the module exists locally with modifications. Without th
 ##### `list [options]` {#module-list}
 
 List all modules currently installed in your project.
-Shows each module's name, version, and integrity status (whether it has been modified locally).
+Shows each module's name, version, kind (`Process` or `Workflow`), and integrity status (whether it has been modified locally).
 
 The following options are available:
 

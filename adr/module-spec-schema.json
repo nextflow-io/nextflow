@@ -232,7 +232,7 @@
         },
         "type": {
           "type": "string",
-          "description": "Data type of the parameter value",
+          "description": "Data type of the parameter value. The generic tags 'channel' (a typed workflow channel, e.g. Channel<T>) and 'custom-record' (a user-defined record type) are documentation only for statically-typed processes/workflows -- the authoritative types are declared in the source take:/emit: and typed input/output, and module run parses them from the code.",
           "enum": [
             "boolean",
             "float",
@@ -241,7 +241,9 @@
             "list",
             "map",
             "file",
-            "directory"
+            "directory",
+            "channel",
+            "custom-record"
           ]
         },
         "description": {

@@ -641,6 +641,65 @@ class ModuleSpecFactoryTest extends Specification {
         spec.topics[0].components[2].type == 'string'
     }
 
+    def 'should map a user-defined record type to the custom-record documentation tag'() {
+        given:
+        def mainNf = tempDir.resolve('main.nf')
+        mainNf.text = '''\
+            nextflow.enable.types = true
+
+            record Sample {
+                id: String
+                reads: Path
+            }
+
+            process ALIGN {
+                input:
+                sample: Sample
+
+                output:
+                bam: Path
+
+                exec:
+                bam = file("${sample.id}.bam")
+            }
+            '''.stripIndent()
+
+        when:
+        def spec = ModuleSpecFactory.fromScript(mainNf, namespace: 'my-namespace')
+
+        then:
+        spec.inputs.size() == 1
+        spec.inputs[0].name == 'sample'
+        spec.inputs[0].type == 'custom-record'
+    }
+
+    def 'should map a Channel type to the channel documentation tag'() {
+        given:
+        def mainNf = tempDir.resolve('main.nf')
+        mainNf.text = '''\
+            nextflow.enable.types = true
+
+            process COLLECT {
+                input:
+                items: Channel<String>
+
+                output:
+                result: Path
+
+                exec:
+                result = file('out.txt')
+            }
+            '''.stripIndent()
+
+        when:
+        def spec = ModuleSpecFactory.fromScript(mainNf, namespace: 'my-namespace')
+
+        then:
+        spec.inputs.size() == 1
+        spec.inputs[0].name == 'items'
+        spec.inputs[0].type == 'channel'
+    }
+
     def 'should extract tuple inputs and outputs'() {
         given:
         def mainNf = tempDir.resolve('main.nf')
@@ -693,6 +752,91 @@ class ModuleSpecFactoryTest extends Specification {
         spec.topics[0].components[1].type == 'string'
         spec.topics[0].components[2].name == null
         spec.topics[0].components[2].type == 'string'
+    }
+
+    // =========================================================================
+    // workflow module tests
+    // =========================================================================
+
+    def 'should extract a workflow spec with TODO types for an untyped workflow'() {
+        given:
+        def mainNf = tempDir.resolve('main.nf')
+        mainNf.text = '''\
+            workflow ALIGN_WF {
+                take:
+                ch_reads
+                ch_index
+
+                main:
+                ch_out = ch_reads
+
+                emit:
+                aligned = ch_out
+            }
+            '''.stripIndent()
+
+        when:
+        def spec = ModuleSpecFactory.fromScript(mainNf, namespace: 'my-namespace')
+
+        then:
+        spec.kind == 'Workflow'
+        spec.name == 'my-namespace/align_wf'
+
+        and: 'take names are extracted, types cannot be inferred (rendered as TODO)'
+        spec.inputs.size() == 2
+        spec.inputs[0].name == 'ch_reads'
+        spec.inputs[0].type == null
+        spec.inputs[1].name == 'ch_index'
+        spec.inputs[1].type == null
+
+        and: 'emit names are extracted, types cannot be inferred'
+        spec.outputs.size() == 1
+        spec.outputs[0].name == 'aligned'
+        spec.outputs[0].type == null
+
+        and: 'untyped params render the TODO placeholder in the YAML'
+        def parsed = new Yaml().load(spec.toYaml()) as Map
+        (parsed['input'] as List)[0]['type'] == 'TODO: Add type'
+        (parsed['output'] as List)[0]['type'] == 'TODO: Add type'
+    }
+
+    def 'should extract a workflow spec with inferred types for a typed workflow'() {
+        given:
+        def mainNf = tempDir.resolve('main.nf')
+        mainNf.text = '''\
+            nextflow.enable.types = true
+
+            workflow ALIGN_WF {
+                take:
+                greeting: String
+                count: Integer
+
+                main:
+                message = greeting
+
+                emit:
+                result: String = message
+            }
+            '''.stripIndent()
+
+        when:
+        def spec = ModuleSpecFactory.fromScript(mainNf, namespace: 'my-namespace')
+
+        then:
+        spec.kind == 'Workflow'
+        spec.name == 'my-namespace/align_wf'
+
+        and: 'typed takes yield inferred types'
+        spec.inputs.size() == 2
+        spec.inputs[0].name == 'greeting'
+        spec.inputs[0].type == 'string'
+        spec.inputs[1].name == 'count'
+        spec.inputs[1].type == 'integer'
+
+        and: 'typed emits yield inferred types'
+        spec.outputs.size() == 1
+        spec.outputs[0].name == 'result'
+        spec.outputs[0].type == 'string'
     }
 
     // =========================================================================
