@@ -1,5 +1,9 @@
 nf-amazon changelog
 ===================
+3.10.1 - 15 Jul 2026
+- Round up CPUs to nearest valid value for AWS Batch Fargate (#7295) [fd6012b52]
+- Fix containerOptions --opt=value parsing for AWS Batch (#5190) (#7288) [b1f31a368]
+
 3.10.0 - 19 Jun 2026
 - Fix netty CVE-2026-44249 via AWS SDK bump and azure-core-http-netty pin (#7223) [ab6a6e65e]
 

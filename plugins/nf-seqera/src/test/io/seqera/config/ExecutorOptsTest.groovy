@@ -301,6 +301,27 @@ class ExecutorOptsTest extends Specification {
         config.taskEnvironment == [:]
     }
 
+    def 'should create config with providerConfig' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            providerConfig: [subnetId: 'subnet-1', securityGroup: 'sg-2']
+        ])
+
+        then:
+        config.providerConfig == [subnetId: 'subnet-1', securityGroup: 'sg-2']
+    }
+
+    def 'should handle null providerConfig' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com'
+        ])
+
+        then:
+        config.providerConfig == null
+    }
+
     def 'should create config with computeEnvId' () {
         when:
         def config = new ExecutorOpts([

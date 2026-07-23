@@ -17,11 +17,6 @@
 package io.seqera.plugin
 
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
-import io.seqera.tower.plugin.CacheCommand
-import io.seqera.tower.plugin.fs.SeqeraFileSystemProvider
-import nextflow.cli.PluginExecAware
-import nextflow.file.FileHelper
 import nextflow.plugin.BasePlugin
 import org.pf4j.PluginWrapper
 
@@ -30,21 +25,10 @@ import org.pf4j.PluginWrapper
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
 @CompileStatic
-class SeqeraPlugin extends BasePlugin implements PluginExecAware {
-
-    @Delegate private CacheCommand delegate
+class SeqeraPlugin extends BasePlugin {
 
     SeqeraPlugin(PluginWrapper wrapper) {
         super(wrapper)
-        this.delegate = new CacheCommand()
     }
-
-    @Override
-    void start() {
-        super.start()
-        FileHelper.getOrInstallProvider(SeqeraFileSystemProvider)
-    }
-
 }
