@@ -24,7 +24,7 @@ import groovy.transform.CompileStatic
 import io.seqera.npr.client.RegistryClient
 import nextflow.Const
 import nextflow.cli.CmdRun
-import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigCmdAdapter
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
@@ -96,7 +96,7 @@ class CmdModuleRun extends CmdRun {
 
         // Get config
         final baseDir = root ?: Path.of('.').toAbsolutePath().normalize()
-        final config = new ConfigBuilder()
+        final config = new ConfigCmdAdapter()
             .setOptions(launcher.options)
             .setBaseDir(baseDir)
             .build()
