@@ -31,6 +31,7 @@ import nextflow.module.ModuleSchemaValidator
 import nextflow.module.ModuleSpec
 import nextflow.module.ModuleSpecFactory
 import nextflow.module.ModuleReference
+import nextflow.module.ModuleResolver
 import nextflow.module.ModuleValidator
 import nextflow.module.RegistryClientFactory
 import nextflow.module.ModuleStorage
@@ -99,20 +100,34 @@ class CmdModulePublish extends CmdBase {
         // Step 2: Load spec for publish metadata
         def spec = ModuleSpecFactory.fromYaml(manifestPath)
 
+        // Config / registry access (needed to verify dependencies and to publish)
+        def config = new ConfigBuilder()
+            .setOptions(launcher.options)
+            .setBaseDir(moduleDir)
+            .build()
+        def registryConfig = config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
+
+        // Step 3: Verify declared dependencies resolve in the registry. Dependencies are not
+        // bundled with the module -- consumers re-resolve them from the registry at install time --
+        // so each declared `requires.modules` reference must exist there at its pinned version.
+        if( spec.requiresModules ) {
+            def resolver = new ModuleResolver(moduleDir, client ?: RegistryClientFactory.forConfig(registryConfig))
+            def missing = resolver.findMissingDependencies(spec.requiresModules)
+            if( missing ) {
+                throw new AbortOperationException(
+                    "Module validation failed:\n" + missing.collect {
+                        "  - Declared dependency '${it}' was not found in the registry".toString()
+                    }.join('\n')
+                )
+            }
+        }
+
         log.info "Module validated: ${spec.name}@${spec.version}"
 
         if (dryRun) {
             printDryRunInfo(spec)
             return
         }
-
-        // Step 3: Get authentication token
-        def config = new ConfigBuilder()
-            .setOptions(launcher.options)
-            .setBaseDir(moduleDir)
-            .build()
-
-        def registryConfig = config.navigate('registry') as RegistryConfig ?: new RegistryConfig()
 
         publishModule(moduleDir, registryConfig, spec)
 

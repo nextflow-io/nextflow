@@ -196,6 +196,37 @@ class ModuleResolver {
     }
 
     /**
+     * Return the declared {@code requires.modules} dependencies that cannot be resolved in the
+     * registry (i.e. do not exist at their pinned version). Used to validate a module's declared
+     * dependencies before publishing -- the dependencies are re-resolved from the registry by
+     * consumers at install time, so they must exist there (they are not bundled with the module).
+     *
+     * @param deps the declared dependency references ({@code scope/name@version})
+     * @return the subset of {@code deps} that could not be resolved in the registry
+     */
+    List<String> findMissingDependencies(List<String> deps) {
+        final missing = new ArrayList<String>()
+        for( final dep : deps ) {
+            final parsed = parseDependency(dep)
+            if( !dependencyExists(parsed.reference.fullName, parsed.version) )
+                missing.add(dep)
+        }
+        return missing
+    }
+
+    private boolean dependencyExists(String name, String version) {
+        try {
+            return version
+                ? registryClient.getModuleRelease(name, version) != null
+                : registryClient.getModule(name) != null
+        }
+        catch( Exception e ) {
+            log.debug "Registry lookup failed for ${name}${version ? "@${version}" : ''}: ${e.message}"
+            return false
+        }
+    }
+
+    /**
      * A parsed {@code requires.modules} entry: a module reference plus an
      * optional pinned version (the part after {@code @}).
      */

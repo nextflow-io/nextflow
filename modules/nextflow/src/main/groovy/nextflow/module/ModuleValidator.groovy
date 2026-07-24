@@ -59,11 +59,6 @@ class ModuleValidator {
         if( errors )
             return errors
 
-        // Level 2c: validate that declared module dependencies are vendored at their pinned version
-        errors.addAll(validateRequiresModules(moduleDir, spec))
-        if( errors )
-            return errors
-
         // Level 3: validate the module script against its kind
         final scriptPath = moduleDir.resolve(Const.DEFAULT_MAIN_FILE_NAME)
         if( spec.isWorkflow() ) {
@@ -145,39 +140,6 @@ class ModuleValidator {
                 errors << "Module spec has ${specTopics} topic emissions but module has ${sourceTopics} topic emissions".toString()
         }
 
-        return errors
-    }
-
-    /**
-     * Validate that every {@code requires.modules} dependency declared in the meta.yml is
-     * vendored under the module's own nested {@code modules/} directory at the pinned version.
-     *
-     * The publish bundle ships these vendored dependencies (nested per-module vendoring, ADR v2),
-     * so a dependency that is declared but not vendored -- or vendored at a different version --
-     * would produce a broken bundle. This check is local/offline (no registry access).
-     *
-     * @param moduleDir the module directory being validated
-     * @param spec      the parsed module spec
-     */
-    static List<String> validateRequiresModules(Path moduleDir, ModuleSpec spec) {
-        final errors = new ArrayList<String>()
-        final deps = spec.requiresModules
-        if( !deps )
-            return errors
-
-        final nested = new ModuleStorage(moduleDir)
-        for( final dep : deps ) {
-            final parsed = ModuleResolver.parseDependency(dep)
-            final ref = parsed.reference
-            final installed = nested.getInstalledModule(ref)
-            if( installed == null ) {
-                errors << ("Declared dependency '${dep}' is not vendored under modules/${ref.fullName} -- " +
-                    "run `nextflow module install ${dep}` from the module directory").toString()
-                continue
-            }
-            if( parsed.version && installed.installedVersion != parsed.version )
-                errors << "Declared dependency '${dep}' is vendored at version ${installed.installedVersion} but ${parsed.version} is required".toString()
-        }
         return errors
     }
 

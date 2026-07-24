@@ -16,7 +16,10 @@
 
 package nextflow.cli.module
 
+import io.seqera.npr.api.schema.v1.ModuleRelease
+import io.seqera.npr.client.RegistryClient
 import nextflow.cli.Launcher
+import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleValidator
 import spock.lang.Specification
 import spock.lang.TempDir
@@ -145,5 +148,71 @@ class CmdModulePublishTest extends Specification {
 
         then:
         noExceptionThrown()
+    }
+
+    private String permissiveSchema() {
+        final p = tempDir.resolve('schema.json')
+        p.text = '{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",' +
+            '"properties":{"name":{"type":"string"},"description":{"type":"string"}},"required":["name","description"]}'
+        return p.toString()
+    }
+
+    private Path workflowModuleWithDep(String depRef) {
+        final dir = tempDir.resolve('wf-module')
+        Files.createDirectories(dir)
+        dir.resolve('main.nf').text = 'workflow FOO {\n  take:\n  ch_in\n  emit:\n  ch_in\n}\n'
+        dir.resolve('README.md').text = '# wf'
+        dir.resolve('meta.yml').text = """\
+            name: test/wf
+            version: 1.0.0
+            kind: Workflow
+            description: Test workflow module
+            requires:
+              modules:
+                - ${depRef}
+            """.stripIndent()
+        return dir
+    }
+
+    private CmdModulePublish publishCmd(Path dir, RegistryClient client) {
+        final launcher = new Launcher()
+        launcher.options = [:]
+        final cmd = new CmdModulePublish()
+        cmd.launcher = launcher
+        cmd.args = [dir.toString()]
+        cmd.schema = permissiveSchema()
+        cmd.dryRun = true
+        cmd.client = client
+        return cmd
+    }
+
+    def 'should pass publish validation when a declared dependency exists in the registry' () {
+        given:
+        def dir = workflowModuleWithDep('nf-core/dep@1.2.0')
+        def cmd = publishCmd(dir, Mock(RegistryClient) {
+            getModuleRelease('nf-core/dep', '1.2.0') >> new ModuleRelease(version: '1.2.0')
+        })
+
+        when:
+        cmd.run()
+
+        then:
+        noExceptionThrown()
+    }
+
+    def 'should fail publish validation when a declared dependency is not in the registry' () {
+        given:
+        def dir = workflowModuleWithDep('nf-core/dep@1.2.0')
+        def cmd = publishCmd(dir, Mock(RegistryClient) {
+            getModuleRelease(_, _) >> { throw new RuntimeException('not found') }
+        })
+
+        when:
+        cmd.run()
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('nf-core/dep@1.2.0')
+        e.message.contains('not found in the registry')
     }
 }
