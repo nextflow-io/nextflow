@@ -236,7 +236,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     private Statement workflowTakes(Parameter[] takes) {
         var statements = Arrays.stream(takes)
             .map((take) ->
-                stmt(callThisX("_take_", args(constX(take.getName()))))
+                stmt(callThisX("_take_", args(constX(take.getName()), classX(take.getType()))))
             )
             .toList();
         return block(null, statements);
