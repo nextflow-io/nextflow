@@ -51,6 +51,9 @@ class CmdModuleInstall extends CmdBase {
     @Parameter(names = ["-force"], description = "Force reinstall even if already installed", arity = 0)
     boolean force = false
 
+    @Parameter(names = ["-update-deps"], description = "For an already-installed module, update its vendored dependencies to match meta.yml, without reinstalling the module (ignored if the module is not installed)", arity = 0)
+    boolean updateDeps = false
+
     @Parameter(description = "[scope/name]", required = true)
     List<String> args
 
@@ -71,6 +74,10 @@ class CmdModuleInstall extends CmdBase {
             throw new AbortOperationException("Incorrect number of arguments")
         }
 
+        if( updateDeps && force ) {
+            throw new AbortOperationException("Options -update-deps and -force cannot be used together")
+        }
+
         def reference = ModuleReference.parse(args[0])
 
         // Get config
@@ -85,7 +92,16 @@ class CmdModuleInstall extends CmdBase {
         def resolver = new ModuleResolver(baseDir, client ?: RegistryClientFactory.forConfig(registryConfig))
 
         try {
-            def installedMainFile = resolver.installModule(reference, version, force)
+            // -update-deps: for an already-installed module, refresh only its vendored dependencies
+            // to match meta.yml (the module itself is left untouched). Ignored if not installed.
+            if( updateDeps && resolver.isInstalled(reference) ) {
+                resolver.updateDependencies(reference)
+                println "Module ${reference} dependencies updated successfully"
+                return
+            }
+
+            // Install the module together with its transitive requires.modules dependencies
+            def installedMainFile = resolver.installWithDependencies(reference, version, force)
             // Read the installed version from meta.yml to avoid a redundant registry call
             def installedVersion = ModuleSpecFactory.fromYaml(installedMainFile.parent.resolve('meta.yml')).version
 

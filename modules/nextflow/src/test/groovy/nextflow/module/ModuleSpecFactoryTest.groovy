@@ -62,6 +62,129 @@ class ModuleSpecFactoryTest extends Specification {
         spec.requires == ['nextflow': '>=24.04.0']
     }
 
+    def 'should load a workflow module spec with kind and requires.modules' () {
+        given:
+        def metaYaml = tempDir.resolve('meta.yml')
+        metaYaml.text = '''\
+            name: nf-core/fastq_align_star
+            version: 0.0.0-4e3e10e
+            kind: Workflow
+            description: Align reads then sort with samtools
+            keywords:
+              - align
+              - star
+            license: MIT
+            requires:
+              nextflow: ">=24.04.0"
+              modules:
+                - nf-core/star/align@>=1.0.0
+                - nf-core/samtools/sort@>=1.2.0,<2.0.0
+            '''.stripIndent()
+
+        when:
+        def spec = ModuleSpecFactory.fromYaml(metaYaml)
+
+        then:
+        spec.name == 'nf-core/fastq_align_star'
+        spec.kind == 'Workflow'
+        spec.isWorkflow()
+        spec.requires == ['nextflow': '>=24.04.0']
+        spec.requiresModules == ['nf-core/star/align@>=1.0.0', 'nf-core/samtools/sort@>=1.2.0,<2.0.0']
+    }
+
+    def 'should default to process kind and empty requiresModules when absent' () {
+        given:
+        def metaYaml = tempDir.resolve('meta.yml')
+        metaYaml.text = '''\
+            name: nf-core/fastqc
+            version: 1.0.0
+            description: FastQC quality control
+            requires:
+              nextflow: ">=24.04.0"
+            '''.stripIndent()
+
+        when:
+        def spec = ModuleSpecFactory.fromYaml(metaYaml)
+
+        then:
+        spec.kind == null
+        !spec.isWorkflow()
+        spec.requiresModules == []
+        spec.requires == ['nextflow': '>=24.04.0']
+    }
+
+    def 'should round-trip kind and requires.modules through asMap' () {
+        given:
+        def spec = new ModuleSpec(
+            name: 'nf-core/fastq_align_star',
+            version: '0.0.0-abc',
+            kind: 'Workflow',
+            description: 'demo',
+            requires: ['nextflow': '>=24.04.0'],
+            requiresModules: ['nf-core/star/align@>=1.0.0']
+        )
+
+        when:
+        def map = spec.asMap()
+
+        then:
+        map['kind'] == 'Workflow'
+        map['requires'] == ['nextflow': '>=24.04.0', 'modules': ['nf-core/star/align@>=1.0.0']]
+    }
+
+    def 'definesWorkflow should return true for a workflow script' () {
+        given:
+        def nf = tempDir.resolve('main.nf')
+        nf.text = '''\
+            workflow FOO {
+                take:
+                ch_in
+                main:
+                ch_out = ch_in
+                emit:
+                ch_out
+            }
+            '''.stripIndent()
+
+        expect:
+        ModuleSpecFactory.definesWorkflow(nf)
+    }
+
+    def 'definesWorkflow should tolerate includes of not-yet-installed modules' () {
+        given:
+        def nf = tempDir.resolve('main.nf')
+        nf.text = '''\
+            include { MAFFT_ALIGN as MAFFT_ALIGN_MODULE } from 'nf-core/mafft/align'
+
+            workflow MAFFT_ALIGN {
+                take:
+                ch_fasta
+                main:
+                MAFFT_ALIGN_MODULE ( ch_fasta )
+                emit:
+                alignment = MAFFT_ALIGN_MODULE.out.fas
+            }
+            '''.stripIndent()
+
+        expect:
+        ModuleSpecFactory.definesWorkflow(nf)
+    }
+
+    def 'definesWorkflow should return false for a process-only script' () {
+        given:
+        def nf = tempDir.resolve('main.nf')
+        nf.text = '''\
+            process FOO {
+                """
+                echo hello
+                """
+            }
+            '''.stripIndent()
+
+        expect:
+        !ModuleSpecFactory.definesWorkflow(nf)
+    }
+
     def 'should fail to load non-existent spec' () {
         given:
         def metaYaml = tempDir.resolve('meta.yml')
@@ -518,6 +641,65 @@ class ModuleSpecFactoryTest extends Specification {
         spec.topics[0].components[2].type == 'string'
     }
 
+    def 'should map a user-defined record type to the custom-record documentation tag'() {
+        given:
+        def mainNf = tempDir.resolve('main.nf')
+        mainNf.text = '''\
+            nextflow.enable.types = true
+
+            record Sample {
+                id: String
+                reads: Path
+            }
+
+            process ALIGN {
+                input:
+                sample: Sample
+
+                output:
+                bam: Path
+
+                exec:
+                bam = file("${sample.id}.bam")
+            }
+            '''.stripIndent()
+
+        when:
+        def spec = ModuleSpecFactory.fromScript(mainNf, namespace: 'my-namespace')
+
+        then:
+        spec.inputs.size() == 1
+        spec.inputs[0].name == 'sample'
+        spec.inputs[0].type == 'custom-record'
+    }
+
+    def 'should map a Channel type to the channel documentation tag'() {
+        given:
+        def mainNf = tempDir.resolve('main.nf')
+        mainNf.text = '''\
+            nextflow.enable.types = true
+
+            process COLLECT {
+                input:
+                items: Channel<String>
+
+                output:
+                result: Path
+
+                exec:
+                result = file('out.txt')
+            }
+            '''.stripIndent()
+
+        when:
+        def spec = ModuleSpecFactory.fromScript(mainNf, namespace: 'my-namespace')
+
+        then:
+        spec.inputs.size() == 1
+        spec.inputs[0].name == 'items'
+        spec.inputs[0].type == 'channel'
+    }
+
     def 'should extract tuple inputs and outputs'() {
         given:
         def mainNf = tempDir.resolve('main.nf')
@@ -570,6 +752,91 @@ class ModuleSpecFactoryTest extends Specification {
         spec.topics[0].components[1].type == 'string'
         spec.topics[0].components[2].name == null
         spec.topics[0].components[2].type == 'string'
+    }
+
+    // =========================================================================
+    // workflow module tests
+    // =========================================================================
+
+    def 'should extract a workflow spec with TODO types for an untyped workflow'() {
+        given:
+        def mainNf = tempDir.resolve('main.nf')
+        mainNf.text = '''\
+            workflow ALIGN_WF {
+                take:
+                ch_reads
+                ch_index
+
+                main:
+                ch_out = ch_reads
+
+                emit:
+                aligned = ch_out
+            }
+            '''.stripIndent()
+
+        when:
+        def spec = ModuleSpecFactory.fromScript(mainNf, namespace: 'my-namespace')
+
+        then:
+        spec.kind == 'Workflow'
+        spec.name == 'my-namespace/align_wf'
+
+        and: 'take names are extracted, types cannot be inferred (rendered as TODO)'
+        spec.inputs.size() == 2
+        spec.inputs[0].name == 'ch_reads'
+        spec.inputs[0].type == null
+        spec.inputs[1].name == 'ch_index'
+        spec.inputs[1].type == null
+
+        and: 'emit names are extracted, types cannot be inferred'
+        spec.outputs.size() == 1
+        spec.outputs[0].name == 'aligned'
+        spec.outputs[0].type == null
+
+        and: 'untyped params render the TODO placeholder in the YAML'
+        def parsed = new Yaml().load(spec.toYaml()) as Map
+        (parsed['input'] as List)[0]['type'] == 'TODO: Add type'
+        (parsed['output'] as List)[0]['type'] == 'TODO: Add type'
+    }
+
+    def 'should extract a workflow spec with inferred types for a typed workflow'() {
+        given:
+        def mainNf = tempDir.resolve('main.nf')
+        mainNf.text = '''\
+            nextflow.enable.types = true
+
+            workflow ALIGN_WF {
+                take:
+                greeting: String
+                count: Integer
+
+                main:
+                message = greeting
+
+                emit:
+                result: String = message
+            }
+            '''.stripIndent()
+
+        when:
+        def spec = ModuleSpecFactory.fromScript(mainNf, namespace: 'my-namespace')
+
+        then:
+        spec.kind == 'Workflow'
+        spec.name == 'my-namespace/align_wf'
+
+        and: 'typed takes yield inferred types'
+        spec.inputs.size() == 2
+        spec.inputs[0].name == 'greeting'
+        spec.inputs[0].type == 'string'
+        spec.inputs[1].name == 'count'
+        spec.inputs[1].type == 'integer'
+
+        and: 'typed emits yield inferred types'
+        spec.outputs.size() == 1
+        spec.outputs[0].name == 'result'
+        spec.outputs[0].type == 'string'
     }
 
     // =========================================================================

@@ -38,6 +38,12 @@ class CmdModuleCreate extends CmdBase {
     @Parameter(description = "[namespace/name]")
     List<String> args
 
+    @Parameter(names = ['-kind'], description = "Module kind: Process (default) or Workflow")
+    String kind
+
+    @Parameter(names = ['-typed'], description = "Generate a statically-typed module (usable directly with `nextflow module run`)", arity = 0)
+    boolean typed
+
     @Override
     String getName() {
         return 'create'
@@ -86,8 +92,18 @@ class CmdModuleCreate extends CmdBase {
 
         validateSegment('namespace', namespace)
         validateSegments('name', name)
-        createModule(namespace, name)
+        createModule(namespace, name, normalizeKind(kind), typed)
     }
+
+    static private String normalizeKind(String value) {
+        if( !value )
+            return 'Process'
+        final k = value.toLowerCase().capitalize()
+        if( k != 'Process' && k != 'Workflow' )
+            throw new AbortOperationException("Invalid module kind '${value}' -- must be 'Process' or 'Workflow'")
+        return k
+    }
+
     static private void validateSegment(String field, String value) {
         if( !value.matches('[a-zA-Z0-9][a-zA-Z0-9._\\-]*') )
                 throw new AbortOperationException("Invalid module $field '${value}' -- only alphanumeric characters, hyphens, underscores and dots are allowed, and must start with an alphanumeric character")
@@ -103,7 +119,7 @@ class CmdModuleCreate extends CmdBase {
         return Path.of('modules')
     }
 
-    protected void createModule(String namespace, String name) {
+    protected void createModule(String namespace, String name, String kind = 'Process', boolean typed = false) {
         final moduleDir = modulesBase().resolve(namespace).resolve(name)
         if( Files.exists(moduleDir) )
             throw new AbortOperationException("Module directory already exists: $moduleDir")
@@ -112,22 +128,31 @@ class CmdModuleCreate extends CmdBase {
         Files.createDirectories(moduleDir)
 
         // create main.nf
-        moduleDir.resolve('main.nf').text = mainNf(namespace, name)
+        moduleDir.resolve('main.nf').text = mainNf(namespace, name, kind, typed)
 
         // create README.md
         moduleDir.resolve('README.md').text = readmeMd(namespace, name)
 
         // create meta.yml
-        moduleDir.resolve('meta.yml').text = metaYml(namespace, name)
+        moduleDir.resolve('meta.yml').text = metaYml(namespace, name, kind, typed)
 
         // create .module-info so it's recognised as a Nextflow managed module
         Files.createFile(moduleDir.resolve(ModuleInfo.MODULE_INFO_FILE))
 
+        final defName = name.replaceAll('[^a-zA-Z0-9_]', '_').toUpperCase()
         println "Module created successfully at path: $moduleDir"
         println ""
-        println "To run the module:"
-        println ""
-        println "  nextflow module run $namespace/$name --greeting 'Hello world!'"
+        // an untyped workflow module cannot be run directly (`module run` requires typed take:/emit:)
+        if( kind == 'Workflow' && !typed ) {
+            println "Include the workflow module in a pipeline:"
+            println ""
+            println "  include { $defName } from '$namespace/$name'"
+        }
+        else {
+            println "To run the module:"
+            println ""
+            println "  nextflow module run $namespace/$name --greeting 'Hello world!'"
+        }
     }
 
     static private String readLine() {
@@ -137,13 +162,84 @@ class CmdModuleCreate extends CmdBase {
             : new BufferedReader(new InputStreamReader(System.in)).readLine()
     }
 
-    static String mainNf(String namespace, String name) {
-        """\
+    static String mainNf(String namespace, String name, String kind = 'Process', boolean typed = false) {
+        final defName = name.replaceAll('[^a-zA-Z0-9_]', '_').toUpperCase()
+
+        if( kind == 'Workflow' && typed ) {
+            return """\
+            /*
+             * Workflow module: ${namespace}/${name}
+             * TODO: rename the workflow, replace the example take/emit and types, and implement the logic.
+             */
+
+            nextflow.enable.types = true
+
+            workflow ${defName} {
+                take:
+                greeting: String
+
+                main:
+                // TODO: implement the workflow logic
+                message = greeting
+
+                emit:
+                result: String = message
+            }
+            """.stripIndent()
+        }
+
+        if( kind == 'Workflow' ) {
+            return """\
+            /*
+             * Workflow module: ${namespace}/${name}
+             * TODO: rename the workflow, replace the example take/emit, and implement the logic.
+             */
+
+            workflow ${defName} {
+                take:
+                ch_input
+
+                main:
+                // TODO: implement the workflow logic
+                ch_output = ch_input
+
+                emit:
+                output = ch_output
+            }
+            """.stripIndent()
+        }
+
+        if( typed ) {
+            return """\
+            /*
+             * Module: ${namespace}/${name}
+             * TODO: rename the process, replace the example input/output and types, and implement the script.
+             */
+
+            nextflow.enable.types = true
+
+            process ${defName} {
+                input:
+                greeting: String
+
+                output:
+                message: String = stdout()
+
+                script:
+                \"\"\"
+                echo '\${greeting}'
+                \"\"\"
+            }
+            """.stripIndent()
+        }
+
+        return """\
         /*
          * Module: ${namespace}/${name}
+         * TODO: rename the process, replace the example input/output, and implement the script.
          */
 
-        process ${name.replaceAll('[^a-zA-Z0-9_]', '_').toUpperCase()} {
+        process ${defName} {
             input:
             val greeting
 
@@ -158,8 +254,69 @@ class CmdModuleCreate extends CmdBase {
         """.stripIndent()
     }
 
-    static String metaYml(String namespace, String name) {
-        """\
+    static String metaYml(String namespace, String name, String kind = 'Process', boolean typed = false) {
+        if( kind == 'Workflow' && typed ) {
+            // typed workflow: derive input/output from the scaffold's take:/emit:
+            // (typed workflows require Nextflow 26.04.0+)
+            return """\
+            name: ${namespace}/${name}
+            version: 1.0.0
+            kind: Workflow
+            description: A brief description of the ${namespace}/${name} workflow module
+            license: Apache-2.0
+            requires:
+              nextflow: ">=26.04.0"
+            input:
+              - name: greeting
+                type: string
+                description: A greeting string
+            output:
+              - name: result
+                type: string
+                description: The greeting message
+            """.stripIndent()
+        }
+        if( kind == 'Workflow' ) {
+            // untyped workflow: take/emit have no declared types, but the generated scaffold's
+            // take/emit are channels, so the interface is documented with the generic channel type
+            return """\
+            name: ${namespace}/${name}
+            version: 1.0.0
+            kind: Workflow
+            description: A brief description of the ${namespace}/${name} workflow module
+            license: Apache-2.0
+            requires:
+              nextflow: ">=24.04.0"
+            input:
+              - name: ch_input
+                type: channel
+                description: The input channel
+            output:
+              - name: output
+                type: channel
+                description: The output channel
+            """.stripIndent()
+        }
+        if( typed ) {
+            // typed process (requires Nextflow 25.10.0+)
+            return """\
+            name: ${namespace}/${name}
+            version: 1.0.0
+            description: A brief description of the ${namespace}/${name} module
+            license: Apache-2.0
+            requires:
+              nextflow: ">=25.10.0"
+            input:
+              - name: greeting
+                type: string
+                description: A greeting string
+            output:
+              - name: message
+                type: string
+                description: The greeting message
+            """.stripIndent()
+        }
+        return """\
         name: ${namespace}/${name}
         version: 1.0.0
         description: A brief description of the ${namespace}/${name} module

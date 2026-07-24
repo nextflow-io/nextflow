@@ -59,16 +59,22 @@ class ModuleValidator {
         if( errors )
             return errors
 
-        // Level 3: validate module input/output spec against process definition
-        final scriptPath = moduleDir.resolve("main.nf")
-        final sourceSpec = ModuleSpecFactory.fromScript(scriptPath)
-        errors.addAll(validateInputsOutputs(spec, sourceSpec))
+        // Level 3: validate the module script against its kind
+        final scriptPath = moduleDir.resolve(Const.DEFAULT_MAIN_FILE_NAME)
+        if( spec.isWorkflow() ) {
+            errors.addAll(validateWorkflow(spec, scriptPath))
+        }
+        else {
+            final sourceSpec = ModuleSpecFactory.fromScript(scriptPath)
+            errors.addAll(validateInputsOutputs(spec, sourceSpec))
+        }
 
         return errors
     }
 
     static List<String> validate(Path moduleDir) {
-        return validate(moduleDir, ModuleSchemaValidator.DEFAULT_SCHEMA_URL)
+        final manifest = moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
+        return validate(moduleDir, ModuleSchemaValidator.resolveSchemaLocation(manifest, null))
     }
 
     /**
@@ -133,6 +139,38 @@ class ModuleValidator {
             if( specTopics != sourceTopics )
                 errors << "Module spec has ${specTopics} topic emissions but module has ${sourceTopics} topic emissions".toString()
         }
+
+        return errors
+    }
+
+    /**
+     * Validate a workflow module's script and reconcile its {@code take:}/{@code emit:} interface
+     * with the meta.yml. A workflow module must define exactly one workflow; when the meta.yml also
+     * declares {@code input}/{@code output} (e.g. a typed workflow) the counts must match the
+     * workflow's take/emit arity. When the meta.yml omits them the take:/emit: sections are the sole
+     * source of truth and there is nothing to reconcile.
+     *
+     * @param spec       the parsed module spec
+     * @param scriptPath the module's main.nf
+     */
+    static List<String> validateWorkflow(ModuleSpec spec, Path scriptPath) {
+        final errors = new ArrayList<String>()
+
+        final interfaces = ModuleSpecFactory.workflowInterfaces(scriptPath)
+        if( interfaces.isEmpty() ) {
+            errors << "Workflow module '${spec.name}' must define a workflow in ${Const.DEFAULT_MAIN_FILE_NAME}".toString()
+            return errors
+        }
+        if( interfaces.size() > 1 ) {
+            errors << "Workflow module '${spec.name}' must define exactly one workflow in ${Const.DEFAULT_MAIN_FILE_NAME} (found ${interfaces.size()})".toString()
+            return errors
+        }
+
+        final iface = interfaces[0]
+        if( spec.inputs != null && spec.inputs.size() != iface.takes )
+            errors << "Module spec has ${spec.inputs.size()} inputs but workflow declares ${iface.takes} take(s)".toString()
+        if( spec.outputs != null && spec.outputs.size() != iface.emits )
+            errors << "Module spec has ${spec.outputs.size()} outputs but workflow declares ${iface.emits} emit(s)".toString()
 
         return errors
     }

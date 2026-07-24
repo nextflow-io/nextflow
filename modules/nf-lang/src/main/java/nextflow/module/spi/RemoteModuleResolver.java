@@ -47,11 +47,13 @@ public interface RemoteModuleResolver {
      * </ol>
      *
      * @param moduleName The module reference string (e.g., '@scope/name' or '@scope/name@version')
-     * @param projectDir The base directory for the project (used to locate the modules directory)
+     * @param baseDir The directory relative to which the {@code modules/} directory is located:
+     *                the project root for a top-level include, or the including module's own
+     *                directory for a nested (vendored) include
      * @return Path to the resolved module's main.nf file
      * @throws IllegalArgumentException if the module reference is invalid or resolution fails
      */
-    Path resolve(String moduleName, Path projectDir);
+    Path resolve(String moduleName, Path baseDir);
 
     /**
      * Get the priority of this resolver. Higher priority resolvers are tried first.
