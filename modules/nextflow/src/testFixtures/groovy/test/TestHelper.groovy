@@ -121,8 +121,16 @@ class TestHelper {
         filterLogNoise(capture.toString(), includeWarn)
     }
 
+    // Matches a Java exception header line, e.g. `org.pf4j.InvalidPluginDescriptorException: message`
+    // (a dotted, fully-qualified class name ending in Exception/Error). Kept strict so ordinary
+    // command output such as "Error loading lid://..." is not treated as noise.
+    private static final java.util.regex.Pattern EXCEPTION_HEADER = ~/[\w$]+(\.[\w$]+)+(Exception|Error)(:.*)?/
+
     /**
-     * Filter captured stdout/stderr output to remove log noise (DEBUG, INFO, WARN, plugin messages, pf4j dependency graph).
+     * Filter captured stdout/stderr output to remove log noise: DEBUG/INFO/(WARN) log lines, plugin
+     * messages, the pf4j dependency graph, and exception stack traces. The latter is important
+     * because plugin loading may emit a descriptor error whose stack trace would otherwise leak into
+     * the captured output and break exact line-count assertions (see CmdLogTest/CmdLineageTest).
      *
      * @param output The captured output string
      * @param includeWarn Whether to also filter out WARN lines (default: false)
@@ -130,11 +138,16 @@ class TestHelper {
      */
     static List<String> filterLogNoise(String output, boolean includeWarn = false) {
         output.readLines().findAll { line ->
+            final trimmed = line.trim()
             !line.contains('DEBUG') &&
             !line.contains('INFO') &&
             (!includeWarn || !line.contains('WARN')) &&
             !line.contains('plugin') &&
-            !line.contains('-> [')  // pf4j dependency graph lines
+            !line.contains('-> [') &&                     // pf4j dependency graph lines
+            !trimmed.startsWith('at ') &&                 // stack-trace frames
+            !trimmed.startsWith('Caused by:') &&
+            !(trimmed ==~ /\.\.\.\s*\d+\s+more/) &&        // "... N more" stack-trace tail
+            !(trimmed ==~ EXCEPTION_HEADER)               // exception header line
         }
     }
 }
