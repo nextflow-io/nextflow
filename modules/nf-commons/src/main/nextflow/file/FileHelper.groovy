@@ -484,7 +484,7 @@ class FileHelper {
             return false
 
         final type = getPathFsType(path)
-        final result = type == 'nfs' || type == 'lustre'
+        final result = type == 'nfs' || type == 'lustre' || type == 'ceph'
         log.debug "FS path type ($result): $path"
         return result
     }

@@ -669,8 +669,12 @@ class BashWrapperBuilder {
     }
 
     String getSyncCmd() {
-        if ( SysEnv.get( 'NXF_ENABLE_FS_SYNC' ) == "true" ) {
-            return 'sync || true'
+        final envOverride = SysEnv.get('NXF_ENABLE_FS_SYNC')
+        if( envOverride == 'false' )
+            return null
+        if( envOverride == 'true' || (Global.session?.workDir && FileHelper.workDirIsSharedFS) ) {
+            final path = bean.workDir?.toString()
+            return path ? "sync --file-system ${Escape.path(path)} || true" : 'sync || true'
         }
         return null
     }
