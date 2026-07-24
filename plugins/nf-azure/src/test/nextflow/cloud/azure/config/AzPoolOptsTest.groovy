@@ -16,6 +16,9 @@
 
 package nextflow.cloud.azure.config
 
+import com.azure.compute.batch.models.ImageVerificationType
+import com.google.common.hash.Hashing
+import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import spock.lang.Specification
 /**
@@ -48,6 +51,54 @@ class AzPoolOptsTest extends Specification {
         !opts.lowPriority
         !opts.startTask.script
         !opts.startTask.privileged
+        !opts.virtualMachineImageId
+        opts.verification == ImageVerificationType.VERIFIED
+    }
+
+    def 'should configure a custom compute gallery image' () {
+        when:
+        def opts = new AzPoolOpts([
+            virtualMachineImageId: '/subscriptions/abc/resourceGroups/rg/providers/Microsoft.Compute/galleries/g/images/d/versions/1.0.0',
+            sku: 'batch.node.ubuntu 24.04',
+            verification: 'unverified',
+        ])
+        then:
+        opts.virtualMachineImageId == '/subscriptions/abc/resourceGroups/rg/providers/Microsoft.Compute/galleries/g/images/d/versions/1.0.0'
+        opts.sku == 'batch.node.ubuntu 24.04'
+        opts.verification == ImageVerificationType.UNVERIFIED
+    }
+
+    def 'should parse the verification value' () {
+        expect:
+        new AzPoolOpts([verification: VALUE]).verification == EXPECTED
+        where:
+        VALUE        | EXPECTED
+        null         | ImageVerificationType.VERIFIED
+        'verified'   | ImageVerificationType.VERIFIED
+        'unverified' | ImageVerificationType.UNVERIFIED
+        'any'        | null
+    }
+
+    def 'should reject an invalid verification value' () {
+        when:
+        new AzPoolOpts([verification: 'bogus'])
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('verification')
+    }
+
+    private static String hash(AzPoolOpts opts) {
+        opts.funnel(Hashing.murmur3_128().newHasher(), CacheHelper.HashMode.STANDARD).hash().toString()
+    }
+
+    def 'pool hash should differ when image config differs' () {
+        given:
+        def base = new AzPoolOpts()
+        def gallery = new AzPoolOpts([virtualMachineImageId: '/subscriptions/x/resourceGroups/rg/providers/Microsoft.Compute/galleries/g/images/d/versions/1'])
+        def unverified = new AzPoolOpts([verification: 'unverified'])
+        expect:
+        hash(base) != hash(gallery)
+        hash(base) != hash(unverified)
     }
 
     def 'should create pool with custom options' () {

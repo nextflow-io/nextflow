@@ -583,6 +583,14 @@ Enable the `startTask` to run with elevated access (default`false`).
 
 The `startTask` that is executed as the node joins the Azure Batch node pool.
 
+##### `azure.batch.pools.<name>.verification`
+
+The image verification type to match when resolving the VM image from the Batch supported-images list. Can be `verified`, `unverified`, or `any` (default`verified`). Ignored when `virtualMachineImageId` is set.
+
+##### `azure.batch.pools.<name>.virtualMachineImageId`
+
+The resource ID of a custom VM image from an Azure Compute Gallery to use for the pool nodes (e.g. `/subscriptions/<id>/resourceGroups/<group>/providers/Microsoft.Compute/galleries/<gallery>/images/<definition>/versions/<version>`). When set, `publisher` and `offer` are ignored, and `sku` must be set to the Batch node agent SKU id that matches the image OS (e.g. `batch.node.ubuntu 24.04`).
+
 ##### `azure.batch.pools.<name>.virtualNetwork`
 
 <AddedInVersion version="23.04" />
