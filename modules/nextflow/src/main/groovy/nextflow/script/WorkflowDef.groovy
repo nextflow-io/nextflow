@@ -40,6 +40,8 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 
     private List<String> declaredInputs
 
+    private Map<String,Class> declaredInputTypes
+
     private List<String> declaredOutputs
 
     private Set<String> variableNames
@@ -64,6 +66,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         this.body = copy.call()
         // now it can access the parameters
         this.declaredInputs = new ArrayList<>(resolver.getTakes())
+        this.declaredInputTypes = new HashMap<>(resolver.getTakeTypes())
         this.declaredOutputs = new ArrayList<>(resolver.getEmits())
         this.variableNames = getVarNames0()
     }
@@ -101,6 +104,8 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
     @PackageScope BodyDef getBody() { body }
 
     @PackageScope List<String> getDeclaredInputs() { declaredInputs }
+
+    @PackageScope Map<String,Class> getDeclaredInputTypes() { declaredInputTypes }
 
     @PackageScope List<String> getDeclaredOutputs() { declaredOutputs }
 
@@ -222,14 +227,20 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 @CompileStatic
 class WorkflowParamsDsl {
 
-    private static final String TAKE = '_take_'
-    private static final String EMIT = '_emit_'
-
     List<String> takes = new ArrayList<>(10)
+    Map<String,Class> takeTypes = new HashMap<>()
     List<String> emits = new ArrayList<>(10)
 
-    void _take_(String name) {
+    /**
+     * Called by generated code for each workflow take parameter.
+     *
+     * @param name the parameter name
+     * @param type the parameter type (may be Object for untyped workflows)
+     */
+    void _take_(String name, Class type = null) {
         takes.add(name)
+        if( type != null && type != Object )
+            takeTypes.put(name, type)
     }
 
     void _emit_(String name) {
