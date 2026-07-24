@@ -51,8 +51,8 @@ class BaseCommandImpl {
     }
 
     protected Map readConfig() {
-        final builder = new ConfigBuilder().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
-        return builder.buildConfigObject().flatten()
+        final configFile = Const.APP_HOME_DIR.resolve('config')
+        return new ConfigBuilder().build(configFile.exists() ? [ configFile ] : []).flatten()
     }
 
     protected List<Map> listUserWorkspaces(TowerClient client, String userId) {
