@@ -474,6 +474,15 @@ class K8sClient {
         final status = resp.status as Map
         final containerStatuses = status?.containerStatuses as List<Map>
 
+        // best-effort detection of an involuntary node disruption (e.g. Spot/preemptible node
+        // preemption or graceful node shutdown), signalled by the `DisruptionTarget` pod condition.
+        // When present -- and the container has not already exited successfully -- surface it as a
+        // node termination so that Nextflow retries the task. This complements the `Shutdown` and
+        // pod-not-found (404) detections, which do not fire reliably for graceful preemptions.
+        // See https://kubernetes.io/docs/concepts/workloads/pods/pod-condition/
+        if( isNodeDisruption(status) && !isSuccessfullyTerminated(containerStatuses) )
+            throw new NodeTerminationException("K8s pod '$podName' was terminated due to a node disruption event")
+
         if( containerStatuses?.size()>0 ) {
             final container = containerStatuses.get(0)
             // note: when the pod is created by a Job submission
@@ -521,6 +530,37 @@ class K8sClient {
         }
 
         throw new K8sResponseException("K8s undetermined status conditions for pod $podName", resp)
+    }
+
+    /**
+     * Determine whether the pod status carries a `DisruptionTarget` condition set to `True`,
+     * which K8s adds when a pod is about to be deleted due to an involuntary disruption such
+     * as node preemption or graceful node shutdown.
+     *
+     * @param status The pod `status` object
+     * @return {@code true} when a `DisruptionTarget` condition with status `True` is present
+     */
+    protected static boolean isNodeDisruption(Map status) {
+        final conditions = status?.conditions
+        if( !(conditions instanceof List) )
+            return false
+        for( Object it : (List) conditions ) {
+            if( it instanceof Map && it.type == 'DisruptionTarget' && it.status == 'True' )
+                return true
+        }
+        return false
+    }
+
+    /**
+     * @param containerStatuses The pod `containerStatuses` list
+     * @return {@code true} when the first container has already terminated with exit code {@code 0}
+     */
+    protected static boolean isSuccessfullyTerminated(List<Map> containerStatuses) {
+        if( !containerStatuses )
+            return false
+        final state = containerStatuses.get(0)?.state as Map
+        final terminated = state?.terminated as Map
+        return terminated != null && (terminated.exitCode as Integer) == 0
     }
 
     protected void checkInvalidWaitingState( Map waiting, K8sResponseJson resp ) {
