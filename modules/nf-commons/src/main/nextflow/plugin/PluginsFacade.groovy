@@ -24,6 +24,7 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
+import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.extension.Bolts
 import nextflow.extension.FilesEx
@@ -305,7 +306,27 @@ class PluginsFacade implements PluginStateListener {
     void load(Map config) {
         if( !manager )
             throw new IllegalArgumentException("Plugin system has not been initialized")
+        applyRegistryConfig(config)
         start(pluginsRequirement(config))
+    }
+
+    protected void applyRegistryConfig(Map config) {
+        final registryMap = Bolts.navigate(config, 'registry') as Map
+        // only override the plugin repositories when one or more registry URLs are explicitly
+        // configured; the configured registries are authoritative and replace the default one.
+        // An empty or unset `registry.url` counts as "not configured" and leaves the default
+        // registry in place (consistent with module resolution in RegistryClientFactory).
+        if( !registryMap?.url )
+            return
+        // in dev mode plugins are resolved from the development classpath, not downloaded from
+        // any registry, so the `registry` scope has no effect on plugin resolution
+        if( mode==DEV_MODE ) {
+            log.warn "Plugin registry config is ignored in development mode -- plugins are resolved from the development classpath"
+            return
+        }
+        // the updater owns the repositories and guards against re-applying the registry config,
+        // so re-entrant calls are safe by construction
+        updater?.addRegistryRepos(new RegistryConfig(registryMap))
     }
 
     synchronized void stop() {

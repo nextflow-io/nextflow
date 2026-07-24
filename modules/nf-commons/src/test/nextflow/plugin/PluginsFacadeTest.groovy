@@ -22,6 +22,7 @@ import java.nio.file.Paths
 
 import com.sun.net.httpserver.HttpServer
 import nextflow.SysEnv
+import nextflow.config.RegistryConfig
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -559,6 +560,49 @@ class PluginsFacadeTest extends Specification {
         [NXF_PLUGINS_ALLOWED:'nf-amz,nf-gcp']       | 'nf-amz'      | true
         [NXF_PLUGINS_ALLOWED:'nf-amz,nf-gcp']       | 'nf-gcp'      | true
         [NXF_PLUGINS_ALLOWED:'nf-amz,nf-gcp']       | 'nf-foo'      | false
+    }
+
+    def 'should apply registry config when url is set' () {
+        given:
+        def updater = Mock(PluginUpdater)
+        def facade = new PluginsFacade(Paths.get('plugins'), 'prod')
+        facade.@updater = updater
+
+        when:
+        facade.applyRegistryConfig([registry: [url: ['https://reg.example/api']]])
+
+        then: 'the configured registries are applied to the updater'
+        1 * updater.addRegistryRepos({ RegistryConfig cfg -> cfg.allUrls == ['https://reg.example/api'] })
+    }
+
+    @Unroll
+    def 'should not apply registry config when url is not set' () {
+        given:
+        def updater = Mock(PluginUpdater)
+        def facade = new PluginsFacade(Paths.get('plugins'), 'prod')
+        facade.@updater = updater
+
+        when:
+        facade.applyRegistryConfig(CONFIG)
+
+        then: 'the updater is left untouched'
+        0 * updater.addRegistryRepos(_)
+
+        where:
+        CONFIG << [ [:], [registry: [:]], [registry: [url: []]] ]
+    }
+
+    def 'should ignore registry config in dev mode' () {
+        given:
+        def updater = Mock(PluginUpdater)
+        def facade = new PluginsFacade(Paths.get('plugins'), 'dev')
+        facade.@updater = updater
+
+        when:
+        facade.applyRegistryConfig([registry: [url: ['https://reg.example/api']]])
+
+        then: 'plugins are resolved from the dev classpath, so the registry scope is ignored'
+        0 * updater.addRegistryRepos(_)
     }
 
 }
