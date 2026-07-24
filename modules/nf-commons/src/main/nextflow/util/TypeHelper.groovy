@@ -117,6 +117,19 @@ class TypeHelper {
     }
 
     /**
+     * Convert a value to a parameterized type that has been preserved
+     * from type erasure in a field of a hidden class (see StripTypesVisitor).
+     *
+     * @param value
+     * @param clazz the hidden class holding the parameterized type
+     * @param field the field name holding the parameterized type
+     */
+    static Object asType(Object value, Class clazz, String field) {
+        final type = clazz.getField(field).getGenericType()
+        return asType(value, type)
+    }
+
+    /**
      * Convert a collection to the given collection type.
      *
      * If the type specifies an element type, each element in the

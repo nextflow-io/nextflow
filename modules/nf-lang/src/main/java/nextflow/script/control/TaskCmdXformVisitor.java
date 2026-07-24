@@ -18,6 +18,7 @@ package nextflow.script.control;
 
 import org.codehaus.groovy.ast.ClassCodeVisitorSupport;
 import org.codehaus.groovy.ast.ClassHelper;
+import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.GStringExpression;
 import org.codehaus.groovy.control.SourceUnit;
@@ -33,6 +34,8 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.*;
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 public class TaskCmdXformVisitor extends ClassCodeVisitorSupport {
+
+    private static final ClassNode LANG_HELPERS = ClassHelper.makeWithoutCaching("nextflow.util.LangHelpers");
 
     private SourceUnit sourceUnit;
 
@@ -57,8 +60,7 @@ public class TaskCmdXformVisitor extends ClassCodeVisitorSupport {
      * @see LangHelpers.applyPathEscapeAware()
      */
     private static Expression applyEscape(Expression node) {
-        var cn = ClassHelper.makeWithoutCaching("nextflow.util.LangHelpers");
-        return callX(classX(cn), "applyPathEscapeAware", args(node));
+        return callX(classX(LANG_HELPERS), "applyPathEscapeAware", args(node));
     }
 
 }
