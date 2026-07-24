@@ -129,14 +129,11 @@ class PluginUpdater extends UpdateManager {
             return
         registryReposApplied = true
         final urls = registryConfig.getAllUrls()
-        // the configured registries take over: drop the default registry repository(ies)
-        // that are actually present so only the user-provided endpoints are queried.
-        // Only existing ids are removed because wrap() creates just one of them and pf4j's
-        // removeRepository() logs a misleading warning when the id is not found.
+        // the configured registries take over: drop the default registry repository(ies).
+        // Mutate the list directly rather than removeRepository(id): pf4j-update 2.3.0 logs a
+        // misleading "Repository with id X not found" warning even on a successful removal.
+        this.@repositories.removeIf { it.id in DEFAULT_REGISTRY_REPO_IDS }
         final existingIds = this.@repositories*.id as Set
-        for( String id : DEFAULT_REGISTRY_REPO_IDS )
-            if( existingIds.remove(id) )
-                removeRepository(id)
         int counter = 0
         for( String url : urls ) {
             String repoId = "registry-${counter++}"
