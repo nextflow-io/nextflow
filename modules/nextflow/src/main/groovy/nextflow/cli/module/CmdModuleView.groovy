@@ -145,6 +145,10 @@ class CmdModuleView extends CmdBase {
         println "URL:         ${moduleUrl}"
         println "Description: ${metadata.description ?: release.description ?: 'N/A'}"
 
+        if( metadata.componentName ) {
+            println "Component:   ${metadata.componentName}"
+        }
+
         if( metadata.authors ) {
             println "Authors:     ${metadata.authors.join(', ')}"
         }
@@ -290,6 +294,7 @@ class CmdModuleView extends CmdBase {
             version    : release.version,
             url        : moduleUrl,
             description: metadata.description ?: release.description,
+            componentName: metadata.componentName,
             authors    : metadata.authors,
             keywords   : metadata.keywords,
         ]
