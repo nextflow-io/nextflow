@@ -16,10 +16,9 @@
 
 package nextflow.dataflow
 
-import nextflow.Global
-import nextflow.Session
 import nextflow.dataflow.ChannelNamespace as channel
 import nextflow.exception.ScriptRuntimeException
+import nextflow.exception.WorkflowScriptErrorException
 import nextflow.extension.CH
 import nextflow.util.HashBag
 import spock.lang.Specification
@@ -205,17 +204,16 @@ class ChannelImplTest extends Specification {
         when:
         runScript(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             workflow {
                 channel.of(tuple(1,2)).flatMap()
             }
             '''
         )
-        def sess = Global.session as Session
         then:
-        sess.isAborted()
-        sess.error.message.contains 'Operator `flatMap` expected an Iterable but received a tuple'
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains 'Operator `flatMap` expected an Iterable but received a tuple'
     }
 
     def testGroupBy() {
@@ -260,62 +258,58 @@ class ChannelImplTest extends Specification {
         when:
         runScript(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             workflow {
                 channel.of(1, 2, 3).groupBy()
             }
             '''
         )
-        def sess = Global.session as Session
         then:
-        sess.isAborted()
-        sess.error.message.contains 'Operator `groupBy` expected a 3-tuple of (key, size, value) or a 2-tuple of (key, value)'
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains 'Operator `groupBy` expected a 3-tuple of (key, size, value) or a 2-tuple of (key, value)'
 
         when:
         runScript(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             workflow {
                 channel.of([1, 1, 'a'], [1, 1, 'b']).groupBy()
             }
             '''
         )
-        sess = Global.session as Session
         then:
-        sess.isAborted()
-        sess.error.message.contains 'Operator `groupBy` received too many values for grouping key: 1'
+        e = thrown(ScriptRuntimeException)
+        e.message.contains 'Operator `groupBy` received too many values for grouping key: 1'
 
         when:
         runScript(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             workflow {
                 channel.of([1, 2, 'a'], [1, 3, 'b']).groupBy()
             }
             '''
         )
-        sess = Global.session as Session
         then:
-        sess.isAborted()
-        sess.error.message.contains 'Operator `groupBy` received inconsistent group size for key 1'
+        e = thrown(ScriptRuntimeException)
+        e.message.contains 'Operator `groupBy` received inconsistent group size for key 1'
 
         when:
         runScript(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             workflow {
                 channel.of([1, 3, 'a'], [1, 3, 'b']).groupBy()
             }
             '''
         )
-        sess = Global.session as Session
         then:
-        sess.isAborted()
-        sess.error.message.contains 'Operator `groupBy` received too few values for grouping keys: 1'
+        e = thrown(ScriptRuntimeException)
+        e.message.contains 'Operator `groupBy` received too few values for grouping keys: 1'
     }
 
     def testJoin() {
@@ -392,7 +386,7 @@ class ChannelImplTest extends Specification {
         when:
         runScript(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             workflow {
                 left = channel.of(1, 2, 3)
@@ -401,10 +395,9 @@ class ChannelImplTest extends Specification {
             }
             '''
         )
-        def sess = Global.session as Session
         then:
-        sess.isAborted()
-        sess.error.message.contains 'Operator `join` expected a record'
+        e = thrown(ScriptRuntimeException)
+        e.message.contains 'Operator `join` expected a record'
     }
 
     def testMap() {
@@ -490,17 +483,16 @@ class ChannelImplTest extends Specification {
         when:
         runScript(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             workflow {
                 channel.empty().reduce { acc, v -> acc + v }
             }
             '''
         )
-        def sess = Global.session as Session
         then:
-        sess.isAborted()
-        sess.error.message.contains "Operator `reduce` received an empty channel with no initial value"
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains "Operator `reduce` received an empty channel with no initial value"
     }
 
     def testReduceWithSeed() {
@@ -653,13 +645,10 @@ class ChannelImplTest extends Specification {
     }
 
     def 'should propagate errors to the session' () {
-        given:
-        def sess
-
         when:
         runScript(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             workflow {
                 channel.of(1, 2, 3).subscribe { v ->
@@ -668,17 +657,16 @@ class ChannelImplTest extends Specification {
             }
             '''
         )
-        sess = Global.session as Session
         then:
-        sess.isAborted()
-        sess.error.message == "failed!"
+        def e = thrown(WorkflowScriptErrorException)
+        e.message == "failed!"
     }
 
     def 'should fall back to legacy operators' () {
         when:
         def result = runScript(
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             workflow {
                 channel.of(1, [2, 3], 4).flatten()

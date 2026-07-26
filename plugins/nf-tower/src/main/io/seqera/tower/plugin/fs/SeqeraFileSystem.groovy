@@ -16,6 +16,7 @@
 
 package io.seqera.tower.plugin.fs
 
+import java.nio.file.AccessDeniedException
 import java.nio.file.FileStore
 import java.nio.file.FileSystem
 import java.nio.file.NoSuchFileException
@@ -27,41 +28,44 @@ import java.nio.file.spi.FileSystemProvider
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import io.seqera.tower.model.DatasetDto
-import io.seqera.tower.model.DatasetVersionDto
 import io.seqera.tower.model.OrgAndWorkspaceDto
-import io.seqera.tower.plugin.dataset.SeqeraDatasetClient
+import io.seqera.tower.plugin.TowerClient
+import io.seqera.tower.plugin.exception.ForbiddenException
+import io.seqera.tower.plugin.exception.NotFoundException
+import io.seqera.tower.plugin.exception.UnauthorizedException
+import nextflow.exception.AbortOperationException
 
 /**
  * FileSystem instance for the {@code seqera://} scheme.
- * One instance per (endpoint + credentials) pair, cached by {@link SeqeraFileSystemProvider}.
+ * One instance per {@link SeqeraFileSystemProvider}.
  *
- * Lazily populates org/workspace/dataset caches on first access.
- * Cache is invalidated on dataset write operations.
- *
- * @author Seqera Labs
+ * Resource-type-agnostic: the filesystem owns the user-id and org/workspace caches
+ * (shared across resource types) and a registry of {@link ResourceTypeHandler}s.
+ * Each handler owns its own API client and resource-specific caches.
  */
 @Slf4j
 @CompileStatic
 class SeqeraFileSystem extends FileSystem {
 
     private final SeqeraFileSystemProvider provider0
-    final SeqeraDatasetClient client
+    private final TowerClient towerClient
+
+    /** Cached current-user id; the user is fixed by the {@code TowerClient}'s access token. */
+    private volatile Long cachedUserId
 
     /** orgName → orgId */
     private final Map<String, Long> orgCache = new LinkedHashMap<>()
     /** "orgName/workspaceName" → workspaceId */
     private final Map<String, Long> workspaceCache = new LinkedHashMap<>()
-    /** workspaceId → list of DatasetDto */
-    private final Map<Long, List<DatasetDto>> datasetCache = new LinkedHashMap<>()
-    /** datasetId → list of DatasetVersionDto */
-    private final Map<String, List<DatasetVersionDto>> versionCache = new LinkedHashMap<>()
+
+    /** resourceType → handler */
+    private final Map<String, ResourceTypeHandler> handlers = new LinkedHashMap<>()
 
     private volatile boolean orgWorkspaceCacheLoaded = false
 
-    SeqeraFileSystem(SeqeraFileSystemProvider provider, SeqeraDatasetClient client) {
+    SeqeraFileSystem(SeqeraFileSystemProvider provider, TowerClient towerClient) {
         this.provider0 = provider
-        this.client = client
+        this.towerClient = towerClient
     }
 
     @Override
@@ -111,7 +115,53 @@ class SeqeraFileSystem extends FileSystem {
         throw new UnsupportedOperationException("WatchService not supported by seqera:// filesystem")
     }
 
-    // ---- cache management ----
+    // ---- user-id / org / workspace caches (shared across handlers) ----
+
+    /**
+     * Resolve the current user's numeric ID via {@code GET /user-info}.
+     * Cached for the lifetime of this filesystem — the token does not change
+     * during a pipeline run, so neither does the resolved user.
+     */
+    synchronized long getUserId() throws IOException {
+        if (cachedUserId != null) return cachedUserId
+        try {
+            final info = towerClient.getUserInfo()
+            if (info?.id == null)
+                throw new AbortOperationException("Unable to retrieve user ID from Seqera Platform — check your access token")
+            cachedUserId = info.id as Long
+            return cachedUserId
+        } catch (UnauthorizedException e) {
+            throw new AbortOperationException(e.getMessage())
+        } catch (ForbiddenException e) {
+            throw new AccessDeniedException("${towerClient.endpoint}/user-info", null, e.message)
+        } catch (NotFoundException e) {
+            throw new NoSuchFileException("${towerClient.endpoint}/user-info")
+        }
+    }
+
+    /** {@code GET /user/{userId}/workspaces} — reachable orgs and workspaces. */
+    private List<OrgAndWorkspaceDto> fetchUserWorkspacesAndOrgs(long userId) throws IOException {
+        try {
+            final list = towerClient.listUserWorkspacesAndOrgs(userId as String)
+            return list.collect { Map m -> mapOrgAndWorkspace(m) }
+        } catch (UnauthorizedException e) {
+            throw new AbortOperationException(e.getMessage())
+        } catch (ForbiddenException e) {
+            throw new AccessDeniedException("${towerClient.endpoint}/user/$userId/workspaces", null, e.message)
+        } catch (NotFoundException e) {
+            throw new NoSuchFileException("${towerClient.endpoint}/user/$userId/workspaces")
+        }
+    }
+
+    private static OrgAndWorkspaceDto mapOrgAndWorkspace(Map m) {
+        final dto = new OrgAndWorkspaceDto()
+        dto.orgId = (m.orgId as Long) ?: 0L
+        dto.orgName = m.orgName as String
+        dto.workspaceId = (m.workspaceId as Long) ?: 0L
+        dto.workspaceName = m.workspaceName as String
+        dto.workspaceFullName = m.workspaceFullName as String
+        return dto
+    }
 
     /**
      * Ensure the org/workspace cache is populated. Thread-safe: loads at most once.
@@ -120,7 +170,7 @@ class SeqeraFileSystem extends FileSystem {
     synchronized void loadOrgWorkspaceCache() {
         if (orgWorkspaceCacheLoaded) return
         log.debug "Loading Seqera org/workspace cache"
-        final entries = client.listUserWorkspacesAndOrgs(client.getUserId())
+        final entries = fetchUserWorkspacesAndOrgs(getUserId())
         for (OrgAndWorkspaceDto entry : entries) {
             if (entry.orgName)
                 orgCache.put(entry.orgName, entry.orgId)
@@ -144,8 +194,8 @@ class SeqeraFileSystem extends FileSystem {
     synchronized List<String> listWorkspaceNames(String org) {
         loadOrgWorkspaceCache()
         return workspaceCache.keySet()
-            .findAll { String k -> k.startsWith("${org}/") }
-            .collect { String k -> k.substring(org.length() + 1) }
+                .findAll { String k -> k.startsWith("${org}/") }
+                .collect { String k -> k.substring(org.length() + 1) }
     }
 
     /**
@@ -161,54 +211,17 @@ class SeqeraFileSystem extends FileSystem {
         return id
     }
 
-    /**
-     * Return datasets for the given workspace, populating the cache on first access.
-     */
-    synchronized List<DatasetDto> resolveDatasets(long workspaceId) {
-        List<DatasetDto> cached = datasetCache.get(workspaceId)
-        if (cached == null) {
-            cached = client.listDatasets(workspaceId)
-            datasetCache.put(workspaceId, cached)
-        }
-        return cached
+    // ---- handler registry ----
+
+    synchronized void registerHandler(ResourceTypeHandler handler) {
+        handlers.put(handler.resourceType, handler)
     }
 
-    /**
-     * Invalidate the dataset and version caches for a workspace (call after a write operation).
-     */
-    synchronized void invalidateDatasetCache(long workspaceId) {
-        // Remove version caches for all datasets in this workspace
-        final datasets = datasetCache.get(workspaceId)
-        if (datasets) {
-            for (DatasetDto ds : datasets) {
-                versionCache.remove(ds.id)
-            }
-        }
-        datasetCache.remove(workspaceId)
+    synchronized ResourceTypeHandler getHandler(String resourceType) {
+        handlers.get(resourceType)
     }
 
-    /**
-     * Resolve a DatasetDto by name within a workspace.
-     * @throws NoSuchFileException if no dataset with the given name exists
-     */
-    synchronized DatasetDto resolveDataset(long workspaceId, String name) throws NoSuchFileException {
-        final datasets = resolveDatasets(workspaceId)
-        return datasets.find { DatasetDto d -> d.name == name }
+    synchronized Set<String> getResourceTypes() {
+        Collections.unmodifiableSet(new LinkedHashSet<String>(handlers.keySet()))
     }
-
-    /**
-     * Return versions for the given dataset, populating the cache on first access.
-     * Note: the version cache is only invalidated when the workspace dataset cache is invalidated
-     * (e.g. after a write operation). Versions published externally during a pipeline run will not
-     * be visible until the cache is cleared.
-     */
-    synchronized List<DatasetVersionDto> resolveVersions(String datasetId, long workspaceId) {
-        List<DatasetVersionDto> cached = versionCache.get(datasetId)
-        if (cached == null) {
-            cached = client.listVersions(datasetId, workspaceId)
-            versionCache.put(datasetId, cached)
-        }
-        return cached
-    }
-
 }

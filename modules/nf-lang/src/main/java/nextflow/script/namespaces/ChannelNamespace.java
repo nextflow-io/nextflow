@@ -32,7 +32,7 @@ public interface ChannelNamespace extends Namespace {
     @Description("""
         Create a channel that emits nothing.
 
-        [Read more](https://nextflow.io/docs/latest/reference/channel.html#empty)
+        [Read more](https://docs.seqera.io/nextflow/reference/channel#empty)
     """)
     Channel<?> empty();
 
@@ -42,28 +42,28 @@ public interface ChannelNamespace extends Namespace {
 
         An optional closure can be used to customize the grouping strategy.
 
-        [Read more](https://nextflow.io/docs/latest/reference/channel.html#fromfilepairs)
+        [Read more](https://docs.seqera.io/nextflow/reference/channel#fromfilepairs)
     """)
     Channel<?> fromFilePairs(Map<String,?> opts, String pattern, Closure grouping);
 
     @Description("""
         Create a channel that emits files from the lineage store matching the given key-value params:
 
-        [Read more](https://nextflow.io/docs/latest/reference/channel.html#fromlineage)
+        [Read more](https://docs.seqera.io/nextflow/reference/channel#fromlineage)
     """)
     Channel<Path> fromLineage(Map<String,?> opts);
 
     @Description("""
         Create a channel that emits each element in a collection.
 
-        [Read more](https://nextflow.io/docs/latest/reference/channel.html#fromlist)
+        [Read more](https://docs.seqera.io/nextflow/reference/channel#fromlist)
     """)
     <E> Channel<E> fromList(Iterable<E> values);
 
     @Description("""
         Create a channel that emits all paths matching a name or glob pattern.
 
-        [Read more](https://nextflow.io/docs/latest/reference/channel.html#frompath)
+        [Read more](https://docs.seqera.io/nextflow/reference/channel#frompath)
     """)
     Channel<Path> fromPath(
         @NamedParams({
@@ -83,35 +83,35 @@ public interface ChannelNamespace extends Namespace {
     @Description("""
         Create a channel that emits an incrementing index (starting from zero) at a periodic interval.
 
-        [Read more](https://nextflow.io/docs/latest/reference/channel.html#interval)
+        [Read more](https://docs.seqera.io/nextflow/reference/channel#interval)
     """)
     Channel<Integer> interval(String interval);
 
     @Description("""
         Create a channel that emits each argument.
 
-        [Read more](https://nextflow.io/docs/latest/reference/channel.html#of)
+        [Read more](https://docs.seqera.io/nextflow/reference/channel#of)
     """)
     <E> Channel<E> of(E... values);
 
     @Description("""
         Create a channel that emits all values in the given topic.
 
-        [Read more](https://nextflow.io/docs/latest/reference/channel.html#topic)
+        [Read more](https://docs.seqera.io/nextflow/reference/channel#topic)
     """)
     Channel<?> topic(String name);
 
     @Description("""
         Create a value channel.
 
-        [Read more](https://nextflow.io/docs/latest/reference/channel.html#value)
+        [Read more](https://docs.seqera.io/nextflow/reference/channel#value)
     """)
     <V> Value<V> value(V value);
 
     @Description("""
         Create a channel that watches for filesystem events for all files matching the given pattern.
 
-        [Read more](https://nextflow.io/docs/latest/reference/channel.html#watchpath)
+        [Read more](https://docs.seqera.io/nextflow/reference/channel#watchpath)
     """)
     Channel<Path> watchPath(String filePattern, String events);
 

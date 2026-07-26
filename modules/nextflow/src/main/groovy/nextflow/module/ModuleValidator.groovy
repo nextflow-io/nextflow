@@ -37,8 +37,9 @@ class ModuleValidator {
      * An empty list means the module is valid.
      *
      * @param moduleDir
+     * @param schemaLocation URL or local path of the JSON schema used to validate meta.yml
      */
-    static List<String> validate(Path moduleDir) {
+    static List<String> validate(Path moduleDir, String schemaLocation) {
         final errors = new ArrayList<String>()
 
         // Level 1: validate module structure
@@ -46,8 +47,13 @@ class ModuleValidator {
         if( errors )
             return errors  // can't proceed without required files
 
-        // Level 2: validate module spec (meta.yml)
+        // Level 2a: validate module spec (meta.yml) against the JSON schema
         final manifestPath = moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
+        errors.addAll(ModuleSchemaValidator.validate(manifestPath, schemaLocation))
+        if( errors )
+            return errors
+
+        // Level 2b: validate Nextflow-specific rules not expressed by the schema
         final spec = ModuleSpecFactory.fromYaml(manifestPath)
         errors.addAll(spec.validate())
         if( errors )
@@ -59,6 +65,10 @@ class ModuleValidator {
         errors.addAll(validateInputsOutputs(spec, sourceSpec))
 
         return errors
+    }
+
+    static List<String> validate(Path moduleDir) {
+        return validate(moduleDir, ModuleSchemaValidator.DEFAULT_SCHEMA_URL)
     }
 
     /**

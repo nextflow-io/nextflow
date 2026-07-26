@@ -146,7 +146,7 @@ class K8sConfig implements ConfigScope {
 
     @ConfigOption(types=[List, Map])
     @Description("""
-        Additional pod configuration options such as environment variables, config maps, secrets, etc. Allows the same settings as the [pod](https://nextflow.io/docs/latest/process.html#pod) process directive.
+        Additional pod configuration options such as environment variables, config maps, secrets, etc. Allows the same settings as the [pod](https://docs.seqera.io/nextflow/reference/process#pod) process directive.
     """)
     final PodOptions pod
 

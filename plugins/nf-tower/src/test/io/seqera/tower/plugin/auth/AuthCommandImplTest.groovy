@@ -27,6 +27,8 @@ import test.OutputCapture
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.attribute.PosixFilePermission
+import java.nio.file.attribute.PosixFilePermissions
 
 /**
  * Test CmdAuth functionality
@@ -215,6 +217,49 @@ param2 = 'value2'"""
         authContent.contains('accessToken = \'test-token-123\'')
         authContent.contains('endpoint = \'https://api.cloud.seqera.io\'')
         authContent.contains('enabled = true')
+    }
+
+    def 'should write seqera-auth.config with owner-only permissions'() {
+        given:
+        def cmd = Spy(AuthCommandImpl)
+        def authFile = tempDir.resolve('seqera-auth.config')
+        def configFile = tempDir.resolve('config')
+
+        cmd.getAuthFile() >> authFile
+        cmd.getConfigFile() >> configFile
+
+        def config = ['tower.accessToken': 'test-token']
+
+        when:
+        cmd.writeConfig(config, null)
+
+        then:
+        Files.exists(authFile)
+        Files.getPosixFilePermissions(authFile) == EnumSet.of(
+            PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE)
+    }
+
+    def 'should re-harden permissions when overwriting an existing world-readable file'() {
+        given:
+        def cmd = Spy(AuthCommandImpl)
+        def authFile = tempDir.resolve('seqera-auth.config')
+        def configFile = tempDir.resolve('config')
+
+        Files.writeString(authFile, 'tower { accessToken = "stale" }')
+        Files.setPosixFilePermissions(authFile, PosixFilePermissions.fromString('rw-r--r--'))
+
+        cmd.getAuthFile() >> authFile
+        cmd.getConfigFile() >> configFile
+
+        def config = ['tower.accessToken': 'test-token']
+
+        when:
+        cmd.writeConfig(config, null)
+
+        then:
+        Files.getPosixFilePermissions(authFile) == EnumSet.of(
+            PosixFilePermission.OWNER_READ, PosixFilePermission.OWNER_WRITE)
+        Files.readString(authFile).contains('test-token')
     }
 
     def 'should write config with workspace metadata'() {
@@ -716,6 +761,7 @@ param2 = 'value2'"""
         given:
         def cmd = Spy(AuthCommandImpl)
         def config = ['tower.endpoint': 'https://unreachable.example.com']
+        SysEnv.push([:])  // Isolate from actual environment variables (avoid real network calls)
 
         cmd.checkApiConnection(_) >> false
 
@@ -726,6 +772,9 @@ param2 = 'value2'"""
         status != null
         status.table[1][0] == 'API connection'
         status.table[1][1].contains('ERROR')
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should collect status with failed authentication'() {
@@ -756,6 +805,7 @@ param2 = 'value2'"""
         given:
         def cmd = Spy(AuthCommandImpl)
         def config = ['tower.enabled': true]
+        SysEnv.push([:])  // Isolate from actual environment variables (avoid real network calls)
 
         cmd.checkApiConnection(_) >> true
 
@@ -766,12 +816,16 @@ param2 = 'value2'"""
         status != null
         status.table[3][0] == 'Workflow monitoring'
         status.table[3][1].contains('Yes')
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should collect status with monitoring disabled'() {
         given:
         def cmd = Spy(AuthCommandImpl)
         def config = ['tower.enabled': false]
+        SysEnv.push([:])  // Isolate from actual environment variables (avoid real network calls)
 
         cmd.checkApiConnection(_) >> true
 
@@ -782,6 +836,9 @@ param2 = 'value2'"""
         status != null
         status.table[3][0] == 'Workflow monitoring'
         status.table[3][1].contains('No')
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should collect status with workspace details'() {
@@ -877,6 +934,7 @@ param2 = 'value2'"""
         given:
         def cmd = Spy(AuthCommandImpl)
         def config = [:]
+        SysEnv.push([:])  // Isolate from actual environment variables (avoid real network calls)
 
         cmd.checkApiConnection(_) >> true
 
@@ -891,6 +949,9 @@ param2 = 'value2'"""
         // Should show monitoring disabled by default
         status.table[3][1].contains('No')
         status.table[3][2] == 'default'
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should collect status with mixed sources'() {

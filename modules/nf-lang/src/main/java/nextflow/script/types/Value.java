@@ -25,7 +25,7 @@ import nextflow.script.dsl.Operator;
 @Description("""
     A dataflow value is an asynchronous value. It is used to facilitate dataflow logic in a workflow.
 
-    [Read more](https://nextflow.io/docs/latest/reference/stdlib-types.html#value-v)
+    [Read more](https://docs.seqera.io/nextflow/reference/stdlib-types#value-v)
 """)
 public interface Value<V> {
 

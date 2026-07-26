@@ -48,6 +48,8 @@ class ApptainerBuilder extends SingularityBuilder {
         if( config.engineOptions )
             this.addEngineOptions(config.engineOptions)
 
+        this.resourceLimits = config.resourceLimits
+
         if( config.runOptions )
             this.addRunOptions(config.runOptions)
     }

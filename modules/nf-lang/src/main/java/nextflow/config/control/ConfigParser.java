@@ -21,7 +21,7 @@ import groovy.lang.GroovyClassLoader;
 import nextflow.config.parser.ConfigParserPluginFactory;
 import nextflow.script.control.Compiler;
 import nextflow.script.control.LazyErrorCollector;
-import nextflow.script.types.Types;
+import nextflow.script.dsl.Types;
 import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.messages.WarningMessage;

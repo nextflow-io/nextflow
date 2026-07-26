@@ -1,0 +1,375 @@
+---
+title: Scripts
+description: A practical introduction to writing Nextflow scripts with variables, strings, collections, operators, control flow, and closures.
+---
+
+# Scripts
+
+Nextflow is a workflow language that runs on the Java virtual machine (JVM). Nextflow's syntax is very similar to [Groovy](https://groovy-lang.org/), a scripting language for the JVM. However, Nextflow is specialized for writing computational pipelines in a declarative manner.
+
+This page is a practical introduction to the Nextflow language. See [Syntax][syntax-page] for the language grammar, [Semantics][semantics-page] for the meaning and behavior of each language construct, and [Standard library][stdlib-page] for the built-in types and functions available to every script.
+
+:::warning
+Nextflow uses UTF-8 as the default character encoding for source files. Make sure to use UTF-8 encoding when editing Nextflow scripts with your preferred text editor.
+:::
+
+:::warning
+Nextflow scripts have a maximum size of 64 KiB. To avoid this limit for large pipelines, consider moving pipeline components into separate files and including them in the main script.
+:::
+
+## Hello world
+
+You can use the `println` function to print to the console:
+
+```nextflow
+println 'Hello, World!'
+```
+
+## Variables
+
+Variables are declared using the `def` keyword:
+
+```nextflow
+def num = 1
+def str = "Hi"
+```
+
+A variable can hold any type of value, and it can be reassigned:
+
+```nextflow
+def x = 1
+x = 'hello'
+```
+
+## Strings
+
+Strings can be defined using single or double quotes (`'` or `"` characters):
+
+```nextflow
+println "he said 'cheese' once"
+println 'he said "cheese!" again'
+```
+
+Strings can be concatenated with `+`:
+
+```nextflow
+def a = "world"
+println "hello " + a
+```
+
+The important difference between single- and double-quoted strings is that double-quoted strings support *interpolation*: the value of a variable can be inserted by prefixing its name with `$`, and the value of any expression can be inserted with `${expression}`:
+
+```nextflow
+def foxtype = 'quick'
+def foxcolor = ['b', 'r', 'o', 'w', 'n']
+println "The $foxtype ${foxcolor.join()} fox"
+// prints: The quick brown fox
+
+println '$foxtype is not interpolated'
+// prints: $foxtype is not interpolated
+```
+
+A block of text that spans multiple lines can be defined by delimiting it with triple single or double quotes:
+
+```nextflow
+def text = """
+    hello there James
+    how are you today?
+    """
+```
+
+See [Strings][semantics-strings] for more about string behavior, including multi-line strings and escaping.
+
+## Lists
+
+Lists are defined using square brackets:
+
+```nextflow
+def myList = [1776, -1, 33, 99, 0, 928734928763]
+```
+
+You can access an item in a list with square-bracket notation (indexes start at 0), and get the length of a list with the `size` method:
+
+```nextflow
+println myList[0]
+println myList.size()
+```
+
+See [List\<E\>][stdlib-types-list] for the set of available list operations.
+
+## Maps
+
+Maps are used to store *key-value pairs*. They are unordered collections of named values, which can each be of a different type:
+
+```nextflow
+def scores = ["Brett": 100, "Pete": "Did not finish", "Andrew": 86.87934]
+```
+
+You can access the values in a map by key in two ways:
+
+```nextflow
+println scores["Pete"]
+println scores.Pete
+```
+
+To add or modify an entry, assign to a key:
+
+```nextflow
+scores["Pete"] = 3
+scores["Cedric"] = 120
+```
+
+:::tip
+You can also use the `+` operator to add two maps together, which produces a new map rather than modifying either input. This is a safer way to modify maps when passing them through channels, because any references to the original map won't be affected. See [Maps][semantics-maps] for details.
+:::
+
+See [Map\<K,V\>][stdlib-types-map] for the set of available map operations.
+
+## Records and tuples
+
+*Records* store a set of related fields, where each field can have its own type. They are created with the `record` function and accessed by field name:
+
+```nextflow
+def person = record(name: 'Alice', age: 42, is_alive: true)
+println person.name
+```
+
+*Tuples* store a fixed sequence of heterogeneous values. They are created with the `tuple` function and accessed by index, and can be *destructured* in an assignment:
+
+```nextflow
+def coords = tuple(1, 2)
+def (x, y) = coords
+println "x=$x, y=$y"
+```
+
+Records and tuples are both immutable -- once created, they cannot be modified. See [Records][semantics-records] and [Tuples][semantics-tuples] for more information.
+
+## Operators
+
+Operators are symbols that perform specific functions on one or more values. This section highlights some of the most commonly used operators. See [Operators][semantics-operators] for the full set.
+
+:::note
+Operators in this context are different from *channel operators*, which are the methods used to work with channels. See [Dataflow][dataflow-page] for more information.
+:::
+
+The `==` and `!=` operators test whether two values are equal (or not equal):
+
+```nextflow
+assert 2 + 2 == 4
+assert [2, 2] != [4]
+```
+
+:::tip
+The `assert` keyword tests a condition and raises an error if the condition is false. Every assert on this page succeeds when executed.
+:::
+
+Comparison operators compare two values:
+
+```nextflow
+assert 3 < 3.14             // numbers are compared as numbers
+assert 'hello' < 'world'    // strings are compared alphabetically
+```
+
+Logical operators perform Boolean logic:
+
+```nextflow
+assert (true && false) == false   // logical AND
+assert (true || false) == true    // logical OR
+assert (!true) == false           // logical NOT
+```
+
+The `in` operator tests *membership*, i.e., whether a collection contains a value:
+
+```nextflow
+assert 2 in [1, 2, 3]
+```
+
+Arithmetic operators do math:
+
+```nextflow
+assert 2 + 2 == 4
+assert 2 * 3 == 6
+assert 2 ** 8 == 256    // exponent
+assert 7 % 2 == 1       // modulo (division remainder)
+```
+
+Some arithmetic operators can be used with other types of values. For example, `+` can also concatenate lists, maps, and strings:
+
+```nextflow
+assert [1, 2, 3] + [4] == [1, 2, 3, 4]
+```
+
+## Conditional execution
+
+If-else statements can be used to execute different code under different conditions:
+
+```nextflow
+def x = Math.random()
+if( x < 0.5 ) {
+    println 'You lost.'
+}
+else {
+    println 'You won!'
+}
+```
+
+In some cases, a conditional can be expressed more concisely as a conditional expression (also known as a *ternary expression*):
+
+```nextflow
+def message = Math.random() < 0.5
+    ? 'You lost.'
+    : 'You won!'
+println message
+```
+
+A shortened version of the conditional expression, known as the *Elvis operator*, returns the first value if it is *truthy*, or falls back to a second value otherwise:
+
+```nextflow
+def scores = ['A': 1, 'B': 2]
+assert (scores['C'] ?: 0) == 0
+```
+
+## Regular expressions
+
+Regular expressions can be used to match and extract patterns from strings.
+
+Use `=~` to check whether a pattern occurs anywhere in a string, and `==~` to check whether a string matches a pattern exactly:
+
+```nextflow
+assert 'hello world' =~ /hello/
+assert 'hello' ==~ /hello/
+```
+
+Use the `replaceFirst` and `replaceAll` methods to replace matching occurrences in a string:
+
+```nextflow
+assert 'colour'.replaceFirst(/ou/, 'o') == 'color'
+assert 'cheesecheese'.replaceAll(/cheese/, 'nice') == 'nicenice'
+```
+
+You can use the matcher object returned by `=~` to extract capture groups from a string:
+
+```nextflow
+def version = '2.7.3-beta'
+def m = version =~ /(\d+)\.(\d+)\.(\d+)-?(.+)/
+
+assert m[0] == ['2.7.3-beta', '2', '7', '3', 'beta']
+assert m[0][1] == '2'
+assert m[0][2] == '7'
+assert m[0][3] == '3'
+assert m[0][4] == 'beta'
+```
+
+See [Regex operators][semantics-regex] for more information.
+
+## Closures
+
+A closure is a function that can be used like a regular value. Typically, closures are passed as arguments to *higher-order functions* to express computations in a declarative manner.
+
+For example, the following closure takes one parameter named `v` and returns the *square* of `v`:
+
+```nextflow
+{ v -> v * v }
+```
+
+This closure can be used with the `collect` method of a list, which uses it to transform each value in the list and produce a new list:
+
+```nextflow
+assert [1, 2, 3, 4].collect { v -> v * v } == [1, 4, 9, 16]
+```
+
+Another example is the `each` method of a map, which takes a closure with two parameters corresponding to the key and value of each map entry:
+
+```nextflow
+["Yue": "Wu", "Mark": "Williams", "Sudha": "Kumari"].each { key, value ->
+    println "$key $value"
+}
+```
+
+Prints:
+
+```
+Yue Wu
+Mark Williams
+Sudha Kumari
+```
+
+See [Closures][semantics-closures] and [Iteration][semantics-iteration] for more about closures and the higher-order functions used to process collections.
+
+## Script definitions
+
+The previous sections covered the basic building blocks of Nextflow code: variables, strings, collections, and closures.
+
+In practice, Nextflow scripts are composed of *workflows*, *processes*, *functions*, and *types* (collectively known as *definitions*), and can *include* definitions from other scripts.
+
+To turn a code snippet into a workflow script, wrap it in a `workflow` block:
+
+```nextflow
+workflow {
+    println 'Hello!'
+}
+```
+
+This block is called the *entry workflow*. It is the entrypoint when the script is executed. Whenever a script contains only simple statements like `println 'Hello!'`, Nextflow treats it as an entry workflow.
+
+You can break up code into functions, for example:
+
+```nextflow
+def sayHello() {
+    println 'Hello!'
+}
+
+def add(a, b) {
+    a + b
+}
+
+workflow {
+    sayHello()
+    println "2 + 2 = ${add(2, 2)}!"
+}
+```
+
+You can organize these definitions further by moving them to a separate script and including them in the main script:
+
+```nextflow
+// functions.nf
+def sayHello() {
+    println 'Hello!'
+}
+
+def add(a, b) {
+    a + b
+}
+```
+
+```nextflow
+// main.nf
+include { sayHello; add } from './functions.nf'
+
+workflow {
+    sayHello()
+    println "2 + 2 = ${add(2, 2)}!"
+}
+```
+
+See [Processes][process-page], [Workflows][workflow-page], and [Scripts][semantics-scripts] for more information about how to use these features in your Nextflow scripts.
+
+[cache-global-var-race-condition]: ./cache-and-resume#race-condition-on-a-global-variable
+[dataflow-page]: ./process
+[process-page]: ./process
+[semantics-booleans]: ./reference/semantics#booleans
+[semantics-closures]: ./reference/semantics#closures
+[semantics-iteration]: ./reference/semantics#iteration
+[semantics-maps]: ./reference/semantics#maps
+[semantics-operators]: ./reference/semantics#operators
+[semantics-page]: ./reference/semantics
+[semantics-records]: ./reference/semantics#records
+[semantics-regex]: ./reference/semantics#regex-operators
+[semantics-scripts]: ./reference/semantics#scripts
+[semantics-strings]: ./reference/semantics#strings
+[semantics-tuples]: ./reference/semantics#tuples
+[stdlib-page]: ./reference/stdlib
+[stdlib-types-list]: ./reference/stdlib-types#liste
+[stdlib-types-map]: ./reference/stdlib-types#mapkv
+[syntax-page]: ./reference/syntax
+[workflow-page]: ./workflow

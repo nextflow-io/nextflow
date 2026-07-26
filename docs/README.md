@@ -1,47 +1,22 @@
-# Nextflow Documentation
+# Nextflow documentation
 
-Nextflow documentation is written using [Sphinx](http://www.sphinx-doc.org/), [MyST](https://myst-parser.readthedocs.io/en/latest/) which is an extended version of Markdown for Sphinx, and the [Read The Docs theme for Sphinx](https://github.com/readthedocs/sphinx_rtd_theme).
+This directory holds the Nextflow documentation content as `.mdx` files. The site is built with [Docusaurus](https://docusaurus.io/) and deployed to [docs.seqera.io/nextflow](https://docs.seqera.io/nextflow/) via Netlify.
 
+## Editing docs
 
-## Dependencies
+- Edit the `.mdx` files in this directory.
+- Use relative links for internal references, e.g. `[link text](./other-page.mdx)`.
+- Images and other assets live in `_static/`.
+- Code snippets under `snippets/` are runnable and covered by the docs tests.
 
-The most convenient approach is to create a Conda environment with Python 3.7 (other versions may work but haven't been tested).
+## Building and previewing locally
 
-The build dependencies can be installed with `pip`:
-
-```bash
-cd docs
-pip install -r requirements.txt
-```
-
-Alternatively, you can use the Dockerfile to build the docs in a container (see below).
-
-
-## Contributing
-
-To edit and contribute to the documentation, you only need a text editor to change the appropriate `.md` files in this directory.
-
-Once you have made your changes, run the following command to build the HTML files:
+The Docusaurus project lives in [`.docusaurus_site/`](../.docusaurus_site) at the repository root (this directory is symlinked into it as `docs/`):
 
 ```bash
-make clean html
+cd .docusaurus_site
+npm install
+npm start
 ```
 
-Alternatively, you can use the Dockerfile to build the docs in a container:
-
-```bash
-docker build -t nextflow/sphinx:5.3.0 .
-docker run -v $(pwd):/tmp nextflow/sphinx:5.3.0 -- make html
-```
-
-Then start up a local http server and open `localhost:8080` in your browser to verify the changes:
-
-```bash
-python -m http.server 8080 --directory _build/html/
-```
-
-
-## License
-
-Nextflow documentation is distributed under
-[Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0) license](https://creativecommons.org/licenses/by-sa/4.0/).
+See [`.docusaurus_site/README.md`](../.docusaurus_site/README.md) for the full build, configuration, and authoring guide.

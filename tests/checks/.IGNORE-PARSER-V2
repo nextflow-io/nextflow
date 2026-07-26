@@ -6,6 +6,7 @@ eval-out-typed.nf
 nullable-path.nf
 output-dsl.nf
 params-dsl.nf
+process-typed-taskpath.nf
 record-types.nf
 records.nf
 task-ext-block.nf

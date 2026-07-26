@@ -55,6 +55,8 @@ import software.amazon.awssdk.services.batch.model.AssignPublicIp
 import software.amazon.awssdk.services.batch.model.AttemptContainerDetail
 import software.amazon.awssdk.services.batch.model.BatchException
 import software.amazon.awssdk.services.batch.model.ClientException
+import software.amazon.awssdk.services.batch.model.ConsumableResourceProperties
+import software.amazon.awssdk.services.batch.model.ConsumableResourceRequirement
 import software.amazon.awssdk.services.batch.model.ContainerOverrides
 import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsRequest
 import software.amazon.awssdk.services.batch.model.DescribeJobDefinitionsResponse
@@ -623,12 +625,20 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         // finally set the container options
         result.containerProperties(container)
 
+        // set consumable resource properties from hints
+        final hints = task.config.getHints()
+        final consumableResources = getConsumableResources(hints)
+        if( consumableResources )
+            result.consumableResourceProperties(consumableResources)
+
         // add to this list all values that has to contribute to the
         // job definition unique name creation
         hashingTokens.add(name)
         hashingTokens.add(container.toString())
         if( containerOpts )
             hashingTokens.add(containerOpts)
+        if( consumableResources )
+            hashingTokens.add(consumableResources.toString())
 
         return result
     }
@@ -673,6 +683,52 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         if( mountsMap ) {
             container.mountPoints(mounts)
             container.volumes(volumes)
+        }
+    }
+
+    private static final String HINT_PREFIX = 'awsbatch/'
+    private static final Set<String> KNOWN_HINTS = Set.of('consumableResources')
+    private static final String SUPPORTED_HINTS_MSG =
+        KNOWN_HINTS.collect { HINT_PREFIX + it }.sort().join(', ')
+
+    @CompileStatic
+    protected ConsumableResourceProperties getConsumableResources(Map<String,Object> hints) {
+        if( !hints )
+            return null
+        warnUnknownHints(hints)
+        final raw = hints.get(HINT_PREFIX + 'consumableResources') ?: hints.get('consumableResources')
+        if( !raw )
+            return null
+        if( !(raw instanceof Map) )
+            throw new IllegalArgumentException("Invalid 'consumableResources' hint: expected a map of resource name to quantity")
+        final resourceMap = (Map)raw
+        final List<ConsumableResourceRequirement> resourceList = new ArrayList<>()
+        for( Map.Entry entry : resourceMap.entrySet() ) {
+            final resourceName = entry.key?.toString()
+            if( !resourceName )
+                throw new IllegalArgumentException("Invalid 'consumableResources' hint: resource name cannot be empty")
+            final value = entry.value
+            if( !(value instanceof Number) )
+                throw new IllegalArgumentException("Invalid 'consumableResources' hint entry '${resourceName}': quantity must be a number")
+            resourceList.add( ConsumableResourceRequirement.builder()
+                .consumableResource(resourceName)
+                .quantity(((Number)value).longValue())
+                .build() )
+        }
+        if( !resourceList )
+            return null
+        return ConsumableResourceProperties.builder()
+            .consumableResourceList(resourceList)
+            .build()
+    }
+
+    @CompileStatic
+    protected void warnUnknownHints(Map<String,Object> hints) {
+        for( final key : hints.keySet() ) {
+            if( !key?.startsWith(HINT_PREFIX) )
+                continue
+            if( !KNOWN_HINTS.contains(key.substring(HINT_PREFIX.length())) )
+                log.warn1("Unknown AWS Batch hint: '${key}' -- supported keys are: ${SUPPORTED_HINTS_MSG}")
         }
     }
 
@@ -822,7 +878,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final container = ContainerOverrides.builder()
         container.command(getSubmitCommand())
         // set the task memory
-        final cpus = task.config.getCpus()
+        final cpus = opts.fargateMode ? normaliseFargateCpus(task.config.getCpus()) : task.config.getCpus()
         final mem = task.config.getMemory()
         if( mem ) {
             final mega = opts.fargateMode ? normaliseFargateMem(cpus, mem) : mem.toMega()
@@ -833,7 +889,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         }
         // set the task cpus
         if( cpus > 1 )
-            resources << ResourceRequirement.builder().type(ResourceType.VCPU).value(task.config.getCpus().toString()).build()
+            resources << ResourceRequirement.builder().type(ResourceType.VCPU).value(cpus.toString()).build()
 
         final accelerator = task.config.getAccelerator()
         if( accelerator ) {
@@ -1022,6 +1078,22 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                                                       4 : MemSlot.ofGiga(8, 30, 1),
                                                       8 : MemSlot.ofGiga(16,60, 4),
                                                       16: MemSlot.ofGiga(32, 120, 8) ]
+
+    /**
+     * Round up the given cpus requirement to the closest valid value accepted by Fargate.
+     *
+     * @param cpus The number of cpus requested by the task
+     * @return The closest cpus count equal to or greater than {@code cpus} that Fargate accepts
+     */
+    protected int normaliseFargateCpus(Integer cpus) {
+        final validCpus = FARGATE_MEM.keySet().findAll { it >= cpus }
+        if( !validCpus )
+            throw new ProcessUnrecoverableException("Requirement of $cpus CPUs is not allowed by Fargate -- Check process with name '${task.lazyName()}'")
+        final result = validCpus.min()
+        if( result != cpus )
+            log.warn "Process '${task.lazyName()}' cpus requirement of ${cpus} is not allowed by Fargate and will be rounded up to ${result}"
+        return result
+    }
 
     protected long normaliseFargateMem(Integer cpus, MemoryUnit mem) {
         final mega = mem.toMega()

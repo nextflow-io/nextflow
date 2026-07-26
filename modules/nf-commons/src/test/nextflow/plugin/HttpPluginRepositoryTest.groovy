@@ -23,7 +23,6 @@ import java.time.ZonedDateTime
 import com.github.tomakehurst.wiremock.junit.WireMockRule
 import nextflow.BuildInfo
 import org.junit.Rule
-import org.pf4j.PluginRuntimeException
 import spock.lang.Specification
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*
@@ -114,17 +113,18 @@ class HttpPluginRepositoryTest extends Specification {
         unit.prefetch([new PluginRef("nf-fake")])
 
         then:
-        def err = thrown PluginRuntimeException
-        err.message.startsWith("Unable to connect to http://localhost")
+        // Prefetch is an optimization, not a hard requirement: a connection failure must not
+        // abort Nextflow startup. Downstream code falls back to per-plugin lookups.
+        noExceptionThrown()
+        unit.getPlugins() == [:]
     }
 
     // ------------------------------------------------------------------------
 
     def 'handle prefetch error with percent chars in error message'() {
         given:
-        // Test that URLs containing '%' characters (like URL-encoded values) are handled
-        // correctly when an exception occurs. The '%' must be escaped to '%%' to avoid
-        // String.format interpretation in PluginRuntimeException.
+        // Test that URLs containing '%' characters (like URL-encoded values) don't trip
+        // String.format inside PluginRuntimeException when the underlying call fails.
         def repoWithEncodedUrl = new HttpPluginRepository("test-repo", new URI("http://localhost:${wiremock.port()}/path%20with%20spaces/"))
         wiremock.stop()
 
@@ -132,10 +132,9 @@ class HttpPluginRepositoryTest extends Specification {
         repoWithEncodedUrl.prefetch([new PluginRef("nf-fake")])
 
         then:
-        def err = thrown PluginRuntimeException
-        // Verify the error message is properly formatted and contains the URL with encoded spaces
-        err.message.contains("Unable to connect to")
-        err.message.contains("path%20with%20spaces")
+        // Should not throw - in particular, no IllegalFormatException from the '%' chars
+        noExceptionThrown()
+        repoWithEncodedUrl.getPlugins() == [:]
     }
 
     // ------------------------------------------------------------------------
@@ -151,11 +150,8 @@ class HttpPluginRepositoryTest extends Specification {
         unit.prefetch([new PluginRef("nf-fake")])
 
         then:
-        def err = thrown PluginRuntimeException
-        err.message == """\
-            Invalid response while fetching plugin metadata from: http://localhost:${wiremock.port()}/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}
-            - http status: 500
-            - response   : Server error!""".stripIndent()
+        noExceptionThrown()
+        unit.getPlugins() == [:]
     }
 
     // ------------------------------------------------------------------------
@@ -191,8 +187,27 @@ class HttpPluginRepositoryTest extends Specification {
         unit.prefetch([new PluginRef("nf-fake")])
 
         then:
-        def err = thrown PluginRuntimeException
-        err.message.startsWith("Invalid response while fetching plugin metadata from: http://localhost")
+        noExceptionThrown()
+        unit.getPlugins() == [:]
+    }
+
+    // ------------------------------------------------------------------------
+
+    def 'prefetch degrades gracefully when the registry keeps returning 429'() {
+        given:
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse()
+                .withStatus(429)
+                .withHeader("Retry-After", "1")
+                .withBody('Too Many Requests')))
+
+        when:
+        unit.prefetch([new PluginRef("nf-fake")])
+
+        then:
+        noExceptionThrown()
+        // The map is initialised to empty so getPlugin() doesn't NPE downstream
+        unit.getPlugins() == [:]
     }
 
     // ------------------------------------------------------------------------

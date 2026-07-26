@@ -21,6 +21,7 @@ import groovy.transform.ToString
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.container.resolver.ContainerMeta
+import nextflow.dag.DagSerializer
 import nextflow.exception.AbortRunException
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
@@ -104,6 +105,8 @@ class TowerObserver implements TraceObserverV2 {
     private TowerClient client
 
     private Map<String,Boolean> allContainers = new ConcurrentHashMap<>()
+
+    private boolean schedRunIdSent
 
     TowerObserver(Session session, TowerClient client, String workspaceId, Map env) {
         this.session = session
@@ -389,12 +392,43 @@ class TowerObserver implements TraceObserverV2 {
         workflow.logFile = getLogFile()
         workflow.outFile = getOutFile()
 
-        def result = new LinkedHashMap(5)
+        def result = new LinkedHashMap(6)
         result.workflow = workflow
         result.processNames = new ArrayList(processNames)
         result.towerLaunch = towerLaunch
+        // faithful serialization of the execution DAG (optional, additive field).
+        // The dataflow network is fully built by the time `onFlowBegin` fires (the
+        // script body runs before `fireDataflowNetwork`), so the DAG is complete here.
+        final dag = renderDag(session)
+        if( dag )
+            result.dag = dag
         result.instant = Instant.now().toEpochMilli()
         return result
+    }
+
+    /**
+     * Serialize the run execution DAG into a plain map for transport to Seqera Platform.
+     *
+     * Failures are swallowed (logged at debug) so that DAG reporting can never abort or
+     * disrupt the run — the field is optional and additive.
+     *
+     * @param session The current Nextflow session
+     * @return The serialized DAG, or {@code null} if it is empty or cannot be serialized
+     */
+    protected Map renderDag(Session session) {
+        try {
+            final dag = session.getDag()
+            if( dag == null || dag.isEmpty() )
+                return null
+            return DagSerializer.toMap(dag)
+        }
+        catch( Throwable e ) {
+            // catch Throwable (not just Exception): DAG.normalize() enforces its
+            // invariant with a Groovy `assert`, which throws AssertionError (an Error,
+            // not an Exception) — so DAG reporting can never abort or disrupt the run.
+            log.debug("Unable to serialize execution DAG for Seqera Platform -- Cause: ${e.message ?: e}", e)
+            return null
+        }
     }
 
     protected Map makeCompleteReq(Session session) {
@@ -426,6 +460,36 @@ class TowerObserver implements TraceObserverV2 {
         result.progress = getWorkflowProgress(true)
         result.instant = Instant.now().toEpochMilli()
         return result
+    }
+
+    /**
+     * @return the Seqera Intelligent Compute scheduler run identifier for the current
+     * execution, or {@code null} when the run is not managed by the scheduler or the
+     * identifier has not been assigned yet (i.e. before the first task is submitted).
+     */
+    protected String getSchedRunId() {
+        return session.workflowMetadata?.platform?.schedRunId
+    }
+
+    /**
+     * Propagate the scheduler run id to Platform via a one-off {@code PATCH /workflow/{workflowId}}
+     * as soon as it is available (assigned on the first task submission). The id is stable for the
+     * life of the run, so it is sent exactly once; Platform stores it as a workflow-extension field
+     * used for cost and resource accounting.
+     *
+     * <p>This is best-effort telemetry: a failure only means Platform shows less information, so the
+     * error is logged and the run carries on instead of aborting. The attempt is made just once.
+     */
+    protected void sendSchedRunId() {
+        if( schedRunIdSent )
+            return
+        final id = getSchedRunId()
+        if( !id )
+            return
+        final resp = client.updateWorkflow([schedRunId: id], workspaceId, workflowId)
+        if( resp.error )
+            log.debug("Unable to propagate Seqera scheduler run id to Platform -- ${resp.code}: ${resp.message}")
+        schedRunIdSent = true
     }
 
     protected String mapToString(def obj) {
@@ -547,6 +611,9 @@ class TowerObserver implements TraceObserverV2 {
                     if( ev.completed )
                         complete = true
                 }
+
+                // propagate the scheduler run id once it is available (sent exactly once)
+                sendSchedRunId()
 
                 // check if there's something to send
                 final now = System.currentTimeMillis()

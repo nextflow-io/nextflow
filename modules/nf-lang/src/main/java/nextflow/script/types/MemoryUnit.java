@@ -20,7 +20,7 @@ import nextflow.script.dsl.Description;
 @Description("""
     A `MemoryUnit` represents a quantity of bytes.
 
-    [Read more](https://nextflow.io/docs/latest/reference/stdlib.html#memoryunit)
+    [Read more](https://docs.seqera.io/nextflow/reference/stdlib-types#memoryunit)
 """)
 public interface MemoryUnit {
 

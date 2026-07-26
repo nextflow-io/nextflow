@@ -46,7 +46,7 @@ conda install -c bioconda nextflow
 
 ## Documentation
 
-The Nextflow documentation is available for the latest [stable](https://nextflow.io/docs/latest/) and [edge](https://nextflow.io/docs/edge/) releases.
+The Nextflow documentation is available for the latest [stable](https://docs.seqera.io/nextflow/) and [edge](https://docs.seqera.io/nextflow/) releases.
 
 ## Community
 

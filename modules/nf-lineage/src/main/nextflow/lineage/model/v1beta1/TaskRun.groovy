@@ -45,6 +45,11 @@ class TaskRun implements LinSerializable {
      */
     String script
     /**
+     * Output eval commands executed by the task run, mapped by output name.
+     * Both the name and the command feed the task hash, so both are recorded.
+     */
+    Map<String,String> eval
+    /**
      * Task run input
      */
     List<Parameter> input
@@ -76,4 +81,10 @@ class TaskRun implements LinSerializable {
      * Workflow run associated to the task run
      */
     String workflowRun
+    /**
+     * Remote Nextflow module that defines the process executed by this task run,
+     * encoded as {@code name@version} (e.g. {@code nf-core/fastqc@1.0.0}). Null when
+     * the process is not defined in a remote module (e.g. local include or main script).
+     */
+    String moduleId
 }

@@ -44,10 +44,22 @@ class ExecutorOptsTest extends Specification {
         config.region == null
         config.provider == null
         config.keyPairName == null
-        config.batchFlushInterval == Duration.of('1 sec')
+        config.batchFlushInterval == Duration.of('5 sec')
         config.machineRequirement != null
         config.machineRequirement.provisioning == null
         !config.autoLabels
+        !config.shellEnabled
+    }
+
+    def 'should enable on-demand shell access when set' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            shellEnabled: true
+        ])
+
+        then:
+        config.shellEnabled
     }
 
     def 'should create config with custom region' () {
@@ -289,6 +301,27 @@ class ExecutorOptsTest extends Specification {
         config.taskEnvironment == [:]
     }
 
+    def 'should create config with providerConfig' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            providerConfig: [subnetId: 'subnet-1', securityGroup: 'sg-2']
+        ])
+
+        then:
+        config.providerConfig == [subnetId: 'subnet-1', securityGroup: 'sg-2']
+    }
+
+    def 'should handle null providerConfig' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com'
+        ])
+
+        then:
+        config.providerConfig == null
+    }
+
     def 'should create config with computeEnvId' () {
         when:
         def config = new ExecutorOpts([
@@ -342,6 +375,29 @@ class ExecutorOptsTest extends Specification {
         then:
         config.provider == 'aws'
         config.region == 'us-west-2'
+    }
+
+    def 'should create config with strategy' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            provider: 'aws',
+            strategy: 'vm'
+        ])
+
+        then:
+        config.provider == 'aws'
+        config.strategy == 'vm'
+    }
+
+    def 'should default strategy to null' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com'
+        ])
+
+        then:
+        config.strategy == null
     }
 
 

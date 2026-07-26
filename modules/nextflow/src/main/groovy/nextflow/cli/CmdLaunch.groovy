@@ -86,6 +86,12 @@ class CmdLaunch extends CmdBase implements UsageAware {
     @Parameter(names = ['-main-script'], description = 'The script file to be executed when launching a project directory or repository')
     String mainScript
 
+    @Parameter(names = ['-user-secret'], description = 'Specify a user secret name to use in the pipeline (can be specified multiple times)')
+    List<String> userSecrets = []
+
+    @Parameter(names = ['-workspace-secret'], description = 'Specify a workspace secret name to use in the pipeline (can be specified multiple times)')
+    List<String> workspaceSecrets = []
+
     /**
      * Defines the parameters to be passed to the pipeline script
      */
@@ -124,7 +130,9 @@ class CmdLaunch extends CmdBase implements UsageAware {
             stubRun: stubRun,
             mainScript: mainScript,
             params: params,
-            launcher: launcher
+            launcher: launcher,
+            userSecrets: userSecrets,
+            workspaceSecrets: workspaceSecrets
         )
 
         // Execute launch
@@ -156,6 +164,8 @@ class CmdLaunch extends CmdBase implements UsageAware {
         result << '  -latest                   Pull latest changes before run'
         result << '  -stub-run, -stub          Execute the workflow replacing process scripts with command stubs'
         result << '  -main-script <file>       The script file to be executed when launching a project'
+        result << '  -user-secret <name>       User secret name to use in the pipeline (can be specified multiple times)'
+        result << '  -workspace-secret <name>  Workspace secret name to use in the pipeline (can be specified multiple times)'
         result << '  --<param>=<value>         Set a parameter used by the pipeline'
         result << ''
         println result.join('\n').toString()
@@ -191,5 +201,7 @@ class CmdLaunch extends CmdBase implements UsageAware {
         String mainScript
         Map<String, String> params
         Launcher launcher
+        List<String> userSecrets
+        List<String> workspaceSecrets
     }
 }

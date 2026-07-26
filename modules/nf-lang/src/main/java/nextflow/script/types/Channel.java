@@ -31,7 +31,7 @@ import nextflow.script.types.Record;
 @Description("""
     A channel is an asynchronous sequence of values. It is used to facilitate dataflow logic in a workflow.
 
-    [Read more](https://nextflow.io/docs/latest/reference/stdlib-types.html#channel-e)
+    [Read more](https://docs.seqera.io/nextflow/reference/stdlib-types#channel-e)
 """)
 public interface Channel<E> {
 
@@ -39,7 +39,7 @@ public interface Channel<E> {
     @Description("""
         The `collect` operator collects all values from a source channel into a list and emits it as a single value.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#collect)
+        [Read more](https://docs.seqera.io/nextflow/reference/operator-typed#collect)
     """)
     Value<Bag<E>> collect();
 
@@ -47,7 +47,7 @@ public interface Channel<E> {
     @Description("""
         The `combine` operator emits every pairwise combination of two channels.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#combine)
+        [Read more](https://docs.seqera.io/nextflow/reference/operator-typed#combine)
     """)
     Channel<Tuple> combine(Channel right);
     Channel<Tuple> combine(Value right);
@@ -56,7 +56,7 @@ public interface Channel<E> {
     @Description("""
         When the `combine` operator is called on a channel of records with named arguments, the named arguments are appended to each record in the source channel. Each named argument can be a value or dataflow value.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#combine)
+        [Read more](https://docs.seqera.io/nextflow/reference/operator-typed#combine)
     """)
     Channel<Record> combine(Map<String,?> fields);
 
@@ -64,7 +64,7 @@ public interface Channel<E> {
     @Description("""
         The `filter` operator emits the values from a source channel that satisfy a condition, discarding all other values.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#filter)
+        [Read more](https://docs.seqera.io/nextflow/reference/operator-typed#filter)
     """)
     Channel<E> filter(Predicate<E> condition);
 
@@ -72,7 +72,7 @@ public interface Channel<E> {
     @Description("""
         The `flatMap` operator applies a mapping function to each value from a source channel. The mapping function should return a collection, and each element in the collection is emitted separately.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#flatmap)
+        [Read more](https://docs.seqera.io/nextflow/reference/operator-typed#flatmap)
     """)
     <R> Channel<R> flatMap(Function<E,Iterable<R>> transform);
     <R> Channel<R> flatMap();
@@ -81,7 +81,7 @@ public interface Channel<E> {
     @Description("""
         The `groupBy` operator collects values from a source channel into groups based on a grouping key. A tuple is emitted for each group containing the grouping key and collection of values.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#groupby)
+        [Read more](https://docs.seqera.io/nextflow/reference/operator-typed#groupby)
     """)
     Channel<Tuple> groupBy();
 
@@ -89,7 +89,7 @@ public interface Channel<E> {
     @Description("""
         The `join` operator emits the relational join of two source channels using a matching key.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#join)
+        [Read more](https://docs.seqera.io/nextflow/reference/operator-typed#join)
     """)
     Channel<Record> join(
         @NamedParams({
@@ -104,7 +104,7 @@ public interface Channel<E> {
     @Description("""
         The `map` operator applies a mapping function to each value from a source channel.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#map)
+        [Read more](https://docs.seqera.io/nextflow/reference/operator-typed#map)
     """)
     <R> Channel<R> map(Function<E,R> transform);
 
@@ -112,7 +112,7 @@ public interface Channel<E> {
     @Description("""
         The `mix` operator emits the values from two source channels into a single output channel.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#mix)
+        [Read more](https://docs.seqera.io/nextflow/reference/operator-typed#mix)
     """)
     Channel<E> mix(Channel<E> other);
     Channel<E> mix(Value<E> other);
@@ -123,7 +123,7 @@ public interface Channel<E> {
 
         The accumulator function takes two parameters -- the accumulated value and the *i*-th emitted value -- and it should return the accumulated result, which is passed to the next invocation with the *i+1*-th value. This process is repeated for each value in the source channel.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#reduce)
+        [Read more](https://docs.seqera.io/nextflow/reference/operator-typed#reduce)
     """)
     <R> Value<R> reduce(R seed, BiFunction<R,E,R> accumulator);
     Value<E> reduce(BiFunction<E,E,E> accumulator);
@@ -132,7 +132,7 @@ public interface Channel<E> {
     @Description("""
         The `subscribe` operator performs an action for each value in a source channel.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#subscribe)
+        [Read more](https://docs.seqera.io/nextflow/reference/operator-typed#subscribe)
     """)
     void subscribe(Consumer<E> action);
     void subscribe(Map<String,Consumer<E>> events);
@@ -141,7 +141,7 @@ public interface Channel<E> {
     @Description("""
         The `unique` operator emits the unique values from a source channel.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#unique)
+        [Read more](https://docs.seqera.io/nextflow/reference/operator-typed#unique)
     """)
     Channel<E> unique(Function<E,?> transform);
     Channel<E> unique();
@@ -150,7 +150,7 @@ public interface Channel<E> {
     @Description("""
         The `until` operator emits each value from a source channel until a stopping condition is satisfied.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#until)
+        [Read more](https://docs.seqera.io/nextflow/reference/operator-typed#until)
     """)
     Channel<E> until(Predicate<E> condition);
 
@@ -158,7 +158,7 @@ public interface Channel<E> {
     @Description("""
         The `view` operator prints each value from a source channel to standard output.
 
-        [Read more](https://nextflow.io/docs/latest/reference/operator-typed.html#view)
+        [Read more](https://docs.seqera.io/nextflow/reference/operator-typed#view)
     """)
     Channel<E> view(Map<String,?> opts, Function<E,String> transform);
     Channel<E> view(Function<E,String> transform);

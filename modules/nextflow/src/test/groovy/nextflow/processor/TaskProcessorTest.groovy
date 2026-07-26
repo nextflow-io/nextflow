@@ -35,6 +35,7 @@ import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ProcessConfigV1
+import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.script.params.FileInParam
@@ -72,7 +73,7 @@ class TaskProcessorTest extends Specification {
         binFolder.mkdirs()
 
         when:
-        def session = new Session([env: [X:"1", Y:"2"]])
+        def session = new Session([env: [X:"1", Y:"2", Z:null, W:'']])
         session.setBaseDir(home)
         def processor = createProcessor('task1', session)
         def builder = new ProcessBuilder()
@@ -82,6 +83,9 @@ class TaskProcessorTest extends Specification {
         builder.environment().X == '1'
         builder.environment().Y == '2'
         builder.environment().PATH == "\$PATH:${binFolder.toString()}"
+        !builder.environment().containsKey('Z')
+        // explicit empty-string values are retained (unlike null values) -- see #5722
+        builder.environment().W == ''
 
         when:
         session = new Session([env: [X:"1", Y:"2", PATH:'/some']])
@@ -98,6 +102,49 @@ class TaskProcessorTest extends Specification {
         cleanup:
         home.deleteDir()
 
+    }
+
+    @Unroll
+    def 'should resolve module bundle for entry script when running as module #desc' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def mod = folder.resolve('mod1'); mod.mkdir()
+        def bin = mod.resolve('resources/usr/bin'); bin.mkdirs()
+        def scriptPath = mod.resolve('main.nf'); Files.createFile(scriptPath)
+        Files.createFile(bin.resolve('echo.sh'))
+        and:
+        def script = Mock(BaseScript)
+        def meta = Mock(ScriptMeta) {
+            getScriptPath() >> scriptPath
+            isModule() >> IS_MODULE
+            getModuleBundle() >> ResourcesBundle.scan(mod.resolve('resources'))
+        }
+        and:
+        def session = Mock(Session) {
+            getConfig() >> [:]
+            isModuleRun() >> IS_MODULE_RUN
+        }
+        def executor = Mock(Executor) {}
+        def processor = Spy(TaskProcessor, constructorArgs: [[session:session, executor:executor]])
+        processor.getOwnerScript() >> script
+
+        when:
+        ResourcesBundle bundle
+        GroovyMock(ScriptMeta, global: true)
+        ScriptMeta.get(script) >> meta
+        bundle = processor.getModuleBundle()
+
+        then:
+        (bundle != null) == EXPECTED
+
+        cleanup:
+        folder?.deleteDir()
+
+        where:
+        desc                                | IS_MODULE | IS_MODULE_RUN | EXPECTED
+        '(included module)'                 | true      | false         | true
+        '(nextflow module run entry)'       | false     | true          | true
+        '(plain entry, no module run flag)' | false     | false         | false
     }
 
     @Unroll

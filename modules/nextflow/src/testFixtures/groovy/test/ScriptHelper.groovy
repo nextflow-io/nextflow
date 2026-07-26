@@ -26,6 +26,7 @@ import nextflow.executor.Executor
 import nextflow.executor.ExecutorFactory
 import nextflow.dataflow.ChannelImpl
 import nextflow.dataflow.ValueImpl
+import nextflow.processor.TaskFault
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskMonitor
 import nextflow.processor.TaskProcessor
@@ -71,7 +72,7 @@ class ScriptHelper {
         def session = opts.config ? new MockSession(opts.config as Map) : new MockSession()
         session.setBinding(new ScriptBinding())
 
-        session.init(null)
+        session.init(null, null, opts.params, opts.configParams)
         session.start()
 
         def loader = ScriptLoaderFactory.create(session)
@@ -154,14 +155,14 @@ class ScriptHelper {
      * last statement of the entry workflow, which can be used to pass
      * output channels to a test.
      *
+     * @param opts
      * @param text
-     * @param config
      */
-    static Object runScript(String text, Map config = null) {
-        def session = config ? new MockSession(config) : new MockSession()
+    static Object runScript(Map opts = [:], String text) {
+        def session = opts.config ? new MockSession(opts.config) : new MockSession()
         session.setBinding(new ScriptBinding())
 
-        session.init(null)
+        session.init(null, null, opts.params, opts.configParams)
         session.start()
 
         def loader = ScriptLoaderFactory.create(session)
@@ -173,6 +174,9 @@ class ScriptHelper {
         session.fireDataflowNetwork()
         session.await()
         session.destroy()
+
+        if( session.error )
+            throw session.error
 
         return result
     }
@@ -204,6 +208,9 @@ class ScriptHelper {
         session.fireDataflowNetwork()
         session.await()
         session.destroy()
+
+        if( session.error )
+            throw session.error
 
         return result
     }
@@ -340,7 +347,9 @@ class MockTaskHandler extends TaskHandler {
             task.code.call()
         }
         status = TaskStatus.COMPLETED
-        task.processor.finalizeTask(this)
+        final fault = task.processor.finalizeTask(this)
+        if( fault instanceof TaskFault )
+            task.processor.session.fault(fault)
     }
 
     @Override

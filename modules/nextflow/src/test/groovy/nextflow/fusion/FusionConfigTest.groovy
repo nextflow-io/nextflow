@@ -40,11 +40,11 @@ class FusionConfigTest extends Specification {
     }
 
     @Unroll
-    def 'should create container config url' () {
+    def 'should create container config uri' () {
         when:
         def opts = new FusionConfig(OPTS, ENV)
         then:
-        opts.containerConfigUrl() == (EXPECTED ? new URL(EXPECTED) : null)
+        opts.containerConfigURI() == (EXPECTED ? new URI(EXPECTED) : null)
 
         where:
         OPTS                                    | ENV           | EXPECTED
@@ -55,6 +55,39 @@ class FusionConfigTest extends Specification {
         [:]                                     | [FUSION_CONTAINER_CONFIG_URL:'http://bar.com']           | 'http://bar.com'
         [containerConfigUrl:'http://foo.com']   | [FUSION_CONTAINER_CONFIG_URL:'http://bar.com']           | 'http://foo.com'
 
+    }
+
+    @Unroll
+    def 'should reject invalid container config url: #VALUE' () {
+        when:
+        new FusionConfig([containerConfigUrl: VALUE])
+        then:
+        thrown(IllegalArgumentException)
+
+        where:
+        VALUE << [
+            'ftp://foo.com/x.json',
+            '/abs/path.json',
+            'relative/path.json',
+            'gs://bucket/x.json',
+            'file://host/tmp/manifest.json',
+            'file:relative.json',
+            'file:./x.json',
+        ]
+    }
+
+    @Unroll
+    def 'should accept container config url: #VALUE' () {
+        expect:
+        new FusionConfig([containerConfigUrl: VALUE]).containerConfigURI() == new URI(VALUE)
+
+        where:
+        VALUE << [
+            'http://foo.com/x.json',
+            'https://foo.com/x.json',
+            'file:/tmp/manifest.json',
+            'file:///tmp/manifest.json',
+        ]
     }
 
     @Unroll
@@ -135,9 +168,9 @@ class FusionConfigTest extends Specification {
         new FusionConfig([:]).retrieveFusionVersion(FUSION_URL) == EXPECTED
         where:
         FUSION_URL                              | EXPECTED
-        FusionConfig.DEFAULT_FUSION_AMD64_URL   | '2.5'
-        FusionConfig.DEFAULT_FUSION_ARM64_URL   | '2.5'
-        FusionConfig.DEFAULT_SNAPSHOT_AMD64_URL | '2.5'
+        FusionConfig.DEFAULT_FUSION_AMD64_URL   | '2.6'
+        FusionConfig.DEFAULT_FUSION_ARM64_URL   | '2.6'
+        FusionConfig.DEFAULT_SNAPSHOT_AMD64_URL | '2.6'
         'https://foo.com/releases/v3.0-amd.json'| '3.0'
     }
 
@@ -147,7 +180,7 @@ class FusionConfigTest extends Specification {
         where:
         FUSION_URL                                      | ENABLED  | EXPECTED
         null                                            | false    | null
-        null                                            | true     | '2.5'
+        null                                            | true     | '2.6'
         'https://foo.com/releases/v4.0-amd64.json'      | true     | '4.0'
         'https://foo.com/releases/v4.0.1-amd64.json'    | true     | '4.0.1'
     }
@@ -186,7 +219,7 @@ class FusionConfigTest extends Specification {
         where:
         ENABLED | TARGET_VER | EXPECTED
         false   | '2.6'          | null
-        true    | null            | '2.5'
+        true    | null            | '2.6'
         true    | '2.6'          | '2.6'
     }
 }

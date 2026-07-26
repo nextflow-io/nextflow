@@ -36,6 +36,7 @@ import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.SysEnv
 import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigCmdAdapter
 import nextflow.config.ConfigMap
 import nextflow.config.ConfigValidator
 import nextflow.config.Manifest
@@ -360,12 +361,13 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- PHASE 1: Load config with mock secrets provider
         final secretsProvider = new EmptySecretProvider()
         ConfigBuilder builder = new ConfigBuilder()
+            .setCliParams(cliParams)
+            .setSecretsProvider(secretsProvider)  // Mock provider returns empty strings
+        ConfigCmdAdapter adapter = new ConfigCmdAdapter(builder)
             .setOptions(launcher.options)
             .setCmdRun(this)
             .setBaseDir(scriptFile.parent)
-            .setCliParams(cliParams)
-            .setSecretsProvider(secretsProvider)  // Mock provider returns empty strings
-        ConfigMap config = builder.build()
+        ConfigMap config = adapter.build()
         Map configParams = builder.getConfigParams()
 
         // -- Check Nextflow version
@@ -388,12 +390,13 @@ class CmdRun extends CmdBase implements HubOptions {
         if( secretsProvider.usedSecrets() ) {
             log.debug "Config file used secrets -- reloading config with secrets provider"
             builder = new ConfigBuilder()
+                .setCliParams(cliParams)
+                // No .setSecretsProvider() - uses real secrets system now
+            adapter = new ConfigCmdAdapter(builder)
                 .setOptions(launcher.options)
                 .setCmdRun(this)
                 .setBaseDir(scriptFile.parent)
-                .setCliParams(cliParams)
-                // No .setSecretsProvider() - uses real secrets system now
-            config = builder.build()
+            config = adapter.build()
             configParams = builder.getConfigParams()
         }
 
@@ -414,11 +417,12 @@ class CmdRun extends CmdBase implements HubOptions {
         runner.session.agentLog = SysEnv.isAgentMode()
         runner.session.debug = launcher.options.remoteDebug
         runner.session.disableJobsCancellation = getDisableJobsCancellation()
+        runner.session.setModuleRun(isModuleRun())
 
         final isTowerEnabled = config.navigate('tower.enabled') as Boolean
         final isDataEnabled = config.navigate("lineage.enabled") as Boolean
         if( isTowerEnabled || isDataEnabled || log.isTraceEnabled() )
-            runner.session.resolvedConfig = ConfigBuilder.resolveConfig(scriptFile.parent, this, cliParams)
+            runner.session.resolvedConfig = ConfigCmdAdapter.resolveConfig(scriptFile.parent, this, cliParams)
         // note config files are collected during the build process
         // this line should be after `ConfigBuilder#build`
         runner.session.configFiles = builder.parsedConfigFiles
@@ -469,7 +473,7 @@ class CmdRun extends CmdBase implements HubOptions {
             // Show Nextflow version
             fmt.a(Attribute.INTENSITY_FAINT).a("  ~  ").reset().a("version " + BuildInfo.version).reset()
             fmt.a("\n")
-            AnsiConsole.out.println(fmt.eraseLine())
+            AnsiConsole.err.println(fmt.eraseLine())
         }
         else {
             // Plain header to the console if ANSI is disabled
@@ -490,6 +494,12 @@ class CmdRun extends CmdBase implements HubOptions {
             : scriptFile.getScriptId()?.substring(0,10)
         printLaunchInfo(repo, head, revision)
     }
+
+    /**
+     * @return {@code true} when the entry script is being launched directly as a
+     * module via `nextflow module run`. Overridden by {@link nextflow.cli.module.CmdModuleRun}.
+     */
+    protected boolean isModuleRun() { false }
 
     static void detectModuleBinaryFeature(ConfigMap config) {
         final moduleBinaries = config.navigate('nextflow.enable.moduleBinaries', false)
@@ -527,7 +537,7 @@ class CmdRun extends CmdBase implements HubOptions {
             fmt.fg(Color.CYAN).a("revision: ").reset()
             fmt.fg(Color.CYAN).a(revision).reset()
             fmt.a("\n")
-            AnsiConsole.out().println(fmt.eraseLine())
+            AnsiConsole.err().println(fmt.eraseLine())
         }
         else {
             log.info "${head} [$runName] - revision: ${revision}"

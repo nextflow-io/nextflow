@@ -29,6 +29,7 @@ import nextflow.extension.DataflowHelper
 import nextflow.extension.OpCall
 import nextflow.extension.OperatorImpl
 import nextflow.script.DataflowTypeHelper
+import nextflow.script.types.Tuple
 
 /**
  * Implements the Value type for typed workflows.

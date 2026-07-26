@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 /*
  * fake alignment step producing a BAM and BAI files
@@ -36,7 +36,7 @@ process merge {
     debug true
 
     input:
-    tuple(barcode: String, samples: Bag<Record>)
+    tuple(barcode: String, samples: List<Record>)
 
     stage:
     stageAs samples*.bam, 'bam?'
@@ -64,6 +64,7 @@ workflow {
     ch_aligned = align( ch_inputs )
         .map { r -> tuple(r.barcode, r) }
         .groupBy()
+        .map { barcode, samples -> tuple(barcode, samples.toSorted()) }
 
     merge( ch_aligned )
 }

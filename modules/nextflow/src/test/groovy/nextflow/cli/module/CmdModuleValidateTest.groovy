@@ -115,12 +115,15 @@ class CmdModuleValidateTest extends Specification {
         errors.any { it.contains('README.md') }
     }
 
-    def 'should fail when meta.yml has missing required fields'() {
+    def 'should fail when meta.yml is missing required fields'() {
         given:
         def moduleDir = createValidModule()
         moduleDir.resolve('meta.yml').text = '''\
             name: myorg/hello
-            version: 1.0.0
+            input:
+              - name: greeting
+                type: string
+                description: A greeting string
             '''.stripIndent()
 
         when:
@@ -128,6 +131,7 @@ class CmdModuleValidateTest extends Specification {
 
         then:
         errors.any { it.contains('description') }
+        errors.any { it.contains('version') }
         errors.any { it.contains('license') }
     }
 

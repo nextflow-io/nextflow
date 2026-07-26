@@ -41,7 +41,7 @@ import nextflow.exception.AbortOperationException
  */
 @CompileStatic
 @Slf4j
-@Parameters(commandDescription = "Manage Nextflow modules")
+@Parameters(commandDescription = "Manage Nextflow modules", commandNames = ['modules'])
 class CmdModule extends CmdBase implements UsageAware {
 
     static final public String NAME = 'module'

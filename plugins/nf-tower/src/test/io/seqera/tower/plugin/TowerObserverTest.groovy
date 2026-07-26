@@ -21,12 +21,14 @@ import java.time.Instant
 import java.time.OffsetDateTime
 import java.time.ZoneId
 
+import groovyx.gpars.dataflow.DataflowQueue
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.container.DockerConfig
 import nextflow.container.resolver.ContainerMeta
+import nextflow.dag.DAG
 import nextflow.exception.AbortRunException
 import nextflow.script.PlatformMetadata
 import nextflow.script.ScriptBinding
@@ -150,6 +152,73 @@ class TowerObserverTest extends Specification {
         req.containers[0].targetImage == 'wave.io/12345/ubuntu:latest'
         and:
         aroundNow(req.instant)
+    }
+
+    def 'should not add scheduler run id to progress requests' () {
+        given:
+        def platform = Mock(PlatformMetadata) { getSchedRunId() >> 'run-xyz' }
+        def meta = Mock(WorkflowMetadata) { getPlatform() >> platform }
+        def session = Mock(Session) { getWorkflowMetadata() >> meta }
+        def PROGRESS = Mock(WorkflowProgress)
+        def observer = Spy(newObserver(session))
+        observer.getWorkflowProgress(true) >> PROGRESS
+
+        when: 'the run id travels via PATCH /workflow, not on progress/heartbeat'
+        then:
+        !observer.makeTasksReq([]).containsKey('schedRunId')
+        and:
+        !observer.makeHeartbeatReq().containsKey('schedRunId')
+    }
+
+    def 'should send the scheduler run id once via PATCH when assigned' () {
+        given:
+        def platform = Mock(PlatformMetadata) { getSchedRunId() >> 'run-xyz' }
+        def meta = Mock(WorkflowMetadata) { getPlatform() >> platform }
+        def session = Mock(Session) { getWorkflowMetadata() >> meta }
+        def client = Mock(TowerClient)
+        def observer = new TowerObserver(session, client, 'ws-1', [:])
+        observer.@workflowId = 'wf-123'
+
+        when: 'invoked repeatedly (once per sender loop iteration)'
+        observer.sendSchedRunId()
+        observer.sendSchedRunId()
+
+        then: 'the run id is patched exactly once'
+        1 * client.updateWorkflow([schedRunId: 'run-xyz'], 'ws-1', 'wf-123') >> new TowerClient.Response(200, 'ok')
+    }
+
+    def 'should not abort the run when the scheduler run id update fails' () {
+        given:
+        def platform = Mock(PlatformMetadata) { getSchedRunId() >> 'run-xyz' }
+        def meta = Mock(WorkflowMetadata) { getPlatform() >> platform }
+        def session = Mock(Session) { getWorkflowMetadata() >> meta }
+        def client = Mock(TowerClient)
+        def observer = new TowerObserver(session, client, 'ws-1', [:])
+        observer.@workflowId = 'wf-123'
+
+        when: 'the update returns an error and is then invoked again'
+        observer.sendSchedRunId()
+        observer.sendSchedRunId()
+
+        then: 'the error response does not abort the run and the attempt is made just once'
+        1 * client.updateWorkflow([schedRunId: 'run-xyz'], 'ws-1', 'wf-123') >> new TowerClient.Response(500, 'boom')
+        noExceptionThrown()
+    }
+
+    def 'should not send the scheduler run id when not assigned' () {
+        given:
+        def platform = Mock(PlatformMetadata) { getSchedRunId() >> null }  // not scheduler-managed
+        def meta = Mock(WorkflowMetadata) { getPlatform() >> platform }
+        def session = Mock(Session) { getWorkflowMetadata() >> meta }
+        def client = Mock(TowerClient)
+        def observer = new TowerObserver(session, client, 'ws-1', [:])
+        observer.@workflowId = 'wf-123'
+
+        when:
+        observer.sendSchedRunId()
+
+        then:
+        0 * client.updateWorkflow(_, _, _)
     }
 
     static now_millis = System.currentTimeMillis()
@@ -568,6 +637,99 @@ class TowerObserverTest extends Specification {
         req.tasks[0].gpuMetrics.mem == 15360
         req.tasks[0].gpuMetrics.pct == 75
         req.tasks[0].gpuMetrics.peak == 100
+    }
+
+    def 'should include dag in begin request' () {
+        given:
+        def session = Mock(Session)
+        def meta = Mock(WorkflowMetadata)
+        def observer = Spy(newObserver(session))
+        def dagMap = [
+            vertices: [[id: '0', type: 'PROCESS', label: 'foo', scope: null]],
+            edges   : [[source: '0', target: '1', label: 'ch']]
+        ]
+
+        when:
+        def req = observer.makeBeginReq(session)
+        then:
+        1 * session.getWorkflowMetadata() >> meta
+        1 * meta.toMap() >> [:]
+        1 * session.getParams() >> new ScriptBinding.ParamsMap()
+        1 * observer.getWorkflowId() >> 'wf-1'
+        1 * observer.renderDag(session) >> dagMap
+        1 * observer.getOperationId() >> null
+        1 * observer.getLogFile() >> null
+        1 * observer.getOutFile() >> null
+        and:
+        req.workflow.id == 'wf-1'
+        req.dag == dagMap
+        and:
+        aroundNow(req.instant)
+    }
+
+    def 'should omit dag from begin request when not available' () {
+        given:
+        def session = Mock(Session)
+        def meta = Mock(WorkflowMetadata)
+        def observer = Spy(newObserver(session))
+
+        when:
+        def req = observer.makeBeginReq(session)
+        then:
+        1 * session.getWorkflowMetadata() >> meta
+        1 * meta.toMap() >> [:]
+        1 * session.getParams() >> new ScriptBinding.ParamsMap()
+        1 * observer.getWorkflowId() >> 'wf-1'
+        1 * observer.renderDag(session) >> null
+        1 * observer.getOperationId() >> null
+        1 * observer.getLogFile() >> null
+        1 * observer.getOutFile() >> null
+        and:
+        !req.containsKey('dag')
+    }
+
+    def 'renderDag should return null for an empty dag' () {
+        given:
+        def dag = new DAG()
+        def session = Mock(Session) { getDag() >> dag }
+        def observer = newObserver(session)
+
+        expect:
+        observer.renderDag(session) == null
+    }
+
+    def 'renderDag should swallow exceptions and return null' () {
+        given:
+        def session = Mock(Session) { getDag() >> { throw new RuntimeException('boom') } }
+        def observer = newObserver(session)
+
+        expect:
+        observer.renderDag(session) == null
+    }
+
+    def 'renderDag should serialize a populated dag preserving operators' () {
+        given:
+        new Session()
+        and:
+        def c1 = new DataflowQueue()
+        def c2 = new DataflowQueue()
+        def c3 = new DataflowQueue()
+        def dag = new DAG()
+        // op1 --c2--> op2 : the operator chain must be preserved end-to-end
+        dag.addOperatorNode('op1', c1, c2)
+        dag.addOperatorNode('op2', c2, c3)
+        and:
+        def session = Mock(Session) { getDag() >> dag }
+        def observer = newObserver(session)
+
+        when:
+        def result = observer.renderDag(session)
+        then:
+        result.vertices.findAll { it.type == 'OPERATOR' }*.label.containsAll(['op1', 'op2'])
+        and:
+        def op1 = result.vertices.find { it.label == 'op1' }
+        def op2 = result.vertices.find { it.label == 'op2' }
+        result.edges.find { it.source == op1.id && it.target == op2.id }
     }
 
     def 'should throw AbortRunException if workflow id is not found'() {

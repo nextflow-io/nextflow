@@ -441,13 +441,15 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
     def 'should throw unsupported when trying delete a bucket' () {
         given:
-        final bucketName = createBucket()
+        def bucketName = createBucket()
 
         when:
         Files.delete(s3path("s3://$bucketName"))
         then:
         thrown(UnsupportedOperationException)
 
+        cleanup:
+        deleteBucket(bucketName)
     }
 
     @Ignore // FIXME

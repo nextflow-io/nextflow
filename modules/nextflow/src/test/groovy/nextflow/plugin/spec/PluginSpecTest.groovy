@@ -47,57 +47,65 @@ class PluginSpecTest extends Specification {
         expect:
         definitions.size() == 4
         and:
-        definitions[0] == [
-            type: 'ConfigScope',
-            spec: [
-                name: 'hello',
-                description: 'The `hello` scope controls the behavior of the `nf-hello` plugin.',
-                children: [
-                    [
-                        type: 'ConfigOption',
-                        spec: [
-                            name: 'message',
-                            description: 'Message to print to standard output when the plugin is enabled.',
-                            type: 'String',
-                            additionalTypes: []
-                        ]
-                    ]
+        definitions[0].type == 'ConfigScope'
+        definitions[0].spec.name == 'hello'
+        definitions[0].spec.description == 'The `hello` scope controls the behavior of the `nf-hello` plugin.'
+        definitions[0].spec.children.sort { it.spec.name } == [
+            [
+                type: 'ConfigOption',
+                spec: [
+                    name: 'message',
+                    description: 'Message to print to standard output when the plugin is enabled.',
+                    type: 'String',
+                    additionalTypes: []
+                ]
+            ],
+            [
+                type: 'ConfigOption',
+                spec: [
+                    name: 'names',
+                    description: 'Names to address when the plugin is enabled.',
+                    type: [
+                        name: 'List',
+                        typeArguments: [ 'String' ]
+                    ],
+                    additionalTypes: []
                 ]
             ]
         ]
-        definitions[1] == [
-            type: 'Factory',
-            spec: [
-                name: 'helloFactory',
-                description: null,
-                returnType: 'DataflowWriteChannel',
-                parameters: []
-            ]
+        and:
+        definitions[1].type == 'Factory'
+        definitions[1].spec == [
+            name: 'helloFactory',
+            description: null,
+            returnType: 'DataflowWriteChannel',
+            parameters: []
         ]
-        definitions[2] == [
-            type: 'Operator',
-            spec: [
-                name: 'helloOperator',
-                description: null,
-                returnType: 'DataflowWriteChannel',
-                parameters: [
-                    [
-                        name: 'arg0',
-                        type: 'DataflowReadChannel'
-                    ]
+        and:
+        definitions[2].type == 'Operator'
+        definitions[2].spec == [
+            name: 'helloOperator',
+            description: null,
+            returnType: 'DataflowWriteChannel',
+            parameters: [
+                [
+                    name: 'arg0',
+                    type: 'DataflowReadChannel'
                 ]
             ]
         ]
-        definitions[3] == [
-            type: 'Function',
-            spec: [
-                name: 'sayHello',
-                description: 'Say hello to the given targets',
-                returnType: 'void',
-                parameters: [
-                    [
-                        name: 'arg0',
-                        type: 'List'
+        and:
+        definitions[3].type == 'Function'
+        definitions[3].spec == [
+            name: 'sayHello',
+            description: 'Say hello to the given targets',
+            returnType: 'void',
+            parameters: [
+                [
+                    name: 'arg0',
+                    type: [
+                        name: 'List',
+                        typeArguments: [ 'String' ]
                     ]
                 ]
             ]
@@ -115,6 +123,12 @@ class TestConfig implements ConfigScope {
         Message to print to standard output when the plugin is enabled.
     ''')
     String message
+
+    @ConfigOption
+    @Description('''
+        Names to address when the plugin is enabled.
+    ''')
+    List<String> names
 }
 
 

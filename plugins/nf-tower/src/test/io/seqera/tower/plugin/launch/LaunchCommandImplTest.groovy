@@ -626,6 +626,44 @@ class LaunchCommandImplTest extends Specification {
         request.launch.configText == 'process.cpus = 8'
     }
 
+    def 'should include workspace and user secrets in launch request'() {
+        given:
+        def cmd = new LaunchCommandImpl()
+        def options = new CmdLaunch.LaunchOptions(
+            pipeline: 'nf-core/rnaseq',
+            userSecrets: ['MY_USER_SECRET'],
+            workspaceSecrets: ['DRAGEN_USERNAME', 'DRAGEN_PASSWORD']
+        )
+        def context = new LaunchCommandImpl.LaunchContext(
+            computeEnvId: 'ce-123',
+            workDir: 's3://bucket/work'
+        )
+
+        when:
+        def request = cmd.buildLaunchRequestPayload(options, context, 'https://github.com/nf-core/rnaseq', null, null)
+
+        then:
+        request.launch.userSecrets == ['MY_USER_SECRET'] as Set
+        request.launch.workspaceSecrets == ['DRAGEN_USERNAME', 'DRAGEN_PASSWORD'] as Set
+    }
+
+    def 'should not include secrets in launch request when none provided'() {
+        given:
+        def cmd = new LaunchCommandImpl()
+        def options = new CmdLaunch.LaunchOptions(pipeline: 'nf-core/rnaseq')
+        def context = new LaunchCommandImpl.LaunchContext(
+            computeEnvId: 'ce-123',
+            workDir: 's3://bucket/work'
+        )
+
+        when:
+        def request = cmd.buildLaunchRequestPayload(options, context, 'https://github.com/nf-core/rnaseq', null, null)
+
+        then:
+        !request.launch.containsKey('userSecrets')
+        !request.launch.containsKey('workspaceSecrets')
+    }
+
     // ===== Workflow Status Tests =====
 
     def 'should get color for workflow status'() {

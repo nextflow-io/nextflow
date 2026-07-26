@@ -20,6 +20,7 @@ import java.nio.file.Files
 
 import com.beust.jcommander.DynamicParameter
 import com.beust.jcommander.Parameter
+import nextflow.util.ProxyConfig
 import spock.lang.Specification
 import spock.lang.Unroll
 import spock.util.environment.RestoreSystemProperties
@@ -32,6 +33,13 @@ class LauncherTest extends Specification {
 
     @org.junit.Rule
     OutputCapture capture = new OutputCapture()
+
+    def cleanup() {
+        // setProxy() populates the static ProxyConfig registry; clear it so a leaked proxy
+        // does not route later tests (e.g. AssetManagerTest via RepositoryProvider) through a
+        // dead proxy, which hangs the suite until the CI job timeout
+        ProxyConfig.reset()
+    }
 
     def 'should return `version` option' () {
 
@@ -84,6 +92,16 @@ class LauncherTest extends Specification {
         then:
         launcher.command instanceof CmdInfo
         launcher.command.args == ['xxx']
+
+    }
+
+    def 'should resolve plural aliases to singular commands'() {
+
+        expect:
+        new Launcher().parseMainArgs('plugin').command instanceof CmdPlugin
+        new Launcher().parseMainArgs('plugins').command instanceof CmdPlugin
+        new Launcher().parseMainArgs('module').command instanceof CmdModule
+        new Launcher().parseMainArgs('modules').command instanceof CmdModule
 
     }
 
@@ -331,6 +349,58 @@ class LauncherTest extends Specification {
         then:
         System.getProperty('ftp.proxyHost') == 'epsilon.com'
         System.getProperty('ftp.proxyPort') == '6658'
+    }
+
+    @RestoreSystemProperties
+    def 'should fall back to ALL_PROXY when no scheme-specific proxy is set'() {
+
+        when: 'only ALL_PROXY (lowercase) is set — used as fallback for https'
+        Launcher.setProxy('https', [all_proxy: 'https://all.com:9090'])
+        then:
+        System.getProperty('https.proxyHost') == 'all.com'
+        System.getProperty('https.proxyPort') == '9090'
+
+        when: 'scheme-specific proxy takes precedence over ALL_PROXY'
+        Launcher.setProxy('HTTP', [HTTP_PROXY: 'specific.com:111', ALL_PROXY: 'all.com:999'])
+        then:
+        System.getProperty('http.proxyHost') == 'specific.com'
+        System.getProperty('http.proxyPort') == '111'
+    }
+
+    @RestoreSystemProperties
+    def 'should clear jdk.http.auth.tunneling.disabledSchemes when the proxy has credentials'() {
+        given:
+        System.clearProperty('jdk.http.auth.tunneling.disabledSchemes')
+
+        when:
+        Launcher.setProxy('HTTPS', [HTTPS_PROXY: 'https://user:pass@proxy.com:8080'])
+
+        then: 'cleared so Basic proxy auth works over the HTTPS CONNECT tunnel'
+        System.getProperty('jdk.http.auth.tunneling.disabledSchemes') == ''
+    }
+
+    @RestoreSystemProperties
+    def 'should not touch disabledSchemes when the proxy has no credentials'() {
+        given:
+        System.clearProperty('jdk.http.auth.tunneling.disabledSchemes')
+
+        when:
+        Launcher.setProxy('HTTPS', [HTTPS_PROXY: 'proxy.com:8080'])
+
+        then:
+        System.getProperty('jdk.http.auth.tunneling.disabledSchemes') == null
+    }
+
+    @RestoreSystemProperties
+    def 'should never override a user-set disabledSchemes'() {
+        given:
+        System.setProperty('jdk.http.auth.tunneling.disabledSchemes', 'NTLM')
+
+        when:
+        Launcher.setProxy('HTTPS', [HTTPS_PROXY: 'https://user:pass@proxy.com:8080'])
+
+        then:
+        System.getProperty('jdk.http.auth.tunneling.disabledSchemes') == 'NTLM'
     }
 
     @RestoreSystemProperties

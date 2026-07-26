@@ -355,12 +355,8 @@ class ModuleSpecFactoryTest extends Specification {
         // Top-level structure
         yaml.startsWith('# This file was auto-generated')
         parsed['name'] == 'my-namespace/fastqc'
-        // null fields are omitted from the YAML map; TODO list is in the comment header
+        // null fields are omitted from the YAML map
         !parsed.containsKey('version')
-        yaml.contains('# TODO:')
-        yaml.contains('Missing required field: version')
-        yaml.contains('Missing required field: description')
-        yaml.contains('Missing required field: license')
 
         and:
         // Tuple input is rendered as a nested list
@@ -431,7 +427,7 @@ class ModuleSpecFactoryTest extends Specification {
         given:
         def mainNf = tempDir.resolve('main.nf')
         mainNf.text = '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process ALIGN {
                 input:
@@ -472,7 +468,7 @@ class ModuleSpecFactoryTest extends Specification {
         given:
         def mainNf = tempDir.resolve('main.nf')
         mainNf.text = '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process ALIGN {
                 input:
@@ -526,7 +522,7 @@ class ModuleSpecFactoryTest extends Specification {
         given:
         def mainNf = tempDir.resolve('main.nf')
         mainNf.text = '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process ALIGN {
                 input:

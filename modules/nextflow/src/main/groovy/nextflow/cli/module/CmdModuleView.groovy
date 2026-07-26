@@ -30,7 +30,7 @@ import io.seqera.npr.api.schema.v1.ModuleMetadata
 import io.seqera.npr.api.schema.v1.ModuleRelease
 import io.seqera.npr.api.schema.v1.ModuleTool
 import nextflow.cli.CmdBase
-import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigCmdAdapter
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
@@ -100,7 +100,7 @@ class CmdModuleView extends CmdBase {
 
         // Get config
         def baseDir = root ?: Paths.get('.').toAbsolutePath().normalize()
-        def config = new ConfigBuilder()
+        def config = new ConfigCmdAdapter()
             .setOptions(launcher.options)
             .setBaseDir(baseDir)
             .build()

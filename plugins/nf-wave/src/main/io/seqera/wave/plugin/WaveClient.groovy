@@ -22,6 +22,7 @@ import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.time.Duration
 import java.time.Instant
 import java.time.OffsetDateTime
@@ -62,6 +63,7 @@ import nextflow.fusion.FusionConfig
 import nextflow.processor.Architecture
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.util.ProxyConfig
 import nextflow.util.SysHelper
 import nextflow.util.Threads
 import org.slf4j.Logger
@@ -149,8 +151,7 @@ class WaveClient {
      */
     protected HxClient newHttpClient() {
         final refreshUrl = tower.refreshToken ? "${tower.endpoint}/oauth/access_token" : null
-        return HxClient.newBuilder()
-                .httpClient(newHttpClient0())
+        return newHttpClientBuilder()
                 .bearerToken(tower.accessToken)
                 .refreshToken(tower.refreshToken)
                 .refreshTokenUrl(refreshUrl)
@@ -160,20 +161,22 @@ class WaveClient {
     }
 
     /**
-     * Creates the underlying Java HTTP client with common configuration.
+     * Creates an {@link HxClient} builder with the common HTTP client configuration, including
+     * the forward proxy settings which are also inherited by the internal token-refresh client.
      *
-     * @return A configured {@link HttpClient} instance
+     * @return A pre-configured {@link HxClient.Builder}
      */
-    protected HttpClient newHttpClient0() {
-        final builder = HttpClient.newBuilder()
+    protected HxClient.Builder newHttpClientBuilder() {
+        final builder = HxClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .followRedirects(HttpClient.Redirect.NEVER)
                 .connectTimeout(config.httpOpts().connectTimeout())
+                // route through the forward proxy when configured
+                .withProxyConfig(ProxyConfig.proxyConfig())
         // use virtual threads executor if enabled
         if( Threads.useVirtual() )
             builder.executor(Executors.newVirtualThreadPerTaskExecutor())
-        // build and return the new client
-        return builder.build()
+        return builder
     }
 
     /**
@@ -188,8 +191,7 @@ class WaveClient {
      */
     @Memoized
     protected HxClient plainHttpClient() {
-        return HxClient.newBuilder()
-                .httpClient(newHttpClient0())
+        return newHttpClientBuilder()
                 .retryConfig(config.retryOpts())
                 .build()
     }
@@ -403,31 +405,34 @@ class WaveClient {
             : new URL(DEFAULT_S5CMD_AMD64_URL)
     }
 
-    protected static URL replaceFusionArch(URL url, String platform) {
+    protected static URI replaceFusionArch(URI uri, String platform) {
+        if( uri.scheme == 'file' )
+            return uri
         final isArm = platform.tokenize('/')?.contains('arm64')
         final targetArch = isArm ? 'arm64' : 'amd64'
-        final replaced = url.toString().replaceAll(/(?<=[-_])(amd64|arm64)(?=\.)/, targetArch)
-        return replaced != url.toString() ? new URL(replaced) : url
+        final original = uri.toString()
+        final replaced = original.replaceAll(/(?<=[-_])(amd64|arm64)(?=\.)/, targetArch)
+        return replaced != original ? new URI(replaced) : uri
     }
 
     ContainerConfig resolveContainerConfig(String platform = DEFAULT_DOCKER_PLATFORM) {
-        final urls = new ArrayList<URL>(config.containerConfigUrl())
+        final uris = new ArrayList<URI>(config.containerConfigUrl().collect { it.toURI() })
         final platforms = platform ? platform.tokenize(',') : List.of(DEFAULT_DOCKER_PLATFORM)
         if( fusion.enabled() ) {
-            final customUrl = fusion.containerConfigUrl()
+            final customUri = fusion.containerConfigURI()
             for( String p : platforms ) {
-                final fusionUrl = customUrl ? replaceFusionArch(customUrl, p.trim()) : defaultFusionUrl(p.trim())
-                urls.add(fusionUrl)
+                final fusionUri = customUri ? replaceFusionArch(customUri, p.trim()) : defaultFusionUrl(p.trim()).toURI()
+                uris.add(fusionUri)
             }
         }
         if( awsFargate ) {
             final s5cmdUrl = s5cmdConfigUrl ?: defaultS5cmdUrl(platform)
-            urls.add(s5cmdUrl)
+            uris.add(s5cmdUrl.toURI())
         }
-        if( !urls )
+        if( !uris )
             return null
         def result = new ContainerConfig()
-        for( URL it : urls ) {
+        for( URI it : uris ) {
             // append each config to the other - the last has priority
             result += fetchContainerConfig(it)
         }
@@ -435,7 +440,27 @@ class WaveClient {
     }
 
     @Memoized
-    synchronized protected ContainerConfig fetchContainerConfig(URL configUrl) {
+    synchronized protected ContainerConfig fetchContainerConfig(URI configURI) {
+        log.debug "Wave fetch container config: $configURI"
+        final scheme = configURI.scheme
+        if( scheme == 'http' || scheme == 'https' )
+            return fetchContainerConfig(configURI.toURL())
+        if( scheme == 'file' )
+            return fetchContainerConfig(Paths.get(configURI))
+        throw new IllegalArgumentException("Unsupported container config URI scheme: $scheme")
+    }
+
+    protected ContainerConfig fetchContainerConfig(Path configPath) {
+        log.debug "Wave read local container config: $configPath"
+        try {
+            return jsonToContainerConfig(configPath.text)
+        }
+        catch( Exception e ) {
+            throw new IllegalStateException("Cannot read Fusion container config from $configPath", e)
+        }
+    }
+
+    protected ContainerConfig fetchContainerConfig(URL configUrl) {
         log.debug "Wave request container config: $configUrl"
         final req = HttpRequest.newBuilder()
                 .uri(configUrl.toURI())

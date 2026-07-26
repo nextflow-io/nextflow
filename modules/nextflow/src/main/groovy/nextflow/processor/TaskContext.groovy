@@ -206,7 +206,9 @@ class TaskContext implements Map<String,Object>, Cloneable {
     }
 
     static TaskContext deserialize(TaskProcessor processor, byte[] buffer) {
-        def map = (Map)KryoHelper.deserialize(buffer)
+        // use the script class loader so that Kryo can resolve user-defined types
+        final loader = processor.ownerScript?.getClass()?.getClassLoader()
+        final map = (Map)KryoHelper.deserialize(buffer, loader)
         new TaskContext(processor, map)
     }
 

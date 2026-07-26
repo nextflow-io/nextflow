@@ -29,6 +29,7 @@ import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.OutputBlockNode;
 import nextflow.script.ast.OutputNode;
 import nextflow.script.ast.ParamBlockNode;
+import nextflow.script.ast.ParamNodeV1;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ProcessNodeV1;
 import nextflow.script.ast.ProcessNodeV2;
@@ -248,6 +249,11 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         }
     }
 
+    @Override
+    public void visitParamV1(ParamNodeV1 node) {
+        vsc.addParanoidWarning("Legacy parameter declarations are discouraged -- use the `params` block instead", "params", node);
+    }
+
     private boolean inWorkflowEmit;
 
     @Override
@@ -306,6 +312,11 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             var output = es.getExpression();
             VariableExpression target;
             if( output instanceof VariableExpression ve ) {
+                // a bare name without a type (e.g. `x`) is an output expression
+                // and should be resolved as a variable reference; a name with a type
+                // (e.g. `x: String`) declares a named output and should not be visited
+                if( ClassHelper.isDynamicTyped(ve.getOriginType()) )
+                    visit(ve);
                 target = ve;
             }
             else if( output instanceof AssignmentExpression assign ) {
@@ -336,7 +347,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         for( var input : asFlatParams(node.inputs) ) {
             vsc.declare(input, input);
 
-            // suppress "unused variable" warnings since Path inputs are implicity staged
+            // suppress "unused variable" warnings since Path inputs are implicitly staged
             vsc.findVariableDeclaration(input.getName(), input);
         }
 
@@ -344,7 +355,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         visitDirectives(node.stagers, "stage directive", false);
         vsc.popScope();
 
-        // deprecation warning reported during ast construction
+        if( !(node.when instanceof EmptyExpression) )
+            vsc.addWarning("Process `when` section will not be supported in a future version", "", node.when);
         visit(node.when);
 
         visit(node.exec);

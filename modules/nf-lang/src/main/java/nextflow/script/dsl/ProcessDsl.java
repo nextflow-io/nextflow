@@ -49,7 +49,7 @@ public interface ProcessDsl extends DslScope {
         @Description("""
             The `accelerator` directive allows you to request hardware accelerators (e.g. GPUs) for the task execution.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#accelerator)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#accelerator)
         """)
         void accelerator(
             @NamedParams({
@@ -65,14 +65,14 @@ public interface ProcessDsl extends DslScope {
         @Description("""
             The `afterScript` directive allows you to execute a custom (Bash) snippet *after* the task script.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#afterscript)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#afterscript)
         """)
         void afterScript(String value);
 
         @Description("""
             The `arch` directive allows you to define the CPU architecture to build the software used by the task.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#arch)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#arch)
         """)
         void arch(
             @NamedParams({
@@ -87,21 +87,21 @@ public interface ProcessDsl extends DslScope {
         @Description("""
             The `array` directive allows you to submit tasks as *job arrays* for executors that support it.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#array)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#array)
         """)
         void array(Integer value);
 
         @Description("""
             The `beforeScript` directive allows you to execute a custom (Bash) snippet *before* the task script.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#beforescript)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#beforescript)
         """)
         void beforeScript(String value);
 
         @Description("""
             The `cache` directive allows you to store the process results to a local cache. When the cache is enabled *and* the pipeline is launched with the `-resume` option, any task executions that are already cached will be re-used.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#cache)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#cache)
         """)
         void cache(String value);
         void cache(Boolean value);
@@ -109,7 +109,7 @@ public interface ProcessDsl extends DslScope {
         @Description("""
             The `clusterOptions` directive allows the usage of any native configuration option accepted by your cluster submit command. You can use it to request non-standard resources or use settings that are specific to your cluster and not supported out of the box by Nextflow.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#clusteroptions)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#clusteroptions)
         """)
         void clusterOptions(String value);
         void clusterOptions(List<String> values);
@@ -118,42 +118,42 @@ public interface ProcessDsl extends DslScope {
         @Description("""
             The `conda` directive allows for the definition of the process dependencies using the [Conda](https://conda.io) package manager.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#conda)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#conda)
         """)
         void conda(String value);
 
         @Description("""
             The `container` directive allows you to execute the process script in a container.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#container)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#container)
         """)
         void container(String value);
 
         @Description("""
             The `containerOptions` directive allows you to specify any container execution option supported by the underlying container engine (ie. Docker, Singularity, etc). This can be useful to provide container settings only for a specific process.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#containeroptions)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#containeroptions)
         """)
         void containerOptions(String value);
 
         @Description("""
             The `cpus` directive allows you to define the number of (logical) CPUs required by each task.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#cpus)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#cpus)
         """)
         void cpus(Integer value);
 
         @Description("""
             The `debug` directive allows you to print the process standard output to Nextflow\'s standard output, i.e. the console. By default this directive is disabled.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#debug)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#debug)
         """)
         void debug(Boolean value);
 
         @Description("""
             The `disk` directive allows you to define how much local disk storage the process is allowed to use.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#disk)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#disk)
         """)
         void disk(
             @NamedParams({
@@ -168,98 +168,105 @@ public interface ProcessDsl extends DslScope {
         @Description("""
             The `errorStrategy` directive allows you to define what to do when a task fails.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#errorstrategy)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#errorstrategy)
         """)
         void errorStrategy(String value);
 
         @Description("""
             The `executor` defines the underlying system where tasks are executed.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#executor)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#executor)
         """)
         void executor(String value);
 
         @Description("""
             The `ext` is a special directive used for custom settings by some executors.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#ext)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#ext)
         """)
         void ext(Map<String,?> value);
 
         @Description("""
             The `fair` directive, when enabled, guarantees that process outputs will be emitted in the order in which they were received.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#fair)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#fair)
         """)
         void fair(Boolean value);
 
         @Description("""
+            The `hints` directive specifies executor-specific hints as key-value pairs. Keys may be namespaced with an `executor/` prefix to target a specific executor.
+
+            [Read more](https://docs.seqera.io/nextflow/reference/process#hints)
+        """)
+        void hints(Map<String,Object> value);
+
+        @Description("""
             The `label` directive allows you to annotate a process with a mnemonic identifier of your choice.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#label)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#label)
         """)
         void label(String value);
 
         @Description("""
-            The `machineType` directive can be used to specify a predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types) when using the [Google Batch](https://nextflow.io/docs/latest/google.html#cloud-batch) executor.
+            The `machineType` directive can be used to specify a predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types) when using the [Google Batch](https://docs.seqera.io/nextflow/google#cloud-batch) executor.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#machinetype)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#machinetype)
         """)
         void machineType(String value);
 
         @Description("""
             The `maxErrors` directive allows you to specify the maximum number of times a process can fail when using the `retry` or `ignore` error strategy. By default this directive is disabled.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#maxerrors)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#maxerrors)
         """)
         void maxErrors(Integer value);
 
         @Description("""
             The `maxForks` directive allows you to define the maximum number of tasks (per process) that can be executed in parallel.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#maxforks)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#maxforks)
         """)
         void maxForks(Integer value);
 
         @Description("""
             The `maxRetries` directive allows you to define the maximum number of times a task can be retried when using the `retry` error strategy. By default only one retry is allowed.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#maxretries)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#maxretries)
         """)
         void maxRetries(Integer value);
 
         @Description("""
             The `maxSubmitAwait` directives allows you to specify how long a task can remain in the submission queue. If a task remains in the queue beyond this time limit, it will fail.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#maxsubmitawait)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#maxsubmitawait)
         """)
         void maxSubmitAwait(Duration value);
 
         @Description("""
             The `memory` directive allows you to define how much memory is required by each task. Can be a string (e.g. `\'8 GB\'`) or a memory unit (e.g. `8.GB`).
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#memory)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#memory)
         """)
         void memory(MemoryUnit value);
 
         @Description("""
             The `module` directive allows you to provide software dependencies to a process using [Environment Modules](http://modules.sourceforge.net/).
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#module)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#module)
         """)
         void module(String value);
 
         @Description("""
-            The `penv` directive allows you to define the parallel environment to be used when submitting a parallel task to the [SGE](https://nextflow.io/docs/latest/executor.html#sge) resource manager.
+            The `penv` directive allows you to define the parallel environment to be used when submitting a parallel task to the [SGE](https://docs.seqera.io/nextflow/executor#sge) resource manager.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#penv)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#penv)
         """)
         void penv(String value);
 
         @Description("""
-            The `pod` directive allows you to define pod specific settings, such as environment variables, secrets, and config maps, when using the [Kubernetes](https://nextflow.io/docs/latest/kubernetes.html) executor.
+            The `pod` directive allows you to define pod specific settings, such as environment variables, secrets, and config maps, when using the [Kubernetes](https://docs.seqera.io/nextflow/kubernetes) executor.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#pod)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#pod)
         """)
         void pod(Map<String,?> opts);
         void pod(List<Map<String,?>> entries);
@@ -267,7 +274,7 @@ public interface ProcessDsl extends DslScope {
         @Description("""
             The `publishDir` directive allows you to publish the process output files to a directory.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#publishdir)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#publishdir)
         """)
         void publishDir(Map<String,?> opts);
         void publishDir(Map<String,?> opts, String value);
@@ -277,21 +284,21 @@ public interface ProcessDsl extends DslScope {
         @Description("""
             The `queue` directive allows you to specify the queue to which jobs are submitted when using a grid executor.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#queue)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#queue)
         """)
         void queue(String value);
 
         @Description("""
             The `resourceLabels` directive allows you to specify custom name-value pairs which are applied to the compute resources used for the process execution.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#resourcelabels)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#resourcelabels)
         """)
         void resourceLabels(Map<String,String> value);
 
         @Description("""
             The `resourceLimits` directive allows you to specify environment-specific limits for task resource requests.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#resourcelimits)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#resourcelimits)
         """)
         void resourceLimits(
             @NamedParams({
@@ -306,7 +313,7 @@ public interface ProcessDsl extends DslScope {
         @Description("""
             The `scratch` directive allows you to execute each task in a temporary directory that is local to the compute node.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#scratch)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#scratch)
         """)
         void scratch(String value);
         void scratch(Boolean value);
@@ -314,14 +321,14 @@ public interface ProcessDsl extends DslScope {
         @Description("""
             The `secret` directive allows you to securely provide secrets to a process.
 
-            [Read more](https://nextflow.io/docs/latest/secrets.html#process-directive)
+            [Read more](https://docs.seqera.io/nextflow/secrets#process-directive)
         """)
         void secret(String value);
 
         @Description("""
             The `shell` directive allows you to define a custom shell command for process scripts. By default, script blocks are executed with `/bin/bash -ue`.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#shell)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#shell)
         """)
         void shell(String value);
         void shell(List<String> values);
@@ -330,42 +337,42 @@ public interface ProcessDsl extends DslScope {
         @Description("""
             The `spack` directive allows you to provide software dependencies using the [Spack](https://spack.io) package manager.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#spack)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#spack)
         """)
         void spack(String value);
 
         @Description("""
             The `stageInMode` directive defines how input files are staged into the task work directory.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#stageinmode)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#stageinmode)
         """)
         void stageInMode(String value);
 
         @Description("""
             The `stageOutMode` directive defines how output files are staged out from the scratch directory to the task work directory when using the `scratch` directive.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#stageoutmode)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#stageoutmode)
         """)
         void stageOutMode(String value);
 
         @Description("""
             The `storeDir` directive allows you to use an external directory as a *permanent* cache for process outputs.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#storedir)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#storedir)
         """)
         void storeDir(String value);
 
         @Description("""
             The `tag` directive allows you to associate each process execution with a custom label, so that it will be easier to identify in the log file or in a report.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#tag)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#tag)
         """)
         void tag(String value);
 
         @Description("""
             The `time` directive allows you to define how long a task is allowed to run.
 
-            [Read more](https://nextflow.io/docs/latest/reference/process.html#time)
+            [Read more](https://docs.seqera.io/nextflow/reference/process#time)
         """)
         void time(Duration value);
 

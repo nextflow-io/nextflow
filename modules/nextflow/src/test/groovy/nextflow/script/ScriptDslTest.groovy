@@ -605,4 +605,36 @@ class ScriptDslTest extends Dsl2Spec {
         e2.message == 'Missing process or function Channel.doesNotExist()'
     }
 
+    def 'should allow typed process output to use external functions' () {
+        when:
+        def result = runScript(
+            '''\
+            nextflow.enable.types = true
+
+            workflow {
+                ADD(2, 2)
+            }
+
+            process ADD {
+                input:
+                x: Integer
+                y: Integer
+
+                output:
+                add(x, y)
+
+                exec:
+                true
+            }
+
+            def add(x, y) {
+                return x + y
+            }
+            '''
+        )
+
+        then:
+        result.val == 4
+    }
+
 }

@@ -1,6 +1,6 @@
 #!/usr/bin/env nextflow
 
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 process foo {
     input:

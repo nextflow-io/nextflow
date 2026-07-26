@@ -85,7 +85,7 @@ class BashWrapperBuilder {
             level = str ? str as int : 0
         }
         catch( Exception e ) {
-            log.warn "Invalid value for `NXF_DEBUG` variable: $str -- See http://www.nextflow.io/docs/latest/config.html#environment-variables"
+            log.warn "Invalid value for `NXF_DEBUG` variable: $str -- See https://docs.seqera.io/nextflow/reference/config#env"
         }
         BASH = Collections.unmodifiableList( level > 0 ? ['/bin/bash','-uex'] : ['/bin/bash','-ue'] )
 
