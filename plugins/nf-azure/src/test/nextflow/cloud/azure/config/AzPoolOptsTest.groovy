@@ -67,6 +67,14 @@ class AzPoolOptsTest extends Specification {
         opts.allowUnverifiedImages
     }
 
+    def 'should require sku for a compute gallery image' () {
+        when:
+        new AzPoolOpts([virtualMachineImageId: '/subscriptions/abc/resourceGroups/rg/providers/Microsoft.Compute/galleries/g/images/d/versions/1.0.0'])
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('sku')
+    }
+
     private static String hash(AzPoolOpts opts) {
         opts.funnel(Hashing.murmur3_128().newHasher(), CacheHelper.HashMode.STANDARD).hash().toString()
     }
@@ -74,7 +82,7 @@ class AzPoolOptsTest extends Specification {
     def 'pool hash should differ when image config differs' () {
         given:
         def base = new AzPoolOpts()
-        def gallery = new AzPoolOpts([virtualMachineImageId: '/subscriptions/x/resourceGroups/rg/providers/Microsoft.Compute/galleries/g/images/d/versions/1'])
+        def gallery = new AzPoolOpts([virtualMachineImageId: '/subscriptions/x/resourceGroups/rg/providers/Microsoft.Compute/galleries/g/images/d/versions/1', sku: 'batch.node.ubuntu 24.04'])
         def unverified = new AzPoolOpts([allowUnverifiedImages: true])
         expect:
         hash(base) != hash(gallery)

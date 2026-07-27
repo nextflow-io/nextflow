@@ -174,6 +174,8 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
         this.offer = opts.offer ?: DEFAULT_OFFER
         this.virtualMachineImageId = opts.virtualMachineImageId ?: null
         this.allowUnverifiedImages = opts.allowUnverifiedImages as boolean
+        if( this.virtualMachineImageId && !opts.sku )
+            throw new IllegalArgumentException("Azure Batch pool option 'sku' is required when 'virtualMachineImageId' is set - it must be set to the Batch node agent SKU id that matches the image OS (e.g. 'batch.node.ubuntu 24.04')")
         this.sku = opts.sku ?: DEFAULT_SKU
         this.vmType = opts.vmType ?: DEFAULT_VM_TYPE
         this.fileShareRootPath = opts.fileShareRootPath ?: buildFileShareRootPath()

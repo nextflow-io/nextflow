@@ -719,8 +719,6 @@ class AzBatchService implements Closeable {
     }
 
     protected BatchVmImageReference customImageReference(AzPoolOpts opts) {
-        if( !opts.sku )
-            throw new IllegalArgumentException("Azure Batch pool option 'sku' is required when 'virtualMachineImageId' is set - it must be a valid node agent SKU id (e.g. 'batch.node.ubuntu 24.04')")
         return new BatchVmImageReference().setVirtualMachineImageId(opts.virtualMachineImageId)
     }
 
