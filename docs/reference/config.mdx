@@ -511,6 +511,8 @@ The client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/
 
 ##### `azure.batch.pools.<name>.allowUnverifiedImages`
 
+<AddedInVersion version="26.10" />
+
 Allow the use of unverified VM images when resolving the image from the Batch supported-images list (default: `false`). Ignored when `virtualMachineImageId` is set.
 
 ##### `azure.batch.pools.<name>.autoScale`
@@ -582,6 +584,8 @@ Enable the `startTask` to run with elevated access (default`false`).
 The `startTask` that is executed as the node joins the Azure Batch node pool.
 
 ##### `azure.batch.pools.<name>.virtualMachineImageId`
+
+<AddedInVersion version="26.10" />
 
 The resource ID of a custom VM image from an Azure Compute Gallery for the pool nodes (e.g., `/subscriptions/<id>/resourceGroups/<group>/providers/Microsoft.Compute/galleries/<gallery>/images/<definition>/versions/<version>`). When set, `publisher` and `offer` are ignored, and `sku` must be the Batch node agent SKU id matching the image OS (for example, `batch.node.ubuntu 24.04`).
 
