@@ -210,7 +210,8 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
         hasher.putUnencodedChars(virtualNetwork ?: '')
         hasher.putBoolean(lowPriority)
         hasher.putUnencodedChars(virtualMachineImageId ?: '')
-        hasher.putBoolean(allowUnverifiedImages)
+        if( allowUnverifiedImages )
+            hasher.putBoolean(allowUnverifiedImages)
         hasher.putUnencodedChars(startTask.script ?: '')
         hasher.putBoolean(startTask.privileged)
         return hasher
