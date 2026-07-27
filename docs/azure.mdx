@@ -622,7 +622,7 @@ Custom images require Microsoft Entra authentication (service principal or manag
 
 **Image verification**
 
-By default, Nextflow only selects images that Azure Batch has formally verified. Set `allowUnverifiedImages` to `true` to also allow images that Azure Batch lists but has not verified. This setting is ignored when `virtualMachineImageId` is set.
+By default, Nextflow selects only images that Azure Batch has verified. Set `allowUnverifiedImages` to `true` to also allow images that Azure Batch lists but has not verified. Ignored when `virtualMachineImageId` is set.
 
 ```groovy
 azure {
