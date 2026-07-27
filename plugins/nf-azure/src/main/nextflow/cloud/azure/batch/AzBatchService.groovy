@@ -51,8 +51,7 @@ import com.azure.compute.batch.models.BatchContainerConfiguration
 import com.azure.compute.batch.models.ContainerRegistryReference
 import com.azure.compute.batch.models.ContainerType
 import com.azure.compute.batch.models.ElevationLevel
-import com.azure.compute.batch.models.ImageReference
-import com.azure.compute.batch.models.MetadataItem
+import com.azure.compute.batch.models.BatchVmImageReference
 import com.azure.compute.batch.models.BatchMetadataItem
 import com.azure.compute.batch.models.MountConfiguration
 import com.azure.compute.batch.models.NetworkConfiguration
@@ -718,10 +717,10 @@ class AzBatchService implements Closeable {
         throw new IllegalStateException("Cannot find a matching VM image with publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; verification type=${opts.verification ?: 'any'}")
     }
 
-    protected ImageReference customImageReference(AzPoolOpts opts) {
+    protected BatchVmImageReference customImageReference(AzPoolOpts opts) {
         if( !opts.sku )
             throw new IllegalArgumentException("Azure Batch pool option 'sku' is required when 'virtualMachineImageId' is set - it must be a valid node agent SKU id (e.g. 'batch.node.ubuntu 24.04')")
-        return new ImageReference().setVirtualMachineImageId(opts.virtualMachineImageId)
+        return new BatchVmImageReference().setVirtualMachineImageId(opts.virtualMachineImageId)
     }
 
     protected AzVmPoolSpec specFromPoolConfig(String poolId) {
@@ -891,7 +890,7 @@ class AzBatchService implements Closeable {
             log.debug "[AZURE BATCH] Connecting Azure Batch pool to Container Registry '$registryOpts.server'"
         }
 
-        final ImageReference imageRef
+        final BatchVmImageReference imageRef
         final String nodeAgentSkuId
         if( opts.virtualMachineImageId ) {
             imageRef = customImageReference(opts)
