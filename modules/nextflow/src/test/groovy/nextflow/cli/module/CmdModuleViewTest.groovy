@@ -96,6 +96,50 @@ class CmdModuleViewTest extends Specification {
         output.contains('Usage Template:')
     }
 
+    def 'should display component name in formatted and json output'() {
+        given:
+        def metadata = new ModuleMetadata(
+            description: 'FastQC quality control',
+            componentName: 'FASTQC'
+        )
+
+        and:
+        def release = new ModuleRelease(
+            version: '1.0.0',
+            metadata: metadata
+        )
+
+        and:
+        def cmd = new CmdModuleView()
+        cmd.args = ['nf-core/fastqc']
+        cmd.output = mode
+        cmd.launcher = Mock(Launcher) {
+            getOptions() >> null
+        }
+        cmd.root = tempDir
+
+        and:
+        def mockModule = Stub(Module) {
+            getLatest() >> release
+        }
+        def mockClient = Mock(RegistryClient) {
+            getModule(_) >> mockModule
+        }
+        cmd.client = mockClient
+
+        when:
+        cmd.run()
+        def output = capture.toString()
+
+        then:
+        output.contains(expected)
+
+        where:
+        mode   | expected
+        'text' | 'Component:   FASTQC'
+        'json' | '"componentName": "FASTQC"'
+    }
+
     def 'should display module info with specific version'() {
         given:
         def metadata = new ModuleMetadata(
