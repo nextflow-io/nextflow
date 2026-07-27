@@ -583,7 +583,8 @@ The `startTask` that is executed as the node joins the Azure Batch node pool.
 
 ##### `azure.batch.pools.<name>.virtualMachineImageId`
 
-The resource ID of a custom VM image from an Azure Compute Gallery to use for the pool nodes (e.g. `/subscriptions/<id>/resourceGroups/<group>/providers/Microsoft.Compute/galleries/<gallery>/images/<definition>/versions/<version>`). When set, `publisher` and `offer` are ignored, and `sku` must be set to the Batch node agent SKU id that matches the image OS (e.g. `batch.node.ubuntu 24.04`).
+The resource ID of a custom VM image from an Azure Compute Gallery for the pool nodes (e.g., `/subscriptions/<id>/resourceGroups/<group>/providers/Microsoft.Compute/galleries/<gallery>/images/<definition>/versions/<version>`). When set, `publisher` and `offer` are ignored, and `sku` must be the Batch node agent SKU id matching the image OS (for example, `batch.node.ubuntu 24.04`).
+
 
 ##### `azure.batch.pools.<name>.virtualNetwork`
 
