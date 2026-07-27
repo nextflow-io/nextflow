@@ -400,7 +400,7 @@ class WorkflowMetadata {
             errorReport = msg
         }
         else {
-            exitStatus = 0
+            exitStatus = session.isSuccess() ? 0 : 1
         }
     }
 
@@ -411,7 +411,7 @@ class WorkflowMetadata {
     void invokeOnComplete() {
         this.complete = OffsetDateTime.now()
         this.duration = Duration.between( start, complete )
-        this.success = !(session.aborted || session.cancelled)
+        this.success = session.isSuccess()
         this.stats = getWorkflowStats()
 
         setErrorAttributes()

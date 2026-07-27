@@ -1,5 +1,9 @@
 nf-tower changelog
 ===================
+1.29.1 - 15 Jul 2026
+- Bump jackson-databind to patched versions to fix deserialization CVEs (#7322) [8d4423e8a]
+- Fix Fusion license token cache keying by product and version (#7320) [d95f5062c]
+
 1.29.0 - 19 Jun 2026
 - Add workflow DAG reporting to nf-tower plugin (#7218) [3041af858]
 - Add seqera:// data-links support to nf-tower filesystem (#7070) [7d6f8c494]

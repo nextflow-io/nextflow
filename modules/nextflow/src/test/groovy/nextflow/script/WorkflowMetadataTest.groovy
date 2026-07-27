@@ -47,7 +47,7 @@ class WorkflowMetadataTest extends Specification {
     def 'should capture the abort cause in errorReport and errorMessage' () {
         given:
         def script = Mock(ScriptFile)
-        Session session = Spy(Session, constructorArgs: [[:]])
+        Session session = Spy(Session)
         session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
         // simulate a background abort (e.g. a Tower 502 telemetry failure): error set, no task fault
         session.getError() >> new AbortRunException('Unexpected HTTP response\n- status code : 502\n- response msg: 502 Bad Gateway')
@@ -336,6 +336,44 @@ class WorkflowMetadataTest extends Specification {
 
         cleanup:
         SysEnv.pop()
+    }
+
+    def 'should report failure when the run is unsuccessful due to failOnIgnore' () {
+        given:
+        def script = Mock(ScriptFile)
+        Session session = Spy(Session)
+        session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
+        session.getFault() >> null
+        session.getError() >> null
+        session.isSuccess() >> false
+        and:
+        def metadata = new WorkflowMetadata(session, script)
+
+        when:
+        metadata.invokeOnComplete()
+
+        then:
+        !metadata.success
+        metadata.exitStatus == 1
+    }
+
+    def 'should report success when the run is successful' () {
+        given:
+        def script = Mock(ScriptFile)
+        Session session = Spy(Session)
+        session.getStatsObserver() >> Mock(WorkflowStatsObserver) { getStats() >> new WorkflowStats() }
+        session.getFault() >> null
+        session.getError() >> null
+        session.isSuccess() >> true
+        and:
+        def metadata = new WorkflowMetadata(session, script)
+
+        when:
+        metadata.invokeOnComplete()
+
+        then:
+        metadata.success
+        metadata.exitStatus == 0
     }
 
 }

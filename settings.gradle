@@ -51,3 +51,4 @@ include 'plugins:nf-seqera'
 
 //includeBuild('../plugin-registry')
 //includeBuild '../sched'
+//includeBuild('../libseqera')

@@ -117,6 +117,14 @@ class ExecutorOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        Backend-specific provider configuration merged into the compute cluster's backend
+        properties (for cluster isolation). When omitted, the backend falls back to its
+        environment variable configuration.
+    """)
+    final Map<String, String> providerConfig
+
+    @ConfigOption
+    @Description("""
         The Seqera Platform compute environment ID. When specified, the scheduler resolves
         the compute environment directly by this ID instead of listing all workspace CEs.
         Used as a fallback when the workflow launch does not include a CE reference.
@@ -156,6 +164,8 @@ class ExecutorOpts implements ConfigScope {
         this.predictionModel = opts.predictionModel as String ?: null
         // custom task environment variables
         this.taskEnvironment = opts.taskEnvironment as Map<String, String>
+        // backend-specific provider configuration
+        this.providerConfig = opts.providerConfig as Map<String, String>
         // compute environment ID
         this.computeEnvId = opts.computeEnvId as String
         // on-demand shell access to task containers (default false)
@@ -222,6 +232,10 @@ class ExecutorOpts implements ConfigScope {
 
     Map<String, String> getTaskEnvironment() {
         return taskEnvironment
+    }
+
+    Map<String, String> getProviderConfig() {
+        return providerConfig
     }
 
     String getComputeEnvId() {

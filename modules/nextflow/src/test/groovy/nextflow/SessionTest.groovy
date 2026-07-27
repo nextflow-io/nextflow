@@ -31,6 +31,7 @@ import nextflow.script.ScriptFile
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceHelper
+import nextflow.trace.TraceObserverV2
 import nextflow.trace.WorkflowStatsObserver
 import nextflow.util.Duration
 import nextflow.util.VersionNumber
@@ -414,5 +415,24 @@ class SessionTest extends Specification {
         false | false
         true  | true
 
+    }
+
+    def 'should notify flow complete only once when abort and destroy race' () {
+        given:
+        def observer = Mock(TraceObserverV2)
+        def session = new Session()
+        session.@observersV2 = [observer]
+
+        when:
+        // certain error conditions can abort the session on a separate thread
+        // while the main thread winds it down via destroy()
+        // both call shutdown0() -> notifyFlowComplete() concurrently
+        def t1 = Thread.start { session.abort() }
+        def t2 = Thread.start { session.destroy() }
+        t1.join()
+        t2.join()
+
+        then:
+        1 * observer.onFlowComplete()
     }
 }

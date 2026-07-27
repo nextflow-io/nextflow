@@ -22,6 +22,7 @@ import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.Consumer
 
 import com.google.common.hash.HashCode
@@ -271,7 +272,7 @@ class Session implements ISession {
 
     private volatile Throwable error
 
-    private volatile boolean shutdownInitiated
+    private final AtomicBoolean shutdownInitiated = new AtomicBoolean(false)
 
     private Queue<Runnable> shutdownCallbacks = new ConcurrentLinkedQueue<>()
 
@@ -759,8 +760,10 @@ class Session implements ISession {
     }
 
     final protected void shutdown0() {
+        // guard against adding shutdown hooks after shutdown, or calling shutdown more than once
+        if( !shutdownInitiated.compareAndSet(false, true) )
+            return
         log.trace "Invoking ${shutdownCallbacks.size()} shutdown callbacks"
-        shutdownInitiated = true
         while( shutdownCallbacks.size() ) {
             final hook = shutdownCallbacks.poll()
             try {
@@ -987,8 +990,8 @@ class Session implements ISession {
             log.warn "Shutdown hook cannot be null\n${ExceptionUtils.getStackTrace(new Exception())}"
             return
         }
-        if( shutdownInitiated )
-            throw new IllegalStateException("Session shutdown already initiated — Hook cannot be added: $hook")
+        if( shutdownInitiated.get() )
+            throw new IllegalStateException("Session shutdown already initiated -- Hook cannot be added: ${hook.class.name}")
         shutdownCallbacks.add(hook)
     }
 

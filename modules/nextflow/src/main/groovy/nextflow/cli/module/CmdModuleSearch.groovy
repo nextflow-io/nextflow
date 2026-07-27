@@ -27,7 +27,7 @@ import io.seqera.npr.api.schema.v1.ModuleSearchResult
 import io.seqera.npr.api.schema.v1.SearchModulesResponse
 import io.seqera.npr.client.RegistryClient
 import nextflow.cli.CmdBase
-import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigCmdAdapter
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.RegistryClientFactory
@@ -86,7 +86,7 @@ class CmdModuleSearch extends CmdBase {
 
         // Get config
         def baseDir = Paths.get('.').toAbsolutePath().normalize()
-        def config = new ConfigBuilder()
+        def config = new ConfigCmdAdapter()
             .setOptions(launcher.options)
             .setBaseDir(baseDir)
             .build()

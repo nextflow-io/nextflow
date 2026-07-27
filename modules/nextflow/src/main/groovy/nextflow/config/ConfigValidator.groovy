@@ -16,7 +16,11 @@
 
 package nextflow.config
 
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
+
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.config.spec.ConfigScope
 import nextflow.config.spec.SpecNode
@@ -195,7 +199,24 @@ class ConfigValidator {
 
     private static boolean isMapOption0(SpecNode.Scope scope, List<String> names) {
         final node = scope.getOption(names)
-        return node != null && node.types().contains(Map.class)
+        return node != null && isMapType(node.types())
+    }
+
+    /**
+     * Determine whether any of the given option types is a {@link Map}, resolving the raw
+     * type of parameterized types so that a declared {@code Map<K,V>} option (which reflects
+     * as a {@link ParameterizedType}, not {@code Map.class}) is recognised as a map option.
+     *
+     * @param types
+     */
+    @PackageScope
+    static boolean isMapType(List<Type> types) {
+        for( final type : types ) {
+            final raw = type instanceof ParameterizedType ? ((ParameterizedType) type).getRawType() : type
+            if( raw instanceof Class && Map.class.isAssignableFrom((Class) raw) )
+                return true
+        }
+        return false
     }
 
     /**

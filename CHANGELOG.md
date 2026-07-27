@@ -1,5 +1,51 @@
 # Nextflow change-log
 
+## [Version 26.07.0-edge](https://github.com/nextflow-io/nextflow/releases/tag/v26.07.0-edge) - 15 Jul 2026
+
+- Add docker.cpuLimits config option (#7289) [60c7ae9a6]
+- Add graceful fallback for array directive with unsupported executors (#7296) [24ed218d3]
+- Add seqera.executor.providerConfig option (#7335) [5b8ce02da]
+- Bump jackson 2.21.1 to 2.21.4 to fix high-severity CVEs (#7274) [a6fddfa8e]
+- Bump jackson-databind to patched versions to fix deserialization CVEs (#7322) [8d4423e8a]
+- chore: pin Docusaurus dependencies (#7324) [373a83d16]
+- chore: update actions/checkout action to v6.0.3 (#7325) [ci fast] [5dc9bbb49]
+- chore: update anthropics/claude-code-action action to v1.0.168 (#7326) [ci fast] [2cc142863]
+- chore: update dependency ch.qos.logback:logback-classic to v1.5.37 (#7327) [15ed1a381]
+- chore: update dependency ch.qos.logback:logback-core to v1.5.35 [security] (#7297) [1e53f4a3e]
+- chore: update dependency com.azure:azure-compute-batch to v1.0.0-beta.6 (#7128) [ci fast] [1c9841221]
+- docs: Add note about IAM roles for google.batch.serviceAccountEmail (#7291) [87943ba8c]
+- docs: add Semantics reference page (#7271) [5a642233d]
+- docs: clarify Bitbucket API token auth requirements (#7279) [37984dd39]
+- docs: Clarify override behavior of resourceLabels directive (#7287) [1439ebf9f]
+- Drop dead oss.sonatype.org repository (#7282) [ci fast] [527a314c9]
+- Exclude null config env entries from task environment (#7294) [0ba281e6a]
+- feat(nf-seqera): send pipeline-secret references to the Seqera Scheduler (#7314) [df61a13fa]
+- feat: add two Indian scientists to NameGenerator (#7079) [ci fast] [142ab0e3c]
+- Fix containerOptions --opt=value parsing for AWS Batch (#5190) (#7288) [b1f31a368]
+- Fix CVE-2025-14813: replace discontinued bcprov-ext with bcprov-jdk18on 1.84 (#7284) [17ef32d8b]
+- Fix error checking in workflow emits (#7058) [56b574d88]
+- Fix high-severity form-data CRLF injection in docs site (#7276) [241612b4f]
+- Fix Kryo deserialization error with enum types (#7277) [0167eb6b6]
+- Fix path input for exec processes (#7272) [afab66b36]
+- Fix URL percent-encoding lost on resume for http/ftp paths (#7333) [79594e70c]
+- fix: key Fusion license token cache by product and version (#7320) [ci fast] [d95f5062c]
+- Force-create staged input symlinks to allow task re-runs (#7285) [ac7eb2687]
+- Revert "Consolidate nf-tower plugin into nf-seqera (#7252)" [da5afcfe9]
+- Revert "Skip nf-tower when superseded by nf-seqera (#7283)" [c5dec3b4e]
+- Round up CPUs to nearest valid value for AWS Batch Fargate (#7295) [fd6012b52]
+- Show absolute path in missing main script error (#7286) [83735698b]
+- Skip nf-tower when superseded by nf-seqera (#7283) [57a52cf1e]
+- Tolerate stale/transient resize errors on autoscale Azure Batch pools (#7312) [46392e625]
+- Use scheduler API exit code, fall back to .exitcode file (#7273) [ci skip] [751effc79]
+- Use wiremock self-contained distribution to drop vulnerable handlebars (#7275) [27646a707]
+- Bump nf-amazon@3.10.1
+- Bump nf-azure@1.23.1
+- Bump nf-google@1.27.4
+- Bump nf-k8s@1.5.5
+- Bump nf-seqera@0.23.0
+- Bump nf-tower@1.29.1
+- Bump nf-wave@1.21.1
+
 ## [Version 26.06.0-edge](https://github.com/nextflow-io/nextflow/releases/tag/v26.06.0-edge) - 30 Jun 2026
 
 - Add docs tip for relocating Docker storage on Azure Batch nodes (#6937) [d2ecd7a50]
