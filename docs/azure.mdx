@@ -605,8 +605,8 @@ To provision pool nodes from a custom VM image published in an [Azure Compute Ga
 azure {
     batch {
         pools {
-             {
-                virtualMachineImageId = '/subscriptions//resourceGroups//providers/Microsoft.Compute/galleries//images//versions/'
+            <pool-name> {
+                virtualMachineImageId = '/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.Compute/galleries/<gallery>/images/<image-definition>/versions/<version>'
                 sku = 'batch.node.ubuntu 24.04'
             }
         }
