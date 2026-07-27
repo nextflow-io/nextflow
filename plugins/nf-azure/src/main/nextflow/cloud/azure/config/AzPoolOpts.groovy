@@ -172,6 +172,8 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
         this.privileged = opts.privileged ?: false
         this.publisher = opts.publisher ?: DEFAULT_PUBLISHER
         this.offer = opts.offer ?: DEFAULT_OFFER
+        this.virtualMachineImageId = opts.virtualMachineImageId ?: null
+        this.allowUnverifiedImages = opts.allowUnverifiedImages as boolean
         this.sku = opts.sku ?: DEFAULT_SKU
         this.vmType = opts.vmType ?: DEFAULT_VM_TYPE
         this.fileShareRootPath = opts.fileShareRootPath ?: buildFileShareRootPath()
@@ -187,8 +189,6 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
         this.password = opts.password
         this.virtualNetwork = opts.virtualNetwork
         this.lowPriority = opts.lowPriority as boolean
-        this.virtualMachineImageId = opts.virtualMachineImageId ?: null
-        this.allowUnverifiedImages = opts.allowUnverifiedImages as boolean
     }
 
     @Override
