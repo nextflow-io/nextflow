@@ -605,8 +605,8 @@ To provision pool nodes from a custom VM image published in an [Azure Compute Ga
 azure {
     batch {
         pools {
-             {
-                virtualMachineImageId = '/subscriptions//resourceGroups//providers/Microsoft.Compute/galleries//images//versions/'
+            <pool-name> {
+                virtualMachineImageId = '/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.Compute/galleries/<gallery>/images/<image-definition>/versions/<version>'
                 sku = 'batch.node.ubuntu 24.04'
             }
         }
@@ -615,7 +615,7 @@ azure {
 ```
 
 :::warning
-Custom images require Microsoft Entra authentication (service principal or managed identity). The **Azure Batch account identity** must have read access to the gallery image. The pool typically requires `virtualNetwork` to be set.
+Custom images require Microsoft Entra authentication (service principal or managed identity). The **Azure Batch account identity** must have read access to the gallery image.
 :::
 
 ### Advanced features
