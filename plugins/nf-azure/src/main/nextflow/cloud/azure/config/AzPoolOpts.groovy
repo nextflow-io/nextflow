@@ -212,7 +212,9 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
         hasher.putUnencodedChars(virtualNetwork ?: '')
         hasher.putBoolean(lowPriority)
         hasher.putUnencodedChars(virtualMachineImageId ?: '')
-        // 'allowUnverifiedImages' only affects marketplace image resolution; it's ignored when a gallery image is set
+        // 'allowUnverifiedImages' only affects marketplace image resolution; it's ignored when a gallery image is set.
+        // NOTE: only hashed when set, so that default configs keep the same hash as previous Nextflow versions
+        // (no auto-pool-id churn on upgrade) - do not change to an unconditional putBoolean
         if( !virtualMachineImageId && allowUnverifiedImages )
             hasher.putBoolean(allowUnverifiedImages)
         hasher.putUnencodedChars(startTask.script ?: '')
