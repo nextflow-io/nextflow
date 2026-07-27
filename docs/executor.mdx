@@ -131,6 +131,22 @@ Resource requests and other job characteristics can be controlled via the follow
 - [resourcelabels][process-resourcelabels]
 - [time][process-time]
 
+The following [hints][process-hints] are supported:
+
+- `scheduling.policy`: Set the [task scheduling policy](https://cloud.google.com/batch/docs/create-run-job#execution) for a process that uses the `array` directive. The value is `in_order` (run the array's tasks sequentially by index on a single VM) or `as_soon_as_possible` (the default; tasks run in parallel as resources allow), case-insensitive. Only applies to array tasks. For example:
+
+  ```nextflow
+  hints 'scheduling.policy': 'in_order'
+  ```
+
+- `scheduling.parallelism`: Cap the number of an array process's tasks that run concurrently, so an array of N tasks runs at most this many at a time (fewer simultaneous VMs). The value is a positive integer, clamped to the array size; it is ignored when `scheduling.policy` is `in_order` (which pins concurrency to 1). Only applies to array tasks. For example:
+
+  ```nextflow
+  hints 'scheduling.parallelism': '8'
+  ```
+
+  These keys may be used as-is or with the `google-batch/` prefix to restrict them to this executor.
+
 See [Cloud Batch][google-batch]for further configuration details.
 
 ## HTCondor
