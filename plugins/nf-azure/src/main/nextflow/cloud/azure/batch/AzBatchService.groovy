@@ -51,6 +51,7 @@ import com.azure.compute.batch.models.BatchContainerConfiguration
 import com.azure.compute.batch.models.ContainerRegistryReference
 import com.azure.compute.batch.models.ContainerType
 import com.azure.compute.batch.models.ElevationLevel
+import com.azure.compute.batch.models.ImageVerificationType
 import com.azure.compute.batch.models.BatchVmImageReference
 import com.azure.compute.batch.models.BatchMetadataItem
 import com.azure.compute.batch.models.MountConfiguration
@@ -705,7 +706,7 @@ class AzBatchService implements Closeable {
                 continue
             if( it.osType != opts.osType )
                 continue
-            if( opts.verification != null && it.verificationType != opts.verification )
+            if( !opts.allowUnverifiedImages && it.verificationType != ImageVerificationType.VERIFIED )
                 continue
             if( !it.imageReference.publisher.equalsIgnoreCase(opts.publisher) )
                 continue
@@ -713,8 +714,8 @@ class AzBatchService implements Closeable {
                 return it
         }
 
-        log.debug "[AZURE BATCH] No VM image matching sku=$opts.sku; publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; verification type=${opts.verification ?: 'any'} - supported images: $available"
-        throw new IllegalStateException("Cannot find a matching VM image with publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; verification type=${opts.verification ?: 'any'}")
+        log.debug "[AZURE BATCH] No VM image matching sku=$opts.sku; publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; allow unverified images=${opts.allowUnverifiedImages} - supported images: $available"
+        throw new IllegalStateException("Cannot find a matching VM image with publisher=$opts.publisher; offer=$opts.offer; OS type=$opts.osType; allow unverified images=${opts.allowUnverifiedImages}")
     }
 
     protected BatchVmImageReference customImageReference(AzPoolOpts opts) {

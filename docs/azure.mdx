@@ -618,23 +618,23 @@ azure {
 Custom images require Microsoft Entra authentication (service principal or managed identity). The **Azure Batch account identity** must have read access to the gallery image, and the pool typically requires `virtualNetwork` to be set.
 :::
 
+### Advanced features
+
 **Image verification**
 
-By default, Nextflow only selects images that Azure Batch has formally verified. Set `verification` to `unverified` to also allow images that Azure Batch lists but has not verified, or to `any` to accept both. This setting is ignored when `virtualMachineImageId` is set.
+By default, Nextflow only selects images that Azure Batch has formally verified. Set `allowUnverifiedImages` to `true` to also allow images that Azure Batch lists but has not verified. This setting is ignored when `virtualMachineImageId` is set.
 
 ```groovy
 azure {
     batch {
         pools {
             <pool-name> {
-                verification = 'unverified'  // 'verified' (default), 'unverified' or 'any'
+                allowUnverifiedImages = true
             }
         }
     }
 }
 ```
-
-### Advanced features
 
 **Virtual networks**
 

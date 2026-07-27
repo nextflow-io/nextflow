@@ -16,7 +16,6 @@
 
 package nextflow.cloud.azure.config
 
-import com.azure.compute.batch.models.ImageVerificationType
 import com.azure.compute.batch.models.OSType
 import com.google.common.hash.Hasher
 import groovy.transform.CompileStatic
@@ -154,9 +153,9 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
 
     @ConfigOption
     @Description("""
-        The image verification type to match when resolving the VM image from the Batch supported-images list. Can be `verified`, `unverified`, or `any` (default: `verified`). Ignored when `virtualMachineImageId` is set.
+        Allow the use of unverified VM images when resolving the image from the Batch supported-images list (default: `false`). Ignored when `virtualMachineImageId` is set.
     """)
-    final ImageVerificationType verification
+    final boolean allowUnverifiedImages
 
     OSType osType = DEFAULT_OS_TYPE
 
@@ -189,19 +188,7 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
         this.virtualNetwork = opts.virtualNetwork
         this.lowPriority = opts.lowPriority as boolean
         this.virtualMachineImageId = opts.virtualMachineImageId ?: null
-        this.verification = parseVerification(opts.verification)
-    }
-
-    protected static ImageVerificationType parseVerification(value) {
-        if( value == null )
-            return ImageVerificationType.VERIFIED
-        if( value instanceof ImageVerificationType )
-            return value
-        final str = value.toString().toLowerCase()
-        if( str == 'verified' ) return ImageVerificationType.VERIFIED
-        if( str == 'unverified' ) return ImageVerificationType.UNVERIFIED
-        if( str == 'any' ) return null
-        throw new IllegalArgumentException("Invalid azure.batch.pools.<name>.verification value: '$value' - expected 'verified', 'unverified' or 'any'")
+        this.allowUnverifiedImages = opts.allowUnverifiedImages as boolean
     }
 
     @Override
@@ -223,7 +210,7 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
         hasher.putUnencodedChars(virtualNetwork ?: '')
         hasher.putBoolean(lowPriority)
         hasher.putUnencodedChars(virtualMachineImageId ?: '')
-        hasher.putUnencodedChars(verification?.toString() ?: 'any')
+        hasher.putBoolean(allowUnverifiedImages)
         hasher.putUnencodedChars(startTask.script ?: '')
         hasher.putBoolean(startTask.privileged)
         return hasher
