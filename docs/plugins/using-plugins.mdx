@@ -56,6 +56,30 @@ Plugin declarations in Nextflow configuration files are ignored when specifying 
 
 When Nextflow downloads plugins, it caches them in the directory specified by `NXF_PLUGINS_DIR` (`$HOME/.nextflow/plugins` by default).
 
+:::note
+The plugin cache is shared across pipelines and is not access-controlled. On multi-tenant or shared systems, use a private cache directory per user (set `NXF_PLUGINS_DIR` to a location only you can write) to avoid loading plugin artifacts populated by another user.
+:::
+
+### Lockfile
+
+<AddedInVersion version="26.07" />
+
+A `plugins.lock` file pins the exact plugin artifacts a pipeline expects. For each plugin it records the `sha512` checksum of the plugin archive, keyed by `id@version`. The file is meant to be committed to the pipeline repository so that everyone running the pipeline resolves the same plugin artifacts.
+
+The lockfile is populated automatically, like `go.sum` or `package-lock.json` — there is no separate command. To enable it, create an empty file in the pipeline directory and run the pipeline once:
+
+```bash
+touch plugins.lock
+```
+
+The first time each plugin is downloaded, its archive checksum is added to `plugins.lock`. Review the resulting file and commit it. On subsequent runs Nextflow verifies each plugin against the committed checksum. When no `plugins.lock` file is present, the feature is dormant and has no effect.
+
+Verification is fully offline: Nextflow re-computes the checksum of the plugin archive from a copy retained in the local cache and compares it to the lock entry, without contacting the plugin registry. An existing entry is never rewritten automatically — if a plugin archive legitimately changes, delete its entry and run again to re-pin it.
+
+Use [`NXF_PLUGINS_LOCK_MODE`][using-plugins-env-vars] to control what happens on a checksum mismatch: `warn` (default) logs a warning and continues, `strict` aborts the run, and `off` skips verification. A plugin whose retained archive is missing (for example, a cache populated before this feature existed) cannot be verified offline; it is reported but never aborts the run, and is never re-downloaded just to verify it.
+
+The lockfile complements, but does not replace, the private-cache guidance above: the cache isolation prevents untrusted artifacts from being loaded, while the lockfile ensures the artifacts that are loaded match what the pipeline pinned.
+
 ## Offline usage
 
 When running Nextflow in an offline environment, any required plugins must be downloaded and moved into the offline environment prior to any runs.
@@ -75,6 +99,7 @@ To use Nextflow plugins in an offline environment:
     :::
 
 [install-standalone]: ../install#standalone-distribution
+[using-plugins-env-vars]: ../reference/env-vars#nxf_plugins_lock_mode
 [using-plugins-config]: ./using-plugins#configuration
 [using-plugins-identifiers]: ./using-plugins#identifiers
 

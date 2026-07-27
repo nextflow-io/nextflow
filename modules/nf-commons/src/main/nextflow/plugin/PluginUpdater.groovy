@@ -20,6 +20,7 @@ import static java.nio.file.StandardCopyOption.*
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.regex.Pattern
 
 import com.github.zafarkhaja.semver.Version
@@ -69,6 +70,8 @@ class PluginUpdater extends UpdateManager {
     private boolean offline
 
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
+
+    private PluginLockVerifier lockVerifier
 
     protected PluginUpdater(CustomPluginManager pluginManager) {
         super(pluginManager)
@@ -249,6 +252,30 @@ class PluginUpdater extends UpdateManager {
         return load0(id, version)
     }
 
+    /**
+     * The {@code plugins.lock} file location used to verify downloaded plugin artifacts.
+     * Defaults to a {@code plugins.lock} file in the current working directory.
+     */
+    protected Path lockFilePath() {
+        return Paths.get('plugins.lock')
+    }
+
+    /**
+     * Lazily create the {@link PluginLockVerifier}. The lock file is read once and cached.
+     */
+    protected synchronized PluginLockVerifier getLockVerifier() {
+        if( lockVerifier == null )
+            lockVerifier = new PluginLockVerifier(lockFilePath())
+        return lockVerifier
+    }
+
+    /**
+     * @return the path to the retained plugin zip artifact used for lock verification
+     */
+    private Path retainedZip(String id, String version) {
+        return pluginsStore.resolve("${id}-${version}.zip")
+    }
+
     private Path download0(String id, String version) {
         // 0. check if version is specified
         if( !version )
@@ -264,9 +291,21 @@ class PluginUpdater extends UpdateManager {
         // 2. download to temporary location
         Path downloaded = safeDownloadPlugin(id, version);
 
-        // 3. unzip the content and delete downloaded file
+        // 3. unzip the content
         Path dir = FileUtils.expandIfZip(downloaded)
-        FileHelper.deletePath(downloaded)
+
+        // 3.1 when the plugins lock is enabled retain the downloaded zip next to the extracted
+        // dir and verify (or pin) its checksum against the lock (cold cache). Otherwise delete it.
+        if( getLockVerifier().isEnabled() ) {
+            final retained = retainedZip(id, version)
+            FileHelper.deletePath(retained)
+            FileHelper.copyPath(downloaded, retained)
+            FileHelper.deletePath(downloaded)
+            getLockVerifier().verify("${id}@${version}", retained)
+        }
+        else {
+            FileHelper.deletePath(downloaded)
+        }
 
         // 4. move the final destination the plugin directory
         assert pluginPath.getFileName() == dir.getFileName()
@@ -394,6 +433,11 @@ class PluginUpdater extends UpdateManager {
         def pluginPath = pluginsStore.resolve("$id-$version")
         if( !FilesEx.exists(pluginPath) ) {
             pluginPath = safeDownload(id, version)
+        }
+        else {
+            // warm cache: re-hash the retained artifact and verify it against the plugins lock
+            // (missing retained zip is treated as a lock-miss by the verifier)
+            getLockVerifier().verify("${id}@${version}", retainedZip(id, version))
         }
 
         // verify the plugin install path contains the expected manifest path
