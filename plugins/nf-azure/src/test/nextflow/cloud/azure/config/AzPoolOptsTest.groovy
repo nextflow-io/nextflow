@@ -89,6 +89,15 @@ class AzPoolOptsTest extends Specification {
         hash(base) != hash(unverified)
     }
 
+    def 'pool hash should ignore allowUnverifiedImages for a gallery image' () {
+        given:
+        def opts = [virtualMachineImageId: '/subscriptions/x/resourceGroups/rg/providers/Microsoft.Compute/galleries/g/images/d/versions/1', sku: 'batch.node.ubuntu 24.04']
+        def a = new AzPoolOpts(opts)
+        def b = new AzPoolOpts(opts + [allowUnverifiedImages: true])
+        expect:
+        hash(a) == hash(b)
+    }
+
     def 'should create pool with custom options' () {
         when:
         def opts = new AzPoolOpts([

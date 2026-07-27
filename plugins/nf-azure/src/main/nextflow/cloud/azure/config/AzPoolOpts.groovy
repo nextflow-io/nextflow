@@ -212,7 +212,8 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
         hasher.putUnencodedChars(virtualNetwork ?: '')
         hasher.putBoolean(lowPriority)
         hasher.putUnencodedChars(virtualMachineImageId ?: '')
-        if( allowUnverifiedImages )
+        // 'allowUnverifiedImages' only affects marketplace image resolution; it's ignored when a gallery image is set
+        if( !virtualMachineImageId && allowUnverifiedImages )
             hasher.putBoolean(allowUnverifiedImages)
         hasher.putUnencodedChars(startTask.script ?: '')
         hasher.putBoolean(startTask.privileged)
