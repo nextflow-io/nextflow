@@ -735,6 +735,16 @@ smolvm.enabled = true
 
 Each time your script launches a process, Nextflow wraps it and runs it inside a microVM created from the specified image using the `smolvm machine run` command. Images are standard OCI images and can be pulled from any registry.
 
+:::tip
+On Apple silicon, running a `linux/amd64` image requires Rosetta 2 translation. Enable it by passing `--rosetta` via `smolvm.runOptions`:
+
+```groovy
+smolvm.runOptions = '--rosetta'
+```
+
+Without it the microVM fails to start the container (`the container ... is not running`). This is not needed for native `arm64` images.
+:::
+
 ### Multiple containers
 
 You can specify a different image for each process in your pipeline, either with the `container` directive or in the configuration file:
