@@ -1990,6 +1990,48 @@ Apply the task `cpus` and `memory` directives as container resource limits using
 
 Specify extra command line options supported by `singularity exec`.
 
+## `smolvm`
+
+The `smolvm` scope controls how [smolvm](https://github.com/smol-machines/smolvm) microVMs are used by Nextflow.
+
+The following settings are available:
+
+##### `smolvm.enabled`
+
+Enable smolvm execution (default: `false`).
+
+##### `smolvm.engineOptions`
+
+Specify additional options supported by the smolvm CLI (i.e., `smolvm [OPTIONS] machine run`).
+
+##### `smolvm.envWhitelist`
+
+Comma separated list of environment variable names to be included in the VM environment.
+
+##### `smolvm.network`
+
+Enable outbound network access in the VM (default: `true`).
+
+##### `smolvm.registry`
+
+The registry from where images are pulled. It should NOT include the protocol prefix (i.e., `http://`).
+
+##### `smolvm.runOptions`
+
+Specify extra command line options supported by the `smolvm machine run` command.
+
+##### `smolvm.temp`
+
+Mounts a path of your choice as the `/tmp` directory in the VM.
+
+##### `smolvm.tty`
+
+Allocate a pseudo-tty (default: `false`).
+
+##### `smolvm.writableInputMounts`
+
+When `false`, mount input directories as read-only (default: `true`).
+
 ## `spack`
 
 The `spack` scope controls the creation of a Spack environment by the Spack package manager.

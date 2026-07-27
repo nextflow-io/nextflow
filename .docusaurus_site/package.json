@@ -24,7 +24,7 @@
         "clsx": "2.1.1",
         "daisyui": "5.5.20",
         "dotenv": "17.4.2",
-        "fs-extra": "11.3.5",
+        "fs-extra": "11.3.6",
         "postcss-import": "16.1.1",
         "postcss-loader": "8.2.1",
         "postcss-nesting": "14.0.0",

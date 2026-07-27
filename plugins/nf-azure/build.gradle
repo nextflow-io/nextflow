@@ -61,7 +61,7 @@ dependencies {
         exclude group: 'org.slf4j', module: 'slf4j-api'
         exclude group: 'com.google.guava', module: 'guava'
     }
-    api('com.azure:azure-identity:1.18.3') {
+    api('com.azure:azure-identity:1.18.4') {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
 
