@@ -716,6 +716,60 @@ When pulling Docker images, Singularity may be unable to determine the container
 
 Singularity advanced configuration settings are described in the [singularity][config-singularity] section in the Nextflow configuration page.
 
+## smolvm
+
+[smolvm](https://github.com/smol-machines/smolvm) is a lightweight container runtime that runs each task inside its own microVM.
+
+### Prerequisites
+
+Install the `smolvm` CLI and make sure it is available on the `PATH` where the workflow is launched.
+
+### How it works
+
+You don't need to modify your Nextflow script to run it with smolvm. Enable it in the Nextflow configuration file:
+
+```groovy
+process.container = 'nextflow/examples:latest'
+smolvm.enabled = true
+```
+
+Each time your script launches a process, Nextflow wraps it and runs it inside a microVM created from the specified image using the `smolvm machine run` command. Images are standard OCI images and can be pulled from any registry.
+
+:::tip
+On Apple silicon, running a `linux/amd64` image requires Rosetta 2 translation. Enable it by passing `--rosetta` via `smolvm.runOptions`:
+
+```groovy
+smolvm.runOptions = '--rosetta'
+```
+
+Without it the microVM fails to start the container (`the container ... is not running`). This is not needed for native `arm64` images.
+:::
+
+### Multiple containers
+
+You can specify a different image for each process in your pipeline, either with the `container` directive or in the configuration file:
+
+```groovy
+process {
+    withName:hello {
+        container = 'image_name_1'
+    }
+    withName:bye {
+        container = 'image_name_2'
+    }
+}
+
+smolvm {
+    enabled = true
+}
+```
+
+See [Process configuration][config-process] for more information about process configuration.
+
+### Advanced settings
+
+See [`smolvm`][config-smolvm] on the Nextflow configuration page for advanced smolvm settings.
+
 [execution-report-tasks]: ./reports#tasks
 [config-page]: ./config
 [config-apple-container]: ./reference/config#applecontainer
@@ -725,3 +779,4 @@ Singularity advanced configuration settings are described in the [singularity][c
 [config-docker]: ./reference/config#docker
 [config-podman]: ./reference/config#podman
 [config-singularity]: ./reference/config#singularity
+[config-smolvm]: ./reference/config#smolvm
