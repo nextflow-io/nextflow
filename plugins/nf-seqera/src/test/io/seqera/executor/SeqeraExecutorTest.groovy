@@ -322,7 +322,7 @@ class SeqeraExecutorTest extends Specification {
         }
         def seqeraOpts = new ExecutorOpts(
             endpoint: 'https://sched.example.com',
-            maxCpusPerUser: 16
+            schedulingRequirement: [maxCpusPerUser: 16]
         )
         def executor = new SeqeraExecutor()
         executor.session = session

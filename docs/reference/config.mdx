@@ -1800,10 +1800,6 @@ The Seqera scheduler service endpoint URL (required).
 
 The EC2 key pair name for SSH access to instances.
 
-###### `seqera.executor.maxCpusPerUser`
-
-The maximum number of concurrent vCPUs a single user may consume across all of their runs on this compute environment. The limit is applied independently to each user sharing the compute environment. When not set, no CPU limit is enforced.
-
 ###### `seqera.executor.predictionModel`
 
 The resource prediction model used to estimate task resource requirements from historical execution metrics. Supported values: `'qr/v1'`, `'qr/v2'` (quantile regression). When not set, no resource estimation is applied.
@@ -1875,6 +1871,12 @@ The maximum number of spot retry attempts before falling back to on-demand. Only
 ###### `seqera.executor.machineRequirement.provisioning`
 
 The instance provisioning mode. Can be `'spot'`, `'ondemand'`, or `'spotFirst'`.
+
+###### `seqera.executor.schedulingRequirement.maxCpusPerUser`
+
+The maximum number of concurrent vCPUs a single user may consume across all of their runs on this compute environment. The limit is applied independently to each user sharing the compute environment. When not set, no CPU limit is enforced.
+
+A task whose own `cpus` request exceeds this cap is failed outright rather than throttled, so keep the cap at least as large as the largest per-task `cpus` request (or clamp requests with `process.resourceLimits.cpus`). Runs that fit within the cap but exceed it in aggregate are queued and admitted on later scheduling cycles.
 
 ###### `seqera.executor.retryPolicy.delay`
 

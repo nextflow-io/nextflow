@@ -269,25 +269,26 @@ class ExecutorOptsTest extends Specification {
         config.predictionModel == null
     }
 
-    def 'should create config with maxCpusPerUser' () {
+    def 'should create config with schedulingRequirement.maxCpusPerUser' () {
         when:
         def config = new ExecutorOpts([
             endpoint: 'https://sched.example.com',
-            maxCpusPerUser: 16
+            schedulingRequirement: [maxCpusPerUser: 16]
         ])
 
         then:
-        config.maxCpusPerUser == 16
+        config.schedulingRequirement.maxCpusPerUser == 16
     }
 
-    def 'should default maxCpusPerUser to null' () {
+    def 'should default schedulingRequirement.maxCpusPerUser to null' () {
         when:
         def config = new ExecutorOpts([
             endpoint: 'https://sched.example.com'
         ])
 
         then:
-        config.maxCpusPerUser == null
+        config.schedulingRequirement != null
+        config.schedulingRequirement.maxCpusPerUser == null
     }
 
     def 'should create config with taskEnvironment' () {

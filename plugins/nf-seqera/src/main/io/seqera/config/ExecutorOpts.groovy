@@ -108,13 +108,10 @@ class ExecutorOpts implements ConfigScope {
     """)
     final String predictionModel
 
-    @ConfigOption
     @Description("""
-        Maximum concurrent vCPUs allowed per user across all of that user's runs on this
-        compute environment. Applied independently to each user sharing the CE. When not set,
-        no CPU limit is enforced (unlimited).
+        Scheduling requirements applied to this run by the Seqera scheduler.
     """)
-    final Integer maxCpusPerUser
+    final SchedulingRequirementOpts schedulingRequirement
 
     @ConfigOption
     @Description("""
@@ -170,8 +167,8 @@ class ExecutorOpts implements ConfigScope {
         this.autoLabels = parseAutoLabels(opts.get('autoLabels'))
         // prediction model
         this.predictionModel = opts.predictionModel as String ?: null
-        // per-user vCPU cap (per compute environment)
-        this.maxCpusPerUser = opts.maxCpusPerUser as Integer ?: null
+        // scheduling requirements (e.g. per-user vCPU cap)
+        this.schedulingRequirement = new SchedulingRequirementOpts(opts.schedulingRequirement as Map ?: Map.of())
         // custom task environment variables
         this.taskEnvironment = opts.taskEnvironment as Map<String, String>
         // backend-specific provider configuration
@@ -240,8 +237,8 @@ class ExecutorOpts implements ConfigScope {
         return predictionModel
     }
 
-    Integer getMaxCpusPerUser() {
-        return maxCpusPerUser
+    SchedulingRequirementOpts getSchedulingRequirement() {
+        return schedulingRequirement
     }
 
     Map<String, String> getTaskEnvironment() {

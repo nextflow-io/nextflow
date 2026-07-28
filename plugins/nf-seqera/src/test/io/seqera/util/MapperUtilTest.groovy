@@ -17,6 +17,7 @@
 package io.seqera.util
 
 import io.seqera.config.MachineRequirementOpts
+import io.seqera.config.SchedulingRequirementOpts
 import io.seqera.sched.api.schema.v1a1.DiskAllocation
 import io.seqera.sched.api.schema.v1a1.EcsCapacityMode
 import io.seqera.sched.api.schema.v1a1.PriceModel as SchedPriceModel
@@ -55,6 +56,25 @@ class MapperUtilTest extends Specification {
         result.provisioning == ProvisioningModel.SPOT_FIRST
         result.maxSpotAttempts == 3
         result.machineTypes == ['m5', 'c5']
+    }
+
+    def 'toSchedulingRequirement returns null for null opts' () {
+        expect:
+        SchemaMapperUtil.toSchedulingRequirement(null) == null
+    }
+
+    def 'toSchedulingRequirement returns null when maxCpusPerUser is not set' () {
+        expect:
+        SchemaMapperUtil.toSchedulingRequirement(new SchedulingRequirementOpts([:])) == null
+    }
+
+    def 'toSchedulingRequirement maps maxCpusPerUser' () {
+        when:
+        def result = SchemaMapperUtil.toSchedulingRequirement(new SchedulingRequirementOpts([maxCpusPerUser: 16]))
+
+        then:
+        result != null
+        result.maxCpusPerUser == 16
     }
 
     def 'should map provisioning model' () {
