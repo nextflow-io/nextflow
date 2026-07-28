@@ -247,6 +247,16 @@ abstract class RepositoryProvider {
      * @return The remote service response as byte array
      */
     protected byte[] invokeBytes( String api ) {
+        return invokeResponse(api).body()
+    }
+
+    /**
+     * Invoke the API request specified and return the complete HTTP response.
+     *
+     * @param api A API request url e.g. https://api.github.com/repos/nextflow-io/hello
+     * @return The remote service response
+     */
+    protected HttpResponse<byte[]> invokeResponse( String api ) {
         assert api
         log.debug "Request [credentials ${getAuthObfuscated() ?: '-'}] -> $api"
         final request = newRequest(api)
@@ -255,8 +265,7 @@ abstract class RepositoryProvider {
         // check the response code
         checkResponse(resp)
         checkMaxLength(resp)
-        // return the body as byte array
-        return resp.body()
+        return resp
     }
 
     protected String getAuthObfuscated() {

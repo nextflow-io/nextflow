@@ -16,6 +16,12 @@
 
 package nextflow.scm
 
+import java.net.http.HttpClient
+import java.net.http.HttpHeaders
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+import javax.net.ssl.SSLSession
+
 import spock.lang.IgnoreIf
 import spock.lang.Requires
 import spock.lang.Specification
@@ -252,5 +258,117 @@ class GitlabRepositoryProviderTest extends Specification {
         // Should include nested files (depth 2)
         entries.any { it.name == 'test-asset.bin' && it.path.contains('/test/') }
         entries.every { it.path && it.sha }
+    }
+
+    def 'should follow GitLab pagination links when listing branches' () {
+        given:
+        def provider = Spy(GitlabRepositoryProvider, constructorArgs: ['pditommaso/hello', new ProviderConfig('gitlab')])
+        and:
+        def first = 'https://gitlab.com/api/v4/projects/pditommaso%2Fhello/repository/branches?per_page=100'
+        def second = 'https://gitlab.com/api/v4/projects/pditommaso%2Fhello/repository/branches?per_page=100&page=2'
+        def last = 'https://gitlab.com/api/v4/projects/pditommaso%2Fhello/repository/branches?per_page=100&page=3'
+
+        when:
+        def branches = provider.getBranches()
+
+        then:
+        1 * provider.invokeResponse(first) >> response(
+            first,
+            '[{"name":"main","commit":{"id":"aaa"}}]',
+            "<${last}>; rel=\"last\", <${second}>; type=\"application/json\"; rel=\"prev next\""
+        )
+        1 * provider.invokeResponse(second) >> response(
+            second,
+            '[{"name":"develop","commit":{"id":"bbb"}}]'
+        )
+        and:
+        branches.name == ['main', 'develop']
+    }
+
+    def 'should request the max page size when listing tags' () {
+        given:
+        def provider = Spy(GitlabRepositoryProvider, constructorArgs: ['pditommaso/hello', new ProviderConfig('gitlab')])
+        and:
+        def url = 'https://gitlab.com/api/v4/projects/pditommaso%2Fhello/repository/tags?per_page=100'
+
+        when:
+        def tags = provider.getTags()
+
+        then:
+        1 * provider.invokeResponse(url) >> response(
+            url,
+            '[{"name":"v1.0","commit":{"id":"aaa"}}]'
+        )
+        and:
+        tags.name == ['v1.0']
+    }
+
+    def 'should reject a cross-origin GitLab pagination link' () {
+        given:
+        def provider = Spy(GitlabRepositoryProvider, constructorArgs: ['pditommaso/hello', new ProviderConfig('gitlab')])
+        and:
+        def url = 'https://gitlab.com/api/v4/projects/pditommaso%2Fhello/repository/branches?per_page=100'
+
+        when:
+        provider.getBranches()
+
+        then:
+        1 * provider.invokeResponse(url) >> response(
+            url,
+            '[{"name":"main","commit":{"id":"aaa"}}]',
+            '<https://example.com/api/v4/projects/1/repository/branches?page=2>; rel="next"'
+        )
+        def error = thrown(IOException)
+        error.message == 'Invalid GitLab pagination URL: https://example.com/api/v4/projects/1/repository/branches?page=2'
+    }
+
+    def 'should reject a GitLab pagination link cycle' () {
+        given:
+        def provider = Spy(GitlabRepositoryProvider, constructorArgs: ['pditommaso/hello', new ProviderConfig('gitlab')])
+        and:
+        def url = 'https://gitlab.com/api/v4/projects/pditommaso%2Fhello/repository/branches?per_page=100'
+
+        when:
+        provider.getBranches()
+
+        then:
+        1 * provider.invokeResponse(url) >> response(
+            url,
+            '[{"name":"main","commit":{"id":"aaa"}}]',
+            "<${url}>; rel=\"next\""
+        )
+        def error = thrown(IOException)
+        error.message == "Invalid GitLab pagination link cycle detected: $url"
+    }
+
+    private static HttpResponse<byte[]> response(String url, String responseBody, String link=null) {
+        return new HttpResponse<byte[]>() {
+            @Override
+            int statusCode() { 200 }
+
+            @Override
+            HttpRequest request() { null }
+
+            @Override
+            Optional<HttpResponse<byte[]>> previousResponse() { Optional.empty() }
+
+            @Override
+            HttpHeaders headers() {
+                final values = link ? ['Link': [link]] : [:]
+                HttpHeaders.of(values, (a, b) -> true)
+            }
+
+            @Override
+            byte[] body() { responseBody.bytes }
+
+            @Override
+            Optional<SSLSession> sslSession() { Optional.empty() }
+
+            @Override
+            URI uri() { new URI(url) }
+
+            @Override
+            HttpClient.Version version() { HttpClient.Version.HTTP_1_1 }
+        }
     }
 }
