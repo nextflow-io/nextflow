@@ -1,35 +1,84 @@
 ---
-title: Workflows (typed)
+title: Typed workflows
 description: Use typed workflows in Nextflow to define statically typed inputs and outputs for workflows.
 ---
 
-# Workflows (typed)
+# Typed workflows
 
-Typed workflows extend static typing to the workflow level. Type annotations apply to three parts of a workflow, and the Nextflow language server uses them to validate data as it enters, moves through, and leaves a pipeline.
-
-The features compose into an end-to-end chain. A value typed in the `params` block flows into a workflow's `take:` section, through its processes, and out through the `output` block. The language server checks each handoff as you write code.
-
-:::note
-Typed workflows require static typing to be enabled. For more information about the required settings, see [Enabling static typing][enabling-static-typing].
-:::
-
-| Feature | Available in | Description |
-| --- | --- | --- |
-| [Typed parameters][typed-parameters-page] | 25.10 | Type annotations on the `params` block type a pipeline's parameters. The language server validates each parameter reference against its declared type. |
-| [Typed outputs][typed-outputs-page] | 25.10 | Type annotations on the `output` block type a workflow's published results. The language server validates each published output against its declared type. |
-| [Typed workflows][typed-workflows-page] | 26.04 (preview) | Type annotations in the `take:` and `emit:` sections type a workflow's inputs and outputs. The language server validates each input and output against its declared type. |
+<AddedInVersion version="26.04" />
 
 :::warning
 Typed workflows are a preview feature. The syntax and behavior may change in future releases.
 :::
 
+Typed workflows let you declare the types of a named workflow's inputs and outputs in its `take:` and `emit:` sections. The Nextflow language server uses the annotations to validate the values that enter and leave the workflow against their declared types.
+
+```nextflow
+nextflow.enable.types = true
+
+workflow hello_bye {
+    take:
+    samples: Channel<Path>
+
+    main:
+    ch_hello = hello(samples)
+    val_bye = bye(ch_hello.collect())
+
+    emit:
+    result: Value<Path> = val_bye
+}
+```
+
+In the above example, `hello_bye` takes a channel of files (`Channel<Path>`) and emits a dataflow value with a single file (`Value<Path>`).
+
+Typed workflows require the `nextflow.enable.types` feature flag. For an overview of static typing and how to enable it, see [Static typing][static-typing-page]. For the complete syntax reference, see [Workflow (typed)][syntax-workflow-typed].
+
+## Supported types
+
+Channels and values are modeled using the dataflow types:
+
+- Use `Channel<V>` for a channel of values.
+- Use `Value<V>` for a single dataflow value.
+
+The element type `V` can be any [standard type][stdlib-types], such as `Path`, `String`, or a record.
+
+Workflow inputs can be channels, dataflow values, or regular values. Workflow outputs can be channels or dataflow values.
+
+## Restricted syntax
+
+The following syntax patterns are no longer supported in typed workflows:
+
+- Using `Channel` to access channel factories (use `channel` instead)
+
+- Using implicit closure parameters (declare parameters explicitly instead)
+
+- Using `set` or `tap` to assign channels (use standard assignments instead)
+
+- Composing dataflow logic with `|` and `&` (use standard method calls instead)
+
+- Accessing process and workflow outputs via `.out` (use standard assignments instead)
+
+For more information about preparing existing code, see [Preparing for static typing][preparing-static-types].
+
+## Operators
+
+The operator library supports static typing and records. All operators work in both typed and legacy workflows, but only a [core subset][operator-typed-page] of operators is recommended for static typing.
+
+For more information about best practices when migrating existing code, see [Using operators with static typing][migrating-static-types-operators].
+
+## Validation
+
+The language server validates each workflow input and output against its declared type. Calling a workflow with an argument whose type does not match its `take:` declaration, or emitting a value that does not match its `emit:` declaration, is reported as an error before the pipeline runs.
+
 ## See also
 
-For the complete syntax reference, see [Workflow (typed)][syntax-workflow-typed]. For more information about converting existing code, see [Migrating to static typing][migrating-static-types].
+- [Static typing][static-typing-page]: Overview of static typing and how to enable it.
+- [Standard types][stdlib-types]: The standard types available for annotations.
+- [Operators][operator-typed-page]: The core operators recommended for static typing.
 
-[enabling-static-typing]: ./static-typing#enabling-static-typing
-[migrating-static-types]: ./tutorials/static-types
+[migrating-static-types-operators]: ./tutorials/static-types-operators
+[operator-typed-page]: ./reference/operator-typed
+[preparing-static-types]: ./tutorials/static-types#preparing-for-static-typing
+[static-typing-page]: ./static-typing
+[stdlib-types]: ./reference/stdlib-types
 [syntax-workflow-typed]: ./reference/syntax#workflow-typed
-[typed-outputs-page]: ./typed-outputs
-[typed-parameters-page]: ./typed-parameters
-[typed-workflows-page]: ./typed-workflows

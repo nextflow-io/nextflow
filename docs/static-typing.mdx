@@ -5,9 +5,11 @@ description: Overview of static typing in Nextflow, including typed processes, t
 
 # Static typing
 
-**Static typing is optional. All existing code continues to work.**
-
 Static typing lets you model and validate the structure of your data as it flows through a pipeline. You add [standard Nextflow types][stdlib-types] to inputs and outputs at every level, from pipeline parameters to process and workflow outputs. The Nextflow language server uses those annotations to catch type-related errors as you write code.
+
+:::note
+Static typing is optional. All existing code continues to work.
+:::
 
 :::warning
 Some static typing features are previews. The syntax and behavior may change in future releases.
@@ -19,9 +21,11 @@ Static typing is a set of related language features. Each one applies type annot
 
 | Page | Description |
 | ---- | -------------- |
-| [Processes&nbsp;(typed)][process-typed-page] | Type annotations for process inputs and outputs, the `stage:` section, records, and tuples. |
-| [Workflows&nbsp;(typed)][workflow-typed-page] | Type annotations across a workflow, covering [Typed parameters][typed-parameters-page] (the `params` block), [Typed outputs][typed-outputs-page] (the `output` block), and [Typed workflows][typed-workflows-page] (the `take:` and `emit:` sections). |
-| [Operators&nbsp;(typed)][operator-typed-page] | The core operators recommended for static typing. |
+| [Typed processes][process-typed-page] | Type annotations for process inputs and outputs, the `stage:` and `topic:` sections, records and tuples. |
+| [Typed workflows][workflow-typed-page] | Type annotations for workflow inputs and outputs, dataflow types, syntax restrictions. |
+| [Typed parameters][typed-parameters-page] | Type annotations for pipeline parameters (the `params` block). |
+| [Typed outputs][syntax-output-block] | Type annotations for pipeline outputs (the `output` block). |
+| [Operators][operator-typed-page] | The core operators recommended for static typing. |
 
 ## Enabling static typing
 
@@ -51,16 +55,16 @@ Static typing is opt-in, and you can adopt it incrementally. To migrate an exist
 
 1. Make sure your code is compatible with the [strict parser][strict-syntax-page] and refactor any patterns that aren't supported in typed workflows. For more information about preparing existing code, see [Preparing for static typing][preparing-static-types].
 2. Follow the [migration tutorial][migrating-static-types] to convert parameters, processes, and workflows to the typed syntax.
-3. Replace legacy operators with their typed equivalents using [Using operators with static typing][migrating-static-types-operators].
+3. Replace legacy operators with their typed equivalents. For more information, see [Using operators with static typing][migrating-static-types-operators].
 
 ## See also
 
 Static typing builds on functionality documented in other sections:
 
-- [Types][stdlib-types]: The type system that the annotations draw from, including records, collections, and dataflow types.
-- [Strict syntax][strict-syntax-page]: The strict (`v2`) parser that static typing requires.
+- [Standard types][stdlib-types]: The available types in the Nextflow standard library, including records, collections, and dataflow types.
+- [Strict syntax][strict-syntax-page]: The strict parser that is required for static typing.
 - [Feature flags][feature-flags-page]: Documents the `nextflow.enable.types` flag and related settings.
-- [Syntax reference][syntax-page]: Gives the formal grammar for typed processes and workflows.
+- [Syntax reference][syntax-page]: Defines the formal grammar for typed processes and workflows.
 
 [feature-flags-page]: ./reference/feature-flags
 [migrating-static-types]: ./tutorials/static-types
@@ -70,8 +74,7 @@ Static typing builds on functionality documented in other sections:
 [process-typed-page]: ./process-typed
 [stdlib-types]: ./reference/stdlib-types
 [strict-syntax-page]: ./strict-syntax
+[syntax-output-block]: ./reference/syntax#output-block
 [syntax-page]: ./reference/syntax
-[typed-outputs-page]: ./typed-outputs
 [typed-parameters-page]: ./typed-parameters
-[typed-workflows-page]: ./typed-workflows
 [workflow-typed-page]: ./workflow-typed

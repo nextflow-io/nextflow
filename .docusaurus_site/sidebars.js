@@ -57,18 +57,8 @@ module.exports = {
             link: { type: "doc", id: "static-typing" },
             items: [
                 "process-typed",
-                {
-                    type: "category",
-                    label: "Workflows (typed)",
-                    collapsed: false,
-                    link: { type: "doc", id: "workflow-typed" },
-                    items: [
-                        "typed-parameters",
-                        "typed-outputs",
-                        "typed-workflows"
-                    ]
-                },
-                "reference/operator-typed"
+                "workflow-typed",
+                "typed-parameters"
             ]
         },
         {
@@ -127,6 +117,7 @@ module.exports = {
                 },
                 "reference/process",
                 "reference/channel",
+                "reference/operator-typed",
                 "reference/operator"
             ]
         },
