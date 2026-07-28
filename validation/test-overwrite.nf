@@ -3,7 +3,7 @@ workflow {
 }
 
 process foo {
-  container 'public.cr.seqera.io/mirror/bash'
+  container 'quay.io/nextflow/bash'
   publishDir "gs://rnaseq-nf/scratch/tests", overwrite: true
   output:
   path 'hello.txt'
