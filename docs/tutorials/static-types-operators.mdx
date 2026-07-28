@@ -7,11 +7,9 @@ description: Best practices for using operators with static typing in Nextflow.
 
 Nextflow 26.04 brings updates to the operator library in order to support static tying and records. This page provides best practices for using operators with static typing.
 
-See [Migrating to static typing][migrating-static-types] for more information about migrating pipelines to static typing.
-
-## Overview
-
 All operators can be used with or without static typing (i.e. [typed workflows][workflow-typed-page]). However, only a core subset of operators are recommended for use with static typing, while the rest are discouraged. They are distinguished here as *core operators* and *legacy operators*.
+
+See [Migrating to static typing][migrating-static-types] for more information about migrating pipelines to static typing.
 
 ## Core operators
 
@@ -28,9 +26,9 @@ When using `combine` with static typing, the right operand should be a channel, 
 When `combine` is called with named arguments, they are appended to each source record as additional fields:
 
 ```nextflow
-sample = channel.value( record(id: 1, fastq: file('1.fq')) )
+samples = channel.of( record(id: 1, fastq: file('1.fq')) )
 index = channel.value( file('index.fa') )
-sample.combine(strandedness: 'auto', index: index)
+samples.combine(strandedness: 'auto', index: index).view()
 
 // [id:1, fastq:1.fq, strandedness:auto, index:index.fa]
 ```

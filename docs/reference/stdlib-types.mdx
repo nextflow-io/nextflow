@@ -45,7 +45,7 @@ Booleans in Nextflow can be backed by any of the following Java types: `boolean`
 
 A channel (also known as a *dataflow channel* or *queue channel*) is an asynchronous sequence of values of type `E`. It is used to facilitate dataflow logic in a workflow.
 
-See [Dataflow][dataflow-page] for an overview of dataflow types. See [Operators (typed)][operator-typed-page] for the set of operators that are recommended for use with static typing.
+See [Dataflow][dataflow-page] for an overview of dataflow types. See [Operators][operator-typed-page] for the set of operators that are recommended for use with static typing.
 
 ## Duration
 
@@ -178,6 +178,10 @@ Invokes the given closure for each element in the iterable.
 ##### `every( condition: (E) -> Boolean ) -> Boolean`
 
 Returns `true` if every element in the iterable satisfies the given condition.
+
+##### `find( condition: (E) -> Boolean ) -> E`
+
+Returns the first element in the iterable that satisfies the given condition.
 
 ##### `findAll( condition: (E) -> Boolean ) -> Iterable<E>`
 
@@ -329,10 +333,6 @@ For example:
   assert [1, 2, 3, 4].collate(3, 1)        == [[1, 2, 3], [2, 3, 4], [3, 4], [4]]
   assert [1, 2, 3, 4].collate(3, 1, false) == [[1, 2, 3], [2, 3, 4]]
   ```
-
-##### `find( condition: (E) -> Boolean ) -> E`
-
-Returns the first element in the list that satisfies the given condition.
 
 ##### `first() -> E`
 

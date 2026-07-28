@@ -113,7 +113,7 @@ The params block consists of one or more *parameter declarations*. A parameter d
 ```nextflow
 params {
     input: Path
-    save_intermeds: Boolean = false
+    max_iterations: Integer = 100
 }
 ```
 
@@ -326,7 +326,7 @@ Consists of one or more *topic statements*. A topic statement is a right-shift e
 Typed processes use the same behavior as legacy processes for all other sections.
 :::
 
-See [Process (typed)][process-reference-typed] for more information on the semantics of typed processes.
+See [Typed processes][process-typed] for more information on the semantics of typed processes.
 
 ### Function
 
@@ -388,15 +388,19 @@ record FastqPair {
 
 ### Output block
 
-The output block consists of one or more *output declarations*. Each output declaration consists of a name and one or more *output directives* for defining the output:
+The output block consists of one or more *output declarations*. Each output declaration consists of a name, an optional type, and one or more *output directives* that define how the output is published:
+
 
 ```nextflow
 output {
-    samples {
+    samples: Channel<Sample> {
         path 'fastq'
         index {
             path 'index.csv'
         }
+    }
+    summary_report: Path {
+        path '.'
     }
 }
 ```
@@ -934,7 +938,7 @@ See [strict syntax][strict-syntax-page] for more information.
 [process-page]: ../process
 [process-reference]: ./process
 [inputs-and-outputs-typed]: ./process#inputs-and-outputs-typed
-[process-reference-typed]: ../process-typed
+[process-typed]: ../process-typed
 [stdlib-page]: ./stdlib
 [strict-syntax-page]: ../strict-syntax
 [workflow-output-def]: ../workflow#outputs
