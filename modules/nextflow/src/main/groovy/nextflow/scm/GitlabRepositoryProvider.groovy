@@ -21,6 +21,7 @@ import groovy.util.logging.Slf4j
 import org.eclipse.jgit.transport.CredentialsProvider
 import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 
+import java.net.http.HttpResponse
 import java.nio.charset.StandardCharsets
 
 import static nextflow.Const.DEFAULT_BRANCH
@@ -35,6 +36,14 @@ import static nextflow.Const.DEFAULT_BRANCH
  */
 @Slf4j
 class GitlabRepositoryProvider extends RepositoryProvider {
+
+    /**
+     * Max number of items that can be requested in a single page by the GitLab API.
+     * The API defaults to 20 items per page when not specified.
+     *
+     * See https://docs.gitlab.com/ee/api/rest/#offset-based-pagination
+     */
+    private static final int MAX_PER_PAGE = 100
 
     GitlabRepositoryProvider(String project, ProviderConfig config=null) {
         this.project = project
@@ -90,15 +99,74 @@ class GitlabRepositoryProvider extends RepositoryProvider {
     @Override
     List<BranchInfo> getBranches() {
         // https://docs.gitlab.com/ee/api/branches.html
-        final url = "${config.endpoint}/api/v4/projects/${getProjectName()}/repository/branches"
+        final url = "${config.endpoint}/api/v4/projects/${getProjectName()}/repository/branches?per_page=${MAX_PER_PAGE}"
         this.<BranchInfo>invokeAndResponseWithPaging(url, { Map branch -> new BranchInfo(branch.name as String, branch.commit?.id as String) })
     }
 
     @Override
     List<TagInfo> getTags() {
         // https://docs.gitlab.com/ee/api/tags.html
-        final url = "${config.endpoint}/api/v4/projects/${getProjectName()}/repository/tags"
+        final url = "${config.endpoint}/api/v4/projects/${getProjectName()}/repository/tags?per_page=${MAX_PER_PAGE}"
         this.<TagInfo>invokeAndResponseWithPaging(url, { Map tag -> new TagInfo(tag.name as String, tag.commit?.id as String) })
+    }
+
+    @Override
+    protected <T> List<T> invokeAndResponseWithPaging(String request, Closure<T> parse) {
+        final result = new ArrayList<T>()
+        final visited = new HashSet<String>()
+        String url = request
+
+        while( url ) {
+            if( !visited.add(url) )
+                throw new IOException("Invalid GitLab pagination link cycle detected: $url")
+
+            final response = invokeResponse(url)
+            final body = new String(response.body(), StandardCharsets.UTF_8)
+            final items = (List) new JsonSlurper().parseText(body)
+            for( def item : items )
+                result.add(parse(item))
+
+            url = getNextPageUrl(response)
+        }
+
+        return result
+    }
+
+    private String getNextPageUrl(HttpResponse<byte[]> response) {
+        for( String value : response.headers().allValues('Link') ) {
+            final links = value =~ /<([^>]+)>([^,]*)/
+            while( links.find() ) {
+                final target = links.group(1)
+                final params = links.group(2)
+                final relation = params =~ /(?i)(?:^|;)\s*rel\s*=\s*"?([^";,]+)"?/
+                if( relation.find() && relation.group(1).tokenize().contains('next') )
+                    return validateNextPageUrl(response.uri(), target)
+            }
+        }
+        return null
+    }
+
+    private static String validateNextPageUrl(URI current, String target) {
+        final next = current.resolve(target)
+        if( next.userInfo || !sameOrigin(current, next) )
+            throw new IOException("Invalid GitLab pagination URL: $next")
+        return next.toString()
+    }
+
+    private static boolean sameOrigin(URI left, URI right) {
+        left.scheme?.equalsIgnoreCase(right.scheme) &&
+            left.host?.equalsIgnoreCase(right.host) &&
+            effectivePort(left) == effectivePort(right)
+    }
+
+    private static int effectivePort(URI uri) {
+        if( uri.port != -1 )
+            return uri.port
+        if( uri.scheme?.equalsIgnoreCase('https') )
+            return 443
+        if( uri.scheme?.equalsIgnoreCase('http') )
+            return 80
+        return -1
     }
 
     /** {@inheritDoc} */
