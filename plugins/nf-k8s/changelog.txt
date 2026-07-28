@@ -1,5 +1,8 @@
 nf-k8s changelog
 ===================
+1.5.5 - 15 Jul 2026
+- Fix CVE-2025-14813: replace discontinued bcprov-ext with bcprov-jdk18on 1.84 (#7284) [17ef32d8b]
+
 1.5.4 - 28 May 2026
 - Bump Failsafe to 3.3.2 (#7181) [1c47215a8]
 

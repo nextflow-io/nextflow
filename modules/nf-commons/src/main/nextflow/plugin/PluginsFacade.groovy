@@ -27,7 +27,6 @@ import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.extension.Bolts
 import nextflow.extension.FilesEx
-import nextflow.util.VersionNumber
 import org.pf4j.DefaultPluginManager
 import org.pf4j.PluginManager
 import org.pf4j.PluginState
@@ -451,12 +450,15 @@ class PluginsFacade implements PluginStateListener {
             log.debug "Plugins default=$defSpecs"
         }
 
-        // add seqera plugin when config contains tower options or uses the seqera executor
-        if( (Bolts.navigate(config,'tower.enabled') || Bolts.navigate(config,'fusion.enabled') || env.TOWER_ACCESS_TOKEN || Bolts.navigate(config,'process.executor')=='seqera' ) && !specs.find {it.id == 'nf-seqera' } ) {
-            specs << defaultPlugins.getPlugin('nf-seqera')
+        // add tower plugin when config contains tower options
+        if( (Bolts.navigate(config,'tower.enabled') || Bolts.navigate(config,'fusion.enabled') || env.TOWER_ACCESS_TOKEN ) && !specs.find {it.id == 'nf-tower' } ) {
+            specs << defaultPlugins.getPlugin('nf-tower')
         }
         if( (Bolts.navigate(config,'wave.enabled') || Bolts.navigate(config,'fusion.enabled')) && !specs.find {it.id == 'nf-wave' } ) {
             specs << defaultPlugins.getPlugin('nf-wave')
+        }
+        if( Bolts.navigate(config,'process.executor')=='seqera') {
+            specs << defaultPlugins.getPlugin('nf-seqera')
         }
 
         // add cloudcache plugin when cloudcache is enabled in the config
@@ -464,41 +466,8 @@ class PluginsFacade implements PluginStateListener {
             specs << defaultPlugins.getPlugin('nf-cloudcache')
         }
 
-        // nf-seqera (>=1.0.0) integrates the former standalone nf-tower plugin; when both are
-        // requested (e.g. nf-tower declared in the config while nf-seqera is auto-loaded because
-        // tower is enabled) drop nf-tower to avoid running two Platform observers at the same time
-        specs = dropSupersededTowerPlugin(specs)
-
         log.debug "Plugins resolved requirement=$specs"
         return specs
-    }
-
-    /**
-     * The {@code nf-tower} plugin has been integrated into {@code nf-seqera} since version 1.0.0.
-     * When both plugins are requested, remove {@code nf-tower} so that the Seqera Platform
-     * integration is provided solely by {@code nf-seqera} and it is not reported twice.
-     *
-     * @param specs The list of resolved plugin requirements
-     * @return The plugin requirements with {@code nf-tower} removed when superseded by {@code nf-seqera}
-     */
-    protected List<PluginRef> dropSupersededTowerPlugin(List<PluginRef> specs) {
-        final tower = specs.find { it.id == 'nf-tower' }
-        final seqera = specs.find { it.id == 'nf-seqera' }
-        if( tower && seqera && isSeqeraSupersedingTower(seqera.version) ) {
-            log.warn "Plugin 'nf-tower' is superseded by 'nf-seqera${seqera.version ? '@'+seqera.version : ''}' and will not be loaded -- Seqera Platform integration is now provided by the nf-seqera plugin"
-            return specs.findAll { it.id != 'nf-tower' }
-        }
-        return specs
-    }
-
-    /**
-     * @param version The {@code nf-seqera} plugin version (can be {@code null} when unspecified)
-     * @return {@code true} when the given {@code nf-seqera} version integrates the {@code nf-tower}
-     *      functionality i.e. it's {@code >= 1.0.0} or unspecified (defaulting to the bundled version)
-     */
-    protected boolean isSeqeraSupersedingTower(String version) {
-        // a missing version implies the default bundled plugin, which is always >= 1.0.0
-        return !version || new VersionNumber(version).matches('>=1.0.0')
     }
 
     protected List<PluginRef> defaultPluginsConf(Map config) {

@@ -14,31 +14,35 @@
  * limitations under the License.
  */
 
-package nextflow.util
-
+package io.seqera.tower.plugin
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.cli.CmdBase
+import io.seqera.tower.plugin.fs.SeqeraFileSystemProvider
+import nextflow.file.FileHelper
+import nextflow.plugin.BasePlugin
+import nextflow.cli.PluginExecAware
+import org.pf4j.PluginWrapper
 /**
- * This class is used to resolve at runtime some spurious dependencies
- * with optional modules
+ * Seqera Platform plugin
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
-@Deprecated
 @CompileStatic
-class SpuriousDeps {
+class TowerPlugin extends BasePlugin implements PluginExecAware {
 
-    static CmdBase cmdCloud() {
-        try {
-            final clazz = Class.forName('nextflow.cli.CmdCloud')
-            return (CmdBase)clazz.newInstance()
-        }
-        catch (ClassNotFoundException e) {
-            return null
-        }
+    @Delegate private CacheCommand delegate
+
+    TowerPlugin(PluginWrapper wrapper) {
+        super(wrapper)
+        this.delegate = new CacheCommand()
+    }
+
+    @Override
+    void start() {
+        super.start()
+        FileHelper.getOrInstallProvider(SeqeraFileSystemProvider)
     }
 
 }

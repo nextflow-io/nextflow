@@ -1,5 +1,13 @@
 nf-seqera changelog
 ====================
+0.23.0 - 15 Jul 2026
+- Add seqera.executor.providerConfig option (#7335) [5b8ce02da]
+- Send pipeline-secret references to the Seqera Scheduler (#7314) [df61a13fa]
+- Use scheduler API exit code, fall back to .exitcode file (#7273) [751effc79]
+- Bump jackson-databind to patched versions to fix deserialization CVEs (#7322) [8d4423e8a]
+- Bump jackson 2.21.1 to 2.21.4 to fix high-severity CVEs (#7274) [a6fddfa8e]
+- Use wiremock self-contained distribution to drop vulnerable handlebars (#7275) [27646a707]
+
 0.22.0 - 19 Jun 2026
 - Bump default Fusion version to 2.6 (#7246) [b56ef1a45]
 - Add shellEnabled option and per-task prediction model to Seqera executor (#7204) [810fd1654]

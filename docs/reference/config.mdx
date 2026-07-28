@@ -139,6 +139,12 @@ The amount of time the Apptainer pull can last, exceeding which the process is t
 
 The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
 
+##### `apptainer.resourceLimits`
+
+<AddedInVersion version="26.10" />
+
+Apply the task `cpus` and `memory` directives as container resource limits using the `--cpus` and `--memory` flags (default: `false`).
+
 ##### `apptainer.runOptions`
 
 Specify extra command line options supported by `apptainer exec`.
@@ -825,6 +831,14 @@ When `false`, channel names are omitted, operators are collapsed, and empty work
 The `docker` scope controls how [Docker](https://www.docker.com) containers are executed by Nextflow.
 
 The following settings are available:
+
+##### `docker.cpuLimits`
+
+<AddedInVersion version="26.10" />
+
+Use the `--cpus` flag to limit CPU usage instead of `--cpu-shares` (default`false`).
+
+Unlike `--cpu-shares`, which only affects the relative scheduling weight of a container, `--cpus` enforces a hard limit on the number of CPUs available to it. See the [Docker documentation](https://docs.docker.com/engine/containers/resource_constraints/#cpu) for details.
 
 ##### `docker.enabled`
 
@@ -1796,6 +1810,10 @@ The EC2 key pair name for SSH access to instances.
 
 The resource prediction model used to estimate task resource requirements from historical execution metrics. Supported values: `'qr/v1'`, `'qr/v2'` (quantile regression). When not set, no resource estimation is applied.
 
+###### `seqera.executor.providerConfig`
+
+Backend-specific provider configuration merged into the compute cluster's backend properties (for cluster isolation). When omitted, the backend falls back to its environment variable configuration. For example: `providerConfig = [lazyPull: 'true']`.
+
 ###### `seqera.executor.provider`
 
 The compute backend provider type (e.g. `'aws'`, `'local'`). When specified, used together with `region` to select the matching compute environment.
@@ -1966,9 +1984,57 @@ The amount of time the Singularity pull can last, after which the process is ter
 
 The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
 
+##### `singularity.resourceLimits`
+
+<AddedInVersion version="26.10" />
+
+Apply the task `cpus` and `memory` directives as container resource limits using the `--cpus` and `--memory` flags (default: `false`).
+
 ##### `singularity.runOptions`
 
 Specify extra command line options supported by `singularity exec`.
+
+## `smolvm`
+
+The `smolvm` scope controls how [smolvm](https://github.com/smol-machines/smolvm) microVMs are used by Nextflow.
+
+The following settings are available:
+
+##### `smolvm.enabled`
+
+Enable smolvm execution (default: `false`).
+
+##### `smolvm.engineOptions`
+
+Specify additional options supported by the smolvm CLI (i.e., `smolvm [OPTIONS] machine run`).
+
+##### `smolvm.envWhitelist`
+
+Comma separated list of environment variable names to be included in the VM environment.
+
+##### `smolvm.network`
+
+Enable outbound network access in the VM (default: `true`).
+
+##### `smolvm.registry`
+
+The registry from where images are pulled. It should NOT include the protocol prefix (i.e., `http://`).
+
+##### `smolvm.runOptions`
+
+Specify extra command line options supported by the `smolvm machine run` command.
+
+##### `smolvm.temp`
+
+Mounts a path of your choice as the `/tmp` directory in the VM.
+
+##### `smolvm.tty`
+
+Allocate a pseudo-tty (default: `false`).
+
+##### `smolvm.writableInputMounts`
+
+When `false`, mount input directories as read-only (default: `true`).
 
 ## `spack`
 

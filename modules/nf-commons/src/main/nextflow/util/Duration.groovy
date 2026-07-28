@@ -219,7 +219,8 @@ class Duration implements IDuration, TemporalAmount, Comparable<Duration>, Seria
     }
 
     static Duration between( Temporal start, Temporal end ) {
-        new Duration(java.time.Duration.between(start, end).toMillis())
+        final millis = java.time.Duration.between(start, end).toMillis()
+        new Duration(Math.max(0L, millis))
     }
 
     @Override

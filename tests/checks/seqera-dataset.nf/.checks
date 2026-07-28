@@ -1,5 +1,5 @@
 set -e
-export NXF_PLUGINS_DEFAULT=nf-seqera
+export NXF_PLUGINS_DEFAULT=nf-tower
 
 # Skip test if Seqera Platform token is missing
 if [[ ! $TOWER_ACCESS_TOKEN ]]; then

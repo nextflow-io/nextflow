@@ -30,7 +30,7 @@ import io.seqera.npr.api.schema.v1.ModuleMetadata
 import io.seqera.npr.api.schema.v1.ModuleRelease
 import io.seqera.npr.api.schema.v1.ModuleTool
 import nextflow.cli.CmdBase
-import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigCmdAdapter
 import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleReference
@@ -100,7 +100,7 @@ class CmdModuleView extends CmdBase {
 
         // Get config
         def baseDir = root ?: Paths.get('.').toAbsolutePath().normalize()
-        def config = new ConfigBuilder()
+        def config = new ConfigCmdAdapter()
             .setOptions(launcher.options)
             .setBaseDir(baseDir)
             .build()
@@ -144,6 +144,10 @@ class CmdModuleView extends CmdBase {
         println "Version:     ${release.version}"
         println "URL:         ${moduleUrl}"
         println "Description: ${metadata.description ?: release.description ?: 'N/A'}"
+
+        if( metadata.componentName ) {
+            println "Component:   ${metadata.componentName}"
+        }
 
         if( metadata.authors ) {
             println "Authors:     ${metadata.authors.join(', ')}"
@@ -290,6 +294,7 @@ class CmdModuleView extends CmdBase {
             version    : release.version,
             url        : moduleUrl,
             description: metadata.description ?: release.description,
+            componentName: metadata.componentName,
             authors    : metadata.authors,
             keywords   : metadata.keywords,
         ]

@@ -73,11 +73,11 @@ class FakeIndexHandler implements HttpHandler {
             ]
           },
           {
-            "id": "nf-seqera",
+            "id": "nf-tower",
             "releases": [
               {
                 "version": "1.0.0",
-                "url": "https://github.com/nextflow-io/nf-seqera/releases/download/1.0.0/nf-seqera-1.0.0.zip",
+                "url": "https://github.com/nextflow-io/nf-tower/releases/download/1.0.0/nf-tower-1.0.0.zip",
                 "date": "2021-01-04T17:49:04.62+01:00",
                 "sha512sum": "c00435164b4f16e548df4bea6f0e8c271dd8d0eaf28b10f29758d0a93aca5c426507c913a2ed0828e1a79e2c01d8f06644df871ccf0de2224f56745110f4a923"
               }
