@@ -26,9 +26,9 @@ When using `combine` with static typing, the right operand should be a channel, 
 When `combine` is called with named arguments, they are appended to each source record as additional fields:
 
 ```nextflow
-sample = channel.value( record(id: 1, fastq: file('1.fq')) )
+samples = channel.of( record(id: 1, fastq: file('1.fq')) )
 index = channel.value( file('index.fa') )
-sample.combine(strandedness: 'auto', index: index)
+samples.combine(strandedness: 'auto', index: index).view()
 
 // [id:1, fastq:1.fq, strandedness:auto, index:index.fa]
 ```
