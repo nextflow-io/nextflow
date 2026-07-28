@@ -51,6 +51,8 @@ abstract class ContainerBuilder<V extends ContainerBuilder> {
             return new CharliecloudBuilder(containerImage, config)
         if( config instanceof AppleContainerConfig )
             return new AppleContainerBuilder(containerImage, config)
+        if( config instanceof SmolVmConfig )
+            return new SmolVmBuilder(containerImage, config)
         //
         throw new IllegalArgumentException("Unknown container engine: $config.engine")
     }
