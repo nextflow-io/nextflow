@@ -253,7 +253,7 @@ class PluginUpdater extends UpdateManager {
     }
 
     /**
-     * The {@code plugins.lock} file location used to verify downloaded plugin artifacts.
+     * The {@code plugins.lock} file location used to verify plugins against their pinned hash.
      * Defaults to a {@code plugins.lock} file in the current working directory.
      */
     protected Path lockFilePath() {
@@ -267,13 +267,6 @@ class PluginUpdater extends UpdateManager {
         if( lockVerifier == null )
             lockVerifier = new PluginLockVerifier(lockFilePath())
         return lockVerifier
-    }
-
-    /**
-     * @return the path to the retained plugin zip artifact used for lock verification
-     */
-    private Path retainedZip(String id, String version) {
-        return pluginsStore.resolve("${id}-${version}.zip")
     }
 
     private Path download0(String id, String version) {
@@ -291,21 +284,9 @@ class PluginUpdater extends UpdateManager {
         // 2. download to temporary location
         Path downloaded = safeDownloadPlugin(id, version);
 
-        // 3. unzip the content
+        // 3. unzip the content and delete downloaded file
         Path dir = FileUtils.expandIfZip(downloaded)
-
-        // 3.1 when the plugins lock is enabled retain the downloaded zip next to the extracted
-        // dir and verify (or pin) its checksum against the lock (cold cache). Otherwise delete it.
-        if( getLockVerifier().isEnabled() ) {
-            final retained = retainedZip(id, version)
-            FileHelper.deletePath(retained)
-            FileHelper.copyPath(downloaded, retained)
-            FileHelper.deletePath(downloaded)
-            getLockVerifier().verify("${id}@${version}", retained)
-        }
-        else {
-            FileHelper.deletePath(downloaded)
-        }
+        FileHelper.deletePath(downloaded)
 
         // 4. move the final destination the plugin directory
         assert pluginPath.getFileName() == dir.getFileName()
@@ -434,16 +415,15 @@ class PluginUpdater extends UpdateManager {
         if( !FilesEx.exists(pluginPath) ) {
             pluginPath = safeDownload(id, version)
         }
-        else {
-            // warm cache: re-hash the retained artifact and verify it against the plugins lock
-            // (missing retained zip is treated as a lock-miss by the verifier)
-            getLockVerifier().verify("${id}@${version}", retainedZip(id, version))
-        }
 
         // verify the plugin install path contains the expected manifest path
         if( !FilesEx.exists(pluginPath.resolve('classes/META-INF/MANIFEST.MF')) ) {
             log.warn("Plugin '${pluginPath.getFileName()}' installation looks corrupted - Delete the following directory and run nextflow again: $pluginPath")
         }
+
+        // verify (or pin) the extracted plugin directory against the plugins lock, before loading
+        // and executing its code. This covers both a fresh download and a reused (warm) cache.
+        getLockVerifier().verify("${id}@${version}", pluginPath)
 
         // load the plugin from the file system
         PluginWrapper wrapper = pluginManager.loadPluginFromPath(pluginPath)

@@ -16,8 +16,11 @@
 
 package nextflow.plugin
 
+import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.SimpleFileVisitor
+import java.nio.file.attribute.BasicFileAttributes
 import java.security.MessageDigest
 
 import groovy.transform.CompileStatic
@@ -26,29 +29,25 @@ import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 
 /**
- * Verifies plugin archives against the {@code plugins.lock} file.
+ * Verifies an extracted plugin directory against the {@code plugins.lock} file.
  *
  * The feature is opt-in <em>by the presence of the lock file</em>: it is dormant (a no-op) when no
- * {@code plugins.lock} exists. When the file is present, the sha512 of the retained plugin archive
- * is re-computed locally (no network) and compared to the committed lock entry.
+ * {@code plugins.lock} exists. When the file is present, a canonical hash of the extracted
+ * {@code $id-$version/} directory - the code that Nextflow actually loads and executes - is
+ * re-computed locally (no network) and compared to the committed lock entry. Because it hashes the
+ * unpacked tree rather than the archive, it detects both a tampered/compromised download and a
+ * poisoned cache directory (a lower-trust user editing already-extracted files on a shared cache).
  *
- * Following the {@code go.sum} / {@code package-lock.json} model, the lock is populated
- * automatically: the first time a coordinate is downloaded and it is missing from the lock, its
- * archive checksum is appended (trust-on-first-use). An existing entry is never rewritten silently
- * — a mismatch against a committed entry is a verification failure.
- *
- * The behaviour on a checksum mismatch is gated by the {@code NXF_PLUGINS_LOCK_MODE} environment
- * variable:
+ * Following the {@code go.sum} / {@code package-lock.json} model the lock is populated
+ * automatically: the first time a coordinate is seen and it is missing from the lock, its tree
+ * hash is appended (trust-on-first-use). An existing entry is never rewritten silently — a
+ * mismatch against a committed entry is a verification failure, gated by
+ * {@code NXF_PLUGINS_LOCK_MODE}:
  * <ul>
  *   <li>{@code strict} - abort with an {@link AbortOperationException}</li>
  *   <li>{@code warn} (default) - log a warning once per coordinate and proceed</li>
  *   <li>{@code off} - skip verification silently</li>
  * </ul>
- *
- * A locked plugin whose archive is not available locally (e.g. a cache extracted before this
- * feature existed) is never aborted: it cannot be verified offline and its archive is never
- * re-downloaded just to verify it. Integrity of the extracted code that actually runs is the
- * responsibility of the plugin directory guard, not of this archive check.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -103,46 +102,39 @@ class PluginLockVerifier {
     }
 
     /**
-     * Verify - and, on first sight, pin - a plugin archive against the lock.
+     * Verify - and, on first sight, pin - an extracted plugin directory against the lock.
      *
      * @param fqid The plugin fully-qualified id ie. {@code id@version}
-     * @param zip The retained plugin archive; may be {@code null} or missing
+     * @param pluginDir The extracted plugin directory ({@code $id-$version/})
      */
-    void verify(String fqid, Path zip) {
+    void verify(String fqid, Path pluginDir) {
         if( !enabled )
             return
+        if( pluginDir == null || !Files.isDirectory(pluginDir) ) {
+            log.debug "Cannot verify plugin '$fqid' against the plugins lock file - directory not available: $pluginDir"
+            return
+        }
+
+        final actual = sha512Tree(pluginDir)
         final entry = lock.getEntry(fqid)
-        final present = zip != null && Files.exists(zip)
 
-        // coordinate not yet locked: pin it on first download (trust-on-first-use), never fail
+        // coordinate not yet locked: pin it on first sight (trust-on-first-use), never fail
         if( entry == null ) {
-            if( present )
-                pin(fqid, sha512(zip))
-            else
-                log.debug "Plugin '$fqid' is not in the plugins lock file and its archive is not available to pin"
+            pin(fqid, actual)
             return
         }
-
-        // locked, but the archive is not available (e.g. a cache created before this feature):
-        // it cannot be verified offline - never abort and never re-download to verify
-        if( !present ) {
-            if( getMode() != Mode.OFF && notified.add(fqid) )
-                log.warn "Cannot verify plugin '$fqid' against the plugins lock file - its archive is not available in the cache"
-            return
-        }
-
-        // verify the retained archive against the committed checksum
-        final actual = sha512(zip)
+        // matches the committed hash
         if( actual == entry.sha512 )
             return
 
-        final reason = "Plugin '$fqid' checksum does not match the plugins lock file\n- expected: ${entry.sha512}\n- actual  : ${actual}"
+        // mismatch: the extracted plugin differs from what the lock pinned
+        final reason = "Plugin '$fqid' does not match the plugins lock file\n- expected: ${entry.sha512}\n- actual  : ${actual}"
         switch( getMode() ) {
             case Mode.OFF:
                 log.debug "Plugins lock verification failed (ignored, mode=off) - $reason"
                 break
             case Mode.STRICT:
-                throw new AbortOperationException("$reason\n- delete the entry from the plugins lock file and re-run to re-pin, or restore the expected plugin archive")
+                throw new AbortOperationException("$reason\n- delete the entry from the plugins lock file and re-run to re-pin, or restore the expected plugin")
             case Mode.WARN:
                 // warn only once per coordinate to avoid log spam
                 if( notified.add(fqid) )
@@ -154,7 +146,7 @@ class PluginLockVerifier {
     /**
      * Append a new entry to the lock and persist it (trust-on-first-use). Existing entries are
      * never overwritten by this path — {@link #verify} routes an already-locked coordinate through
-     * the checksum comparison instead.
+     * the hash comparison instead.
      */
     private synchronized void pin(String fqid, String sha512) {
         lock.addEntry(fqid, new PluginLockFile.Entry(sha512))
@@ -164,18 +156,35 @@ class PluginLockVerifier {
     }
 
     /**
-     * Compute the sha512 hex digest of the given file.
+     * Compute a canonical sha512 digest over the content of a directory tree. The digest covers,
+     * for every regular file (visited in sorted relative-path order for determinism), its relative
+     * path and its bytes - not timestamps or permissions - so it is stable across extractions and
+     * platforms while still detecting any change to the files that will be executed.
      *
-     * @param file The file to hash
+     * @param dir The directory to hash
      * @return The lowercase hex-encoded sha512 digest (128 chars)
      */
-    static String sha512(Path file) {
+    static String sha512Tree(Path dir) {
         final md = MessageDigest.getInstance('SHA-512')
-        try (InputStream is = Files.newInputStream(file)) {
-            final buffer = new byte[8192]
-            int read
-            while( (read = is.read(buffer)) != -1 )
-                md.update(buffer, 0, read)
+        // TreeMap keyed by relative path -> deterministic, sorted iteration order
+        final files = new TreeMap<String, Path>()
+        Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
+            @Override
+            FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                files.put(dir.relativize(file).toString().replace('\\', '/'), file)
+                return FileVisitResult.CONTINUE
+            }
+        })
+        final buffer = new byte[8192]
+        for( Map.Entry<String, Path> it : files.entrySet() ) {
+            md.update(it.key.getBytes('UTF-8'))
+            md.update((byte) 0)
+            try (InputStream is = Files.newInputStream(it.value)) {
+                int read
+                while( (read = is.read(buffer)) != -1 )
+                    md.update(buffer, 0, read)
+            }
+            md.update((byte) 0)
         }
         return HexFormat.of().formatHex(md.digest())
     }

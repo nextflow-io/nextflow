@@ -30,10 +30,15 @@ import spock.lang.Unroll
  */
 class PluginLockVerifierTest extends Specification {
 
-    private Path zipWith(String content) {
-        final zip = Files.createTempFile('plugin', '.zip')
-        Files.write(zip, content.getBytes('UTF-8'))
-        return zip
+    /** Create an extracted-plugin-like directory tree with the given relative-path->content files */
+    private Path pluginDir(Map<String,String> files) {
+        final dir = Files.createTempDirectory('plugin')
+        files.each { rel, content ->
+            final f = dir.resolve(rel)
+            Files.createDirectories(f.parent)
+            Files.write(f, content.getBytes('UTF-8'))
+        }
+        return dir
     }
 
     /** Write a lock file holding the given fqid->sha512 entries and return its path */
@@ -69,26 +74,48 @@ class PluginLockVerifierTest extends Specification {
     }
 
     // ---------------------------------------------------------------------------
+    // tree hashing
+
+    def 'sha512Tree should be deterministic and content-sensitive' () {
+        given:
+        def a = pluginDir(['classes/A.class': 'aaa', 'META-INF/MANIFEST.MF': 'mmm'])
+        def b = pluginDir(['classes/A.class': 'aaa', 'META-INF/MANIFEST.MF': 'mmm'])
+        def c = pluginDir(['classes/A.class': 'aaa', 'META-INF/MANIFEST.MF': 'CHANGED'])
+
+        expect:
+        // identical content in different dirs -> identical hash
+        PluginLockVerifier.sha512Tree(a) == PluginLockVerifier.sha512Tree(b)
+        // any content change -> different hash
+        PluginLockVerifier.sha512Tree(a) != PluginLockVerifier.sha512Tree(c)
+        and:
+        PluginLockVerifier.sha512Tree(a).length() == 128
+        PluginLockVerifier.sha512Tree(a) ==~ /[0-9a-f]{128}/
+
+        cleanup:
+        [a, b, c].each { it.deleteDir() }
+    }
+
+    // ---------------------------------------------------------------------------
     // dormant / enabled
 
     def 'should be dormant when no lock file exists' () {
         given:
         SysEnv.push([NXF_PLUGINS_LOCK_MODE: 'strict'])
         and:
-        def zip = zipWith('hello plugin')
+        def dir = pluginDir(['classes/A.class': 'aaa'])
         def verifier = new PluginLockVerifier(Path.of('/no/such/plugins.lock'))
 
         expect:
         !verifier.isEnabled()
 
         when:
-        verifier.verify('nf-foo@1.0.0', zip)
+        verifier.verify('nf-foo@1.0.0', dir)
         then:
         noExceptionThrown()
 
         cleanup:
         SysEnv.pop()
-        Files.deleteIfExists(zip)
+        dir.deleteDir()
     }
 
     def 'should be enabled when an (even empty) lock file exists' () {
@@ -110,15 +137,15 @@ class PluginLockVerifierTest extends Specification {
         given:
         SysEnv.push([NXF_PLUGINS_LOCK_MODE: 'strict'])
         and:
-        def zip = zipWith('hello plugin')
-        final sha = PluginLockVerifier.sha512(zip)
+        def dir = pluginDir(['classes/A.class': 'hello'])
+        final sha = PluginLockVerifier.sha512Tree(dir)
         and:
         // an empty but present lock file -> feature enabled, nothing pinned yet
         def lockPath = lockFileWith([:])
         def verifier = new PluginLockVerifier(lockPath)
 
         when:
-        verifier.verify('nf-foo@1.0.0', zip)
+        verifier.verify('nf-foo@1.0.0', dir)
 
         then:
         noExceptionThrown()
@@ -129,147 +156,119 @@ class PluginLockVerifierTest extends Specification {
 
         cleanup:
         SysEnv.pop()
-        Files.deleteIfExists(zip)
+        dir.deleteDir()
         Files.deleteIfExists(lockPath)
-    }
-
-    def 'should not pin when dormant' () {
-        given:
-        def zip = zipWith('hello plugin')
-        def verifier = new PluginLockVerifier(Path.of('/no/such/plugins.lock'))
-
-        when:
-        verifier.verify('nf-foo@1.0.0', zip)
-
-        then:
-        !verifier.isEnabled()
-        noExceptionThrown()
-
-        cleanup:
-        Files.deleteIfExists(zip)
     }
 
     // ---------------------------------------------------------------------------
     // verification of an already-locked coordinate
 
-    def 'should pass verification when the artifact matches the lock' () {
+    def 'should pass verification when the plugin matches the lock' () {
         given:
         SysEnv.push([NXF_PLUGINS_LOCK_MODE: 'strict'])
         and:
-        def zip = zipWith('hello plugin')
-        final sha = PluginLockVerifier.sha512(zip)
+        def dir = pluginDir(['classes/A.class': 'hello'])
+        final sha = PluginLockVerifier.sha512Tree(dir)
         def lockPath = lockFileWith(['nf-foo@1.0.0': sha])
         def verifier = new PluginLockVerifier(lockPath)
 
         when:
-        verifier.verify('nf-foo@1.0.0', zip)
+        verifier.verify('nf-foo@1.0.0', dir)
 
         then:
         noExceptionThrown()
 
         cleanup:
         SysEnv.pop()
-        Files.deleteIfExists(zip)
+        dir.deleteDir()
         Files.deleteIfExists(lockPath)
     }
 
-    def 'strict mode should abort on a checksum mismatch' () {
+    def 'strict mode should abort when the extracted plugin does not match' () {
         given:
         SysEnv.push([NXF_PLUGINS_LOCK_MODE: 'strict'])
         and:
-        def zip = zipWith('hello plugin')
+        def dir = pluginDir(['classes/A.class': 'poisoned'])
         def lockPath = lockFileWith(['nf-foo@1.0.0': 'deadbeef'])
         def verifier = new PluginLockVerifier(lockPath)
 
         when:
-        verifier.verify('nf-foo@1.0.0', zip)
+        verifier.verify('nf-foo@1.0.0', dir)
 
         then:
         def e = thrown(AbortOperationException)
-        e.message.contains('checksum does not match')
+        e.message.contains('does not match')
 
         cleanup:
         SysEnv.pop()
-        Files.deleteIfExists(zip)
+        dir.deleteDir()
         Files.deleteIfExists(lockPath)
     }
 
-    def 'warn mode should not abort on a checksum mismatch' () {
+    def 'warn mode should not abort on a mismatch' () {
         given:
         SysEnv.push([NXF_PLUGINS_LOCK_MODE: 'warn'])
         and:
-        def zip = zipWith('hello plugin')
+        def dir = pluginDir(['classes/A.class': 'poisoned'])
         def lockPath = lockFileWith(['nf-foo@1.0.0': 'deadbeef'])
         def verifier = new PluginLockVerifier(lockPath)
 
         when:
-        verifier.verify('nf-foo@1.0.0', zip)
+        verifier.verify('nf-foo@1.0.0', dir)
         // second call to exercise the "log once" path
-        verifier.verify('nf-foo@1.0.0', zip)
+        verifier.verify('nf-foo@1.0.0', dir)
 
         then:
         noExceptionThrown()
 
         cleanup:
         SysEnv.pop()
-        Files.deleteIfExists(zip)
+        dir.deleteDir()
         Files.deleteIfExists(lockPath)
     }
 
-    def 'off mode should ignore a checksum mismatch' () {
+    def 'off mode should ignore a mismatch' () {
         given:
         SysEnv.push([NXF_PLUGINS_LOCK_MODE: 'off'])
         and:
-        def zip = zipWith('hello plugin')
+        def dir = pluginDir(['classes/A.class': 'poisoned'])
         def lockPath = lockFileWith(['nf-foo@1.0.0': 'deadbeef'])
         def verifier = new PluginLockVerifier(lockPath)
 
         when:
-        verifier.verify('nf-foo@1.0.0', zip)
+        verifier.verify('nf-foo@1.0.0', dir)
 
         then:
         noExceptionThrown()
 
         cleanup:
         SysEnv.pop()
-        Files.deleteIfExists(zip)
+        dir.deleteDir()
         Files.deleteIfExists(lockPath)
     }
 
-    // ---------------------------------------------------------------------------
-    // archive-absent (e.g. a cache extracted before this feature): never abort
-
-    def 'strict mode should NOT abort when a locked artifact is unavailable' () {
+    def 'should catch cache poisoning regardless of directory ownership' () {
         given:
+        // pin the good tree, then tamper an extracted file in place (the shared-cache attack)
         SysEnv.push([NXF_PLUGINS_LOCK_MODE: 'strict'])
         and:
-        final missing = Path.of('/no/such/nf-foo-1.0.0.zip')
-        def lockPath = lockFileWith(['nf-foo@1.0.0': 'abc'])
+        def dir = pluginDir(['classes/A.class': 'good', 'lib/x.jar': 'jar'])
+        final good = PluginLockVerifier.sha512Tree(dir)
+        def lockPath = lockFileWith(['nf-foo@1.0.0': good])
         def verifier = new PluginLockVerifier(lockPath)
+        and:
+        // attacker edits an already-extracted file
+        Files.write(dir.resolve('classes/A.class'), 'evil'.getBytes('UTF-8'))
 
         when:
-        verifier.verify('nf-foo@1.0.0', missing)
+        verifier.verify('nf-foo@1.0.0', dir)
 
         then:
-        noExceptionThrown()
+        thrown(AbortOperationException)
 
         cleanup:
         SysEnv.pop()
+        dir.deleteDir()
         Files.deleteIfExists(lockPath)
-    }
-
-    def 'sha512 should compute a 128-char lowercase hex digest' () {
-        given:
-        def zip = zipWith('some bytes')
-
-        when:
-        final sha = PluginLockVerifier.sha512(zip)
-
-        then:
-        sha.length() == 128
-        sha ==~ /[0-9a-f]{128}/
-
-        cleanup:
-        Files.deleteIfExists(zip)
     }
 }

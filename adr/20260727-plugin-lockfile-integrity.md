@@ -7,41 +7,37 @@
 
 ## Summary
 
-Introduce a committed lockfile (`plugins.lock`) that pins the SHA-512 hash of each resolved plugin **archive**, computed over the actual archive bytes. The lockfile is populated automatically as a side effect of the normal plugin download — the first time a coordinate is fetched it is pinned (trust-on-first-use) — exactly like `go.sum` / `package-lock.json`, with **no dedicated command**. The trusted hash lives in the pipeline repository under version control and is not re-fetched from the registry on every run. During plugin resolution Nextflow re-hashes the downloaded — or retained — archive and verifies it against the locked hash.
+Introduce a committed lockfile (`plugins.lock`) that pins a canonical SHA-512 hash of each plugin's **extracted directory** — the unpacked `$id-$version/` tree that Nextflow actually loads and executes. The lockfile is populated automatically the first time a plugin is seen (trust-on-first-use), exactly like `go.sum` / `package-lock.json`, with **no dedicated command**. The trusted hash lives in the pipeline repository under version control and is not re-fetched from the registry on every run. Before loading a plugin, Nextflow re-hashes its extracted directory and verifies it against the committed hash.
 
-Verification is network-free **whenever the archive being verified is present locally** (always true on a cold download; true on a warm cache only if the archive was retained). This ADR is explicit about the one case where an archive is not present — a cache extracted before this feature existed — and specifies an offline-safe behavior for it that never triggers a download (see *Migration and first adoption* and *Verification flow*).
+Because it hashes the code that runs rather than the archive it came from, a single mechanism covers **both** integrity surfaces: a tampered/compromised download or registry, **and** a poisoned cache directory (a lower-trust user editing already-extracted files on a shared filesystem). Verification is fully offline, and it uses no ownership or permission heuristics, so it does not produce false-positive warnings on legitimate shared caches.
 
 ## Problem Statement
 
-Nextflow resolves plugins from a registry (or mirror), downloads a zip archive, and extracts it into the local plugin cache under `$id-$version/`. Today there is no persistent, user-owned record of what a plugin archive is *supposed* to hash to. The registry returns a `sha512sum` during resolution, but that value is fetched fresh on every run and is only ever compared against the download in transit — so it can detect corruption on the wire, never a compromise of the source of truth itself.
+Nextflow resolves plugins from a registry (or mirror), downloads a zip archive, extracts it into the local plugin cache under `$id-$version/`, and loads the extracted code. Two integrity gaps exist:
 
-**What is already covered today.** In-transit archive integrity is *not* an open gap: `HttpPluginRepository` wires pf4j's `CompoundVerifier` (`HttpPluginRepository.groovy:134-135`), which checks the downloaded archive against the registry-supplied `sha512sum` (`:222`) at download time. A corrupted or MITM-mangled download that no longer matches the registry's own hash is already rejected. The lockfile does **not** claim novelty there.
+1. **Cache poisoning (the executed code).** When a `$id-$version/` directory already exists, `PluginUpdater.load0()` short-circuits the download entirely and loads the extracted tree as-is. On a shared, writable plugin cache (`NXF_PLUGINS_DIR` pointed at a group-writable or world-writable location), a lower-trust local user can pre-populate or edit an official pinned coordinate (e.g. `nf-amazon-3.10.0/`) with attacker-controlled class/jar files that then execute inside the victim's Nextflow process.
+2. **Runtime trust in the registry.** The registry returns a `sha512sum` during resolution, but that value is fetched fresh every run and only ever compared against the download in transit (pf4j's `CompoundVerifier`, `HttpPluginRepository.groovy:134-135` / `:222`). A compromised registry/mirror that serves a tampered archive with a matching tampered hash passes that check, and silent version drift produces no signal. There is no persistent, user-owned record of what a plugin is *supposed* to be.
 
-The genuine, non-redundant gaps the lockfile closes are:
+**What is already covered today.** In-transit corruption of a download is caught by `CompoundVerifier` against the registry-supplied hash. The lockfile does not duplicate that. Its job is the *post-download* surface: the extracted code, plus removing runtime trust in the registry's own hash.
 
-- **Runtime trust in the registry's own hash**: today the *expected* value is whatever the registry asserts on this run. A compromised registry (or mirror) that serves a tampered archive together with a matching tampered hash passes the existing `CompoundVerifier` check — because both sides of the comparison come from the same untrusted source. The lockfile removes the registry from the trust path at run time.
-- **Silent version drift**: a coordinate that resolves to a different artifact than it did last week produces no signal today.
-- **Reproducibility / committed baseline for teams that vendor or mirror plugins**: there is no local, authoritative, VCS-reviewed record of what each coordinate must hash to, independent of the registry.
-
-The core issue is that the *trusted* hash must be owned by the pipeline and committed to version control, so verification depends on the repository — which the team controls and reviews — rather than on the registry being honest at run time.
+The core issue is that the *trusted* baseline must be owned by the pipeline and committed to version control, and it must describe the artifact that actually executes — the extracted tree — so verification depends on the repository (which the team controls and reviews) rather than on the registry being honest at run time or on the cache being un-tampered.
 
 ## Goals or Decision Drivers
 
-- **Local, network-free verification when the archive is present**: once the lockfile exists, checking a locally-present archive against the locked hash requires no network access. Network is used only to *fetch* a plugin that is not yet cached, exactly as today. This ADR does **not** claim verification is unconditionally offline — see the migration case below.
-- **Content-addressed trust anchor**: the pinned hash is computed over the downloaded archive bytes at first download, so the baseline is a genuine content hash (the `go.sum` / `package-lock.json` model), not a re-recording of a registry claim.
-- **User-owned trust anchor**: the authoritative hash is committed to the pipeline repository and reviewed through normal VCS workflows (pull requests, code review, blame).
-- **Reproducibility**: a given commit of a pipeline resolves to exactly the same plugin archives, or fails loudly.
-- **Zero breakage by default**: pipelines without a lockfile behave exactly as they do today. The feature is opt-in by the mere presence of the file, and its default enforcement level mirrors PR #7308's warn-first rollout philosophy (see *Modes and rollout*).
-- **Never turn verification into a network dependency**: the verification path must never re-fetch from the registry as a remedy — that would re-introduce the exact runtime dependency this design rejects in Option A.
-- **Honest scope**: the mechanism must defend what it can actually defend (the archive, and only as a re-extraction gate on a warm cache) and not overclaim protection it does not provide (the extracted tree that actually runs).
+- **Cover the executed code.** The check must protect the extracted `$id-$version/` tree that Nextflow loads, not merely the archive it was unpacked from.
+- **One mechanism, both surfaces.** Supply-chain/registry integrity and cache-poisoning integrity should be answered by the same content hash, not two features.
+- **No false positives, no noise.** Verification must not rely on directory ownership or permission heuristics; a legitimate shared or admin-managed cache must be silent. Output happens only on a genuine mismatch.
+- **Local, network-free verification.** Once the lockfile exists, checking a plugin requires no network access; the registry is never a runtime dependency of verification.
+- **Content-addressed, user-owned trust anchor.** The pinned hash is computed over the actual files and committed to the pipeline repository, reviewed through normal VCS workflows.
+- **Zero breakage by default.** Pipelines without a lockfile behave exactly as today; the feature is opt-in by the mere presence of the file, defaulting to `warn` on mismatch (mirroring PR #7308's warn-first rollout).
 
 ## Non-goals
 
-- **Extracted-tree hashing**: hashing or re-verifying the contents of the extracted `$id-$version/` directory is out of scope. That surface is covered by the `PluginSecurity` directory guard in PR #7308 (see *Threat model* and *Known residual* below).
-- **Transitive / dependency lock resolution**: only the coordinates declared in the pipeline config are locked. There is no dependency-graph resolution or locking of plugins pulled in indirectly.
-- **Registry-server changes**: this ADR is entirely client-side. The registry contract is unchanged.
-- **Signature or provenance verification**: the lockfile pins a hash, not a cryptographic signature or attestation. Provenance metadata (the `url`) is recorded for auditability only.
-- **Catching in-transit download corruption**: already handled by pf4j's `CompoundVerifier` against the registry-supplied `sha512sum`. Not a job the lockfile duplicates.
+- **A dedicated `lock` command.** The lockfile is populated automatically on first load; there is no `nextflow plugins lock` subcommand to run or maintain.
+- **Transitive / dependency lock resolution.** Only coordinates that are actually loaded are pinned; there is no dependency-graph resolution.
+- **Registry-server changes.** Entirely client-side; the registry contract is unchanged.
+- **Signature / provenance verification.** The lockfile pins a content hash, not a cryptographic signature or attestation.
+- **Catching in-transit download corruption.** Already handled by pf4j's `CompoundVerifier`.
 
 ## Considered Options
 
@@ -49,64 +45,47 @@ The core issue is that the *trusted* hash must be owned by the pipeline and comm
 
 Fetch the plugin, then re-query the registry for the expected `sha512sum` at load time and compare. No committed lockfile.
 
-- Good, because there is nothing new to commit or maintain in the pipeline repo.
-- Bad, because it makes the **registry a runtime dependency** of every plugin load — breaking air-gapped and offline execution, the exact environments where integrity matters most.
-- Bad, because the registry becomes both the source of the artifact *and* the source of the trusted hash: a compromised registry can serve a tampered archive with a matching tampered hash and defeat the check entirely (this is exactly the `CompoundVerifier` behavior that already exists today).
-- Bad, because it provides no reproducibility anchor — the "expected" value can change out from under a pipeline between runs with no committed record.
+- Bad, because it makes the **registry a runtime dependency** of every plugin load — breaking air-gapped and offline execution, the environments where integrity matters most.
+- Bad, because the registry becomes both the source of the artifact *and* the source of the trusted hash: a compromised registry defeats the check entirely.
+- Bad, because it provides no reproducibility anchor and does nothing for cache poisoning.
 
-### Option B: Extracted directory tree-hash
+### Option B: Committed archive-hash lockfile
 
-Compute a hash over the extracted `$id-$version/` directory tree and pin that.
+Commit a `plugins.lock` pinning the SHA-512 of each plugin **archive** (the zip), verified on download and (by retaining the zip) on warm-cache runs.
 
-- Good, because it would detect edits to already-extracted files (cache poisoning of the unpacked plugin) — the surface the archive hash cannot see.
-- Bad, because tree hashing is heavier: it must walk and hash the full extracted tree, and is sensitive to extraction non-determinism (file ordering, timestamps, permissions, symlinks) across platforms and unzip implementations.
-- Bad, because it duplicates the protection the `PluginSecurity` directory guard in PR #7308 already provides for the extracted tree.
-- Bad, because it would tempt an implementation to re-extract and re-hash on every run, adding cost to the warm-cache hot path.
-- Deferred: the extracted-tree surface is real and is what actually executes, but it is owned by the #7308 guard, not by the lockfile. (Note: a variant of Option B — deriving the lock hash from the extracted tree — is the only way to make verification offline on a pre-existing cache with no retained archive; that is called out where relevant below but remains deferred.)
+- Good, because it is a committed, offline, content-addressed anchor for supply-chain integrity and drift.
+- Bad, because on a warm cache **the archive is not what executes** — Nextflow runs the extracted tree. Re-hashing a retained zip cannot detect edits to already-unpacked files, so it does **not** cover cache poisoning (the executed code) at all. It would still need PR #7308's directory guard as a complement.
+- Bad, because it requires **retaining the archive** next to the extracted tree — roughly doubling cache footprint — and introduces an "archive absent" case (every pre-feature cache, and admin caches that ship only extracted dirs) that produces notices without adding protection.
 
-### Option C: Committed archive-hash lockfile with download-gate and retain-and-re-verify (adopted)
+### Option C: Committed extracted-tree-hash lockfile (adopted)
 
-Commit a `plugins.lock` file pinning the SHA-512 of each resolved plugin **archive**, hashed from the archive bytes at generation time. On a cold cache, gate the download against the locked hash. Retain the verified archive in the cache and re-verify it on warm-cache runs.
+Commit a `plugins.lock` pinning a canonical SHA-512 over the **extracted `$id-$version/` directory contents**. Before loading a plugin, re-hash its directory and compare to the committed entry.
 
-- Good, because the trusted hash is owned by the pipeline and committed to VCS — the registry is not trusted at verification time.
-- Good, because the pinned hash is content-addressed (computed over the bytes), so it survives registry compromise on all runs *after* the lock was honestly generated (trust-on-first-use).
-- Good, because it adds a reproducibility / drift anchor the registry cannot silently move.
-- Good, because verification of a locally-present archive is network-free.
-- Good, because archive hashing is deterministic and cheap (one hash of one zip), with no extraction-ordering pitfalls.
-- Bad (accepted), because it requires **retaining** the archive in the cache — a new persisted artifact with size and lifecycle cost (see *Tradeoff: retaining the archive*), and one an attacker can simply ignore.
-- Bad (accepted), because on a warm cache the thing that actually executes is the extracted tree, not the retained zip — so re-hashing the zip protects only a *future* re-extraction, not the current run (see *Threat model* and *Known residual*). Warm-run integrity of the executed code rests on the #7308 guard.
-- Bad (accepted), because a cache extracted *before* this feature has no retained archive, so its archive cannot be verified offline; the design degrades safely rather than re-downloading (see *Migration and first adoption*).
+- Good, because it hashes exactly the bytes that get executed, so a **single** hash covers supply-chain/drift **and** cache poisoning.
+- Good, because it uses **no ownership/permission heuristic** — it is silent on any legitimate cache (private, shared read-only, admin service-account) and speaks only on a real content mismatch. This eliminates the false-positive/warning-noise problem of a directory-ownership guard.
+- Good, because it needs **no retained archive** (no doubled footprint) and has **no "archive absent" case** — the extracted tree is always present when a plugin loads.
+- Good, because verification of a locally-present directory is network-free.
+- Bad (accepted), because it must re-hash the extracted tree; for large cloud plugins this cost is non-trivial and motivates the caching optimisation described below.
+- Bad (accepted), because, like any lockfile, the first pin is trust-on-first-use — it trusts the artifact present when the coordinate is first seen.
 
 ## Solution or decision outcome
 
-**Option C — committed archive-hash lockfile with download-gate and retain-and-re-verify** — is the recommended approach. It places a content-addressed trust anchor in the pipeline repository, keeps verification network-free whenever the archive is locally present, never re-fetches from the registry as a verification remedy, and composes cleanly with the extracted-directory guard from PR #7308 rather than duplicating it.
+**Option C — committed extracted-tree-hash lockfile** — is adopted. It places a content-addressed, user-owned trust anchor over the code that actually runs, keeps verification network-free, produces no ownership-based false positives, and with one mechanism covers both the supply-chain surface (Option B's goal) and the cache-poisoning surface (PR #7308's goal). It therefore **supersedes** both the archive-hash approach and the directory-ownership guard.
 
 ## Rationale & discussion
 
 ### Threat model
 
-The lockfile's genuine contribution (beyond what pf4j's `CompoundVerifier` already does at download time) is:
+- **Cache poisoning of the executed code.** A lower-trust user edits the extracted `$id-$version/` tree on a shared/writable cache. Re-hashing the tree at load detects any change to the files, **independently of who owns the directory or its permissions** — so it catches cases an ownership heuristic misses (e.g. a group-writable cache owned by a trusted service account) and never mis-fires on a legitimate read-only shared cache.
+- **Registry/mirror compromise and drift.** A tampered archive extracts to a different tree, so its hash no longer matches the committed entry. This holds on every run after the lock was honestly generated.
+- **In-transit corruption.** Already caught by `CompoundVerifier`; not a lockfile novelty.
 
-- **Removing runtime trust in the registry-supplied hash** — a compromised registry/mirror that serves a tampered archive with a matching tampered hash passes today's `CompoundVerifier`, but fails against the committed content hash. This holds on every run after the lock was honestly generated.
-- **Silent version drift** — a coordinate resolving to a different artifact fails against the committed hash.
-- **A committed reproducibility baseline** for teams that vendor or mirror plugins.
-
-What the lockfile does **not** defend:
-
-- **In-transit corruption** — already caught by `CompoundVerifier`; not a lockfile novelty.
-- **A poisoned *extracted* cache** — this is the important honesty point. On a warm cache Nextflow loads and executes the extracted `$id-$version/` tree; the retained zip is not what runs. An attacker who can write to the plugin cache will simply modify the extracted tree and leave the retained zip untouched, and the lockfile check passes while poisoned code executes. Re-hashing the archive therefore provides **essentially zero protection for what actually runs on a warm cache**; it only detects tampering of the archive itself, which matters solely if that archive is later re-extracted. Warm-run integrity of the executed plugin rests **entirely** on the `PluginSecurity` directory guard in **PR #7308**, which is a required complement, not optional.
-
-The two features compose:
-
-- the **lockfile** guarantees the *archive* you obtained (and retained) is the archive you committed to, and gates the cold-cache download and any future re-extraction;
-- the **#7308 directory guard** guarantees the *extracted tree* — the code that actually executes — has not been altered after extraction.
-
-This split is stated plainly: the lockfile must not be marketed as "surviving cache poisoning." It survives archive tampering; the directory guard survives extracted-file tampering.
+The first pin of each coordinate is **trust-on-first-use**: it trusts the tree present when first seen (which, on a cold download, was just fetched and checked in transit against the registry hash). Once committed to VCS, every later run is anchored to that reviewed baseline and no longer trusts the registry or the cache.
 
 ### Lockfile format and location
 
 - **File name**: `plugins.lock`, in the pipeline project root next to `nextflow.config`, committed to VCS.
-- **Format**: JSON, chosen for diff-friendliness under code review.
+- **Format**: JSON, chosen for diff-friendliness under code review, with a stable (sorted) key order.
 - **Keying**: by resolved `id@version`.
 
 ```json
@@ -120,91 +99,75 @@ This split is stated plainly: the lockfile must not be marketed as "surviving ca
 }
 ```
 
-- `sha512` is the hash of the plugin **archive** (the zip), **computed over the downloaded archive bytes**. It is a content hash the pipeline owns, not a re-recording of the registry's `sha512sum`. (No `url` field is stored: it is not available at the point the archive is retained, and it would be provenance-only — never a trust input.)
+- `sha512` is a canonical hash of the **extracted directory tree**: for every regular file, in sorted relative-path order, the digest absorbs the relative path and the file bytes (not timestamps or permissions), so it is stable across extractions and platforms while detecting any change to executable content.
 
-### Generation — automatic on first download (trust-on-first-use)
+### Generation — automatic on first load (trust-on-first-use)
 
-There is **no dedicated `lock` command**. The lockfile is populated as a side effect of the normal plugin download, exactly as `go` writes `go.sum` and `npm` writes `package-lock.json` on first install:
+There is **no dedicated command**. The lockfile is populated as a side effect of loading a plugin, as `go` writes `go.sum` and `npm` writes `package-lock.json`:
 
 - The feature is dormant unless a `plugins.lock` file is present. To start, create an empty one (`touch plugins.lock`) and run the pipeline once.
-- On a **cold-cache download** the archive is being fetched anyway; Nextflow hashes the retained bytes. If the coordinate is **missing** from the lock, its computed hash is **appended** (trust-on-first-use). Reviewing the resulting diff and committing it establishes the baseline.
-- Because the pinned value is computed from the bytes actually received (not copied from registry metadata), it is a genuine content hash — the `go.sum` model — which is what makes the "survives registry compromise" property honest.
-- Trust model: TOFU. Pinning trusts the registry at the moment a coordinate is first seen; every run thereafter is anchored to the committed content hash and no longer trusts the registry. This is why the pinned lockfile is meant to be reviewed and committed to VCS.
+- The first time a coordinate is loaded and it is **missing** from the lock, its extracted-tree hash is **appended**. Reviewing the resulting diff and committing it establishes the baseline.
+- The pinned value is computed from the files on disk, so it is a genuine content hash.
 
-Auto-pinning only ever **adds a missing coordinate**. An entry already present is **never silently rewritten** — a downloaded archive whose hash differs from a committed entry is a verification *failure* (mode-gated below), not a silent update, exactly as `go.sum` refuses to quietly change a recorded hash. Re-pinning a legitimately changed plugin is an explicit action: delete the stale entry and re-run.
+Auto-pinning only ever **adds a missing coordinate**. An entry already present is **never silently rewritten** — a plugin whose tree differs from a committed entry is a verification *failure* (mode-gated below), not a silent update, exactly as `go.sum` refuses to quietly change a recorded hash. Re-pinning a legitimately changed plugin is explicit: delete the stale entry and re-run.
 
 ### Verification flow (in `PluginUpdater`)
 
-Verification happens during plugin resolution in `PluginUpdater`. **No branch of this flow ever re-fetches from the registry as a remedy** — fetching happens only to obtain a plugin that is genuinely absent from the cache, exactly as today.
+Verification happens once per plugin in `load0()`, immediately before `loadPluginFromPath()`, covering both a fresh download and a reused (warm) cache with the same code path. **No branch ever re-fetches from the registry as a remedy** — network access happens only to obtain a plugin genuinely absent from the cache, exactly as today.
 
-- **Cold cache (download path)**: the archive is downloaded to obtain the plugin regardless of the lockfile. After fetching the zip, compute its SHA-512. If the coordinate is **already locked**, compare against the committed entry — the **lock**, not the registry-supplied `sha512sum`, is authoritative. If the coordinate is **not yet locked**, append it (trust-on-first-use). Retain the zip in the cache (`$id-$version.zip` next to the extracted `$id-$version/` directory) so later runs can re-verify it offline.
-- **Warm cache, archive retained (extracted dir + retained zip present)**: re-hash the retained zip against the lock, offline. This gates a *future* re-extraction only; see the threat model for why it does not protect the currently-executing extracted tree.
-- **Warm cache, archive absent (extracted dir present, no retained zip)** — the universal state for every cache extracted before this feature (see *Migration and first adoption*): the plugin is already present and functional, so **do not download anything**. Verification of the archive is simply not possible offline for this cache. Behavior is:
-  - `strict` / `warn`: emit a one-time notice that the archive is unavailable for lockfile verification and that a fresh download (or re-vendoring the archive) is needed to establish an offline-verifiable baseline. **Do not abort** and **do not re-download** — a present, functioning plugin is never failed solely because its archive is missing and cannot be fetched offline. Integrity of the extracted tree for this run is provided by the #7308 directory guard.
-  - `off`: skip silently.
-- **Coordinate not in the lock**: on a cold download it is **auto-pinned** (trust-on-first-use, see *Generation*); on a warm cache with no retained archive there are no bytes to pin, so it is a silent no-op.
+- Compute the canonical hash of the extracted `$id-$version/` directory.
+- If the coordinate is **not in the lock** → append it (trust-on-first-use).
+- If it **matches** the committed entry → proceed.
+- If it **differs** → mode-gated (below).
 
-Verification of a **locally-present** archive requires no network. The one case where the archive is not present (a pre-feature cache) is handled without any network access, by design — it never falls back to a download.
+Verification of a locally-present directory requires no network. There is no "artifact absent" case: if a plugin is being loaded, its extracted directory exists by definition.
 
-#### Known residual (documented, not overclaimed)
+### Performance and the re-hash cost
 
-Re-hashing the retained zip proves the **archive** is intact. On a warm run it does **not** protect the code that actually executes: Nextflow runs the already-extracted `$id-$version/` tree, and re-hashing the zip verifies an artifact that is not the thing being run. For a warm run the archive re-verify is therefore effectively inert for the executed code — its only value is gating a subsequent re-extraction. Detection of extracted-file tampering — the integrity of what actually runs — is the responsibility of the `PluginSecurity` directory guard in PR #7308. This residual is expected and by design.
+Verification re-hashes the extracted directory on every load when a lockfile is present. For small plugins this is negligible next to JVM and Nextflow start-up; for large cloud plugins (bundled SDKs of tens to hundreds of MB) it is material.
 
-#### Tradeoff: retaining the archive
+The initial implementation performs the full hash each time and does **not** pre-optimise. A follow-up optimisation, added only once the cost is shown to matter, avoids the re-hash when nothing changed:
 
-Today Nextflow unzips the archive and immediately deletes it (`PluginUpdater.groovy:267-269`); a warm cache returns the extracted dir with no archive (`:259-262`). This ADR changes that for locked plugins by keeping `$id-$version.zip` alongside the extracted directory. Costs and caveats:
+- Keep a **local, non-committed** sidecar (e.g. under `$NXF_PLUGINS_DIR`) recording, per plugin, the last verified tree hash and a cheap fingerprint of the tree — the set of `(relative-path, size, mtime)`.
+- On load, stat the files (no reads) and rebuild the fingerprint; if it is unchanged and the lock entry is unchanged, reuse the last verified result and skip the full hash.
+- **Safety of the shortcut:** `mtime`/`size` are forgeable by anyone who can write the files, so the fingerprint shortcut is trusted **only when the cache cannot change under you** — i.e. a directory you own that is not writable by group or others. On a shared/writable cache the fingerprint is not trusted and the full hash always runs. Ownership is thus used to select the *strategy* (fast vs full), never to emit a warning — so the noise problem of an ownership guard does not reappear.
 
-- **Cache size**: roughly doubles on-disk footprint per plugin (compressed archive + extracted tree). Acceptable for the reproducibility/offline benefit; could be scoped to locked plugins only.
-- **Lifecycle**: the retained zip must be cleaned up with the plugin directory and re-written on re-download.
-- **Attacker can ignore it**: retaining the zip adds no protection for the running code — an attacker edits the extracted tree and leaves the zip untouched, and the check still passes. This is precisely why the #7308 directory guard is a required complement.
-
-### Migration and first adoption
-
-Because current code deletes the archive right after extraction (`PluginUpdater.groovy:267-269`) and warm-cache resolution returns the extracted directory with no archive (`:259-262`), **every plugin cache that predates this feature has no retained archive**. This is the *universal initial state* on first adoption, not an edge case.
-
-Consequences, stated plainly:
-
-- On the first lockfile-enabled run against a pre-existing cache — including an air-gapped one — plugins are already extracted and functional. The archive-absent branch above applies: Nextflow does **not** re-download, does **not** abort in strict mode, and simply notes that an offline-verifiable archive baseline has not yet been established. No network is required and no false abort occurs.
-- An offline-verifiable archive baseline is established the next time each plugin is downloaded through the gate (cold cache) once a `plugins.lock` file exists, at which point the archive is retained and the coordinate pinned.
-- **Air-gapped teams that vendor or mirror plugins** typically ship the extracted `$id-$version/` directories, not the `.zip` archives. To get *archive-level* offline verification in such an environment, the archives must be vendored too — i.e. the mirror/vendor step must include the retained `$id-$version.zip` files (produced by running the pipeline once against the registry in a connected environment, then committing/shipping the archives alongside the lockfile). Absent that, air-gapped runs fall into the archive-absent branch and rely on the #7308 directory guard for the extracted tree — which is safe and network-free, but is not archive verification. The only alternative that would make archive-free caches offline-verifiable is deriving the lock hash from the extracted tree (deferred Option B).
+This keeps steady-state launches on a private cache nearly free, runs the full hash exactly where tampering is possible, and stays silent in all cases except a genuine mismatch.
 
 ### Modes and rollout
 
-- **Opt-in by presence**: if no `plugins.lock` exists, the feature is dormant and behavior is unchanged — zero breakage for existing pipelines.
-- When the file exists, behavior is controlled by `NXF_PLUGINS_LOCK_MODE`, reusing the `warn`/`strict`/`off` tri-state plumbing introduced by PR #7308's `NXF_PLUGINS_STRICT_MODE`, but **independent** from it (the two knobs can be set separately).
+- **Opt-in by presence**: no `plugins.lock` → dormant, behaviour unchanged, zero breakage.
+- When the file exists, mismatch behaviour is controlled by `NXF_PLUGINS_LOCK_MODE`, reusing the `warn`/`strict`/`off` tri-state plumbing pattern from PR #7308's `NXF_PLUGINS_STRICT_MODE`, but independent from it.
 
-Mode gates only the **hash-mismatch** outcome. A coordinate *missing* from the lock is auto-pinned (see *Generation*), not gated; an *absent* archive is never gated (never aborts).
+| Mode | Tree hash mismatch (locked entry) | Coordinate missing from lock |
+|------|-----------------------------------|------------------------------|
+| `strict` | **Abort** with a re-pin hint | Auto-pin (trust-on-first-use) |
+| `warn` (default when the file is present) | Log a warning once and proceed | Auto-pin |
+| `off` | Skip verification | Auto-pin |
 
-| Mode | Hash mismatch (locked entry) | Coordinate missing from lock | Archive absent (pre-feature cache) |
-|------|------------------------------|------------------------------|-------------------------------------|
-| `strict` | **Abort** with a re-pin hint | Auto-pin (cold) / no-op (warm) | Notice only, proceed (never abort) |
-| `warn` (default when the file is present) | Log a warning once and proceed | Auto-pin (cold) / no-op (warm) | Notice only, proceed |
-| `off` | Skip verification | Auto-pin (cold) / no-op (warm) | Skip silently |
+Mode gates only the **mismatch** outcome. A coordinate missing from the lock is auto-pinned, not gated. Default is `warn` for a friendly rollout; `strict` is opt-in for teams that want a fail-closed guarantee. Unlike a directory-ownership guard, **either default is silent in normal operation** — a mismatch is a real, rare, actionable event, not per-run noise on healthy caches.
 
-**Default is `warn` when a lockfile is present**, deliberately mirroring PR #7308's warn-first rollout philosophy (`NXF_PLUGINS_STRICT_MODE` defaults to `warn`). This was a considered choice: an earlier draft proposed `strict`-when-present on the reasoning that a committed lockfile expresses intent to enforce. That was rejected because it diverges from the #7308 rollout philosophy this feature otherwise mirrors, and because it produces a surprising hard failure in the one gated case — a plugin whose committed lock entry is legitimately stale (e.g. the archive was re-released) would hard-abort until the entry is deleted and re-pinned. `warn`-by-default surfaces the drift without breaking the run; teams that want enforcement opt into `strict` explicitly (a staged `warn` → `strict` rollout), exactly as with #7308. (Note the auto-pin model already removes the most common friction: a *new or bumped* coordinate is pinned on first download rather than aborting, even in `strict`.)
+### Relationship to PR #7308
 
-Independently of mode, a **present and functioning plugin is never aborted solely because its archive is missing** and cannot be fetched offline (the archive-absent column above) — this avoids a false-positive failure on precisely the air-gapped caches the feature is meant to serve.
+PR #7308 proposed a `PluginSecurity` directory guard that flags a plugin directory as untrusted when it is foreign-owned or world-writable, to defend the extracted tree on shared caches. This ADR's extracted-tree hash defends the **same** surface by content instead of by ownership, which is both stronger (it catches any modification regardless of ownership, including the group-writable-trusted-owner case the heuristic misses) and quieter (it never warns on a legitimate shared/read-only cache). It also covers the supply-chain surface the guard did not. This mechanism therefore **supersedes PR #7308**, which can be closed in its favour. The zero-config baseline for the extracted-tree surface remains the operational guidance to keep the plugin cache private (per-user); the lockfile is the committed, enforceable layer on top for teams that want it.
 
 ### Reused and new components
 
 | Component | Module | Change |
 |-----------|--------|--------|
 | `PluginLockFile` (new) | nf-commons | Read/write/round-trip of `plugins.lock`; blank/malformed-file handling |
-| `PluginLockVerifier` (new) | nf-commons | Auto-pin on first download (TOFU); re-verify retained archive; archive-absent handling; mode gating |
-| `PluginUpdater` | nf-commons | Cold-cache: retain zip + verify/pin; warm-cache: re-verify retained zip. No dedicated command |
+| `PluginLockVerifier` (new) | nf-commons | Canonical extracted-tree hash; auto-pin on first load (TOFU); mismatch mode gating |
+| `PluginUpdater` | nf-commons | Verify/pin the extracted directory in `load0()` before loading. No retained archive, no dedicated command |
 | `HttpPluginRepository` | nf-commons | No change — `CompoundVerifier` still checks downloads against the registry `sha512sum` at fetch time |
 | `NXF_PLUGINS_LOCK_MODE` | nf-commons | New env var, tri-state (`strict`/`warn`/`off`), default `warn`, independent of `NXF_PLUGINS_STRICT_MODE` |
 
-### Relationship to PR #7308
-
-PR #7308 introduces the `PluginSecurity` directory guard, which protects the **extracted** plugin directory — the code that actually executes — and the `NXF_PLUGINS_STRICT_MODE` tri-state plumbing (default `warn`). This ADR's lockfile is the **sibling** feature protecting the **archive**, reusing the same mode-plumbing pattern and the same warn-first default under a separate, independent switch. Together they cover both integrity surfaces — archive and extracted tree — without either overclaiming the other's protection. Critically, warm-run integrity of executing code depends on the #7308 guard; the lockfile does not substitute for it.
-
 ## Testing
 
-- **`PluginLockFile`**: read, write, and round-trip of `plugins.lock`; blank/`touch`ed file parses as empty; malformed file throws.
-- **Auto-pin (TOFU)**: an enabled but empty lock, given a downloaded archive for an unlocked coordinate, appends the **byte-computed** hash to the file on disk; a dormant (no file) verifier never pins.
+- **`PluginLockFile`**: read, write, round-trip; blank/`touch`ed file parses as empty; malformed file throws.
+- **`sha512Tree`**: identical trees in different locations hash equal; any file-content change changes the hash; output is a 128-char lowercase hex digest.
+- **Auto-pin (TOFU)**: an enabled but empty lock, given an extracted directory for an unlocked coordinate, appends the tree hash to the file on disk; a dormant (no file) verifier never pins.
 - **Verification**:
-  - matching hash passes;
+  - matching tree passes;
   - mismatch **aborts** in `strict`, **warns once** in `warn`, is **ignored** in `off`;
-  - **archive-absent (pre-feature cache)**: with a locked coordinate but no retained zip, the run proceeds in `strict` with a notice, performs **no download**, and never aborts.
-- **No-network guarantee**: verification and pinning operate purely on locally-present bytes; no branch re-fetches from the registry as a remedy.
+  - **cache poisoning**: pinning a good tree then editing an extracted file in place is detected as a mismatch — regardless of directory ownership.
+- **No-network guarantee**: verification and pinning operate purely on local files; no branch re-fetches from the registry.
