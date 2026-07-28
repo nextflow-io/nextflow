@@ -223,14 +223,12 @@ class GitlabRepositoryProvider extends RepositoryProvider {
         if (depth > 1) {
             params.add("recursive=true")
         }
+        params.add("per_page=${MAX_PER_PAGE}")
 
-        if (params) {
-            url += "?" + params.join("&")
-        }
+        url += "?" + params.join("&")
 
-        // Make the API call and parse response
-        String response = invoke(url)
-        List<Map> treeEntries = response ? new JsonSlurper().parseText(response) as List<Map> : []
+        // Make the API call and parse response, fetching all pages
+        List<Map> treeEntries = this.<Map>invokeAndResponseWithPaging(url, { Map entry -> entry })
 
         if (!treeEntries) {
             return []

@@ -260,6 +260,34 @@ class GitlabRepositoryProviderTest extends Specification {
         entries.every { it.path && it.sha }
     }
 
+    def 'should follow all GitLab pagination links when listing a directory' () {
+        given:
+        def provider = Spy(GitlabRepositoryProvider, constructorArgs: ['pditommaso/hello', new ProviderConfig('gitlab')])
+        provider.setRevision('main')
+        and:
+        def base = 'https://gitlab.com/api/v4/projects/pditommaso%2Fhello/repository/tree?ref=main&per_page=100'
+        int page = 0
+
+        when:
+        def entries = provider.listDirectory('/', 1)
+
+        then:
+        101 * provider.invokeResponse(_ as String) >> { String url ->
+            page++
+            assert url == (page == 1 ? base : "${base}&page=${page}")
+            final next = page < 101 ? "${base}&page=${page + 1}" : null
+            final link = next ? "<${next}>; rel=\"next\"" : null
+            response(
+                url,
+                """[{"id":"sha-${page}","name":"file-${page}.nf","type":"blob","path":"file-${page}.nf"}]""",
+                link
+            )
+        }
+        and:
+        entries.size() == 101
+        entries.every { it.type == RepositoryProvider.EntryType.FILE && it.path && it.sha }
+    }
+
     def 'should follow GitLab pagination links when listing branches' () {
         given:
         def provider = Spy(GitlabRepositoryProvider, constructorArgs: ['pditommaso/hello', new ProviderConfig('gitlab')])
