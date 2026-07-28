@@ -1878,6 +1878,8 @@ The maximum number of concurrent vCPUs a single user may consume across all of t
 
 A task whose own `cpus` request exceeds this cap is failed outright rather than throttled, so keep the cap at least as large as the largest per-task `cpus` request (or clamp requests with `process.resourceLimits.cpus`). Runs that fit within the cap but exceed it in aggregate are queued and admitted on later scheduling cycles.
 
+Set from a run's own configuration, this is a per-run setting applied to the submitting user rather than an administrator-enforced quota. When the run is launched through Seqera Platform, the value configured on the compute environment is used instead.
+
 ###### `seqera.executor.retryPolicy.delay`
 
 The initial delay when a failing HTTP request is retried (default: `'450ms'`).
