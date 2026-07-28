@@ -495,7 +495,7 @@ class FilesEx {
             return true
         }
         catch(IOException e) {
-            log.debug "Failed to create directory '$self'", e
+            log.debug "Failed to create directory '${toUriString(self)}'", e
             return false
         }
     }
@@ -515,7 +515,7 @@ class FilesEx {
             Files.isReadable(self)
         }
         catch( IOException e ) {
-            log.trace("Cannot get read permission on file: $self -- Cause: ${e.getMessage()}")
+            log.trace("Cannot get read permission on file '${toUriString(self)}' -- Cause: ${e.getMessage()}")
             return false
         }
     }
@@ -536,7 +536,7 @@ class FilesEx {
             Files.isWritable(self)
         }
         catch( IOException e ) {
-            log.trace("Cannot get write permission on file: $self -- Cause: ${e.getMessage()}")
+            log.trace("Cannot get write permission on file '${toUriString(self)}' -- Cause: ${e.getMessage()}")
             return false
         }
     }
@@ -560,7 +560,7 @@ class FilesEx {
             Files.isExecutable(self)
         }
         catch( IOException e ) {
-            log.trace("Cannot get execute permission on file: $self -- Cause: ${e.getMessage()}")
+            log.trace("Cannot get execute permission on file '${toUriString(self)}' -- Cause: ${e.getMessage()}")
             return false
         }
     }
@@ -590,7 +590,7 @@ class FilesEx {
             Files.getLastModifiedTime(self,options).toMillis()
         }
         catch( IOException e ) {
-            log.trace "Cannot get lastModified time on file: $self -- Cause: ${e.getMessage()}"
+            log.trace "Cannot get lastModified time on file '${toUriString(self)}' -- Cause: ${e.getMessage()}"
             return 0
         }
     }

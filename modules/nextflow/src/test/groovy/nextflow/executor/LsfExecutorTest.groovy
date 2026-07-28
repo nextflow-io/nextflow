@@ -471,7 +471,7 @@ class LsfExecutorTest extends Specification {
         // executor stub object
         def executor = createExecutor()
         then:
-        executor.killTaskCommand('12345').join(' ') == 'bkill 12345'
+        executor.killTaskCommand('12345').join(' ') == 'bkill -d 12345'
 
     }
 

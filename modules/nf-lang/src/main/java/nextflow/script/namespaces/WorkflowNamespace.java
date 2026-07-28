@@ -116,7 +116,7 @@ public interface WorkflowNamespace extends Namespace {
 
     @Constant("manifest")
     @Description("""
-        Namespace corresponding to the [manifest](https://nextflow.io/docs/latest/reference/config.html#manifest) config scope.
+        Namespace corresponding to the [manifest](https://docs.seqera.io/nextflow/reference/config#manifest) config scope.
     """)
     ManifestNamespace getManifest();
 

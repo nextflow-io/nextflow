@@ -37,9 +37,7 @@ import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.TupleParameter;
 import nextflow.script.ast.WorkflowNode;
-import nextflow.script.types.Types;
 import org.codehaus.groovy.ast.ClassNode;
-import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.expr.EmptyExpression;
 import org.codehaus.groovy.ast.expr.Expression;
@@ -204,10 +202,6 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitParams(ParamBlockNode node) {
-        var alignmentWidth = options.harshilAlignment()
-            ? maxParameterWidth(node.declarations)
-            : 0;
-
         fmt.appendLeadingComments(node);
         fmt.append("params {\n");
         fmt.incIndent();
@@ -216,10 +210,6 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             fmt.appendIndent();
             fmt.append(param.getName());
             if( fmt.hasType(param) ) {
-                if( alignmentWidth > 0 ) {
-                    var padding = alignmentWidth - param.getName().length() + 1;
-                    fmt.append(" ".repeat(padding));
-                }
                 fmt.append(": ");
                 fmt.visitTypeAnnotation(param.getType());
             }
@@ -231,12 +221,6 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         }
         fmt.decIndent();
         fmt.append("}\n");
-    }
-
-    private static int maxParameterWidth(Parameter[] parameters) {
-        return Arrays.stream(parameters)
-            .map(param -> parameterWidth(param))
-            .max(Integer::compare).orElse(0);
     }
 
     @Override
@@ -312,49 +296,55 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
     }
 
     private void visitTypedInputs(Parameter[] inputs) {
-        var alignmentWidth = options.harshilAlignment()
-            ? maxParameterWidth(inputs)
-            : 0;
-
         for( var input : inputs ) {
             fmt.appendIndent();
             if( input instanceof TupleParameter tp ) {
-                var components = Arrays.stream(tp.components)
-                    .map(p -> p.getName())
-                    .collect(Collectors.joining(", "));
-                fmt.append('(');
-                fmt.append(components);
-                fmt.append(')');
+                visitStructuredInput(tp);
             }
             else {
-                fmt.append(input.getName());
-            }
-            if( fmt.hasType(input) ) {
-                if( alignmentWidth > 0 ) {
-                    var padding = alignmentWidth - parameterWidth(input) + 1;
-                    fmt.append(" ".repeat(padding));
-                }
-                fmt.append(": ");
-                var type = input.getType();
-                if( type.getNameWithoutPackage().startsWith("__Record") )
-                    visitProcessInputRecordType((RecordNode) type.redirect());
-                else
-                    fmt.visitTypeAnnotation(type);
+                visitTypedInput(input);
             }
             fmt.appendTrailingComment(input);
             fmt.appendNewLine();
         }
     }
 
-    private static int parameterWidth(Parameter param) {
-        return param instanceof TupleParameter tp
-            ? Arrays.stream(tp.components).mapToInt(p -> 2 + p.getName().length()).sum()
-            : param.getName().length();
+    private void visitStructuredInput(TupleParameter tp) {
+        var isRecord = "Record".equals(tp.getType().getNameWithoutPackage());
+        var wrap = isRecord;
+
+        fmt.append(isRecord ? "record" : "tuple");
+        fmt.append('(');
+        if( wrap )
+            fmt.incIndent();
+        for( int i = 0; i < tp.components.length; i++ ) {
+            var p = tp.components[i];
+            if( wrap ) {
+                fmt.appendNewLine();
+                fmt.appendIndent();
+            }
+            fmt.append(p.getName());
+            if( fmt.hasType(p) ) {
+                fmt.append(": ");
+                fmt.visitTypeAnnotation(p.getType());
+            }
+            if( i < tp.components.length - 1 )
+                fmt.append(wrap ? "," : ", ");
+        }
+        if( wrap ) {
+            fmt.appendNewLine();
+            fmt.decIndent();
+            fmt.appendIndent();
+        }
+        fmt.append(')');
     }
 
-    private void visitProcessInputRecordType(RecordNode type) {
-        fmt.append("Record");
-        visitRecordBody(type);
+    private void visitTypedInput(Parameter node) {
+        fmt.append(node.getName());
+        if( fmt.hasType(node) ) {
+            fmt.append(": ");
+            fmt.visitTypeAnnotation(node.getType());
+        }
     }
 
     private void visitTypedOutputs(List<Statement> outputs) {
@@ -599,20 +589,12 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
     }
 
     private void visitRecordBody(RecordNode node) {
-        var alignmentWidth = options.harshilAlignment()
-            ? maxFieldWidth(node.getFields())
-            : 0;
-
         fmt.append(" {\n");
         fmt.incIndent();
         for( var fn : node.getFields() ) {
             fmt.appendIndent();
             fmt.append(fn.getName());
             if( fmt.hasType(fn) ) {
-                if( alignmentWidth > 0 ) {
-                    var padding = alignmentWidth - fn.getName().length() + 1;
-                    fmt.append(" ".repeat(padding));
-                }
                 fmt.append(": ");
                 fmt.visitTypeAnnotation(fn.getType());
             }
@@ -621,12 +603,6 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.decIndent();
         fmt.appendIndent();
         fmt.append("}");
-    }
-
-    private int maxFieldWidth(List<FieldNode> fields) {
-        return fields.stream()
-            .map(fn -> fn.getName().length())
-            .max(Integer::compare).orElse(0);
     }
 
     @Override

@@ -21,15 +21,18 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import io.seqera.executor.Labels
 import io.seqera.sched.api.schema.v1a1.AcceleratorType
 import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
 import io.seqera.sched.api.schema.v1a1.NextflowTask
+import io.seqera.sched.api.schema.v1a1.PredictionModel
 import io.seqera.sched.api.schema.v1a1.ResourceLimit
 import io.seqera.sched.api.schema.v1a1.ResourceRequirement
 import io.seqera.sched.api.schema.v1a1.Task
 import io.seqera.sched.api.schema.v1a1.TaskState as SchedTaskState
 import io.seqera.sched.api.schema.v1a1.TaskStatus as SchedTaskStatus
 import io.seqera.sched.client.SchedClient
+import io.seqera.util.HintHelper
 import io.seqera.util.SchemaMapperUtil
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.exception.ProcessException
@@ -113,12 +116,21 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
                 resourceReq.acceleratorName(accelerator.type)
         }
         // build machine requirement merging config settings with task arch, disk, and snapshot settings
-        final machineReq = SchemaMapperUtil.toMachineRequirement(
+        // overlay any seqera/machineRequirement.* hints on top of config-scope values (hints win)
+        final baseMachineOpts = HintHelper.overlayHints(
             executor.getSeqeraConfig().machineRequirement,
+            task.config.getHints()
+        )
+        final machineReq = SchemaMapperUtil.toMachineRequirement(
+            baseMachineOpts,
             task.getContainerPlatform(),
             task.config.getDisk(),
             fusionConfig().snapshotsEnabled()
         )
+        // resolve optional per-task prediction model override from the seqera/predictionModel hint;
+        // when unset the task inherits the run-level model
+        final predictionModelHint = HintHelper.resolvePredictionModel(task.config.getHints())
+        final predictionModel = predictionModelHint ? PredictionModel.fromValue(predictionModelHint) : null
         // build resource limit from process resourceLimits directive (upper bound for OOM retry scaling)
         final resourceLim = toResourceLimit()
         // validate container - Seqera executor requires all processes to specify a container image
@@ -134,13 +146,46 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             .resourceRequirement(resourceReq)  // cpu, memory, accelerators
             .resourceLimit(resourceLim)         // resource upper bounds for OOM retry
             .machineRequirement(machineReq)    // machine type and disk requirements
+            .predictionModel(predictionModel)  // optional per-task prediction model override
             .nextflow(new NextflowTask()
                 .taskId(task.id?.intValue())
                 .hash(task.hash?.toString())
                 .workDir(task.getWorkDirStr()))
+        // attach per-task resource labels delta (over run-level baseline)
+        final taskLabels = Labels.toStringMap(task.config.getResourceLabels())
+        final delta = Labels.delta(taskLabels, executor.runResourceLabels)
+        if( delta )
+            schedTask.labels(delta)
+        // attach pipeline secret references (never values) — resolved at the compute edge
+        final secretRefs = buildSecretRefs()
+        if( secretRefs )
+            schedTask.secrets(secretRefs)
         log.debug "[SEQERA] Enqueueing task for batch submission: ${schedTask}"
         // Enqueue for batch submission - status will be set by setBatchTaskId callback
         executor.getBatchSubmitter().submit(this, schedTask)
+    }
+
+    /**
+     * Build the map of container environment variable name to the pipeline secret store
+     * reference for each {@code secret} process directive.
+     *
+     * Platform stores the secret value in the cloud secret store under
+     * {@code tower-<workflowId>/<name>}; the executor sends only this reference and the
+     * scheduler backend resolves the value at the compute edge. The secret value never
+     * passes through Nextflow or the scheduler API.
+     *
+     * Returns {@code null} when there are no secret directives or no Platform workflow id
+     * (bare-scheduler usage has no store, so a missing reference is a no-op).
+     */
+    protected Map<String, String> buildSecretRefs() {
+        final names = task.config.getSecret()
+        final workflowId = executor.getWorkflowId()
+        if( !names || !workflowId )
+            return null
+        final result = new LinkedHashMap<String, String>()
+        for( String name : names )
+            result.put(name, "tower-${workflowId}/${name}".toString())
+        return result
     }
 
     /**
@@ -223,7 +268,13 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         if (isTerminated(schedStatus)) {
             log.debug "[SEQERA] Process `${task.lazyName()}` - terminated taskId=$taskId; status=$schedStatus"
             // finalize the task
-            task.exitStatus = readExitFile()
+            // prefer the exit code reported by the scheduler API; fall back to the `.exitcode`
+            // file only when the API does not report one. On error (e.g. OOM, spot reclaim,
+            // timeout) the container may terminate before the wrapper's on_exit trap can write
+            // the file, so the scheduler exit code is the more reliable source — consistent with
+            // the K8s, AWS Batch and Azure Batch executors.
+            final apiExitCode = cachedTaskState?.getExitCode()
+            task.exitStatus = apiExitCode != null ? apiExitCode : readExitFile()
             if (isFailed(schedStatus)) {
                 // When no exit code available, get the error message from task state
                 if (task.exitStatus == Integer.MAX_VALUE) {
@@ -358,8 +409,45 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         return cachedTaskState?.getId()
     }
 
+    /**
+     * Get the allocated resources for this task from the last task attempt.
+     * Falls back to the resource requirement from the task state if no attempts exist.
+     *
+     * @return a map of allocated resource fields, or null if not available
+     */
+    protected Map<String,Object> getResourceAllocation() {
+        if (!cachedTaskState)
+            return null
+
+        def resources = null
+        final attempts = cachedTaskState.getAttempts()
+        if (attempts && !attempts.isEmpty()) {
+            resources = attempts.get(attempts.size() - 1).getResources()
+        }
+        if (!resources) {
+            resources = cachedTaskState.getResourceAllocation()
+        }
+        if (!resources)
+            return null
+
+        final result = new LinkedHashMap<String,Object>()
+        if (resources.getCpuShares() != null)
+            result.put('cpuShares', resources.getCpuShares())
+        if (resources.getMemoryMiB() != null)
+            result.put('memoryMiB', resources.getMemoryMiB())
+        if (resources.getAcceleratorCount() != null)
+            result.put('acceleratorCount', resources.getAcceleratorCount())
+        if (resources.getAcceleratorType() != null)
+            result.put('acceleratorType', resources.getAcceleratorType().toString())
+        if (resources.getAcceleratorName() != null)
+            result.put('acceleratorName', resources.getAcceleratorName())
+        if (resources.getTime() != null)
+            result.put('time', resources.getTime())
+        return result.isEmpty() ? null : result
+    }
+
     protected Long getGrantedTime() {
-        final time = cachedTaskState?.getResourceRequirement()?.getTime()
+        final String time = cachedTaskState?.getResourceAllocation()?.getTime()
         return time != null ? Duration.of(time).toMillis() : task.config.getTime()?.toMillis()
     }
 
@@ -375,6 +463,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         result.machineInfo = getMachineInfo()
         result.numSpotInterruptions = getNumSpotInterruptions()
         result.logStreamId = getLogStreamId()
+        result.resourceAllocation = getResourceAllocation()
         // Override executor name to include cloud backend for cost tracking
         result.executorName = "${SeqeraExecutor.SEQERA}/aws"
         return result

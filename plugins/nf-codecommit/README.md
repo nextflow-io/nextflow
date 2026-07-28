@@ -66,7 +66,7 @@ nextflow run codecommit://my-repo/main.nf
 ## Resources
 
 - [AWS CodeCommit Documentation](https://docs.aws.amazon.com/codecommit/)
-- [Nextflow Pipeline Sharing](https://nextflow.io/docs/latest/sharing.html)
+- [Nextflow Pipeline Sharing](https://docs.seqera.io/nextflow/sharing)
 
 ## License
 

@@ -173,6 +173,10 @@ class ProcessConfig implements Map<String,Object>, Cloneable {
         HashMode.of(configProperties.cache) ?: HashMode.DEFAULT()
     }
 
+    Map<String,Object> getHints() {
+        (configProperties.get('hints') ?: Collections.emptyMap()) as Map<String, Object>
+    }
+
     Map<String,Object> getResourceLabels() {
         (configProperties.get('resourceLabels') ?: Collections.emptyMap()) as Map<String, Object>
     }

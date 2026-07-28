@@ -16,6 +16,10 @@
 
 package nextflow.k8s
 
+import java.util.concurrent.TimeUnit
+
+import com.google.common.cache.Cache
+import com.google.common.cache.CacheBuilder
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
@@ -41,12 +45,17 @@ import org.pf4j.ExtensionPoint
 class K8sExecutor extends Executor implements ExtensionPoint {
 
     /**
-     * The Kubernetes HTTP client
+     * Cache for the Kubernetes HTTP client. The client is refreshed periodically
+     * so that the service account token is re-read when it expires.
      */
-    private K8sClient client
+    private Cache<String, K8sClient> clientCache
 
+    /**
+     * @return The Kubernetes HTTP client. Delegates to a Guava cache that refreshes
+     * the client (including the service account token) when the configured interval expires.
+     */
     protected K8sClient getClient() {
-        client
+        clientCache.get('client', () -> new K8sClient(k8sConfig.getClient()))
     }
 
     /**
@@ -64,9 +73,12 @@ class K8sExecutor extends Executor implements ExtensionPoint {
     protected void register() {
         super.register()
         final k8sConfig = getK8sConfig()
-        final clientConfig = k8sConfig.getClient()
-        this.client = new K8sClient(clientConfig)
-        log.debug "[K8s] config=$k8sConfig; API client config=$clientConfig"
+        final refreshInterval = k8sConfig.clientRefreshInterval
+        this.clientCache = CacheBuilder.newBuilder()
+            .expireAfterWrite(refreshInterval.toMillis(), TimeUnit.MILLISECONDS)
+            .build()
+        final client = getClient()
+        log.debug "[K8s] config=$k8sConfig; API client config=$client.config"
     }
 
     /**

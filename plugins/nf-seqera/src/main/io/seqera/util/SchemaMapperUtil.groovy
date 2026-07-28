@@ -63,10 +63,9 @@ class SchemaMapperUtil {
             return null
         final diskReq = toDiskRequirement(opts.diskSize, opts)
         final capacityMode = toEcsCapacityMode(opts.capacityMode)
-        if (!opts.arch && !opts.provisioning && !opts.maxSpotAttempts && !opts.machineTypes && !diskReq && !capacityMode)
+        if (!opts.provisioning && !opts.maxSpotAttempts && !opts.machineTypes && !diskReq && !capacityMode)
             return null
         new MachineRequirement()
-            .arch(opts.arch)
             .provisioning(toProvisioningModel(opts.provisioning))
             .maxSpotAttempts(opts.maxSpotAttempts)
             .machineTypes(opts.machineTypes)
@@ -76,7 +75,6 @@ class SchemaMapperUtil {
 
     /**
      * Maps MachineRequirementOpts to MachineRequirement API object, merging with task arch.
-     * Task arch overrides config arch if specified.
      *
      * @param opts the config options (can be null)
      * @param taskArch the task container platform/arch (can be null)
@@ -88,7 +86,6 @@ class SchemaMapperUtil {
 
     /**
      * Maps MachineRequirementOpts to MachineRequirement API object, merging with task arch, disk, and snapshots.
-     * Task arch overrides config arch if specified.
      *
      * @param opts the config options (can be null)
      * @param taskArch the task container platform/arch (can be null)
@@ -97,7 +94,7 @@ class SchemaMapperUtil {
      * @return the MachineRequirement API object, or null if no settings
      */
     static MachineRequirement toMachineRequirement(MachineRequirementOpts opts, String taskArch, MemoryUnit diskSize, boolean snapshotEnabled) {
-        final arch = taskArch ?: opts?.arch
+        final arch = taskArch
         final provisioning = opts?.provisioning
         final maxSpotAttempts = opts?.maxSpotAttempts
             ?: (snapshotEnabled ? FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS : null)

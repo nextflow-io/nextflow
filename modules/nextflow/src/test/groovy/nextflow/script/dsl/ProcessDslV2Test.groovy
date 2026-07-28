@@ -40,7 +40,7 @@ class ProcessDslV2Test extends Specification {
         dsl._input_('infile', Path, false)
         dsl._input_('x', String, false)
         dsl._input_('y', String, false)
-        dsl.stageAs('filename.fa', { infile })
+        dsl.stageAs({ infile }, 'filename.fa')
         dsl.stdin { y }
 
         then:
@@ -112,7 +112,7 @@ class ProcessDslV2Test extends Specification {
         dsl.memory '10 GB'
         dsl._input_('foo', String, false)
         dsl._input_('sample', Path, false)
-        dsl.stageAs('sample.txt', { sample })
+        dsl.stageAs({ sample }, 'sample.txt')
         dsl._output_('result', Path, { file('$file0') })
         dsl._unstage_files('$file0', 'result.txt')
 

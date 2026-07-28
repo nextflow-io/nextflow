@@ -17,7 +17,13 @@
 package nextflow.scm
 
 import nextflow.config.Manifest
+import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.Git
+import org.eclipse.jgit.lib.ObjectId
+import org.eclipse.jgit.lib.RefUpdate
+import org.eclipse.jgit.transport.FetchResult
+import org.eclipse.jgit.transport.RefSpec
+import org.eclipse.jgit.transport.TrackingRefUpdate
 
 import static MultiRevisionRepositoryStrategy.BARE_REPO
 import static MultiRevisionRepositoryStrategy.REVISION_SUBDIR
@@ -209,6 +215,126 @@ class MultiRevisionRepositoryStrategyTest extends Specification {
         noExceptionThrown()
         // v1.2 ref is 1b420d060d3fad67027154ac48e3bdea06f058
         folder.resolve(REPOS_SUBDIR + '/nextflow-io/hello/' + REVISION_SUBDIR + '/1b420d060d3fad67027154ac48e3bdea06f058da/.git').isDirectory()
+    }
+
+    private TrackingRefUpdate mockUpdate(RefUpdate.Result result, String localName = 'refs/heads/main', String remoteName = 'refs/heads/main') {
+        Mock(TrackingRefUpdate) {
+            getResult() >> result
+            getLocalName() >> localName
+            getRemoteName() >> remoteName
+            getOldObjectId() >> ObjectId.fromString('3851da8d5cfe3f451dc1ff6d3f41e67b91cf2219')
+            getNewObjectId() >> ObjectId.fromString('d17b807dc70a0f88757addf4960b2d905b3b13bc')
+        }
+    }
+
+    def 'verifyFetchResult should pass silently for happy results'() {
+        given:
+        def strategy = new MultiRevisionRepositoryStrategy('test/project')
+        def fetchResult = Mock(FetchResult) {
+            getTrackingRefUpdates() >> [mockUpdate(resultCode)]
+        }
+
+        when:
+        strategy.verifyFetchResult(fetchResult, 'main', 'bare repo')
+
+        then:
+        noExceptionThrown()
+
+        where:
+        resultCode << [RefUpdate.Result.NEW, RefUpdate.Result.FAST_FORWARD, RefUpdate.Result.NO_CHANGE]
+    }
+
+    def 'verifyFetchResult should warn but not throw on FORCED'() {
+        given:
+        def strategy = new MultiRevisionRepositoryStrategy('test/project')
+        def fetchResult = Mock(FetchResult) {
+            getTrackingRefUpdates() >> [mockUpdate(RefUpdate.Result.FORCED)]
+        }
+
+        when:
+        strategy.verifyFetchResult(fetchResult, 'main', 'bare repo')
+
+        then:
+        noExceptionThrown()
+    }
+
+    def 'verifyFetchResult should abort on rejected or failure results'() {
+        given:
+        def strategy = new MultiRevisionRepositoryStrategy('test/project')
+        def fetchResult = Mock(FetchResult) {
+            getTrackingRefUpdates() >> [mockUpdate(resultCode, 'refs/tags/v1.0', 'refs/tags/v1.0')]
+        }
+
+        when:
+        strategy.verifyFetchResult(fetchResult, 'v1.0', 'bare repo')
+
+        then:
+        def ex = thrown(AbortOperationException)
+        ex.message.contains('v1.0')
+        ex.message.contains('bare repo')
+
+        where:
+        resultCode << [
+                RefUpdate.Result.REJECTED,
+                RefUpdate.Result.LOCK_FAILURE,
+                RefUpdate.Result.IO_FAILURE,
+                RefUpdate.Result.REJECTED_OTHER_REASON,
+                RefUpdate.Result.REJECTED_MISSING_OBJECT
+        ]
+    }
+
+    def 'should pick up force-pushed branch on subsequent fetch'() {
+        given: 'a bare upstream repo'
+        def folder = tempDir.getRoot()
+        def upstreamDir = folder.resolve('upstream.git').toFile()
+        upstreamDir.mkdirs()
+        Git.init().setDirectory(upstreamDir).setBare(true).setInitialBranch('main').call().close()
+
+        and: 'a working repo with an initial commit on main, pushed to upstream'
+        def workDir = folder.resolve('work').toFile()
+        def work = Git.init().setDirectory(workDir).setInitialBranch('main').call()
+        new File(workDir, 'a.txt').text = 'A'
+        work.add().addFilepattern('a.txt').call()
+        def commitA = work.commit().setMessage('A').call()
+        work.push().setRemote(upstreamDir.absolutePath).setRefSpecs(new RefSpec('refs/heads/main:refs/heads/main')).call()
+        work.close()
+
+        and: 'a strategy targeting the local upstream'
+        def provider = Mock(RepositoryProvider) {
+            hasCredentials() >> false
+            getCloneUrl() >> upstreamDir.absolutePath
+        }
+        def strategy = new MultiRevisionRepositoryStrategy('test/forced', 'main')
+        strategy.setProvider(provider)
+        def manifest = Mock(Manifest) {
+            getDefaultBranch() >> 'main'
+            getRecurseSubmodules() >> false
+        }
+
+        when: 'first fetch creates the bare repo'
+        strategy.checkBareRepo(manifest)
+
+        then: 'local bare repo points at commit A'
+        def bareGit = Git.open(strategy.getBareRepo())
+        bareGit.getRepository().resolve('refs/heads/main').name() == commitA.name()
+        bareGit.close()
+
+        when: 'upstream main is force-pushed to a divergent commit'
+        work = Git.open(workDir)
+        new File(workDir, 'a.txt').text = 'B'
+        work.add().addFilepattern('a.txt').call()
+        def commitB = work.commit().setAmend(true).setMessage('B').call()
+        work.push().setRemote(upstreamDir.absolutePath).setForce(true).setRefSpecs(new RefSpec('refs/heads/main:refs/heads/main')).call()
+        work.close()
+
+        and: 'strategy fetches again'
+        strategy.checkBareRepo(manifest)
+
+        then: 'local bare repo now points at commit B'
+        def bareGitB = Git.open(strategy.getBareRepo())
+        bareGitB.getRepository().resolve('refs/heads/main').name() == commitB.name()
+        commitB.name() != commitA.name()
+        bareGitB.close()
     }
 
 }

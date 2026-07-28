@@ -40,7 +40,9 @@ import nextflow.script.formatter.ScriptFormattingVisitor
 import nextflow.script.parser.v2.ErrorListener
 import nextflow.script.parser.v2.ErrorSummary
 import nextflow.script.parser.v2.StandardErrorListener
+import nextflow.util.ClassLoaderFactory
 import nextflow.util.PathUtils
+import nextflow.util.TestOnly
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage
 import org.codehaus.groovy.control.messages.WarningMessage
@@ -62,7 +64,13 @@ class CmdLint extends CmdBase {
         names = ['-exclude'],
         description = 'File pattern to exclude from error checking (can be specified multiple times)'
     )
-    List<String> excludePatterns = ['.git', '.lineage', '.nf-test', '.nextflow', 'work', 'nf-test.config']
+    List<String> excludePatterns = ['.git', '.lineage', '.nextflow', '.nf-test', 'nf-test.config', 'work']
+
+    @Parameter(
+        names = ['-files-from'],
+        description = 'Read list of paths to lint from a text file (one per line, use - for stdin)'
+    )
+    String filesFrom
 
     @Parameter(
         names = ['-o', '-output'],
@@ -81,6 +89,12 @@ class CmdLint extends CmdBase {
                 throw new ParameterException("Output mode must be one of $MODES (found: $value)")
         }
     }
+
+    @Parameter(
+        names = ['-project-dir'],
+        description = 'Path to project directory (default: .)'
+    )
+    String projectDir = '.'
 
     @Parameter(names = ['-format'], description = 'Format scripts and config files that have no errors')
     boolean formatting
@@ -107,12 +121,18 @@ class CmdLint extends CmdBase {
 
     private ErrorSummary summary = new ErrorSummary()
 
+    @TestOnly
+    protected Path root
+
     @Override
     String getName() { 'lint' }
 
     @Override
     void run() {
-        if( !args )
+        // read input files from positional args and -files-from option
+        final inputs = getInputs(args, filesFrom)
+
+        if( !inputs )
             throw new AbortOperationException("Error: No input files were specified")
 
         if( spaces && tabs )
@@ -121,13 +141,17 @@ class CmdLint extends CmdBase {
         if( !spaces && !tabs )
             spaces = 4
 
-        scriptParser = new ScriptParser()
+        final baseDir = Path.of(projectDir)
+        final libDir = baseDir.resolve('lib')
+        final classLoader = ClassLoaderFactory.create([ libDir ])
+
+        scriptParser = new ScriptParser(baseDir, classLoader)
         configParser = new ConfigParser()
-        errorListener = outputMode == 'json'
-            ? new JsonErrorListener()
-            : outputMode == 'markdown'
-            ? new MarkdownErrorListener()
-            : new StandardErrorListener(outputMode, launcher.options.ansiLog)
+        errorListener = switch( outputMode ) {
+            case 'json' -> new JsonErrorListener()
+            case 'markdown' -> new MarkdownErrorListener()
+            default -> new StandardErrorListener(outputMode, launcher.options.ansiLog, launcher.options.quiet)
+        }
         formattingOptions = new FormattingOptions(spaces, !tabs, harhsilAlignment, false, sortDeclarations)
 
         errorListener.beforeAll()
@@ -135,9 +159,10 @@ class CmdLint extends CmdBase {
         // collect files to lint
         final List<File> files = []
 
-        for( final arg : args ) {
+        for( final input : inputs ) {
+            final start = root != null ? root.resolve(input) : Path.of(input)
             PathUtils.visitFiles(
-                Path.of(arg),
+                start,
                 (path) -> !PathUtils.isExcluded(path, excludePatterns),
                 (path) -> files.add(path.toFile()))
         }
@@ -167,6 +192,24 @@ class CmdLint extends CmdBase {
             throw new AbortOperationException()
     }
 
+    private static List<String> getInputs(List<String> args, String filesFrom) {
+        final List<String> result = []
+        result.addAll(args)
+
+        if( filesFrom ) {
+            final lines = filesFrom == '-'
+                ? System.in.readLines()
+                : Path.of(filesFrom).readLines()
+            for( final line : lines ) {
+                final trimmed = line.trim()
+                if( trimmed )
+                    result.add(trimmed)
+            }
+        }
+
+        return result
+    }
+
     private void parse(File file) {
         final name = file.getName()
         if( name.endsWith('.nf') )
@@ -191,6 +234,7 @@ class CmdLint extends CmdBase {
         compiler.getSources()
             .values()
             .stream()
+            .filter((source) -> !isExcludedSource(source))
             .sorted(Comparator.comparing((SourceUnit source) -> source.getSource().getURI()))
             .forEach((source) -> {
                 final errorCollector = source.getErrorCollector()
@@ -209,16 +253,47 @@ class CmdLint extends CmdBase {
             })
     }
 
+    /**
+     * Determine whether a source file should be excluded from lint
+     * reporting. Sources can be added to the compiler indirectly, e.g.
+     * by resolving an `include` statement into a script that lives
+     * under an excluded directory.
+     *
+     * Match exclude patterns only against path components *within* the
+     * project directory.
+     *
+     * @param source
+     */
+    private boolean isExcludedSource(SourceUnit source) {
+        final uri = source.getSource().getURI()
+        if( uri == null || uri.getScheme() != 'file' )
+            return false
+        final base = cwd()
+        final absolute = Path.of(uri)
+        final start = absolute.startsWith(base) ? base.relativize(absolute) : absolute
+        for( Path path = start; path != null; path = path.getParent() ) {
+            if( PathUtils.isExcluded(path, excludePatterns) )
+                return true
+        }
+        return false
+    }
+
+    /**
+     * Report all errors and warnings for a source file.
+     *
+     * @param source
+     */
     private void printErrors(SourceUnit source) {
         errorListener.beforeErrors()
 
+        final name = relativeName(source)
         final errors = source.getErrorCollector().getErrors() ?: []
         errors.stream()
             .filter(message -> message instanceof SyntaxErrorMessage)
             .map(message -> ((SyntaxErrorMessage) message).getCause())
             .sorted(ERROR_COMPARATOR)
             .forEach((cause) -> {
-                errorListener.onError(cause, source.getName(), source)
+                errorListener.onError(cause, name, source)
                 summary.errors += 1
             })
 
@@ -227,11 +302,30 @@ class CmdLint extends CmdBase {
             .filter(warning -> warning !instanceof ParanoidWarning)
             .sorted(WARNING_COMPARATOR)
             .forEach((warning) -> {
-                errorListener.onWarning(warning, source.getName(), source)
+                errorListener.onWarning(warning, name, source)
                 summary.warnings += 1
             })
 
         errorListener.afterErrors()
+    }
+
+    /**
+     * Resolve the path for a source file, relative to the
+     * current working directory.
+     *
+     * @param source
+     */
+    private String relativeName(SourceUnit source) {
+        final uri = source.getSource().getURI()
+        return cwd().relativize(Path.of(uri)).toString()
+    }
+
+    /**
+     * The directory that source paths are resolved and reported against.
+     * Defaults to the current working directory; overridable in tests.
+     */
+    private Path cwd() {
+        return root ?: Path.of('.').toAbsolutePath().normalize()
     }
 
     private static final Comparator<SyntaxException> ERROR_COMPARATOR = (SyntaxException a, SyntaxException b) -> {

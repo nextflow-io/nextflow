@@ -26,6 +26,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.SysEnv
 import nextflow.container.ContainerBuilder
 import nextflow.container.ContainerHelper
@@ -84,7 +85,7 @@ class BashWrapperBuilder {
             level = str ? str as int : 0
         }
         catch( Exception e ) {
-            log.warn "Invalid value for `NXF_DEBUG` variable: $str -- See http://www.nextflow.io/docs/latest/config.html#environment-variables"
+            log.warn "Invalid value for `NXF_DEBUG` variable: $str -- See https://docs.seqera.io/nextflow/reference/config#env"
         }
         BASH = Collections.unmodifiableList( level > 0 ? ['/bin/bash','-uex'] : ['/bin/bash','-ue'] )
 
@@ -582,7 +583,9 @@ class BashWrapperBuilder {
     }
 
     protected boolean isTraceRequired() {
-        statsEnabled || fixOwnership()
+        if( fusionEnabled && Global.isFusionTraceEnabled() )
+            return fixOwnership()
+        return statsEnabled || fixOwnership()
     }
 
     protected String shellPath() {

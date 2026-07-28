@@ -26,8 +26,15 @@ import com.beust.jcommander.Parameter
 abstract class CmdBase implements Runnable {
 
     private Launcher launcher
+    private List<String> unknownOptions
 
     abstract String getName()
+
+    List<String> getAliases() { Collections.emptyList() }
+
+    protected List<String> getUnknownOptions(){ return this.unknownOptions }
+
+    void setUnknownOptions(List<String> options){ this.unknownOptions = options }
 
     Launcher getLauncher() { launcher }
 

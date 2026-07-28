@@ -62,7 +62,8 @@ class K8sTaskHandlerTest extends Specification {
         def task = Mock(TaskRun)
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
-        def handler = Spy(new K8sTaskHandler(builder:builder, client: client))
+        def handler = Spy(new K8sTaskHandler(builder:builder))
+        handler.getClient() >> client
         Map result
 
         when:
@@ -162,7 +163,8 @@ class K8sTaskHandlerTest extends Specification {
         def task = Mock(TaskRun)
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
-        def handler = Spy(new K8sTaskHandler(builder: builder, client:client))
+        def handler = Spy(new K8sTaskHandler(builder: builder))
+        handler.getClient() >> client
         Map result
 
         when:
@@ -198,7 +200,8 @@ class K8sTaskHandlerTest extends Specification {
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
         def config = Mock(ClientConfig)
-        def handler = Spy(new K8sTaskHandler(builder: builder, client: client))
+        def handler = Spy(new K8sTaskHandler(builder: builder))
+        handler.getClient() >> client
         Map result
 
         when:
@@ -233,7 +236,8 @@ class K8sTaskHandlerTest extends Specification {
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
         def config = Mock(TaskConfig)
-        def handler = Spy(new K8sTaskHandler(builder:builder, client:client))
+        def handler = Spy(new K8sTaskHandler(builder:builder))
+        handler.getClient() >> client
         def podOptions = Mock(PodOptions)
         and:
         Map result
@@ -281,7 +285,8 @@ class K8sTaskHandlerTest extends Specification {
         def task = Mock(TaskRun)
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
-        def handler = Spy(new K8sTaskHandler(builder:builder, client:client))
+        def handler = Spy(new K8sTaskHandler(builder:builder))
+        handler.getClient() >> client
         def podOptions = Mock(PodOptions)
         and:
         Map result
@@ -354,7 +359,8 @@ class K8sTaskHandlerTest extends Specification {
         def task = Mock(TaskRun)
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
-        def handler = Spy(new K8sTaskHandler(client: client, task:task))
+        def handler = Spy(new K8sTaskHandler(task:task))
+        handler.getClient() >> client
 
         def POD_NAME = 'new-pod-id'
         def REQUEST =  [foo: 'bar']
@@ -391,7 +397,8 @@ class K8sTaskHandlerTest extends Specification {
         def builder = Mock(K8sWrapperBuilder)
         def config = Mock(TaskConfig)
         def executor = Mock(K8sExecutor)
-        def handler = Spy(new K8sTaskHandler(builder: builder, client: client, executor: executor))
+        def handler = Spy(new K8sTaskHandler(builder: builder, executor: executor))
+        handler.getClient() >> client
         def podOptions = Mock(PodOptions)
         and:
         Map result
@@ -440,7 +447,8 @@ class K8sTaskHandlerTest extends Specification {
         given:
         def POD_NAME = 'pod-xyz'
         def client = Mock(K8sClient)
-        def handler = Spy(new K8sTaskHandler(client: client, podName: POD_NAME, status: TaskStatus.SUBMITTED))
+        def handler = Spy(new K8sTaskHandler(podName: POD_NAME, status: TaskStatus.SUBMITTED))
+        handler.getClient() >> client
 
         when:
         def result = handler.checkIfRunning()
@@ -479,7 +487,8 @@ class K8sTaskHandlerTest extends Specification {
                                     finishedAt: "2018-01-13T10:19:36Z" ]
         def noExitCodeState = [terminated: noExitCodeTermState]
         and:
-        def handler = Spy(new K8sTaskHandler(task: task, client:client, podName: POD_NAME, outputFile: OUT_FILE, errorFile: ERR_FILE))
+        def handler = Spy(new K8sTaskHandler(task: task, podName: POD_NAME, outputFile: OUT_FILE, errorFile: ERR_FILE))
+        handler.getClient() >> client
 
         when:
         def result = handler.checkIfCompleted()
@@ -539,7 +548,8 @@ class K8sTaskHandlerTest extends Specification {
                           finishedAt: "2018-01-13T10:19:36Z",
                           exitCode: 137 ]
         def task = new TaskRun()
-        def handler = Spy(new K8sTaskHandler(task: task, client:client, podName: POD_NAME, outputFile: OUT_FILE, errorFile: ERR_FILE))
+        def handler = Spy(new K8sTaskHandler(task: task, podName: POD_NAME, outputFile: OUT_FILE, errorFile: ERR_FILE))
+        handler.getClient() >> client
 
         when:
         def result = handler.checkIfCompleted()
@@ -558,7 +568,8 @@ class K8sTaskHandlerTest extends Specification {
         given:
         def POD_NAME = 'pod-xyz'
         def client = Mock(K8sClient)
-        def handler = Spy(new K8sTaskHandler(client:client, podName: POD_NAME))
+        def handler = Spy(new K8sTaskHandler(podName: POD_NAME))
+        handler.getClient() >> client
 
         when:
         handler.killTask()
@@ -577,7 +588,8 @@ class K8sTaskHandlerTest extends Specification {
         given:
         def POD_NAME = 'pod-xyz'
         def client = Mock(K8sClient)
-        def handler = Spy(new K8sTaskHandler(client:client, podName: POD_NAME))
+        def handler = Spy(new K8sTaskHandler(podName: POD_NAME))
+        handler.getClient() >> client
         and:
         Map STATE1 = [status:'pending']
         Map STATE2 = [status:'running']
@@ -646,7 +658,8 @@ class K8sTaskHandlerTest extends Specification {
         given:
         def POD_NAME = 'pod-xyz'
         def client = Mock(K8sClient)
-        def handler = Spy(new K8sTaskHandler(client:client, podName: POD_NAME))
+        def handler = Spy(new K8sTaskHandler(podName: POD_NAME))
+        handler.getClient() >> client
 
         when:
         def state = handler.getState()
@@ -664,7 +677,8 @@ class K8sTaskHandlerTest extends Specification {
         given:
         def POD_NAME = 'pod-xyz'
         def client = Mock(K8sClient)
-        def handler = Spy(new K8sTaskHandler(client:client, podName: POD_NAME))
+        def handler = Spy(new K8sTaskHandler(podName: POD_NAME))
+        handler.getClient() >> client
 
         when:
         def state = handler.getState()
@@ -782,7 +796,8 @@ class K8sTaskHandlerTest extends Specification {
         def POD_NAME = 'the-pod-name'
         def executor = Mock(K8sExecutor)
         def client = Mock(K8sClient)
-        def handler = Spy(new K8sTaskHandler(podName: POD_NAME, executor:executor, client:client))
+        def handler = Spy(new K8sTaskHandler(podName: POD_NAME, executor:executor))
+        handler.getClient() >> client
         handler.useJobResource() >> false
         and:
         def TASK_OK = Mock(TaskRun); TASK_OK.isSuccess() >> true
@@ -814,7 +829,8 @@ class K8sTaskHandlerTest extends Specification {
         def POD_NAME = 'the-job-name'
         def executor = Mock(K8sExecutor)
         def client = Mock(K8sClient)
-        def handler = Spy(new K8sTaskHandler(podName: POD_NAME, executor:executor, client:client))
+        def handler = Spy(new K8sTaskHandler(podName: POD_NAME, executor:executor))
+        handler.getClient() >> client
         handler.useJobResource() >> true
         and:
         def TASK_OK = Mock(TaskRun); TASK_OK.isSuccess() >> true
@@ -846,7 +862,8 @@ class K8sTaskHandlerTest extends Specification {
         def executor = Mock(K8sExecutor)
         def client = Mock(K8sClient)
         and:
-        def handler = Spy(new K8sTaskHandler(executor: executor, client: client, podName: POD_NAME))
+        def handler = Spy(new K8sTaskHandler(executor: executor, podName: POD_NAME))
+        handler.getClient() >> client
 
         when:
         handler.saveJobLogOnError(task)
@@ -976,7 +993,8 @@ class K8sTaskHandlerTest extends Specification {
         def client = Mock(K8sClient)
         def builder = Mock(K8sWrapperBuilder)
         def launcher = Mock(FusionScriptLauncher)
-        def handler = Spy(new K8sTaskHandler(builder:builder, client: client))
+        def handler = Spy(new K8sTaskHandler(builder:builder))
+        handler.getClient() >> client
         Map result
 
         when:
@@ -1022,7 +1040,8 @@ class K8sTaskHandlerTest extends Specification {
         def launcher = Mock(FusionScriptLauncher)
         def k8sConfig = Spy(K8sConfig)
         def exec = Mock(K8sExecutor) { getK8sConfig()>>k8sConfig  }
-        def handler = Spy(new K8sTaskHandler(builder:builder, client: client, executor: exec))
+        def handler = Spy(new K8sTaskHandler(builder:builder, executor: exec))
+        handler.getClient() >> client
         Map result
 
         when:

@@ -18,20 +18,38 @@ package nextflow.cli
 
 
 import java.nio.file.Files
+import java.nio.file.Path
 
 import nextflow.NextflowMeta
 import nextflow.SysEnv
 import nextflow.config.ConfigMap
 import nextflow.exception.AbortOperationException
+import nextflow.scm.AssetManager
 import nextflow.util.VersionNumber
+import org.eclipse.jgit.api.Git
+import org.junit.Rule
 import spock.lang.Specification
 import spock.lang.Unroll
+import test.TemporaryPath
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class CmdRunTest extends Specification {
+
+    @Rule
+    TemporaryPath tempDir = new TemporaryPath()
+
+    private File savedRoot
+
+    def setup() {
+        savedRoot = AssetManager.root
+    }
+
+    def cleanup() {
+        AssetManager.root = savedRoot
+    }
 
     @Unroll
     def 'should parse cmd param=#STR' () {
@@ -414,6 +432,52 @@ class CmdRunTest extends Specification {
         0 * cmd.getCurrentVersion()
         0 * cmd.showVersionWarning(_)
         0 * cmd.showVersionError(_)
+    }
+
+    def 'should allow local scm clone in offline mode' () {
+        given: 'a source git repo with a main.nf'
+        def folder = tempDir.getRoot()
+        def sourceDir = folder.resolve('source-repo')
+        Files.createDirectories(sourceDir)
+        sourceDir.resolve('main.nf').text = "println 'Hello'"
+        def git = Git.init().setDirectory(sourceDir.toFile()).call()
+        git.add().addFilepattern('.').call()
+        git.commit().setSign(false).setMessage('init').call()
+        git.close()
+
+        and: 'a bare clone of it'
+        def bareDir = folder.resolve('my-pipeline.git')
+        Git.cloneRepository()
+            .setURI(sourceDir.toUri().toString())
+            .setDirectory(bareDir.toFile())
+            .setBare(true)
+            .call()
+            .close()
+
+        and: 'AssetManager root points to a temp directory'
+        AssetManager.root = folder.resolve('assets').toFile()
+
+        when: 'running in offline mode with a file: URL'
+        def cmd = new CmdRun(offline: true)
+        def scriptFile = cmd.getScriptFile0("file:${bareDir}")
+
+        then: 'the pipeline is cloned and returned successfully'
+        scriptFile != null
+        scriptFile.main.text.contains("println 'Hello'")
+    }
+
+    def 'should block remote repo clone in offline mode' () {
+        given:
+        def folder = tempDir.getRoot()
+        AssetManager.root = folder.resolve('assets').toFile()
+
+        when: 'running in offline mode with a remote repo name'
+        def cmd = new CmdRun(offline: true)
+        cmd.getScriptFile0('nextflow-io/hello')
+
+        then: 'an AbortOperationException is thrown'
+        def e = thrown(AbortOperationException)
+        e.message.contains('automatic download from remote repositories is disabled')
     }
 
 }

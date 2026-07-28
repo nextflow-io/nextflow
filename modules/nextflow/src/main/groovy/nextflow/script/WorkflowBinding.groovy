@@ -21,10 +21,13 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.NF
+import nextflow.dataflow.ChannelImpl
+import nextflow.dataflow.ValueImpl
 import nextflow.exception.IllegalInvocationException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
 import nextflow.extension.OpCall
+import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Models the execution context of a workflow component
  *
@@ -98,19 +101,35 @@ class WorkflowBinding extends Binding  {
     @Override
     Object invokeMethod(String name, Object args) {
         if( meta ) {
-            log.trace "Trying to invoke component: $name - args=${args}"
+            log.trace "Trying to invoke component: $name - args=${renderArgs(args)}"
             final component = getComponent0(name)
             if( component ) {
                 checkScope0(component)
-                return component.invoke_o(args)
+                return invoke0(component, args)
             }
 
             // check it's an operator name
-            if( NF.hasOperator(name) )
+            if( !owner?.isTypingEnabled() && NF.hasOperator(name) )
                 return OpCall.create(name, args)
         }
 
         throw new MissingMethodException(name,this.getClass())
+    }
+
+    private static String renderArgs(Object args) {
+        try {
+            return InvokerHelper.toString(args)
+        }
+        catch( Throwable t ) {
+            return "<unable to render args: ${t.class.simpleName}>"
+        }
+    }
+
+    private Object invoke0(ComponentDef component, Object args) {
+        final componentTyped = component instanceof WorkflowDef && component.getOwner().isTypingEnabled()
+        final args1 = DataflowTypeHelper.normalizeArray(args, componentTyped)
+        final result = component.invoke_a(args1)
+        return DataflowTypeHelper.normalize(result, owner?.isTypingEnabled())
     }
 
     @Override
@@ -147,8 +166,11 @@ class WorkflowBinding extends Binding  {
             super.getVariable(name)
         }
         catch( MissingPropertyException e ) {
+            if( owner?.isTypingEnabled() )
+                throw e
+
             if( !meta )
-                 throw e
+                throw e
 
             def component = getComponent0(name)
             if( component )
@@ -169,9 +191,11 @@ class WorkflowBinding extends Binding  {
             source = source[0]
         }
 
-        owner.session.outputs[name] = source instanceof DataflowWriteChannel
-            ? source
-            : CH.value(source)
+        owner.session.outputs[name] =
+            source instanceof ChannelImpl ? source.getSource() :
+            source instanceof ValueImpl ? source.getSource() :
+            source instanceof DataflowWriteChannel ? source :
+            CH.value(source)
     }
 
 }

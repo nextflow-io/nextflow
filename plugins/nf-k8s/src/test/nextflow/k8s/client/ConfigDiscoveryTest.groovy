@@ -387,6 +387,7 @@ class ConfigDiscoveryTest extends Specification {
         config.server == 'foo.com:4343'
         config.namespace == 'foo-namespace'
         config.token == 'my-token'
+        config.tokenPath == TOKEN_FILE
         config.sslCert == CERT_FILE.text.bytes
         config.isFromCluster
 

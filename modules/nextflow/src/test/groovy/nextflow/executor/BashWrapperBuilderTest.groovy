@@ -459,8 +459,8 @@ class BashWrapperBuilderTest extends Specification {
                 # stage input files
                 rm -f sample_1.fq
                 rm -f sample_2.fq
-                ln -s /some/data/sample_1.fq sample_1.fq
-                ln -s /some/data/sample_2.fq sample_2.fq
+                ln -sfn /some/data/sample_1.fq sample_1.fq
+                ln -sfn /some/data/sample_2.fq sample_2.fq
                 '''.stripIndent().rightTrim()
 
         when:
@@ -486,8 +486,8 @@ class BashWrapperBuilderTest extends Specification {
         def stageScript = '''\
                 rm -f sample_1.fq
                 rm -f sample_2.fq
-                ln -s /some/data/sample_1.fq sample_1.fq
-                ln -s /some/data/sample_2.fq sample_2.fq
+                ln -sfn /some/data/sample_1.fq sample_1.fq
+                ln -sfn /some/data/sample_2.fq sample_2.fq
                 '''.stripIndent().rightTrim()
         and:
         def builder = newBashWrapperBuilder([
@@ -1445,6 +1445,42 @@ class BashWrapperBuilderTest extends Specification {
         binding.launch_cmd == 'podman run -i -e "NXF_TASK_WORKDIR" -v /work/dir:/work/dir -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" --name $NXF_BOXID busybox /bin/bash -ue /work/dir/.command.sh'
         binding.cleanup_cmd == 'rm -rf $NXF_SCRATCH || true\npodman rm $NXF_BOXID &>/dev/null || true\n'
         binding.kill_cmd == 'podman stop $NXF_BOXID'
+    }
+
+    def 'should skip trace wrapper when NXF_FUSION_TRACE is enabled and Fusion is active'() {
+        given:
+        SysEnv.push([NXF_FUSION_TRACE: 'true'])
+        def bean = new TaskBean()
+        bean.statsEnabled = true
+        bean.fusionEnabled = true
+        bean.workDir = Path.of('/work/xx/yy')
+        bean.script = 'echo hello'
+
+        def builder = new BashWrapperBuilder(bean)
+
+        expect:
+        !builder.isTraceRequired()
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should keep trace wrapper when NXF_FUSION_TRACE is disabled even with Fusion'() {
+        given:
+        SysEnv.push([NXF_FUSION_TRACE: 'false'])
+        def bean = new TaskBean()
+        bean.statsEnabled = true
+        bean.fusionEnabled = true
+        bean.workDir = Path.of('/work/xx/yy')
+        bean.script = 'echo hello'
+
+        def builder = new BashWrapperBuilder(bean)
+
+        expect:
+        builder.isTraceRequired()
+
+        cleanup:
+        SysEnv.pop()
     }
 
     @Unroll

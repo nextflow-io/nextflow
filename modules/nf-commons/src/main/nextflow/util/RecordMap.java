@@ -17,7 +17,7 @@
 package nextflow.util;
 
 import java.util.Collection;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 import nextflow.script.types.Record;
@@ -28,7 +28,7 @@ import org.codehaus.groovy.runtime.DefaultGroovyMethods;
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-public class RecordMap extends HashMap<String,Object> implements Record {
+public class RecordMap extends LinkedHashMap<String,Object> implements Record {
 
     public RecordMap() {}
 
@@ -65,7 +65,7 @@ public class RecordMap extends HashMap<String,Object> implements Record {
     }
 
     public RecordMap plus(RecordMap other) {
-        var result = new HashMap<String,Object>();
+        var result = new LinkedHashMap<String,Object>();
         result.putAll(this);
         result.putAll(other);
         return new RecordMap(result);

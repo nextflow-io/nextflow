@@ -47,6 +47,19 @@ class FusionHelperTest extends Specification {
 
     }
 
+    def 'should include container platform in fusion command' () {
+        given:
+        def launcher = Mock(FusionScriptLauncher)
+        def config = new DockerConfig([:])
+
+        when:
+        def result = FusionHelper.runWithContainer(launcher, config, 'image:1', null, ['echo', 'hello'], 'linux/amd64')
+        then:
+        1 * launcher.fusionEnv() >> [:]
+        and:
+        result == "docker run -i --platform linux/amd64 --rm --privileged image:1 echo 'hello'"
+    }
+
     def 'should return fusion container command' () {
         given:
         def launcher = Mock(FusionScriptLauncher) {

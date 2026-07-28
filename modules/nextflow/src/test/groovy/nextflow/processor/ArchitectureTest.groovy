@@ -31,37 +31,94 @@ class ArchitectureTest extends Specification {
         when:
         def arch = new Architecture(VALUE)
         then:
-        arch.platform == PLAT
-        arch.arch == ARCH
-        arch.target == TAR
         arch.dockerArch == DOCK
         arch.spackArch == SPACK
 
         where:
-        VALUE                                  | PLAT     | ARCH        | TAR    | DOCK             | SPACK
-        'x86_64'                               | null     | 'x86_64'    | null   | 'linux/amd64'    | 'x86_64'
-        'linux/x86_64'                         | 'linux'  | 'x86_64'    | null   | 'linux/amd64'    | 'x86_64'
-        'amd64'                                | null     | 'amd64'     | null   | 'linux/amd64'    | 'x86_64'
-        'aarch64'                              | null     | 'aarch64'   | null   | 'linux/arm64'    | 'aarch64'
-        'arm64'                                | null     | 'arm64'     | null   | 'linux/arm64'    | 'aarch64'
-        'linux/arm64/v8'                       | 'linux'  | 'arm64/v8'  | null   | 'linux/arm64'    | 'aarch64'
-        'linux/arm64/v7'                       | 'linux'  | 'arm64/v7'  | null   | 'linux/arm64/v7' | null
+        VALUE                | DOCK             | SPACK
+        'x86_64'             | 'linux/amd64'    | 'x86_64'
+        'linux/x86_64'       | 'linux/amd64'    | 'x86_64'
+        'amd64'              | 'linux/amd64'    | 'x86_64'
+        'aarch64'            | 'linux/arm64'    | 'aarch64'
+        'arm64'              | 'linux/arm64'    | 'aarch64'
+        'linux/arm64/v8'     | 'linux/arm64'    | 'aarch64'
+        'linux/arm64/v7'     | 'linux/arm64/v7' | null
     }
 
     def 'should define arch with map' () {
         when:
         def arch = new Architecture(VALUE)
         then:
-        arch.platform == PLAT
-        arch.arch == ARCH
-        arch.target == TAR
         arch.dockerArch == DOCK
         arch.spackArch == SPACK
 
         where:
-        VALUE                                  | PLAT     | ARCH        | TAR    | DOCK             | SPACK
-        [name: 'amd64', target: 'zen3']        | null     | 'amd64'     | 'zen3' | 'linux/amd64'    | 'zen3'
-        [name: 'arm64', target: 'zen3']        | null     | 'arm64'     | 'zen3' | 'linux/arm64'    | 'zen3'
-        [name: 'linux/x86_64', target: 'zen3'] | 'linux'  | 'x86_64'    | 'zen3' | 'linux/amd64'    | 'zen3'
+        VALUE                                  | DOCK             | SPACK
+        [name: 'amd64', target: 'zen3']        | 'linux/amd64'    | 'zen3'
+        [name: 'arm64', target: 'zen3']        | 'linux/arm64'    | 'zen3'
+        [name: 'linux/x86_64', target: 'zen3'] | 'linux/amd64'    | 'zen3'
+    }
+
+    @Unroll
+    def 'should normalize arch from name' () {
+        expect:
+        Architecture.ArchEntry.normalize(NAME) == EXPECTED
+
+        where:
+        NAME             | EXPECTED
+        'x86_64'         | 'x86_64'
+        'linux/x86_64'   | 'x86_64'
+        'linux/arm64/v8' | 'arm64/v8'
+        'linux/arm64/v7' | 'arm64/v7'
+        'arm64'          | 'arm64'
+        'aarch64'        | 'aarch64'
+    }
+
+    def 'should return dockerArch as string representation' () {
+        expect:
+        new Architecture('linux/x86_64').toString() == 'linux/amd64'
+        new Architecture('arm64').toString() == 'linux/arm64'
+        new Architecture('linux/amd64,linux/arm64').toString() == 'linux/amd64,linux/arm64'
+    }
+
+    def 'should parse multi-arch value' () {
+        when:
+        def arch = new Architecture('linux/amd64,linux/arm64')
+        then:
+        arch.dockerArch == 'linux/amd64'
+        arch.spackArch == 'x86_64'
+        arch.platforms() == ['linux/amd64', 'linux/arm64']
+    }
+
+    def 'should parse multi-arch with spaces' () {
+        when:
+        def arch = new Architecture('linux/amd64, linux/arm64')
+        then:
+        arch.platforms() == ['linux/amd64', 'linux/arm64']
+    }
+
+    def 'should return containerPlatform as comma-separated string' () {
+        expect:
+        new Architecture('linux/amd64').containerPlatform() == 'linux/amd64'
+        new Architecture('linux/amd64,linux/arm64').containerPlatform() == 'linux/amd64,linux/arm64'
+    }
+
+    def 'should define multi-arch with map' () {
+        when:
+        def arch = new Architecture([name: 'amd64,arm64', target: 'zen3'])
+        then:
+        arch.dockerArch == 'linux/amd64'
+        arch.spackArch == 'zen3'
+        arch.platforms() == ['linux/amd64', 'linux/arm64']
+        arch.containerPlatform() == 'linux/amd64,linux/arm64'
+    }
+
+    def 'should use primary arch for dockerArch and spackArch with multi-arch' () {
+        when:
+        def arch = new Architecture('arm64,amd64')
+        then:
+        arch.dockerArch == 'linux/arm64'
+        arch.spackArch == 'aarch64'
+        arch.platforms() == ['linux/arm64', 'linux/amd64']
     }
 }

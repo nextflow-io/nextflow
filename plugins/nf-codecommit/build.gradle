@@ -43,20 +43,21 @@ sourceSets {
 configurations {
     // see https://docs.gradle.org/4.1/userguide/dependency_management.html#sub:exclude_transitive_dependencies
     runtimeClasspath.exclude group: 'org.slf4j', module: 'slf4j-api'
+    testRuntimeClasspath.exclude group: 'io.micronaut', module: 'micronaut-core-bom'
 }
 
 dependencies {
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
-    compileOnly 'org.pf4j:pf4j:3.12.0'
+    compileOnly 'org.pf4j:pf4j:3.14.1'
 
     api ('javax.xml.bind:jaxb-api:2.4.0-b180830.0359')
-    api ('software.amazon.awssdk:codecommit:2.31.64')
-    api ('software.amazon.awssdk:sso:2.31.64')
-    api ('software.amazon.awssdk:ssooidc:2.31.64')
+    api ('software.amazon.awssdk:codecommit:2.46.8')
+    api ('software.amazon.awssdk:sso:2.46.8')
+    api ('software.amazon.awssdk:ssooidc:2.46.8')
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.apache.groovy:groovy:4.0.30"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.30"
+    testImplementation "org.apache.groovy:groovy:4.0.31"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.31"
 }

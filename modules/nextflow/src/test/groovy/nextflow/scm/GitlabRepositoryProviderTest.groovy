@@ -54,6 +54,24 @@ class GitlabRepositoryProviderTest extends Specification {
         true        | new ProviderConfig('gitlab').setToken('xyz')
     }
 
+    @Unroll
+    def 'should return git credentials' () {
+        given:
+        def provider = new GitlabRepositoryProvider('pditommaso/tutorial', CONFIG)
+
+        when:
+        def credentials = provider.getGitCredentials()
+
+        then:
+        credentials != null
+
+        where:
+        CONFIG                                                                    | _
+        new ProviderConfig('gitlab').setUser('foo').setPassword('bar')            | _
+        new ProviderConfig('gitlab').setUser('foo').setToken('xyz')               | _
+        new ProviderConfig('gitlab').setUser('foo').setPassword('bar').setToken('xyz') | _
+    }
+
     @Requires({System.getenv('NXF_GITLAB_ACCESS_TOKEN')})
     def 'should return clone url'() {
         given:

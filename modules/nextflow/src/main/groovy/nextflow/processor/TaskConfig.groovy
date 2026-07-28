@@ -212,9 +212,7 @@ class TaskConfig extends LazyMap implements Cloneable {
     }
 
     boolean getDebug() {
-        // check both `debug` and `echo` for backward
-        // compatibility until `echo` is not removed
-        def value = get('debug') || get('echo')
+        def value = get('debug')
         return toBool(value)
     }
 
@@ -527,6 +525,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         if( opts!=null )
             throw new IllegalArgumentException("Invalid `containerOptions` directive value: $opts [${opts.getClass().getName()}]")
         return CmdLineOptionMap.emptyOption()
+    }
+
+    Map<String, Object> getHints() {
+        return get('hints') as Map<String, Object> ?: Collections.<String,Object>emptyMap()
     }
 
     Map<String, String> getResourceLabels() {

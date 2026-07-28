@@ -18,6 +18,8 @@ package nextflow.scm
 
 import groovy.json.JsonSlurper
 import groovy.util.logging.Slf4j
+import org.eclipse.jgit.transport.CredentialsProvider
+import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 
 import java.nio.charset.StandardCharsets
 
@@ -60,6 +62,12 @@ class GitlabRepositoryProvider extends RepositoryProvider {
         return getToken()
             ? true
             : super.hasCredentials()
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    CredentialsProvider getGitCredentials() {
+        return new UsernamePasswordCredentialsProvider(getUser(), getToken() ?: getPassword())
     }
 
     @Override

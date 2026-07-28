@@ -1,0 +1,26 @@
+/* Section indentation */
+section > section h5 ~ *,
+section > section h6 ~ *,
+section h5 ~ *,
+section h6 ~ *,
+section .admonition {
+  margin-left: 2em !important;
+}
+
+/* Make h5 and h6 headings smaller and bold */
+h5, h6 {
+  font-size: 1rem !important;
+}
+
+/* Code blocks in admonitions fill full width */
+.theme-admonition > div {
+  width: 100%;
+}
+
+/* Make wide tables horizontally scrollable instead of overflowing the page */
+.markdown table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+}

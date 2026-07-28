@@ -73,6 +73,15 @@ interface ConfigParser {
     ConfigParser setProfiles(List<String> profiles)
 
     /**
+     * Toggle whether to render compilation errors with ANSI colors.
+     *
+     * @param value
+     */
+    default ConfigParser setAnsiLog(boolean value) {
+        return this
+    }
+
+    /**
      * Parse a config object from the given source.
      */
     ConfigObject parse(String text)

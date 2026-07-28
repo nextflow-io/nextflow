@@ -362,7 +362,7 @@ class FileHelper {
         return asPath(toPathURI(str))
     }
 
-    static final private Map<String,String> PLUGINS_MAP = [s3:'nf-amazon', gs:'nf-google', az:'nf-azure']
+    static final private Map<String,String> PLUGINS_MAP = [s3:'nf-amazon', gs:'nf-google', az:'nf-azure', seqera:'nf-tower']
 
     static final private Map<String,Boolean> SCHEME_CHECKED = new HashMap<>()
 
@@ -373,6 +373,7 @@ class FileHelper {
         // find out the default plugin for the given scheme and try to load it
         final pluginId = PLUGINS_MAP.get(scheme)
         if( pluginId ) try {
+            log.debug "Detected required plugin '$pluginId'"
             if( Plugins.startIfMissing(pluginId) ) {
                 log.debug "Started plugin '$pluginId' required to handle file: $str"
                 // return true to signal a new plugin was loaded

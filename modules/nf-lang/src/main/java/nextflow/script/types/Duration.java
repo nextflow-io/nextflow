@@ -20,7 +20,7 @@ import nextflow.script.dsl.Description;
 @Description("""
     A `Duration` represents a duration of time.
 
-    [Read more](https://nextflow.io/docs/latest/reference/stdlib.html#duration)
+    [Read more](https://docs.seqera.io/nextflow/reference/stdlib-types#duration)
 """)
 public interface Duration {
 

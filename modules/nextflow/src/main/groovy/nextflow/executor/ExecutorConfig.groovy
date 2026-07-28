@@ -153,7 +153,7 @@ class ExecutorConfig implements ConfigScope {
     @Description("""
         The `executor.retry` scope controls the behavior of retrying failed job submissions.
 
-        [Read more](https://nextflow.io/docs/latest/reference/config.html#executor)
+        [Read more](https://docs.seqera.io/nextflow/reference/config#executor)
     """)
     final ExecutorRetryConfig retry
 

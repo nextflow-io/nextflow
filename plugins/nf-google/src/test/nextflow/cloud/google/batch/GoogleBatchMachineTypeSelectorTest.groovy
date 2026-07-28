@@ -34,6 +34,12 @@ class GoogleBatchMachineTypeSelectorTest extends Specification {
             new MachineType(type: 'm2-type08', family: 'm2', 'spotPrice': 0.036, 'onDemandPrice': 0.35, 'cpusPerVm': 8, 'memPerVm': 8),
             new MachineType(type: 'n2-type09', family: 'n2', 'spotPrice': 0.040, 'onDemandPrice': 0.40, 'cpusPerVm': 10, 'memPerVm': 10),
             new MachineType(type: 'c2-type10', family: 'c2', 'spotPrice': 0.045, 'onDemandPrice': 0.45, 'cpusPerVm': 10, 'memPerVm': 10),
+            new MachineType(type: 'c4-type11', family: 'c4', 'spotPrice': 0.040, 'onDemandPrice': 0.40, 'cpusPerVm': 8, 'memPerVm': 8),
+            new MachineType(type: 'c4a-type12', family: 'c4a', 'spotPrice': 0.038, 'onDemandPrice': 0.38, 'cpusPerVm': 8, 'memPerVm': 8),
+            new MachineType(type: 'c4d-type13', family: 'c4d', 'spotPrice': 0.039, 'onDemandPrice': 0.39, 'cpusPerVm': 8, 'memPerVm': 8),
+            new MachineType(type: 'n4-type14', family: 'n4', 'spotPrice': 0.035, 'onDemandPrice': 0.35, 'cpusPerVm': 8, 'memPerVm': 8),
+            new MachineType(type: 'n4a-type15', family: 'n4a', 'spotPrice': 0.033, 'onDemandPrice': 0.33, 'cpusPerVm': 8, 'memPerVm': 8),
+            new MachineType(type: 'n4d-type16', family: 'n4d', 'spotPrice': 0.034, 'onDemandPrice': 0.34, 'cpusPerVm': 8, 'memPerVm': 8),
     ]
 
     def 'should select best machine type'() {
@@ -57,6 +63,12 @@ class GoogleBatchMachineTypeSelectorTest extends Specification {
         8    | 8000 | 'reg'  | true  | false  | null                       | 'm1-type07'
         8    | 8000 | 'reg'  | false | false  | ['m?-*', 'c2-*']           | 'm2-type08'
         8    | 8000 | 'reg'  | false | false  | ['m1-type07', 'm2-type66'] | 'm1-type07'
+        8    | 8000 | 'reg'  | true  | false  | ['c4-*']                   | 'c4-type11'
+        8    | 8000 | 'reg'  | true  | false  | ['c4a-*']                  | 'c4a-type12'
+        8    | 8000 | 'reg'  | true  | false  | ['c4d-*']                  | 'c4d-type13'
+        8    | 8000 | 'reg'  | true  | false  | ['n4-*']                   | 'n4-type14'
+        8    | 8000 | 'reg'  | true  | false  | ['n4a-*']                  | 'n4a-type15'
+        8    | 8000 | 'reg'  | true  | false  | ['n4d-*']                  | 'n4d-type16'
 
 
     }
@@ -113,6 +125,27 @@ class GoogleBatchMachineTypeSelectorTest extends Specification {
         '200 GB'  | 'c2-standard-4'   | 'c2'   | 4    | '375 GB'
         '50 GB'   | 'c2d-highmem-56'  | 'c2d'  | 56   | '1500 GB'
         '750 GB'  | 'm3-megamem-64'   | 'm3'   | 64   | '1500 GB'
+        '100 GB'  | 'c4-standard-8-lssd'  | 'c4'   | 8    | '0'
+        '100 GB'  | 'c4a-standard-8-lssd' | 'c4a'  | 8    | '0'
+        '100 GB'  | 'c4d-standard-8-lssd' | 'c4d'  | 8    | '0'
+    }
+
+    def 'should know when hyperdisk is required'() {
+        expect:
+        GoogleBatchMachineTypeSelector.INSTANCE.isHyperdiskOnly(TYPE) == EXPECTED
+
+        where:
+        TYPE                | EXPECTED
+        'c4-standard-8'     | true
+        'c4a-standard-8'    | true
+        'c4d-standard-8'    | true
+        'n4-standard-8'     | true
+        'n4a-standard-8'    | true
+        'n4d-standard-8'    | true
+        'n1-standard-8'     | false
+        'n2-standard-8'     | false
+        'e2-standard-8'     | false
+        'c2-standard-8'     | false
     }
 
     def 'should know when to install GPU drivers'() {
@@ -127,5 +160,35 @@ class GoogleBatchMachineTypeSelectorTest extends Specification {
         'a2-highgpu-1g' | 0    | true
         'a3-highgpu-1g' | 0    | true
         'g2-standard-4' | 0    | true
+    }
+
+    def 'should detect non-configurable local SSD'() {
+        expect:
+        final machineType = new MachineType(type: TYPE, family: FAMILY)
+        GoogleBatchMachineTypeSelector.INSTANCE.notConfigurableLocalSSD(machineType) == EXPECTED
+
+        where:
+        TYPE                        | FAMILY | EXPECTED
+        // c3/c3d with -lssd suffix → true
+        'c3-standard-8-lssd'        | 'c3'   | true
+        'c3d-standard-8-lssd'       | 'c3d'  | true
+        // c4/c4a/c4d with -lssd suffix → true
+        'c4-standard-8-lssd'        | 'c4'   | true
+        'c4a-standard-8-lssd'       | 'c4a'  | true
+        'c4d-standard-8-lssd'       | 'c4d'  | true
+        // a3 family → always true regardless of type
+        'a3-highgpu-8g'             | 'a3'   | true
+        'a3-megagpu-64g'            | 'a3'   | true
+        // a2-ultragpu- prefix → true regardless of family
+        'a2-ultragpu-1g'            | 'a2'   | true
+        'a2-ultragpu-8g'            | 'a2'   | true
+        // c3/c4 without -lssd suffix → false
+        'c3-standard-8'             | 'c3'   | false
+        'c4-standard-8'             | 'c4'   | false
+        // a2 non-ultragpu → false
+        'a2-highgpu-1g'             | 'a2'   | false
+        // unrelated families → false
+        'n2-standard-4'             | 'n2'   | false
+        'e2-standard-8'             | 'e2'   | false
     }
 }

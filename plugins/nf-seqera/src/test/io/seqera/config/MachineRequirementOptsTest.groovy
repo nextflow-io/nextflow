@@ -30,7 +30,6 @@ class MachineRequirementOptsTest extends Specification {
         def opts = new MachineRequirementOpts([:])
 
         then:
-        opts.arch == null
         opts.provisioning == null
         opts.maxSpotAttempts == null
         opts.machineTypes == null
@@ -39,14 +38,12 @@ class MachineRequirementOptsTest extends Specification {
     def 'should create with all settings' () {
         when:
         def opts = new MachineRequirementOpts([
-            arch: 'arm64',
             provisioning: 'spotFirst',
             maxSpotAttempts: 3,
             machineTypes: ['m5', 'c5', 'r5']
         ])
 
         then:
-        opts.arch == 'arm64'
         opts.provisioning == 'spotFirst'
         opts.maxSpotAttempts == 3
         opts.machineTypes == ['m5', 'c5', 'r5']
@@ -54,10 +51,9 @@ class MachineRequirementOptsTest extends Specification {
 
     def 'should create with partial settings' () {
         when:
-        def opts = new MachineRequirementOpts([arch: 'x86_64', provisioning: 'spot'])
+        def opts = new MachineRequirementOpts([provisioning: 'spot'])
 
         then:
-        opts.arch == 'x86_64'
         opts.provisioning == 'spot'
         opts.maxSpotAttempts == null
         opts.machineTypes == null
