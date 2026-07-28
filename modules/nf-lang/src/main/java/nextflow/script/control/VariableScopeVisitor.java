@@ -347,7 +347,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         for( var input : asFlatParams(node.inputs) ) {
             vsc.declare(input, input);
 
-            // suppress "unused variable" warnings since Path inputs are implicity staged
+            // suppress "unused variable" warnings since Path inputs are implicitly staged
             vsc.findVariableDeclaration(input.getName(), input);
         }
 

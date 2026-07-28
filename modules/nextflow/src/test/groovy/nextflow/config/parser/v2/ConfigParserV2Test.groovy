@@ -81,6 +81,47 @@ class ConfigParserV2Test extends Specification {
         config.process.cpus == 1
     }
 
+    def 'should resolve multiple plugins block by replacement' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def main = folder.resolve('nextflow.config')
+        def snippet = folder.resolve('other.config')
+
+        snippet.text = '''
+            plugins {
+                id 'nf-boost'
+                id 'nf-schema@2.5.1'
+            }
+            '''
+
+        when:
+        main.text = """
+            includeConfig 'other.config'
+
+            plugins {
+                id 'nf-schema@2.6.1'
+            }
+            """
+        def config = new ConfigParserV2().parse(main)
+        then:
+        config.plugins == ['nf-schema@2.6.1'] as Set
+
+        when:
+        main.text = """
+            plugins {
+                id 'nf-schema@2.6.1'
+            }
+
+            includeConfig 'other.config'
+            """
+        config = new ConfigParserV2().parse(main)
+        then:
+        config.plugins == ['nf-boost', 'nf-schema@2.5.1'] as Set
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should parse composed config files' () {
 
         given:
@@ -550,7 +591,7 @@ class ConfigParserV2Test extends Specification {
 
         when:
         def url = 'http://localhost:9900/nextflow.config' as Path
-        def cfg = new ConfigBuilder().buildGivenFiles(url)
+        def cfg = new ConfigBuilder().build([url])
         then:
         cfg.params.foo == 'Hello'
         cfg.params.bar == 'world!'

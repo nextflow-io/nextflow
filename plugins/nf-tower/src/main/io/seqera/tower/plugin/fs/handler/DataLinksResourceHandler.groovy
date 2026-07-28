@@ -26,6 +26,7 @@ import java.time.Instant
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.http.HxClient
 import io.seqera.tower.model.DataLinkDto
 import io.seqera.tower.model.DataLinkItem
 import io.seqera.tower.model.DataLinkItemType
@@ -35,14 +36,16 @@ import io.seqera.tower.plugin.fs.ResourceTypeHandler
 import io.seqera.tower.plugin.fs.SeqeraFileAttributes
 import io.seqera.tower.plugin.fs.SeqeraFileSystem
 import io.seqera.tower.plugin.fs.SeqeraPath
+import nextflow.util.ProxyConfig
 
 /**
  * {@link ResourceTypeHandler} for the {@code data-links} resource type.
  *
  * Listings and attribute queries go through the Seqera Platform API; file reads
  * use a pre-signed URL obtained from {@code /generate-download-url} and fetched
- * with a plain JDK {@link HttpClient} — the Seqera {@code Authorization} header
- * must not be sent to the cloud-backed URL.
+ * with an {@link HxClient} configured <em>without</em> a bearer token — the Seqera
+ * {@code Authorization} header must not be sent to the cloud-backed URL — that also
+ * honours the forward proxy resolved from the launch environment.
  *
  * Data-link list and directory content are streamed lazily to avoid materializing
  * potentially large result sets in memory.
@@ -55,17 +58,19 @@ class DataLinksResourceHandler implements ResourceTypeHandler {
 
     private final SeqeraFileSystem fs
     private final SeqeraDataLinkClient client
-    private final HttpClient httpClient
+    private final HxClient httpClient
 
     DataLinksResourceHandler(SeqeraFileSystem fs, SeqeraDataLinkClient client) {
-        this(fs, client, HttpClient.newBuilder()
+        this(fs, client, HxClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .followRedirects(HttpClient.Redirect.NORMAL)
+                // route through the forward proxy when configured
+                .withProxyConfig(ProxyConfig.proxyConfig())
                 .build())
     }
 
-    /** Test-only constructor to inject a mock {@link HttpClient}. */
-    DataLinksResourceHandler(SeqeraFileSystem fs, SeqeraDataLinkClient client, HttpClient httpClient) {
+    /** Test-only constructor to inject a mock {@link HxClient}. */
+    DataLinksResourceHandler(SeqeraFileSystem fs, SeqeraDataLinkClient client, HxClient httpClient) {
         this.fs = fs
         this.client = client
         this.httpClient = httpClient

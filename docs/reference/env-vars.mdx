@@ -355,17 +355,25 @@ The Seqera Platform workspace ID. Can also be configured using the `tower.worksp
 
 ## Other settings
 
+##### `ALL_PROXY`
+
+Defines a proxy server used as a fallback for any protocol (HTTP, HTTPS, FTP) that does not have a scheme-specific proxy variable set. A scheme-specific variable (e.g. `HTTPS_PROXY`) takes precedence over `ALL_PROXY`. Proxy authentication is supported by providing the credentials in the proxy URL.
+
 ##### `FTP_PROXY`
 
-Defines the FTP proxy server. Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `ftp://user:password@proxy-host.com:port`.
+Defines the FTP proxy server. Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `ftp://user:password@proxy-host.com:port`. Credentials containing special characters must be URL-encoded (percent-encoded).
 
 ##### `HTTP_PROXY`
 
-Defines the HTTP proxy server.
+Defines the HTTP proxy server. Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `http://user:password@proxy-host.com:port`. Credentials containing special characters must be URL-encoded (percent-encoded).
 
 ##### `HTTPS_PROXY`
 
-Defines the HTTPS proxy server.
+Defines the HTTPS proxy server. Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `https://user:password@proxy-host.com:port`. Credentials containing special characters must be URL-encoded (percent-encoded).
+
+:::note
+When connecting to HTTPS targets through an authenticating proxy, the JDK strips proxy credentials from the `CONNECT` request for the schemes listed in `jdk.http.auth.tunneling.disabledSchemes` (default `Basic`), which can cause a `407` error. Nextflow clears this property automatically when the proxy URL carries credentials. If you set the property yourself, Nextflow does not override it — clear it explicitly to allow Basic proxy authentication over HTTPS with `NXF_OPTS='-Djdk.http.auth.tunneling.disabledSchemes='`.
+:::
 
 ##### `NO_COLOR`
 

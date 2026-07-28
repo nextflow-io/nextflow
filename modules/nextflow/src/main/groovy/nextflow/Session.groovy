@@ -47,6 +47,7 @@ import nextflow.container.PodmanConfig
 import nextflow.container.SarusConfig
 import nextflow.container.ShifterConfig
 import nextflow.container.SingularityConfig
+import nextflow.container.SmolVmConfig
 import nextflow.dag.DAG
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
@@ -1209,6 +1210,7 @@ class Session implements ISession {
             new ApptainerConfig(config.apptainer as Map ?: Collections.emptyMap()),
             new CharliecloudConfig(config.charliecloud as Map ?: Collections.emptyMap()),
             new AppleContainerConfig(config.appleContainer as Map ?: Collections.emptyMap()),
+            new SmolVmConfig(config.smolvm as Map ?: Collections.emptyMap()),
         ] as List<ContainerConfig>
 
         if( engine ) {
