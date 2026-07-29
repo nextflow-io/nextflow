@@ -1,0 +1,132 @@
+---
+title: Seqera file system
+description: Read Seqera Platform datasets and data links in Nextflow pipelines using the seqera:// URI scheme.
+---
+
+# Seqera file system
+
+<AddedInVersion version="26.04" />
+
+Nextflow can read Seqera Platform datasets and data links using the `seqera` URI scheme.
+Use a `seqera://` path anywhere Nextflow expects a file path.
+Your pipeline then reads data registered in a Seqera Platform workspace without hard-coding the storage location or the credentials.
+
+The `nf-tower` plugin, bundled with Nextflow, provides the Seqera file system.
+The file system is read-only. A `seqera://` path cannot be a work directory, an output directory, or a publish target.
+
+See [Working with files][working-with-files] and the [Path][stdlib-types-path] reference for the available file operations.
+
+## Authentication
+
+Reading a `seqera://` path requires a [Seqera Platform](https://seqera.io) access token with permission to read the target datasets or data links. See [Authentication](https://docs.seqera.io/platform-cloud/api/overview#authentication) in the Seqera Platform documentation to create one.
+
+Provide the token using the `TOWER_ACCESS_TOKEN` environment variable:
+
+```bash
+export TOWER_ACCESS_TOKEN='<PLATFORM_ACCESS_TOKEN>'
+```
+
+Alternatively, specify the token in your configuration with the [`tower.accessToken`][config-tower-accessToken] setting, along with the plugin declaration:
+
+```nextflow
+plugins {
+    id 'nf-tower'
+}
+
+tower.accessToken = '<PLATFORM_ACCESS_TOKEN>'
+```
+
+Nextflow loads the `nf-tower` plugin automatically when the `TOWER_ACCESS_TOKEN` environment variable is set, or when [`tower.enabled`][config-tower-enabled] or [`fusion.enabled`][config-fusion-enabled] is `true`. Otherwise, declare the plugin explicitly. Without it, Nextflow does not register the `seqera` scheme.
+
+:::note
+Setting `tower.enabled = true` also registers the scheme, but it turns on run monitoring with Seqera Platform. To read data without reporting your runs, declare the plugin instead.
+:::
+
+For Seqera Platform Enterprise, set the API endpoint of your instance with the [`tower.endpoint`][config-tower-endpoint] setting or the `TOWER_API_ENDPOINT` environment variable.
+
+## Dataset paths
+
+A [dataset](https://docs.seqera.io/platform-cloud/data/datasets) is a versioned CSV or TSV file stored in a Seqera Platform workspace, typically a samplesheet. Dataset paths take the following form:
+
+```
+seqera://<organization>/<workspace>/datasets/<name>[@<version>]
+```
+
+For example, the following pipeline reads a samplesheet from the `showcase` workspace of the `seqeralabs` organization:
+
+```nextflow
+params.dataset = 'seqera://seqeralabs/showcase/datasets/sarek_samples'
+
+workflow {
+    channel.fromPath(params.dataset)
+        | splitCsv(header: true)
+        | view
+}
+```
+
+Omit the version to read the latest enabled version of the dataset. Append `@<version>` to pin a specific version. A pinned path keeps a run reproducible after someone uploads a new version:
+
+```nextflow
+params.dataset = 'seqera://seqeralabs/showcase/datasets/sarek_samples@2'
+```
+
+## Data link paths
+
+<AddedInVersion version="26.05.0-edge" />
+
+A [data link](https://docs.seqera.io/platform-cloud/data/data-explorer) is a cloud storage bucket or container registered in a Seqera Platform workspace, along with the credentials that grant access to it. Data link paths take the following form:
+
+```
+seqera://<organization>/<workspace>/data-links/<provider>/<name>/<path>
+```
+
+The segments are:
+
+- `<provider>`: the cloud provider of the data link, such as `aws`, `azure`, or `google`.
+- `<name>`: the name of the data link in the workspace, as shown in **Data Explorer**. This is not the name of the underlying bucket or container.
+- `<path>`: the path of the file or directory within the data link.
+
+For example, the following pipeline reads a file from the `inputs` data link:
+
+```nextflow
+workflow {
+    println file('seqera://acme/research/data-links/aws/inputs/data/sequences.fa').text
+}
+```
+
+Because the data link supplies the credentials, your pipeline does not need its own cloud credentials to read the data.
+
+:::note
+To write pipeline outputs to the storage behind a data link, use the native path of the bucket or container, such as `s3://my-bucket/results`.
+:::
+
+## List available data
+
+Every level of a `seqera://` path is a directory. Use [`listDirectory()`][stdlib-listDirectory] to see the organizations, workspaces, datasets, and data links that your access token can read:
+
+```nextflow
+workflow {
+    // organizations
+    file('seqera://').listDirectory().each { println it }
+
+    // workspaces in an organization
+    file('seqera://acme').listDirectory().each { println it }
+
+    // datasets in a workspace
+    file('seqera://acme/research/datasets').listDirectory().each { println it }
+
+    // providers with data links in a workspace
+    file('seqera://acme/research/data-links').listDirectory().each { println it }
+
+    // data links for a provider
+    file('seqera://acme/research/data-links/aws').listDirectory().each { println it }
+}
+```
+
+[config-fusion-enabled]: ./reference/config#fusionenabled
+[config-tower-accessToken]: ./reference/config#toweraccesstoken
+[config-tower-enabled]: ./reference/config#towerenabled
+[config-tower-endpoint]: ./reference/config#towerendpoint
+[stdlib-listDirectory]: ./reference/stdlib-types#listdirectory---iterablepath
+[stdlib-types-path]: ./reference/stdlib-types#path
+[working-with-files]: ./working-with-files

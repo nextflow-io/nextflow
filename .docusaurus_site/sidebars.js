@@ -83,7 +83,8 @@ module.exports = {
                 "azure",
                 "google",
                 "kubernetes",
-                "fusion"
+                "fusion",
+                "seqera-filesystem"
             ]
         },
         {
