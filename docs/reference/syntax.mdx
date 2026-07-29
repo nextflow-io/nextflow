@@ -81,20 +81,20 @@ nextflow.preview.recursion = true
 An include declaration consists of an *include source* and one or more *include clauses*:
 
 ```nextflow
-include { hallo as sayHello } from './some/module'
+include { hello as sayHello } from './some/module'
 ```
 
-The include source should be a string literal. Each include clause should specify a name, and may also specify an *alias*. In the above example, `hallo` is included under the alias `sayHello`.
+The include source should be a string literal. Each include clause should specify a name, and may also specify an *alias*. In the above example, `hello` is included under the alias `sayHello`.
 
 Include clauses can be separated by semi-colons or newlines:
 
 ```nextflow
 // semi-colons
-include { hallo ; bye as goodbye } from './some/module'
+include { hello ; bye as goodbye } from './some/module'
 
 // newlines
 include {
-    hallo
+hello
     bye as goodbye
 } from './some/module'
 ```
@@ -102,7 +102,7 @@ include {
 Include clauses can also be specified as separate includes:
 
 ```nextflow
-include { hallo } from './some/module'
+include { hello } from './some/module'
 include { bye as goodbye } from './some/module'
 ```
 
@@ -338,6 +338,14 @@ def greet(greeting, name) {
 }
 ```
 
+Each parameter may declare a type, and the function may declare a return type after the parameter list:
+
+```nextflow
+def add(a: Integer, b: Integer) -> Integer {
+    a + b
+}
+```
+
 The function body consists of one or more [statements](#statements).
 
 The [return statement](#return) can be used to explicitly return from a function:
@@ -432,6 +440,13 @@ Multiple variables can be declared in a single statement if the initializer is a
 
 ```nextflow
 def (x, y) = tuple(1, 2)
+```
+
+A variable declaration may specify a type after the name, separated by a colon:
+
+```nextflow
+def x: Integer = 42
+def (x: Integer, y: Integer) = tuple(1, 2)
 ```
 
 ### Assignment
@@ -535,10 +550,18 @@ def text = null
 try {
     text = file('hello.txt').text
 }
-catch( IOException e ) {
+catch( e: IOException ) {
     log.warn "Could not load hello.txt"
 }
+catch( e: FileNotFoundException | AccessDeniedException ) {
+    log.warn "Could not load hello.txt"
+}
+catch( e ) {
+    log.warn "Unexpected error: ${e}"
+}
 ```
+
+Each catch clause declares a variable and may specify any number of error types. Multiple error types can be specified by separating them with a pipe (`|`). A catch clause with no type catches any exception.
 
 ## Expressions
 
