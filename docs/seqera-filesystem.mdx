@@ -3,12 +3,10 @@ title: Seqera file system
 description: Read Seqera Platform datasets and data links in Nextflow pipelines using the seqera:// URI scheme.
 ---
 
-# Seqera file system
-
 <AddedInVersion version="26.04" />
 
 Nextflow can read Seqera Platform datasets and data links using the `seqera` URI scheme.
-Use a `seqera://` path anywhere Nextflow expects a file path.
+Use a `seqera://` path anywhere Nextflow reads an input file.
 Your pipeline then reads data registered in a Seqera Platform workspace without hard-coding the storage location or the credentials.
 
 The `nf-tower` plugin, bundled with Nextflow, provides the Seqera file system.
