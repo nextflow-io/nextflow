@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cli
@@ -22,7 +21,7 @@ import java.nio.file.Paths
 import com.beust.jcommander.Parameter
 import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
-import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigCmdAdapter
 import nextflow.config.ConfigMap
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
@@ -87,7 +86,7 @@ class CmdLineage extends CmdBase implements UsageAware {
         // setup the plugins system and load the secrets provider
         Plugins.init()
         // load the config
-        this.config = new ConfigBuilder()
+        this.config = new ConfigCmdAdapter()
             .setOptions(launcher.options)
             .setBaseDir(Paths.get('.'))
             .build()

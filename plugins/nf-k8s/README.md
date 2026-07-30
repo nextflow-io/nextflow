@@ -1,5 +1,7 @@
 # Kubernetes plugin for Nextflow
 
+## Summary
+
 The Kubernetes plugin provides native Kubernetes execution capability for Nextflow pipelines. It supports pod management, volume mounting, and resource allocation.
 
 ## Get Started
@@ -76,7 +78,7 @@ process {
 
 ## Resources
 
-- [Kubernetes Executor Documentation](https://nextflow.io/docs/latest/kubernetes.html)
+- [Kubernetes Executor Documentation](https://docs.seqera.io/nextflow/kubernetes)
 
 ## License
 

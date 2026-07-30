@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,8 +33,8 @@ import static test.TestUtils.tempFile
  */
 class ResolveIncludeTest extends Specification {
 
-    List<SyntaxException> check(List<Path> files) {
-        final parser = new ScriptParser()
+    List<SyntaxException> check(Path projectDir, List<Path> files) {
+        final parser = new ScriptParser(projectDir)
         return TestUtils.check(parser, files)
     }
 
@@ -48,7 +48,7 @@ class ResolveIncludeTest extends Specification {
         def module = root.resolve('hello.nf')
 
         when:
-        def errors = check([main])
+        def errors = check(root, [main])
         then:
         errors.size() == 1
         errors[0].getStartLine() == 1
@@ -72,7 +72,7 @@ class ResolveIncludeTest extends Specification {
             ''')
 
         when:
-        def errors = check([main, module])
+        def errors = check(root, [main, module])
         then:
         errors.size() == 2
         errors[0].getSourceLocator().endsWith('main.nf')
@@ -102,7 +102,7 @@ class ResolveIncludeTest extends Specification {
             ''')
 
         when:
-        def errors = check([main, module])
+        def errors = check(root, [main, module])
         then:
         errors.size() == 1
         errors[0].getSourceLocator().endsWith('main.nf')
@@ -128,7 +128,7 @@ class ResolveIncludeTest extends Specification {
             ''')
 
         when:
-        def errors = check([main, module])
+        def errors = check(root, [main, module])
         then:
         errors.size() == 0
 

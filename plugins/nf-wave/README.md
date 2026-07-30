@@ -1,5 +1,7 @@
 # Wave containers plugin for Nextflow
 
+## Summary
+
 The Wave containers plugin provides integration with the Wave container service for dynamic container building, augmentation, and on-demand software provisioning.
 
 ## Get started
@@ -106,7 +108,7 @@ docker {
 ## Resources
 
 - [Wave Documentation](https://docs.seqera.io/wave)
-- [Wave Integration Guide](https://nextflow.io/docs/latest/wave.html)
+- [Wave Integration Guide](https://docs.seqera.io/nextflow/wave)
 
 ## License
 

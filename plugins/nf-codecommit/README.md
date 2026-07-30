@@ -1,5 +1,7 @@
 # AWS CodeCommit plugin for Nextflow
 
+## Summary
+
 The AWS CodeCommit plugin provides integration with AWS CodeCommit. It enables Nextflow to pull pipeline scripts directly from CodeCommit repositories.
 
 ## Get Started
@@ -64,7 +66,7 @@ nextflow run codecommit://my-repo/main.nf
 ## Resources
 
 - [AWS CodeCommit Documentation](https://docs.aws.amazon.com/codecommit/)
-- [Nextflow Pipeline Sharing](https://nextflow.io/docs/latest/sharing.html)
+- [Nextflow Pipeline Sharing](https://docs.seqera.io/nextflow/sharing)
 
 ## License
 

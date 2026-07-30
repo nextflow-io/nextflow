@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,8 @@
 
 package io.seqera.tower.plugin.launch
 
+import io.seqera.http.HxClient
+import io.seqera.tower.plugin.TowerClient
 import nextflow.cli.CmdLaunch
 import nextflow.exception.AbortOperationException
 import org.junit.Rule
@@ -373,15 +375,18 @@ class LaunchCommandImplTest extends Specification {
 
     def 'should initialize context with valid config'() {
         given:
-        def cmd = Spy(LaunchCommandImpl)
         def config = [
             'tower.accessToken': 'test-token',
             'tower.endpoint': 'https://api.cloud.seqera.io'
         ]
+        def client = Mock(TowerClient){
+            getUserInfo() >> [name: 'testuser', id: '123']
+            getUserWorkspaceDetails(_,_) >> null
+        }
+        def cmd = Spy(new LaunchCommandImpl())
+        cmd.createTowerClient(_,_) >> client
         cmd.readConfig() >> config
-        cmd.getUserInfo(_, _) >> [name: 'testuser', id: '123']
         cmd.resolveWorkspaceId(_, _, _, _) >> null
-        cmd.getWorkspaceDetails(_, _, _) >> null
         cmd.resolveComputeEnvironment(_,_, _, _, _) >> [id: 'ce-123', name: 'test-ce', workDir: 's3://bucket/work']
 
         def options = new CmdLaunch.LaunchOptions(pipeline: 'nf-core/rnaseq')
@@ -400,12 +405,15 @@ class LaunchCommandImplTest extends Specification {
 
     def 'should use default endpoint when not configured'() {
         given:
-        def cmd = Spy(LaunchCommandImpl)
         def config = ['tower.accessToken': 'test-token']
+        def client = Mock(TowerClient){
+            getUserInfo() >> [name: 'testuser', id: '123']
+            getUserWorkspaceDetails(_, _) >> null
+        }
+        def cmd = Spy(new LaunchCommandImpl())
+        cmd.createTowerClient(_,_) >> client
         cmd.readConfig() >> config
-        cmd.getUserInfo(_, _) >> [name: 'testuser', id: '123']
         cmd.resolveWorkspaceId(_, _, _, _) >> null
-        cmd.getWorkspaceDetails(_, _, _) >> null
         cmd.resolveComputeEnvironment(_,_, _, _, _) >> [id: 'ce-123', name: 'test-ce', workDir: 's3://bucket/work']
 
         def options = new CmdLaunch.LaunchOptions(pipeline: 'nf-core/rnaseq')
@@ -419,12 +427,16 @@ class LaunchCommandImplTest extends Specification {
 
     def 'should resolve workspace details when workspace ID provided'() {
         given:
-        def cmd = Spy(LaunchCommandImpl)
+
         def config = ['tower.accessToken': 'test-token', 'tower.workspaceId': 12345]
+        def client = Mock(TowerClient){
+             getUserInfo() >> [name: 'testuser', id: '123']
+             getUserWorkspaceDetails(_, _) >> [orgName: 'TestOrg', workspaceName: 'TestWS']
+        }
+        def cmd = Spy(new LaunchCommandImpl())
+        cmd.createTowerClient(_,_) >> client
         cmd.readConfig() >> config
-        cmd.getUserInfo(_, _) >> [name: 'testuser', id: '123']
         cmd.resolveWorkspaceId(_, _, _, _) >> 12345L
-        cmd.getWorkspaceDetails(_, _, _) >> [orgName: 'TestOrg', workspaceName: 'TestWS']
         cmd.resolveComputeEnvironment(_, _, _, _, _) >> [id: 'ce-123', name: 'test-ce', workDir: 's3://bucket/work']
 
         def options = new CmdLaunch.LaunchOptions(pipeline: 'nf-core/rnaseq')
@@ -447,10 +459,10 @@ class LaunchCommandImplTest extends Specification {
             [id: 'ce-1', name: 'primary-ce', primary: true],
             [id: 'ce-2', name: 'secondary-ce', primary: false]
         ]
-        cmd.listComputeEnvironments(_, _, _) >> computeEnvs
+        cmd.listComputeEnvironments(_, _) >> computeEnvs
 
         when:
-        def result = cmd.findComputeEnv('secondary-ce', null, 'token', 'endpoint')
+        def result = cmd.findComputeEnv(Mock(TowerClient), 'secondary-ce', null)
 
         then:
         result.id == 'ce-2'
@@ -464,10 +476,10 @@ class LaunchCommandImplTest extends Specification {
             [id: 'ce-1', name: 'primary-ce', primary: true],
             [id: 'ce-2', name: 'secondary-ce', primary: false]
         ]
-        cmd.listComputeEnvironments(_, _, _) >> computeEnvs
+        cmd.listComputeEnvironments(_, _) >> computeEnvs
 
         when:
-        def result = cmd.findComputeEnv(null, null, 'token', 'endpoint')
+        def result = cmd.findComputeEnv( Mock(TowerClient) ,null, null)
 
         then:
         result.id == 'ce-1'
@@ -478,10 +490,10 @@ class LaunchCommandImplTest extends Specification {
     def 'should return null when compute environment not found'() {
         given:
         def cmd = Spy(LaunchCommandImpl)
-        cmd.listComputeEnvironments(_, _, _) >> []
+        cmd.listComputeEnvironments(_, _) >> []
 
         when:
-        def result = cmd.findComputeEnv('nonexistent', null, 'token', 'endpoint')
+        def result = cmd.findComputeEnv(Mock(TowerClient), 'nonexistent', null)
 
         then:
         result == null
@@ -491,7 +503,7 @@ class LaunchCommandImplTest extends Specification {
         given:
         def cmd = Spy(LaunchCommandImpl)
         // Mock findComputeEnv to return null (not found)
-        cmd.findComputeEnv('nonexistent', null, 'token', 'https://api.cloud.seqera.io') >> null
+        cmd.findComputeEnv(_,'nonexistent', null) >> null
 
         when:
         cmd.resolveComputeEnvironment(null, 'nonexistent', null, 'token', 'https://api.cloud.seqera.io')
@@ -505,7 +517,8 @@ class LaunchCommandImplTest extends Specification {
         given:
         def cmd = Spy(LaunchCommandImpl)
         // Mock findComputeEnv to return null (no primary found)
-        cmd.findComputeEnv(null, null, 'token', 'https://api.cloud.seqera.io') >> null
+        cmd.createTowerClient(_,_) >> Mock(TowerClient)
+        cmd.findComputeEnv(_ , null, null) >> null
 
         when:
         cmd.resolveComputeEnvironment(null, null, null, 'token', 'https://api.cloud.seqera.io')
@@ -613,6 +626,44 @@ class LaunchCommandImplTest extends Specification {
         request.launch.configText == 'process.cpus = 8'
     }
 
+    def 'should include workspace and user secrets in launch request'() {
+        given:
+        def cmd = new LaunchCommandImpl()
+        def options = new CmdLaunch.LaunchOptions(
+            pipeline: 'nf-core/rnaseq',
+            userSecrets: ['MY_USER_SECRET'],
+            workspaceSecrets: ['DRAGEN_USERNAME', 'DRAGEN_PASSWORD']
+        )
+        def context = new LaunchCommandImpl.LaunchContext(
+            computeEnvId: 'ce-123',
+            workDir: 's3://bucket/work'
+        )
+
+        when:
+        def request = cmd.buildLaunchRequestPayload(options, context, 'https://github.com/nf-core/rnaseq', null, null)
+
+        then:
+        request.launch.userSecrets == ['MY_USER_SECRET'] as Set
+        request.launch.workspaceSecrets == ['DRAGEN_USERNAME', 'DRAGEN_PASSWORD'] as Set
+    }
+
+    def 'should not include secrets in launch request when none provided'() {
+        given:
+        def cmd = new LaunchCommandImpl()
+        def options = new CmdLaunch.LaunchOptions(pipeline: 'nf-core/rnaseq')
+        def context = new LaunchCommandImpl.LaunchContext(
+            computeEnvId: 'ce-123',
+            workDir: 's3://bucket/work'
+        )
+
+        when:
+        def request = cmd.buildLaunchRequestPayload(options, context, 'https://github.com/nf-core/rnaseq', null, null)
+
+        then:
+        !request.launch.containsKey('userSecrets')
+        !request.launch.containsKey('workspaceSecrets')
+    }
+
     // ===== Workflow Status Tests =====
 
     def 'should get color for workflow status'() {
@@ -673,14 +724,17 @@ class LaunchCommandImplTest extends Specification {
 
     def 'should lookup workspace by name'() {
         given:
-        def cmd = Spy(LaunchCommandImpl)
         def config = [:]
         def workspaces = [
             [workspaceId: 111, workspaceName: 'ws1'],
             [workspaceId: 222, workspaceName: 'ws2']
         ]
-        cmd.getUserInfo(_, _) >> [id: 'user-123']
-        cmd.listUserWorkspaces(_, _, _) >> workspaces
+        def client = Mock(TowerClient) {
+            getUserInfo() >> [id: 'user-123']
+        }
+        def cmd = Spy(new LaunchCommandImpl())
+        cmd.createTowerClient(_,_) >> client
+        cmd.listUserWorkspaces(_, _) >> workspaces
 
         when:
         def workspaceId = cmd.resolveWorkspaceId(config, 'ws2', 'token', 'endpoint')
@@ -691,9 +745,12 @@ class LaunchCommandImplTest extends Specification {
 
     def 'should throw error when workspace not found by name'() {
         given:
-        def cmd = Spy(LaunchCommandImpl)
         def config = [:]
-        cmd.getUserInfo(_, _) >> [id: 'user-123']
+        def client = Mock(TowerClient) {
+            getUserInfo() >> [id: 'user-123']
+        }
+        def cmd = Spy(new LaunchCommandImpl())
+        cmd.createTowerClient(_,_) >> client
         cmd.listUserWorkspaces(_, _, _) >> []
 
         when:
@@ -714,42 +771,6 @@ class LaunchCommandImplTest extends Specification {
 
         then:
         workspaceId == null
-    }
-
-    // ===== URL Building Tests =====
-
-    def 'should build URL without query params'() {
-        given:
-        def cmd = new LaunchCommandImpl()
-
-        when:
-        def url = cmd.buildUrl('https://api.cloud.seqera.io', '/workflow/launch', [:])
-
-        then:
-        url == 'https://api.cloud.seqera.io/workflow/launch'
-    }
-
-    def 'should build URL with query params'() {
-        given:
-        def cmd = new LaunchCommandImpl()
-
-        when:
-        def url = cmd.buildUrl('https://api.cloud.seqera.io', '/workflow/launch', [workspaceId: '12345'])
-
-        then:
-        url.contains('https://api.cloud.seqera.io/workflow/launch?')
-        url.contains('workspaceId=12345')
-    }
-
-    def 'should URL encode query params'() {
-        given:
-        def cmd = new LaunchCommandImpl()
-
-        when:
-        def url = cmd.buildUrl('https://api.cloud.seqera.io', '/workflow', [name: 'test workflow'])
-
-        then:
-        url.contains('name=test+workflow')
     }
 
     // ===== Launch Result Tests =====

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.processor
@@ -21,6 +20,7 @@ import nextflow.Session
 import nextflow.container.resolver.ContainerInfo
 import nextflow.executor.Executor
 import nextflow.executor.TaskArrayExecutor
+import nextflow.script.ProcessConfigV2
 import spock.lang.Specification
 /**
  *
@@ -51,6 +51,21 @@ class TaskArrayRunTest extends Specification {
         def task = new TaskArrayRun()
         expect:
         task.isArray()
+    }
+
+    def 'should not stage output files because it is only a child task launcher' () {
+        given: 'a typed process'
+        def config = Mock(ProcessConfigV2)
+        def processor = Mock(TaskProcessor) { getConfig() >> config }
+        and: 'an array task whose context has no input variables bound, like the real array parent'
+        def task = new TaskArrayRun(processor: processor, context: Mock(TaskContext))
+
+        when:
+        def names = task.getOutputFilesNames()
+
+        then: 'no output files are returned and the typed output declarations are never evaluated'
+        names == []
+        0 * config.getOutputs()
     }
 
 }

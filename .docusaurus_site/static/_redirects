@@ -1,0 +1,20 @@
+#/platform-enterprise/      https://seqera-docs.netlify.app/platform-enterprise/:splat  200!
+#/platform-cloud/*          https://seqera-docs.netlify.app/platform-cloud/:splat       200!
+#/wave/*                    https://seqera-docs.netlify.app/wave/:splat                 200!
+#/fusion/*                  https://seqera-docs.netlify.app/fusion/:splat               200!
+#/multiqc/*                 https://seqera-docs.netlify.app/multiqc/:splat              200!
+#/platform-api/*            https://seqera-docs-api.netlify.app/platform-api/:splat     200!
+#/changelog/*               https://seqera-docs.netlify.app/changelog/:splat            200!
+
+/nextflow/developer/index          /nextflow/developer                     301
+/nextflow/updating-syntax          /nextflow/strict-syntax                 301
+/nextflow/updating-spot-retries    /nextflow/guides/updating-spot-retries  301
+/nextflow/metrics                  /nextflow/tutorials/metrics             301
+/nextflow/data-lineage             /nextflow/tutorials/data-lineage        301
+/nextflow/workflow-outputs         /nextflow/tutorials/workflow-outputs    301
+/nextflow/flux                     /nextflow/tutorials/flux                301
+/nextflow/developer/plugins        /nextflow/plugins/developing-plugins    301
+/nextflow/plugins                  /nextflow/plugins/plugins               301
+/nextflow/channel                  /nextflow/workflow                      301
+/nextflow/module/                  /nextflow/modules/                      301
+/nextflow/operator                 /nextflow/reference/operator            301

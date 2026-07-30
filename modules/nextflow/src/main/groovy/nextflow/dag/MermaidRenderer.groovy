@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -277,7 +277,7 @@ class MermaidRenderer implements DagRenderer {
                 node.label = vertex.label.tokenize(':').last()
 
             // determine the vertex subgraph
-            final keys = 
+            final keys =
                 vertex.type == DAG.Type.ORIGIN ? List.of(INPUTS) :
                 vertex.type == DAG.Type.NODE ? List.of(OUTPUTS) :
                 vertex.workflow.tokenize(':')

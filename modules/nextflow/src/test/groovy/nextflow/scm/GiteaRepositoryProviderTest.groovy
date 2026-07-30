@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -76,6 +76,24 @@ class GiteaRepositoryProviderTest extends Specification {
         true        | new ProviderConfig('gitea').setToken('xyz')
     }
 
+    @Unroll
+    def 'should return git credentials' () {
+        given:
+        def provider = new GiteaRepositoryProvider('pditommaso/tutorial', CONFIG)
+
+        when:
+        def credentials = provider.getGitCredentials()
+
+        then:
+        credentials != null
+
+        where:
+        CONFIG                                                                  | _
+        new ProviderConfig('gitea').setUser('foo').setPassword('bar')           | _
+        new ProviderConfig('gitea').setUser('foo').setToken('xyz')              | _
+        new ProviderConfig('gitea').setUser('foo').setPassword('bar').setToken('xyz') | _
+    }
+
     @IgnoreIf({System.getenv('NXF_SMOKE')})
     @Requires({System.getenv('NXF_GITEA_ACCESS_TOKEN')})
     def 'should read file content'() {
@@ -113,7 +131,7 @@ class GiteaRepositoryProviderTest extends Specification {
         def repo = new GiteaRepositoryProvider('pditommaso/test-hello', config)
         and:
         def DATA = this.class.getResourceAsStream('/test-asset.bin').bytes
-        
+
         when:
         def result = repo.readBytes('test/test-asset.bin')
 

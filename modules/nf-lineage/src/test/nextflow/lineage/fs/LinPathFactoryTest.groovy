@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -49,7 +49,7 @@ class LinPathFactoryTest extends Specification {
 
         expect:
         factory.parseUri('foo') == null
-        
+
         when:
         def p1 = factory.parseUri('lid://12345')
         then:
@@ -80,7 +80,7 @@ class LinPathFactoryTest extends Specification {
         def lid = LinPathFactory.create(EXPECTED)
         then:
         factory.toUriString(lid) == EXPECTED
-        
+
         where:
         _ | EXPECTED
         _ | 'lid://123'

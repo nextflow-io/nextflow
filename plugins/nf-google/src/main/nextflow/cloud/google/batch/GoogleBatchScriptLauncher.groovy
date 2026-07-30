@@ -1,6 +1,5 @@
 /*
- * Copyright 2023, Seqera Labs.
- * Copyright 2022, Google Inc.
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,7 +35,7 @@ import nextflow.util.TestOnly
 
 /**
  * Implement Nextflow task launcher script
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -66,7 +65,7 @@ class GoogleBatchScriptLauncher extends BashWrapperBuilder implements GoogleBatc
         bean.workDir = toContainerMount(bean.workDir)
         bean.targetDir = toContainerMount(bean.targetDir)
 
-        // add all children work dir 
+        // add all children work dir
         if( bean.arrayWorkDirs ) {
             for( Path it : bean.arrayWorkDirs )
                 toContainerMount(it)

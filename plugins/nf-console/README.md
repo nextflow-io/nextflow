@@ -1,5 +1,7 @@
 # Groovy console plugin for Nextflow
 
+## Summary
+
 The Groovy console plugin provides an interactive console and graphical user interface for Nextflow development, testing, and workflow exploration.
 
 ## Get Started
@@ -65,7 +67,7 @@ println executorFactory.getExecutorNames()
 
 ## Resources
 
-- [Nextflow Console Documentation](https://nextflow.io/docs/latest/cli.html#console)
+- [Nextflow Console Documentation](https://docs.seqera.io/nextflow/cli#interactive-console)
 - [Groovy Console Guide](https://groovy-lang.org/groovyconsole.html)
 
 ## License

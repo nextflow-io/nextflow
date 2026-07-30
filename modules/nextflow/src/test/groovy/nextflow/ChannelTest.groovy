@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -459,7 +459,7 @@ class ChannelTest extends Specification {
         def file3 = Files.createFile(folder.resolve('file3.log'))
         and:
         SysEnv.push(NXF_FILE_ROOT: folder.toString())
-        
+
         when:
         def result = runDataflow {
             Channel.fromPath( '*.txt' )
@@ -523,7 +523,7 @@ class ChannelTest extends Specification {
         def file3 = Files.createFile(sub1.resolve('file3.txt'))
         def file4 = Files.createFile(sub1.resolve('file4.txt'))
         Files.createSymbolicLink(folder.resolve('link_to_sub1'), sub1 )
-        
+
         // -- by default traverse symlinks
         when:
         def result = runDataflow {
@@ -1028,7 +1028,7 @@ class ChannelTest extends Specification {
                 Paths.get('/data/SRR389222_sub2.fastq.gz'),
                 Paths.get('/data/SRR389222_sub3.fastq.gz')
         ]
-        
+
         when:
         def result = runDataflow {
             Channel.fromFilePairs(files)

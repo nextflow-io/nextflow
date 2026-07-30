@@ -1,6 +1,5 @@
 /*
- * Copyright 2023, Seqera Labs
- * Copyright 2022, Google Inc.
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -60,7 +59,7 @@ import nextflow.trace.TraceRecord
 import nextflow.util.TestOnly
 /**
  * Implements a task handler for Google Batch executor
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -402,11 +401,12 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         else {
             final instancePolicy = AllocationPolicy.InstancePolicy.newBuilder()
 
-            if( batchConfig.getBootDiskImage() )
-                instancePolicy.setBootDisk(AllocationPolicy.Disk.newBuilder().setImage(batchConfig.getBootDiskImage()))
-
             if( fusionEnabled() && !disk ) {
-                disk = new DiskResource(request: '375 GB', type: 'local-ssd')
+                final reqMachineType = task.config.getMachineType()
+                disk = new DiskResource(
+                    request: '375 GB',
+                    type: reqMachineType ? chooseFusionDiskType(reqMachineType) : 'local-ssd'
+                )
                 log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - adding local volume as fusion scratch: $disk"
             }
 
@@ -423,6 +423,20 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                     priceModel: machineType.priceModel
                 )
             }
+
+            // Configure boot disk
+            final bootDisk = AllocationPolicy.Disk.newBuilder()
+            boolean setBoot = false
+            if( batchConfig.getBootDiskImage() ) {
+                bootDisk.setImage(batchConfig.getBootDiskImage())
+                setBoot = true
+            }
+            if( machineType && GoogleBatchMachineTypeSelector.INSTANCE.isHyperdiskOnly(machineType.type) ) {
+                bootDisk.setType('hyperdisk-balanced')
+                setBoot = true
+            }
+            if( setBoot )
+                instancePolicy.setBootDisk(bootDisk)
 
             if( task.config.getAccelerator() ) {
                 final accelerator = AllocationPolicy.Accelerator.newBuilder()
@@ -474,7 +488,29 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             instancePolicyOrTemplate.setPolicy(instancePolicy)
         }
 
+        if( batchConfig.installOpsAgent ) {
+            if( !batchConfig.bootDiskImage?.toLowerCase()?.contains('debian') )
+                log.warn1 "The Ops Agent requires a compatible boot disk image. Set 'google.batch.bootDiskImage' to a batch-debian image."
+            instancePolicyOrTemplate.setInstallOpsAgent( true )
+        }
+
         return new InstancePolicyResult(instancePolicyOrTemplate.build(), requiresScratchVolume)
+    }
+
+    /**
+     * Choose the disk type for Fusion according to the machine or family.
+     * Preference is 'local-ssd', 'hyperdisk-balanced' and 'pd-balanced' other types can be set by setting disk directive
+     * @param machineTypeOrFamily
+     * @return Disk type
+     */
+    protected String chooseFusionDiskType(String machineTypeOrFamily){
+        if( !GoogleBatchMachineTypeSelector.unsupportedLocalSSD(machineTypeOrFamily) ){
+            return 'local-ssd'
+        } else if( GoogleBatchMachineTypeSelector.isPdOnly(machineTypeOrFamily) ){
+            return 'pd-balanced'
+        } else {
+            return 'hyperdisk-balanced'
+        }
     }
 
     /**
@@ -683,6 +719,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 task.stderr = executor.logging.stderr(uid, taskId) ?: errorFile
             }
             else {
+                // Retried spot instances could keep the 500xx exit code event when the automatic retied succeeds. In this case, we need to read the exit code from .exitcode
+                // https://github.com/nextflow-io/nextflow/issues/6779
+                if( task.exitStatus >= 50000 )
+                    task.exitStatus = readExitFile()
                 task.stdout = outputFile
                 task.stderr = errorFile
             }

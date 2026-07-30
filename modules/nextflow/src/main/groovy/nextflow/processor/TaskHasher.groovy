@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -94,6 +94,15 @@ class TaskHasher {
         if( binEntries ) {
             log.trace "Task: ${task.processor.name} > Adding scripts on project bin path: ${-> binEntries.join('; ')}"
             keys.addAll(binEntries)
+        }
+
+        // add the fingerprint of the module resources bundle (e.g. module binaries)
+        // since these files are not staged individually like the project bin dir
+        final moduleBundle = session.enableModuleBinaries() ? processor.getModuleBundle() : null
+        if( moduleBundle && moduleBundle.hasEntries() ) {
+            final fingerprint = moduleBundle.fingerprint()
+            log.trace "Task: ${task.processor.name} > Adding module bundle fingerprint: ${fingerprint}"
+            keys.add(fingerprint)
         }
 
         // add environment modules (`module` directive)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,6 +30,7 @@ import groovy.util.logging.Slf4j
 import nextflow.cli.CmdKubeRun
 import nextflow.cli.CmdRun
 import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigCmdAdapter
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.k8s.client.K8sClient
@@ -72,7 +73,7 @@ class K8sDriverLauncher {
      */
     private String headMemory
 
-    /** 
+    /**
      * Pre-script to run before nextflow
      */
     private String headPreScript
@@ -198,7 +199,7 @@ class K8sDriverLauncher {
             }
         }
     }
-    
+
     protected boolean isWaitTimedOut(long time) {
         System.currentTimeMillis()-time > 90_000
     }
@@ -265,17 +266,20 @@ class K8sDriverLauncher {
         // -- load local config if available
         final builder = new ConfigBuilder()
                 .setShowClosures(true)
-                .setOptions(cmd.launcher.options)
                 .setProfile(cmd.profile)
+
+        final adapter = new ConfigCmdAdapter(builder)
+                .setOptions(cmd.launcher.options)
                 .setCmdRun(cmd)
 
         if( !interactive && !pipelineName.startsWith('/') && !cmd.remoteProfile && !cmd.runRemoteConfig ) {
             // -- check and parse project remote config
-            final pipelineConfig = new AssetManager(pipelineName, cmd).setRevision(cmd.revision).getConfigFile()
-            builder.setUserConfigFiles(pipelineConfig)
+            final pipelineConfig = new AssetManager(pipelineName, cmd.revision, cmd.mainScript, cmd).getConfigFile()
+            if( pipelineConfig )
+                adapter.setUserConfigFiles(pipelineConfig)
         }
 
-        return builder.buildConfigObject()
+        return adapter.buildConfigObject()
     }
 
     protected K8sConfig makeK8sConfig(Map config) {
@@ -634,7 +638,7 @@ class K8sDriverLauncher {
         initScript += "mkdir -p '$launchDir'; if [ -d '$launchDir' ]; then cd '$launchDir'; else echo 'Cannot create directory: $launchDir'; exit 1; fi; "
         initScript += '[ -f /etc/nextflow/scm ] && ln -s /etc/nextflow/scm $NXF_HOME/scm; '
         initScript += '[ -f /etc/nextflow/nextflow.config ] && cp /etc/nextflow/nextflow.config $PWD/nextflow.config; '
-        if( headPreScript ) 
+        if( headPreScript )
             initScript += "[ -f '$headPreScript' ] && '$headPreScript'; "
         configMap['init.sh'] = initScript
 

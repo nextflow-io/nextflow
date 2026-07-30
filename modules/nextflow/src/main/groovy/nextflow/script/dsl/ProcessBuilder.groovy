@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,12 +19,13 @@ package nextflow.script.dsl
 import java.util.regex.Pattern
 
 import groovy.transform.TypeChecked
-import groovy.util.logging.Slf4j
+import nextflow.NF
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.IllegalDirectiveException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.processor.ConfigList
 import nextflow.processor.ErrorStrategy
+import nextflow.processor.HintDefs
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
@@ -37,7 +38,6 @@ import nextflow.script.ProcessDef
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-@Slf4j
 @TypeChecked
 class ProcessBuilder {
 
@@ -59,6 +59,7 @@ class ProcessBuilder {
             'executor',
             'ext',
             'fair',
+            'hints',
             'label',
             'machineType',
             'maxErrors',
@@ -98,21 +99,35 @@ class ProcessBuilder {
         this.config = config
     }
 
+    // NOTE: replace with internal DSL after v1 parser is removed
     def methodMissing( String name, def args ) {
-        checkName(name)
+        if( DIRECTIVES.contains(name) || name == 'when' || name == 'stub' ) {
+            applyDirective(name, args)
+            return
+        }
 
+        // v1 parser: report error if method call is not a directive
+        if( !NF.isSyntaxParserV2() ) {
+            reportInvalidDirective(name)
+            return
+        }
+
+        // v2 parser: delegate method call to the script (which will report a
+        // missing method itself if the name is not a script-defined function)
+        if( ownerScript != null )
+            return ownerScript.invokeMethod(name, args)
+
+        throw new MissingMethodException(name, this.getClass(), args as Object[])
+    }
+
+    private void applyDirective(String name, def args) {
         if( args instanceof Object[] )
             config.put(name, args.size()==1 ? args[0] : args.toList())
         else
             config.put(name, args)
     }
 
-    private void checkName(String name) {
-        if( DIRECTIVES.contains(name) )
-            return
-        if( name == 'when' || name == 'stub' )
-            return
-
+    private void reportInvalidDirective(String name) {
         String message = "Unknown process directive: `$name`"
         def alternatives = DIRECTIVES.closest(name)
         if( alternatives.size()==1 ) {
@@ -201,18 +216,6 @@ class ProcessBuilder {
     }
 
     /**
-     * Implements the {@code echo} directive for backwards compatibility.
-     *
-     * note: without this method definition {@link BaseScript#echo} will be invoked
-     *
-     * @param value
-     */
-    void echo( value ) {
-        log.warn1('The `echo` directive has been deprecated - use `debug` instead')
-        config.put('debug', value)
-    }
-
-    /**
      * Implements the {@code errorStrategy} directive.
      *
      * @param strategy
@@ -222,6 +225,26 @@ class ProcessBuilder {
             throw new IllegalArgumentException("Unknown error strategy '${strategy}' ― Available strategies are: ${ErrorStrategy.values().join(',').toLowerCase()}")
 
         config.put('errorStrategy', strategy)
+    }
+
+    /**
+     * Implements the {@code hints} directive.
+     *
+     * This directive can be specified (invoked) multiple times in
+     * the process definition. Multiple calls accumulate entries.
+     *
+     * @param map
+     */
+    void hints(Map<String, Object> map) {
+        if( !map ) return
+        HintDefs.validateHints(map)
+
+        def allHints = (Map)config.get('hints')
+        if( !allHints ) {
+            allHints = [:]
+        }
+        allHints += map
+        config.put('hints', allHints)
     }
 
     /**

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,7 +20,6 @@ import java.nio.file.FileVisitor
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.nio.file.attribute.BasicFileAttributes
 
 import com.beust.jcommander.Parameter
@@ -33,6 +32,7 @@ import nextflow.Global
 import nextflow.ISession
 import nextflow.Session
 import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigCmdAdapter
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
 import nextflow.plugin.Plugins
@@ -107,11 +107,11 @@ class CmdClean extends CmdBase implements CacheBase {
         Global.setLazySession {
             final builder = new ConfigBuilder()
                     .setShowClosures(true)
-                    .showMissingVariables(true)
+                    .setShowMissingVariables(true)
+            final config = new ConfigCmdAdapter(builder)
                     .setOptions(launcher.options)
-                    .setBaseDir(Paths.get('.'))
-
-            final config = builder.buildConfigObject()
+                    .setBaseDir(Path.of('.'))
+                    .buildConfigObject()
             return (ISession) new Session(config)
         }
     }
@@ -255,7 +255,7 @@ class CmdClean extends CmdBase implements CacheBase {
                     result = false
                     if(!quiet) System.err.println "Failed to remove ${dir.toUriString()}"
                 }
-                
+
                 result ? FileVisitResult.CONTINUE : FileVisitResult.TERMINATE
             }
         })

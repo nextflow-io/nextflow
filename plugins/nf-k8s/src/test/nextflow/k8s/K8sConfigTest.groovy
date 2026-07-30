@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -369,7 +369,7 @@ class K8sConfigTest extends Specification {
                     new PodVolumeClaim('nf-0001', '/workspace'),
                     new PodVolumeClaim('nf-0002', '/data', '/home')
         ] as Set
-        
+
     }
 
 
@@ -449,7 +449,7 @@ class K8sConfigTest extends Specification {
         then:
         !cfg.getDebug().getYaml()
     }
-  
+
     def 'should set fetchNodeName' () {
         when:
         def cfg = new K8sConfig( fetchNodeName: true )
@@ -484,33 +484,4 @@ class K8sConfigTest extends Specification {
         cfg.clientRefreshInterval == Duration.of('1h')
     }
 
-    def 'should cache client config and refresh after expiration' () {
-        given:
-        def CONFIG = [
-            namespace: 'test-ns',
-            serviceAccount: 'test-sa',
-            client: [server: 'http://k8s-server'],
-            clientRefreshInterval: '100ms'
-        ]
-        K8sConfig config = Spy(K8sConfig, constructorArgs: [CONFIG])
-
-        when: 'first call to getClient'
-        def client1 = config.getClient()
-        then: 'client is created via clientFromNextflow'
-        1 * config.clientFromNextflow(_, _, _) >> new ClientConfig(server: 'http://k8s-server', namespace: 'test-ns')
-        client1.server == 'http://k8s-server'
-
-        when: 'second call within cache interval'
-        def client2 = config.getClient()
-        then: 'returns cached client without calling clientFromNextflow again'
-        0 * config.clientFromNextflow(_, _, _)
-        client2.is(client1)
-
-        when: 'call after cache expiration'
-        sleep(150) // wait for cache to expire
-        def client3 = config.getClient()
-        then: 'client is recreated'
-        1 * config.clientFromNextflow(_, _, _) >> new ClientConfig(server: 'http://k8s-server', namespace: 'test-ns')
-        !client3.is(client1)
-    }
 }

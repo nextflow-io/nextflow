@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -100,11 +100,11 @@ class PbsProExecutor extends PbsExecutor {
 
     @Override
     protected List<String> queueStatusCommand(Object queue) {
-        String cmd = 'qstat -f ' 
+        String cmd = 'qstat -f '
         if( queue ) {
             cmd += queue
         } else {
-            cmd += '$( qstat -B | grep -E -v \'(^Server|^---)\' | awk -v ORS=\' \' \'{print \"@\"\$1}\' )'
+            cmd += '$( qstat -B -f | awk -v ORS=\' \' \'\$1 == \"Server:\" {print \"@\"\$2}\' )'
         }
         return ['bash','-c', "set -o pipefail; $cmd | { grep -E '(Job Id:|job_state =)' || true; }".toString()]
     }
@@ -114,12 +114,12 @@ class PbsProExecutor extends PbsExecutor {
     static private Map<String,QueueStatus> DECODE_STATUS = [
             'F': QueueStatus.DONE,      // job is finished
             'E': QueueStatus.RUNNING,   // job is exiting (therefore still running)
-            'R': QueueStatus.RUNNING,   // job is running 
-            'Q': QueueStatus.PENDING,   // job is queued 
+            'R': QueueStatus.RUNNING,   // job is running
+            'Q': QueueStatus.PENDING,   // job is queued
             'H': QueueStatus.HOLD,      // job is held
-            'S': QueueStatus.HOLD,      // job is suspended 
+            'S': QueueStatus.HOLD,      // job is suspended
             'U': QueueStatus.HOLD,      // job is suspended due to workstation becoming busy
-            'W': QueueStatus.HOLD,      // job is waiting 
+            'W': QueueStatus.HOLD,      // job is waiting
             'T': QueueStatus.HOLD,      // job is in transition
             'M': QueueStatus.HOLD,      // job was moved to another server
     ]

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020-2022, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,11 +12,11 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cloud.aws.nio.util;
 
+import java.io.IOException;
 import java.nio.file.NoSuchFileException;
 import java.util.List;
 
@@ -34,9 +34,9 @@ public class S3ObjectSummaryLookup {
      * Get the {@link software.amazon.awssdk.services.s3.model.S3Object} that represent this Path or its first child if the path does not exist
      * @param s3Path {@link S3Path}
      * @return {@link software.amazon.awssdk.services.s3.model.S3Object}
-     * @throws java.nio.file.NoSuchFileException if not found the path and any child
+     * @throws java.io.IOException if path not found, access denied or error getting the object
      */
-    public S3Object lookup(S3Path s3Path) throws NoSuchFileException {
+    public S3Object lookup(S3Path s3Path) throws IOException {
 
         /*
          * check is object summary has been cached
@@ -80,7 +80,7 @@ public class S3ObjectSummaryLookup {
      * @param client the S3 client
      * @return the matching {@link S3Object}, or {@code null} if not found
      */
-    private S3Object getS3Object(S3Path s3Path, S3Client client) {
+    private S3Object getS3Object(S3Path s3Path, S3Client client) throws IOException {
 
         // Call 1: list up to 2 objects whose key starts with the target key.
         //
@@ -154,18 +154,5 @@ public class S3ObjectSummaryLookup {
             return true;
 
         return foundKey.charAt(fileName.length()) == '/';
-    }
-
-    public HeadObjectResponse getS3ObjectMetadata(S3Path s3Path) {
-        S3Client client = s3Path.getFileSystem().getClient();
-        try {
-            return client.getObjectMetadata(s3Path.getBucket(), s3Path.getKey());
-        }
-        catch (S3Exception e){
-            if (e.statusCode() != 404){
-                throw e;
-            }
-            return null;
-        }
     }
 }

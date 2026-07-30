@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -79,6 +79,47 @@ class ConfigParserV2Test extends Specification {
         config.plugins == ['foo','bar'] as Set
         and:
         config.process.cpus == 1
+    }
+
+    def 'should resolve multiple plugins block by replacement' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def main = folder.resolve('nextflow.config')
+        def snippet = folder.resolve('other.config')
+
+        snippet.text = '''
+            plugins {
+                id 'nf-boost'
+                id 'nf-schema@2.5.1'
+            }
+            '''
+
+        when:
+        main.text = """
+            includeConfig 'other.config'
+
+            plugins {
+                id 'nf-schema@2.6.1'
+            }
+            """
+        def config = new ConfigParserV2().parse(main)
+        then:
+        config.plugins == ['nf-schema@2.6.1'] as Set
+
+        when:
+        main.text = """
+            plugins {
+                id 'nf-schema@2.6.1'
+            }
+
+            includeConfig 'other.config'
+            """
+        config = new ConfigParserV2().parse(main)
+        then:
+        config.plugins == ['nf-boost', 'nf-schema@2.5.1'] as Set
+
+        cleanup:
+        folder?.deleteDir()
     }
 
     def 'should parse composed config files' () {
@@ -550,7 +591,7 @@ class ConfigParserV2Test extends Specification {
 
         when:
         def url = 'http://localhost:9900/nextflow.config' as Path
-        def cfg = new ConfigBuilder().buildGivenFiles(url)
+        def cfg = new ConfigBuilder().build([url])
         then:
         cfg.params.foo == 'Hello'
         cfg.params.bar == 'world!'
@@ -734,6 +775,31 @@ class ConfigParserV2Test extends Specification {
         then:
         config.params.outdir == 'my-results'
         config.report.file == 'my-results/report.html'
+    }
+
+    def 'should convert CLI params to appropriate type based on config params' () {
+        given:
+        def cliParams = [
+            igenomes_ignore: 'true',
+            max_cpus: '8',
+            publish_mode: 'symlink',
+            config_profile_name: 'Test profile'
+        ]
+        and:
+        def CONFIG = '''
+            params.igenomes_ignore = false
+            params.max_cpus = 4
+            params.publish_mode = 'copy'
+            params.config_profile_name = null
+            '''
+
+        when:
+        def config = new ConfigParserV2().setParams(cliParams).parse(CONFIG)
+        then:
+        config.params.igenomes_ignore == true
+        config.params.max_cpus == 8
+        config.params.publish_mode == 'symlink'
+        config.params.config_profile_name == 'Test profile'
     }
 
     static class ConfigFileHandler implements HttpHandler {

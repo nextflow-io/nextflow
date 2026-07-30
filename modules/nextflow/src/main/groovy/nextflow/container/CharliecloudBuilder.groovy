@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,7 +33,7 @@ import nextflow.Global
 @CompileStatic
 @Slf4j
 class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
-    
+
     private boolean writeFake
 
     CharliecloudBuilder(String name, CharliecloudConfig config) {
@@ -71,7 +71,7 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
 
     @Override
     CharliecloudBuilder build(StringBuilder result) {
-        
+
         assert image
         def imageStorage = Paths.get(image).parent.parent
         def imageName = image.split('/')[-1]
@@ -105,7 +105,7 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
             // Otherwise run by path
             result << image
         }
-        
+
         result << ' --'
 
         runCommand = result.toString()
@@ -123,7 +123,7 @@ class CharliecloudBuilder extends ContainerBuilder<CharliecloudBuilder> {
 
         return rootPath
     }
-    
+
     @Override
     protected String composeVolumePath(String path, boolean readOnlyInputs = false) {
         def mountCmd = "-b ${escape(path)}"

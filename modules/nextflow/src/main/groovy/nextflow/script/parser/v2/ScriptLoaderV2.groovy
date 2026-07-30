@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ import org.codehaus.groovy.control.CompilationFailedException
 import org.codehaus.groovy.control.SourceUnit
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
- * Script parser/loader that uses the strict syntax.
+ * Script loader that uses the strict syntax parser.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
@@ -51,7 +51,7 @@ class ScriptLoaderV2 implements ScriptLoader {
     @Override
     ScriptLoaderV2 setEntryName(String name) {
         if( name )
-            throw new IllegalArgumentException("The `-entry` option is not supported with the strict syntax -- use a param to run a named workflow from the entry workflow")
+            throw new IllegalArgumentException("The `-entry` option is not supported with the strict parser -- use a param to run a named workflow from the entry workflow")
         return this
     }
 
@@ -131,7 +131,7 @@ class ScriptLoaderV2 implements ScriptLoader {
     }
 
     private void printErrors(Path path) {
-        final errorListener = new StandardErrorListener('full', false)
+        final errorListener = new StandardErrorListener('full', session.ansiLog)
         println()
         errorListener.beforeErrors()
         for( final message : compiler.getErrors() ) {
@@ -175,7 +175,7 @@ class ScriptLoaderV2 implements ScriptLoader {
 
     private ScriptCompiler getCompiler() {
         if( !compiler )
-            compiler = new ScriptCompiler(session.debug, session.classesDir, session.getClassLoader())
+            compiler = new ScriptCompiler(session.debug, session.classesDir, session.getClassLoader(), session.baseDir)
         return compiler
     }
 

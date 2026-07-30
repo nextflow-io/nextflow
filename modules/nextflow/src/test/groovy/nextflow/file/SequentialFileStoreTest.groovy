@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -71,7 +71,7 @@ class SequentialFileStoreTest extends Specification {
         given:
         Path file = tempDir.newFile()
         def HELLO = 'Hello world'.getBytes()
-        def store = new SequentialFileStore(file) 
+        def store = new SequentialFileStore(file)
 
         when:
         10.times {

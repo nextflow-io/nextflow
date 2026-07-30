@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.plugin
@@ -35,7 +34,7 @@ import org.pf4j.PluginStateEvent
 import org.pf4j.PluginStateListener
 /**
  * Manage plugins installation and configuration
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -412,8 +411,10 @@ class PluginsFacade implements PluginStateListener {
             final skippedIds = skippable.collect{ plugin -> plugin.id }
             log.debug "Plugin 'start' is not required in embedded mode -- ignoring for plugins: $skippedIds"
         }
-        // prefetch the plugins meta
-        updater.prefetchMetadata(startable)
+        // prefetch the plugins meta - skipped in offline mode to make the no-network guarantee
+        // explicit (in offline mode no remote repo is wired in, so this is also a no-op transitively)
+        if( !offline )
+            updater.prefetchMetadata(startable)
         // finally start the plugins
         for( PluginRef plugin : startable ) {
             updater.prepareAndStart(plugin.id, plugin.version)
@@ -427,7 +428,7 @@ class PluginsFacade implements PluginStateListener {
     /**
      * @return {@code true} when running in embedded mode ie. the nextflow distribution
      * include also plugin libraries. When running is this mode, plugins should not be started
-     * and cannot be updated. 
+     * and cannot be updated.
      */
     protected boolean isEmbedded() {
         return embedded
@@ -455,6 +456,9 @@ class PluginsFacade implements PluginStateListener {
         }
         if( (Bolts.navigate(config,'wave.enabled') || Bolts.navigate(config,'fusion.enabled')) && !specs.find {it.id == 'nf-wave' } ) {
             specs << defaultPlugins.getPlugin('nf-wave')
+        }
+        if( Bolts.navigate(config,'process.executor')=='seqera') {
+            specs << defaultPlugins.getPlugin('nf-seqera')
         }
 
         // add cloudcache plugin when cloudcache is enabled in the config
@@ -497,7 +501,7 @@ class PluginsFacade implements PluginStateListener {
 
         if( Bolts.navigate(config, 'weblog.enabled'))
             plugins << new PluginRef('nf-weblog')
-            
+
         return plugins
     }
 

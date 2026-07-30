@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import nextflow.scm.AssetManager
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Clone a project into a folder")
-class CmdClone extends CmdBase implements HubOptions {
+class CmdClone extends CmdBase implements HubAware {
 
     static final public NAME = 'clone'
 
@@ -52,7 +52,7 @@ class CmdClone extends CmdBase implements HubOptions {
         Plugins.init()
         // the pipeline name
         String pipeline = args[0]
-        try (final manager = new AssetManager(pipeline, this)) {
+        try (final manager = new AssetManager(pipeline, toHubOptions())) {
             // the target directory is the second parameter
             // otherwise default the current pipeline name
             def target = new File(args.size()> 1 ? args[1] : manager.getBaseName())

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -97,6 +97,12 @@ class SingularityConfig implements ConfigScope, ContainerConfig {
 
     @ConfigOption
     @Description("""
+        Apply the task `cpus` and `memory` directives as container resource limits using the `--cpus` and `--memory` flags (default: `false`).
+    """)
+    final boolean resourceLimits
+
+    @ConfigOption
+    @Description("""
         Specify extra command line options supported by `singularity exec`.
     """)
     final String runOptions
@@ -116,6 +122,7 @@ class SingularityConfig implements ConfigScope, ContainerConfig {
         ociMode = opts.ociMode as Boolean
         pullTimeout = opts.pullTimeout as Duration ?: Duration.of('20min')
         registry = opts.registry
+        resourceLimits = opts.resourceLimits as boolean
         runOptions = opts.runOptions
     }
 

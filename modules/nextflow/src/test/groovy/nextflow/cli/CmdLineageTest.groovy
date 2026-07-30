@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cli
@@ -196,6 +195,7 @@ class CmdLineageTest extends Specification {
         entry = new TaskRun("u345-2346-1stw2", "foo",
                 new Checksum("abcde2345","nextflow","standard"),
                 'this is a script',
+                null,
                 [new Parameter( "val", "sample_id","ggal_gut"),
                 new Parameter("path","reads",["lid://45678/output.txt"])],
                 null, null, null, null, [:],[], null)
@@ -206,7 +206,7 @@ class CmdLineageTest extends Specification {
         entry = new TaskRun("u345-2346-1stw2", "bar",
                 new Checksum("abfs2556","nextflow","standard"),
                 'this is a script',
-                null,null, null, null, null, [:],[], null)
+                null, null, null, null, null, null, [:],[], null)
         lidFile5.text = encoder.encode(entry)
         final network = """\
             flowchart TB

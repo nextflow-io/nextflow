@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package io.seqera.tower.plugin
@@ -25,7 +24,9 @@ import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import io.seqera.http.HxProxyConfig
 import nextflow.file.http.XAuthProvider
+import nextflow.util.ProxyConfig
 
 /**
  * Implements Tower authentication strategy for resources accessed
@@ -42,6 +43,9 @@ class TowerXAuth implements XAuthProvider {
     private String accessToken
     private String refreshToken
     private CookieManager cookieManager
+    // Kept as a plain JDK HttpClient (not HxClient) on purpose: the token-refresh flow owns a
+    // CookieManager and reads the JWT / JWT_REFRESH_TOKEN cookies back out of it, but
+    // HxClient.Builder has no cookieHandler() hook. Proxy support is wired explicitly below.
     final private HttpClient httpClient
 
     TowerXAuth(String endpoint, String accessToken, String refreshToken) {
@@ -53,12 +57,20 @@ class TowerXAuth implements XAuthProvider {
         // the cookie manager
         cookieManager = new CookieManager(null, CookiePolicy.ACCEPT_ALL)
         // create http client
-        this.httpClient = HttpClient.newBuilder()
+        final builder = HttpClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .followRedirects(HttpClient.Redirect.NORMAL)
                 .cookieHandler(cookieManager)
                 .connectTimeout(Duration.ofSeconds(10))
-                .build()
+        // route through the forward proxy when configured (this client is a plain JDK
+        // HttpClient, so apply the selector + proxy authenticator explicitly)
+        final HxProxyConfig proxy = ProxyConfig.proxyConfig()
+        if( proxy ) {
+            builder.proxy(proxy.toProxySelector())
+            if( proxy.hasCredentials() )
+                builder.authenticator(proxy.toAuthenticator())
+        }
+        this.httpClient = builder.build()
     }
 
     @Override

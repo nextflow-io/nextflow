@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.cli
@@ -22,6 +21,7 @@ import java.nio.file.Paths
 import groovy.transform.CompileStatic
 import nextflow.Session
 import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigCmdAdapter
 import nextflow.exception.AbortOperationException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -50,7 +50,7 @@ trait PluginAbstractExec implements PluginExecAware {
     final int exec(Launcher launcher1, String pluginId, String cmd, List<String> args) {
         this.launcher = launcher1
         // create the config
-        final config = new ConfigBuilder()
+        final config = new ConfigCmdAdapter(new ConfigBuilder())
                 .setOptions(launcher1.options)
                 .setBaseDir(Paths.get('.'))
                 .build()

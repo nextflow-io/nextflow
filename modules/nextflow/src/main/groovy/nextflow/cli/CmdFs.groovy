@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
-import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigCmdAdapter
 import nextflow.exception.AbortOperationException
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
@@ -164,7 +164,7 @@ class CmdFs extends CmdBase implements UsageAware {
                     size          : ${attr.size()}
                     is directory  : ${attr.isDirectory()}
                     last modified : ${attr.lastModifiedTime() ?: '-'}
-                    creation time : ${attr.creationTime() ?: '-'}                    
+                    creation time : ${attr.creationTime() ?: '-'}
                     """.stripIndent()
             }
             catch (IOException e) {
@@ -202,7 +202,7 @@ class CmdFs extends CmdBase implements UsageAware {
 
     private Session createSession() {
         // create the config
-        final config = new ConfigBuilder()
+        final config = new ConfigCmdAdapter()
                 .setOptions(getLauncher().getOptions())
                 .setBaseDir(Paths.get('.'))
                 .build()

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -169,6 +169,43 @@ class CmdConfigTest extends Specification {
         then:
         buffer.toString() == "foo = 'Hi\\' there'\n"
 
+    }
+
+    def 'should render closures nested inside a list of maps' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def CONFIG = folder.resolve('nextflow.config')
+
+        CONFIG.text = '''
+        process {
+            cpus = { 8 * task.attempt }
+            publishDir = [
+                [ path: { "results/multiqc" }, mode: 'copy', pattern: '*.{json,html}' ],
+                [ path: { "results/multiqc" }, mode: 'copy', pattern: '*.log', saveAs: { filename -> filename } ]
+            ]
+        }
+        '''
+        def buffer = new ByteArrayOutputStream()
+        // command definition
+        def cmd = new CmdConfig()
+        cmd.launcher = new Launcher(options: new CliOptions(config: [CONFIG.toString()]))
+        cmd.stdout = buffer
+        cmd.args = [ '.' ]
+
+        when:
+        cmd.run()
+
+        then:
+        buffer.toString() == '''
+        process {
+           cpus = { 8 * task.attempt }
+           publishDir = [[path:{ "results/multiqc" }, mode:'copy', pattern:'*.{json,html}'], [path:{ "results/multiqc" }, mode:'copy', pattern:'*.log', saveAs:{ filename -> filename }]]
+        }
+        '''
+        .stripIndent().leftTrim()
+
+        cleanup:
+        folder.deleteDir()
     }
 
     def 'should print the value of a config option' () {

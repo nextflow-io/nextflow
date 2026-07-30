@@ -18,7 +18,9 @@ nextflow.cache.DefaultCacheFactory
 nextflow.conda.CondaConfig
 nextflow.config.ConfigMap
 nextflow.config.Manifest
+nextflow.config.RegistryConfig
 nextflow.config.WorkflowConfig
+nextflow.container.AppleContainerConfig
 nextflow.container.ApptainerConfig
 nextflow.container.CharliecloudConfig
 nextflow.container.DockerConfig
@@ -26,6 +28,7 @@ nextflow.container.PodmanConfig
 nextflow.container.SarusConfig
 nextflow.container.ShifterConfig
 nextflow.container.SingularityConfig
+nextflow.container.SmolVmConfig
 nextflow.container.resolver.DefaultContainerResolver
 nextflow.executor.ExecutorConfig
 nextflow.fusion.FusionConfig

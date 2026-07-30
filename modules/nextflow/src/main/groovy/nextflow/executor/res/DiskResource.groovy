@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +22,10 @@ import groovy.transform.ToString
 import nextflow.util.MemoryUnit
 
 /**
- * Models disk resource request
- * 
+ * Models disk resource request with support for cloud-specific options.
+ *
  * @author Ben Sherman <bentshermann@gmail.com>
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @ToString(includeNames = true, includePackage = false)
 @CompileStatic
@@ -33,6 +34,11 @@ class DiskResource {
 
     final MemoryUnit request
     final String type
+    final Integer iops
+    final Integer throughput
+    final Boolean encrypted
+    final String filesystem
+    final String mountPath
 
     DiskResource( value ) {
         this(request: value)
@@ -43,10 +49,28 @@ class DiskResource {
 
         if( opts.type )
             this.type = opts.type as String
+        if( opts.iops )
+            this.iops = opts.iops as Integer
+        if( opts.throughput )
+            this.throughput = opts.throughput as Integer
+        if( opts.encrypted != null )
+            this.encrypted = opts.encrypted as Boolean
+        if( opts.filesystem )
+            this.filesystem = opts.filesystem as String
+        if( opts.mountPath )
+            this.mountPath = opts.mountPath as String
     }
 
     DiskResource withRequest(MemoryUnit value) {
-        return new DiskResource(request: value, type: this.type)
+        return new DiskResource(
+            request: value,
+            type: this.type,
+            iops: this.iops,
+            throughput: this.throughput,
+            encrypted: this.encrypted,
+            filesystem: this.filesystem,
+            mountPath: this.mountPath
+        )
     }
 
     private static MemoryUnit toMemoryUnit( value ) {

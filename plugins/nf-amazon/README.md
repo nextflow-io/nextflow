@@ -1,5 +1,7 @@
 # Amazon Web Services plugin for Nextflow
 
+## Summary
+
 The Amazon Web Services (AWS) plugin provides support for AWS, including AWS Batch as a compute executor, S3 as a file system, and Fusion file system for high-performance data operations.
 
 ## Get started
@@ -79,8 +81,8 @@ aws {
 
 ## Resources
 
-- [AWS Batch Executor Documentation](https://nextflow.io/docs/latest/aws.html)
-- [Amazon S3 Storage Documentation](https://nextflow.io/docs/latest/aws.html#s3-storage)
+- [AWS Batch Executor Documentation](https://docs.seqera.io/nextflow/aws)
+- [Amazon S3 Storage Documentation](https://docs.seqera.io/nextflow/amazons3)
 
 ## License
 

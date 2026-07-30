@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -575,7 +575,7 @@ class ConfigParserV1Test extends Specification {
 
         when:
         def url = 'http://localhost:9900/nextflow.config' as Path
-        def cfg = new ConfigBuilder().buildGivenFiles(url)
+        def cfg = new ConfigBuilder().build([url])
         then:
         cfg.params.foo == 'Hello'
         cfg.params.bar == 'world!'

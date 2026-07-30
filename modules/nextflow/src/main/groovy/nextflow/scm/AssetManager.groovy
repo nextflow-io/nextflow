@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,11 +28,11 @@ import groovy.transform.PackageScope
 import groovy.transform.ToString
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
-import nextflow.cli.HubOptions
-import nextflow.config.Manifest
 import nextflow.config.ConfigParserFactory
+import nextflow.config.Manifest
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AmbiguousPipelineNameException
+import nextflow.scm.HubOptions
 import nextflow.script.ScriptFile
 import nextflow.SysEnv
 import nextflow.util.IniFile
@@ -100,12 +100,12 @@ class AssetManager implements Closeable {
      *
      * @param pipeline The pipeline to be managed by this manager e.g. {@code nextflow-io/hello}
      */
-    AssetManager( String pipelineName, HubOptions cliOpts = null) {
+    AssetManager( String pipelineName, HubOptions hubOpts = null) {
         assert pipelineName
         // read the default config file (if available)
         def config = ProviderConfig.getDefault()
         // build the object
-        build(pipelineName, config, cliOpts)
+        build(pipelineName, config, hubOpts)
     }
 
     AssetManager( String pipelineName, Map config ) {
@@ -114,12 +114,12 @@ class AssetManager implements Closeable {
         build(pipelineName, config)
     }
 
-    AssetManager( String pipelineName, String revision, HubOptions cliOpts = null ) {
+    AssetManager( String pipelineName, String revision, String mainScript = null, HubOptions hubOpts = null ) {
         assert pipelineName
-        // build the object
+        // read the default config file (if available)
         def config = ProviderConfig.getDefault()
         // build the object
-        build(pipelineName, config, cliOpts, revision)
+        build(pipelineName, config, hubOpts, revision, mainScript)
     }
 
     /**
@@ -127,31 +127,32 @@ class AssetManager implements Closeable {
      *
      * @param pipelineName A project name or a project repository Git URL
      * @param config A {@link Map} holding the configuration properties defined in the {@link ProviderConfig#DEFAULT_SCM_FILE} file
-     * @param cliOpts User credentials provided on the command line. See {@link HubOptions} trait
+     * @param hubOpts The git provider credentials. See {@link HubOptions}
      * @return The {@link AssetManager} object itself
      */
     @PackageScope
-    AssetManager build( String pipelineName, Map config = null, HubOptions cliOpts = null, String revision = null ) {
+    AssetManager build( String pipelineName, Map config = null, HubOptions hubOpts = null, String revision = null, String mainScript = null ) {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
 
         this.project = resolveName(pipelineName)
+        if( mainScript )
+            this.mainScript = mainScript
 
-        if( !isValidProjectName(this.project) ) {
-            throw new IllegalArgumentException("Not a valid project name: ${this.project}")
-        }
+        if( !isValidProjectName(project) )
+            throw new IllegalArgumentException("Not a valid project name: ${project}")
+
         // Initialize strategy based on environment and repository state
         initStrategy(revision)
-        this.hub = checkHubProvider(cliOpts)
+        this.hub = checkHubProvider(hubOpts)
         this.provider = createHubProvider(hub)
 
-        if( revision ){
+        if( revision )
             setRevision(revision)
-        }
 
         strategy.setProvider(this.provider)
 
-        setupCredentials(cliOpts)
+        setupCredentials(hubOpts)
 
         validateProjectDir()
 
@@ -320,14 +321,15 @@ class AssetManager implements Closeable {
     /**
      * Sets the user credentials on the {@link RepositoryProvider} object
      *
-     * @param cliOpts The user credentials specified on the program command line. See {@code HubOptions}
+     * @param hubOpts The git provider credentials. See {@link HubOptions}
      */
     @PackageScope
-    void setupCredentials( HubOptions cliOpts ) {
-        if( cliOpts?.hubUser ) {
-            cliOpts.hubProvider = hub
-            final user = cliOpts.getHubUser()
-            final pwd = cliOpts.getHubPassword()
+    void setupCredentials( HubOptions hubOpts ) {
+        if( hubOpts?.getUser() ) {
+            // rebind to the resolved hub provider so the password prompt names it correctly
+            hubOpts = hubOpts.withProvider(hub)
+            final user = hubOpts.getUser()
+            final pwd = hubOpts.getPassword()
             provider.setCredentials(user, pwd)
         }
     }
@@ -365,15 +367,15 @@ class AssetManager implements Closeable {
      * Find out the "hub provider" (i.e. the platform on which the remote repository is stored
      * for example: github, bitbucket, etc) and verifies that it is a known provider.
      *
-     * @param cliOpts The user hub info provider as command line options. See {@link HubOptions}
+     * @param hubOpts The git provider credentials. See {@link HubOptions}
      * @return The name of hub name e.g. {@code github}, {@code bitbucket}, etc.
      */
     @PackageScope
-    String checkHubProvider( HubOptions cliOpts ) {
+    String checkHubProvider( HubOptions hubOpts ) {
 
         def result = hub
         if( !result )
-            result = cliOpts?.getHubProvider()
+            result = hubOpts?.getProvider()
         if( !result )
             result = guessHubProviderFromGitConfig()
         if( !result )
@@ -414,9 +416,12 @@ class AssetManager implements Closeable {
 
         def parts = name.split('/') as List<String>
         def last = parts[-1]
-        if( last.endsWith('.nf') || last.endsWith('.nxf') ) {
+        if( last.endsWith('.nf') ) {
             if( parts.size()==1 )
                 throw new AbortOperationException("Not a valid project name: $name")
+
+            if( mainScript )
+                throw new AbortOperationException("Not a valid project name: $name -- Project name must be a directory when main script is provided")
 
             if( parts.size()==2 ) {
                 mainScript = last
@@ -461,6 +466,9 @@ class AssetManager implements Closeable {
         final isUrl = repository.startsWith('http://') || repository.startsWith('https://') || repository.startsWith('file:/')
         if( !isUrl )
             return null
+
+        if( repository.endsWith('.nf') )
+            throw new AbortOperationException("Repository URL must not end with a script file extension (.nf) -- use `-main-script` to specify the relative script path")
 
         try {
             def url = new GitUrl(repository)
@@ -559,7 +567,7 @@ class AssetManager implements Closeable {
         def mainScript = scriptName ?: getMainScriptName()
         def result = new File(localPath, mainScript)
         if( !result.exists() )
-            throw new AbortOperationException("Missing project main script: $result")
+            throw new AbortOperationException("Missing project main script: ${result.canonicalPath}")
 
         return result
     }
@@ -646,6 +654,13 @@ class AssetManager implements Closeable {
 
     boolean isLocal() {
         return localPath && localPath.exists()
+    }
+
+    /**
+     * @return {@code true} when the SCM source points to a local file-system repository.
+     */
+    boolean isLocalScmSource() {
+        return provider instanceof LocalRepositoryProvider
     }
 
     /**
@@ -1116,7 +1131,7 @@ class AssetManager implements Closeable {
 
         final result = domain ? providerConfigs.find { it -> it.domain == domain } : (ProviderConfig)null
         if( !result && failFast ) {
-            def message = "Can't find any configured provider for git server `$domain` -- Make sure to have specified it in your `scm` file. For details check https://www.nextflow.io/docs/latest/sharing.html#scm-configuration-file"
+            def message = "Can't find any configured provider for git server `$domain` -- Make sure to have specified it in your `scm` file. For details check https://docs.seqera.io/nextflow/sharing#git-configuration"
             throw new AbortOperationException(message)
         }
 

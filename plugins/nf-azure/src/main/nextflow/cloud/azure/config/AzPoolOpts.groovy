@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, Microsoft Corp
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -120,7 +120,7 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
 
     @ConfigOption
     @Description("""
-        The ID of the Compute Node agent SKU which the pool identified with `<name>` supports (default: `batch.node.centos 8`).
+        The ID of the Compute Node agent SKU which the pool identified with `<name>` supports (default: `batch.node.ubuntu 24.04`).
     """)
     final String sku
 
@@ -150,7 +150,7 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
     String registry
     String userName
     String password
-    
+
     AzPoolOpts() {
         this(Collections.emptyMap())
     }

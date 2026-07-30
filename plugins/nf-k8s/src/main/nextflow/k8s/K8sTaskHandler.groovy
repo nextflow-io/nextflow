@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -70,8 +70,6 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private ResourceType resourceType = ResourceType.Pod
 
-    private K8sClient client
-
     private String podName
 
     private BashWrapperBuilder builder
@@ -93,7 +91,6 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
     K8sTaskHandler( TaskRun task, K8sExecutor executor ) {
         super(task)
         this.executor = executor
-        this.client = executor.client
         this.outputFile = task.workDir.resolve(TaskRun.CMD_OUTFILE)
         this.errorFile = task.workDir.resolve(TaskRun.CMD_ERRFILE)
         this.exitFile = task.workDir.resolve(TaskRun.CMD_EXIT)
@@ -115,6 +112,8 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected K8sConfig getK8sConfig() { executor.getK8sConfig() }
+
+    protected K8sClient getClient() { executor.getClient() }
 
     protected boolean useJobResource() { resourceType==ResourceType.Job }
 
@@ -235,7 +234,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
         if( SysEnv.containsKey('NXF_DEBUG') )
             builder.withEnv(PodEnv.value('NXF_DEBUG', SysEnv.get('NXF_DEBUG')))
-        
+
         // add computing resources
         final cpus = taskCfg.getCpus()
         final mem = taskCfg.getMemory()
@@ -357,7 +356,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
                 }
             }
             return state
-        } 
+        }
         catch (NodeTerminationException | PodUnschedulableException e) {
             // create a synthetic `state` object adding an extra `nodeTermination`
             // attribute to return the error to the caller method
@@ -500,7 +499,7 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
 
         if( cleanupDisabled() )
             return
-        
+
         log.trace "[K8s] deleting ${resourceType.lower()} name=$podName"
         delete0(podName)
     }

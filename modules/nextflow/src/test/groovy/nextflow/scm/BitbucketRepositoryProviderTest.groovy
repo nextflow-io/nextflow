@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -237,7 +237,7 @@ class BitbucketRepositoryProviderTest extends Specification {
         // Should only include immediate children for depth=1
         entries.every { it.path.split('/').length <= 2 }
         and:
-        // Should NOT include any nested paths beyond immediate children  
+        // Should NOT include any nested paths beyond immediate children
         !entries.any { it.path.split('/').length > 2 }
     }
 

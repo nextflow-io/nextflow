@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -760,7 +760,7 @@ class TaskRunTest extends Specification {
         def vars = task.getVariableNames()
         then:
         1 * task.context.getVariableNames() >> ['foo']
-        and: 
+        and:
         vars == ['foo'] as Set
     }
 
@@ -935,6 +935,28 @@ class TaskRunTest extends Specification {
         0 * task.resolveBody(_) >> null
     }
 
+    def 'should get stub source via method access' () {
+        given:
+        // a TaskClosure whose owner/delegate (the spec instance) has no `source` property:
+        // accessing `.source` as a property would resolve against the delegate and throw,
+        // so `getStubSource()` must call `getSource()` as a method instead
+        def stub = new TaskClosure({ -> 'echo hello' }, 'echo stub source')
+        def task = Spy(TaskRun)
+        task.config = Mock(TaskConfig) { getStubBlock() >> stub }
+
+        expect:
+        task.getStubSource() == 'echo stub source'
+    }
+
+    def 'should get null stub source when no stub block' () {
+        given:
+        def task = Spy(TaskRun)
+        task.config = Mock(TaskConfig) { getStubBlock() >> null }
+
+        expect:
+        task.getStubSource() == null
+    }
+
     def 'should get container info & meta' () {
         given:
         def image = 'my/container:latest'
@@ -959,7 +981,7 @@ class TaskRunTest extends Specification {
         and:
         result2 == meta
     }
-    
+
     def 'should resolve task stub from template' () {
 
         given:

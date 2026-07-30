@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -160,7 +160,7 @@ class CrgExecutorTest extends Specification {
         def config = task.config = new TaskConfig()
         config.container = 'busybox'
         and:
-        
+
         def result = executor.getDirectives(task, [])
         then:
         result == [
@@ -539,7 +539,7 @@ class CrgExecutorTest extends Specification {
             #$ -binding env linear:1
             #$ -soft -l docker_images=*;foo;*
             NXF_CHDIR=/some/dir
-            
+
             cpuset=${cpuset:=''}
             [[ $SGE_BINDING ]] && cpuset="--cpuset-cpus $(echo $SGE_BINDING | sed 's/ /,/g')"
             '''
@@ -577,7 +577,7 @@ class CrgExecutorTest extends Specification {
             #$ -binding env linear:1
             #$ -soft -l docker_images=*;foo;*
             NXF_CHDIR=/some/dir
-            
+
             cpuset=${cpuset:=''}
             [[ $SGE_BINDING ]] && cpuset="--cpuset $(echo $SGE_BINDING | sed 's/ /,/g')"
             '''

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,6 +26,7 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigCmdAdapter
 import nextflow.config.ConfigValidator
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Plugins
@@ -113,12 +114,13 @@ class CmdConfig extends CmdBase {
         final builder = new ConfigBuilder()
                 .setShowClosures(true)
                 .setStripSecrets(true)
-                .showMissingVariables(true)
+                .setShowMissingVariables(true)
+
+        final config = new ConfigCmdAdapter(builder)
                 .setOptions(launcher.options)
                 .setBaseDir(base)
                 .setCmdConfig(this)
-
-        final config = builder.buildConfigObject()
+                .buildConfigObject()
 
         // -- validate config options
         if( NF.isSyntaxParserV2() ) {

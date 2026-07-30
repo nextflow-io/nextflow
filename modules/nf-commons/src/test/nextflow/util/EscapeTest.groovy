@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -64,7 +64,7 @@ class EscapeTest extends Specification {
 
     def 'should escape wildcards' () {
 
-        expect: 
+        expect:
         Escape.wildcards('file_*') == 'file_\\*'
         Escape.wildcards('file_??') == 'file_\\?\\?'
         Escape.wildcards('file_{a,b}') == 'file_\\{a,b\\}'
@@ -73,7 +73,7 @@ class EscapeTest extends Specification {
     }
 
     def 'should escape cli' () {
-        expect: 
+        expect:
         Escape.cli('nextflow','run','this') == 'nextflow run this'
         Escape.cli('nextflow','--foo','file.txt') == 'nextflow --foo file.txt'
         Escape.cli('nextflow','--foo','*.txt') == "nextflow --foo '*.txt'"

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,13 +36,13 @@ class TupleOutParamTest extends Dsl2Spec {
 
               output:
               tuple val(x)
-              tuple val(y), stdout, file('*.fa') 
+              tuple val(y), stdout, file('*.fa')
               tuple stdout, val(z)
 
               script:
               ''
             }
-            
+
             workflow {
               hola( ['x', 'y', 'z'] )
             }
@@ -105,7 +105,7 @@ class TupleOutParamTest extends Dsl2Spec {
               script:
               ''
             }
-            
+
             workflow {
               hola( ['x', 'y', 'z'] )
             }
@@ -158,11 +158,11 @@ class TupleOutParamTest extends Dsl2Spec {
             process hola {
               output:
               tuple env('FOO'), env('BAR')
-              
+
               script:
-              /echo command/ 
+              /echo command/
             }
-            
+
             workflow {
               hola()
             }
@@ -196,11 +196,11 @@ class TupleOutParamTest extends Dsl2Spec {
 
               output:
               tuple eval('this --one'), eval("$other --two")
-              
+
               script:
-              /echo command/ 
+              /echo command/
             }
-            
+
             workflow {
               hola('tool')
             }

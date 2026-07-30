@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -394,7 +394,7 @@ class PublishDir {
         final listener = new EventListener<ExecutionAttemptedEvent>() {
             @Override
             void accept(ExecutionAttemptedEvent event) throws Throwable {
-                log.debug "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- attempt: ${event.attemptCount}; reason: ${event.lastFailure.message}"
+                log.debug "Failed to publish file: ${source.toUriString()}; to: ${target.toUriString()} [${mode.toString().toLowerCase()}] -- attempt: ${event.attemptCount}; reason: ${event.lastException.message}"
             }
         }
         final retryPolicy = RetryPolicy.builder()
@@ -426,7 +426,7 @@ class PublishDir {
             // see https://github.com/nextflow-io/nextflow/issues/2177
             if( !sameRealPath && checkSourcePathConflicts(destination))
                 return
-            
+
             if( !sameRealPath && shouldOverwrite(source, destination) ) {
                 FileHelper.deletePath(destination)
                 processFileImpl(source, destination)
@@ -492,11 +492,23 @@ class PublishDir {
         if( overwrite instanceof Boolean )
             return overwrite
 
+        // overwrite when the existing file was published with a different mode
+        // (e.g. a symlink but now `copy`, or vice versa), even if its content matches.
+        // placed after the explicit `overwrite` check so `overwrite false` is honored
+        if( checkPublishModeMismatch(target) )
+            return true
+
         final hashMode = HashMode.of(overwrite) ?: HashMode.DEFAULT()
         final sourceHash = HashBuilder.hashPath(source, source.parent, hashMode)
         final targetHash = HashBuilder.hashPath(target, target.parent, hashMode)
         log.trace "comparing source and target with mode=${overwrite}, source=${sourceHash}, target=${targetHash}, should overwrite=${sourceHash != targetHash}"
         return sourceHash != targetHash
+    }
+
+    protected boolean checkPublishModeMismatch(Path target) {
+        if( target.fileSystem != FileSystems.default )
+            return false
+        return Files.isSymbolicLink(target) != isSymlinkMode()
     }
 
     protected void processFileImpl( Path source, Path destination ) {

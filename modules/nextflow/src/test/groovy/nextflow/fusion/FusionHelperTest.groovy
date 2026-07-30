@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.fusion
@@ -46,6 +45,19 @@ class FusionHelperTest extends Specification {
         then:
         result == Path.of('/fusion/http/bar/z.txt')
 
+    }
+
+    def 'should include container platform in fusion command' () {
+        given:
+        def launcher = Mock(FusionScriptLauncher)
+        def config = new DockerConfig([:])
+
+        when:
+        def result = FusionHelper.runWithContainer(launcher, config, 'image:1', null, ['echo', 'hello'], 'linux/amd64')
+        then:
+        1 * launcher.fusionEnv() >> [:]
+        and:
+        result == "docker run -i --platform linux/amd64 --rm --privileged image:1 echo 'hello'"
     }
 
     def 'should return fusion container command' () {

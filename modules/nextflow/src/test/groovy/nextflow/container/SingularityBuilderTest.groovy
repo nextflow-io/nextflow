@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,7 @@ package nextflow.container
 import java.nio.file.Paths
 
 import nextflow.SysEnv
+import nextflow.util.MemoryUnit
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -219,6 +220,25 @@ class SingularityBuilderTest extends Specification {
         cmd = new SingularityBuilder('ubuntu.img').params(entry:'/bin/sh').build().getRunCommand('bwa --this --that file.fastq')
         then:
         cmd == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid -B "$NXF_TASK_WORKDIR" ubuntu.img /bin/sh -c "cd \\"$NXF_TASK_WORKDIR\\"; bwa --this --that file.fastq"'
+    }
+
+    def 'should emit resource limits when enabled' () {
+        expect:
+        new SingularityBuilder('busybox')
+                .setCpus(2)
+                .setMemory(new MemoryUnit('100M'))
+                .build()
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid -B "$NXF_TASK_WORKDIR" busybox'
+
+        new SingularityBuilder('busybox', new SingularityConfig(resourceLimits: true))
+                .setCpus(2)
+                .setMemory(new MemoryUnit('100M'))
+                .build()
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid --cpus 2 --memory 100m -B "$NXF_TASK_WORKDIR" busybox'
+
+        new SingularityBuilder('busybox', new SingularityConfig(resourceLimits: true))
+                .build()
+                .runCommand == 'set +u; env - PATH="$PATH" ${TMP:+SINGULARITYENV_TMP="$TMP"} ${TMPDIR:+SINGULARITYENV_TMPDIR="$TMPDIR"} singularity exec --no-home --pid -B "$NXF_TASK_WORKDIR" busybox'
     }
 
     @Unroll

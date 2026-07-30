@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.cloud.azure.batch
 
 
@@ -89,7 +105,7 @@ class AzFileCopyStrategyTest extends Specification {
                   cp "$NXF_TASK_LAUNCH_DIR"/.command.in . 2>/dev/null || true
                 fi
                 downloads=(true)
-                
+
                 nxf_parallel "${downloads[@]}"
                 '''.stripIndent()
 
@@ -125,7 +141,7 @@ class AzFileCopyStrategyTest extends Specification {
                       timeout=\$(( timeout * 2 ))
                     done
                 }
-                
+
                 nxf_parallel() {
                     IFS=$'\\n\'
                     local cmd=("$@")
@@ -143,7 +159,7 @@ class AzFileCopyStrategyTest extends Specification {
                           [[ -e /proc/$x ]] && copy+=($x) || wait $x
                         done
                         pid=("${copy[@]}")
-                
+
                         if ((${#pid[@]}>=$max)); then
                           nxf_sleep 0.2
                         else
@@ -158,17 +174,17 @@ class AzFileCopyStrategyTest extends Specification {
                     )
                     unset IFS
                 }
-                
+
                 # custom env variables used for azcopy opts
                 export AZCOPY_BLOCK_SIZE_MB=4
                 export AZCOPY_BLOCK_BLOB_TIER=None
-                
+
                 nxf_az_upload() {
                     local name=$1
                     local target=${2%/} ## remove ending slash
                     local base_name="$(basename "$name")"
                     local dir_name="$(dirname "$name")"
-        
+
                     if [[ -d $name ]]; then
                       if [[ "$base_name" == "$name" ]]; then
                         azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
@@ -179,14 +195,14 @@ class AzFileCopyStrategyTest extends Specification {
                       azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                     fi
                 }
-                
+
                 nxf_az_download() {
                     local source=$1
                     local target=$2
                     local basedir=$(dirname $2)
                     local ret
                     mkdir -p "$basedir"
-                
+
                     ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                         ## if fails check if it was trying to download a directory
                         mkdir -p $target
@@ -197,7 +213,7 @@ class AzFileCopyStrategyTest extends Specification {
                         }
                     }
                 }
-                
+
                 '''.stripIndent(true)
     }
 
@@ -231,7 +247,7 @@ class AzFileCopyStrategyTest extends Specification {
                 nxf_az_download 'http://account.blob.core.windows.net/my-data/work/remote/bin' $PWD/.nextflow-bin
                 chmod +x $PWD/.nextflow-bin/* || true
                 downloads=(true)
-                
+
                 nxf_parallel "${downloads[@]}"
                 '''.stripIndent()
 
@@ -268,7 +284,7 @@ class AzFileCopyStrategyTest extends Specification {
                       timeout=\$(( timeout * 2 ))
                     done
                 }
-                
+
                 nxf_parallel() {
                     IFS=$'\\n\'
                     local cmd=("$@")
@@ -286,7 +302,7 @@ class AzFileCopyStrategyTest extends Specification {
                           [[ -e /proc/$x ]] && copy+=($x) || wait $x
                         done
                         pid=("${copy[@]}")
-                
+
                         if ((${#pid[@]}>=$max)); then
                           nxf_sleep 0.2
                         else
@@ -301,17 +317,17 @@ class AzFileCopyStrategyTest extends Specification {
                     )
                     unset IFS
                 }
-                
+
                 # custom env variables used for azcopy opts
                 export AZCOPY_BLOCK_SIZE_MB=4
                 export AZCOPY_BLOCK_BLOB_TIER=None
-                
+
                 nxf_az_upload() {
                     local name=$1
                     local target=${2%/} ## remove ending slash
                     local base_name="$(basename "$name")"
                     local dir_name="$(dirname "$name")"
-        
+
                     if [[ -d $name ]]; then
                       if [[ "$base_name" == "$name" ]]; then
                         azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
@@ -322,14 +338,14 @@ class AzFileCopyStrategyTest extends Specification {
                       azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                     fi
                 }
-                
+
                 nxf_az_download() {
                     local source=$1
                     local target=$2
                     local basedir=$(dirname $2)
                     local ret
                     mkdir -p "$basedir"
-                
+
                     ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                         ## if fails check if it was trying to download a directory
                         mkdir -p $target
@@ -472,13 +488,13 @@ class AzFileCopyStrategyTest extends Specification {
                     # custom env variables used for azcopy opts
                     export AZCOPY_BLOCK_SIZE_MB=4
                     export AZCOPY_BLOCK_BLOB_TIER=None
-                    
+
                     nxf_az_upload() {
                         local name=$1
                         local target=${2%/} ## remove ending slash
                         local base_name="$(basename "$name")"
                         local dir_name="$(dirname "$name")"
-            
+
                         if [[ -d $name ]]; then
                           if [[ "$base_name" == "$name" ]]; then
                             azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
@@ -489,14 +505,14 @@ class AzFileCopyStrategyTest extends Specification {
                           azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                         fi
                     }
-                    
+
                     nxf_az_download() {
                         local source=$1
                         local target=$2
                         local basedir=$(dirname $2)
                         local ret
                         mkdir -p "$basedir"
-                    
+
                         ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
                             ## if fails check if it was trying to download a directory
                             mkdir -p $target

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -127,7 +127,7 @@ class LinUtils {
 
     /**
      * Check if an record fulfill the parameter-value
-     * 
+     *
      * @param record Object to evaluate
      * @param params parameter-value pairs to evaluate
      * @return true if all record parameters exist and matches with the value, otherwise false.

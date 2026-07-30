@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,7 +40,6 @@ import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
 import nextflow.util.LoggerHelper
 import nextflow.util.ProxyConfig
-import nextflow.util.SpuriousDeps
 import org.eclipse.jgit.api.errors.GitAPIException
 
 import static nextflow.util.SysHelper.dumpThreads
@@ -99,6 +98,7 @@ class Launcher {
                 new CmdLaunch(),
                 new CmdList(),
                 new CmdLog(),
+                new CmdLogFile(),
                 new CmdPull(),
                 new CmdRun(),
                 new CmdKubeRun(),
@@ -111,16 +111,12 @@ class Launcher {
                 new CmdPlugin(),
                 new CmdInspect(),
                 new CmdLint(),
-                new CmdLineage()
+                new CmdLineage(),
+                new CmdModule()
         ]
 
         if(SecretsLoader.isEnabled())
             allCommands.add(new CmdSecret())
-
-        // legacy command
-        final cmdCloud = SpuriousDeps.cmdCloud()
-        if( cmdCloud )
-            allCommands.add(cmdCloud)
 
         options = new CliOptions()
         jcommander = new JCommander(options)
@@ -129,6 +125,9 @@ class Launcher {
             jcommander.addCommand(cmd.name, cmd, aliases(cmd))
         }
         jcommander.setProgramName( APP_NAME )
+
+        //Allow unknown options for module command
+        jcommander.getCommands().get(CmdModule.NAME)?.setAcceptUnknownOptions(true)
     }
 
     private static final String[] EMPTY = new String[0]
@@ -154,6 +153,11 @@ class Launcher {
         jcommander.parse( normalizedArgs as String[] )
         fullVersion = '-version' in normalizedArgs
         command = allCommands.find { it.name == jcommander.getParsedCommand()  }
+        //Attach unknown options to command in case of needed
+        if (command) {
+            final unknownOptions = jcommander.commands.get(jcommander.getParsedCommand())?.getUnknownOptions() ?: []
+            command.setUnknownOptions(unknownOptions)
+        }
         // whether is running a daemon
         daemonMode = command instanceof CmdNode
         // set the log file name
@@ -181,6 +185,8 @@ class Launcher {
         if( !options.logFile ) {
             if( isDaemon() )
                 options.logFile = System.getenv('NXF_LOG_FILE') ?: '.node-nextflow.log'
+            else if( command instanceof CmdModule && (command as CmdModule).args?.first() == 'run' )
+                options.logFile = System.getenv('NXF_LOG_FILE') ?: ".module.log"
             else if( command instanceof CmdRun || command instanceof CmdLaunch || command instanceof CmdAuth || options.debug || options.trace )
                 options.logFile = System.getenv('NXF_LOG_FILE') ?: ".nextflow.log"
         }
@@ -623,6 +629,8 @@ class Launcher {
         final noProxy = env.get('NO_PROXY') ?: env.get('no_proxy')
         if(noProxy) {
             System.setProperty('http.nonProxyHosts', noProxy.tokenize(',').join('|'))
+            // make the same entries available to HxClient-based clients via ProxyConfig
+            ProxyConfig.setNoProxyHosts(noProxy.tokenize(','))
         }
     }
 
@@ -642,10 +650,12 @@ class Launcher {
         assert qualifier in ['http','https','ftp','HTTP','HTTPS','FTP']
         def str = null
         def var = "${qualifier}_" + (qualifier.isLowerCase() ? 'proxy' : 'PROXY')
+        // ALL_PROXY / all_proxy is the fallback when no scheme-specific variable is set
+        def allVar = qualifier.isLowerCase() ? 'all_proxy' : 'ALL_PROXY'
 
         // -- setup HTTP proxy
         try {
-            final proxy = ProxyConfig.parse(str = env.get(var.toString()))
+            final proxy = ProxyConfig.parse(str = env.get(var.toString()) ?: env.get(allVar))
             if( proxy ) {
                 // set the expected protocol
                 proxy.protocol = qualifier.toLowerCase()
@@ -656,13 +666,33 @@ class Launcher {
                 if( proxy.authenticator() ) {
                     log.debug "Setting $qualifier proxy authenticator"
                     Authenticator.setDefault(proxy.authenticator())
+                    enableBasicProxyTunneling()
                 }
+                // register so HxClient-based clients honour the same proxy (routing + credentials)
+                ProxyConfig.register(proxy)
             }
         }
         catch ( MalformedURLException e ) {
             log.warn "Not a valid $qualifier proxy: '$str' -- Check the value of variable `$var` in your environment"
         }
 
+    }
+
+    /**
+     * The JDK strips proxy credentials from the HTTPS {@code CONNECT} request for the auth schemes
+     * listed in {@code jdk.http.auth.tunneling.disabledSchemes} (default {@code Basic}, see
+     * {@code $JAVA_HOME/conf/net.properties}), so HTTPS targets behind an authenticating proxy fail
+     * with a 407 even when the authenticator is correctly wired. Clear the property so Basic proxy
+     * authentication works over the tunnel — but never override a value the user set explicitly
+     * (e.g. via {@code NXF_OPTS='-Djdk.http.auth.tunneling.disabledSchemes=...'}).
+     */
+    @PackageScope
+    static void enableBasicProxyTunneling() {
+        final key = 'jdk.http.auth.tunneling.disabledSchemes'
+        if( System.getProperty(key) == null ) {
+            log.debug "Clearing $key to allow Basic proxy authentication over HTTPS tunnelling"
+            System.setProperty(key, '')
+        }
     }
 
     /**

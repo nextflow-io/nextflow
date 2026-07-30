@@ -1,5 +1,5 @@
 /*
- * Copyright 2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,11 +23,14 @@ import java.util.List;
 import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.ProcessNodeV2;
+import nextflow.script.ast.RecordNode;
+import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.TupleParameter;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.CodeVisitorSupport;
 import org.codehaus.groovy.ast.Parameter;
+import org.codehaus.groovy.ast.Variable;
 import org.codehaus.groovy.ast.VariableScope;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
 import org.codehaus.groovy.ast.expr.ClosureExpression;
@@ -54,10 +57,13 @@ public class ProcessToGroovyVisitorV2 {
 
     private SourceUnit sourceUnit;
 
+    private ScriptNode moduleNode;
+
     private ScriptToGroovyHelper sgh;
 
     public ProcessToGroovyVisitorV2(SourceUnit sourceUnit) {
         this.sourceUnit = sourceUnit;
+        this.moduleNode = (ScriptNode) sourceUnit.getAST();
         this.sgh = new ScriptToGroovyHelper(sourceUnit);
     }
 
@@ -122,44 +128,52 @@ public class ProcessToGroovyVisitorV2 {
 
     private void visitProcessInputs(Parameter[] inputs, BlockStatement stagers) {
         for( var param : asFlatParams(inputs) ) {
-            if( isPathType(param.getType()) ) {
-                var ve = varX(param.getName());
-                var stager = stmt(callThisX("stageAs", args(closureX(stmt(ve)))));
-                stagers.addStatement(stager);
-            }
+            visitProcessInputType(param, varX(param.getName()), stagers);
+        }
+    }
+
+    /**
+     * Add implicit staging directives that are inferred from
+     * the process input type:
+     *
+     * - Inputs with type Path or a Path collection (e.g. Set<Path>)
+     *   are staged as input files.
+     *
+     * - Inputs with a record type are recursively inspected for nested
+     *   file inputs based on the record type definition.
+     *
+     * @param param
+     * @param target
+     * @param stagers
+     */
+    private void visitProcessInputType(Variable param, Expression target, BlockStatement stagers) {
+        var cn = param.getType();
+        if( isPathType(cn) ) {
+            var stager = stmt(callThisX("stageAs", args(closureX(stmt(target)))));
+            stagers.addStatement(stager);
+        }
+        else if( isRecordType(cn) ) {
+            for( var fn : cn.getFields() )
+                visitProcessInputType(fn, propX(target, fn.getName()), stagers);
         }
     }
 
     private static boolean isPathType(ClassNode cn) {
         if( !cn.isResolved() )
             return false;
-        var tn = new TypeNode(cn);
-        var type = tn.type;
-        if( Path.class.isAssignableFrom(type) ) {
+        var clazz = cn.getTypeClass();
+        if( Path.class.isAssignableFrom(clazz) ) {
             return true;
         }
-        if( Collection.class.isAssignableFrom(type) && tn.genericTypes != null ) {
-            var genericType = tn.genericTypes.get(0);
-            return Path.class.isAssignableFrom(genericType);
+        if( Collection.class.isAssignableFrom(clazz) && cn.isUsingGenerics() ) {
+            var elementType = cn.getGenericsTypes()[0].getType();
+            return Path.class.isAssignableFrom(elementType.getTypeClass());
         }
         return false;
     }
 
-    private static class TypeNode {
-        final Class type;
-        final List<Class> genericTypes;
-
-        public TypeNode(ClassNode cn) {
-            this.type = cn.getTypeClass();
-            if( cn.isUsingGenerics() ) {
-                this.genericTypes = Arrays.stream(cn.getGenericsTypes())
-                    .map(el -> el.getType().getTypeClass())
-                    .toList();
-            }
-            else {
-                this.genericTypes = null;
-            }
-        }
+    private static boolean isRecordType(ClassNode cn) {
+        return cn.redirect() instanceof RecordNode;
     }
 
     private void visitProcessUnstagers(Statement outputs, ProcessUnstageVisitor visitor) {

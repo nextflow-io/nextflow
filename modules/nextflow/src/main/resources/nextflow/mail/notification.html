@@ -1,5 +1,5 @@
 <!--
-  ~ Copyright 2013-2024, Seqera Labs
+  ~ Copyright 2013-2026, Seqera Labs
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -61,12 +61,12 @@
         <td>Ending time</td>
         <td>${SysHelper.fmtDate(workflow.complete)} (duration: ${workflow.duration})</td>
         </tr>
-        
+
         <tr>
         <td>Total CPU-Hours</td>
         <td>${workflow.stats.computeTimeFmt ?: '-'}</td>
         </tr>
-        
+
         <tr>
             <td>Tasks stats</td>
             <td>
@@ -81,67 +81,67 @@
         <td>Launch directory</td>
         <td>${workflow.launchDir}</td>
         </tr>
-        
+
         <tr>
         <td>Work directory</td>
         <td>${workflow.workDir.toUriString()}</td>
         </tr>
-        
+
         <tr>
         <td>Project directory</td>
         <td>${workflow.projectDir}</td>
         </tr>
-        
+
         <tr>
         <td>Script name</td>
         <td>${workflow.scriptName ?: '-'}</td>
         </tr>
-        
+
         <tr>
         <td>Script ID</td>
         <td>${workflow.scriptId ?: '-'}</td>
         </tr>
-        
+
         <tr>
         <td>Workflow session</td>
         <td>${workflow.sessionId}</td>
         </tr>
-        
+
         <tr>
         <td>Workflow repo</td>
         <td>${workflow.repository ?: '-' }</td>
         </tr>
-        
+
         <tr>
         <td>Workflow revision</td>
         <td>${workflow.repository ? "$workflow.revision ($workflow.commitId)" : '-'}</td>
         </tr>
-        
+
         <tr>
         <td>Workflow profile</td>
         <td>${workflow.profile ?: '-'}</td>
         </tr>
-        
+
         <tr>
         <td>Workflow container</td>
         <td>${workflow.container ?: '-'}</td>
         </tr>
-        
+
         <tr>
         <td>Container engine</td>
         <td>${workflow.containerEngine?:'-'}</td>
         </tr>
-        
+
         <tr>
         <td>Wave enabled</td>
         <td>${workflow.wave.enabled}</td>
         </tr>
-        
+
         <tr>
         <td>Fusion enabled</td>
         <td>${workflow.fusion.enabled}, version ${workflow.fusion.enabled ? workflow.fusion.version : '-'}</td>
         </tr>
-        
+
         <tr>
         <td>Nextflow version</td>
         <td>${workflow.nextflow.version}, build ${workflow.nextflow.build} (${workflow.nextflow.timestamp})</td>

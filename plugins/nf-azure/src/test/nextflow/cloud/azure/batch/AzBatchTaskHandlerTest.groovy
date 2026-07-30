@@ -1,10 +1,23 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.cloud.azure.batch
 
 import com.azure.compute.batch.models.BatchTask
-import com.azure.compute.batch.models.BatchTaskExecutionInfo
-import com.azure.compute.batch.models.BatchTaskFailureInfo
-import com.azure.compute.batch.models.BatchTaskState
-import com.azure.compute.batch.models.ErrorCategory
+import com.azure.json.JsonProviders
 import com.sun.jna.platform.unix.X11
 import nextflow.processor.TaskStatus
 
@@ -72,10 +85,10 @@ class AzBatchTaskHandlerTest extends Specification {
         def handler = Spy(new AzBatchTaskHandler(task, executor)) {
             getBatchService() >> azure
         }
-        
+
         when:
         handler.submit()
-        
+
         then:
         1 * handler.createBashWrapper() >> Mock(BashWrapperBuilder)
         1 * handler.getBatchService() >> Mock(AzBatchService)
@@ -116,11 +129,7 @@ class AzBatchTaskHandlerTest extends Specification {
         task.name = 'foo'
         task.workDir = Path.of('/tmp/wdir')
         def taskKey = new AzTaskKey('pool-123', 'job-456')
-        def azTask = new BatchTask()
-        def execInfo = new BatchTaskExecutionInfo(0,0)
-        execInfo.exitCode = 0
-        azTask.executionInfo = execInfo
-        azTask.state = BatchTaskState.COMPLETED
+        def azTask = BatchTask.fromJson(JsonProviders.createReader('{"state":"completed","executionInfo":{"retryCount":0,"requeueCount":0,"exitCode":0}}'))
 
         def batchService = Mock(AzBatchService){
             getTask(taskKey) >> azTask
@@ -153,11 +162,7 @@ class AzBatchTaskHandlerTest extends Specification {
         task.name = 'foo'
         task.workDir = Path.of('/tmp/wdir')
         def taskKey = new AzTaskKey('pool-123', 'job-456')
-        def azTask = new BatchTask()
-        def execInfo = new BatchTaskExecutionInfo(0,0)
-        execInfo.exitCode = 137
-        azTask.executionInfo = execInfo
-        azTask.state = BatchTaskState.COMPLETED
+        def azTask = BatchTask.fromJson(JsonProviders.createReader('{"state":"completed","executionInfo":{"retryCount":0,"requeueCount":0,"exitCode":137}}'))
 
         def batchService = Mock(AzBatchService){
             getTask(taskKey) >> azTask
@@ -191,10 +196,7 @@ class AzBatchTaskHandlerTest extends Specification {
         task.name = 'foo'
         task.workDir = Path.of('/tmp/wdir')
         def taskKey = new AzTaskKey('pool-123', 'job-456')
-        def azTask = new BatchTask()
-        def execInfo = new BatchTaskExecutionInfo(0,0)
-        azTask.executionInfo = execInfo
-        azTask.state = BatchTaskState.COMPLETED
+        def azTask = BatchTask.fromJson(JsonProviders.createReader('{"state":"completed","executionInfo":{"retryCount":0,"requeueCount":0}}'))
 
         def batchService = Mock(AzBatchService){
             getTask(taskKey) >> azTask
@@ -227,13 +229,7 @@ class AzBatchTaskHandlerTest extends Specification {
         task.name = 'foo'
         task.workDir = Path.of('/tmp/wdir')
         def taskKey = new AzTaskKey('pool-123', 'job-456')
-        def azTask = new BatchTask()
-        def execInfo = new BatchTaskExecutionInfo(0,0)
-        def failureInfo = new BatchTaskFailureInfo(ErrorCategory.USER_ERROR)
-        failureInfo.message = 'Unknown error'
-        execInfo.failureInfo = failureInfo
-        azTask.executionInfo = execInfo
-        azTask.state = BatchTaskState.COMPLETED
+        def azTask = BatchTask.fromJson(JsonProviders.createReader('{"state":"completed","executionInfo":{"retryCount":0,"requeueCount":0,"failureInfo":{"category":"userError","message":"Unknown error"}}}'))
 
         def batchService = Mock(AzBatchService){
             getTask(taskKey) >> azTask

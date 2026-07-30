@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,11 +23,12 @@ import java.util.Map;
 import java.util.Set;
 
 import nextflow.script.ast.ASTNodeMarker;
-import nextflow.script.dsl.Constant;
-import nextflow.script.dsl.Operator;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.WorkflowNode;
-import nextflow.script.types.Record;
+import nextflow.script.dsl.Constant;
+import nextflow.script.dsl.Operator;
+import nextflow.script.dsl.WorkflowDsl;
+import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
@@ -58,11 +59,11 @@ public class VariableScopeChecker {
 
     private SourceUnit sourceUnit;
 
-    private Map<String,MethodNode> includes = new HashMap<>();
+    private Map<String,AnnotatedNode> includes = new HashMap<>();
 
     private VariableScope currentScope;
 
-    private Set<Variable> declaredVariables = Collections.newSetFromMap(new IdentityHashMap<>());
+    private Set<Variable> unusedVariables = Collections.newSetFromMap(new IdentityHashMap<>());
 
     public VariableScopeChecker(SourceUnit sourceUnit, ClassNode classScope) {
         this.sourceUnit = sourceUnit;
@@ -78,16 +79,16 @@ public class VariableScopeChecker {
         return currentScope;
     }
 
-    public void include(String name, MethodNode variable) {
+    public void include(String name, AnnotatedNode variable) {
         includes.put(name, variable);
     }
 
-    public MethodNode getInclude(String name) {
+    public AnnotatedNode getInclude(String name) {
         return includes.get(name);
     }
 
     public void checkUnusedVariables() {
-        for( var variable : declaredVariables ) {
+        for( var variable : unusedVariables ) {
             if( variable instanceof ASTNode node && !variable.getName().startsWith("_") ) {
                 var message = variable instanceof Parameter
                     ? "Parameter was not used -- prefix with `_` to suppress warning"
@@ -130,7 +131,7 @@ public class VariableScopeChecker {
             }
         }
         currentScope.putDeclaredVariable(variable);
-        declaredVariables.add(variable);
+        unusedVariables.add(variable);
     }
 
     /**
@@ -175,7 +176,7 @@ public class VariableScopeChecker {
                 break;
             scope = scope.getParent();
         }
-        declaredVariables.remove(variable);
+        unusedVariables.remove(variable);
         return variable;
     }
 
@@ -187,6 +188,7 @@ public class VariableScopeChecker {
      * @param node
      */
     private Variable findDslVariable(ClassNode cn, String name, ASTNode node) {
+        var classScope = cn;
         while( cn != null ) {
             for( var mn : cn.getMethods() ) {
                 // processes, workflows, and operators can be accessed as variables, e.g. with pipes
@@ -209,10 +211,16 @@ public class VariableScopeChecker {
                 : null;
         }
 
-        if( includes.containsKey(name) )
-            return wrapMethodAsVariable(includes.get(name), name);
+        // an included definition can be accessed as a variable in a workflow
+        // (less strict here since plugin includes aren't resolved at this point)
+        if( isWorkflowScope(classScope) && includes.get(name) instanceof MethodNode mn )
+            return wrapMethodAsVariable(mn, name);
 
         return null;
+    }
+
+    private static boolean isWorkflowScope(ClassNode cn) {
+        return cn != null && WorkflowDsl.class.isAssignableFrom(cn.getTypeClass());
     }
 
     public static boolean isDataflowMethod(MethodNode mn) {
@@ -236,15 +244,9 @@ public class VariableScopeChecker {
     }
 
     private static ClassNode methodOutputType(MethodNode mn) {
-        if( !(mn instanceof ProcessNode || mn instanceof WorkflowNode) )
-            return mn.getReturnType();
-        var cn = new ClassNode(Record.class);
-        var fn = new FieldNode("out", mn.getModifiers() & 0xF, mn.getReturnType(), cn, null);
-        fn.setHasNoRealSourcePosition(true);
-        fn.setDeclaringClass(cn);
-        fn.setSynthetic(true);
-        cn.addField(fn);
-        return cn;
+        if( mn instanceof ProcessNode || mn instanceof WorkflowNode )
+            return ClassHelper.dynamicType();
+        return mn.getReturnType();
     }
 
     /**
@@ -281,8 +283,8 @@ public class VariableScopeChecker {
             scope = scope.getParent();
         }
 
-        return includes.containsKey(name)
-            ? List.of(includes.get(name))
+        return includes.get(name) instanceof MethodNode mn
+            ? List.of(mn)
             : Collections.emptyList();
     }
 

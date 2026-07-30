@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.script
 
 import nextflow.Channel
@@ -587,6 +603,38 @@ class ScriptDslTest extends Dsl2Spec {
         then:
         def e2 = thrown(MissingProcessException)
         e2.message == 'Missing process or function Channel.doesNotExist()'
+    }
+
+    def 'should allow typed process output to use external functions' () {
+        when:
+        def result = runScript(
+            '''\
+            nextflow.enable.types = true
+
+            workflow {
+                ADD(2, 2)
+            }
+
+            process ADD {
+                input:
+                x: Integer
+                y: Integer
+
+                output:
+                add(x, y)
+
+                exec:
+                true
+            }
+
+            def add(x, y) {
+                return x + y
+            }
+            '''
+        )
+
+        then:
+        result.val == 4
     }
 
 }

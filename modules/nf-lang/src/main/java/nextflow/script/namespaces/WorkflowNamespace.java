@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -116,7 +116,7 @@ public interface WorkflowNamespace extends Namespace {
 
     @Constant("manifest")
     @Description("""
-        Namespace corresponding to the [manifest](https://nextflow.io/docs/latest/reference/config.html#manifest) config scope.
+        Namespace corresponding to the [manifest](https://docs.seqera.io/nextflow/reference/config#manifest) config scope.
     """)
     ManifestNamespace getManifest();
 

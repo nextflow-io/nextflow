@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -115,6 +115,62 @@ class ClientConfigTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+    }
+
+    def 'should preserve token file path when reading token from tokenFile in nextflow config' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def tokenFile = folder.resolve('token')
+        tokenFile.text = 'file-token'
+
+        def MAP = [
+                server: 'foo.com',
+                tokenFile: tokenFile ]
+
+        when:
+        def result = ClientConfig.fromNextflowConfig(MAP, null, null)
+
+        then:
+        result.token == 'file-token'
+        result.tokenPath == tokenFile
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should preserve token file path when reading token from tokenFile in kubeconfig' () {
+
+        given:
+        def folder = Files.createTempDirectory('test')
+        def tokenFile = folder.resolve('token')
+        tokenFile.text = 'file-token'
+
+        def user = [ tokenFile: tokenFile.toString() ]
+        def cluster = [ server: 'https://foo:6443' ]
+
+        when:
+        def result = ClientConfig.fromUserAndCluster(user, cluster, folder)
+
+        then:
+        result.token == 'file-token'
+        result.tokenPath == tokenFile
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should not set token path when token is provided inline' () {
+
+        given:
+        def MAP = [ server: 'foo.com', token: 'inline-token' ]
+
+        when:
+        def result = ClientConfig.fromNextflowConfig(MAP, null, null)
+
+        then:
+        result.token == 'inline-token'
+        result.tokenPath == null
     }
 
 }

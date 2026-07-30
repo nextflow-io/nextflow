@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -85,7 +85,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      * @param files
      *      The map on input file, holds ( local file name, storage path ) pairs
      * @return
-     *      A map containing remote file paths resolved as local paths 
+     *      A map containing remote file paths resolved as local paths
      */
 //    @Override
 //    Map<String,Path> resolveForeignFiles(Map<String,Path> files) {
@@ -203,18 +203,18 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      *   a relative path.
      * * link: Create a hard link to source from target.
      * * copy: Copy the file at source to target.
-     * 
+     *
      * @param source The original file that is to be staged.
      * @param target The new path to create.
      * @param mode The method to use for staging the file. See Methods above.
      * @return The command to issue to stage the specified file.
-     */ 
+     */
     protected String stageInCommand( String source, String target, String mode ) {
         if( !target || target.startsWith('/') )
             throw new IllegalArgumentException("Process input file target path must be relative: $target")
 
         if( mode == 'symlink' || !mode )
-            return "ln -s ${Escape.path(source)} ${Escape.path(target)}"
+            return "ln -sfn ${Escape.path(source)} ${Escape.path(target)}"
 
         if( mode == 'rellink' ) {
             // GNU ln has the '-r' flag, but BSD ln doesn't, so we have to
@@ -224,11 +224,11 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
             def sourcePath = workDir.resolve(source)
             source = targetPath.getParent().relativize(sourcePath).toString()
 
-            return "ln -s ${Escape.path(source)} ${Escape.path(target)}"
+            return "ln -sfn ${Escape.path(source)} ${Escape.path(target)}"
         }
 
         if( mode == 'link' )
-            return "ln ${Escape.path(source)} ${Escape.path(target)}"
+            return "ln -f ${Escape.path(source)} ${Escape.path(target)}"
 
         if( mode == 'copy' || !mode )
             return "cp -fRL ${Escape.path(source)} ${Escape.path(target)}"
