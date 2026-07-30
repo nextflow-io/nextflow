@@ -1784,11 +1784,9 @@ The `seqera.executor` scope configures the Seqera scheduler service for the [Seq
 
 The following settings are available:
 
-The following settings are available:
-
 ###### `seqera.executor.autoLabels`
 
-When `true`, automatically adds workflow metadata labels to the session with the `nextflow.io/` prefix (default: `false`). The following labels are added: `projectName`, `userName`, `runName`, `sessionId`, `resume`, `revision`, `commitId`, `repository`, `manifestName`, `runtimeVersion`. A `seqera.io/runId` label is also added, computed as a SipHash of the session ID and run name.
+When `true`, automatically adds workflow metadata labels to the session with the `nextflow.io/` prefix (default: `false`). The following labels are added: `projectName`, `userName`, `runName`, `sessionId`, `resume`, `revision`, `commitId`, `repository`, `manifestName`, `runtimeVersion`. A `seqera.io/runId` label is also added, computed as a SipHash of the session ID and run name. The `userName` label reports the Seqera Platform user that submitted the run, falling back to the OS user running the Nextflow launcher when no Platform identity is available.
 
 ###### `seqera.executor.computeEnvId`
 
@@ -1873,6 +1871,10 @@ The maximum number of spot retry attempts before falling back to on-demand. Only
 ###### `seqera.executor.machineRequirement.provisioning`
 
 The instance provisioning mode. Can be `'spot'`, `'ondemand'`, or `'spotFirst'`.
+
+###### `seqera.executor.schedulingRequirement.maxCpusPerUser`
+
+The maximum number of concurrent vCPUs a single user may consume across all of their runs on this compute environment (default: no limit). A task requesting more `cpus` than this cap fails instead of being queued.
 
 ###### `seqera.executor.retryPolicy.delay`
 
