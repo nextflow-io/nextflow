@@ -43,7 +43,10 @@ import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.Global
+import nextflow.fusion.FusionConfig
 import spock.lang.Specification
+import spock.lang.Unroll
 
 import java.nio.file.Paths
 
@@ -1303,6 +1306,33 @@ class SeqeraTaskHandlerTest extends Specification {
     /**
      * Creates a test handler with an error set on the task
      */
+    @Unroll
+    def 'should validate max spot attempts' () {
+        given:
+        Global.config = [fusion: [enabled: FUSION, snapshots: SNAPSHOTS]]
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient); isFusionEnabled() >> FUSION }
+        def proc = Mock(TaskProcessor) { getExecutor() >> executor }
+        def task = Mock(TaskRun) { getWorkDir() >> Paths.get('/work/ab/cd1234'); getProcessor() >> proc }
+        def handler = new SeqeraTaskHandler(task, executor)
+
+        expect:
+        handler.maxSpotAttempts(ATTEMPTS != null ? new MachineRequirementOpts([maxSpotAttempts: ATTEMPTS]) : null) == EXPECTED
+
+        cleanup:
+        Global.config = null
+
+        where:
+        ATTEMPTS    | FUSION | SNAPSHOTS | EXPECTED
+        null        | false  | false     | 0
+        0           | false  | false     | 0
+        2           | false  | false     | 2
+        and:
+        null        | true   | false     | 0
+        null        | true   | true      | FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS
+        0           | true   | true      | FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS
+        2           | true   | true      | 2
+    }
+
     private SeqeraTaskHandler createHandlerWithError(Throwable error) {
         def taskRun = Mock(TaskRun) {
             getWorkDir() >> Paths.get('/work/ab/cd1234')

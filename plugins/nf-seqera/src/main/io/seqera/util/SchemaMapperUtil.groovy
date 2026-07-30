@@ -27,7 +27,6 @@ import io.seqera.sched.api.schema.v1a1.PriceModel as SchedPriceModel
 import io.seqera.sched.api.schema.v1a1.ProvisioningModel
 import io.seqera.sched.api.schema.v1a1.SchedulingRequirement
 import nextflow.cloud.types.PriceModel
-import nextflow.fusion.FusionConfig
 import nextflow.util.MemoryUnit
 
 /**
@@ -96,7 +95,7 @@ class SchemaMapperUtil {
      * @return the MachineRequirement API object, or null if no settings
      */
     static MachineRequirement toMachineRequirement(MachineRequirementOpts opts, String taskArch) {
-        return toMachineRequirement(opts, taskArch, null, false)
+        return toMachineRequirement(opts, taskArch, null, false, opts?.maxSpotAttempts ?: 0)
     }
 
     /**
@@ -106,13 +105,13 @@ class SchemaMapperUtil {
      * @param taskArch the task container platform/arch (can be null)
      * @param diskSize the disk size from task config (can be null)
      * @param snapshotEnabled whether Fusion snapshots are enabled
+     * @param spotAttempts the number of spot retry attempts, {@code 0} when not applicable
      * @return the MachineRequirement API object, or null if no settings
      */
-    static MachineRequirement toMachineRequirement(MachineRequirementOpts opts, String taskArch, MemoryUnit diskSize, boolean snapshotEnabled) {
+    static MachineRequirement toMachineRequirement(MachineRequirementOpts opts, String taskArch, MemoryUnit diskSize, boolean snapshotEnabled, int spotAttempts) {
         final arch = taskArch
         final provisioning = opts?.provisioning
-        final maxSpotAttempts = opts?.maxSpotAttempts
-            ?: (snapshotEnabled ? FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS : null)
+        final maxSpotAttempts = spotAttempts > 0 ? spotAttempts : null
         final machineTypes = opts?.machineTypes
         // task disk overrides config disk
         final effectiveDiskSize = diskSize ?: opts?.diskSize

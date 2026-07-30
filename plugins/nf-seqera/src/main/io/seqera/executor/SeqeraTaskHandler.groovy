@@ -21,6 +21,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import io.seqera.config.MachineRequirementOpts
 import io.seqera.executor.Labels
 import io.seqera.sched.api.schema.v1a1.AcceleratorType
 import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
@@ -40,6 +41,7 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import nextflow.fusion.FusionAwareTask
+import nextflow.fusion.FusionConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
@@ -125,7 +127,8 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             baseMachineOpts,
             task.getContainerPlatform(),
             task.config.getDisk(),
-            fusionConfig().snapshotsEnabled()
+            fusionEnabled() && fusionConfig().snapshotsEnabled(),
+            maxSpotAttempts(baseMachineOpts)
         )
         // resolve optional per-task prediction model override from the seqera/predictionModel hint;
         // when unset the task inherits the run-level model
@@ -163,6 +166,15 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         log.debug "[SEQERA] Enqueueing task for batch submission: ${schedTask}"
         // Enqueue for batch submission - status will be set by setBatchTaskId callback
         executor.getBatchSubmitter().submit(this, schedTask)
+    }
+
+    protected int maxSpotAttempts(MachineRequirementOpts opts) {
+        final result = opts?.maxSpotAttempts
+        if( result )
+            return result
+        // when fusion snapshot is enabled max attempt should be > 0
+        // to enable to allow snapshot retry the job execution in a new compute instance
+        return fusionEnabled() && fusionConfig().snapshotsEnabled() ? FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS : 0
     }
 
     /**
