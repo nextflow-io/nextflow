@@ -5,7 +5,7 @@ description: Overview of the standard types in the Nextflow standard library, in
 
 # Types
 
-The Nextflow standard library defines the types that describe the values in a pipeline. You can use these types to annotate pipeline parameters, process inputs and outputs, and workflow inputs and outputs. See [Static typing][static-typing-page] for an overview.
+The Nextflow standard library defines the types that are available in a pipeline. You can use these types to annotate pipeline parameters, process inputs and outputs, and workflow inputs and outputs. See [Static typing][static-typing-page] for an overview.
 
 ## Primitive types
 
@@ -23,9 +23,14 @@ The Nextflow standard library defines the types that describe the values in a pi
 | [Bag\<E\>][stdlib-types-bag] | An unordered collection of values. |
 | [Iterable\<E\>][stdlib-types-iterable] | The trait implemented by collection types that support iteration. |
 | [List\<E\>][stdlib-types-list] | An ordered collection of values. |
-| [Map\<K,V\>][stdlib-types-map] | A collection that maps keys to values. |
-| [Record][stdlib-types-record] | An immutable map of fields to values, where each value can have its own type. |
 | [Set\<E\>][stdlib-types-set] | An unordered collection of unique values. |
+
+## Composite types
+
+| Page | Description |
+| ---- | ----------- |
+| [Map\<K,V\>][stdlib-types-map] | A mapping of key-value pairs. |
+| [Record][stdlib-types-record] | An immutable map of fields to values, where each value can have its own type. |
 | [Tuple][stdlib-types-tuple] | A fixed sequence of values, where each value can have its own type. |
 
 ## Dataflow types
@@ -47,12 +52,10 @@ The Nextflow standard library defines the types that describe the values in a pi
 ## See also
 
 - [Namespaces][stdlib-namespaces-page]: The constants and functions that return these types.
-- [Groovy and Java classes][stdlib-groovy-page]: The Groovy and Java classes that are available to Nextflow at runtime.
 - [Semantics][semantics-values]: How Nextflow evaluates values and expressions that use these types.
 
 [semantics-values]: ./semantics#values
 [static-typing-page]: ../static-typing
-[stdlib-groovy-page]: ./stdlib-groovy
 [stdlib-namespaces-page]: ./stdlib-namespaces
 [stdlib-types-bag]: ./stdlib-types/bag
 [stdlib-types-boolean]: ./stdlib-types/boolean
