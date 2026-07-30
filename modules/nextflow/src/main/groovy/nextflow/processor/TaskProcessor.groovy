@@ -896,7 +896,7 @@ class TaskProcessor {
             session.notifyTaskCached(new StoredTaskHandler(task))
 
             // -- now bind the results
-            finalizeTask0(task)
+            taskCompleted(task)
             return true
         }
         catch( MissingFileException | MissingValueException e ) {
@@ -1001,7 +1001,7 @@ class TaskProcessor {
                 session.notifyTaskCached(new CachedTaskHandler(task,entry.trace))
 
             // -- now bind the results
-            finalizeTask0(task)
+            taskCompleted(task)
             return true
         }
         catch( MissingFileException | MissingValueException e ) {
@@ -1816,7 +1816,7 @@ class TaskProcessor {
             }
 
             log.trace "Task ${safeTaskName(task)} is not executed because `when` condition is not verified"
-            finalizeTask0(task)
+            taskCompleted(task)
             return false
         }
         catch ( FailedGuardException error ) {
@@ -1862,7 +1862,7 @@ class TaskProcessor {
 
         // -- finalize the task
         if( fault != ErrorStrategy.RETRY )
-            finalizeTask0(task)
+            taskCompleted(task)
 
         return fault
     }
@@ -1879,13 +1879,17 @@ class TaskProcessor {
     }
 
     /**
-     * Finalize the task execution, checking the exit status
-     * and binding output values accordingly
+     * Invoked when a task execution has completed, that is when the task outputs
+     * have been resolved, or the task has failed, or its execution was skipped
+     * because of a `when` guard, a store directory or a cached result.
      *
-     * @param task The {@code TaskRun} instance to finalize
-     * @param producedFiles The map of files to be bind the outputs
+     * This is the boundary between the execution of a task and the dataflow
+     * interface of the process: it is the only point at which task results are
+     * emitted to the process output channels.
+     *
+     * @param task The {@code TaskRun} instance that has completed
      */
-    private void finalizeTask0( TaskRun task ) {
+    protected void taskCompleted( TaskRun task ) {
         log.trace "Finalize process > ${safeTaskName(task)}"
 
         // -- bind output (files)
