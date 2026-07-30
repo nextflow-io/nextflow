@@ -355,7 +355,7 @@ class MockTaskHandler extends TaskHandler {
             task.code.call()
         }
         status = TaskStatus.COMPLETED
-        final fault = task.processor.finalizeTask(this)
+        final fault = task.processor.getRunner().finalizeTask(this)
         if( fault instanceof TaskFault )
             task.processor.session.fault(fault)
     }
