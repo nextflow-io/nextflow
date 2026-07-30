@@ -19,3 +19,4 @@
 /nextflow/module/                  /nextflow/modules/                               301
 /nextflow/operator                 /nextflow/reference/operator                     301
 /nextflow/reference/channel        /nextflow/reference/stdlib-namespaces/channel    301
+/nextflow/reference/operator-typed /nextflow/reference/stdlib-types/channel         301

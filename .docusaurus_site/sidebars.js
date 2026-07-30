@@ -192,7 +192,6 @@ module.exports = {
                     ]
                 },
                 "reference/process",
-                "reference/operator-typed",
                 "reference/operator"
             ]
         },
