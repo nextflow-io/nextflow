@@ -1,0 +1,31 @@
+---
+title: Namespaces
+description: Overview of the namespaces in the Nextflow standard library, including the global namespace and the channel, log, nextflow, and workflow namespaces.
+---
+
+# Namespaces
+
+A namespace groups a set of related constants and functions that Nextflow makes available to every script. The global namespace is available without a prefix, while the remaining namespaces are accessed by name, such as `workflow.projectDir`.
+
+## Available namespaces
+
+| Page | Description |
+| ---- | ----------- |
+| [Global namespace][stdlib-namespaces-global] | The globally available constants and functions. |
+| [`channel`][stdlib-namespaces-channel] | The built-in channel factories. |
+| [`log`][stdlib-namespaces-log] | Functions for logging messages to the console. |
+| [`nextflow`][stdlib-namespaces-nextflow] | Information about the current Nextflow runtime. |
+| [`workflow`][stdlib-namespaces-workflow] | Information about the current workflow run. |
+
+## See also
+
+- [Types][stdlib-types-page]: The standard types returned by these constants and functions.
+- [Groovy and Java classes][stdlib-groovy-page]: The Groovy and Java classes that are available to Nextflow at runtime.
+
+[stdlib-groovy-page]: ./stdlib-groovy
+[stdlib-namespaces-channel]: ./stdlib-namespaces/channel
+[stdlib-namespaces-global]: ./stdlib-namespaces/global
+[stdlib-namespaces-log]: ./stdlib-namespaces/log
+[stdlib-namespaces-nextflow]: ./stdlib-namespaces/nextflow
+[stdlib-namespaces-workflow]: ./stdlib-namespaces/workflow
+[stdlib-types-page]: ./stdlib-types

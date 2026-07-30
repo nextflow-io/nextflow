@@ -108,10 +108,12 @@ module.exports = {
                 {
                     type: "category",
                     label: "Standard library",
+                    link: { type: "doc", id: "reference/stdlib" },
                     items: [
                         {
                             type: "category",
                             label: "Namespaces",
+                            link: { type: "doc", id: "reference/stdlib-namespaces" },
                             items: [
                                 "reference/stdlib-namespaces/global",
                                 "reference/stdlib-namespaces/channel",
@@ -123,6 +125,7 @@ module.exports = {
                         {
                             type: "category",
                             label: "Types",
+                            link: { type: "doc", id: "reference/stdlib-types" },
                             items: [
                                 "reference/stdlib-types/bag",
                                 "reference/stdlib-types/boolean",
