@@ -344,6 +344,7 @@ module.exports = {
                 "tutorials/workflow-outputs",
                 "tutorials/static-types",
                 "tutorials/static-types-operators",
+                "tutorials/topic-channels",
                 "tutorials/metrics",
                 "tutorials/flux"
             ]

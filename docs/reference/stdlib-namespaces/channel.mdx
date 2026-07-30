@@ -333,56 +333,13 @@ Y
 
 <AddedInVersion version="25.04" />
 
-:::note
-This feature was previewed in versions 24.04 and 24.10 with the `nextflow.preview.topic` feature flag.
-:::
-
-A *topic channel* is a channel that can receive values from many sources *implicitly* based on a matching *topic name*.
-
-A typed process can emit values to a topic using the `topic:` section:
-
-```nextflow
-nextflow.enable.types = true
-
-process hello {
-    topic:
-    file('hello.txt') >> 'my-topic'
-
-    // ...
-}
-
-process bye {
-    topic:
-    file('bye.txt') >> 'my-topic'
-
-    // ...
-}
-```
-
-A legacy process can assign outputs in the `output:` section to a topic using the `topic` option:
-
-```nextflow
-process hello {
-    output:
-    path('hello.txt'), topic: 'my-topic'
-
-    // ...
-}
-```
-
-The `channel.topic` factory returns the topic channel for the given name:
+Get the *topic channel* for the given *topic name*:
 
 ```nextflow
 channel.topic('my-topic').view()
 ```
 
-The above example emits all values sent to the `my-topic` topic from processes such as `hello` and `bye`.
-
-This approach is a convenient way to collect related items from many different sources without explicitly connecting them (e.g. using the `mix` operator).
-
-:::warning
-Any process that consumes a topic channel (directly or indirectly) should not send any outputs to that topic, or else the pipeline will hang forever.
-:::
+See [Collecting values with topic channels][tutorial-topic-channels] for more information.
 
 ##### `value( value: V ) -> Value<V>` {#value}
 
@@ -432,4 +389,7 @@ The `watchPath` factory only works with local and shared filesystems. It does no
 [glob]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
 [operator-take]: ../operator#take
 [operator-until]: ../operator#until
+[process-topic-option]: ../process#topic-name
+[process-typed-topics]: ../../process-typed#topics
 [static-types-samplesheet]: ../../tutorials/static-types#loading-a-samplesheet-input
+[tutorial-topic-channels]: ../../tutorials/topic-channels
