@@ -1,0 +1,99 @@
+---
+title: kuberun
+description: Reference for the nextflow kuberun command. Launch a Nextflow pipeline on a Kubernetes cluster.
+---
+
+# `kuberun`
+
+Launch a Nextflow pipeline on a Kubernetes cluster.
+
+## Usage
+
+```console
+$ nextflow kuberun [options] [project]
+```
+
+## Description
+
+The `kuberun` command builds upon the `run` command and offers a deep integration with the Kubernetes execution environment. This command deploys the Nextflow runtime as a Kubernetes pod and assumes that you've already installed the `kubectl` CLI. The `kuberun` command does not allow the execution of local Nextflow scripts. See [Kubernetes][k8s-page] for more information.
+
+## Options
+
+The `kuberun` command supports the following options from [`run`](./run):
+
+- `-cache`
+- `-disable-jobs-cancellation`
+- `-dump-channels`
+- `-dump-hashes`
+- `-e.<key>=<value>`
+- `-entry`
+- `-h, -help`
+- `-hub`
+- `-latest`
+- `-main-script`
+- `-name`
+- `-offline`
+- `-params-file`
+- `-plugins`
+- `-preview`
+- `-profile`
+- `-qs, -queue-size`
+- `-resume`
+- `-r, -revision`
+- `-stub, -stub-run`
+- `-user`
+- `-with-conda`
+- `-with-dag`
+- `-N, -with-notification`
+- `-with-report`
+- `-with-spack`
+- `-with-timeline`
+- `-with-tower`
+- `-with-trace`
+- `-with-wave`
+- `-with-weblog`
+- `-w, -work-dir`
+
+The following new options are also available:
+
+##### `-head-cpus`
+
+Specify number of CPUs requested for the Nextflow pod.
+
+##### `-head-image`
+
+Specify the container image for the Nextflow driver pod.
+
+##### `-head-memory`
+
+Specify amount of memory requested for the Nextflow pod.
+
+##### `-head-prescript`
+
+Specify script to be run before the Nextflow pod starts.
+
+##### `-n, -namespace`
+
+Specify the K8s namespace to use.
+
+##### `-remoteConfig`
+
+Add the specified file from the K8s cluster to configuration set.
+
+##### `-remoteProfile`
+
+Choose a configuration profile in the remoteConfig.
+
+##### `-v, -volume-mount`
+
+Volume claim mounts. For example, `my-pvc:/mnt/path`.
+
+## Examples
+
+Execute a pipeline into a Kubernetes cluster:
+
+```console
+$ nextflow kuberun nextflow-io/hello
+```
+
+[k8s-page]: ../../kubernetes

@@ -1,0 +1,56 @@
+---
+title: clone
+description: Reference for the nextflow clone command. Clone a remote project into a folder.
+---
+
+# `clone`
+
+Clone a remote project into a folder.
+
+## Usage
+
+```console
+$ nextflow clone [options] [project]
+```
+
+## Description
+
+The `clone` command downloads a pipeline from a Git-hosting platform into the *current directory* and modifies it accordingly. For downloading a pipeline into the global cache `~/.nextflow/assets`, please refer to the `nextflow pull` command.
+
+## Options
+
+##### `-d, -deep`
+
+Create a shallow clone of the specified depth.
+
+##### `-h, -help`
+
+Print the command usage.
+
+##### `-hub` (`github`)
+
+Service hub where the project is hosted. Options: `gitlab` or `bitbucket`.
+
+##### `-r` (`master`)
+
+Revision to clone. It can be a git branch, tag, or commit SHA number.
+
+##### `-user`
+
+Private repository user name.
+
+## Examples
+
+Clone the latest revision of a pipeline:
+
+```console
+$ nextflow clone nextflow-io/hello
+nextflow-io/hello cloned to: hello
+```
+
+Clone a specific revision of a pipeline:
+
+```console
+$ nextflow clone nextflow-io/hello -r v1.1
+nextflow-io/hello cloned to: hello
+```

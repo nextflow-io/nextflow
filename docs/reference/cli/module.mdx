@@ -1,0 +1,287 @@
+---
+title: module
+description: Reference for the nextflow module command. Manage Nextflow modules.
+---
+
+# `module`
+
+<AddedInVersion version="26.04" />
+
+Manage Nextflow modules.
+
+## Usage
+
+```console
+$ nextflow module <subcommand> [options]
+```
+
+## Description
+
+The `module` command provides a comprehensive system for managing registry-based modules. It enables installing modules from registries, running them directly, searching for available modules, and publishing your own modules to a registry.
+
+## Subcommands
+
+##### `create [namespace/name]` {#module-create}
+
+Create a new module with a basic `main.nf`, `meta.yml`, and `README.md`.
+
+##### `install [options] [namespace/name]` {#module-install}
+
+Install a module from the registry into your project.
+Downloaded modules are stored in the `modules/` directory.
+The `.module-info` file is created in the module directory to store additional information of the installed module.
+
+The following options are available:
+
+###### `-version`
+
+Specify the module version to install (e.g., `1.0.0`). If not specified, installs the latest version.
+
+###### `-force`
+
+Force reinstall even if the module exists locally with modifications. Without this flag, Nextflow prevents overwriting locally modified modules.
+
+##### `list [options]` {#module-list}
+
+List all modules currently installed in your project.
+Shows each module's name, version, and integrity status (whether it has been modified locally).
+
+The following options are available:
+
+###### `-o, -output` (`table`)
+
+Output mode for list results. Options: `table` (default), `json`.
+
+##### `publish [options] [namespace/name | path]` {#module-publish}
+
+Publish a module to the registry, making it available for others to install.
+The argument can be either a `namespace/name` reference (for an already-installed module) or a local directory path containing the module files.
+Requires authentication via the `NXF_REGISTRY_TOKEN` environment variable or the `registry.apiKey` config option.
+The module directory must contain `main.nf`, `meta.yml`, and `README.md`.
+
+The following options are available:
+
+###### `-dry-run`
+
+Validate the module structure and metadata without uploading to the registry. Useful for testing before publishing.
+
+###### `-registry`
+
+Specify the registry to publish the module (default: `https://registry.nextflow.io`)
+
+##### `remove [options] [namespace/name]` {#module-remove}
+
+Remove a module from your project. By default, removes both local files and configuration entries. Use options to control what gets removed.
+
+The following options are available:
+
+###### `-force`
+
+Force removal even if the module has no `.module-info` file (i.e. not installed from a registry) or has local modifications.
+
+###### `-keep-files`
+
+Remove the `.module-info` but keep local files in the `modules/` directory.
+
+##### `run [options] [namespace/name | path] [--<input_name> <input-value>]` {#module-run}
+
+Execute a module directly.
+Can be a remote module (`namespace/name`) or a local module path (beginning with `./`, `../`, or `/`).
+Automatically downloads the module if not already installed.
+
+Accepts all standard Nextflow run options. For example, `-profile`, `-resume`, and `-c`.
+Command-line params (i.e., `--<input_name>`) are inferred from the module's declared inputs.
+
+The following additional options are available:
+
+###### `-version`
+
+Specify the module version to run (e.g., `1.0.0`). If not specified, uses the latest version.
+
+##### `search [options] [query]` {#module-search}
+
+Search for modules in the registry by keyword or name.
+Returns modules matching the query with their names, versions, descriptions, and download statistics.
+
+The following options are available:
+
+###### `-limit`
+
+Maximum number of results to return (default: varies by registry).
+
+###### `-o, -output` (`simple`)
+
+Output mode for search results. Options: `simple` (default), `json`.
+
+##### `spec [options] <namespace/name or path>` {#module-spec}
+
+Generate the `meta.yml` for a local module from the source code (`main.nf`).
+
+The generated file includes `TODO` placeholders for fields that were not specified.
+
+If a spec file already exists, it is incorporated into the new file.
+
+The following options are available:
+
+##### `view [options] [namespace/name]` {#module-view}
+
+Display detailed information about a module from the registry.
+Shows module name, version, description, and other metadata, as well as example usage.
+
+The following options are available:
+
+###### `-version`
+
+Specify the module version to query (e.g., `1.0.0`). If not specified, displays information for the latest version.
+
+###### `-o, -output` (`text`)
+
+Output mode for info results. Options: `text` (default), `json`.
+
+###### `-namespace <namespace>`
+
+Module namespace, used to construct the module name. Required when the argument is a path; ignored when it is a module name.
+
+###### `-version <version>`
+
+Module version string (e.g. `1.0.0`). Defaults to `TODO: Add version`.
+
+###### `-description <text>`
+
+Short description of what the module does. Defaults to `TODO: Add description`.
+
+###### `-license <identifier>`
+
+SPDX license identifier (e.g. `MIT`, `Apache-2.0`). Defaults to `TODO: Add license (e.g., MIT)`.
+
+###### `-author <name>`
+
+Module author. Can be specified multiple times, once per author. Defaults to `[TODO: Add author]`.
+
+###### `-dry-run`
+
+Print the generated spec to stdout without writing any file.
+
+##### `validate [options] <scope/name or path>` {#module-validate}
+
+Validate a module before publishing to the registry.
+
+Verifies that all required files are present (`main.nf`, `meta.yml`, `README.md`) and that the module spec contains all required fields (name, version, description, license).
+
+## Examples
+
+Install the latest module version:
+
+```console
+$ nextflow module install nf-core/fastqc
+```
+
+Display installed modules in formatted table:
+
+```console
+$ nextflow module list
+```
+
+Validate module structure without publishing:
+
+```console
+$ nextflow module publish myorg/my-module -dry-run
+```
+
+Publish module to nextflow registry:
+
+```console
+$ export NXF_REGISTRY_TOKEN=your-token
+$ nextflow module publish myorg/my-module
+```
+
+Display information for latest module version:
+
+```console
+$ nextflow module view nf-core/fastqc
+```
+
+Display information for specific version:
+
+```console
+$ nextflow module view nf-core/fastqc -version 1.0.0
+```
+
+Create a module:
+
+```console
+$ nextflow module create
+```
+
+Remove module completely:
+
+```console
+$ nextflow module remove nf-core/fastqc
+```
+
+Run a remote module:
+
+```console
+$ nextflow module run nf-core/fastqc \
+    --input 'data/*.fastq.gz'
+```
+
+Run a remote module with specific version and run options:
+
+```console
+$ nextflow module run nf-core/fastqc \
+    -version 1.0.0 \
+    --input 'data/*.fastq.gz' \
+    -with-conda \
+    -resume
+```
+
+Run a local module:
+
+```console
+$ nextflow module run ./modules/nf-core/fastqc/main.nf \
+      --input 'data/*.fastq.gz'
+```
+
+Search for alignment-related modules:
+
+```console
+$ nextflow module search alignment
+```
+
+Generate spec for local module by name:
+
+```console
+$ nextflow module spec nf-core/fastqc
+```
+
+Generate spec for local module by path (namespace required):
+
+```console
+$ nextflow module spec -namespace nf-core ./modules/my-module
+```
+
+Provide additional fields to avoid TODO placeholders:
+
+```console
+$ nextflow module spec \
+    -namespace nf-core \
+    -version 1.0.0 \
+    -description "Quality control of raw sequencing reads" \
+    -license MIT \
+    -author "@drpatelh" \
+    -author "@joseespinosa" \
+    ./modules/nf-core/fastqc
+```
+
+Validate module by name:
+
+```console
+$ nextflow module validate myorg/my-module
+```
+
+Validate module by path:
+
+```console
+$ nextflow module validate ./modules/myorg/my-module
+```

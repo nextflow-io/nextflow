@@ -1,0 +1,30 @@
+---
+title: plugin
+description: Reference for the nextflow plugin command. Manage plugins and run plugin-specific commands.
+---
+
+# `plugin`
+
+Manage plugins and run plugin-specific commands:
+
+```console
+$ nextflow plugin <subcommand> [options]
+```
+
+## Subcommands
+
+##### `create`
+
+<AddedInVersion version="25.04" />
+
+Create a plugin scaffold using the [Nextflow plugin template](https://github.com/nextflow-io/nf-plugin-template/). See [Creating a plugin][gradle-plugin-create] for more information.
+
+##### `install <plugin[@version],..>`
+
+Install a plugin. Multiple plugins can be specified as a comma-separated list. Each plugin id consists of a name and optional version separated by a `@`.
+
+##### `<plugin>:<subcommand> [options]`
+
+Execute a plugin-specific command.
+
+[gradle-plugin-create]: ../../guides/gradle-plugin#creating-a-plugin

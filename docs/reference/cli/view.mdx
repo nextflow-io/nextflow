@@ -1,0 +1,101 @@
+---
+title: view
+description: Reference for the nextflow view command. View a project's script file(s).
+---
+
+# `view`
+
+View a project's script file(s).
+
+## Usage
+
+```console
+$ nextflow view [options] [project]
+```
+
+## Description
+
+The `view` command is used to inspect the pipelines that are already stored in the global nextflow cache. For downloading a pipeline into the global cache `~/.nextflow/assets`, refer to the `pull` command.
+
+## Options
+
+##### `-h, -help`
+
+Print the command usage.
+
+##### `-l`
+
+List repository content.
+
+##### `-q`
+
+Hide header line.
+
+##### `-r, -revision`
+
+<AddedInVersion version="26.04" />
+
+Project revision. Can be a git branch, tag, or commit SHA number.
+
+## Examples
+
+Viewing the contents of a downloaded pipeline:
+
+```console
+$ nextflow view nextflow-io/hello
+
+== content of file: .nextflow/assets/.repos/nextflow-io/hello/main.nf
+#!/usr/bin/env nextflow
+
+process sayHello {
+  input:
+    val x
+  output:
+    stdout
+  script:
+    """
+    echo '$x world!'
+    """
+}
+
+workflow {
+  channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
+}
+```
+
+List the folder structure of the downloaded pipeline:
+
+```console
+$ nextflow view -l nextflow-io/hello
+
+== content of path: .nextflow/assets/.repos/nextflow-io/hello
+.git
+.gitignore
+LICENSE
+README.md
+main.nf
+nextflow.config
+```
+
+View the contents of a downloaded pipeline without omitting the header:
+
+```console
+$ nextflow view -q nextflow-io/hello
+
+#!/usr/bin/env nextflow
+
+process sayHello {
+  input:
+    val x
+  output:
+    stdout
+  script:
+    """
+    echo '$x world!'
+    """
+}
+
+workflow {
+  channel.of('Bonjour', 'Ciao', 'Hello', 'Hola') | sayHello | view
+}
+```

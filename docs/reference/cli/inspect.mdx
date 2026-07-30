@@ -1,0 +1,60 @@
+---
+title: inspect
+description: Reference for the nextflow inspect command. Inspect process settings in a pipeline project.
+---
+
+# `inspect`
+
+<AddedInVersion version="23.10" />
+
+Inspect process settings in a pipeline project. Currently only supports the `container` directive.
+
+## Usage
+
+```console
+$ nextflow inspect [options] [project]
+```
+
+## Description
+
+The `inspect` command allows you to determine the container for each process in a pipeline without running the pipeline. It prints to stdout a listing of containers for each process, formatted either as JSON or Nextflow configuration.
+
+## Options
+
+##### `-concretize`
+
+Build the container images resolved by the inspect command.
+
+##### `-format` (`json`)
+
+Inspect output format. Can be `json` or `config`.
+
+##### `-i, -ignore-errors`
+
+Ignore errors while inspecting the pipeline.
+
+##### `-params-file`
+
+Load script parameters from a JSON/YAML file.
+
+##### `-profile`
+
+Use the given configuration profile(s).
+
+##### `-r, revision`
+
+Revision of the project to inspect (either a git branch, tag or commit SHA number).
+
+## Examples
+
+Get the list of containers used by a pipeline:
+
+```console
+$ nextflow inspect nextflow-io/hello
+```
+
+Specify parameters as with the `run` command:
+
+```console
+$ nextflow inspect main.nf --alpha 1 --beta hello
+```

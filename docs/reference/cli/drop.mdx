@@ -1,0 +1,48 @@
+---
+title: drop
+description: Reference for the nextflow drop command. Delete the local copy of a project.
+---
+
+# `drop`
+
+Delete the local copy of a project.
+
+## Usage
+
+```console
+$ nextflow drop [options] [project]
+```
+
+## Description
+
+The `drop` command is used to remove the projects which have been downloaded into the global cache. Please refer the `list` command for generating a list of downloaded pipelines.
+
+## Options
+
+##### `-f`
+
+Delete the repository without taking care of local changes.
+
+##### `-h, -help`
+
+Print the command usage.
+
+##### `-r, -revision`
+
+<AddedInVersion version="26.04" />
+
+Project revision to drop. Can be a git branch, tag, or commit SHA number.
+
+## Examples
+
+Drop the `nextflow-io/hello` project:
+
+```console
+$ nextflow drop nextflow-io/hello
+```
+
+Forcefully drop the `nextflow-io/hello` pipeline, ignoring any local changes:
+
+```console
+$ nextflow drop nextflow-io/hello -f
+```

@@ -1,0 +1,62 @@
+---
+title: lineage
+description: Reference for the nextflow lineage command. Inspect lineage metadata for Nextflow runs.
+---
+
+# `lineage`
+
+<AddedInVersion version="25.04" />
+
+:::warning
+*Experimental: may change in a future release.*
+:::
+
+Inspect lineage metadata for Nextflow runs.
+
+## Usage
+
+```console
+$ nextflow lineage SUBCOMMAND [arg ..]
+```
+
+## Description
+
+The `lineage` command is used to inspect lineage metadata.
+
+See [Getting started with data lineage][data-lineage-page] to learn how to get started with data lineage.
+
+## Options
+
+##### `-h, -help`
+
+Print the command usage.
+
+## Subcommands
+
+##### `check <lid>`
+
+Validate the checksum of output lineage record.
+
+##### `diff <lid-1> <lid-2>`
+
+Display a git-style diff between two lineage records.
+
+##### `find <field-1>=<value-1> [<field-2>=<value-2> ...]`
+
+Find all lineage records that match the given field values.
+
+##### `list`
+
+List the Nextflow runs with lineage enabled, printing the corresponding lineage ID (LID) for each run.
+
+##### `render <lid> [path]`
+
+Render the lineage graph for a lineage record as an HTML file (default output path: `./lineage.html`).
+
+The lineage record should be of type `FileOutput`, `TaskRun`, or `WorkflowRun`.
+
+##### `view <lid>`
+
+View a lineage record.
+
+[data-lineage-page]: ../../tutorials/data-lineage

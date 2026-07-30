@@ -1,0 +1,42 @@
+---
+title: help
+description: Reference for the nextflow help command. Print the top-level help or specific help for a command.
+---
+
+# `help`
+
+Print the top-level help or specific help for a command.
+
+## Usage
+
+```console
+$ nextflow help [options] [command]
+```
+
+## Description
+
+The `help` command prints out the overview of the CLI interface and enumerates the top-level *options* and *commands*. Note that this command is equivalent to simply invoking `nextflow` at the command line.
+
+## Options
+
+##### `-h, -help`
+
+Print the command usage.
+
+## Examples
+
+Invoke the `help` option for the `drop` command:
+
+```console
+$ nextflow help drop
+
+Delete the local copy of a project
+Usage: drop [options] name of the project to drop
+   Options:
+     -f
+          Delete the repository without taking care of local changes
+          Default: false
+     -h, -help
+          Print the command usage
+          Default: false
+```
