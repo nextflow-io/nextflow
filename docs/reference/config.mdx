@@ -1874,11 +1874,7 @@ The instance provisioning mode. Can be `'spot'`, `'ondemand'`, or `'spotFirst'`.
 
 ###### `seqera.executor.schedulingRequirement.maxCpusPerUser`
 
-The maximum number of concurrent vCPUs a single user may consume across all of their runs on this compute environment. The limit is applied independently to each user sharing the compute environment. When not set, no CPU limit is enforced.
-
-A task whose own `cpus` request exceeds this cap is failed outright rather than throttled, so keep the cap at least as large as the largest per-task `cpus` request (or clamp requests with `process.resourceLimits.cpus`). Runs that fit within the cap but exceed it in aggregate are queued and admitted on later scheduling cycles.
-
-Set from a run's own configuration, this is a per-run setting applied to the submitting user rather than an administrator-enforced quota. When the run is launched through Seqera Platform, the value configured on the compute environment is used instead.
+The maximum number of concurrent vCPUs a single user may consume across all of their runs on this compute environment (default: no limit). A task requesting more `cpus` than this cap fails instead of being queued.
 
 ###### `seqera.executor.retryPolicy.delay`
 

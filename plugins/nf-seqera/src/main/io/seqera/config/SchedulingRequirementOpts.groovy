@@ -32,10 +32,8 @@ class SchedulingRequirementOpts implements ConfigScope {
     @ConfigOption
     @Description("""
         Maximum concurrent vCPUs a single user may consume across all of that user's runs on this
-        compute environment. Applied independently to each user sharing the CE. When not set, no
-        CPU limit is enforced. A task whose own request exceeds the cap fails outright, so keep the
-        cap at least as large as the largest per-task `cpus` request (or clamp it with
-        `process.resourceLimits.cpus`).
+        compute environment (default: no limit). A task requesting more `cpus` than this cap fails
+        instead of being queued.
     """)
     final Integer maxCpusPerUser
 
