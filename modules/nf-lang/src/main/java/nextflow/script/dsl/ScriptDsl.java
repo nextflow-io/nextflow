@@ -49,9 +49,9 @@ public interface ScriptDsl extends DslScope {
 
     @Constant("log")
     @Description("""
-        The `log` namepsace contains functions for logging messages to the console.
+        The `log` namespace contains functions for logging messages to the console.
 
-        [Read more](https://docs.seqera.io/nextflow/reference/stdlib-namespaces#log)
+        [Read more](https://docs.seqera.io/nextflow/reference/stdlib-namespaces/log)
     """)
     LogNamespace getLog();
 
