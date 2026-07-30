@@ -17,6 +17,19 @@ h5, h6 {
   width: 100%;
 }
 
+/* Sidebar indentation beyond level 2.
+   Each nested `menu__list` lives inside its parent `li`, so these margins
+   compound down the tree — every level needs the same 1rem step, not a larger
+   absolute value. Links already get 1rem at every level from the theme's `ml-4`;
+   the theme only indents categories up to level 2, so level-3+ categories sit
+   flush with their parent. Match them to the level-2 step so deeper branches
+   (e.g. Language reference > Standard library > Namespaces) nest visually. */
+.theme-doc-sidebar-item-category-level-3.menu__list-item,
+.theme-doc-sidebar-item-category-level-4.menu__list-item,
+.theme-doc-sidebar-item-category-level-5.menu__list-item {
+  margin-left: 1rem;
+}
+
 /* Make wide tables horizontally scrollable instead of overflowing the page */
 .markdown table {
   display: block;
