@@ -91,10 +91,6 @@ API tokens are supported for BitBucket authentication. When both `token` and `pa
 
 [Bitbucket Server](https://confluence.atlassian.com/bitbucketserver) is a self-hosted Git repository and management platform.
 
-:::note
-Bitbucket Servers use a different API from the [Bitbucket](https://bitbucket.org/) Cloud service. Make sure to use the right configuration whether you are using the cloud service or a self-hosted installation.
-:::
-
 To access your local Bitbucket Server, create an entry in the [SCM configuration file](#git-configuration) as shown below:
 
 ```groovy
@@ -108,6 +104,10 @@ providers {
     }
 }
 ```
+
+:::note
+Bitbucket Servers use a different API from the [Bitbucket](https://bitbucket.org/) Cloud service. Make sure to use the right configuration whether you are using the cloud service or a self-hosted installation.
+:::
 
 ### GitHub
 

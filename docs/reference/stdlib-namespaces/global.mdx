@@ -86,7 +86,6 @@ When `true`, interprets characters `*`, `?`, `[]` and `{}` as glob wildcards, ot
 
 When `true`, includes hidden files in the resulting paths (default: `false`).
 
-
 ###### `maxDepth: int`
 
 Maximum number of directory levels to visit (default: *no limit*).
@@ -124,6 +123,55 @@ Print a value to standard output with a newline.
 ##### `sendMail( [options] )`
 
 Send an email. See [Notifications][mail-page] for more information.
+
+Available options:
+
+###### `to`
+
+The mail target recipients. Multiple email addresses can be specified as a comma-separated list.
+
+###### `cc`
+
+The mail CC recipients. Multiple email addresses can be specified as a comma-separated list.
+
+###### `bcc`
+
+The mail BCC recipients. Multiple email addresses can be specified as a comma-separated list.
+
+###### `from`
+
+The mail sender address.
+
+###### `subject`
+
+The mail subject.
+
+###### `charset`
+
+The mail content charset (default: `UTF-8`).
+
+###### `text`
+
+The mail plain text content.
+
+###### `body`
+
+The mail body content. Can be either plain text or HTML content.
+
+To send an email that includes both plain text and HTML content, use both the `text` and `body` attributes: `text` is used for the plain text content, while `body` is used for the rich HTML content.
+
+###### `type`
+
+The mail body mime type (default: automatically detected).
+
+###### `attach`
+
+List of file attachments. Each attachment may specify the following params:
+
+- `contentId`: The `Content-ID` header field
+- `disposition`: The `Content-Disposition` header field
+- `fileName`: The `filename` parameter of the `Content-Disposition` header field
+- `description`: The `Content-Description` header field
 
 ##### `sleep( milliseconds: long )`
 
