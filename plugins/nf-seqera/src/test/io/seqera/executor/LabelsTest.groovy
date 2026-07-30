@@ -61,6 +61,28 @@ class LabelsTest extends Specification {
         labels.entries['nextflow.io/runtimeVersion'] == NextflowMeta.instance.version.toString()
     }
 
+    def 'should prefer the platform user name over the OS user name'() {
+        given:
+        def platform = new PlatformMetadata()
+        if( platformUser )
+            platform.user = new PlatformMetadata.User(id: '1', userName: platformUser)
+        def workflow = Mock(WorkflowMetadata) {
+            getUserName() >> 'ec2-user'
+            getPlatform() >> platform
+        }
+
+        when:
+        def labels = new Labels().withWorkflowMetadata(workflow, ['userName'] as Set)
+
+        then:
+        labels.entries['nextflow.io/userName'] == expected
+
+        where:
+        platformUser    | expected
+        'jane.doe'      | 'jane.doe'
+        null            | 'ec2-user'
+    }
+
     def 'should compute stable runId from sessionId and runName'() {
         given:
         def sid = 'e2315a82-49b0-4langc3-a58a-0d7d52f7e3a1'
