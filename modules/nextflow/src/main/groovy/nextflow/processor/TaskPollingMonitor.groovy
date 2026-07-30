@@ -766,7 +766,7 @@ class TaskPollingMonitor implements TaskMonitor {
             ? (handler.task as TaskArrayRun).children
             : List.of(handler)
         for( TaskHandler it : handlers ) {
-            final fault = it.task.processor.finalizeFailedTask(it, error)
+            final fault = it.task.processor.getRunner().finalizeFailedTask(it, error)
             if( fault instanceof TaskFault )
                 session.fault(fault, it)
         }
@@ -785,11 +785,11 @@ class TaskPollingMonitor implements TaskMonitor {
         try {
             if( evict(handler) ) {
                 handler.decProcessForks()
-                fault = handler.task.processor.finalizeFailedTask(handler, error)
+                fault = handler.task.processor.getRunner().finalizeFailedTask(handler, error)
                 session.notifyTaskComplete(handler)
             }
             else {
-                fault = handler.task.processor.resumeOrDie(handler.task, error, handler.getTraceRecord())
+                fault = handler.task.processor.getRunner().resumeOrDie(handler.task, error, handler.getTraceRecord())
                 log.trace "Task fault (1): $fault"
             }
         }
@@ -857,7 +857,7 @@ class TaskPollingMonitor implements TaskMonitor {
 
     protected void finalizeTask( TaskHandler handler ) {
         // finalize the task execution
-        final fault = handler.task.processor.finalizeTask(handler)
+        final fault = handler.task.processor.getRunner().finalizeTask(handler)
 
         // notify task completion
         session.notifyTaskComplete(handler)

@@ -232,7 +232,7 @@ class AgentResumeIntegrationTest extends Dsl2Spec {
         newSession(containerized())
         def processor = newAgent().buildAgentTask(['hello'])
         processor.createStateObj()
-        def task = processor.createTaskRun(new TaskStartParams(TaskId.of(1), 1))
+        def task = processor.getRunner().createTaskRun(new TaskStartParams(TaskId.of(1), 1))
         def body = ((Closure) processor.getTaskBody().closure.clone())
         body.setDelegate(new TaskContext(processor, [q: 'hello', task: task.config]))
 
@@ -289,7 +289,7 @@ class AgentResumeIntegrationTest extends Dsl2Spec {
      */
     private Map replay(TaskProcessor processor, Map storedContext, String storedStdout, AtomicInteger runnerCalls, List<TaskEvent> cachedEvents) {
         processor.createStateObj()
-        final task = processor.createTaskRun(new TaskStartParams(TaskId.of(1), 1))
+        final task = processor.getRunner().createTaskRun(new TaskStartParams(TaskId.of(1), 1))
 
         final ctx = new TaskContext(processor, storedContext)
         final entry = new TaskEntry(new TraceRecord(), ctx)
@@ -298,7 +298,7 @@ class AgentResumeIntegrationTest extends Dsl2Spec {
             folder.resolve(TaskRun.CMD_OUTFILE).text = storedStdout
         final hash = CacheHelper.hasher('agent-resume').hash()
 
-        final hit = processor.checkCachedOutput(task, folder, hash, entry)
+        final hit = processor.getRunner().checkCachedOutput(task, folder, hash, entry)
         final bound = processor.getConfig().getOutputs().getParams()[0].getChannel().val
         return [hit: hit, bound: bound, runnerCalls: runnerCalls.get(), cachedEvents: cachedEvents.size(), task: task]
     }
@@ -362,12 +362,12 @@ class AgentResumeIntegrationTest extends Dsl2Spec {
         and: 'the agent processor built via the M1 task path'
         def processor = newAgent().buildAgentTask(['hello'])
         processor.createStateObj()
-        def task = processor.createTaskRun(new TaskStartParams(TaskId.of(1), 1))
+        def task = processor.getRunner().createTaskRun(new TaskStartParams(TaskId.of(1), 1))
         def folder = Files.createTempDirectory('nxf-resume-miss')
         def hash = CacheHelper.hasher('agent-resume-miss').hash()
 
         when: 'the cached entry has a NULL context (e.g. a pre-fix / cache-false entry)'
-        def hit = processor.checkCachedOutput(task, folder, hash, new TaskEntry(new TraceRecord(), null))
+        def hit = processor.getRunner().checkCachedOutput(task, folder, hash, new TaskEntry(new TraceRecord(), null))
 
         then: 'the exec body makes hasCacheableValues() true, so a missing context forces a miss'
         task.hasCacheableValues() == true
@@ -386,7 +386,7 @@ class AgentResumeIntegrationTest extends Dsl2Spec {
         and: 'the agent processor built via the M1 task path'
         def processor = newAgent().buildAgentTask(['hello'])
         processor.createStateObj()
-        def task = processor.createTaskRun(new TaskStartParams(TaskId.of(1), 1))
+        def task = processor.getRunner().createTaskRun(new TaskStartParams(TaskId.of(1), 1))
 
         when: 'the synthetic GROOVY body runs against a task context seeded with the input'
         def body = ((Closure) processor.getTaskBody().closure.clone())
@@ -473,9 +473,9 @@ class AgentResumeIntegrationTest extends Dsl2Spec {
         processor.createStateObj()
 
         when:
-        def t1 = processor.createTaskRun(new TaskStartParams(TaskId.of(1), 1))
+        def t1 = processor.getRunner().createTaskRun(new TaskStartParams(TaskId.of(1), 1))
         t1.source = 'agentModel=openai/gpt-4o\ntemperature=default'
-        def t2 = processor.createTaskRun(new TaskStartParams(TaskId.of(2), 2))
+        def t2 = processor.getRunner().createTaskRun(new TaskStartParams(TaskId.of(2), 2))
         t2.source = 'agentModel=openai/gpt-4o-mini\ntemperature=default'
         def h1 = new nextflow.processor.TaskHasher(t1).compute()
         def h2 = new nextflow.processor.TaskHasher(t2).compute()
@@ -757,9 +757,9 @@ class AgentResumeIntegrationTest extends Dsl2Spec {
 
         when: 'the task hash folds the fully-qualified processor name'
         p1.createStateObj(); p2.createStateObj()
-        final t1 = p1.createTaskRun(new TaskStartParams(TaskId.of(1), 1))
+        final t1 = p1.getRunner().createTaskRun(new TaskStartParams(TaskId.of(1), 1))
         t1.source = p1.getTaskBody().source
-        final t2 = p2.createTaskRun(new TaskStartParams(TaskId.of(2), 2))
+        final t2 = p2.getRunner().createTaskRun(new TaskStartParams(TaskId.of(2), 2))
         t2.source = p2.getTaskBody().source
 
         then: 'aliasing therefore invalidates the resume cache'
