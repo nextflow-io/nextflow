@@ -1,0 +1,124 @@
+---
+title: manifest
+description: Reference for the manifest config scope, which defines pipeline metadata that is useful when publishing or running a pipeline.
+---
+
+# `manifest`
+
+The `manifest` scope allows you to define some metadata that is useful when publishing or running your pipeline.
+
+##### `manifest.author`
+
+<DeprecatedInVersion version="24.10">
+Use `manifest.contributors` instead.
+</DeprecatedInVersion>
+
+Project author name (use a comma to separate multiple names).
+
+##### `manifest.contributors`
+
+<AddedInVersion version="24.10" />
+
+List of project contributors. Should be a list of maps.
+
+The following fields are supported in the contributor map:
+
+###### `name`
+
+The contributor name.
+
+###### `affiliation`
+
+The contributor affiliated organization.
+
+###### `email`
+
+The contributor email address.
+
+###### `github`
+
+The contributor GitHub URL.
+
+###### `contribution`
+
+List of contribution types, each element can be one of `'author'`, `'maintainer'`, or `'contributor'`.
+
+###### `orcid`
+
+The contributor [ORCID](https://orcid.org/) URL.
+
+##### `manifest.defaultBranch`
+
+<DeprecatedInVersion version="26.04">
+Nextflow can automatically detect the default branch when using a remote pipeline.
+</DeprecatedInVersion>
+
+Git repository default branch (default: `master`).
+
+##### `manifest.description`
+
+Free text describing the workflow project.
+
+##### `manifest.docsUrl`
+
+Project documentation URL.
+
+##### `manifest.doi`
+
+Project related publication DOI identifier.
+
+##### `manifest.gitmodules`
+
+Controls whether git sub-modules should be cloned with the main repository.
+
+Can be either a boolean value, a list of submodule names, or a comma-separated string of submodule names.
+
+##### `manifest.homePage`
+
+Project home page URL.
+
+##### `manifest.icon`
+
+Project related icon location (Relative path or URL).
+
+##### `manifest.license`
+
+Project license.
+
+##### `manifest.mainScript`
+
+Project main script (default: `main.nf`).
+
+##### `manifest.name`
+
+Project short name.
+
+##### `manifest.nextflowVersion`
+
+Minimum required Nextflow version.
+
+This setting may be useful to ensure that a specific version is used:
+
+```groovy
+manifest.nextflowVersion = '1.2.3'        // exact match
+manifest.nextflowVersion = '1.2+'         // 1.2 or later (excluding 2 and later)
+manifest.nextflowVersion = '>=1.2'        // 1.2 or later
+manifest.nextflowVersion = '>=1.2, <=1.5' // any version in the 1.2 .. 1.5 range
+manifest.nextflowVersion = '!>=1.2'       // with ! prefix, stop execution if current version does not match required version.
+```
+
+See [VersionNumber][stdlib-types-versionnumber] for details.
+
+##### `manifest.organization`
+
+Project organization.
+
+##### `manifest.recurseSubmodules`
+
+Pull submodules recursively from the Git repository.
+
+##### `manifest.version`
+
+Project version number.
+
+[stdlib-types-versionnumber]: ../stdlib-types/version-number

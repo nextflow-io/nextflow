@@ -1,0 +1,154 @@
+---
+title: google
+description: Reference for the google config scope, which controls the interactions with Google Cloud, including Google Cloud Batch and Google Cloud Storage.
+---
+
+# `google`
+
+The `google` scope allows you to configure the interactions with Google Cloud, including Google Cloud Batch and Google Cloud Storage.
+
+##### `google.enableRequesterPaysBuckets`
+
+Use the given Google Cloud project ID as the billing project for storage access (default: `false`). Required when accessing data from [requester pays](https://cloud.google.com/storage/docs/requester-pays) buckets.
+
+##### `google.httpConnectTimeout`
+
+<AddedInVersion version="23.10" />
+
+The HTTP connection timeout for Cloud Storage API requests (default: `'60s'`).
+
+##### `google.httpReadTimeout`
+
+<AddedInVersion version="23.10" />
+
+The HTTP read timeout for Cloud Storage API requests (default: `'60s'`).
+
+##### `google.location`
+
+The Google Cloud location where jobs are executed (default: `us-central1`).
+
+##### `google.project`
+
+The Google Cloud project ID to use for pipeline execution.
+
+##### `google.batch.allowedLocations`
+
+The set of [allowed locations](https://cloud.google.com/batch/docs/reference/rest/v1/projects.locations.jobs#locationpolicy) for VMs to be provisioned (defaultno restriction).
+
+##### `google.batch.autoRetryExitCodes`
+
+<AddedInVersion version="24.10" />
+
+The list of exit codes that should be automatically retried by Google Batch when `google.batch.maxSpotAttempts` is greater than 0 (default: `[50001]`).
+See [Google Batch documentation](https://cloud.google.com/batch/docs/troubleshooting#reserved-exit-codes) for the complete list of retryable exit codes.
+
+##### `google.batch.bootDiskImage`
+
+<AddedInVersion version="24.10" />
+
+The image URI of the virtual machine boot disk, e.g `batch-debian` (defaultnone).
+See [Google documentation](https://cloud.google.com/batch/docs/vm-os-environment-overview#vm-os-image-options) for details.
+
+##### `google.batch.bootDiskSize`
+
+The size of the virtual machine boot disk, e.g `50.GB` (defaultnone).
+
+##### `google.batch.cpuPlatform`
+
+The [minimum CPU Platform](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications), e.g. `'Intel Skylake'` (defaultnone).
+
+##### `google.batch.gcsfuseOptions`
+
+<AddedInVersion version="25.04" />
+
+List of custom mount options for `gcsfuse` (default: `['-o rw', '-implicit-dirs']`).
+
+##### `google.batch.installOpsAgent`
+
+Enables Ops Agent installation on Google Batch instances for enhanced monitoring and logging (default: `false`).
+See the [Google Batch documentation](https://docs.cloud.google.com/batch/docs/create-run-job-ops-agent) for details.
+
+:::note
+The Ops Agent requires a compatible boot disk image.
+For Google Batch, use [Batch-debian images](https://docs.cloud.google.com/batch/docs/vm-os-environment-overview#vm-os-image-options) (e.g., `batch-debian`) with `google.batch.bootDiskImage`.
+The default Container-Optimized OS (`batch-cos`) is not compatible with the Ops Agent.
+:::
+
+##### `google.batch.logsPath`
+
+<AddedInVersion version="26.04" />
+
+The Google Cloud Storage path where job logs should be stored, e.g. `gs://my-logs-bucket/logs`.
+When specified, Google Batch will write job logs to this location instead of [Cloud Logging](https://cloud.google.com/logging/docs). The bucket must be accessible and writable by the service account.
+
+##### `google.batch.maxSpotAttempts`
+
+
+<AddedInVersion version="24.10">
+The default value was changed from `5` to `0`.
+</AddedInVersion>
+
+Max number of execution attempts of a job interrupted by a Compute Engine Spot reclaim event (default: `0`).
+See also`google.batch.autoRetryExitCodes`
+
+##### `google.batch.network`
+
+The URL of an existing network resource to which the VM will be attached.
+
+You can specify the network as a full or partial URL. For example, the following are all valid URLs:
+
+- `https://www.googleapis.com/compute/v1/projects/{project}/global/networks/{network}`
+- `projects/{project}/global/networks/{network}`
+- `global/networks/{network}`
+
+##### `google.batch.networkTags`
+
+The [network tags](https://cloud.google.com/vpc/docs/add-remove-network-tags) to be applied to the instances created by Google Batch jobs (e.g., `['allow-ssh', 'allow-http']`).
+Network tags are ignored when using instance templates.
+
+##### `google.batch.serviceAccountEmail`
+
+The Google service account email to use for the pipeline execution. If not specified, the default Compute Engine service account for the project will be used.
+
+The service account must have the IAM roles listed in the [Google Cloud Batch documentation for Nextflow](https://cloud.google.com/batch/docs/nextflow). Without these roles, Cloud Batch jobs stay in the `SCHEDULED` state and never run.
+
+This service account will only be used for tasks submitted by Nextflow, not for Nextflow itself. See [Credentials][google-credentials] for more information on Google Cloud credentials.
+
+##### `google.batch.spot`
+
+Enable the use of spot virtual machines (default: `false`).
+
+##### `google.batch.subnetwork`
+
+The URL of an existing subnetwork resource in the network to which the VM will be attached.
+
+You can specify the subnetwork as a full or partial URL. For example, the following are all valid URLs:
+
+- `https://www.googleapis.com/compute/v1/projects/{project}/regions/{region}/subnetworks/{subnetwork}`
+- `projects/{project}/regions/{region}/subnetworks/{subnetwork}`
+- `regions/{region}/subnetworks/{subnetwork}`
+
+##### `google.batch.usePrivateAddress`
+
+Do not provision public IP addresses for VMs, such that they only have an internal IP address (default: `false`).
+When this option is enabled, jobs can only load Docker images from Google Container Registry, and cannot use external services other than Google APIs.
+
+##### `google.storage.retryPolicy.maxAttempts`
+
+<AddedInVersion version="24.10" />
+
+Max attempts when retrying failed API requests to Cloud Storage (default: `10`).
+
+##### `google.storage.retryPolicy.maxDelay`
+
+<AddedInVersion version="24.10" />
+
+Max delay when retrying failed API requests to Cloud Storage (default: `'90s'`).
+
+##### `google.storage.retryPolicy.multiplier`
+
+<AddedInVersion version="24.10" />
+
+Delay multiplier when retrying failed API requests to Cloud Storage (default: `2.0`).
+
+[google-credentials]: ../../google#credentials

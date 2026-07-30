@@ -1,0 +1,268 @@
+---
+title: aws
+description: Reference for the aws config scope, which controls the interactions with AWS, including AWS Batch and S3.
+---
+
+# `aws`
+
+The `aws` scope controls the interactions with AWS, including AWS Batch and S3.
+
+##### `aws.accessKey`
+
+AWS account access key.
+
+##### `aws.profile`
+
+AWS profile from `~/.aws/credentials`.
+
+##### `aws.region`
+
+AWS region (e.g. `us-east-1`).
+
+##### `aws.secretKey`
+
+AWS account secret key.
+
+##### `aws.batch.cliPath`
+
+The path where the AWS command line tool is installed in the host AMI.
+
+##### `aws.batch.delayBetweenAttempts`
+
+Delay between download attempts from S3 (default: `10 sec`).
+
+##### `aws.batch.executionRole`
+
+The AWS Batch [Execution Role](https://docs.aws.amazon.com/batch/latest/userguide/execution-IAM-role.html) ARN that needs to be used to execute the Batch Job. It is mandatory when using AWS Fargate.
+
+##### `aws.batch.forceGlacierTransfer`
+
+<AddedInVersion version="26.04" />
+
+When `true`, add the `--force-glacier-transfer` flag to AWS CLI S3 download commands (default: `false`).
+
+This option is needed when staging directories that have been restored from [S3 Glacier](https://aws.amazon.com/s3/storage-classes/glacier/). It does not restore objects from Glacier.
+
+##### `aws.batch.jobRole`
+
+The AWS Batch Job Role ARN that needs to be used to execute the Batch Job.
+
+##### `aws.batch.logsGroup`
+
+The name of the logs group used by Batch Jobs (default: `/aws/batch/job`).
+
+##### `aws.batch.maxParallelTransfers`
+
+Max parallel upload/download transfer operations *per job* (default: `4`).
+
+##### `aws.batch.maxSpotAttempts`
+
+<ChangedInVersion version="24.10">
+The default value was changed from `5` to `0`.
+</ChangedInVersion>
+
+Max number of execution attempts of a job interrupted by a EC2 Spot reclaim event (default: `0`)
+
+##### `aws.batch.maxTransferAttempts`
+
+Max number of downloads attempts from S3 (default: `1`).
+
+##### `aws.batch.platformType`
+
+The compute platform type used by AWS Batch. Can be either `ec2` or `fargate`. Set to `fargate` to use [AWS Fargate](https://docs.aws.amazon.com/batch/latest/userguide/fargate.html).
+
+##### `aws.batch.retryMode`
+
+The [retry mode](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-retries.html) used to handle rate-limiting by AWS APIs. Can be one of `standard`, `legacy`, `adaptive`, or `built-in` (default: `standard`).
+
+##### `aws.batch.schedulingPriority`
+
+The scheduling priority for all tasks when using [fair-share scheduling](https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/) (default: `0`).
+
+##### `aws.batch.shareIdentifier`
+
+The share identifier for all tasks when using [fair-share scheduling](https://aws.amazon.com/blogs/hpc/introducing-fair-share-scheduling-for-aws-batch/).
+
+##### `aws.batch.terminateUnschedulableJobs`
+
+<AddedInVersion version="25.04" />
+
+When `true`, jobs that cannot be scheduled due to lack of resources or misconfiguration are terminated and handled as task failures (default: `false`).
+
+##### `aws.batch.volumes`
+
+List of container mounts. Mounts can be specified as simple e.g. `/some/path` or canonical format e.g. `/host/path:/mount/path[:ro|rw]`.
+
+##### `aws.client.anonymous`
+
+Allow the access of public S3 buckets without providing AWS credentials (default: `false`). Any service that does not accept unsigned requests will return a service access error.
+
+##### `aws.client.connectionTimeout`
+
+The amount of time to wait (in milliseconds) when initially establishing a connection before timing out (default: `10000`).
+
+##### `aws.client.endpoint`
+
+The AWS S3 API entry point e.g. `https://s3-us-west-1.amazonaws.com`. The endpoint must include the protocol prefix e.g. `https://`.
+
+##### `aws.client.maxConnections`
+
+The maximum number of open HTTP connections used by the S3 client (default: `50`).
+
+##### `aws.client.maxDownloadHeapMemory`
+
+The maximum size for the heap memory buffer used by concurrent downloads. It must be at least 10 times the `minimumPartSize` (default:`400 MB`).
+
+##### `aws.client.maxErrorRetry`
+
+The maximum number of retry attempts for failed retryable requests (default: `-1`).
+
+##### `aws.client.minimumPartSize`
+
+<AddedInVersion version="25.10" />
+
+The minimum part size used for multipart S3 transfers (default: `8 MB`).
+
+##### `aws.client.multipartThreshold`
+
+<AddedInVersion version="25.10" />
+
+The object size threshold used for multipart S3 transfers (default: same as `aws.cllient.minimumPartSize`).
+
+##### `aws.client.protocol`
+
+<DeprecatedInVersion version="25.10">
+This option is no longer supported.
+</DeprecatedInVersion>
+
+The protocol to use when connecting to AWS. Can be `http` or `https` (default: `'https'`).
+
+##### `aws.client.proxyHost`
+
+The proxy host to connect through.
+
+##### `aws.client.proxyPassword`
+
+The password to use when connecting through a proxy.
+
+##### `aws.client.proxyPort`
+
+The port to use when connecting through a proxy.
+
+##### `aws.client.proxyScheme`
+
+<AddedInVersion version="25.10" />
+
+The protocol scheme to use when connecting through a proxy. Can be `http` or `https` (default: `'http'`).
+
+##### `aws.client.proxyUsername`
+
+The user name to use when connecting through a proxy.
+
+##### `aws.client.requesterPays`
+
+<AddedInVersion version="25.10" />
+
+Use [Requester Pays](https://docs.aws.amazon.com/AmazonS3/latest/userguide/RequesterPaysBuckets.html) for S3 buckets (default: `false`).
+
+##### `aws.client.s3Acl`
+
+Specify predefined bucket permissions, also known as [canned ACL](https://docs.aws.amazon.com/AmazonS3/latest/userguide/acl-overview.html#canned-acl). Can be one of `Private`, `PublicRead`, `PublicReadWrite`, `AuthenticatedRead`, `LogDeliveryWrite`, `BucketOwnerRead`, `BucketOwnerFullControl`, or `AwsExecRead`.
+
+##### `aws.client.s3PathStyleAccess`
+
+Use the path-based access model to access objects in S3-compatible storage systems (default: `false`).
+
+##### `aws.client.signerOverride`
+
+<DeprecatedInVersion version="25.10">
+This option is no longer supported.
+</DeprecatedInVersion>
+
+The name of the signature algorithm to use for signing requests made by the client.
+
+##### `aws.client.socketSendBufferSizeHint`
+
+<DeprecatedInVersion version="25.10">
+This option is no longer supported.
+</DeprecatedInVersion>
+
+The Size hint (in bytes) for the low level TCP send buffer (default: `0`).
+
+##### `aws.client.socketRecvBufferSizeHint`
+
+<DeprecatedInVersion version="25.10">
+This option is no longer supported.
+</DeprecatedInVersion>
+
+The Size hint (in bytes) for the low level TCP receive buffer (default: `0`).
+
+##### `aws.client.socketTimeout`
+
+<ChangedInVersion version="25.10">
+The default socket timeout changed from `50000` to `30000`.
+</ChangedInVersion>
+
+The amount of time to wait (in milliseconds) for data to be transferred over an established, open connection before the connection is timed out (default: `30000`).
+
+##### `aws.client.storageClass`
+
+The S3 storage class applied to stored objects, one of \[`STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, `INTELLIGENT_TIERING`\] (default: `STANDARD`).
+
+##### `aws.client.storageEncryption`
+
+The S3 server side encryption to be used when saving objects on S3. Can be `AES256` or `aws:kms` (defaultnone).
+
+##### `aws.client.storageKmsKeyId`
+
+The AWS KMS key Id to be used to encrypt files stored in the target S3 bucket.
+
+##### `aws.client.targetThroughputInGbps`
+
+<AddedInVersion version="25.10" />
+
+The target network throughput (in Gbps) used for S3 uploads and downloads (default: `10`).
+
+##### `aws.client.userAgent`
+
+<DeprecatedInVersion version="25.10">
+This option is no longer supported.
+</DeprecatedInVersion>
+
+The HTTP user agent header passed with all HTTP requests.
+
+##### `aws.client.uploadChunkSize`
+
+<DeprecatedInVersion version="25.10">
+This option is no longer supported.
+</DeprecatedInVersion>
+
+The size of a single part in a multipart upload (default: `100 MB`).
+
+##### `aws.client.uploadMaxAttempts`
+
+<DeprecatedInVersion version="25.10">
+This option is no longer supported.
+</DeprecatedInVersion>
+
+The maximum number of upload attempts after which a multipart upload returns an error (default: `5`).
+
+##### `aws.client.uploadMaxThreads`
+
+<DeprecatedInVersion version="25.10">
+This option is no longer supported.
+</DeprecatedInVersion>
+
+The maximum number of threads used for multipart upload (default: `10`).
+
+##### `aws.client.uploadRetrySleep`
+
+<DeprecatedInVersion version="25.10">
+This option is no longer supported.
+</DeprecatedInVersion>
+
+The time to wait after a failed upload attempt to retry the part upload (default: `500ms`).
+
+##### `aws.client.uploadStorageClass`
+
+The S3 storage class applied to stored objects. Can be `STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, or `INTELLIGENT_TIERING` (default: `STANDARD`).

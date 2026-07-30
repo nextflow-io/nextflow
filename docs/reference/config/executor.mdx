@@ -1,0 +1,189 @@
+---
+title: executor
+description: Reference for the executor config scope, which controls various executor behaviors.
+---
+
+# `executor`
+
+The `executor` scope controls various executor behaviors.
+
+##### `executor.account`
+
+<AddedInVersion version="24.04" />
+
+*Used only by the [SLURM][slurm-executor], [LSF][lsf-executor], [PBS/Torque][pbs-executor] and [PBS Pro][pbspro-executor] executors.*
+
+The project or organization account that should be charged for running the pipeline jobs.
+
+##### `executor.cpus`
+
+*Used only by the local executor.*
+
+The maximum number of CPUs made available by the underlying system.
+
+##### `executor.dumpInterval`
+
+Determines how often to log the executor status (default: `5 min`).
+
+##### `executor.exitReadTimeout`
+
+*Used only by grid executors.*
+
+Determines how long to wait for the `.exitcode` file to be created after the task has completed, before returning an error status (default: `270 sec`).
+
+##### `executor.jobName`
+
+*Used only by grid executors and Google Batch.*
+
+Determines the name of jobs submitted to the underlying cluster executor:
+
+```groovy
+executor.jobName = { "$task.name - $task.hash" }
+```
+
+The job name should satisfy the validation constraints of the underlying scheduler.
+
+##### `executor.killBatchSize`
+
+Determines the number of jobs that can be killed in a single command execution (default: `100`).
+
+##### `executor.memory`
+
+*Used only by the local executor.*
+
+The maximum amount of memory made available by the underlying system.
+
+##### `executor.name`
+
+The name of the executor to be used (default: `local`).
+
+##### `executor.perCpuMemAllocation`
+
+<AddedInVersion version="23.10" />
+
+*Used only by the [SLURM][slurm-executor] executor.*
+
+When `true`, memory allocations for SLURM jobs are specified as `--mem-per-cpu <task.memory / task.cpus>` instead of `--mem <task.memory>`.
+
+##### `executor.onlyJobState`
+
+<AddedInVersion version="26.04" />
+
+*Used only by the [SLURM][slurm-executor] executor.*
+
+*Requires SLURM 24.05 or later.*
+
+When `true`, job status queries use `squeue --only-job-state` without partition (`-p`) or user (`-u`) filters. This can reduce the load on the SLURM controller, especially if your SLURM administrator has enabled `SchedulerParameters=enable_job_state_cache` in your [SLURM configuration](https://slurm.schedmd.com/slurm.conf.html#OPT_enable_job_state_cache). See [`--only-job-state`](https://slurm.schedmd.com/squeue.html#OPT_only-job-state) for more information (default: `false`).
+
+##### `executor.perJobMemLimit`
+
+*Used only by the [LSF][lsf-executor] executor.*
+
+Enables the *per-job* memory limit mode for LSF jobs.
+
+##### `executor.perTaskReserve`
+
+*Used only by the [LSF][lsf-executor] executor.*
+
+Enables the *per-task* memory reserve mode for LSF jobs.
+
+##### `executor.pollInterval`
+
+Determines how often to check for process termination. Default varies for each executor.
+
+##### `executor.queueGlobalStatus`
+
+<AddedInVersion version="23.04" />
+
+Determines how job status is retrieved. When `false` only the queue associated with the job execution is queried. When `true` the job status is queried globally i.e. irrespective of the submission queue (default: `false`).
+
+##### `executor.queueSize`
+
+The number of tasks the executor will handle in a parallel manner. A queue size of zero corresponds to no limit. Default varies for each executor.
+
+##### `executor.queueStatInterval`
+
+*Used only by grid executors.*
+
+Determines how often to fetch the queue status from the scheduler (default: `1 min`).
+
+##### `executor.submitRateLimit`
+
+Determines the max rate of job submission per time unit, for example `'10sec'` (10 jobs per second) or `'50/2min'` (50 jobs every 2 minutes) (defaultunlimited).
+
+##### `executor.retry.delay`
+
+*Used only by grid executors.*
+
+Delay when retrying failed job submissions (default: `500ms`).
+
+##### `executor.retry.jitter`
+
+*Used only by grid executors.*
+
+Jitter value when retrying failed job submissions (default: `0.25`).
+
+##### `executor.retry.maxAttempts`
+
+*Used only by grid executors.*
+
+Max attempts when retrying failed job submissions (default: `3`).
+
+##### `executor.retry.maxDelay`
+
+*Used only by grid executors.*
+
+Max delay when retrying failed job submissions (default: `30s`).
+
+##### `executor.retry.reason`
+
+<ChangedInVersion version="25.10">
+This option was renamed from `executor.submit.retry.reason` to `executor.retry.reason`.
+</ChangedInVersion>
+
+*Used only by grid executors.*
+
+Regex pattern that when verified causes a failed submit operation to be re-tried (default: `Socket timed out`).
+
+### Executor-specific defaults
+
+Some executor settings have different default values depending on the executor.
+
+| Executor       | `queueSize` | `pollInterval` |
+| -------------- | ----------- | -------------- |
+| AWS Batch      | `1000`      | `10s`          |
+| Azure Batch    | `1000`      | `10s`          |
+| Google Batch   | `1000`      | `10s`          |
+| Grid Executors | `100`       | `5s`           |
+| Kubernetes     | `100`       | `5s`           |
+| Local          | N/A         | `100ms`        |
+
+### Executor-specific configuration
+
+Executor config settings can be applied to specific executors by prefixing the executor name with the symbol `$` and using it as special scope. For example:
+
+```groovy
+// block syntax
+executor {
+  $sge {
+      queueSize = 100
+      pollInterval = '30sec'
+  }
+
+  $local {
+      cpus = 8
+      memory = '32 GB'
+  }
+}
+
+// dot syntax
+executor.$sge.queueSize = 100
+executor.$sge.pollInterval = '30sec'
+executor.$local.cpus = 8
+executor.$local.memory = '32 GB'
+```
+
+[lsf-executor]: ../../executor#lsf
+[pbs-executor]: ../../executor#pbstorque
+[pbspro-executor]: ../../executor#pbs-pro
+[slurm-executor]: ../../executor#slurm

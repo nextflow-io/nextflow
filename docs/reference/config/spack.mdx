@@ -1,0 +1,30 @@
+---
+title: spack
+description: Reference for the spack config scope, which controls the creation of Spack environments by the Spack package manager.
+---
+
+# `spack`
+
+The `spack` scope controls the creation of a Spack environment by the Spack package manager.
+
+##### `spack.cacheDir`
+
+The path where Spack environments are stored. It should be accessible from all compute nodes when using a shared file system.
+
+##### `spack.checksum`
+
+Enable checksum verification of source tarballs (default: `true`).
+
+Only disable when requesting a package version not yet encoded in the corresponding Spack recipe.
+
+##### `spack.createTimeout`
+
+The amount of time to wait for the Spack environment to be created before failing (default: `60 min`).
+
+##### `spack.enabled`
+
+Execute tasks with Spack environments (default: `false`).
+
+##### `spack.parallelBuilds`
+
+The maximum number of parallel package builds (defaultthe number of available CPUs).

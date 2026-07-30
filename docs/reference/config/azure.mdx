@@ -1,0 +1,250 @@
+---
+title: azure
+description: Reference for the azure config scope, which controls the interactions with Azure, including Azure Batch and Azure Blob Storage.
+---
+
+# `azure`
+
+The `azure` scope allows you to configure the interactions with Azure, including Azure Batch and Azure Blob Storage.
+
+##### `azure.activeDirectory.servicePrincipalId`
+
+The service principal client ID. Defaults to environment variable `AZURE_CLIENT_ID`.
+
+##### `azure.activeDirectory.servicePrincipalSecret`
+
+The service principal client secret. Defaults to environment variable `AZURE_CLIENT_SECRET`.
+
+##### `azure.activeDirectory.tenantId`
+
+The Azure tenant ID. Defaults to environment variable `AZURE_TENANT_ID`.
+
+##### `azure.azcopy.blobTier`
+
+The blob [access tier](https://learn.microsoft.com/en-us/azure/storage/blobs/access-tiers-overview) used by `azcopy` to upload files to Azure Blob Storage. Valid options are `None`, `Hot`, or `Cool` (default: `None`).
+
+##### `azure.azcopy.blockSize`
+
+The block size (in MB) used by `azcopy` to transfer files between Azure Blob Storage and compute nodes (default: `4`).
+
+##### `azure.batch.accountKey`
+
+The batch service account key. Defaults to environment variable `AZURE_BATCH_ACCOUNT_KEY`.
+
+##### `azure.batch.accountName`
+
+The batch service account name. Defaults to environment variable `AZURE_BATCH_ACCOUNT_NAME`.
+
+##### `azure.batch.allowPoolCreation`
+
+Enable the automatic creation of batch pools specified in the Nextflow configuration file (default: `false`).
+
+##### `azure.batch.autoPoolMode`
+
+Enable the automatic creation of batch pools depending on the pipeline resources demand (default: `true`).
+
+##### `azure.batch.copyToolInstallMode`
+
+The mode in which the `azcopy` tool is installed by Nextflow (default: `'node'`).
+
+Available options:
+
+###### `'node'`
+
+The `azcopy` tool is installed once during the pool creation.
+
+###### `'task'`
+
+The `azcopy` tool is installed for each task execution.
+
+###### `'off'`
+
+The `azcopy` tool is not installed.
+
+##### `azure.batch.deleteJobsOnCompletion`
+
+<ChangedInVersion version="23.10">
+Default value was changed from `true` to `false`.
+</ChangedInVersion>
+
+Delete all jobs when the workflow completes (default: `false`).
+
+##### `azure.batch.deletePoolsOnCompletion`
+
+Delete all compute node pools when the workflow completes (default: `false`).
+
+##### `azure.batch.deleteTasksOnCompletion`
+
+<AddedInVersion version="23.10" />
+
+Delete each task when it completes (default: `true`).
+Although this setting is enabled by default, failed tasks will not be deleted unless it is explicitly enabled. This way, the default behavior is that successful tasks are deleted while failed tasks are preserved for debugging purposes.
+
+##### `azure.batch.endpoint`
+
+The batch service endpoint e.g. `https://nfbatch1.westeurope.batch.azure.com`.
+
+##### `azure.batch.jobMaxWallClockTime`
+
+<AddedInVersion version="25.04" />
+
+The maximum elapsed time that jobs may run, measured from the time they are created (default: `30d`).
+If jobs do not complete within this time limit, the Batch service terminates them and any tasks still running.
+
+##### `azure.batch.location`
+
+The name of the batch service region, e.g. `westeurope` or `eastus2`. Not needed when the endpoint is specified.
+
+##### `azure.batch.poolIdentityClientId`
+
+<AddedInVersion version="25.10" />
+
+The client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) that is available on all Azure Batch node pools. This identity is used by Fusion to authenticate to Azure storage. If set to `'auto'`, Fusion will use the first available managed identity.
+
+##### `azure.batch.pools.<name>.autoScale`
+
+Enable autoscaling feature for the pool identified with `<name>`.
+
+##### `azure.batch.pools.<name>.fileShareRootPath`
+
+The internal root mount point when mounting File Shares. Must be `/mnt/resource/batch/tasks/fsmounts` for CentOS nodes or `/mnt/batch/tasks/fsmounts` for Ubuntu nodes (defaultCentOS).
+
+##### `azure.batch.pools.<name>.lowPriority`
+
+Enable the use of low-priority VMs (default: `false`).
+
+:::warning
+As of September 30, 2025, Low Priority VMs will no longer be supported in Azure Batch accounts that use Batch Managed mode for pool allocation. You may continue to use this setting to configure Spot VMs in Batch accounts configured with User Subscription mode.
+:::
+
+##### `azure.batch.pools.<name>.maxVmCount`
+
+The max number of virtual machines when using auto scaling.
+
+##### `azure.batch.pools.<name>.mountOptions`
+
+The mount options for mounting the file shares (default: `-o vers=3.0,dir_mode=0777,file_mode=0777,sec=ntlmssp`).
+
+##### `azure.batch.pools.<name>.offer`
+
+The offer type of the virtual machine type used by the pool identified with `<name>` (default: `centos-container`).
+
+##### `azure.batch.pools.<name>.privileged`
+
+Enable the task to run with elevated access. Ignored if `runAs` is set (default: `false`).
+
+##### `azure.batch.pools.<name>.publisher`
+
+The publisher of virtual machine type used by the pool identified with `<name>` (default: `microsoft-azure-batch`).
+
+##### `azure.batch.pools.<name>.runAs`
+
+The username under which the task is run. The user must already exist on each node of the pool.
+
+##### `azure.batch.pools.<name>.scaleFormula`
+
+The [scale formula](https://docs.microsoft.com/en-us/azure/batch/batch-automatic-scaling) for the pool identified with `<name>`.
+
+##### `azure.batch.pools.<name>.scaleInterval`
+
+The interval at which to automatically adjust the Pool size according to the autoscale formula. Must be at least 5 minutes and at most 168 hours (default: `10 mins`).
+
+##### `azure.batch.pools.<name>.schedulePolicy`
+
+The scheduling policy for the pool identified with `<name>`. Can be either `spread` or `pack` (default: `spread`).
+
+##### `azure.batch.pools.<name>.sku`
+
+The ID of the Compute Node agent SKU which the pool identified with `<name>` supports (default: `batch.node.centos 8`).
+
+##### `azure.batch.pools.<name>.startTask.privileged`
+
+<AddedInVersion version="25.04" />
+
+Enable the `startTask` to run with elevated access (default: `false`).
+
+##### `azure.batch.pools.<name>.startTask.script`
+
+<AddedInVersion version="25.04" />
+
+The `startTask` that is executed as the node joins the Azure Batch node pool.
+
+##### `azure.batch.pools.<name>.virtualNetwork`
+
+<AddedInVersion version="23.04" />
+
+The subnet ID of a virtual network in which to create the pool.
+
+##### `azure.batch.pools.<name>.vmCount`
+
+The number of virtual machines provisioned by the pool identified with `<name>`.
+
+##### `azure.batch.pools.<name>.vmType`
+
+The virtual machine type used by the pool identified with `<name>`.
+
+##### `azure.batch.terminateJobsOnCompletion`
+
+<AddedInVersion version="23.10" />
+
+When the workflow completes, set all jobs to terminate on task completion (default: `true`).
+
+##### `azure.managedIdentity.clientId`
+
+The client ID for an Azure [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview). Defaults to environment variable `AZURE_MANAGED_IDENTITY_USER`.
+
+##### `azure.managedIdentity.system`
+
+When `true`, use the system-assigned [managed identity](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/overview) to authenticate Azure resources. Defaults to environment variable `AZURE_MANAGED_IDENTITY_SYSTEM`.
+
+##### `azure.registry.password`
+
+The password to connect to a private container registry.
+
+##### `azure.registry.server`
+
+The container registry from which to pull the Docker images (default: `docker.io`).
+
+##### `azure.registry.userName`
+
+The username to connect to a private container registry.
+
+##### `azure.retryPolicy.delay`
+
+Delay when retrying failed API requests (default: `250ms`).
+
+##### `azure.retryPolicy.jitter`
+
+Jitter value when retrying failed API requests (default: `0.25`).
+
+##### `azure.retryPolicy.maxAttempts`
+
+Max attempts when retrying failed API requests (default: `10`).
+
+##### `azure.retryPolicy.maxDelay`
+
+Max delay when retrying failed API requests (default: `90s`).
+
+##### `azure.storage.accountKey`
+
+The blob storage account key. Defaults to environment variable `AZURE_STORAGE_ACCOUNT_KEY`.
+
+##### `azure.storage.accountName`
+
+The blob storage account name. Defaults to environment variable `AZURE_STORAGE_ACCOUNT_NAME`.
+
+##### `azure.storage.fileShares.<name>.mountOptions`
+
+The file share mount options.
+
+##### `azure.storage.fileShares.<name>.mountPath`
+
+The file share mount path.
+
+##### `azure.storage.sasToken`
+
+The blob storage shared access signature (SAS) token, which can be provided instead of an account key. Defaults to environment variable `AZURE_STORAGE_SAS_TOKEN`.
+
+##### `azure.storage.tokenDuration`
+
+The duration of the SAS token generated by Nextflow when the `sasToken` option is *not* specified (default: `48h`).

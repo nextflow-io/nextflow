@@ -1,0 +1,82 @@
+---
+title: dag
+description: Reference for the dag config scope, which controls the generation of the workflow diagram.
+---
+
+# `dag`
+
+The `dag` scope controls the generation of the [workflow diagram][workflow-diagram].
+
+##### `dag.depth`
+
+<AddedInVersion version="23.10" />
+
+*Supported by the HTML and Mermaid renderers.*
+
+Controls the maximum depth at which to render sub-workflows (defaultno limit).
+
+##### `dag.direction`
+
+<AddedInVersion version="23.10" />
+
+*Supported by the Graphviz, DOT, HTML and Mermaid renderers.*
+
+Controls the direction of the DAG, can be `'LR'` (left-to-right) or `'TB'` (top-to-bottom) (default: `'TB'`).
+
+##### `dag.enabled`
+
+When `true` enables the generation of the DAG file (default: `false`).
+
+##### `dag.file`
+
+Graph file name (default: `'dag-<timestamp>.html'`).
+
+The output format is inferred from the file extension. The following formats are supported:
+
+###### `dot`
+
+Graphviz [DOT](http://www.graphviz.org/content/dot-language) file.
+
+###### `gexf`
+
+Graph Exchange XML Format ([GEXF](https://gexf.net/)).
+
+###### `html`
+
+HTML file with Mermaid diagram.
+
+###### `mmd`
+
+Mermaid diagram.
+
+###### `pdf`
+
+*Requires [Graphviz](http://www.graphviz.org).*
+
+Graphviz PDF file.
+
+###### `png`
+
+*Requires [Graphviz](http://www.graphviz.org)*
+
+Graphviz PNG file.
+
+###### `svg`
+
+*Requires [Graphviz](http://www.graphviz.org)*
+
+Graphviz SVG file.
+
+##### `dag.overwrite`
+
+When `true` overwrites any existing DAG file with the same name (default: `false`).
+
+##### `dag.verbose`
+
+<AddedInVersion version="23.10" />
+
+*Only supported by the HTML and Mermaid renderers.*
+
+When `false`, channel names are omitted, operators are collapsed, and empty workflow inputs are removed (default: `false`).
+
+[workflow-diagram]: ../../reports#workflow-diagram
