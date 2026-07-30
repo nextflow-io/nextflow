@@ -768,7 +768,7 @@ The above example executes the `echo` process three times. The dataflow value `x
 ```
 
 :::note
-In general, multiple input channels should be used to process *combinations* of different inputs, using the `each` qualifier or value channels. Having multiple queue channels as inputs is equivalent to using the [`merge`][operator-merge] operator, which is not recommended as it may lead to [non-deterministic process inputs][cache-nondeterministic-inputs].
+Multiple inputs should only be used to process *combinations* of different inputs, using the `each` qualifier or dataflow values. Having multiple queue channels as inputs is equivalent to using the [`merge`][operator-merge] operator, which is not recommended as it may lead to [non-deterministic process inputs][cache-nondeterministic-inputs].
 :::
 
 See also: [Singleton outputs](#singleton-outputs).
@@ -1319,7 +1319,7 @@ process hello {
 ```
 
 [cache-nondeterministic-inputs]: ./cache-and-resume#non-deterministic-process-inputs
-[channel-value]: ./reference/channel#value
+[channel-value]: ./reference/stdlib-namespaces/channel#value
 [executor-page]: ./executor
 [glob]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html.mdx#glob
 [operator-combine]: ./reference/operator#combine

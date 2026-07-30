@@ -43,7 +43,7 @@ public interface ScriptDsl extends DslScope {
     @Description("""
         The `channel` namespace contains the built-in channel factories.
 
-        [Read more](https://docs.seqera.io/nextflow/reference/channel)
+        [Read more](https://docs.seqera.io/nextflow/reference/stdlib-namespaces/channel)
     """)
     ChannelNamespace getChannel();
 
