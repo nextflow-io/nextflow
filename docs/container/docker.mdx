@@ -1,0 +1,37 @@
+---
+title: Docker
+description: Use Docker with Nextflow.
+---
+
+# Docker
+
+[Docker](https://www.docker.com) is the industry standard container runtime.
+
+## Prerequisites
+
+Docker must be installed in your execution environment.
+
+If you are running Docker on Mac OSX make sure you are mounting your local `/Users` directory into the Docker VM as explained in this excellent tutorial: [How to use Docker on OSX](http://viget.com/extend/how-to-use-docker-on-os-x-the-missing-guide).
+
+## How it works
+
+Enable Docker in the Nextflow configuration file:
+
+```groovy
+docker.enabled = true
+process.container = 'nextflow/examples:latest'
+```
+
+Whenever your pipeline launches a task, Nextflow runs it inside a Docker container created from the specified image using the `docker run` command.
+
+You can also enable Docker on the command line:
+
+```bash
+nextflow run main.nf -with-docker
+```
+
+## Advanced settings
+
+See the [`docker`][config-docker] configuration scope for advanced Docker settings.
+
+[config-docker]: ../reference/config/docker

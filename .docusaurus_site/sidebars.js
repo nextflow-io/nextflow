@@ -67,7 +67,23 @@ module.exports = {
             collapsed: true,
             items: [
                 "git",
-                "container",
+                {
+                    type: "category",
+                    label: "Containers",
+                    collapsed: true,
+                    link: { type: "doc", id: "container" },
+                    items: [
+                        "container/apple-container",
+                        "container/apptainer",
+                        "container/charliecloud",
+                        "container/docker",
+                        "container/podman",
+                        "container/sarus",
+                        "container/shifter",
+                        "container/singularity",
+                        "container/smolvm"
+                    ]
+                },
                 "conda",
                 "spack",
                 "wave"
