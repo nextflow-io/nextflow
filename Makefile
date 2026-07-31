@@ -21,6 +21,8 @@
 
 config ?= compileClasspath
 
+gradle = ./gradlew --console=plain
+
 ifdef module 
 mm = :${module}:
 else 
@@ -28,17 +30,17 @@ mm =
 endif 
 
 compile:
-	./gradlew compile exportClasspath
+	$(gradle) compile exportClasspath
 	@echo "DONE `date`"
 
 assemble:
-	./gradlew buildInfo compile assemble
+	$(gradle) buildInfo compile assemble
 
 releaseInfo:
-	./gradlew releaseInfo
+	$(gradle) releaseInfo
 
 check:
-	./gradlew check
+	$(gradle) check
 
 clean:
 	rm -rf .nextflow*
@@ -48,95 +50,95 @@ clean:
 	rm -rf build
 	rm -rf modules/*/build
 	rm -rf plugins/*/build
-	./gradlew clean
+	$(gradle) clean
 
 #
 # install compiled artifacts in Maven local dir
 # 
 install:
 	BUILD_PACK=1 \
-	./gradlew installLauncher publishToMavenLocal installPlugin
+	$(gradle) installLauncher publishToMavenLocal installPlugin
 
 installScratch:
 	BUILD_PACK=1 \
-	./gradlew installScratch publishToMavenLocal installPlugin
+	$(gradle) installScratch publishToMavenLocal installPlugin
 
 #
 # Show dependencies try `make deps config=runtime`, `make deps config=google`
 #
 deps:
-	./gradlew -q ${mm}dependencies --configuration ${config}
+	$(gradle) -q ${mm}dependencies --configuration ${config}
 
 deps-all:
-	./gradlew -q dependencyInsight --configuration ${config} --dependency ${module}
+	$(gradle) -q dependencyInsight --configuration ${config} --dependency ${module}
 
 #
 # Refresh SNAPSHOTs dependencies
 #
 refresh:
-	./gradlew --refresh-dependencies 
+	$(gradle) --refresh-dependencies 
 
 #
 # Run all tests or selected ones
 #
 test:
 ifndef class
-	./gradlew ${mm}test
+	$(gradle) ${mm}test
 else
-	./gradlew ${mm}test --tests ${class}
+	$(gradle) ${mm}test --tests ${class}
 endif
 
 #
 # Run smoke tests
 #
 smoke:
-	NXF_SMOKE=1 ./gradlew ${mm}test
+	NXF_SMOKE=1 $(gradle) ${mm}test
 
 #
 # Upload JAR artifacts to Maven Central
 #
 upload:
-	./gradlew upload
+	$(gradle) upload
 
 #
 # Create self-contained distribution package
 #
 pack:
-	BUILD_PACK=1 ./gradlew pack
+	BUILD_PACK=1 $(gradle) pack
 
 #
 # Upload NF launcher to nextflow.io web site
 #
 deploy:
-	BUILD_PACK=1 ./gradlew deploy
+	BUILD_PACK=1 $(gradle) deploy
 
 #
 # Close artifacts uploaded to Maven central
 #
 close:
-	./gradlew closeAndReleaseRepository
+	$(gradle) closeAndReleaseRepository
 
 #
 # Upload final package to GitHub
 #
 release:
-	BUILD_PACK=1 ./gradlew release
+	BUILD_PACK=1 $(gradle) release
 
 #
 # Create and upload docker image distribution
 #
 dockerImage:
-	BUILD_PACK=1 ./gradlew dockerImage
+	BUILD_PACK=1 $(gradle) dockerImage
 
 #
 # Create local docker image
 #
 dockerPack:
-	BUILD_PACK=1 ./gradlew publishToMavenLocal dockerPack -Dmaven.repo.local=${PWD}/build/docker/.nextflow/capsule/deps/ installPlugin
+	BUILD_PACK=1 $(gradle) publishToMavenLocal dockerPack -Dmaven.repo.local=${PWD}/build/docker/.nextflow/capsule/deps/ installPlugin
 
 release-plugins:
-	./gradlew releasePluginToRegistryIfNotExists
+	$(gradle) releasePluginToRegistryIfNotExists
 
 publish-artifacts:
-	./gradlew publishAllPublicationsToSeqeraRepository
+	$(gradle) publishAllPublicationsToSeqeraRepository
 

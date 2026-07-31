@@ -67,6 +67,8 @@ public class StripTypesVisitor extends ClassCodeExpressionTransformer {
         ClassHelper.makeCached(Value.class)
     );
 
+    private static final ClassNode TYPE_HELPER = ClassHelper.makeWithoutCaching("nextflow.util.TypeHelper");
+
     private SourceUnit sourceUnit;
 
     public StripTypesVisitor(SourceUnit sourceUnit) {
@@ -118,10 +120,10 @@ public class StripTypesVisitor extends ClassCodeExpressionTransformer {
         }
         if( type.getGenericsTypes() != null ) {
             var fn = parameterizedType(type);
-            return callThisX("_as_type", args(transform(node.getExpression()), classX(fn.getDeclaringClass()), constX(fn.getName())));
+            return callX(classX(TYPE_HELPER), "asType", args(transform(node.getExpression()), classX(fn.getDeclaringClass()), constX(fn.getName())));
         }
         if( isNamedRecordType(type) ) {
-            return callThisX("_as_type", args(transform(node.getExpression()), classX(type)));
+            return callX(classX(TYPE_HELPER), "asType", args(transform(node.getExpression()), classX(type)));
         }
         return node;
     }
@@ -141,7 +143,7 @@ public class StripTypesVisitor extends ClassCodeExpressionTransformer {
     //   List<Sample> _1
     // }
     //
-    // _as_type(samples, __ParameterizedTypes, '_1')
+    // TypeHelper.asType(samples, __ParameterizedTypes, '_1')
     // ```
     //
     private ClassNode hiddenClassNode;
@@ -177,7 +179,7 @@ public class StripTypesVisitor extends ClassCodeExpressionTransformer {
     private Expression transformInstanceof(BinaryExpression node) {
         var right = node.getRightExpression();
         if( right instanceof ClassExpression ce && isNamedRecordType(ce.getType()) )
-            return callThisX("_instanceof_record_type", args(transform(node.getLeftExpression()), right));
+            return callX(classX(TYPE_HELPER), "instanceofRecordType", args(transform(node.getLeftExpression()), right));
         return super.transform(node);
     }
 

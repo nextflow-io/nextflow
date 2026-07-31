@@ -35,6 +35,7 @@ import nextflow.BuildInfo
 import nextflow.SysEnv
 import nextflow.exception.AbortRunException
 import nextflow.util.Duration
+import nextflow.util.ProxyConfig
 import nextflow.util.TestOnly
 /**
  * Perform HTTP call to Seqera platform.
@@ -224,8 +225,9 @@ class TowerClient {
         final builder = HxClient.newBuilder()
         // auth settings
         setupClientAuth(builder, getAccessToken())
-        // retry settings
+        // retry + proxy settings (proxy applies to the main client and the token-refresh client)
         this.httpClient = builder
+            .withProxyConfig(ProxyConfig.proxyConfig())
             .retryConfig(this.retryPolicy)
             .followRedirects(HttpClient.Redirect.NORMAL)
             .version(HttpClient.Version.HTTP_1_1)

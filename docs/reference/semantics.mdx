@@ -9,7 +9,7 @@ The *semantics* of the Nextflow language are the meaning and behavior of each la
 
 ## Values
 
-Every expression in Nextflow produces a *value*, and every value has a [type](#types) that determines the operations it supports. This section describes the kinds of values in the language and how they behave. See the [Types][stdlib-types] reference for the full set of operations available on each type, and [Syntax][syntax-page] for the grammar of each literal.
+Every expression in Nextflow produces a *value*, and every value has a [type](#types) that determines the operations it supports. This section describes the kinds of values in the language and how they behave. Each kind of value links to its type reference, which describes the full set of available operations. See [Syntax][syntax-page] for the grammar of each literal.
 
 ### Booleans
 
@@ -901,7 +901,7 @@ The entry workflow of an included script is ignored. This allows the same script
 
 ## Types
 
-Every value in Nextflow has a *type*, which determines the set of operations that can be performed on it. The available types are described in the [Types][stdlib-types] reference.
+Every value in Nextflow has a *type*, which determines the set of operations that can be performed on it. The available types are described in [Values](#values).
 
 Nextflow supports two styles of typing:
 
@@ -1029,18 +1029,17 @@ A value is also cast *implicitly* in the following situations:
 [process-error-strategy]: ./process#errorstrategy
 [process-page]: ../process
 [script-page]: ../script
-[stdlib-error]: ./stdlib-namespaces
-[stdlib-types]: ./stdlib-types
-[stdlib-types-float]: ./stdlib-types#float
-[stdlib-types-integer]: ./stdlib-types#integer
-[stdlib-types-iterable]: ./stdlib-types#iterablee
-[stdlib-types-bag]: ./stdlib-types#bage
-[stdlib-types-list]: ./stdlib-types#liste
-[stdlib-types-map]: ./stdlib-types#mapkv
-[stdlib-types-record]: ./stdlib-types#record
-[stdlib-types-set]: ./stdlib-types#sete
-[stdlib-types-string]: ./stdlib-types#string
-[stdlib-types-tuple]: ./stdlib-types#tuple
+[stdlib-error]: ./stdlib-namespaces/global
+[stdlib-types-float]: ./stdlib-types/float
+[stdlib-types-integer]: ./stdlib-types/integer
+[stdlib-types-iterable]: ./stdlib-types/iterable
+[stdlib-types-bag]: ./stdlib-types/bag
+[stdlib-types-list]: ./stdlib-types/list
+[stdlib-types-map]: ./stdlib-types/map
+[stdlib-types-record]: ./stdlib-types/record
+[stdlib-types-set]: ./stdlib-types/set
+[stdlib-types-string]: ./stdlib-types/string
+[stdlib-types-tuple]: ./stdlib-types/tuple
 [syntax-operators]: ./syntax#binary-expressions
 [syntax-page]: ./syntax
 [syntax-precedence]: ./syntax#precedence

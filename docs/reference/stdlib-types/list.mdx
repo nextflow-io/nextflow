@@ -1,0 +1,105 @@
+---
+title: List<E>
+description: Reference for the List type, an ordered collection of values.
+---
+
+# List\<E\>
+
+*Implements the [Iterable\<E\>][stdlib-types-iterable] trait.*
+
+A list is an ordered collection of values of type `E`. See [Lists][script-list] for an overview of lists.
+
+The following operations are supported for lists:
+
+##### `+ : (List<E>, List<E>) -> List<E>`
+
+Concatenates two lists.
+
+##### `* : (List<E>, Integer) -> List<E>`
+
+Given a list and an integer *n*, repeats the list *n* times.
+
+##### `[] : (List<E>, Integer) -> E`
+
+Given a list and an index, returns the element at the given index in the list, or `null` if the index is out of range.
+
+##### `in, !in : (E, List<E>) -> Boolean`
+
+Given a value and a list, returns `true` if the list contains the value (or not).
+
+The following methods are available for a list:
+
+##### `collate( size: Integer, keepRemainder: Boolean = true ) -> List<List<E>>`
+
+Collates the list into a list of sub-lists of length `size`. If `keepRemainder` is `true`, any remaining elements are included as a partial sub-list, otherwise they are excluded.
+
+For example:
+  ```nextflow
+  assert [1, 2, 3, 4, 5, 6, 7].collate(3)        == [[1, 2, 3], [4, 5, 6], [7]]
+  assert [1, 2, 3, 4, 5, 6, 7].collate(3, false) == [[1, 2, 3], [4, 5, 6]]
+  ```
+
+##### `collate( size: Integer, step: Integer, keepRemainder: Boolean = true ) -> List<List<E>>`
+
+Collates the list into a list of sub-lists of length `size`, stepping through the list `step` elements for each sub-list. If `keepRemainder` is `true`, any remaining elements are included as a partial sub-list, otherwise they are excluded.
+
+For example:
+  ```nextflow
+  assert [1, 2, 3, 4].collate(3, 1)        == [[1, 2, 3], [2, 3, 4], [3, 4], [4]]
+  assert [1, 2, 3, 4].collate(3, 1, false) == [[1, 2, 3], [2, 3, 4]]
+  ```
+
+##### `first() -> E`
+
+Returns the first element in the list. Raises an error if the list is empty.
+
+##### `getIndices() -> List<Integer>`
+
+Returns the list of integers from 0 to *n - 1*, where *n* is the number of elements in the list.
+
+##### `head() -> E`
+
+Equivalent to `first()`.
+
+##### `indexOf( value: E ) -> Integer`
+
+Returns the index of the first occurrence of the given value in the list, or -1 if the list does not contain the value.
+
+##### `init() -> List<E>`
+
+Returns a shallow copy of the list with the last element excluded.
+
+##### `last() -> E`
+
+Returns the last element in the list. Raises an error if the list is empty.
+
+##### `reverse() -> List<E>`
+
+Returns a shallow copy of the list with the elements reversed.
+
+##### `subList( fromIndex: Integer, toIndex: Integer ) -> List<E>`
+
+Returns the portion of the list between the given `fromIndex` (inclusive) and `toIndex` (exclusive).
+
+##### `tail() -> List<E>`
+
+Returns a shallow copy of the list with the first element excluded.
+
+##### `take( n: Integer ) -> List<E>`
+
+Returns the first *n* elements of the list.
+
+##### `takeWhile( condition: (E) -> Boolean ) -> List<E>`
+
+Returns the longest prefix of the list where each element satisfies the given condition.
+
+##### `withIndex() -> List<(E,Integer)>`
+
+Returns a list of 2-tuples corresponding to the value and index of each element in the list.
+
+:::note
+Lists in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/List.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/List.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
+:::
+
+[script-list]: ../../script#lists
+[stdlib-types-iterable]: ./iterable

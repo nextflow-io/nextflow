@@ -117,6 +117,10 @@ workflow {
 
 Supported languages include: `groovy`, `bash`, `python`, `javascript`, `java`, `yaml`, `json`, and many more.
 
+### Runnable snippets
+
+- Code snippets under `docs/snippets/` are runnable and covered by the docs tests.
+
 ### Images and assets
 
 - Place images in `docs/_static/` or `static/`

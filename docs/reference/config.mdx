@@ -139,6 +139,12 @@ The amount of time the Apptainer pull can last, exceeding which the process is t
 
 The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
 
+##### `apptainer.resourceLimits`
+
+<AddedInVersion version="26.10" />
+
+Apply the task `cpus` and `memory` directives as container resource limits using the `--cpus` and `--memory` flags (default: `false`).
+
 ##### `apptainer.runOptions`
 
 Specify extra command line options supported by `apptainer exec`.
@@ -1778,11 +1784,9 @@ The `seqera.executor` scope configures the Seqera scheduler service for the [Seq
 
 The following settings are available:
 
-The following settings are available:
-
 ###### `seqera.executor.autoLabels`
 
-When `true`, automatically adds workflow metadata labels to the session with the `nextflow.io/` prefix (default: `false`). The following labels are added: `projectName`, `userName`, `runName`, `sessionId`, `resume`, `revision`, `commitId`, `repository`, `manifestName`, `runtimeVersion`. A `seqera.io/runId` label is also added, computed as a SipHash of the session ID and run name.
+When `true`, automatically adds workflow metadata labels to the session with the `nextflow.io/` prefix (default: `false`). The following labels are added: `projectName`, `userName`, `runName`, `sessionId`, `resume`, `revision`, `commitId`, `repository`, `manifestName`, `runtimeVersion`. A `seqera.io/runId` label is also added, computed as a SipHash of the session ID and run name. The `userName` label reports the Seqera Platform user that submitted the run, falling back to the OS user running the Nextflow launcher when no Platform identity is available.
 
 ###### `seqera.executor.computeEnvId`
 
@@ -1867,6 +1871,10 @@ The maximum number of spot retry attempts before falling back to on-demand. Only
 ###### `seqera.executor.machineRequirement.provisioning`
 
 The instance provisioning mode. Can be `'spot'`, `'ondemand'`, or `'spotFirst'`.
+
+###### `seqera.executor.schedulingRequirement.maxCpusPerUser`
+
+The maximum number of concurrent vCPUs a single user may consume across all of their runs on this compute environment (default: no limit). A task requesting more `cpus` than this cap fails instead of being queued.
 
 ###### `seqera.executor.retryPolicy.delay`
 
@@ -1974,9 +1982,57 @@ The amount of time the Singularity pull can last, after which the process is ter
 
 The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
 
+##### `singularity.resourceLimits`
+
+<AddedInVersion version="26.10" />
+
+Apply the task `cpus` and `memory` directives as container resource limits using the `--cpus` and `--memory` flags (default: `false`).
+
 ##### `singularity.runOptions`
 
 Specify extra command line options supported by `singularity exec`.
+
+## `smolvm`
+
+The `smolvm` scope controls how [smolvm](https://github.com/smol-machines/smolvm) microVMs are used by Nextflow.
+
+The following settings are available:
+
+##### `smolvm.enabled`
+
+Enable smolvm execution (default: `false`).
+
+##### `smolvm.engineOptions`
+
+Specify additional options supported by the smolvm CLI (i.e., `smolvm [OPTIONS] machine run`).
+
+##### `smolvm.envWhitelist`
+
+Comma separated list of environment variable names to be included in the VM environment.
+
+##### `smolvm.network`
+
+Enable outbound network access in the VM (default: `true`).
+
+##### `smolvm.registry`
+
+The registry from where images are pulled. It should NOT include the protocol prefix (i.e., `http://`).
+
+##### `smolvm.runOptions`
+
+Specify extra command line options supported by the `smolvm machine run` command.
+
+##### `smolvm.temp`
+
+Mounts a path of your choice as the `/tmp` directory in the VM.
+
+##### `smolvm.tty`
+
+Allocate a pseudo-tty (default: `false`).
+
+##### `smolvm.writableInputMounts`
+
+When `false`, mount input directories as read-only (default: `true`).
 
 ## `spack`
 
@@ -2575,7 +2631,7 @@ workflow.output.tags = [FOO'hello', BAR'world']
 [seqera-executor]: ../executor#seqera
 [sharing-page]: ../sharing
 [slurm-executor]: ../executor#slurm
-[stdlib-types-versionnumber]: ./stdlib-types#versionnumber
+[stdlib-types-versionnumber]: ./stdlib-types/version-number
 [timeline-report]: ../reports#execution-timeline
 [trace-report]: ../reports#trace-file
 [wave-page]: ../wave
