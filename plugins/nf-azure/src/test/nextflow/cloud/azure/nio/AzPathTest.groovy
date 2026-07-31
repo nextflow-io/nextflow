@@ -334,14 +334,16 @@ class AzPathTest extends Specification {
 
     }
 
-    def 'isDirectory should consult the attributes for a path without a trailing slash'() {
+    def 'isDirectory should reuse cached attributes for a path without a trailing slash'() {
         given: 'a slashless path whose resolved attributes report a directory'
         def path = azpath('/pipeline/output')
-        path.setAttributes(new AzFileAttributes(size: 0, objectId: '/pipeline/output', directory: true))
+        def attrs = new AzFileAttributes(size: 0, objectId: '/pipeline/output', directory: true)
+        path.setAttributes(attrs)
 
         expect:
         !path.@directory        // the trailing-slash field alone says "not a directory"
         path.isDirectory()      // ...but the resolved attributes identify it as a directory
+        path.attributesCache().is(attrs) // retain the one-shot cache for a later readAttributes call
     }
 
     def 'isDirectory should propagate the error when the attribute lookup fails'() {

@@ -103,7 +103,7 @@ class AzPath implements Path {
             return directoryResolved
         // Consult the file system, which resolves this via the blob metadata and listing (see
         // AzFileSystem.readAttributes), instead of relying on the trailing slash alone.
-        final attrs = fs.readAttributes(this)
+        final attrs = attributes ?: fs.readAttributes(this)
         return directoryResolved = (attrs != null && attrs.isDirectory())
     }
 
