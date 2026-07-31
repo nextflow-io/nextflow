@@ -350,7 +350,7 @@ class AzPathTest extends Specification {
         path.attributesCache().is(attrs) // retain the one-shot cache for a later readAttributes call
     }
 
-    def 'isDirectory should not cache attributes resolved from storage'() {
+    def 'isDirectory should reuse attributes resolved from storage'() {
         given:
         def fs = Mock(AzFileSystem)
         fs.getContainerName() >> 'pipeline'
@@ -363,7 +363,7 @@ class AzPathTest extends Specification {
         then:
         first
         second
-        2 * fs.readAttributes(path) >> new AzFileAttributes(directory: true)
+        1 * fs.readAttributes(path) >> new AzFileAttributes(directory: true)
         0 * _
     }
 

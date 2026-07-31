@@ -100,7 +100,8 @@ class AzPath implements Path {
             return attributes.isDirectory()
         if( !isAbsolute() )
             return false
-        return fs.readAttributes(this)?.isDirectory() ?: false
+        attributes = fs.readAttributes(this)
+        return attributes?.isDirectory() ?: false
     }
 
     String checkContainerName() {
