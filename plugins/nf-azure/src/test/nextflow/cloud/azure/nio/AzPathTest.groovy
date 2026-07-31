@@ -17,7 +17,11 @@
 package nextflow.cloud.azure.nio
 
 
+import java.time.OffsetDateTime
+
 import com.azure.storage.blob.BlobServiceClient
+import com.azure.storage.blob.models.BlobItem
+import com.azure.storage.blob.models.BlobItemProperties
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -346,15 +350,61 @@ class AzPathTest extends Specification {
         path.attributesCache().is(attrs) // retain the one-shot cache for a later readAttributes call
     }
 
-    def 'isDirectory should propagate the error when the attribute lookup fails'() {
-        given: 'a relative path has no container, so the attribute lookup throws'
-        def path = azpath('some/file.txt')
+    def 'isDirectory should not cache attributes resolved from storage'() {
+        given:
+        def fs = Mock(AzFileSystem)
+        fs.getContainerName() >> 'pipeline'
+        def path = new AzPath(fs, '/pipeline/output')
 
         when:
-        path.isDirectory()
+        def first = path.isDirectory()
+        def second = path.isDirectory()
 
         then:
-        thrown(IllegalArgumentException)
+        first
+        second
+        2 * fs.readAttributes(path) >> new AzFileAttributes(directory: true)
+        0 * _
+    }
+
+    def 'isDirectory should return false for a relative path'() {
+        given:
+        def path = azpath('some/file.txt')
+
+        expect:
+        !path.isDirectory()
+    }
+
+    def 'should only recognise zero-size hdi_isfolder markers'() {
+        expect:
+        AzFileAttributes.isDirectoryMarker(metadata, size) == directory
+
+        where:
+        metadata                    | size || directory
+        [hdi_isfolder: 'true']      | 0L   || true
+        [hdi_isfolder: 'true']      | 42L  || false
+        [hdi_isfolder: 'false']     | 0L   || false
+        [:]                         | 0L   || false
+    }
+
+    def 'should not classify a non-empty listed blob with hdi_isfolder metadata as a directory'() {
+        given:
+        def properties = new BlobItemProperties()
+                .setContentLength(42L)
+                .setCreationTime(OffsetDateTime.now())
+                .setLastModified(OffsetDateTime.now())
+        def item = new BlobItem()
+                .setName('output')
+                .setMetadata([hdi_isfolder: 'true'])
+                .setProperties(properties)
+
+        when:
+        def attrs = new AzFileAttributes('pipeline', item)
+
+        then:
+        !attrs.isDirectory()
+        attrs.isRegularFile()
+        attrs.size() == 42L
     }
 
 }

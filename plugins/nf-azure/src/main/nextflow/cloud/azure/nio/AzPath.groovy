@@ -49,9 +49,6 @@ class AzPath implements Path {
     boolean directory
 
     @PackageScope
-    Boolean directoryResolved
-
-    @PackageScope
     AzPath() {}
 
     @PackageScope
@@ -99,12 +96,11 @@ class AzPath implements Path {
     boolean isDirectory() {
         if( directory )
             return true
-        if( directoryResolved != null )
-            return directoryResolved
-        // Consult the file system, which resolves this via the blob metadata and listing (see
-        // AzFileSystem.readAttributes), instead of relying on the trailing slash alone.
-        final attrs = attributes ?: fs.readAttributes(this)
-        return directoryResolved = (attrs != null && attrs.isDirectory())
+        if( attributes )
+            return attributes.isDirectory()
+        if( !isAbsolute() )
+            return false
+        return fs.readAttributes(this)?.isDirectory() ?: false
     }
 
     String checkContainerName() {
