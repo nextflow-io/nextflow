@@ -1,0 +1,29 @@
+---
+title: Kubernetes
+description: Reference for the Kubernetes executor.
+---
+
+# Kubernetes
+
+The `k8s` executor runs pipeline tasks on a [Kubernetes](http://kubernetes.io/) cluster. It submits each task as a Kubernetes job.
+
+Resource requests and other job characteristics can be controlled via the following process directives:
+
+- [accelerator][process-accelerator]
+- [cpus][process-cpus]
+- [disk][process-disk]
+- [memory][process-memory]
+- [pod][process-pod]
+- [resourcelabels][process-resourcelabels]
+- [time][process-time]
+
+See the [Kubernetes][k8s-page] page to learn how to set up a Kubernetes cluster to run Nextflow pipelines.
+
+[k8s-page]: ../kubernetes
+[process-accelerator]: ../reference/process#accelerator
+[process-cpus]: ../reference/process#cpus
+[process-disk]: ../reference/process#disk
+[process-memory]: ../reference/process#memory
+[process-pod]: ../reference/process#pod
+[process-resourcelabels]: ../reference/process#resourcelabels
+[process-time]: ../reference/process#time

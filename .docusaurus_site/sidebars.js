@@ -19,7 +19,33 @@ module.exports = {
             items: [
                 "cli",
                 "config",
-                "executor",
+                {
+                    type: "category",
+                    label: "Executors",
+                    collapsed: true,
+                    link: { type: "doc", id: "executor" },
+                    items: [
+                        "executor/local",
+                        "executor/aws-batch",
+                        "executor/azure-batch",
+                        "executor/google-batch",
+                        "executor/kubernetes",
+                        "executor/seqera",
+                        "executor/bridge",
+                        "executor/flux",
+                        "executor/htcondor",
+                        "executor/hyperqueue",
+                        "executor/lsf",
+                        "executor/moab",
+                        "executor/nqsii",
+                        "executor/oar",
+                        "executor/pbs",
+                        "executor/pbspro",
+                        "executor/sge",
+                        "executor/slurm",
+                        "executor/tcs"
+                    ]
+                },
                 "cache-and-resume",
                 "reports"
             ]

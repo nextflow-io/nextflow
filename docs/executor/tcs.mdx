@@ -1,0 +1,31 @@
+---
+title: TCS
+description: Reference for the TCS executor.
+---
+
+# TCS
+
+The `tcs` executor runs pipeline tasks using a [Fujitsu Technical Computing Suite (TCS)](https://software.fujitsu.com/jp/manual/manualindex/p21000155e.html) cluster. It submits each task as a TCS job using the `pjsub` command.
+
+To enable the TCS executor, set `process.executor = 'tcs'` in the `nextflow.config` file. The pipeline must be launched from a node where `pjsub` is available, typically the login node.
+
+Resource requests and other job characteristics can be controlled via the following process directives:
+
+- [clusterOptions][process-clusteroptions]
+- [time][process-time]
+
+Use `clusterOptions` to specify system-dependent options such as queue (resource group), CPU, and node. These options vary across target systems and are not standardized.
+They correspond to `-L` options in the arguments of the `pjsub` command and should be configured according to the requirements of the specific cluster environment.
+
+For example:
+
+```groovy
+process {
+  executor = 'tcs'
+  time = '00:30:00'
+  clusterOptions = '-L rscgrp=a-batch -L vnode-core=4'
+}
+```
+
+[process-clusteroptions]: ../reference/process#clusteroptions
+[process-time]: ../reference/process#time

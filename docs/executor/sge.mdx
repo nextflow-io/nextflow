@@ -1,0 +1,26 @@
+---
+title: SGE
+description: Reference for the SGE executor.
+---
+
+# SGE
+
+The `sge` executor runs pipeline tasks using a [Sun Grid Engine](http://en.wikipedia.org/wiki/Oracle_Grid_Engine) cluster or a compatible platform ([Open Grid Engine](http://gridscheduler.sourceforge.net/), [Univa Grid Engine](http://www.univa.com/products/grid-engine.php), etc). It submits each task as an SGE job using the `qsub` command.
+
+To enable the SGE executor, set `process.executor = 'sge'` in the `nextflow.config` file. The pipeline must be launched from a node where `qsub` is available, typically the cluster login node.
+
+Resource requests and other job characteristics can be controlled via the following process directives:
+
+- [clusterOptions][process-clusteroptions]
+- [cpus][process-cpus]
+- [memory][process-memory]
+- [penv][process-penv]
+- [queue][process-queue]
+- [time][process-time]
+
+[process-clusteroptions]: ../reference/process#clusteroptions
+[process-cpus]: ../reference/process#cpus
+[process-memory]: ../reference/process#memory
+[process-penv]: ../reference/process#penv
+[process-queue]: ../reference/process#queue
+[process-time]: ../reference/process#time
