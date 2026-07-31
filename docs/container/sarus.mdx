@@ -1,0 +1,33 @@
+---
+title: Sarus
+description: Use Sarus with Nextflow.
+---
+
+# Sarus
+
+[Sarus](https://sarus.readthedocs.io) is an alternative container runtime to Docker. Sarus works by converting Docker images to a common format that can then be distributed and launched on HPC systems. The user interface to Sarus enables a user to select an image from [Docker Hub](https://hub.docker.com/) and then submit jobs which run entirely within the container.
+
+## Prerequisites
+
+Sarus must be installed in your execution environment.
+
+## Images
+
+Sarus converts a Docker image to Squashfs layers which are distributed and launched in the cluster. For more information on how to build Sarus images, see the [official documentation](https://sarus.readthedocs.io/en/stable/user/user_guide.html#develop-the-docker-image).
+
+## How it works
+
+Enable Sarus in the Nextflow configuration file:
+
+```groovy
+sarus.enabled = true
+process.container = 'dockerhub_user/image_name:image_tag'
+```
+
+Sarus always searches the Docker Hub registry for the images. If you do not specify an image tag, the `latest` tag will be fetched by default.
+
+## Advanced settings
+
+See the [`sarus`][config-sarus] configuration scope for advanced Sarus settings.
+
+[config-sarus]: ../reference/config/sarus
