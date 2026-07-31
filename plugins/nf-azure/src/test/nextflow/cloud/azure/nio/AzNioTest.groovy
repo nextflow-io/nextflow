@@ -953,12 +953,14 @@ class AzNioTest extends Specification implements AzBaseSpec {
         containerClient.getBlobClient("output/file.txt").upload(new ByteArrayInputStream("hello".bytes), "hello".length())
 
         and: 'the prefix is referenced without a trailing slash'
-        def dir = Path.of(new URI("az://$bucketName/output"))
+        def path = "az://$bucketName/output"
+        def azPath = Path.of(new URI(path))
+        def nioPath = Path.of(new URI(path))
         def file = Path.of(new URI("az://$bucketName/output/file.txt"))
 
         then: 'it is recognised as a directory (via both entry points) while the blob is a file'
-        (dir as AzPath).isDirectory()
-        Files.isDirectory(dir)
+        (azPath as AzPath).isDirectory()
+        Files.isDirectory(nioPath)
         !Files.isDirectory(file)
 
         cleanup:
