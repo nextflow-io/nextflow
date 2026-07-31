@@ -47,8 +47,8 @@ For example, to use all GPUs on a node with four NVIDIA GPUs, set `CUDA_VISIBLE_
 To run tasks in containers, propagate the device environment variable into the container and configure the container runtime for GPU access. For example, with Docker, add `CUDA_VISIBLE_DEVICES` to `docker.envWhitelist` and set GPU options such as `--gpus` via `docker.runOptions`. See your container runtime's documentation for GPU support.
 :::
 
-[container-docker]: ../container#docker
-[container-podman]: ../container#podman
+[container-docker]: ../container/docker
+[container-podman]: ../container/podman
 [process-accelerator]: ../reference/process#accelerator
 [process-container]: ../reference/process#container
 [process-containeroptions]: ../reference/process#containeroptions

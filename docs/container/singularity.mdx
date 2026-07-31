@@ -1,0 +1,99 @@
+---
+title: Singularity
+description: Use Singularity with Nextflow.
+---
+
+# Singularity
+
+[Singularity](https://sylabs.io/singularity/) is an alternative container runtime to Docker. Singularity can be used without root privileges and it doesn't require a separate daemon process, making it well-suited to HPC environments. Singularity can use existing Docker images and pull from Docker registries.
+
+## Prerequisites
+
+Singularity must be installed in your execution environment.
+
+## Images
+
+Refer to the [Singularity documentation](https://www.sylabs.io/docs/) to learn how to create Singularity images.
+
+Singularity allows paths that do not currently exist within the container to be created and mounted dynamically by specifying them on the command line. This feature is only supported on hosts that support the [Overlay file system](https://en.wikipedia.org/wiki/OverlayFS) and is not enabled by default.
+
+## How it works
+
+Enable Singularity in the Nextflow configuration file:
+
+```groovy
+singularity.enabled = true
+process.container = '/path/to/singularity.img'
+```
+
+Whenever your pipeline launches a task, Nextflow runs it inside a Singularity container created from the specified image using the `singularity exec` command.
+
+You can also enable Singularity on the command line:
+
+```bash
+nextflow run main.nf -with-singularity
+```
+
+Nextflow automatically mounts the required host paths in the container. This requires the `user bind control` feature to be enabled in your Singularity installation. To disable it, set `singularity.autoMounts` to `false`.
+
+:::warning
+When a process input is a *symbolic link* file, make sure the linked file is stored in a host folder that is accessible from a bind path defined in your Singularity installation. Otherwise the task will fail because the container won't be able to access the linked file.
+:::
+
+<ChangedInVersion version="23.10">
+Nextflow no longer mounts the home directory when launching a Singularity container. To re-enable the old behavior, set the environment variable `NXF_SINGULARITY_HOME_MOUNT` to `true`.
+</ChangedInVersion>
+
+<ChangedInVersion version="23.10">
+Host paths are mounted in the container automatically. To re-enable the old behavior, set the environment variable `NXF_SINGULARITY_AUTO_MOUNTS` to `false`.
+</ChangedInVersion>
+
+<ChangedInVersion version="23.10">
+The execution command for Singularity/Apptainer containers can be set to `run` by means of the environment variable `NXF_SINGULARITY_RUN_COMMAND` (default command is `exec`).
+</ChangedInVersion>
+
+## Singularity & Docker Hub
+
+Nextflow can pull remote container images from [Singularity Hub](https://singularity-hub.org/), the [Singularity Library](https://cloud.sylabs.io/library/), or any Docker-compatible registry. This feature requires Singularity to be installed in the launch environment (as opposed to the compute nodes).
+
+By default, when a container name is specified, Nextflow checks if an image file with that name exists in the local file system. If that image file exists, it is used to execute the container. If a matching file does not exist, Nextflow automatically tries to pull an image with the specified name from the container registry.
+
+To use only local file images, prefix the container name with `file://`. For example:
+
+```groovy
+singularity.enabled = true
+process.container = 'file:///path/to/singularity.img'
+```
+
+:::warning
+Use three `/` slashes to specify an *absolute* file path, otherwise the path will be interpreted as relative to the workflow launch directory.
+:::
+
+To pull an image from a specific registry, prefix the image name with `shub://`, `docker://`, `docker-daemon://`, or `library://` as required by Singularity. For example:
+
+```groovy
+singularity.enabled = true
+process.container = 'docker://quay.io/biocontainers/multiqc:1.3--py35_2'
+```
+
+You do not need to specify `docker://` to pull from a Docker registry. Nextflow will automatically prepend it to your image name when Singularity is enabled. Additionally, the Docker engine will not work with containers specified as `docker://`.
+
+By default, Nextflow caches Singularity images in the `singularity` directory, in the pipeline work directory. Use the `NXF_SINGULARITY_CACHEDIR` environment variable or the `singularity.cacheDir` config setting to define a centralized cache directory.
+
+Nextflow uses the library directory to determine the location of local Singularity container images. Use the `NXF_SINGULARITY_LIBRARYDIR` environment variable or the `singularity.libraryDir` config setting to define it. The configuration file option overrides the environment variable if both are set.
+
+When resolving a container image, Nextflow first checks the library directory, then the cache directory. Use the library directory as a read-only container repository, and the cache directory as a writable location where container images can be cached.
+
+:::note
+When using a compute cluster, the Singularity cache directory must reside in a shared filesystem accessible to all compute nodes.
+:::
+
+:::warning
+When pulling Docker images, Singularity may be unable to determine the container size if the image was stored using an old Docker format, resulting in a pipeline execution error. See the Singularity documentation for details.
+:::
+
+## Advanced settings
+
+See the [`singularity`][config-singularity] configuration scope for advanced Singularity settings.
+
+[config-singularity]: ../reference/config/singularity
