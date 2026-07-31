@@ -63,14 +63,15 @@ class AzFileAttributes implements BasicFileAttributes {
 
         // Support for Azure Data Lake Storage Gen2 with hierarchical namespace enabled.
         final meta = props.getMetadata()
-        if( isDirectoryMarker(meta, size) ) {
+        if( isDirectoryMarker(meta) ) {
             directory = true
+            size = 0
         }
     }
 
     AzFileAttributes(String containerName, BlobItem item) {
         objectId = "/${containerName}/${item.name}"
-        directory = item.name.endsWith('/') || isDirectoryMarker(item.getMetadata(), item.properties.getContentLength())
+        directory = item.name.endsWith('/') || isDirectoryMarker(item.getMetadata())
         if( !directory ) {
             creationTime = time(item.properties.getCreationTime())
             updateTime = time(item.properties.getLastModified())
@@ -95,8 +96,8 @@ class AzFileAttributes implements BasicFileAttributes {
         directory = blobName.endsWith('/')
     }
 
-    static protected boolean isDirectoryMarker(Map<String,String> metadata, long size) {
-        metadata?.get('hdi_isfolder') == 'true' && size == 0
+    static protected boolean isDirectoryMarker(Map<String,String> metadata) {
+        metadata?.get('hdi_isfolder') == 'true'
     }
 
 

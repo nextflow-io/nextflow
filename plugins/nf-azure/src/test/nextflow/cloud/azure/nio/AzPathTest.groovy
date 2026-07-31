@@ -375,19 +375,18 @@ class AzPathTest extends Specification {
         !path.isDirectory()
     }
 
-    def 'should only recognise zero-size hdi_isfolder markers'() {
+    def 'should recognise hdi_isfolder markers regardless of reported size'() {
         expect:
-        AzFileAttributes.isDirectoryMarker(metadata, size) == directory
+        AzFileAttributes.isDirectoryMarker(metadata) == directory
 
         where:
-        metadata                    | size || directory
-        [hdi_isfolder: 'true']      | 0L   || true
-        [hdi_isfolder: 'true']      | 42L  || false
-        [hdi_isfolder: 'false']     | 0L   || false
-        [:]                         | 0L   || false
+        metadata                    || directory
+        [hdi_isfolder: 'true']      || true
+        [hdi_isfolder: 'false']     || false
+        [:]                         || false
     }
 
-    def 'should not classify a non-empty listed blob with hdi_isfolder metadata as a directory'() {
+    def 'should classify a non-empty listed hdi_isfolder marker as a directory'() {
         given:
         def properties = new BlobItemProperties()
                 .setContentLength(42L)
@@ -402,9 +401,9 @@ class AzPathTest extends Specification {
         def attrs = new AzFileAttributes('pipeline', item)
 
         then:
-        !attrs.isDirectory()
-        attrs.isRegularFile()
-        attrs.size() == 42L
+        attrs.isDirectory()
+        !attrs.isRegularFile()
+        attrs.size() == 0L
     }
 
 }
