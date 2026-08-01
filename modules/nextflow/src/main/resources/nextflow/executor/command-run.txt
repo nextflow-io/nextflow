@@ -146,7 +146,7 @@ nxf_unstage() {
     ## Deactivate fast failure to allow uploading stdout and stderr files later
     if [[ ${nxf_main_ret:=0} == 0 ]]; then
         ## Data unstaging redirecting stdout and stderr with append mode
-        (set -e -o pipefail; (nxf_unstage_outputs | tee -a {{stdout_file}}) 3>&1 1>&2 2>&3 | tee -a {{stderr_file}})
+        (set -e -o pipefail; (nxf_unstage_outputs | tee -a {{stdout_file}}) 3>&1 1>&2 2>&3 | tee -a {{stderr_file}}) 3>&1 1>&2 2>&3
         nxf_unstage_ret=$?
     fi
     nxf_unstage_controls
