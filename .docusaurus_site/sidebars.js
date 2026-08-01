@@ -32,9 +32,18 @@ module.exports = {
                 "script",
                 "working-with-files",
                 "process",
-                "process-typed",
                 "workflow",
-                "workflow-typed",
+                {
+                    type: "category",
+                    label: "Static typing",
+                    collapsed: true,
+                    link: { type: "doc", id: "static-typing" },
+                    items: [
+                        "process-typed",
+                        "workflow-typed",
+                        "typed-parameters"
+                    ]
+                },
                 "notifications",
                 "secrets",
                 "sharing",
@@ -45,8 +54,8 @@ module.exports = {
             type: "category",
             label: "Modules",
             collapsed: true,
+            link: { type: "doc", id: "modules/modules" },
             items: [
-                "modules/modules",
                 "modules/using-modules",
                 "modules/developing-modules",
                 "modules/module-registry"
@@ -101,8 +110,42 @@ module.exports = {
                     label: "Standard library",
                     link: { type: "doc", id: "reference/stdlib" },
                     items: [
-                        "reference/stdlib-namespaces",
-                        "reference/stdlib-types",
+                        {
+                            type: "category",
+                            label: "Namespaces",
+                            link: { type: "doc", id: "reference/stdlib-namespaces" },
+                            items: [
+                                "reference/stdlib-namespaces/global",
+                                "reference/stdlib-namespaces/channel",
+                                "reference/stdlib-namespaces/log",
+                                "reference/stdlib-namespaces/nextflow",
+                                "reference/stdlib-namespaces/workflow"
+                            ]
+                        },
+                        {
+                            type: "category",
+                            label: "Types",
+                            link: { type: "doc", id: "reference/stdlib-types" },
+                            items: [
+                                "reference/stdlib-types/bag",
+                                "reference/stdlib-types/boolean",
+                                "reference/stdlib-types/channel",
+                                "reference/stdlib-types/duration",
+                                "reference/stdlib-types/float",
+                                "reference/stdlib-types/integer",
+                                "reference/stdlib-types/iterable",
+                                "reference/stdlib-types/list",
+                                "reference/stdlib-types/map",
+                                "reference/stdlib-types/memory-unit",
+                                "reference/stdlib-types/path",
+                                "reference/stdlib-types/record",
+                                "reference/stdlib-types/set",
+                                "reference/stdlib-types/string",
+                                "reference/stdlib-types/tuple",
+                                "reference/stdlib-types/value",
+                                "reference/stdlib-types/version-number"
+                            ]
+                        },
                         "reference/stdlib-groovy"
                     ]
                 },

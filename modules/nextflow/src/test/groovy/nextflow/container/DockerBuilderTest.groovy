@@ -151,6 +151,11 @@ class DockerBuilderTest extends Specification {
                 .build()
                 .runCommand == 'docker run -i -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
 
+        new DockerBuilder('fedora', new DockerConfig(cpuLimits: true))
+                .setCpus(2)
+                .build()
+                .runCommand == 'docker run -i --cpus 2 -v "$NXF_TASK_WORKDIR":"$NXF_TASK_WORKDIR" -w "$NXF_TASK_WORKDIR" fedora'
+
         new DockerBuilder('fedora')
                 .setMemory('10g')
                 .build()

@@ -31,7 +31,7 @@ import nextflow.script.types.Record;
 @Description("""
     A channel is an asynchronous sequence of values. It is used to facilitate dataflow logic in a workflow.
 
-    [Read more](https://docs.seqera.io/nextflow/reference/stdlib-types#channel-e)
+    [Read more](https://docs.seqera.io/nextflow/reference/stdlib-types/channel)
 """)
 public interface Channel<E> {
 

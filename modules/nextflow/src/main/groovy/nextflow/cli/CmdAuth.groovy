@@ -22,7 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.SysEnv
-import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigCmdAdapter
 import nextflow.exception.AbortOperationException
 import nextflow.platform.PlatformHelper
 import nextflow.plugin.Plugins
@@ -63,7 +63,7 @@ import org.pf4j.ExtensionPoint
  * </ol>
  *
  * <h2>Plugin Architecture</h2>
- * <p>The actual authentication implementation is provided by the {@code nf-seqera} plugin through
+ * <p>The actual authentication implementation is provided by the {@code nf-tower} plugin through
  * the {@link AuthCommand} extension point. This allows the authentication logic to be maintained
  * separately from the CLI interface.
  *
@@ -110,7 +110,7 @@ class CmdAuth extends CmdBase implements UsageAware {
     /**
      * Extension point interface for authentication command implementations.
      *
-     * <p>This interface is implemented by the {@code nf-seqera} plugin to provide the actual
+     * <p>This interface is implemented by the {@code nf-tower} plugin to provide the actual
      * authentication logic while keeping the CLI interface in the core Nextflow codebase.
      * The plugin system uses PF4J to discover and load implementations at runtime.
      *
@@ -216,7 +216,7 @@ class CmdAuth extends CmdBase implements UsageAware {
         // setup the plugins system and load the secrets provider
         Plugins.init()
         // load the config
-        Plugins.start('nf-seqera')
+        Plugins.start('nf-tower')
         // get Auth command operations implementation from plugins
         return Plugins.getExtension(AuthCommand)
     }
@@ -283,7 +283,7 @@ class CmdAuth extends CmdBase implements UsageAware {
         @Override
         void usage(List<String> result) {
             // Read config to get the actual resolved endpoint value
-            final builder = new ConfigBuilder().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
+            final builder = new ConfigCmdAdapter().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
             final config = builder.buildConfigObject().flatten()
             final towerConfig = config.findAll { it.key.toString().startsWith('tower.') }
                 .collectEntries { k, v -> [(k.toString().substring(6)): v] }

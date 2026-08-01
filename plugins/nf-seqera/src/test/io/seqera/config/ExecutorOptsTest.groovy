@@ -269,6 +269,28 @@ class ExecutorOptsTest extends Specification {
         config.predictionModel == null
     }
 
+    def 'should create config with schedulingRequirement.maxCpusPerUser' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            schedulingRequirement: [maxCpusPerUser: 16]
+        ])
+
+        then:
+        config.schedulingRequirement.maxCpusPerUser == 16
+    }
+
+    def 'should default schedulingRequirement.maxCpusPerUser to null' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com'
+        ])
+
+        then:
+        config.schedulingRequirement != null
+        config.schedulingRequirement.maxCpusPerUser == null
+    }
+
     def 'should create config with taskEnvironment' () {
         when:
         def config = new ExecutorOpts([
@@ -299,6 +321,27 @@ class ExecutorOptsTest extends Specification {
 
         then:
         config.taskEnvironment == [:]
+    }
+
+    def 'should create config with providerConfig' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            providerConfig: [subnetId: 'subnet-1', securityGroup: 'sg-2']
+        ])
+
+        then:
+        config.providerConfig == [subnetId: 'subnet-1', securityGroup: 'sg-2']
+    }
+
+    def 'should handle null providerConfig' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com'
+        ])
+
+        then:
+        config.providerConfig == null
     }
 
     def 'should create config with computeEnvId' () {

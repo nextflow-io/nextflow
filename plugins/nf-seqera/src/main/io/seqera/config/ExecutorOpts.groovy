@@ -108,12 +108,25 @@ class ExecutorOpts implements ConfigScope {
     """)
     final String predictionModel
 
+    @Description("""
+        Scheduling requirements applied to this run by the Seqera scheduler.
+    """)
+    final SchedulingRequirementOpts schedulingRequirement
+
     @ConfigOption
     @Description("""
         Custom environment variables to apply to all tasks submitted by the Seqera executor.
         These are merged with the Fusion environment variables, with Fusion variables taking precedence.
     """)
     final Map<String, String> taskEnvironment
+
+    @ConfigOption
+    @Description("""
+        Backend-specific provider configuration merged into the compute cluster's backend
+        properties (for cluster isolation). When omitted, the backend falls back to its
+        environment variable configuration.
+    """)
+    final Map<String, String> providerConfig
 
     @ConfigOption
     @Description("""
@@ -154,8 +167,12 @@ class ExecutorOpts implements ConfigScope {
         this.autoLabels = parseAutoLabels(opts.get('autoLabels'))
         // prediction model
         this.predictionModel = opts.predictionModel as String ?: null
+        // scheduling requirements (e.g. per-user vCPU cap)
+        this.schedulingRequirement = new SchedulingRequirementOpts(opts.schedulingRequirement as Map ?: Map.of())
         // custom task environment variables
         this.taskEnvironment = opts.taskEnvironment as Map<String, String>
+        // backend-specific provider configuration
+        this.providerConfig = opts.providerConfig as Map<String, String>
         // compute environment ID
         this.computeEnvId = opts.computeEnvId as String
         // on-demand shell access to task containers (default false)
@@ -220,8 +237,16 @@ class ExecutorOpts implements ConfigScope {
         return predictionModel
     }
 
+    SchedulingRequirementOpts getSchedulingRequirement() {
+        return schedulingRequirement
+    }
+
     Map<String, String> getTaskEnvironment() {
         return taskEnvironment
+    }
+
+    Map<String, String> getProviderConfig() {
+        return providerConfig
     }
 
     String getComputeEnvId() {

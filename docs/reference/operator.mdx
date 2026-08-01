@@ -7,7 +7,7 @@ description: Reference for legacy Nextflow channel operators.
 
 <AddedInVersion version="26.04">
 
-See [Operators (typed)][operator-typed] for the new typed operator reference. See [Using operators with static typing][static-types-operators] for the migration guide.
+See [Operators][operator-typed] for the core operator reference. See [Using operators with static typing][static-types-operators] for the migration guide.
 
 </AddedInVersion>
 
@@ -662,7 +662,7 @@ When `true`, an error is reported when the operator receives an item from one ch
 
 ##### `remainder`
 
-When `true`, unmatched items are emitted at the end, otherwise they are discarded (default: `false`). 
+When `true`, unmatched items are emitted at the end, otherwise they are discarded (default: `false`).
 
 ## last
 
@@ -1441,7 +1441,7 @@ The zero-based index of the element to be transposed. Can also be a list of indi
 
 ##### `remainder`
 
-When `true`, incomplete tuples are emitted with `null` values for missing elements, otherwise they are discarded (default: `false`). 
+When `true`, incomplete tuples are emitted with `null` values for missing elements, otherwise they are discarded (default: `false`).
 
 :::tip
 As a best practice, use [`flatMap`](#flatmap) instead of `transpose`, since `flatMap` has a well-defined return type.

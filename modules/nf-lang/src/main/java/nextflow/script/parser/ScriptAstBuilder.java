@@ -886,8 +886,6 @@ public class ScriptAstBuilder {
         var hasEmitExpression = statements.stream().anyMatch(this::isEmitExpression);
         if( hasEmitExpression && statements.size() > 1 )
             collectSyntaxError(new SyntaxException("Every emit must be assigned to a name when there are multiple emits", result));
-        if( !hasEmitExpression && statements.size() == 1 )
-            collectWarning("Emit name should be omitted when there is only one emit", ctx.workflowEmit(0).getText(), result);
         return result;
     }
 

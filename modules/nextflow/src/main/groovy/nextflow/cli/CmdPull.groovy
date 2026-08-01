@@ -31,7 +31,7 @@ import nextflow.util.TestOnly
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Download or update a project")
-class CmdPull extends CmdBase implements HubOptions {
+class CmdPull extends CmdBase implements HubAware {
 
     static final public NAME = 'pull'
 
@@ -94,7 +94,7 @@ class CmdPull extends CmdBase implements HubOptions {
     }
 
     private pullProjectRevision(String project, String revision) {
-        try (final manager = new AssetManager(project, this)) {
+        try (final manager = new AssetManager(project, toHubOptions())) {
             if( manager.isUsingLegacyStrategy() ) {
                 if( migrate ) {
                     log.info "Migrating ${project} revision ${revision} to multi-revision strategy"
