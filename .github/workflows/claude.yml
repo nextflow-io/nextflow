@@ -35,7 +35,7 @@ jobs:
           persist-credentials: false
 
       - name: Run Claude PR Action
-        uses: anthropics/claude-code-action@fa7e2f0a29a126f0b81cdcf360561b36e44cf608 # v1.0.180
+        uses: anthropics/claude-code-action@be7b93b1907a4abad570368f3c74b6fe3807510b # v1.0.183
         with:
           anthropic_api_key: ${{ secrets.NEXTFLOW_ANTHROPIC_API_KEY }}
           timeout_minutes: "60"
