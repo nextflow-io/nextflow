@@ -16,7 +16,6 @@
 
 package nextflow.cloud.azure.config
 
-import com.azure.compute.batch.models.ImageVerificationType
 import com.azure.compute.batch.models.OSType
 import com.google.common.hash.Hasher
 import groovy.transform.CompileStatic
@@ -144,8 +143,21 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
     """)
     final String vmType
 
+    @ConfigOption
+    @Description("""
+        The resource ID of a custom VM image from an Azure Compute Gallery to use for the pool nodes
+        (e.g. `/subscriptions/<id>/resourceGroups/<group>/providers/Microsoft.Compute/galleries/<gallery>/images/<definition>/versions/<version>`).
+        When set, `publisher` and `offer` are ignored, and `sku` must be set to the Batch node agent SKU id that matches the image OS (e.g. `batch.node.ubuntu 24.04`).
+    """)
+    final String virtualMachineImageId
+
+    @ConfigOption
+    @Description("""
+        Allow the use of unverified VM images when resolving the image from the Batch supported-images list (default: `false`). Ignored when `virtualMachineImageId` is set.
+    """)
+    final boolean allowUnverifiedImages
+
     OSType osType = DEFAULT_OS_TYPE
-    ImageVerificationType verification = ImageVerificationType.VERIFIED
 
     String registry
     String userName
@@ -160,6 +172,10 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
         this.privileged = opts.privileged ?: false
         this.publisher = opts.publisher ?: DEFAULT_PUBLISHER
         this.offer = opts.offer ?: DEFAULT_OFFER
+        this.virtualMachineImageId = opts.virtualMachineImageId ?: null
+        this.allowUnverifiedImages = opts.allowUnverifiedImages as boolean
+        if( this.virtualMachineImageId && !opts.sku )
+            throw new IllegalArgumentException("Azure Batch pool option 'sku' is required when 'virtualMachineImageId' is set - it must be set to the Batch node agent SKU id that matches the image OS (e.g. 'batch.node.ubuntu 24.04')")
         this.sku = opts.sku ?: DEFAULT_SKU
         this.vmType = opts.vmType ?: DEFAULT_VM_TYPE
         this.fileShareRootPath = opts.fileShareRootPath ?: buildFileShareRootPath()
@@ -195,6 +211,12 @@ class AzPoolOpts implements CacheFunnel, ConfigScope {
         hasher.putUnencodedChars(schedulePolicy ?: '')
         hasher.putUnencodedChars(virtualNetwork ?: '')
         hasher.putBoolean(lowPriority)
+        hasher.putUnencodedChars(virtualMachineImageId ?: '')
+        // 'allowUnverifiedImages' only affects marketplace image resolution; it's ignored when a gallery image is set.
+        // NOTE: only hashed when set, so that default configs keep the same hash as previous Nextflow versions
+        // (no auto-pool-id churn on upgrade) - do not change to an unconditional putBoolean
+        if( !virtualMachineImageId && allowUnverifiedImages )
+            hasher.putBoolean(allowUnverifiedImages)
         hasher.putUnencodedChars(startTask.script ?: '')
         hasher.putBoolean(startTask.privileged)
         return hasher
