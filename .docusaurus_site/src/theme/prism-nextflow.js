@@ -75,7 +75,7 @@ export default function(Prism) {
       alias: 'property'
     },
     'nextflow-keyword': {
-      pattern: /\b(?:process|workflow|params|input|output|stage|topic|publish|script|shell|exec|when|channel|emit|take|main|tuple|path|val|file|env|stdin|stdout|stderr|include|from)\b/,
+      pattern: /\b(?:process|workflow|params|input|output|stage|topic|publish|script|shell|exec|when|emit|take|main|include|from)\b/,
       alias: 'keyword'
     },
     // Standard types used by static typing, including generic types such as
