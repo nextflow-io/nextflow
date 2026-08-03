@@ -447,10 +447,10 @@ The `fs` command performs filesystem operations on remote storage systems suppor
 Use this to manage remote data, test cloud storage access, or perform bulk file operations without additional tools:
 
 ```bash
-nextflow fs list s3://my-bucket/data/
+nextflow fs ls 's3://my-bucket/data/*'
 nextflow fs cat s3://my-bucket/data/file.txt
 nextflow fs cp s3://my-bucket/data/file.txt s3://dest/
-nextflow fs delete s3://my-bucket/data/file.txt
+nextflow fs rm s3://my-bucket/data/file.txt
 ```
 
 See [fs][cli-fs] for more information.
@@ -559,35 +559,35 @@ cite doi:10.1038/nbt.3820
 http://nextflow.io
 ```
 
-[cli-auth]: ./reference/cli#auth
-[cli-clean]: ./reference/cli#clean
-[cli-clone]: ./reference/cli#clone
-[cli-config]: ./reference/cli#config
-[cli-drop]: ./reference/cli#drop
-[cli-fs]: ./reference/cli#fs
-[cli-inspect]: ./reference/cli#inspect
-[cli-kuberun]: ./reference/cli#kuberun
-[cli-launch]: ./reference/cli#launch
-[cli-lineage]: ./reference/cli#lineage
-[cli-lint]: ./reference/cli#lint
-[cli-log]: ./reference/cli#log
-[cli-module]: ./reference/cli#module
-[cli-module-install]: ./reference/cli#module-install
-[cli-module-list]: ./reference/cli#module-list
-[cli-module-view]: ./reference/cli#module-view
-[cli-module-run]: ./reference/cli#module-run
-[cli-module-spec]: ./reference/cli#module-spec
-[cli-module-validate]: ./reference/cli#module-validate
-[cli-module-remove]: ./reference/cli#module-remove
-[cli-module-publish]: ./reference/cli#module-publish
-[cli-module-search]: ./reference/cli#module-search
+[cli-auth]: ./reference/cli/auth
+[cli-clean]: ./reference/cli/clean
+[cli-clone]: ./reference/cli/clone
+[cli-config]: ./reference/cli/config
+[cli-drop]: ./reference/cli/drop
+[cli-fs]: ./reference/cli/fs
+[cli-inspect]: ./reference/cli/inspect
+[cli-kuberun]: ./reference/cli/kuberun
+[cli-launch]: ./reference/cli/launch
+[cli-lineage]: ./reference/cli/lineage
+[cli-lint]: ./reference/cli/lint
+[cli-log]: ./reference/cli/log
+[cli-module]: ./reference/cli/module
+[cli-module-install]: ./reference/cli/module#module-install
+[cli-module-list]: ./reference/cli/module#module-list
+[cli-module-view]: ./reference/cli/module#module-view
+[cli-module-run]: ./reference/cli/module#module-run
+[cli-module-spec]: ./reference/cli/module#module-spec
+[cli-module-validate]: ./reference/cli/module#module-validate
+[cli-module-remove]: ./reference/cli/module#module-remove
+[cli-module-publish]: ./reference/cli/module#module-publish
+[cli-module-search]: ./reference/cli/module#module-search
 [cli-params]: ./cli#pipeline-parameters
-[cli-plugin]: ./reference/cli#plugin
-[cli-pull]: ./reference/cli#pull
+[cli-plugin]: ./reference/cli/plugin
+[cli-pull]: ./reference/cli/pull
 [cli-reference]: ./reference/cli
-[cli-run]: ./reference/cli#run
-[cli-secrets]: ./reference/cli#secrets
-[cli-view]: ./reference/cli#view
+[cli-run]: ./reference/cli/run
+[cli-secrets]: ./reference/cli/secrets
+[cli-view]: ./reference/cli/view
 [config-constants]: ./config#constants-and-functions
 [config-env-vars]: ./reference/env-vars
 [config-page]: ./config
