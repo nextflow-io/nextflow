@@ -47,7 +47,7 @@ workflow.onError {
 ```
 
 :::note
-Both the `onError` and `onComplete` handlers are invoked when an error condition is encountered. The `onError` handler is called as soon as the error is raised, while `onComplete` is called just before the pipeline execution is about to terminate. When using the `finish` [errorStrategy][process-error-strategy], there may be a significant gap between the two, depending on the time required to complete any pending job.
+Both the `onError` and `onComplete` handlers are invoked when an error condition is encountered. The `onError` handler is called as soon as the error is raised, while `onComplete` is called just before the pipeline execution is about to terminate.
 :::
 
 <AddedInVersion version="25.10" />
@@ -66,11 +66,9 @@ workflow {
 
 ## Mail
 
-The built-in function `sendMail` allows you to send a mail message from a workflow script.
+Use the `sendMail` function to send a mail message from a workflow script.
 
-### Basic mail
-
-The mail attributes are specified as named parameters or an equivalent map. For example:
+For example:
 
 ```nextflow
 sendMail(
@@ -81,73 +79,7 @@ sendMail(
 )
 ```
 
-which is equivalent to:
-
-```nextflow
-mail = [
-    to: 'you@gmail.com',
-    subject: 'Catch up',
-    body: 'Hi, how are you!',
-    attach: '/some/path/attachment/file.txt'
-]
-
-sendMail(mail)
-```
-
-The following parameters can be specified:
-
-
-##### `to`
-
-*Multiple email addresses can be specified by separating them with a comma.*
-
-The mail target recipients.
-
-##### `cc`
-
-*Multiple email addresses can be specified by separating them with a comma.*
-
-The mail CC recipients.
-
-##### `bcc`
-
-*Multiple email addresses can be specified by separating them with a comma.*
-
-The mail BCC recipients.
-
-##### `from`
-
-*Multiple email addresses can be specified by separating them with a comma.*
-
-The mail sender address.
-
-##### `subject`
-
-The mail subject.
-
-##### `charset`
-
-The mail content charset (default: `UTF-8`).
-
-##### `text`
-
-The mail plain text content.
-
-##### `body`
-
-The mail body content. It can be either plain text or HTML content.
-
-##### `type`
-
-The mail body mime type. If not specified it's automatically detected.
-
-##### `attach`
-
-Single file or a list of files to be included as mail attachments.
-
-### Advanced mail
-
-Another version of `sendMail` allows a more idiomatic syntax:
+You can also specify mail options using a closure:
 
 ```nextflow
 sendMail {
@@ -157,6 +89,7 @@ sendMail {
     attach '/other/path/image.png'
     subject 'Catch up'
 
+    // string expression is treated as the mail body
     '''
     Hi there,
     Look! Multi-lines
@@ -165,39 +98,7 @@ sendMail {
 }
 ```
 
-The same attributes listed in the table in the previous section are allowed.
-
-:::tip
-A string expression at the end is implicitly interpreted as the mail body content, therefore the `body` parameter can be omitted as shown above.
-:::
-
-:::tip
-To send an email that includes text and HTML content, use both the `text` and `body` attributes. The first is used for the plain text content, while the second is used for the rich HTML content.
-:::
-
-### Mail attachments
-
-When using the curly brackets syntax, the `attach` parameter can be repeated two or more times to include multiple attachments in the mail message.
-
-Moreover for each attachment it's possible to specify any of the following options:
-
-##### `contentId`
-
-Defines the `Content-ID` header field for the attachment.
-
-##### `disposition`
-
-Defines the `Content-Disposition` header field for the attachment.
-
-##### `fileName`
-
-Defines the `filename` parameter of the `Content-Disposition` header field.
-
-##### `description`
-
-Defines the `Content-Description` header field for the attachment.
-
-For example:
+Attach multiple files with custom headers:
 
 ```nextflow
 sendMail {
@@ -210,6 +111,8 @@ sendMail {
     '''
 }
 ```
+
+See [sendMail][stdlib-namespaces-sendmail] for the full reference.
 
 ### Mail configuration
 
@@ -316,3 +219,4 @@ See [Completion handler](#completion-handler) to learn more about the workflow n
 [config-mail]: ./reference/config#mail
 [config-notification]: ./reference/config#notification
 [process-error-strategy]: ./reference/process#errorstrategy
+[stdlib-namespaces-sendmail]: ./reference/stdlib-namespaces/global#sendmail-options-
