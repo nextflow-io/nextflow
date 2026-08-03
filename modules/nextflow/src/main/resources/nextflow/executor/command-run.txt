@@ -169,7 +169,7 @@ nxf_unstage() {
         ## stdout/stderr of the subshell are appended to .command.out/.err
         ## (rather than replacing them) so any output produced while
         ## unstaging is visible next to the task's own output.
-        (set -e -o pipefail; (nxf_unstage_outputs | tee -a {{stdout_file}}) 3>&1 1>&2 2>&3 | tee -a {{stderr_file}})
+        (set -e -o pipefail; (nxf_unstage_outputs | tee -a {{stdout_file}}) 3>&1 1>&2 2>&3 | tee -a {{stderr_file}}) 3>&1 1>&2 2>&3
         nxf_unstage_ret=$?
     fi
     ## Control files (.command.out/.err/.log/...) are unstaged unconditionally,
@@ -204,7 +204,7 @@ nxf_main() {
     {{stage_cmd}}
 
     set +e
-    (set -o pipefail; (nxf_launch | tee {{stdout_file}}) 3>&1 1>&2 2>&3 | tee {{stderr_file}}) &
+    (set -o pipefail; (nxf_launch | tee {{stdout_file}}) 3>&1 1>&2 2>&3 | tee {{stderr_file}}) 3>&1 1>&2 2>&3 &
     pid=$!
     wait $pid || nxf_main_ret=$?
     {{unstage_cmd}}
