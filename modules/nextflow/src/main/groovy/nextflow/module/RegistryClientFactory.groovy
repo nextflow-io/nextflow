@@ -37,6 +37,8 @@ class RegistryClientFactory {
 
     static RegistryClient forConfig(RegistryConfig config) {
         final cfg = config ?: new RegistryConfig()
+        // the configured registries are authoritative: use exactly the URLs declared in the
+        // `registry` scope (which falls back to the default registry when none are configured)
         return new RegistryClient(
             cfg.allUrls as List<String>,
             cfg.apiKey,
