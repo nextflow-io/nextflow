@@ -87,7 +87,7 @@ class SlurmTaskGroupAnalyzer {
      *
      * Any omitted field is left null/0, meaning that dimension is unconstrained during grouping.
      */
-    private void readNodeCapacity() {
+    void readNodeCapacity() {
         final cpus = session.config.navigate('executor.slurm.nodeCapacity.cpus')
         nodeMaxCpus = cpus ? cpus as int : 0
 
