@@ -145,10 +145,12 @@ When including a config file, the included config is evaluated with the paramete
 You should declare parameters in the config file only when other config options use them. When you use a parameter in the script, you should declare it there and override it in config profiles as needed:
 
 ```nextflow
+// main.nf
 params.input = null
 ```
 
 ```groovy
+// nextflow.config
 params {
     publish_mode = 'copy'
 }
