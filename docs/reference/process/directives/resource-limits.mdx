@@ -1,0 +1,46 @@
+---
+title: resourceLimits
+description: Reference for the `resourceLimits` process directive.
+---
+
+# `resourceLimits`
+
+<AddedInVersion version="24.04" />
+
+The `resourceLimits` directive defines environment-specific limits for task resource requests.
+
+Resource limits can be specified in a process:
+
+```nextflow
+process hello {
+    resourceLimits cpus: 24, memory: 768.GB, time: 72.h
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+Or in the Nextflow configuration:
+
+```nextflow
+process.resourceLimits = [
+    cpus: 24,
+    memory: 768.GB,
+    time: 72.h
+]
+```
+
+Resource limits can be defined for the following directives:
+
+- [cpus](./cpus)
+- [disk](./disk)
+- [memory](./memory)
+- [time](./time)
+
+When a task resource request exceeds the corresponding limit, the task resources are automatically reduced to comply with these limits before the job is submitted.
+
+Resource limits are a useful way to prevent tasks with [dynamic resources][dynamic-task-resources] from requesting more resources than can be provided by an executor (e.g. a task requests 32 cores but the largest node in the cluster has 24).
+
+[dynamic-task-resources]: ../../../process#dynamic-task-resources

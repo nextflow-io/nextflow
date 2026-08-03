@@ -1,0 +1,66 @@
+---
+title: errorStrategy
+description: Reference for the `errorStrategy` process directive.
+---
+
+# `errorStrategy`
+
+The `errorStrategy` directive defines how to handle task failures.
+
+A task failure occurs when the executed script returns a non-zero exit code. By default, the pipeline run is aborted.
+
+The following error strategies are available:
+
+##### `'terminate'` (default)
+
+When a task fails, terminate the pipeline immediately and report an error. Pending and running jobs are killed.
+
+##### `'finish'`
+
+When a task fails, wait for submitted and running tasks to finish and then terminate the pipeline, reporting an error.
+
+##### `'ignore'`
+
+When a task fails, ignore it and continue the pipeline execution. If the `workflow.failOnIgnore` config option is set to `true`, the pipeline will report an error (i.e. return a non-zero exit code) upon completion. Otherwise, the pipeline will complete successfully.
+
+See the [workflow][stdlib-namespaces-workflow] namespace for more information.
+
+##### `'retry'`
+
+When a task fails, retry it.
+
+When setting the `errorStrategy` directive to `ignore` the process doesn't stop on an error condition, it just reports a message notifying you of the error event.
+
+For example:
+
+```nextflow
+process hello {
+    errorStrategy 'ignore'
+
+    // ...
+}
+```
+
+In this case, the workflow will complete successfully and return an exit status of 0. However, if you set `workflow.failOnIgnore = true` in your Nextflow configuration, the workflow will return a non-zero exit status and report the failed tasks as an error.
+
+The `retry` error strategy retries failed tasks. For example:
+
+```nextflow
+process hello {
+    errorStrategy 'retry'
+
+    // ...
+}
+```
+
+The number of times a failing process is re-executed is defined by the [maxRetries](./max-retries) and [maxErrors](./max-errors) directives.
+
+:::tip
+More complex strategies depending on the task exit status or other parametric values can be defined using a dynamic `errorStrategy`. See [Dynamic directives][dynamic-directives] for details.
+:::
+
+See also: [maxErrors](./max-errors), [maxRetries](./max-retries), [dynamic task resources][dynamic-task-resources]
+
+[dynamic-directives]: ../../../process#dynamic-directives
+[dynamic-task-resources]: ../../../process#dynamic-task-resources
+[stdlib-namespaces-workflow]: ../../stdlib-namespaces/workflow

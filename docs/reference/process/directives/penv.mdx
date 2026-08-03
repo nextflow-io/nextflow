@@ -1,0 +1,25 @@
+---
+title: penv
+description: Reference for the `penv` process directive.
+---
+
+# `penv`
+
+The `penv` directive defines the parallel environment to use when submitting tasks to the [SGE][sge-executor] resource manager. For example:
+
+```nextflow
+process blast {
+    cpus 4
+    penv 'smp'
+    executor 'sge'
+
+    script:
+    """
+    blastp -query input_sequence -num_threads ${task.cpus}
+    """
+}
+```
+
+Refer to your cluster documentation or your system administrator to determine whether this feature is supported in your environment.
+
+[sge-executor]: ../../../executor/sge

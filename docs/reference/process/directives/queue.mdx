@@ -1,0 +1,32 @@
+---
+title: queue
+description: Reference for the `queue` process directive.
+---
+
+# `queue`
+
+The `queue` directive defines the queue to which tasks should be submitted, for executors that support queues. For example:
+
+```nextflow
+process hello {
+    queue 'long'
+    executor 'slurm'
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+Some executors can accept multiple queue names as a comma-separated string:
+
+```nextflow
+queue 'short,long,cn-el6'
+```
+
+However, this is not generally supported by cloud executors such as AWS Batch, Azure Batch, and Google Batch.
+
+See [Executors][executor-page] to see which executors support this directive.
+
+[executor-page]: ../../../executor

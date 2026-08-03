@@ -1,0 +1,73 @@
+---
+title: Task properties
+description: Reference for the task properties available in a process body.
+---
+
+# Task properties
+
+The following task properties are defined in the process body:
+
+##### `task.attempt`
+
+The current task attempt.
+
+##### `task.exitStatus`
+
+*Available only in `script:` and `shell:` blocks*
+
+The exit code returned by the task script.
+
+The exit code is only available after the task has been executed (e.g., the [errorStrategy](./directives/error-strategy) directive).
+
+##### `task.hash`
+
+*Available only in `exec:` blocks*
+
+The task hash.
+
+##### `task.index`
+
+The process-level task index.
+
+##### `task.name`
+
+*Available only in `exec:` blocks*
+
+The task name.
+
+##### `task.previousException`
+
+<AddedInVersion version="24.10" />
+
+The exception reported by the previous task attempt.
+
+Since the exception is available after a failed task attempt, it can only be accessed when retrying a failed task execution, i.e., when `task.attempt` is greater than 1.
+
+##### `task.previousTrace`
+
+<AddedInVersion version="24.10" />
+
+The trace record associated with the previous task attempt.
+
+Since the trace record is available after a failed task attempt, it can only be accessed when retrying a failed task execution, i.e., when `task.attempt` is greater than 1. See [Trace file][trace-report] for a list of available fields.
+
+:::note
+The trace fields `%cpu` and `%mem` can be accessed as `pcpu` and `pmem`, respectively.
+:::
+
+##### `task.process`
+
+The name of the process that spawned the task.
+
+##### `task.workDir`
+
+*Available only in `exec:` blocks*
+
+The unique directory path for the task.
+
+:::note
+[Directive values](./directives) for a task can be accessed via `task.<directive>`. See [Task directive values][task-directive-values] for more information.
+:::
+
+[task-directive-values]: ../../process#using-task-directive-values
+[trace-report]: ../../reports#trace-file

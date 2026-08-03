@@ -1,0 +1,26 @@
+---
+title: maxRetries
+description: Reference for the `maxRetries` process directive.
+---
+
+# `maxRetries`
+
+The `maxRetries` directive defines the maximum number of times a task can be retried when using the `retry` error strategy. For example:
+
+```nextflow
+process hello {
+    errorStrategy 'retry'
+    maxRetries 3
+
+    script:
+    """
+    echo 'do this as that .. '
+    """
+}
+```
+
+In the above example, the run will fail if any task executed by `hello` fails more than three times.
+
+By default, only one retry per task is allowed. However, the run can still fail if the total number of failures for the process exceeds the number allowed by the `maxErrors` directive.
+
+See also: [errorStrategy](./error-strategy), [maxErrors](./max-errors)

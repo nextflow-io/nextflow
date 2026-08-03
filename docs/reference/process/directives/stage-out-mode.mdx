@@ -1,0 +1,36 @@
+---
+title: stageOutMode
+description: Reference for the `stageOutMode` process directive.
+---
+
+# `stageOutMode`
+
+The `stageOutMode` directive defines how output files are staged out from the scratch directory to the task work directory.
+
+The following modes are supported:
+
+##### `'copy'`
+
+Output files are copied from the scratch directory to the work directory.
+
+##### `'fcp'`
+
+<AddedInVersion version="23.04" />
+
+Output files are copied from the scratch directory to the work directory by using the [fcp](https://github.com/Svetlitski/fcp) utility (note: it must be available in the task environment).
+
+##### `'move'`
+
+Output files are moved from the scratch directory to the work directory.
+
+##### `'rclone'`
+
+<AddedInVersion version="23.04" />
+
+Output files are copied from the scratch directory to the work directory by using the [rclone](https://rclone.org) utility (note: it must be available in the task environment).
+
+##### `'rsync'`
+
+Output files are copied from the scratch directory to the work directory by using the `rsync` utility.
+
+See also: [scratch](./scratch)
