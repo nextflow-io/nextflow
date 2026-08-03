@@ -237,8 +237,8 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
     private String normalizeApiUrl(String url) {
         if( !url ) {
             // Read config to get the actual resolved endpoint value
-            final builder = new ConfigBuilder().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
-            final configObject = builder.buildConfigObject()
+            final configFile = Const.APP_HOME_DIR.resolve('config')
+            final configObject = new ConfigBuilder().build(configFile.exists() ? [ configFile ] : [])
             final towerConfig = configObject.navigate('tower') as Map ?: [:]
             return PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
         }
@@ -405,8 +405,8 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
     @Override
     void config(Boolean showHeader = true) {
         // Read from both main config and seqera-auth.config file
-        final builder = new ConfigBuilder().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
-        final configObject = builder.buildConfigObject()
+        final configFile = Const.APP_HOME_DIR.resolve('config')
+        final configObject = new ConfigBuilder().build(configFile.exists() ? [ configFile ] : [])
         final config = configObject.flatten()
 
         // Navigate to tower config section (returns map without 'tower.' prefix)
