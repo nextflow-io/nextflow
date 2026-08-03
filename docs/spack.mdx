@@ -49,12 +49,12 @@ Spack package names can be specified using the `spack` directive. Multiple packa
 
 ```nextflow
 process hello {
-  spack 'bwa samtools py-multiqc'
-
-  script:
-  '''
-  your_command --here
-  '''
+    spack 'bwa samtools py-multiqc'
+    
+    script:
+    '''
+    your_command --here
+    '''
 }
 ```
 
@@ -94,12 +94,12 @@ The path of an environment file can be specified using the `spack` directive:
 
 ```nextflow
 process hello {
-  spack '/some/path/my-env.yaml'
-
-  script:
-  '''
-  your_command --here
-  '''
+    spack '/some/path/my-env.yaml'
+    
+    script:
+    '''
+    your_command --here
+    '''
 }
 ```
 
@@ -113,12 +113,12 @@ If you already have a local Spack environment, you can use it in your workflow s
 
 ```nextflow
 process hello {
-  spack '/path/to/an/existing/env/directory'
-
-  script:
-  '''
-  your_command --here
-  '''
+    spack '/path/to/an/existing/env/directory'
+    
+    script:
+    '''
+    your_command --here
+    '''
 }
 ```
 
@@ -155,14 +155,14 @@ recommended to allow the execution via a command line option and to enhance the 
 
 ```groovy
 profiles {
-  spack {
-    process.spack = 'samtools'
-  }
+    spack {
+        process.spack = 'samtools'
+    }
 
-  docker {
-    process.container = 'biocontainers/samtools'
-    docker.enabled = true
-  }
+    docker {
+        process.container = 'biocontainers/samtools'
+        docker.enabled = true
+    }
 }
 ```
 

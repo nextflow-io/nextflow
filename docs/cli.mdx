@@ -263,20 +263,6 @@ See [drop][cli-drop] for more information.
 
 The `module` command allows you to discover, install, and run modules through a centralized module registry. See [Using modules][using-modules-page] and the [`module`][cli-module] command reference for more information.
 
-### Secret management
-
-The `secrets` command manages secure pipeline secrets.
-
-Use this to store credentials securely, reference them in pipelines without exposing values, and manage sensitive data centrally across your organization:
-
-```bash
-nextflow secrets list
-nextflow secrets set AWS_ACCESS_KEY_ID
-nextflow secrets delete AWS_ACCESS_KEY_ID
-```
-
-See [secrets][cli-secrets] for more information.
-
 ## Configuration and validation
 
 Configuration and validation options and commands help you control and verify pipeline settings. Configuration options supplement pipeline configuration at runtime, while validation commands inspect how Nextflow interprets your configuration files, process definitions, and scripts.
@@ -503,6 +489,20 @@ nextflow plugin my-plugin:hello --alpha --beta
 
 See individual plugin documentation for plugin specific commands.
 
+### Secrets
+
+The `secrets` command manages secure pipeline secrets.
+
+Use this to store credentials securely, reference them in pipelines without exposing values, and manage sensitive data centrally across your organization:
+
+```bash
+nextflow secrets list
+nextflow secrets set AWS_ACCESS_KEY_ID
+nextflow secrets delete AWS_ACCESS_KEY_ID
+```
+
+See [secrets][cli-secrets] for more information.
+
 ### Nextflow updates
 
 The `self-update` command updates Nextflow to a newer version.  It downloads and installs the latest release or a specific version. By default, it updates to the latest stable release:
@@ -593,5 +593,5 @@ http://nextflow.io
 [config-page]: ./config
 [config-params]: ./config#parameters
 [data-lineage-page]: ./tutorials/data-lineage
-[git-page]: ./cli
+[git-page]: ./git
 [using-modules-page]: ./modules/using-modules
