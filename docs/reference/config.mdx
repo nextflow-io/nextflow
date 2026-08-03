@@ -945,9 +945,9 @@ Determines how often to log the executor status (default`5 min`).
 
 ##### `executor.exitReadTimeout`
 
-*Used only by grid executors.*
+*Used only by grid executors and AWS Batch.*
 
-Determines how long to wait for the `.exitcode` file to be created after the task has completed, before returning an error status (default`270 sec`).
+Determines how long to wait for the `.exitcode` file to be created after the task has completed, before returning an error status (default`270 sec`). For AWS Batch, it determines how long to wait when the job status cannot be resolved via the Batch API (e.g. the job is missing from the `DescribeJobs` response), before returning an error status.
 
 ##### `executor.jobName`
 
