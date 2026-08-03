@@ -15,7 +15,7 @@ $ nextflow config [options] [project name or path]
 
 ## Description
 
-The `config` command is used for printing the project's configuration i.e. the `nextflow.config` and is especially useful for understanding the resolved profiles and parameters that Nextflow will use run a pipeline. For in-depth information, see the [Config profiles][config-profiles] section.
+The `config` command prints the project's resolved configuration, that is, the settings from `nextflow.config` and any profiles and parameters Nextflow applies when it runs the pipeline. See [Config profiles][config-profiles] for more information.
 
 ## Options
 
@@ -57,7 +57,7 @@ Print the value of a config option, or fail if the option is not defined.
 
 ## Examples
 
-Print out the inferred config using a the default group key-value notation:
+Print the resolved config using the default group key-value notation:
 
 ```console
 $ nextflow config
@@ -71,7 +71,7 @@ process {
 }
 ```
 
-Print out the config using a flat notation:
+Print the config using flat notation:
 
 ```console
 $ nextflow config -flat
@@ -80,7 +80,7 @@ docker.enabled = true
 process.executor = 'local'
 ```
 
-Print out the config using the Java properties notation:
+Print the config using Java properties notation:
 
 ```console
 $ nextflow config -properties
@@ -89,14 +89,14 @@ docker.enabled = true
 process.executor = local
 ```
 
-Print out the value of a specific configuration property:
+Print the value of a specific configuration property:
 
 ```console
 $ nextflow config -value process.executor
 local
 ```
 
-Print out all profiles from the project's configuration:
+Print all profiles from the project's configuration:
 
 ```console
 $ nextflow config -show-profiles

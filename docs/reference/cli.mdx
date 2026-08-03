@@ -1,71 +1,35 @@
 ---
 title: CLI reference
-description: Reference for all Nextflow CLI options, commands, and subcommands.
+description: Reference for the top-level Nextflow CLI options and commands.
 ---
 
 # CLI reference
 
-This page lists all of the available options and subcommands for the [Nextflow CLI][cli-page].
+The [Nextflow CLI][cli-page] takes top-level options, a command, and the command's arguments:
+
+```console
+$ nextflow [options] COMMAND [arg...]
+```
+
+[Options](#options) apply to every command. Each [command](#commands) has its own reference page with usage, options, subcommands, and examples.
 
 ## Options
 
-The top-level options are meant to be invoked in relation to the core Nextflow application and are applied to all commands. For options specific to any command, refer the CLI Commands section.
+| Option | Description |
+| ------ | ----------- |
+| `-C` | Comma-separated list of configuration files to use as the configuration set. Nextflow ignores all default configuration files. |
+| `-D` | Set JVM properties, for example `-Dfile.encoding=UTF-8`. Equivalent to the `NXF_JVM_ARGS` environment variable. |
+| `-bg` | Run Nextflow in the background. You can close your terminal without terminating the pipeline run. |
+| `-c, -config` | Comma-separated list of configuration files to add to the configuration set. |
+| <code style={{whiteSpace: 'nowrap'}}>-d, -dockerize</code> | <DeprecatedInVersion version="23.10" /> Launch Nextflow via Docker (experimental). |
+| `-h` | Print available commands and options. |
+| `-log` | Set Nextflow log file path (default: `.nextflow.log`). Must be a local path. |
+| `-q, -quiet` | Do not print the Nextflow banner and execution progress to the console. Does not affect error messages. |
+| <code style={{whiteSpace: 'nowrap'}}>-remote-debug</code> | Enable JVM interactive remote debugging (experimental). |
+| `-syslog` | Send logs to a [Syslog](https://en.wikipedia.org/wiki/Syslog) server, for example `localhost:514`. |
+| `-trace` | Enable trace level logging for the specified packages. Separate multiple packages with a comma, for example `-trace nextflow,io.seqera`. |
+| `-v, -version` | Print the program version. |
 
-Available options:
-
-##### `-C`
-
-Comma-separated list of configuration files which are used as the configuration set. Any other default configuration files are ignored.
-
-##### `-D`
-
-Set JVM properties (e.g. `-Dfile.encoding=UTF-8`). Equivalent to the `NXF_JVM_ARGS` environment variable.
-
-##### `-bg`
-
-Execute Nextflow in background.
-
-Allows you to close your terminal without terminating the pipeline run.
-
-##### `-c, -config`
-
-Comma-separated list of configuration files which are added to the configuration set.
-
-##### `-d, -dockerize`
-
-<DeprecatedInVersion version="23.10" />
-
-Launch Nextflow via Docker (experimental).
-
-##### `-h`
-
-Print available commands and options.
-
-##### `-log`
-
-Set Nextflow log file path (default: `.nextflow.log`). Must be a local path.
-
-##### `-q, -quiet`
-
-Do not print the Nextflow banner and execution progress to the console.
-
-Does not affect error messages.
-
-##### `-remote-debug`
-
-Enable JVM interactive remote debugging (experimental).
-
-##### `-syslog`
-
-Send logs to a [Syslog](https://en.wikipedia.org/wiki/Syslog) server (e.g. `localhost:514`).
-
-##### `-trace`
-
-Enable trace level logging for the specified packages. Multiple packages can be provided separating them with a comma, e.g. `-trace nextflow,io.seqera`.
-
-##### `-v, -version`
-
-Print the program version.
 
 ## Commands
 

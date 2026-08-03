@@ -15,13 +15,13 @@ $ nextflow drop [options] [project]
 
 ## Description
 
-The `drop` command is used to remove the projects which have been downloaded into the global cache. Please refer the `list` command for generating a list of downloaded pipelines.
+The `drop` command removes a project that was downloaded into the global cache. Use the `list` command to list the downloaded pipelines.
 
 ## Options
 
 ##### `-f`
 
-Delete the repository without taking care of local changes.
+Delete the repository, ignoring any local changes.
 
 ##### `-h, -help`
 
@@ -41,7 +41,7 @@ Drop the `nextflow-io/hello` project:
 $ nextflow drop nextflow-io/hello
 ```
 
-Forcefully drop the `nextflow-io/hello` pipeline, ignoring any local changes:
+Drop the `nextflow-io/hello` project, ignoring any local changes:
 
 ```console
 $ nextflow drop nextflow-io/hello -f

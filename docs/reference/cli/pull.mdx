@@ -15,7 +15,7 @@ $ nextflow pull [options] [project]
 
 ## Description
 
-The `pull` command downloads a pipeline from a Git-hosting platform into the global cache `~/.nextflow/assets` and modifies it accordingly. For downloading a pipeline into a local directory, please refer to the `nextflow clone` command.
+The `pull` command downloads a pipeline from a Git-hosting platform into the global cache `~/.nextflow/assets` and modifies it accordingly. To download a pipeline into a local directory, use the `nextflow clone` command.
 
 ## Options
 
@@ -37,13 +37,13 @@ Print the command usage.
 
 ##### `-hub` (`github`)
 
-Service hub where the project is hosted. Options: `gitlab` or `bitbucket`
+Service hub where the project is hosted. Options: `gitlab` or `bitbucket`.
 
 ##### `-migrate`
 
 <AddedInVersion version="26.04" />
 
-Update the project asset to new multi-revision strategy.
+Update the project asset to the new multi-revision strategy.
 
 ##### `-r, -revision`
 
@@ -57,7 +57,7 @@ Private repository user name.
 
 ## Examples
 
-Download a new pipeline or pull the latest revision for a specific project:
+Download a project, or pull the latest revision if it is already downloaded:
 
 ```console
 $ nextflow pull nextflow-io/hello
@@ -77,7 +77,7 @@ Checking nextflow-hub/fastqc ...
 done - revision: 087659b18e [master]
 ```
 
-Download a specific revision of a new project or pull the latest revision for a specific project:
+Pull a specific revision of a project:
 
 ```console
 $ nextflow pull nextflow-io/hello -r v1.1
