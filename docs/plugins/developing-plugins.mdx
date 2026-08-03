@@ -129,6 +129,18 @@ Runs plugin unit tests. See [Test a plugin][gradle-plugin-test] for more informa
 
 Nextflow’s plugin system exposes various extension points. This section gives examples of typical extension points and how to use them.
 
+Each extension point must be registered in `build.gradle`, so that Nextflow can discover it:
+
+```groovy
+nextflowPlugin {
+    // ...
+    extensionPoints = [
+        'nextflow.myplugin.MyPluginConfig',
+        // other extension points...
+    ]
+}
+```
+
 ### Commands
 
 Plugins can define custom CLI commands that are executable with the `nextflow plugin` command.
