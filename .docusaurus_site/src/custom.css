@@ -30,6 +30,27 @@ h5, h6 {
   margin-left: 1rem;
 }
 
+/* Sidebar scrolling.
+   The theme sticks the sidebar viewport at `--ifm-navbar-height - 2rem` but
+   leaves its `max-height` at `100vh` (stock Docusaurus sticks it at `top: 0`),
+   so the scroll container hangs 2rem below the window. Since it is sticky, that
+   2rem never comes into view: the last menu entry and the end of the scrollbar
+   track are unreachable no matter how far the page is scrolled. Subtract the
+   offset from the height so the container ends at the window edge. `overflow-y`
+   is stated explicitly rather than relying on Infima's `.menu { overflow-x:
+   hidden }` computing the other axis to `auto`, and the extra bottom padding
+   keeps the last entry off the window edge once it can be scrolled to. */
+@media (min-width: 997px) {
+  .theme-doc-sidebar-container > div {
+    max-height: calc(100vh - (var(--ifm-navbar-height) - 2rem));
+  }
+
+  .theme-doc-sidebar-container nav.menu {
+    overflow-y: auto;
+    padding-bottom: 1.5rem;
+  }
+}
+
 /* Make wide tables horizontally scrollable instead of overflowing the page */
 .markdown table {
   display: block;
