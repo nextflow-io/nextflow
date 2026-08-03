@@ -1,42 +1,22 @@
-FROM pditommaso/dkrbase:1.2
+FROM debian:stable-slim
 
-MAINTAINER Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+# Tools required by the test suite: blastp (blast.nf, blast-parallel.nf),
+# t_coffee (blast-parallel.nf, watch.nf), AMPA.pl (ampa.nf).
+# Math::CDF is not packaged by Debian, so it is the only source build.
+# gnuplot is required: AMPA.pl exits 2 if absent, even with -noplot.
+RUN apt-get update -qq && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -qq -y --no-install-recommends \
+      ncbi-blast+ \
+      t-coffee \
+      libmath-round-perl \
+      gnuplot-nox \
+      build-essential \
+      cpanminus && \
+    cpanm --notest Math::CDF && \
+    apt-get purge -qq -y build-essential cpanminus && \
+    apt-get autoremove -qq -y && \
+    rm -rf /var/lib/apt/lists/* /root/.cpanm
 
-RUN apt-get update -y && apt-get install -q -y gnuplot python && apt-get clean 
+COPY bin/AMPA.pl /usr/local/bin/
 
-#
-# Required PERL modules
-#
-RUN cpanm Math::CDF Math::Round && \
-  rm -rf /root/.cpanm/work/
-
-
-#
-# BLAST
-#
-RUN wget -q ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/2.2.29/ncbi-blast-2.2.29+-x64-linux.tar.gz && \
-    tar xf ncbi-blast-2.2.29+-x64-linux.tar.gz && \
-    mv ncbi-blast-2.2.29+ /opt/ && \
-    rm -rf ncbi-blast-2.2.29+-x64-linux.tar.gz && \
-    ln -s /opt/ncbi-blast-2.2.29+/ /opt/blast
-
-# 
-# install T-Coffee 
-#
-RUN wget -q http://tcoffee.org/Packages/Stable/Version_11.00.8cbe486/linux/T-COFFEE_installer_Version_11.00.8cbe486_linux_x64.tar.gz && \
-  tar xf T-COFFEE_installer_Version_11.00.8cbe486_linux_x64.tar.gz -C /opt && \
-  mv /opt/T-COFFEE_installer_Version_11.00.8cbe486_linux_x64 /opt/tcoffee && \
-  rm -rf /opt/tcoffee/plugins/linux/*  && \
-  rm T-COFFEE_installer_Version_11.00.8cbe486_linux_x64.tar.gz 
-
-#
-# Add AMPA script to bin folder 
-#
-ADD bin/AMPA.pl /usr/local/bin/
-
-
-#
-# Configure the env
-#
-ENV PATH="$PATH:/opt/ncbi-blast-2.2.29+/bin:/opt/tcoffee/bin"
-
+CMD ["/bin/bash"]
