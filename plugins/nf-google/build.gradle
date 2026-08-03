@@ -72,7 +72,7 @@ dependencies {
     runtimeOnly 'com.fasterxml.jackson.core:jackson-databind:2.18.9'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.31"
+    testImplementation "org.apache.groovy:groovy:4.0.33"
     testImplementation "org.apache.groovy:groovy-nio:4.0.31"
 }
 
