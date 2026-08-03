@@ -200,7 +200,7 @@ Name of the file where the process PID is saved when Nextflow is launched in bac
 
 <AddedInVersion version="25.04" />
 
-Comma separated list of plugin IDs that can be used in a workflow executions e.g. `NXF_PLUGINS_ALLOWED=nf-amazon,nf-seqera,nf-wave`. Use empty string to disallow all plugins.
+Comma separated list of plugin IDs that can be used in a workflow executions e.g. `NXF_PLUGINS_ALLOWED=nf-amazon,nf-tower,nf-wave`. Use empty string to disallow all plugins.
 
 ##### `NXF_PLUGINS_DEFAULT`
 
@@ -355,17 +355,35 @@ The Seqera Platform workspace ID. Can also be configured using the `tower.worksp
 
 ## Other settings
 
+##### `ALL_PROXY`
+
+Defines a proxy server used as a fallback for any protocol (HTTP, HTTPS, FTP) that does not have a scheme-specific proxy variable set. A scheme-specific variable (e.g. `HTTPS_PROXY`) takes precedence over `ALL_PROXY`. Proxy authentication is supported by providing the credentials in the proxy URL.
+
+##### `COLUMNS`
+
+<AddedInVersion version="26.10" />
+
+Sets the terminal width of ANSI-formatted log output when `TERMINAL_WIDTH` is not set to a positive integer.
+
+:::note
+Bash sets `COLUMNS` in interactive shells but does not export it, so it is not visible to Nextflow unless you export it explicitly, e.g. `export COLUMNS=100`, or set it for the command, e.g. `COLUMNS=100 nextflow run <pipeline>`. In non-interactive contexts such as a batch job script, `COLUMNS` is not set at all — use `TERMINAL_WIDTH` to force a width there.
+:::
+
 ##### `FTP_PROXY`
 
-Defines the FTP proxy server. Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `ftp://user:password@proxy-host.com:port`.
+Defines the FTP proxy server. Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `ftp://user:password@proxy-host.com:port`. Credentials containing special characters must be URL-encoded (percent-encoded).
 
 ##### `HTTP_PROXY`
 
-Defines the HTTP proxy server.
+Defines the HTTP proxy server. Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `http://user:password@proxy-host.com:port`. Credentials containing special characters must be URL-encoded (percent-encoded).
 
 ##### `HTTPS_PROXY`
 
-Defines the HTTPS proxy server.
+Defines the HTTPS proxy server. Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `https://user:password@proxy-host.com:port`. Credentials containing special characters must be URL-encoded (percent-encoded).
+
+:::note
+When connecting to HTTPS targets through an authenticating proxy, the JDK strips proxy credentials from the `CONNECT` request for the schemes listed in `jdk.http.auth.tunneling.disabledSchemes` (default `Basic`), which can cause a `407` error. Nextflow clears this property automatically when the proxy URL carries credentials. If you set the property yourself, Nextflow does not override it — clear it explicitly to allow Basic proxy authentication over HTTPS with `NXF_OPTS='-Djdk.http.auth.tunneling.disabledSchemes='`.
+:::
 
 ##### `NO_COLOR`
 
@@ -379,7 +397,7 @@ Defines one or more host names that should not use the proxy server. Separate mu
 
 ##### `TERMINAL_WIDTH`
 
-Forces the terminal width of ANSI-formatted log output. Overrides automatic terminal width detection and uses the specified width for line wrapping when set to an integer value.
+Forces the terminal width of ANSI-formatted log output. Overrides automatic terminal width detection and uses the specified width for line wrapping when set to a positive integer. Values that are not positive integers are ignored, in which case Nextflow falls back to `COLUMNS` and then to automatic detection.
 
 [process-conda]: ./process#conda
 [process-publishdir]: ./process#publishdir

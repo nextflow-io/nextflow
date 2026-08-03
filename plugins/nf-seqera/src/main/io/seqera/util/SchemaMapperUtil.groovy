@@ -18,12 +18,14 @@ package io.seqera.util
 
 import groovy.transform.CompileStatic
 import io.seqera.config.MachineRequirementOpts
+import io.seqera.config.SchedulingRequirementOpts
 import io.seqera.sched.api.schema.v1a1.DiskAllocation
 import io.seqera.sched.api.schema.v1a1.DiskRequirement
 import io.seqera.sched.api.schema.v1a1.EcsCapacityMode
 import io.seqera.sched.api.schema.v1a1.MachineRequirement
 import io.seqera.sched.api.schema.v1a1.PriceModel as SchedPriceModel
 import io.seqera.sched.api.schema.v1a1.ProvisioningModel
+import io.seqera.sched.api.schema.v1a1.SchedulingRequirement
 import nextflow.cloud.types.PriceModel
 import nextflow.fusion.FusionConfig
 import nextflow.util.MemoryUnit
@@ -71,6 +73,19 @@ class SchemaMapperUtil {
             .machineTypes(opts.machineTypes)
             .disk(diskReq)
             .capacityMode(capacityMode)
+    }
+
+    /**
+     * Maps SchedulingRequirementOpts to SchedulingRequirement API object.
+     *
+     * @param opts the config options (can be null)
+     * @return the SchedulingRequirement API object, or null if opts is null or has no settings
+     */
+    static SchedulingRequirement toSchedulingRequirement(SchedulingRequirementOpts opts) {
+        if (!opts || opts.maxCpusPerUser == null)
+            return null
+        new SchedulingRequirement()
+            .maxCpusPerUser(opts.maxCpusPerUser)
     }
 
     /**

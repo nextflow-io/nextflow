@@ -321,14 +321,19 @@ class ConfigDsl extends Script {
     }
 
     private static class PluginsDsl extends ConfigBlockDsl {
+        private Set<String> plugins = new LinkedHashSet<>()
+
         PluginsDsl(ConfigDsl dsl) {
             super(dsl, Collections.<String>emptyList())
         }
 
         void id(String value) {
-            final target = dsl.getTarget()
-            final plugins = (Set) target.computeIfAbsent('plugins', (k) -> new LinkedHashSet<>())
             plugins.add(value)
+        }
+
+        @Override
+        void apply() {
+            dsl.getTarget().put('plugins', plugins)
         }
     }
 

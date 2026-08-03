@@ -16,7 +16,7 @@
 #
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
-NXF_VER=${NXF_VER:-'26.06.0-edge'}
+NXF_VER=${NXF_VER:-'26.07.0-edge'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
 NXF_PROT=${NXF_PROT:-'https'}
@@ -295,7 +295,7 @@ NXF_CLASSPATH=${NXF_CLASSPATH:-''}
 
 # Determine the path to this file
 if [[ $NXF_PACK = dist ]]; then
-    NXF_BIN=$(which "$0" 2>/dev/null)
+    NXF_BIN=$(command -v "$0")
     [ $? -gt 0 -a -f "$0" ] && NXF_BIN="./$0"
 fi
 
@@ -316,7 +316,7 @@ if [ ! -x "$JAVA_CMD" ] ; then
     elif [ -x /usr/libexec/java_home ]; then
         JAVA_CMD="$(/usr/libexec/java_home -v 17+ 2>/dev/null)/bin/java" || JAVA_CMD=java
     else
-        JAVA_CMD="$(which java)" || JAVA_CMD=java
+        JAVA_CMD="$(command -v java)" || JAVA_CMD=java
     fi
 fi
 

@@ -28,7 +28,6 @@ import nextflow.exception.AbortOperationException
 import nextflow.script.dsl.ProcessDslV1
 import nextflow.script.dsl.ProcessDslV2
 import nextflow.secret.SecretsLoader
-import nextflow.util.TypeHelper
 
 /**
  * Any user defined script will extends this class, it provides the base execution context
@@ -218,31 +217,6 @@ abstract class BaseScript extends Script implements ExecutionContext {
      */
     protected void declareType(Class type) {
         meta.addDefinition(new TypeDef(type))
-    }
-
-    /**
-     * Runtime type cast that supports parameterized types and record types.
-     *
-     * @param value
-     * @param type
-     */
-    protected Object _as_type(Object value, Class type) {
-        return TypeHelper.asType(value, type)
-    }
-
-    protected Object _as_type(Object value, Class clazz, String field) {
-        final type = clazz.getField(field).getGenericType()
-        return TypeHelper.asType(value, type)
-    }
-
-    /**
-     * Runtime check replacing {@code instanceof} for record types.
-     *
-     * @param value
-     * @param type
-     */
-    protected boolean _instanceof_record_type(Object value, Class type) {
-        return TypeHelper.instanceofRecordType(value, type)
     }
 
     /**

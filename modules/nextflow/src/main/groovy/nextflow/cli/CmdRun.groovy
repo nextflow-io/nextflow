@@ -36,6 +36,7 @@ import nextflow.NF
 import nextflow.NextflowMeta
 import nextflow.SysEnv
 import nextflow.config.ConfigBuilder
+import nextflow.config.ConfigCmdAdapter
 import nextflow.config.ConfigMap
 import nextflow.config.ConfigValidator
 import nextflow.config.Manifest
@@ -62,7 +63,7 @@ import org.yaml.snakeyaml.Yaml
 @Slf4j
 @CompileStatic
 @Parameters(commandDescription = "Execute a pipeline project")
-class CmdRun extends CmdBase implements HubOptions {
+class CmdRun extends CmdBase implements HubAware {
 
     static final public Pattern RUN_NAME_PATTERN = Pattern.compile(/^[a-z](?:[a-z\d]|[-_](?=[a-z\d])){0,79}$/, Pattern.CASE_INSENSITIVE)
 
@@ -137,7 +138,7 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names='-params-file', description = 'Load script parameters from a JSON/YAML file')
     String paramsFile
 
-    @DynamicParameter(names = ['-process.'], description = 'Set process options' )
+    @DynamicParameter(names = ['-process.'], description = 'Set process options', hidden = true)
     Map<String,String> process = [:]
 
     @DynamicParameter(names = ['-e.'], description = 'Add the specified variable to execution environment')
@@ -207,13 +208,13 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names = '-with-podman', description = 'Enable process execution in a Podman container')
     def withPodman
 
-    @Parameter(names = '-without-podman', description = 'Disable process execution in a Podman container')
+    @Parameter(names = '-without-podman', description = 'Disable process execution in a Podman container', hidden = true)
     def withoutPodman
 
     @Parameter(names = '-with-docker', description = 'Enable process execution in a Docker container')
     def withDocker
 
-    @Parameter(names = '-without-docker', description = 'Disable process execution with Docker', arity = 0)
+    @Parameter(names = '-without-docker', description = 'Disable process execution with Docker', arity = 0, hidden = true)
     boolean withoutDocker
 
     @Parameter(names = '-with-mpi', hidden = true)
@@ -248,13 +249,13 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-with-conda'], description = 'Use the specified Conda environment package or file (must end with .yml|.yaml suffix)')
     String withConda
 
-    @Parameter(names=['-without-conda'], description = 'Disable the use of Conda environments')
+    @Parameter(names=['-without-conda'], description = 'Disable the use of Conda environments', hidden = true)
     Boolean withoutConda
 
     @Parameter(names=['-with-spack'], description = 'Use the specified Spack environment package or file (must end with .yaml suffix)')
     String withSpack
 
-    @Parameter(names=['-without-spack'], description = 'Disable the use of Spack environments')
+    @Parameter(names=['-without-spack'], description = 'Disable the use of Spack environments', hidden = true)
     Boolean withoutSpack
 
     @Parameter(names=['-offline'], description = 'Do not check for remote project updates')
@@ -272,7 +273,7 @@ class CmdRun extends CmdBase implements HubOptions {
     @Parameter(names=['-preview'], description = "Run the workflow script skipping the execution of all processes")
     boolean preview
 
-    @Parameter(names=['-plugins'], description = 'Specify the plugins to be applied for this run e.g. nf-amazon,nf-seqera')
+    @Parameter(names=['-plugins'], description = 'Specify the plugins to be applied for this run e.g. nf-amazon,nf-tower')
     String plugins
 
     @Parameter(names=['-disable-jobs-cancellation'], description = 'Prevent the cancellation of child jobs on execution termination')
@@ -360,12 +361,13 @@ class CmdRun extends CmdBase implements HubOptions {
         // -- PHASE 1: Load config with mock secrets provider
         final secretsProvider = new EmptySecretProvider()
         ConfigBuilder builder = new ConfigBuilder()
+            .setCliParams(cliParams)
+            .setSecretsProvider(secretsProvider)  // Mock provider returns empty strings
+        ConfigCmdAdapter adapter = new ConfigCmdAdapter(builder)
             .setOptions(launcher.options)
             .setCmdRun(this)
             .setBaseDir(scriptFile.parent)
-            .setCliParams(cliParams)
-            .setSecretsProvider(secretsProvider)  // Mock provider returns empty strings
-        ConfigMap config = builder.build()
+        ConfigMap config = adapter.build()
         Map configParams = builder.getConfigParams()
 
         // -- Check Nextflow version
@@ -388,12 +390,13 @@ class CmdRun extends CmdBase implements HubOptions {
         if( secretsProvider.usedSecrets() ) {
             log.debug "Config file used secrets -- reloading config with secrets provider"
             builder = new ConfigBuilder()
+                .setCliParams(cliParams)
+                // No .setSecretsProvider() - uses real secrets system now
+            adapter = new ConfigCmdAdapter(builder)
                 .setOptions(launcher.options)
                 .setCmdRun(this)
                 .setBaseDir(scriptFile.parent)
-                .setCliParams(cliParams)
-                // No .setSecretsProvider() - uses real secrets system now
-            config = builder.build()
+            config = adapter.build()
             configParams = builder.getConfigParams()
         }
 
@@ -419,7 +422,7 @@ class CmdRun extends CmdBase implements HubOptions {
         final isTowerEnabled = config.navigate('tower.enabled') as Boolean
         final isDataEnabled = config.navigate("lineage.enabled") as Boolean
         if( isTowerEnabled || isDataEnabled || log.isTraceEnabled() )
-            runner.session.resolvedConfig = ConfigBuilder.resolveConfig(scriptFile.parent, this, cliParams)
+            runner.session.resolvedConfig = ConfigCmdAdapter.resolveConfig(scriptFile.parent, this, cliParams)
         // note config files are collected during the build process
         // this line should be after `ConfigBuilder#build`
         runner.session.configFiles = builder.parsedConfigFiles
@@ -623,7 +626,7 @@ class CmdRun extends CmdBase implements HubOptions {
         /*
          * try to look for a pipeline in the repository
          */
-        try( final manager = new AssetManager(pipelineName, revision, mainScript, this) ) {
+        try( final manager = new AssetManager(pipelineName, revision, mainScript, toHubOptions()) ) {
             final repo = manager.getProjectWithRevision()
             final remoteSource = !manager.isLocalScmSource()
 

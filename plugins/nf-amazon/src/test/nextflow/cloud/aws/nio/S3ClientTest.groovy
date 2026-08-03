@@ -23,8 +23,11 @@ import software.amazon.awssdk.awscore.exception.AwsErrorDetails
 import software.amazon.awssdk.awscore.exception.AwsServiceException
 import software.amazon.awssdk.core.exception.SdkClientException
 import software.amazon.awssdk.core.exception.SdkException
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException
+import software.amazon.awssdk.services.s3.model.Tag
+import software.amazon.awssdk.services.s3.model.TaggingDirective
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -133,6 +136,29 @@ class S3ClientTest extends Specification {
         result.message.contains('listBuckets')
         result.message.contains('s3://')
         result.cause.is(aws)
+    }
+
+    @Unroll
+    def 'should always set REPLACE tagging directive on copy so source tags are not inherited'() {
+        given:
+        def reqBuilder = CopyObjectRequest.builder()
+                .sourceBucket('src').sourceKey('a')
+                .destinationBucket('dst').destinationKey('b')
+
+        when:
+        S3Client.applyTagging(reqBuilder, tags)
+        def req = reqBuilder.build()
+
+        then:
+        // REPLACE is always used so the destination never inherits the source object's tags
+        req.taggingDirective() == TaggingDirective.REPLACE
+        req.tagging() == expectedTagging
+
+        where:
+        tags                                            | expectedTagging
+        null                                            | null
+        []                                              | null
+        [Tag.builder().key('foo').value('bar').build()] | 'foo=bar'
     }
 
     def 'should format path without trailing slash when key is null or empty'() {
