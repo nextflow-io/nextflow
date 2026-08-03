@@ -316,7 +316,7 @@ if [ ! -x "$JAVA_CMD" ] ; then
     elif [ -x /usr/libexec/java_home ]; then
         JAVA_CMD="$(/usr/libexec/java_home -v 17+ 2>/dev/null)/bin/java" || JAVA_CMD=java
     else
-        JAVA_CMD="$(which java)" || JAVA_CMD=java
+        JAVA_CMD="$(command -v java)" || JAVA_CMD=java
     fi
 fi
 
