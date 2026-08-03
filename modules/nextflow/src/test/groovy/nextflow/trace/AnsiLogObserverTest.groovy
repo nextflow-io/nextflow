@@ -39,18 +39,19 @@ class AnsiLogObserverTest extends Specification {
         SysEnv.pop()
 
         where:
-        ENV                                             | EXPECTED
-        [COLUMNS: '50']                                | 50
-        [COLUMNS: '']                                  | null
-        [COLUMNS: 'abc']                               | null
-        [COLUMNS: '0']                                 | null
-        [COLUMNS: '-10']                               | null
-        [COLUMNS: '2147483648']                        | null
-        [:]                                            | null
-        [TERMINAL_WIDTH: '60', COLUMNS: '50']          | 60
-        [TERMINAL_WIDTH: 'invalid', COLUMNS: '50']     | 50
-        [TERMINAL_WIDTH: '0', COLUMNS: '50']           | 50
-        [TERMINAL_WIDTH: '-1', COLUMNS: '50']          | 50
+        ENV                                         | EXPECTED
+        [:]                                         | null
+        [COLUMNS: '50']                             | 50
+        [COLUMNS: '']                               | null
+        [COLUMNS: 'abc']                            | null
+        [COLUMNS: '0']                              | null
+        [COLUMNS: '-10']                            | null
+        [COLUMNS: '2147483648']                     | null
+        [TERMINAL_WIDTH: '60']                      | 60
+        [TERMINAL_WIDTH: '60', COLUMNS: '50']       | 60
+        [TERMINAL_WIDTH: 'invalid', COLUMNS: '50']  | 50
+        [TERMINAL_WIDTH: '0', COLUMNS: '50']        | 50
+        [TERMINAL_WIDTH: '-1', COLUMNS: '50']       | 50
     }
 
     @Unroll
