@@ -15,7 +15,7 @@ $ nextflow kuberun [options] [project]
 
 ## Description
 
-The `kuberun` command builds upon the `run` command and offers a deep integration with the Kubernetes execution environment. This command deploys the Nextflow runtime as a Kubernetes pod and assumes that you've already installed the `kubectl` CLI. The `kuberun` command does not allow the execution of local Nextflow scripts. See [Kubernetes][k8s-page] for more information.
+The `kuberun` command extends the `run` command with a Kubernetes integration. It deploys the Nextflow runtime as a Kubernetes pod and requires the `kubectl` CLI. The `kuberun` command cannot run local Nextflow scripts. See [Kubernetes][k8s-page] for more information.
 
 ## Options
 
@@ -58,31 +58,31 @@ The following new options are also available:
 
 ##### `-head-cpus`
 
-Specify number of CPUs requested for the Nextflow pod.
+Number of CPUs requested for the Nextflow pod.
 
 ##### `-head-image`
 
-Specify the container image for the Nextflow driver pod.
+Container image for the Nextflow driver pod.
 
 ##### `-head-memory`
 
-Specify amount of memory requested for the Nextflow pod.
+Amount of memory requested for the Nextflow pod.
 
 ##### `-head-prescript`
 
-Specify script to be run before the Nextflow pod starts.
+Script to run before the Nextflow pod starts.
 
 ##### `-n, -namespace`
 
-Specify the K8s namespace to use.
+Kubernetes namespace to use.
 
 ##### `-remoteConfig`
 
-Add the specified file from the K8s cluster to configuration set.
+Add the specified file from the Kubernetes cluster to the configuration set.
 
 ##### `-remoteProfile`
 
-Choose a configuration profile in the remoteConfig.
+Configuration profile to use from `-remoteConfig`.
 
 ##### `-v, -volume-mount`
 
@@ -90,7 +90,7 @@ Volume claim mounts. For example, `my-pvc:/mnt/path`.
 
 ## Examples
 
-Execute a pipeline into a Kubernetes cluster:
+Run a pipeline on a Kubernetes cluster:
 
 ```console
 $ nextflow kuberun nextflow-io/hello

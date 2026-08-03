@@ -23,7 +23,7 @@ The `launch` command launches a pipeline run in Seqera Platform. To log in and c
 
 ##### `-compute-env`
 
-The compute environment for workflow execution.
+The compute environment to run the workflow on.
 
 ##### `-c, -config`
 
@@ -31,15 +31,15 @@ A configuration file to add to the configuration set.
 
 ##### `-entry`
 
-The entry workflow to be executed.
+The entry workflow to run.
 
 ##### `-h, -help`
 
-Prints command usage information.
+Print the command usage.
 
 ##### `-latest`
 
-Whether to pull the latest changes before execution.
+Pull the latest changes before the run.
 
 ##### `-name`
 
@@ -59,7 +59,7 @@ A configuration profile.
 
 ##### `-resume`
 
-Whether to resume an execution using cached results from a previous run.
+Resume the run using cached results from a previous run.
 
 ##### `-r, -revision`
 
@@ -67,7 +67,7 @@ The project revision to run. Can be a git branch, tag, or commit hash.
 
 ##### `-stub-run, -stub`
 
-Whether to replace scripts with command stubs when executing the run.
+Replace process scripts with command stubs.
 
 ##### `-user-secret`
 
@@ -91,7 +91,7 @@ Name of workspace secret to use in the pipeline. Can be specified multiple times
 
 ## Examples
 
-Execute a pipeline in Seqera Platform:
+Run a pipeline in Seqera Platform:
 
 ```console
 $ nextflow launch nextflow-io/hello

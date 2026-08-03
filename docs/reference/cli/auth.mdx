@@ -17,37 +17,37 @@ $ nextflow auth <subcommand> [options]
 
 ## Description
 
-The `auth` command provides authentication and configuration management for Seqera. For Seqera Cloud, it uses an OAuth2 authentication flow to generate and save a Personal Access Token (PAT) locally. For Seqera Enterprise installations, it uses direct PAT authentication. Credentials are saved to `~/.nextflow/seqera-auth.config`. An `includeConfig` statement is automatically added to `~/.nextflow/config` or the configuration file set using `$NXF_HOME`.
+The `auth` command manages authentication and configuration for Seqera. For Seqera Cloud, it uses an OAuth2 authentication flow to generate and save a personal access token (PAT) locally. For Seqera Enterprise installations, it uses direct PAT authentication. Nextflow saves credentials to `~/.nextflow/seqera-auth.config` and adds an `includeConfig` statement to `~/.nextflow/config`, or to the configuration file set by `$NXF_HOME`.
 
 ## Options
 
 ##### `-h, -help`
 
-Prints the command usage information.
+Print the command usage.
 
 ## Subcommands
 
 ##### `login`
 
-Authenticates with Seqera and saves credentials. Sets Seqera primary compute environment, monitoring, and workspace.
+Authenticate with Seqera and save credentials. Set the Seqera primary compute environment, monitoring, and workspace.
 
-Available options:
+The following options are available:
 
-######  `-u, -url`
+###### `-u, -url`
 
-Specifies your Seqera API endpoint (default: `https://api.cloud.seqera.io`)
+Seqera API endpoint (default: `https://api.cloud.seqera.io`).
 
 ##### `logout`
 
-Removes Seqera authentication and revokes the Seqera Cloud access token (if applicable).
+Remove Seqera authentication and revoke the Seqera Cloud access token, if applicable.
 
 ##### `config`
 
-Sets Seqera primary compute environment, monitoring, and workspace.
+Set the Seqera primary compute environment, monitoring, and workspace.
 
 ##### `status`
 
-Shows Seqera authentication status and configuration.
+Show the Seqera authentication status and configuration.
 
 ## Examples
 

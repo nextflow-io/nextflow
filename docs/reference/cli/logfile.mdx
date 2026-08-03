@@ -19,11 +19,11 @@ $ nextflow logfile [options] [run_name | session_id | path]
 
 The `logfile` command prints the contents of a `.nextflow.log` file written by Nextflow during a pipeline run. The argument can be:
 
-- A run name (e.g. `kickass_rutherford`) -- resolved via the local execution history and matched to the corresponding `.nextflow.log[.N]` file in the current directory by session id.
-- A session id (or unique prefix), or the literal `last` for the most recent run.
-- A direct path to a log file (e.g. `.nextflow.log.4` or an absolute path).
+- A run name, for example `kickass_rutherford`. Nextflow resolves it from the local execution history and matches it by session ID to the corresponding `.nextflow.log[.N]` file in the current directory.
+- A session ID, or a unique prefix of one, or the literal `last` for the most recent run.
+- A direct path to a log file, for example `.nextflow.log.4` or an absolute path.
 
-If no argument is given, the most recent run is used.
+If you give no argument, `logfile` uses the most recent run.
 
 ## Options
 
@@ -37,36 +37,36 @@ Print the command usage.
 
 ##### `-keep-ansi`
 
-Preserve any ANSI escape sequences found inside log content. By default these are stripped so the output is clean text.
+Preserve any ANSI escape sequences found inside log content. By default, Nextflow strips them to produce clean text.
 
 ##### `-l, -level <LEVEL>`
 
 Minimum log level to print: `TRACE`, `DEBUG`, `INFO`, `WARN`, or `ERROR`.
 Case-insensitive.
-When set, only entries at this level or higher are printed.
-Multi-line entries (e.g. stack traces) inherit the level of their parent entry.
-No filtering is applied by default.
+When set, Nextflow prints only entries at this level or higher.
+Multi-line entries, such as stack traces, inherit the level of their parent entry.
+By default, Nextflow applies no filtering.
 
 ##### `-n, -lines <N>`
 
-Print only the last N log entries. Counts entries (one or more lines each), not raw lines.
+Print only the last `N` log entries. Counts entries (one or more lines each), not raw lines.
 
 ##### `-no-pager`
 
 Do not pipe the output through a pager.
-By default, when standard output is a terminal, the output is piped through `$NXF_PAGER`, falling back to `$PAGER`, falling back to `less -FR`.
-A bare `less` invocation is augmented with `-FR` so colors render. Short outputs exit without entering the pager.
-Pager is automatically disabled with `-f`/`-follow`.
+By default, when standard output is a terminal, Nextflow pipes the output through `$NXF_PAGER`, then `$PAGER`, then `less -FR`.
+Nextflow adds `-FR` to a bare `less` invocation so that colors render. Short outputs exit without entering the pager.
+The `-f`/`-follow` option disables the pager.
 
 ##### `-no-ansi`
 
 Disable colored output. By default, when the output destination is a terminal:
 
-- Every line is prefixed with a coloured 2-character level indicator.
+- Every line is prefixed with a colored 2-character level indicator.
 - TRACE and DEBUG entries are dimmed.
 - DEBUG, INFO, WARN and ERROR entries are syntax-highlighted to make them easier to read.
 
-Styling is auto-disabled when output goes to a non-terminal destination (file or pipe with `-no-pager`) or when the `NO_COLOR` environment variable is set.
+Nextflow disables styling when output goes to a non-terminal destination, such as a file or a pipe with `-no-pager`, or when the `NO_COLOR` environment variable is set.
 
 ## Examples
 

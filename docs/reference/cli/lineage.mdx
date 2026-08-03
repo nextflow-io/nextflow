@@ -21,9 +21,9 @@ $ nextflow lineage SUBCOMMAND [arg ..]
 
 ## Description
 
-The `lineage` command is used to inspect lineage metadata.
+The `lineage` command inspects lineage metadata.
 
-See [Getting started with data lineage][data-lineage-page] to learn how to get started with data lineage.
+See [Getting started with data lineage][data-lineage-page] for more information.
 
 ## Options
 
@@ -35,7 +35,7 @@ Print the command usage.
 
 ##### `check <lid>`
 
-Validate the checksum of output lineage record.
+Validate the checksum of an output lineage record.
 
 ##### `diff <lid-1> <lid-2>`
 
@@ -47,7 +47,7 @@ Find all lineage records that match the given field values.
 
 ##### `list`
 
-List the Nextflow runs with lineage enabled, printing the corresponding lineage ID (LID) for each run.
+List the Nextflow runs with lineage enabled and print the lineage ID (LID) of each run.
 
 ##### `render <lid> [path]`
 
@@ -58,5 +58,49 @@ The lineage record should be of type `FileOutput`, `TaskRun`, or `WorkflowRun`.
 ##### `view <lid>`
 
 View a lineage record.
+
+## Examples
+
+List the runs with lineage enabled:
+
+```console
+$ nextflow lineage list
+```
+
+View a lineage record:
+
+```console
+$ nextflow lineage view lid://16b31030474f2e96c55f4940bca3ab64
+```
+
+View the lineage record of a published file:
+
+```console
+$ nextflow lineage view lid://16b31030474f2e96c55f4940bca3ab64/multiqc_report.html
+```
+
+Find all tasks belonging to a given run:
+
+```console
+$ nextflow lineage find type=TaskRun workflowRun=lid://16b31030474f2e96c55f4940bca3ab64
+```
+
+Compare two lineage records:
+
+```console
+$ nextflow lineage diff lid://862df53160e07cd823c0c3960545e747 lid://9433dda73f2193491f9a26e3e23cd8a1
+```
+
+Validate the checksum of an output lineage record:
+
+```console
+$ nextflow lineage check lid://16b31030474f2e96c55f4940bca3ab64/multiqc_report.html
+```
+
+Render the lineage graph of a published file:
+
+```console
+$ nextflow lineage render lid://16b31030474f2e96c55f4940bca3ab64/multiqc_report.html
+```
 
 [data-lineage-page]: ../../tutorials/data-lineage

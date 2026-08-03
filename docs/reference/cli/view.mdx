@@ -1,11 +1,11 @@
 ---
 title: nextflow view
-description: Reference for the nextflow view command. View a project's script file(s).
+description: Reference for the nextflow view command. View a project's script files.
 ---
 
 # `nextflow view`
 
-View a project's script file(s).
+View a project's script files.
 
 ## Usage
 
@@ -15,7 +15,7 @@ $ nextflow view [options] [project]
 
 ## Description
 
-The `view` command is used to inspect the pipelines that are already stored in the global nextflow cache. For downloading a pipeline into the global cache `~/.nextflow/assets`, refer to the `pull` command.
+The `view` command inspects a pipeline already stored in the global Nextflow cache. To download a pipeline into the global cache `~/.nextflow/assets`, use the `pull` command.
 
 ## Options
 
@@ -39,7 +39,7 @@ Project revision. Can be a git branch, tag, or commit SHA number.
 
 ## Examples
 
-Viewing the contents of a downloaded pipeline:
+View the contents of a downloaded pipeline:
 
 ```console
 $ nextflow view nextflow-io/hello
@@ -63,7 +63,7 @@ workflow {
 }
 ```
 
-List the folder structure of the downloaded pipeline:
+List the folder structure of a downloaded pipeline:
 
 ```console
 $ nextflow view -l nextflow-io/hello
@@ -77,7 +77,7 @@ main.nf
 nextflow.config
 ```
 
-View the contents of a downloaded pipeline without omitting the header:
+View the contents of a downloaded pipeline without the header:
 
 ```console
 $ nextflow view -q nextflow-io/hello
