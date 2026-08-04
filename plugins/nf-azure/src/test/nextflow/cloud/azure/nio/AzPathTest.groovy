@@ -68,27 +68,23 @@ class AzPathTest extends Specification {
     }
 
     @Unroll
-    def 'should validate blob constructor and cached attributes'() {
+    def 'should validate blob constructor'() {
         when:
         def path = azpath(PATH)
-        // pre-populate the attributes cache so the slashless case (no directory marker
-        // on the path itself) doesn't have to resolve a real blob over the network
-        path.setAttributes(new AzFileAttributes(directory: IS_DIRECTORY))
         then:
         path.containerName == CONTAINER
 //        path.objectName == BLOB
-        path.isDirectory() == IS_DIRECTORY
         path.isContainer() == IS_CONTAINER
         and:
         path.getContainerName() == path.checkContainerName()
 //        path.getObjectName() == path.blobName()
 
         where:
-        PATH                    | CONTAINER     | BLOB          | IS_DIRECTORY  | IS_CONTAINER
-        '/alpha/beta/delta'     | 'alpha'       | 'beta/delta'  | false         | false
-        '/alpha/beta/delta/'    | 'alpha'       | 'beta/delta/' | true          | false
-        '/alpha/'               | 'alpha'       | null          | true          | true
-        '/alpha'                | 'alpha'       | null          | true          | true
+        PATH                    | CONTAINER     | BLOB          | IS_CONTAINER
+        '/alpha/beta/delta'     | 'alpha'       | 'beta/delta'  | false
+        '/alpha/beta/delta/'    | 'alpha'       | 'beta/delta/' | false
+        '/alpha/'               | 'alpha'       | null          | true
+        '/alpha'                | 'alpha'       | null          | true
 
     }
 
@@ -375,18 +371,34 @@ class AzPathTest extends Specification {
         !path.isDirectory()
     }
 
-    def 'should recognise hdi_isfolder markers regardless of reported size'() {
-        expect:
-        AzFileAttributes.isDirectoryMarker(metadata) == directory
+    def 'isDirectory should propagate attribute lookup failures'() {
+        given:
+        def fs = Mock(AzFileSystem)
+        fs.getContainerName() >> 'pipeline'
+        def path = new AzPath(fs, '/pipeline/output')
 
-        where:
-        metadata                    || directory
-        [hdi_isfolder: 'true']      || true
-        [hdi_isfolder: 'false']     || false
-        [:]                         || false
+        when:
+        path.isDirectory()
+
+        then:
+        def error = thrown(IllegalStateException)
+        error.message == 'Unable to read attributes'
+        1 * fs.readAttributes(path) >> { throw new IllegalStateException('Unable to read attributes') }
     }
 
-    def 'should classify a non-empty listed hdi_isfolder marker as a directory'() {
+    def 'should only recognise zero-size hdi_isfolder markers'() {
+        expect:
+        AzFileAttributes.isDirectoryMarker(metadata, size) == directory
+
+        where:
+        metadata                    | size || directory
+        [hdi_isfolder: 'true']      | 0L   || true
+        [hdi_isfolder: 'true']      | 42L  || false
+        [hdi_isfolder: 'false']     | 0L   || false
+        [:]                         | 0L   || false
+    }
+
+    def 'should not classify a non-empty listed blob with hdi_isfolder metadata as a directory'() {
         given:
         def properties = new BlobItemProperties()
                 .setContentLength(42L)
@@ -401,9 +413,9 @@ class AzPathTest extends Specification {
         def attrs = new AzFileAttributes('pipeline', item)
 
         then:
-        attrs.isDirectory()
-        !attrs.isRegularFile()
-        attrs.size() == 0L
+        !attrs.isDirectory()
+        attrs.isRegularFile()
+        attrs.size() == 42L
     }
 
 }

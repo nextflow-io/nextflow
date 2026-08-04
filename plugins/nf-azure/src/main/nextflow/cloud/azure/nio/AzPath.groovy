@@ -93,6 +93,11 @@ class AzPath implements Path {
         return this
     }
 
+    /**
+     * Determines whether this path is a directory. Groovy property access via
+     * {@code path.directory} invokes this method and may perform a remote
+     * attribute lookup for an absolute path without a trailing slash.
+     */
     boolean isDirectory() {
         if( directory )
             return true
