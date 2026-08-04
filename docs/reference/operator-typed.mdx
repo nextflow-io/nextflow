@@ -1,13 +1,15 @@
 ---
-title: Operators (typed)
+title: Operators
 description: Reference for the core Nextflow operators recommended for use with static typing.
 ---
 
-# Operators (typed)
+# Operators
 
 <AddedInVersion version="26.04" />
 
 This page describes the core operators that are recommended for use with static typing.
+
+See [Using operators with static typing](../tutorials/static-types-operators) for best practices when migrating existing code.
 
 ## collect
 
@@ -40,6 +42,16 @@ Tuples in both the left- and right-hand sources are flattened in the combined tu
 **`Channel<Record> combine( [opts] ) -> Channel<Record>`**
 
 When the `combine` operator is called on a channel of records with named arguments, the named arguments are appended to each record in the source channel. Each named argument can be a value or dataflow value.
+
+```nextflow
+samples = channel.of( record(id: 1, fastq: file('1.fq')) )
+index = channel.value( file('index.fa') )
+samples.combine(strandedness: 'auto', index: index).view()
+```
+
+```console
+[id:1, fastq:1.fq, strandedness:auto, index:index.fa]
+```
 
 ## filter
 

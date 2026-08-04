@@ -138,7 +138,7 @@ class CmdRun extends CmdBase implements HubAware {
     @Parameter(names='-params-file', description = 'Load script parameters from a JSON/YAML file')
     String paramsFile
 
-    @DynamicParameter(names = ['-process.'], description = 'Set process options' )
+    @DynamicParameter(names = ['-process.'], description = 'Set process options', hidden = true)
     Map<String,String> process = [:]
 
     @DynamicParameter(names = ['-e.'], description = 'Add the specified variable to execution environment')
@@ -208,13 +208,13 @@ class CmdRun extends CmdBase implements HubAware {
     @Parameter(names = '-with-podman', description = 'Enable process execution in a Podman container')
     def withPodman
 
-    @Parameter(names = '-without-podman', description = 'Disable process execution in a Podman container')
+    @Parameter(names = '-without-podman', description = 'Disable process execution in a Podman container', hidden = true)
     def withoutPodman
 
     @Parameter(names = '-with-docker', description = 'Enable process execution in a Docker container')
     def withDocker
 
-    @Parameter(names = '-without-docker', description = 'Disable process execution with Docker', arity = 0)
+    @Parameter(names = '-without-docker', description = 'Disable process execution with Docker', arity = 0, hidden = true)
     boolean withoutDocker
 
     @Parameter(names = '-with-mpi', hidden = true)
@@ -249,13 +249,13 @@ class CmdRun extends CmdBase implements HubAware {
     @Parameter(names=['-with-conda'], description = 'Use the specified Conda environment package or file (must end with .yml|.yaml suffix)')
     String withConda
 
-    @Parameter(names=['-without-conda'], description = 'Disable the use of Conda environments')
+    @Parameter(names=['-without-conda'], description = 'Disable the use of Conda environments', hidden = true)
     Boolean withoutConda
 
     @Parameter(names=['-with-spack'], description = 'Use the specified Spack environment package or file (must end with .yaml suffix)')
     String withSpack
 
-    @Parameter(names=['-without-spack'], description = 'Disable the use of Spack environments')
+    @Parameter(names=['-without-spack'], description = 'Disable the use of Spack environments', hidden = true)
     Boolean withoutSpack
 
     @Parameter(names=['-offline'], description = 'Do not check for remote project updates')

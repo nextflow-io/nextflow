@@ -81,20 +81,20 @@ nextflow.preview.recursion = true
 An include declaration consists of an *include source* and one or more *include clauses*:
 
 ```nextflow
-include { hallo as sayHello } from './some/module'
+include { hello as sayHello } from './some/module'
 ```
 
-The include source should be a string literal. Each include clause should specify a name, and may also specify an *alias*. In the above example, `hallo` is included under the alias `sayHello`.
+The include source should be a string literal. Each include clause should specify a name, and may also specify an *alias*. In the above example, `hello` is included under the alias `sayHello`.
 
 Include clauses can be separated by semi-colons or newlines:
 
 ```nextflow
 // semi-colons
-include { hallo ; bye as goodbye } from './some/module'
+include { hello ; bye as goodbye } from './some/module'
 
 // newlines
 include {
-    hallo
+hello
     bye as goodbye
 } from './some/module'
 ```
@@ -102,7 +102,7 @@ include {
 Include clauses can also be specified as separate includes:
 
 ```nextflow
-include { hallo } from './some/module'
+include { hello } from './some/module'
 include { bye as goodbye } from './some/module'
 ```
 
@@ -113,7 +113,7 @@ The params block consists of one or more *parameter declarations*. A parameter d
 ```nextflow
 params {
     input: Path
-    save_intermeds: Boolean = false
+    max_iterations: Integer = 100
 }
 ```
 
@@ -326,7 +326,7 @@ Consists of one or more *topic statements*. A topic statement is a right-shift e
 Typed processes use the same behavior as legacy processes for all other sections.
 :::
 
-See [Process (typed)][process-reference-typed] for more information on the semantics of typed processes.
+See [Typed processes][process-typed] for more information on the semantics of typed processes.
 
 ### Function
 
@@ -335,6 +335,14 @@ A function consists of a name, parameter list, and a body:
 ```nextflow
 def greet(greeting, name) {
     println "${greeting}, ${name}!"
+}
+```
+
+Each parameter may declare a type, and the function may declare a return type after the parameter list:
+
+```nextflow
+def add(a: Integer, b: Integer) -> Integer {
+    a + b
 }
 ```
 
@@ -388,15 +396,19 @@ record FastqPair {
 
 ### Output block
 
-The output block consists of one or more *output declarations*. Each output declaration consists of a name and one or more *output directives* for defining the output:
+The output block consists of one or more *output declarations*. Each output declaration consists of a name, an optional type, and one or more *output directives* that define how the output is published:
+
 
 ```nextflow
 output {
-    samples {
+    samples: Channel<Sample> {
         path 'fastq'
         index {
             path 'index.csv'
         }
+    }
+    summary_report: Path {
+        path '.'
     }
 }
 ```
@@ -428,6 +440,13 @@ Multiple variables can be declared in a single statement if the initializer is a
 
 ```nextflow
 def (x, y) = tuple(1, 2)
+```
+
+A variable declaration may specify a type after the name, separated by a colon:
+
+```nextflow
+def x: Integer = 42
+def (x: Integer, y: Integer) = tuple(1, 2)
 ```
 
 ### Assignment
@@ -531,10 +550,18 @@ def text = null
 try {
     text = file('hello.txt').text
 }
-catch( IOException e ) {
+catch( e: IOException ) {
     log.warn "Could not load hello.txt"
 }
+catch( e: FileNotFoundException | AccessDeniedException ) {
+    log.warn "Could not load hello.txt"
+}
+catch( e ) {
+    log.warn "Unexpected error: ${e}"
+}
 ```
+
+Each catch clause declares a variable and may specify any number of error types. Multiple error types can be specified by separating them with a pipe (`|`). A catch clause with no type catches any exception.
 
 ## Expressions
 
@@ -727,7 +754,7 @@ The closure body is identical to that of a [function](#function). Statements sho
 }
 ```
 
-See [standard library][stdlib-page] and [operator][operator-page] for more examples of how closures are used in practice.
+See [Iterable\<E\>][stdlib-types-iterable] and [operator][operator-page] for more examples of how closures are used in practice.
 
 ### Index expression
 
@@ -812,8 +839,6 @@ If the type is implicitly available in the script, the *fully-qualified type nam
 ```nextflow
 new Date()
 ```
-
-See [Standard library][stdlib-page] for the set of types that are available in Nextflow scripts.
 
 ### Unary expressions
 
@@ -934,8 +959,8 @@ See [strict syntax][strict-syntax-page] for more information.
 [process-page]: ../process
 [process-reference]: ./process
 [inputs-and-outputs-typed]: ./process#inputs-and-outputs-typed
-[process-reference-typed]: ../process-typed
-[stdlib-page]: ./stdlib
+[process-typed]: ../process-typed
+[stdlib-types-iterable]: ./stdlib-types/iterable
 [strict-syntax-page]: ../strict-syntax
 [workflow-output-def]: ../workflow#outputs
 [workflow-typed-page]: ../workflow-typed

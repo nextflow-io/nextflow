@@ -1,0 +1,42 @@
+---
+title: Value<V>
+description: Reference for the Value type, an asynchronous value.
+---
+
+# Value\<V\>
+
+A dataflow value (also known as a *value channel*) is an asynchronous value of type `V`. It is used to facilitate dataflow logic in a workflow.
+
+See [Dataflow][dataflow-page] for an overview of dataflow types.
+
+The following methods are available for a dataflow value:
+
+##### `flatMap( transform: (V) -> Iterable<R> ) -> Channel<R>`
+
+Transforms the dataflow value into a collection with the given closure and emits the resulting values in a dataflow channel.
+
+##### `map( transform: (V) -> R ) -> Value<R>`
+
+Transforms the dataflow value into another dataflow value with the given closure.
+
+##### `subscribe( action: (V) -> () )`
+
+Invokes the given closure on the dataflow value.
+
+##### `view() -> Value<V>`
+
+Prints the dataflow value to standard output.
+
+##### `view( transform: (V) -> String ) -> Value<V>`
+
+Transforms the dataflow value using the given closure and print the result to standard output.
+
+##### `combine( right: Value ) -> Value<Tuple>`
+
+Emits the combination of the dataflow value with another dataflow value.
+
+##### `combine( [opts] ) -> Value<Record>`
+
+When called on a dataflow value of records with named arguments, the named arguments are appended to each record.
+
+[dataflow-page]: ../../workflow#dataflow

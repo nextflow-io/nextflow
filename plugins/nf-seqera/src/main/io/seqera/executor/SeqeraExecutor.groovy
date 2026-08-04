@@ -150,6 +150,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
                 .workspaceId(workspaceId)
                 .pipeline(pipeline)
                 .predictionModel(predictionModel)
+                .schedulingRequirement(SchemaMapperUtil.toSchedulingRequirement(seqeraConfig.schedulingRequirement))
                 .computeEnvId(computeEnvId)
                 .shellEnabled(seqeraConfig.shellEnabled)
         log.debug "[SEQERA] Creating run: ${request}"

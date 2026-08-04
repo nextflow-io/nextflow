@@ -1,0 +1,165 @@
+---
+title: wave
+description: Reference for the wave config scope, which provides advanced configuration for the use of Wave containers.
+---
+
+# `wave`
+
+The `wave` scope provides advanced configuration for the use of [Wave containers][wave-page].
+
+##### `wave.enabled`
+
+Enable the use of Wave containers (default: `false`).
+
+##### `wave.endpoint`
+
+The Wave service endpoint (default: `https://wave.seqera.io`).
+
+##### `wave.freeze`
+
+<AddedInVersion version="23.10" />
+
+Enable Wave container freezing (default: `false`). Wave will provision a non-ephemeral container image that will be pushed to a container repository of your choice.
+The target registry must be specified using the `wave.build.repository` setting. It is also recommended to specify a custom cache repository using `wave.build.cacheRepository`.
+
+:::note
+The container registry authentication must be managed by the underlying infrastructure.
+:::
+
+##### `wave.mirror`
+
+<AddedInVersion version="24.10" />
+
+Enable Wave container mirroring (default: `false`). Wave will mirror (i.e., copy) the containers in your pipeline to a container registry of your choice, so that pipeline tasks can pull the containers from this registry instead of the original one.
+
+The mirrored containers will have the same name, digest, and metadata.
+
+The target registry must be specified using the `wave.build.repository` setting.
+
+This option is only compatible with `wave.strategy = 'container'`. It cannot be used with `wave.freeze`.
+
+:::note
+The container registry authentication must be managed by the underlying infrastructure.
+:::
+
+##### `wave.strategy`
+The strategy to be used when resolving multiple Wave container requirements (default: `'container,dockerfile,conda'`).
+
+##### `wave.build.cacheRepository`
+
+The container repository used to cache image layers built by the Wave service.
+
+The corresponding credentials must be provided in your Seqera Platform account.
+
+##### `wave.build.compression.mode`
+
+<AddedInVersion version="25.10" />
+
+The compression algorithm that should be used when building the container. Can be `gzip`, `estargz`, or `zstd` (default: `gzip`).
+
+##### `wave.build.compression.level`
+
+<AddedInVersion version="25.10" />
+
+Level of compression used when building a container depending the chosen algorithmgzip, estargz (0-9) and zstd (0-22).
+
+##### `wave.build.compression.force`
+
+<AddedInVersion version="25.10" />
+
+Forcefully apply compression option to all layers, including already existing layers (default: `false`).
+
+##### `wave.build.conda.baseImage`
+
+<AddedInVersion version="24.04" />
+
+The base image for the final stage in multi-stage Conda container builds (default: `ubuntu:24.04`). This option only applies when using `wave.build.template` set to `conda/micromamba:v2` or `conda/pixi:v1`.
+
+##### `wave.build.conda.basePackages`
+
+One or more Conda packages to be always added in the resulting container (default: `conda-forge::procps-ng`).
+
+##### `wave.build.conda.commands`
+
+One or more commands to be added to the Dockerfile used to build a Conda based image.
+
+##### `wave.build.conda.mambaImage`
+
+The Mamba container image is used to build Conda based container. This is expected to be [micromamba-docker](https://github.com/mamba-org/micromamba-docker) image.
+
+##### `wave.build.repository`
+
+The container repository where images built by Wave are uploaded.
+
+The corresponding credentials must be provided in your Seqera Platform account.
+
+##### `wave.build.template`
+
+<AddedInVersion version="26.04" />
+
+The build template to use for container builds (default: `conda/micromamba:v1`). Supported values:
+
+- `conda/micromamba:v1`Standard Micromamba 1.x single-stage build. Default when unspecified.
+- `conda/micromamba:v2`Micromamba 2.x with multi-stage builds.
+- `conda/pixi:v1`Pixi package manager with multi-stage builds for optimized image sizes.
+- `cran/installr:v1`R/CRAN packages using installr.
+
+Multi-stage templates produce smaller images by excluding build tools from the final image.
+
+##### `wave.httpClient.connectTimeout`
+
+The connection timeout for the Wave HTTP client (default: `30s`).
+
+##### `wave.httpClient.maxRate`
+
+<AddedInVersion version="25.04" />
+
+The maximum request rate for the Wave HTTP client (default: `1/sec`).
+
+##### `wave.retryPolicy.delay`
+
+The initial delay when a failing HTTP request is retried (default: `450ms`).
+
+##### `wave.retryPolicy.jitter`
+
+The jitter factor used to randomly vary retry delays (default: `0.25`).
+
+##### `wave.retryPolicy.maxAttempts`
+
+The max number of attempts a failing HTTP request is retried (default: `5`).
+
+##### `wave.retryPolicy.maxDelay`
+
+The max delay when a failing HTTP request is retried (default: `90s`).
+
+##### `wave.scan.allowedLevels`
+
+<AddedInVersion version="24.10" />
+
+Comma-separated list of allowed vulnerability levels when scanning containers for security vulnerabilities in `required` mode.
+
+Allowed values are`low`, `medium`, `high`, `critical`.
+
+This option requires `wave.scan.mode = 'required'`.
+
+##### `wave.scan.mode`
+
+<AddedInVersion version="24.10" />
+
+Enable Wave container security scanning. Wave will scan the containers in your pipeline for security vulnerabilities.
+
+The following options can be specified:
+
+###### `'none'`
+
+No security scanning is performed.
+
+###### `'async'`
+
+The containers used by your pipeline are scanned for security vulnerabilities. The task execution is carried out regardless of the security scan result.
+
+###### `'required'`
+
+The containers used by your pipeline are scanned for security vulnerabilities. The task is only executed if the corresponding container is free of vulnerabilities.
+
+[wave-page]: ../../wave

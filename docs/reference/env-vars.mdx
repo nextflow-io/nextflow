@@ -365,6 +365,16 @@ The Seqera Platform workspace ID. Can also be configured using the `tower.worksp
 
 Defines a proxy server used as a fallback for any protocol (HTTP, HTTPS, FTP) that does not have a scheme-specific proxy variable set. A scheme-specific variable (e.g. `HTTPS_PROXY`) takes precedence over `ALL_PROXY`. Proxy authentication is supported by providing the credentials in the proxy URL.
 
+##### `COLUMNS`
+
+<AddedInVersion version="26.10" />
+
+Sets the terminal width of ANSI-formatted log output when `TERMINAL_WIDTH` is not set to a positive integer.
+
+:::note
+Bash sets `COLUMNS` in interactive shells but does not export it, so it is not visible to Nextflow unless you export it explicitly, e.g. `export COLUMNS=100`, or set it for the command, e.g. `COLUMNS=100 nextflow run <pipeline>`. In non-interactive contexts such as a batch job script, `COLUMNS` is not set at all — use `TERMINAL_WIDTH` to force a width there.
+:::
+
 ##### `FTP_PROXY`
 
 Defines the FTP proxy server. Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `ftp://user:password@proxy-host.com:port`. Credentials containing special characters must be URL-encoded (percent-encoded).
@@ -393,7 +403,7 @@ Defines one or more host names that should not use the proxy server. Separate mu
 
 ##### `TERMINAL_WIDTH`
 
-Forces the terminal width of ANSI-formatted log output. Overrides automatic terminal width detection and uses the specified width for line wrapping when set to an integer value.
+Forces the terminal width of ANSI-formatted log output. Overrides automatic terminal width detection and uses the specified width for line wrapping when set to a positive integer. Values that are not positive integers are ignored, in which case Nextflow falls back to `COLUMNS` and then to automatic detection.
 
 [process-conda]: ./process#conda
 [process-publishdir]: ./process#publishdir

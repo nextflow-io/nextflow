@@ -32,9 +32,18 @@ module.exports = {
                 "script",
                 "working-with-files",
                 "process",
-                "process-typed",
                 "workflow",
-                "workflow-typed",
+                {
+                    type: "category",
+                    label: "Static typing",
+                    collapsed: true,
+                    link: { type: "doc", id: "static-typing" },
+                    items: [
+                        "process-typed",
+                        "workflow-typed",
+                        "typed-parameters"
+                    ]
+                },
                 "notifications",
                 "secrets",
                 "sharing",
@@ -45,8 +54,8 @@ module.exports = {
             type: "category",
             label: "Modules",
             collapsed: true,
+            link: { type: "doc", id: "modules/modules" },
             items: [
-                "modules/modules",
                 "modules/using-modules",
                 "modules/developing-modules",
                 "modules/module-registry"
@@ -101,8 +110,42 @@ module.exports = {
                     label: "Standard library",
                     link: { type: "doc", id: "reference/stdlib" },
                     items: [
-                        "reference/stdlib-namespaces",
-                        "reference/stdlib-types",
+                        {
+                            type: "category",
+                            label: "Namespaces",
+                            link: { type: "doc", id: "reference/stdlib-namespaces" },
+                            items: [
+                                "reference/stdlib-namespaces/global",
+                                "reference/stdlib-namespaces/channel",
+                                "reference/stdlib-namespaces/log",
+                                "reference/stdlib-namespaces/nextflow",
+                                "reference/stdlib-namespaces/workflow"
+                            ]
+                        },
+                        {
+                            type: "category",
+                            label: "Types",
+                            link: { type: "doc", id: "reference/stdlib-types" },
+                            items: [
+                                "reference/stdlib-types/bag",
+                                "reference/stdlib-types/boolean",
+                                "reference/stdlib-types/channel",
+                                "reference/stdlib-types/duration",
+                                "reference/stdlib-types/float",
+                                "reference/stdlib-types/integer",
+                                "reference/stdlib-types/iterable",
+                                "reference/stdlib-types/list",
+                                "reference/stdlib-types/map",
+                                "reference/stdlib-types/memory-unit",
+                                "reference/stdlib-types/path",
+                                "reference/stdlib-types/record",
+                                "reference/stdlib-types/set",
+                                "reference/stdlib-types/string",
+                                "reference/stdlib-types/tuple",
+                                "reference/stdlib-types/value",
+                                "reference/stdlib-types/version-number"
+                            ]
+                        },
                         "reference/stdlib-groovy"
                     ]
                 },
@@ -117,8 +160,77 @@ module.exports = {
             label: "Runtime reference",
             collapsed: true,
             items: [
-                "reference/cli",
-                "reference/config",
+                {
+                    type: "category",
+                    label: "CLI",
+                    link: { type: "doc", id: "reference/cli" },
+                    items: [
+                        "reference/cli/auth",
+                        "reference/cli/clean",
+                        "reference/cli/clone",
+                        "reference/cli/config",
+                        "reference/cli/console",
+                        "reference/cli/drop",
+                        "reference/cli/fs",
+                        "reference/cli/help",
+                        "reference/cli/info",
+                        "reference/cli/inspect",
+                        "reference/cli/kuberun",
+                        "reference/cli/launch",
+                        "reference/cli/lineage",
+                        "reference/cli/lint",
+                        "reference/cli/list",
+                        "reference/cli/log",
+                        "reference/cli/logfile",
+                        "reference/cli/module",
+                        "reference/cli/plugin",
+                        "reference/cli/pull",
+                        "reference/cli/run",
+                        "reference/cli/secrets",
+                        "reference/cli/self-update",
+                        "reference/cli/view"
+                    ]
+                },
+                {
+                    type: "category",
+                    label: "Configuration options",
+                    link: { type: "doc", id: "reference/config" },
+                    items: [
+                        "reference/config/unscoped",
+                        "reference/config/apple-container",
+                        "reference/config/apptainer",
+                        "reference/config/aws",
+                        "reference/config/azure",
+                        "reference/config/charliecloud",
+                        "reference/config/conda",
+                        "reference/config/dag",
+                        "reference/config/docker",
+                        "reference/config/env",
+                        "reference/config/executor",
+                        "reference/config/fusion",
+                        "reference/config/google",
+                        "reference/config/k8s",
+                        "reference/config/lineage",
+                        "reference/config/mail",
+                        "reference/config/manifest",
+                        "reference/config/nextflow",
+                        "reference/config/notification",
+                        "reference/config/podman",
+                        "reference/config/registry",
+                        "reference/config/report",
+                        "reference/config/sarus",
+                        "reference/config/seqera",
+                        "reference/config/shifter",
+                        "reference/config/singularity",
+                        "reference/config/smolvm",
+                        "reference/config/spack",
+                        "reference/config/timeline",
+                        "reference/config/tower",
+                        "reference/config/trace",
+                        "reference/config/wave",
+                        "reference/config/workflow"
+                    ]
+                },
                 "reference/env-vars"
             ]
         },

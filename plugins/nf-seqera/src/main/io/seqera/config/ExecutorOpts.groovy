@@ -108,6 +108,11 @@ class ExecutorOpts implements ConfigScope {
     """)
     final String predictionModel
 
+    @Description("""
+        Scheduling requirements applied to this run by the Seqera scheduler.
+    """)
+    final SchedulingRequirementOpts schedulingRequirement
+
     @ConfigOption
     @Description("""
         Custom environment variables to apply to all tasks submitted by the Seqera executor.
@@ -162,6 +167,8 @@ class ExecutorOpts implements ConfigScope {
         this.autoLabels = parseAutoLabels(opts.get('autoLabels'))
         // prediction model
         this.predictionModel = opts.predictionModel as String ?: null
+        // scheduling requirements (e.g. per-user vCPU cap)
+        this.schedulingRequirement = new SchedulingRequirementOpts(opts.schedulingRequirement as Map ?: Map.of())
         // custom task environment variables
         this.taskEnvironment = opts.taskEnvironment as Map<String, String>
         // backend-specific provider configuration
@@ -228,6 +235,10 @@ class ExecutorOpts implements ConfigScope {
 
     String getPredictionModel() {
         return predictionModel
+    }
+
+    SchedulingRequirementOpts getSchedulingRequirement() {
+        return schedulingRequirement
     }
 
     Map<String, String> getTaskEnvironment() {
