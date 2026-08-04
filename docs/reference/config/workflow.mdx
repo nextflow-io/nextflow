@@ -79,7 +79,7 @@ Create an absolute symbolic link in the output directory for each output file.
 
 ##### `workflow.output.overwrite`
 
-When `true` any existing file in the specified folder will be overwritten (default: `'standard'`).
+Determines when to overwrite an existing file in the output directory (default: `'standard'`).
 
 Available options:
 
@@ -118,7 +118,7 @@ Specify arbitrary tags for published files.
 For example:
 
 ```groovy
-workflow.output.tags = [FOO'hello', BAR'world']
+workflow.output.tags = [FOO: 'hello', BAR: 'world']
 ```
 
 [process-error-strategy]: ../process#errorstrategy
