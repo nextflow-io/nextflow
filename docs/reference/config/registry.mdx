@@ -9,7 +9,7 @@ description: Reference for the registry config scope, which configures the regis
 
 The `registry` scope configures the registries used to resolve [modules][module-registry-page] and [plugins][plugin-registry-page].
 
-The registries defined in this scope are authoritative: when one or more are configured, Nextflow queries exactly those, in the order they are listed, and the public Nextflow registry (`https://registry.nextflow.io/api`) is *not* added implicitly. When the scope is not configured, the public registry is used. To keep using the public registry alongside your own, include its URL in `registry.url` explicitly.
+By default, only the public Nextflow registry (`https://registry.nextflow.io/api`) is used. When one or more registries are configured, Nextflow uses only those registries in the order they are listed, and the public registry is *not* used. To keep using the public registry alongside your own, include its URL in `registry.url` explicitly.
 
 ##### `registry.apiKey`
 

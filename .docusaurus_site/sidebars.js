@@ -216,6 +216,7 @@ module.exports = {
                         "reference/config/nextflow",
                         "reference/config/notification",
                         "reference/config/podman",
+                        "reference/config/registry",
                         "reference/config/report",
                         "reference/config/sarus",
                         "reference/config/seqera",
