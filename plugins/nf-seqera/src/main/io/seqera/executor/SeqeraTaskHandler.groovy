@@ -170,6 +170,8 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
 
     protected int maxSpotAttempts(MachineRequirementOpts opts) {
         final result = opts?.maxSpotAttempts
+        if( result != null && result < 0 )
+            throw new IllegalArgumentException("Invalid maxSpotAttempts value: ${result} -- the value must be zero or a positive number")
         if( result )
             return result
         // when fusion snapshot is enabled max attempt should be > 0

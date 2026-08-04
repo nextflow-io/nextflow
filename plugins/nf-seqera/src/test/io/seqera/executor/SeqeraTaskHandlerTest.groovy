@@ -1329,6 +1329,26 @@ class SeqeraTaskHandlerTest extends Specification {
         2           | true      | 2
     }
 
+    def 'should reject negative max spot attempts' () {
+        given:
+        Global.config = [fusion: [enabled: true, snapshots: true]]
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient); isFusionEnabled() >> true }
+        def proc = Mock(TaskProcessor) { getExecutor() >> executor }
+        def task = Mock(TaskRun) { getWorkDir() >> Paths.get('/work/ab/cd1234'); getProcessor() >> proc }
+        def handler = new SeqeraTaskHandler(task, executor)
+
+        when:
+        handler.maxSpotAttempts(new MachineRequirementOpts([maxSpotAttempts: -1]))
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('maxSpotAttempts')
+        e.message.contains('-1')
+
+        cleanup:
+        Global.config = null
+    }
+
     /**
      * Creates a test handler with an error set on the task
      */
