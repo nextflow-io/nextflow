@@ -131,6 +131,16 @@ Resource requests and other job characteristics can be controlled via the follow
 - [resourcelabels][process-resourcelabels]
 - [time][process-time]
 
+The following [hints][process-hints] are supported:
+
+- `scheduling.provisioningModel`: Select the [provisioning model](https://cloud.google.com/batch/docs/create-run-job-spot) for a specific process, overriding the global `google.batch.spot` / `google.batch.preemptible` config options. The value is one of `spot`, `standard` (or `ondemand`) for on-demand, or `preemptible` (case-insensitive). For example:
+
+  ```nextflow
+  hints 'scheduling.provisioningModel': 'standard'
+  ```
+
+  The key may be used as-is or with the `google-batch/` prefix to restrict it to this executor (e.g. `hints 'google-batch/scheduling.provisioningModel': 'spot'`).
+
 See [Cloud Batch][google-batch]for further configuration details.
 
 ## HTCondor
