@@ -1,49 +1,49 @@
 ---
 title: Executors
-description: Configure Nextflow executors to run pipeline processes on local machines, HPC schedulers, and cloud platforms.
+description: Reference for the Nextflow executors, which run pipeline tasks on local machines, HPC schedulers, and cloud platforms.
 ---
 
 # Executors
 
-In Nextflow, the *executor* is the component that executes tasks submitted by the pipeline.
+In Nextflow, the *executor* is the component that runs the tasks submitted by a pipeline.
 
-The executor provides an abstraction between the pipeline definition (*what it computes*) and the underlying execution system (*how it runs*). This way, you can write a pipeline once and run it anywhere -- on your local machine, an HPC cluster, or in the cloud -- simply by using a different configuration profile.
+The executor provides an abstraction between the pipeline definition (*what it computes*) and the underlying execution system (*how it runs*). You can write a pipeline once and run it on your local machine, a high-performance computing (HPC) cluster, or in the cloud by changing the executor in the Nextflow configuration.
 
-Use [`process.executor`][process-executor] to set the executor, e.g. `process.executor = 'slurm'`. The `local` executor is used by default.
+Use [`process.executor`][process-executor] to set the executor, e.g. `process.executor = 'slurm'`. Nextflow uses the `local` executor by default.
 
 ## Local
 
 | Page | Name | Description |
 | ---- | ---- | ----------- |
-| [Local][executor-local] | `local` | Submit jobs as OS processes in the local machine. |
+| [Local][executor-local] | `local` | Runs tasks as operating system processes on the local machine. |
 
 ## Cloud
 
 | Page | Name | Description |
 | ---- | ---- | ----------- |
-| [AWS Batch][executor-aws-batch] | `awsbatch` | Submit jobs to AWS Batch. |
-| [Azure Batch][executor-azure-batch] | `azurebatch` | Submit jobs to Azure Batch. |
-| [Google Cloud Batch][executor-google-batch] | `google-batch` | Submit jobs to Google Cloud Batch. |
-| [Kubernetes][executor-kubernetes] | `k8s` | Submit jobs to a Kubernetes cluster. |
-| [Seqera][executor-seqera] | `seqera` | Submit jobs to Seqera Intelligent Compute. |
+| [AWS Batch][executor-aws-batch] | `awsbatch` | Submits tasks to AWS Batch. |
+| [Azure Batch][executor-azure-batch] | `azurebatch` | Submits tasks to Azure Batch. |
+| [Google Cloud Batch][executor-google-batch] | `google-batch` | Submits tasks to Google Cloud Batch. |
+| [Kubernetes][executor-kubernetes] | `k8s` | Submits tasks to a Kubernetes cluster. |
+| [Seqera][executor-seqera] | `seqera` | Submits tasks to Seqera Intelligent Compute. |
 
 ## HPC schedulers
 
 | Page | Name | Description |
 | ---- | ---- | ----------- |
-| [Bridge][executor-bridge] | `bridge` | Submit jobs through the Bridge abstraction layer. |
-| [Flux][executor-flux] | `flux` | Submit jobs to the Flux Framework. |
-| [HTCondor][executor-htcondor] | `condor` | Submit jobs to the HTCondor resource manager. |
-| [HyperQueue][executor-hyperqueue] | `hq` | Submit jobs to the HyperQueue job scheduler. |
-| [LSF][executor-lsf] | `lsf` | Submit jobs to a Platform LSF cluster. |
-| [Moab][executor-moab] | `moab` | Submit jobs to the Moab resource manager. |
-| [NQSII][executor-nqsii] | `nqsii` | Submit jobs to the NQSII resource manager. |
-| [OAR][executor-oar] | `oar` | Submit jobs to the OAR resource manager. |
-| [PBS/Torque][executor-pbs] | `pbs` | Submit jobs to a PBS/Torque scheduler. |
-| [PBS Pro][executor-pbspro] | `pbspro` | Submit jobs to the PBS Pro resource manager. |
-| [SGE][executor-sge] | `sge` | Submit jobs to an SGE cluster or compatible platform. |
-| [SLURM][executor-slurm] | `slurm` | Submit jobs to the SLURM resource manager. |
-| [TCS][executor-tcs] | `tcs` | Submit jobs to a Fujitsu TCS cluster. |
+| [Bridge][executor-bridge] | `bridge` | Submits tasks through the Bridge abstraction layer. |
+| [Flux][executor-flux] | `flux` | Submits tasks to the Flux Framework. |
+| [HTCondor][executor-htcondor] | `condor` | Submits tasks to the HTCondor resource manager. |
+| [HyperQueue][executor-hyperqueue] | `hq` | Submits tasks to the HyperQueue job scheduler. |
+| [LSF][executor-lsf] | `lsf` | Submits tasks to a Platform LSF cluster. |
+| [Moab][executor-moab] | `moab` | Submits tasks to the Moab resource manager. |
+| [NQSII][executor-nqsii] | `nqsii` | Submits tasks to the NQSII resource manager. |
+| [OAR][executor-oar] | `oar` | Submits tasks to the OAR resource manager. |
+| [PBS/Torque][executor-pbs] | `pbs` | Submits tasks to a PBS/Torque scheduler. |
+| [PBS Pro][executor-pbspro] | `pbspro` | Submits tasks to the PBS Pro resource manager. |
+| [SGE][executor-sge] | `sge` | Submits tasks to an SGE cluster or compatible platform. |
+| [SLURM][executor-slurm] | `slurm` | Submits tasks to the SLURM resource manager. |
+| [TCS][executor-tcs] | `tcs` | Submits tasks to a Fujitsu TCS cluster. |
 
 [executor-aws-batch]: ./executor/aws-batch
 [executor-azure-batch]: ./executor/azure-batch

@@ -1,6 +1,6 @@
 ---
 title: HTCondor
-description: Reference for the HTCondor executor.
+description: Reference for the condor executor, which submits tasks to the HTCondor resource manager.
 ---
 
 # HTCondor
@@ -10,13 +10,13 @@ description: Reference for the HTCondor executor.
 
 The `condor` executor runs pipeline tasks using the [HTCondor](https://research.cs.wisc.edu/htcondor/) resource manager. It submits each task as an HTCondor job using the `condor_submit` command.
 
-To enable the HTCondor executor, set `process.executor = 'condor'` in the `nextflow.config` file. The pipeline must be launched from a node where `condor_submit` is available, typically the cluster login node.
+To enable the HTCondor executor, set `process.executor = 'condor'` in the `nextflow.config` file. Launch the pipeline from a node where `condor_submit` is available, typically the cluster login node.
 
 :::note
-The HTCondor executor for Nextflow does not currently support HTCondor's ability to transfer input/output data to the corresponding job's compute node. Therefore, the data must be made accessible to the compute nodes through a shared file system directory from where the Nextflow workflow is executed (or specified via the `-w` option).
+The HTCondor executor does not support HTCondor's ability to transfer input and output data to the job's compute node. Instead, make the data accessible to the compute nodes through a shared file system directory, either the directory where you launch the pipeline or the one specified with the `-w` option.
 :::
 
-Resource requests and other job characteristics can be controlled via the following process directives:
+Use the following process directives to control resource requests and other job characteristics:
 
 - [clusterOptions][process-clusteroptions]
 - [cpus][process-cpus]
