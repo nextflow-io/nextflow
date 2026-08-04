@@ -1,0 +1,146 @@
+---
+title: k8s
+description: Reference for the k8s config scope, which controls the deployment and execution of workflow applications in a Kubernetes cluster.
+---
+
+# `k8s`
+
+The `k8s` scope controls the deployment and execution of workflow applications in a Kubernetes cluster.
+
+##### `k8s.autoMountHostPaths`
+
+Automatically mount host paths into the task pods (default: `false`). Only intended for development purposes when using a single node.
+
+##### `k8s.cleanup`
+
+When `true`, successful pods are automatically deleted (default: `true`).
+
+##### `k8s.client`
+
+Map of options for the Kubernetes HTTP client.
+
+If this option is specified, it will be used instead of `.kube/config`.
+
+Available options:
+
+- `server`
+- `token`
+- `tokenFile`
+- `verifySsl`
+- `sslCert`
+- `sslCertFile`
+- `clientCert`
+- `clientCertFile`
+- `clientKey`
+- `clientKeyFile`
+
+##### `k8s.clientRefreshInterval`
+
+<AddedInVersion version="26.04" />
+
+The interval after which the Kubernetes client configuration is refreshed (default: `50m`).
+
+This setting is useful when the Kubernetes authentication token has a limited lifespan and needs to be periodically refreshed. The client configuration will be automatically reloaded after the specified interval, allowing Nextflow to obtain fresh credentials from the Kubernetes configuration.
+
+##### `k8s.computeResourceType`
+
+Whether to use Kubernetes `Pod` or `Job` resource type to carry out Nextflow tasks (default: `Pod`).
+
+##### `k8s.context`
+
+The Kubernetes [configuration context](https://kubernetes.io/docs/tasks/access-application-cluster/configure-access-multiple-clusters/) to use.
+
+##### `k8s.cpuLimits`
+
+<AddedInVersion version="24.04" />
+
+When `true`, set both the pod CPUs `request` and `limit` to the value specified by the `cpus` directive, otherwise set only the `request` (default: `false`).
+This setting is useful when a K8s cluster requires a CPU limit to be defined through a [LimitRange](https://kubernetes.io/docs/concepts/policy/limit-range/).
+
+##### `k8s.fetchNodeName`
+
+Include the hostname of each task in the execution trace (default: `false`).
+
+##### `k8s.fuseDevicePlugin`
+
+<AddedInVersion version="24.04" />
+
+The FUSE device plugin to be used when enabling Fusion in unprivileged mode (default: `['nextflow.io/fuse': 1]`).
+
+##### `k8s.httpConnectTimeout`
+
+The Kubernetes HTTP client request connection timeout e.g. `'60s'`.
+
+##### `k8s.httpReadTimeout`
+
+The Kubernetes HTTP client request connection read timeout e.g. `'60s'`.
+
+##### `k8s.imagePullPolicy`
+
+The strategy for pulling container images. Can be `IfNotPresent`, `Always`, `Never`.
+
+##### `k8s.launchDir`
+The path where the workflow is launched and the user data is stored (default: `<volume-claim-mount-path>/<user-name>`). Must be a path in a shared K8s persistent volume.
+
+##### `k8s.namespace`
+
+The Kubernetes namespace to use (default: `default`).
+
+##### `k8s.pod`
+
+Additional pod configuration options such as environment variables, config maps, secrets, etc. Allows the same settings as the [pod][process-pod] process directive.
+When using the `kuberun` command, this setting also applies to the submitter pod.
+
+##### `k8s.projectDir`
+
+The path where Nextflow projects are downloaded (default: `<volume-claim-mount-path>/projects`). Must be a path in a shared K8s persistent volume.
+
+##### `k8s.runAsUser`
+
+The user ID to be used to run the containers. Shortcut for the `securityContext` option.
+
+##### `k8s.securityContext`
+
+The [security context](https://kubernetes.io/docs/tasks/configure-pod-container/security-context/) to use for all pods.
+
+##### `k8s.serviceAccount`
+
+The Kubernetes [service account name](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) to use.
+
+##### `k8s.storageClaimName`
+
+The name of the persistent volume claim where the shared work directory is stored.
+
+##### `k8s.storageMountPath`
+
+The mount path for the persistent volume claim (default: `/workspace`).
+
+##### `k8s.storageSubPath`
+
+The path in the persistent volume to be mounted (default: `/`).
+
+##### `k8s.workDir`
+
+The path of the shared work directory (default: `<user-dir>/work`). Must be a path in a shared K8s persistent volume.
+
+##### `k8s.debug.yaml`
+
+Save the pod spec for each task to `.command.yaml` in the task directory (default: `false`).
+
+##### `k8s.retryPolicy.delay`
+
+Delay when retrying failed API requests (default: `250ms`).
+
+##### `k8s.retryPolicy.jitter`
+
+Jitter value when retrying failed API requests (default: `0.25`).
+
+##### `k8s.retryPolicy.maxAttempts`
+
+Max attempts when retrying failed API requests (default: `4`).
+
+##### `k8s.retryPolicy.maxDelay`
+
+Max delay when retrying failed API requests (default: `90s`).
+
+[process-pod]: ../process#pod
