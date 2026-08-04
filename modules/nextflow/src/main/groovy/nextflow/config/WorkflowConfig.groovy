@@ -104,7 +104,7 @@ class WorkflowOutputConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        When `true` any existing file in the specified folder will be overwritten (default: `'standard'`).
+        Determines when to overwrite an existing file in the output directory (default: `'standard'`).
     """)
     final Object overwrite
 
