@@ -7,12 +7,28 @@ description: Overview of the config scopes that are available in the Nextflow co
 
 The [Nextflow configuration][config-page] is organized into config scopes. The following pages describe the available settings in each scope.
 
+Each setting is listed by its fully qualified name, which includes the enclosing scopes. You can write a setting using either dot syntax or block syntax:
+
+```groovy
+// dot syntax
+docker.enabled = true
+docker.runOptions = '-u $(id -u):$(id -g)'
+
+// block syntax
+docker {
+    enabled = true
+    runOptions = '-u $(id -u):$(id -g)'
+}
+```
+
+See [Blocks][config-blocks] for more information about the two forms.
+
 ## Config scopes
 
 | Page | Description |
 | ---- | ----------- |
 | [Unscoped options][config-unscoped] | Settings that are not part of a config scope. |
-| [`appleContainer`][config-apple-container] | Controls how [Apple container](https://github.com/apple/container) is used by Nextflow. |
+| [<code style={{whiteSpace: 'nowrap'}}>appleContainer</code>][config-apple-container] | Controls how [Apple container](https://github.com/apple/container) is used by Nextflow. |
 | [`apptainer`][config-apptainer] | Controls how [Apptainer](https://apptainer.org) containers are executed by Nextflow. |
 | [`aws`][config-aws] | Controls the interactions with AWS, including AWS Batch and S3. |
 | [`azure`][config-azure] | Controls the interactions with Azure, including Azure Batch and Azure Blob Storage. |
@@ -49,6 +65,7 @@ The [Nextflow configuration][config-page] is organized into config scopes. The f
 [config-apptainer]: ./config/apptainer
 [config-aws]: ./config/aws
 [config-azure]: ./config/azure
+[config-blocks]: ../config#blocks
 [config-charliecloud]: ./config/charliecloud
 [config-conda]: ./config/conda
 [config-dag]: ./config/dag
