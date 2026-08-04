@@ -1,0 +1,23 @@
+---
+title: registry
+description: Reference for the registry config scope, which configures the registries used to resolve modules and plugins.
+---
+
+# `registry`
+
+<AddedInVersion version="26.04" />
+
+The `registry` scope configures the registries used to resolve [modules][module-registry-page] and [plugins][plugin-registry-page].
+
+The registries defined in this scope are authoritative: when one or more are configured, Nextflow queries exactly those, in the order they are listed, and the public Nextflow registry (`https://registry.nextflow.io/api`) is *not* added implicitly. When the scope is not configured, the public registry is used. To keep using the public registry alongside your own, include its URL in `registry.url` explicitly.
+
+##### `registry.apiKey`
+
+The API key used to authenticate with the registry. When not set, the `NXF_REGISTRY_TOKEN` environment variable is used.
+
+##### `registry.url`
+
+A registry URL, or a list of registry URLs queried in the order they are listed. When set, these replace the default public registry.
+
+[module-registry-page]: ../../modules/module-registry
+[plugin-registry-page]: ../../plugins/plugin-registry

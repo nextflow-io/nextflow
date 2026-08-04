@@ -47,6 +47,7 @@ See [Blocks][config-blocks] for more information about the two forms.
 | [`nextflow`][config-nextflow] | Controls the retry policy used for retryable operations. |
 | [`notification`][config-notification] | Controls the automatic sending of an email notification on workflow completion. |
 | [`podman`][config-podman] | Controls how [Podman](https://podman.io/) containers are executed by Nextflow. |
+| [`registry`][config-registry] | Configures the registries used to resolve [modules][module-registry-page] and [plugins][plugin-registry-page]. |
 | [`report`][config-report] | Controls the generation of the [execution report][execution-report]. |
 | [`sarus`][config-sarus] | Controls how [Sarus](https://sarus.readthedocs.io) containers are executed by Nextflow. |
 | [`seqera`][config-seqera] | Controls the interactions with Seqera services. |
@@ -82,6 +83,7 @@ See [Blocks][config-blocks] for more information about the two forms.
 [config-notification]: ./config/notification
 [config-page]: ../config
 [config-podman]: ./config/podman
+[config-registry]: ./config/registry
 [config-report]: ./config/report
 [config-sarus]: ./config/sarus
 [config-seqera]: ./config/seqera
@@ -97,6 +99,8 @@ See [Blocks][config-blocks] for more information about the two forms.
 [config-workflow]: ./config/workflow
 [execution-report]: ../reports#execution-report
 [fusion-page]: ../fusion
+[module-registry-page]: ../modules/module-registry
+[plugin-registry-page]: ../plugins/plugin-registry
 [timeline-report]: ../reports#execution-timeline
 [trace-report]: ../reports#trace-file
 [wave-page]: ../wave
