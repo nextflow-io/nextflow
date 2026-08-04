@@ -127,7 +127,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             baseMachineOpts,
             task.getContainerPlatform(),
             task.config.getDisk(),
-            fusionEnabled() && fusionConfig().snapshotsEnabled(),
+            fusionConfig().snapshotsEnabled(),
             maxSpotAttempts(baseMachineOpts)
         )
         // resolve optional per-task prediction model override from the seqera/predictionModel hint;
@@ -174,7 +174,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             return result
         // when fusion snapshot is enabled max attempt should be > 0
         // to enable to allow snapshot retry the job execution in a new compute instance
-        return fusionEnabled() && fusionConfig().snapshotsEnabled() ? FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS : 0
+        return fusionConfig().snapshotsEnabled() ? FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS : 0
     }
 
     /**

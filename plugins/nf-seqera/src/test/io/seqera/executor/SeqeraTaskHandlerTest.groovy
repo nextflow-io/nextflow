@@ -1303,14 +1303,11 @@ class SeqeraTaskHandlerTest extends Specification {
         return new SeqeraTaskHandler(taskRun, executor)
     }
 
-    /**
-     * Creates a test handler with an error set on the task
-     */
     @Unroll
     def 'should validate max spot attempts' () {
         given:
-        Global.config = [fusion: [enabled: FUSION, snapshots: SNAPSHOTS]]
-        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient); isFusionEnabled() >> FUSION }
+        Global.config = [fusion: [enabled: true, snapshots: SNAPSHOTS]]
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient); isFusionEnabled() >> true }
         def proc = Mock(TaskProcessor) { getExecutor() >> executor }
         def task = Mock(TaskRun) { getWorkDir() >> Paths.get('/work/ab/cd1234'); getProcessor() >> proc }
         def handler = new SeqeraTaskHandler(task, executor)
@@ -1322,17 +1319,19 @@ class SeqeraTaskHandlerTest extends Specification {
         Global.config = null
 
         where:
-        ATTEMPTS    | FUSION | SNAPSHOTS | EXPECTED
-        null        | false  | false     | 0
-        0           | false  | false     | 0
-        2           | false  | false     | 2
+        ATTEMPTS    | SNAPSHOTS | EXPECTED
+        null        | false     | 0
+        0           | false     | 0
+        2           | false     | 2
         and:
-        null        | true   | false     | 0
-        null        | true   | true      | FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS
-        0           | true   | true      | FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS
-        2           | true   | true      | 2
+        null        | true      | FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS
+        0           | true      | FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS
+        2           | true      | 2
     }
 
+    /**
+     * Creates a test handler with an error set on the task
+     */
     private SeqeraTaskHandler createHandlerWithError(Throwable error) {
         def taskRun = Mock(TaskRun) {
             getWorkDir() >> Paths.get('/work/ab/cd1234')
