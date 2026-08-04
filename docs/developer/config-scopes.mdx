@@ -50,6 +50,10 @@ For example:
     String createMessage
 ```
 
+:::note
+Inherited fields are not included. Each scope class must declare its options directly.
+:::
+
 The `@ConfigOption` annotation can specify an optional set of types that are valid in addition to the field type. For example, the `fusion.tags` option, which accepts either a String or Boolean, is declared as follows:
 
 ```groovy
@@ -59,13 +63,39 @@ The `@ConfigOption` annotation can specify an optional set of types that are val
 
 The field type and any additional types are included in the config spec, allowing them to be used for validation.
 
-The field type can be any Java or Groovy class, but in practice it should be a class that can be constructed from primitive values (numbers, booleans, strings). For example, `Duration` and `MemoryUnit` are standard Nextflow types that can each be constructed from an integer or string.
+The field type can be any Java or Groovy class, but in practice it should be a [standard Nextflow type][stdlib-types] that can be constructed from primitive values (numbers, booleans, strings). For example, `Duration` and `MemoryUnit` are standard types that can each be constructed from an integer or string.
 
 ### Nested scopes
 
-A *nested scope* is defined as a field whose type is an implementation of `ConfigScope`. The field name determines the name of the nested scope.
+A *nested scope* is defined as a field whose type is an implementation of `ConfigScope`. The field name determines the name of the nested scope. It does not need the `@ConfigOption` annotation.
 
 The scope class referenced by the field type defines config options and scopes in the same manner as top-level scope classes. Unlike top-level scopes, nested scope classes do not need to use the `@ScopeName` annotation or provide a default constructor.
+
+For example:
+
+```groovy
+@ScopeName('hello')
+class HelloConfig implements ConfigScope {
+
+    ReportConfig report
+
+    HelloConfig() {}
+
+    HelloConfig(Map opts) {
+        this.report = new ReportConfig(opts.report as Map ?: [:])
+    }
+}
+
+class ReportConfig implements ConfigScope {
+
+    @ConfigOption
+    String file
+
+    ReportConfig(Map opts) {
+        this.file = opts.file
+    }
+}
+```
 
 See `ExecutorConfig` and `ExecutorRetryConfig` for an example of how a nested scope is defined and constructed.
 
@@ -174,3 +204,4 @@ The config spec described above can be rendered to Markdown using the `MarkdownR
 This approach to docs generation is not yet complete, and has not been incorporated into the build process yet. However, it can be used to check for discrepancies between the source code and docs when making changes. The documentation should match the `@Description` annotations as closely as possible, but may contain additional details such as version notes and extra paragraphs.
 
 [config-options]: ../reference/config
+[stdlib-types]: ../reference/stdlib-types

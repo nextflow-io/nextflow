@@ -160,7 +160,37 @@ module.exports = {
             label: "Runtime reference",
             collapsed: true,
             items: [
-                "reference/cli",
+                {
+                    type: "category",
+                    label: "CLI",
+                    link: { type: "doc", id: "reference/cli" },
+                    items: [
+                        "reference/cli/auth",
+                        "reference/cli/clean",
+                        "reference/cli/clone",
+                        "reference/cli/config",
+                        "reference/cli/console",
+                        "reference/cli/drop",
+                        "reference/cli/fs",
+                        "reference/cli/help",
+                        "reference/cli/info",
+                        "reference/cli/inspect",
+                        "reference/cli/kuberun",
+                        "reference/cli/launch",
+                        "reference/cli/lineage",
+                        "reference/cli/lint",
+                        "reference/cli/list",
+                        "reference/cli/log",
+                        "reference/cli/logfile",
+                        "reference/cli/module",
+                        "reference/cli/plugin",
+                        "reference/cli/pull",
+                        "reference/cli/run",
+                        "reference/cli/secrets",
+                        "reference/cli/self-update",
+                        "reference/cli/view"
+                    ]
+                },
                 "reference/config",
                 "reference/env-vars"
             ]
