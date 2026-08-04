@@ -1,15 +1,15 @@
 ---
 title: PBS/Torque
-description: Reference for the PBS/Torque executor.
+description: Reference for the pbs executor, which submits tasks to a PBS/Torque scheduler.
 ---
 
 # PBS/Torque
 
 The `pbs` executor runs pipeline tasks using a resource manager from the [PBS/Torque](http://en.wikipedia.org/wiki/Portable_Batch_System) family of batch schedulers. It submits each task as a PBS job using the `qsub` command.
 
-To enable the PBS executor, set `process.executor = 'pbs'` in the `nextflow.config` file. The pipeline must be launched from a node where `qsub` is available, typically the cluster login node.
+To enable the PBS executor, set `process.executor = 'pbs'` in the `nextflow.config` file. Launch the pipeline from a node where `qsub` is available, typically the cluster login node.
 
-Resource requests and other job characteristics can be controlled via the following process directives:
+Use the following process directives to control resource requests and other job characteristics:
 
 - [clusterOptions][process-clusteroptions]
 - [cpus][process-cpus]

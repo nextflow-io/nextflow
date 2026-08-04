@@ -1,31 +1,30 @@
 ---
 title: Local
-description: Reference for the local executor.
+description: Reference for the local executor, which runs tasks as processes on the local machine.
 ---
 
 # Local
 
-The `local` executor submits pipeline tasks as OS processes on the computer where Nextflow is launched. It is the default executor.
-
-The `local` executor is useful for developing and testing a pipeline on your computer, before scaling up to production workloads on a cluster or cloud environment.
+The `local` executor submits pipeline tasks as operating system processes on the computer where Nextflow is launched. It is the default executor. Use it to develop and test a pipeline on your computer before scaling up to production workloads on a cluster or in the cloud.
 
 The local executor supports two types of tasks:
+
 - Script tasks (processes with a `script` block) -- executed via a Bash wrapper script.
 - Native tasks (processes with an `exec` block) -- executed directly in the JVM.
 
-Resource requests and other job characteristics can be controlled via the following process directives:
+Use the following process directives to control resource requests and other job characteristics:
 
 - [accelerator][process-accelerator]
+- [container][process-container]
+- [containerOptions][process-containeroptions]
 - [cpus][process-cpus]
 - [memory][process-memory]
 - [time][process-time]
-- [container][process-container]
-- [containerOptions][process-containeroptions]
 
- Tasks are executed in parallel based on the amount of available resources (CPUs and memory). For example, on a machine with 8 CPUs and 16 GB of memory, a pipeline submitting tasks with 2 CPUs and 4 GB of memory can run up to 3 tasks in parallel (Nextflow reserves one CPU for itself). If a task requested more than 7 CPUs or 16 GB, the run would fail.
+Nextflow runs tasks in parallel based on the available resources (CPUs and memory). For example, on a machine with 8 CPUs and 16 GB of memory, a pipeline submitting tasks with 2 CPUs and 4 GB of memory can run up to 3 tasks in parallel, because Nextflow reserves one CPU for itself. If a task requests more than 7 CPUs or 16 GB, the run fails.
 
 :::note
-Because the operating system does not enforce resource limits, a local task can still use more CPUs and memory than it requested, starving other tasks in the process. To avoid this problem, use a container runtime such as [Docker][container-docker] or [Podman][container-podman] that can enforce resource limits.
+Because the operating system does not enforce resource limits, a local task can use more CPUs and memory than it requested and starve other tasks. To avoid this problem, use a container runtime such as [Docker][container-docker] or [Podman][container-podman] that can enforce resource limits.
 :::
 
 ## Accelerators

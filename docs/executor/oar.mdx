@@ -1,15 +1,15 @@
 ---
 title: OAR
-description: Reference for the OAR executor.
+description: Reference for the oar executor, which submits tasks to the OAR resource manager.
 ---
 
 # OAR
 
 The `oar` executor runs pipeline tasks using the [OAR](https://oar.imag.fr) resource manager. It submits each task as an OAR job using the `oarsub` command.
 
-To enable the OAR executor set `process.executor = 'oar'` in the `nextflow.config` file. The pipeline must be launched from a node where `oarsub` is available, typically the cluster login node.
+To enable the OAR executor, set `process.executor = 'oar'` in the `nextflow.config` file. Launch the pipeline from a node where `oarsub` is available, typically the cluster login node.
 
-Resource requests and other job characteristics can be controlled via the following process directives:
+Use the following process directives to control resource requests and other job characteristics:
 
 - [clusterOptions][process-clusteroptions]
 - [cpus][process-cpus]
@@ -17,7 +17,7 @@ Resource requests and other job characteristics can be controlled via the follow
 - [queue][process-queue]
 - [time][process-time]
 
-When specifying `clusterOptions` as a string, multiple options must be separated by semicolons to ensure that the job script is formatted correctly:
+When you specify `clusterOptions` as a string, separate multiple options with semicolons so that the job script is formatted correctly:
 
 ```groovy
 clusterOptions = '-t besteffort;--project myproject'
@@ -25,7 +25,7 @@ clusterOptions = '-t besteffort;--project myproject'
 
 <AddedInVersion version="24.04" />
 
-The same behavior can now be achieved using a string list:
+You can also specify the options as a string list:
 
 ```groovy
 clusterOptions = [ '-t besteffort', '--project myproject' ]

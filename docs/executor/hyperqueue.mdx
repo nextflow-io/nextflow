@@ -1,6 +1,6 @@
 ---
 title: HyperQueue
-description: Reference for the HyperQueue executor.
+description: Reference for the hyperqueue executor, which submits tasks to the HyperQueue job scheduler.
 ---
 
 # HyperQueue
@@ -15,9 +15,9 @@ HyperQueue 0.20.0 or later is required.
 
 The `hyperqueue` executor runs pipeline tasks using the [HyperQueue](https://github.com/It4innovations/hyperqueue) job scheduler. It submits each task as a HyperQueue job using the `hq` command.
 
-To enable the HyperQueue executor, set `process.executor = 'hq'` in the `nextflow.config` file. The pipeline must be launched from a node where `hq` is available, typically the cluster login node.
+To enable the HyperQueue executor, set `process.executor = 'hq'` in the `nextflow.config` file. Launch the pipeline from a node where `hq` is available, typically the cluster login node.
 
-Resource requests and other job characteristics can be controlled via the following process directives:
+Use the following process directives to control resource requests and other job characteristics:
 
 - [accelerator][process-accelerator]
 - [clusterOptions][process-clusteroptions]

@@ -1,15 +1,15 @@
 ---
 title: AWS Batch
-description: Reference for the AWS Batch executor.
+description: Reference for the awsbatch executor, which submits tasks to AWS Batch.
 ---
 
 # AWS Batch
 
 The `awsbatch` executor runs pipeline tasks using [AWS Batch](https://aws.amazon.com/batch/), a managed compute service that runs containerized workloads in AWS. It submits each task as an AWS Batch job.
 
-To enable this executor, set `process.executor = 'awsbatch'` in the `nextflow.config` file. The pipeline can be launched from a local machine or an EC2 instance. Every pipeline process must specify a Docker image using the `container` directive. The pipeline work directory must be located in an S3 bucket.
+To enable this executor, set `process.executor = 'awsbatch'` in the `nextflow.config` file. You can launch the pipeline from a local machine or an EC2 instance. Every pipeline process must specify a Docker image using the `container` directive. The pipeline work directory must be located in an S3 bucket.
 
-Resource requests and other job characteristics can be controlled via the following process directives:
+Use the following process directives to control resource requests and other job characteristics:
 
 - [accelerator][process-accelerator]
 - [arch][process-arch] (only when using Fargate platform type for AWS Batch)

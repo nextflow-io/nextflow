@@ -1,6 +1,6 @@
 ---
 title: Flux
-description: Reference for the Flux executor.
+description: Reference for the flux executor, which submits tasks to the Flux Framework.
 ---
 
 # Flux
@@ -9,19 +9,17 @@ The `flux` executor runs pipeline tasks using the [Flux Framework](https://flux-
 
 To enable the Flux executor, set `process.executor = 'flux'` in the `nextflow.config` file.
 
-Resource requests and other job characteristics can be controlled via the following process directives:
+Use the following process directives to control resource requests and other job characteristics:
 
 - [clusterOptions][process-clusteroptions]
 - [cpus][process-cpus]
 - [queue][process-queue]
 - [time][process-time]
 
-:::note
-Flux does not support the `memory` directive.
-:::
+By default, Flux sends all output to the `.command.log` file. To send this output to stdout and stderr instead, set `flux.terminalOutput = true` in your configuration file.
 
 :::note
-By default, Flux will send all output to the `.command.log` file. To send this output to stdout and stderr instead, set `flux.terminalOutput = true` in your config file.
+Flux does not support the `memory` directive.
 :::
 
 [process-clusteroptions]: ../reference/process#clusteroptions
