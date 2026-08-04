@@ -31,6 +31,14 @@ class SpecNodeTest extends Specification {
         def scope = SpecNode.ROOT.children.get('process')
 
         expect:
+        // every directive should have a description, even if it is overloaded
+        scope.children.get('arch').description
+        scope.children.get('cache').description
+        scope.children.get('clusterOptions').description
+        scope.children.get('cpus').description
+        scope.children.get('disk').description
+        scope.children.get('publishDir').description
+        and:
         scope.children.get('clusterOptions').types as Set == [ String, List, String[] ] as Set
         scope.children.get('cpus').types == [ Integer ]
         scope.children.get('errorStrategy').types == [ String ]

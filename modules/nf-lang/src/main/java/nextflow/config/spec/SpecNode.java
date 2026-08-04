@@ -80,9 +80,9 @@ public sealed interface SpecNode {
      * process directives.
      *
      * Directives with multiple method overloads are treated as
-     * options with multiple supported types. Method overloads with
-     * multiple parameters are ignored because they are not supported
-     * in the configuration.
+     * options with multiple supported types. Only one overload needs
+     * to provide a description. Method overloads with multiple parameters
+     * are ignored because they are not supported in the configuration.
      */
     private static SpecNode processScope() {
         var description = """
@@ -94,13 +94,14 @@ public sealed interface SpecNode {
         for( var method : ProcessDsl.DirectiveDsl.class.getDeclaredMethods() ) {
             if( method.getParameters().length != 1 )
                 continue;
-            if( !children.containsKey(method.getName()) ) {
-                var desc = annotatedDescription(method, "");
-                children.put(method.getName(), new Option(desc, new ArrayList<>()));
-            }
-            var option = (Option) children.get(method.getName());
-            var paramType = method.getParameterTypes()[0];
-            option.types.add(paramType);
+            var name = method.getName();
+            var desc = annotatedDescription(method, "");
+            var option = (Option) children.get(name);
+            if( option == null )
+                children.put(name, option = new Option(desc, new ArrayList<>()));
+            else if( option.description().isEmpty() && !desc.isEmpty() )
+                children.put(name, option = new Option(desc, option.types()));
+            option.types.add(method.getParameterTypes()[0]);
         }
         return new Scope(description, children);
     }
