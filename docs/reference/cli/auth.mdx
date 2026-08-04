@@ -1,0 +1,82 @@
+---
+title: nextflow auth
+description: Reference for the nextflow auth command. Manage Seqera Platform authentication.
+---
+
+# `nextflow auth`
+
+<AddedInVersion version="25.10" />
+
+Manage Seqera Platform authentication.
+
+## Usage
+
+```console
+$ nextflow auth <subcommand> [options]
+```
+
+## Description
+
+The `auth` command manages authentication and configuration for Seqera. For Seqera Cloud, it uses an OAuth2 authentication flow to generate and save a personal access token (PAT) locally. For Seqera Enterprise installations, it uses direct PAT authentication. Nextflow saves credentials to `~/.nextflow/seqera-auth.config` and adds an `includeConfig` statement to `~/.nextflow/config`, or to the configuration file set by `$NXF_HOME`.
+
+## Options
+
+##### `-h, -help`
+
+Print the command usage.
+
+## Subcommands
+
+##### `login`
+
+Authenticate with Seqera and save credentials. Set the Seqera primary compute environment, monitoring, and workspace.
+
+The following options are available:
+
+###### `-u, -url`
+
+Seqera API endpoint (default: `https://api.cloud.seqera.io`).
+
+##### `logout`
+
+Remove Seqera authentication and revoke the Seqera Cloud access token, if applicable.
+
+##### `config`
+
+Set the Seqera primary compute environment, monitoring, and workspace.
+
+##### `status`
+
+Show the Seqera authentication status and configuration.
+
+## Examples
+
+Authenticate with Seqera Cloud:
+
+```console
+$ nextflow auth login
+```
+
+Authenticate with an Enterprise installation:
+
+```console
+$ nextflow auth login -u https://tower.example.com/api
+```
+
+View current authentication status:
+
+```console
+$ nextflow auth status
+```
+
+Configure Seqera settings:
+
+```console
+$ nextflow auth config
+```
+
+Remove authentication:
+
+```console
+$ nextflow auth logout
+```
