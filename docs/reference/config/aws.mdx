@@ -187,7 +187,7 @@ The name of the signature algorithm to use for signing requests made by the clie
 This option is no longer supported.
 </DeprecatedInVersion>
 
-The Size hint (in bytes) for the low level TCP send buffer (default: `0`).
+The size hint (in bytes) for the low level TCP send buffer (default: `0`).
 
 ##### `aws.client.socketRecvBufferSizeHint`
 
@@ -195,7 +195,7 @@ The Size hint (in bytes) for the low level TCP send buffer (default: `0`).
 This option is no longer supported.
 </DeprecatedInVersion>
 
-The Size hint (in bytes) for the low level TCP receive buffer (default: `0`).
+The size hint (in bytes) for the low level TCP receive buffer (default: `0`).
 
 ##### `aws.client.socketTimeout`
 
@@ -207,11 +207,11 @@ The amount of time to wait (in milliseconds) for data to be transferred over an 
 
 ##### `aws.client.storageClass`
 
-The S3 storage class applied to stored objects, one of \[`STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, `INTELLIGENT_TIERING`\] (default: `STANDARD`).
+The S3 storage class applied to stored objects. Can be `STANDARD`, `STANDARD_IA`, `ONEZONE_IA`, or `INTELLIGENT_TIERING` (default: `STANDARD`).
 
 ##### `aws.client.storageEncryption`
 
-The S3 server side encryption to be used when saving objects on S3. Can be `AES256` or `aws:kms` (defaultnone).
+The S3 server side encryption to be used when saving objects on S3. Can be `AES256` or `aws:kms` (default: none).
 
 ##### `aws.client.storageKmsKeyId`
 

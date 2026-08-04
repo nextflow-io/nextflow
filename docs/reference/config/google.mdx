@@ -5,7 +5,7 @@ description: Reference for the google config scope, which controls the interacti
 
 # `google`
 
-The `google` scope allows you to configure the interactions with Google Cloud, including Google Cloud Batch and Google Cloud Storage.
+The `google` scope controls the interactions with Google Cloud, including Google Cloud Batch and Google Cloud Storage.
 
 ##### `google.enableRequesterPaysBuckets`
 
@@ -33,7 +33,7 @@ The Google Cloud project ID to use for pipeline execution.
 
 ##### `google.batch.allowedLocations`
 
-The set of [allowed locations](https://cloud.google.com/batch/docs/reference/rest/v1/projects.locations.jobs#locationpolicy) for VMs to be provisioned (defaultno restriction).
+The set of [allowed locations](https://cloud.google.com/batch/docs/reference/rest/v1/projects.locations.jobs#locationpolicy) for VMs to be provisioned (default: no restriction).
 
 ##### `google.batch.autoRetryExitCodes`
 
@@ -46,16 +46,16 @@ See [Google Batch documentation](https://cloud.google.com/batch/docs/troubleshoo
 
 <AddedInVersion version="24.10" />
 
-The image URI of the virtual machine boot disk, e.g `batch-debian` (defaultnone).
+The image URI of the virtual machine boot disk, e.g `batch-debian` (default: none).
 See [Google documentation](https://cloud.google.com/batch/docs/vm-os-environment-overview#vm-os-image-options) for details.
 
 ##### `google.batch.bootDiskSize`
 
-The size of the virtual machine boot disk, e.g `50.GB` (defaultnone).
+The size of the virtual machine boot disk, e.g `50.GB` (default: none).
 
 ##### `google.batch.cpuPlatform`
 
-The [minimum CPU Platform](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications), e.g. `'Intel Skylake'` (defaultnone).
+The [minimum CPU Platform](https://cloud.google.com/compute/docs/instances/specify-min-cpu-platform#specifications), e.g. `'Intel Skylake'` (default: none).
 
 ##### `google.batch.gcsfuseOptions`
 

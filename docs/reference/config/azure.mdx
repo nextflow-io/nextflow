@@ -5,7 +5,7 @@ description: Reference for the azure config scope, which controls the interactio
 
 # `azure`
 
-The `azure` scope allows you to configure the interactions with Azure, including Azure Batch and Azure Blob Storage.
+The `azure` scope controls the interactions with Azure, including Azure Batch and Azure Blob Storage.
 
 ##### `azure.activeDirectory.servicePrincipalId`
 
@@ -107,7 +107,7 @@ Enable autoscaling feature for the pool identified with `<name>`.
 
 ##### `azure.batch.pools.<name>.fileShareRootPath`
 
-The internal root mount point when mounting File Shares. Must be `/mnt/resource/batch/tasks/fsmounts` for CentOS nodes or `/mnt/batch/tasks/fsmounts` for Ubuntu nodes (defaultCentOS).
+The internal root mount point when mounting File Shares. Must be `/mnt/resource/batch/tasks/fsmounts` for CentOS nodes or `/mnt/batch/tasks/fsmounts` for Ubuntu nodes (default: CentOS).
 
 ##### `azure.batch.pools.<name>.lowPriority`
 
