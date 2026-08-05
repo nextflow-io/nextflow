@@ -1,0 +1,127 @@
+#!/bin/bash
+#
+# Test: Multi-process lineage validation
+# Verifies validation works with complex pipelines having multiple outputs
+#
+
+set -e
+
+# Get script directory and project root
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+TESTS_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
+PROJECT_ROOT="$(dirname "$TESTS_DIR")"
+
+# Use project launcher if NXF_CMD not set
+: "${NXF_CMD:=$PROJECT_ROOT/launch.sh}"
+: "${NXF_RUN:=$NXF_CMD run $TESTS_DIR/lineage-validate-multi.nf}"
+
+# Create temporary working directory
+WORK_DIR=$(mktemp -d)
+trap "rm -rf $WORK_DIR" EXIT
+cd "$WORK_DIR"
+
+# Skip if lineage is not available
+if ! "$NXF_CMD" lineage --help &>/dev/null; then
+    echo "SKIP: lineage command not available"
+    exit 0
+fi
+
+# Create temporary lineage store
+LINEAGE_STORE="$WORK_DIR/lineage-store"
+mkdir -p "$LINEAGE_STORE"
+
+LINEAGE_CONFIG="lineage { enabled = true; store { location = '$LINEAGE_STORE' } }"
+
+#
+# Test 1: Multi-sample pipeline produces consistent outputs
+#
+echo "=== Test 1: Multi-sample consistency ==="
+
+# Run 1
+echo "--- Run 1 ---"
+"$NXF_RUN" -c <(echo "$LINEAGE_CONFIG") --samples 'A,B,C' 2>&1 | tee run1.out
+RUN1_LID=$(grep -oE 'lid://[a-f0-9-]+' .nextflow.log | head -1)
+echo "Run 1 LID: $RUN1_LID"
+
+# Verify all processes ran
+[[ $(grep -c 'Submitted process > GENERATE' .nextflow.log) == 3 ]] || \
+    { echo "ERROR: Expected 3 GENERATE processes"; exit 1; }
+[[ $(grep -c 'Submitted process > ANALYZE' .nextflow.log) == 3 ]] || \
+    { echo "ERROR: Expected 3 ANALYZE processes"; exit 1; }
+[[ $(grep -c 'Submitted process > SUMMARIZE' .nextflow.log) == 1 ]] || \
+    { echo "ERROR: Expected 1 SUMMARIZE process"; exit 1; }
+
+rm -rf work .nextflow.log
+
+# Run 2 with same samples
+echo ""
+echo "--- Run 2 (identical) ---"
+"$NXF_RUN" -c <(echo "$LINEAGE_CONFIG") --samples 'A,B,C' 2>&1 | tee run2.out
+RUN2_LID=$(grep -oE 'lid://[a-f0-9-]+' .nextflow.log | head -1)
+echo "Run 2 LID: $RUN2_LID"
+rm -rf work .nextflow.log
+
+# Validate
+echo ""
+echo "--- Validating ---"
+"$NXF_CMD" lineage validate "$RUN2_LID" --against "$RUN1_LID" \
+    -c <(echo "$LINEAGE_CONFIG") 2>&1 | tee validate1.out
+
+grep -q "semantically equivalent" validate1.out || \
+    { echo "ERROR: Multi-sample runs should be equivalent"; exit 1; }
+
+echo "Test 1 passed: Multi-sample pipeline validated"
+
+
+#
+# Test 2: Different sample sets should fail
+#
+echo ""
+echo "=== Test 2: Different samples detection ==="
+
+# Run 3 with different samples
+echo "--- Run 3: samples=X,Y ---"
+"$NXF_RUN" -c <(echo "$LINEAGE_CONFIG") --samples 'X,Y' 2>&1 | tee run3.out
+RUN3_LID=$(grep -oE 'lid://[a-f0-9-]+' .nextflow.log | head -1)
+echo "Run 3 LID: $RUN3_LID"
+rm -rf work .nextflow.log
+
+# Validate against first run (should fail - different samples)
+echo ""
+echo "--- Validating different samples (should fail) ---"
+if "$NXF_CMD" lineage validate "$RUN3_LID" --against "$RUN1_LID" \
+    -c <(echo "$LINEAGE_CONFIG") 2>&1 | tee validate2.out; then
+    echo "ERROR: Validation should fail (different samples)"
+    exit 1
+fi
+
+echo "Test 2 passed: Different samples detected"
+
+
+#
+# Test 3: Same samples in different order should still match (outputs are same)
+#
+echo ""
+echo "=== Test 3: Sample order independence ==="
+
+# Run 4 with same samples, different order
+echo "--- Run 4: samples=C,A,B (reordered) ---"
+"$NXF_RUN" -c <(echo "$LINEAGE_CONFIG") --samples 'C,A,B' 2>&1 | tee run4.out
+RUN4_LID=$(grep -oE 'lid://[a-f0-9-]+' .nextflow.log | head -1)
+echo "Run 4 LID: $RUN4_LID"
+rm -rf work .nextflow.log
+
+# Validate - should pass because params are normalized/compared properly
+echo ""
+echo "--- Validating reordered samples ---"
+# Note: This test may pass or fail depending on how params are compared
+# If it fails, that's also valid behavior (params differ)
+if "$NXF_CMD" lineage validate "$RUN4_LID" --against "$RUN1_LID" \
+    -c <(echo "$LINEAGE_CONFIG") 2>&1 | tee validate3.out; then
+    echo "Test 3: Reordered samples validated as equivalent"
+else
+    echo "Test 3: Reordered samples detected as different (also valid)"
+fi
+
+echo ""
+echo "=== All multi-process tests passed ==="

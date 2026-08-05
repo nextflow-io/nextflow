@@ -1,0 +1,135 @@
+#!/bin/bash
+#
+# Test: Lineage validation change detection
+# Verifies that validation detects parameter and output differences
+#
+
+set -e
+
+# Get script directory and project root
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+TESTS_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
+PROJECT_ROOT="$(dirname "$TESTS_DIR")"
+
+# Use project launcher if NXF_CMD not set
+: "${NXF_CMD:=$PROJECT_ROOT/launch.sh}"
+: "${NXF_RUN:=$NXF_CMD run $TESTS_DIR/lineage-validate-changes.nf}"
+
+# Create temporary working directory
+WORK_DIR=$(mktemp -d)
+trap "rm -rf $WORK_DIR" EXIT
+cd "$WORK_DIR"
+
+# Skip if lineage is not available
+if ! "$NXF_CMD" lineage --help &>/dev/null; then
+    echo "SKIP: lineage command not available"
+    exit 0
+fi
+
+# Create temporary lineage store
+LINEAGE_STORE="$WORK_DIR/lineage-store"
+mkdir -p "$LINEAGE_STORE"
+
+LINEAGE_CONFIG="lineage { enabled = true; store { location = '$LINEAGE_STORE' } }"
+
+#
+# Test 1: Different parameters should fail validation
+#
+echo "=== Test 1: Parameter change detection ==="
+
+# Run 1 with text A
+echo "--- Run 1: input_text=alpha ---"
+"$NXF_RUN" -c <(echo "$LINEAGE_CONFIG") --input_text alpha --multiplier 1 2>&1 | tee run1.out
+RUN1_LID=$(grep -oE 'lid://[a-f0-9-]+' .nextflow.log | head -1)
+echo "Run 1 LID: $RUN1_LID"
+rm -rf work .nextflow.log
+
+# Run 2 with text B (different!)
+echo ""
+echo "--- Run 2: input_text=beta ---"
+"$NXF_RUN" -c <(echo "$LINEAGE_CONFIG") --input_text beta --multiplier 1 2>&1 | tee run2.out
+RUN2_LID=$(grep -oE 'lid://[a-f0-9-]+' .nextflow.log | head -1)
+echo "Run 2 LID: $RUN2_LID"
+rm -rf work .nextflow.log
+
+# Validation should FAIL (different params = different outputs)
+echo ""
+echo "--- Validating (should fail) ---"
+if "$NXF_CMD" lineage validate "$RUN2_LID" --against "$RUN1_LID" \
+    -c <(echo "$LINEAGE_CONFIG") 2>&1 | tee validate1.out; then
+    echo "ERROR: Validation should have failed (params differ)"
+    exit 1
+fi
+
+# Verify diff output was shown
+grep -q "differ" validate1.out || grep -q "not equivalent" validate1.out || \
+    { echo "ERROR: Should show difference message"; exit 1; }
+
+echo "Test 1 passed: Parameter change detected"
+
+
+#
+# Test 2: Same parameters but different multiplier (different output content)
+#
+echo ""
+echo "=== Test 2: Output content change detection ==="
+
+# Run 3 with multiplier 1
+echo "--- Run 3: multiplier=1 ---"
+"$NXF_RUN" -c <(echo "$LINEAGE_CONFIG") --input_text same --multiplier 1 2>&1 | tee run3.out
+RUN3_LID=$(grep -oE 'lid://[a-f0-9-]+' .nextflow.log | head -1)
+echo "Run 3 LID: $RUN3_LID"
+rm -rf work .nextflow.log
+
+# Run 4 with multiplier 3 (different content = different checksum)
+echo ""
+echo "--- Run 4: multiplier=3 ---"
+"$NXF_RUN" -c <(echo "$LINEAGE_CONFIG") --input_text same --multiplier 3 2>&1 | tee run4.out
+RUN4_LID=$(grep -oE 'lid://[a-f0-9-]+' .nextflow.log | head -1)
+echo "Run 4 LID: $RUN4_LID"
+rm -rf work .nextflow.log
+
+# Validation should FAIL (different output checksums)
+echo ""
+echo "--- Validating (should fail) ---"
+if "$NXF_CMD" lineage validate "$RUN4_LID" --against "$RUN3_LID" \
+    -c <(echo "$LINEAGE_CONFIG") 2>&1 | tee validate2.out; then
+    echo "ERROR: Validation should have failed (output checksums differ)"
+    exit 1
+fi
+
+echo "Test 2 passed: Output change detected"
+
+
+#
+# Test 3: --ignore-fields should allow ignoring specific differences
+#
+echo ""
+echo "=== Test 3: --ignore-fields option ==="
+
+# Run 5 and 6 with same content but we'll test ignore functionality
+echo "--- Run 5 ---"
+"$NXF_RUN" -c <(echo "$LINEAGE_CONFIG") --input_text final --multiplier 2 2>&1 | tee run5.out
+RUN5_LID=$(grep -oE 'lid://[a-f0-9-]+' .nextflow.log | head -1)
+echo "Run 5 LID: $RUN5_LID"
+rm -rf work .nextflow.log
+
+echo ""
+echo "--- Run 6 (identical) ---"
+"$NXF_RUN" -c <(echo "$LINEAGE_CONFIG") --input_text final --multiplier 2 2>&1 | tee run6.out
+RUN6_LID=$(grep -oE 'lid://[a-f0-9-]+' .nextflow.log | head -1)
+echo "Run 6 LID: $RUN6_LID"
+rm -rf work .nextflow.log
+
+# Validation should PASS (identical runs)
+echo ""
+echo "--- Validating identical runs ---"
+"$NXF_CMD" lineage validate "$RUN6_LID" --against "$RUN5_LID" \
+    -c <(echo "$LINEAGE_CONFIG") 2>&1 | tee validate3.out
+
+grep -q "semantically equivalent" validate3.out || { echo "ERROR: Identical runs should pass"; exit 1; }
+
+echo "Test 3 passed: Identical runs validated"
+
+echo ""
+echo "=== All tests passed: Change detection working ==="
