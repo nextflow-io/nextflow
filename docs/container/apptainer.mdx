@@ -1,11 +1,11 @@
 ---
 title: Apptainer
-description: Use Apptainer with Nextflow.
+description: Run Nextflow pipeline tasks in Apptainer containers, including image caching and Docker registry support.
 ---
 
 # Apptainer
 
-[Apptainer](https://apptainer.org) is an alternative container runtime to Docker and an open source fork of Singularity. Apptainer can be used without root privileges and it doesn't require a separate daemon process, making it well-suited to HPC environments. Apptainer can use existing Docker images and pull from Docker registries.
+[Apptainer](https://apptainer.org) is a container runtime and an open source fork of Singularity. Apptainer runs without root privileges and without a separate daemon process, which suits high-performance computing (HPC) environments. Apptainer can use existing Docker images and pull from Docker registries.
 
 ## Prerequisites
 
@@ -13,9 +13,9 @@ Apptainer must be installed in your execution environment.
 
 ## Images
 
-Refer to the [Apptainer documentation](https://apptainer.org/docs) to learn how to create Apptainer images.
+To create Apptainer images, see the [Apptainer documentation](https://apptainer.org/docs).
 
-Apptainer allows paths that do not currently exist within the container to be created and mounted dynamically by specifying them on the command line. This feature is only supported on hosts that support the [Overlay file system](https://en.wikipedia.org/wiki/OverlayFS) and is not enabled by default.
+Apptainer can create and mount paths that do not exist in the container when you specify them on the command line. This feature requires a host that supports the [Overlay file system](https://en.wikipedia.org/wiki/OverlayFS) and is disabled by default.
 
 ## How it works
 
@@ -35,22 +35,22 @@ nextflow run main.nf -with-apptainer
 ```
 
 :::note
-Nextflow automatically mounts the required host paths in the container. This requires the `user bind control` feature to be enabled in your Apptainer installation. To disable it, set `apptainer.autoMounts` to `false`.
+Nextflow automatically mounts the required host paths in the container. This requires the `user bind control` feature in your Apptainer installation. To disable automatic mounts, set `apptainer.autoMounts` to `false`.
 :::
 
 :::warning
-When a process input is a *symbolic link* file, make sure the linked file is stored in a host folder that is accessible from a bind path defined in your Apptainer installation. Otherwise the task will fail because the container won't be able to access the linked file.
+When a process input is a *symbolic link*, store the linked file in a host directory that is accessible from a bind path defined in your Apptainer installation. Otherwise, the task fails because the container cannot access the linked file.
 :::
 
 <ChangedInVersion version="23.10">
 Nextflow no longer mounts the home directory when launching an Apptainer container. To re-enable the old behavior, set the environment variable `NXF_APPTAINER_HOME_MOUNT` to `true`.
 </ChangedInVersion>
 
-## Apptainer & Docker Hub
+## Apptainer and Docker Hub
 
-Nextflow can pull remote container images from any Docker-compatible registry. This requires Apptainer to be installed in the launch environment (as opposed to the compute nodes).
+Nextflow can pull remote container images from any Docker-compatible registry. This requires Apptainer in the launch environment, not on the compute nodes.
 
-By default, when a container name is specified, Nextflow checks if an image file with that name exists in the local file system. If that image file exists, it is used to execute the container. If a matching file does not exist, Nextflow automatically tries to pull an image with the specified name from the container registry.
+When you specify a container name, Nextflow first checks whether an image file with that name exists in the local file system. If it does, Nextflow uses that file to execute the container. If it does not, Nextflow pulls an image with that name from the container registry.
 
 To use only local file images, prefix the container name with `file://`. For example:
 
@@ -60,7 +60,7 @@ process.container = 'file:///path/to/apptainer.img'
 ```
 
 :::warning
-Use three `/` slashes to specify an *absolute* file path, otherwise the path will be interpreted as relative to the workflow launch directory.
+Use three `/` slashes to specify an *absolute* file path. Otherwise, Nextflow interprets the path as relative to the workflow launch directory.
 :::
 
 To pull an image from a specific registry, prefix the image name with `shub://`, `docker://`, or `docker-daemon://` as required by Apptainer. For example:
@@ -70,7 +70,7 @@ apptainer.enabled = true
 process.container = 'docker://quay.io/biocontainers/multiqc:1.3--py35_2'
 ```
 
-You do not need to specify `docker://` to pull from a Docker registry. Nextflow will automatically prepend it to your image name when Apptainer is enabled. Additionally, the Docker engine will not work with containers specified as `docker://`.
+You do not need to specify `docker://` to pull from a Docker registry. When Apptainer is enabled, Nextflow prepends it to your image name. The Docker engine does not work with containers specified as `docker://`.
 
 By default, Nextflow caches Apptainer images in the `apptainer` directory, in the pipeline work directory. Use the `NXF_APPTAINER_CACHEDIR` environment variable or the `apptainer.cacheDir` config setting to define a centralized cache directory.
 
@@ -79,11 +79,11 @@ Nextflow uses the library directory to determine the location of local Apptainer
 When resolving a container image, Nextflow first checks the library directory, then the cache directory. Use the library directory as a read-only container repository, and the cache directory as a writable location where container images can be cached.
 
 :::note
-When using a compute cluster, the Apptainer cache directory must reside in a shared filesystem accessible to all compute nodes.
+On a compute cluster, the Apptainer cache directory must reside on a shared file system that all compute nodes can access.
 :::
 
 :::warning
-When pulling Docker images, Apptainer may be unable to determine the container size if the image was stored using an old Docker format, resulting in a pipeline execution error. See the Apptainer documentation for details.
+When pulling Docker images, Apptainer cannot determine the container size if the image uses an old Docker format. The pipeline execution then fails with an error. See the Apptainer documentation for details.
 :::
 
 ## Advanced settings
