@@ -1,0 +1,130 @@
+---
+title: Seqera
+description: Reference for the seqera executor, which submits tasks to Seqera Intelligent Compute.
+---
+
+# Seqera
+
+<AddedInVersion version="26.04" />
+
+:::warning
+Preview feature: may change in a future release.
+:::
+
+The `seqera` executor runs pipeline tasks using [Seqera Intelligent Compute](https://seqera.io/blog/intelligent-compute-launch/). It submits each task to the Seqera scheduler service.
+
+To enable this executor, set `process.executor = 'seqera'` in the `nextflow.config` file. Every pipeline process must specify a Docker image using the `container` directive. The pipeline work directory must be located in an S3 bucket.
+
+Use the following process directives to control resource requests and other job characteristics:
+
+- [arch][process-arch]
+- [container][process-container]
+- [containerOptions][process-containeroptions]
+- [cpus][process-cpus]
+- [disk][process-disk]
+- [memory][process-memory]
+- [secret][process-secret]
+- [time][process-time]
+
+The following [hints][process-hints] are supported:
+
+- `machineRequirement.capacityMode`
+- `machineRequirement.diskAllocation`
+- `machineRequirement.diskEncrypted`
+- `machineRequirement.diskIops`
+- `machineRequirement.diskMountPath`
+- `machineRequirement.diskSize`
+- `machineRequirement.diskThroughputMiBps`
+- `machineRequirement.diskType`
+- `machineRequirement.machineTypes`
+- `machineRequirement.maxSpotAttempts`
+- `machineRequirement.provisioning`
+- `predictionModel`
+
+The `machineRequirement.*` hints override the corresponding field of the `seqera.executor.machineRequirement` config scope on a per-process basis. The `predictionModel` hint overrides the run-level `seqera.executor.predictionModel` for a single process. Set it to `qr/v1` or `qr/v2` to select a model, or to `none` to disable resource prediction for that process even when the run enables a model. When omitted, the process inherits the run-level prediction model. Use keys as-is, or with the `seqera/` prefix to restrict them to this executor.
+
+For example, to override the provisioning mode for a single process:
+
+```nextflow
+process hello {
+    hints 'seqera/machineRequirement.provisioning': 'spotFirst'
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+To disable resource prediction for a single process when the run sets a model:
+
+```nextflow
+process hello {
+    hints 'seqera/predictionModel': 'none'
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+See the [`seqera` scope][config-seqera] for the full config reference.
+
+## Disk support
+
+When a process specifies the [disk][process-disk] directive, the Seqera executor provisions storage for the task container. It supports two disk allocation strategies:
+
+- `task` (default): Nextflow creates a dedicated EBS volume for each task at launch time. This provides isolated storage with configurable volume type, IOPS, throughput, and encryption.
+
+- `node`: Uses the instance storage attached at the cluster level. Tasks running on the same node share this storage, which does not support EBS-specific options.
+
+### Task allocation (EBS volumes)
+
+By default, Nextflow uses a gp3 volume with 325 MiB/s throughput, the recommended settings for Fusion. You can customize the EBS volume configuration:
+
+```groovy
+seqera {
+    executor {
+        machineRequirement {
+            diskAllocation = 'task'    // Per-task EBS volume (default)
+            diskType = 'ebs/io1'       // Use provisioned IOPS SSD
+            diskIops = 10000           // Required for io1/io2
+            diskThroughputMiBps = 500  // Throughput for gp3 volumes
+            diskEncrypted = true       // Enable KMS encryption
+            diskMountPath = '/data'    // Container mount path (default: /tmp)
+        }
+    }
+}
+```
+
+Supported volume types: `ebs/gp3` (default), `ebs/gp2`, `ebs/io1`, `ebs/io2`, `ebs/st1`, `ebs/sc1`.
+
+### Node allocation (instance storage)
+
+To use instance storage instead of per-task EBS volumes:
+
+```groovy
+seqera {
+    executor {
+        machineRequirement {
+            diskAllocation = 'node'    // Use instance storage
+        }
+    }
+}
+```
+
+:::note
+The EBS-specific options (`diskType`, `diskIops`, `diskThroughputMiBps`, `diskEncrypted`) do not apply to `node` allocation. Specifying them causes an error.
+:::
+
+[config-seqera]: ../reference/config/seqera
+[process-arch]: ../reference/process#arch
+[process-container]: ../reference/process#container
+[process-containeroptions]: ../reference/process#containeroptions
+[process-cpus]: ../reference/process#cpus
+[process-disk]: ../reference/process#disk
+[process-hints]: ../reference/process#hints
+[process-memory]: ../reference/process#memory
+[process-secret]: ../reference/process#secret
+[process-time]: ../reference/process#time
