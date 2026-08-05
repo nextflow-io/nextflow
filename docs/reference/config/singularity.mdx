@@ -1,0 +1,86 @@
+---
+title: singularity
+description: Reference for the singularity config scope, which controls how Singularity containers are executed by Nextflow.
+---
+
+# `singularity`
+
+The `singularity` scope controls how [Singularity](https://sylabs.io/singularity/) containers are executed by Nextflow.
+
+##### `singularity.autoMounts`
+
+<ChangedInVersion version="23.10">
+Default value was changed from `false` to `true`.
+</ChangedInVersion>
+
+Automatically mount host paths in the executed container (default: `true`). It requires the `user bind control` feature to be enabled in your Singularity installation.
+
+##### `singularity.cacheDir`
+
+The directory where remote Singularity images are stored. When using a compute cluster, it must be a shared folder accessible to all compute nodes.
+
+##### `singularity.enabled`
+
+Execute tasks with Singularity containers (default: `false`).
+
+##### `singularity.engineOptions`
+
+Specify additional options supported by the Singularity engine i.e. `singularity [OPTIONS]`.
+
+##### `singularity.envWhitelist`
+
+Comma separated list of environment variable names to be included in the container environment.
+
+##### `singularity.libraryDir`
+
+Directory where remote Singularity images are retrieved. When using a computing cluster it must be a shared folder accessible to all compute nodes.
+
+##### `singularity.noHttps`
+
+Pull the Singularity image with http protocol (default: `false`).
+
+##### `singularity.ociAutoPull`
+
+<AddedInVersion version="24.04" />
+
+*Requires Singularity 3.11 or later*
+
+When enabled, OCI (and Docker) container images are pulled and converted to the SIF format by the Singularity run command, instead of Nextflow (default: `false`).
+
+:::note
+Leave `ociAutoPull` disabled if willing to build a Singularity native image with Wave (see [Build Singularity native images][wave-singularity]).
+:::
+
+##### `singularity.ociMode`
+
+<AddedInVersion version="24.04" />
+
+*Requires Singularity 4 or later*
+
+Enable OCI-mode, that allows running native OCI compliant container image with Singularity using `crun` or `runc` as low-level runtime (default: `false`).
+
+See `--oci` flag in the [Singularity documentation](https://docs.sylabs.io/guides/4.0/user-guide/oci_runtime.html#oci-mode) for more details and requirements (default: `false`).
+
+:::note
+Leave `ociMode` disabled if you are willing to build a Singularity native image with Wave (see [ Build Singularity native images][wave-singularity]).
+:::
+
+##### `singularity.pullTimeout`
+
+The amount of time the Singularity pull can last, after which the process is terminated (default: `20 min`).
+
+##### `singularity.registry`
+
+The registry from where Docker images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
+
+##### `singularity.resourceLimits`
+
+<AddedInVersion version="26.10" />
+
+Apply the task `cpus` and `memory` directives as container resource limits using the `--cpus` and `--memory` flags (default: `false`).
+
+##### `singularity.runOptions`
+
+Specify extra command line options supported by `singularity exec`.
+
+[wave-singularity]: ../../wave#build-singularity-native-images

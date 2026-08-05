@@ -24,7 +24,7 @@ public class Config implements ConfigScope {
     @Description("""
         The `env` scope allows you to define environment variables that will be exported into the environment where workflow tasks are executed.
 
-        [Read more](https://docs.seqera.io/nextflow/reference/config#env)
+        [Read more](https://docs.seqera.io/nextflow/reference/config/env)
     """)
     public ConfigScope env;
 

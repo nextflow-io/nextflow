@@ -191,7 +191,46 @@ module.exports = {
                         "reference/cli/view"
                     ]
                 },
-                "reference/config",
+                {
+                    type: "category",
+                    label: "Configuration options",
+                    link: { type: "doc", id: "reference/config" },
+                    items: [
+                        "reference/config/unscoped",
+                        "reference/config/apple-container",
+                        "reference/config/apptainer",
+                        "reference/config/aws",
+                        "reference/config/azure",
+                        "reference/config/charliecloud",
+                        "reference/config/conda",
+                        "reference/config/dag",
+                        "reference/config/docker",
+                        "reference/config/env",
+                        "reference/config/executor",
+                        "reference/config/fusion",
+                        "reference/config/google",
+                        "reference/config/k8s",
+                        "reference/config/lineage",
+                        "reference/config/mail",
+                        "reference/config/manifest",
+                        "reference/config/nextflow",
+                        "reference/config/notification",
+                        "reference/config/podman",
+                        "reference/config/registry",
+                        "reference/config/report",
+                        "reference/config/sarus",
+                        "reference/config/seqera",
+                        "reference/config/shifter",
+                        "reference/config/singularity",
+                        "reference/config/smolvm",
+                        "reference/config/spack",
+                        "reference/config/timeline",
+                        "reference/config/tower",
+                        "reference/config/trace",
+                        "reference/config/wave",
+                        "reference/config/workflow"
+                    ]
+                },
                 "reference/env-vars"
             ]
         },
