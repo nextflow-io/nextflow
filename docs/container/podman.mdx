@@ -1,6 +1,6 @@
 ---
 title: Podman
-description: Use Podman with Nextflow.
+description: Run Nextflow pipeline tasks in Podman containers, with or without root privileges.
 ---
 
 # Podman
@@ -11,7 +11,7 @@ description: Use Podman with Nextflow.
 
 Podman must be installed in your execution environment.
 
-Running in rootless mode requires appropriate OS configuration. Due to Podman limitations, using cpuset for cpus and memory is only possible with root permissions.
+Rootless mode requires additional operating system configuration. Because of a Podman limitation, cpuset for CPUs and memory only works with root permissions.
 
 ## How it works
 

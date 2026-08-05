@@ -5,9 +5,9 @@ description: Use Docker, Singularity, Apptainer, and other container runtimes wi
 
 # Containers
 
-Containerization allows you to write self-contained and reproducible computational pipelines, by packaging the binary dependencies of a script into a *container image* that can be executed on any platform that supports a *container runtime*.
+A *container image* packages the binary dependencies of a script so that the script runs on any platform with a *container runtime*. Containerizing a pipeline makes it self-contained and reproducible.
 
-A Nextflow pipeline can be executed with any of the supported container runtimes, as long as it is available in the target compute environment.
+Nextflow runs a pipeline with any of the supported container runtimes, provided the runtime is available in the target compute environment.
 
 ## Container configuration
 
@@ -35,7 +35,7 @@ process bye {
 }
 ```
 
-The same container settings can be defined in the configuration file:
+You can also define the same container settings in the configuration file:
 
 ```groovy
 process {
@@ -48,28 +48,32 @@ process {
 }
 ```
 
-See [Process configuration][config-process] and the [container][process-container] directive for more information.
+See [Process configuration][config-process] and the [`container`][process-container] directive for more information.
 
 :::tip
-Use the `nextflow inspect` command to preview the containers that will be used for each process in a pipeline.
+Use the `nextflow inspect` command to preview the container that each process in a pipeline uses.
 :::
 
 ## Caveats
 
-The following caveats apply when running Nextflow pipelines with containers:
+The following caveats apply when you run Nextflow pipelines with containers.
 
-- **Container image requirements**. Every container image must have Bash (>=3.0), `ps`, and other tools required for collecting metrics (see [Tasks][execution-report-tasks] for more information). Bash must be available on the path `/bin/bash` and it must be the container entrypoint.
+### Container image requirements
 
-- **Symbolic link inputs**. Nextflow automatically manages the file system mounts for a container in order to provide task inputs. However, when a task input is a *symbolic link*, the linked file must reside in the same directory as the symlink, or a sub-directory thereof. Otherwise, the task will fail because the container won't be able to access the linked file.
+Every container image must include Bash (>=3.0), `ps`, and the other tools required to collect metrics. See [Tasks][execution-report-tasks] for more information. Bash must be available at `/bin/bash` and must be the container entrypoint.
+
+### Symbolic link inputs
+
+Nextflow manages the file system mounts for a container to provide task inputs. When a task input is a *symbolic link*, the linked file must reside in the same directory as the symlink, or in a subdirectory of it. Otherwise, the task fails because the container cannot access the linked file.
 
 ## Container runtimes
 
 | Page | Description |
 | ---- | ----------- |
 | [<span style={{whiteSpace: 'nowrap'}}>Apple container</span>][container-apple-container] | A lightweight runtime that runs each container in its own virtual machine on macOS. |
-| [Apptainer][container-apptainer] | An open source fork of Singularity, suited to HPC workloads. |
+| [Apptainer][container-apptainer] | An open source fork of Singularity, suited to high-performance computing (HPC) workloads. |
 | [Charliecloud][container-charliecloud] | An unprivileged runtime for HPC environments, based on Linux user namespaces. |
-| [Docker][container-docker] | The industry standard container runtime. |
+| [Docker][container-docker] | The most widely used container runtime. |
 | [Podman][container-podman] | A drop-in replacement for Docker that can run with or without root privileges. |
 | [Sarus][container-sarus] | An HPC runtime, developed at CSCS, that converts Docker images to Squashfs layers. |
 | [Shifter][container-shifter] | An HPC runtime, developed at NERSC, that converts Docker images to Squashfs layers. |

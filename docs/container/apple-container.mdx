@@ -1,6 +1,6 @@
 ---
 title: Apple container
-description: Use Apple container with Nextflow.
+description: Run Nextflow pipeline tasks in Apple container virtual machines on macOS.
 ---
 
 # Apple container
@@ -30,7 +30,7 @@ process.container = 'nextflow/examples:latest'
 
 Whenever your pipeline launches a task, Nextflow runs it inside a container created from the specified image using the `container run` command.
 
-Each container runs in its own lightweight VM, so tasks benefit from strong isolation without the overhead of a full VM per task. Images are standard OCI images and can be pulled from any registry.
+Each container runs in its own lightweight virtual machine. This isolates tasks without the overhead of running a full virtual machine for each one. Images are standard OCI images that you can pull from any registry.
 
 :::note
 Apple container only supports Linux images. To run an `amd64` image on Apple silicon, pass `--rosetta` via `appleContainer.runOptions` and set the platform explicitly, for example, `process.arch = 'linux/amd64'`.
