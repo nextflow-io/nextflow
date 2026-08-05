@@ -1,0 +1,27 @@
+---
+title: Moab
+description: Reference for the moab executor, which submits tasks to the Moab resource manager.
+---
+
+# Moab
+
+:::warning{title="Experimental: may change in a future release"}
+:::
+
+The `moab` executor runs pipeline tasks using the [Moab](https://en.wikipedia.org/wiki/Moab_Cluster_Suite) resource manager by [Adaptive Computing](http://www.adaptivecomputing.com/). It submits each task as a Moab job using the `msub` command.
+
+To enable the Moab executor, set `process.executor = 'moab'` in the `nextflow.config` file. Launch the pipeline from a node where `msub` is available, typically the cluster login node.
+
+Use the following process directives to control resource requests and other job characteristics:
+
+- [clusterOptions][process-clusteroptions]
+- [cpus][process-cpus]
+- [memory][process-memory]
+- [queue][process-queue]
+- [time][process-time]
+
+[process-clusteroptions]: ../reference/process#clusteroptions
+[process-cpus]: ../reference/process#cpus
+[process-memory]: ../reference/process#memory
+[process-queue]: ../reference/process#queue
+[process-time]: ../reference/process#time

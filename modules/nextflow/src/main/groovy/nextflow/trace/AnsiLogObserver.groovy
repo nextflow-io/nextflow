@@ -102,12 +102,17 @@ class AnsiLogObserver implements TraceObserverV2, LogObserver {
 
     private WorkflowStatsObserver statsObserver
 
-    private static Integer getEnvTerminalWidth() {
-        final env = SysEnv.get('TERMINAL_WIDTH')
+    protected static Integer getEnvTerminalWidth() {
+        return parseEnvTerminalWidth('TERMINAL_WIDTH') ?: parseEnvTerminalWidth('COLUMNS')
+    }
+
+    private static Integer parseEnvTerminalWidth(String name) {
+        final env = SysEnv.get(name)
         if( !env )
             return null
         try {
-            return Integer.parseInt(env)
+            final result = Integer.parseInt(env)
+            return result>0 ? result : null
         }
         catch( NumberFormatException e ) {
             // do not log error to avoid catch-22 logging event (this class renders logging events)

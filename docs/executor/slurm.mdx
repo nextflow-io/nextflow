@@ -1,0 +1,38 @@
+---
+title: SLURM
+description: Reference for the slurm executor, which submits tasks to the SLURM resource manager.
+---
+
+# SLURM
+
+The `slurm` executor runs pipeline tasks using the [SLURM](https://slurm.schedmd.com/documentation.html) resource manager. It submits each task as a SLURM job using the `sbatch` command.
+
+To enable the SLURM executor, set `process.executor = 'slurm'` in the `nextflow.config` file. Launch the pipeline from a node where `sbatch` is available, typically the cluster login node.
+
+Use the following process directives to control resource requests and other job characteristics:
+
+- [clusterOptions][process-clusteroptions]
+- [cpus][process-cpus]
+- [memory][process-memory]
+- [queue][process-queue]
+- [time][process-time]
+
+Specify SLURM partitions with the `queue` directive.
+
+:::note
+Nextflow does not support SLURM multi-clusters directly. To submit tasks to a cluster other than the current one, set the `SLURM_CLUSTERS` variable in the launch environment.
+:::
+
+<AddedInVersion version="23.10">
+Some SLURM clusters require memory allocations to be specified with `--mem-per-cpu` instead of `--mem`. To enable this behavior, set `executor.perCpuMemAllocation = true` in the Nextflow configuration. Nextflow then computes the memory per CPU for each task, using 1 CPU by default.
+</AddedInVersion>
+
+<AddedInVersion version="26.04">
+Since SLURM 24, `squeue` supports an `--only-job-state` option that ignores the partition (`-p`) or user (`-u`) filters. To enable this behavior, set `executor.$slurm.onlyJobState = true` in your Nextflow configuration. Enabling `SchedulerParameters=enable_job_state_cache` improves Nextflow performance and reduces load on the SLURM controller. See [`enable_job_state_cache`](https://slurm.schedmd.com/slurm.conf.html#OPT_enable_job_state_cache) and [`--only-job-state`](https://slurm.schedmd.com/squeue.html#OPT_only-job-state) for more information.
+</AddedInVersion>
+
+[process-clusteroptions]: ../reference/process#clusteroptions
+[process-cpus]: ../reference/process#cpus
+[process-memory]: ../reference/process#memory
+[process-queue]: ../reference/process#queue
+[process-time]: ../reference/process#time

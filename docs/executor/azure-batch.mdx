@@ -1,0 +1,35 @@
+---
+title: Azure Batch
+description: Reference for the azurebatch executor, which submits tasks to Azure Batch.
+---
+
+# Azure Batch
+
+The `azurebatch` executor runs pipeline tasks using [Azure Batch](https://azure.microsoft.com/en-us/services/batch/), a managed compute service that runs containerized workloads in Azure. It submits each task as an Azure Batch job.
+
+To enable this executor, set `process.executor = 'azurebatch'` in the `nextflow.config` file. You can launch the pipeline from a local machine or an Azure VM. Every pipeline process must specify a Docker image using the `container` directive. The pipeline work directory must be located in an Azure Blob Storage container.
+
+Use the following process directives to control resource requests and other job characteristics:
+
+- [container][process-container]
+- [containerOptions][process-containeroptions]
+- [cpus][process-cpus]
+- [disk][process-disk]
+- [machineType][process-machinetype]
+- [memory][process-memory]
+- [queue][process-queue]
+- [resourcelabels][process-resourcelabels]
+- [time][process-time]
+
+See [Azure Batch][azure-batch] for more information.
+
+[azure-batch]: ../azure#azure-batch
+[process-container]: ../reference/process#container
+[process-containeroptions]: ../reference/process#containeroptions
+[process-cpus]: ../reference/process#cpus
+[process-disk]: ../reference/process#disk
+[process-machinetype]: ../reference/process#machinetype
+[process-memory]: ../reference/process#memory
+[process-queue]: ../reference/process#queue
+[process-resourcelabels]: ../reference/process#resourcelabels
+[process-time]: ../reference/process#time

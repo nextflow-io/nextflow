@@ -1,0 +1,26 @@
+---
+title: Bag<E>
+description: Reference for the Bag type, an unordered collection of values.
+---
+
+# Bag\<E\>
+
+*Implements the [Iterable\<E\>][stdlib-types-iterable] trait.*
+
+A bag is an unordered collection of values of type `E`.
+
+The following operations are supported for bags:
+
+##### `+ : (Bag<E>, Bag<E>) -> Bag<E>`
+
+Concatenates two bags.
+
+##### `in, !in : (E, Bag<E>) -> Boolean`
+
+Given a value and a bag, returns `true` if the bag contains the value (or not).
+
+:::note
+Lists in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Collection.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/Collection.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
+:::
+
+[stdlib-types-iterable]: ./iterable

@@ -665,7 +665,7 @@ These operators are not supported when [static typing][preparing-static-types] i
 The following operators have a special meaning when used with process and workflow calls in a workflow:
 
 - The `|` *pipe* operator can be used to chain processes, operators, and workflows.
-- The `&` *and* operator can be used to call multiple processes in parallel with the same channel(s).
+- The `&` *fork* operator can be used to call multiple processes in parallel with the same channel(s).
 
 For example:
 
@@ -759,7 +759,7 @@ Workflows can also be invoked recursively:
 [channel-value]: ./reference/channel#value
 [cli-params]: ./cli#pipeline-parameters
 [config-process-selectors]: ./config#process-selectors
-[config-workflow]: ./reference/config#workflow
+[config-workflow]: ./reference/config/workflow
 [data-lineage-page]: ./tutorials/data-lineage
 [data-lineage-workflow-outputs]: ./tutorials/data-lineage
 [dsl1-page]: ./migrations/dsl1
@@ -779,7 +779,7 @@ Workflows can also be invoked recursively:
 [process-out-singleton]: ./process#singleton-outputs
 [process-page]: ./process
 [process-publishdir]: ./reference/process#publishdir
-[stdlib-types-value]: ./reference/stdlib-types#valuev
+[stdlib-types-value]: ./reference/stdlib-types/value
 [syntax-include]: ./reference/syntax#include
 [workflow-outputs-first-preview]: ./migrations/24-04#workflow-outputs-first-preview
 [static-typing-page]: ./static-typing

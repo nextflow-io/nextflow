@@ -1,0 +1,401 @@
+---
+title: Path
+description: Reference for the Path type, a handle for files, directories, and URLs.
+---
+
+# Path
+
+A Path is a handle for hierarchical paths such as local files and directories, HTTP/FTP URLs, and object storage paths (e.g. Amazon S3).
+
+The `file()` function can be used to get a Path for a given filename or URL:
+
+```nextflow
+def hello = file('hello.txt')
+println hello.text
+```
+
+The `files()` function can be used to get a collection of Paths from a glob pattern:
+
+```nextflow
+def inputs = files('*.txt')
+inputs.each { input ->
+  println "${input.name}: ${input.text}"
+}
+```
+
+The following sections describe the methods that are available for paths.
+
+:::note
+Paths in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/Path.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/nio/file/Path.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
+:::
+
+<h3>Operations</h3>
+
+The following operations are supported for paths:
+
+##### `/ : (Path, String) -> Path`
+
+Resolves a relative path string against a directory path. Equivalent to `resolve()`.
+
+##### `<< : (Path, String)`
+
+Appends text to a file without replacing existing content. Equivalent to `append()`.
+
+<h3>Filesystem attributes</h3>
+
+The following properties are available:
+
+##### `baseName: String`
+
+The path name without its extension, e.g. `/some/path/file.tar.gz` -> `file.tar`.
+
+##### `extension: String`
+
+The path extension, e.g. `/some/path/file.txt` -> `txt`.
+
+##### `name: String`
+
+The path name, e.g. `/some/path/file.txt` -> `file.txt`.
+For files staged as a task input, the path name is the path relative to the task directory (e.g., `my-dir/file.txt`).
+Use `fileName.name` for task paths to get only the file name.
+
+##### `parent: Path`
+
+The path parent path, e.g. `/some/path/file.txt` -> `/some/path`.
+
+##### `scheme: String`
+
+The path URI scheme, e.g. `s3://some-bucket/hello.txt` -> `s3`.
+
+##### `simpleName: String`
+
+The path name without any extension, e.g. `/some/path/file.tar.gz` -> `file`.
+
+The following methods are available for getting filesystem attributes:
+
+##### `exists() -> Boolean`
+
+Returns true if the path exists.
+
+##### `isDirectory() -> Boolean`
+
+Returns `true` if the path is a directory.
+
+##### `getSimpleName() -> String`
+
+Gets the path name without any extension, e.g. `/some/path/file.tar.gz` -> `file`.
+
+##### `getParent() -> Path`
+
+Gets the path parent path, e.g. `/some/path/file.txt` -> `/some/path`.
+
+##### `getScheme() -> String`
+
+Gets the path URI scheme, e.g. `s3://some-bucket/hello.txt` -> `s3`.
+
+##### `isDirectory() -> Boolean`
+
+Returns `true` if the path is a directory.
+
+##### `isEmpty() -> Boolean`
+
+Returns `true` if the path is empty or does not exist.
+
+##### `isFile() -> Boolean`
+
+Returns `true` if the path is a file (i.e. not a directory).
+
+##### `isHidden() -> Boolean`
+
+Returns `true` if the path is hidden.
+
+##### `isLink() -> Boolean`
+
+Returns `true` if the path is a symbolic link.
+
+##### `lastModified() -> Integer`
+
+Returns the path last modified timestamp in Unix time (i.e. milliseconds since January 1, 1970).
+
+##### `relativize(other: Path) -> Path`
+
+Returns the relative path between this path and the given path.
+
+##### `resolve(other: String) -> Path`
+
+Resolves the given path string against this path.
+
+##### `resolveSibling(other: String) -> Path`
+
+Resolves the given path string against this path's parent path.
+
+##### `size() -> Integer`
+
+Gets the file size in bytes.
+
+##### `toUriString() -> String`
+
+Gets the file path along with the protocol scheme:
+
+```nextflow
+def ref = file('s3://some-bucket/hello.txt')
+
+assert ref.toString() == '/some-bucket/hello.txt'
+assert "$ref" == '/some-bucket/hello.txt'
+assert ref.toUriString() == 's3://some-bucket/hello.txt'
+```
+
+<h3>Reading</h3>
+
+The following methods are available for reading files:
+
+##### `eachLine( action: (String) -> () )`
+
+Iterates over the file, applying the specified closure to each line.
+
+##### `getText() -> String`
+
+Returns the file content as a string.
+
+##### `readLines() -> List<String>`
+
+Reads the file line by line and returns the content as a list of strings.
+
+##### `withReader( action: (BufferedReader) -> () )`
+
+Invokes the given closure with a [BufferedReader](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/io/BufferedReader.html), which can be used to read the file one line at a time using the `readLine()` method.
+
+<h3>Writing</h3>
+
+The following methods are available for writing to files:
+
+##### `append( text: String )`
+
+Appends text to a file without replacing existing content.
+
+##### `setText( text: String )`
+
+Writes text to a file, replacing any existing content. Equivalent to setting the `text` property.
+
+##### `write( text: String )`
+
+Writes text to a file, replacing any existing content. Equivalent to `setText()`.
+
+<h3>Filesystem operations</h3>
+
+The following methods are available for manipulating files and directories in a filesystem:
+
+##### `copyTo( target: Path )`
+
+Copies a source file or directory to a target file or directory.
+
+*When copying a file to another file:* if the target file already exists, it will be replaced.
+
+```nextflow
+file('/some/path/my_file.txt').copyTo('/another/path/new_file.txt')
+```
+
+*When copying a file to a directory:* the file will be copied into the directory, replacing any file with the same name.
+
+```nextflow
+file('/some/path/my_file.txt').copyTo('/another/path')
+```
+
+*When copying a directory to another directory:* if the target directory already exists, the source directory will be copied into the target directory, replacing any sub-directory with the same name. If the target path does not exist, it will be created automatically.
+
+```nextflow
+file('/any/dir_a').moveTo('/any/dir_b')
+```
+
+The result of the above example depends on the existence of the target directory. If the target directory exists, the source is moved into the target directory, resulting in the path `/any/dir_b/dir_a`. If the target directory does not exist, the source is just renamed to the target name, resulting in the path `/any/dir_b`.
+
+:::note
+The `copyTo()` function follows the semantics of the Linux command `cp -r <source> <target>`, with the following caveat: while Linux tools often treat paths ending with a slash (e.g. `/some/path/name/`) as directories, and those not (e.g. `/some/path/name`) as regular files, Nextflow (due to its use of the Java files API) views both of these paths as the same file system object. If the path exists, it is handled according to its actual type (i.e. as a regular file or as a directory). If the path does not exist, it is treated as a regular file, with any missing parent directories created automatically.
+:::
+
+##### `delete() -> Boolean`
+
+Deletes the file or directory at the given path, returning `true` if the operation succeeds, and `false` otherwise:
+
+```nextflow
+myFile = file('some/file.txt')
+result = myFile.delete()
+println result ? "OK" : "Cannot delete: $myFile"
+```
+
+If a directory is not empty, it will not be deleted and `delete()` will return `false`.
+
+##### `deleteDir() -> Boolean`
+
+Deletes a directory and all of its contents.
+
+```nextflow
+file('any/path').deleteDir()
+```
+
+##### `getPermissions() -> String`
+
+Returns a file’s permissions using the symbolic notation, e.g. 'rw-rw-r--'.
+
+##### `list() -> List<String>`
+
+Returns the first-level elements (files and directories) of a directory as a list of strings.
+
+##### `listFiles() -> List<Path>`
+
+Returns the first-level elements (files and directories) of a directory as a list of Paths.
+
+##### `mkdir() -> Boolean`
+
+Creates a directory at the given path, returning `true` if the directory is created successfully, and `false` otherwise:
+
+```nextflow
+myDir = file('any/path')
+result = myDir.mkdir()
+println result ? "OK" : "Cannot create directory: $myDir"
+```
+
+If the parent directories do not exist, the directory will not be created and `mkdir()` will return `false`.
+
+##### `mkdirs() -> Boolean`
+
+Creates a directory at the given path, including any nonexistent parent directories:
+
+```nextflow
+file('any/path').mkdirs()
+```
+
+##### `mklink( linkName: String, [options] ) -> Path`
+
+Creates a *filesystem link* to a given path:
+
+```nextflow
+myFile = file('/some/path/file.txt')
+myFile.mklink('/user/name/link-to-file.txt')
+```
+
+Returns the Path of the link to create.
+
+Available options:
+
+###### `hard: Boolean`
+
+When `true`, creates a *hard* link, otherwise creates a *soft* (aka *symbolic*) link (default: `false`).
+
+###### `overwrite: Boolean`
+
+When `true`, overwrites any existing file with the same name, otherwise throws a [FileAlreadyExistsException](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/nio/file/FileAlreadyExistsException.html) (default: `false`).
+
+##### `moveTo( target: Path )`
+
+Moves a source file or directory to a target file or directory. Follows the same semantics as `copyTo()`.
+
+##### `renameTo( target: String ) -> Boolean`
+
+Rename a file or directory:
+
+```nextflow
+file('my_file.txt').renameTo('new_file_name.txt')
+```
+
+##### `setPermissions( permissions: String ) -> Boolean`
+
+Sets a file's permissions using the [symbolic notation](http://en.wikipedia.org/wiki/File_system_permissions#Symbolic_notation):
+
+```nextflow
+myFile.setPermissions('rwxr-xr-x')
+```
+
+##### `setPermissions( owner: Integer, group: Integer, other: Integer ) -> Boolean`
+
+Sets a file's permissions using the [numeric notation](http://en.wikipedia.org/wiki/File_system_permissions#Numeric_notation), i.e. as three digits representing the **owner**, **group**, and **other** permissions:
+
+```nextflow
+myFile.setPermissions(7,5,5)
+```
+
+The following methods are available for listing and traversing directories:
+
+##### `eachDir( action: (Path) -> () )`
+
+Iterates through first-level directories only.
+
+##### `eachDirMatch( nameFilter: String, action: (Path) -> () )`
+
+Iterates through directories whose names match the given filter.
+
+##### `eachDirRecurse( action: (Path) -> () )`
+
+Iterates through directories depth-first (regular files are ignored).
+
+##### `eachFile( action: (Path) -> () )`
+
+Iterates through first-level files and directories.
+
+##### `eachFileMatch( nameFilter: String, action: (Path) -> () )`
+
+Iterates through files and directories whose names match the given filter.
+
+##### `eachFileRecurse( action: (Path) -> () )`
+
+Iterates through files and directories depth-first.
+
+##### `listDirectory() -> Iterable<Path>`
+
+<AddedInVersion version="26.04" />
+
+Returns the first-level elements (files and directories) in a directory.
+
+##### `listFiles() -> Iterable<Path>`
+
+<DeprecatedInVersion version="26.04">
+Use `listDirectory()` instead.
+</DeprecatedInVersion>
+
+Returns the first-level elements (files and directories) in a directory.
+
+<h3>Splitting files</h3>
+
+The following methods are available for splitting and counting the records in files:
+
+##### `countFasta() -> Integer`
+
+Counts the number of records in a [FASTA](https://en.wikipedia.org/wiki/FASTA_format) file. See the [operator-splitfasta][operator-splitfasta] operator for available options.
+
+##### `countFastq() -> Integer`
+
+Counts the number of records in a [FASTQ](https://en.wikipedia.org/wiki/FASTQ_format) file. See the [operator-splitfastq][operator-splitfastq] operator for available options.
+
+##### `countJson() -> Integer`
+
+Counts the number of records in a JSON file. See the [operator-splitjson][operator-splitjson] operator for available options.
+
+##### `countLines() -> Integer`
+
+Counts the number of lines in a text file. See the [operator-splittext][operator-splittext] operator for available options.
+
+##### `splitCsv() -> List<?>`
+
+Splits a CSV file into a list of records. See the [operator-splitcsv][operator-splitcsv] operator for available options.
+
+##### `splitFasta() -> List<?>`
+
+Splits a [FASTA](https://en.wikipedia.org/wiki/FASTA_format) file into a list of records. See the [operator-splitfasta][operator-splitfasta] operator for available options.
+
+##### `splitFastq() -> List<?>`
+
+Splits a [FASTQ](https://en.wikipedia.org/wiki/FASTQ_format) file into a list of records. See the [operator-splitfastq][operator-splitfastq] operator for available options.
+
+##### `splitJson() -> List<?>`
+
+Splits a JSON file into a list of records. See the [operator-splitjson][operator-splitjson] operator for available options.
+
+##### `splitText() -> List<String>`
+
+Splits a text file into a list of lines. See the [operator-splittext][operator-splittext] operator for available options.
+
+[operator-splitcsv]: ../operator#splitcsv
+[operator-splitfasta]: ../operator#splitfasta
+[operator-splitfastq]: ../operator#splitfastq
+[operator-splitjson]: ../operator#splitjson
+[operator-splittext]: ../operator#splittext

@@ -1,0 +1,44 @@
+---
+title: mail
+description: Reference for the mail config scope, which controls the mail server used to send email notifications.
+---
+
+# `mail`
+
+The `mail` scope controls the mail server used to send email notifications.
+
+##### `mail.debug`
+
+Enable Java Mail logging for debugging purposes (default: `false`).
+
+##### `mail.from`
+
+Default email sender address.
+
+##### `mail.smtp.host`
+
+Host name of the mail server.
+
+##### `mail.smtp.password`
+
+User password to connect to the mail server.
+
+##### `mail.smtp.port`
+
+Port number of the mail server.
+
+##### `mail.smtp.user`
+
+User name to connect to the mail server.
+
+##### `mail.smtp.proxy.host`
+
+Host name of an HTTP web proxy server that will be used for connections to the mail server.
+
+##### `mail.smtp.proxy.port`
+
+Port number for the HTTP web proxy server.
+
+##### `mail.smtp.*`
+
+Any SMTP configuration property supported by the [Java Mail API](https://javaee.github.io/javamail/), which Nextflow uses to send emails. See the table of available properties [here](https://javaee.github.io/javamail/docs/api/com/sun/mail/smtp/package-summary.html#properties).
