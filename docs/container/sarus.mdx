@@ -1,11 +1,11 @@
 ---
 title: Sarus
-description: Use Sarus with Nextflow.
+description: Run Nextflow pipeline tasks in Sarus containers converted from Docker images.
 ---
 
 # Sarus
 
-[Sarus](https://sarus.readthedocs.io) is an alternative container runtime to Docker. Sarus works by converting Docker images to a common format that can then be distributed and launched on HPC systems. The user interface to Sarus enables a user to select an image from [Docker Hub](https://hub.docker.com/) and then submit jobs which run entirely within the container.
+[Sarus](https://sarus.readthedocs.io) is a container runtime that converts Docker images to a common format for distribution and launch on high-performance computing (HPC) systems. With Sarus, you select an image from [Docker Hub](https://hub.docker.com/) and submit jobs that run entirely within the container.
 
 ## Prerequisites
 
@@ -13,7 +13,7 @@ Sarus must be installed in your execution environment.
 
 ## Images
 
-Sarus converts a Docker image to Squashfs layers which are distributed and launched in the cluster. For more information on how to build Sarus images, see the [official documentation](https://sarus.readthedocs.io/en/stable/user/user_guide.html#develop-the-docker-image).
+Sarus converts a Docker image to Squashfs layers that are distributed and launched in the cluster. To build Sarus images, see the [Sarus documentation](https://sarus.readthedocs.io/en/stable/user/user_guide.html#develop-the-docker-image).
 
 ## How it works
 
@@ -24,7 +24,7 @@ sarus.enabled = true
 process.container = 'dockerhub_user/image_name:image_tag'
 ```
 
-Sarus always searches the Docker Hub registry for the images. If you do not specify an image tag, the `latest` tag will be fetched by default.
+Sarus always searches the Docker Hub registry for images. If you do not specify an image tag, Sarus fetches the `latest` tag.
 
 ## Advanced settings
 

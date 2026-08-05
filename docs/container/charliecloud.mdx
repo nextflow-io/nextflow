@@ -1,6 +1,6 @@
 ---
 title: Charliecloud
-description: Use Charliecloud with Nextflow.
+description: Run Nextflow pipeline tasks in Charliecloud containers without root privileges.
 ---
 
 # Charliecloud
@@ -11,7 +11,7 @@ description: Use Charliecloud with Nextflow.
 :::warning{title="Experimental: not recommended for production environments."}
 :::
 
-[Charliecloud](https://hpc.github.io/charliecloud) is an alternative container runtime to Docker that is better suited for HPC environments. It can be used without root privileges, making use of user namespaces in the Linux kernel, and it can pull from Docker registries.
+[Charliecloud](https://hpc.github.io/charliecloud) is a container runtime for high-performance computing (HPC) environments. Charliecloud runs without root privileges by using user namespaces in the Linux kernel, and it can pull from Docker registries.
 
 ## Prerequisites
 
@@ -35,23 +35,23 @@ nextflow run main.nf -with-charliecloud
 ```
 
 :::warning
-If an absolute path is provided, the container needs to be in the Charliecloud flat directory format. See [Charliecloud & Docker Hub](#charliecloud--docker-hub) for compatibility with Docker registries.
+If you provide an absolute path, the container must be in the Charliecloud flat directory format. See [Charliecloud and Docker Hub](#charliecloud-and-docker-hub) for compatibility with Docker registries.
 :::
 
-## Charliecloud & Docker Hub
+## Charliecloud and Docker Hub
 
 Nextflow can pull remote container images from any Docker-compatible registry and convert them to the Charliecloud format.
 
-By default, when a container name is specified, Nextflow checks if a container with that name exists in the local file system. If it exists, it is used to execute the container. If a matching file does not exist, Nextflow automatically tries to pull an image with the specified name from the registry.
+When you specify a container name, Nextflow first checks whether a container with that name exists in the local file system. If it does, Nextflow uses that container. If it does not, Nextflow pulls an image with that name from the registry.
 
-To pull an image from a specific registry, provide the URL to the image. If no URL is provided, Docker Hub is assumed. For example, the following config pulls an image from quay.io and converts it to the Charliecloud format:
+To pull an image from a specific registry, give the URL to the image. Without a URL, Nextflow uses Docker Hub. For example, this configuration pulls an image from quay.io and converts it to the Charliecloud format:
 
 ```groovy
 charliecloud.enabled = true
 process.container = 'https://quay.io/biocontainers/multiqc:1.3--py35_2'
 ```
 
-Whereas the following config pulls from Docker Hub:
+This configuration pulls from Docker Hub:
 
 ```groovy
 charliecloud.enabled = true
