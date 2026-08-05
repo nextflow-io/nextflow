@@ -1071,7 +1071,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         def folder = Files.createTempDirectory('test')
         def target = folder.resolve('test-data.txt')
         and:
-        def source = s3path("s3://nf-kms-xyz/test-data.txt")
+        def source = s3path("s3://nextflow-ci-oss-kms/fixtures/test-data.txt")
 
         when:
         FileHelper.copyPath(source, target)
@@ -1084,12 +1084,12 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
     def 'should upload file to encrypted bucket' () {
         given:
-        def KEY = 'arn:aws:kms:eu-west-1:195996028523:key/e97ecf28-951e-4700-bf22-1bd416ec519f'
+        def KEY = 'arn:aws:kms:eu-west-1:807882257208:key/28c34bc1-d8da-4682-9b2e-3356aeb77cc9'
         and:
         def folder = Files.createTempDirectory('test')
         def source = folder.resolve('hello.txt'); source.text = 'Hello world'
         and:
-        def target = s3path("s3://nf-kms-xyz/test-${UUID.randomUUID()}.txt")
+        def target = s3path("s3://nextflow-ci-oss-kms/test-${UUID.randomUUID()}.txt")
         and: // assign some tags
         target.setTags([ONE: 'HELLO'])
 
@@ -1110,7 +1110,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
 
     def 'should upload directory to encrypted bucket' () {
         given:
-        def KEY = 'arn:aws:kms:eu-west-1:195996028523:key/e97ecf28-951e-4700-bf22-1bd416ec519f'
+        def KEY = 'arn:aws:kms:eu-west-1:807882257208:key/28c34bc1-d8da-4682-9b2e-3356aeb77cc9'
         and:
         def folder = Files.createTempDirectory('test')
         def source = folder.resolve('data'); source.mkdir()
@@ -1123,7 +1123,7 @@ class AwsS3NioTest extends Specification implements AwsS3BaseSpec {
         source.resolve('alpha/beta/file-5.txt').text = 'file 5'
 
         and:
-        def target = s3path("s3://nf-kms-xyz/test-${UUID.randomUUID()}")
+        def target = s3path("s3://nextflow-ci-oss-kms/test-${UUID.randomUUID()}")
         and: // assign some tags
         target.setTags([ONE: 'HELLO'])
 
