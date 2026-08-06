@@ -60,6 +60,20 @@ class FusionHelperTest extends Specification {
         result == "docker run -i --platform linux/amd64 --rm --privileged image:1 echo 'hello'"
     }
 
+    def 'should propagate the array index variable to the fusion container' () {
+        given:
+        def launcher = Mock(FusionScriptLauncher) {
+            fusionEnv() >> [:]
+            getArrayIndexName() >> 'SLURM_ARRAY_TASK_ID'
+        }
+        def config = new DockerConfig([:])
+
+        when:
+        def result = FusionHelper.runWithContainer(launcher, config, 'image:1', null, ['echo', 'hello'])
+        then:
+        result.contains('-e "SLURM_ARRAY_TASK_ID"')
+    }
+
     def 'should return fusion container command' () {
         given:
         def launcher = Mock(FusionScriptLauncher) {
