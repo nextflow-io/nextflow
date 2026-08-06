@@ -56,6 +56,30 @@ Plugin declarations in Nextflow configuration files are ignored when specifying 
 
 When Nextflow downloads plugins, it caches them in the directory specified by `NXF_PLUGINS_DIR` (`$HOME/.nextflow/plugins` by default).
 
+:::note
+The plugin cache is shared across pipelines and is not access-controlled. On multi-tenant or shared systems, use a private cache directory per user (set `NXF_PLUGINS_DIR` to a location only you can write) to avoid loading plugin artifacts populated by another user.
+:::
+
+### Lockfile
+
+<AddedInVersion version="26.07" />
+
+A `plugins.lock` file pins the exact plugin code a pipeline expects. For each plugin it records a `sha512` hash of the **extracted plugin directory** — the code Nextflow actually loads and runs — keyed by `id@version`. The file is meant to be committed to the pipeline repository so that everyone running the pipeline executes the same plugin code.
+
+The lockfile is populated automatically, like `go.sum` or `package-lock.json` — there is no separate command. To enable it, create an empty file in the pipeline directory and run the pipeline once:
+
+```bash
+touch plugins.lock
+```
+
+The first time each plugin is loaded, its hash is added to `plugins.lock`. Review the resulting file and commit it. On subsequent runs Nextflow re-hashes each plugin's extracted directory and verifies it against the committed hash. When no `plugins.lock` file is present, the feature is dormant and has no effect.
+
+Verification is fully offline — it re-hashes the files already in the local cache and never contacts the plugin registry. Because it hashes the extracted code rather than the download, it detects both a tampered or compromised download and a plugin directory that was modified after extraction (for example by another user on a shared cache), independently of file ownership or permissions. An existing entry is never rewritten automatically — if a plugin legitimately changes, delete its entry and run again to re-pin it.
+
+Use [`NXF_PLUGINS_LOCK_MODE`][using-plugins-env-vars] to control what happens on a mismatch: `warn` (default) logs a warning and continues, `strict` aborts the run, and `off` skips verification.
+
+The lockfile complements the private-cache guidance above: keeping the cache private prevents untrusted code from being written in the first place, while the lockfile detects any change to the plugin code that is actually loaded.
+
 ## Offline usage
 
 When running Nextflow in an offline environment, any required plugins must be downloaded and moved into the offline environment prior to any runs.
@@ -75,6 +99,7 @@ To use Nextflow plugins in an offline environment:
     :::
 
 [install-standalone]: ../install#standalone-distribution
+[using-plugins-env-vars]: ../reference/env-vars#nxf_plugins_lock_mode
 [using-plugins-config]: ./using-plugins#configuration
 [using-plugins-identifiers]: ./using-plugins#identifiers
 

@@ -20,6 +20,7 @@ import static java.nio.file.StandardCopyOption.*
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.Paths
 import java.util.regex.Pattern
 
 import com.github.zafarkhaja.semver.Version
@@ -72,6 +73,8 @@ class PluginUpdater extends UpdateManager {
     private boolean registryReposApplied
 
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
+
+    private PluginLockVerifier lockVerifier
 
     protected PluginUpdater(CustomPluginManager pluginManager) {
         super(pluginManager)
@@ -357,6 +360,23 @@ class PluginUpdater extends UpdateManager {
         return load0(id, version)
     }
 
+    /**
+     * The {@code plugins.lock} file location used to verify plugins against their pinned hash.
+     * Defaults to a {@code plugins.lock} file in the current working directory.
+     */
+    protected Path lockFilePath() {
+        return Paths.get('plugins.lock')
+    }
+
+    /**
+     * Lazily create the {@link PluginLockVerifier}. The lock file is read once and cached.
+     */
+    protected synchronized PluginLockVerifier getLockVerifier() {
+        if( lockVerifier == null )
+            lockVerifier = new PluginLockVerifier(lockFilePath())
+        return lockVerifier
+    }
+
     private Path download0(String id, String version) {
         // 0. check if version is specified
         if( !version )
@@ -508,6 +528,10 @@ class PluginUpdater extends UpdateManager {
         if( !FilesEx.exists(pluginPath.resolve('classes/META-INF/MANIFEST.MF')) ) {
             log.warn("Plugin '${pluginPath.getFileName()}' installation looks corrupted - Delete the following directory and run nextflow again: $pluginPath")
         }
+
+        // verify (or pin) the extracted plugin directory against the plugins lock, before loading
+        // and executing its code. This covers both a fresh download and a reused (warm) cache.
+        getLockVerifier().verify("${id}@${version}", pluginPath)
 
         // load the plugin from the file system
         PluginWrapper wrapper = pluginManager.loadPluginFromPath(pluginPath)

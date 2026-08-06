@@ -210,6 +210,12 @@ Whether to use the default plugins when no plugins are specified in the Nextflow
 
 The path where the plugin archives are loaded and stored (default: `$NXF_HOME/plugins`).
 
+##### `NXF_PLUGINS_LOCK_MODE`
+
+<AddedInVersion version="26.07" />
+
+Controls how Nextflow reacts when a plugin's extracted directory does not match the hash recorded in the `plugins.lock` file: `warn` logs a warning once per plugin and continues, `strict` aborts the run, and `off` skips verification silently (default: `warn`). Verification is dormant when no `plugins.lock` file is present.
+
 ##### `NXF_PLUGINS_REGISTRY_URL`
 
 <AddedInVersion version="25.10" />
