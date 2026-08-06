@@ -112,21 +112,21 @@ class TaskRun implements Cloneable {
     /**
      * The map of input environment vars
      *
-     * @see TaskProcessor#resolveTaskInputs()
+     * @see TaskRunner#resolveTaskInputs()
      */
     Map<String,String> inputEnv = [:]
 
     /**
      * The list of input files
      *
-     * @see TaskProcessor#resolveTaskInputs()
+     * @see TaskRunner#resolveTaskInputs()
      */
     List<FileHolder> inputFiles = new ArrayBag()
 
     /**
      * The value to be piped to the process stdin
      *
-     * @see TaskProcessor#resolveTaskInputs()
+     * @see TaskRunner#resolveTaskInputs()
      */
     def stdin
 
