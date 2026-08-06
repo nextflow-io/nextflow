@@ -31,6 +31,20 @@ import spock.lang.Unroll
  */
 class K8sConfigTest extends Specification {
 
+    def 'should treat a missing k8s scope as an empty one' () {
+
+        when: 'the `k8s` scope is absent, so navigating to it yields null'
+        def cfg = new K8sConfig(null)
+
+        then: 'it behaves exactly as the no-arg constructor, instead of throwing'
+        noExceptionThrown()
+        cfg.getNamespace() == null
+        cfg.getServiceAccount() == null
+        !cfg.getDebug().getYaml()
+        and: 'defaults that do not come from the map are still applied'
+        cfg.getClientRefreshInterval() == Duration.of('50m')
+    }
+
     def 'should create config object' () {
 
         when:

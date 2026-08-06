@@ -216,7 +216,11 @@ class K8sConfig implements ConfigScope {
         this(Collections.emptyMap())
     }
 
-    K8sConfig(Map opts) {
+    K8sConfig(Map options) {
+        // a missing `k8s` scope navigates to null, which is the same thing as an empty one -- the
+        // no-arg constructor above already says so. Tolerate it here rather than at each call site,
+        // so a config with no `k8s` block cannot NPE its way out of an executor.
+        final opts = options ?: Collections.emptyMap()
         autoMountHostPaths = opts.autoMountHostPaths as boolean
         cleanup = opts.cleanup as Boolean
         client = opts.client as Map
