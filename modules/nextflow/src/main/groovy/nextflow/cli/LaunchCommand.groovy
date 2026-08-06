@@ -16,15 +16,15 @@
 
 package nextflow.cli
 
+import org.pf4j.ExtensionPoint
+
 /**
- * Define the interface for plugin commands
+ * Extension point interface for the `launch` command.
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @see io.seqera.tower.plugin.launch.LaunchCommandImpl
+ *
+ * @author Phil Ewels <phil.ewels@seqera.io>
  */
-interface PluginExecAware {
-
-    static final String CMD_SEP = ':'
-
-    int exec(String pluginId, String cmd, List<String> args)
-
+interface LaunchCommand extends ExtensionPoint {
+    void launch(LaunchOptions options)
 }

@@ -26,7 +26,6 @@ import nextflow.config.ConfigCmdAdapter
 import nextflow.exception.AbortOperationException
 import nextflow.platform.PlatformHelper
 import nextflow.plugin.Plugins
-import org.pf4j.ExtensionPoint
 
 /**
  * Command-line interface for managing Seqera Platform authentication and configuration.
@@ -105,47 +104,6 @@ class CmdAuth extends CmdBase implements UsageAware {
          * @param result the list to which usage text lines should be added
          */
         void usage(List<String> result)
-    }
-
-    /**
-     * Extension point interface for authentication command implementations.
-     *
-     * <p>This interface is implemented by the {@code nf-tower} plugin to provide the actual
-     * authentication logic while keeping the CLI interface in the core Nextflow codebase.
-     * The plugin system uses PF4J to discover and load implementations at runtime.
-     *
-     * <p>The implementation handles:
-     * <ul>
-     *   <li>OAuth2 device flow for Seqera Platform Cloud
-     *   <li>PAT (Personal Access Token) authentication for Enterprise
-     *   <li>Token storage and management in config files
-     *   <li>Workspace and compute environment configuration
-     * </ul>
-     *
-     * @see io.seqera.tower.plugin.auth.AuthCommandImpl
-     */
-    interface AuthCommand extends ExtensionPoint {
-        /**
-         * Authenticates with Seqera Platform and saves credentials to config.
-         *
-         * @param url the Seqera Platform API endpoint URL (null for default)
-         */
-        void login(String url)
-
-        /**
-         * Revokes access token and removes authentication from local config.
-         */
-        void logout()
-
-        /**
-         * Configures Seqera Platform settings (workspace, monitoring, compute environment).
-         */
-        void config()
-
-        /**
-         * Displays current authentication status and configuration sources.
-         */
-        void status()
     }
 
     static public final String NAME = 'auth'

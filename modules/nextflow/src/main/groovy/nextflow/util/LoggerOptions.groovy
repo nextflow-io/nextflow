@@ -14,17 +14,24 @@
  * limitations under the License.
  */
 
-package nextflow.cli
+package nextflow.util
+
+import groovy.transform.Canonical
+import groovy.transform.CompileStatic
 
 /**
- * Define the interface for plugin commands
+ * Model the logging-related CLI options used to configure the logger.
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Ben Sherman <bentshermann@gmail.com>
  */
-interface PluginExecAware {
-
-    static final String CMD_SEP = ':'
-
-    int exec(String pluginId, String cmd, List<String> args)
-
+@Canonical
+@CompileStatic
+class LoggerOptions {
+    boolean ansiLog
+    boolean background
+    List<String> debug
+    String logFile
+    boolean quiet
+    String syslog
+    List<String> trace
 }

@@ -16,15 +16,30 @@
 
 package nextflow.cli
 
+import groovy.transform.CompileStatic
+
 /**
- * Define the interface for plugin commands
+ * Data class to hold launch options
  *
- * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ * @author Phil Ewels <phil.ewels@seqera.io>
  */
-interface PluginExecAware {
-
-    static final String CMD_SEP = ':'
-
-    int exec(String pluginId, String cmd, List<String> args)
-
+@CompileStatic
+class LaunchOptions {
+    String pipeline
+    String workspace
+    String computeEnv
+    String runName
+    String workDir
+    String revision
+    String profile
+    List<String> configFiles
+    String paramsFile
+    String entryName
+    String resume
+    boolean latest
+    boolean stubRun
+    String mainScript
+    Map<String, String> params
+    List<String> userSecrets
+    List<String> workspaceSecrets
 }
