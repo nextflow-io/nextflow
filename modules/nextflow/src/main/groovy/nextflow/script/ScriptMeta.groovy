@@ -304,6 +304,21 @@ class ScriptMeta {
     }
 
     /**
+     * Check if this script has a named workflow that can be executed
+     * automatically without an explicit entry workflow.
+     *
+     * @return true if the script has exactly one named workflow
+     */
+    boolean hasExecutableWorkflows() {
+        // Don't allow execution of true modules (those are meant for inclusion)
+        if( isModule() )
+            return false
+
+        // Must have exactly one workflow
+        return getLocalWorkflowNames().size() == 1
+    }
+
+    /**
      * Check if this script has standalone processes that can be executed
      * automatically without requiring workflows
      *
