@@ -258,15 +258,15 @@ NCBI user API key.
 
 ###### `cache`
 
-Enable/disable the caching API requests (default: `true`).
+Enable or disable caching of API requests (default: `true`).
 
 ###### `max`
 
-Maximum number of entries that can be retried (default: unlimited) .
+Maximum number of entries that can be retried (default: unlimited).
 
 ###### `protocol`
 
-Allow choosing the protocol for the resulting remote URLs. Available choices: `ftp`, `http`, `https` (default: `ftp`).
+The protocol for the resulting remote URLs. Available choices: `ftp`, `http`, `https` (default: `ftp`).
 
 ###### `retryPolicy`
 
@@ -378,7 +378,7 @@ By default, only new files are watched. The following events are supported:
 - `delete`: A file is deleted
 
 :::warning
-The `watchPath` factory waits endlessly for matching files, which means that it will cause your pipeline to run forever. Consider using the `take` or `until` operator to apply a stopping condition (e.g. receiving 10 files, receiving a file named `DONE`).
+The `watchPath` factory waits endlessly for matching files. This causes your pipeline to run forever. Use the `take` or `until` operator to apply a stopping condition (e.g. receiving 10 files, receiving a file named `DONE`).
 :::
 
 :::note
@@ -389,7 +389,5 @@ The `watchPath` factory only works with local and shared filesystems. It does no
 [glob]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
 [operator-take]: ../operator#take
 [operator-until]: ../operator#until
-[process-topic-option]: ../process#topic-name
-[process-typed-topics]: ../../process-typed#topics
 [static-types-samplesheet]: ../../tutorials/static-types#loading-a-samplesheet-input
 [tutorial-topic-channels]: ../../tutorials/topic-channels
