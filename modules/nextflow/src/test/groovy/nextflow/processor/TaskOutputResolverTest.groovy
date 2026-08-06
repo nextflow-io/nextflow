@@ -23,6 +23,7 @@ import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.script.params.v2.ProcessFileOutput
 import nextflow.util.RecordMap
+import nextflow.util.RetryConfig
 import spock.lang.Specification
 import spock.lang.TempDir
 
@@ -30,6 +31,8 @@ import spock.lang.TempDir
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 class TaskOutputResolverTest extends Specification {
+
+    private static final RetryConfig FAST_RETRY = new RetryConfig([delay: '20ms', maxDelay: '50ms', maxAttempts: 5])
 
     @TempDir
     Path tempDir
@@ -262,12 +265,41 @@ class TaskOutputResolverTest extends Specification {
         def missingFile = tempDir.resolve('missing.out')
         def task = makeTask()
         task.stdout = missingFile
-        def resolver = new TaskOutputResolver([:], task)
+        def resolver = new TaskOutputResolver([:], task, FAST_RETRY)
 
         when:
         resolver.stdout()
         then:
-        thrown(Exception)
+        thrown(MissingFileException)
+    }
+
+    def 'should retry and succeed once a missing stdout file appears'() {
+        given:
+        def stdoutFile = tempDir.resolve('.command.out')
+        Thread.start {
+            sleep(30)
+            stdoutFile.text = 'hello world'
+        }
+        and:
+        def task = makeTask()
+        task.stdout = stdoutFile
+        def resolver = new TaskOutputResolver([:], task, FAST_RETRY)
+
+        expect:
+        resolver.stdout() == 'hello world'
+    }
+
+    def 'should return empty stdout immediately without retrying'() {
+        given:
+        def stdoutFile = tempDir.resolve('.command.out')
+        stdoutFile.text = ''
+        and:
+        def task = makeTask()
+        task.stdout = stdoutFile
+        def resolver = new TaskOutputResolver([:], task, FAST_RETRY)
+
+        expect:
+        resolver.stdout() == ''
     }
 
     def 'should get variable from context'() {

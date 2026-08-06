@@ -32,6 +32,7 @@ import dev.failsafe.function.CheckedSupplier
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessFailedException
 import nextflow.exception.ProcessNonZeroExitStatusException
@@ -83,7 +84,9 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
     BatchCleanup batch
 
     @TestOnly
-    protected GridTaskHandler() {}
+    protected GridTaskHandler() {
+        this.exitAwaiter = new ExitStatusAwaiter(Duration.of('270sec'))
+    }
 
     GridTaskHandler( TaskRun task, AbstractGridExecutor executor ) {
         super(task)
@@ -96,6 +99,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
         this.wrapperFile = task.workDir.resolve(TaskRun.CMD_RUN)
         final duration = executor.config.getExitReadTimeout(executor.name)
         this.exitStatusReadTimeoutMillis = duration.toMillis()
+        this.exitAwaiter = new ExitStatusAwaiter(duration)
         this.queue = task.config?.queue
         this.sanityCheckInterval = duration
     }
@@ -300,9 +304,7 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
 
     private long exitTimestampMillis0 = System.currentTimeMillis()
 
-    private long exitTimestampMillis1
-
-    private long exitTimestampMillis2
+    private ExitStatusAwaiter exitAwaiter
 
     /**
      * When a process terminated save its exit status into the file defined by #exitFile
@@ -311,17 +313,6 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
      * file contains an invalid number return {@code Integer#MAX_VALUE}
      */
     protected Integer readExitStatus() {
-
-        String workDirList = null
-        if( exitTimestampMillis1 && FileHelper.workDirIsSharedFS ) {
-            /*
-             * When the file is in a NFS folder in order to avoid false negative
-             * list the content of the parent path to force refresh of NFS metadata
-             * http://stackoverflow.com/questions/3833127/alternative-to-file-exists-in-java
-             * http://superuser.com/questions/422061/how-to-determine-whether-a-directory-is-on-an-nfs-mounted-drive
-             */
-            workDirList = FileHelper.listDirectory(task.workDir)
-        }
 
         /*
          * when the file does not exist return null, to force the monitor to continue to wait
@@ -334,86 +325,52 @@ class GridTaskHandler extends TaskHandler implements FusionAwareTask {
                 else
                     log.trace "JobId `$jobId` exit file: ${exitFile.toUriString()} - lastModified: ${exitAttrs?.lastModifiedTime()} - size: ${exitAttrs?.size()}"
             }
-            // -- fetch the job status before return a result
-            final active = executor.checkActiveStatus(jobId, queue)
 
-            // --
+            // -- grace period: don't query the scheduler until enough time has elapsed since job submission
             def elapsed = System.currentTimeMillis() - startedMillis
-            if( elapsed < executor.queueInterval.toMillis() * 2.5 ) {
+            if( executor.queueInterval && elapsed < executor.queueInterval.toMillis() * 2.5 ) {
+                exitAwaiter.reset()
                 return null
             }
 
-            // -- if the job is active, this means that it is still running and thus the exit file cannot exist
-            //    returns null to continue to wait
-            if( active ) {
-                // make sure to reset exit time if the task is active -- see #927
-                exitTimestampMillis1 = 0
+            // -- fetch the job status before returning a result
+            // -- if the job is active, it is still running and the exit file absence is expected
+            if( executor.checkActiveStatus(jobId, queue) ) {
+                // make sure to reset the awaiter if the task is still active -- see #927
+                exitAwaiter.reset()
                 return null
             }
 
-            // -- if the job is not active, something is going wrong
-            //  * before returning an error code make (due to NFS latency) the file status could be in a incoherent state
-            if( !exitTimestampMillis1 ) {
-                log.trace "Exit file does not exist for and the job is not running for task: $this -- Try to wait before kill it"
-                exitTimestampMillis1 = System.currentTimeMillis()
+            // -- job is not active and exit file is missing: force NFS metadata refresh and delegate
+            //    timeout tracking to the shared awaiter (mirrors ExitStatusAwaiter two-phase logic)
+            String workDirList = null
+            if( Global.session && FileHelper.workDirIsSharedFS ) {
+                /*
+                 * When the file is in a NFS folder, list the parent path to force refresh of NFS metadata
+                 * before the awaiter re-reads the attributes, avoiding false-negative cache hits.
+                 * http://stackoverflow.com/questions/3833127/alternative-to-file-exists-in-java
+                 * http://superuser.com/questions/422061/how-to-determine-whether-a-directory-is-on-an-nfs-mounted-drive
+                 */
+                workDirList = FileHelper.listDirectory(task.workDir)
             }
 
-            def delta = System.currentTimeMillis() - exitTimestampMillis1
-            if( delta < exitStatusReadTimeoutMillis ) {
-                return null
+            final result = exitAwaiter.read(exitFile)
+            if( result == Integer.MAX_VALUE ) {
+                def errMessage = []
+                errMessage << "Failed to get exit status for process ${this} -- exitStatusReadTimeoutMillis: $exitStatusReadTimeoutMillis"
+                errMessage << "Current queue status:"
+                errMessage << executor.dumpQueueStatus()?.indent('> ')
+                errMessage << "Content of workDir: ${task.workDir}"
+                errMessage << workDirList?.indent('> ')
+                log.debug errMessage.join('\n')
             }
-
-            def errMessage = []
-            errMessage << "Failed to get exit status for process ${this} -- exitStatusReadTimeoutMillis: $exitStatusReadTimeoutMillis; delta: $delta"
-            // -- dump current queue stats
-            errMessage << "Current queue status:"
-            errMessage << executor.dumpQueueStatus()?.indent('> ')
-            // -- dump directory listing
-            errMessage << "Content of workDir: ${task.workDir}"
-            errMessage << workDirList?.indent('> ')
-            log.debug errMessage.join('\n')
-
-            return Integer.MAX_VALUE
+            return result
         }
 
         /*
-         * read the exit file, it should contain the executed process exit status
+         * file is present: delegate content parsing and empty-file retry to the shared awaiter
          */
-        def status = exitFile.text?.trim()
-        if( status ) {
-            try {
-                return status.toInteger()
-            }
-            catch( Exception e ) {
-                log.warn "Unable to parse process exit file: ${exitFile.toUriString()} -- bad value: '$status'"
-                return Integer.MAX_VALUE
-            }
-        }
-
-        else {
-            /*
-             * Since working with NFS it may happen that the file exists BUT it is empty due to network latencies,
-             * before returning an invalid exit code, wait some seconds.
-             *
-             * More in detail:
-             * 1) the very first time that arrive here initialize the 'exitTimestampMillis' to the current timestamp
-             * 2) when the file is empty but less than 5 seconds are spent from the first check, return null
-             *    this will force the monitor to continue to wait for job termination
-             * 3) if more than 5 seconds are spent, and the file is empty return MAX_INT as an invalid exit status
-             *
-             */
-            if( !exitTimestampMillis2 ) {
-                log.debug "File is returning empty content: $this -- Try to wait a while... and pray."
-                exitTimestampMillis2 = System.currentTimeMillis()
-            }
-
-            def delta = System.currentTimeMillis() - exitTimestampMillis2
-            if( delta < exitStatusReadTimeoutMillis ) {
-                return null
-            }
-            log.warn "Unable to read command status from: ${exitFile.toUriString()} after $delta ms"
-            return -1
-        }
+        return exitAwaiter.read(exitFile)
     }
 
     @Override

@@ -16,11 +16,14 @@
 
 package nextflow.processor
 
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.regex.Matcher
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.exception.ProcessEvalException
+import nextflow.util.RetryConfig
 /**
  * Implements the collection of environment variables
  * from the environment of a task execution.
@@ -28,6 +31,7 @@ import nextflow.exception.ProcessEvalException
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  * @author Ben Sherman <bentshermann@gmail.com>
  */
+@Slf4j
 @CompileStatic
 class TaskEnvCollector {
 
@@ -35,16 +39,28 @@ class TaskEnvCollector {
 
     private Map<String,String> evalCmds
 
+    private RetryConfig retryConfig
+
     TaskEnvCollector(Path workDir, Map<String,String> evalCmds) {
+        this(workDir, evalCmds, RetryConfig.config())
+    }
+
+    protected TaskEnvCollector(Path workDir, Map<String,String> evalCmds, RetryConfig retryConfig) {
         this.workDir = workDir
         this.evalCmds = evalCmds
+        this.retryConfig = retryConfig
     }
 
     /**
      * Load the values for `env` and `eval` outputs from the `.command.env` file.
+     *
+     * The file is written by the task wrapper script and may not be immediately
+     * visible once the task has completed (e.g. due to propagation delays on
+     * shared/eventually-consistent filesystems), so missing or empty content is
+     * retried for a short, bounded window before giving up.
      */
     Map collect() {
-        final env = workDir.resolve(TaskRun.CMD_ENV).text
+        final env = readEnvFile()
         final result = new HashMap<String,String>(50)
         Matcher matcher
         // `current` represents the current capturing env variable name
@@ -79,5 +95,28 @@ class TaskEnvCollector {
             }
         }
         return result
+    }
+
+    /**
+     * Read the `.command.env` file, retrying when it's missing or empty.
+     */
+    private String readEnvFile() {
+        final envFile = workDir.resolve(TaskRun.CMD_ENV)
+        return TaskFileRetry.withRetry(retryConfig, [NoSuchFileException, EmptyEnvFileException], "task env file: ${envFile.toUriString()}") {
+            readEnvFile0(envFile)
+        }
+    }
+
+    private String readEnvFile0(Path envFile) {
+        final text = envFile.text
+        if( !text )
+            throw new EmptyEnvFileException(envFile)
+        return text
+    }
+
+    static private class EmptyEnvFileException extends RuntimeException {
+        EmptyEnvFileException(Path envFile) {
+            super("Task env file is empty: ${envFile.toUriString()}".toString())
+        }
     }
 }

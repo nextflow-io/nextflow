@@ -16,7 +16,10 @@
 
 package nextflow.processor
 
+import java.nio.file.NoSuchFileException
+
 import nextflow.exception.ProcessEvalException
+import nextflow.util.RetryConfig
 import spock.lang.Specification
 import test.TestHelper
 /**
@@ -24,6 +27,8 @@ import test.TestHelper
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class TaskEnvCollectorTest extends Specification {
+
+    private static final RetryConfig FAST_RETRY = new RetryConfig([delay: '20ms', maxDelay: '50ms', maxAttempts: 5])
 
     def 'should parse env map' () {
         given:
@@ -70,6 +75,59 @@ class TaskEnvCollectorTest extends Specification {
         e.command == 'bar --that'
         e.output == 'This is an error message\nfor unknown reason'
         e.status == 100
+    }
+
+    def 'should retry and succeed once a missing env file appears' () {
+        given:
+        def workDir = TestHelper.createInMemTempDir()
+        def envFile = workDir.resolve(TaskRun.CMD_ENV)
+        Thread.start {
+            sleep(30)
+            envFile.text = 'ALPHA=one\n/ALPHA/\n'
+        }
+
+        when:
+        def result = new TaskEnvCollector(workDir, Map.of(), FAST_RETRY).collect()
+        then:
+        result == [ALPHA: 'one']
+    }
+
+    def 'should retry and succeed once an empty env file is populated' () {
+        given:
+        def workDir = TestHelper.createInMemTempDir()
+        def envFile = workDir.resolve(TaskRun.CMD_ENV)
+        envFile.text = ''
+        Thread.start {
+            sleep(30)
+            envFile.text = 'ALPHA=one\n/ALPHA/\n'
+        }
+
+        when:
+        def result = new TaskEnvCollector(workDir, Map.of(), FAST_RETRY).collect()
+        then:
+        result == [ALPHA: 'one']
+    }
+
+    def 'should throw after retries are exhausted when the env file never appears' () {
+        given:
+        def workDir = TestHelper.createInMemTempDir()
+
+        when:
+        new TaskEnvCollector(workDir, Map.of(), FAST_RETRY).collect()
+        then:
+        thrown(NoSuchFileException)
+    }
+
+    def 'should throw after retries are exhausted when the env file stays empty' () {
+        given:
+        def workDir = TestHelper.createInMemTempDir()
+        def envFile = workDir.resolve(TaskRun.CMD_ENV)
+        envFile.text = ''
+
+        when:
+        new TaskEnvCollector(workDir, Map.of(), FAST_RETRY).collect()
+        then:
+        thrown(RuntimeException)
     }
 
 }
