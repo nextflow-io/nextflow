@@ -393,13 +393,13 @@ class K8sConfigTest extends Specification {
     def 'should set env and sec context' () {
         given:
         def ctx = [
-                [env: 'FUSION_BUCKETS', value: 's3://nextflow-ci'],
+                [env: 'FUSION_BUCKETS', value: 's3://nextflow-ci-oss'],
                 [securityContext: [privileged: true]]]
 
         when:
         def cfg = new K8sConfig( pod: ctx )
         then:
-        cfg.getPodOptions().getEnvVars().first() == PodEnv.value('FUSION_BUCKETS', 's3://nextflow-ci')
+        cfg.getPodOptions().getEnvVars().first() == PodEnv.value('FUSION_BUCKETS', 's3://nextflow-ci-oss')
         cfg.getPodOptions().getSecurityContext().toSpec() == [privileged:true]
 
     }

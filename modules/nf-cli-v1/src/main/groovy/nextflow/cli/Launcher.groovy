@@ -39,6 +39,7 @@ import nextflow.exception.ScriptRuntimeException
 import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
 import nextflow.util.LoggerHelper
+import nextflow.util.LoggerOptions
 import nextflow.util.ProxyConfig
 import org.eclipse.jgit.api.errors.GitAPIException
 
@@ -451,7 +452,7 @@ class Launcher {
          */
         try {
             parseMainArgs(args)
-            LoggerHelper.configureLogger(this)
+            LoggerHelper.configureLogger(loggerOptions(), daemonMode)
         }
         catch( ParameterException e ) {
             // print command line parsing errors
@@ -471,6 +472,18 @@ class Launcher {
             System.exit(1)
         }
         return this
+    }
+
+    protected LoggerOptions loggerOptions() {
+        new LoggerOptions(
+            ansiLog: options.ansiLog,
+            background: options.background,
+            debug: options.debug,
+            logFile: options.logFile,
+            quiet: options.quiet,
+            syslog: options.syslog,
+            trace: options.trace
+        )
     }
 
     protected void checkForHelp() {

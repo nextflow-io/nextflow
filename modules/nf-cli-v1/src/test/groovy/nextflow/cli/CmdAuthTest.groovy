@@ -83,7 +83,7 @@ class CmdAuthTest extends Specification {
         given:
         def cmd = Spy(CmdAuth)
         cmd.args = ['unknown']
-        def operation = Mock(CmdAuth.AuthCommand)
+        def operation = Mock(AuthCommand)
 
         when:
         cmd.run()
@@ -111,7 +111,7 @@ class CmdAuthTest extends Specification {
     def 'login command should validate too many arguments'() {
         given:
         def cmd = Spy(CmdAuth)
-        def operation = Mock(CmdAuth.AuthCommand)
+        def operation = Mock(AuthCommand)
         cmd.args = ['login', 'extra']
 
         when:
@@ -126,7 +126,7 @@ class CmdAuthTest extends Specification {
     def 'logout command should validate too many arguments'() {
         given:
         def cmd = Spy(CmdAuth)
-        def operation = Mock(CmdAuth.AuthCommand)
+        def operation = Mock(AuthCommand)
         cmd.args = ['logout', 'extra']
 
         when:
@@ -141,7 +141,7 @@ class CmdAuthTest extends Specification {
     def 'config command should validate too many arguments'() {
         given:
         def cmd = Spy(CmdAuth)
-        def operation = Mock(CmdAuth.AuthCommand)
+        def operation = Mock(AuthCommand)
         cmd.args = ['config', 'extra']
 
         when:
@@ -156,7 +156,7 @@ class CmdAuthTest extends Specification {
     def 'status command should validate too many arguments'() {
         given:
         def cmd = Spy(CmdAuth)
-        def operation = Mock(CmdAuth.AuthCommand)
+        def operation = Mock(AuthCommand)
         cmd.args = ['status', 'extra']
 
         when:
@@ -171,7 +171,7 @@ class CmdAuthTest extends Specification {
     def 'login command should use provided API URL'() {
         given:
         def cmd = Spy(CmdAuth)
-        def operation = Mock(CmdAuth.AuthCommand)
+        def operation = Mock(AuthCommand)
         cmd.args = ['login']
         cmd.apiUrl = 'https://api.example.com'
 

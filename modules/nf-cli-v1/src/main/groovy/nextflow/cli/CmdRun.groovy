@@ -360,6 +360,7 @@ class CmdRun extends CmdBase implements HubAware {
 
         // -- PHASE 1: Load config with mock secrets provider
         final secretsProvider = new EmptySecretProvider()
+
         ConfigBuilder builder = new ConfigBuilder()
             .setCliParams(cliParams)
             .setSecretsProvider(secretsProvider)  // Mock provider returns empty strings
