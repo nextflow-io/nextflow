@@ -17,7 +17,11 @@
 package nextflow.cloud.azure.nio
 
 
+import java.time.OffsetDateTime
+
 import com.azure.storage.blob.BlobServiceClient
+import com.azure.storage.blob.models.BlobItem
+import com.azure.storage.blob.models.BlobItemProperties
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -51,7 +55,7 @@ class AzPathTest extends Specification {
         def path = azpath(objectName)
         then:
         path.toString() == expected
-        path.directory == dir
+        path.@directory == dir
 
         where:
         objectName              | expected              | dir
@@ -64,24 +68,23 @@ class AzPathTest extends Specification {
     }
 
     @Unroll
-    def 'should validate blob constructor and cached attributes'() {
+    def 'should validate blob constructor'() {
         when:
         def path = azpath(PATH)
         then:
         path.containerName == CONTAINER
 //        path.objectName == BLOB
-        path.isDirectory() == IS_DIRECTORY
         path.isContainer() == IS_CONTAINER
         and:
         path.getContainerName() == path.checkContainerName()
 //        path.getObjectName() == path.blobName()
 
         where:
-        PATH                    | CONTAINER     | BLOB          | IS_DIRECTORY  | IS_CONTAINER
-        '/alpha/beta/delta'     | 'alpha'       | 'beta/delta'  | false         | false
-        '/alpha/beta/delta/'    | 'alpha'       | 'beta/delta/' | true          | false
-        '/alpha/'               | 'alpha'       | null          | true          | true
-        '/alpha'                | 'alpha'       | null          | true          | true
+        PATH                    | CONTAINER     | BLOB          | IS_CONTAINER
+        '/alpha/beta/delta'     | 'alpha'       | 'beta/delta'  | false
+        '/alpha/beta/delta/'    | 'alpha'       | 'beta/delta/' | false
+        '/alpha/'               | 'alpha'       | null          | true
+        '/alpha'                | 'alpha'       | null          | true
 
     }
 
@@ -329,6 +332,90 @@ class AzPathTest extends Specification {
         itr.next() == azpath('file-name.txt')
         !itr.hasNext()
 
+    }
+
+    def 'isDirectory should reuse cached attributes for a path without a trailing slash'() {
+        given: 'a slashless path whose resolved attributes report a directory'
+        def path = azpath('/pipeline/output')
+        def attrs = new AzFileAttributes(size: 0, objectId: '/pipeline/output', directory: true)
+        path.setAttributes(attrs)
+
+        expect:
+        !path.@directory        // the trailing-slash field alone says "not a directory"
+        path.isDirectory()      // ...but the resolved attributes identify it as a directory
+        path.attributesCache().is(attrs) // retain the one-shot cache for a later readAttributes call
+    }
+
+    def 'isDirectory should reuse attributes resolved from storage'() {
+        given:
+        def fs = Mock(AzFileSystem)
+        fs.getContainerName() >> 'pipeline'
+        def path = new AzPath(fs, '/pipeline/output')
+
+        when:
+        def first = path.isDirectory()
+        def second = path.isDirectory()
+
+        then:
+        first
+        second
+        1 * fs.readAttributes(path) >> new AzFileAttributes(directory: true)
+        0 * _
+    }
+
+    def 'isDirectory should return false for a relative path'() {
+        given:
+        def path = azpath('some/file.txt')
+
+        expect:
+        !path.isDirectory()
+    }
+
+    def 'isDirectory should propagate attribute lookup failures'() {
+        given:
+        def fs = Mock(AzFileSystem)
+        fs.getContainerName() >> 'pipeline'
+        def path = new AzPath(fs, '/pipeline/output')
+
+        when:
+        path.isDirectory()
+
+        then:
+        def error = thrown(IllegalStateException)
+        error.message == 'Unable to read attributes'
+        1 * fs.readAttributes(path) >> { throw new IllegalStateException('Unable to read attributes') }
+    }
+
+    def 'should only recognise zero-size hdi_isfolder markers'() {
+        expect:
+        AzFileAttributes.isDirectoryMarker(metadata, size) == directory
+
+        where:
+        metadata                    | size || directory
+        [hdi_isfolder: 'true']      | 0L   || true
+        [hdi_isfolder: 'true']      | 42L  || false
+        [hdi_isfolder: 'false']     | 0L   || false
+        [:]                         | 0L   || false
+    }
+
+    def 'should not classify a non-empty listed blob with hdi_isfolder metadata as a directory'() {
+        given:
+        def properties = new BlobItemProperties()
+                .setContentLength(42L)
+                .setCreationTime(OffsetDateTime.now())
+                .setLastModified(OffsetDateTime.now())
+        def item = new BlobItem()
+                .setName('output')
+                .setMetadata([hdi_isfolder: 'true'])
+                .setProperties(properties)
+
+        when:
+        def attrs = new AzFileAttributes('pipeline', item)
+
+        then:
+        !attrs.isDirectory()
+        attrs.isRegularFile()
+        attrs.size() == 42L
     }
 
 }

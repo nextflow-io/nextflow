@@ -944,4 +944,27 @@ class AzNioTest extends Specification implements AzBaseSpec {
         deleteBucket(bucket1)
     }
 
+    def 'should detect a virtual directory without a trailing slash' () {
+        given:
+        def bucketName = createBucket()
+
+        when: 'a blob exists under a prefix, without any explicit directory marker'
+        def containerClient = storageClient.getBlobContainerClient(bucketName)
+        containerClient.getBlobClient("output/file.txt").upload(new ByteArrayInputStream("hello".bytes), "hello".length())
+
+        and: 'the prefix is referenced without a trailing slash'
+        def path = "az://$bucketName/output"
+        def azPath = Path.of(new URI(path))
+        def nioPath = Path.of(new URI(path))
+        def file = Path.of(new URI("az://$bucketName/output/file.txt"))
+
+        then: 'it is recognised as a directory (via both entry points) while the blob is a file'
+        (azPath as AzPath).isDirectory()
+        Files.isDirectory(nioPath)
+        !Files.isDirectory(file)
+
+        cleanup:
+        deleteBucket(bucketName)
+    }
+
 }
