@@ -70,4 +70,40 @@ class TowerRetryPolicyTest extends Specification {
         policy.maxDelay == RetryConfig.DEFAULT_MAX_DELAY
         policy.jitter == RetryConfig.DEFAULT_JITTER
     }
+
+    def 'should honour a zero jitter instead of falling back to the default'() {
+        when: 'jitter is explicitly disabled -- 0.0 is falsy in Groovy'
+        def policy = new TowerRetryPolicy([jitter: 0])
+
+        then:
+        policy.jitter == 0d
+    }
+
+    def 'should honour a single attempt'() {
+        when:
+        def policy = new TowerRetryPolicy([maxAttempts: 1])
+
+        then:
+        policy.maxAttempts == 1
+    }
+
+    def 'should allow an unlimited retry policy'() {
+        when:
+        def policy = new TowerRetryPolicy([maxAttempts: -1])
+
+        then:
+        policy.maxAttempts == -1
+    }
+
+    def 'should reject a maxAttempts value that would never run the operation'() {
+        when: 'a user writes 0 meaning "do not retry" -- previously this silently became 10'
+        new TowerRetryPolicy([maxAttempts: VALUE])
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('maxAttempts')
+
+        where:
+        VALUE << [0, -2]
+    }
 }

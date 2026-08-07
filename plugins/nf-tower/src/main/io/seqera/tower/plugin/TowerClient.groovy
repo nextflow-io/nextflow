@@ -544,7 +544,7 @@ class TowerClient {
 
     /**
      * Memoized for the same reason as {@link #describeUser()}: the workspaces a user
-     * belongs to do not change within a single command, and several call sites need
+     * belongs to do not change for the life of the client, and several call sites need
      * the list to map a workspace name to its ID and back again.
      */
     @Memoized

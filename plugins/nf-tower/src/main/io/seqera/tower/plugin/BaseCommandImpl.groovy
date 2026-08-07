@@ -43,6 +43,17 @@ class BaseCommandImpl {
     }
 
     /**
+     * Client for a best-effort lookup whose failure is not fatal, bounded so that a slow
+     * or unreachable Platform cannot make an interactive command hang for minutes.
+     *
+     * @see TowerConfig#forLookup
+     */
+    @Memoized
+    protected TowerClient createLookupClient(String apiUrl, String accessToken) {
+        return new TowerClient( TowerConfig.forLookup([accessToken: accessToken, endpoint: apiUrl], SysEnv.get()) )
+    }
+
+    /**
      * Convert API endpoint to web URL
      * e.g., https://api.cloud.seqera.io -> https://cloud.seqera.io
      *      https://cloud.seqera.io/api -> https://cloud.seqera.io

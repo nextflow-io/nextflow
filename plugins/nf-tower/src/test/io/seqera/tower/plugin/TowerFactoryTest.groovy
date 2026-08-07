@@ -84,7 +84,24 @@ class TowerFactoryTest extends Specification {
         1 * factory.defaultWorkspaceId(_ as Map) >> null
         observer.getWorkspaceId() == null
         and: 'no workspace key is invented'
-        config.tower.workspaceId == null
+        !(config.tower as Map).containsKey('workspaceId')
+    }
+
+    def 'should not publish over a workspace the user configured' () {
+        given:
+        def factory = Spy(new TowerFactory(env: [TOWER_WORKSPACE_ID: '100', TOWER_ACCESS_TOKEN: 'xyz']))
+        def config = [tower: [enabled: true, workspaceId: '200', accessToken: 'xyz']]
+        def session = Mock(Session) { getConfig() >> config }
+
+        when:
+        def observer = (TowerObserver) factory.create(session)[0]
+
+        then: 'the local setting is used and the Platform default is not queried'
+        0 * factory.defaultWorkspaceId(_ as Map)
+        observer.getWorkspaceId() == '200'
+
+        and: 'the config the user wrote is left exactly as it was'
+        (config.tower as Map).workspaceId == '200'
     }
 
     @Unroll

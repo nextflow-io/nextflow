@@ -734,27 +734,6 @@ class LaunchCommandImplTest extends Specification {
         SysEnv.pop()
     }
 
-    def 'should lookup workspace by name'() {
-        given:
-        def config = [:]
-        def workspaces = [
-            [workspaceId: 111, workspaceName: 'ws1'],
-            [workspaceId: 222, workspaceName: 'ws2']
-        ]
-        def client = Mock(TowerClient) {
-            getUserInfo() >> [id: 'user-123']
-        }
-        def cmd = Spy(new LaunchCommandImpl())
-        cmd.createTowerClient(_,_) >> client
-        cmd.listUserWorkspaces(_, _) >> workspaces
-
-        when:
-        def workspaceId = cmd.resolveWorkspaceId(config, 'ws2', 'token', 'endpoint')
-
-        then:
-        workspaceId == 222
-    }
-
     def 'should throw error when workspace not found by name'() {
         given:
         def config = [:]
@@ -763,7 +742,7 @@ class LaunchCommandImplTest extends Specification {
         }
         def cmd = Spy(new LaunchCommandImpl())
         cmd.createTowerClient(_,_) >> client
-        cmd.listUserWorkspaces(_, _, _) >> []
+        cmd.listUserWorkspaces(_, _) >> []
 
         when:
         cmd.resolveWorkspaceId(config, 'nonexistent', 'token', 'endpoint')
@@ -779,6 +758,8 @@ class LaunchCommandImplTest extends Specification {
         def client = Mock(TowerClient) { getDefaultWorkspaceId() >> PLATFORM_DEFAULT }
         def cmd = Spy(new LaunchCommandImpl())
         cmd.createTowerClient(_, _) >> client
+        // the Platform default lookup uses a bounded client
+        cmd.createLookupClient(_, _) >> client
         SysEnv.push(ENV)
 
         when:

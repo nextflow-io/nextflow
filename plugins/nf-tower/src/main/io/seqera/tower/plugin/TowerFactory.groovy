@@ -38,14 +38,6 @@ import nextflow.util.Duration
 @CompileStatic
 class TowerFactory implements TraceObserverFactoryV2 {
 
-    /**
-     * Retry budget and timeout for the best-effort default-workspace lookup performed
-     * during session init -- deliberately much tighter than the telemetry retry policy.
-     */
-    private static final int LOOKUP_MAX_ATTEMPTS = 1
-
-    private static final Duration LOOKUP_TIMEOUT = Duration.of('10s')
-
     private Map<String,String> env
 
     TowerFactory(){
@@ -66,14 +58,16 @@ class TowerFactory implements TraceObserverFactoryV2 {
         final client = client(session, env)
         // resolve the workspace: a local setting wins, otherwise fall back to the
         // user's default workspace configured in Seqera Platform
+        final local = PlatformHelper.getWorkspaceId(opts, env)
         final workspaceId = PlatformHelper.getEffectiveWorkspaceId(opts, env, () -> defaultWorkspaceId(opts))
-        // publish the resolved value back into the session config: this is the single point
-        // where the workspace becomes known, and other subsystems that scope themselves to
-        // the workspace -- Wave (registry credentials), the Fusion licence, the Seqera
-        // executor -- read it back via PlatformHelper.getWorkspaceId(session.config.tower, env).
-        // Without this they would resolve to the personal workspace while the run is
-        // reported into the Platform default one.
-        publishWorkspaceId(session, workspaceId)
+        // when -- and only when -- the workspace came from the Platform account default,
+        // publish it back into the session config. Other subsystems that scope themselves
+        // to the workspace -- Wave (registry credentials), the Fusion licence, the Seqera
+        // executor -- read it via PlatformHelper.getWorkspaceId(session.config.tower, env)
+        // and would otherwise resolve to the personal workspace while the run is reported
+        // into the Platform default one. Anything the user set is left exactly as it is.
+        if( !local && workspaceId )
+            publishDefaultWorkspaceId(session, workspaceId)
         // create the tower observer
         result.add( new TowerObserver(session, client, workspaceId, env))
         // create the logs checkpoint
@@ -95,25 +89,27 @@ class TowerFactory implements TraceObserverFactoryV2 {
      * Extracted as a seam so it can be stubbed in tests without hitting the network.
      */
     protected String defaultWorkspaceId(Map opts) {
-        final boundedOpts = new HashMap(opts)
-        boundedOpts.retryPolicy = [maxAttempts: LOOKUP_MAX_ATTEMPTS]
-        boundedOpts.httpConnectTimeout = LOOKUP_TIMEOUT
-        boundedOpts.httpReadTimeout = LOOKUP_TIMEOUT
-        return new TowerClient(new TowerConfig(boundedOpts, env)).getDefaultWorkspaceId()
+        return new TowerClient(TowerConfig.forLookup(opts, env)).getDefaultWorkspaceId()
     }
 
     /**
-     * Store the resolved workspace ID in the session config so that every subsystem
-     * scoping itself to the workspace observes the same value. Nothing is written when
-     * the workspace is unset, so the personal-workspace behaviour is left untouched.
+     * Store the workspace resolved from the Seqera Platform account default in the session
+     * config, so that every subsystem scoping itself to the workspace observes it.
+     *
+     * Only ever called when the user set no workspace of their own, so this never
+     * overwrites a configured value.
+     *
+     * Note this relies on {@code session.config} being a plain map: it is normalized from
+     * the parsed {@code ConfigObject} by {@code ConfigCmdAdapter.normalize0} and converted
+     * in the {@link Session} constructor, so an absent key really does read as null here.
      */
-    protected void publishWorkspaceId(Session session, String workspaceId) {
-        if( !workspaceId )
-            return
+    protected void publishDefaultWorkspaceId(Session session, String workspaceId) {
         final config = session.config
         if( config.tower == null )
             config.tower = new HashMap(1)
         (config.tower as Map).workspaceId = workspaceId
+        // tell the user why their run is landing in a workspace they did not configure
+        log.info "Using default workspace configured in your Seqera Platform account: $workspaceId"
     }
 
     @Memoized

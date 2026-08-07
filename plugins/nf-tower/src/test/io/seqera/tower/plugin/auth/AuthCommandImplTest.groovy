@@ -902,7 +902,7 @@ param2 = 'value2'"""
         def config = ['tower.accessToken': 'test-token']
         def client = Mock(TowerClient) {
             getUserInfo() >> [userName: 'testuser', id: '123']
-            getDefaultWorkspaceId() >> 777L
+            getDefaultWorkspaceId() >> '777'
             getUserWorkspaceDetails(_, _) >> [
                 orgName: 'TestOrg',
                 workspaceName: 'DefaultWorkspace',
@@ -911,6 +911,8 @@ param2 = 'value2'"""
         }
         def cmd = Spy(new AuthCommandImpl())
         cmd.createTowerClient(_,_) >> client
+        // the Platform default lookup uses a bounded client
+        cmd.createLookupClient(_,_) >> client
         cmd.checkApiConnection(_) >> true
         cmd.listComputeEnvironments(_, _) >> []
         SysEnv.push([:])  // isolate from real environment variables

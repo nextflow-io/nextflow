@@ -122,6 +122,8 @@ class WaveClient {
         this.session = session
         this.config = new WaveConfig(session.config.wave as Map ?: Collections.emptyMap(), SysEnv.get())
         this.fusion = new FusionConfig(session.config.fusion as Map ?: Collections.emptyMap(), SysEnv.get())
+        // note: the workspace may have been resolved from the Seqera Platform account default
+        // and written into `session.config.tower` by TowerFactory during session init
         this.tower = new TowerConfig(session.config.tower as Map ?: Collections.emptyMap(), SysEnv.get())
         this.awsFargate = WaveFactory.isAwsBatchFargateMode(session.config)
         this.s5cmdConfigUrl = session.config.navigate('wave.s5cmdConfigUrl') as URL

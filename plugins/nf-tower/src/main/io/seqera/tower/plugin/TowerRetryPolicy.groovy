@@ -64,7 +64,7 @@ class TowerRetryPolicy implements Retryable.Config, ConfigScope {
 
     @ConfigOption
     @Description("""
-        Maximum number of retry attempts for Tower operations (default: `10`).
+        Maximum number of attempts for Tower operations, including the initial one (default: `10`). Use `-1` for no limit.
     """)
     int maxAttempts
 
@@ -81,10 +81,29 @@ class TowerRetryPolicy implements Retryable.Config, ConfigScope {
     double multiplier
 
     TowerRetryPolicy(Map opts, Map legacy=Map.of()) {
-        this.delay = opts.delay as Duration ?: legacy.backOffDelay as Duration ?: RetryConfig.DEFAULT_DELAY
-        this.maxDelay = opts.maxDelay as Duration ?: RetryConfig.DEFAULT_MAX_DELAY
-        this.maxAttempts = opts.maxAttempts as Integer ?: legacy.maxRetries as Integer ?: DEFAULT_MAX_ATTEMPTS
-        this.jitter = opts.jitter as Double ?: RetryConfig.DEFAULT_JITTER
-        this.multiplier = opts.multiplier as Double ?: legacy.backOffBase as Double ?: RetryConfig.DEFAULT_MULTIPLIER
+        // note: use explicit null checks rather than the elvis operator, because 0 and 0.0
+        // are falsy in Groovy -- `jitter = 0` or `maxAttempts = 0` are meaningful settings
+        // and must not be silently replaced by the defaults
+        this.delay = firstOf(opts.delay, legacy.backOffDelay, RetryConfig.DEFAULT_DELAY) as Duration
+        this.maxDelay = firstOf(opts.maxDelay, RetryConfig.DEFAULT_MAX_DELAY) as Duration
+        this.maxAttempts = firstOf(opts.maxAttempts, legacy.maxRetries, DEFAULT_MAX_ATTEMPTS) as Integer
+        this.jitter = firstOf(opts.jitter, RetryConfig.DEFAULT_JITTER) as Double
+        this.multiplier = firstOf(opts.multiplier, legacy.backOffBase, RetryConfig.DEFAULT_MULTIPLIER) as Double
+        // `maxAttempts` counts the initial attempt, so anything below 1 would mean "never
+        // run the operation at all"; the underlying retry library rejects 0 outright.
+        // -1 is the library's documented value for "retry indefinitely" and is allowed.
+        if( maxAttempts == 0 || maxAttempts < -1 )
+            throw new IllegalArgumentException("Invalid Seqera Platform retry policy: 'maxAttempts' must be 1 or greater, or -1 for no limit -- offending value: $maxAttempts")
+    }
+
+    /**
+     * Return the first non-null value, so that a legitimate falsy setting such as
+     * `0` or `0.0` is honoured instead of falling through to the default.
+     */
+    private static Object firstOf(Object... values) {
+        for( Object it : values )
+            if( it != null )
+                return it
+        return null
     }
 }

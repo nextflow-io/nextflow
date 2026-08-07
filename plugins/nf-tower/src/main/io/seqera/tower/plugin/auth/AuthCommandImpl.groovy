@@ -846,9 +846,11 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         final tokenInfo = getConfigValue(config, 'tower.accessToken', 'TOWER_ACCESS_TOKEN')
         final String tokenSource = tokenInfo.source ?: 'not set'
 
-        if( accessToken ) {
+        final httpClient = accessToken ? createTowerClient(endpoint, accessToken) : null
+
+        if( httpClient ) {
             try {
-                final userInfo = createTowerClient(endpoint, accessToken).getUserInfo()
+                final userInfo = httpClient.getUserInfo()
                 final currentUser = userInfo.userName as String
                 status.table.add(['Authentication', "${colorize('✔ OK', 'green')} (user: $currentUser)".toString(), tokenSource])
             } catch( Exception e ) {
@@ -866,13 +868,13 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         // Default workspace: the local setting if any, otherwise the Seqera Platform
         // default workspace -- i.e. the workspace a run would actually use
         final workspaceInfo = getConfigValue(config, 'tower.workspaceId', 'TOWER_WORKSPACE_ID')
-        final httpClient = accessToken ? createTowerClient(endpoint, accessToken) : null
         final String effectiveWorkspaceId = PlatformHelper.getEffectiveWorkspaceId(
-            towerConfig, SysEnv.get(), () -> httpClient?.getDefaultWorkspaceId() )
+            towerConfig, SysEnv.get(),
+            () -> accessToken ? createLookupClient(endpoint, accessToken).getDefaultWorkspaceId() : null )
 
         if( effectiveWorkspaceId ) {
-            // `workspaceInfo.source` is null exactly when neither the config nor the env
-            // var is set, which is when the value can only have come from Platform
+            // when neither the config nor the env var is set there is no local source to
+            // report, so the value can only have come from the Platform account default
             final source = (workspaceInfo.source ?: 'platform') as String
             // Try to get workspace name and roles from API if we have a token
             final userId = httpClient?.getUserInfo()?.id as String
@@ -1077,18 +1079,15 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
             Files.createDirectories(configFile.parent)
         }
 
-        // Write tower config to seqera-auth.config file
-        final towerConfig = config.findAll { key, value ->
-            key.toString().startsWith('tower.')
-        }
+        // Write tower config to seqera-auth.config file, keyed without the `tower.` prefix
+        final towerConfig = towerOpts(config)
 
         final authConfigText = new StringBuilder()
         authConfigText.append("// Seqera Platform configuration\n")
         authConfigText.append("tower {\n")
         for (entry in towerConfig) {
-            final key = entry.key
             final value = entry.value
-            final configKey = key.toString().substring(6) // Remove "tower." prefix
+            final configKey = entry.key.toString()
 
             if (value instanceof String) {
                 def line = "    ${configKey} = '${value}'"

@@ -85,6 +85,8 @@ class TowerFusionToken implements FusionToken {
         this.accessToken = PlatformHelper.getAccessToken(config, env)
         this.refreshToken = PlatformHelper.getRefreshToken(config, env)
         this.workflowId = env.get('TOWER_WORKFLOW_ID')
+        // note: the workspace may have been resolved from the Seqera Platform account default
+        // and written into `session.config.tower` by TowerFactory during session init
         this.workspaceId = PlatformHelper.getWorkspaceId(config, env)
         this.client = TowerFactory.client()
     }

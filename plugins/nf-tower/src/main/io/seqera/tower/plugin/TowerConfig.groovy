@@ -40,6 +40,13 @@ class TowerConfig implements ConfigScope {
 
     static final Duration DEFAULT_READ_TIMEOUT = Duration.of('60s')
 
+    /**
+     * Timeout applied to a best-effort lookup. Note this is a *per-phase* budget: it is
+     * used for both the connect and the read phase, so the worst case for one request is
+     * roughly twice this value.
+     */
+    static final Duration LOOKUP_PHASE_TIMEOUT = Duration.of('10s')
+
     @ConfigOption
     @Description("""
         The unique access token for your Seqera Platform account.
@@ -83,6 +90,30 @@ class TowerConfig implements ConfigScope {
         The workspace ID in Seqera Platform in which to save the run (default: the user's default workspace in Seqera Platform, or the launching user's personal workspace if no default is set).
     """)
     final String workspaceId
+
+    /**
+     * Build a config for a best-effort lookup: one that improves the experience when it
+     * succeeds but must never delay or abort the operation when Platform is slow or
+     * unreachable, because the caller has a working fallback.
+     *
+     * The default retry policy is sized for the telemetry stream -- 10 attempts with
+     * exponential backoff, up to roughly three minutes -- which is the wrong trade-off
+     * for such a lookup, especially on the session-init path where it delays the start of
+     * every run. This bounds it to a single attempt with short timeouts.
+     *
+     * The caller's options are copied, so the map passed in is never modified.
+     *
+     * @param opts the `tower` scope options, keyed without the prefix
+     * @param env the applicable environment variables
+     * @return a {@link TowerConfig} identical to the caller's except for retries and timeouts
+     */
+    static TowerConfig forLookup(Map opts, Map<String,String> env) {
+        final bounded = new HashMap(opts)
+        bounded.retryPolicy = [maxAttempts: 1]
+        bounded.httpConnectTimeout = LOOKUP_PHASE_TIMEOUT
+        bounded.httpReadTimeout = LOOKUP_PHASE_TIMEOUT
+        return new TowerConfig(bounded, env)
+    }
 
     /* required by extension point -- do not remove */
     TowerConfig() {}
