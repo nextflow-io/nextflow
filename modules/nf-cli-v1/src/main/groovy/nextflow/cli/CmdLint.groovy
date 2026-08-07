@@ -35,6 +35,7 @@ import nextflow.exception.AbortOperationException
 import nextflow.script.control.Compiler
 import nextflow.script.control.ParanoidWarning
 import nextflow.script.control.ScriptParser
+import nextflow.script.formatter.Comment
 import nextflow.script.formatter.FormattingOptions
 import nextflow.script.formatter.ScriptFormattingVisitor
 import nextflow.script.parser.v2.ErrorListener
@@ -367,7 +368,7 @@ class CmdLint extends CmdBase {
 
         final formatter = new ScriptFormattingVisitor(source, formattingOptions)
         formatter.visit()
-        return formatter.toString()
+        return checkComments(file, formatter.getMissingComments(), formatter.toString())
     }
 
     private String formatConfig(File file) {
@@ -382,7 +383,20 @@ class CmdLint extends CmdBase {
 
         final formatter = new ConfigFormattingVisitor(source, formattingOptions)
         formatter.visit()
-        return formatter.toString()
+        return checkComments(file, formatter.getMissingComments(), formatter.toString())
+    }
+
+    /**
+     * Refuse to write a file whose comments would not be preserved. Formatting
+     * should never lose a comment, so this is a safety net rather than an
+     * expected outcome.
+     */
+    private String checkComments(File file, List<Comment> missing, String formatted) {
+        if( missing ) {
+            log.warn "Not formatting ${file} -- ${missing.size()} comment(s) would be lost:\n${missing.collect(it -> '  ' + it).join('\n')}"
+            return null
+        }
+        return formatted
     }
 
 }
