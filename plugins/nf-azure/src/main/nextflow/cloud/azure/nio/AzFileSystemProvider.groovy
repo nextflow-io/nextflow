@@ -37,12 +37,15 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileAttribute
 import java.nio.file.attribute.FileAttributeView
 import java.nio.file.spi.FileSystemProvider
+import java.util.concurrent.ConcurrentHashMap
 
 import com.azure.storage.blob.BlobServiceClient
 import com.azure.storage.blob.models.BlobStorageException
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.cloud.azure.batch.AzHelper
+import nextflow.cloud.azure.config.AzConfig
 /**
  * Implements NIO File system provider for Azure Blob Storage
  *
@@ -67,8 +70,11 @@ class AzFileSystemProvider extends FileSystemProvider {
 
     private Map<String,String> env = new HashMap<>(System.getenv())
     private Map<String,AzFileSystem> fileSystems = [:]
+    /** Global SAS token (user-supplied or account-key-derived). Covers all containers. */
     private String sasToken = null
     private String accountKey = null
+    /** Per-container SAS tokens generated lazily for AD/MI auth. */
+    private final Map<String,String> containerSasTokens = new ConcurrentHashMap<>()
 
     /**
      * @inheritDoc
@@ -78,8 +84,37 @@ class AzFileSystemProvider extends FileSystemProvider {
         return SCHEME
     }
 
+    /** @deprecated Use {@link #getSasToken(String)} for per-container lookup. */
     String getSasToken() {
         return this.sasToken
+    }
+
+    /**
+     * Return the SAS token for the given container.
+     * Checks per-container tokens first, then falls back to the global token.
+     *
+     * @param containerName The blob container name
+     * @return The SAS token, or {@code null} if none is available
+     */
+    String getSasToken(String containerName) {
+        return containerSasTokens.getOrDefault(containerName, sasToken)
+    }
+
+    /**
+     * Register a per-container SAS token (called by the batch executor after lazy generation).
+     *
+     * @param containerName The blob container name
+     * @param token         The SAS token
+     */
+    void setSasToken(String containerName, String token) {
+        containerSasTokens.put(containerName, token)
+    }
+
+    /**
+     * Return all registered per-container SAS tokens (unmodifiable view).
+     */
+    Map<String,String> getContainerSasTokens() {
+        return Collections.unmodifiableMap(containerSasTokens)
     }
 
     String getAccountKey() {
@@ -206,9 +241,11 @@ class AzFileSystemProvider extends FileSystemProvider {
 
         if( managedIdentityUser || managedIdentitySystem ) {
             client = createBlobServiceWithManagedIdentity(accountName, managedIdentityUser)
+            generateAndRegisterContainerSas(client, bucket, config)
         }
         else if( servicePrincipalSecret && servicePrincipalId && tenantId ) {
             client = createBlobServiceWithServicePrincipal(accountName, servicePrincipalId, servicePrincipalSecret, tenantId)
+            generateAndRegisterContainerSas(client, bucket, config)
         }
         else if( sasToken ) {
             client = createBlobServiceWithToken(accountName, sasToken)
@@ -217,6 +254,7 @@ class AzFileSystemProvider extends FileSystemProvider {
         else if( accountKey ) {
             client = createBlobServiceWithKey(accountName, accountKey)
             this.accountKey = accountKey
+            generateAndRegisterContainerSas(client, bucket, config)
         }
         else {
             throw new IllegalArgumentException("Missing Azure storage credentials: please specify a managed identity, service principal, or storage account key")
@@ -225,6 +263,21 @@ class AzFileSystemProvider extends FileSystemProvider {
         final result = createFileSystem(client, bucket, config)
         fileSystems[bucket] = result
         return result
+    }
+
+    protected void generateAndRegisterContainerSas(BlobServiceClient serviceClient, String bucket, Map<String,?> config) {
+        if( !Global.session?.config )
+            return
+        final azConfig = AzConfig.getConfig()
+        if( azConfig.storage().sasToken )
+            return
+        final duration = azConfig.storage().tokenDuration
+        final containerClient = serviceClient.getBlobContainerClient(bucket)
+        final String sas = accountKey
+                ? AzHelper.generateContainerSasWithAccountKey(containerClient, duration)
+                : AzHelper.generateContainerUserDelegationSas(containerClient, duration, AzHelper.generateUserDelegationKey(serviceClient, duration))
+        containerSasTokens.put(bucket, sas)
+        log.debug "Generated SAS token for Azure container: $bucket"
     }
 
     /**

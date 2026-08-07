@@ -20,12 +20,12 @@ package nextflow.cloud.azure.batch
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.nio.file.attribute.BasicFileAttributes
-import java.nio.file.spi.FileSystemProvider
 
 import com.azure.storage.blob.BlobClient
 import nextflow.Session
 import nextflow.cloud.azure.config.AzConfig
 import nextflow.cloud.azure.nio.AzFileSystem
+import nextflow.cloud.azure.nio.AzFileSystemProvider
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.processor.TaskBean
 import spock.lang.Specification
@@ -47,7 +47,7 @@ class AzFileCopyStrategyTest extends Specification {
         attr.isRegularFile() >> !isDir
         attr.isSymbolicLink() >> false
 
-        def provider = Mock(FileSystemProvider)
+        def provider = Mock(AzFileSystemProvider)
         provider.getScheme() >> 'az'
         provider.readAttributes(_, _, _) >> attr
 
@@ -72,6 +72,7 @@ class AzFileCopyStrategyTest extends Specification {
         result.getParent() >> { def p=path.lastIndexOf('/'); p!=-1 ? mockAzPath("${path.substring(0,p)}", true) : null }
         result.getFileName() >> { Paths.get(tokens[-1]) }
         result.getName() >> tokens[1]
+        result.getContainerName() >> tokens[1]
         result.blobClient() >> BLOB_CLIENT
         return result
     }
@@ -105,8 +106,8 @@ class AzFileCopyStrategyTest extends Specification {
                 '''.stripIndent()
 
         binding.unstage_controls == '''\
-                nxf_az_upload .command.out 'http://account.blob.core.windows.net/my-data/work/dir' || true
-                nxf_az_upload .command.err 'http://account.blob.core.windows.net/my-data/work/dir' || true
+                nxf_az_upload .command.out 'http://account.blob.core.windows.net/my-data/work/dir?12345' || true
+                nxf_az_upload .command.err 'http://account.blob.core.windows.net/my-data/work/dir?12345' || true
                 '''.stripIndent()
 
         binding.launch_cmd == '/bin/bash -ue .command.sh < .command.in'
@@ -179,15 +180,18 @@ class AzFileCopyStrategyTest extends Specification {
                     local target=${2%/} ## remove ending slash
                     local base_name="$(basename "$name")"
                     local dir_name="$(dirname "$name")"
+                    local target_base="${target%%\\?*}"
+                    local target_qs="${target#*\\?}"
+                    [[ "$target_base" == "$target" ]] && target_qs=""
 
                     if [[ -d $name ]]; then
                       if [[ "$base_name" == "$name" ]]; then
-                        azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                        azcopy cp "$name" "$target_base${target_qs:+?$target_qs}" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                       else
-                        azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                        azcopy cp "$name" "$target_base/$dir_name${target_qs:+?$target_qs}" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                       fi
                     else
-                      azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                      azcopy cp "$name" "$target_base/$name${target_qs:+?$target_qs}" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                     fi
                 }
 
@@ -198,10 +202,14 @@ class AzFileCopyStrategyTest extends Specification {
                     local ret
                     mkdir -p "$basedir"
 
-                    ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
+                    ret=$(azcopy cp "$source" "$target" 2>&1) || {
                         ## if fails check if it was trying to download a directory
                         mkdir -p $target
-                        azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                        local source_base="${source%%\\?*}"
+                        local source_qs="${source#*\\?}"
+                        [[ "$source_base" == "$source" ]] && source_qs=""
+                        local source_dir="${source_base}/*${source_qs:+?$source_qs}"
+                        azcopy cp "$source_dir" "$target" --recursive >/dev/null || {
                             rm -rf $target
                             >&2 echo "Unable to download path: $source"
                             exit 1
@@ -234,7 +242,7 @@ class AzFileCopyStrategyTest extends Specification {
         then:
         binding.stage_inputs == '''\
                 # stage input files
-                nxf_az_download 'http://account.blob.core.windows.net/my-data/work/remote/bin' $PWD/.nextflow-bin
+                nxf_az_download 'http://account.blob.core.windows.net/my-data/work/remote/bin?12345' $PWD/.nextflow-bin
                 chmod +x $PWD/.nextflow-bin/* || true
                 downloads=(true)
 
@@ -246,7 +254,6 @@ class AzFileCopyStrategyTest extends Specification {
                     export BAR="any"
                     export PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"
                     export AZCOPY_LOG_LOCATION="$PWD/.azcopy_log"
-                    export AZ_SAS="12345"
                     '''.stripIndent()
 
         binding.helpers_script == '''\
@@ -316,15 +323,18 @@ class AzFileCopyStrategyTest extends Specification {
                     local target=${2%/} ## remove ending slash
                     local base_name="$(basename "$name")"
                     local dir_name="$(dirname "$name")"
+                    local target_base="${target%%\\?*}"
+                    local target_qs="${target#*\\?}"
+                    [[ "$target_base" == "$target" ]] && target_qs=""
 
                     if [[ -d $name ]]; then
                       if [[ "$base_name" == "$name" ]]; then
-                        azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                        azcopy cp "$name" "$target_base${target_qs:+?$target_qs}" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                       else
-                        azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                        azcopy cp "$name" "$target_base/$dir_name${target_qs:+?$target_qs}" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                       fi
                     else
-                      azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                      azcopy cp "$name" "$target_base/$name${target_qs:+?$target_qs}" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                     fi
                 }
 
@@ -335,10 +345,14 @@ class AzFileCopyStrategyTest extends Specification {
                     local ret
                     mkdir -p "$basedir"
 
-                    ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
+                    ret=$(azcopy cp "$source" "$target" 2>&1) || {
                         ## if fails check if it was trying to download a directory
                         mkdir -p $target
-                        azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                        local source_base="${source%%\\?*}"
+                        local source_qs="${source#*\\?}"
+                        [[ "$source_base" == "$source" ]] && source_qs=""
+                        local source_dir="${source_base}/*${source_qs:+?$source_qs}"
+                        azcopy cp "$source_dir" "$target" --recursive >/dev/null || {
                             rm -rf $target
                             >&2 echo "Unable to download path: $source"
                             exit 1
@@ -377,9 +391,9 @@ class AzFileCopyStrategyTest extends Specification {
         then:
 
         binding.unstage_controls == '''\
-                nxf_az_upload .command.out 'http://account.blob.core.windows.net/my-data/work/dir' || true
-                nxf_az_upload .command.err 'http://account.blob.core.windows.net/my-data/work/dir' || true
-                nxf_az_upload .command.trace 'http://account.blob.core.windows.net/my-data/work/dir' || true
+                nxf_az_upload .command.out 'http://account.blob.core.windows.net/my-data/work/dir?12345' || true
+                nxf_az_upload .command.err 'http://account.blob.core.windows.net/my-data/work/dir?12345' || true
+                nxf_az_upload .command.trace 'http://account.blob.core.windows.net/my-data/work/dir?12345' || true
                 '''.stripIndent()
 
         binding.stage_inputs == '''\
@@ -387,8 +401,8 @@ class AzFileCopyStrategyTest extends Specification {
                 downloads=(true)
                 rm -f file1.txt
                 rm -f file2.txt
-                downloads+=("nxf_az_download 'http://account.blob.core.windows.net/my-data/work/dir/file1.txt' file1.txt")
-                downloads+=("nxf_az_download 'http://account.blob.core.windows.net/my-data/work/dir/file2.txt' file2.txt")
+                downloads+=("nxf_az_download 'http://account.blob.core.windows.net/my-data/work/dir/file1.txt?12345' file1.txt")
+                downloads+=("nxf_az_download 'http://account.blob.core.windows.net/my-data/work/dir/file2.txt?12345' file2.txt")
                 nxf_parallel "${downloads[@]}"
                 '''.stripIndent()
 
@@ -396,7 +410,7 @@ class AzFileCopyStrategyTest extends Specification {
                     uploads=()
                     IFS=$'\\n'
                     for name in $(eval "ls -1d foo.txt bar.fastq" | sort | uniq); do
-                        uploads+=("nxf_az_upload '$name' 'http://account.blob.core.windows.net/my-data/work/dir'")
+                        uploads+=("nxf_az_upload '$name' 'http://account.blob.core.windows.net/my-data/work/dir?12345'")
                     done
                     unset IFS
                     nxf_parallel "${uploads[@]}"
@@ -407,7 +421,6 @@ class AzFileCopyStrategyTest extends Specification {
         binding.task_env == '''\
                     export PATH="$PWD/.nextflow-bin:$AZ_BATCH_NODE_SHARED_DIR/bin/:$PATH"
                     export AZCOPY_LOG_LOCATION="$PWD/.azcopy_log"
-                    export AZ_SAS="12345"
                     '''.stripIndent()
 
         binding.helpers_script == '''\
@@ -477,15 +490,18 @@ class AzFileCopyStrategyTest extends Specification {
                         local target=${2%/} ## remove ending slash
                         local base_name="$(basename "$name")"
                         local dir_name="$(dirname "$name")"
+                        local target_base="${target%%\\?*}"
+                        local target_qs="${target#*\\?}"
+                        [[ "$target_base" == "$target" ]] && target_qs=""
 
                         if [[ -d $name ]]; then
                           if [[ "$base_name" == "$name" ]]; then
-                            azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                            azcopy cp "$name" "$target_base${target_qs:+?$target_qs}" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                           else
-                            azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                            azcopy cp "$name" "$target_base/$dir_name${target_qs:+?$target_qs}" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                           fi
                         else
-                          azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                          azcopy cp "$name" "$target_base/$name${target_qs:+?$target_qs}" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
                         fi
                     }
 
@@ -496,10 +512,14 @@ class AzFileCopyStrategyTest extends Specification {
                         local ret
                         mkdir -p "$basedir"
 
-                        ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
+                        ret=$(azcopy cp "$source" "$target" 2>&1) || {
                             ## if fails check if it was trying to download a directory
                             mkdir -p $target
-                            azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                            local source_base="${source%%\\?*}"
+                            local source_qs="${source#*\\?}"
+                            [[ "$source_base" == "$source" ]] && source_qs=""
+                            local source_dir="${source_base}/*${source_qs:+?$source_qs}"
+                            azcopy cp "$source_dir" "$target" --recursive >/dev/null || {
                                 rm -rf $target
                                 >&2 echo "Unable to download path: $source"
                                 exit 1
@@ -509,6 +529,19 @@ class AzFileCopyStrategyTest extends Specification {
 
                     '''.stripIndent(true)
 
+    }
+
+    def 'should not export AZ_SAS env var when using AD/MI auth'() {
+        given:
+        def config = new AzConfig([storage:[:]])
+        def strategy = new AzFileCopyStrategy()
+        strategy.config = config
+
+        when:
+        def env = strategy.getEnvScript([:], false)
+
+        then:
+        !env.contains('export AZ_SAS')
     }
 
 }

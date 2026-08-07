@@ -431,7 +431,7 @@ class AzFileSystem extends FileSystem {
 
     @PackageScope
     void copy(AzPath source, AzPath target) {
-        final sasToken = provider.getSasToken()
+        final sasToken = provider.getSasToken(source.getContainerName())
         String sourceUrl = source.blobClient().getBlobUrl()
 
         if (sasToken != null) {
