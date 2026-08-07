@@ -84,6 +84,12 @@ Defines the format for date and time representations in notifications and report
 
 Defines the DSL version that should be used in not specified otherwise in the script of config file (default: `2`)
 
+##### `NXF_DEV`
+
+<AddedInVersion version="26.08" />
+
+Use an automated development build of Nextflow, for testing only. Set to `master` for the latest master-branch build, or `pr-<number>` for the latest build of a pull request. Builds are published in the [nextflow-dev-builds](https://github.com/nextflow-io/nextflow-dev-builds) repository. Core plugins compiled from the same source replace the released plugin versions. Third-party plugins are downloaded from the plugin registry as usual.
+
 ##### `NXF_DISABLE_CHECK_LATEST`
 
 <AddedInVersion version="23.10" />
