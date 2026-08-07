@@ -993,6 +993,14 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
             return (matchingWorkspace as Map).workspaceId as Long
         }
 
+        // No local/CLI workspace set — fall back to the Seqera Platform server-side
+        // default workspace, if the user (or the system) has one configured
+        final defaultWorkspaceId = createTowerClient(apiEndpoint, accessToken).getDefaultWorkspaceId()
+        if (defaultWorkspaceId) {
+            log.debug "Using Seqera Platform default workspace ID: ${defaultWorkspaceId}"
+            return defaultWorkspaceId
+        }
+
         return null
     }
 

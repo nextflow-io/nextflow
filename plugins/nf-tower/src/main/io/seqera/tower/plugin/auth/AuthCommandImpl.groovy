@@ -842,6 +842,9 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         // Default workspace - use PlatformHelper
         final String workspaceId = PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get())
         final workspaceInfo = getConfigValue(config, 'tower.workspaceId', 'TOWER_WORKSPACE_ID')
+        // the workspace effectively used for runs: the local/CLI value if set,
+        // otherwise the Seqera Platform server-side default workspace (if any)
+        String effectiveWorkspaceId = workspaceId
         if( workspaceId ) {
             // Try to get workspace name and roles from API if we have a token
             def workspaceDetails = null
@@ -864,7 +867,24 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
             }
         } else {
             if( accessToken ) {
-                status.table.add(['Default workspace', 'None (Personal workspace)', 'default'])
+                // No local/CLI workspace set — check for a Seqera Platform default workspace
+                final httpClient = createTowerClient(endpoint, accessToken)
+                final platformDefaultId = httpClient.getDefaultWorkspaceId()?.toString()
+                if( platformDefaultId ) {
+                    effectiveWorkspaceId = platformDefaultId
+                    final userInfo = httpClient.getUserInfo()
+                    final workspaceDetails = httpClient.getUserWorkspaceDetails(userInfo.id as String, platformDefaultId)
+                    if( workspaceDetails ) {
+                        status.workspaceRowIndex = status.table.size()
+                        status.table.add(['Default workspace', platformDefaultId, 'platform'])
+                        status.workspaceInfo = workspaceDetails
+                        status.workspaceRoles = workspaceDetails.roles as List<String>
+                    } else {
+                        status.table.add(['Default workspace', platformDefaultId, 'platform'])
+                    }
+                } else {
+                    status.table.add(['Default workspace', 'None (Personal workspace)', 'default'])
+                }
             }
         }
 
@@ -874,9 +894,9 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
             final httpClient = createTowerClient(endpoint, accessToken)
             try {
                 if( config['tower.computeEnvId'] ) {
-                    computeEnv = getComputeEnvironment(httpClient, config['tower.computeEnvId'] as String, workspaceId)
+                    computeEnv = getComputeEnvironment(httpClient, config['tower.computeEnvId'] as String, effectiveWorkspaceId)
                 } else {
-                    final computeEnvs = listComputeEnvironments(httpClient, workspaceId)
+                    final computeEnvs = listComputeEnvironments(httpClient, effectiveWorkspaceId)
                     computeEnv = computeEnvs.find { ((Map) it).primary == true } as Map
                 }
             } catch( Exception e ) {

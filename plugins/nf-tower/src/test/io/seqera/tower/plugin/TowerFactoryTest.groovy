@@ -29,7 +29,10 @@ class TowerFactoryTest extends Specification {
 
     def 'should create a tower observer' () {
         given:
-        def factory = new TowerFactory(env: [TOWER_ACCESS_TOKEN: '123'])
+        // stub the Platform default-workspace lookup so no live API call is made when
+        // no workspace is configured locally
+        def factory = Spy(new TowerFactory(env: [TOWER_ACCESS_TOKEN: '123']))
+        factory.resolveDefaultWorkspaceId(_, _) >> null
 
         when:
         def session = Mock(Session) { getConfig() >> [tower: [enabled: true]] }
@@ -42,6 +45,42 @@ class TowerFactoryTest extends Specification {
         observer = factory.create(session)[0] as TowerObserver
         then:
         observer.@client.endpoint == 'http://foo.com/api'
+    }
+
+    def 'should use the Platform default workspace when none is configured locally' () {
+        given:
+        def factory = Spy(new TowerFactory(env: [TOWER_ACCESS_TOKEN: 'xyz']))
+        def session = Mock(Session) { getConfig() >> [tower: [enabled: true, accessToken: 'xyz']] }
+
+        when:
+        def observer = (TowerObserver) factory.create(session)[0]
+        then: 'the Platform default workspace is resolved and used'
+        1 * factory.resolveDefaultWorkspaceId(_, _) >> 300L
+        observer.getWorkspaceId() == '300'
+    }
+
+    def 'should not use the Platform default when a workspace is configured locally' () {
+        given:
+        def factory = Spy(new TowerFactory(env: [:]))
+        def session = Mock(Session) { getConfig() >> [tower: [enabled: true, workspaceId: '200', accessToken: 'xyz']] }
+
+        when:
+        def observer = (TowerObserver) factory.create(session)[0]
+        then: 'the local workspace wins and no default lookup is performed'
+        0 * factory.resolveDefaultWorkspaceId(_, _)
+        observer.getWorkspaceId() == '200'
+    }
+
+    def 'should not use the Platform default for a Platform-driven run' () {
+        given:
+        def factory = Spy(new TowerFactory(env: [TOWER_WORKSPACE_ID: '100', TOWER_WORKFLOW_ID: '111222333', TOWER_ACCESS_TOKEN: 'xyz']))
+        def session = Mock(Session) { getConfig() >> [tower: [enabled: true, accessToken: 'xyz']] }
+
+        when:
+        def observer = (TowerObserver) factory.create(session)[0]
+        then: 'the env workspace is used and no default lookup is performed'
+        0 * factory.resolveDefaultWorkspaceId(_, _)
+        observer.getWorkspaceId() == '100'
     }
 
     @Unroll

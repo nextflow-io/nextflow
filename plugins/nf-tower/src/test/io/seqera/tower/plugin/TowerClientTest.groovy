@@ -254,6 +254,50 @@ class TowerClientTest extends Specification {
         wireMock.stop()
     }
 
+    def 'should resolve the default workspace id from user-info' () {
+        given:
+        def wireMock = new WireMockServer(0)
+        wireMock.start()
+        and:
+        TowerConfig config = Mock(TowerConfig) {
+            getHttpReadTimeout() >> Duration.of('5 s')
+            getHttpConnectTimeout() >> Duration.of('5 s')
+            getEndpoint() >> wireMock.baseUrl()
+            getAccessToken() >> 'token'
+        }
+        TowerClient client = new TowerClient(config)
+
+        when: 'the user-info response carries a top-level defaultWorkspaceId'
+        wireMock.stubFor(
+            WireMock.get(WireMock.urlPathEqualTo('/user-info'))
+                .willReturn(WireMock.aResponse().withStatus(200)
+                    .withHeader('Content-Type', 'application/json')
+                    .withBody('{"user":{"id":1,"userName":"me"},"needConsent":false,"defaultWorkspaceId":42}')))
+        then:
+        client.getDefaultWorkspaceId() == 42L
+
+        when: 'no defaultWorkspaceId is present in the response'
+        wireMock.resetAll()
+        wireMock.stubFor(
+            WireMock.get(WireMock.urlPathEqualTo('/user-info'))
+                .willReturn(WireMock.aResponse().withStatus(200)
+                    .withHeader('Content-Type', 'application/json')
+                    .withBody('{"user":{"id":1,"userName":"me"},"needConsent":false}')))
+        then:
+        client.getDefaultWorkspaceId() == null
+
+        when: 'the endpoint returns an error'
+        wireMock.resetAll()
+        wireMock.stubFor(
+            WireMock.get(WireMock.urlPathEqualTo('/user-info'))
+                .willReturn(WireMock.aResponse().withStatus(500).withBody('boom')))
+        then: 'the failure is swallowed and null is returned'
+        client.getDefaultWorkspaceId() == null
+
+        cleanup:
+        wireMock.stop()
+    }
+
     def 'should build URL without query params'() {
         given:
         def client = new TowerClient()

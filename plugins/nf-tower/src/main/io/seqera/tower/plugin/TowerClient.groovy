@@ -494,6 +494,28 @@ class TowerClient {
     }
 
     /**
+     * Return the user's server-side default workspace ID, if any.
+     *
+     * Seqera Platform exposes a per-user default workspace (falling back to a
+     * global system default) as the top-level {@code defaultWorkspaceId} field of
+     * the {@code GET /user-info} response. The value is access-validated by
+     * Platform and is {@code null} when no default is set, when the stored default
+     * is no longer accessible, or when the Platform version predates the feature.
+     *
+     * @return the default workspace ID, or {@code null} if none is available
+     */
+    Long getDefaultWorkspaceId() {
+        try {
+            final json = apiGet("/user-info")
+            return json.defaultWorkspaceId as Long
+        }
+        catch( Exception e ) {
+            log.debug "Unable to resolve Seqera Platform default workspace: ${e.message}"
+            return null
+        }
+    }
+
+    /**
      * Calls the Seqera Platform to retrieve the workflow information.
      *
      * @param workflowId Id of the workflow

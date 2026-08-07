@@ -53,12 +53,25 @@ class TowerFactory implements TraceObserverFactoryV2 {
         // during session init and gets swallowed silently by the launcher
         checkAccessToken(config)
         final result = new ArrayList<TraceObserverV2>(1)
+        // resolve the workspace: local/CLI settings win; when none is set and this is
+        // not a Platform-driven run, fall back to the user's Platform default workspace
+        String workspaceId = config.workspaceId
+        if( !workspaceId && !env.get('TOWER_WORKFLOW_ID') )
+            workspaceId = resolveDefaultWorkspaceId(session, env)?.toString()
         // create the tower observer
-        result.add( new TowerObserver(session, client(session, env), config.workspaceId, env))
+        result.add( new TowerObserver(session, client(session, env), workspaceId, env))
         // create the logs checkpoint
         if( session.cloudCachePath )
             result.add( new LogsCheckpoint() )
         return result
+    }
+
+    /**
+     * Resolve the user's server-side default workspace from Seqera Platform.
+     * Extracted as a seam so it can be stubbed in tests without hitting the network.
+     */
+    protected Long resolveDefaultWorkspaceId(Session session, Map env) {
+        return client(session, env).getDefaultWorkspaceId()
     }
 
     @Memoized

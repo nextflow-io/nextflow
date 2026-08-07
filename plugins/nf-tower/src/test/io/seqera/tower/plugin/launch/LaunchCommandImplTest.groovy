@@ -761,9 +761,11 @@ class LaunchCommandImplTest extends Specification {
         ex.message.contains('Workspace \'nonexistent\' not found')
     }
 
-    def 'should return null when no workspace specified'() {
+    def 'should return null when no workspace specified and no Platform default'() {
         given:
-        def cmd = new LaunchCommandImpl()
+        def client = Mock(TowerClient) { getDefaultWorkspaceId() >> null }
+        def cmd = Spy(new LaunchCommandImpl())
+        cmd.createTowerClient(_, _) >> client
         def config = [:]
 
         when:
@@ -771,6 +773,35 @@ class LaunchCommandImplTest extends Specification {
 
         then:
         workspaceId == null
+    }
+
+    def 'should use the Platform default workspace when none specified locally'() {
+        given:
+        def client = Mock(TowerClient) { getDefaultWorkspaceId() >> 999L }
+        def cmd = Spy(new LaunchCommandImpl())
+        cmd.createTowerClient(_, _) >> client
+        def config = [:]
+
+        when:
+        def workspaceId = cmd.resolveWorkspaceId(config, null, 'token', 'endpoint')
+
+        then: 'the Platform default workspace is used'
+        workspaceId == 999L
+    }
+
+    def 'should prefer the config workspace over the Platform default'() {
+        given:
+        def client = Mock(TowerClient)
+        def cmd = Spy(new LaunchCommandImpl())
+        cmd.createTowerClient(_, _) >> client
+        def config = ['tower.workspaceId': 12345L]
+
+        when:
+        def workspaceId = cmd.resolveWorkspaceId(config, null, 'token', 'endpoint')
+
+        then: 'the local config wins and the Platform default is never queried'
+        0 * client.getDefaultWorkspaceId()
+        workspaceId == 12345L
     }
 
     // ===== Launch Result Tests =====
