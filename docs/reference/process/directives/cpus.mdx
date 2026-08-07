@@ -1,0 +1,25 @@
+---
+title: cpus
+description: Reference for the `cpus` process directive.
+---
+
+# `cpus`
+
+The `cpus` directive defines the number of CPUs required by each task execution. For example:
+
+```nextflow
+process blast {
+    cpus 8
+
+    script:
+    """
+    blastp -query input_sequence -num_threads ${task.cpus}
+    """
+}
+```
+
+This directive is required for tasks that execute multi-process or multi-threaded commands/tools and it is meant to reserve enough CPUs when a pipeline task is executed through a cluster resource manager.
+
+See also: [disk](./disk), [memory](./memory), [time](./time), [queue](./queue), [dynamic task resources][dynamic-task-resources]
+
+[dynamic-task-resources]: ../../../process#dynamic-task-resources

@@ -1,0 +1,71 @@
+---
+title: array
+description: Reference for the `array` process directive.
+---
+
+# `array`
+
+<AddedInVersion version="24.04" />
+
+The `array` directive submits tasks as *job arrays* for executors that support it.
+
+A job array is a collection of jobs with the same resource requirements and the same script (parameterized by an index). Job arrays incur significantly less scheduling overhead compared to individual jobs, and as a result they are preferred by HPC schedulers where possible.
+
+The directive should be specified with a given array size, along with an executor that supports job arrays. For example:
+
+```nextflow
+process hello {
+    executor 'slurm'
+    array 100
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+Nextflow currently supports job arrays for the following executors:
+
+- [AWS Batch][awsbatch-executor]
+- [Google Cloud Batch][google-batch-executor]
+- [LSF][lsf-executor]
+- [PBS][pbs-executor]
+- [PBS Pro][pbspro-executor]
+- [SGE][sge-executor]
+- [SLURM][slurm-executor]
+
+A process using job arrays collects tasks and submits each batch as a job array when it is ready. Any "leftover" tasks are submitted as a partial job array.
+
+Once a job array is submitted, each "child" task is executed as an independent job. Any tasks that fail (and can be retried) are retried without interfering with the tasks that succeeded. Retried tasks are submitted individually rather than through a job array, in order to allow for the use of [dynamic resources][dynamic-task-resources].
+
+The following directives must be uniform across all tasks in a process that uses job arrays, because these directives are specified once for the entire job array:
+
+- [accelerator](./accelerator)
+- [clusterOptions](./cluster-options)
+- [cpus](./cpus)
+- [disk](./disk)
+- [machineType](./machine-type)
+- [memory](./memory)
+- [queue](./queue)
+- [resourceLabels](./resource-labels)
+- [resourceLimits](./resource-limits)
+- [time](./time)
+
+For cloud-based executors like AWS Batch, or when using Fusion with any executor, the following additional directives must be uniform:
+
+- [container](./container)
+- [containerOptions](./container-options)
+
+When using Wave, the following additional directives must be uniform:
+
+- [conda](./conda)
+
+[awsbatch-executor]: ../../../executor/aws-batch
+[dynamic-task-resources]: ../../../process#dynamic-task-resources
+[google-batch-executor]: ../../../executor/google-batch
+[lsf-executor]: ../../../executor/lsf
+[pbs-executor]: ../../../executor/pbs
+[pbspro-executor]: ../../../executor/pbspro
+[sge-executor]: ../../../executor/sge
+[slurm-executor]: ../../../executor/slurm

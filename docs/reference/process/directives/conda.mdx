@@ -1,0 +1,27 @@
+---
+title: conda
+description: Reference for the `conda` process directive.
+---
+
+# `conda`
+
+The `conda` directive defines the set of [Conda](https://conda.io) packages required by each task. For example:
+
+```nextflow
+process hello {
+    conda 'bwa=0.7.15'
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+Nextflow automatically creates an environment for each unique set of Conda packages.
+
+The name of the desired channel for a specific package can be specified using the standard Conda notation, e.g. `bioconda::bwa=0.7.15`. Multiple packages can be specified separating them with a blank space, e.g. `bwa=0.7.15 fastqc=0.11.5`.
+
+The `conda` directive can also accept a Conda environment file path or the path of an existing Conda environment. See [Conda][conda-page] for more information.
+
+[conda-page]: ../../../conda

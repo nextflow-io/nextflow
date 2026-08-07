@@ -1,0 +1,57 @@
+---
+title: resourceLabels
+description: Reference for the `resourceLabels` process directive.
+---
+
+# `resourceLabels`
+
+The `resourceLabels` directive attaches custom name-value pairs to task executions, for executors that support it. For example:
+
+```nextflow
+process hello {
+    resourceLabels region: 'some-region', user: 'some-username'
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+Resource labels are attached to underlying resources such as cloud VMs, and are intended for operational purposes such as cost tracking. They are not recorded in lineage metadata.
+
+When `resourceLabels` is specified multiple times in the config, only the last setting is used. Additionally, when `resourceLabels` is specified both in the config and the process definition, only the process definition is used.
+
+As a best practice, define all resource labels in a single config setting:
+
+```groovy
+process {
+    resourceLabels = [ region: 'some-region', user: 'some-username' ]
+}
+```
+
+Use process selectors (`withName:` or `withLabel:`) to override resource labels for a specific process.
+
+Resource labels are currently supported by the following executors:
+
+- [AWS Batch][awsbatch-executor]
+- [Azure Batch][azurebatch-executor]
+- [Google Cloud Batch][google-batch-executor]
+- [Kubernetes][k8s-executor]
+- [Seqera executor][seqera-executor]
+
+:::note
+The limits and the syntax of the corresponding executor should be taken into consideration when using resource labels.
+:::
+
+<AddedInVersion version="23.10">
+Resource labels in Azure are added to auto-pools, rather than jobs, in order to facilitate cost analysis. A new pool will be created for each new set of resource labels. Therefore, it is recommended to also set `azure.batch.deletePoolsOnCompletion = true` when using process-specific resource labels.
+</AddedInVersion>
+
+See also: [label](./label) (for shared process configuration), [tag](./tag) (for per-task identification)
+
+[awsbatch-executor]: ../../../executor/aws-batch
+[azurebatch-executor]: ../../../executor/azure-batch
+[google-batch-executor]: ../../../executor/google-batch
+[k8s-executor]: ../../../executor/kubernetes
+[seqera-executor]: ../../../executor/seqera

@@ -1,0 +1,26 @@
+---
+title: machineType
+description: Reference for the `machineType` process directive.
+---
+
+# `machineType`
+
+The `machineType` can be used to specify a predefined Google Compute Platform [machine type](https://cloud.google.com/compute/docs/machine-types) when running using the [Google Batch][google-batch-executor], or when using auto-pools with [Azure Batch][azurebatch-executor].
+
+For example:
+
+```nextflow
+process hello {
+    machineType 'n1-highmem-8'
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+See also: [cpus](./cpus), [memory](./memory)
+
+[azurebatch-executor]: ../../../executor/azure-batch
+[google-batch-executor]: ../../../executor/google-batch

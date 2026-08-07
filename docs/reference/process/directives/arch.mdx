@@ -1,0 +1,37 @@
+---
+title: arch
+description: Reference for the `arch` process directive.
+---
+
+# `arch`
+
+The `arch` directive defines the CPU architecture to build the software in use by the process' task. For example:
+
+```nextflow
+process blast {
+    spack 'blast-plus@2.13.0'
+    arch 'linux/x86_64', target: 'cascadelake'
+
+    script:
+    """
+    blastp -query input_sequence -num_threads ${task.cpus}
+    """
+}
+```
+
+The example above declares that the CPU generic architecture is `linux/x86_64` (X86 64 bit), and more specifically that the microarchitecture is `cascadelake` (a specific generation of Intel CPUs).
+
+This directive is currently used by the following Nextflow functionalities:
+
+- by the [spack](./spack) directive, to build microarchitecture-optimized applications;
+- by the [Wave][wave-page] service, to build containers for one of the generic families of CPU architectures (see below);
+- by the `spack` strategy within [Wave][wave-page], to optimize the container builds for specific CPU microarchitectures.
+
+Allowed values for the `arch` directive are as follows, grouped by equivalent family (choices available for the sake of compatibility):
+- X86 64 bit: `linux/x86_64`, `x86_64`, `linux/amd64`, `amd64`
+- ARM 64 bit: `linux/aarch64`, `aarch64`, `linux/arm64`, `arm64`, `linux/arm64/v8`
+- ARM 64 bit, older generation: `linux/arm64/v7`
+
+Examples of values for the architecture `target` option are `cascadelake`, `icelake`, `zen2` and `zen3`. See the [Spack documentation](https://spack.readthedocs.io/en/latest/basic_usage.html#support-for-specific-microarchitectures) for the full and up-to-date list of meaningful targets.
+
+[wave-page]: ../../../wave

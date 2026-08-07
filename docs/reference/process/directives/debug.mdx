@@ -1,0 +1,29 @@
+---
+title: debug
+description: Reference for the `debug` process directive.
+---
+
+# `debug`
+
+The `debug` directive prints the standard output of each task to the pipeline standard output.
+
+For example:
+
+```nextflow
+process hello {
+    debug true
+
+    script:
+    """
+    echo Hello
+    """
+}
+```
+
+Prints:
+
+```
+Hello
+```
+
+Removing the `debug` directive or setting it to `false` in the above example will cause `Hello` to not be printed.

@@ -1,0 +1,34 @@
+---
+title: memory
+description: Reference for the `memory` process directive.
+---
+
+# `memory`
+
+The `memory` directive defines how much memory is required by each task execution. For example:
+
+```nextflow
+process hello {
+    memory 2.GB
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+The following suffixes can be used to specify memory values:
+
+- `B`: Bytes
+- `KB`: Kilobytes
+- `MB`: Megabytes
+- `GB`: Gigabytes
+- `TB`: Terabytes
+
+See [MemoryUnit][stdlib-types-memoryunit] for more information.
+
+See also: [cpus](./cpus), [disk](./disk), [time](./time), [queue](./queue), [dynamic task resources][dynamic-task-resources]
+
+[dynamic-task-resources]: ../../../process#dynamic-task-resources
+[stdlib-types-memoryunit]: ../../stdlib-types/memory-unit

@@ -1,0 +1,25 @@
+---
+title: shell
+description: Reference for the `shell` process directive.
+---
+
+# `shell`
+
+The `shell` directive defines a custom shell command for process scripts. By default, script blocks are executed with `/bin/bash -ue`.
+
+```nextflow
+process hello {
+    shell '/bin/bash', '-euo', 'pipefail'
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+It can also be specified in the Nextflow configuration:
+
+```groovy
+process.shell = ['/bin/bash', '-euo', 'pipefail']
+```

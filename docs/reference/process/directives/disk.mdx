@@ -1,0 +1,39 @@
+---
+title: disk
+description: Reference for the `disk` process directive.
+---
+
+# `disk`
+
+The `disk` directive defines the amount of disk storage required by each task execution. For example:
+
+```nextflow
+process hello {
+    disk 2.GB
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+The following suffixes can be used to specify disk values:
+
+- `B`: Bytes
+- `KB`: Kilobytes
+- `MB`: Megabytes
+- `GB`: Gigabytes
+- `TB`: Terabytes
+
+See [MemoryUnit][stdlib-types-memoryunit] for more information.
+
+:::note
+The `disk` directive is only used by certain executors. Refer to the [Executors][executor-page] page to see which executors support this directive.
+:::
+
+See also: [cpus](./cpus), [memory](./memory), [time](./time), [queue](./queue), [dynamic task resources][dynamic-task-resources]
+
+[dynamic-task-resources]: ../../../process#dynamic-task-resources
+[executor-page]: ../../../executor
+[stdlib-types-memoryunit]: ../../stdlib-types/memory-unit
