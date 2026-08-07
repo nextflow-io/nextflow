@@ -395,12 +395,14 @@ class K8sClient {
             try {
                 return podState(podName)
             }
-            /* pod might be deleted by control plane just after findPodNameForJob() call
-             * so try fallback to jobState
+            /* the pod state check may fail because the pod was evicted/deleted by the control plane
+             * (e.g. a node disruption or a pod cleaned up just after findPodNameForJob()), so fall
+             * back to the Job status. The original exception is passed along so that a genuine node
+             * termination is re-surfaced -- rather than being collapsed into the Job's `backoffLimit`
+             * failure -- allowing Nextflow to retry the task as an infrastructure failure.
              */
             catch (NodeTerminationException err) {
-                log.warn1("Job $jobName's Pod not found, probably cleaned by controlplane")
-                return jobStateFallback0(jobName)
+                return jobStateFallback0(jobName, err)
             }
         }
         else {
@@ -408,7 +410,7 @@ class K8sClient {
         }
     }
 
-    protected Map jobStateFallback0(String jobName) {
+    protected Map jobStateFallback0(String jobName, NodeTerminationException original=null) {
         final K8sResponseJson jobResp = jobStatus(jobName)
         final jobStatus = jobResp.status as Map
         if( jobStatus?.succeeded == 1 && jobStatus.conditions instanceof List ) {
@@ -431,6 +433,12 @@ class K8sClient {
         }
 
         if( jobStatus?.failed && (int)(jobStatus.failed) > 0 ) {
+            // if the pod state check raised a node termination (e.g. a `DisruptionTarget` condition
+            // or a `Shutdown`/evicted pod), re-surface it so the task is retried as an infrastructure
+            // failure instead of the Job's generic `backoffLimit` failure -- the disruption signal
+            // only lives on the (now gone) pod and cannot be recovered from the Job status alone
+            if( original != null )
+                throw original
             String message = 'unknown'
             if( jobStatus.conditions instanceof List ) {
                 final allConditions = jobStatus.conditions as List<Map>
