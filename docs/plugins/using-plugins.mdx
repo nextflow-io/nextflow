@@ -56,6 +56,12 @@ Plugin declarations in Nextflow configuration files are ignored when specifying 
 
 When Nextflow downloads plugins, it caches them in the directory specified by `NXF_PLUGINS_DIR` (`$HOME/.nextflow/plugins` by default).
 
+:::warning
+The plugin cache should be a private, per-user directory that other users cannot write to. Nextflow loads and executes cached plugin code without re-verifying its origin. If the cache is writable by other users (or owned by another user), a lower-trust user can replace the cached code with their own, and that code then runs inside your Nextflow process.
+
+Keep `NXF_PLUGINS_DIR` owned by you and not world-writable. A group-writable directory owned by you, as created under the common umask 002, is fine. If you need a shared cache, use a directory owned by an administrator or a dedicated service account that regular users cannot modify, and add that owner to [`NXF_PLUGINS_TRUSTED_OWNERS`][env-vars]. Use [`NXF_PLUGINS_STRICT_MODE`][env-vars] to control whether Nextflow warns about or refuses to load plugins from an untrusted directory.
+:::
+
 ## Offline usage
 
 When running Nextflow in an offline environment, any required plugins must be downloaded and moved into the offline environment prior to any runs.
@@ -74,6 +80,7 @@ To use Nextflow plugins in an offline environment:
     Nextflow will attempt to download newer versions of plugins if their versions are not set. See [Identifiers][using-plugins-identifiers] for more information.
     :::
 
+[env-vars]: ../reference/env-vars
 [install-standalone]: ../install#standalone-distribution
 [using-plugins-config]: ./using-plugins#configuration
 [using-plugins-identifiers]: ./using-plugins#identifiers
