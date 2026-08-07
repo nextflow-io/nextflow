@@ -17,11 +17,13 @@
 package nextflow.util
 
 import java.nio.file.Files
+import java.nio.file.Path
 import java.nio.file.Paths
 
 import com.google.common.hash.Hashing
 import nextflow.Global
 import nextflow.Session
+import nextflow.script.types.Record
 import org.apache.commons.codec.digest.DigestUtils
 import spock.lang.Specification
 import test.TestHelper
@@ -31,6 +33,15 @@ import test.TestHelper
  */
 class HashBuilderTest extends Specification {
 
+    static class SampleRecord implements Record {
+        public String id
+        public Path path
+    }
+
+    static class OtherSampleRecord implements Record {
+        public String id
+        public Path path
+    }
 
     def testHashContent() {
         setup:
@@ -120,6 +131,19 @@ class HashBuilderTest extends Specification {
         HashBuilder.hashFileSha256Impl0(file) == EXPECTED
         and:
         HashBuilder.hashFileSha256Impl0(file) == DigestUtils.sha256Hex(file.bytes)
+    }
+
+    def 'should hash records structurally'() {
+        given:
+        def file = TestHelper.createInMemTempFile('foo', 'Hello world')
+        def record = new SampleRecord(id: 'alpha', path: file)
+        def sameRecord = new OtherSampleRecord(id: 'alpha', path: file)
+        def differentRecord = new SampleRecord(id: 'beta', path: file)
+
+        expect:
+        new HashBuilder().with(record).build() == new HashBuilder().with(sameRecord).build()
+        new HashBuilder().with(record).build() == new HashBuilder().with(new RecordMap(id: 'alpha', path: file)).build()
+        new HashBuilder().with(record).build() != new HashBuilder().with(differentRecord).build()
     }
 
     def 'should hash dir content with sha256'() {
