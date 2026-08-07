@@ -341,6 +341,12 @@ class TaskRun implements Cloneable {
     volatile boolean aborted
 
     /**
+     * The executor-specific reason for task termination (e.g. OOMKilled, Evicted).
+     * Set by the executor when the platform provides a termination reason.
+     */
+    volatile String terminationReason
+
+    /**
      * The action {@link ErrorStrategy} action applied if task has failed
      */
     volatile ErrorStrategy errorAction
@@ -376,6 +382,7 @@ class TaskRun implements Cloneable {
         copy.name = null // <-- force to re-evaluate the name that can include a dynamic tag
         copy.error = null
         copy.exitStatus = Integer.MAX_VALUE
+        copy.terminationReason = null
         return copy
     }
 

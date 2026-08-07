@@ -74,6 +74,7 @@ class ProcessBuilder {
             'queue',
             'resourceLabels',
             'resourceLimits',
+            'retryOn',
             'scratch',
             'secret',
             'shell',
