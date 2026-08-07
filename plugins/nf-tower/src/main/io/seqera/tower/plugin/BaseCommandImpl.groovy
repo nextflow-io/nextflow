@@ -22,6 +22,7 @@ import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.SysEnv
 import nextflow.config.ConfigBuilder
+import nextflow.platform.PlatformHelper
 import nextflow.util.Duration
 
 @Slf4j
@@ -60,9 +61,7 @@ class BaseCommandImpl {
      * `tower.` prefix so the result can be passed to {@code PlatformHelper}.
      */
     protected Map towerOpts(Map config) {
-        return config
-            .findAll { it.key.toString().startsWith('tower.') }
-            .collectEntries { k, v -> [(k.toString().substring(6)): v] }
+        return PlatformHelper.towerOpts(config)
     }
 
     protected List<Map> listUserWorkspaces(TowerClient client, String userId) {

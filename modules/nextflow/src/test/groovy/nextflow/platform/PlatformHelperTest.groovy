@@ -139,13 +139,13 @@ class PlatformHelperTest extends Specification {
 
         where:
         SOURCE             | OPTS                | ENV                                            | DEFAULT | EXPECTED
-        'config'           | [workspaceId: '200']| [:]                                            | 999L    | '200'
-        'env var'          | [:]                 | [TOWER_WORKSPACE_ID: '100']                    | 999L    | '100'
-        'platform default' | [:]                 | [:]                                            | 999L    | '999'
+        'config'           | [workspaceId: '200']| [:]                                            | '999'   | '200'
+        'env var'          | [:]                 | [TOWER_WORKSPACE_ID: '100']                    | '999'   | '100'
+        'platform default' | [:]                 | [:]                                            | '999'   | '999'
         'nothing set'      | [:]                 | [:]                                            | null    | null
         // a Platform-driven run is authoritative: never override with the account default
-        'platform run'     | [:]                 | [TOWER_WORKFLOW_ID: 'wf-1']                    | 999L    | null
-        'platform run env' | [:]                 | [TOWER_WORKFLOW_ID: 'wf-1', TOWER_WORKSPACE_ID: '100'] | 999L | '100'
+        'platform run'     | [:]                 | [TOWER_WORKFLOW_ID: 'wf-1']                    | '999'   | null
+        'platform run env' | [:]                 | [TOWER_WORKFLOW_ID: 'wf-1', TOWER_WORKSPACE_ID: '100'] | '999' | '100'
     }
 
     def 'should not query the platform default when a local workspace is set'() {
@@ -153,7 +153,7 @@ class PlatformHelperTest extends Specification {
         def queried = false
 
         when:
-        final result = PlatformHelper.getEffectiveWorkspaceId([workspaceId: '200'], [:], () -> { queried = true; 999L })
+        final result = PlatformHelper.getEffectiveWorkspaceId([workspaceId: '200'], [:], () -> { queried = true; '999' })
 
         then:
         result == '200'

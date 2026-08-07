@@ -285,8 +285,7 @@ class CmdAuth extends CmdBase implements UsageAware {
             // Read config to get the actual resolved endpoint value
             final builder = new ConfigCmdAdapter().setHomeDir(Const.APP_HOME_DIR).setCurrentDir(Const.APP_HOME_DIR)
             final config = builder.buildConfigObject().flatten()
-            final towerConfig = config.findAll { it.key.toString().startsWith('tower.') }
-                .collectEntries { k, v -> [(k.toString().substring(6)): v] }
+            final towerConfig = PlatformHelper.towerOpts(config)
             def defaultEndpoint = PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
 
             result << 'Authenticate with Seqera Platform'

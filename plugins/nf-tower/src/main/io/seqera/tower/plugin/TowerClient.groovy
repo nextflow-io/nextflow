@@ -519,9 +519,9 @@ class TowerClient {
      *
      * @return the default workspace ID, or {@code null} if none is available
      */
-    Long getDefaultWorkspaceId() {
+    String getDefaultWorkspaceId() {
         try {
-            return describeUser().defaultWorkspaceId as Long
+            return describeUser().defaultWorkspaceId?.toString()
         }
         catch( Exception e ) {
             log.debug "Unable to resolve Seqera Platform default workspace: ${e.message}"
@@ -542,6 +542,12 @@ class TowerClient {
     }
 
 
+    /**
+     * Memoized for the same reason as {@link #describeUser()}: the workspaces a user
+     * belongs to do not change within a single command, and several call sites need
+     * the list to map a workspace name to its ID and back again.
+     */
+    @Memoized
     List<Map> listUserWorkspacesAndOrgs(String userId) {
         final json = apiGet("/user/${userId}/workspaces")
         return json.orgsAndWorkspaces as List<Map>

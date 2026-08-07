@@ -712,16 +712,26 @@ class LaunchCommandImplTest extends Specification {
 
     // ===== Workspace Resolution Tests =====
 
-    def 'should use workspace ID from config'() {
-        given:
-        def cmd = new LaunchCommandImpl()
-        def config = ['tower.workspaceId': 12345L]
+    def 'should prefer the -workspace name over the config and the environment'() {
+        given: 'a workspace set in the config AND in the environment'
+        def workspaces = [
+            [workspaceId: 111, workspaceName: 'ws1'],
+            [workspaceId: 222, workspaceName: 'ws2']
+        ]
+        def client = Mock(TowerClient) { getUserInfo() >> [id: 'user-123'] }
+        def cmd = Spy(new LaunchCommandImpl())
+        cmd.createTowerClient(_, _) >> client
+        cmd.listUserWorkspaces(_, _) >> workspaces
+        SysEnv.push([TOWER_WORKSPACE_ID: '5000'])
 
-        when:
-        def workspaceId = cmd.resolveWorkspaceId(config, null, 'token', 'endpoint')
+        when: 'the -workspace flag names a different workspace'
+        def workspaceId = cmd.resolveWorkspaceId(['tower.workspaceId': 12345L], 'ws2', 'token', 'endpoint')
 
-        then:
-        workspaceId == 12345L
+        then: 'the explicit flag wins over both'
+        workspaceId == 222
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should lookup workspace by name'() {
@@ -782,9 +792,9 @@ class LaunchCommandImplTest extends Specification {
 
         where:
         SOURCE             | CONFIG                        | ENV                          | PLATFORM_DEFAULT | EXPECTED
-        'config'           | ['tower.workspaceId': 12345L] | [:]                          | 999L             | 12345L
-        'env var'          | [:]                           | [TOWER_WORKSPACE_ID: '5000'] | 999L             | 5000L
-        'platform default' | [:]                           | [:]                          | 999L             | 999L
+        'config'           | ['tower.workspaceId': 12345L] | [:]                          | '999'            | 12345L
+        'env var'          | [:]                           | [TOWER_WORKSPACE_ID: '5000'] | '999'            | 5000L
+        'platform default' | [:]                           | [:]                          | '999'            | 999L
         'none'             | [:]                           | [:]                          | null             | null
     }
 

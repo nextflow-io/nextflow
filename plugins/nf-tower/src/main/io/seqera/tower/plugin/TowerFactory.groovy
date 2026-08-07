@@ -38,6 +38,14 @@ import nextflow.util.Duration
 @CompileStatic
 class TowerFactory implements TraceObserverFactoryV2 {
 
+    /**
+     * Retry budget and timeout for the best-effort default-workspace lookup performed
+     * during session init -- deliberately much tighter than the telemetry retry policy.
+     */
+    private static final int LOOKUP_MAX_ATTEMPTS = 1
+
+    private static final Duration LOOKUP_TIMEOUT = Duration.of('10s')
+
     private Map<String,String> env
 
     TowerFactory(){
@@ -46,7 +54,8 @@ class TowerFactory implements TraceObserverFactoryV2 {
 
     @Override
     Collection<TraceObserverV2> create(Session session) {
-        final config = new TowerConfig(session.config.tower as Map ?: Collections.emptyMap(), env)
+        final opts = session.config.tower as Map ?: Collections.emptyMap()
+        final config = new TowerConfig(opts, env)
         if( !isEnabled(session, config, env) )
             return Collections.emptyList()
         // make sure the access token is available before the client is created, otherwise the
@@ -57,8 +66,14 @@ class TowerFactory implements TraceObserverFactoryV2 {
         final client = client(session, env)
         // resolve the workspace: a local setting wins, otherwise fall back to the
         // user's default workspace configured in Seqera Platform
-        final opts = session.config.tower as Map ?: Collections.emptyMap()
-        final workspaceId = PlatformHelper.getEffectiveWorkspaceId(opts, env, () -> defaultWorkspaceId(client))
+        final workspaceId = PlatformHelper.getEffectiveWorkspaceId(opts, env, () -> defaultWorkspaceId(opts))
+        // publish the resolved value back into the session config: this is the single point
+        // where the workspace becomes known, and other subsystems that scope themselves to
+        // the workspace -- Wave (registry credentials), the Fusion licence, the Seqera
+        // executor -- read it back via PlatformHelper.getWorkspaceId(session.config.tower, env).
+        // Without this they would resolve to the personal workspace while the run is
+        // reported into the Platform default one.
+        publishWorkspaceId(session, workspaceId)
         // create the tower observer
         result.add( new TowerObserver(session, client, workspaceId, env))
         // create the logs checkpoint
@@ -69,10 +84,36 @@ class TowerFactory implements TraceObserverFactoryV2 {
 
     /**
      * Query the user's server-side default workspace from Seqera Platform.
+     *
+     * This runs during session initialization, before the pipeline script is even parsed,
+     * so it uses a dedicated client with a bounded retry budget and short timeouts: the
+     * lookup is a best-effort convenience that falls back to the personal workspace, and
+     * it must never be able to stall the start of a run for minutes when Platform is slow
+     * or unreachable. The shared client's retry policy is sized for the telemetry stream,
+     * which is a different trade-off.
+     *
      * Extracted as a seam so it can be stubbed in tests without hitting the network.
      */
-    protected Long defaultWorkspaceId(TowerClient client) {
-        return client.getDefaultWorkspaceId()
+    protected String defaultWorkspaceId(Map opts) {
+        final boundedOpts = new HashMap(opts)
+        boundedOpts.retryPolicy = [maxAttempts: LOOKUP_MAX_ATTEMPTS]
+        boundedOpts.httpConnectTimeout = LOOKUP_TIMEOUT
+        boundedOpts.httpReadTimeout = LOOKUP_TIMEOUT
+        return new TowerClient(new TowerConfig(boundedOpts, env)).getDefaultWorkspaceId()
+    }
+
+    /**
+     * Store the resolved workspace ID in the session config so that every subsystem
+     * scoping itself to the workspace observes the same value. Nothing is written when
+     * the workspace is unset, so the personal-workspace behaviour is left untouched.
+     */
+    protected void publishWorkspaceId(Session session, String workspaceId) {
+        if( !workspaceId )
+            return
+        final config = session.config
+        if( config.tower == null )
+            config.tower = new HashMap(1)
+        (config.tower as Map).workspaceId = workspaceId
     }
 
     @Memoized

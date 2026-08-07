@@ -32,6 +32,19 @@ import nextflow.SysEnv
 class PlatformHelper {
 
     /**
+     * Extract the `tower` scope options from a flattened config map, stripping the
+     * `tower.` prefix so the result can be passed to the accessors in this class.
+     *
+     * @param flatConfig a flattened config map, e.g. `['tower.endpoint': '...']`
+     * @return the `tower` options keyed without the prefix, e.g. `[endpoint: '...']`
+     */
+    static Map towerOpts(Map flatConfig) {
+        return flatConfig
+            .findAll { it.key.toString().startsWith('tower.') }
+            .collectEntries { k, v -> [(k.toString().substring('tower.'.length())): v] }
+    }
+
+    /**
      * A run made by Seqera Platform is signalled by the {@code TOWER_WORKFLOW_ID}
      * environment variable. In that case the settings must be taken from the
      * environment only, because Platform has already decided them for this run.
@@ -56,12 +69,12 @@ class PlatformHelper {
      * @param platformDefault supplies the Platform default workspace ID, queried only when needed
      * @return the workspace ID to use, or null to use the personal workspace
      */
-    static String getEffectiveWorkspaceId(Map opts, Map<String,String> env, Supplier<Long> platformDefault) {
+    static String getEffectiveWorkspaceId(Map opts, Map<String,String> env, Supplier<String> platformDefault) {
         final local = getWorkspaceId(opts, env)
         // a local setting always wins; for a Platform-driven run the environment is authoritative
         if( local || isPlatformRun(env) )
             return local
-        return platformDefault?.get()?.toString()
+        return platformDefault.get()
     }
 
     /**

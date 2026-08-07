@@ -282,7 +282,7 @@ class TowerClientTest extends Specification {
 
         where:
         SCENARIO                       | STATUS | BODY                                                                             | EXPECTED
-        'the field is present'         | 200    | '{"user":{"id":1},"needConsent":false,"defaultWorkspaceId":42}'                  | 42L
+        'the field is present'         | 200    | '{"user":{"id":1},"needConsent":false,"defaultWorkspaceId":42}'                  | '42'
         'the field is absent'          | 200    | '{"user":{"id":1},"needConsent":false}'                                          | null
         'the field is null'            | 200    | '{"user":{"id":1},"needConsent":false,"defaultWorkspaceId":null}'                | null
         'the endpoint returns an error'| 500    | 'boom'                                                                           | null
