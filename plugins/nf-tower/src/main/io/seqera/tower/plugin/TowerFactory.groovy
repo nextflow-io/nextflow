@@ -28,7 +28,6 @@ import nextflow.file.http.XAuthRegistry
 import nextflow.platform.PlatformHelper
 import nextflow.trace.TraceObserverFactoryV2
 import nextflow.trace.TraceObserverV2
-import nextflow.util.Duration
 /**
  * Create and register the Tower observer instance
  *

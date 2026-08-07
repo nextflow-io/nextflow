@@ -85,8 +85,8 @@ class TowerConfigTest extends Specification {
 
         then: 'the lookup gets a single attempt and short timeouts'
         config.retryPolicy.maxAttempts == 1
-        config.httpConnectTimeout == TowerConfig.LOOKUP_PHASE_TIMEOUT
-        config.httpReadTimeout == TowerConfig.LOOKUP_PHASE_TIMEOUT
+        config.httpConnectTimeout == TowerConfig.LOOKUP_TIMEOUT
+        config.httpReadTimeout == TowerConfig.LOOKUP_TIMEOUT
 
         and: 'everything else is carried over unchanged'
         config.accessToken == 'xyz'

@@ -282,7 +282,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         final authConfig = readAuthFile()
         final existingToken = authConfig['tower.accessToken']
         // Extract tower config for PlatformHelper (strip 'tower.' prefix)
-        final towerConfig = towerOpts(authConfig)
+        final towerConfig = PlatformHelper.towerOpts(authConfig)
         final apiUrl = PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
 
         if( !existingToken ) {
@@ -827,7 +827,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         final status = new ConfigStatus([], null, null, null)
 
         // Extract tower config and strip prefix for PlatformHelper
-        final towerConfig = towerOpts(config)
+        final towerConfig = PlatformHelper.towerOpts(config)
 
         // API endpoint - use PlatformHelper
         final String endpoint = PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
@@ -869,8 +869,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         // default workspace -- i.e. the workspace a run would actually use
         final workspaceInfo = getConfigValue(config, 'tower.workspaceId', 'TOWER_WORKSPACE_ID')
         final String effectiveWorkspaceId = PlatformHelper.getEffectiveWorkspaceId(
-            towerConfig, SysEnv.get(),
-            () -> accessToken ? createLookupClient(endpoint, accessToken).getDefaultWorkspaceId() : null )
+            towerConfig, SysEnv.get(), () -> httpClient?.getDefaultWorkspaceId() )
 
         if( effectiveWorkspaceId ) {
             // when neither the config nor the env var is set there is no local source to
@@ -1080,7 +1079,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         }
 
         // Write tower config to seqera-auth.config file, keyed without the `tower.` prefix
-        final towerConfig = towerOpts(config)
+        final towerConfig = PlatformHelper.towerOpts(config)
 
         final authConfigText = new StringBuilder()
         authConfigText.append("// Seqera Platform configuration\n")

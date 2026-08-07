@@ -17,6 +17,7 @@
 package io.seqera.tower.plugin
 
 
+import groovy.util.logging.Slf4j
 import io.seqera.util.retry.Retryable
 import nextflow.config.spec.ConfigOption
 import nextflow.config.spec.ConfigScope
@@ -40,6 +41,7 @@ import nextflow.util.RetryConfig
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 class TowerRetryPolicy implements Retryable.Config, ConfigScope {
 
     /**
@@ -89,11 +91,15 @@ class TowerRetryPolicy implements Retryable.Config, ConfigScope {
         this.maxAttempts = firstOf(opts.maxAttempts, legacy.maxRetries, DEFAULT_MAX_ATTEMPTS) as Integer
         this.jitter = firstOf(opts.jitter, RetryConfig.DEFAULT_JITTER) as Double
         this.multiplier = firstOf(opts.multiplier, legacy.backOffBase, RetryConfig.DEFAULT_MULTIPLIER) as Double
-        // `maxAttempts` counts the initial attempt, so anything below 1 would mean "never
-        // run the operation at all"; the underlying retry library rejects 0 outright.
-        // -1 is the library's documented value for "retry indefinitely" and is allowed.
-        if( maxAttempts == 0 || maxAttempts < -1 )
-            throw new IllegalArgumentException("Invalid Seqera Platform retry policy: 'maxAttempts' must be 1 or greater, or -1 for no limit -- offending value: $maxAttempts")
+        // `maxAttempts` counts the initial attempt, and -1 is the retry library's value for
+        // "retry indefinitely". Anything else below 1 would mean "never run the operation at
+        // all" and is rejected by the library, so warn and fall back to a single attempt --
+        // which is what `0` was almost certainly meant to express -- rather than abort a run
+        // over a setting that used to be silently ignored.
+        if( maxAttempts < 1 && maxAttempts != -1 ) {
+            log.warn "Invalid value for config option 'tower.retryPolicy.maxAttempts' -- offending value: $maxAttempts -- using 1 (no retries) instead"
+            this.maxAttempts = 1
+        }
     }
 
     /**

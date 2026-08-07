@@ -993,9 +993,9 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
         // Otherwise apply the standard precedence: `tower.workspaceId` config, then the
         // TOWER_WORKSPACE_ID environment variable, then the Seqera Platform default workspace.
         // The client is created lazily so no API call is made when a local setting applies,
-        // and it is bounded so a slow Platform cannot hang the command
+        // and it is the command's shared client so the `/user-info` response is fetched once
         final workspaceId = PlatformHelper.getEffectiveWorkspaceId(
-            towerOpts(config), SysEnv.get(), () -> createLookupClient(apiEndpoint, accessToken).getDefaultWorkspaceId() )
+            PlatformHelper.towerOpts(config), SysEnv.get(), () -> createTowerClient(apiEndpoint, accessToken).getDefaultWorkspaceId() )
         log.debug "Resolved workspace ID: ${workspaceId ?: 'none (personal workspace)'}"
         return workspaceId ? workspaceId as Long : null
     }

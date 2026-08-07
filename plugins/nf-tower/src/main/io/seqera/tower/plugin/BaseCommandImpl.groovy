@@ -22,7 +22,6 @@ import groovy.util.logging.Slf4j
 import nextflow.Const
 import nextflow.SysEnv
 import nextflow.config.ConfigBuilder
-import nextflow.platform.PlatformHelper
 import nextflow.util.Duration
 
 @Slf4j
@@ -43,17 +42,6 @@ class BaseCommandImpl {
     }
 
     /**
-     * Client for a best-effort lookup whose failure is not fatal, bounded so that a slow
-     * or unreachable Platform cannot make an interactive command hang for minutes.
-     *
-     * @see TowerConfig#forLookup
-     */
-    @Memoized
-    protected TowerClient createLookupClient(String apiUrl, String accessToken) {
-        return new TowerClient( TowerConfig.forLookup([accessToken: accessToken, endpoint: apiUrl], SysEnv.get()) )
-    }
-
-    /**
      * Convert API endpoint to web URL
      * e.g., https://api.cloud.seqera.io -> https://cloud.seqera.io
      *      https://cloud.seqera.io/api -> https://cloud.seqera.io
@@ -65,14 +53,6 @@ class BaseCommandImpl {
     protected Map readConfig() {
         final configFile = Const.APP_HOME_DIR.resolve('config')
         return new ConfigBuilder().build(configFile.exists() ? [ configFile ] : []).flatten()
-    }
-
-    /**
-     * Extract the `tower` scope options from a flattened config map, stripping the
-     * `tower.` prefix so the result can be passed to {@code PlatformHelper}.
-     */
-    protected Map towerOpts(Map config) {
-        return PlatformHelper.towerOpts(config)
     }
 
     protected List<Map> listUserWorkspaces(TowerClient client, String userId) {

@@ -188,6 +188,14 @@ class PlatformHelper {
      * Return the Platform Workspace ID: if `TOWER_WORKFLOW_ID` is provided in the environment, it means we are running
      * in a Platform-made run and we should ONLY retrieve the workspace ID from the environment. Otherwise, check the
      * configuration or fallback to the environment. If no workspace ID is found, return null.
+     *
+     * Note for callers passing the `tower` scope of a live session config: when the user set no
+     * workspace of their own, the workspace configured as default in their Seqera Platform
+     * account is resolved during session init and written into that map, so this can return a
+     * value that appears nowhere in the user's configuration files. That is deliberate -- it is
+     * what keeps the run, Wave, the Fusion licence and the Seqera executor in the same
+     * workspace. See {@code TowerFactory.publishDefaultWorkspaceId}.
+     *
      * @param opts
      * @param env
      * @return

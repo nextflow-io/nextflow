@@ -19,6 +19,7 @@ package io.seqera.tower.plugin
 import nextflow.util.Duration
 import nextflow.util.RetryConfig
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  * Unit tests for TowerRetryPolicy
@@ -58,7 +59,7 @@ class TowerRetryPolicyTest extends Specification {
         policy.multiplier == 1.5d
     }
 
-    def 'should use provided values when specified'() {
+    def 'should use provided values from the legacy options'() {
         when:
         def policy = new TowerRetryPolicy([:], [backOffDelay: 500, maxRetries: 100, backOffBase: 5])
 
@@ -79,29 +80,22 @@ class TowerRetryPolicyTest extends Specification {
         policy.jitter == 0d
     }
 
-    def 'should honour a single attempt'() {
-        when:
-        def policy = new TowerRetryPolicy([maxAttempts: 1])
+    @Unroll
+    def 'should honour a valid maxAttempts of #VALUE'() {
+        expect: '1 means no retries and -1 means retry indefinitely'
+        new TowerRetryPolicy([maxAttempts: VALUE]).maxAttempts == VALUE
 
-        then:
-        policy.maxAttempts == 1
+        where:
+        VALUE << [1, -1]
     }
 
-    def 'should allow an unlimited retry policy'() {
-        when:
-        def policy = new TowerRetryPolicy([maxAttempts: -1])
-
-        then:
-        policy.maxAttempts == -1
-    }
-
-    def 'should reject a maxAttempts value that would never run the operation'() {
+    @Unroll
+    def 'should fall back to a single attempt for an unusable maxAttempts of #VALUE'() {
         when: 'a user writes 0 meaning "do not retry" -- previously this silently became 10'
-        new TowerRetryPolicy([maxAttempts: VALUE])
+        def policy = new TowerRetryPolicy([maxAttempts: VALUE])
 
-        then:
-        def e = thrown(IllegalArgumentException)
-        e.message.contains('maxAttempts')
+        then: 'the run is not aborted, but the setting is not silently ignored either'
+        policy.maxAttempts == 1
 
         where:
         VALUE << [0, -2]

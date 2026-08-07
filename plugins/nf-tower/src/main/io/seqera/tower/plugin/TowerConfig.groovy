@@ -41,11 +41,11 @@ class TowerConfig implements ConfigScope {
     static final Duration DEFAULT_READ_TIMEOUT = Duration.of('60s')
 
     /**
-     * Timeout applied to a best-effort lookup. Note this is a *per-phase* budget: it is
-     * used for both the connect and the read phase, so the worst case for one request is
-     * roughly twice this value.
+     * Timeout applied to a best-effort lookup. It is used for both the connect and the read
+     * budget; since the read timeout is applied as an overall request timeout covering
+     * connect, TLS and read, one bounded request cannot take much longer than this.
      */
-    static final Duration LOOKUP_PHASE_TIMEOUT = Duration.of('10s')
+    static final Duration LOOKUP_TIMEOUT = Duration.of('10s')
 
     @ConfigOption
     @Description("""
@@ -110,8 +110,8 @@ class TowerConfig implements ConfigScope {
     static TowerConfig forLookup(Map opts, Map<String,String> env) {
         final bounded = new HashMap(opts)
         bounded.retryPolicy = [maxAttempts: 1]
-        bounded.httpConnectTimeout = LOOKUP_PHASE_TIMEOUT
-        bounded.httpReadTimeout = LOOKUP_PHASE_TIMEOUT
+        bounded.httpConnectTimeout = LOOKUP_TIMEOUT
+        bounded.httpReadTimeout = LOOKUP_TIMEOUT
         return new TowerConfig(bounded, env)
     }
 
