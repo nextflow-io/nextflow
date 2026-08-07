@@ -802,8 +802,7 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         final status = new ConfigStatus([], null, null, null)
 
         // Extract tower config and strip prefix for PlatformHelper
-        final towerConfig = config.findAll { it.key.toString().startsWith('tower.') }
-            .collectEntries { k, v -> [(k.toString().substring(6)): v] }
+        final towerConfig = towerOpts(config)
 
         // API endpoint - use PlatformHelper
         final String endpoint = PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
@@ -839,59 +838,36 @@ class AuthCommandImpl extends BaseCommandImpl implements CmdAuth.AuthCommand {
         final enabledValue = enabledInfo.value?.toString()?.toLowerCase() in ['true', '1', 'yes'] ? 'Yes' : 'No'
         status.table.add(['Workflow monitoring', enabledValue, (enabledInfo.source ?: 'default') as String])
 
-        // Default workspace - use PlatformHelper
-        final String workspaceId = PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get())
+        // Default workspace: the local setting if any, otherwise the Seqera Platform
+        // default workspace -- i.e. the workspace a run would actually use
+        final String localWorkspaceId = PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get())
         final workspaceInfo = getConfigValue(config, 'tower.workspaceId', 'TOWER_WORKSPACE_ID')
-        // the workspace effectively used for runs: the local/CLI value if set,
-        // otherwise the Seqera Platform server-side default workspace (if any)
-        String effectiveWorkspaceId = workspaceId
-        if( workspaceId ) {
-            // Try to get workspace name and roles from API if we have a token
-            def workspaceDetails = null
-            if( accessToken ) {
-                final httpClient = createTowerClient(endpoint, accessToken)
-                final userInfo = httpClient.getUserInfo()
-                workspaceDetails = httpClient.getUserWorkspaceDetails(userInfo.id as String, workspaceId)
-            }
+        final httpClient = accessToken ? createTowerClient(endpoint, accessToken) : null
+        final String effectiveWorkspaceId = PlatformHelper.getEffectiveWorkspaceId(
+            towerConfig, SysEnv.get(), () -> httpClient?.getDefaultWorkspaceId() )
 
+        if( effectiveWorkspaceId ) {
+            // report where the value came from: the local config/env, or Platform itself
+            final source = localWorkspaceId ? workspaceInfo.source as String : 'platform'
+            // Try to get workspace name and roles from API if we have a token
+            final workspaceDetails = httpClient?.getUserWorkspaceDetails(httpClient.getUserInfo().id as String, effectiveWorkspaceId)
+            // Add workspace ID row and remember its index
+            status.workspaceRowIndex = status.table.size()
+            status.table.add(['Default workspace', effectiveWorkspaceId, source])
             if( workspaceDetails ) {
-                // Add workspace ID row and remember its index
-                status.workspaceRowIndex = status.table.size()
-                status.table.add(['Default workspace', workspaceId, workspaceInfo.source as String])
                 // Store workspace details for display after this row (outside table structure)
                 // roles are included in workspaceDetails
                 status.workspaceInfo = workspaceDetails
                 status.workspaceRoles = workspaceDetails.roles as List<String>
-            } else {
-                status.table.add(['Default workspace', workspaceId, workspaceInfo.source as String])
             }
-        } else {
-            if( accessToken ) {
-                // No local/CLI workspace set — check for a Seqera Platform default workspace
-                final httpClient = createTowerClient(endpoint, accessToken)
-                final platformDefaultId = httpClient.getDefaultWorkspaceId()?.toString()
-                if( platformDefaultId ) {
-                    effectiveWorkspaceId = platformDefaultId
-                    final userInfo = httpClient.getUserInfo()
-                    final workspaceDetails = httpClient.getUserWorkspaceDetails(userInfo.id as String, platformDefaultId)
-                    if( workspaceDetails ) {
-                        status.workspaceRowIndex = status.table.size()
-                        status.table.add(['Default workspace', platformDefaultId, 'platform'])
-                        status.workspaceInfo = workspaceDetails
-                        status.workspaceRoles = workspaceDetails.roles as List<String>
-                    } else {
-                        status.table.add(['Default workspace', platformDefaultId, 'platform'])
-                    }
-                } else {
-                    status.table.add(['Default workspace', 'None (Personal workspace)', 'default'])
-                }
-            }
+        }
+        else if( accessToken ) {
+            status.table.add(['Default workspace', 'None (Personal workspace)', 'default'])
         }
 
         // Compute environment and work directory
         def computeEnv = null
-        if( accessToken ) {
-            final httpClient = createTowerClient(endpoint, accessToken)
+        if( httpClient ) {
             try {
                 if( config['tower.computeEnvId'] ) {
                     computeEnv = getComputeEnvironment(httpClient, config['tower.computeEnvId'] as String, effectiveWorkspaceId)

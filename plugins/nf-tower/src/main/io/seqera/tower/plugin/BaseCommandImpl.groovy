@@ -55,6 +55,16 @@ class BaseCommandImpl {
         return new ConfigBuilder().build(configFile.exists() ? [ configFile ] : []).flatten()
     }
 
+    /**
+     * Extract the `tower` scope options from a flattened config map, stripping the
+     * `tower.` prefix so the result can be passed to {@code PlatformHelper}.
+     */
+    protected Map towerOpts(Map config) {
+        return config
+            .findAll { it.key.toString().startsWith('tower.') }
+            .collectEntries { k, v -> [(k.toString().substring(6)): v] }
+    }
+
     protected List<Map> listUserWorkspaces(TowerClient client, String userId) {
         return client.listUserWorkspacesAndOrgs(userId).findAll { ((Map) it).workspaceId != null }
     }

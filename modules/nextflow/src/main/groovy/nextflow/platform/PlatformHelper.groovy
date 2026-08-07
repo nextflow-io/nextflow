@@ -16,6 +16,8 @@
 
 package nextflow.platform
 
+import java.util.function.Supplier
+
 import groovy.transform.CompileStatic
 import nextflow.Global
 import nextflow.Session
@@ -28,6 +30,39 @@ import nextflow.SysEnv
  */
 @CompileStatic
 class PlatformHelper {
+
+    /**
+     * A run made by Seqera Platform is signalled by the {@code TOWER_WORKFLOW_ID}
+     * environment variable. In that case the settings must be taken from the
+     * environment only, because Platform has already decided them for this run.
+     *
+     * @param env the applicable environment variables
+     * @return {@code true} when the current run was launched by Platform
+     */
+    static boolean isPlatformRun(Map<String,String> env) {
+        return env.get('TOWER_WORKFLOW_ID') as boolean
+    }
+
+    /**
+     * Resolve the workspace effectively used for a run: the locally configured
+     * value wins, otherwise fall back to the user's server-side default workspace
+     * in Seqera Platform.
+     *
+     * The Platform lookup is supplied by the caller so that this class stays free
+     * of any I/O and of any dependency on the Platform API client.
+     *
+     * @param opts the configuration options for Platform (e.g. `session.config.navigate('tower')`)
+     * @param env the applicable environment variables
+     * @param platformDefault supplies the Platform default workspace ID, queried only when needed
+     * @return the workspace ID to use, or null to use the personal workspace
+     */
+    static String getEffectiveWorkspaceId(Map opts, Map<String,String> env, Supplier<Long> platformDefault) {
+        final local = getWorkspaceId(opts, env)
+        // a local setting always wins; for a Platform-driven run the environment is authoritative
+        if( local || isPlatformRun(env) )
+            return local
+        return platformDefault?.get()?.toString()
+    }
 
     /**
      * Get the configured Platform API endpoint: if the endpoint is not provided in the configuration, we fallback to the
@@ -114,7 +149,7 @@ class PlatformHelper {
      * @return the Platform access token
      */
     static String getAccessToken(Map opts, Map<String,String> env) {
-        final token = env.get('TOWER_WORKFLOW_ID')
+        final token = isPlatformRun(env)
             ? env.get('TOWER_ACCESS_TOKEN')
             : opts.containsKey('accessToken') ? opts.accessToken as String : env.get('TOWER_ACCESS_TOKEN')
         return token
@@ -130,7 +165,7 @@ class PlatformHelper {
      * @return the Platform refresh token
      */
     static String getRefreshToken(Map opts, Map<String,String> env) {
-        final token = env.get('TOWER_WORKFLOW_ID')
+        final token = isPlatformRun(env)
             ? env.get('TOWER_REFRESH_TOKEN')
             : opts.containsKey('refreshToken') ? opts.refreshToken as String : env.get('TOWER_REFRESH_TOKEN')
         return token
@@ -146,7 +181,7 @@ class PlatformHelper {
      */
     static String getWorkspaceId(Map opts, Map<String,String> env) {
         try {
-            final workspaceId = env.get('TOWER_WORKFLOW_ID')
+            final workspaceId = isPlatformRun(env)
                 ? env.get('TOWER_WORKSPACE_ID')
                 : opts.workspaceId as Long ?: env.get('TOWER_WORKSPACE_ID') as Long
             return workspaceId
@@ -167,7 +202,7 @@ class PlatformHelper {
      * @return the Platform compute environment ID, or null
      */
     static String getComputeEnvId(Map opts, Map<String,String> env) {
-        final computeEnvId = env.get('TOWER_WORKFLOW_ID')
+        final computeEnvId = isPlatformRun(env)
             ? env.get('TOWER_COMPUTE_ENV_ID')
             : opts.containsKey('computeEnvId') ? opts.computeEnvId as String : env.get('TOWER_COMPUTE_ENV_ID')
         return computeEnvId

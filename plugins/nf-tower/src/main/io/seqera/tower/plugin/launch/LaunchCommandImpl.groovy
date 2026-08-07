@@ -27,7 +27,9 @@ import io.seqera.tower.plugin.BaseCommandImpl
 import io.seqera.tower.plugin.TowerClient
 import io.seqera.tower.plugin.exception.ForbiddenException
 import nextflow.BuildInfo
+import nextflow.SysEnv
 import nextflow.cli.CmdLaunch
+import nextflow.platform.PlatformHelper
 import nextflow.util.ColorUtil
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
@@ -967,13 +969,8 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
     // ===== Workspace & User Helper Methods =====
 
     protected Long resolveWorkspaceId(Map config, String workspaceName, String accessToken, String apiEndpoint) {
-        // First check config for workspace ID
-        final configWorkspaceId = config['tower.workspaceId']
-        if (configWorkspaceId) {
-            return configWorkspaceId as Long
-        }
-
-        // If workspace name provided, look it up
+        // The `-workspace` flag is the most explicit choice, so it wins over the
+        // config file and the environment: look it up by name
         if (workspaceName) {
             final httpClient = createTowerClient(apiEndpoint, accessToken)
             final userInfo = httpClient.getUserInfo() as Map
@@ -993,15 +990,13 @@ class LaunchCommandImpl extends BaseCommandImpl implements CmdLaunch.LaunchComma
             return (matchingWorkspace as Map).workspaceId as Long
         }
 
-        // No local/CLI workspace set — fall back to the Seqera Platform server-side
-        // default workspace, if the user (or the system) has one configured
-        final defaultWorkspaceId = createTowerClient(apiEndpoint, accessToken).getDefaultWorkspaceId()
-        if (defaultWorkspaceId) {
-            log.debug "Using Seqera Platform default workspace ID: ${defaultWorkspaceId}"
-            return defaultWorkspaceId
-        }
-
-        return null
+        // Otherwise apply the standard precedence: `tower.workspaceId` config, then the
+        // TOWER_WORKSPACE_ID environment variable, then the Seqera Platform default workspace.
+        // The client is created lazily so no API call is made when a local setting applies
+        final workspaceId = PlatformHelper.getEffectiveWorkspaceId(
+            towerOpts(config), SysEnv.get(), () -> createTowerClient(apiEndpoint, accessToken).getDefaultWorkspaceId() )
+        log.debug "Resolved workspace ID: ${workspaceId ?: 'none (personal workspace)'}"
+        return workspaceId ? workspaceId as Long : null
     }
 
     protected Map findComputeEnv(TowerClient client, String computeEnvName, Long workspaceId) {

@@ -25,6 +25,7 @@ import io.seqera.http.HxClient
 import nextflow.exception.AbortRunException
 import nextflow.util.Duration
 import spock.lang.Specification
+import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -254,10 +255,16 @@ class TowerClientTest extends Specification {
         wireMock.stop()
     }
 
-    def 'should resolve the default workspace id from user-info' () {
+    @Unroll
+    def 'should resolve the default workspace id when #SCENARIO' () {
         given:
         def wireMock = new WireMockServer(0)
         wireMock.start()
+        wireMock.stubFor(
+            WireMock.get(WireMock.urlPathEqualTo('/user-info'))
+                .willReturn(WireMock.aResponse().withStatus(STATUS)
+                    .withHeader('Content-Type', 'application/json')
+                    .withBody(BODY)))
         and:
         TowerConfig config = Mock(TowerConfig) {
             getHttpReadTimeout() >> Duration.of('5 s')
@@ -267,32 +274,44 @@ class TowerClientTest extends Specification {
         }
         TowerClient client = new TowerClient(config)
 
-        when: 'the user-info response carries a top-level defaultWorkspaceId'
+        expect:
+        client.getDefaultWorkspaceId() == EXPECTED
+
+        cleanup:
+        wireMock.stop()
+
+        where:
+        SCENARIO                       | STATUS | BODY                                                                             | EXPECTED
+        'the field is present'         | 200    | '{"user":{"id":1},"needConsent":false,"defaultWorkspaceId":42}'                  | 42L
+        'the field is absent'          | 200    | '{"user":{"id":1},"needConsent":false}'                                          | null
+        'the field is null'            | 200    | '{"user":{"id":1},"needConsent":false,"defaultWorkspaceId":null}'                | null
+        'the endpoint returns an error'| 500    | 'boom'                                                                           | null
+    }
+
+    def 'should fetch user-info only once per client' () {
+        given:
+        def wireMock = new WireMockServer(0)
+        wireMock.start()
         wireMock.stubFor(
             WireMock.get(WireMock.urlPathEqualTo('/user-info'))
                 .willReturn(WireMock.aResponse().withStatus(200)
                     .withHeader('Content-Type', 'application/json')
-                    .withBody('{"user":{"id":1,"userName":"me"},"needConsent":false,"defaultWorkspaceId":42}')))
-        then:
-        client.getDefaultWorkspaceId() == 42L
+                    .withBody('{"user":{"id":1,"userName":"me"},"defaultWorkspaceId":42}')))
+        and:
+        TowerConfig config = Mock(TowerConfig) {
+            getHttpReadTimeout() >> Duration.of('5 s')
+            getHttpConnectTimeout() >> Duration.of('5 s')
+            getEndpoint() >> wireMock.baseUrl()
+            getAccessToken() >> 'token'
+        }
+        TowerClient client = new TowerClient(config)
 
-        when: 'no defaultWorkspaceId is present in the response'
-        wireMock.resetAll()
-        wireMock.stubFor(
-            WireMock.get(WireMock.urlPathEqualTo('/user-info'))
-                .willReturn(WireMock.aResponse().withStatus(200)
-                    .withHeader('Content-Type', 'application/json')
-                    .withBody('{"user":{"id":1,"userName":"me"},"needConsent":false}')))
-        then:
-        client.getDefaultWorkspaceId() == null
+        when: 'both accessors of the same endpoint are used'
+        client.getUserInfo()
+        client.getDefaultWorkspaceId()
 
-        when: 'the endpoint returns an error'
-        wireMock.resetAll()
-        wireMock.stubFor(
-            WireMock.get(WireMock.urlPathEqualTo('/user-info'))
-                .willReturn(WireMock.aResponse().withStatus(500).withBody('boom')))
-        then: 'the failure is swallowed and null is returned'
-        client.getDefaultWorkspaceId() == null
+        then: 'the response is shared, not re-fetched'
+        wireMock.verify(1, WireMock.getRequestedFor(WireMock.urlPathEqualTo('/user-info')))
 
         cleanup:
         wireMock.stop()

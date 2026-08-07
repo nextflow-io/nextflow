@@ -32,7 +32,7 @@ class TowerFactoryTest extends Specification {
         // stub the Platform default-workspace lookup so no live API call is made when
         // no workspace is configured locally
         def factory = Spy(new TowerFactory(env: [TOWER_ACCESS_TOKEN: '123']))
-        factory.resolveDefaultWorkspaceId(_, _) >> null
+        factory.defaultWorkspaceId(_) >> null
 
         when:
         def session = Mock(Session) { getConfig() >> [tower: [enabled: true]] }
@@ -55,7 +55,7 @@ class TowerFactoryTest extends Specification {
         when:
         def observer = (TowerObserver) factory.create(session)[0]
         then: 'the Platform default workspace is resolved and used'
-        1 * factory.resolveDefaultWorkspaceId(_, _) >> 300L
+        1 * factory.defaultWorkspaceId(_) >> 300L
         observer.getWorkspaceId() == '300'
     }
 
@@ -67,7 +67,7 @@ class TowerFactoryTest extends Specification {
         when:
         def observer = (TowerObserver) factory.create(session)[0]
         then: 'the local workspace wins and no default lookup is performed'
-        0 * factory.resolveDefaultWorkspaceId(_, _)
+        0 * factory.defaultWorkspaceId(_)
         observer.getWorkspaceId() == '200'
     }
 
@@ -79,7 +79,7 @@ class TowerFactoryTest extends Specification {
         when:
         def observer = (TowerObserver) factory.create(session)[0]
         then: 'the env workspace is used and no default lookup is performed'
-        0 * factory.resolveDefaultWorkspaceId(_, _)
+        0 * factory.defaultWorkspaceId(_)
         observer.getWorkspaceId() == '100'
     }
 

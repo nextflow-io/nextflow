@@ -449,7 +449,7 @@ class CmdAuth extends CmdBase implements UsageAware {
      *   <tr>
      *     <td>Default workspace</td>
      *     <td>Configured workspace ID and name</td>
-     *     <td>nextflow config, env var $TOWER_WORKSPACE_ID, default (Personal)</td>
+     *     <td>nextflow config, env var $TOWER_WORKSPACE_ID, platform (account default), default (Personal)</td>
      *   </tr>
      *   <tr>
      *     <td>Primary compute env</td>

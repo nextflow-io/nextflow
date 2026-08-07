@@ -80,7 +80,7 @@ class TowerConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The workspace ID in Seqera Platform in which to save the run (default: the launching user's personal workspace).
+        The workspace ID in Seqera Platform in which to save the run (default: the user's default workspace in Seqera Platform, or the launching user's personal workspace if no default is set).
     """)
     final String workspaceId
 

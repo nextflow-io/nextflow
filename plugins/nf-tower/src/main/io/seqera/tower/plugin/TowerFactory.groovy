@@ -25,6 +25,7 @@ import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.file.http.XAuthProvider
 import nextflow.file.http.XAuthRegistry
+import nextflow.platform.PlatformHelper
 import nextflow.trace.TraceObserverFactoryV2
 import nextflow.trace.TraceObserverV2
 import nextflow.util.Duration
@@ -53,13 +54,13 @@ class TowerFactory implements TraceObserverFactoryV2 {
         // during session init and gets swallowed silently by the launcher
         checkAccessToken(config)
         final result = new ArrayList<TraceObserverV2>(1)
-        // resolve the workspace: local/CLI settings win; when none is set and this is
-        // not a Platform-driven run, fall back to the user's Platform default workspace
-        String workspaceId = config.workspaceId
-        if( !workspaceId && !env.get('TOWER_WORKFLOW_ID') )
-            workspaceId = resolveDefaultWorkspaceId(session, env)?.toString()
+        final client = client(session, env)
+        // resolve the workspace: a local setting wins, otherwise fall back to the
+        // user's default workspace configured in Seqera Platform
+        final opts = session.config.tower as Map ?: Collections.emptyMap()
+        final workspaceId = PlatformHelper.getEffectiveWorkspaceId(opts, env, () -> defaultWorkspaceId(client))
         // create the tower observer
-        result.add( new TowerObserver(session, client(session, env), workspaceId, env))
+        result.add( new TowerObserver(session, client, workspaceId, env))
         // create the logs checkpoint
         if( session.cloudCachePath )
             result.add( new LogsCheckpoint() )
@@ -67,11 +68,11 @@ class TowerFactory implements TraceObserverFactoryV2 {
     }
 
     /**
-     * Resolve the user's server-side default workspace from Seqera Platform.
+     * Query the user's server-side default workspace from Seqera Platform.
      * Extracted as a seam so it can be stubbed in tests without hitting the network.
      */
-    protected Long resolveDefaultWorkspaceId(Session session, Map env) {
-        return client(session, env).getDefaultWorkspaceId()
+    protected Long defaultWorkspaceId(TowerClient client) {
+        return client.getDefaultWorkspaceId()
     }
 
     @Memoized

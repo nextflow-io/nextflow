@@ -24,6 +24,7 @@ import groovy.json.JsonGenerator
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import io.seqera.http.HxClient
@@ -486,11 +487,22 @@ class TowerClient {
     }
 
     /**
+     * Fetch the full {@code GET /user-info} payload, which carries both the user
+     * object and the account-level settings such as {@code defaultWorkspaceId}.
+     *
+     * Memoized so that the several accessors reading different fields of the same
+     * response share a single HTTP round-trip per client instance.
+     */
+    @Memoized
+    protected Map describeUser() {
+        return apiGet("/user-info")
+    }
+
+    /**
      * @return current user info (id, userName, etc.) from GET /user-info
      */
     Map<String, Object> getUserInfo() {
-        final json = apiGet("/user-info")
-        return json.user as Map<String, Object>
+        return describeUser().user as Map<String, Object>
     }
 
     /**
@@ -502,12 +514,14 @@ class TowerClient {
      * Platform and is {@code null} when no default is set, when the stored default
      * is no longer accessible, or when the Platform version predates the feature.
      *
+     * Unlike the other accessors on this endpoint, failures are swallowed: resolving
+     * the default workspace is a best-effort convenience and must never abort a run.
+     *
      * @return the default workspace ID, or {@code null} if none is available
      */
     Long getDefaultWorkspaceId() {
         try {
-            final json = apiGet("/user-info")
-            return json.defaultWorkspaceId as Long
+            return describeUser().defaultWorkspaceId as Long
         }
         catch( Exception e ) {
             log.debug "Unable to resolve Seqera Platform default workspace: ${e.message}"
