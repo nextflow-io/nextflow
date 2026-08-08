@@ -766,8 +766,7 @@ Commonly used executors include:
 - `awsbatch`: [AWS Batch](https://aws.amazon.com/batch/)
 - `azurebatch`: [Azure Batch](https://azure.microsoft.com/en-us/services/batch/)
 - `google-batch`: [Google Cloud Batch](https://cloud.google.com/batch)
-- `k8s`: [Kubernetes](https://kubernetes.io/) cluster
-- `local`: The local machine where the pipeline is launched
+- `local`: local machine
 - `lsf`: [Platform LSF](http://en.wikipedia.org/wiki/Platform_LSF) job scheduler
 - `slurm`: [SLURM](https://en.wikipedia.org/wiki/Slurm_Workload_Manager) workload manager
 
@@ -1803,10 +1802,10 @@ This directive is only used by certain executors. Refer to the [Executors][execu
 
 See also: [cpus](#cpus), [disk](#disk), [memory](#memory), [queue](#queue), [dynamic task resources][dynamic-task-resources]
 
-[awsbatch-executor]: ../executor#aws-batch
-[azurebatch-executor]: ../executor#azure-batch
+[awsbatch-executor]: ../executor/aws-batch
+[azurebatch-executor]: ../executor/azure-batch
 [cache-resume-page]: ../cache-and-resume
-[channel-topic]: ./channel#topic
+[channel-topic]: ./stdlib-namespaces/channel#topic
 [config-process-selectors]: ../config#process-selectors
 [conda-page]: ../conda
 [container-page]: ../container
@@ -1817,19 +1816,19 @@ See also: [cpus](#cpus), [disk](#disk), [memory](#memory), [queue](#queue), [dyn
 [executor-page]: ../executor
 [getstarted-resume]: ../your-first-script#modify-and-resume
 [glob]: https://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
-[google-batch-executor]: ../executor#google-cloud-batch
-[k8s-executor]: ../executor#kubernetes
-[lsf-executor]: ../executor#lsf
+[google-batch-executor]: ../executor/google-batch
+[k8s-executor]: ../executor/kubernetes
+[lsf-executor]: ../executor/lsf
 [migrating-workflow-outputs]: ../tutorials/workflow-outputs
-[pbs-executor]: ../executor#pbstorque
-[pbspro-executor]: ../executor#pbs-pro
+[pbs-executor]: ../executor/pbs
+[pbspro-executor]: ../executor/pbspro
 [process-multiple-input-files]: ../process#multiple-input-files
 [process-native]: ../process#native-execution
 [process-page]: ../process
 [secrets-page]: ../secrets
-[seqera-executor]: ../executor#seqera
-[sge-executor]: ../executor#sge
-[slurm-executor]: ../executor#slurm
+[seqera-executor]: ../executor/seqera
+[sge-executor]: ../executor/sge
+[slurm-executor]: ../executor/slurm
 [spack-page]: ../spack
 [stdlib-namespaces-workflow]: ./stdlib-namespaces/workflow
 [stdlib-types-duration]: ./stdlib-types/duration

@@ -21,6 +21,7 @@ import com.beust.jcommander.Parameters
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
+import nextflow.k8s.K8sDriverLauncher
 import nextflow.plugin.Plugins
 import org.pf4j.ExtensionPoint
 /**
@@ -32,10 +33,6 @@ import org.pf4j.ExtensionPoint
 @CompileStatic
 @Parameters(commandDescription = "Execute a workflow in a Kubernetes cluster (experimental)")
 class CmdKubeRun extends CmdRun {
-
-    interface KubeCommand extends ExtensionPoint {
-        int run(CmdKubeRun cmd, String pipeline, List<String> args)
-    }
 
     static private String POD_NAME = /[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/
 
@@ -98,11 +95,17 @@ class CmdKubeRun extends CmdRun {
             headImage = podImage
         }
         checkRunName()
-        Plugins.init()
-        Plugins.start('nf-k8s')
-        // load the command operations
-        final command = Plugins.getExtension(KubeCommand)
-        final status = command.run(this, pipeline, scriptArgs)
+        final driver = new K8sDriverLauncher(
+            cmd: this,
+            runName: runName,
+            headImage: headImage,
+            background: background(),
+            headCpus: headCpus,
+            headMemory: headMemory,
+            headPreScript: headPreScript,
+            plugins: plugins )
+        driver.run(pipeline, scriptArgs)
+        final status = driver.shutdown()
         System.exit(status)
     }
 

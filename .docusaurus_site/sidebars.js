@@ -19,7 +19,33 @@ module.exports = {
             items: [
                 "cli",
                 "config",
-                "executor",
+                {
+                    type: "category",
+                    label: "Executors",
+                    collapsed: true,
+                    link: { type: "doc", id: "executor" },
+                    items: [
+                        "executor/local",
+                        "executor/aws-batch",
+                        "executor/azure-batch",
+                        "executor/google-batch",
+                        "executor/kubernetes",
+                        "executor/seqera",
+                        "executor/bridge",
+                        "executor/flux",
+                        "executor/htcondor",
+                        "executor/hyperqueue",
+                        "executor/lsf",
+                        "executor/moab",
+                        "executor/nqsii",
+                        "executor/oar",
+                        "executor/pbs",
+                        "executor/pbspro",
+                        "executor/sge",
+                        "executor/slurm",
+                        "executor/tcs"
+                    ]
+                },
                 "cache-and-resume",
                 "reports"
             ]
@@ -67,7 +93,23 @@ module.exports = {
             collapsed: true,
             items: [
                 "git",
-                "container",
+                {
+                    type: "category",
+                    label: "Containers",
+                    collapsed: true,
+                    link: { type: "doc", id: "container" },
+                    items: [
+                        "container/apple-container",
+                        "container/apptainer",
+                        "container/charliecloud",
+                        "container/docker",
+                        "container/podman",
+                        "container/sarus",
+                        "container/shifter",
+                        "container/singularity",
+                        "container/smolvm"
+                    ]
+                },
                 "conda",
                 "spack",
                 "wave"
@@ -150,8 +192,6 @@ module.exports = {
                     ]
                 },
                 "reference/process",
-                "reference/channel",
-                "reference/operator-typed",
                 "reference/operator"
             ]
         },
@@ -303,6 +343,7 @@ module.exports = {
                 "tutorials/workflow-outputs",
                 "tutorials/static-types",
                 "tutorials/static-types-operators",
+                "tutorials/topic-channels",
                 "tutorials/metrics",
                 "tutorials/flux"
             ]

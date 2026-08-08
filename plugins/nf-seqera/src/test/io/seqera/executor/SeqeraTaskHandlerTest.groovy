@@ -43,7 +43,10 @@ import nextflow.processor.TaskId
 import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
+import nextflow.Global
+import nextflow.fusion.FusionConfig
 import spock.lang.Specification
+import spock.lang.Unroll
 
 import java.nio.file.Paths
 
@@ -1298,6 +1301,52 @@ class SeqeraTaskHandlerTest extends Specification {
             getRunResourceLabels() >> [:]
         }
         return new SeqeraTaskHandler(taskRun, executor)
+    }
+
+    @Unroll
+    def 'should validate max spot attempts' () {
+        given:
+        Global.config = [fusion: [enabled: true, snapshots: SNAPSHOTS]]
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient); isFusionEnabled() >> true }
+        def proc = Mock(TaskProcessor) { getExecutor() >> executor }
+        def task = Mock(TaskRun) { getWorkDir() >> Paths.get('/work/ab/cd1234'); getProcessor() >> proc }
+        def handler = new SeqeraTaskHandler(task, executor)
+
+        expect:
+        handler.maxSpotAttempts(ATTEMPTS != null ? new MachineRequirementOpts([maxSpotAttempts: ATTEMPTS]) : null) == EXPECTED
+
+        cleanup:
+        Global.config = null
+
+        where:
+        ATTEMPTS    | SNAPSHOTS | EXPECTED
+        null        | false     | 0
+        0           | false     | 0
+        2           | false     | 2
+        and:
+        null        | true      | FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS
+        0           | true      | FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS
+        2           | true      | 2
+    }
+
+    def 'should reject negative max spot attempts' () {
+        given:
+        Global.config = [fusion: [enabled: true, snapshots: true]]
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient); isFusionEnabled() >> true }
+        def proc = Mock(TaskProcessor) { getExecutor() >> executor }
+        def task = Mock(TaskRun) { getWorkDir() >> Paths.get('/work/ab/cd1234'); getProcessor() >> proc }
+        def handler = new SeqeraTaskHandler(task, executor)
+
+        when:
+        handler.maxSpotAttempts(new MachineRequirementOpts([maxSpotAttempts: -1]))
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('maxSpotAttempts')
+        e.message.contains('-1')
+
+        cleanup:
+        Global.config = null
     }
 
     /**

@@ -298,7 +298,7 @@ public interface TaskConfig {
 
     @Constant("penv")
     @Description("""
-        The `penv` directive allows you to define the parallel environment to be used when submitting a parallel task to the [SGE](https://docs.seqera.io/nextflow/executor#sge) resource manager.
+        The `penv` directive allows you to define the parallel environment to be used when submitting a parallel task to the [SGE](https://docs.seqera.io/nextflow/executor/sge) resource manager.
 
         [Read more](https://docs.seqera.io/nextflow/reference/process#penv)
     """)

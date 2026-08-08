@@ -31,7 +31,7 @@ import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.attribute.PosixFilePermissions
 
 /**
- * Test CmdAuth functionality
+ * Test AuthCommandImpl functionality
  *
  * @author Phil Ewels <phil.ewels@seqera.io>
  */
@@ -50,7 +50,7 @@ class AuthCommandImplTest extends Specification {
 
         expect:
         // readConfig method should return a Map
-        cmd.readConfig() instanceof Map
+        cmd.readConfigFlat() instanceof Map
     }
 
     def 'should handle config writing'() {
