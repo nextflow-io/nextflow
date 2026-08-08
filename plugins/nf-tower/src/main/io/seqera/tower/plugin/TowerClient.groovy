@@ -49,6 +49,9 @@ class TowerClient {
 
     static final public String DEF_ENDPOINT_URL = 'https://api.cloud.seqera.io'
 
+    /** Seqera Platform documentation for workspace roles and permissions */
+    static final private String WORKSPACE_ROLES_URL = 'https://docs.seqera.io/platform-cloud/orgs-and-teams/roles'
+
     static private final String TOKEN_PREFIX = '@token:'
 
     @TupleConstructor
@@ -121,11 +124,11 @@ class TowerClient {
     }
 
     Map traceCreate(Map req, String workspaceId){
-        return sendAndProcessRequest( getUrlTraceCreate(workspaceId), req, 'POST')
+        return sendAndProcessRequest( getUrlTraceCreate(workspaceId), req, 'POST', workspaceId)
     }
 
     Map traceBegin(Map req, String workspaceId, String workflowId){
-        return sendAndProcessRequest( getUrlTraceBegin(workspaceId, workflowId), req, 'PUT')
+        return sendAndProcessRequest( getUrlTraceBegin(workspaceId, workflowId), req, 'PUT', workspaceId)
     }
 
     void traceComplete(Map req, String workspaceId, String workflowId) {
@@ -143,15 +146,8 @@ class TowerClient {
     void traceProgress(Map req, String workspaceId, String workflowId) {
         final url = getUrlTraceProgress( workspaceId, workflowId )
         final resp = sendHttpMessage(url, req, 'PUT')
-        if( resp.error ) {
-            final message =  """\
-                Unexpected HTTP response
-                - endpoint    : $url
-                - status code : $resp.code
-                - response msg: $resp.message
-                """.stripIndent(true)
-            throw new AbortRunException(message)
-        }
+        if( resp.error )
+            throw new AbortRunException(errorMessage(url, resp, workspaceId))
     }
 
     /**
@@ -166,18 +162,81 @@ class TowerClient {
         return sendHttpMessage(url, req, 'PATCH')
     }
 
-    protected Map sendAndProcessRequest(String url, Map req, String method){
+    protected Map sendAndProcessRequest(String url, Map req, String method, String workspaceId=null){
         final resp = sendHttpMessage(url, req, method)
-        if( resp.error ) {
-            final message =  """\
-                Unexpected HTTP response
-                - endpoint    : $url
-                - status code : $resp.code
-                - response msg: $resp.message
-                """.stripIndent(true)
-            throw new AbortRunException(message)
-        }
+        if( resp.error )
+            throw new AbortRunException(errorMessage(url, resp, workspaceId))
         return parseTowerResponse(resp)
+    }
+
+    /**
+     * Describe a failed request: a workspace-scoped call refused with an auth status is a
+     * common, well understood condition, so explain it rather than dumping the HTTP
+     * response. Everything else falls back to the raw response.
+     */
+    private String errorMessage(String url, Response resp, String workspaceId) {
+        final explained = workspaceId ? workspaceAccessError(workspaceId, resp.code) : null
+        return explained ?: """\
+            Unexpected HTTP response
+            - endpoint    : $url
+            - status code : $resp.code
+            - response msg: $resp.message
+            """.stripIndent(true)
+    }
+
+    /**
+     * Explain why a workspace-scoped request was refused, when the reason can be
+     * determined with confidence, and say how to resolve it.
+     *
+     * Whether the account can see the workspace at all separates the two cases: a
+     * workspace that is listed for the user exists and is visible, so a refusal means
+     * the role is insufficient; one that is not listed means the ID does not identify a
+     * workspace this account can use. A 401 is deliberately not handled here -- the token
+     * itself is rejected, so nothing about the workspace can be established.
+     *
+     * @return the explanation, or null when the status is not one we can attribute
+     */
+    protected String workspaceAccessError(String workspaceId, int statusCode) {
+        if( statusCode != 403 && statusCode != 404 )
+            return null
+        // if the visibility lookup itself fails we cannot attribute the refusal with
+        // confidence, so say nothing and let the caller report the raw response
+        final List<Map> workspaces
+        try {
+            workspaces = listUserWorkspacesAndOrgs(getUserInfo()?.id as String)
+        }
+        catch( Exception e ) {
+            log.debug "Unable to determine access to Seqera Platform workspace ${workspaceId}: ${e.message}"
+            return null
+        }
+        final visible = workspaces?.any { it.workspaceId?.toString() == workspaceId }
+        final label = workspaceLabel(workspaceId)
+        // explain where the workspace came from, because that determines the remedy
+        final isAccountDefault = workspaceId == getDefaultWorkspaceId()
+        final origin = isAccountDefault
+            ? "\nThis is the default workspace configured in your Seqera Platform account, which is used when no workspace is set locally."
+            : ''
+
+        if( visible )
+            return """\
+                Cannot run in Seqera Platform workspace ${label}: your access token does not have permission to launch runs there.${origin}
+                To resolve this, either:
+                  - ask an admin of that workspace to grant your user the 'launch' role or higher; or
+                  ${isAccountDefault ? '- change the default workspace in your Seqera Platform user settings; or' : '- choose a workspace you have access to; or'}
+                  - set `tower.workspaceId` (or TOWER_WORKSPACE_ID) to a workspace you can use.
+
+                See ${WORKSPACE_ROLES_URL}
+                """.stripIndent(true)
+
+        return """\
+            Seqera Platform workspace ${label} is not available to your account: it either does not exist or your access token cannot see it.${origin}
+            To resolve this, either:
+              - check the workspace ID is correct; or
+              - ask an admin of that workspace to grant your user access; or
+              - set `tower.workspaceId` (or TOWER_WORKSPACE_ID) to a workspace you can use.
+
+            See ${WORKSPACE_ROLES_URL}
+            """.stripIndent(true)
     }
 
     protected String getUrlTraceCreate(String workspaceId) {
@@ -563,6 +622,34 @@ class TowerClient {
         if (code == 404)
             throw new NotFoundException("Resource $url not found")
         throw new Exception("Seqera API error: HTTP ${code} for ${url}${resp.message ? ' - ' + resp.message :''}")
+    }
+
+    /**
+     * Describe a workspace for humans, pairing its numeric ID with its name so that
+     * log messages and errors are readable, e.g. {@code 12345 [my-org / my-workspace]}.
+     *
+     * Best-effort by design: it degrades to the bare ID and never throws, so it is safe
+     * to use while building an error message. A workspace the account cannot see has no
+     * name to show -- which is itself a signal that the ID is wrong or inaccessible.
+     *
+     * Both underlying calls are memoized, so this is effectively free after first use.
+     *
+     * @param workspaceId Id of the workspace, may be null
+     * @return the ID annotated with the org and workspace name when they are known
+     */
+    String workspaceLabel(String workspaceId) {
+        if( !workspaceId )
+            return null
+        try {
+            final details = getUserWorkspaceDetails(getUserInfo()?.id as String, workspaceId)
+            return details
+                ? "${workspaceId} [${details.orgName} / ${details.workspaceName}]".toString()
+                : workspaceId
+        }
+        catch( Exception e ) {
+            log.debug "Unable to resolve the name of Seqera Platform workspace ${workspaceId}: ${e.message}"
+            return workspaceId
+        }
     }
 
     /**

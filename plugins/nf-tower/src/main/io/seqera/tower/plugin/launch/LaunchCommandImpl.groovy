@@ -168,7 +168,7 @@ class LaunchCommandImpl extends BaseCommandImpl implements LaunchCommand {
             final wsDetails = httpClient.getUserWorkspaceDetails(userId, workspaceId.toString())
             orgName = wsDetails?.orgName as String
             workspaceName = wsDetails?.workspaceName as String
-            log.debug "Using workspace '${workspaceName}' (ID: ${workspaceId})"
+            log.debug "Using workspace ${httpClient.workspaceLabel(workspaceId.toString())}"
         } else {
             log.debug "Using personal workspace for user: ${userName}"
         }
@@ -993,8 +993,9 @@ class LaunchCommandImpl extends BaseCommandImpl implements LaunchCommand {
 
         // Otherwise apply the standard precedence: `tower.workspaceId` config, then the
         // TOWER_WORKSPACE_ID environment variable, then the Seqera Platform default workspace.
-        // The client is created lazily so no API call is made when a local setting applies,
-        // and it is the command's shared client so the `/user-info` response is fetched once
+        // The client is created lazily so that no API call is made when a local setting applies.
+        // The ID is not named here: `createTowerClient` returns a fresh client, so resolving the
+        // name would mean building one -- and two extra API calls -- just to log a line.
         final workspaceId = PlatformHelper.getEffectiveWorkspaceId(
             PlatformHelper.towerOpts(config), SysEnv.get(), () -> createTowerClient(apiEndpoint, accessToken).getDefaultWorkspaceId() )
         log.debug "Resolved workspace ID: ${workspaceId ?: 'none (personal workspace)'}"
@@ -1004,7 +1005,9 @@ class LaunchCommandImpl extends BaseCommandImpl implements LaunchCommand {
     protected Map findComputeEnv(TowerClient client, String computeEnvName, Long workspaceId) {
         final computeEnvs = listComputeEnvironments(client, workspaceId ? workspaceId.toString() : null)
 
-        log.debug "Looking for ${computeEnvName ? "compute environment with name: ${computeEnvName}" : "primary compute environment"} ${workspaceId ? "in workspace ID ${workspaceId}" : "in personal workspace"}"
+        // guarded: naming the workspace costs a lookup, and GString arguments are built eagerly
+        if( log.isDebugEnabled() )
+            log.debug "Looking for ${computeEnvName ? "compute environment with name: ${computeEnvName}" : "primary compute environment"} ${workspaceId ? "in workspace ${client.workspaceLabel(workspaceId.toString())}" : "in personal workspace"}"
 
         for (item in computeEnvs) {
             final computeEnv = item as Map

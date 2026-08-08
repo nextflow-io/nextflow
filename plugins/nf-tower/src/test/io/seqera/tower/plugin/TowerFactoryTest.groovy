@@ -61,6 +61,9 @@ class TowerFactoryTest extends Specification {
         1 * factory.defaultWorkspaceId(_ as Map) >> '300'
         observer.getWorkspaceId() == '300'
 
+        and: 'the workspace is named in the log line announcing it'
+        1 * factory.workspaceLabel(_ as Map, '300') >> '300 [acme / ws-300]'
+
         and: 'the resolved value is published into the session config'
         config.tower.workspaceId == '300'
 

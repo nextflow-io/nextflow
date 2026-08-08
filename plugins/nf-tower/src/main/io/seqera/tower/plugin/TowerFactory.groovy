@@ -39,6 +39,9 @@ class TowerFactory implements TraceObserverFactoryV2 {
 
     private Map<String,String> env
 
+    /** bounded-retry client for the pre-run Platform lookups; created on demand and reused */
+    private TowerClient lookupClient
+
     TowerFactory(){
         env = SysEnv.get()
     }
@@ -66,7 +69,7 @@ class TowerFactory implements TraceObserverFactoryV2 {
         // and would otherwise resolve to the personal workspace while the run is reported
         // into the Platform default one. Anything the user set is left exactly as it is.
         if( !local && workspaceId )
-            publishDefaultWorkspaceId(session, workspaceId)
+            publishDefaultWorkspaceId(session, workspaceId, opts)
         // create the tower observer
         result.add( new TowerObserver(session, client, workspaceId, env))
         // create the logs checkpoint
@@ -88,7 +91,24 @@ class TowerFactory implements TraceObserverFactoryV2 {
      * Extracted as a seam so it can be stubbed in tests without hitting the network.
      */
     protected String defaultWorkspaceId(Map opts) {
-        return new TowerClient(TowerConfig.forLookup(opts, env)).getDefaultWorkspaceId()
+        return lookupClient(opts).getDefaultWorkspaceId()
+    }
+
+    /**
+     * Name the workspace for the log line in {@link #publishDefaultWorkspaceId}. Shares the
+     * lookup client with {@link #defaultWorkspaceId}, so the {@code /user-info} response it
+     * already fetched is reused and only the workspace list is requested.
+     *
+     * Extracted as a seam so it can be stubbed in tests without hitting the network.
+     */
+    protected String workspaceLabel(Map opts, String workspaceId) {
+        return lookupClient(opts).workspaceLabel(workspaceId)
+    }
+
+    private TowerClient lookupClient(Map opts) {
+        if( lookupClient == null )
+            lookupClient = new TowerClient(TowerConfig.forLookup(opts, env))
+        return lookupClient
     }
 
     /**
@@ -102,13 +122,14 @@ class TowerFactory implements TraceObserverFactoryV2 {
      * the parsed {@code ConfigObject} by {@code ConfigCmdAdapter.normalize0} and converted
      * in the {@link Session} constructor, so an absent key really does read as null here.
      */
-    protected void publishDefaultWorkspaceId(Session session, String workspaceId) {
+    protected void publishDefaultWorkspaceId(Session session, String workspaceId, Map opts) {
         final config = session.config
         if( config.tower == null )
             config.tower = new HashMap(1)
         (config.tower as Map).workspaceId = workspaceId
-        // tell the user why their run is landing in a workspace they did not configure
-        log.info "Using default workspace configured in your Seqera Platform account: $workspaceId"
+        // tell the user why their run is landing in a workspace they did not configure,
+        // naming it so the numeric ID alone does not have to be looked up
+        log.info "Using default workspace configured in your Seqera Platform account: ${workspaceLabel(opts, workspaceId)}"
     }
 
     @Memoized
