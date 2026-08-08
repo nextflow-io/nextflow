@@ -128,6 +128,8 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         final workflowId = session.workflowMetadata?.platform?.workflowId
         this.workflowId = workflowId
         final workflowUrl = session.workflowMetadata?.platform?.workflowUrl
+        // note: the workspace may have been resolved during session init -- see the
+        // PlatformHelper.getWorkspaceId javadoc
         final workspaceId = PlatformHelper.getWorkspaceId(towerConfig, SysEnv.get()) as Long
         final computeEnvId = PlatformHelper.getComputeEnvId(towerConfig, SysEnv.get()) ?: seqeraConfig.computeEnvId
 
