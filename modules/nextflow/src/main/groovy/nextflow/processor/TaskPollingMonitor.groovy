@@ -659,6 +659,7 @@ class TaskPollingMonitor implements TaskMonitor {
                 submit(handler)
             }
             catch ( Throwable e ) {
+                releaseSubmitSlot(handler)
                 handleException(handler, e)
                 notifyTaskComplete(handler)
             }
@@ -670,6 +671,21 @@ class TaskPollingMonitor implements TaskMonitor {
         return count
     }
 
+
+    /**
+     * Give back the {@code maxForks} slot acquired just before a submit attempt that
+     * then failed. The handler is not in the running queue in that case -- {@link #submit}
+     * adds it only after {@code handler.submit()} returns -- so {@link #evict} returns
+     * false and {@link #handleException} would not release the slot.
+     *
+     * @param handler
+     *      The {@link TaskHandler} whose submission threw
+     */
+    protected void releaseSubmitSlot(TaskHandler handler) {
+        if( !handler || runningQueue.contains(handler) )
+            return
+        handler.decProcessForks()
+    }
 
     final protected void handleException( TaskHandler handler, Throwable error ) {
         def fault = null
