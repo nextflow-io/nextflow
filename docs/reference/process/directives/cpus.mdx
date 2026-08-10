@@ -5,7 +5,11 @@ description: Reference for the `cpus` process directive.
 
 # `cpus`
 
-The `cpus` directive defines the number of CPUs required by each task execution. For example:
+The `cpus` directive defines the number of CPUs required by each task execution.
+
+## Usage
+
+For example:
 
 ```nextflow
 process blast {
@@ -20,6 +24,12 @@ process blast {
 
 Set this directive for tasks that execute multi-process or multi-threaded commands. It reserves enough CPUs when a task is executed through a cluster resource manager.
 
-See also: [disk](./disk), [memory](./memory), [time](./time), [queue](./queue), [dynamic task resources][dynamic-task-resources]
+## See also
+
+- [disk](./disk)
+- [memory](./memory)
+- [time](./time)
+- [queue](./queue)
+- [Dynamic task resources][dynamic-task-resources]
 
 [dynamic-task-resources]: ../../../process#dynamic-task-resources

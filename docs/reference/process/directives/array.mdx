@@ -11,6 +11,8 @@ The `array` directive submits tasks as *job arrays* for executors that support i
 
 A job array is a collection of jobs with the same resource requirements and the same script (parameterized by an index). Job arrays incur less scheduling overhead than individual jobs and are preferred by HPC schedulers where possible.
 
+## Usage
+
 Specify the directive with an array size, along with an executor that supports job arrays. For example:
 
 ```nextflow
@@ -24,16 +26,6 @@ process hello {
     """
 }
 ```
-
-Nextflow supports job arrays for the following executors:
-
-- [AWS Batch][awsbatch-executor]
-- [Google Cloud Batch][google-batch-executor]
-- [LSF][lsf-executor]
-- [PBS][pbs-executor]
-- [PBS Pro][pbspro-executor]
-- [SGE][sge-executor]
-- [SLURM][slurm-executor]
 
 A process using job arrays collects tasks and submits each batch as a job array when it is ready. Any "leftover" tasks are submitted as a partial job array.
 
@@ -60,6 +52,18 @@ For cloud-based executors such as AWS Batch, or when using Fusion with any execu
 When using Wave, the following additional directives must be uniform:
 
 - [conda](./conda)
+
+## Executor support
+
+Nextflow supports job arrays for the following executors:
+
+- [AWS Batch][awsbatch-executor]
+- [Google Cloud Batch][google-batch-executor]
+- [LSF][lsf-executor]
+- [PBS][pbs-executor]
+- [PBS Pro][pbspro-executor]
+- [SGE][sge-executor]
+- [SLURM][slurm-executor]
 
 [awsbatch-executor]: ../../../executor/aws-batch
 [dynamic-task-resources]: ../../../process#dynamic-task-resources

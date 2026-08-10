@@ -7,6 +7,8 @@ description: Reference for the `hints` process directive.
 
 The `hints` directive specifies executor-specific hints as key-value pairs. Each executor uses the hints it recognizes and ignores the rest. Hint values can be any raw value, that is, numbers, strings, booleans, lists, and maps.
 
+## Usage
+
 Unprefixed keys are available to every executor, and any executor that recognizes the key consumes it. For example:
 
 ```nextflow
@@ -29,6 +31,8 @@ hints 'awsbatch/consumableResources': ['my-license': 1]
 When the same hint is provided both unprefixed and with a matching executor prefix, the prefixed form takes precedence for that executor.
 
 Calling `hints` multiple times in a process definition accumulates entries, with later calls overwriting entries for the same key. Setting `hints` in configuration (for example, in `nextflow.config`) replaces the entire map.
+
+## Executor support
 
 See [Executors][executor-page] for the hints recognized by each executor.
 

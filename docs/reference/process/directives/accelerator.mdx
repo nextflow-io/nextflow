@@ -5,7 +5,11 @@ description: Reference for the `accelerator` process directive.
 
 # `accelerator`
 
-The `accelerator` directive defines the number of hardware accelerators (for example, GPUs) required by each task execution. For example:
+The `accelerator` directive defines the number of hardware accelerators (for example, GPUs) required by each task execution.
+
+## Usage
+
+For example:
 
 ```nextflow
 process hello {
@@ -21,12 +25,10 @@ process hello {
 This example requests 4 GPUs of type `nvidia-tesla-k80` for each task.
 
 :::note
-This directive is only used by certain executors. See [Executors][executor-page] for the executors that support this directive.
-:::
-
-:::note
 Additional options may be required to use accelerators. When using containers with GPUs, you must pass the GPU drivers through to the container. For Docker, this requires the option `--gpus all` in the `docker run` command. For Apptainer/Singularity, this requires the option `--nv`. Implementation details depend on the accelerator and container type.
 :::
+
+## Options
 
 The following options are available:
 
@@ -46,5 +48,9 @@ The meaning of this option depends on the target execution platform. See the pla
   - [Kubernetes](https://kubernetes.io/docs/tasks/manage-gpus/scheduling-gpus/#clusters-containing-different-types-of-gpus)
 
 This option is not supported for AWS Batch. You can control the accelerator type indirectly through the allowed instance types in your compute environment. See the [AWS Batch FAQs](https://aws.amazon.com/batch/faqs/?#GPU_Scheduling_) for more information.
+
+## Executor support
+
+This directive is only used by certain executors. See [Executors][executor-page] for the executors that support this directive.
 
 [executor-page]: ../../../executor

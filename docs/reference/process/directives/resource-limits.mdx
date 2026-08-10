@@ -9,6 +9,8 @@ description: Reference for the `resourceLimits` process directive.
 
 The `resourceLimits` directive defines environment-specific limits for task resource requests.
 
+## Usage
+
 Resource limits can be specified in a process:
 
 ```nextflow
@@ -22,7 +24,7 @@ process hello {
 }
 ```
 
-Or in the Nextflow configuration:
+You can also set it in the Nextflow configuration:
 
 ```nextflow
 process.resourceLimits = [

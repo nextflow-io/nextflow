@@ -9,6 +9,8 @@ The `storeDir` directive stores task outputs in a permanent *store directory* in
 
 On subsequent runs, each task is executed only if the declared output files do not exist in the store directory. When the files are present, the task is skipped and these files are used as the task outputs.
 
+## Usage
+
 The following example shows how to use the `storeDir` directive to create a directory containing a BLAST database for each species specified by an input parameter:
 
 ```nextflow

@@ -9,7 +9,11 @@ description: Reference for the `publishDir` process directive.
 You can use [workflow outputs][workflow-output-def] instead of `publishDir`. See [Migrating to workflow outputs][migrating-workflow-outputs] to learn how to migrate existing code.
 :::
 
-The `publishDir` directive publishes matching process output files to a target directory. For example:
+The `publishDir` directive publishes matching process output files to a target directory.
+
+## Usage
+
+For example:
 
 ```nextflow
 process hello {
@@ -51,7 +55,9 @@ process hello {
 Output files are published *asynchronously* after the task execution. They may not be immediately available in the publish directory during the pipeline run. Downstream processes should access output files through the declared process outputs, not the publish directory.
 :::
 
-Available options:
+## Options
+
+The following options are available:
 
 ##### `contentType`
 
