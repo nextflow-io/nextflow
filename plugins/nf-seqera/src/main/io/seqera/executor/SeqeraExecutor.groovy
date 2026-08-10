@@ -73,6 +73,8 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     @Override
     protected void register() {
+        if( !isFusionEnabled() )
+            throw new AbortOperationException("Seqera executor requires the use of Fusion file system")
         applyFusionDefaults()
         createClient()
     }
@@ -150,6 +152,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
                 .workspaceId(workspaceId)
                 .pipeline(pipeline)
                 .predictionModel(predictionModel)
+                .schedulingRequirement(SchemaMapperUtil.toSchedulingRequirement(seqeraConfig.schedulingRequirement))
                 .computeEnvId(computeEnvId)
                 .shellEnabled(seqeraConfig.shellEnabled)
         log.debug "[SEQERA] Creating run: ${request}"
@@ -198,10 +201,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     @Override
     boolean isFusionEnabled() {
-        final enabled = FusionHelper.isFusionEnabled(session)
-        if (!enabled)
-            throw new AbortOperationException("Seqera executor requires the use of Fusion file system")
-        return true
+        return FusionHelper.isFusionEnabled(session)
     }
 
     /**

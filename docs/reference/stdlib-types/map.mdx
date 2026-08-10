@@ -1,0 +1,74 @@
+---
+title: Map<K,V>
+description: Reference for the Map type, which maps keys to values.
+---
+
+# Map\<K,V\>
+
+A map associates or "maps" keys of type `K` to values of type `V`. Each key can map to at most one value -- a map cannot contain duplicate keys. See [Maps][script-map] for an overview of maps.
+
+The following operations are supported for maps:
+
+##### `+ : (Map<K,V>, Map<K,V>) -> Map<K,V>`
+
+Concatenates two maps. If a key exists in both maps, the mapping from the right-hand side is used.
+
+##### `[] : (Map<K,V>, K) -> V`
+
+Given a map and a key, returns the value for the given key in the map, or `null` if the key is not in the map.
+
+##### `in, !in : (K, Map<K,V>) -> Boolean`
+
+Given a key and a map, returns `true` if the map contains the key and the corresponding value is *truthy* (e.g. not `null`, `0`, or `false`).
+
+The following methods are available for a map:
+
+##### `any( condition: (K,V) -> Boolean ) -> Boolean`
+
+Returns `true` if any key-value pair in the map satisfies the given condition. The closure should accept two parameters corresponding to the key and value of an entry.
+
+##### `containsKey( key: K ) -> Boolean`
+
+Returns `true` if the map contains a mapping for the given key.
+
+##### `containsValue( value: V ) -> Boolean`
+
+Returns `true` if the map maps one or more keys to the given value.
+
+##### `each( action: (K,V) -> () )`
+
+Invokes the given closure for each key-value pair in the map. The closure should accept two parameters corresponding to the key and value of an entry.
+
+##### `entrySet() -> Set<(K,V)>`
+
+Returns a set of the key-value pairs in the map.
+
+##### `every( condition: (K,V) -> Boolean ) -> Boolean`
+
+Returns `true` if every key-value pair in the map satisfies the given condition. The closure should accept two parameters corresponding to the key and value of an entry.
+
+##### `isEmpty() -> Boolean`
+
+Returns `true` if the map is empty.
+
+##### `keySet() -> Set<K>`
+
+Returns a set of the keys in the map.
+
+##### `size() -> Integer`
+
+Returns the number of key-value pairs in the map.
+
+##### `subMap( keys: Iterable<K> ) -> Map<K,V>`
+
+Returns a sub-map containing the given keys.
+
+##### `values() -> Bag<V>`
+
+Returns a collection of the values in the map.
+
+:::note
+Maps in Nextflow are backed by the [Java](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/Map.html) and [Groovy](https://docs.groovy-lang.org/latest/html/groovy-jdk/java/util/Map.html) standard libraries, which may expose additional methods. Only methods which are recommended for use in Nextflow are documented here.
+:::
+
+[script-map]: ../../script#maps

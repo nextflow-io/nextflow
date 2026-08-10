@@ -1,0 +1,57 @@
+---
+title: Local
+description: Reference for the local executor, which runs tasks as processes on the local machine.
+---
+
+# Local
+
+The `local` executor submits pipeline tasks as operating system processes on the computer where Nextflow is launched. It is the default executor. Use it to develop and test a pipeline on your computer before scaling up to production workloads on a cluster or in the cloud.
+
+The local executor supports two types of tasks:
+
+- Script tasks (processes with a `script` block) -- executed via a Bash wrapper script.
+- Native tasks (processes with an `exec` block) -- executed directly in the JVM.
+
+Use the following process directives to control resource requests and other job characteristics:
+
+- [accelerator][process-accelerator]
+- [container][process-container]
+- [containerOptions][process-containeroptions]
+- [cpus][process-cpus]
+- [memory][process-memory]
+- [time][process-time]
+
+Nextflow runs tasks in parallel based on the available resources (CPUs and memory). For example, on a machine with 8 CPUs and 16 GB of memory, a pipeline submitting tasks with 2 CPUs and 4 GB of memory can run up to 3 tasks in parallel, because Nextflow reserves one CPU for itself. If a task requests more than 7 CPUs or 16 GB, the run fails.
+
+:::note
+Because the operating system does not enforce resource limits, a local task can use more CPUs and memory than it requested and starve other tasks. To avoid this problem, use a container runtime such as [Docker][container-docker] or [Podman][container-podman] that can enforce resource limits.
+:::
+
+## Accelerators
+
+<AddedInVersion version="26.10" />
+
+The local executor allocates accelerators, such as GPUs, to tasks that request them with the [accelerator][process-accelerator] directive. Set the environment variable for your accelerator type:
+
+- `CUDA_VISIBLE_DEVICES` for [NVIDIA CUDA](https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#cuda-environment-variables) applications
+
+- `HIP_VISIBLE_DEVICES` for [HIP](https://rocm.docs.amd.com/projects/HIP/en/docs-develop/reference/env_variables.html) applications
+
+- `ROCR_VISIBLE_DEVICES` for [AMD ROCm](https://rocm.docs.amd.com/en/latest/conceptual/gpu-isolation.html) applications
+
+Set the variable to a comma-separated list of device IDs that Nextflow can use. The list must not be empty. If no devices are listed, no accelerators are available and any task that requests one fails.
+
+For example, to use all GPUs on a node with four NVIDIA GPUs, set `CUDA_VISIBLE_DEVICES` to `0,1,2,3`. If four tasks each request one GPU, they run with `CUDA_VISIBLE_DEVICES` set to `0`, `1`, `2`, and `3`, respectively.
+
+:::note
+To run tasks in containers, propagate the device environment variable into the container and configure the container runtime for GPU access. For example, with Docker, add `CUDA_VISIBLE_DEVICES` to `docker.envWhitelist` and set GPU options such as `--gpus` via `docker.runOptions`. See your container runtime's documentation for GPU support.
+:::
+
+[container-docker]: ../container/docker
+[container-podman]: ../container/podman
+[process-accelerator]: ../reference/process#accelerator
+[process-container]: ../reference/process#container
+[process-containeroptions]: ../reference/process#containeroptions
+[process-cpus]: ../reference/process#cpus
+[process-memory]: ../reference/process#memory
+[process-time]: ../reference/process#time

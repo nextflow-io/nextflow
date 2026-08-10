@@ -17,6 +17,7 @@
 package io.seqera.util
 
 import io.seqera.config.MachineRequirementOpts
+import io.seqera.config.SchedulingRequirementOpts
 import io.seqera.sched.api.schema.v1a1.DiskAllocation
 import io.seqera.sched.api.schema.v1a1.EcsCapacityMode
 import io.seqera.sched.api.schema.v1a1.PriceModel as SchedPriceModel
@@ -55,6 +56,25 @@ class MapperUtilTest extends Specification {
         result.provisioning == ProvisioningModel.SPOT_FIRST
         result.maxSpotAttempts == 3
         result.machineTypes == ['m5', 'c5']
+    }
+
+    def 'toSchedulingRequirement returns null for null opts' () {
+        expect:
+        SchemaMapperUtil.toSchedulingRequirement(null) == null
+    }
+
+    def 'toSchedulingRequirement returns null when maxCpusPerUser is not set' () {
+        expect:
+        SchemaMapperUtil.toSchedulingRequirement(new SchedulingRequirementOpts([:])) == null
+    }
+
+    def 'toSchedulingRequirement maps maxCpusPerUser' () {
+        when:
+        def result = SchemaMapperUtil.toSchedulingRequirement(new SchedulingRequirementOpts([maxCpusPerUser: 16]))
+
+        then:
+        result != null
+        result.maxCpusPerUser == 16
     }
 
     def 'should map provisioning model' () {
@@ -171,7 +191,8 @@ class MapperUtilTest extends Specification {
             new MachineRequirementOpts([:]),
             'x86_64',
             MemoryUnit.of('200 GB'),
-            false
+            false,
+            0
         )
 
         then:
@@ -182,7 +203,7 @@ class MapperUtilTest extends Specification {
 
     def 'should return machine requirement with only disk' () {
         when:
-        def result = SchemaMapperUtil.toMachineRequirement(null, null, MemoryUnit.of('100 GB'), false)
+        def result = SchemaMapperUtil.toMachineRequirement(null, null, MemoryUnit.of('100 GB'), false, 0)
 
         then:
         result != null
@@ -193,7 +214,7 @@ class MapperUtilTest extends Specification {
 
     def 'should return null when no taskArch, no opts, and no disk' () {
         expect:
-        SchemaMapperUtil.toMachineRequirement(null, null, null, false) == null
+        SchemaMapperUtil.toMachineRequirement(null, null, null, false, 0) == null
     }
 
     // tests for custom disk configuration options
@@ -283,7 +304,7 @@ class MapperUtilTest extends Specification {
         ])
 
         when:
-        def result = SchemaMapperUtil.toMachineRequirement(opts, 'arm64', MemoryUnit.of('500 GB'), false)
+        def result = SchemaMapperUtil.toMachineRequirement(opts, 'arm64', MemoryUnit.of('500 GB'), false, 0)
 
         then:
         result.arch == 'arm64'
@@ -355,7 +376,7 @@ class MapperUtilTest extends Specification {
         ])
 
         when:
-        def result = SchemaMapperUtil.toMachineRequirement(opts, 'x86_64', MemoryUnit.of('200 GB'), false)
+        def result = SchemaMapperUtil.toMachineRequirement(opts, 'x86_64', MemoryUnit.of('200 GB'), false, 0)
 
         then:
         result.arch == 'x86_64'
@@ -445,11 +466,11 @@ class MapperUtilTest extends Specification {
         e.message.contains('diskEncrypted')
     }
 
-    // tests for snapshot maxSpotAttempts defaulting
+    // tests for snapshot and spot attempts mapping
 
     def 'should return machine requirement with only snapshot enabled' () {
         when:
-        def result = SchemaMapperUtil.toMachineRequirement(null, null, null, true)
+        def result = SchemaMapperUtil.toMachineRequirement(null, null, null, true, FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS)
 
         then:
         result != null
@@ -457,18 +478,18 @@ class MapperUtilTest extends Specification {
         result.maxSpotAttempts == FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS
     }
 
-    def 'should use explicit maxSpotAttempts when snapshot enabled' () {
+    def 'should use given spot attempts' () {
         when:
-        def result = SchemaMapperUtil.toMachineRequirement(new MachineRequirementOpts([maxSpotAttempts: 2]), null, null, true)
+        def result = SchemaMapperUtil.toMachineRequirement(new MachineRequirementOpts([maxSpotAttempts: 2]), null, null, true, 2)
 
         then:
         result.snapshotEnabled == true
         result.maxSpotAttempts == 2
     }
 
-    def 'should not default maxSpotAttempts when snapshot disabled' () {
+    def 'should not set maxSpotAttempts when spot attempts is zero' () {
         when:
-        def result = SchemaMapperUtil.toMachineRequirement(new MachineRequirementOpts([:]), 'x86_64', null, false)
+        def result = SchemaMapperUtil.toMachineRequirement(new MachineRequirementOpts([:]), 'x86_64', null, false, 0)
 
         then:
         result.snapshotEnabled == null
@@ -507,7 +528,8 @@ class MapperUtilTest extends Specification {
             new MachineRequirementOpts([capacityMode: 'managed']),
             'arm64',
             null,
-            false
+            false,
+            0
         )
 
         then:
@@ -521,7 +543,8 @@ class MapperUtilTest extends Specification {
             new MachineRequirementOpts([provisioning: 'spot']),
             'arm64',
             MemoryUnit.of('100 GB'),
-            true
+            true,
+            FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS
         )
 
         then:
@@ -569,7 +592,7 @@ class MapperUtilTest extends Specification {
         def opts = new MachineRequirementOpts([diskAllocation: 'nvme', capacityMode: 'asg'])
 
         when:
-        def result = SchemaMapperUtil.toMachineRequirement(opts, 'x86_64', null, false)
+        def result = SchemaMapperUtil.toMachineRequirement(opts, 'x86_64', null, false, 0)
 
         then:
         result != null

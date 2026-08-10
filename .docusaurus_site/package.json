@@ -16,7 +16,7 @@
     },
     "dependencies": {
         "@docusaurus/core": "3.9.2",
-        "@docusaurus/faster": "3.10.1",
+        "@docusaurus/faster": "3.10.2",
         "@docusaurus/preset-classic": "3.9.2",
         "@docusaurus/theme-mermaid": "3.9.2",
         "@mdx-js/react": "3.1.1",
@@ -24,7 +24,7 @@
         "clsx": "2.1.1",
         "daisyui": "5.5.20",
         "dotenv": "17.4.2",
-        "fs-extra": "11.3.5",
+        "fs-extra": "11.3.6",
         "postcss-import": "16.1.1",
         "postcss-loader": "8.2.1",
         "postcss-nesting": "14.0.0",

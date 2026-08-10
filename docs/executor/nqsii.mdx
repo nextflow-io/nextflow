@@ -1,0 +1,24 @@
+---
+title: NQSII
+description: Reference for the nqsii executor, which submits tasks to the NQSII resource manager.
+---
+
+# NQSII
+
+The `nqsii` executor runs pipeline tasks using the [NQSII](https://www.rz.uni-kiel.de/en/our-portfolio/hiperf/nec-linux-cluster) resource manager. It submits each task as an NQSII job using the `qsub` command.
+
+To enable the NQSII executor, set `process.executor = 'nqsii'` in the `nextflow.config` file. Launch the pipeline from a node where `qsub` is available, typically the cluster login node.
+
+Use the following process directives to control resource requests and other job characteristics:
+
+- [clusterOptions][process-clusteroptions]
+- [cpus][process-cpus]
+- [memory][process-memory]
+- [queue][process-queue]
+- [time][process-time]
+
+[process-clusteroptions]: ../reference/process#clusteroptions
+[process-cpus]: ../reference/process#cpus
+[process-memory]: ../reference/process#memory
+[process-queue]: ../reference/process#queue
+[process-time]: ../reference/process#time

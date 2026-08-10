@@ -77,10 +77,21 @@ allprojects {
     java {
         // these settings apply to all jvm tooling, including groovy
         toolchain {
-            languageVersion = JavaLanguageVersion.of(21)
+            languageVersion = JavaLanguageVersion.of(25)
         }
-        sourceCompatibility = 17
-        targetCompatibility = 17
+    }
+
+    // Target Java 17. For Java sources use --release, which also constrains the
+    // API surface to the Java 17 stdlib (stronger than -source/-target). Groovy
+    // does not honor --release, so its bytecode level is pinned via source/target
+    // on GroovyCompile. Note: --release and -source/-target cannot be combined on
+    // the same javac task, hence the split across compile task types.
+    tasks.withType(JavaCompile).configureEach {
+        options.release = 17
+    }
+    tasks.withType(GroovyCompile).configureEach {
+        sourceCompatibility = '17'
+        targetCompatibility = '17'
     }
 
     idea {
@@ -113,12 +124,14 @@ allprojects {
 
         // Documentation required libraries
         groovyDoc 'org.fusesource.jansi:jansi:2.4.0'
-        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.31"
-        groovyDoc "org.apache.groovy:groovy-ant:4.0.31"
+        groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.33"
+        groovyDoc "org.apache.groovy:groovy-ant:4.0.33"
     }
 
     test {
         useJUnitPlatform()
+        minHeapSize = "512m"
+        maxHeapSize = "4096m"
     }
 
     // this is required due to this IDEA bug
@@ -333,7 +346,7 @@ task compile {
 
 def getRuntimeConfigs() {
     def names = subprojects
-            .findAll { prj -> prj.name in ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'] }
+            .findAll { prj -> prj.name in ['nextflow','nf-cli-v1','nf-commons','nf-httpfs','nf-lang','nf-lineage'] }
             .collect { it.name }
 
     FileCollection result = null
@@ -364,14 +377,14 @@ task exportClasspath {
         def libs = []
 
         // Resolve configurations during provider evaluation (not ideal but functional)
-        ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'].each { moduleName ->
+        ['nextflow','nf-cli-v1','nf-commons','nf-httpfs','nf-lang','nf-lineage'].each { moduleName ->
             def moduleProject = project(":$moduleName")
             def cfg = moduleProject.configurations.getByName('runtimeClasspath')
             libs.addAll(cfg.files.collect { it.canonicalPath })
         }
 
         // Add module jars
-        ['nextflow','nf-commons','nf-httpfs','nf-lang','nf-lineage'].each {
+        ['nextflow','nf-cli-v1','nf-commons','nf-httpfs','nf-lang','nf-lineage'].each {
             libs << file("modules/$it/build/libs/${it}-${version}.jar").canonicalPath
         }
 
@@ -395,7 +408,7 @@ ext.nexusEmail = project.findProperty('nexusEmail')
 // `signing.keyId` property needs to be defined in the `gradle.properties` file
 ext.enableSignArchives = project.findProperty('signing.keyId')
 
-ext.coreProjects = projects( ':nextflow', ':nf-commons', ':nf-httpfs', ':nf-lang', ':nf-lineage' )
+ext.coreProjects = projects( ':nextflow', ':nf-cli-v1', ':nf-commons', ':nf-httpfs', ':nf-lang', ':nf-lineage' )
 
 configure(coreProjects) {
     group = 'io.nextflow'

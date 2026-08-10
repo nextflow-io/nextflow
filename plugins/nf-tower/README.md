@@ -86,7 +86,7 @@ tower {
 ## Resources
 
 - [Seqera Platform Documentation](https://docs.seqera.io/)
-- [Nextflow Tower Configuration](https://docs.seqera.io/nextflow/reference/config#seqera)
+- [Nextflow Configuration](https://docs.seqera.io/nextflow/reference/config/tower)
 
 ## License
 

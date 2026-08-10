@@ -63,6 +63,7 @@ import nextflow.fusion.FusionConfig
 import nextflow.processor.Architecture
 import nextflow.processor.TaskRun
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.util.ProxyConfig
 import nextflow.util.SysHelper
 import nextflow.util.Threads
 import org.slf4j.Logger
@@ -150,8 +151,7 @@ class WaveClient {
      */
     protected HxClient newHttpClient() {
         final refreshUrl = tower.refreshToken ? "${tower.endpoint}/oauth/access_token" : null
-        return HxClient.newBuilder()
-                .httpClient(newHttpClient0())
+        return newHttpClientBuilder()
                 .bearerToken(tower.accessToken)
                 .refreshToken(tower.refreshToken)
                 .refreshTokenUrl(refreshUrl)
@@ -161,20 +161,22 @@ class WaveClient {
     }
 
     /**
-     * Creates the underlying Java HTTP client with common configuration.
+     * Creates an {@link HxClient} builder with the common HTTP client configuration, including
+     * the forward proxy settings which are also inherited by the internal token-refresh client.
      *
-     * @return A configured {@link HttpClient} instance
+     * @return A pre-configured {@link HxClient.Builder}
      */
-    protected HttpClient newHttpClient0() {
-        final builder = HttpClient.newBuilder()
+    protected HxClient.Builder newHttpClientBuilder() {
+        final builder = HxClient.newBuilder()
                 .version(HttpClient.Version.HTTP_1_1)
                 .followRedirects(HttpClient.Redirect.NEVER)
                 .connectTimeout(config.httpOpts().connectTimeout())
+                // route through the forward proxy when configured
+                .withProxyConfig(ProxyConfig.proxyConfig())
         // use virtual threads executor if enabled
         if( Threads.useVirtual() )
             builder.executor(Executors.newVirtualThreadPerTaskExecutor())
-        // build and return the new client
-        return builder.build()
+        return builder
     }
 
     /**
@@ -189,8 +191,7 @@ class WaveClient {
      */
     @Memoized
     protected HxClient plainHttpClient() {
-        return HxClient.newBuilder()
-                .httpClient(newHttpClient0())
+        return newHttpClientBuilder()
                 .retryConfig(config.retryOpts())
                 .build()
     }

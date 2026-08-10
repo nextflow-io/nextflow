@@ -58,8 +58,10 @@ class Labels {
         if( !include ) return this
         if( include.contains('projectName') && workflow.projectName )
             entries.put('nextflow.io/projectName', workflow.projectName)
-        if( include.contains('userName') && workflow.userName )
-            entries.put('nextflow.io/userName', workflow.userName)
+        // the Platform user that submitted the run, falling back to the OS user running the launcher
+        final userName = workflow.platform?.user?.userName ?: workflow.userName
+        if( include.contains('userName') && userName )
+            entries.put('nextflow.io/userName', userName)
         if( include.contains('runName') && workflow.runName )
             entries.put('nextflow.io/runName', workflow.runName)
         if( include.contains('sessionId') && workflow.sessionId )

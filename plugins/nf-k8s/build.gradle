@@ -29,7 +29,6 @@ nextflowPlugin {
     extensionPoints = [
         'nextflow.k8s.K8sConfig',
         'nextflow.k8s.K8sExecutor',
-        'nextflow.k8s.cli.KubeCommandImpl',
     ]
 }
 
@@ -56,8 +55,8 @@ dependencies {
     api 'org.bouncycastle:bcpkix-jdk18on:1.84'
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.31"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.31"
+    testImplementation "org.apache.groovy:groovy:4.0.33"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.33"
 }
 
 test {
