@@ -21,17 +21,7 @@ When a task fails, wait for submitted and running tasks to finish and then termi
 
 ##### `'ignore'`
 
-When a task fails, ignore it and continue the pipeline execution. If the `workflow.failOnIgnore` config option is set to `true`, the pipeline will report an error (i.e. return a non-zero exit code) upon completion. Otherwise, the pipeline will complete successfully.
-
-See the [workflow][stdlib-namespaces-workflow] namespace for more information.
-
-##### `'retry'`
-
-When a task fails, retry it.
-
-When setting the `errorStrategy` directive to `ignore` the process doesn't stop on an error condition, it just reports a message notifying you of the error event.
-
-For example:
+When a task fails, ignore it and continue the pipeline execution. The failure is reported as a message, but the run is not stopped. For example:
 
 ```nextflow
 process hello {
@@ -41,9 +31,11 @@ process hello {
 }
 ```
 
-In this case, the workflow will complete successfully and return an exit status of 0. However, if you set `workflow.failOnIgnore = true` in your Nextflow configuration, the workflow will return a non-zero exit status and report the failed tasks as an error.
+By default, the pipeline completes successfully and returns an exit status of 0. If the `workflow.failOnIgnore` config option is set to `true`, the pipeline returns a non-zero exit status and reports the failed tasks as an error upon completion. See the [workflow][stdlib-namespaces-workflow] namespace for more information.
 
-The `retry` error strategy retries failed tasks. For example:
+##### `'retry'`
+
+When a task fails, retry it. For example:
 
 ```nextflow
 process hello {
@@ -53,10 +45,10 @@ process hello {
 }
 ```
 
-The number of times a failing process is re-executed is defined by the [maxRetries](./max-retries) and [maxErrors](./max-errors) directives.
+Use the [maxRetries](./max-retries) and [maxErrors](./max-errors) directives to limit the number of retries.
 
 :::tip
-More complex strategies depending on the task exit status or other parametric values can be defined using a dynamic `errorStrategy`. See [Dynamic directives][dynamic-directives] for details.
+Use a dynamic `errorStrategy` to define more complex strategies based on the task exit status or other parametric values. See [Dynamic directives][dynamic-directives] for details.
 :::
 
 See also: [maxErrors](./max-errors), [maxRetries](./max-retries), [dynamic task resources][dynamic-task-resources]

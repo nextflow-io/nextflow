@@ -5,7 +5,7 @@ description: Reference for the `queue` process directive.
 
 # `queue`
 
-The `queue` directive defines the queue to which tasks should be submitted, for executors that support queues. For example:
+The `queue` directive defines the queue where tasks are submitted, for executors that support queues. For example:
 
 ```nextflow
 process hello {
@@ -27,6 +27,6 @@ queue 'short,long,cn-el6'
 
 However, this is not generally supported by cloud executors such as AWS Batch, Azure Batch, and Google Batch.
 
-See [Executors][executor-page] to see which executors support this directive.
+See [Executors][executor-page] for the executors that support this directive.
 
 [executor-page]: ../../../executor

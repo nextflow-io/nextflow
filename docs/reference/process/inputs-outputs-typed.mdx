@@ -29,7 +29,7 @@ Stages a collection of files into the task directory under the given alias.
 
 ##### `stdin( value: String )`
 
-Stages the given value as the standard input (i.e., `stdin`) to the task script.
+Stages the given value as the standard input (`stdin`) to the task script.
 
 ### Outputs
 
@@ -71,11 +71,11 @@ Maximum number of directory levels to visit (default: no limit).
 
 ###### `optional: Boolean`
 
-When `true`, the task will not fail if the given file is missing (default: `false`).
+When `true`, the task does not fail if the given file is missing (default: `false`).
 
 ###### `type: String`
 
-Type of paths returned, either `file`, `dir` or `any` (default: `any`, or `file` if the given file name contains a double star (`**`)).
+Type of paths returned, either `file`, `dir`, or `any` (default: `any`, or `file` if the given file name contains a double star (`**`)).
 
 ##### `files( pattern: String, [options] ) -> Set<Path>`
 

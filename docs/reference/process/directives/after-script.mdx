@@ -5,6 +5,6 @@ description: Reference for the `afterScript` process directive.
 
 # `afterScript`
 
-The `afterScript` directive executes a custom (Bash) snippet immediately *after* the main process has run. This may be useful to clean up your staging area.
+The `afterScript` directive executes a custom Bash snippet immediately *after* the main process has run. Use it to clean up your staging area.
 
-When combined with the [container](./container) directive, the `afterScript` is executed outside the specified container. In other words, the `afterScript` is always executed in the host environment.
+The `afterScript` is always executed in the host environment. When combined with the [container](./container) directive, the `afterScript` is executed outside the specified container.

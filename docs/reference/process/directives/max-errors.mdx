@@ -19,8 +19,8 @@ process hello {
 }
 ```
 
-In the above example, the run will fail if the `hello` process accrues more than 5 failures across all of its task executions.
+In this example, the run fails if the `hello` process accrues more than 5 failures across all of its task executions.
 
-By default, there is no limit. However, the run can still fail if an individual task exceeds the number of retries allowed by the `maxRetries` directive.
+By default, the number of task failures is unlimited. However, the run can still fail if an individual task exceeds the number of retries allowed by the `maxRetries` directive.
 
 See also: [errorStrategy](./error-strategy), [maxRetries](./max-retries)

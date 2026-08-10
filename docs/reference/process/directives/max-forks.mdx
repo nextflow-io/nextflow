@@ -18,6 +18,6 @@ process hello {
 }
 ```
 
-The above example forces the `hello` process to execute tasks sequentially.
+This example forces the `hello` process to execute tasks sequentially.
 
-By default, there is no limit. However, the number of concurrent tasks can still be limited globally by the number of CPUs (for local tasks) and the `executor.queueSize` config option.
+By default, the number of concurrent task executions is unlimited. However, the number of concurrent tasks can still be limited globally by the number of CPUs (for local tasks) and the `executor.queueSize` config option.

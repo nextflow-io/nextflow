@@ -5,7 +5,7 @@ description: Reference for the `containerOptions` process directive.
 
 # `containerOptions`
 
-The `containerOptions` directive specifies additional container options for the underlying container runtime (e.g. Docker, Singularity). For example:
+The `containerOptions` directive specifies additional container options for the underlying container runtime (for example, Docker or Singularity). For example:
 
 ```nextflow
 process hello_docker {
@@ -22,7 +22,7 @@ process hello_docker {
 }
 ```
 
-The above example provides a custom volume mount for a specific process.
+This example provides a custom volume mount for a specific process.
 
 :::warning
 This directive is not supported by the [Kubernetes][k8s-executor] executor.

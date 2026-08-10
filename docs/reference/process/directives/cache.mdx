@@ -7,7 +7,7 @@ description: Reference for the `cache` process directive.
 
 The `cache` directive controls whether and how task executions are cached.
 
-By default, cached task executions are re-used when the pipeline is launched with the [resume][getstarted-resume] option. The `cache` directive can be used to disable caching for a specific process:
+By default, cached task executions are re-used when the pipeline is launched with the [resume][getstarted-resume] option. Use the `cache` directive to disable caching for a specific process:
 
 ```nextflow
 process hello {
@@ -27,7 +27,7 @@ Disable caching.
 
 ##### `true` (default)
 
-Enable caching. Input file metadata (name, size, last updated timestamp) are included in the cache keys.
+Enable caching. Input file metadata (name, size, last updated timestamp) is included in the cache keys.
 
 ##### `'deep'`
 
@@ -35,7 +35,7 @@ Enable caching. Input file content is included in the cache keys.
 
 ##### `'lenient'`
 
-Enable caching. Minimal input file metadata (name and size only) are included in the cache keys.
+Enable caching. Minimal input file metadata (name and size only) is included in the cache keys.
 
 This strategy provides a workaround for incorrect caching invalidation observed on shared file systems due to inconsistent file timestamps.
 

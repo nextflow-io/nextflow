@@ -36,7 +36,7 @@ By default, the `scratch` directive uses the `$TMPDIR` environment variable in t
 Each task creates a subdirectory within the base scratch directory and automatically deletes it upon completion.
 
 :::note
-Cloud-based executors enable `scratch` by default since the pipeline work directory resides in object storage.
+Cloud-based executors enable `scratch` by default because the pipeline work directory resides in object storage.
 :::
 
 The following values are supported:
@@ -51,7 +51,7 @@ Create a scratch directory in the directory defined by the `$TMPDIR` environment
 
 ##### `'$YOUR_VAR'`
 
-Create a scratch directory in the directory defined by the given environment variable, or `$(mktemp /tmp)` if that variable is not set. The value must use single quotes, otherwise the environment variable will be evaluated in the pipeline script context.
+Create a scratch directory in the directory defined by the given environment variable, or `$(mktemp /tmp)` if that variable is not set. The value must use single quotes, otherwise the environment variable is evaluated in the pipeline script context.
 
 ##### `'/my/tmp/path'`
 
