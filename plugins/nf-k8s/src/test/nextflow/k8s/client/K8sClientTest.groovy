@@ -24,6 +24,7 @@ import nextflow.exception.K8sOutOfMemoryException
 import javax.net.ssl.HttpsURLConnection
 
 import nextflow.exception.NodeTerminationException
+import nextflow.exception.ProcessFailedException
 import spock.lang.Specification
 /**
  *
@@ -1204,6 +1205,107 @@ class K8sClientTest extends Specification {
         // The key assertion: exitCode should not be present (null) so fallback to .exitcode file works
         result.terminated.exitCode == null
         result.terminated.exitcode == null
+    }
+
+    def 'should re-throw node termination when job failed and original exception is present' () {
+        given:
+        def JOB_STATUS_JSON = '''
+        {
+            "apiVersion": "batch/v1",
+            "kind": "Job",
+            "metadata": {
+                "name": "test-job"
+            },
+            "status": {
+                "failed": 1,
+                "conditions": [
+                    {
+                        "type": "Failed",
+                        "status": "True",
+                        "reason": "BackoffLimitExceeded",
+                        "message": "Job has reached the specified backoff limit"
+                    }
+                ]
+            }
+        }
+        '''
+        def client = Spy(K8sClient)
+        final JOB_NAME = 'test-job'
+        final original = new NodeTerminationException('Pod terminated by node disruption')
+
+        when:
+        client.jobStateFallback0(JOB_NAME, original)
+
+        then:
+        1 * client.jobStatus(JOB_NAME) >> new K8sResponseJson(JOB_STATUS_JSON)
+
+        and:
+        def e = thrown(NodeTerminationException)
+        e.is(original)
+    }
+
+    def 'should throw process failed exception when job failed and no original exception is present' () {
+        given:
+        def JOB_STATUS_JSON = '''
+        {
+            "apiVersion": "batch/v1",
+            "kind": "Job",
+            "metadata": {
+                "name": "test-job"
+            },
+            "status": {
+                "failed": 1,
+                "conditions": [
+                    {
+                        "type": "Failed",
+                        "status": "True",
+                        "reason": "BackoffLimitExceeded",
+                        "message": "Job has reached the specified backoff limit"
+                    }
+                ]
+            }
+        }
+        '''
+        def client = Spy(K8sClient)
+        final JOB_NAME = 'test-job'
+
+        when:
+        client.jobStateFallback0(JOB_NAME)
+
+        then:
+        1 * client.jobStatus(JOB_NAME) >> new K8sResponseJson(JOB_STATUS_JSON)
+
+        and:
+        def e = thrown(ProcessFailedException)
+        e.message == "K8s Job test-job execution failed: Job has reached the specified backoff limit"
+    }
+
+    def 'should return empty map when job has no pods scheduled yet' () {
+        given:
+        def JOB_STATUS_JSON = '''
+        {
+            "apiVersion": "batch/v1",
+            "kind": "Job",
+            "metadata": {
+                "name": "test-job"
+            },
+            "status": {
+                "active": 0
+            }
+        }
+        '''
+        def client = Spy(K8sClient)
+        final JOB_NAME = 'test-job'
+
+        when:
+        def result = client.jobStateFallback0(JOB_NAME)
+
+        then:
+        1 * client.jobStatus(JOB_NAME) >> new K8sResponseJson(JOB_STATUS_JSON)
+
+        and:
+        result != null
+        result.isEmpty()
     }
 
     def 'should re-read token from disk and retry on 401 when tokenPath is set' () {
