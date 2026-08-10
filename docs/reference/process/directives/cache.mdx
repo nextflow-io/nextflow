@@ -7,6 +7,8 @@ description: Reference for the `cache` process directive.
 
 The `cache` directive controls whether and how task executions are cached.
 
+## Usage
+
 By default, cached task executions are re-used when the pipeline is launched with the [resume][getstarted-resume] option. Use the `cache` directive to disable caching for a specific process:
 
 ```nextflow
@@ -19,7 +21,9 @@ process hello {
 
 See [Cache and resume][cache-resume-page] for more information.
 
-The following options are available:
+## Options
+
+The following values are available:
 
 ##### `false`
 

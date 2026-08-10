@@ -5,7 +5,11 @@ description: Reference for the `resourceLabels` process directive.
 
 # `resourceLabels`
 
-The `resourceLabels` directive attaches custom name-value pairs to task executions, for executors that support it. For example:
+The `resourceLabels` directive attaches custom name-value pairs to task executions, for executors that support it.
+
+## Usage
+
+For example:
 
 ```nextflow
 process hello {
@@ -32,6 +36,8 @@ process {
 
 Use process selectors (`withName:` or `withLabel:`) to override resource labels for a specific process.
 
+## Executor support
+
 Resource labels are supported by the following executors:
 
 - [AWS Batch][awsbatch-executor]
@@ -40,15 +46,16 @@ Resource labels are supported by the following executors:
 - [Kubernetes][k8s-executor]
 - [Seqera executor][seqera-executor]
 
-:::note
 Consider the limits and syntax of the corresponding executor when using resource labels.
-:::
 
 <AddedInVersion version="23.10">
 Resource labels in Azure are added to auto-pools, rather than jobs, to support cost analysis. A new pool is created for each new set of resource labels. Setting `azure.batch.deletePoolsOnCompletion = true` is recommended when using process-specific resource labels.
 </AddedInVersion>
 
-See also: [label](./label) (for shared process configuration), [tag](./tag) (for per-task identification)
+## See also
+
+- [label](./label) (for shared process configuration)
+- [tag](./tag) (for per-task identification)
 
 [awsbatch-executor]: ../../../executor/aws-batch
 [azurebatch-executor]: ../../../executor/azure-batch

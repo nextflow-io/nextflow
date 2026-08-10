@@ -5,7 +5,11 @@ description: Reference for the `maxRetries` process directive.
 
 # `maxRetries`
 
-The `maxRetries` directive defines the maximum number of times a task can be retried when using the `retry` error strategy. For example:
+The `maxRetries` directive defines the maximum number of times a task can be retried when using the `retry` error strategy.
+
+## Usage
+
+For example:
 
 ```nextflow
 process hello {
@@ -23,4 +27,7 @@ In this example, the run fails if any task executed by `hello` fails more than t
 
 By default, only one retry per task is allowed. However, the run can still fail if the total number of failures for the process exceeds the number allowed by the `maxErrors` directive.
 
-See also: [errorStrategy](./error-strategy), [maxErrors](./max-errors)
+## See also
+
+- [errorStrategy](./error-strategy)
+- [maxErrors](./max-errors)

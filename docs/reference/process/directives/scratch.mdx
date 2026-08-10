@@ -7,6 +7,8 @@ description: Reference for the `scratch` process directive.
 
 The `scratch` directive executes each task in a temporary directory that is local to the compute node.
 
+## Usage
+
 This is useful when executing tasks on an executor with a shared filesystem, because it decreases the network overhead of reading and writing files. Only the files declared as process outputs are copied to the pipeline work directory.
 
 For example:
@@ -25,7 +27,7 @@ process hello {
 }
 ```
 
-It can also be specified in the Nextflow configuration:
+You can also set it in the Nextflow configuration:
 
 ```groovy
 process.scratch = true
@@ -39,7 +41,9 @@ Each task creates a subdirectory within the base scratch directory and automatic
 Cloud-based executors enable `scratch` by default because the pipeline work directory resides in object storage.
 :::
 
-The following values are supported:
+## Options
+
+The following values are available:
 
 ##### `false`
 

@@ -5,7 +5,9 @@ description: Reference for the `machineType` process directive.
 
 # `machineType`
 
-The `machineType` directive specifies a predefined [machine type](https://cloud.google.com/compute/docs/machine-types) when using the [Google Batch][google-batch-executor] executor, or when using auto-pools with the [Azure Batch][azurebatch-executor] executor.
+The `machineType` directive specifies a predefined [machine type](https://cloud.google.com/compute/docs/machine-types), for cloud executors that support it.
+
+## Usage
 
 For example:
 
@@ -20,7 +22,14 @@ process hello {
 }
 ```
 
-See also: [cpus](./cpus), [memory](./memory)
+## Executor support
+
+This directive is supported by the [Google Batch][google-batch-executor] executor, and by the [Azure Batch][azurebatch-executor] executor when using auto-pools.
+
+## See also
+
+- [cpus](./cpus)
+- [memory](./memory)
 
 [azurebatch-executor]: ../../../executor/azure-batch
 [google-batch-executor]: ../../../executor/google-batch

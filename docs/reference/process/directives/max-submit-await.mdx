@@ -7,6 +7,8 @@ description: Reference for the `maxSubmitAwait` process directive.
 
 The `maxSubmitAwait` directive defines how long a task can remain in the submission queue without being executed. Tasks that exceed this duration in the queue fail.
 
+## Usage
+
 Use it with the `retry` error strategy to re-submit tasks to a different queue or with different resource requirements. For example:
 
 ```nextflow

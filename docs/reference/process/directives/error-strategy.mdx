@@ -9,6 +9,8 @@ The `errorStrategy` directive defines how to handle task failures.
 
 A task failure occurs when the executed script returns a non-zero exit code. By default, the pipeline run is aborted.
 
+## Options
+
 The following error strategies are available:
 
 ##### `'terminate'` (default)
@@ -51,7 +53,11 @@ Use the [maxRetries](./max-retries) and [maxErrors](./max-errors) directives to 
 Use a dynamic `errorStrategy` to define more complex strategies based on the task exit status or other parametric values. See [Dynamic directives][dynamic-directives] for details.
 :::
 
-See also: [maxErrors](./max-errors), [maxRetries](./max-retries), [dynamic task resources][dynamic-task-resources]
+## See also
+
+- [maxErrors](./max-errors)
+- [maxRetries](./max-retries)
+- [Dynamic task resources][dynamic-task-resources]
 
 [dynamic-directives]: ../../../process#dynamic-directives
 [dynamic-task-resources]: ../../../process#dynamic-task-resources

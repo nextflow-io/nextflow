@@ -5,7 +5,11 @@ description: Reference for the `time` process directive.
 
 # `time`
 
-The `time` directive defines the maximum runtime for each task. For example:
+The `time` directive defines the maximum runtime for each task.
+
+## Usage
+
+For example:
 
 ```nextflow
 process hello {
@@ -28,11 +32,17 @@ Use the following suffixes to specify duration values:
 
 See [Duration][stdlib-types-duration] for more information.
 
-:::note
-This directive is only used by certain executors. See [Executors][executor-page] for the executors that support this directive.
-:::
+## Executor support
 
-See also: [cpus](./cpus), [disk](./disk), [memory](./memory), [queue](./queue), [dynamic task resources][dynamic-task-resources]
+This directive is only used by certain executors. See [Executors][executor-page] for the executors that support this directive.
+
+## See also
+
+- [cpus](./cpus)
+- [disk](./disk)
+- [memory](./memory)
+- [queue](./queue)
+- [Dynamic task resources][dynamic-task-resources]
 
 [dynamic-task-resources]: ../../../process#dynamic-task-resources
 [executor-page]: ../../../executor

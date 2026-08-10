@@ -5,7 +5,11 @@ description: Reference for the `penv` process directive.
 
 # `penv`
 
-The `penv` directive defines the parallel environment to use when submitting tasks to the [SGE][sge-executor] resource manager. For example:
+The `penv` directive defines the parallel environment to use when submitting tasks to the [SGE][sge-executor] resource manager.
+
+## Usage
+
+For example:
 
 ```nextflow
 process blast {
@@ -20,6 +24,8 @@ process blast {
 }
 ```
 
-Refer to your cluster documentation or your system administrator to determine whether this feature is supported in your environment.
+## Executor support
+
+This directive is only used by the [SGE][sge-executor] executor. Refer to your cluster documentation or your system administrator to determine whether this feature is supported in your environment.
 
 [sge-executor]: ../../../executor/sge

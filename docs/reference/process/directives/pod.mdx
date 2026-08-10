@@ -7,6 +7,8 @@ description: Reference for the `pod` process directive.
 
 The `pod` directive defines pod-specific settings, such as environment variables, secrets, and config maps, when using the [Kubernetes][k8s-executor] executor.
 
+## Usage
+
 For example:
 
 ```nextflow
@@ -22,7 +24,7 @@ process echo {
 
 This example defines an environment variable named `MESSAGE` whose value is `'hello world'`.
 
-Pod settings can be specified in Nextflow configuration:
+You can also set it in the Nextflow configuration:
 
 ```groovy
 // single setting
@@ -34,6 +36,8 @@ process.pod = [
     [secret: 'my-secret/key1', mountPath: '/etc/file.txt']
 ]
 ```
+
+## Options
 
 The following options are available:
 
