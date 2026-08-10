@@ -81,6 +81,15 @@ class ExecutorOpts implements ConfigScope {
     """)
     final Duration batchFlushInterval
 
+    @ConfigOption
+    @Description("""
+        The maximum time to wait for a response from the Seqera scheduler service, applied
+        to each attempt (default: `45 sec`). A timed-out request is retried according to
+        `seqera.executor.retryPolicy`, except for task submissions, which are never
+        re-sent. Set to `0 sec` to wait indefinitely.
+    """)
+    final Duration requestTimeout
+
     @Description("""
         Machine/infrastructure requirements for session tasks.
     """)
@@ -162,6 +171,9 @@ class ExecutorOpts implements ConfigScope {
         this.batchFlushInterval = opts.batchFlushInterval
             ? Duration.of(opts.batchFlushInterval as String)
             : Duration.of('5 sec')
+        this.requestTimeout = opts.requestTimeout
+            ? Duration.of(opts.requestTimeout as String)
+            : Duration.of('45 sec')
         // machine requirement settings
         this.machineRequirement = new MachineRequirementOpts(opts.machineRequirement as Map ?: Map.of())
         this.autoLabels = parseAutoLabels(opts.get('autoLabels'))
@@ -205,6 +217,10 @@ class ExecutorOpts implements ConfigScope {
 
     Duration getBatchFlushInterval() {
         return batchFlushInterval
+    }
+
+    Duration getRequestTimeout() {
+        return requestTimeout
     }
 
     MachineRequirementOpts getMachineRequirement() {

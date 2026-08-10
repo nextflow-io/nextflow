@@ -119,8 +119,25 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .retryConfig(seqeraConfig.retryOpts())
+                .requestTimeout(requestTimeoutOf(seqeraConfig.requestTimeout))
                 .build()
         this.client = new SchedClient(clientConfig)
+    }
+
+    /**
+     * Maps the configured request timeout onto the client setting. The timeout bounds a
+     * single attempt: a timed-out read raises an {@code IOException} that the configured
+     * retry policy absorbs, so the {@code Task monitor} thread recovers on the next poll
+     * cycle instead of blocking on a stalled Scheduler. Task submissions are never
+     * re-sent by the client, so a bounded submit fails rather than duplicating tasks.
+     * <p>
+     * A zero (or absent) duration means "wait indefinitely" — the client default.
+     *
+     * @param value the configured timeout, or null
+     * @return the equivalent {@code java.time.Duration}, or null when unbounded
+     */
+    protected static java.time.Duration requestTimeoutOf(Duration value) {
+        return value?.toMillis() ? java.time.Duration.ofMillis(value.toMillis()) : null
     }
 
     protected void createRun() {

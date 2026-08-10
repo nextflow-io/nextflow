@@ -45,6 +45,7 @@ class ExecutorOptsTest extends Specification {
         config.provider == null
         config.keyPairName == null
         config.batchFlushInterval == Duration.of('5 sec')
+        config.requestTimeout == Duration.of('45 sec')
         config.machineRequirement != null
         config.machineRequirement.provisioning == null
         !config.autoLabels
@@ -122,6 +123,7 @@ class ExecutorOptsTest extends Specification {
             region: 'eu-west-1',
             keyPairName: 'my-key',
             batchFlushInterval: '2 sec',
+            requestTimeout: '5 sec',
             machineRequirement: [
                 provisioning: 'spot'
             ]
@@ -132,6 +134,7 @@ class ExecutorOptsTest extends Specification {
         config.region == 'eu-west-1'
         config.keyPairName == 'my-key'
         config.batchFlushInterval == Duration.of('2 sec')
+        config.requestTimeout == Duration.of('5 sec')
         config.machineRequirement.provisioning == 'spot'
     }
 

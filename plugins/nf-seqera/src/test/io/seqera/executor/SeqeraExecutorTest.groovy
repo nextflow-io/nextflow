@@ -56,6 +56,34 @@ class SeqeraExecutorTest extends Specification {
         config.refreshToken == 'config-refresh-token'
     }
 
+    def 'should bound each attempt with the configured request timeout'() {
+        given:
+        SysEnv.push([:])
+
+        when:
+        def config = buildClientConfig(
+            [endpoint: 'https://sched.example.com', requestTimeout: '5 sec'],
+            [endpoint: 'https://api.platform.example.com', accessToken: 'tok']
+        )
+
+        then:
+        config.requestTimeout == java.time.Duration.ofSeconds(5)
+    }
+
+    def 'should leave responses unbounded when the request timeout is zero'() {
+        given:
+        SysEnv.push([:])
+
+        when:
+        def config = buildClientConfig(
+            [endpoint: 'https://sched.example.com', requestTimeout: '0 sec'],
+            [endpoint: 'https://api.platform.example.com', accessToken: 'tok']
+        )
+
+        then:
+        config.requestTimeout == null
+    }
+
     def 'should create client config with env variable settings'() {
         given:
         SysEnv.push([
@@ -467,6 +495,7 @@ class SeqeraExecutorTest extends Specification {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .retryConfig(seqeraConfig.retryOpts())
+                .requestTimeout(SeqeraExecutor.requestTimeoutOf(seqeraConfig.requestTimeout))
                 .build()
     }
 }
