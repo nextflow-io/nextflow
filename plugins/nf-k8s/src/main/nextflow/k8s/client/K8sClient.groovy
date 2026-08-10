@@ -395,12 +395,8 @@ class K8sClient {
             try {
                 return podState(podName)
             }
-            /* the pod state check may fail because the pod was evicted/deleted by the control plane
-             * (e.g. a node disruption or a pod cleaned up just after findPodNameForJob()), so fall
-             * back to the Job status. The original exception is passed along so that a genuine node
-             * termination is re-surfaced -- rather than being collapsed into the Job's `backoffLimit`
-             * failure -- allowing Nextflow to retry the task as an infrastructure failure.
-             */
+            // pod gone (evicted or cleaned up by the control plane): fall back to the Job
+            // status, passing the exception so a node termination can be re-surfaced
             catch (NodeTerminationException err) {
                 return jobStateFallback0(jobName, err)
             }
@@ -433,10 +429,9 @@ class K8sClient {
         }
 
         if( jobStatus?.failed && (int)(jobStatus.failed) > 0 ) {
-            // if the pod state check raised a node termination (e.g. a `DisruptionTarget` condition
-            // or a `Shutdown`/evicted pod), re-surface it so the task is retried as an infrastructure
-            // failure instead of the Job's generic `backoffLimit` failure -- the disruption signal
-            // only lives on the (now gone) pod and cannot be recovered from the Job status alone
+            // re-surface a node termination as an infrastructure failure rather than the Job's
+            // generic `backoffLimit` failure: the disruption signal lived on the (now gone) pod
+            // and cannot be recovered from the Job status alone
             if( original != null )
                 throw original
             String message = 'unknown'
