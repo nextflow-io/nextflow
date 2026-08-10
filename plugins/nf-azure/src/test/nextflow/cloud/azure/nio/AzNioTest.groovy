@@ -959,8 +959,8 @@ class AzNioTest extends Specification implements AzBaseSpec {
         def file = Path.of(new URI("az://$bucketName/output/file.txt"))
 
         then: 'it is recognised as a directory (via both entry points) while the blob is a file'
-        (azPath as AzPath).isDirectory()
-        Files.isDirectory(nioPath)
+        azPath.isDirectory()        // the Groovy call nf-schema makes, via the FilesEx extension
+        Files.isDirectory(nioPath)  // the plain NIO call
         !Files.isDirectory(file)
 
         cleanup:
