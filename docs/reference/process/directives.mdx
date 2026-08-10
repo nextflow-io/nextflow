@@ -7,9 +7,9 @@ description: Reference for the directives that control the execution of process 
 
 Directives are optional settings that affect the execution of the current process. They are declared at the top of a process definition, before any input, output, or script section.
 
-By default, directives are evaluated when the process is defined. However, if the value is a dynamic string or closure, it will be evaluated separately for each task. See [Dynamic directives][dynamic-directives] for more information.
+By default, directives are evaluated when the process is defined. However, if the value is a dynamic string or closure, it is evaluated separately for each task. See [Dynamic directives][dynamic-directives] for more information.
 
-Directives can also be specified in a configuration file using the `process` config scope, which is the recommended way to configure a pipeline for a particular compute environment. See [Process configuration][config-process-scope] for more information.
+You can also specify directives in a configuration file using the `process` config scope. This is the recommended way to configure a pipeline for a particular compute environment. See [Process configuration][config-process-scope] for more information.
 
 Some directives are only supported by specific executors. See [Executors][executor-page] for more information about each executor.
 
@@ -17,7 +17,7 @@ The following directives are available:
 
 | Directive | Description |
 | --------- | ----------- |
-| [`accelerator`][accelerator] | The number of hardware accelerators (e.g. GPUs) required by each task. |
+| [`accelerator`][accelerator] | The number of hardware accelerators (for example, GPUs) required by each task. |
 | [`afterScript`][after-script] | A Bash snippet to execute after the task script. |
 | [`arch`][arch] | The CPU architecture to build the software required by each task. |
 | [`array`][array] | Submit tasks as job arrays, for executors that support it. |

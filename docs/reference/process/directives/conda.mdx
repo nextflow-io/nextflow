@@ -20,8 +20,8 @@ process hello {
 
 Nextflow automatically creates an environment for each unique set of Conda packages.
 
-The name of the desired channel for a specific package can be specified using the standard Conda notation, e.g. `bioconda::bwa=0.7.15`. Multiple packages can be specified separating them with a blank space, e.g. `bwa=0.7.15 fastqc=0.11.5`.
+Specify the channel for a package using the standard Conda notation, for example, `bioconda::bwa=0.7.15`. Specify multiple packages by separating them with a space, for example, `bwa=0.7.15 fastqc=0.11.5`.
 
-The `conda` directive can also accept a Conda environment file path or the path of an existing Conda environment. See [Conda][conda-page] for more information.
+The `conda` directive also accepts a Conda environment file path or the path of an existing Conda environment. See [Conda][conda-page] for more information.
 
 [conda-page]: ../../../conda

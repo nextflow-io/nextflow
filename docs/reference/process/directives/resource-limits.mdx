@@ -39,8 +39,8 @@ Resource limits can be defined for the following directives:
 - [memory](./memory)
 - [time](./time)
 
-When a task resource request exceeds the corresponding limit, the task resources are automatically reduced to comply with these limits before the job is submitted.
+When a task resource request exceeds the corresponding limit, the task resources are automatically reduced to the limit before the job is submitted.
 
-Resource limits are a useful way to prevent tasks with [dynamic resources][dynamic-task-resources] from requesting more resources than can be provided by an executor (e.g. a task requests 32 cores but the largest node in the cluster has 24).
+Resource limits are a useful way to prevent tasks with [dynamic resources][dynamic-task-resources] from requesting more resources than an executor can provide (for example, a task requests 32 cores but the largest node in the cluster has 24).
 
 [dynamic-task-resources]: ../../../process#dynamic-task-resources

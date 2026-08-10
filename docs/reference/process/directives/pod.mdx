@@ -20,7 +20,7 @@ process echo {
 }
 ```
 
-The above snippet defines an environment variable named `MESSAGE` whose value is `'hello world'`.
+This example defines an environment variable named `MESSAGE` whose value is `'hello world'`.
 
 Pod settings can be specified in Nextflow configuration:
 
@@ -49,7 +49,7 @@ Defines a pod [annotation](https://kubernetes.io/docs/concepts/overview/working-
 
 ##### `automountServiceAccountToken: true | false`
 
-Specifies whether to [automount service account token](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#opt-out-of-api-credential-automounting) into the pod (default: `true`).
+Specifies whether to [automount the service account token](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/#opt-out-of-api-credential-automounting) into the pod (default: `true`).
 
 ##### `config: '<configMap>/<key>', mountPath: '</absolute/path>'`
 
@@ -115,7 +115,7 @@ Defines an environment variable with the given name and value.
 
 *Can be specified multiple times*
 
-Allows creating [hostPath](https://kubernetes.io/docs/concepts/storage/volumes/#hostpath) volume and access it with the specified `mountPath` in the pod.
+Creates a [hostPath](https://kubernetes.io/docs/concepts/storage/volumes/#hostpath) volume and mounts it at the specified `mountPath` in the pod.
 
 ##### `imagePullPolicy: 'IfNotPresent' | 'Always' | 'Never'`
 
@@ -215,8 +215,8 @@ Specifies the [TTL mechanism](https://kubernetes.io/docs/concepts/workloads/cont
 
 Mounts a [Persistent volume claim](https://kubernetes.io/docs/concepts/storage/persistent-volumes/) with the given name to the given path.
 
-The `subPath` option can be used to mount a sub-directory of the volume instead of its root.
+The `subPath` option mounts a sub-directory of the volume instead of its root.
 
-The `readOnly` option can be used to mount the volume as read-only (default: `false`)
+The `readOnly` option mounts the volume as read-only (default: `false`).
 
 [k8s-executor]: ../../../executor/kubernetes

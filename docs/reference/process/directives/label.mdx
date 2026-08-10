@@ -22,7 +22,7 @@ A label may contain alphanumeric characters or `_`. It must start and end with a
 
 The same label can be applied to multiple processes. Multiple labels can be applied to the same process by using the `label` directive multiple times.
 
-Process labels are used to apply shared process configuration via `withLabel` selectors. They are not recorded in execution logs, trace reports, or lineage metadata. See [Process selectors][config-process-selectors] for more information.
+Process labels are used to apply shared process configuration using `withLabel` selectors. They are not recorded in execution logs, trace reports, or lineage metadata. See [Process selectors][config-process-selectors] for more information.
 
 :::note
 To tag individual task executions for logging and debugging, use [tag](./tag). To tag cloud computing resources for cost tracking, use [resourceLabels](./resource-labels). To attach metadata labels to output files for lineage tracking, use the `label` [output directive][workflow-output-def] in the `output` block.

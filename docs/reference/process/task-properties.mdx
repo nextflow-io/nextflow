@@ -17,7 +17,7 @@ The current task attempt.
 
 The exit code returned by the task script.
 
-The exit code is only available after the task has been executed (e.g., the [errorStrategy](./directives/error-strategy) directive).
+The exit code is only available after the task has been executed, for example, in the [`errorStrategy`](./directives/error-strategy) directive.
 
 ##### `task.hash`
 
@@ -41,7 +41,7 @@ The task name.
 
 The exception reported by the previous task attempt.
 
-Since the exception is available after a failed task attempt, it can only be accessed when retrying a failed task execution, i.e., when `task.attempt` is greater than 1.
+Because the exception is available only after a failed task attempt, it can only be accessed when retrying a failed task execution, that is, when `task.attempt` is greater than 1.
 
 ##### `task.previousTrace`
 
@@ -49,7 +49,7 @@ Since the exception is available after a failed task attempt, it can only be acc
 
 The trace record associated with the previous task attempt.
 
-Since the trace record is available after a failed task attempt, it can only be accessed when retrying a failed task execution, i.e., when `task.attempt` is greater than 1. See [Trace file][trace-report] for a list of available fields.
+Because the trace record is available only after a failed task attempt, it can only be accessed when retrying a failed task execution, that is, when `task.attempt` is greater than 1. See [Trace file][trace-report] for a list of available fields.
 
 :::note
 The trace fields `%cpu` and `%mem` can be accessed as `pcpu` and `pmem`, respectively.
@@ -66,7 +66,7 @@ The name of the process that spawned the task.
 The unique directory path for the task.
 
 :::note
-[Directive values](./directives) for a task can be accessed via `task.<directive>`. See [Task directive values][task-directive-values] for more information.
+[Directive values](./directives) for a task can be accessed as `task.<directive>`. See [Task directive values][task-directive-values] for more information.
 :::
 
 [task-directive-values]: ../../process#using-task-directive-values

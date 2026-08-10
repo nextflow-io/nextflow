@@ -5,7 +5,7 @@ description: Reference for the `beforeScript` process directive.
 
 # `beforeScript`
 
-The `beforeScript` directive executes a custom (Bash) snippet *before* the main process script is run. This may be useful to initialize the underlying cluster environment or for other custom initialization.
+The `beforeScript` directive executes a custom Bash snippet *before* the main process script is run. Use it to initialize the underlying cluster environment or perform other custom initialization.
 
 For example:
 
@@ -20,4 +20,4 @@ process hello {
 }
 ```
 
-When the process is containerized (using the [container](./container) directive), the `beforeScript` is executed in the container only if the executor is *container-native* (e.g. cloud batch executors, Kubernetes). Otherwise, the `beforeScript` is executed outside the container.
+When the process is containerized (using the [container](./container) directive), the `beforeScript` is executed in the container only if the executor is *container-native* (for example, cloud batch executors and Kubernetes). Otherwise, the `beforeScript` is executed outside the container.

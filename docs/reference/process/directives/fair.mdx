@@ -7,7 +7,7 @@ description: Reference for the `fair` process directive.
 
 <AddedInVersion version="23.04" />
 
-The `fair` directive, when enabled, guarantees that process outputs will be emitted in the order in which they were received. For example:
+When enabled, the `fair` directive guarantees that process outputs are emitted in the order in which they were received. For example:
 
 ```nextflow
 process hello {
@@ -30,7 +30,7 @@ workflow {
 }
 ```
 
-The above example produces:
+This example produces:
 
 ```
 [1, A]

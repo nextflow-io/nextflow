@@ -33,7 +33,7 @@ Caveats:
 
 - The `env`, `eval`, and `stdout` output qualifiers cannot be used with `storeDir` because they rely on helper files in the task directory. Use `path` outputs instead.
 
-- If a process uses `storeDir` and all of its outputs are optional, the process will always be skipped, even if the store directory is empty. Avoid this issue by specifying at least one required file output.
+- If a process uses `storeDir` and all of its outputs are optional, the process is always skipped, even if the store directory is empty. Avoid this issue by specifying at least one required file output.
 
 - The `storeDir` directive is not a replacement for publishing outputs. Use the [publishDir](./publish-dir) directive or [workflow outputs][workflow-output-def] instead.
 

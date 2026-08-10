@@ -19,7 +19,7 @@ process hello {
 }
 ```
 
-In the above example, the run will fail if any task executed by `hello` fails more than three times.
+In this example, the run fails if any task executed by `hello` fails more than three times.
 
 By default, only one retry per task is allowed. However, the run can still fail if the total number of failures for the process exceeds the number allowed by the `maxErrors` directive.
 
