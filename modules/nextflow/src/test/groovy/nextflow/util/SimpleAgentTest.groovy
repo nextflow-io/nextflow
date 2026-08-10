@@ -16,6 +16,9 @@
 
 package nextflow.util
 
+import java.util.concurrent.CompletableFuture
+import java.util.concurrent.TimeUnit
+
 import spock.lang.Specification
 
 /**
@@ -48,6 +51,23 @@ class SimpleAgentTest extends Specification {
         then:
         result == [1,2,3]
 
+    }
+
+    def 'should get the value when invoked by the runner thread' () {
+        given:
+        def state = []
+        def result = new CompletableFuture()
+        SimpleAgent agent
+        // the error handler is invoked by the agent runner thread itself, therefore
+        // it cannot await for an event that only that thread is able to serve
+        agent = new SimpleAgent(state).onError { result.complete(agent.getValue()) }
+
+        when:
+        agent.send { state<<1 }
+        agent.send { throw new RuntimeException('Oops') }
+
+        then:
+        result.get(30, TimeUnit.SECONDS) == [1]
     }
 
 }

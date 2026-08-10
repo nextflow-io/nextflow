@@ -19,6 +19,7 @@ package nextflow
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.attribute.PosixFilePermission
+import java.util.concurrent.CountDownLatch
 
 import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
@@ -27,6 +28,7 @@ import nextflow.container.PodmanConfig
 import nextflow.container.SarusConfig
 import nextflow.exception.AbortOperationException
 import nextflow.file.FileHelper
+import nextflow.processor.TaskProcessor
 import nextflow.script.ScriptFile
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceFileObserver
@@ -434,5 +436,30 @@ class SessionTest extends Specification {
 
         then:
         1 * observer.onFlowComplete()
+    }
+
+    def 'should release the await barrier when a shutdown callback is blocking' () {
+        given:
+        def blocked = new CountDownLatch(1)
+        def release = new CountDownLatch(1)
+        def session = new Session()
+        def processor = Mock(TaskProcessor)
+        // register a process, so that `await` blocks on the processes barrier
+        session.processRegister(processor)
+        // register a shutdown callback that never returns until it's released
+        session.onShutdown { blocked.countDown(); release.await() }
+
+        when:
+        Thread.start { session.abort() }
+        blocked.await()
+        // the main thread must be able to complete the await, even though
+        // the shutdown callback is still hanging
+        def main = Thread.start { session.await() }
+        main.join(30_000)
+        then:
+        !main.isAlive()
+
+        cleanup:
+        release.countDown()
     }
 }
