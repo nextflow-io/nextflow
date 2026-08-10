@@ -274,7 +274,7 @@ class K8sDriverLauncher {
 
         if( !interactive && !pipelineName.startsWith('/') && !cmd.remoteProfile && !cmd.runRemoteConfig ) {
             // -- check and parse project remote config
-            final pipelineConfig = new AssetManager(pipelineName, cmd.revision, cmd.mainScript, cmd).getConfigFile()
+            final pipelineConfig = new AssetManager(pipelineName, cmd.revision, cmd.mainScript, cmd.toHubOptions()).getConfigFile()
             if( pipelineConfig )
                 adapter.setUserConfigFiles(pipelineConfig)
         }

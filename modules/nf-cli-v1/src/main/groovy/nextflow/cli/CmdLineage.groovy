@@ -24,6 +24,7 @@ import groovy.transform.CompileStatic
 import nextflow.config.ConfigCmdAdapter
 import nextflow.config.ConfigMap
 import nextflow.exception.AbortOperationException
+import nextflow.lineage.cli.LinCommandImpl
 import nextflow.plugin.Plugins
 import org.pf4j.ExtensionPoint
 
@@ -38,15 +39,6 @@ class CmdLineage extends CmdBase implements UsageAware {
 
     private static final String NAME = 'lineage'
 
-    interface LinCommand extends ExtensionPoint {
-        void list(ConfigMap config)
-        void view(ConfigMap config, List<String> args)
-        void render(ConfigMap config, List<String> args)
-        void diff(ConfigMap config, List<String> args)
-        void find(ConfigMap config, List<String> args)
-        void check(ConfigMap config, List<String> args)
-    }
-
     interface SubCmd {
         String getName()
         String getDescription()
@@ -56,7 +48,7 @@ class CmdLineage extends CmdBase implements UsageAware {
 
     private List<SubCmd> commands = new ArrayList<>()
 
-    private LinCommand operation
+    private LinCommandImpl operation = new LinCommandImpl()
 
     private ConfigMap config
 
@@ -92,10 +84,6 @@ class CmdLineage extends CmdBase implements UsageAware {
             .build()
         // init plugins
         Plugins.load(config)
-        // load the command operations
-        this.operation = Plugins.getExtension(LinCommand)
-        if( !operation )
-            throw new IllegalStateException("Unable to load lineage extensions.")
         // consume the first argument
         getCmd(args).apply(args.drop(1))
     }

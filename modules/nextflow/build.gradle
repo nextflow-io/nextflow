@@ -14,11 +14,7 @@
  * limitations under the License.
  */
 
-plugins {
-    id "com.gradleup.shadow" version "9.3.1"
-}
 apply plugin: 'groovy'
-apply plugin: 'application'
 
 sourceSets {
     main.java.srcDirs = []
@@ -27,14 +23,6 @@ sourceSets {
     test.java.srcDirs = []
     test.groovy.srcDirs = ['src/test/groovy']
     test.resources.srcDirs = ['src/test/resources']
-}
-
-compileGroovy {
-    options.compilerArgs = ['-XDignore.symbol.file']
-}
-
-configurations {
-    lineageImplementation
 }
 
 dependencies {
@@ -57,7 +45,6 @@ dependencies {
     api "org.apache.commons:commons-lang3:3.18.0"
     api "commons-codec:commons-codec:1.15"
     api "commons-io:commons-io:2.15.1"
-    api "com.beust:jcommander:1.35"
     api("com.esotericsoftware.kryo:kryo:2.24.0") { exclude group: 'com.esotericsoftware.minlog', module: 'minlog' }
     api('org.iq80.leveldb:leveldb:0.12')
     api('org.eclipse.jgit:org.eclipse.jgit:7.1.1.202505221757-r')
@@ -72,7 +59,7 @@ dependencies {
     api 'com.fasterxml.woodstox:woodstox-core:7.1.1'
     api 'org.apache.commons:commons-compress:1.27.1'  // For tar.gz extraction
     api 'io.seqera:npr-api:0.25.0'
-    api 'io.seqera:npr-client:0.25.0'
+    api 'io.seqera:npr-client:0.25.1'
     api 'com.networknt:json-schema-validator:1.5.9'
 
     testImplementation 'org.subethamail:subethasmtp:3.1.7'
@@ -85,36 +72,5 @@ dependencies {
     testFixturesApi ("org.spockframework:spock-core:2.4-groovy-4.0") { exclude group: 'org.apache.groovy' }
     testFixturesApi ('org.spockframework:spock-junit4:2.4-groovy-4.0') { exclude group: 'org.apache.groovy' }
     testFixturesApi 'com.google.jimfs:jimfs:1.2'
-    // note: declare as separate dependency to avoid a circular dependency
-    lineageImplementation (project(':nf-lineage'))
-}
-
-
-test {
-    minHeapSize = "512m"
-    maxHeapSize = "4096m"
-}
-
-application {
-    mainClass = 'nextflow.cli.Launcher'
-}
-
-run{
-    args( (project.hasProperty("runCmd") ? project.findProperty("runCmd") : "set a cmd to run").split(' ') )
-}
-
-shadowJar {
-    // add 'lineage' because it cannot be added to this project
-    // explicitly otherwise it will result into a circular dependency
-    configurations = [project.configurations.runtimeClasspath, project.configurations.lineageImplementation]
-    archiveClassifier='one'
-    manifest {
-        attributes 'Main-Class': application.mainClass.get()
-    }
-    mergeServiceFiles()
-    mergeGroovyExtensionModules()
-    transform(com.github.jengelman.gradle.plugins.shadow.transformers.AppendingTransformer) {
-        resource = 'META-INF/extensions.idx'
-    }
 }
 

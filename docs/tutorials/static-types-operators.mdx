@@ -13,7 +13,7 @@ See [Migrating to static typing][migrating-static-types] for more information ab
 
 ## Core operators
 
-The [core operators][operator-typed-page] are recommended for use with static typing. When static typing is enabled (via `nextflow.enable.types`), some of these operators have stricter semantics which may require minor changes to pipeline code. These cases are described below.
+The [core operators][channel-type] are recommended for use with static typing. When static typing is enabled (via `nextflow.enable.types`), some of these operators have stricter semantics which may require minor changes to pipeline code. These cases are described below.
 
 ### collect
 
@@ -515,7 +515,7 @@ channel.of(
 
 [migrating-static-types]: ./static-types
 [workflow-typed-page]: ../workflow-typed
-[operator-typed-page]: ../reference/operator-typed
+[channel-type]: ../reference/stdlib-types/channel
 [operator-page]: ../reference/operator
 [workflow-output-def]: ../workflow#outputs
 [working-with-files]: ../working-with-files

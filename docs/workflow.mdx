@@ -470,7 +470,7 @@ A channel can be created by factories in the `channel` namespace. For example, t
 channel.fromPath('input/*.txt').view()
 ```
 
-See [Channel factories][channel-factory] for the full list of channel factories.
+See the [`channel` namespace][channel-namespace] for the full list of channel factories.
 
 ### Operators
 
@@ -755,8 +755,8 @@ Workflows can also be invoked recursively:
 
 - Recursive workflows cannot use *reduction* operators such as `collect`, `reduce`, and `toList`, because these operators cause the recursion to hang indefinitely after the initial iteration.
 
-[channel-factory]: ./reference/channel
-[channel-value]: ./reference/channel#value
+[channel-namespace]: ./reference/stdlib-namespaces/channel
+[channel-value]: ./reference/stdlib-namespaces/channel#value
 [cli-params]: ./cli#pipeline-parameters
 [config-process-selectors]: ./config#process-selectors
 [config-workflow]: ./reference/config/workflow

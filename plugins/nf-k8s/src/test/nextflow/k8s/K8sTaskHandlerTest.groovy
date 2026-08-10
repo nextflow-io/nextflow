@@ -926,11 +926,11 @@ class K8sTaskHandlerTest extends Specification {
         when:
         opts = handler.getPodOptions()
         then:
-        1 * k8sConfig.getPodOptions() >> new PodOptions([[env: 'FUSION_BUCKETS', value: 's3://nextflow-ci'], [privileged: true]])
+        1 * k8sConfig.getPodOptions() >> new PodOptions([[env: 'FUSION_BUCKETS', value: 's3://nextflow-ci-oss'], [privileged: true]])
         and:
         1 * handler.taskPodOptions() >> new PodOptions([:])
         and:
-        opts == new PodOptions([[env: 'FUSION_BUCKETS', value: 's3://nextflow-ci'], [privileged: true]])
+        opts == new PodOptions([[env: 'FUSION_BUCKETS', value: 's3://nextflow-ci-oss'], [privileged: true]])
     }
 
     def 'should update startTimeMillis and completeTimeMillis with terminated state' () {

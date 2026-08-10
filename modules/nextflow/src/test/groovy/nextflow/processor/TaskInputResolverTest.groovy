@@ -203,12 +203,14 @@ class TaskInputResolverTest extends Specification {
         // see issue #378: a `path` input in an `exec:` block must resolve to the
         // absolute, symlink-resolved real path so that e.g. `.exists()` works,
         // not the relative stage name (which is never materialized for native tasks)
+        // note: the holders are built as the resolver does it in production, ie. via
+        // the `FileHolder` constructor which resolves the store path to the real path
         given:
         def file1 = Files.createTempFile('test1', '.txt')
         def file2 = Files.createTempFile('test2', '.txt')
 
         when:
-        def list = [ FileHolder.get(file1, 'staged_1.txt') ]
+        def list = [ new FileHolder(file1).withName('staged_1.txt') ]
         def result = TaskInputResolver.singleItemOrList(list, true, ScriptType.GROOVY)
         then:
         result == file1.toRealPath()
@@ -216,7 +218,7 @@ class TaskInputResolverTest extends Specification {
         result.exists()
 
         when:
-        list = [ FileHolder.get(file1, 'staged_1.txt'), FileHolder.get(file2, 'staged_2.txt') ]
+        list = [ new FileHolder(file1).withName('staged_1.txt'), new FileHolder(file2).withName('staged_2.txt') ]
         result = TaskInputResolver.singleItemOrList(list, false, ScriptType.GROOVY)
         then:
         result*.toString() == [ file1.toRealPath().toString(), file2.toRealPath().toString() ]

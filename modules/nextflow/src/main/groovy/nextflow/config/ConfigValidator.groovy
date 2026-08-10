@@ -76,6 +76,7 @@ class ConfigValidator {
 
     private void loadPluginScopes() {
         final children = new HashMap<String, SpecNode>()
+        final scopeClasses = new HashMap<String, String>()
         for( final scope : Plugins.getExtensions(ConfigScope) ) {
             final clazz = scope.getClass()
             final name = clazz.getAnnotation(ScopeName)?.value()
@@ -87,10 +88,12 @@ class ConfigValidator {
             if( !name )
                 continue
             if( name in children ) {
-                log.warn "Plugin config scope `${clazz.name}` conflicts with existing scope: `${name}`"
+                if( scopeClasses[name] != clazz.name )
+                    log.warn "Plugin config scope `${clazz.name}` conflicts with existing scope: `${name}`"
                 continue
             }
             children.put(name, SpecNode.Scope.of(clazz, description))
+            scopeClasses.put(name, clazz.name)
         }
         pluginScopes = new SpecNode.Scope('', children)
     }
