@@ -256,7 +256,7 @@ class ConfigBuilderTest extends Specification {
         new ConfigBuilder().build([file])
         then:
         def e = thrown(ConfigParseException)
-        e.message == "Unknown config attribute `bar` -- check config file: ${file.toRealPath()}".toString()
+        e.message == "Unknown config attribute `bar` -- check config file: ${file}".toString()
 
         cleanup:
         SysEnv.pop()
@@ -340,7 +340,7 @@ class ConfigBuilderTest extends Specification {
         new ConfigBuilder().build([file])
         then:
         def e = thrown(ConfigParseException)
-        e.message == "Unknown config attribute `foo.bar` -- check config file: ${file.toRealPath()}".toString()
+        e.message == "Unknown config attribute `foo.bar` -- check config file: ${file}".toString()
 
         cleanup:
         SysEnv.pop()
