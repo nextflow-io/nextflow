@@ -29,6 +29,7 @@ import java.nio.file.Path
 
 import com.google.cloud.batch.v1.GCS
 import com.google.cloud.batch.v1.StatusEvent
+import com.google.cloud.batch.v1.TaskGroup
 import com.google.cloud.batch.v1.TaskStatus
 import com.google.cloud.batch.v1.Volume
 import com.google.protobuf.Timestamp
@@ -1375,6 +1376,91 @@ class GoogleBatchTaskHandlerTest extends Specification {
         // ? replacing the family discriminator digit is treated as a literal character (not a wildcard)
         'e?-standard-4'       | 'local-ssd'          // 'e?' does not match regex ^e2-.*$, so not classified as e2
         'h?-standard-88'      | 'local-ssd'          // 'h?' does not match regex ^h3-.*$, so not classified as h3
+    }
+
+    // array task-group scheduling hints: scheduling.policy / scheduling.parallelism
+
+    private GoogleBatchTaskHandler schedulingHandler() {
+        def task = Mock(TaskRun) { hashLog >> '1234567890'; getWorkDir() >> Path.of('/work/dir') }
+        def exec = Mock(GoogleBatchExecutor) { getClient() >> Mock(BatchClient); getBatchConfig() >> Mock(BatchConfig) }
+        return Spy(new GoogleBatchTaskHandler(task, exec))
+    }
+
+    def 'should apply array scheduling from hints' () {
+        given:
+        def handler = schedulingHandler()
+        def tg = TaskGroup.newBuilder()
+        def config = Mock(TaskConfig) { getHints() >> HINTS }
+
+        when:
+        handler.applyScheduling(tg, config, ARRAY_SIZE)
+
+        then:
+        tg.getSchedulingPolicy() == POLICY
+        tg.getParallelism() == PARALLELISM
+
+        where:
+        HINTS                                            | ARRAY_SIZE || POLICY                                                   | PARALLELISM
+        [:]                                              | 5          || TaskGroup.SchedulingPolicy.SCHEDULING_POLICY_UNSPECIFIED | 0
+        ['scheduling.policy': 'in_order']                | 5          || TaskGroup.SchedulingPolicy.IN_ORDER                      | 1
+        ['scheduling.policy': 'in-order']                | 5          || TaskGroup.SchedulingPolicy.IN_ORDER                      | 1
+        ['scheduling.policy': 'as_soon_as_possible']     | 5          || TaskGroup.SchedulingPolicy.SCHEDULING_POLICY_UNSPECIFIED | 0
+        ['scheduling.parallelism': '8']                  | 20         || TaskGroup.SchedulingPolicy.SCHEDULING_POLICY_UNSPECIFIED | 8
+        ['scheduling.parallelism': 8]                    | 20         || TaskGroup.SchedulingPolicy.SCHEDULING_POLICY_UNSPECIFIED | 8
+        ['scheduling.parallelism': '50']                 | 4          || TaskGroup.SchedulingPolicy.SCHEDULING_POLICY_UNSPECIFIED | 4
+        ['google-batch/scheduling.policy': 'in_order']   | 5          || TaskGroup.SchedulingPolicy.IN_ORDER                      | 1
+    }
+
+    def 'should throw on invalid array scheduling hint' () {
+        given:
+        def handler = schedulingHandler()
+        def tg = TaskGroup.newBuilder()
+        def config = Mock(TaskConfig) { getHints() >> HINTS }
+
+        when:
+        handler.applyScheduling(tg, config, 5)
+
+        then:
+        thrown(IllegalArgumentException)
+
+        where:
+        HINTS << [
+            ['scheduling.policy': 'bogus'],
+            ['scheduling.parallelism': 'lots'],
+            ['scheduling.parallelism': '0'],
+            ['scheduling.parallelism': -3],
+        ]
+    }
+
+    def 'should accept known and unprefixed google-batch hints' () {
+        given:
+        def handler = schedulingHandler()
+
+        when:
+        handler.validateHints(HINTS)
+
+        then:
+        noExceptionThrown()
+
+        where:
+        HINTS << [
+            null,
+            [:],
+            ['google-batch/scheduling.policy': 'in_order'],
+            ['scheduling.policy': 'in_order'],   // bare (unprefixed) keys are not validated
+            ['other-executor/foo': 'bar'],       // foreign-executor keys are left untouched
+        ]
+    }
+
+    def 'should reject unknown prefixed google-batch hints' () {
+        given:
+        def handler = schedulingHandler()
+
+        when:
+        handler.validateHints(['google-batch/scheduling.unknown': 'x'])
+
+        then:
+        thrown(IllegalArgumentException)
     }
 
 }
