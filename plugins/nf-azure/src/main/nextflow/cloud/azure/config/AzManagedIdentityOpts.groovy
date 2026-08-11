@@ -18,6 +18,7 @@ package nextflow.cloud.azure.config
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
+import nextflow.SysEnv
 import nextflow.cloud.azure.nio.AzFileSystemProvider
 import nextflow.config.spec.ConfigOption
 import nextflow.config.spec.ConfigScope
@@ -45,10 +46,10 @@ class AzManagedIdentityOpts implements ConfigScope {
     """)
     final boolean system
 
-    AzManagedIdentityOpts(Map config) {
+    AzManagedIdentityOpts(Map config, Map<String, String> env = null) {
         assert config != null
-        this.clientId = config.clientId
-        this.system = Boolean.parseBoolean(config.system as String)
+        this.clientId = config.clientId ?: SysEnv.get('AZURE_MANAGED_IDENTITY_USER')
+        this.system = config.system != null ? Boolean.parseBoolean(config.system as String) : Boolean.parseBoolean(SysEnv.get('AZURE_MANAGED_IDENTITY_SYSTEM'))
     }
 
     Map<String, Object> getEnv() {
