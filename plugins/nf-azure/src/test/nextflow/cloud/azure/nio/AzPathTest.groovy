@@ -74,17 +74,18 @@ class AzPathTest extends Specification {
         then:
         path.containerName == CONTAINER
 //        path.objectName == BLOB
+        path.@directory == IS_DIRECTORY
         path.isContainer() == IS_CONTAINER
         and:
         path.getContainerName() == path.checkContainerName()
 //        path.getObjectName() == path.blobName()
 
         where:
-        PATH                    | CONTAINER     | BLOB          | IS_CONTAINER
-        '/alpha/beta/delta'     | 'alpha'       | 'beta/delta'  | false
-        '/alpha/beta/delta/'    | 'alpha'       | 'beta/delta/' | false
-        '/alpha/'               | 'alpha'       | null          | true
-        '/alpha'                | 'alpha'       | null          | true
+        PATH                    | CONTAINER     | BLOB          | IS_DIRECTORY  | IS_CONTAINER
+        '/alpha/beta/delta'     | 'alpha'       | 'beta/delta'  | false         | false
+        '/alpha/beta/delta/'    | 'alpha'       | 'beta/delta/' | true          | false
+        '/alpha/'               | 'alpha'       | null          | true          | true
+        '/alpha'                | 'alpha'       | null          | true          | true
 
     }
 
@@ -334,56 +335,44 @@ class AzPathTest extends Specification {
 
     }
 
-    def 'isDirectory should reuse cached attributes for a path without a trailing slash'() {
-        given: 'a slashless path whose resolved attributes report a directory'
-        def path = azpath('/pipeline/output')
-        def attrs = new AzFileAttributes(size: 0, objectId: '/pipeline/output', directory: true)
-        path.setAttributes(attrs)
-
+    def 'should not declare an isDirectory getter'() {
+        // A public isDirectory() would shadow the FilesEx.isDirectory(Path) extension
+        // method, so `path.isDirectory()` would answer from the trailing slash instead
+        // of storage and report `az://container/output` as a file -- see #6427. It would
+        // also be picked up by the generated equals(), making it perform remote I/O.
         expect:
-        !path.@directory        // the trailing-slash field alone says "not a directory"
-        path.isDirectory()      // ...but the resolved attributes identify it as a directory
-        path.attributesCache().is(attrs) // retain the one-shot cache for a later readAttributes call
+        AzPath.declaredMethods.every { it.name !in ['isDirectory','getDirectory'] }
     }
 
-    def 'isDirectory should reuse attributes resolved from storage'() {
+    def 'equals should not trigger a remote attribute lookup'() {
         given:
         def fs = Mock(AzFileSystem)
         fs.getContainerName() >> 'pipeline'
-        def path = new AzPath(fs, '/pipeline/output')
+        def left = new AzPath(fs, '/pipeline/output')
+        def right = new AzPath(fs, '/pipeline/output')
 
         when:
-        def first = path.isDirectory()
-        def second = path.isDirectory()
+        left.equals(right)
 
         then:
-        first
-        second
-        1 * fs.readAttributes(path) >> new AzFileAttributes(directory: true)
-        0 * _
+        0 * fs.readAttributes(_)
     }
 
-    def 'isDirectory should return false for a relative path'() {
-        given:
-        def path = azpath('some/file.txt')
-
-        expect:
-        !path.isDirectory()
-    }
-
-    def 'isDirectory should propagate attribute lookup failures'() {
-        given:
+    def 'equals should not depend on the resolved attributes'() {
+        given: 'two equal paths, only one of which carries listing-sourced attributes'
         def fs = Mock(AzFileSystem)
         fs.getContainerName() >> 'pipeline'
-        def path = new AzPath(fs, '/pipeline/output')
+        def withAttrs = new AzPath(fs, '/pipeline/output')
+        withAttrs.setAttributes(new AzFileAttributes(directory: true))
+        def bare = new AzPath(fs, '/pipeline/output')
 
-        when:
-        path.isDirectory()
+        expect: 'equality is symmetric and consistent with hashCode'
+        withAttrs == bare
+        bare == withAttrs
+        withAttrs.hashCode() == bare.hashCode()
 
-        then:
-        def error = thrown(IllegalStateException)
-        error.message == 'Unable to read attributes'
-        1 * fs.readAttributes(path) >> { throw new IllegalStateException('Unable to read attributes') }
+        and: 'so a map lookup finds the entry'
+        [(bare): 'value'].get(withAttrs) == 'value'
     }
 
     def 'should only recognise zero-size hdi_isfolder markers'() {
