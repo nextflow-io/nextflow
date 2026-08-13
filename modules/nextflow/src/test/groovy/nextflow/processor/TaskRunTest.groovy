@@ -29,7 +29,10 @@ import nextflow.container.resolver.ContainerMeta
 import nextflow.container.resolver.ContainerResolver
 import nextflow.executor.Executor
 import nextflow.file.FileHolder
+import nextflow.script.BaseScript
 import nextflow.script.BodyDef
+import nextflow.script.ProcessConfigV2
+import nextflow.script.ScriptType
 import nextflow.script.ScriptBinding
 import nextflow.script.TaskClosure
 import nextflow.script.TokenVar
@@ -202,6 +205,28 @@ class TaskRunTest extends Specification {
         then:
         task6.hasCacheableValues()
 
+    }
+
+    private TaskRun v2Task(ScriptType type) {
+        def config = new ProcessConfigV2(Mock(BaseScript), 'p')
+        config.getOutputs().addParam('answer', String, { getProperty('answer') })
+        def proc = Mock(TaskProcessor) { getConfig() >> config }
+        return new TaskRun(processor: proc, type: type)
+    }
+
+    // -- (design §9.6/D1) the context is persisted based on the task TYPE, not on the shape of
+    //    the declared outputs: only an `exec` body (the in-JVM agent body included) computes its
+    //    results into task.context, whereas a script body -- and hence its context -- is
+    //    re-evaluated before the cache is consulted, so there is nothing to persist.
+
+    def 'hasCacheableValues: exec task => true (results live only in the context)'() {
+        expect:
+        v2Task(ScriptType.GROOVY).hasCacheableValues()
+    }
+
+    def 'hasCacheableValues: script task => false (context rebuilt on resume)'() {
+        expect:
+        !v2Task(ScriptType.SCRIPTLET).hasCacheableValues()
     }
 
 

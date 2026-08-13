@@ -52,11 +52,14 @@ class ScriptMeta {
 
     static private Set<String> resolvedProcessNames = new HashSet<>(20)
 
+    static private Set<String> resolvedAgentNames = new HashSet<>(20)
+
     @TestOnly
     static void reset() {
         REGISTRY.clear()
         scriptsByPath.clear()
         resolvedProcessNames.clear()
+        resolvedAgentNames.clear()
     }
 
     static ScriptMeta get(BaseScript script) {
@@ -78,6 +81,15 @@ class ScriptMeta {
         return result
     }
 
+    static Set<String> allAgentNames() {
+        def result = new HashSet()
+        for( ScriptMeta entry : REGISTRY.values() )
+            result.addAll( entry.getAgentNames() )
+        // add all resolved names
+        result.addAll(resolvedAgentNames)
+        return result
+    }
+
     static Set<ProcessDef> allProcesses() {
         final result = new HashSet()
         for( final entry : REGISTRY.values() ) {
@@ -89,6 +101,10 @@ class ScriptMeta {
 
     static void addResolvedName(String name) {
         resolvedProcessNames.add(name)
+    }
+
+    static void addResolvedAgentName(String name) {
+        resolvedAgentNames.add(name)
     }
 
     static Map<String,Path> allScriptNames() {
@@ -279,6 +295,22 @@ class ScriptMeta {
         // processes from imports
         for( def item: imports.values() ) {
             if( item instanceof ProcessDef )
+                result.add(item.name)
+        }
+        return result
+    }
+
+    Set<String> getAgentNames() {
+        def result = new HashSet(definitions.size() + imports.size())
+        // local definitions
+        for( def item : definitions.values() ) {
+            if( item instanceof AgentDef )
+                result.add(item.name)
+        }
+        // agents from imports -- an aliased include is a clone carrying the alias as its name,
+        // so both the declared name and the alias are valid `withName:` targets
+        for( def item: imports.values() ) {
+            if( item instanceof AgentDef )
                 result.add(item.name)
         }
         return result

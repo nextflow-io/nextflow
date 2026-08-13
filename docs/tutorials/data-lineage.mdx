@@ -22,7 +22,7 @@ Data lineage tracks the complete history of your Nextflow runs, including:
 Each lineage record has a unique identifier called a *lineage ID* (LID) that you can use to access and query the data.
 
 :::note
-The data model for every lineage record is defined in the Nextflow [source code](https://github.com/nextflow-io/nextflow/tree/master/modules/nf-lineage/src/main/nextflow/lineage/model).
+The data model for every lineage record is defined in the Nextflow [source code](https://github.com/nextflow-io/nextflow/tree/master/modules/nf-lineage/src/main/nextflow/lineage/model/v1beta1).
 :::
 
 ## Enable data lineage
@@ -222,6 +222,67 @@ $ nextflow lineage view lid://862df53160e07cd823c0c3960545e747
 
 Every task run is represented in the lineage store as a `TaskRun`, which includes information such as the name, script, inputs, and software dependencies. From here, you can continue traversing through the file inputs to view upstream tasks.
 
+### Agent runs
+
+An [agent][agent-page] also runs as a task, but its provenance is not a script -- it is the model that was called and the prompt, tools and skills it was called with. Agent executions are therefore recorded as a separate `AgentRun` record in place of a `TaskRun`:
+
+```console
+$ nextflow lineage view lid://c47bf9183c56715c9bca1a67a4acdc68
+{
+  "version": "lineage/v1beta1",
+  "kind": "AgentRun",
+  "spec": {
+    "sessionId": "554fe81b-8034-4f5a-81c4-b07195258201",
+    "name": "analyst (1)",
+    "codeChecksum": {
+      "value": "f8acadb0cd9048eaf953b1b30836dffd",
+      "algorithm": "nextflow",
+      "mode": "standard"
+    },
+    "runner": "pi",
+    "model": "openai/gpt-5-mini",
+    "resolvedModel": null,
+    "instruction": "You are a precise scientific analyst. Be concise and honest about uncertainty.",
+    "goal": null,
+    "promptTemplate": "    \"\"\"\n    Analyze the following question and return a structured analysis.\n\n    Question: ${query.question}\n    \"\"\"\n",
+    "maxIterations": 20,
+    "outputSchema": "{\"additionalProperties\":false,\"properties\":{\"actionable\":{\"type\":\"boolean\"},\"confidence\":{\"type\":\"number\"},\"key_points\":{\"items\":{\"type\":\"string\"},\"type\":\"array\"},\"summary\":{\"type\":\"string\"}},\"required\":[\"summary\",\"confidence\",\"actionable\",\"key_points\"],\"type\":\"object\"}",
+    "tools": null,
+    "skills": null,
+    "input": [
+      {
+        "type": "val",
+        "name": "query",
+        "value": {
+          "question": "Is FASTQ a binary or a text format?",
+          "context": "bioinformatics file formats"
+        }
+      }
+    ],
+    "container": null,
+    "workflowRun": "lid://6334982d0dd5e6573989fa5640fc01d3",
+    "moduleId": null
+  }
+}
+```
+
+The fields that make an agent run reproducible are:
+
+- `model` is the model that was requested, while `resolvedModel` is the concrete model the provider actually served. These differ when a floating alias (`openai/gpt-4o`) resolves to a dated snapshot -- which is why pinning a snapshot is recommended for [reproducible resume][agent-page]. `resolvedModel` is `null` when the runner executes out of process or the agent is not cacheable.
+- `promptTemplate` is the verbatim source text of the `prompt:` block -- quote delimiters, indentation and trailing newline included -- not the rendered text. Combined with `input`, it tells you what the model was asked.
+- `tools` and `skills` list what the agent was allowed to use, and `outputSchema` is the JSON schema its response had to satisfy.
+- `codeChecksum` covers the agent's canonical identity -- the same text that feeds the [task hash][cache-resume-task-hash] -- so two agent runs with the same LID were driven by the same model, prompt, schema and skills.
+
+An agent's results are recorded as a `TaskOutput`, exactly like a process, so agent outputs traverse and query the same way as any other task output.
+
+:::note
+Agent runs record the prompt *template*, never the rendered prompt, and do not record token usage. See [Data lineage][agent-lineage] in the agent documentation for the full list of what is and is not captured.
+:::
+
+:::note
+Lineage records are stored in a `version`/`kind`/`spec` envelope, as shown above. Some examples in this page still show the flat pre-envelope layout.
+:::
+
 Finally, use the `render` subcommand to render the entire lineage of the MULTIQC report as an HTML report:
 
 ```console
@@ -239,18 +300,21 @@ Use the `find` subcommand to find all tasks executed by a workflow run:
 
 ```console
 $ nextflow lineage find type=TaskRun workflowRun=lid://16b31030474f2e96c55f4940bca3ab64
-[
-  "lid://2d8bd92c69f732605bc99941e60d5319",
-  "lid://eff8846883b46c5a76f11e7e4480a6c8",
-  "lid://862df53160e07cd823c0c3960545e747",
-  "lid://6d3bff36bf2c3c14c2d383384621e8ca"
-]
+lid://2d8bd92c69f732605bc99941e60d5319
+lid://eff8846883b46c5a76f11e7e4480a6c8
+lid://862df53160e07cd823c0c3960545e747
+lid://6d3bff36bf2c3c14c2d383384621e8ca
 ```
 
-You can use any field defined in the [lineage data model](https://github.com/nextflow-io/nextflow/tree/master/modules/nf-lineage/src/main/nextflow/lineage/model).
+You can use any field defined in the [lineage data model](https://github.com/nextflow-io/nextflow/tree/master/modules/nf-lineage/src/main/nextflow/lineage/model/v1beta1). Fields specific to a record kind work the same way -- for example, to find every agent run in the store that used a given model:
+
+```console
+$ nextflow lineage find type=AgentRun model=openai/gpt-5-mini
+lid://c47bf9183c56715c9bca1a67a4acdc68
+```
 
 :::tip
-Since the `find` and `view` subcommands always output JSON, you can use JSON processing tools such as [jq](https://jqlang.org/) to further query and transform results.
+The `view` subcommand outputs JSON, so you can use JSON processing tools such as [jq](https://jqlang.org/) to further query and transform results. The `find` subcommand prints one LID per line, which pipes directly into `xargs`.
 :::
 
 ## Compare task runs
@@ -379,6 +443,8 @@ It should produce the following output:
 
 The `fromLineage` channel factory can also be used to query lineage records in a similar manner as the `find` subcommand. See [fromLineage][channel-from-lineage] for details.
 
+[agent-lineage]: ../agent#data-lineage
+[agent-page]: ../agent
 [cache-resume-task-hash]: ../cache-and-resume#task-cache
 [channel-from-lineage]: ../reference/stdlib-namespaces/channel#fromlineage
 [cli-lineage]: ../reference/cli/lineage

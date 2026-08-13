@@ -1,0 +1,73 @@
+nf-agent-pi changelog
+=====================
+0.5.0 - 9 Aug 2026
+- Bound the wait for the driver connection with a new `--connect-timeout` proxy flag, 30s by
+  default, and fail the task naming the endpoint that was tried. The driver now INFERS its RPC
+  address from its own default route rather than requiring `agent.rpc.remoteHost`, and the
+  expensive way for inference to be wrong is to be plausible: a blackholed address left the
+  channel in CONNECTING with nothing to fail on, pinning the invocation until its capability
+  expired an hour later. A refused endpoint was already loud and still is.
+- Report the endpoint in the "open driver stream" error, which previously named nothing.
+- Digest-pin the Go builder stage of the image, as the Node runtime stage already was, so the
+  proxy is built by a toolchain this repo names rather than by whatever `golang:1.23-bookworm`
+  points at on the day of the build.
+- Publishing the image is now part of the Nextflow release (`release.sh` step 1) instead of a
+  step someone remembers to run, the tag is guarded against silent drift from this VERSION, and
+  the plugin declares its own image so `agent.container` is optional for the `pi` runner.
+- NOTE ON 0.4.1: it was published by hand BEFORE the connect-timeout work above landed, so the
+  published `0.4.1` tag does not carry it. That is the drift this release exists to end; treat
+  0.5.0, not 0.4.1, as the first tag whose content the tree reproducibly describes.
+
+0.4.1 - 9 Aug 2026
+- Wait, up to 2s, for the driver to end the RPC stream before dropping the connection. CloseSend
+  half-closes only the proxy's direction, so tearing the TLS connection down under the driver's
+  trailer flush made a run that in fact succeeded log `SSLEngine closed already` and "Transport
+  failed". Only the tail of a successful invocation waits; the result is already on stdout.
+
+0.4.0 - 8 Aug 2026
+- BREAKING for the IMAGE, not for the plugin: the harness protocol goes to version 2. The driver
+  no longer sends a `filesystem` tool descriptor and instead names the runner's own tools in
+  `spec.nativeToolNames`, which the harness enables from the Pi SDK's builtins. Ignoring the new
+  field is not safe -- a 0.3.0 harness would find neither the native names nor the descriptor and
+  run an agent whose instruction names file and shell tools it was never given -- so the frame is
+  refused outright and the mismatch is one legible line instead of a confusing model error.
+  Rebuild or repin `agent.container` to a 0.4.0 image.
+- Every descriptor the driver sends is now brokered back to it unconditionally: there is no
+  per-descriptor locality flag, which would have run a container-side tool in the driver JVM if
+  mis-set, and the harness no longer carries its own sandboxed filesystem tool.
+
+0.3.0 - 7 Aug 2026
+- Deliver the LLM provider credential to the agent task IN BAND, on the TLS-protected RPC start
+  frame, instead of requiring it to be forwarded into the container's environment. The driver
+  resolves it once (`agent.apiKey` -> `NXF_AGENT_API_KEY` -> `<PROVIDER>_API_KEY`, scoped to the
+  model's API provider) and the harness installs it as an in-memory runtime key for that process:
+  it enters neither the task environment nor pi's on-disk auth store.
+- The credential is withheld, with one warning, when `agent.rpc.tls = false` -- the start frame is
+  then cleartext -- and when the driver resolved a provider key the endpoint gate refuses to send.
+  Both cases fall back to the runner's own resolution, so an `env`/`secret` deployment keeps working.
+- Never send the `nxf-no-credential` placeholder over the link: a runtime key owns its provider in
+  pi, so a placeholder would shadow a credential the container was given out of band.
+- BREAKING for the IMAGE, not for the plugin: in-band delivery needs a harness that reads
+  `start.apiKey`. A runner image built before 0.3.0 ignores it silently and the agent behaves as if
+  no credential had been sent. Rebuild or repin `agent.container` to a 0.3.0 image, or keep an
+  out-of-band channel (`agent.containerOptions = '-e OPENAI_API_KEY'`, the `env` scope, or the
+  `secret` directive).
+
+0.2.0 - 7 Aug 2026
+- Encrypt the agent RPC link with TLS and pin the driver certificate by SHA-256 fingerprint (#82)
+- Fix an agent RPC capability expiring while its task was still queued, and report an expired or
+  already-consumed capability as such instead of as an invalid token (#82)
+- Detect a vanished agent task with gRPC keepalive rather than waiting on the OS TCP timeout (#82)
+- Refuse a connect frame carrying no invocation identity with a status, instead of aborting the call
+  with an unexplained `UNKNOWN` (#84)
+- Remember enough terminal outcomes that a retry is still told why its capability was refused on runs
+  with more than a thousand agent tasks (#84)
+- Report the driver's refusal reason when gRPC surfaces a terminated send as a bare `EOF` (#84)
+- BREAKING: the driver now always passes `--fingerprint` or `--insecure` to `agent-rpc`, with no
+  negotiation. A runner image built before 0.2.0 rejects both flags and fails every agent task with
+  `flag provided but not defined: -fingerprint`; `agent.rpc.tls = false` is NOT a workaround, since
+  that path emits `--insecure`, which such an image also rejects. Rebuild or repin `agent.container`
+  to an image carrying a 0.2.0 proxy.
+
+0.1.0 - 24 Jul 2026
+- Initial release: the `pi` agent runner, shipped as a container image rather than a vendored runtime

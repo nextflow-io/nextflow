@@ -282,6 +282,8 @@ This configuration:
 - Sets 16 CPUs for any process named `bye` (or imported as `bye`)
 - Sets 32 CPUs for any process named `bye` (or imported as `bye`) invoked by a workflow named `aloha`
 
+The same selector syntax and the same priority order apply in the `agent` scope, which configures agent tasks independently from the `process` scope. See [Agents](agent.mdx#configuration).
+
 ## Config profiles
 
 Configuration files can define one or more *profiles*. A profile is a set of configuration settings that can be selected at runtime using the `-profile` command line option.
