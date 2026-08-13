@@ -29,6 +29,7 @@ import nextflow.config.ast.ConfigIncludeNode;
 import nextflow.config.ast.ConfigNode;
 import nextflow.config.ast.ConfigStatement;
 import nextflow.script.ast.ASTNodeMarker;
+import nextflow.script.ast.AgentNode;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.OutputBlockNode;
 import nextflow.script.ast.ParamBlockNode;
@@ -311,6 +312,14 @@ public class CommentAttacher {
             var container = container(cn, parent);
             for( var field : cn.getFields() )
                 addChild(container, field);
+        }
+        else if( decl instanceof AgentNode an ) {
+            var container = container(an, parent);
+            statements(an.directives, container);
+            for( var input : an.inputs )
+                addChild(container, input);
+            statements(an.outputs, container);
+            statements(an.prompt, container);
         }
         else if( decl instanceof FunctionNode fn ) {
             statements(fn.getCode(), container(fn, parent));

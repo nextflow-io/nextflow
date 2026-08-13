@@ -111,6 +111,38 @@ class ConfigValidatorTest extends Specification {
         !capture.toString().contains('Unrecognized config option')
     }
 
+    def 'should ignore agent selectors and accept process directives in the agent scope' () {
+        when:
+        new ConfigValidator().validate([
+            agent: [
+                disk: '10 GB',
+                publishDir: '/tmp/out',
+                tag: 'x',
+                'withLabel:foobar': [
+                    cpus: 2
+                ],
+                'withName:foobar': [
+                    cpus: 2
+                ],
+                "withName:'.*AGENT.*'": [
+                    cpus: 2
+                ]
+            ]
+        ])
+        then:
+        !capture.toString().contains('Unrecognized config option')
+    }
+
+    def 'should warn for an unknown option in the agent scope' () {
+        when:
+        // `model`/`maxIterations` share the agent body directive names, as `process` does
+        new ConfigValidator().validate([agent: [maxIterations: 40, model: 'openai/gpt-5', fooBar: 1]])
+        then:
+        !capture.toString().contains("Unrecognized config option 'agent.maxIterations'")
+        !capture.toString().contains("Unrecognized config option 'agent.model'")
+        capture.toString().contains("Unrecognized config option 'agent.fooBar'")
+    }
+
     def 'should support map options' () {
         when:
         new ConfigValidator().validate([

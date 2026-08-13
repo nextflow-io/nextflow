@@ -46,8 +46,20 @@ public sealed interface SpecNode {
         var result = Scope.of(Config.class, "");
         // derive `nextflow` config options from feature flags.
         result.children().put("nextflow", nextflowScope());
-        // derive `process` config options from process directives.
-        result.children().put("process", processScope());
+        // derive `process` and `agent` config options from process directives: an agent
+        // task accepts the same task directives, in its own independent scope.
+        // NOTE: the descriptions are inlined because an interface cannot declare private fields.
+        result.children().put("process", directiveScope("""
+            The `process` scope allows you to specify default directives for processes in your pipeline.
+
+            [Read more](https://docs.seqera.io/nextflow/config#process-configuration)
+        """));
+        result.children().put("agent", directiveScope("""
+            The `agent` scope allows you to specify default directives for agents in your pipeline. An
+            agent task accepts the same task directives as a process, in its own independent scope.
+
+            [Read more](https://docs.seqera.io/nextflow/agent#configuration)
+        """));
         return result;
     }
 
@@ -76,20 +88,17 @@ public sealed interface SpecNode {
     }
 
     /**
-     * Initialize the `process` config scope from the set of
-     * process directives.
+     * Initialize a task-directive config scope (`process`, `agent`) from the
+     * set of process directives.
      *
      * Directives with multiple method overloads are treated as
      * options with multiple supported types. Method overloads with
      * multiple parameters are ignored because they are not supported
      * in the configuration.
+     *
+     * @param description
      */
-    private static SpecNode processScope() {
-        var description = """
-            The `process` scope allows you to specify default directives for processes in your pipeline.
-
-            [Read more](https://docs.seqera.io/nextflow/config#process-configuration)
-        """;
+    private static SpecNode directiveScope(String description) {
         var children = new HashMap<String, SpecNode>();
         for( var method : ProcessDsl.DirectiveDsl.class.getDeclaredMethods() ) {
             if( method.getParameters().length != 1 )

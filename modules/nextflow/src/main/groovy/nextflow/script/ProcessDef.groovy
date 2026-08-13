@@ -89,6 +89,14 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
         this.taskBody = taskBody
     }
 
+    /**
+     * The process implementation, i.e. its {@code script}/{@code exec} body. Its
+     * {@link BodyDef#source} is the process identity {@code TaskHasher} folds into every task
+     * hash, so it is also what identifies this process when it is referenced from elsewhere
+     * (see {@code AgentDef.toolsFingerprint}).
+     */
+    BodyDef getTaskBody() { taskBody }
+
     static String stripScope(String str) {
         str.split(Const.SCOPE_SEP).last()
     }
@@ -251,23 +259,46 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
     }
 
     TaskProcessor createTaskProcessor() {
-        // apply process directives from config settings
-        applyConfig()
-
-        // create executor for process
-        final executor = session
-            .executorFactory
-            .getExecutor(processName, processConfig, taskBody, session)
-
-        // create task processor for process
-        return session
-            .newProcessFactory(owner)
-            .newTaskProcessor(processName, executor, processConfig, taskBody)
+        return createTaskProcessor(session, owner, processName, simpleName, baseName, processConfig, taskBody)
     }
 
     protected void applyConfig() {
         final configProcessScope = (Map)session.config.process
         new ProcessConfigBuilder(processConfig).applyConfig(configProcessScope, baseName, simpleName, processName)
+    }
+
+    /**
+     * Build a {@link TaskProcessor} from a process config + body. Extracted as a
+     * static helper so non-{@code ProcessDef} lowerings (e.g. {@code AgentDef} on
+     * the tool-free task path) can drive the standard {@link TaskProcessor} pipeline
+     * without duplicating the executor/factory wiring.
+     */
+    static TaskProcessor createTaskProcessor(Session session, BaseScript owner,
+            String processName, String simpleName, String baseName,
+            ProcessConfig config, BodyDef body) {
+        // apply process directives from config settings
+        new ProcessConfigBuilder(config).applyConfig((Map)session.config.process, baseName, simpleName, processName)
+
+        return createTaskProcessorResolved(session, owner, processName, config, body)
+    }
+
+    /**
+     * Build a task processor from an already resolved config. This allows non-process
+     * components such as agents to use the canonical task/executor pipeline without
+     * inheriting the {@code process} configuration scope.
+     */
+    static TaskProcessor createTaskProcessorResolved(Session session, BaseScript owner,
+            String processName, ProcessConfig config, BodyDef body) {
+
+        // create executor for process
+        final executor = session
+            .executorFactory
+            .getExecutor(processName, config, body, session)
+
+        // create task processor for process
+        return session
+            .newProcessFactory(owner)
+            .newTaskProcessor(processName, executor, config, body)
     }
 
 }

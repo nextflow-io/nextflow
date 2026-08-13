@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 
 import groovy.lang.groovydoc.GroovydocHolder;
+import nextflow.script.ast.AgentNode;
 import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
@@ -36,6 +37,7 @@ import nextflow.script.ast.ProcessNodeV2;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
+import nextflow.script.dsl.AgentDsl;
 import nextflow.script.dsl.Constant;
 import nextflow.script.dsl.EntryWorkflowDsl;
 import nextflow.script.dsl.FeatureFlag;
@@ -117,6 +119,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             }
             for( var processNode : sn.getProcesses() )
                 declareMethod(processNode);
+            for( var agentNode : sn.getAgents() )
+                declareMethod(agentNode);
             for( var functionNode : sn.getFunctions() )
                 declareMethod(functionNode);
             declareTypes(sn);
@@ -336,6 +340,36 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
                     declaredOutputs.put(name, target);
             }
         }
+    }
+
+    @Override
+    public void visitAgent(AgentNode node) {
+        vsc.pushScope(AgentDsl.class);
+        currentDefinition = node;
+        node.setVariableScope(currentScope());
+
+        for( var input : asFlatParams(node.inputs) ) {
+            vsc.declare(input, input);
+
+            // suppress "unused variable" warnings since every input is sent to the model
+            vsc.findVariableDeclaration(input.getName(), input);
+        }
+
+        vsc.pushScope(AgentDsl.DirectiveDsl.class);
+        visitDirectives(node.directives, "agent directive", false);
+        vsc.popScope();
+
+        // the prompt template may reference input parameters
+        visit(node.prompt);
+
+        // mirrors visitProcessV2: `file(...)`/`files(...)` in an agent output collect from the
+        // task work dir, so they must NOT resolve to the driver-side global ScriptDsl.file
+        vsc.pushScope(AgentDsl.AgentOutputDsl.class);
+        visitTypedOutputs(node.outputs, "Agent output");
+        vsc.popScope();
+
+        currentDefinition = null;
+        vsc.popScope();
     }
 
     @Override
@@ -763,6 +797,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             return "Processes";
         if( mn instanceof WorkflowNode )
             return "Workflows";
+        if( mn instanceof AgentNode )
+            return "Agents";
         return "Operators";
     }
 
