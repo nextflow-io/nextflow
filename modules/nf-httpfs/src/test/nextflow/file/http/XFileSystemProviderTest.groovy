@@ -16,10 +16,13 @@
 
 package nextflow.file.http
 
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 
 import com.github.tomakehurst.wiremock.junit.WireMockRule
+import nextflow.file.HttpCopyOption
 import org.junit.Rule
 import spock.lang.IgnoreIf
 import spock.lang.Specification
@@ -227,5 +230,244 @@ class XFileSystemProviderTest extends Specification {
         '/this/that'            | 'http://foo.com:123/abc'  | 'http://foo.com:123/this/that'
         'this/that'             | 'http://foo.com:123/abc'  | 'http://foo.com:123/this/that'
 
+    }
+
+    def 'should resume an http download using a byte range'() {
+        given:
+        def localhost = "http://localhost:${wireMockRule.port()}"
+        def FULL = 'ABCDEFGHIJKLMNOPQRST'   // 20 bytes
+        def PARTIAL = 'ABCDEFGHIJ'          // first 10 bytes
+        def REMAINING = 'KLMNOPQRST'        // remaining 10 bytes
+
+        wireMockRule.stubFor(get(urlEqualTo('/file.txt'))
+            .withHeader('Range', equalTo('bytes=10-'))
+            .willReturn(aResponse()
+                .withStatus(206)
+                .withHeader('Content-Range', 'bytes 10-19/20')
+                .withHeader('Content-Length', '10')
+                .withBody(REMAINING)))
+
+        def provider = new HttpFileSystemProvider()
+        def source = provider.getPath(new URI("${localhost}/file.txt"))
+        def target = Files.createTempFile('nf-resume', '.txt')
+        target.text = PARTIAL
+
+        when:
+        provider.download(source, target, HttpCopyOption.RESUME)
+
+        then:
+        target.text == FULL
+
+        and:
+        wireMockRule.verify(getRequestedFor(urlEqualTo('/file.txt')).withHeader('Range', equalTo('bytes=10-')))
+
+        cleanup:
+        target?.delete()
+    }
+
+    def 'should restart an http download when the server ignores the range'() {
+        given:
+        def localhost = "http://localhost:${wireMockRule.port()}"
+        def FULL = 'ABCDEFGHIJKLMNOPQRST'
+        def PARTIAL = 'ABCDEFGHIJ'
+
+        wireMockRule.stubFor(get(urlEqualTo('/file.txt'))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader('Content-Length', '20')
+                .withBody(FULL)))
+
+        def provider = new HttpFileSystemProvider()
+        def source = provider.getPath(new URI("${localhost}/file.txt"))
+        def target = Files.createTempFile('nf-restart', '.txt')
+        target.text = PARTIAL
+
+        when:
+        provider.download(source, target, HttpCopyOption.RESUME)
+
+        then:
+        target.text == FULL
+
+        and:
+        wireMockRule.verify(getRequestedFor(urlEqualTo('/file.txt')).withHeader('Range', equalTo('bytes=10-')))
+
+        cleanup:
+        target?.delete()
+    }
+
+    def 'should gate resume download to http and https'() {
+        given:
+        def http = new HttpFileSystemProvider()
+        def https = new HttpsFileSystemProvider()
+        def ftp = new FtpFileSystemProvider()
+
+        expect:
+        http.canDownload(null, null)
+        https.canDownload(null, null)
+        !ftp.canDownload(null, null)
+
+        and:
+        !http.canUpload(null, null)
+        !https.canUpload(null, null)
+        !ftp.canUpload(null, null)
+    }
+
+    def 'should restart when the server returns a mismatched content range'() {
+        given:
+        def localhost = "http://localhost:${wireMockRule.port()}"
+        def FULL = 'ABCDEFGHIJKLMNOPQRST'   // 20 bytes
+        def PARTIAL = 'ABCDEFGHIJ'          // first 10 bytes
+
+        // ranged request returns a 206 that does not start at the requested offset
+        wireMockRule.stubFor(get(urlEqualTo('/file.txt'))
+            .atPriority(1)
+            .withHeader('Range', equalTo('bytes=10-'))
+            .willReturn(aResponse()
+                .withStatus(206)
+                .withHeader('Content-Range', 'bytes 0-19/20')
+                .withHeader('Content-Length', '20')
+                .withBody(FULL)))
+
+        // fallback request returns the full body
+        wireMockRule.stubFor(get(urlEqualTo('/file.txt'))
+            .atPriority(2)
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader('Content-Length', '20')
+                .withBody(FULL)))
+
+        def provider = new HttpFileSystemProvider()
+        def source = provider.getPath(new URI("${localhost}/file.txt"))
+        def target = Files.createTempFile('nf-mismatch', '.txt')
+        target.text = PARTIAL
+
+        when:
+        provider.download(source, target, HttpCopyOption.RESUME)
+
+        then:
+        target.text == FULL
+
+        and:
+        wireMockRule.verify(getRequestedFor(urlEqualTo('/file.txt')).withHeader('Range', equalTo('bytes=10-')))
+
+        cleanup:
+        target?.delete()
+    }
+
+    def 'should restart when the server returns 416 range not satisfiable'() {
+        given:
+        def localhost = "http://localhost:${wireMockRule.port()}"
+        def FULL = 'ABCDEFGHIJKLMNOPQRST'
+        def PARTIAL = 'ABCDEFGHIJ'
+
+        wireMockRule.stubFor(get(urlEqualTo('/file.txt'))
+            .atPriority(1)
+            .withHeader('Range', equalTo('bytes=10-'))
+            .willReturn(aResponse()
+                .withStatus(416)
+                .withHeader('Content-Range', 'bytes */20')))
+
+        wireMockRule.stubFor(get(urlEqualTo('/file.txt'))
+            .atPriority(2)
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader('Content-Length', '20')
+                .withBody(FULL)))
+
+        def provider = new HttpFileSystemProvider()
+        def source = provider.getPath(new URI("${localhost}/file.txt"))
+        def target = Files.createTempFile('nf-416', '.txt')
+        target.text = PARTIAL
+
+        when:
+        provider.download(source, target, HttpCopyOption.RESUME)
+
+        then:
+        target.text == FULL
+
+        and:
+        wireMockRule.verify(getRequestedFor(urlEqualTo('/file.txt')).withHeader('Range', equalTo('bytes=10-')))
+
+        cleanup:
+        target?.delete()
+    }
+
+    def 'should download a file when the target does not exist'() {
+        given:
+        def localhost = "http://localhost:${wireMockRule.port()}"
+        def FULL = 'ABCDEFGHIJKLMNOPQRST'
+
+        wireMockRule.stubFor(get(urlEqualTo('/file.txt'))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader('Content-Length', '20')
+                .withBody(FULL)))
+
+        def provider = new HttpFileSystemProvider()
+        def source = provider.getPath(new URI("${localhost}/file.txt"))
+        def target = Files.createTempFile('nf-fresh', '.txt')
+        Files.delete(target)
+
+        when:
+        provider.download(source, target)
+
+        then:
+        target.text == FULL
+
+        cleanup:
+        target?.delete()
+    }
+
+    def 'should replace an existing file when REPLACE_EXISTING is specified'() {
+        given:
+        def localhost = "http://localhost:${wireMockRule.port()}"
+        def FULL = 'ABCDEFGHIJKLMNOPQRST'
+
+        wireMockRule.stubFor(get(urlEqualTo('/file.txt'))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader('Content-Length', '20')
+                .withBody(FULL)))
+
+        def provider = new HttpFileSystemProvider()
+        def source = provider.getPath(new URI("${localhost}/file.txt"))
+        def target = Files.createTempFile('nf-replace', '.txt')
+        target.text = 'stale content'
+
+        when:
+        provider.download(source, target, StandardCopyOption.REPLACE_EXISTING)
+
+        then:
+        target.text == FULL
+
+        cleanup:
+        target?.delete()
+    }
+
+    def 'should fail when the target already exists without REPLACE_EXISTING'() {
+        given:
+        def localhost = "http://localhost:${wireMockRule.port()}"
+        def FULL = 'ABCDEFGHIJKLMNOPQRST'
+
+        wireMockRule.stubFor(get(urlEqualTo('/file.txt'))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader('Content-Length', '20')
+                .withBody(FULL)))
+
+        def provider = new HttpFileSystemProvider()
+        def source = provider.getPath(new URI("${localhost}/file.txt"))
+        def target = Files.createTempFile('nf-exists', '.txt')
+        target.text = 'stale content'
+
+        when:
+        provider.download(source, target)
+
+        then:
+        thrown(FileAlreadyExistsException)
+        target.text == 'stale content'
+
+        cleanup:
+        target?.delete()
     }
 }

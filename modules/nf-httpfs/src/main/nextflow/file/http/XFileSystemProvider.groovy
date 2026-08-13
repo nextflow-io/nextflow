@@ -17,6 +17,9 @@
 package nextflow.file.http
 
 import nextflow.file.CopyMoveHelper
+import nextflow.file.CopyOptions
+import nextflow.file.FileSystemTransferAware
+import nextflow.file.HttpCopyOption
 
 import static nextflow.file.http.XFileSystemConfig.*
 
@@ -26,6 +29,7 @@ import java.nio.file.AccessDeniedException
 import java.nio.file.AccessMode
 import java.nio.file.CopyOption
 import java.nio.file.DirectoryStream
+import java.nio.file.FileAlreadyExistsException
 import java.nio.file.FileStore
 import java.nio.file.FileSystem
 import java.nio.file.FileSystemNotFoundException
@@ -60,7 +64,7 @@ import sun.net.www.protocol.ftp.FtpURLConnection
 @Slf4j
 @PackageScope
 @CompileStatic
-abstract class XFileSystemProvider extends FileSystemProvider {
+abstract class XFileSystemProvider extends FileSystemProvider implements FileSystemTransferAware {
 
     private Map<URI, FileSystem> fileSystemMap = new LinkedHashMap<>(20)
 
@@ -178,18 +182,24 @@ abstract class XFileSystemProvider extends FileSystemProvider {
     }
 
     protected URLConnection toConnection(Path path) {
-        final url = path.toUri().toURL()
-        log.trace "File remote URL: $url"
-        return toConnection0(url, 0)
+        toConnection(path, 0)
     }
 
-    protected URLConnection toConnection0(URL url, int attempt) {
+    protected URLConnection toConnection(Path path, long offset) {
+        final url = path.toUri().toURL()
+        log.trace "File remote URL: $url"
+        return toConnection0(url, 0, offset)
+    }
+
+    protected URLConnection toConnection0(URL url, int attempt, long offset) {
         final conn = url.openConnection()
         conn.setRequestProperty("User-Agent", 'Nextflow/httpfs')
         if( conn instanceof HttpURLConnection ) {
             // by default HttpURLConnection does redirect only within the same host
             // disable the built-in to implement custom redirection logic (see below)
             conn.setInstanceFollowRedirects(false)
+            if( offset > 0 )
+                conn.setRequestProperty("Range", "bytes=$offset-")
         }
         if( url.userInfo ) {
             conn.setRequestProperty("Authorization", auth(url.userInfo));
@@ -204,17 +214,17 @@ abstract class XFileSystemProvider extends FileSystemProvider {
             final newUrl = new URI(absLocation(location,url)).toURL()
             if( url.protocol=='https' && newUrl.protocol=='http' )
                 throw new IOException("Refuse to follow redirection from HTTPS to HTTP (unsafe) URL - origin: $url - target: $newUrl")
-            return toConnection0(newUrl, attempt+1)
+            return toConnection0(newUrl, attempt+1, offset)
         }
         else if( conn instanceof HttpURLConnection && conn.getResponseCode() in config().retryCodes() && attempt < config().maxAttempts() ) {
             final delay = (Math.pow(config().backOffBase(), attempt) as long) * config().backOffDelay()
             log.debug "Got HTTP error=${conn.getResponseCode()} waiting for ${delay}ms (attempt=${attempt+1})"
             Thread.sleep(delay)
-            return toConnection0(url, attempt+1)
+            return toConnection0(url, attempt+1, offset)
         }
         else if( conn instanceof HttpURLConnection && conn.getResponseCode()==401 && attempt==0 ) {
             if( XAuthRegistry.instance.refreshToken(conn) ) {
-                return toConnection0(url, attempt+1)
+                return toConnection0(url, attempt+1, offset)
             }
         }
         return conn
@@ -421,6 +431,123 @@ abstract class XFileSystemProvider extends FileSystemProvider {
     @Override
     void move(Path source, Path target, CopyOption... options) throws IOException {
         throw new UnsupportedOperationException("Move not supported by ${getScheme().toUpperCase()} file system provider")
+    }
+
+    @Override
+    boolean canDownload(Path source, Path target) {
+        // byte-range resume is only supported for HTTP(S); FTP keeps the default copy path
+        return getScheme() in ['http','https']
+    }
+
+    @Override
+    boolean canUpload(Path source, Path target) {
+        return false
+    }
+
+    @Override
+    void download(Path source, Path target, CopyOption... options) throws IOException {
+        if( source.class != XPath )
+            throw new ProviderMismatchException()
+
+        if( options.contains(HttpCopyOption.RESUME) ) {
+            // resume a partially downloaded file, falling back to a full download
+            final long offset = Files.exists(target) ? Files.size(target) : 0
+            if( offset > 0 && resumeDownload(source, target, offset) )
+                return
+            downloadFromStart(source, target)
+        }
+        else {
+            // plain copy honouring the standard copy options; the target is only overwritten inside
+            // downloadFromStart after the source has responded successfully
+            final CopyOptions opts = CopyOptions.parse(options)
+            if( Files.exists(target) && !opts.replaceExisting() )
+                throw new FileAlreadyExistsException(target.toString())
+            downloadFromStart(source, target)
+        }
+    }
+
+    /**
+     * Append the remaining bytes of {@code source} to the partial file at {@code target}.
+     *
+     * @return {@code true} when the server honoured the exact requested range and the remaining
+     *         bytes were appended, {@code false} when the server ignored or rejected the range
+     *         and a full re-download is required
+     */
+    private boolean resumeDownload(Path source, Path target, long offset) throws IOException {
+        final conn = toConnection(source, offset)
+        if( conn !instanceof HttpURLConnection )
+            return false
+        try {
+            final int code = ((HttpURLConnection)conn).getResponseCode()
+            if( code != 206 )
+                return false
+            // only accept a resume when the server honoured the exact requested range through EOF
+            final long[] range = parseContentRange(conn)
+            if( range == null || range[0] != offset || range[1] + 1 != range[2] )
+                return false
+            final long remaining = range[2] - offset
+            try( InputStream in = checkedInputStream(conn, remaining) ) {
+                try( OutputStream out = Files.newOutputStream(target, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.APPEND) ) {
+                    copyStream(in, out)
+                }
+            }
+            return true
+        }
+        finally {
+            ((HttpURLConnection)conn).disconnect()
+        }
+    }
+
+    private void downloadFromStart(Path source, Path target) throws IOException {
+        final conn = toConnection(source)
+        if( conn !instanceof HttpURLConnection )
+            throw new IOException("Download not supported for non-HTTP source: ${FilesEx.toUriString(source)}")
+        try {
+            final int code = ((HttpURLConnection)conn).getResponseCode()
+            if( code != 200 )
+                throw new IOException("Unable to download foreign file ${FilesEx.toUriString(source)} -- unexpected HTTP status code: $code")
+            try( InputStream in = checkedInputStream(conn, conn.getContentLengthLong()) ) {
+                try( OutputStream out = Files.newOutputStream(target, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING) ) {
+                    copyStream(in, out)
+                }
+            }
+        }
+        finally {
+            ((HttpURLConnection)conn).disconnect()
+        }
+    }
+
+    private static InputStream checkedInputStream(URLConnection conn, long expectedLength) throws IOException {
+        return expectedLength > 0
+                ? new FixedInputStream(conn.getInputStream(), expectedLength)
+                : conn.getInputStream()
+    }
+
+    /**
+     * Parse a {@code Content-Range} response header (e.g. {@code bytes 10-19/20}).
+     *
+     * @return an array {@code [start, end, total]}, or {@code null} when the header is absent or malformed
+     */
+    private static long[] parseContentRange(URLConnection conn) {
+        final String value = conn.getHeaderField('Content-Range')
+        if( !value )
+            return null
+        final matcher = value =~ ~/^bytes\s+(\d+)-(\d+)\/(\d+)$/
+        return matcher.matches()
+                ? [matcher.group(1) as long, matcher.group(2) as long, matcher.group(3) as long] as long[]
+                : null
+    }
+
+    private static void copyStream(InputStream in, OutputStream out) throws IOException {
+        final byte[] buffer = new byte[8192]
+        int len
+        while( (len = in.read(buffer)) != -1 )
+            out.write(buffer, 0, len)
+    }
+
+    @Override
+    void upload(Path source, Path target, CopyOption... options) throws IOException {
+        throw new UnsupportedOperationException("Upload not supported by ${getScheme().toUpperCase()} file system provider")
     }
 
     @Override

@@ -16,6 +16,7 @@
 
 package nextflow.file
 
+import java.nio.file.FileSystems
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
 import java.nio.file.NoSuchFileException
@@ -323,16 +324,28 @@ class FilePorter {
         protected Path stageForeignFile(Path filePath, Path stagePath) {
 
             int count = 0
+            boolean resume = false
             while( true ) {
                 try {
-                    return stageForeignFile0(filePath, stagePath)
+                    // only the first attempt may short-circuit on an existing (cached) target;
+                    // retries must force a download so that a partial file can be resumed
+                    return count == 0
+                            ? stageForeignFile0(filePath, stagePath)
+                            : copyForeignFile(filePath, stagePath, resume)
                 }
                 catch( IOException e ) {
-                    // remove the target file that could be have partially downloaded
-                    cleanup(stagePath)
                     // check if a stage/download retry is allowed
-                    if( count++ < maxRetries && recoverableError(e) && !Thread.currentThread().isInterrupted() ) {
-                        def message = "Unable to stage foreign file: ${filePath.toUriString()} (try ${count} of ${maxRetries}) -- Cause: $e.message"
+                    final retry = count < maxRetries && !Thread.currentThread().isInterrupted()
+                    // resume a partial download (HTTP/HTTPS only), otherwise discard the
+                    // partially downloaded file and start again from the beginning
+                    resume = retry && canResumeDownload(filePath, stagePath)
+                    if( !resume )
+                        cleanup(stagePath)
+                    if( retry ) {
+                        count++
+                        def message = resume
+                            ? "Unable to stage foreign file: ${filePath.toUriString()} (resuming, attempt ${count} of ${maxRetries}) -- Cause: $e.message"
+                            : "Unable to stage foreign file: ${filePath.toUriString()} (try ${count} of ${maxRetries}) -- Cause: $e.message"
                         log.isDebugEnabled() ? log.warn(message, e) : log.warn(message)
 
                         sleep (10 + RND.nextInt(300))
@@ -344,13 +357,15 @@ class FilePorter {
             }
         }
 
-        private boolean recoverableError(IOException e){
-            final result =
-                e !instanceof NoSuchFileException
-                && (e instanceof SocketTimeoutException || e !instanceof InterruptedIOException)
-                && e !instanceof SocketException
-            log.debug "Stage foreign file exception: recoverable=$result; type=${e.class.name}; message=${e.message}"
-            return result
+        @PackageScope
+        boolean canResumeDownload(Path source, Path target) {
+            // a resume only makes sense for a partially downloaded HTTP(S) file written to a local
+            // target, where APPEND is supported
+            if( !Files.exists(target) || Files.size(target) == 0 )
+                return false
+            if( target.fileSystem != FileSystems.getDefault() )
+                return false
+            return source.toUri().scheme in ['http', 'https']
         }
 
         private String fmtError(Path filePath, Exception e) {
@@ -367,10 +382,17 @@ class FilePorter {
                 log.debug "Local cache found for foreign file ${source.toUriString()} at ${target.toUriString()}"
                 return target
             }
+            return copyForeignFile(source, target, false)
+        }
+
+        @PackageScope
+        Path copyForeignFile(Path source, Path target, boolean resume) {
             log.debug "Copying foreign file ${source.toUriString()} to work dir: ${target.toUriString()}"
             if( debugDelay )
                 sleep ( new Random().nextInt(debugDelay) )
-            return FileHelper.copyPath(source, target)
+            return resume
+                    ? FileHelper.copyPath(source, target, HttpCopyOption.RESUME)
+                    : FileHelper.copyPath(source, target)
         }
 
         synchronized String getMessageAndClear() {
