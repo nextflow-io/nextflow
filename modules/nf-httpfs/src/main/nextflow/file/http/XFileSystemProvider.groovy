@@ -20,6 +20,8 @@ import nextflow.file.CopyMoveHelper
 import nextflow.file.CopyOptions
 import nextflow.file.FileSystemTransferAware
 import nextflow.file.HttpCopyOption
+import nextflow.file.ResumableFileSystem
+import nextflow.file.ResumableUpload
 
 import static nextflow.file.http.XFileSystemConfig.*
 
@@ -450,7 +452,18 @@ abstract class XFileSystemProvider extends FileSystemProvider implements FileSys
             throw new ProviderMismatchException()
 
         if( options.contains(HttpCopyOption.RESUME) ) {
-            // resume a partially downloaded file, falling back to a full download
+            // resume into a resumable (cloud) target when available
+            final targetProvider = target.fileSystem.provider()
+            if( targetProvider instanceof ResumableFileSystem ) {
+                final upload = ((ResumableFileSystem)targetProvider).resumeUpload(target)
+                if( upload != null ) {
+                    if( upload.committedBytes() > 0 && resumeToTarget(source, upload) )
+                        return
+                    // nothing committed to resume from: discard the stale upload and restart
+                    upload.abort()
+                }
+            }
+            // resume into a local target, otherwise fall back to a full download
             final long offset = Files.exists(target) ? Files.size(target) : 0
             if( offset > 0 && resumeDownload(source, target, offset) )
                 return
@@ -498,6 +511,47 @@ abstract class XFileSystemProvider extends FileSystemProvider implements FileSys
         }
     }
 
+    /**
+     * Resume a download into a resumable (cloud) target from the committed offset.
+     *
+     * @return {@code true} when the remaining bytes were streamed and the upload completed,
+     *         {@code false} when the source could not be resumed (and the upload was aborted)
+     */
+    @PackageScope
+    boolean resumeToTarget(Path source, ResumableUpload upload) throws IOException {
+        final long offset = upload.committedBytes()
+        final conn = toConnection(source, offset)
+        if( conn !instanceof HttpURLConnection ) {
+            upload.abort()
+            return false
+        }
+        try {
+            final int code = ((HttpURLConnection)conn).getResponseCode()
+            final long[] range = code == 206 ? parseContentRange(conn) : null
+            if( range == null || range[0] != offset || range[1] + 1 != range[2] ) {
+                // source can't be resumed — discard the stale upload and restart
+                upload.abort()
+                return false
+            }
+            final long remaining = range[2] - offset
+            try {
+                try( InputStream in = checkedInputStream(conn, remaining) ) {
+                    copyStream(in, upload.outputStream())
+                }
+                upload.complete()
+            }
+            catch( IOException e ) {
+                // mid-stream failure — leave the upload in-progress for a later retry
+                upload.abandon()
+                throw e
+            }
+            return true
+        }
+        finally {
+            ((HttpURLConnection)conn).disconnect()
+        }
+    }
+
     private void downloadFromStart(Path source, Path target) throws IOException {
         final conn = toConnection(source)
         if( conn !instanceof HttpURLConnection )
@@ -506,14 +560,38 @@ abstract class XFileSystemProvider extends FileSystemProvider implements FileSys
             final int code = ((HttpURLConnection)conn).getResponseCode()
             if( code != 200 )
                 throw new IOException("Unable to download foreign file ${FilesEx.toUriString(source)} -- unexpected HTTP status code: $code")
-            try( InputStream in = checkedInputStream(conn, conn.getContentLengthLong()) ) {
-                try( OutputStream out = Files.newOutputStream(target, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING) ) {
-                    copyStream(in, out)
+            final targetProvider = target.fileSystem.provider()
+            if( targetProvider instanceof ResumableFileSystem ) {
+                downloadToResumableTarget(conn, ((ResumableFileSystem)targetProvider).newUpload(target))
+            }
+            else {
+                try( InputStream in = checkedInputStream(conn, conn.getContentLengthLong()) ) {
+                    try( OutputStream out = Files.newOutputStream(target, StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING) ) {
+                        copyStream(in, out)
+                    }
                 }
             }
         }
         finally {
             ((HttpURLConnection)conn).disconnect()
+        }
+    }
+
+    /**
+     * Stream a download into a resumable (cloud) target, completing the upload on success and
+     * leaving it in-progress on a mid-stream failure so a later attempt can resume it.
+     */
+    private void downloadToResumableTarget(URLConnection conn, ResumableUpload upload) throws IOException {
+        try {
+            try( InputStream in = checkedInputStream(conn, conn.getContentLengthLong()) ) {
+                copyStream(in, upload.outputStream())
+            }
+            upload.complete()
+        }
+        catch( IOException e ) {
+            // mid-stream failure — leave the upload in-progress for a later retry
+            upload.abandon()
+            throw e
         }
     }
 

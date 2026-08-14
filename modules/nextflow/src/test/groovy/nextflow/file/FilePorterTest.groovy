@@ -18,6 +18,7 @@ package nextflow.file
 
 import java.nio.file.FileSystems
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.Semaphore
 
@@ -158,6 +159,50 @@ class FilePorterTest extends Specification {
     }
 
 
+    def 'should not retry a missing source file' () {
+        given:
+        def source = 'http://localhost:1234/file.txt' as Path
+        def folder = Files.createTempDirectory('test')
+        def target = folder.resolve('file.txt')
+
+        and:
+        def transfer = new NoSuchFileTransfer(source, target, 3)
+
+        when:
+        transfer.stageForeignFile(source, target)
+
+        then:
+        thrown(ProcessStageException)
+        transfer.attempts == 1
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+
+    def 'should abort an in-progress upload on terminal failure' () {
+        given:
+        def provider = Mock(ResumableFileSystem)
+        def upload = Mock(ResumableUpload)
+        def source = 'http://localhost:1234/file.txt' as Path
+        def folder = Files.createTempDirectory('test')
+        def target = folder.resolve('file.txt')
+
+        and:
+        def transfer = new FilePorter.FileTransfer(source, target, 3, Mock(Semaphore))
+
+        when:
+        transfer.abortResumableUpload(provider, target)
+
+        then:
+        1 * provider.resumeUpload(target) >> upload
+        1 * upload.abort()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+
     def 'should resume a partial download via the copyPath seam' () {
 
         given:
@@ -269,6 +314,21 @@ class FilePorterTest extends Specification {
             }
             target.text = 'complete'
             return target
+        }
+    }
+
+
+    static class NoSuchFileTransfer extends FilePorter.FileTransfer {
+        int attempts = 0
+
+        NoSuchFileTransfer(Path source, Path target, int maxRetries) {
+            super(source, target, maxRetries, new Semaphore(100))
+        }
+
+        @Override
+        Path copyForeignFile(Path source, Path target, boolean resume) {
+            attempts++
+            throw new NoSuchFileException(source.toString())
         }
     }
 

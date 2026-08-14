@@ -23,6 +23,7 @@ import java.nio.file.StandardCopyOption
 
 import com.github.tomakehurst.wiremock.junit.WireMockRule
 import nextflow.file.HttpCopyOption
+import nextflow.file.ResumableUpload
 import org.junit.Rule
 import spock.lang.IgnoreIf
 import spock.lang.Specification
@@ -469,5 +470,68 @@ class XFileSystemProviderTest extends Specification {
 
         cleanup:
         target?.delete()
+    }
+
+    def 'should resume a download into a resumable upload'() {
+        given:
+        def localhost = "http://localhost:${wireMockRule.port()}"
+        def REMAINING = 'KLMNOPQRST'
+
+        wireMockRule.stubFor(get(urlEqualTo('/file.txt'))
+            .withHeader('Range', equalTo('bytes=10-'))
+            .willReturn(aResponse()
+                .withStatus(206)
+                .withHeader('Content-Range', 'bytes 10-19/20')
+                .withHeader('Content-Length', '10')
+                .withBody(REMAINING)))
+
+        def provider = new HttpFileSystemProvider()
+        def source = provider.getPath(new URI("${localhost}/file.txt"))
+        def upload = Mock(ResumableUpload)
+        def output = new ByteArrayOutputStream()
+
+        when:
+        def resumed = provider.resumeToTarget(source, upload)
+
+        then:
+        1 * upload.committedBytes() >> 10
+        1 * upload.outputStream() >> output
+        1 * upload.complete()
+        0 * upload.abort()
+        0 * upload.abandon()
+
+        and:
+        resumed
+        output.toString() == REMAINING
+    }
+
+    def 'should abandon a resumable upload when the download fails mid-stream'() {
+        given:
+        def localhost = "http://localhost:${wireMockRule.port()}"
+
+        wireMockRule.stubFor(get(urlEqualTo('/file.txt'))
+            .withHeader('Range', equalTo('bytes=10-'))
+            .willReturn(aResponse()
+                .withStatus(206)
+                .withHeader('Content-Range', 'bytes 10-19/20')
+                .withHeader('Content-Length', '10')
+                .withBody('KLMNOPQRST')))
+
+        def provider = new HttpFileSystemProvider()
+        def source = provider.getPath(new URI("${localhost}/file.txt"))
+        def upload = Mock(ResumableUpload)
+        def failingOutput = new OutputStream() {
+            void write(int b) throws IOException { throw new IOException('boom') }
+        }
+
+        when:
+        provider.resumeToTarget(source, upload)
+
+        then:
+        1 * upload.committedBytes() >> 10
+        1 * upload.outputStream() >> failingOutput
+        1 * upload.abandon()
+        0 * upload.complete()
+        thrown(IOException)
     }
 }

@@ -335,7 +335,7 @@ class FilePorter {
                 }
                 catch( IOException e ) {
                     // check if a stage/download retry is allowed
-                    final retry = count < maxRetries && !Thread.currentThread().isInterrupted()
+                    final retry = count < maxRetries && recoverableError(e) && !Thread.currentThread().isInterrupted()
                     // resume a partial download (HTTP/HTTPS only), otherwise discard the
                     // partially downloaded file and start again from the beginning
                     resume = retry && canResumeDownload(filePath, stagePath)
@@ -352,6 +352,9 @@ class FilePorter {
                         continue
                     }
 
+                    final targetProvider = stagePath.fileSystem.provider()
+                    if( targetProvider instanceof ResumableFileSystem )
+                        abortResumableUpload((ResumableFileSystem)targetProvider, stagePath)
                     throw new ProcessStageException(fmtError(filePath,e), e)
                 }
             }
@@ -359,13 +362,39 @@ class FilePorter {
 
         @PackageScope
         boolean canResumeDownload(Path source, Path target) {
-            // a resume only makes sense for a partially downloaded HTTP(S) file written to a local
-            // target, where APPEND is supported
-            if( !Files.exists(target) || Files.size(target) == 0 )
+            if( source.toUri().scheme !in ['http', 'https'] )
                 return false
-            if( target.fileSystem != FileSystems.getDefault() )
+            // local target: resume a partial file
+            if( target.fileSystem == FileSystems.getDefault() )
+                return Files.exists(target) && Files.size(target) > 0
+            // cloud target: resume an in-progress upload
+            final provider = target.fileSystem.provider()
+            if( provider !instanceof ResumableFileSystem )
                 return false
-            return source.toUri().scheme in ['http', 'https']
+            try {
+                return ((ResumableFileSystem)provider).resumeUpload(target) != null
+            }
+            catch( IOException e ) {
+                log.debug "Unable to determine resume state for ${target.toUriString()}: ${e.message}"
+                return false
+            }
+        }
+
+        private boolean recoverableError(IOException e) {
+            return e !instanceof NoSuchFileException
+                && (e instanceof SocketTimeoutException || e !instanceof InterruptedIOException);
+        }
+
+        @PackageScope
+        void abortResumableUpload(ResumableFileSystem provider, Path target) {
+            try {
+                final upload = provider.resumeUpload(target)
+                if( upload != null )
+                    upload.abort()
+            }
+            catch( IOException e ) {
+                log.debug "Unable to abort in-progress upload for ${target.toUriString()}: ${e.message}"
+            }
         }
 
         private String fmtError(Path filePath, Exception e) {
