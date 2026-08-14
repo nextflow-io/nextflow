@@ -140,6 +140,65 @@ class TaskFileCollectorTest extends Specification {
 
     }
 
+    def 'should not collect the files left in the work dir by a hidden directory'() {
+
+        given:
+        // mimic a task work dir where Fusion has left its own metadata files under
+        // `<workDir>/.fusion/v1/<absolute path>/md.json` -- see issue #7480
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('sample/outs').mkdirs()
+        folder.resolve('sample/outs/real.txt').text = 'real output'
+        and:
+        folder.resolve('.fusion/v1/s3/bucket/work/ab/cdef/sample/outs').mkdirs()
+        folder.resolve('.fusion/v1/s3/bucket/work/ab/cdef/sample/outs/md.json').text = '{"internal":"metadata"}'
+        and:
+        def result
+
+        when: 'the pattern does not name the hidden directory'
+        result = fetchResultFiles('**/outs/**', folder)
+        then:
+        result == ['sample/outs/real.txt']
+
+        when: 'hidden files are explicitly requested'
+        result = fetchResultFiles('**/outs/**', folder, hidden: true)
+        then:
+        result == ['.fusion/v1/s3/bucket/work/ab/cdef/sample/outs/md.json', 'sample/outs/real.txt']
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
+    def 'should apply the dot rule per component for a pattern starting with a dot'() {
+
+        given:
+        // a dotted component authorises a hidden name where it appears and nowhere else,
+        // therefore `.config` is visited while `.secret` and `.dotleaf.txt` are not.
+        // bash 5.3 and zsh 5.9 return `.config/a/plain/y.txt` alone for this tree
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('.config/a/.secret').mkdirs()
+        folder.resolve('.config/a/plain').mkdirs()
+        folder.resolve('.config/a/.secret/x.txt').text = 'x'
+        folder.resolve('.config/a/plain/y.txt').text = 'y'
+        folder.resolve('.config/a/.dotleaf.txt').text = 'z'
+        and:
+        def result
+
+        when:
+        result = fetchResultFiles('.config/**/*.txt', folder)
+        then:
+        result == ['.config/a/plain/y.txt']
+
+        when: 'hidden files are explicitly requested'
+        result = fetchResultFiles('.config/**/*.txt', folder, hidden: true)
+        then:
+        result == ['.config/a/.dotleaf.txt', '.config/a/.secret/x.txt', '.config/a/plain/y.txt']
+
+        cleanup:
+        folder?.deleteDir()
+
+    }
+
     def defaultCollector(Map opts) {
         return new TaskFileCollector([], opts, Mock(TaskRun))
     }
@@ -154,7 +213,9 @@ class TaskFileCollectorTest extends Specification {
         then:
         collector.visitOptions('file.txt') == [type:'any', followLinks: true, maxDepth: null, hidden: false, relative: false]
         collector.visitOptions('path/**') == [type:'file', followLinks: true, maxDepth: null, hidden: false, relative: false]
-        collector.visitOptions('.hidden_file') == [type:'any', followLinks: true, maxDepth: null, hidden: true, relative: false]
+        // note: a dotted pattern no longer forces `hidden` here. The dot rule is applied by
+        // `FileHelper.visitFiles` per path component, see issue #7480
+        collector.visitOptions('.hidden_file') == [type:'any', followLinks: true, maxDepth: null, hidden: false, relative: false]
 
         when:
         collector = defaultCollector([type: 'dir'])

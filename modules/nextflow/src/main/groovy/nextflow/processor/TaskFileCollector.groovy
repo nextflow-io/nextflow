@@ -117,7 +117,11 @@ class TaskFileCollector {
     protected Map<String,?> visitOptions(String pattern) {
         return [
             relative: false,
-            hidden: opts.hidden ?: pattern.startsWith('.'),
+            // note: only the explicit `hidden` option is forwarded. The dot rule for the pattern
+            // itself is applied by `FileHelper.visitFiles` per path component, therefore deriving
+            // it here from `pattern.startsWith('.')` would turn a single dotted component into a
+            // tree-wide authorisation e.g. `.config/**/*.txt` would also collect `.config/a/.secret/x.txt`
+            hidden: opts.hidden as boolean,
             followLinks: opts.followLinks,
             maxDepth: opts.maxDepth,
             type: opts.type ? opts.type : ( pattern.contains('**') ? 'file' : 'any' )

@@ -57,7 +57,7 @@ When `true`, follows symbolic links when traversing a directory tree, otherwise 
 
 ###### `hidden`
 
-When `true`, matches hidden files when using a glob pattern (default: `false`).
+When `true`, matches hidden files and directories when using a glob pattern, without requiring the pattern to match the leading `.` explicitly (default: `false`).
 
 ###### `maxDepth`
 
@@ -144,7 +144,7 @@ channel.fromPath('data/**/*.fa')
 channel.fromPath('data/file_{1,2}.fq')
 ```
 
-By default, glob patterns do not match hidden files (i.e. files with names that start with `.`). Use a glob pattern that explicitly starts with `.` or set `hidden: true` to match hidden files:
+By default, glob patterns do not match hidden files and directories (i.e. names that start with `.`). As in Bash, the leading `.` must be matched explicitly by the corresponding component of the pattern, and hidden directories are not traversed unless a component of the pattern matches them. Alternatively, set `hidden: true` to match every hidden file and directory:
 
 ```nextflow
 // match hidden files in `data`
@@ -153,7 +153,12 @@ channel.fromPath('data/*', hidden: true)
 
 // match hidden files in `data` with `fa` extension
 channel.fromPath('data/.*.fa')
+
+// match `fa` files in any hidden `.cache` directory under `data`
+channel.fromPath('data/**/.cache/*.fa')
 ```
+
+Since the `.` is matched for each component separately, `data/*/*.fa` does not match `data/.cache/file.fa`, because the pattern says nothing about a hidden `.cache` directory.
 
 By default, glob patterns only match regular files, not directories. Use the `type` option to control whether to match files, directories, or both:
 
@@ -181,7 +186,7 @@ When `true`, interprets the characters `*`, `?`, `[]`, and `{}` as glob wildcard
 
 ###### `hidden`
 
-When `true`, matches hidden files when using a glob pattern (default: `false`).
+When `true`, matches hidden files and directories when using a glob pattern, without requiring the pattern to match the leading `.` explicitly (default: `false`).
 
 ###### `maxDepth`
 
