@@ -36,6 +36,10 @@ import nextflow.util.Duration
 @CompileStatic
 class HttpClientOpts implements ConfigScope {
 
+    static final Duration DEFAULT_CONNECT_TIMEOUT = Duration.of('10 sec')
+
+    static final Duration DEFAULT_REQUEST_TIMEOUT = Duration.of('45 sec')
+
     @ConfigOption
     @Description("""
         The maximum time to wait for a connection to the Seqera scheduler service to be
@@ -68,10 +72,10 @@ class HttpClientOpts implements ConfigScope {
         // back into the default
         requestTimeout = opts.requestTimeout != null
             ? opts.requestTimeout as Duration
-            : Duration.of('45 sec')
+            : DEFAULT_REQUEST_TIMEOUT
         connectTimeout = opts.connectTimeout != null
             ? opts.connectTimeout as Duration
-            : Duration.of('10 sec')
+            : DEFAULT_CONNECT_TIMEOUT
         // unlike requestTimeout, zero is not "unbounded" here — a connect phase that never
         // gives up is not a bound worth expressing, and sched-client rejects it. Catch it at
         // the config edge so the message names the option rather than surfacing from the
