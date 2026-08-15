@@ -836,14 +836,16 @@ class TaskRun implements Cloneable {
      * executor that allows them to be adjusted at schedule time uses this to detect the tasks
      * that would otherwise be given a value differing from the one baked into the command.
      *
-     * Note it is taken from the process body, not from the task, since the references are
-     * collected at compile time.
+     * The references are collected at compile time, from the process definition and from the
+     * dynamic directive values declared in the config file, e.g. the common idiom
+     * {@code process.ext.args = &#123; "-Xmx$&#123;task.memory.toGiga()&#125;g" &#125;}.
      *
      * @param directive The directive name e.g. {@code memory}
-     * @return {@code true} when the process references the given directive
+     * @return {@code true} when the given directive is referenced
      */
     boolean isDirectiveReferenced(String directive) {
         return processor?.getTaskBody()?.directiveRefs?.contains(directive)
+            || config?.isDirectiveReferenced(directive)
     }
 
     void resolve(BodyDef body)  {

@@ -25,12 +25,16 @@ import nextflow.config.ast.ConfigBlockNode;
 import nextflow.config.ast.ConfigIncludeNode;
 import nextflow.config.ast.ConfigNode;
 import nextflow.config.ast.ConfigVisitorSupport;
+import nextflow.script.control.DirectiveRefCollector;
 import org.codehaus.groovy.ast.VariableScope;
+import org.codehaus.groovy.ast.expr.ClosureExpression;
 import org.codehaus.groovy.ast.expr.Expression;
+import org.codehaus.groovy.ast.expr.MapExpression;
 import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.control.SourceUnit;
 
+import static nextflow.script.ast.ASTUtils.*;
 import static org.codehaus.groovy.ast.tools.GeneralUtils.*;
 
 /**
@@ -88,7 +92,38 @@ public class ConfigToGroovyVisitor extends ConfigVisitorSupport {
                 .map(name -> (Expression) constX(name))
                 .collect(Collectors.toList())
         );
-        return stmt(callThisX("assign", args(names, node.value)));
+        return stmt(callThisX("assign", args(names, transformDirectiveRefs(node.value))));
+    }
+
+    /**
+     * Attach to a dynamic directive value the names of the `task` directives that it
+     * references, so that they are available at runtime without evaluating the value.
+     *
+     * A config value can only reference `task` from within a closure, since `task` is not
+     * defined in the config scope, therefore only closures need to be wrapped. A map value
+     * (e.g. `ext = [args: {..}]`) is handled by transforming its entries in turn.
+     *
+     * @see nextflow.script.DirectiveRefsClosure
+     * @param node
+     */
+    private Expression transformDirectiveRefs(Expression node) {
+        if( node instanceof MapExpression me ) {
+            for( var entry : me.getMapEntryExpressions() )
+                entry.setValueExpression(transformDirectiveRefs(entry.getValueExpression()));
+            return me;
+        }
+
+        if( !(node instanceof ClosureExpression) )
+            return node;
+
+        var refs = DirectiveRefCollector.collect(node);
+        if( refs.isEmpty() )
+            return node;
+
+        var names = refs.stream()
+            .map(name -> (Expression) constX(name))
+            .collect(Collectors.toList());
+        return createX("nextflow.script.DirectiveRefsClosure", node, listX(names));
     }
 
     @Override

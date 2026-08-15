@@ -107,6 +107,46 @@ seqera {
 }
 ```
 
+#### Processes depending on `task.memory`
+
+When a prediction model is enabled the scheduler can allocate less memory than the task requested.
+The task script however is rendered *before* the task is scheduled, therefore a script referencing
+`task.memory` carries the memory that was *requested*, not the one that was allocated e.g.
+
+```groovy
+process FOO {
+    memory 8.GB
+
+    script:
+    """
+    java -Xmx${task.memory.toGiga()}g -jar app.jar
+    """
+}
+```
+
+Here `-Xmx8g` is baked into the command even when the scheduler allocates less, and the task fails
+with an out-of-memory error. To prevent this the executor submits the affected tasks with prediction
+model `none` and reports a warning.
+
+The references are collected at compile time from the process AST, so the check also covers the
+directives that are resolved independently of the task script, and the values defined in the config
+file — including the common `ext.args` idiom:
+
+```groovy
+process { withName: FOO { ext.args = { "-Xmx${task.memory.toGiga()}g" } } }
+```
+
+Set the `seqera/predictionModel` hint explicitly on the process to override this behaviour:
+
+```groovy
+process FOO {
+    hints 'seqera/predictionModel': 'qr/v1'
+}
+```
+
+Note that `task.cpus` is not subject to this check, and neither are the `template` files, whose
+content is only read at run time.
+
 ## Resources
 
 - [Seqera Platform Documentation](https://docs.seqera.io/)

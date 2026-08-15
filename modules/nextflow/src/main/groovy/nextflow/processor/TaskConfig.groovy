@@ -30,6 +30,7 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
 import nextflow.executor.res.DiskResource
+import nextflow.script.DirectiveRefsClosure
 import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
 import nextflow.util.CmdLineOptionMap
@@ -121,6 +122,46 @@ class TaskConfig extends LazyMap implements Cloneable {
             return result
 
         return eval0( result, path.subList(1,path.size()), key )
+    }
+
+    /**
+     * Report whether any dynamic directive value references the given {@code task} directive
+     * e.g. {@code ext.args = { "-Xmx${task.memory.toGiga()}g" }} references {@code memory}.
+     *
+     * The names are collected at compile time from the config AST and carried by the value
+     * itself, therefore the check does not evaluate any directive.
+     *
+     * @see nextflow.script.DirectiveRefsClosure
+     * @param directive The directive name e.g. {@code memory}
+     * @return {@code true} when a directive value references the given directive
+     */
+    boolean isDirectiveReferenced(String directive) {
+        return anyDirectiveRef(getTarget()?.values(), directive)
+    }
+
+    private static boolean anyDirectiveRef(Collection values, String directive) {
+        if( !values )
+            return false
+        for( Object value : values ) {
+            if( value instanceof DirectiveRefsClosure ) {
+                if( value.getDirectiveRefs().contains(directive) )
+                    return true
+            }
+            // `ext` is held as a nested lazy map, other directives may hold a plain map
+            else if( value instanceof LazyMap ) {
+                if( anyDirectiveRef(value.getTarget()?.values(), directive) )
+                    return true
+            }
+            else if( value instanceof Map ) {
+                if( anyDirectiveRef((value as Map).values(), directive) )
+                    return true
+            }
+            else if( value instanceof Collection ) {
+                if( anyDirectiveRef(value as Collection, directive) )
+                    return true
+            }
+        }
+        return false
     }
 
     def getProperty(String name) {
