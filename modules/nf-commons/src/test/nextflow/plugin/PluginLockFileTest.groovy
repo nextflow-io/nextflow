@@ -19,6 +19,7 @@ package nextflow.plugin
 import java.nio.file.Files
 import java.nio.file.Path
 
+import nextflow.exception.AbortOperationException
 import spock.lang.Specification
 
 /**
@@ -115,10 +116,48 @@ class PluginLockFileTest extends Specification {
         PluginLockFile.read(path)
 
         then:
-        thrown(IllegalStateException)
+        def e = thrown(AbortOperationException)
+        e.message.contains('malformed JSON')
 
         cleanup:
         Files.deleteIfExists(path)
+    }
+
+    def 'should throw for a lock file created by a newer version' () {
+        given:
+        def path = Files.createTempFile('plugins', '.lock')
+        path.text = '{ "version": 2, "plugins": {} }'
+
+        when:
+        PluginLockFile.read(path)
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('requires a newer version of Nextflow')
+
+        cleanup:
+        Files.deleteIfExists(path)
+    }
+
+    def 'should replace the target file leaving no temporary file behind' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def path = folder.resolve('plugins.lock')
+        path.text = '{ "version": 1, "plugins": { "nf-old@1.0.0": { "sha512": "sha512-old" } } }'
+
+        when:
+        final lock = new PluginLockFile()
+        lock.addEntry('nf-new@1.0.0', new PluginLockFile.Entry('sha512-new'))
+        lock.write(path)
+
+        then:
+        // the previous content is fully replaced and no leftover temp file remains
+        PluginLockFile.read(path).entries.keySet() == ['nf-new@1.0.0'] as Set
+        and:
+        Files.list(folder).collect { it.fileName.toString() } == ['plugins.lock']
+
+        cleanup:
+        folder?.deleteDir()
     }
 
     def 'should lookup an entry by id and version' () {

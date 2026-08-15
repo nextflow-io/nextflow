@@ -16,6 +16,8 @@
 
 package nextflow.plugin
 
+import static java.nio.file.StandardCopyOption.*
+
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -26,11 +28,12 @@ import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
 import groovy.util.logging.Slf4j
+import nextflow.exception.AbortOperationException
 
 /**
  * Model the {@code plugins.lock} file. It holds a format version number and a map
  * of plugin fully-qualified ids (ie. {@code id@version}) to the corresponding
- * {@link Entry} carrying the {@code sha512} checksum of the plugin archive.
+ * {@link Entry} carrying the {@code sha512} hash of the extracted plugin directory.
  *
  * The file is serialised as pretty-printed JSON with a stable (sorted) key order to
  * keep diffs deterministic.
@@ -112,13 +115,22 @@ class PluginLockFile {
     }
 
     /**
-     * Serialise this lock file as pretty-printed JSON with a stable key order.
+     * Serialise this lock file as pretty-printed JSON with a stable key order. The content is
+     * written to a sibling temporary file and moved in place, so that a concurrent reader either
+     * sees the previous content or the new one, but never a truncated file.
      *
      * @param path The target file path
      */
     void write(Path path) {
         final json = gson0().toJson(toModel())
-        Files.write(path, json.getBytes('UTF-8'))
+        final temp = Files.createTempFile(path.parent ?: Path.of('.'), 'plugins', '.lock.tmp')
+        try {
+            Files.write(temp, json.getBytes('UTF-8'))
+            Files.move(temp, path, ATOMIC_MOVE, REPLACE_EXISTING)
+        }
+        finally {
+            Files.deleteIfExists(temp)
+        }
     }
 
     private Map<String,Object> toModel() {
@@ -139,7 +151,8 @@ class PluginLockFile {
      *
      * @param path The lock file path
      * @return A {@link PluginLockFile}; an empty (dormant) instance when the file does not exist
-     * @throws IllegalStateException when the file content cannot be parsed
+     * @throws AbortOperationException when the file content cannot be parsed or was written by a
+     *         newer Nextflow version
      */
     static PluginLockFile read(Path path) {
         if( path == null || !Files.exists(path) ) {
@@ -151,19 +164,23 @@ class PluginLockFile {
         // a blank or freshly `touch`ed file is a valid, empty lock (bootstrap case)
         if( !text.trim() )
             return new PluginLockFile()
+        final ModelBean model
         try {
-            final model = gson0().fromJson(text, ModelBean)
-            if( model == null )
-                throw new IllegalStateException("Invalid plugins lock file - empty content: $path")
-            final result = new PluginLockFile()
-            result.version = model.version
-            if( model.plugins )
-                result.plugins.putAll(model.plugins)
-            return result
+            model = gson0().fromJson(text, ModelBean)
         }
         catch( JsonSyntaxException e ) {
-            throw new IllegalStateException("Invalid plugins lock file - malformed JSON: $path", e)
+            throw new AbortOperationException("Invalid plugins lock file - malformed JSON: $path\n- fix or delete the file and run again to re-create it", e)
         }
+        if( model == null )
+            throw new AbortOperationException("Invalid plugins lock file - empty content: $path\n- fix or delete the file and run again to re-create it")
+        if( model.version > CURRENT_VERSION )
+            throw new AbortOperationException("Plugins lock file version ${model.version} is not supported: $path\n- it requires a newer version of Nextflow")
+        final result = new PluginLockFile()
+        if( model.version > 0 )
+            result.version = model.version
+        if( model.plugins )
+            result.plugins.putAll(model.plugins)
+        return result
     }
 
     /**

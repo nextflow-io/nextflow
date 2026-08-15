@@ -95,6 +95,21 @@ class PluginLockVerifierTest extends Specification {
         [a, b, c].each { it.deleteDir() }
     }
 
+    def 'sha512Tree should skip non-regular files' () {
+        given:
+        def dir = pluginDir(['classes/A.class': 'aaa'])
+        final expected = PluginLockVerifier.sha512Tree(dir)
+        and:
+        // a symlink to a directory cannot be read as a byte stream: it must be skipped
+        Files.createSymbolicLink(dir.resolve('link'), dir.resolve('classes'))
+
+        expect:
+        PluginLockVerifier.sha512Tree(dir) == expected
+
+        cleanup:
+        dir.deleteDir()
+    }
+
     // ---------------------------------------------------------------------------
     // dormant / enabled
 
@@ -107,6 +122,9 @@ class PluginLockVerifierTest extends Specification {
 
         expect:
         !verifier.isEnabled()
+        and:
+        // no lock file location at all ie. the plugin system was never given a project dir
+        !new PluginLockVerifier(null).isEnabled()
 
         when:
         verifier.verify('nf-foo@1.0.0', dir)
@@ -227,13 +245,66 @@ class PluginLockVerifierTest extends Specification {
         Files.deleteIfExists(lockPath)
     }
 
-    def 'off mode should ignore a mismatch' () {
+    def 'off mode should disable the verifier altogether' () {
         given:
         SysEnv.push([NXF_PLUGINS_LOCK_MODE: 'off'])
         and:
         def dir = pluginDir(['classes/A.class': 'poisoned'])
         def lockPath = lockFileWith(['nf-foo@1.0.0': 'deadbeef'])
         def verifier = new PluginLockVerifier(lockPath)
+        final before = lockPath.text
+
+        expect:
+        !verifier.isEnabled()
+
+        when:
+        // both a mismatch and an unlocked coordinate are no-ops
+        verifier.verify('nf-foo@1.0.0', dir)
+        verifier.verify('nf-bar@1.0.0', dir)
+
+        then:
+        noExceptionThrown()
+        and:
+        // nothing was pinned ie. the user working tree is left untouched
+        lockPath.text == before
+
+        cleanup:
+        SysEnv.pop()
+        dir.deleteDir()
+        Files.deleteIfExists(lockPath)
+    }
+
+    def 'off mode should not even read a malformed lock file' () {
+        given:
+        SysEnv.push([NXF_PLUGINS_LOCK_MODE: 'off'])
+        and:
+        def lockPath = Files.createTempFile('plugins', '.lock')
+        lockPath.text = '{ this is not valid json ]'
+
+        when:
+        def verifier = new PluginLockVerifier(lockPath)
+
+        then:
+        noExceptionThrown()
+        !verifier.isEnabled()
+
+        cleanup:
+        SysEnv.pop()
+        Files.deleteIfExists(lockPath)
+    }
+
+    def 'should warn instead of aborting when the lock file cannot be written' () {
+        given:
+        SysEnv.push([NXF_PLUGINS_LOCK_MODE: 'strict'])
+        and:
+        def dir = pluginDir(['classes/A.class': 'hello'])
+        def folder = Files.createTempDirectory('test')
+        def lockPath = folder.resolve('plugins.lock')
+        lockPath.text = ''
+        def verifier = new PluginLockVerifier(lockPath)
+        and:
+        // make the lock file location unwritable after the verifier has been created
+        folder.deleteDir()
 
         when:
         verifier.verify('nf-foo@1.0.0', dir)
@@ -244,7 +315,7 @@ class PluginLockVerifierTest extends Specification {
         cleanup:
         SysEnv.pop()
         dir.deleteDir()
-        Files.deleteIfExists(lockPath)
+        folder?.deleteDir()
     }
 
     def 'should catch cache poisoning regardless of directory ownership' () {

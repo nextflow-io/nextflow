@@ -46,7 +46,7 @@ import nextflow.exception.AbortOperationException
  * <ul>
  *   <li>{@code strict} - abort with an {@link AbortOperationException}</li>
  *   <li>{@code warn} (default) - log a warning once per coordinate and proceed</li>
- *   <li>{@code off} - skip verification silently</li>
+ *   <li>{@code off} - disable the feature altogether ie. no hashing, no pinning, no reporting</li>
  * </ul>
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -67,12 +67,15 @@ class PluginLockVerifier {
 
     /**
      * @param lockPath The {@code plugins.lock} path; the feature is enabled only when this file
-     *        exists. A {@code null} or missing path leaves the verifier dormant.
+     *        exists. A {@code null} or missing path leaves the verifier dormant, and so does
+     *        {@code NXF_PLUGINS_LOCK_MODE=off}.
      */
     PluginLockVerifier(Path lockPath) {
         this.lockPath = lockPath
-        this.enabled = lockPath != null && Files.exists(lockPath)
-        this.lock = PluginLockFile.read(lockPath)
+        // `off` is a complete escape hatch: the lock file is not even read, so a run can always
+        // be unblocked without deleting a file committed in the pipeline repository
+        this.enabled = lockPath != null && Files.exists(lockPath) && getMode() != Mode.OFF
+        this.lock = enabled ? PluginLockFile.read(lockPath) : new PluginLockFile()
     }
 
     /**
@@ -128,31 +131,32 @@ class PluginLockVerifier {
             return
 
         // mismatch: the extracted plugin differs from what the lock pinned
+        // note: `off` is handled upfront by the `enabled` flag, so only strict/warn get here
         final reason = "Plugin '$fqid' does not match the plugins lock file\n- expected: ${entry.sha512}\n- actual  : ${actual}"
-        switch( getMode() ) {
-            case Mode.OFF:
-                log.debug "Plugins lock verification failed (ignored, mode=off) - $reason"
-                break
-            case Mode.STRICT:
-                throw new AbortOperationException("$reason\n- delete the entry from the plugins lock file and re-run to re-pin, or restore the expected plugin")
-            case Mode.WARN:
-                // warn only once per coordinate to avoid log spam
-                if( notified.add(fqid) )
-                    log.warn "$reason\n- delete the entry from the plugins lock file and re-run to re-pin"
-                break
-        }
+        if( getMode() == Mode.STRICT )
+            throw new AbortOperationException("$reason\n- delete the entry from the plugins lock file and re-run to re-pin, or restore the expected plugin")
+        // warn only once per coordinate to avoid log spam
+        if( notified.add(fqid) )
+            log.warn "$reason\n- delete the entry from the plugins lock file and re-run to re-pin"
     }
 
     /**
      * Append a new entry to the lock and persist it (trust-on-first-use). Existing entries are
      * never overwritten by this path — {@link #verify} routes an already-locked coordinate through
      * the hash comparison instead.
+     *
+     * Failing to persist the pin is not an integrity problem, therefore it is reported as a
+     * warning instead of aborting the run eg. when the lock file lives in a read-only checkout.
      */
     private synchronized void pin(String fqid, String sha512) {
         lock.addEntry(fqid, new PluginLockFile.Entry(sha512))
-        if( lockPath != null )
+        try {
             lock.write(lockPath)
-        log.info "Added plugin '$fqid' to the plugins lock file"
+            log.info "Added plugin '$fqid' to the plugins lock file"
+        }
+        catch( Exception e ) {
+            log.warn "Unable to add plugin '$fqid' to the plugins lock file: $lockPath - cause: ${e.message ?: e}"
+        }
     }
 
     /**
@@ -171,7 +175,10 @@ class PluginLockVerifier {
         Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
             @Override
             FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                files.put(dir.relativize(file).toString().replace('\\', '/'), file)
+                // only regular files are hashed; symlinks and other special entries are skipped
+                // because they cannot be read as a byte stream in a portable way
+                if( attrs.isRegularFile() )
+                    files.put(dir.relativize(file).toString().replace('\\', '/'), file)
                 return FileVisitResult.CONTINUE
             }
         })

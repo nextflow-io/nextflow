@@ -47,6 +47,8 @@ class PluginsFacade implements PluginStateListener {
 
     final static String NEXTFLOW_PLUGINS_REPO = 'https://registry.nextflow.io/api'
 
+    final static String PLUGINS_LOCK_FILE_NAME = 'plugins.lock'
+
     private static final String DEV_MODE = 'dev'
     private static final String PROD_MODE = 'prod'
     private Map<String,String> env = SysEnv.get()
@@ -301,6 +303,17 @@ class PluginsFacade implements PluginStateListener {
             manager.startPlugins()
             this.embedded = embedded
         }
+    }
+
+    /**
+     * Set the directory holding the {@code plugins.lock} file used to verify plugins against
+     * their pinned hash. It is expected to be the pipeline project directory, so that the lock
+     * file can be committed along with the pipeline code.
+     *
+     * @param projectDir The pipeline project directory
+     */
+    void setLockFileDir(Path projectDir) {
+        updater?.setLockFile(projectDir?.resolve(PLUGINS_LOCK_FILE_NAME))
     }
 
     void load(Map config) {

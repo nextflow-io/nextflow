@@ -57,28 +57,47 @@ Plugin declarations in Nextflow configuration files are ignored when specifying 
 When Nextflow downloads plugins, it caches them in the directory specified by `NXF_PLUGINS_DIR` (`$HOME/.nextflow/plugins` by default).
 
 :::note
-The plugin cache is shared across pipelines and is not access-controlled. On multi-tenant or shared systems, use a private cache directory per user (set `NXF_PLUGINS_DIR` to a location only you can write) to avoid loading plugin artifacts populated by another user.
+The plugin cache is shared across pipelines and has no access controls. On multi-tenant or shared systems, set `NXF_PLUGINS_DIR` to a directory only you can write to. This prevents Nextflow from loading plugin artifacts populated by other users.
 :::
 
 ### Lockfile
 
 <AddedInVersion version="26.07" />
 
-A `plugins.lock` file pins the exact plugin code a pipeline expects. For each plugin it records a `sha512` hash of the **extracted plugin directory** — the code Nextflow actually loads and runs — keyed by `id@version`. The file is meant to be committed to the pipeline repository so that everyone running the pipeline executes the same plugin code.
+A `plugins.lock` file pins the exact plugin code a pipeline expects. For each plugin, it records the `sha512` hash of the **extracted plugin directory** — the code Nextflow loads and runs — keyed by `id@version`. Commit the file to the pipeline repository so that everyone who runs the pipeline executes the same plugin code.
 
-The lockfile is populated automatically, like `go.sum` or `package-lock.json` — there is no separate command. To enable it, create an empty file in the pipeline directory and run the pipeline once:
+Nextflow resolves `plugins.lock` from the pipeline project directory, that is, the directory that contains the main script. For a pipeline pulled from a Git repository, this is its local clone under `$NXF_HOME/assets`, not the directory you launched the run from.
 
-```bash
-touch plugins.lock
-```
+To enable the lockfile:
 
-The first time each plugin is loaded, its hash is added to `plugins.lock`. Review the resulting file and commit it. On subsequent runs Nextflow re-hashes each plugin's extracted directory and verifies it against the committed hash. When no `plugins.lock` file is present, the feature is dormant and has no effect.
+1. Create an empty `plugins.lock` file in the pipeline project directory:
 
-Verification is fully offline — it re-hashes the files already in the local cache and never contacts the plugin registry. Because it hashes the extracted code rather than the download, it detects both a tampered or compromised download and a plugin directory that was modified after extraction (for example by another user on a shared cache), independently of file ownership or permissions. An existing entry is never rewritten automatically — if a plugin legitimately changes, delete its entry and run again to re-pin it.
+   ```bash
+   touch plugins.lock
+   ```
 
-Use [`NXF_PLUGINS_LOCK_MODE`][using-plugins-env-vars] to control what happens on a mismatch: `warn` (default) logs a warning and continues, `strict` aborts the run, and `off` skips verification.
+2. Run the pipeline once. The first time each plugin is loaded, Nextflow adds the hash of its extracted directory to `plugins.lock`.
+3. Review the resulting file and commit it.
 
-The lockfile complements the private-cache guidance above: keeping the cache private prevents untrusted code from being written in the first place, while the lockfile detects any change to the plugin code that is actually loaded.
+On later runs, Nextflow re-hashes each plugin's extracted directory and verifies it against the committed hash. Without a `plugins.lock` file, the feature does nothing.
+
+Verification runs offline. Nextflow re-hashes the files already in the local cache and never contacts the plugin registry. Because it hashes the extracted code rather than the download, it detects both a tampered or compromised download and a plugin directory that was modified after extraction, for example by another user on a shared cache, regardless of file ownership or permissions.
+
+Nextflow never rewrites an existing entry. If a plugin changes legitimately, delete its entry and run the pipeline again to re-pin it. Entries are never removed automatically either, so a lockfile accumulates an entry for every plugin version it has seen, including versions left behind by Nextflow upgrades. Remove stale entries yourself.
+
+Use [`NXF_PLUGINS_LOCK_MODE`][using-plugins-env-vars] to control what happens when a hash does not match:
+
+| Mode             | Behavior                                     |
+| ---------------- | -------------------------------------------- |
+| `warn` (default) | Logs a warning once per plugin and continues. |
+| `strict`         | Aborts the run.                               |
+| `off`            | Disables the lockfile entirely.               |
+
+:::note
+The lockfile covers plugins that Nextflow resolves from a plugin registry. It does not apply to plugins resolved from the development classpath (`NXF_PLUGINS_MODE=dev`) or embedded in an application that uses Nextflow as a library.
+:::
+
+The lockfile does not replace a private cache directory. A private cache prevents Nextflow from loading untrusted artifacts in the first place. The lockfile confirms only that the code it loads matches what the pipeline pinned.
 
 ## Offline usage
 

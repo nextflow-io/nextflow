@@ -20,7 +20,6 @@ import static java.nio.file.StandardCopyOption.*
 
 import java.nio.file.Files
 import java.nio.file.Path
-import java.nio.file.Paths
 import java.util.regex.Pattern
 
 import com.github.zafarkhaja.semver.Version
@@ -73,6 +72,8 @@ class PluginUpdater extends UpdateManager {
     private boolean registryReposApplied
 
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
+
+    private Path lockFile
 
     private PluginLockVerifier lockVerifier
 
@@ -361,11 +362,17 @@ class PluginUpdater extends UpdateManager {
     }
 
     /**
-     * The {@code plugins.lock} file location used to verify plugins against their pinned hash.
-     * Defaults to a {@code plugins.lock} file in the current working directory.
+     * Set the {@code plugins.lock} file used to verify plugins against their pinned hash. It is
+     * expected to be the pipeline project directory ie. the directory holding the main script,
+     * so that the lock file can be committed along with the pipeline code. When unset, plugin
+     * verification is dormant.
+     *
+     * @param path The {@code plugins.lock} file path
      */
-    protected Path lockFilePath() {
-        return Paths.get('plugins.lock')
+    synchronized void setLockFile(Path path) {
+        this.lockFile = path
+        // discard any verifier created against the previous location
+        this.lockVerifier = null
     }
 
     /**
@@ -373,7 +380,7 @@ class PluginUpdater extends UpdateManager {
      */
     protected synchronized PluginLockVerifier getLockVerifier() {
         if( lockVerifier == null )
-            lockVerifier = new PluginLockVerifier(lockFilePath())
+            lockVerifier = new PluginLockVerifier(lockFile)
         return lockVerifier
     }
 

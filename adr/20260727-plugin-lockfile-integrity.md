@@ -1,6 +1,6 @@
 # Plugin Lockfile Integrity
 
-- Authors: Claude <noreply@anthropic.com>
+- Authors: Paolo Di Tommaso <paolo.ditommaso@gmail.com>
 - Status: draft
 - Date: 2026-07-27
 - Tags: plugins, security, registry, integrity
@@ -84,7 +84,8 @@ The first pin of each coordinate is **trust-on-first-use**: it trusts the tree p
 
 ### Lockfile format and location
 
-- **File name**: `plugins.lock`, in the pipeline project root next to `nextflow.config`, committed to VCS.
+- **File name**: `plugins.lock`, in the pipeline project root next to `nextflow.config`, committed to VCS. The project directory is the one holding the main script — for a pipeline pulled from a Git repository, its local clone under `$NXF_HOME/assets` — and is wired into the plugin system by `CmdRun` once the script has been resolved. Not the launch directory, so that a lockfile committed by one pipeline can never be applied to another.
+- **Concurrency**: the file is rewritten via a sibling temp file plus an atomic move, so that a concurrent reader never observes a truncated file. Two runs pinning the same missing coordinate concurrently is last-writer-wins, which is self-healing on the next run.
 - **Format**: JSON, chosen for diff-friendliness under code review, with a stable (sorted) key order.
 - **Keying**: by resolved `id@version`.
 
@@ -143,9 +144,9 @@ This keeps steady-state launches on a private cache nearly free, runs the full h
 |------|-----------------------------------|------------------------------|
 | `strict` | **Abort** with a re-pin hint | Auto-pin (trust-on-first-use) |
 | `warn` (default when the file is present) | Log a warning once and proceed | Auto-pin |
-| `off` | Skip verification | Auto-pin |
+| `off` | Feature disabled — no hashing, no pinning, no reporting | — |
 
-Mode gates only the **mismatch** outcome. A coordinate missing from the lock is auto-pinned, not gated. Default is `warn` for a friendly rollout; `strict` is opt-in for teams that want a fail-closed guarantee. Unlike a directory-ownership guard, **either default is silent in normal operation** — a mismatch is a real, rare, actionable event, not per-run noise on healthy caches.
+In `strict` and `warn` the mode gates only the **mismatch** outcome: a coordinate missing from the lock is auto-pinned, not gated. `off` is a complete escape hatch — the lock file is not even read — so that a run can always be unblocked without deleting a file committed in the pipeline repository. Default is `warn` for a friendly rollout; `strict` is opt-in for teams that want a fail-closed guarantee. Unlike a directory-ownership guard, **either default is silent in normal operation** — a mismatch is a real, rare, actionable event, not per-run noise on healthy caches.
 
 ### Relationship to PR #7308
 
@@ -163,11 +164,12 @@ PR #7308 proposed a `PluginSecurity` directory guard that flags a plugin directo
 
 ## Testing
 
-- **`PluginLockFile`**: read, write, round-trip; blank/`touch`ed file parses as empty; malformed file throws.
+- **`PluginLockFile`**: read, write, round-trip; blank/`touch`ed file parses as empty; malformed file and a future format version abort with an `AbortOperationException`; writes are atomic.
 - **`sha512Tree`**: identical trees in different locations hash equal; any file-content change changes the hash; output is a 128-char lowercase hex digest.
 - **Auto-pin (TOFU)**: an enabled but empty lock, given an extracted directory for an unlocked coordinate, appends the tree hash to the file on disk; a dormant (no file) verifier never pins.
 - **Verification**:
   - matching tree passes;
-  - mismatch **aborts** in `strict`, **warns once** in `warn`, is **ignored** in `off`;
+  - mismatch **aborts** in `strict`, **warns once** in `warn`, and `off` leaves the verifier dormant;
+  - a lock file that cannot be written (eg. a read-only checkout) warns instead of aborting the run;
   - **cache poisoning**: pinning a good tree then editing an extracted file in place is detected as a mismatch — regardless of directory ownership.
 - **No-network guarantee**: verification and pinning operate purely on local files; no branch re-fetches from the registry.
