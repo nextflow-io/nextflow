@@ -126,10 +126,19 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     /**
      * Maps the configured request timeout onto the client setting. The timeout bounds a
-     * single attempt: a timed-out read raises an {@code IOException} that the configured
-     * retry policy absorbs, so the {@code Task monitor} thread recovers on the next poll
-     * cycle instead of blocking on a stalled Scheduler. Task submissions are never
-     * re-sent by the client, so a bounded submit fails rather than duplicating tasks.
+     * single attempt, and what it bounds overall depends on the request.
+     * <p>
+     * A stalled poll or cancel is idempotent, so the client re-sends it: the timeout raises
+     * an {@code IOException} the configured retry policy absorbs, and the task is retried
+     * rather than failed out of {@code checkAllTasks()}. The cost is that the retries run on
+     * the {@code Task monitor} thread, so a Scheduler stalled on every attempt holds that
+     * thread for up to {@code requestTimeout × retryPolicy.maxAttempts} plus the accumulated
+     * backoff — bounded, where before it was not, but far from free. Lower this value (or
+     * {@code retryPolicy.maxAttempts}) to tighten it.
+     * <p>
+     * A stalled task submission is not re-sent — the Scheduler mints fresh task ids per
+     * delivery, so a re-sent batch would create a second set nothing polls or cancels — and
+     * is therefore bounded at a single timeout however many attempts remain.
      * <p>
      * A zero (or absent) duration means "wait indefinitely" — the client default.
      *
@@ -137,7 +146,8 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
      * @return the equivalent {@code java.time.Duration}, or null when unbounded
      */
     protected static java.time.Duration requestTimeoutOf(Duration value) {
-        return value?.toMillis() ? java.time.Duration.ofMillis(value.toMillis()) : null
+        final long millis = value != null ? value.toMillis() : 0
+        return millis > 0 ? java.time.Duration.ofMillis(millis) : null
     }
 
     protected void createRun() {

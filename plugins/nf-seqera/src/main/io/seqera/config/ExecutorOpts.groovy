@@ -84,9 +84,9 @@ class ExecutorOpts implements ConfigScope {
     @ConfigOption
     @Description("""
         The maximum time to wait for a response from the Seqera scheduler service, applied
-        to each attempt (default: `45 sec`). A timed-out request is retried according to
-        `seqera.executor.retryPolicy`, except for task submissions, which are never
-        re-sent. Set to `0 sec` to wait indefinitely.
+        to each attempt (default: `45 sec`). A timed-out poll or cancel is retried according
+        to `seqera.executor.retryPolicy`; a timed-out task submission is not re-sent, since
+        the scheduler may already be creating the tasks. Set to `0 sec` to wait indefinitely.
     """)
     final Duration requestTimeout
 

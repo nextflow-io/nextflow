@@ -45,6 +45,10 @@ The compute backend provider type (e.g. `'aws'`, `'local'`). When specified, use
 
 The cloud region for task execution.
 
+##### `seqera.executor.requestTimeout`
+
+The maximum time to wait for a response from the Seqera scheduler service, applied to each attempt (default: `'45 sec'`). A timed-out poll or cancel is retried according to `seqera.executor.retryPolicy`; a timed-out task submission is not re-sent, since the scheduler may already be creating the tasks. Set to `'0 sec'` to wait indefinitely.
+
 ##### `seqera.executor.shellEnabled`
 
 When `true`, enables on-demand interactive shell access (e.g. SSH) to the run's task containers for the VM and local backends (default: `false`). A running task can then be reached with `sched task ssh <task-id>` (or a plain `ssh <task-id>@<scheduler>`), and the connection survives task completion.
