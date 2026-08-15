@@ -70,8 +70,10 @@ dependencies {
     testImplementation "org.apache.groovy:groovy:4.0.33"
     testImplementation "org.apache.groovy:groovy-nio:4.0.33"
     testImplementation "org.apache.groovy:groovy-json:4.0.33"
-    // wiremock required by TowerFusionEnvTest
-    testImplementation "org.wiremock:wiremock:3.13.2"
+    // wiremock required by TowerFusionEnvTest; the self-contained distribution shades its
+    // own dependencies and therefore keeps jetty, handlebars and httpcomponents off the
+    // test classpath (same approach already used by nextflow, nf-commons and nf-httpfs)
+    testImplementation ('org.wiremock:wiremock-standalone:3.13.2') { exclude module: 'groovy-all' }
     // Address security vulnerabilities CVE-2022-45688 and CVE-2023-5072
     testImplementation 'org.json:json:20240303'
 }
