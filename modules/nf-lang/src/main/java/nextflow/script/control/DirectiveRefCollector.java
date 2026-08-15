@@ -45,6 +45,11 @@ public class DirectiveRefCollector extends CodeVisitorSupport {
     /**
      * The process directive names, used to tell apart the `task` properties that are
      * directives (e.g. `task.memory`) from the ones that are not (e.g. `task.attempt`).
+     *
+     * Taken from the DSL declaration rather than hard-coded, so that a directive added to
+     * the language is picked up here without a second place to update. `DirectiveDsl` is an
+     * interface whose every method *is* a directive, and `getMethods()` on an interface does
+     * not report the `Object` methods, so the set needs no further filtering.
      */
     private static final Set<String> DIRECTIVE_NAMES = Arrays.stream(ProcessDsl.DirectiveDsl.class.getMethods())
         .map(Method::getName)
@@ -81,10 +86,16 @@ public class DirectiveRefCollector extends CodeVisitorSupport {
      * access, e.g. `memory` for the `task.memory` in `task.memory.toGiga()`, or `ext`
      * for the `task.ext` in `task.ext.args`.
      *
-     * Note the `task` object also exposes task properties that are not directives e.g.
-     * `task.attempt`, which are not reported.
+     * Note the `task` object mixes both worlds -- it is documented as the "map of task
+     * properties, including directive values" -- so `task.attempt`, `task.name` and the
+     * other task properties reach this method too, and are rejected by the name check.
      */
     private static String directiveRef(PropertyExpression node) {
+        // Only a property read directly off the `task` variable is a directive reference.
+        // A nested access such as the `task.ext.args` in a script reaches this method twice:
+        // once for the outer `<task.ext>.args`, whose object is itself a property expression
+        // and is skipped here, and once for the inner `task.ext`, which is what gets
+        // reported. Reporting the innermost name is what we want -- `ext` is the directive.
         if( !(node.getObjectExpression() instanceof VariableExpression ve) )
             return null;
         if( !"task".equals(ve.getName()) )

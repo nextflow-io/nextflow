@@ -99,6 +99,8 @@ public class ProcessToGroovyVisitorV2 {
                     constX(sgh.getSourceText(node.exec)),
                     constX(node.type),
                     sgh.getVariableRefs(node.exec),
+                    // note the directives are traversed as well as the script, since a value
+                    // such as `ext` can pull a directive into the rendered command in turn
                     sgh.getDirectiveRefs(node.directives, node.exec, node.stub)
                 )
             ))

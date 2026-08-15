@@ -828,18 +828,34 @@ class TaskRun implements Cloneable {
      * executor that allows them to be adjusted at schedule time uses this to detect the tasks
      * that would otherwise be given a value differing from the one baked into the command.
      *
-     * The references are collected at compile time, from the process definition and from the
-     * dynamic directive values declared in the config file, e.g. the common idiom
-     * {@code process.ext.args = &#123; "-Xmx$&#123;task.memory.toGiga()&#125;g" &#125;}.
+     * A reference can enter the task from three places, none of which sees the other two,
+     * hence the union below:
+     *
+     * <ol>
+     * <li>the process definition -- collected from the AST when the process is compiled;
+     * <li>the config file -- collected from the config AST, since a dynamic directive value
+     *     is a closure and closures carry no source text at runtime;
+     * <li>a {@code shell} block or a {@code template} file -- these are rendered by the
+     *     template engine rather than compiled, so they appear in neither AST.
+     * </ol>
+     *
+     * Note this reports a *static* reference: the directive is known to be mentioned, not
+     * known to have been evaluated. That errs on the safe side for the intended use, since a
+     * missed reference silently reinstates the very problem the check exists to prevent.
      *
      * @param directive The directive name e.g. {@code memory}
      * @return {@code true} when the given directive is referenced
      */
     boolean isDirectiveReferenced(String directive) {
+        // (1) the process script, stub and directives -- note it is taken from the process
+        // body rather than from this task, since the references are shared by every task
         return processor?.getTaskBody()?.directiveRefs?.contains(directive)
+        // (2) the dynamic directive values declared in the config file, e.g. the common
+        // idiom `process.ext.args = { "-Xmx${task.memory.toGiga()}g" }`
             || config?.isDirectiveReferenced(directive)
-            // a `shell` block and a `template` file are rendered by the template engine,
-            // hence their references are not in the process AST -- see #renderTemplate
+        // (3) a `shell` block or a `template` file. The template engine records the names it
+        // interpolated, in the dotted form `task.memory` -- the same source the task hasher
+        // uses to pick up `task.ext.*` references. See #renderScript and #renderTemplate
             || templateVars?.contains("task.${directive}".toString())
     }
 

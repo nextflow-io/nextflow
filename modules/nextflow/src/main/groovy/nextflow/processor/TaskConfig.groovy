@@ -136,13 +136,20 @@ class TaskConfig extends LazyMap implements Cloneable {
      * @return {@code true} when a directive value references the given directive
      */
     boolean isDirectiveReferenced(String directive) {
+        // note the *raw* values are inspected, so that no directive is resolved as a side
+        // effect of the check -- resolving `ext.args` here would evaluate its closure early
         final entries = getTarget()?.entrySet()
         if( !entries )
             return false
         for( Map.Entry entry : entries ) {
-            // the config selector blocks e.g. `withName:FOO` are copied verbatim into the
-            // process config, therefore they may hold the directives of *other* processes
-            // and must not be inspected -- see ProcessConfigBuilder#applyConfigDefaults
+            // Skip the config selector blocks. `ProcessConfigBuilder#applyConfigDefaults`
+            // copies *every* key of the `process` config scope into each process config,
+            // including the `withName:`/`withLabel:` blocks that were not applied to it.
+            // Those blocks hold the directives of *other* processes, so inspecting them
+            // would report a reference for every process in the pipeline as soon as a single
+            // selector uses a dynamic directive -- which is the norm in nf-core pipelines.
+            // A selector that *does* match is merged into the top-level directives by then,
+            // so true positives are unaffected.
             if( isSelector(entry.key) )
                 continue
             if( anyDirectiveRef(Collections.singleton(entry.value), directive) )
@@ -155,23 +162,32 @@ class TaskConfig extends LazyMap implements Cloneable {
         return key instanceof String && (key.startsWith('withName:') || key.startsWith('withLabel:'))
     }
 
+    /**
+     * Walk the given raw directive values looking for one that declares a reference to the
+     * given directive. The values are nested in several shapes, hence the recursion.
+     */
     private static boolean anyDirectiveRef(Collection values, String directive) {
         if( !values )
             return false
         for( Object value : values ) {
+            // the marker attached at compile time by ConfigToGroovyVisitor -- the only place
+            // where a reference is actually recorded, every other branch is a container
             if( value instanceof DirectiveRefsClosure ) {
                 if( value.getDirectiveRefs().contains(directive) )
                     return true
             }
-            // `ext` is held as a nested lazy map, other directives may hold a plain map
+            // `ext` is re-wrapped as a nested lazy map on put, so its entries are one level
+            // down and must be taken from the target to avoid resolving them -- see #put
             else if( value instanceof LazyMap ) {
                 if( anyDirectiveRef(value.getTarget()?.values(), directive) )
                     return true
             }
+            // a directive declared with named parameters e.g. `publishDir path: {..}`
             else if( value instanceof Map ) {
                 if( anyDirectiveRef((value as Map).values(), directive) )
                     return true
             }
+            // a repeatable directive e.g. several `publishDir`, held as a list of values
             else if( value instanceof Collection ) {
                 if( anyDirectiveRef(value as Collection, directive) )
                     return true

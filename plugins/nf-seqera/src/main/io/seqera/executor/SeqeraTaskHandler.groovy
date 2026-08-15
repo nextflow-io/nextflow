@@ -130,8 +130,10 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             fusionConfig().snapshotsEnabled(),
             maxSpotAttempts(baseMachineOpts)
         )
-        // resolve optional per-task prediction model override from the seqera/predictionModel hint;
-        // when unset the task inherits the run-level model, unless its script pins the memory
+        // Resolve the optional per-task prediction model override from the seqera/predictionModel
+        // hint. An explicit hint always wins: the automatic check below is a safety net, and the
+        // user asking for a specific model on a process is a deliberate opt-out of it.
+        // When neither applies the value is left null, so the task inherits the run-level model
         final predictionModelHint = HintHelper.resolvePredictionModel(task.config.getHints())
         final predictionModel = predictionModelHint
             ? PredictionModel.fromValue(predictionModelHint)
@@ -184,12 +186,20 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
      * @return {@code true} when the task should be submitted with prediction model {@code none}
      */
     protected boolean shouldDisablePrediction() {
-        // nothing to disable unless the run enables a prediction model
+        // Nothing to disable unless the run enables a prediction model. Checking this first
+        // also keeps the warning quiet for the runs where the resources are never adjusted,
+        // which would otherwise report a problem that cannot happen
         final runModel = executor.getSeqeraConfig()?.predictionModel
         if( !runModel || runModel == PredictionModel.NONE.getValue() )
             return false
+        // Note only `memory` is checked. The scheduler can adjust the cpus as well, but a
+        // stale `task.cpus` costs an over-subscribed thread pool whereas a stale
+        // `task.memory` fails the task, and `task.cpus` is referenced by nearly every
+        // process -- disabling the prediction for those would defeat the feature
         if( !task.isDirectiveReferenced('memory') )
             return false
+        // warn once per process rather than once per task: the reference belongs to the
+        // process definition, so every one of its tasks would otherwise report it
         log.warn1("Process `${task.processor?.name ?: task.lazyName()}` depends on the `task.memory` value -- resource prediction has been disabled for this process to prevent an under-allocation of the requested memory", firstOnly: true)
         return true
     }

@@ -49,7 +49,11 @@ class BodyDef implements Cloneable {
      * the references made by the process directives e.g. {@code beforeScript} or {@code ext},
      * which are resolved independently of the task script.
      *
-     * Note: unlike {@link #valRefs} these names do NOT contribute to the task hash.
+     * Note: unlike {@link #valRefs} these names do NOT contribute to the task hash. They are
+     * kept in a separate field precisely for that reason -- {@link #getValNames()} feeds the
+     * task hash through the task context, so adding them there would change the hash of every
+     * process using a resource directive and invalidate the resume cache of every existing
+     * pipeline.
      */
     Set<String> directiveRefs
 
@@ -74,6 +78,11 @@ class BodyDef implements Cloneable {
         this.valRefs = values != null ? values as Set : Collections.<TokenValRef>emptySet()
     }
 
+    /**
+     * Note the directive references are an *optional* trailing argument, so that the parsers
+     * that do not collect them keep using the constructor above and simply leave the set
+     * empty -- the executors relying on it then behave as if no directive was referenced.
+     */
     BodyDef(Closure closure, String source, String section, List<TokenValRef> values, List<String> directives ) {
         this(closure, source, section, values)
         this.directiveRefs = directives != null ? directives as Set : Collections.<String>emptySet()

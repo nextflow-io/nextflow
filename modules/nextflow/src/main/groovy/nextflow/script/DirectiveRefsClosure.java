@@ -31,6 +31,13 @@ import groovy.lang.Closure;
  * config AST and attached here, so that an executor can tell whether a task depends on a
  * given directive *without* having to evaluate the value.
  *
+ * Note this delegates every {@link Closure} method to the closure it wraps, rather than
+ * subclassing it, so that the value keeps behaving exactly as the one the user wrote when it
+ * is cloned and called by {@code LazyMap#resolveImpl}. The delegation follows the pattern
+ * already established by {@link TaskClosure}; the duplication is deliberate, as the two carry
+ * unrelated payloads and are attached by different compilation steps.
+ *
+ * @see nextflow.script.control.DirectiveRefCollector
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 public class DirectiveRefsClosure extends Closure {
