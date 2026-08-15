@@ -107,7 +107,7 @@ The maximum number of concurrent vCPUs a single user may consume across all of t
 
 ##### `seqera.executor.httpClient.connectTimeout`
 
-The maximum time to wait for a connection to the Seqera scheduler service to be established, applied to a single attempt (default: `'10 sec'`). It bounds only reaching the service, never waiting for its response — see `seqera.executor.httpClient.requestTimeout` for that. A timed-out connection proves the request never arrived, so it is retried under `seqera.executor.retryPolicy` for every request, task submissions included.
+The maximum time to wait for a connection to the Seqera scheduler service to be established, applied to a single attempt (default: `'10 sec'`). It bounds only reaching the service, never waiting for its response — see `seqera.executor.httpClient.requestTimeout` for that. A timed-out connection proves the request never arrived, so it is retried under `seqera.executor.retryPolicy` for every request, task submissions included. It must be greater than zero — unlike `requestTimeout`, `'0 sec'` is not accepted as "unbounded".
 
 ##### `seqera.executor.httpClient.requestTimeout`
 

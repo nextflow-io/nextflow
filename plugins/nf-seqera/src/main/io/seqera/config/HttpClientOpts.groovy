@@ -42,7 +42,8 @@ class HttpClientOpts implements ConfigScope {
         established, applied to a single attempt (default: `10 sec`). It bounds only reaching
         the service, never waiting for its response — see `requestTimeout` for that. A
         timed-out connection proves the request never arrived, so it is retried under
-        `seqera.executor.retryPolicy` for every request, task submissions included.
+        `seqera.executor.retryPolicy` for every request, task submissions included. It must be
+        greater than zero — unlike `requestTimeout`, `0 sec` is not accepted as "unbounded".
     """)
     final private Duration connectTimeout
 
@@ -71,6 +72,12 @@ class HttpClientOpts implements ConfigScope {
         connectTimeout = opts.connectTimeout != null
             ? opts.connectTimeout as Duration
             : Duration.of('10 sec')
+        // unlike requestTimeout, zero is not "unbounded" here — a connect phase that never
+        // gives up is not a bound worth expressing, and sched-client rejects it. Catch it at
+        // the config edge so the message names the option rather than surfacing from the
+        // client builder halfway through session start.
+        if( connectTimeout.toMillis() <= 0 )
+            throw new IllegalArgumentException("Config option 'seqera.executor.httpClient.connectTimeout' must be greater than zero - offending value: ${opts.connectTimeout}")
     }
 
     /**

@@ -109,20 +109,32 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         if (!seqeraConfig)
             throw new IllegalArgumentException("Missing Seqera executor configuration - make sure to specify 'seqera.executor' settings")
         // Get access token and refresh token from tower config (shares authentication with Platform)
-        def towerConfig = session.config.tower as Map ?: Collections.emptyMap()
-        def accessToken = PlatformHelper.getAccessToken(towerConfig, SysEnv.get())
-        def refreshToken = PlatformHelper.getRefreshToken(towerConfig, SysEnv.get())
-        def platformUrl = PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
-        def clientConfig = SchedClientConfig.builder()
-                .endpoint(seqeraConfig.endpoint)
+        final towerConfig = session.config.tower as Map ?: Collections.emptyMap()
+        this.client = new SchedClient(clientConfig(seqeraConfig, towerConfig))
+    }
+
+    /**
+     * Maps the executor config onto the scheduler client config. Kept separate from
+     * {@link #createClient()} so it can be exercised without a session — a test that rebuilds
+     * this chain instead would pass just as happily with the wiring deleted.
+     *
+     * @param opts the resolved {@code seqera.executor} settings
+     * @param towerConfig the {@code tower} config scope, which carries the shared credentials
+     * @return the client configuration
+     */
+    protected static SchedClientConfig clientConfig(ExecutorOpts opts, Map towerConfig) {
+        final accessToken = PlatformHelper.getAccessToken(towerConfig, SysEnv.get())
+        final refreshToken = PlatformHelper.getRefreshToken(towerConfig, SysEnv.get())
+        final platformUrl = PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
+        return SchedClientConfig.builder()
+                .endpoint(opts.endpoint)
                 .platformUrl(platformUrl)
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
-                .retryConfig(seqeraConfig.retryOpts())
-                .requestTimeout(seqeraConfig.httpOpts().requestTimeout())
-                .connectTimeout(seqeraConfig.httpOpts().connectTimeout())
+                .retryConfig(opts.retryOpts())
+                .requestTimeout(opts.httpOpts().requestTimeout())
+                .connectTimeout(opts.httpOpts().connectTimeout())
                 .build()
-        this.client = new SchedClient(clientConfig)
     }
 
     protected void createRun() {

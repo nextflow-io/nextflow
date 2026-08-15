@@ -84,6 +84,35 @@ class SeqeraExecutorTest extends Specification {
         config.requestTimeout == null
     }
 
+    def 'should bound the connect phase with the configured connect timeout'() {
+        given:
+        SysEnv.push([:])
+
+        when:
+        def config = buildClientConfig(
+            [endpoint: 'https://sched.example.com', httpClient: [connectTimeout: '3 sec']],
+            [endpoint: 'https://api.platform.example.com', accessToken: 'tok']
+        )
+
+        then:
+        config.connectTimeout == java.time.Duration.ofSeconds(3)
+    }
+
+    def 'should carry the default timeouts when the http client scope is absent'() {
+        given:
+        SysEnv.push([:])
+
+        when:
+        def config = buildClientConfig(
+            [endpoint: 'https://sched.example.com'],
+            [endpoint: 'https://api.platform.example.com', accessToken: 'tok']
+        )
+
+        then:
+        config.connectTimeout == java.time.Duration.ofSeconds(10)
+        config.requestTimeout == java.time.Duration.ofSeconds(45)
+    }
+
     def 'should create client config with env variable settings'() {
         given:
         SysEnv.push([
@@ -482,21 +511,11 @@ class SeqeraExecutorTest extends Specification {
 
 
     /**
-     * Builds a SchedClientConfig using the same logic as {@link SeqeraExecutor#createClient()}
+     * Builds a SchedClientConfig through the same code {@link SeqeraExecutor#createClient()}
+     * uses, so removing a setting from that chain fails these specs rather than passing.
      */
     private SchedClientConfig buildClientConfig(Map executorOpts, Map towerConfig) {
         def seqeraConfig = new SeqeraConfig([executor: executorOpts]).executor
-        def accessToken = PlatformHelper.getAccessToken(towerConfig, SysEnv.get())
-        def refreshToken = PlatformHelper.getRefreshToken(towerConfig, SysEnv.get())
-        def platformUrl = PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
-        return SchedClientConfig.builder()
-                .endpoint(seqeraConfig.endpoint)
-                .platformUrl(platformUrl)
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .retryConfig(seqeraConfig.retryOpts())
-                .requestTimeout(seqeraConfig.httpOpts().requestTimeout())
-                .connectTimeout(seqeraConfig.httpOpts().connectTimeout())
-                .build()
+        return SeqeraExecutor.clientConfig(seqeraConfig, towerConfig)
     }
 }

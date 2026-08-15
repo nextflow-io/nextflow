@@ -137,6 +137,23 @@ class ExecutorOptsTest extends Specification {
         Duration.of('0 sec')    | null
     }
 
+    def 'should reject a connect timeout that bounds nothing' () {
+        when:
+        new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            httpClient: [connectTimeout: TIMEOUT]
+        ])
+
+        then: 'the failure names the option, instead of surfacing from the client builder'
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("'seqera.executor.httpClient.connectTimeout' must be greater than zero")
+
+        where:
+        // zero is unbounded for requestTimeout but meaningless here, so it must not be
+        // silently accepted and handed to a client that rejects it
+        TIMEOUT << ['0 sec', Duration.of('0 sec')]
+    }
+
     def 'should bound the connect phase separately from the response' () {
         when:
         def config = new ExecutorOpts([
