@@ -42,6 +42,18 @@ class BodyDef implements Cloneable {
     Set<TokenValRef> valRefs
 
     /**
+     * The names of the {@code task} directives referenced by the process definition e.g.
+     * {@code memory} for a script interpolating {@code "-Xmx${task.memory.toGiga()}g"}.
+     *
+     * It is collected at compile time by traversing the process AST, therefore it also covers
+     * the references made by the process directives e.g. {@code beforeScript} or {@code ext},
+     * which are resolved independently of the task script.
+     *
+     * Note: unlike {@link #valRefs} these names do NOT contribute to the task hash.
+     */
+    Set<String> directiveRefs
+
+    /**
      * Hold the use provided task body
      *
      * @param closure The task body closure
@@ -53,6 +65,7 @@ class BodyDef implements Cloneable {
         this.closure = closure
         this.source = source
         this.valRefs = Collections.emptySet()
+        this.directiveRefs = Collections.emptySet()
         setType(section)
     }
 
@@ -61,10 +74,16 @@ class BodyDef implements Cloneable {
         this.valRefs = values != null ? values as Set : Collections.<TokenValRef>emptySet()
     }
 
+    BodyDef(Closure closure, String source, String section, List<TokenValRef> values, List<String> directives ) {
+        this(closure, source, section, values)
+        this.directiveRefs = directives != null ? directives as Set : Collections.<String>emptySet()
+    }
+
     BodyDef clone() {
         def result = (BodyDef) super.clone()
         result.closure = (Closure) closure.clone()
         result.valRefs = new HashSet(valRefs)
+        result.directiveRefs = new HashSet(directiveRefs)
         return result
     }
     /**

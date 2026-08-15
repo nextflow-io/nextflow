@@ -15,10 +15,15 @@
  */
 package nextflow.script.control;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
+
+import nextflow.script.dsl.ProcessDsl;
 
 import org.codehaus.groovy.ast.CodeVisitorSupport;
 import org.codehaus.groovy.ast.Variable;
@@ -114,6 +119,80 @@ public class ScriptToGroovyHelper {
 
             Collections.reverse(list);
             return String.join(".", list);
+        }
+    }
+
+    /**
+     * The process directive names, used to tell apart the `task` properties that are
+     * directives (e.g. `task.memory`) from the ones that are not (e.g. `task.attempt`).
+     */
+    private static final Set<String> DIRECTIVE_NAMES = Arrays.stream(ProcessDsl.DirectiveDsl.class.getMethods())
+        .map(Method::getName)
+        .collect(Collectors.toSet());
+
+    /**
+     * Get the list of `task` directives referenced by the given statements, e.g. `memory`
+     * for a script interpolating `"-Xmx${task.memory.toGiga()}g"`.
+     *
+     * A rendered command carries the directive values that were *requested*, so an executor
+     * that allows them to be adjusted at schedule time needs to know which ones the command
+     * depends on. Collecting the references from the AST covers the process directives too
+     * (e.g. `beforeScript`, `ext`), which are resolved independently of the task script, and
+     * it does not require any value to be evaluated.
+     *
+     * The resulting list expression should be provided as the fifth argument of the BodyDef
+     * constructor.
+     *
+     * @param nodes
+     */
+    public Expression getDirectiveRefs(Statement... nodes) {
+        var collector = new DirectiveRefCollector();
+        for( var node : nodes ) {
+            if( node != null )
+                collector.collect(node);
+        }
+        var refs = collector.getNames().stream()
+            .map(name -> (Expression) constX(name))
+            .toList();
+
+        return listX(refs);
+    }
+
+    private class DirectiveRefCollector extends CodeVisitorSupport {
+
+        private Set<String> names = new HashSet<>();
+
+        public void collect(Statement node) {
+            visit(node);
+        }
+
+        public Set<String> getNames() {
+            return names;
+        }
+
+        @Override
+        public void visitPropertyExpression(PropertyExpression node) {
+            var name = directiveRef(node);
+            if( name != null )
+                names.add(name);
+            super.visitPropertyExpression(node);
+        }
+
+        /**
+         * Return the directive name when the given expression is a `task.<name>` property
+         * access, e.g. `memory` for the `task.memory` in `task.memory.toGiga()`, or `ext`
+         * for the `task.ext` in `task.ext.args`.
+         *
+         * Note the `task` object also exposes task properties that are not directives e.g.
+         * `task.attempt`, which are not reported.
+         */
+        private static String directiveRef(PropertyExpression node) {
+            if( !(node.getObjectExpression() instanceof VariableExpression ve) )
+                return null;
+            if( !"task".equals(ve.getName()) )
+                return null;
+            var name = node.getPropertyAsString();
+            return DIRECTIVE_NAMES.contains(name) ? name : null;
         }
     }
 

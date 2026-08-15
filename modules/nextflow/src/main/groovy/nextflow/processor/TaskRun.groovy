@@ -828,6 +828,24 @@ class TaskRun implements Cloneable {
      *
      * @param body A {@code BodyDef} object instance
      */
+    /**
+     * Report whether the process definition references the given {@code task} directive, either
+     * in the task script or in any of its directives e.g. {@code beforeScript}, {@code ext}.
+     *
+     * The rendered command carries the directive values that were *requested*, therefore an
+     * executor that allows them to be adjusted at schedule time uses this to detect the tasks
+     * that would otherwise be given a value differing from the one baked into the command.
+     *
+     * Note it is taken from the process body, not from the task, since the references are
+     * collected at compile time.
+     *
+     * @param directive The directive name e.g. {@code memory}
+     * @return {@code true} when the process references the given directive
+     */
+    boolean isDirectiveReferenced(String directive) {
+        return processor?.getTaskBody()?.directiveRefs?.contains(directive)
+    }
+
     void resolve(BodyDef body)  {
         processor.session.stubRun && config.getStubBlock()
             ? resolveStub(config.getStubBlock())
