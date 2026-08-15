@@ -41,6 +41,11 @@ class ExecutorOpts implements ConfigScope {
 
     final RetryOpts retryPolicy
 
+    @Description("""
+        HTTP client settings for requests to the Seqera scheduler service.
+    """)
+    final HttpClientOpts httpClient
+
     @ConfigOption
     @Description("""
         The Seqera scheduler service endpoint URL.
@@ -80,15 +85,6 @@ class ExecutorOpts implements ConfigScope {
         The interval for batching task submissions (default: `5 sec`).
     """)
     final Duration batchFlushInterval
-
-    @ConfigOption
-    @Description("""
-        The maximum time to wait for a response from the Seqera scheduler service, applied
-        to each attempt (default: `45 sec`). A timed-out poll or cancel is retried according
-        to `seqera.executor.retryPolicy`; a timed-out task submission is not re-sent, since
-        the scheduler may already be creating the tasks. Set to `0 sec` to wait indefinitely.
-    """)
-    final Duration requestTimeout
 
     @Description("""
         Machine/infrastructure requirements for session tasks.
@@ -160,6 +156,7 @@ class ExecutorOpts implements ConfigScope {
 
     ExecutorOpts(Map opts) {
         this.retryPolicy = new RetryOpts(opts.retryPolicy as Map ?: Map.of())
+        this.httpClient = new HttpClientOpts(opts.httpClient as Map ?: Map.of())
         this.endpoint = opts.endpoint as String
         if (!endpoint)
             throw new IllegalArgumentException("Missing Seqera endpoint - make sure to specify 'seqera.executor.endpoint' settings")
@@ -171,9 +168,6 @@ class ExecutorOpts implements ConfigScope {
         this.batchFlushInterval = opts.batchFlushInterval
             ? Duration.of(opts.batchFlushInterval as String)
             : Duration.of('5 sec')
-        this.requestTimeout = opts.requestTimeout
-            ? Duration.of(opts.requestTimeout as String)
-            : Duration.of('45 sec')
         // machine requirement settings
         this.machineRequirement = new MachineRequirementOpts(opts.machineRequirement as Map ?: Map.of())
         this.autoLabels = parseAutoLabels(opts.get('autoLabels'))
@@ -193,6 +187,10 @@ class ExecutorOpts implements ConfigScope {
 
     RetryOpts retryOpts() {
         this.retryPolicy
+    }
+
+    HttpClientOpts httpOpts() {
+        this.httpClient
     }
 
     String getEndpoint() {
@@ -217,10 +215,6 @@ class ExecutorOpts implements ConfigScope {
 
     Duration getBatchFlushInterval() {
         return batchFlushInterval
-    }
-
-    Duration getRequestTimeout() {
-        return requestTimeout
     }
 
     MachineRequirementOpts getMachineRequirement() {

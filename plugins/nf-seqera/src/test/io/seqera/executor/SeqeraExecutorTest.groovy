@@ -62,7 +62,7 @@ class SeqeraExecutorTest extends Specification {
 
         when:
         def config = buildClientConfig(
-            [endpoint: 'https://sched.example.com', requestTimeout: '5 sec'],
+            [endpoint: 'https://sched.example.com', httpClient: [requestTimeout: '5 sec']],
             [endpoint: 'https://api.platform.example.com', accessToken: 'tok']
         )
 
@@ -76,7 +76,7 @@ class SeqeraExecutorTest extends Specification {
 
         when:
         def config = buildClientConfig(
-            [endpoint: 'https://sched.example.com', requestTimeout: '0 sec'],
+            [endpoint: 'https://sched.example.com', httpClient: [requestTimeout: '0 sec']],
             [endpoint: 'https://api.platform.example.com', accessToken: 'tok']
         )
 
@@ -495,7 +495,8 @@ class SeqeraExecutorTest extends Specification {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .retryConfig(seqeraConfig.retryOpts())
-                .requestTimeout(SeqeraExecutor.requestTimeoutOf(seqeraConfig.requestTimeout))
+                .requestTimeout(seqeraConfig.httpOpts().requestTimeout())
+                .connectTimeout(seqeraConfig.httpOpts().connectTimeout())
                 .build()
     }
 }

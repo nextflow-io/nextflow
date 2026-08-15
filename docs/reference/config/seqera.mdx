@@ -45,10 +45,6 @@ The compute backend provider type (e.g. `'aws'`, `'local'`). When specified, use
 
 The cloud region for task execution.
 
-##### `seqera.executor.requestTimeout`
-
-The maximum time to wait for a response from the Seqera scheduler service, applied to each attempt (default: `'45 sec'`). A timed-out poll or cancel is retried according to `seqera.executor.retryPolicy`; a timed-out task submission is not re-sent, since the scheduler may already be creating the tasks. Set to `'0 sec'` to wait indefinitely.
-
 ##### `seqera.executor.shellEnabled`
 
 When `true`, enables on-demand interactive shell access (e.g. SSH) to the run's task containers for the VM and local backends (default: `false`). A running task can then be reached with `sched task ssh <task-id>` (or a plain `ssh <task-id>@<scheduler>`), and the connection survives task completion.
@@ -108,6 +104,14 @@ The instance provisioning mode. Can be `'spot'`, `'ondemand'`, or `'spotFirst'`.
 ##### `seqera.executor.schedulingRequirement.maxCpusPerUser`
 
 The maximum number of concurrent vCPUs a single user may consume across all of their runs on this compute environment (default: no limit). A task requesting more `cpus` than this cap fails instead of being queued.
+
+##### `seqera.executor.httpClient.connectTimeout`
+
+The maximum time to wait for a connection to the Seqera scheduler service to be established, applied to a single attempt (default: `'10 sec'`). It bounds only reaching the service, never waiting for its response — see `seqera.executor.httpClient.requestTimeout` for that. A timed-out connection proves the request never arrived, so it is retried under `seqera.executor.retryPolicy` for every request, task submissions included.
+
+##### `seqera.executor.httpClient.requestTimeout`
+
+The maximum time to wait for a response from the Seqera scheduler service, applied to a single attempt (default: `'45 sec'`). A timed-out poll or cancel is retried under `seqera.executor.retryPolicy`, so the worst case for one call is `requestTimeout` times `seqera.executor.retryPolicy.maxAttempts` plus the accumulated delays; a timed-out task submission is not re-sent, since the scheduler may already be creating the tasks. Set to `'0 sec'` to wait indefinitely.
 
 ##### `seqera.executor.retryPolicy.delay`
 
