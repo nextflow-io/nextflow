@@ -245,11 +245,21 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
      * whole run of unspecified tasks looked deliberately sized. Omitting the field instead lets the
      * scheduler resolve and surface its default (seqeralabs/sched#1086).
      * <p>
-     * A non-positive figure gets the same treatment for the same reason — it carries no usable
-     * intent — but it is worth telling the user about, because unlike an absent directive it is
-     * almost always a config accident: a {@code memory} closure that evaluated to zero, or a
-     * {@code params.max_memory} that was never set. Warned once per process rather than once per
-     * task, since the mistake belongs to the process definition.
+     * A zero-valued directive is omitted for the same reason, and warned about once per process,
+     * since unlike an absent directive it is a config accident rather than a choice. Exactly zero
+     * is the only invalid figure reachable here: {@code MemoryUnit(long)} asserts a non-negative
+     * value, and {@code TaskConfig.getMemory0} maps a falsy directive to null via
+     * {@code MemoryUnit.asBoolean}, so what survives is the string form — {@code memory '0 GB'} —
+     * whose string is truthy.
+     * <p>
+     * The conversion below can still yield zero for a <em>positive</em> sub-MiB directive: the
+     * size-derived idiom nf-core uses for index builds, {@code memory { 6.B * fasta.size() }} in
+     * {@code nf-core/bwa/index}, falls under 1 MiB for any reference below ~170 KB — which is what
+     * a test or CI profile supplies, and is why {@code BWAMEM1_INDEX} submits a zero today. That
+     * zero is forwarded deliberately rather than caught here. The scheduler already resolves any
+     * non-positive request to its default and reports having done so; restating that rule
+     * client-side would split one normalisation across two codebases that then have to be kept in
+     * agreement, which is the failure this whole change is undoing.
      *
      * @return the requested memory in MiB, or null to leave the axis unspecified
      */
@@ -258,7 +268,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         if( memory == null )
             return null
         if( memory.toBytes() <= 0 ) {
-            log.warn1("Process `${task.processor?.name ?: task.lazyName()}` declares a non-positive `memory` directive (${memory}) -- ignoring it; the scheduler will apply its own default", firstOnly: true)
+            log.warn1("Process `${task.processor.name}` declares a zero `memory` directive -- ignoring it; the scheduler will apply its own default", firstOnly: true)
             return null
         }
         return (int) (memory.toBytes() / (1024 * 1024))
