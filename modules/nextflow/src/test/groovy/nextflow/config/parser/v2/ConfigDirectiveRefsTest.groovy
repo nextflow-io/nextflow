@@ -16,7 +16,11 @@
 
 package nextflow.config.parser.v2
 
+import nextflow.config.ConfigClosurePlaceholder
 import nextflow.processor.TaskConfig
+import nextflow.script.ProcessConfig
+import nextflow.script.dsl.ProcessConfigBuilder
+import nextflow.util.ConfigHelper
 import spock.lang.Specification
 
 /**
@@ -53,20 +57,47 @@ class ConfigDirectiveRefsTest extends Specification {
         config.isDirectiveReferenced('memory')
     }
 
-    def 'should detect the memory reference within a selector' () {
-        given:
-        def config = taskConfig('''
-            process {
-                withName: FOO {
-                    ext.args = { "-Xmx${task.memory.toGiga()}g" }
-                }
+    private static final String SELECTOR_CONFIG = '''
+        process {
+            withName: FOO {
+                ext.args = { "-Xmx${task.memory.toGiga()}g" }
             }
-            ''')
+        }
+        '''
 
+    private TaskConfig taskConfigFor(String text, String processName) {
+        final config = new ConfigParserV2().parse(text)
+        final processConfig = new ProcessConfig([:])
+        new ProcessConfigBuilder(processConfig)
+            .applyConfig(config.process as Map, processName, processName, processName)
+        return processConfig.createTaskConfig()
+    }
+
+    def 'should detect the memory reference for a process matching the selector' () {
         expect:
-        // the selector settings are applied to the task config by ProcessConfigBuilder,
-        // here it is enough that the marker survives the config parsing
-        config.isDirectiveReferenced('memory')
+        taskConfigFor(SELECTOR_CONFIG, 'FOO').isDirectiveReferenced('memory')
+    }
+
+    def 'should not detect the memory reference for a process not matching the selector' () {
+        expect:
+        // the un-applied `withName:` blocks are copied verbatim into the process config,
+        // they must not be mistaken for a directive of this process
+        !taskConfigFor(SELECTOR_CONFIG, 'BAR').isDirectiveReferenced('memory')
+    }
+
+    def 'should render a dynamic directive as a string placeholder' () {
+        when:
+        def config = new ConfigParserV2()
+            .setRenderClosureAsString(true)
+            .parse('''
+                process.clusterOptions = { "--mem ${task.memory.toMega()}" }
+                ''')
+
+        then:
+        // `nextflow config` and `kuberun` render the config back as text -- the directive
+        // reference must not get in the way of the placeholder substitution
+        config.process.clusterOptions instanceof ConfigClosurePlaceholder
+        ConfigHelper.toCanonicalString(config).contains('task.memory.toMega()')
     }
 
     def 'should report a config directive reference through the task run' () {

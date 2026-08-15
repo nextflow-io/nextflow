@@ -136,6 +136,17 @@ class ProcessDirectiveRefsTest extends Dsl2Spec {
             ''') == [] as Set
     }
 
+    def 'should report a memory reference made by a shell block' () {
+        given:
+        // a `shell` block is rendered by the template engine, so the reference is not in
+        // the process AST -- it is reported through the rendered template variables
+        def run = new TaskRun(templateVars: ['task.memory'] as Set)
+
+        expect:
+        run.isDirectiveReferenced('memory')
+        !run.isDirectiveReferenced('cpus')
+    }
+
     def 'should report the referenced directive through the task run' () {
         given:
         def parser = new ScriptLoaderV2(new Session())

@@ -1229,7 +1229,7 @@ class SeqeraTaskHandlerTest extends Specification {
     }
 
     @Unroll
-    def 'submit does not disable the prediction model when no run-level model is enabled'() {
+    def 'submit does not disable the prediction model when the run-level model is #runModel'() {
         given:
         Task captured = null
         def handler = createSubmitHandler(

@@ -821,14 +821,6 @@ class TaskRun implements Cloneable {
     }
 
     /**
-     * Given the task body token declared in the process definition:
-     * 1) assign to the task run instance the code closure to execute
-     * 2) extract the process code `source`
-     * 3) assign the `script` code to execute
-     *
-     * @param body A {@code BodyDef} object instance
-     */
-    /**
      * Report whether the process definition references the given {@code task} directive, either
      * in the task script or in any of its directives e.g. {@code beforeScript}, {@code ext}.
      *
@@ -846,8 +838,19 @@ class TaskRun implements Cloneable {
     boolean isDirectiveReferenced(String directive) {
         return processor?.getTaskBody()?.directiveRefs?.contains(directive)
             || config?.isDirectiveReferenced(directive)
+            // a `shell` block and a `template` file are rendered by the template engine,
+            // hence their references are not in the process AST -- see #renderTemplate
+            || templateVars?.contains("task.${directive}".toString())
     }
 
+    /**
+     * Given the task body token declared in the process definition:
+     * 1) assign to the task run instance the code closure to execute
+     * 2) extract the process code `source`
+     * 3) assign the `script` code to execute
+     *
+     * @param body A {@code BodyDef} object instance
+     */
     void resolve(BodyDef body)  {
         processor.session.stubRun && config.getStubBlock()
             ? resolveStub(config.getStubBlock())

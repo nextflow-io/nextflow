@@ -21,6 +21,7 @@ import org.codehaus.groovy.ast.ClassCodeVisitorSupport;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.expr.ArgumentListExpression;
 import org.codehaus.groovy.ast.expr.ClosureExpression;
+import org.codehaus.groovy.ast.expr.ConstructorCallExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.ListExpression;
 import org.codehaus.groovy.ast.expr.MapExpression;
@@ -34,6 +35,8 @@ import static org.codehaus.groovy.ast.tools.GeneralUtils.*;
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 class ClosureToStringVisitor extends ClassCodeVisitorSupport {
+
+    private static final String DIRECTIVE_REFS_CLOSURE = "nextflow.script.DirectiveRefsClosure";
 
     protected SourceUnit sourceUnit;
 
@@ -73,6 +76,14 @@ class ClosureToStringVisitor extends ClassCodeVisitorSupport {
     protected Expression replaceClosures(Expression node) {
         if( node instanceof ClosureExpression ce ) {
             return wrapExprAsPlaceholder(ce);
+        }
+        // a dynamic directive referencing a `task` directive is wrapped by
+        // ConfigToGroovyVisitor, unwrap it to render the closure it holds
+        if( node instanceof ConstructorCallExpression cce
+                && DIRECTIVE_REFS_CLOSURE.equals(cce.getType().getName())
+                && cce.getArguments() instanceof ArgumentListExpression ale
+                && ale.getExpressions().size() > 0 ) {
+            return replaceClosures(ale.getExpression(0));
         }
         if( node instanceof ListExpression le ) {
             var items = le.getExpressions();

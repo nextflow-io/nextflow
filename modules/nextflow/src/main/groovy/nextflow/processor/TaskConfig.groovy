@@ -136,7 +136,23 @@ class TaskConfig extends LazyMap implements Cloneable {
      * @return {@code true} when a directive value references the given directive
      */
     boolean isDirectiveReferenced(String directive) {
-        return anyDirectiveRef(getTarget()?.values(), directive)
+        final entries = getTarget()?.entrySet()
+        if( !entries )
+            return false
+        for( Map.Entry entry : entries ) {
+            // the config selector blocks e.g. `withName:FOO` are copied verbatim into the
+            // process config, therefore they may hold the directives of *other* processes
+            // and must not be inspected -- see ProcessConfigBuilder#applyConfigDefaults
+            if( isSelector(entry.key) )
+                continue
+            if( anyDirectiveRef(Collections.singleton(entry.value), directive) )
+                return true
+        }
+        return false
+    }
+
+    private static boolean isSelector(Object key) {
+        return key instanceof String && (key.startsWith('withName:') || key.startsWith('withLabel:'))
     }
 
     private static boolean anyDirectiveRef(Collection values, String directive) {
