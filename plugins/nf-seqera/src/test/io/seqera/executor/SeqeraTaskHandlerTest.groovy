@@ -873,6 +873,27 @@ class SeqeraTaskHandlerTest extends Specification {
         handler.getGrantedTime() == Duration.of('6h').toMillis()
     }
 
+    def 'should request memory only when the directive declares a usable figure: #scenario'() {
+        given:
+        def taskConfig = Mock(TaskConfig) { getMemory() >> memory }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getConfig() >> taskConfig
+            lazyName() >> 'test_task'
+        }
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient); getRunResourceLabels() >> [:] }
+        def handler = new SeqeraTaskHandler(taskRun, executor)
+
+        expect: 'an unusable figure leaves the axis unset so the scheduler applies and reports its own default'
+        handler.memoryMiB() == expected
+
+        where:
+        scenario   | memory                | expected
+        'declared' | MemoryUnit.of('2 GB') | 2048
+        'absent'   | null                  | null
+        'zero'     | MemoryUnit.of(0)      | null
+    }
+
     def 'should build resource limit from task config'() {
         given:
         def taskConfig = Mock(TaskConfig) {

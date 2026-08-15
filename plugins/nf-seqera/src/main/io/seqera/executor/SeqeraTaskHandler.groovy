@@ -101,11 +101,12 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
     @Override
     void submit() {
         executor.ensureRunCreated()
-        int cpuShares = (task.config.getCpus() ?: 1) * 1024
-        int memoryMiB = task.config.getMemory() ? (int) (task.config.getMemory().toBytes() / (1024 * 1024)) : 1024
+        // cpus needs no unspecified handling: TaskConfig.getCpus() already guarantees at least 1
+        // and throws on a negative, so there is never an absent or non-positive value to forward.
+        // memory has no such guarantee — see memoryMiB().
         final resourceReq = new ResourceRequirement()
-            .cpuShares(cpuShares)
-            .memoryMiB(memoryMiB)
+            .cpuShares(task.config.getCpus() * 1024)
+            .memoryMiB(memoryMiB())
         // add accelerator settings if defined
         final accelerator = task.config.getAccelerator()
         if( accelerator ) {
@@ -232,6 +233,35 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         log.debug "[SEQERA] Batch submission failed for task ${task.lazyName()}: ${cause.message}"
         task.error = cause
         this.status = TaskStatus.COMPLETED
+    }
+
+    /**
+     * The memory to request, in MiB, or {@code null} when the process declares none.
+     * <p>
+     * The {@code memory} directive is optional, and leaving it out is a legitimate way of saying
+     * "I have no opinion". Substituting a figure here fabricated an opinion the user never
+     * expressed: the scheduler received a concrete request indistinguishable from a declared one,
+     * so it could neither apply its own default nor report that nothing had been asked for, and a
+     * whole run of unspecified tasks looked deliberately sized. Omitting the field instead lets the
+     * scheduler resolve and surface its default (seqeralabs/sched#1086).
+     * <p>
+     * A non-positive figure gets the same treatment for the same reason — it carries no usable
+     * intent — but it is worth telling the user about, because unlike an absent directive it is
+     * almost always a config accident: a {@code memory} closure that evaluated to zero, or a
+     * {@code params.max_memory} that was never set. Warned once per process rather than once per
+     * task, since the mistake belongs to the process definition.
+     *
+     * @return the requested memory in MiB, or null to leave the axis unspecified
+     */
+    protected Integer memoryMiB() {
+        final memory = task.config.getMemory()
+        if( memory == null )
+            return null
+        if( memory.toBytes() <= 0 ) {
+            log.warn1("Process `${task.processor?.name ?: task.lazyName()}` declares a non-positive `memory` directive (${memory}) -- ignoring it; the scheduler will apply its own default", firstOnly: true)
+            return null
+        }
+        return (int) (memory.toBytes() / (1024 * 1024))
     }
 
     /**
