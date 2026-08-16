@@ -26,6 +26,7 @@ import nextflow.script.ast.ProcessNodeV2;
 import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.TupleParameter;
+import nextflow.script.types.Bag;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.CodeVisitorSupport;
@@ -152,28 +153,49 @@ public class ProcessToGroovyVisitorV2 {
             var stager = stmt(callThisX("stageAs", args(closureX(stmt(target)))));
             stagers.addStatement(stager);
         }
-        else if( isRecordType(cn) ) {
-            for( var fn : cn.getFields() )
+        else if( cn != null && cn.redirect() instanceof RecordNode rn ) {
+            for( var fn : rn.getFields() )
                 visitProcessInputType(fn, propX(target, fn.getName()), stagers);
         }
     }
 
     private static boolean isPathType(ClassNode cn) {
-        if( !cn.isResolved() )
+        if( cn == null )
             return false;
-        var clazz = cn.getTypeClass();
-        if( Path.class.isAssignableFrom(clazz) ) {
+
+        if( cn.isResolved() && Path.class.isAssignableFrom(cn.getTypeClass()) )
             return true;
+
+        if( isPathCollectionType(cn) && cn.isUsingGenerics() ) {
+            var generics = cn.getGenericsTypes();
+            if( generics != null && generics.length > 0 )
+                return isPathType(generics[0].getType());
         }
-        if( Collection.class.isAssignableFrom(clazz) && cn.isUsingGenerics() ) {
-            var elementType = cn.getGenericsTypes()[0].getType();
-            return Path.class.isAssignableFrom(elementType.getTypeClass());
+
+        // For unresolved Path references, fall back to the simple or fully qualified name.
+        if( !cn.isResolved() ) {
+            var name = cn.getNameWithoutPackage();
+            return "Path".equals(name) || Path.class.getName().equals(cn.getName());
         }
+
         return false;
     }
 
-    private static boolean isRecordType(ClassNode cn) {
-        return cn.redirect() instanceof RecordNode;
+    private static boolean isPathCollectionType(ClassNode cn) {
+        if( cn == null )
+            return false;
+
+        if( cn.isResolved() ) {
+            var cls = cn.getTypeClass();
+            return Collection.class.isAssignableFrom(cls) || Bag.class.isAssignableFrom(cls);
+        }
+
+        // For unresolved collection-like references, fall back to the simple name.
+        var name = cn.getNameWithoutPackage();
+        return "List".equals(name)
+            || "Set".equals(name)
+            || "Collection".equals(name)
+            || "Bag".equals(name);
     }
 
     private void visitProcessUnstagers(Statement outputs, ProcessUnstageVisitor visitor) {
