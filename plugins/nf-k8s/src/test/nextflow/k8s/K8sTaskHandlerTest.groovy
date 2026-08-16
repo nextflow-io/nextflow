@@ -489,6 +489,7 @@ class K8sTaskHandlerTest extends Specification {
         and:
         def handler = Spy(new K8sTaskHandler(task: task, podName: POD_NAME, outputFile: OUT_FILE, errorFile: ERR_FILE))
         handler.getClient() >> client
+        handler.isExitFileVisible() >> true
 
         when:
         def result = handler.checkIfCompleted()
@@ -537,6 +538,109 @@ class K8sTaskHandlerTest extends Specification {
 
     }
 
+    def 'should not complete the task until the exit file is visible' () {
+        given:
+        def POD_NAME = 'pod-xyz'
+        def termState = [ reason: "Completed",
+                          startedAt: "2018-01-13T10:09:36Z",
+                          finishedAt: "2018-01-13T10:19:36Z",
+                          exitCode: 0 ]
+        def task = new TaskRun()
+        def handler = Spy(new K8sTaskHandler(task: task, podName: POD_NAME))
+
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+        1 * handler.getState() >> [terminated: termState]
+        1 * handler.isExitFileVisible() >> false
+        0 * handler.updateTimestamps(_)
+        0 * handler.deleteJobIfSuccessful(_)
+        handler.status != TaskStatus.COMPLETED
+        result == false
+    }
+
+    def 'should not wait for the exit file when the pod reports a failure' () {
+        given:
+        def POD_NAME = 'pod-xyz'
+        def client = Mock(K8sClient)
+        // a task killed by the system (e.g. OOMKilled) never writes the exit file,
+        // therefore waiting for it would only delay the error report
+        def termState = [ reason: "OOMKilled",
+                          startedAt: "2018-01-13T10:09:36Z",
+                          finishedAt: "2018-01-13T10:19:36Z",
+                          exitCode: 137 ]
+        def task = new TaskRun()
+        def handler = Spy(new K8sTaskHandler(task: task, podName: POD_NAME))
+        handler.getClient() >> client
+
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+        1 * handler.getState() >> [terminated: termState]
+        0 * handler.isExitFileVisible()
+        1 * handler.deleteJobIfSuccessful(task) >> null
+        1 * handler.saveJobLogOnError(task) >> null
+        handler.task.exitStatus == 137
+        handler.status == TaskStatus.COMPLETED
+        result == true
+    }
+
+    def 'should wait for the exit file on a shared file system' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def exitFile = folder.resolve('.exitcode')
+        def task = new TaskRun(name: 'foo', workDir: folder)
+        def handler = Spy(new K8sTaskHandler(task: task, exitFile: exitFile))
+        handler.isWorkDirSharedFS() >> true
+        handler.getExitReadTimeoutMillis() >> 10_000
+
+        expect: 'the exit file does not exist yet'
+        !handler.isExitFileVisible()
+
+        when: 'the exit file exists but is still empty'
+        Files.createFile(exitFile)
+        then:
+        !handler.isExitFileVisible()
+
+        when: 'the exit file holds the exit status'
+        exitFile.text = '0'
+        then:
+        handler.isExitFileVisible()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should give up waiting for the exit file after the read timeout' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def exitFile = folder.resolve('.exitcode')
+        def task = new TaskRun(name: 'foo', workDir: folder)
+        def handler = Spy(new K8sTaskHandler(task: task, exitFile: exitFile))
+        handler.isWorkDirSharedFS() >> true
+        handler.getExitReadTimeoutMillis() >> 0
+
+        expect:
+        handler.isExitFileVisible()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should not wait for the exit file when the work dir is not a shared file system' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def task = new TaskRun(name: 'foo', workDir: folder)
+        def handler = Spy(new K8sTaskHandler(task: task, exitFile: folder.resolve('.exitcode')))
+        handler.isWorkDirSharedFS() >> false
+
+        expect:
+        handler.isExitFileVisible()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should use K8s exit code when available' () {
         given:
         def ERR_FILE = Paths.get('err.file')
@@ -550,6 +654,7 @@ class K8sTaskHandlerTest extends Specification {
         def task = new TaskRun()
         def handler = Spy(new K8sTaskHandler(task: task, podName: POD_NAME, outputFile: OUT_FILE, errorFile: ERR_FILE))
         handler.getClient() >> client
+        handler.isExitFileVisible() >> true
 
         when:
         def result = handler.checkIfCompleted()
