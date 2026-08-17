@@ -101,11 +101,12 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
     @Override
     void submit() {
         executor.ensureRunCreated()
-        int cpuShares = (task.config.getCpus() ?: 1) * 1024
-        int memoryMiB = task.config.getMemory() ? (int) (task.config.getMemory().toBytes() / (1024 * 1024)) : 1024
+        // cpus needs no unspecified handling: TaskConfig.getCpus() already guarantees at least 1
+        // and throws on a negative, so there is never an absent or non-positive value to forward.
+        // memory has no such guarantee — see memoryMiB().
         final resourceReq = new ResourceRequirement()
-            .cpuShares(cpuShares)
-            .memoryMiB(memoryMiB)
+            .cpuShares(task.config.getCpus() * 1024)
+            .memoryMiB(memoryMiB())
         // add accelerator settings if defined
         final accelerator = task.config.getAccelerator()
         if( accelerator ) {
@@ -232,6 +233,45 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         log.debug "[SEQERA] Batch submission failed for task ${task.lazyName()}: ${cause.message}"
         task.error = cause
         this.status = TaskStatus.COMPLETED
+    }
+
+    /**
+     * The memory to request, in MiB, or {@code null} when the process declares none.
+     * <p>
+     * The {@code memory} directive is optional, and leaving it out is a legitimate way of saying
+     * "I have no opinion". Substituting a figure here fabricated an opinion the user never
+     * expressed: the scheduler received a concrete request indistinguishable from a declared one,
+     * so it could neither apply its own default nor report that nothing had been asked for, and a
+     * whole run of unspecified tasks looked deliberately sized. Omitting the field instead lets the
+     * scheduler resolve and surface its default (seqeralabs/sched#1086).
+     * <p>
+     * A zero-valued directive is omitted for the same reason, and warned about once per process,
+     * since unlike an absent directive it is a config accident rather than a choice. Exactly zero
+     * is the only invalid figure reachable here: {@code MemoryUnit(long)} asserts a non-negative
+     * value, and {@code TaskConfig.getMemory0} maps a falsy directive to null via
+     * {@code MemoryUnit.asBoolean}, so what survives is the string form — {@code memory '0 GB'} —
+     * whose string is truthy.
+     * <p>
+     * The conversion below can still yield zero for a <em>positive</em> sub-MiB directive: the
+     * size-derived idiom nf-core uses for index builds, {@code memory { 6.B * fasta.size() }} in
+     * {@code nf-core/bwa/index}, falls under 1 MiB for any reference below ~170 KB — which is what
+     * a test or CI profile supplies, and is why {@code BWAMEM1_INDEX} submits a zero today. That
+     * zero is forwarded deliberately rather than caught here. The scheduler already resolves any
+     * non-positive request to its default and reports having done so; restating that rule
+     * client-side would split one normalisation across two codebases that then have to be kept in
+     * agreement, which is the failure this whole change is undoing.
+     *
+     * @return the requested memory in MiB, or null to leave the axis unspecified
+     */
+    protected Integer memoryMiB() {
+        final memory = task.config.getMemory()
+        if( memory == null )
+            return null
+        if( memory.toBytes() <= 0 ) {
+            log.warn1("Process `${task.processor.name}` declares a zero `memory` directive -- ignoring it; the scheduler will apply its own default", firstOnly: true)
+            return null
+        }
+        return (int) (memory.toBytes() / (1024 * 1024))
     }
 
     /**

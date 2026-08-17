@@ -41,6 +41,11 @@ class ExecutorOpts implements ConfigScope {
 
     final RetryOpts retryPolicy
 
+    @Description("""
+        HTTP client settings for requests to the Seqera scheduler service.
+    """)
+    final HttpClientOpts httpClient
+
     @ConfigOption
     @Description("""
         The Seqera scheduler service endpoint URL.
@@ -151,6 +156,7 @@ class ExecutorOpts implements ConfigScope {
 
     ExecutorOpts(Map opts) {
         this.retryPolicy = new RetryOpts(opts.retryPolicy as Map ?: Map.of())
+        this.httpClient = new HttpClientOpts(opts.httpClient as Map ?: Map.of())
         this.endpoint = opts.endpoint as String
         if (!endpoint)
             throw new IllegalArgumentException("Missing Seqera endpoint - make sure to specify 'seqera.executor.endpoint' settings")
@@ -181,6 +187,10 @@ class ExecutorOpts implements ConfigScope {
 
     RetryOpts retryOpts() {
         this.retryPolicy
+    }
+
+    HttpClientOpts httpOpts() {
+        this.httpClient
     }
 
     String getEndpoint() {

@@ -17,7 +17,11 @@
 package nextflow.cloud.azure.nio
 
 
+import java.time.OffsetDateTime
+
 import com.azure.storage.blob.BlobServiceClient
+import com.azure.storage.blob.models.BlobItem
+import com.azure.storage.blob.models.BlobItemProperties
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -51,7 +55,7 @@ class AzPathTest extends Specification {
         def path = azpath(objectName)
         then:
         path.toString() == expected
-        path.directory == dir
+        path.@directory == dir
 
         where:
         objectName              | expected              | dir
@@ -64,13 +68,13 @@ class AzPathTest extends Specification {
     }
 
     @Unroll
-    def 'should validate blob constructor and cached attributes'() {
+    def 'should validate blob constructor'() {
         when:
         def path = azpath(PATH)
         then:
         path.containerName == CONTAINER
 //        path.objectName == BLOB
-        path.isDirectory() == IS_DIRECTORY
+        path.@directory == IS_DIRECTORY
         path.isContainer() == IS_CONTAINER
         and:
         path.getContainerName() == path.checkContainerName()
@@ -329,6 +333,78 @@ class AzPathTest extends Specification {
         itr.next() == azpath('file-name.txt')
         !itr.hasNext()
 
+    }
+
+    def 'should not declare an isDirectory getter'() {
+        // A public isDirectory() would shadow the FilesEx.isDirectory(Path) extension
+        // method, so `path.isDirectory()` would answer from the trailing slash instead
+        // of storage and report `az://container/output` as a file -- see #6427. It would
+        // also be picked up by the generated equals(), making it perform remote I/O.
+        expect:
+        AzPath.declaredMethods.every { it.name !in ['isDirectory','getDirectory'] }
+    }
+
+    def 'equals should not trigger a remote attribute lookup'() {
+        given:
+        def fs = Mock(AzFileSystem)
+        fs.getContainerName() >> 'pipeline'
+        def left = new AzPath(fs, '/pipeline/output')
+        def right = new AzPath(fs, '/pipeline/output')
+
+        when:
+        left.equals(right)
+
+        then:
+        0 * fs.readAttributes(_)
+    }
+
+    def 'equals should not depend on the resolved attributes'() {
+        given: 'two equal paths, only one of which carries listing-sourced attributes'
+        def fs = Mock(AzFileSystem)
+        fs.getContainerName() >> 'pipeline'
+        def withAttrs = new AzPath(fs, '/pipeline/output')
+        withAttrs.setAttributes(new AzFileAttributes(directory: true))
+        def bare = new AzPath(fs, '/pipeline/output')
+
+        expect: 'equality is symmetric and consistent with hashCode'
+        withAttrs == bare
+        bare == withAttrs
+        withAttrs.hashCode() == bare.hashCode()
+
+        and: 'so a map lookup finds the entry'
+        [(bare): 'value'].get(withAttrs) == 'value'
+    }
+
+    def 'should only recognise zero-size hdi_isfolder markers'() {
+        expect:
+        AzFileAttributes.isDirectoryMarker(metadata, size) == directory
+
+        where:
+        metadata                    | size || directory
+        [hdi_isfolder: 'true']      | 0L   || true
+        [hdi_isfolder: 'true']      | 42L  || false
+        [hdi_isfolder: 'false']     | 0L   || false
+        [:]                         | 0L   || false
+    }
+
+    def 'should not classify a non-empty listed blob with hdi_isfolder metadata as a directory'() {
+        given:
+        def properties = new BlobItemProperties()
+                .setContentLength(42L)
+                .setCreationTime(OffsetDateTime.now())
+                .setLastModified(OffsetDateTime.now())
+        def item = new BlobItem()
+                .setName('output')
+                .setMetadata([hdi_isfolder: 'true'])
+                .setProperties(properties)
+
+        when:
+        def attrs = new AzFileAttributes('pipeline', item)
+
+        then:
+        !attrs.isDirectory()
+        attrs.isRegularFile()
+        attrs.size() == 42L
     }
 
 }

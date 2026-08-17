@@ -36,6 +36,7 @@ import com.azure.storage.blob.BlobServiceClient
 import com.azure.storage.blob.models.BlobContainerItem
 import com.azure.storage.blob.models.BlobCopyInfo
 import com.azure.storage.blob.models.BlobItem
+import com.azure.storage.blob.models.BlobListDetails
 import com.azure.storage.blob.models.BlobStorageException
 import com.azure.storage.blob.models.ListBlobsOptions
 import dev.failsafe.Failsafe
@@ -270,8 +271,11 @@ class AzFileSystem extends FileSystem {
         }
 
         // -- list the bucket content
+        final options = new ListBlobsOptions()
+                .setPrefix(prefix)
+                .setDetails(new BlobListDetails().setRetrieveMetadata(true))
         final blobs = dir.containerClient()
-                .listBlobsByHierarchy(prefix)
+                .listBlobsByHierarchy('/', options, null)
                 .iterator()
 
         // wrap the result with a directory stream
