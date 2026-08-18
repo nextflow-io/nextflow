@@ -213,12 +213,18 @@ jobs:
 
   # Launch the e2e showcase test once the build is green. Triggered by the
   # [e2e stage]/[e2e prod] commit tag, or the workflow_dispatch `e2e` input.
+  # The tag only counts on a push: build.yml also runs on `pull_request`, and
+  # without this guard a PR whose head commit merely contains the tag would
+  # launch e2e (with its secrets) just by being opened — no maintainer
+  # involved. workflow_dispatch is inherently safe here since triggering it
+  # already requires write access to the repo.
   # All logic lives in the reusable .github/workflows/e2e.yml workflow.
   test-e2e:
     needs: build
     if: >-
-      contains(needs.build.outputs.commit_message, '[e2e stage]') ||
-      contains(needs.build.outputs.commit_message, '[e2e prod]') ||
+      ( github.event_name == 'push' &&
+        ( contains(needs.build.outputs.commit_message, '[e2e stage]') ||
+          contains(needs.build.outputs.commit_message, '[e2e prod]') ) ) ||
       ( github.event_name == 'workflow_dispatch' && inputs.e2e != 'none' )
     uses: ./.github/workflows/e2e.yml
     with:
@@ -231,13 +237,17 @@ jobs:
   # Run the release once build is green and tests pass. Triggered by the
   # [release] commit tag, or the workflow_dispatch `release` input. The dispatch
   # path is limited to the same branches the push trigger allows, so a release
-  # can't be kicked off from an arbitrary feature branch.
+  # can't be kicked off from an arbitrary feature branch. The tag is likewise
+  # restricted to `push`: build.yml also runs on `pull_request`, and without
+  # this guard a same-repo PR whose head commit contains the tag would run
+  # the real release (S3/Maven/Docker Hub/npm credentials) just by being
+  # opened or updated.
   release:
     if: >-
       always() &&
       needs.build.result == 'success' &&
       (needs.test.result == 'success' || needs.test.result == 'skipped') &&
-      ( contains(needs.build.outputs.commit_message, '[release]') ||
+      ( ( github.event_name == 'push' && contains(needs.build.outputs.commit_message, '[release]') ) ||
         ( github.event_name == 'workflow_dispatch' && inputs.release &&
           ( github.ref_name == 'master' ||
             startsWith(github.ref_name, 'test') ||
