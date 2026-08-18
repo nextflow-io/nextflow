@@ -2,8 +2,9 @@ name: PR commands
 # Single entry point for comment/review-driven commands, so each comment fires
 # one workflow run (not one per command). Routes to either:
 #   - Claude   : a maintainer comment or review mentioning @claude on a PR (runs a formal review)
-#   - e2e      : a maintainer comments a line starting with /e2e-prod or /e2e-stage
-#                on a pull request (delegates to the reusable e2e.yml workflow).
+#   - e2e      : a maintainer comments a line starting with /e2e-prod or /e2e-stage,
+#                followed by the full commit SHA to test, on a pull request
+#                (delegates to the reusable e2e.yml workflow).
 
 on:
   issue_comment:
@@ -157,16 +158,18 @@ jobs:
           claude_args: |
             --allowedTools "Read,Grep,Glob,Write,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr review:*),Bash(gh pr comment:*),Bash(gh pr checks:*)"
 
-  # Maintainer /e2e-prod or /e2e-stage on a PR. The reusable workflow inherits
-  # github.event.comment.* and parses the environment from the comment itself.
-  # NOTE: the maintainer gate is the security boundary — the e2e workflow builds
-  # and runs the PR head (incl. forks) with publish-capable secrets, so only
-  # trigger on PRs whose code you've reviewed.
+  # Maintainer /e2e-prod or /e2e-stage <full SHA> on a PR. The reusable workflow
+  # inherits github.event.comment.* and parses the command from the comment
+  # itself. This `if:` is only a cheap pre-filter to avoid spinning up a runner
+  # for unrelated comments — it is NOT the security boundary. The e2e workflow
+  # builds and runs PR content (incl. forks) with publish-capable secrets, so
+  # the real authorization (live collaborator-permission check, not the
+  # comment's cached author_association) and the pinned-SHA check that closes
+  # the TOCTOU race both live in e2e.yml, where an API call can gate the run.
   e2e:
     if: >-
       github.event_name == 'issue_comment' && github.event.issue.pull_request &&
-      ( contains(github.event.comment.body, '/e2e-prod') || contains(github.event.comment.body, '/e2e-stage') ) &&
-      contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association)
+      ( contains(github.event.comment.body, '/e2e-prod') || contains(github.event.comment.body, '/e2e-stage') )
     permissions:
       contents: read
       pull-requests: write

@@ -15,43 +15,15 @@
 #
 set -e
 
-# Build a snapshot Nextflow launcher container and trigger the Seqera Platform
-# showcase e2e test, surfacing the dispatched run URL via step outputs/summary.
-# ENVIRONMENT ('production'|'staging') is set by the workflow; if unset it falls
-# back to grepping the commit message for '[e2e prod]'.
+# Pushes the launcher image built by e2e-build.sh and triggers the Seqera
+# Platform showcase e2e test, surfacing the dispatched run URL via step
+# outputs/summary. Handles the SEQERA_PUBLIC_CR_PASSWORD (via `docker push`,
+# already logged in) and AUTOMATION_GITHUB_TOKEN (as $GITHUB_TOKEN) secrets —
+# this script must always be run from a trusted checkout (see e2e.yml), never
+# from a PR checkout, since $CTX may contain a PR-controlled Dockerfile.
+: "${CTX:?CTX must point at the prepared docker build context (see e2e-build.sh)}"
 SHOWCASE_REPO=${SHOWCASE_REPO:-'seqeralabs/showcase-automation'}
-REPO_ROOT="$(git rev-parse --show-toplevel)"
-# docker build context: Dockerfile + assembled runtime (installScratch targets its .nextflow/)
-CTX="$REPO_ROOT/.github/test-e2e"
-
-# cleanup
-rm -rf "$CTX/.nextflow" && mkdir -p "$CTX/.nextflow"
-# copy nextflow dependencies
-(cd "$REPO_ROOT"
-export NXF_PLUGINS_DIR=$PWD/build/plugins
-make releaseInfo assemble installScratch
-)
-
-# copy nextflow plugins
-cp -r "$REPO_ROOT/build/plugins" "$CTX/.nextflow/"
-# copy nextflow launcher script
-cp "$REPO_ROOT/nextflow" "$CTX/" && chmod +x "$CTX/nextflow"
-cp "$REPO_ROOT/modules/nextflow/src/main/resources/META-INF/build-info.properties" "$CTX/"
 source "$CTX/build-info.properties"
-
-if [ -z "$version" ]; then
-    echo "Error: version is empty or missing"; exit 1
-fi
-if [ -z "$build" ]; then
-    echo "Error: build is empty or missing"; exit 1
-fi
-if [ -z "$commitId" ]; then
-    echo "Error: commitId is empty or missing"; exit 1
-fi
-
-echo "version  : $version"
-echo "build    : $build"
-echo "commit id: $commitId"
 
 #
 # build a scratch container image with assembled nextflow runtime and plugins
@@ -78,7 +50,7 @@ echo "Running Platform tests using image launcher: $launcher"
 
 # determine the e2e environment: prefer $ENVIRONMENT, else fall back to the commit message
 if [ -z "$ENVIRONMENT" ]; then
-  [ -z "$COMMIT_MESSAGE" ] && COMMIT_MESSAGE=$(git show -s --format='%s')
+  [ -z "$COMMIT_MESSAGE" ] && COMMIT_MESSAGE=$(git -C "$CTX" show -s --format='%s' 2>/dev/null || true)
   if echo "$COMMIT_MESSAGE" | grep -q "\[e2e prod\]"; then
     ENVIRONMENT="production"
   else
