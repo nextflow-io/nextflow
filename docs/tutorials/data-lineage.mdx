@@ -298,10 +298,6 @@ An agent's results are recorded as a `TaskOutput`, exactly like a process, so ag
 Agent runs record the prompt *template*, never the rendered prompt, and do not record token usage. See [Data lineage][agent-lineage] in the agent documentation for the full list of what is and is not captured.
 :::
 
-:::note
-Lineage records are stored in a `version`/`kind`/`spec` envelope, as shown above. Some examples in this page still show the flat pre-envelope layout.
-:::
-
 Finally, use the `render` subcommand to render the entire lineage of the MULTIQC report as an HTML report:
 
 ```console
