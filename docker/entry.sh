@@ -58,8 +58,7 @@ su nextflow << EOF
 exec bash -c "$cli"
 EOF
 
-# otherwise just execute the command directly — no string round-trip, no
-# quoting to get wrong
+# otherwise just execute the command
 else
 exec "$@"
 fi
