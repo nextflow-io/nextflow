@@ -32,8 +32,8 @@ import nextflow.file.FileHolder
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfigV2
-import nextflow.script.ScriptType
 import nextflow.script.ScriptBinding
+import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.TokenVar
 import nextflow.script.params.EnvInParam

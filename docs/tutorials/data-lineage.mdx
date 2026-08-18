@@ -75,26 +75,37 @@ Use the `view` subcommand to view the lineage record for the workflow run:
 $ nextflow lineage view lid://16b31030474f2e96c55f4940bca3ab64
 {
   "version": "lineage/v1beta1",
-  "type": "WorkflowRun",
-  "workflow": {
-    "scriptFiles": [
+  "kind": "WorkflowRun",
+  "spec": {
+    "workflow": {
+      "scriptFiles": [
+        ...
+      ],
+      "repository": "https://github.com/nextflow-io/rnaseq-nf",
+      "commitId": "86165b8c81d43a1f57363964431395152e353e56"
+    },
+    "sessionId": "065bdc6b-89b4-42ee-92c1-2a5af37f2c50",
+    "name": "peaceful_blackwell",
+    "params": [
       ...
     ],
-    "repository": "https://github.com/nextflow-io/rnaseq-nf",
-    "commitId": "86165b8c81d43a1f57363964431395152e353e56"
-  },
-  "sessionId": "065bdc6b-89b4-42ee-92c1-2a5af37f2c50",
-  "name": "peaceful_blackwell",
-  "params": [
-    ...
-  ],
-  "config": {
-    ...
+    "config": {
+      ...
+    },
+    "metadata": {
+      ...
+    }
   }
 }
 ```
 
-Every workflow run is represented in the lineage store as a `WorkflowRun` record. It includes information such as the pipeline repository, revision, run name, parameters, and resolved config.
+Every workflow run is represented in the lineage store as a `WorkflowRun` record. It includes information such as the pipeline repository, revision, run name, parameters, resolved config, and run metadata.
+
+Every lineage record is stored in the same envelope: `version` is the version of the lineage data model, `kind` is the record type, and `spec` is the record itself.
+
+:::note
+While the record type is serialized as `kind`, it is queried as `type` by the `find` subcommand and the `fromLineage` channel factory, e.g. `nextflow lineage find type=TaskRun`.
+:::
 
 The output files of a workflow run can be accessed as `lid://<WORKFLOW_RUN_HASH>/<PATH>`, where `<PATH>` is the file path relative to the workflow output directory.
 
@@ -121,20 +132,22 @@ Now, use the workflow LID and relative path to view the lineage record for an ou
 $ nextflow lineage view lid://16b31030474f2e96c55f4940bca3ab64/multiqc_report.html
 {
   "version": "lineage/v1beta1",
-  "type": "FileOutput",
-  "path": "/results/multiqc_report.html",
-  "checksum": {
-    "value": "03fd5ed150c7862e1fad5efd4f574a47",
-    "algorithm": "nextflow",
-    "mode": "standard"
-  },
-  "source": "lid://862df53160e07cd823c0c3960545e747/multiqc_report.html",
-  "workflowRun": "lid://16b31030474f2e96c55f4940bca3ab64",
-  "taskRun": null,
-  "size": 5079806,
-  "createdAt": "2025-05-09T13:27:34.576590545-05:00",
-  "modifiedAt": "2025-05-09T13:27:34.586590551-05:00",
-  "labels": null
+  "kind": "FileOutput",
+  "spec": {
+    "path": "/results/multiqc_report.html",
+    "checksum": {
+      "value": "03fd5ed150c7862e1fad5efd4f574a47",
+      "algorithm": "nextflow",
+      "mode": "standard"
+    },
+    "source": "lid://862df53160e07cd823c0c3960545e747/multiqc_report.html",
+    "workflowRun": "lid://16b31030474f2e96c55f4940bca3ab64",
+    "taskRun": null,
+    "size": 5079806,
+    "createdAt": "2025-05-09T13:27:34.576590545-05:00",
+    "modifiedAt": "2025-05-09T13:27:34.586590551-05:00",
+    "labels": null
+  }
 }
 ```
 
@@ -152,20 +165,22 @@ Any LID in a lineage record can be viewed, allowing you to traverse the lineage 
 $ nextflow lineage view lid://862df53160e07cd823c0c3960545e747/multiqc_report.html
 {
   "version": "lineage/v1beta1",
-  "type": "FileOutput",
-  "path": "/work/86/2df53160e07cd823c0c3960545e747/multiqc_report.html",
-  "checksum": {
-    "value": "b14f5171a48ce5c22ea27d7b8e57b6c4",
-    "algorithm": "nextflow",
-    "mode": "standard"
-  },
-  "source": "lid://862df53160e07cd823c0c3960545e747",
-  "workflowRun": "lid://16b31030474f2e96c55f4940bca3ab64",
-  "taskRun": "lid://862df53160e07cd823c0c3960545e747",
-  "size": 5079806,
-  "createdAt": "2025-05-09T13:27:34.236590379-05:00",
-  "modifiedAt": "2025-05-09T13:27:34.246590383-05:00",
-  "labels": null
+  "kind": "FileOutput",
+  "spec": {
+    "path": "/work/86/2df53160e07cd823c0c3960545e747/multiqc_report.html",
+    "checksum": {
+      "value": "b14f5171a48ce5c22ea27d7b8e57b6c4",
+      "algorithm": "nextflow",
+      "mode": "standard"
+    },
+    "source": "lid://862df53160e07cd823c0c3960545e747",
+    "workflowRun": "lid://16b31030474f2e96c55f4940bca3ab64",
+    "taskRun": "lid://862df53160e07cd823c0c3960545e747",
+    "size": 5079806,
+    "createdAt": "2025-05-09T13:27:34.236590379-05:00",
+    "modifiedAt": "2025-05-09T13:27:34.246590383-05:00",
+    "labels": null
+  }
 }
 ```
 
@@ -177,46 +192,50 @@ View the lineage record for the task that produced this file:
 $ nextflow lineage view lid://862df53160e07cd823c0c3960545e747
 {
   "version": "lineage/v1beta1",
-  "type": "TaskRun",
-  "sessionId": "065bdc6b-89b4-42ee-92c1-2a5af37f2c50",
-  "name": "MULTIQC",
-  "codeChecksum": {
-    "value": "edf2e9f84cd3a18ee9259012b660f2dd",
-    "algorithm": "nextflow",
-    "mode": "standard"
-  },
-  "script": "\n    cp multiqc/* .\n    echo \"custom_logo: $PWD/nextflow_logo.png\" \u003e\u003e multiqc_config.yaml\n    multiqc -n multiqc_report.html .\n    ",
-  "input": [
-    {
-      "type": "path",
-      "name": "*",
-      "value": [
-        "lid://eff8846883b46c5a76f11e7e4480a6c8/ggal_gut",
-        "lid://2d8bd92c69f732605bc99941e60d5319/fastqc_ggal_gut_logs"
-      ]
+  "kind": "TaskRun",
+  "spec": {
+    "sessionId": "065bdc6b-89b4-42ee-92c1-2a5af37f2c50",
+    "name": "MULTIQC",
+    "codeChecksum": {
+      "value": "edf2e9f84cd3a18ee9259012b660f2dd",
+      "algorithm": "nextflow",
+      "mode": "standard"
     },
-    {
-      "type": "path",
-      "name": "config",
-      "value": [
-        {
-          "path": "https://github.com/nextflow-io/rnaseq-nf/tree/86165b8c81d43a1f57363964431395152e353e56/multiqc",
-          "checksum": {
-            "value": "2aac500cdfb292e961e678433e7dc3d8",
-            "algorithm": "nextflow",
-            "mode": "standard"
+    "script": "\n    cp multiqc/* .\n    echo \"custom_logo: $PWD/nextflow_logo.png\" \u003e\u003e multiqc_config.yaml\n    multiqc -n multiqc_report.html .\n    ",
+    "eval": null,
+    "input": [
+      {
+        "type": "path",
+        "name": "*",
+        "value": [
+          "lid://eff8846883b46c5a76f11e7e4480a6c8/ggal_gut",
+          "lid://2d8bd92c69f732605bc99941e60d5319/fastqc_ggal_gut_logs"
+        ]
+      },
+      {
+        "type": "path",
+        "name": "config",
+        "value": [
+          {
+            "path": "https://github.com/nextflow-io/rnaseq-nf/tree/86165b8c81d43a1f57363964431395152e353e56/multiqc",
+            "checksum": {
+              "value": "2aac500cdfb292e961e678433e7dc3d8",
+              "algorithm": "nextflow",
+              "mode": "standard"
+            }
           }
-        }
-      ]
-    }
-  ],
-  "container": null,
-  "conda": "file:///conda/env-4a436c230263dfdbbf4dddd0623505d1",
-  "spack": null,
-  "architecture": null,
-  "globalVars": {},
-  "binEntries": [],
-  "workflowRun": "lid://16b31030474f2e96c55f4940bca3ab64"
+        ]
+      }
+    ],
+    "container": null,
+    "conda": "file:///conda/env-4a436c230263dfdbbf4dddd0623505d1",
+    "spack": null,
+    "architecture": null,
+    "globalVars": {},
+    "binEntries": [],
+    "workflowRun": "lid://16b31030474f2e96c55f4940bca3ab64",
+    "moduleId": null
+  }
 }
 ```
 
@@ -341,26 +360,28 @@ $ nextflow lineage diff lid://862df53160e07cd823c0c3960545e747 lid://9433dda73f2
 diff --git 862df53160e07cd823c0c3960545e747 9433dda73f2193491f9a26e3e23cd8a1
 --- 862df53160e07cd823c0c3960545e747
 +++ 9433dda73f2193491f9a26e3e23cd8a1
-@@ -3,11 +3,11 @@
-   "sessionId": "065bdc6b-89b4-42ee-92c1-2a5af37f2c50",
-   "name": "MULTIQC",
-   "codeChecksum": {
--    "value": "edf2e9f84cd3a18ee9259012b660f2dd",
-+    "value": "9615a8da3a3f9e935cfc8e4042cdf5e0",
-     "algorithm": "nextflow",
-     "mode": "standard"
-   },
--  "script": "\n    cp multiqc/* .\n    echo \"custom_logo: $PWD/nextflow_logo.png\" \u003e\u003e multiqc_config.yaml\n    multiqc -n multiqc_report.html .\n    ",
-+  "script": "\n    cp multiqc/* . # hello!\n    echo \"custom_logo: $PWD/nextflow_logo.png\" \u003e\u003e multiqc_config.yaml\n    multiqc -n multiqc_report.html .\n    ",
-   "input": [
-     {
-       "type": "path",
-@@ -38,5 +38,5 @@
-   "architecture": null,
-   "globalVars": {},
-   "binEntries": [],
--  "workflowRun": "lid://16b31030474f2e96c55f4940bca3ab64"
-+  "workflowRun": "lid://65044872aad36f97e42336b9ba0dee57"
+@@ -4,11 +4,11 @@
+     "sessionId": "065bdc6b-89b4-42ee-92c1-2a5af37f2c50",
+     "name": "MULTIQC",
+     "codeChecksum": {
+-      "value": "edf2e9f84cd3a18ee9259012b660f2dd",
++      "value": "9615a8da3a3f9e935cfc8e4042cdf5e0",
+       "algorithm": "nextflow",
+       "mode": "standard"
+     },
+-    "script": "\n    cp multiqc/* .\n    echo \"custom_logo: $PWD/nextflow_logo.png\" \u003e\u003e multiqc_config.yaml\n    multiqc -n multiqc_report.html .\n    ",
++    "script": "\n    cp multiqc/* . # hello!\n    echo \"custom_logo: $PWD/nextflow_logo.png\" \u003e\u003e multiqc_config.yaml\n    multiqc -n multiqc_report.html .\n    ",
+     "eval": null,
+     "input": [
+       {
+@@ -40,7 +40,7 @@
+     "architecture": null,
+     "globalVars": {},
+     "binEntries": [],
+-    "workflowRun": "lid://16b31030474f2e96c55f4940bca3ab64",
++    "workflowRun": "lid://65044872aad36f97e42336b9ba0dee57",
+     "moduleId": null
+   }
  }
 ```
 
@@ -408,10 +429,12 @@ When labels are assigned to a workflow output with the `label` directive, they a
 $ nextflow lineage view lid://9410d13abeec617640b5fe9735ba12fc/multiqc_report.html
 {
   "version": "lineage/v1beta1",
-  "type": "FileOutput",
-  "path": "/results/multiqc_report.html",
-  ...
-  "labels": ["qc", "summary"]
+  "kind": "FileOutput",
+  "spec": {
+    "path": "/results/multiqc_report.html",
+    ...
+    "labels": ["qc", "summary"]
+  }
 }
 ```
 
