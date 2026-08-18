@@ -36,9 +36,6 @@
 # enable debugging
 [[ "$NXF_DEBUG_ENTRY" ]] && set -x
 
-# wrap cli args with single quote to avoid wildcard expansion
-cli=''; for x in "$@"; do cli+="'$x' "; done
-
 # the NXF_USRMAP hold the user ID in the host environment
 if [[ "$NXF_USRMAP" ]]; then
 # create a `nextflow` user with the provided ID
@@ -50,13 +47,19 @@ useradd -u "$NXF_USRMAP" -G docker -s /bin/bash nextflow
 chown nextflow /var/run/docker.sock
 chown -R nextflow /.nextflow
 
+# `su` only accepts a command string, so re-quote each arg with `%q`
+# (not a hand-rolled `'$x'` wrap, which breaks — and lets the arg escape
+# the quoting — the moment an arg contains a single quote).
+cli=''; for x in "$@"; do printf -v esc '%q' "$x"; cli+="$esc "; done
+
 # finally run the target command with `nextflow` user
 su nextflow << EOF
 [[ "$NXF_DEBUG_ENTRY" ]] && set -x
 exec bash -c "$cli"
 EOF
 
-# otherwise just execute the command
+# otherwise just execute the command directly — no string round-trip, no
+# quoting to get wrong
 else
-exec bash -c "$cli"
+exec "$@"
 fi
