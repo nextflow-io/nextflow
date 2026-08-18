@@ -31,6 +31,7 @@ import nextflow.executor.Executor
 import nextflow.file.FileHolder
 import nextflow.script.BodyDef
 import nextflow.script.ScriptBinding
+import nextflow.script.ScriptType
 import nextflow.script.TaskClosure
 import nextflow.script.TokenVar
 import nextflow.script.params.EnvInParam
@@ -202,6 +203,28 @@ class TaskRunTest extends Specification {
         then:
         task6.hasCacheableValues()
 
+    }
+
+    def 'should have cacheable values for an exec task'() {
+        given:
+        def binding = new Binding()
+        def list = []
+        // a plain file output, i.e. nothing cacheable in the declared outputs
+        def out = new FileOutParam(binding,list).bind('file_out.beta')
+
+        when:
+        // an `exec` task computes its result into the task context, hence it must be cached
+        def task1 = new TaskRun(type: ScriptType.GROOVY)
+        task1.setOutput(out)
+        then:
+        task1.hasCacheableValues()
+
+        when:
+        // a script task rebuilds its context when the body is resolved, hence there's nothing to cache
+        def task2 = new TaskRun(type: ScriptType.SCRIPTLET)
+        task2.setOutput(out)
+        then:
+        !task2.hasCacheableValues()
     }
 
 
