@@ -20,8 +20,10 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.Consumer
 
@@ -86,6 +88,7 @@ import nextflow.trace.event.TaskEvent
 import nextflow.trace.event.WorkflowOutputEvent
 import nextflow.util.Barrier
 import nextflow.util.ClassLoaderFactory
+import nextflow.util.Duration
 import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
 import nextflow.util.NameGenerator
@@ -103,6 +106,12 @@ import sun.misc.SignalHandler
 @Slf4j
 @CompileStatic
 class Session implements ISession {
+
+    /**
+     * Max time to wait for the shutdown callbacks completion, when they are
+     * executed by another thread e.g. the thread that aborted the session
+     */
+    static private final Duration SHUTDOWN_TIMEOUT = Duration.of('5min')
 
     /**
      * Keep a list of all processor created
@@ -274,6 +283,8 @@ class Session implements ISession {
     private volatile Throwable error
 
     private final AtomicBoolean shutdownInitiated = new AtomicBoolean(false)
+
+    private final CountDownLatch shutdownComplete = new CountDownLatch(1)
 
     private Queue<Runnable> shutdownCallbacks = new ConcurrentLinkedQueue<>()
 
@@ -762,21 +773,32 @@ class Session implements ISession {
 
     final protected void shutdown0() {
         // guard against adding shutdown hooks after shutdown, or calling shutdown more than once
-        if( !shutdownInitiated.compareAndSet(false, true) )
+        if( !shutdownInitiated.compareAndSet(false, true) ) {
+            // the callbacks are being executed by another thread e.g. the thread that
+            // aborted the session -- await their completion, but not indefinitely, so that
+            // a stuck callback cannot prevent the pipeline execution from terminating
+            if( !shutdownComplete.await(SHUTDOWN_TIMEOUT.millis, TimeUnit.MILLISECONDS) )
+                log.warn "Timed out awaiting the completion of the shutdown callbacks (>$SHUTDOWN_TIMEOUT) -- Forcing pipeline termination"
             return
-        log.trace "Invoking ${shutdownCallbacks.size()} shutdown callbacks"
-        while( shutdownCallbacks.size() ) {
-            final hook = shutdownCallbacks.poll()
-            try {
-                hook.run()
-            }
-            catch( Exception e ) {
-                log.debug "Failed to execute shutdown hook: ${hook.class.name}", e
-            }
         }
+        try {
+            log.trace "Invoking ${shutdownCallbacks.size()} shutdown callbacks"
+            while( shutdownCallbacks.size() ) {
+                final hook = shutdownCallbacks.poll()
+                try {
+                    hook.run()
+                }
+                catch( Exception e ) {
+                    log.debug "Failed to execute shutdown hook: ${hook.class.name}", e
+                }
+            }
 
-        // -- invoke observers completion handlers
-        notifyFlowComplete()
+            // -- invoke observers completion handlers
+            notifyFlowComplete()
+        }
+        finally {
+            shutdownComplete.countDown()
+        }
     }
 
     /**
@@ -830,15 +852,17 @@ class Session implements ISession {
             // dump threads status
             if( log.isTraceEnabled() )
                 log.trace(SysHelper.dumpThreads())
-            // invoke shutdown callbacks
-            shutdown0()
-            notifyError(null)
-            // force termination
-            logObserver?.forceTermination()
+            // force termination *before* running the shutdown callbacks, otherwise a callback
+            // taking too long (or hanging) would prevent the release of the threads awaiting
+            // the pipeline termination, and therefore hang the execution -- see issue #7444
             executorFactory?.signalExecutors()
             processesBarrier.forceTermination()
             monitorsBarrier.forceTermination()
             operatorsForceTermination()
+            // invoke shutdown callbacks
+            shutdown0()
+            notifyError(null)
+            logObserver?.forceTermination()
         }
         catch( Throwable e ) {
             log.debug "Unexpected error while aborting execution", e

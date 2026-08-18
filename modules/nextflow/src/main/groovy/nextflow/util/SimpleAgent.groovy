@@ -36,6 +36,11 @@ import groovy.util.logging.Slf4j
 @CompileStatic
 class SimpleAgent<T> {
 
+    /**
+     * Max time to wait for the agent runner thread to provide the current state
+     */
+    static private final Duration GET_VALUE_TIMEOUT = Duration.of('1min')
+
     private T state
     private BlockingDeque events = new LinkedBlockingDeque<>()
     private Thread runner
@@ -45,7 +50,7 @@ class SimpleAgent<T> {
         if(state == null)
             throw new IllegalArgumentException("Missing state argument")
         this.state = state
-        this.runner = Threads.start(this.&run)
+        this.runner = Threads.start("agent-${state.getClass().getSimpleName()}".toString(), this.&run)
     }
 
     SimpleAgent onError(@ClosureParams(value = SimpleType, options = ['java.lang.Throwable']) Closure handler) {
@@ -72,15 +77,29 @@ class SimpleAgent<T> {
      *  the cloned state otherwise the state object itself.
      */
     T getQuickValue() {
+        if( Thread.currentThread()==runner )
+            return currentValue0()
         final retrieve = new RetrieveValueClosure<T>(state)
         events.offerFirst(retrieve)
         return retrieve.getResult()
     }
 
     T getValue() {
+        if( Thread.currentThread()==runner )
+            return currentValue0()
         final retrieve = new RetrieveValueClosure<T>(state)
         events.offer(retrieve)
         return retrieve.getResult()
+    }
+
+    /**
+     * Retrieve the state directly, without going through the events queue. It's meant to be
+     * used only when the invoking thread is the agent runner itself, that otherwise would
+     * deadlock awaiting for an event that only it can serve.
+     */
+    @CompileDynamic
+    private T currentValue0() {
+        return (T)(state instanceof Cloneable ? state.clone() : state)
     }
 
     protected void run() {
@@ -129,7 +148,12 @@ class SimpleAgent<T> {
 
         T getResult() {
             try {
-                sync.await()
+                // note: do not await indefinitely, otherwise a stalled runner thread
+                // would hang the invoking thread forever -- see issue #7444
+                if( !sync.await(GET_VALUE_TIMEOUT.millis, TimeUnit.MILLISECONDS) ) {
+                    log.warn "Timed out awaiting the agent result (>$GET_VALUE_TIMEOUT) -- Returning the current state"
+                    return (T)s0
+                }
                 return (T)result
             }
             catch (InterruptedException e) {
