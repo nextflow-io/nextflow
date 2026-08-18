@@ -312,12 +312,14 @@ class ProcessEntryHandler {
         final type = paramTypes.get(name)
         final value = namedArgs.get(name)
 
-        // File/path inputs: a null OR blank-string value means "not provided". nf-core path
-        // inputs are optional by convention and default to an empty list (the process script
-        // handles the empty case); treating "" like null also prevents file("") from throwing
-        // when a caller (e.g. an LLM tool call) passes an empty string for an optional path.
+        // File/path inputs: an ABSENT value means "not provided". nf-core path inputs are
+        // optional by convention and default to an empty list (the process script handles the
+        // empty case). An empty value is NOT a stand-in for an absent one: as with most CLI
+        // tools, an optional path input is skipped by supplying nothing at all, not by
+        // supplying the option with an empty value. An empty value therefore falls through to
+        // `file('')`, which fails loudly.
         if( param instanceof FileInParam ) {
-            if( value == null || value.toString().trim().isEmpty() ) {
+            if( value == null ) {
                 log.warn "Path input '--${name}' not provided, defaulting to empty list"
                 return []
             }

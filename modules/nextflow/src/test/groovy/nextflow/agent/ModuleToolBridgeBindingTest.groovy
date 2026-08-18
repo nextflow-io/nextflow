@@ -148,4 +148,75 @@ class ModuleToolBridgeBindingTest extends Dsl2Spec {
         then: 'the binding throws -- the bridge dispatcher turns this into a {"error":...} tool result'
         thrown(IllegalArgumentException)
     }
+
+    def 'should omit an empty-valued path arg so the optional path input is bound as not provided'() {
+        given:
+        final dir = Files.createTempDirectory('test')
+        final modPath = dir.resolve('main.nf')
+        modPath.text = '''
+            process echo_tool {
+                input:
+                tuple val(meta), path(reads)
+                path fasta
+
+                output:
+                tuple val(meta), path("out.txt"), emit: report
+
+                script:
+                """
+                cat ${reads} > out.txt
+                """
+            }
+            '''.stripIndent()
+
+        and: 'a sibling meta.yml declaring a second, optional-by-convention path input'
+        final metaPath = dir.resolve('meta.yml')
+        metaPath.text = '''\
+            name: echo_tool
+            input:
+              - - name: meta
+                  type: map
+                - name: reads
+                  type: file
+              - name: fasta
+                type: file
+            '''.stripIndent()
+
+        and:
+        final ProcessDef proc = loadModuleProcess(modPath)
+        final ModuleSpec spec = ModuleSpecFactory.fromYaml(metaPath)
+
+        when: 'the model sends "" for the path input it has nothing to supply for'
+        final args0 = ModuleToolBridge.dropEmptyPathArgs([meta: [id: 's1'], reads: '/abs/x', fasta: ''], spec)
+
+        then: 'the empty path arg is OMITTED, never passed on as an empty value'
+        !args0.containsKey('fasta')
+        args0.reads == '/abs/x'
+
+        when:
+        final args = ProcessEntryHandler.getProcessArguments(proc, args0, spec)
+
+        then: 'the absent path input binds to an empty list (the "not provided" contract)'
+        args.size() == 2
+        (args[0] as List)[1] == Nextflow.file('/abs/x')
+        args[1] == []
+    }
+
+    def 'should leave non-path args untouched when their value is empty'() {
+        given:
+        final dir = Files.createTempDirectory('test')
+        final metaPath = dir.resolve('meta.yml')
+        metaPath.text = '''\
+            name: echo_tool
+            input:
+              - name: label
+                type: string
+              - name: fasta
+                type: file
+            '''.stripIndent()
+        final ModuleSpec spec = ModuleSpecFactory.fromYaml(metaPath)
+
+        expect: 'only file/path args are dropped -- an empty string is a legit value for a val input'
+        ModuleToolBridge.dropEmptyPathArgs([label: '', fasta: '  '], spec) == [label: '']
+    }
 }
