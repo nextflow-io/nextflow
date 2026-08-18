@@ -639,6 +639,38 @@ class ModuleToolBridge implements ToolDispatcher {
         return (Map) parsed
     }
 
+    /**
+     * Return {@code args} without the file/path entries whose value is an empty (or blank) string.
+     *
+     * <p>A spec-derived tool schema marks EVERY module input {@code required} - neither a
+     * {@code meta.yml} nor the registry metadata declares optionality - so a model with nothing
+     * to supply for an input that the module treats as optional tends to send {@code ""} rather
+     * than omit the key. Skipping an optional path input means supplying NOTHING, the way a CLI
+     * tool behaves: the binding in {@link ProcessEntryHandler} defaults an ABSENT path arg to an
+     * empty list and does not accept an empty value as a stand-in. So the empty value is dropped
+     * HERE, at the producer, instead of being interpreted downstream.
+     */
+    @PackageScope
+    static Map dropEmptyPathArgs(Map args, ModuleSpec spec) {
+        if( !args || spec == null )
+            return args
+        final Map result = new LinkedHashMap(args)
+        final inputs = spec.inputs ?: Collections.<ModuleParam>emptyList()
+        for( final param : inputs ) {
+            final List<ModuleParam> components = param.isTuple() ? param.components : Collections.singletonList(param)
+            for( final comp : components ) {
+                if( !ToolSchema.isFileType(comp.type?.toLowerCase()) )
+                    continue
+                final value = result.get(comp.name)
+                if( value instanceof CharSequence && value.toString().trim().isEmpty() ) {
+                    log.debug "Agent tool arg `${comp.name}` is empty - omitting it (optional path input not provided)"
+                    result.remove(comp.name)
+                }
+            }
+        }
+        return result
+    }
+
     private void startScalarInvocation(Session session, ToolCall request) {
         final tool = request.tool
         final parsed = request.arguments
@@ -656,8 +688,8 @@ class ModuleToolBridge implements ToolDispatcher {
 
     private void startSpecInvocation(Session session, ToolCall request) {
         final tool = request.tool
-        final parsed = request.arguments
         final spec = tool.spec
+        final parsed = dropEmptyPathArgs(request.arguments, spec)
 
         // -- marshal the flattened LLM args into one channel value per input channel using the
         //    SAME logic as `nextflow module run` (ProcessEntryHandler.getProcessArguments): the

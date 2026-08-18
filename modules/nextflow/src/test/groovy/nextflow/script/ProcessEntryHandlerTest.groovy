@@ -348,7 +348,7 @@ class ProcessEntryHandlerTest extends Specification {
         result == []
     }
 
-    def 'should treat a blank-string path input as not provided (v1)' () {
+    def 'should reject an empty-string path input instead of treating it as not provided (v1)' () {
         given:
         def session = Mock(Session)
         def script = Mock(BaseScript)
@@ -358,11 +358,12 @@ class ProcessEntryHandlerTest extends Specification {
         def handler = new ProcessEntryHandler(script, session, meta)
         def pathParam = Mock(FileInParam) { getName() >> 'proteins' }
 
-        expect: 'an empty/blank path arg is treated like "not provided" -> empty list (never file(""))'
-        handler.getValueForInputV1(pathParam, [proteins: VALUE], [:]) == []
+        when: 'an empty value is supplied for a path input'
+        handler.getValueForInputV1(pathParam, [proteins: ''], [:])
 
-        where:
-        VALUE << ['', '   ', '\t']
+        then: 'it is NOT a stand-in for "not provided" -- an optional path is skipped by omitting the arg'
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('cannot be')
     }
 
     def 'should throw error for missing val input (v1)' () {
