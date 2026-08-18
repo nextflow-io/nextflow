@@ -14,14 +14,11 @@ concurrency:
 
 jobs:
   claude-code-action:
-    # Three guards. The actor check breaks the feedback loop: this workflow
-    # fires on pull_request_review, and Claude's own review body usually echoes
-    # the @claude mention that triggered it. The author_association check keeps
-    # the run from starting at all for a drive-by mention — this is a public
-    # repository, the action rejects anyone without write access anyway, and
-    # failing there costs a runner and leaves a red X on the pull request. And
-    # the issue_comment arm requires a pull_request payload, so a mention on a
-    # plain issue does not start a review with no diff to read.
+    # Three guards. The actor check breaks the feedback loop: Claude's own
+    # review echoes the @claude mention that triggered it. author_association
+    # is just a cheap pre-filter — real authorization is the Authorize step
+    # below. The issue_comment arm requires a pull_request payload, so a
+    # mention on a plain issue doesn't start a review.
     if: |
       (github.actor != 'claude[bot]')
       && contains(fromJSON('["OWNER", "MEMBER", "COLLABORATOR"]'), github.event.comment.author_association || github.event.review.author_association)
@@ -42,7 +39,25 @@ jobs:
       actions: read
       id-token: write
     steps:
+      - name: Authorize
+        id: authorize
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          ACTOR: ${{ github.event.comment.user.login || github.event.review.user.login }}
+        run: |
+          # author_association is a comment property, not the commenter's
+          # actual access — ask GitHub for their real permission instead.
+          permission=$(gh api "repos/$REPO/collaborators/$ACTOR/permission" --jq '.permission')
+          echo "$ACTOR has '$permission' permission on $REPO"
+          if [ "$permission" = "admin" ] || [ "$permission" = "maintain" ] || [ "$permission" = "write" ]; then
+            echo "authorized=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "authorized=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout PR head
+        if: ${{ steps.authorize.outputs.authorized == 'true' }}
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           # Agent mode performs no branch setup of its own (unlike tag mode), and
@@ -56,6 +71,7 @@ jobs:
           persist-credentials: false
 
       - name: Run Claude PR Review
+        if: ${{ steps.authorize.outputs.authorized == 'true' }}
         uses: anthropics/claude-code-action@239e3a730883eeb5c53db12b0fc9573b3024b126 # v1.0.191
         timeout-minutes: 60
         with:
