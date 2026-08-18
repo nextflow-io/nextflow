@@ -260,7 +260,6 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
     public void visitWorkflow(WorkflowNode node) {
         var classScope = workflowDsl(node.isEntry());
         if( node.isEntry() && paramsType != null ) {
-            classScope = new ClassNode(classScope.getTypeClass());
             var paramsMethod = classScope.getDeclaredMethods("getParams").get(0);
             paramsMethod.setReturnType(paramsType);
         }
