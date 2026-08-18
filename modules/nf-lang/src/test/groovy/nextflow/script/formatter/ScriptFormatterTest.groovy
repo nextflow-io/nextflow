@@ -933,6 +933,27 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    def 'should preserve a comment before an else branch' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                if (x) {
+                    a()
+                }
+                // otherwise
+                else if (y) {
+                    b()
+                }
+                // last resort
+                else {
+                    c()
+                }
+            }
+            '''
+        )
+    }
+
     def 'should preserve a block comment' () {
         expect:
         checkFormat(

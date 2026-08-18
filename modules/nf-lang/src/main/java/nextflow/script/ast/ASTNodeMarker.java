@@ -24,6 +24,9 @@ public enum ASTNodeMarker {
     // the comments in a source file (ModuleNode)
     COMMENTS,
 
+    // the packed source position of the `else` keyword (IfStatement)
+    ELSE_POSITION,
+
     // denotes a fully-qualified type annotation (ClassNode)
     FULLY_QUALIFIED,
 

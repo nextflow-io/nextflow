@@ -384,10 +384,17 @@ public class CommentAttacher {
             statements(is.getIfBlock(), thenContainer);
             is.getBooleanExpression().visit(new ExpressionWalker(thenContainer));
             if( hasPosition(elseBlock) ) {
+                // the `else` keyword divides the branches: a comment before it
+                // leads the branch it introduces, a comment after it belongs to
+                // that branch's body. Without a recorded `else` the two cannot
+                // be told apart, so the gap is left to the branch that follows.
+                var elsePos = (Long) is.getNodeMetaData(ASTNodeMarker.ELSE_POSITION);
+                if( elsePos != null )
+                    addChild(parent, elseBlock, boundary, elsePos, null);
                 if( elseBlock instanceof IfStatement )
                     statement(elseBlock, parent);
                 else
-                    statements(elseBlock, container(elseBlock, boundary, end(is), parent));
+                    statements(elseBlock, container(elseBlock, elsePos != null ? elsePos : boundary, end(is), parent));
             }
         }
         else if( node instanceof TryCatchStatement tcs ) {

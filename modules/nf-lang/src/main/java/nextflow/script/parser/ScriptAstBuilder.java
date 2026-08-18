@@ -28,6 +28,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import groovy.lang.Tuple2;
 import nextflow.script.ast.ASTNodeMarker;
+import nextflow.script.formatter.Comment;
 import nextflow.script.formatter.Comments;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
@@ -1052,7 +1053,14 @@ public class ScriptAstBuilder {
         var elseStmt = ctx.ELSE() != null
             ? statementOrBlock(ctx.fb)
             : EmptyStatement.INSTANCE;
-        return ifElseS(condition, thenStmt, elseStmt);
+        var result = ifElseS(condition, thenStmt, elseStmt);
+        if( ctx.ELSE() != null ) {
+            // the `else` keyword is the only thing between the two branches,
+            // and it is needed to tell which branch a comment there belongs to
+            var token = ctx.ELSE().getSymbol();
+            result.putNodeMetaData(ASTNodeMarker.ELSE_POSITION, Comment.position(token.getLine(), token.getCharPositionInLine() + 1));
+        }
+        return result;
     }
 
     private Statement statementOrBlock(StatementOrBlockContext ctx) {

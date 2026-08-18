@@ -129,6 +129,18 @@ public class Formatter extends CodeVisitorSupport {
     }
 
     /**
+     * Append the comments that precede a node that is printed after a fixed
+     * prefix, i.e. an `else` keyword. The prefix already fixes the surrounding
+     * blank lines, so only the comments are appended here.
+     *
+     * @param node
+     */
+    public void appendCommentsBefore(ASTNode node) {
+        for( var comment : comments.leading(node) )
+            appendComment(comment);
+    }
+
+    /**
      * Append the comments that belong to a construct but not to any
      * particular child, e.g. a comment before a closing brace.
      *
@@ -259,9 +271,12 @@ public class Formatter extends CodeVisitorSupport {
     }
 
     protected void visitIfElse(IfStatement node, boolean preIndent) {
-        appendLeadingComments(node);
-        if( preIndent )
+        // an `else if` is printed by its parent, which has already emitted
+        // the comments that precede it
+        if( preIndent ) {
+            appendLeadingComments(node);
             appendIndent();
+        }
         append("if ");
         visit(node.getBooleanExpression());
         append(" {\n");
@@ -274,6 +289,7 @@ public class Formatter extends CodeVisitorSupport {
         if( elseBlock instanceof IfStatement is ) {
             appendTrailingComment(node);
             appendNewLine();
+            appendCommentsBefore(is);
             appendIndent();
             append("else ");
             visitIfElse(is, false);
@@ -281,6 +297,7 @@ public class Formatter extends CodeVisitorSupport {
         }
         if( !(elseBlock instanceof EmptyStatement) ) {
             appendNewLine();
+            appendCommentsBefore(elseBlock);
             appendIndent();
             append("else {\n");
             incIndent();
