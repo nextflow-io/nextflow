@@ -1,0 +1,281 @@
+---
+title: nextflow run
+description: Reference for the nextflow run command. Execute a pipeline.
+---
+
+# `nextflow run`
+
+Execute a pipeline.
+
+## Usage
+
+```console
+$ nextflow run [options] [project]
+```
+
+## Description
+
+The `run` command runs a local pipeline script or a remote pipeline project.
+
+## Options
+
+##### `-E`
+
+Export all current system environment variables.
+
+##### `-ansi-log`
+
+Enable or disable ANSI console logging.
+
+##### `-bucket-dir`
+
+Remote bucket where intermediate result files are stored. When running a hybrid workflow, `-bucket-dir` and `-work-dir` should define separate work directories for remote tasks and local tasks, respectively.
+
+##### `-cache`
+
+Enable or disable process caching.
+
+##### `-d, -deep`
+
+<DeprecatedInVersion version="26.04">
+Ignored for new multi-revision asset management strategy. Still used in legacy assets.
+</DeprecatedInVersion>
+
+Create a shallow clone of the specified depth.
+
+##### `-disable-jobs-cancellation`
+
+Do not cancel child jobs when the run terminates.
+
+##### `-dump-channels`
+
+Dump channels for debugging. Optionally accepts a comma-separated list of channel tags to select which channels are printed.
+
+##### `-dump-hashes`
+
+Dump task hash keys for debugging purposes.
+
+<AddedInVersion version="23.10">
+You can use `-dump-hashes json` to dump the task hash keys as JSON for easier post-processing. See the [caching and resuming tips][cache-compare-hashes] for more details.
+</AddedInVersion>
+
+##### `-e.<key>=<value>`
+
+Add the specified variable to the execution environment.
+
+##### `-entry`
+
+<DeprecatedInVersion version="24.10">
+Use params in the entry workflow to call different workflows from the command line.
+</DeprecatedInVersion>
+
+Entry workflow to run.
+
+##### `-h, -help`
+
+Print the command usage.
+
+##### `-hub` (`github`)
+
+Service hub where the project is hosted. Options: `gitlab` or `bitbucket`.
+
+##### `-latest`
+
+Pull the latest changes before the run.
+
+##### `-lib`
+
+Library extension path.
+
+##### `-main-script` (`main.nf`)
+
+The script file to execute when launching a project directory or repository. Should be a path relative to the project root. For example, `-main-script subproject/main.nf`.
+
+The project `nextflow.config` is always read from the project root regardless of the main script location.
+
+##### `-name`
+
+Assign a mnemonic name to the pipeline run.
+
+##### `-offline`
+
+Do not check for remote project updates.
+
+##### `-o, -output-dir` (`results`)
+
+<AddedInVersion version="24.10" />
+
+Directory where workflow outputs are stored.
+
+##### `-output-format`
+
+<AddedInVersion version="26.04" />
+
+Output format for printing workflow outputs. Options: `text` (default), `json`, `none`.
+
+##### `-params-file`
+
+Load script parameters from a JSON/YAML file.
+
+##### `-plugins`
+
+Comma-separated list of plugin ids to apply to the pipeline run.
+
+##### `-preview`
+
+Run the workflow script without running any processes.
+
+##### `-profile`
+
+Choose a configuration profile.
+
+##### `-qs, -queue-size`
+
+Maximum number of processes each executor can run in parallel.
+
+##### `-resume`
+
+Run the script using cached results. Use this to continue a run that stopped because of an error.
+
+##### `-r, -revision`
+
+Project revision to run. Can be a git branch, tag, or commit SHA number.
+
+When passing a git tag or branch, the `workflow.revision` and `workflow.commitId` fields are populated. When passing only the commit hash, `workflow.revision` is not defined.
+
+##### `-stub-run, -stub`
+
+Run the workflow, replacing process scripts with command stubs.
+
+##### `-test`
+
+Test the script function with the specified name.
+
+##### `-user`
+
+Private repository user name.
+
+##### `-with-apptainer`
+
+Enable process execution in an Apptainer container.
+
+##### `-with-charliecloud`
+
+Enable process execution in a Charliecloud container.
+
+##### `-with-cloudcache`
+
+Store cache metadata in an object storage bucket with the Cloud cache plugin.
+
+##### `-with-conda`
+
+Use the specified Conda environment package or file, which must end with `.yml` or `.yaml`.
+
+##### `-with-dag` (`dag-<timestamp>.html`)
+
+Create pipeline DAG file.
+
+<ChangedInVersion version="23.10">
+The default format was changed from `dot` to `html`.
+</ChangedInVersion>
+
+##### `-with-docker`
+
+Enable process execution in a Docker container.
+
+##### `-N, -with-notification`
+
+Send a notification email on workflow completion to the specified recipients.
+
+##### `-with-podman`
+
+Enable process execution in a Podman container.
+
+##### `-with-report` (`report-<timestamp>.html`)
+
+Create workflow execution HTML report.
+
+##### `-with-singularity`
+
+Enable process execution in a Singularity container.
+
+##### `-with-spack`
+
+Use the specified Spack environment package or file, which must end with `.yaml`.
+
+##### `-with-timeline` (`timeline-<timestamp>.html`)
+
+Create workflow execution timeline.
+
+##### `-with-tower` (`https://api.cloud.seqera.io`)
+
+Monitor workflow execution with [Seqera Platform](https://seqera.io/) (formerly Tower Cloud).
+
+##### `-with-trace` (`trace-<timestamp>.txt`)
+
+Create workflow execution trace file.
+
+##### `-with-wave` (`https://wave.seqera.io`)
+
+Use Wave containers.
+
+##### `-with-weblog` (`http://localhost`)
+
+Send workflow status messages to the target URL over HTTP.
+
+##### `-w, -work-dir` (`work`)
+
+Directory where intermediate result files are stored.
+
+## Examples
+
+Run a specific revision of a remote pipeline:
+
+```console
+$ nextflow run nextflow-io/hello -r v1.1
+
+N E X T F L O W  ~  version 20.07.1
+Launching `nextflow-io/hello` [grave_cajal] - revision: 1c3e9e7404 [v1.1]
+```
+
+Choose a profile for running the project. This example assumes a profile named `docker` is defined in the config file:
+
+```console
+$ nextflow run main.nf -profile docker
+```
+
+Run a pipeline and generate the summary HTML report. See [Reports][tracing-page] for more information about the metrics:
+
+```console
+$ nextflow run main.nf -with-report
+```
+
+Run a pipeline with a custom queue size. By default, the queue size is the number of available CPUs:
+
+```console
+$ nextflow run nextflow-io/hello -qs 4
+```
+
+Run the pipeline with a specific workflow as the entry point:
+
+```console
+$ nextflow run main.nf -entry workflow_A
+```
+
+Run a pipeline with monitoring in [Seqera Platform](https://seqera.io):
+
+```console
+$ nextflow run nextflow-io/hello -with-tower
+```
+
+Run a pipeline with a custom parameters file in YAML or JSON:
+
+```console
+$ nextflow run main.nf -params-file pipeline_params.yml
+```
+
+See [Pipeline parameters][cli-params] for more information about writing custom parameters files.
+
+[cache-compare-hashes]: ../../cache-and-resume#comparing-the-hashes-of-two-runs
+[cli-params]: ../../cli#pipeline-parameters
+[tracing-page]: ../../reports

@@ -51,13 +51,20 @@ dependencies {
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
     compileOnly 'org.pf4j:pf4j:3.14.1'
-    api 'io.seqera:sched-client:0.59.0'
-    // Override the old lib-httpx pulled transitively by sched-client, otherwise the plugin
-    // bundles failsafe-3.1.0 which clashes with the failsafe-3.3.2 the plugin is compiled
-    // against (java.lang.NoSuchMethodError on handleIf(CheckedPredicate) at runtime).
-    api 'io.seqera:lib-httpx:2.3.0'
+
+    // intelligent compute scheduler client
+    api 'io.seqera:sched-client:0.79.3'
+    // Single lib-httpx declaration, kept in step with the version sched-client is built
+    // against. SchedHxClient overrides shouldRetryOnException(HttpRequest, Throwable), an
+    // overload added in 2.6.0: on an older lib-httpx the override binds to nothing and the
+    // client silently falls back to retrying every IOException on every request, which
+    // re-sends a timed-out batch submit and duplicates the tasks it creates.
+    api 'io.seqera:lib-httpx:2.6.0'
+    // jackson 2.21.5 addresses GHSA-rmj7-2vxq-3g9f and GHSA-j3rv-43j4-c7qm
+    // (PolymorphicTypeValidator bypasses) and later deserialization advisories
+    api "com.fasterxml.jackson.core:jackson-databind:2.21.5"
 
     testImplementation(testFixtures(project(":nextflow")))
-    testImplementation "org.apache.groovy:groovy:4.0.31"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.31"
+    testImplementation "org.apache.groovy:groovy:4.0.33"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.33"
 }

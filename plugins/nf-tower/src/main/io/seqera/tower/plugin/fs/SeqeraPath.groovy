@@ -16,6 +16,8 @@
 
 package io.seqera.tower.plugin.fs
 
+import groovy.transform.PackageScope
+
 import java.nio.file.FileSystem
 import java.nio.file.InvalidPathException
 import java.nio.file.LinkOption
@@ -30,176 +32,167 @@ import groovy.transform.CompileStatic
 /**
  * {@link Path} implementation for the {@code seqera://} scheme.
  *
- * Path hierarchy:
+ * Path shape:
  * <pre>
- *   depth 0  seqera://                                   (root — directory)
- *   depth 1  seqera://&lt;org&gt;                              (org — directory)
- *   depth 2  seqera://&lt;org&gt;/&lt;workspace&gt;                  (workspace — directory)
- *   depth 3  seqera://&lt;org&gt;/&lt;workspace&gt;/datasets          (resource type — directory)
- *   depth 4  seqera://&lt;org&gt;/&lt;workspace&gt;/datasets/&lt;name&gt;  (dataset file)
- *            seqera://&lt;org&gt;/&lt;workspace&gt;/datasets/&lt;name@ver&gt;  (pinned version)
+ *   seqera://                               depth 0 — root
+ *   seqera://&lt;org&gt;                       depth 1
+ *   seqera://&lt;org&gt;/&lt;ws&gt;               depth 2
+ *   seqera://&lt;org&gt;/&lt;ws&gt;/&lt;type&gt;      depth 3 — resource type
+ *   seqera://&lt;org&gt;/&lt;ws&gt;/&lt;type&gt;/...   depth 4+ — handler-owned trail
  * </pre>
  *
- * @author Seqera Labs
+ * Resource-type-agnostic for depth &ge; 3: segments after {@code resourceType} are
+ * exposed as {@link #getTrail()} and interpreted by the matching
+ * {@link ResourceTypeHandler}.
  */
 @CompileStatic
 class SeqeraPath implements Path {
 
-    /** URI scheme */
     public static final String SCHEME = 'seqera'
     public static final String PROTOCOL = "${SCHEME}://"
     public static final String SEPARATOR = '/'
 
     private final SeqeraFileSystem fs
-    /** path segments in order: [org, workspace, resourceType, datasetName] — null for missing levels */
     private final String org
     private final String workspace
     private final String resourceType
-    private final String datasetName
-    /** version string extracted from {@code @version} suffix; null when not pinned */
-    private final String version
-    /**
-     * Raw relative path string — non-null only for relative {@code SeqeraPath} instances
-     * created by {@link #relativize(Path)}. When non-null, {@link #fs} is {@code null}
-     * and all segment fields are {@code null}.
-     */
+    private final List<String> trail
+    /** non-null only for relative paths produced by {@link #relativize(Path)} */
     private final String relPath
-
     /**
-     * Parse a {@code seqera://} URI string into a SeqeraPath.
-     * The URI authority is the org; path segments are workspace, resourceType, datasetName.
-     * The last segment may contain a {@code @version} suffix.
+     * Optional attributes attached when this path was produced by a directory listing,
+     * or set by {@link SeqeraFileSystemProvider#readAttributes} after a fresh resolution
+     * so subsequent reads on the same path instance hit the cache. Not part of the URI —
+     * does not affect {@link #equals}, {@link #hashCode}, {@link #toString}, {@link #toUri},
+     * or propagation via {@link #resolve} / {@link #getParent}.
+     *
+     * Marked {@code volatile} so the publication of a freshly-resolved value is visible
+     * to other threads that call {@link #getCachedAttributes()} on the same path.
      */
+    private volatile SeqeraFileAttributes cachedAttributes
+
+    /** Parse a {@code seqera://} URI string. */
     SeqeraPath(SeqeraFileSystem fs, String uriString) {
         this.fs = fs
         this.relPath = null
-        if (!uriString.startsWith("${SCHEME}://"))
+        this.cachedAttributes = null
+        if (!uriString.startsWith(PROTOCOL))
             throw new InvalidPathException(uriString, "Not a seqera:// URI")
-        // strip scheme: seqera://rest
-        final withoutScheme = uriString.substring("${SCHEME}://".length())
-        // split on '/'
-        final parts = withoutScheme.split('/', -1).toList().findAll { it != null } as List<String>
-        // parts[0]=org, parts[1]=workspace, parts[2]=resourceType, parts[3]=datasetName[@version]
-        this.org = parts.size() > 0 && parts[0] ? parts[0] : null
-        this.workspace = parts.size() > 1 && parts[1] ? parts[1] : null
+        final withoutScheme = uriString.substring(PROTOCOL.length())
+        final parts = withoutScheme.split('/', -1).toList().findAll { String s -> s != null } as List<String>
+        this.org          = parts.size() > 0 && parts[0] ? parts[0] : null
+        this.workspace    = parts.size() > 1 && parts[1] ? parts[1] : null
         this.resourceType = parts.size() > 2 && parts[2] ? parts[2] : null
-        if (parts.size() > 3 && parts[3]) {
-            final last = parts[3]
-            final atIdx = last.lastIndexOf('@')
-            if (atIdx > 0) {
-                this.datasetName = last.substring(0, atIdx)
-                this.version = last.substring(atIdx + 1)
-            } else {
-                this.datasetName = last
-                this.version = null
-            }
-        } else {
-            this.datasetName = null
-            this.version = null
-        }
+        // Trail: drop any empty segments (trailing slash, accidental double-slashes)
+        final List<String> tail = parts.size() > 3
+                ? parts.subList(3, parts.size()).findAll { String s -> s } as List<String>
+                : new ArrayList<String>()
+        this.trail = Collections.unmodifiableList(tail)
         validatePath(uriString)
     }
 
-    /** Internal constructor for programmatic absolute path creation */
-    SeqeraPath(SeqeraFileSystem fs, String org, String workspace, String resourceType, String datasetName, String version) {
+    /** Programmatic absolute-path constructor. */
+    SeqeraPath(SeqeraFileSystem fs, String org, String workspace, String resourceType, List<String> trail) {
+        this(fs, org, workspace, resourceType, trail, null)
+    }
+
+    /** Programmatic absolute-path constructor with pre-resolved attributes. */
+    SeqeraPath(SeqeraFileSystem fs, String org, String workspace, String resourceType, List<String> trail, SeqeraFileAttributes cachedAttributes) {
         this.fs = fs
         this.relPath = null
         this.org = org
         this.workspace = workspace
         this.resourceType = resourceType
-        this.datasetName = datasetName
-        this.version = version
+        this.trail = trail != null
+                ? Collections.unmodifiableList(new ArrayList<String>(trail))
+                : Collections.<String>emptyList()
+        this.cachedAttributes = cachedAttributes
         validatePath(null)
     }
 
-    /**
-     * Constructor for relative paths produced by {@link #relativize(Path)}.
-     * The {@code relPath} is a slash-separated string of the differing path segments.
-     * All segment fields are {@code null}; {@link #isAbsolute()} returns {@code false}.
-     */
+    /** Relative path produced only by {@link #relativize(Path)}. */
     SeqeraPath(String relPath) {
         this.fs = null
         this.relPath = relPath ?: ''
         this.org = null
         this.workspace = null
         this.resourceType = null
-        this.datasetName = null
-        this.version = null
+        this.trail = Collections.<String>emptyList()
+        this.cachedAttributes = null
     }
 
-    /**
-     * Validate structural integrity: deeper segments require all shallower ones,
-     * and no segment may contain {@code /}.
-     *
-     * @param original original URI string used in error messages (null → derive from fields)
-     * @throws InvalidPathException if the path is malformed
-     */
     private void validatePath(String original) {
         final label = original ?: rawPath()
-        if (datasetName && !workspace)
-            throw new InvalidPathException(label, "Dataset path requires a workspace segment")
+        if (trail && !resourceType)
+            throw new InvalidPathException(label, "Trail segments require a resource-type segment")
         if (resourceType && !workspace)
             throw new InvalidPathException(label, "Resource type requires a workspace segment")
         if (workspace && !org)
             throw new InvalidPathException(label, "Workspace requires an org segment")
-        // Segments from URI parsing never contain '/', but guard the internal constructor too
         if (org?.contains('/'))
             throw new InvalidPathException(label, "Org name cannot contain '/'")
         if (workspace?.contains('/'))
             throw new InvalidPathException(label, "Workspace name cannot contain '/'")
         if (resourceType?.contains('/'))
             throw new InvalidPathException(label, "Resource type cannot contain '/'")
-        if (datasetName?.contains('/'))
-            throw new InvalidPathException(label, "Dataset name cannot contain '/'")
+        for (String t : trail) {
+            if (t == null || t.isEmpty())
+                throw new InvalidPathException(label, "Path segments cannot be empty")
+            if (t.contains('/'))
+                throw new InvalidPathException(label, "Path segments cannot contain '/'")
+        }
     }
 
-    /** Return a list of name component strings (works for both absolute and relative paths). */
+    private String rawPath() {
+        final sb = new StringBuilder(PROTOCOL)
+        if (org) sb.append(org)
+        if (workspace) sb.append('/').append(workspace)
+        if (resourceType) sb.append('/').append(resourceType)
+        for (String t : trail) sb.append('/').append(t)
+        return sb.toString()
+    }
+
     private List<String> nameComponents() {
         if (isAbsolute()) {
             final d = depth()
-            final result = new ArrayList<String>(d)
+            final out = new ArrayList<String>(d)
             for (int i = 0; i < d; i++)
-                result.add(getName(i).toString())
-            return result
+                out.add(getName(i).toString())
+            return out
         }
         if (!relPath) return Collections.<String>emptyList()
         return relPath.split('/').toList().findAll { String s -> s } as List<String>
     }
 
-    /** Build a raw path string from the current fields, for use in exception messages. */
-    private String rawPath() {
-        final sb = new StringBuilder("${SCHEME}://")
-        if (org) sb.append(org)
-        if (workspace) sb.append('/').append(workspace)
-        if (resourceType) sb.append('/').append(resourceType)
-        if (datasetName) {
-            sb.append('/').append(datasetName)
-            if (version) sb.append('@').append(version)
-        }
-        return sb.toString()
-    }
-
-    // ---- path component accessors ----
+    // ---- accessors ----
 
     String getOrg() { org }
     String getWorkspace() { workspace }
     String getResourceType() { resourceType }
-    String getDatasetName() { datasetName }
-    String getVersion() { version }
+    List<String> getTrail() { trail }
+    SeqeraFileAttributes getCachedAttributes() { cachedAttributes }
 
+    /** Package-scope: only same-package callers (e.g. {@link SeqeraFileSystemProvider}) cache attrs. */
+    @PackageScope
+    void setCachedAttributes(SeqeraFileAttributes attributes) {
+        this.cachedAttributes = attributes
+    }
     /**
-     * Path depth: 0=root, 1=org, 2=workspace, 3=resourceType, 4=dataset file.
+     * Resolve a child segment and attach the given attributes to the resulting path.
+     * Used by directory-listing code paths so follow-up {@code readAttributes()} calls
+     * don't re-fetch information that was already available from the listing response.
      */
+    SeqeraPath resolveWithAttributes(String segment, SeqeraFileAttributes attrs) {
+        final child = resolve(segment) as SeqeraPath
+        return new SeqeraPath(child.fs, child.org, child.workspace, child.resourceType, child.trail, attrs)
+    }
+
     int depth() {
-        if (datasetName) return 4
-        if (resourceType) return 3
+        if (resourceType) return 3 + trail.size()
         if (workspace) return 2
         if (org) return 1
         return 0
     }
-
-    boolean isDirectory() { depth() < 4 }
-    boolean isRegularFile() { depth() == 4 }
 
     // ---- Path API ----
 
@@ -210,27 +203,28 @@ class SeqeraPath implements Path {
     boolean isAbsolute() { fs != null }
 
     @Override
-    Path getRoot() { new SeqeraPath(fs, null, null, null, null, null) }
+    Path getRoot() { new SeqeraPath(fs, null, null, null, null) }
 
     @Override
     Path getFileName() {
         final d = depth()
         if (d == 0) return null
-        final name = d == 4 ? (version ? "${datasetName}@${version}" : datasetName)
-                   : d == 3 ? resourceType
-                   : d == 2 ? workspace
-                   : org
-        return new SeqeraPath( name as String)
+        if (d >= 4) return new SeqeraPath(trail[trail.size() - 1])
+        if (d == 3) return new SeqeraPath(resourceType)
+        if (d == 2) return new SeqeraPath(workspace)
+        return new SeqeraPath(org)
     }
 
     @Override
     Path getParent() {
         final d = depth()
         if (d == 0) return null
-        if (d == 1) return new SeqeraPath(fs, null, null, null, null, null)
-        if (d == 2) return new SeqeraPath(fs, org, null, null, null, null)
-        if (d == 3) return new SeqeraPath(fs, org, workspace, null, null, null)
-        return new SeqeraPath(fs, org, workspace, resourceType, null, null)
+        if (d == 1) return new SeqeraPath(fs, null, null, null, null)
+        if (d == 2) return new SeqeraPath(fs, org, null, null, null)
+        if (d == 3) return new SeqeraPath(fs, org, workspace, null, null)
+        // d >= 4: drop last trail segment
+        final newTrail = trail.subList(0, trail.size() - 1)
+        return new SeqeraPath(fs, org, workspace, resourceType, newTrail)
     }
 
     @Override
@@ -244,7 +238,7 @@ class SeqeraPath implements Path {
         if (index == 0) return new SeqeraPath(org)
         if (index == 1) return new SeqeraPath(workspace)
         if (index == 2) return new SeqeraPath(resourceType)
-        return new SeqeraPath((version ? "${datasetName}@${version}" : datasetName) as String)
+        return new SeqeraPath(trail[index - 3])
     }
 
     @Override
@@ -346,16 +340,12 @@ class SeqeraPath implements Path {
     /** Resolve a single (non-empty, slash-free) segment against this path. */
     private SeqeraPath resolveOne(String seg) {
         final d = depth()
-        if (d == 0) return new SeqeraPath(fs, seg, null, null, null, null)
-        if (d == 1) return new SeqeraPath(fs, org, seg, null, null, null)
-        if (d == 2) return new SeqeraPath(fs, org, workspace, seg, null, null)
-        if (d == 3) {
-            final atIdx = seg.lastIndexOf('@')
-            if (atIdx > 0)
-                return new SeqeraPath(fs, org, workspace, resourceType, seg.substring(0, atIdx), seg.substring(atIdx + 1))
-            return new SeqeraPath(fs, org, workspace, resourceType, seg, null)
-        }
-        throw new IllegalStateException("Cannot resolve a path segment on a depth-4 path: $this")
+        if (d == 0) return new SeqeraPath(fs, seg, null, null, null)
+        if (d == 1) return new SeqeraPath(fs, org, seg, null, null)
+        if (d == 2) return new SeqeraPath(fs, org, workspace, seg, null)
+        final newTrail = new ArrayList<String>(trail)
+        newTrail.add(seg)
+        return new SeqeraPath(fs, org, workspace, resourceType, newTrail)
     }
 
     @Override
@@ -400,7 +390,7 @@ class SeqeraPath implements Path {
         if (workspace) {
             final segments = [workspace]
             if (resourceType) segments.add(resourceType)
-            if (datasetName) segments.add(version ? "${datasetName}@${version}" as String : datasetName)
+            for (String t : trail) segments.add(t)
             uriPath = '/' + segments.join('/')
         }
         // new URI(scheme, authority, path, query, fragment) avoids URI.create() pitfalls for edge cases

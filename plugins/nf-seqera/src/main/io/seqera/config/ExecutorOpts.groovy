@@ -41,6 +41,11 @@ class ExecutorOpts implements ConfigScope {
 
     final RetryOpts retryPolicy
 
+    @Description("""
+        HTTP client settings for requests to the Seqera scheduler service.
+    """)
+    final HttpClientOpts httpClient
+
     @ConfigOption
     @Description("""
         The Seqera scheduler service endpoint URL.
@@ -77,7 +82,7 @@ class ExecutorOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The interval for batching task submissions (default: `1 sec`).
+        The interval for batching task submissions (default: `5 sec`).
     """)
     final Duration batchFlushInterval
 
@@ -108,6 +113,11 @@ class ExecutorOpts implements ConfigScope {
     """)
     final String predictionModel
 
+    @Description("""
+        Scheduling requirements applied to this run by the Seqera scheduler.
+    """)
+    final SchedulingRequirementOpts schedulingRequirement
+
     @ConfigOption
     @Description("""
         Custom environment variables to apply to all tasks submitted by the Seqera executor.
@@ -117,11 +127,28 @@ class ExecutorOpts implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        Backend-specific provider configuration merged into the compute cluster's backend
+        properties (for cluster isolation). When omitted, the backend falls back to its
+        environment variable configuration.
+    """)
+    final Map<String, String> providerConfig
+
+    @ConfigOption
+    @Description("""
         The Seqera Platform compute environment ID. When specified, the scheduler resolves
         the compute environment directly by this ID instead of listing all workspace CEs.
         Used as a fallback when the workflow launch does not include a CE reference.
     """)
     final String computeEnvId
+
+    @ConfigOption
+    @Description("""
+        Enable on-demand interactive shell access (e.g. SSH) to this run's task containers
+        (VM and local backends). When `true`, a running task can be reached with
+        `sched task ssh <task-id>` (or a plain `ssh <task-id>@<scheduler>`), and the
+        connection survives task completion. Default: `false`.
+    """)
+    final boolean shellEnabled
 
     /* required by config scope -- do not remove */
 
@@ -129,6 +156,7 @@ class ExecutorOpts implements ConfigScope {
 
     ExecutorOpts(Map opts) {
         this.retryPolicy = new RetryOpts(opts.retryPolicy as Map ?: Map.of())
+        this.httpClient = new HttpClientOpts(opts.httpClient as Map ?: Map.of())
         this.endpoint = opts.endpoint as String
         if (!endpoint)
             throw new IllegalArgumentException("Missing Seqera endpoint - make sure to specify 'seqera.executor.endpoint' settings")
@@ -139,20 +167,30 @@ class ExecutorOpts implements ConfigScope {
         this.keyPairName = opts.keyPairName as String
         this.batchFlushInterval = opts.batchFlushInterval
             ? Duration.of(opts.batchFlushInterval as String)
-            : Duration.of('1 sec')
+            : Duration.of('5 sec')
         // machine requirement settings
         this.machineRequirement = new MachineRequirementOpts(opts.machineRequirement as Map ?: Map.of())
         this.autoLabels = parseAutoLabels(opts.get('autoLabels'))
         // prediction model
         this.predictionModel = opts.predictionModel as String ?: null
+        // scheduling requirements (e.g. per-user vCPU cap)
+        this.schedulingRequirement = new SchedulingRequirementOpts(opts.schedulingRequirement as Map ?: Map.of())
         // custom task environment variables
         this.taskEnvironment = opts.taskEnvironment as Map<String, String>
+        // backend-specific provider configuration
+        this.providerConfig = opts.providerConfig as Map<String, String>
         // compute environment ID
         this.computeEnvId = opts.computeEnvId as String
+        // on-demand shell access to task containers (default false)
+        this.shellEnabled = opts.shellEnabled as boolean
     }
 
     RetryOpts retryOpts() {
         this.retryPolicy
+    }
+
+    HttpClientOpts httpOpts() {
+        this.httpClient
     }
 
     String getEndpoint() {
@@ -209,11 +247,23 @@ class ExecutorOpts implements ConfigScope {
         return predictionModel
     }
 
+    SchedulingRequirementOpts getSchedulingRequirement() {
+        return schedulingRequirement
+    }
+
     Map<String, String> getTaskEnvironment() {
         return taskEnvironment
     }
 
+    Map<String, String> getProviderConfig() {
+        return providerConfig
+    }
+
     String getComputeEnvId() {
         return computeEnvId
+    }
+
+    boolean getShellEnabled() {
+        return shellEnabled
     }
 }

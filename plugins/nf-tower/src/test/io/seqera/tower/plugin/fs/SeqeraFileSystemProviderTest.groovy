@@ -21,6 +21,7 @@ import java.nio.file.DirectoryStream
 import java.nio.file.FileSystemAlreadyExistsException
 import java.nio.file.InvalidPathException
 import java.nio.file.NoSuchFileException
+import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
 import java.nio.file.attribute.FileTime
 import java.time.OffsetDateTime
@@ -55,7 +56,9 @@ class SeqeraFileSystemProviderTest extends Specification {
     private SeqeraFileSystem buildFs(TowerClient tc) {
         final client = new SeqeraDatasetClient(tc)
         final provider = new SeqeraFileSystemProvider()
-        return new SeqeraFileSystem(provider, client)
+        final fs = new SeqeraFileSystem(provider, tc)
+        fs.registerHandler(new io.seqera.tower.plugin.fs.handler.DatasetsResourceHandler(fs, client))
+        return fs
     }
 
     private static String userInfoJson() {
@@ -76,11 +79,11 @@ class SeqeraFileSystemProviderTest extends Specification {
         ], totalSize: 1])
     }
 
-    private static String versionsJson() {
+    private static String versionsJson(String datasetId = 'ds-1') {
         JsonOutput.toJson([versions: [
-            [datasetId: 'ds-1', version: 1L, fileName: 'samples.csv', fileSize: 100L,
+            [datasetId: datasetId, version: 1L, fileName: 'samples.csv', fileSize: 100L,
              mediaType: 'text/csv', hasHeader: true, dateCreated: '2024-01-01T00:00:00Z', lastUpdated: '2024-01-03T00:00:00Z', disabled: false],
-            [datasetId: 'ds-1', version: 2L, fileName: 'samples_v2.csv', fileSize: 4096L,
+            [datasetId: datasetId, version: 2L, fileName: 'samples_v2.csv', fileSize: 4096L,
              mediaType: 'text/csv', hasHeader: true, dateCreated: '2024-01-02T00:00:00Z', lastUpdated: '2024-01-04T00:00:00Z', disabled: false]
         ]])
     }
@@ -290,16 +293,18 @@ class SeqeraFileSystemProviderTest extends Specification {
         entries[0].toString() == 'seqera://acme/research'
     }
 
-    def "newDirectoryStream on workspace returns datasets resource type"() {
+    def "newDirectoryStream on workspace returns registered resource types"() {
         given:
         def tc = spyTower()
+        tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
+        tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
         final fs = buildFs(tc)
         final wsPath = new SeqeraPath(fs, 'seqera://acme/research')
 
         when:
         def entries = fs.provider().newDirectoryStream(wsPath, null).toList()
 
-        then:
+        then: 'only datasets is registered by this test helper; data-links registration happens in the production provider'
         entries.size() == 1
         entries[0].toString() == 'seqera://acme/research/datasets'
     }
@@ -310,6 +315,7 @@ class SeqeraFileSystemProviderTest extends Specification {
         tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
         tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
         tc.sendApiRequest("${ENDPOINT}/datasets?workspaceId=10") >> ok(datasetsJson())
+        tc.sendApiRequest("${ENDPOINT}/datasets/ds-1/versions?workspaceId=10") >> ok(versionsJson())
 
         final fs = buildFs(tc)
         final dsDir = new SeqeraPath(fs, 'seqera://acme/research/datasets')
@@ -351,10 +357,11 @@ class SeqeraFileSystemProviderTest extends Specification {
             [id: 'ds-2', name: 'results', version: 1L, mediaType: 'text/csv', workspaceId: 10L,
              dateCreated: '2024-01-01T00:00:00Z', lastUpdated: '2024-01-02T00:00:00Z']
         ], totalSize: 2]))
-
+        tc.sendApiRequest("${ENDPOINT}/datasets/ds-1/versions?workspaceId=10") >> ok(versionsJson('ds-1'))
+        tc.sendApiRequest("${ENDPOINT}/datasets/ds-2/versions?workspaceId=10") >> ok(versionsJson('ds-2'))
         final fs = buildFs(tc)
         final dsDir = new SeqeraPath(fs, 'seqera://acme/research/datasets')
-        final filter = { java.nio.file.Path p -> p.toString().contains('results') } as DirectoryStream.Filter
+        final filter = { Path p -> p.toString().contains('results') } as DirectoryStream.Filter
 
         when:
         def entries = fs.provider().newDirectoryStream(dsDir, filter).toList()
@@ -447,9 +454,8 @@ class SeqeraFileSystemProviderTest extends Specification {
 
     def "newFileSystem throws FileSystemAlreadyExistsException when filesystem exists"() {
         given: 'a provider with an existing filesystem'
-        def tc = spyTower()
         def provider = new SeqeraFileSystemProvider()
-        def fs = new SeqeraFileSystem(provider, new SeqeraDatasetClient(tc))
+        def fs = new SeqeraFileSystem(provider, Mock(TowerClient))
         provider.@fileSystem = fs
 
         when:
@@ -457,5 +463,76 @@ class SeqeraFileSystemProviderTest extends Specification {
 
         then:
         thrown(FileSystemAlreadyExistsException)
+    }
+
+    // ---- handler dispatch ----
+
+    def "newDirectoryStream at workspace enumerates registered handlers (datasets + data-links)"() {
+        given:
+        def tc = spyTower()
+        tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
+        tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
+        def datasetClient = new SeqeraDatasetClient(tc)
+        def fs = new SeqeraFileSystem(new SeqeraFileSystemProvider(), tc)
+        fs.registerHandler(new io.seqera.tower.plugin.fs.handler.DatasetsResourceHandler(fs, datasetClient))
+        fs.registerHandler(new io.seqera.tower.plugin.fs.handler.DataLinksResourceHandler(fs, new io.seqera.tower.plugin.datalink.SeqeraDataLinkClient(tc)))
+        def wsPath = new SeqeraPath(fs, 'seqera://acme/research')
+
+        when:
+        def entries = fs.provider().newDirectoryStream(wsPath, null).toList()
+
+        then:
+        entries*.toString().sort() == [
+                'seqera://acme/research/data-links',
+                'seqera://acme/research/datasets'
+        ]
+    }
+
+    def "newInputStream on an unsupported resource type throws NoSuchFileException"() {
+        given:
+        def tc = spyTower()
+        tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
+        tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
+        def fs = buildFs(tc)
+        def path = new SeqeraPath(fs, 'seqera://acme/research/unknown-type/foo')
+
+        when:
+        fs.provider().newInputStream(path)
+
+        then:
+        def ex = thrown(NoSuchFileException)
+        ex.reason?.contains('Unsupported resource type')
+    }
+
+    def "readAttributes short-circuits when the SeqeraPath carries cachedAttributes (no API call)"() {
+        given: 'a provider with a fresh filesystem and a path carrying pre-resolved attrs'
+        def tc = spyTower()
+        def fs = buildFs(tc)
+        def attrs = new SeqeraFileAttributes(999L, java.time.Instant.EPOCH, java.time.Instant.EPOCH, 'cached-key')
+        def path = new SeqeraPath(fs, 'seqera://acme/research/datasets/samples').resolveWithAttributes('nested', attrs)
+
+        when:
+        def got = fs.provider().readAttributes(path, java.nio.file.attribute.BasicFileAttributes)
+
+        then: 'no workspace-cache load and no dataset/browse API calls were issued'
+        0 * tc.sendApiRequest(_)
+        got === attrs
+    }
+
+    def "newDirectoryStream.iterator() throws IllegalStateException on a second call"() {
+        given:
+        def tc = spyTower()
+        tc.sendApiRequest("${ENDPOINT}/user-info") >> ok(userInfoJson())
+        tc.sendApiRequest("${ENDPOINT}/user/42/workspaces") >> ok(workspacesJson())
+        def fs = buildFs(tc)
+        def wsPath = new SeqeraPath(fs, 'seqera://acme/research')
+        def stream = fs.provider().newDirectoryStream(wsPath, null)
+
+        when:
+        stream.iterator()
+        stream.iterator()
+
+        then:
+        thrown(IllegalStateException)
     }
 }

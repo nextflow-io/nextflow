@@ -1,0 +1,44 @@
+---
+title: tower
+description: Reference for the tower config scope, which controls the settings for Seqera Platform.
+---
+
+# `tower`
+
+The `tower` scope controls the settings for [Seqera Platform](https://seqera.io) (formerly Tower Cloud).
+
+##### `tower.accessToken`
+
+The unique access token for your Seqera Platform account.
+
+Your `accessToken` can be obtained from your Seqera Platform instance in the [Tokens page](https://cloud.seqera.io/tokens).
+
+##### `tower.computeEnvId`
+
+The compute environment ID in your Seqera Platform account used to launch pipelines (default: the primary compute environment in the selected workspace).
+
+##### `tower.enabled`
+
+Enable workflow monitoring with Seqera Platform (default: `false`).
+
+##### `tower.endpoint`
+
+The endpoint of your Seqera Platform instance (default: `https://api.cloud.seqera.io`).
+
+##### `tower.httpConnectTimeout`
+
+<AddedInVersion version="26.04" />
+
+The HTTP connection timeout for Seqera Platform API requests (default: `'60s'`).
+
+##### `tower.httpReadTimeout`
+
+<AddedInVersion version="26.04" />
+
+The HTTP read timeout for Seqera Platform API requests (default: `'60s'`).
+
+##### `tower.workspaceId`
+
+The workspace ID in Seqera Platform in which to save the run (default: the launching user's personal workspace).
+
+The workspace ID can also be specified using the environment variable `TOWER_WORKSPACE_ID` (config file has priority over the environment variable).

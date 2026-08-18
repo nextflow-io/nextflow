@@ -398,7 +398,7 @@ This pattern provides the best balance of continuity with the old way and consis
 
 ## Links
 
-- [Nextflow standard types](https://nextflow.io/docs/latest/reference/stdlib-types.html)
+- [Nextflow standard types](https://docs.seqera.io/nextflow/reference/stdlib-types)
 - Community issues: #1694, #2678
 - Related nf-core discussion: https://github.com/nf-core/modules/issues/4311
 - Original implementation: #4553

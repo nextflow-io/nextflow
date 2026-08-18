@@ -1,5 +1,5 @@
-#!/bin/bash 
-set -e 
+#!/bin/bash
+set -e
 
 get_abs_filename() {
   echo "$(cd "$(dirname "$1")" && pwd)/$(basename "$1")"
@@ -11,8 +11,31 @@ export NXF_CMD=${NXF_CMD:-$(get_abs_filename ../launch.sh)}
 export NXF_ANSI_LOG=false
 export NXF_DISABLE_CHECK_LATEST=true
 
+# Pull the test container up-front. Nextflow does not serialize image pulls, so
+# the first wave of tasks each trigger their own pull of the same image, and a
+# connection reset there fails the task with exit status 125.
+#
+# $1 is the test suite directory, relative to this script (../tests, ../tests-v1).
+# The image is read from that suite's nextflow.config so the reference stays
+# defined in one place only.
+prepull_container() {
+    local image attempt
+    image=$(grep -oE "public\.cr\.seqera\.io/[^'\"[:space:]]+" "$1/nextflow.config")
+    [[ $image ]] || { echo "ERROR: no container found in $1/nextflow.config"; exit 1; }
+    echo "Pre-pulling $image"
+    for attempt in 1 2 3; do
+      docker pull -q "$image" && return 0
+      echo "Pull attempt $attempt failed, retrying in $((attempt*5))s"
+      sleep $((attempt*5))
+    done
+    echo "ERROR: unable to pull $image after 3 attempts"
+    exit 1
+}
+
 test_integration() {
     (
+      # must run before the cd below, while $1 is still relative to this script
+      prepull_container "$1"
       cd "$1"
       sudo bash cleanup.sh
       cd checks

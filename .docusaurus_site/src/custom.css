@@ -1,0 +1,63 @@
+/* Section indentation */
+section > section h5 ~ *,
+section > section h6 ~ *,
+section h5 ~ *,
+section h6 ~ *,
+section .admonition {
+  margin-left: 2em !important;
+}
+
+/* Make h5 and h6 headings smaller and bold */
+h5, h6 {
+  font-size: 1rem !important;
+}
+
+/* Code blocks in admonitions fill full width */
+.theme-admonition > div {
+  width: 100%;
+}
+
+/* Sidebar indentation beyond level 2.
+   Each nested `menu__list` lives inside its parent `li`, so these margins
+   compound down the tree — every level needs the same 1rem step, not a larger
+   absolute value. Links already get 1rem at every level from the theme's `ml-4`;
+   the theme only indents categories up to level 2, so level-3+ categories sit
+   flush with their parent. Match them to the level-2 step so deeper branches
+   (e.g. Language reference > Standard library > Namespaces) nest visually. */
+.theme-doc-sidebar-item-category-level-3.menu__list-item,
+.theme-doc-sidebar-item-category-level-4.menu__list-item,
+.theme-doc-sidebar-item-category-level-5.menu__list-item {
+  margin-left: 1rem;
+}
+
+/* Sidebar scrolling.
+   @seqera/docusaurus-theme-seqera (1.0.39) sticks the sidebar viewport at
+   `--ifm-navbar-height - 2rem` but leaves its `max-height` at `100vh`, where
+   stock Docusaurus sticks it at `top: 0`. The scroll container therefore hangs
+   2rem below the window, and because it is sticky that 2rem never comes into
+   view: the last menu entry and the end of the scrollbar track are unreachable
+   at any page scroll position. Set both halves here so they cannot drift — the
+   offset stays 2rem, matching the theme's current geometry, and the height is
+   derived from it rather than from the theme's expression. `overflow-y` is
+   stated explicitly rather than relying on Infima's `.menu { overflow-x:
+   hidden }` computing the other axis to `auto`, and the bottom padding keeps
+   the last entry off the window edge once it can be scrolled to. */
+@media (min-width: 997px) {
+  .theme-doc-sidebar-container > div {
+    top: 2rem;
+    max-height: calc(100vh - 2rem);
+  }
+
+  .theme-doc-sidebar-container .menu {
+    overflow-y: auto;
+    padding-bottom: 1.5rem;
+  }
+}
+
+/* Make wide tables horizontally scrollable instead of overflowing the page */
+.markdown table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  overflow-x: auto;
+}

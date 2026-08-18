@@ -31,12 +31,15 @@ import nextflow.script.ScriptFile
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceHelper
+import nextflow.trace.TraceObserverV2
 import nextflow.trace.WorkflowStatsObserver
 import nextflow.util.Duration
 import nextflow.util.VersionNumber
 import spock.lang.Specification
 import spock.lang.Unroll
 import test.TestHelper
+
+import static test.ScriptHelper.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -347,12 +350,6 @@ class SessionTest extends Specification {
         'foo|bar'   | ['baz']       | "There's no process matching config selector: foo|bar"
     }
 
-
-    static Map cfg(String config) {
-        new ConfigSlurper().parse(config).toMap()
-    }
-
-
     def 'should fetch containers definition' () {
 
         String text
@@ -362,7 +359,7 @@ class SessionTest extends Specification {
                 process.container = 'beta'
                 '''
         then:
-        new Session(cfg(text)).fetchContainers() == 'beta'
+        new Session(loadConfig(text)).fetchContainers() == 'beta'
 
 
         when:
@@ -373,7 +370,7 @@ class SessionTest extends Specification {
                 }
                 '''
         then:
-        new Session(cfg(text)).fetchContainers() == ['proc1': 'alpha', 'proc2': 'beta']
+        new Session(loadConfig(text)).fetchContainers() == ['proc1': 'alpha', 'proc2': 'beta']
 
 
         when:
@@ -386,7 +383,7 @@ class SessionTest extends Specification {
                 process.container = 'gamma'
                 '''
         then:
-        new Session(cfg(text)).fetchContainers() == ['proc1': 'alpha', 'proc2': 'beta', 'default': 'gamma']
+        new Session(loadConfig(text)).fetchContainers() == ['proc1': 'alpha', 'proc2': 'beta', 'default': 'gamma']
 
 
         when:
@@ -395,7 +392,7 @@ class SessionTest extends Specification {
                 '''
 
         def meta = Mock(WorkflowMetadata); meta.getRevision() >> '1.2'
-        def session = new Session(cfg(text))
+        def session = new Session(loadConfig(text))
         session.binding.setVariable('workflow',meta)
         then:
         session.fetchContainers() == 'ngi/rnaseq:1.2'
@@ -418,5 +415,24 @@ class SessionTest extends Specification {
         false | false
         true  | true
 
+    }
+
+    def 'should notify flow complete only once when abort and destroy race' () {
+        given:
+        def observer = Mock(TraceObserverV2)
+        def session = new Session()
+        session.@observersV2 = [observer]
+
+        when:
+        // certain error conditions can abort the session on a separate thread
+        // while the main thread winds it down via destroy()
+        // both call shutdown0() -> notifyFlowComplete() concurrently
+        def t1 = Thread.start { session.abort() }
+        def t2 = Thread.start { session.destroy() }
+        t1.join()
+        t2.join()
+
+        then:
+        1 * observer.onFlowComplete()
     }
 }

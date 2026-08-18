@@ -12,12 +12,11 @@ configurations {
 }
 
 dependencies {
-    api project(':nextflow')
+    api project(':nf-cli-v1')
     // include Ivy at runtime in order to have Grape @Grab work correctly
     defaultCfg "org.apache.ivy:ivy:2.5.2"
-    // default cfg = runtime + httpfs + lineage
+    // default cfg = runtime + httpfs (lineage arrives transitively via nf-cli-v1)
     defaultCfg project(':nf-httpfs')
-    defaultCfg project(':nf-lineage')
     console project(':plugins:nf-console')
     google  project(':plugins:nf-google')
     amazon  project(':plugins:nf-amazon')
@@ -93,21 +92,22 @@ protected coordinates( it ) {
 /*
  * Compile and pack all packages
  */
-task packOne( dependsOn: [compile, ":nextflow:shadowJar"]) {
+task packOne( dependsOn: [compile, ":nf-cli-v1:shadowJar"]) {
     doLast {
-        def source = "modules/nextflow/build/libs/nextflow-${version}-one.jar"
-        ant.copy(file: source, todir: releaseDir, overwrite: true)
-        ant.copy(file: source, todir: nextflowDir, overwrite: true)
-        println "\n+ Nextflow package `ONE` copied to: $releaseDir/nextflow-${version}-one.jar"
+        def source = "modules/nf-cli-v1/build/libs/nf-cli-v1-${version}-one.jar"
+        def targetName = "nextflow-${version}-one.jar"
+        ant.copy(file: source, tofile: "$releaseDir/$targetName", overwrite: true)
+        ant.copy(file: source, tofile: "$nextflowDir/$targetName", overwrite: true)
+        println "\n+ Nextflow package `ONE` copied to: $releaseDir/$targetName"
     }
 }
 
-task packDist( dependsOn: [compile, ":nextflow:shadowJar"]) {
+task packDist( dependsOn: [compile, ":nf-cli-v1:shadowJar"]) {
 
     doLast {
         file(releaseDir).mkdirs()
         // cleanup
-        def source = file("modules/nextflow/build/libs/nextflow-${version}-one.jar")
+        def source = file("modules/nf-cli-v1/build/libs/nf-cli-v1-${version}-one.jar")
         def target = file("$releaseDir/nextflow-${version}-dist"); target.delete()
         // append the big jar
         target.withOutputStream {
@@ -117,7 +117,7 @@ task packDist( dependsOn: [compile, ":nextflow:shadowJar"]) {
         // execute permission
         "chmod +x $target".execute()
         // done
-        println "+ Nextflow package `ALL` copied to: $target\n"
+        println "+ Nextflow package `DIST` copied to: $target\n"
     }
 }
 
@@ -125,7 +125,6 @@ task packDist( dependsOn: [compile, ":nextflow:shadowJar"]) {
  * Compile and pack all packages
  */
 task pack( dependsOn: [packOne, packDist]) {
-
 }
 
 task deploy( type: Exec, dependsOn: [clean, compile, pack, validatePluginVersions]) {
@@ -204,7 +203,7 @@ task dockerPack(type: Exec, dependsOn: ['packOne']) {
     dockerBase.mkdirs()
     def dockerFile = new File("$buildDir/docker/Dockerfile")
     dockerFile.text = """
-    FROM amazoncorretto:17-alpine-jdk
+    FROM amazoncorretto:25-alpine-jdk
     RUN apk update && apk add bash && apk add coreutils && apk add curl
     COPY .nextflow /.nextflow
     COPY nextflow /usr/local/bin/nextflow
@@ -273,16 +272,47 @@ task release(type: Exec, dependsOn: [pack, dockerImage, validatePluginVersions])
         aws s3 cp $versionFile s3://www2.nextflow.io/releases/edge/version $s3CmdOpts
         """.stripIndent()
 
-    else if( isLatest && branch == 'master' )
+    else if( isLatest )
         cmd += """
-        # publish the script as the latest
+        # Publish this build as the 'latest' stable channel pointer (the one resolved by
+        # `nextflow self-update` and by fresh `curl get.nextflow.io` installs).
+        #
+        # This promotion used to be gated on the release running from the 'master' branch.
+        # That assumption broke once stable patches started being cut from STABLE-*.x
+        # maintenance branches: such a release was fully published (artifacts, tag, GitHub
+        # release, Maven, plugins) but the 'latest' pointer was never updated, so users kept
+        # being served the previous version.
+        #
+        # Instead, decide by version. Read the version currently advertised as latest from
+        # the exact same endpoint the launcher polls in check_latest()
+        # (https://www.nextflow.io/releases/latest/version), and compare it with the version
+        # being released using the launcher's OWN cmp_ver() function -- extracted from the
+        # released `nextflow` script so the comparison is identical to Nextflow's and there is
+        # no second copy of the semver logic to keep in sync. Promote only when this release
+        # is strictly newer. Effects:
+        #  - a stable patch from any STABLE-*.x branch is promoted (it is newer than latest);
+        #  - an older maintenance line (e.g. a later 25.10.x patch published while latest is
+        #    already 26.04.x) cannot clobber the newer pointer;
+        #  - if the comparator or the published version can't be obtained, promotion is
+        #    skipped rather than failed, so a transient error never demotes the channel.
         export AWS_ACCESS_KEY_ID=${System.env.NXF_AWS_ACCESS}
         export AWS_SECRET_ACCESS_KEY=${System.env.NXF_AWS_SECRET}
-        aws s3 cp $launcherFile s3://www2.nextflow.io/releases/latest/nextflow $s3CmdOpts
-        aws s3 cp $launcherSha1 s3://www2.nextflow.io/releases/latest/nextflow.sha1 $s3CmdOpts
-        aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/latest/nextflow.sha256 $s3CmdOpts
-        aws s3 cp $launcherMd5 s3://www2.nextflow.io/releases/latest/nextflow.md5 $s3CmdOpts
-        aws s3 cp $versionFile s3://www2.nextflow.io/releases/latest/version $s3CmdOpts
+        eval "\$(sed -n '/^function cmp_ver()/,/^}/p' $launcherFile)" || true
+        published=\$(curl -fsSL https://www.nextflow.io/releases/latest/version 2>/dev/null | tr -d '[:space:]') || true
+        if ! declare -F cmp_ver >/dev/null; then
+          echo "Skipping 'latest' promotion: version comparator could not be loaded"
+        elif [ -z "\$published" ]; then
+          echo "Skipping 'latest' promotion: could not read the currently published version"
+        elif [ "\$(cmp_ver "$version" "\$published")" -le 0 ]; then
+          echo "Skipping 'latest' promotion: $version is not newer than published \$published"
+        else
+          echo "Promoting $version to the 'latest' stable channel (previously \$published)"
+          aws s3 cp $launcherFile s3://www2.nextflow.io/releases/latest/nextflow $s3CmdOpts
+          aws s3 cp $launcherSha1 s3://www2.nextflow.io/releases/latest/nextflow.sha1 $s3CmdOpts
+          aws s3 cp $launcherSha256 s3://www2.nextflow.io/releases/latest/nextflow.sha256 $s3CmdOpts
+          aws s3 cp $launcherMd5 s3://www2.nextflow.io/releases/latest/nextflow.md5 $s3CmdOpts
+          aws s3 cp $versionFile s3://www2.nextflow.io/releases/latest/version $s3CmdOpts
+        fi
         """.stripIndent()
 
     def temp = File.createTempFile('upload',null)

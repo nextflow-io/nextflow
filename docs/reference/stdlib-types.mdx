@@ -1,0 +1,76 @@
+---
+title: Types
+description: Overview of the standard types in the Nextflow standard library, including primitive types, collections, records, and dataflow types.
+---
+
+# Types
+
+The Nextflow standard library defines the types that are available in a pipeline. You can use these types to annotate pipeline parameters, process inputs and outputs, and workflow inputs and outputs. See [Static typing][static-typing-page] for an overview.
+
+## Primitive types
+
+| Page | Description |
+| ---- | ----------- |
+| [Boolean][stdlib-types-boolean] | `true` or `false`. |
+| [Float][stdlib-types-float] | A floating-point number. |
+| [Integer][stdlib-types-integer] | A whole number. |
+| [String][stdlib-types-string] | An immutable sequence of characters. |
+
+## Collection types
+
+| Page | Description |
+| ---- | ----------- |
+| [Bag\<E\>][stdlib-types-bag] | An unordered collection of values. |
+| [Iterable\<E\>][stdlib-types-iterable] | The trait implemented by collection types that support iteration. |
+| [List\<E\>][stdlib-types-list] | An ordered collection of values. |
+| [Set\<E\>][stdlib-types-set] | An unordered collection of unique values. |
+
+## Composite types
+
+| Page | Description |
+| ---- | ----------- |
+| [Map\<K,V\>][stdlib-types-map] | A mapping of key-value pairs. |
+| [Record][stdlib-types-record] | An immutable map of fields to values, where each value can have its own type. |
+| [Tuple][stdlib-types-tuple] | A fixed sequence of values, where each value can have its own type. |
+
+## Dataflow types
+
+| Page | Description |
+| ---- | ----------- |
+| [Channel\<E\>][stdlib-types-channel] | An asynchronous sequence of values. |
+| [Value\<V\>][stdlib-types-value] | An asynchronous value. |
+
+## Other types
+
+| Page | Description |
+| ---- | ----------- |
+| [Duration][stdlib-types-duration] | A duration of time. |
+| [MemoryUnit][stdlib-types-memory-unit] | A quantity of bytes. |
+| [Path][stdlib-types-path] | A handle for files, directories, and URLs. |
+| [VersionNumber][stdlib-types-version-number] | A semantic or calendar version number. |
+
+## See also
+
+- [Namespaces][stdlib-namespaces-page]: The constants and functions that return these types.
+- [Semantics][semantics-values]: How Nextflow evaluates values and expressions that use these types.
+
+[semantics-values]: ./semantics#values
+[static-typing-page]: ../static-typing
+[stdlib-namespaces-page]: ./stdlib-namespaces
+[stdlib-types-bag]: ./stdlib-types/bag
+[stdlib-types-boolean]: ./stdlib-types/boolean
+[stdlib-types-channel]: ./stdlib-types/channel
+[stdlib-types-duration]: ./stdlib-types/duration
+[stdlib-types-float]: ./stdlib-types/float
+[stdlib-types-integer]: ./stdlib-types/integer
+[stdlib-types-iterable]: ./stdlib-types/iterable
+[stdlib-types-list]: ./stdlib-types/list
+[stdlib-types-map]: ./stdlib-types/map
+[stdlib-types-memory-unit]: ./stdlib-types/memory-unit
+[stdlib-types-path]: ./stdlib-types/path
+[stdlib-types-record]: ./stdlib-types/record
+[stdlib-types-set]: ./stdlib-types/set
+[stdlib-types-string]: ./stdlib-types/string
+[stdlib-types-tuple]: ./stdlib-types/tuple
+[stdlib-types-value]: ./stdlib-types/value
+[stdlib-types-version-number]: ./stdlib-types/version-number

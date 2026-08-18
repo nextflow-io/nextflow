@@ -498,7 +498,7 @@ workflow {
 }
 ```
 
-This particular pattern was proposed as a cleaner alternative to the experimental [recursion](https://nextflow.io/docs/latest/workflow.html#process-and-workflow-recursion) feature. As long as the process matches the signature of the accumulator closure (two inputs and one output), the process can be executed iteratively.
+This particular pattern was proposed as a cleaner alternative to the experimental [recursion](https://docs.seqera.io/nextflow/workflow#process-and-workflow-recursion) feature. As long as the process matches the signature of the accumulator closure (two inputs and one output), the process can be executed iteratively.
 
 While this approach avoids most of the potential complexity that would be required to call processes in operator closures, it is still a significant syntax change with dubious relative benefit.
 

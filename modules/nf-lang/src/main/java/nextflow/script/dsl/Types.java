@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.Map;
 
 import nextflow.script.ast.ASTNodeMarker;
-import org.codehaus.groovy.GroovyBugError;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.GenericsType;
@@ -122,14 +121,6 @@ public class Types {
         return spec.get(new GenericsType.GenericsTypeName(name)).getType();
     }
 
-    private static String tupleName(ClassNode type) {
-        var sb = new StringBuilder();
-        sb.append('(');
-        genericsTypeNames(type.getGenericsTypes(), sb);
-        sb.append(')');
-        return sb.toString();
-    }
-
     private static String typeName(ClassNode type) {
         var sb = new StringBuilder();
 
@@ -170,7 +161,7 @@ public class Types {
             getName(type.getTypeName());
     }
 
-    private static String getName(Class type) {
+    private static String getName(Class<?> type) {
         return getName(type.getSimpleName());
     }
 

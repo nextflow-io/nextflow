@@ -322,9 +322,8 @@ class TaskInputResolver {
         if( type == ScriptType.SCRIPTLET ) {
             return new TaskPath(holder)
         }
-        if( type == ScriptType.GROOVY) {
-            // the real path for the native task needs to be fixed -- see #378
-            return Path.of(holder.stageName)
+        if( type == ScriptType.GROOVY ) {
+            return holder.storePath
         }
         throw new IllegalStateException("Unknown task type: $type")
     }

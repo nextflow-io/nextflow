@@ -25,8 +25,10 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.script.dsl.Types
+import nextflow.script.types.Record
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
+import nextflow.util.RecordMap
 import nextflow.util.TypeHelper
 import org.codehaus.groovy.runtime.typehandling.GroovyCastException
 /**
@@ -171,11 +173,17 @@ class ParamsDsl {
     }
 
     private static boolean isAssignableFrom(Class target, Class source) {
+        // any numeric value can be assigned to Float
         if( target == Float.class )
             return Number.class.isAssignableFrom(source)
 
+        // any integer value can be assigned to Integer
         if( target == Integer.class )
             return source == BigInteger.class || source == Long.class || source == Integer.class
+
+        // any record can be assigned to a record type (validation is handled by asType())
+        if( Record.class.isAssignableFrom(target) )
+            return source == RecordMap.class
 
         return target.isAssignableFrom(source)
     }

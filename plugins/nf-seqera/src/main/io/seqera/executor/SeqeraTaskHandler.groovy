@@ -21,10 +21,12 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import io.seqera.config.MachineRequirementOpts
 import io.seqera.executor.Labels
 import io.seqera.sched.api.schema.v1a1.AcceleratorType
 import io.seqera.sched.api.schema.v1a1.GetTaskLogsResponse
 import io.seqera.sched.api.schema.v1a1.NextflowTask
+import io.seqera.sched.api.schema.v1a1.PredictionModel
 import io.seqera.sched.api.schema.v1a1.ResourceLimit
 import io.seqera.sched.api.schema.v1a1.ResourceRequirement
 import io.seqera.sched.api.schema.v1a1.Task
@@ -39,6 +41,7 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import nextflow.fusion.FusionAwareTask
+import nextflow.fusion.FusionConfig
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
@@ -98,11 +101,12 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
     @Override
     void submit() {
         executor.ensureRunCreated()
-        int cpuShares = (task.config.getCpus() ?: 1) * 1024
-        int memoryMiB = task.config.getMemory() ? (int) (task.config.getMemory().toBytes() / (1024 * 1024)) : 1024
+        // cpus needs no unspecified handling: TaskConfig.getCpus() already guarantees at least 1
+        // and throws on a negative, so there is never an absent or non-positive value to forward.
+        // memory has no such guarantee — see memoryMiB().
         final resourceReq = new ResourceRequirement()
-            .cpuShares(cpuShares)
-            .memoryMiB(memoryMiB)
+            .cpuShares(task.config.getCpus() * 1024)
+            .memoryMiB(memoryMiB())
         // add accelerator settings if defined
         final accelerator = task.config.getAccelerator()
         if( accelerator ) {
@@ -124,8 +128,13 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             baseMachineOpts,
             task.getContainerPlatform(),
             task.config.getDisk(),
-            fusionConfig().snapshotsEnabled()
+            fusionConfig().snapshotsEnabled(),
+            maxSpotAttempts(baseMachineOpts)
         )
+        // resolve optional per-task prediction model override from the seqera/predictionModel hint;
+        // when unset the task inherits the run-level model
+        final predictionModelHint = HintHelper.resolvePredictionModel(task.config.getHints())
+        final predictionModel = predictionModelHint ? PredictionModel.fromValue(predictionModelHint) : null
         // build resource limit from process resourceLimits directive (upper bound for OOM retry scaling)
         final resourceLim = toResourceLimit()
         // validate container - Seqera executor requires all processes to specify a container image
@@ -141,6 +150,7 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             .resourceRequirement(resourceReq)  // cpu, memory, accelerators
             .resourceLimit(resourceLim)         // resource upper bounds for OOM retry
             .machineRequirement(machineReq)    // machine type and disk requirements
+            .predictionModel(predictionModel)  // optional per-task prediction model override
             .nextflow(new NextflowTask()
                 .taskId(task.id?.intValue())
                 .hash(task.hash?.toString())
@@ -150,9 +160,47 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         final delta = Labels.delta(taskLabels, executor.runResourceLabels)
         if( delta )
             schedTask.labels(delta)
+        // attach pipeline secret references (never values) — resolved at the compute edge
+        final secretRefs = buildSecretRefs()
+        if( secretRefs )
+            schedTask.secrets(secretRefs)
         log.debug "[SEQERA] Enqueueing task for batch submission: ${schedTask}"
         // Enqueue for batch submission - status will be set by setBatchTaskId callback
         executor.getBatchSubmitter().submit(this, schedTask)
+    }
+
+    protected int maxSpotAttempts(MachineRequirementOpts opts) {
+        final result = opts?.maxSpotAttempts
+        if( result != null && result < 0 )
+            throw new IllegalArgumentException("Invalid maxSpotAttempts value: ${result} -- the value must be zero or a positive number")
+        if( result )
+            return result
+        // when fusion snapshot is enabled max attempt should be > 0
+        // to enable to allow snapshot retry the job execution in a new compute instance
+        return fusionConfig().snapshotsEnabled() ? FusionConfig.DEFAULT_SNAPSHOT_MAX_SPOT_ATTEMPTS : 0
+    }
+
+    /**
+     * Build the map of container environment variable name to the pipeline secret store
+     * reference for each {@code secret} process directive.
+     *
+     * Platform stores the secret value in the cloud secret store under
+     * {@code tower-<workflowId>/<name>}; the executor sends only this reference and the
+     * scheduler backend resolves the value at the compute edge. The secret value never
+     * passes through Nextflow or the scheduler API.
+     *
+     * Returns {@code null} when there are no secret directives or no Platform workflow id
+     * (bare-scheduler usage has no store, so a missing reference is a no-op).
+     */
+    protected Map<String, String> buildSecretRefs() {
+        final names = task.config.getSecret()
+        final workflowId = executor.getWorkflowId()
+        if( !names || !workflowId )
+            return null
+        final result = new LinkedHashMap<String, String>()
+        for( String name : names )
+            result.put(name, "tower-${workflowId}/${name}".toString())
+        return result
     }
 
     /**
@@ -185,6 +233,45 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         log.debug "[SEQERA] Batch submission failed for task ${task.lazyName()}: ${cause.message}"
         task.error = cause
         this.status = TaskStatus.COMPLETED
+    }
+
+    /**
+     * The memory to request, in MiB, or {@code null} when the process declares none.
+     * <p>
+     * The {@code memory} directive is optional, and leaving it out is a legitimate way of saying
+     * "I have no opinion". Substituting a figure here fabricated an opinion the user never
+     * expressed: the scheduler received a concrete request indistinguishable from a declared one,
+     * so it could neither apply its own default nor report that nothing had been asked for, and a
+     * whole run of unspecified tasks looked deliberately sized. Omitting the field instead lets the
+     * scheduler resolve and surface its default (seqeralabs/sched#1086).
+     * <p>
+     * A zero-valued directive is omitted for the same reason, and warned about once per process,
+     * since unlike an absent directive it is a config accident rather than a choice. Exactly zero
+     * is the only invalid figure reachable here: {@code MemoryUnit(long)} asserts a non-negative
+     * value, and {@code TaskConfig.getMemory0} maps a falsy directive to null via
+     * {@code MemoryUnit.asBoolean}, so what survives is the string form — {@code memory '0 GB'} —
+     * whose string is truthy.
+     * <p>
+     * The conversion below can still yield zero for a <em>positive</em> sub-MiB directive: the
+     * size-derived idiom nf-core uses for index builds, {@code memory { 6.B * fasta.size() }} in
+     * {@code nf-core/bwa/index}, falls under 1 MiB for any reference below ~170 KB — which is what
+     * a test or CI profile supplies, and is why {@code BWAMEM1_INDEX} submits a zero today. That
+     * zero is forwarded deliberately rather than caught here. The scheduler already resolves any
+     * non-positive request to its default and reports having done so; restating that rule
+     * client-side would split one normalisation across two codebases that then have to be kept in
+     * agreement, which is the failure this whole change is undoing.
+     *
+     * @return the requested memory in MiB, or null to leave the axis unspecified
+     */
+    protected Integer memoryMiB() {
+        final memory = task.config.getMemory()
+        if( memory == null )
+            return null
+        if( memory.toBytes() <= 0 ) {
+            log.warn1("Process `${task.processor.name}` declares a zero `memory` directive -- ignoring it; the scheduler will apply its own default", firstOnly: true)
+            return null
+        }
+        return (int) (memory.toBytes() / (1024 * 1024))
     }
 
     /**
@@ -235,7 +322,13 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         if (isTerminated(schedStatus)) {
             log.debug "[SEQERA] Process `${task.lazyName()}` - terminated taskId=$taskId; status=$schedStatus"
             // finalize the task
-            task.exitStatus = readExitFile()
+            // prefer the exit code reported by the scheduler API; fall back to the `.exitcode`
+            // file only when the API does not report one. On error (e.g. OOM, spot reclaim,
+            // timeout) the container may terminate before the wrapper's on_exit trap can write
+            // the file, so the scheduler exit code is the more reliable source — consistent with
+            // the K8s, AWS Batch and Azure Batch executors.
+            final apiExitCode = cachedTaskState?.getExitCode()
+            task.exitStatus = apiExitCode != null ? apiExitCode : readExitFile()
             if (isFailed(schedStatus)) {
                 // When no exit code available, get the error message from task state
                 if (task.exitStatus == Integer.MAX_VALUE) {

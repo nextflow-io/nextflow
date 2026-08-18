@@ -435,6 +435,14 @@ class TaskRun implements Cloneable {
         if( config?.isDynamic() )
             return true
 
+        // An `exec` task is the only kind whose context must be persisted: the process body *is*
+        // the task execution, therefore whatever it computed lives only in `task.context` and
+        // cannot be re-derived on a cache hit. A script task instead re-evaluates its body -- and
+        // therefore rebuilds its context -- in TaskProcessor.invokeTask, before the cache is
+        // consulted.
+        if( type == ScriptType.GROOVY )
+            return true
+
         for( OutParam it : outputs.keySet() ) {
             if( it.class == ValueOutParam ) return true
             if( it.class == FileOutParam && ((FileOutParam)it).isDynamic() ) return true
@@ -1020,7 +1028,7 @@ class TaskRun implements Cloneable {
     }
 
     String getStubSource() {
-        return config?.getStubBlock()?.source
+        return config?.getStubBlock()?.getSource()
     }
 }
 

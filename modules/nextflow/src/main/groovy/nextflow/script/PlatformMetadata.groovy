@@ -125,6 +125,18 @@ class PlatformMetadata {
      */
     volatile List<String> labels
 
+    /**
+     * The Seqera Intelligent Compute scheduler run identifier.
+     *
+     * <p>Assigned lazily by {@code SeqeraExecutor.createRun} on the first task submission (executor
+     * thread) and read by the {@code TowerObserver} reporting thread — hence {@code volatile}. It is
+     * null until the first task is submitted, and for runs not managed by the Intelligent Compute
+     * scheduler. Propagated to Platform via a dedicated {@code PATCH /workflow/{workflowId}} request;
+     * it is grouped here with the other Platform identifiers rather than exposed as a top-level
+     * {@code workflow} attribute.
+     */
+    volatile String schedRunId
+
     PlatformMetadata() {}
 
     PlatformMetadata(String workflowId) {

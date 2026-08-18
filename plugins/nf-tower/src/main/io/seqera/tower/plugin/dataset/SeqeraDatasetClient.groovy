@@ -29,7 +29,6 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.tower.model.DatasetDto
 import io.seqera.tower.model.DatasetVersionDto
-import io.seqera.tower.model.OrgAndWorkspaceDto
 import io.seqera.tower.plugin.TowerClient
 import nextflow.exception.AbortOperationException
 
@@ -52,42 +51,6 @@ class SeqeraDatasetClient {
     }
 
     private String getEndpoint() { towerClient.endpoint }
-
-    /**
-     * @return current user info (id, userName, etc.) from GET /user-info
-     */
-    Long getUserId() {
-        try {
-             final info = towerClient.getUserInfo()
-             if( info?.id == null )
-                 throw new AbortOperationException("Unable to retrieve user ID from Seqera Platform — check your access token")
-             return info.id as long
-        }catch( UnauthorizedException e ){
-            throw new AbortOperationException(e.getMessage())
-        }catch( ForbiddenException e){
-            throw new AccessDeniedException("${endpoint}/user-info", null, e.message)
-        }catch(NotFoundException e){
-            throw new NoSuchFileException("${endpoint}/user-info")
-        }
-    }
-
-    /**
-     * @return all orgs and workspaces accessible to the given user from GET /user/{userId}/workspaces
-     */
-    List<OrgAndWorkspaceDto> listUserWorkspacesAndOrgs(long userId) {
-        try {
-            final list = towerClient.listUserWorkspacesAndOrgs(userId as String)
-            return list.collect { m -> mapOrgAndWorkspace(m) }
-        } catch( UnauthorizedException e ){
-            throw new AbortOperationException(e.getMessage())
-        } catch( ForbiddenException e){
-            throw new AccessDeniedException("${endpoint}/user/$userId/workspaces", null, e.message)
-        } catch(NotFoundException e){
-            throw new NoSuchFileException("${endpoint}/user/$userId/workspaces")
-        }
-    }
-
-
 
     /**
      * @return all datasets in the given workspace from GET /datasets?workspaceId={workspaceId}
@@ -163,16 +126,6 @@ class SeqeraDatasetClient {
         if (code == 404)
             throw new NoSuchFileException(url)
         throw new IOException("Seqera API error: HTTP ${code} for ${url}")
-    }
-
-    private static OrgAndWorkspaceDto mapOrgAndWorkspace(Map m) {
-        final dto = new OrgAndWorkspaceDto()
-        dto.orgId = (m.orgId as Long) ?: 0L
-        dto.orgName = m.orgName as String
-        dto.workspaceId = (m.workspaceId as Long) ?: 0L
-        dto.workspaceName = m.workspaceName as String
-        dto.workspaceFullName = m.workspaceFullName as String
-        return dto
     }
 
     private static DatasetDto mapDataset(Map m) {

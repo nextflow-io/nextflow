@@ -139,7 +139,7 @@ class TowerFusionToken implements FusionToken {
             workflowId: workflowId,
             workspaceId: workspaceId
         )
-        final key = '${product}-${version}'
+        final String key = "${product}-${version}"
         try {
             final now = Instant.now()
             int i=0

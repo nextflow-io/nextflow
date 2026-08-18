@@ -182,7 +182,7 @@ class KryoHelper {
         }
         finally {
             if( prev ) {
-                kryo.setClassLoader(loader)
+                kryo.setClassLoader(prev)
             }
         }
     }

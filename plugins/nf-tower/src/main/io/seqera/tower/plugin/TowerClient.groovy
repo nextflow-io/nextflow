@@ -35,6 +35,7 @@ import nextflow.BuildInfo
 import nextflow.SysEnv
 import nextflow.exception.AbortRunException
 import nextflow.util.Duration
+import nextflow.util.ProxyConfig
 import nextflow.util.TestOnly
 /**
  * Perform HTTP call to Seqera platform.
@@ -152,6 +153,18 @@ class TowerClient {
         }
     }
 
+    /**
+     * Update workflow-extension metadata via the generic {@code PATCH /workflow/{workflowId}}
+     * endpoint. Used to propagate the Seqera Intelligent Compute scheduler run id.
+     *
+     * <p>Returns the {@link Response} rather than throwing on error so the caller can decide how
+     * to react: propagating the run id is best-effort telemetry and must not abort the run.
+     */
+    Response updateWorkflow(Map req, String workspaceId, String workflowId) {
+        final url = getUrlWorkflowUpdate(workspaceId, workflowId)
+        return sendHttpMessage(url, req, 'PATCH')
+    }
+
     protected Map sendAndProcessRequest(String url, Map req, String method){
         final resp = sendHttpMessage(url, req, method)
         if( resp.error ) {
@@ -201,12 +214,20 @@ class TowerClient {
         return result
     }
 
+    protected String getUrlWorkflowUpdate(String workspaceId, String workflowId) {
+        def result = "$endpoint/workflow/$workflowId"
+        if( workspaceId )
+            result += "?workspaceId=$workspaceId"
+        return result
+    }
+
     protected void initHttpClient() {
         final builder = HxClient.newBuilder()
         // auth settings
         setupClientAuth(builder, getAccessToken())
-        // retry settings
+        // retry + proxy settings (proxy applies to the main client and the token-refresh client)
         this.httpClient = builder
+            .withProxyConfig(ProxyConfig.proxyConfig())
             .retryConfig(this.retryPolicy)
             .followRedirects(HttpClient.Redirect.NORMAL)
             .version(HttpClient.Version.HTTP_1_1)
@@ -346,6 +367,9 @@ class TowerClient {
 
         if( verb == 'POST' )
             return builder.POST(HttpRequest.BodyPublishers.ofString(payload)).build()
+
+        if( verb == 'PATCH' )
+            return builder.method('PATCH', HttpRequest.BodyPublishers.ofString(payload)).build()
 
         throw new IllegalArgumentException("Unsupported HTTP verb: $verb")
     }

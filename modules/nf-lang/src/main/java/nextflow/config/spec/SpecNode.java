@@ -88,7 +88,7 @@ public sealed interface SpecNode {
         var description = """
             The `process` scope allows you to specify default directives for processes in your pipeline.
 
-            [Read more](https://nextflow.io/docs/latest/config.html#process-configuration)
+            [Read more](https://docs.seqera.io/nextflow/config#process-configuration)
         """;
         var children = new HashMap<String, SpecNode>();
         for( var method : ProcessDsl.DirectiveDsl.class.getDeclaredMethods() ) {

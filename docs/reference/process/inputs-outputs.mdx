@@ -1,0 +1,165 @@
+---
+title: Inputs and outputs (legacy)
+description: Reference for the input and output qualifiers available in a legacy process.
+---
+
+# Inputs and outputs (legacy)
+
+## Inputs
+
+##### `val( identifier )`
+
+Declare a variable input. The received value can be any type. It is made available to the process body (that is, the `script`, `shell`, or `exec` section) as a variable given by `identifier`.
+
+##### `file( identifier | stageName )`
+
+<DeprecatedInVersion version="19.10">
+Use `path` instead.
+</DeprecatedInVersion>
+
+Declare a file input. The received value can be any type, and it is staged into the task directory. If the received value is not a file or collection of files, it is implicitly converted to a string and written to a file.
+
+The argument can be an identifier or string. If an identifier, the received value is made available to the process body as a variable. If a string, the received value is staged into the task directory under the given alias.
+
+##### `path( identifier | stageName )`
+
+Declare a file input. The received value should be a file or collection of files, which are staged into the task directory.
+
+:::tip
+See [Multiple input files][process-multiple-input-files] for more information about accepting collections of files.
+:::
+
+The argument can be an identifier or string. If an identifier, the received value is made available to the process body as a variable. If a string, the received value is staged into the task directory under the given alias.
+
+Available options:
+
+###### `arity`
+
+<AddedInVersion version="23.10" />
+
+Specify the number of expected files. Can be a number, for example, `'1'`, or a range, for example, `'1..*'`. If a task receives an invalid number of files for this `path` input, the task fails.
+
+###### `name`
+
+Specify how the file should be named in the task work directory. Can be a name or a pattern.
+
+###### `stageAs`
+
+Alias of `name`.
+
+##### `env( name )`
+
+Declare an environment variable input. The received value should be a string, and it is exported to the task environment as an environment variable given by `name`.
+
+##### `stdin`
+
+Declare a `stdin` input. The received value should be a string, and it is provided as the standard input (`stdin`) to the task script. Declare it only once per process.
+
+##### `tuple( arg1, arg2, ... )`
+
+Declare a tuple input. Each argument should be an input declaration such as `val`, `path`, `env`, or `stdin`.
+
+The received value should be a tuple with the same number of elements as the `tuple` declaration, and each received element should be compatible with the corresponding `tuple` argument. Each tuple element is treated the same way as if it were a standalone input.
+
+## Outputs
+
+##### `val( value )`
+
+Declare a variable output. The argument can be any value, and it can reference any output variables defined in the process body (that is, variables declared without the `def` keyword).
+
+##### `file( pattern )`
+
+<DeprecatedInVersion version="19.10">
+Use `path` instead.
+</DeprecatedInVersion>
+
+Declare a file output. It receives the output files from the task environment that match the given pattern.
+
+Multiple patterns can be specified using the colon separator (`:`). The union of all files matched by each pattern is collected.
+
+##### `path( pattern, [options] )`
+
+Declare a file output. It receives the output files from the task environment that match the given pattern.
+
+Available options:
+
+###### `arity`
+
+<AddedInVersion version="23.10" />
+
+Specify the number of expected files. Can be a number or a range. If a task produces an invalid number of files for this `path` output, the task fails.
+
+If the arity is `1`, a single file is emitted. Otherwise, a list is always emitted, even if only one file is produced.
+
+:::warning
+If the arity is not specified, a single file or list is emitted based on whether a single file or multiple files are produced at runtime. This can result in an output channel with a mixture of files and file collections.
+:::
+
+###### `followLinks`
+
+When `true`, target files are returned in place of any matching symlink (default: `true`).
+
+###### `glob`
+
+When `true`, the specified name is interpreted as a glob pattern (default: `true`).
+
+###### `hidden`
+
+When `true`, hidden files are included in the matching output files (default: `false`).
+
+###### `includeInputs`
+
+When `true` and the output path is a glob pattern, any input files matching the pattern are also included in the output (default: `false`).
+
+###### `maxDepth`
+
+Maximum number of directory levels to visit (default: no limit).
+
+###### `type`
+
+Type of paths returned, either `file`, `dir`, or `any` (default: `any`, or `file` if the specified file name pattern contains a double star (`**`)).
+
+##### `env( name )`
+
+Declare an environment variable output. It receives the value of the environment variable (given by `name`) from the task environment.
+
+<ChangedInVersion version="24.04">
+Prior to this version, if the environment variable contained multiple lines of output, the output would be compressed to a single line by converting newlines to spaces.
+</ChangedInVersion>
+
+##### `stdout`
+
+Declare a `stdout` output. It receives the standard output of the task script.
+
+##### `eval( command )`
+
+<AddedInVersion version="24.04" />
+
+Declare an `eval` output. It receives the standard output of the given command, which is executed in the task environment after the task script.
+
+If the command fails, the task also fails.
+
+##### `tuple( arg1, arg2, ... )`
+
+Declare a tuple output. Each argument should be an output declaration such as `val`, `path`, `env`, `stdin`, or `eval`. Each tuple element is treated the same way as if it were a standalone output.
+
+## Generic options
+
+The following options are available for all process outputs:
+
+##### `emit: <name>`
+
+Defines the name of the output channel.
+
+##### `optional: true | false`
+
+When `true`, the task does not fail if the specified output is missing (default: `false`).
+
+##### `topic: <name>`
+
+<AddedInVersion version="25.04" />
+
+Send the output to a [topic channel][channel-topic] with the given name.
+
+[channel-topic]: ../stdlib-namespaces/channel#topic
+[process-multiple-input-files]: ../../process#multiple-input-files

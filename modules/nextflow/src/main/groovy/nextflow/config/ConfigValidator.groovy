@@ -16,7 +16,11 @@
 
 package nextflow.config
 
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
+
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.config.spec.ConfigScope
 import nextflow.config.spec.SpecNode
@@ -72,6 +76,7 @@ class ConfigValidator {
 
     private void loadPluginScopes() {
         final children = new HashMap<String, SpecNode>()
+        final scopeClasses = new HashMap<String, String>()
         for( final scope : Plugins.getExtensions(ConfigScope) ) {
             final clazz = scope.getClass()
             final name = clazz.getAnnotation(ScopeName)?.value()
@@ -83,10 +88,12 @@ class ConfigValidator {
             if( !name )
                 continue
             if( name in children ) {
-                log.warn "Plugin config scope `${clazz.name}` conflicts with existing scope: `${name}`"
+                if( scopeClasses[name] != clazz.name )
+                    log.warn "Plugin config scope `${clazz.name}` conflicts with existing scope: `${name}`"
                 continue
             }
             children.put(name, SpecNode.Scope.of(clazz, description))
+            scopeClasses.put(name, clazz.name)
         }
         pluginScopes = new SpecNode.Scope('', children)
     }
@@ -195,7 +202,24 @@ class ConfigValidator {
 
     private static boolean isMapOption0(SpecNode.Scope scope, List<String> names) {
         final node = scope.getOption(names)
-        return node != null && node.types().contains(Map.class)
+        return node != null && isMapType(node.types())
+    }
+
+    /**
+     * Determine whether any of the given option types is a {@link Map}, resolving the raw
+     * type of parameterized types so that a declared {@code Map<K,V>} option (which reflects
+     * as a {@link ParameterizedType}, not {@code Map.class}) is recognised as a map option.
+     *
+     * @param types
+     */
+    @PackageScope
+    static boolean isMapType(List<Type> types) {
+        for( final type : types ) {
+            final raw = type instanceof ParameterizedType ? ((ParameterizedType) type).getRawType() : type
+            if( raw instanceof Class && Map.class.isAssignableFrom((Class) raw) )
+                return true
+        }
+        return false
     }
 
     /**

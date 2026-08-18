@@ -22,6 +22,7 @@ import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.Consumer
 
 import com.google.common.hash.HashCode
@@ -46,6 +47,7 @@ import nextflow.container.PodmanConfig
 import nextflow.container.SarusConfig
 import nextflow.container.ShifterConfig
 import nextflow.container.SingularityConfig
+import nextflow.container.SmolVmConfig
 import nextflow.dag.DAG
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
@@ -271,7 +273,7 @@ class Session implements ISession {
 
     private volatile Throwable error
 
-    private volatile boolean shutdownInitiated
+    private final AtomicBoolean shutdownInitiated = new AtomicBoolean(false)
 
     private Queue<Runnable> shutdownCallbacks = new ConcurrentLinkedQueue<>()
 
@@ -759,15 +761,17 @@ class Session implements ISession {
     }
 
     final protected void shutdown0() {
-        log.trace "Shutdown: $shutdownCallbacks"
-        shutdownInitiated = true
+        // guard against adding shutdown hooks after shutdown, or calling shutdown more than once
+        if( !shutdownInitiated.compareAndSet(false, true) )
+            return
+        log.trace "Invoking ${shutdownCallbacks.size()} shutdown callbacks"
         while( shutdownCallbacks.size() ) {
             final hook = shutdownCallbacks.poll()
             try {
                 hook.run()
             }
             catch( Exception e ) {
-                log.debug "Failed to execute shutdown hook: $hook", e
+                log.debug "Failed to execute shutdown hook: ${hook.class.name}", e
             }
         }
 
@@ -987,8 +991,8 @@ class Session implements ISession {
             log.warn "Shutdown hook cannot be null\n${ExceptionUtils.getStackTrace(new Exception())}"
             return
         }
-        if( shutdownInitiated )
-            throw new IllegalStateException("Session shutdown already initiated — Hook cannot be added: $hook")
+        if( shutdownInitiated.get() )
+            throw new IllegalStateException("Session shutdown already initiated -- Hook cannot be added: ${hook.class.name}")
         shutdownCallbacks.add(hook)
     }
 
@@ -1206,6 +1210,7 @@ class Session implements ISession {
             new ApptainerConfig(config.apptainer as Map ?: Collections.emptyMap()),
             new CharliecloudConfig(config.charliecloud as Map ?: Collections.emptyMap()),
             new AppleContainerConfig(config.appleContainer as Map ?: Collections.emptyMap()),
+            new SmolVmConfig(config.smolvm as Map ?: Collections.emptyMap()),
         ] as List<ContainerConfig>
 
         if( engine ) {

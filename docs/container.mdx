@@ -1,0 +1,94 @@
+---
+title: Containers
+description: Use Docker, Singularity, Apptainer, and other container runtimes with Nextflow.
+---
+
+# Containers
+
+A *container image* packages the binary dependencies of a script so that the script runs on any platform with a *container runtime*. Containerizing a pipeline makes it self-contained and reproducible.
+
+Nextflow runs a pipeline with any of the supported container runtimes, provided the runtime is available in the target compute environment.
+
+## Container configuration
+
+Each process in a pipeline can specify its own container image.
+
+For example:
+
+```nextflow
+process hello {
+    container 'image-name-1'
+    
+    script:
+    """
+    do this
+    """
+}
+
+process bye {
+    container 'image-name-2'
+    
+    script:
+    """
+    do that
+    """
+}
+```
+
+You can also define the same container settings in the configuration file:
+
+```groovy
+process {
+    withName:hello {
+        container = 'image-name-1'
+    }
+    withName:bye {
+        container = 'image-name-2'
+    }
+}
+```
+
+See [Process configuration][config-process] and the [`container`][process-container] directive for more information.
+
+:::tip
+Use the `nextflow inspect` command to preview the container that each process in a pipeline uses.
+:::
+
+## Caveats
+
+The following caveats apply when you run Nextflow pipelines with containers.
+
+### Container image requirements
+
+Every container image must include Bash (>=3.0), `ps`, and the other tools required to collect metrics. See [Tasks][execution-report-tasks] for more information. Bash must be available at `/bin/bash` and must be the container entrypoint.
+
+### Symbolic link inputs
+
+Nextflow manages the file system mounts for a container to provide task inputs. When a task input is a *symbolic link*, the linked file must reside in the same directory as the symlink, or in a subdirectory of it. Otherwise, the task fails because the container cannot access the linked file.
+
+## Container runtimes
+
+| Page | Description |
+| ---- | ----------- |
+| [<span style={{whiteSpace: 'nowrap'}}>Apple container</span>][container-apple-container] | A lightweight runtime that runs each container in its own virtual machine on macOS. |
+| [Apptainer][container-apptainer] | An open source fork of Singularity, suited to high-performance computing (HPC) workloads. |
+| [Charliecloud][container-charliecloud] | An unprivileged runtime for HPC environments, based on Linux user namespaces. |
+| [Docker][container-docker] | The most widely used container runtime. |
+| [Podman][container-podman] | A drop-in replacement for Docker that can run with or without root privileges. |
+| [Sarus][container-sarus] | An HPC runtime, developed at CSCS, that converts Docker images to Squashfs layers. |
+| [Shifter][container-shifter] | An HPC runtime, developed at NERSC, that converts Docker images to Squashfs layers. |
+| [Singularity][container-singularity] | A runtime that requires no root privileges or daemon process, suited to HPC workloads. |
+| [smolvm][container-smolvm] | A lightweight runtime that runs each task inside its own microVM. |
+
+[config-process]: ./config#process-configuration
+[container-apple-container]: ./container/apple-container
+[container-apptainer]: ./container/apptainer
+[container-charliecloud]: ./container/charliecloud
+[container-docker]: ./container/docker
+[container-podman]: ./container/podman
+[container-sarus]: ./container/sarus
+[container-shifter]: ./container/shifter
+[container-singularity]: ./container/singularity
+[container-smolvm]: ./container/smolvm
+[execution-report-tasks]: ./reports#tasks
+[process-container]: ./reference/process/directives/container

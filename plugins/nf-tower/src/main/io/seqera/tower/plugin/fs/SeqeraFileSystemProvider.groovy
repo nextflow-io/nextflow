@@ -20,6 +20,7 @@ import java.nio.channels.SeekableByteChannel
 import java.nio.file.AccessDeniedException
 import java.nio.file.AccessMode
 import java.nio.file.CopyOption
+import java.nio.file.DirectoryIteratorException
 import java.nio.file.DirectoryStream
 import java.nio.file.FileStore
 import java.nio.file.FileSystem
@@ -27,9 +28,7 @@ import java.nio.file.FileSystemAlreadyExistsException
 import java.nio.file.FileSystemNotFoundException
 import java.nio.file.Files
 import java.nio.file.LinkOption
-import java.nio.file.DirectoryIteratorException
 import java.nio.file.NoSuchFileException
-import java.nio.file.NotDirectoryException
 import java.nio.file.OpenOption
 import java.nio.file.Path
 import java.nio.file.ProviderMismatchException
@@ -41,23 +40,19 @@ import java.nio.file.spi.FileSystemProvider
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import io.seqera.tower.model.DatasetDto
-import io.seqera.tower.model.DatasetVersionDto
 import io.seqera.tower.plugin.TowerClient
 import io.seqera.tower.plugin.TowerFactory
+import io.seqera.tower.plugin.datalink.SeqeraDataLinkClient
 import io.seqera.tower.plugin.dataset.SeqeraDatasetClient
+import io.seqera.tower.plugin.fs.handler.DataLinksResourceHandler
+import io.seqera.tower.plugin.fs.handler.DatasetsResourceHandler
 
 /**
- * NIO {@link FileSystemProvider} for the {@code seqera://} scheme.
- * Registered via {@code META-INF/services/java.nio.file.spi.FileSystemProvider}.
+ * NIO {@link FileSystemProvider} for the {@code seqera://} scheme. Registered via
+ * {@code META-INF/services/java.nio.file.spi.FileSystemProvider}.
  *
- * Enables Nextflow pipelines to read Seqera Platform datasets as ordinary file paths:
- * {@code seqera://<org>/<workspace>/datasets/<dataset-name>}
- *
- * Follows the {@code LinFileSystemProvider} pattern for structure.
- * Write support follows the {@code AzFileSystemProvider} buffered-upload pattern.
- *
- * @author Seqera Labs
+ * Generic for depth &ge; 3: dispatches to a {@link ResourceTypeHandler} selected by
+ * {@code SeqeraPath.resourceType}. The handlers own all resource-specific logic.
  */
 @Slf4j
 @CompileStatic
@@ -78,11 +73,12 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         checkScheme(uri)
         if (fileSystem)
             throw new FileSystemAlreadyExistsException("File system `seqera://` already exists")
-        final TowerClient towerClient = TowerFactory.client()
-        if (!towerClient)
-            throw new IllegalStateException("File system `seqera://` requires the Seqera Platform access token to be provided - use `tower.accessToken` config option or TOWER_ACCESS_TOKEN env variable")
-        final client = new SeqeraDatasetClient(towerClient)
-        fileSystem = new SeqeraFileSystem(this, client)
+        final TowerClient tc = TowerFactory.client()
+        if (!tc)
+            throw new IllegalStateException("File system `seqera://` requires the Seqera Platform access token — use `tower.accessToken` config option or TOWER_ACCESS_TOKEN env variable")
+        fileSystem = new SeqeraFileSystem(this, tc)
+        fileSystem.registerHandler(new DatasetsResourceHandler(fileSystem, new SeqeraDatasetClient(tc)))
+        fileSystem.registerHandler(new DataLinksResourceHandler(fileSystem, new SeqeraDataLinkClient(tc)))
         return fileSystem
     }
 
@@ -113,16 +109,13 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
     @Override
     InputStream newInputStream(Path path, OpenOption... options) throws IOException {
         final sp = toSeqeraPath(path)
-        if (sp.depth() != 4)
-            throw new IllegalArgumentException("Operation `newInputStream` requires a dataset path (depth 4): $path")
+        if (sp.depth() < 3)
+            throw new IllegalArgumentException("newInputStream requires a leaf path: $path")
         final fs = sp.getFileSystem() as SeqeraFileSystem
-        final workspaceId = fs.resolveWorkspaceId(sp.org, sp.workspace)
-        final dataset = fs.resolveDataset(workspaceId, sp.datasetName)
-        if (!dataset)
-            throw new NoSuchFileException(sp.toString(), null, "Dataset '${sp.datasetName}' not found in workspace $sp.workspace")
-        final version = resolveVersion(fs, dataset, sp)
-        log.debug "Downloading dataset '${sp.datasetName}' version ${version.version} (${version.fileName}) from workspace $workspaceId"
-        return fs.client.downloadDataset(dataset.id, String.valueOf(version.version), version.fileName, dataset.workspaceId)
+        final h = fs.getHandler(sp.resourceType)
+        if (!h)
+            throw new NoSuchFileException(path.toString(), null, "Unsupported resource type: ${sp.resourceType}")
+        return h.newInputStream(sp)
     }
 
     @Override
@@ -140,20 +133,20 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         if (!BasicFileAttributes.isAssignableFrom(type))
             throw new UnsupportedOperationException("Attribute type not supported: $type")
         final sp = toSeqeraPath(path)
+        if (sp.cachedAttributes)
+            return (A) sp.cachedAttributes
         final fs = sp.getFileSystem() as SeqeraFileSystem
         final d = sp.depth()
-        if (d < 4) {
-            // Virtual directory — validate the path exists (throws NoSuchFileException if not)
-            validateDirectoryExists(fs, sp)
-            return (A) new SeqeraFileAttributes(true)
+        if (d < 3) {
+            validateSharedDirectoryExists(fs, sp)
+            sp.cachedAttributes = new SeqeraFileAttributes(true)
+            return (A) sp.cachedAttributes
         }
-        // Dataset file
-        final workspaceId = fs.resolveWorkspaceId(sp.org, sp.workspace)
-        final dataset = fs.resolveDataset(workspaceId, sp.datasetName)
-        if (!dataset)
-            throw new NoSuchFileException(sp.toString(), null, "Dataset '${sp.datasetName}' not found in workspace $sp.workspace")
-        final version = resolveVersion(fs, dataset, sp)
-        return (A) new SeqeraFileAttributes(version)
+        final h = fs.getHandler(sp.resourceType)
+        if (!h)
+            throw new NoSuchFileException(path.toString(), null, "Unsupported resource type: ${sp.resourceType}")
+        sp.cachedAttributes = h.readAttributes(sp)
+        return (A) sp.cachedAttributes
     }
 
     @Override
@@ -170,17 +163,17 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
             if (m == AccessMode.WRITE || m == AccessMode.EXECUTE)
                 throw new AccessDeniedException(path.toString(), null, "seqera:// filesystem is read-only")
         }
-        // For READ, verify the path resolves without throwing NoSuchFileException
-        if (sp.depth() >= 1) {
-            final fs = sp.getFileSystem() as SeqeraFileSystem
-            if (sp.depth() == 1) {
-                fs.loadOrgWorkspaceCache()
-                if (!fs.listOrgNames().contains(sp.org))
-                    throw new NoSuchFileException(path.toString(), null, "Organisation not found")
-            } else {
-                fs.resolveWorkspaceId(sp.org, sp.workspace)
-            }
+        final d = sp.depth()
+        if (d == 0) return
+        if (d < 3) {
+            validateSharedDirectoryExists(sp.getFileSystem() as SeqeraFileSystem, sp)
+            return
         }
+        final fs = sp.getFileSystem() as SeqeraFileSystem
+        final h = fs.getHandler(sp.resourceType)
+        if (!h)
+            throw new NoSuchFileException(path.toString(), null, "Unsupported resource type: ${sp.resourceType}")
+        h.readAttributes(sp)
     }
 
     // ---- Directory stream ----
@@ -190,7 +183,7 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
         final sp = toSeqeraPath(dir)
         final fs = sp.getFileSystem() as SeqeraFileSystem
         final d = sp.depth()
-        List<Path> entries
+        Iterable<Path> entries
         if (d == 0) {
             // Root: list distinct org names
             fs.loadOrgWorkspaceCache()
@@ -200,26 +193,71 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
             fs.loadOrgWorkspaceCache()
             entries = fs.listWorkspaceNames(sp.org).collect { String ws -> sp.resolve(ws) as Path }
         } else if (d == 2) {
-            // Workspace: static resource types
-            entries = ['datasets'].collect { String rt -> sp.resolve(rt) as Path }
-        } else if (d == 3) {
-            // Resource type directory: list dataset names
-            final workspaceId = fs.resolveWorkspaceId(sp.org, sp.workspace)
-            entries = fs.resolveDatasets(workspaceId).collect { DatasetDto ds ->
-                sp.resolve(ds.name) as Path
-            }
+            fs.resolveWorkspaceId(sp.org, sp.workspace)
+            entries = fs.getResourceTypes().collect { String rt -> sp.resolve(rt) as Path }
         } else {
-            throw new NotDirectoryException(dir.toString())
+            final h = fs.getHandler(sp.resourceType)
+            if (!h)
+                throw new NoSuchFileException(dir.toString(), null, "Unsupported resource type: ${sp.resourceType}")
+            entries = h.list(sp)
         }
 
-        final filtered = filter ? entries.findAll { Path p ->
-            try { filter.accept(p) }
-            catch (IOException e) { throw new DirectoryIteratorException(e) }
-        } : entries
-
+        final source = entries
         return new DirectoryStream<Path>() {
-            @Override Iterator<Path> iterator() { filtered.iterator() }
-            @Override void close() {}
+            private boolean iteratorCalled = false
+            @Override
+            Iterator<Path> iterator() {
+                // NIO contract: DirectoryStream.iterator() may be called at most once.
+                // For data-link listings a second iteration would also re-fetch pages 2+
+                // (needlessly doubling API calls), so enforcing the contract is a win.
+                if (iteratorCalled)
+                    throw new IllegalStateException("DirectoryStream.iterator() may be called at most once")
+                iteratorCalled = true
+                final inner = source.iterator()
+                if (!filter) return inner
+                return new FilteredIterator<Path>(inner, filter)
+            }
+            @Override
+            void close() {}
+        }
+    }
+
+    /** Lazy filtering iterator: calls the filter as each element is consumed. */
+    @CompileStatic
+    private static class FilteredIterator<T> implements Iterator<T> {
+        private final Iterator<T> inner
+        private final DirectoryStream.Filter<? super T> filter
+        private T buffered
+        private boolean hasBuffered = false
+
+        FilteredIterator(Iterator<T> inner, DirectoryStream.Filter<? super T> filter) {
+            this.inner = inner
+            this.filter = filter
+        }
+
+        @Override
+        boolean hasNext() {
+            while (!hasBuffered && inner.hasNext()) {
+                final candidate = inner.next()
+                try {
+                    if (filter.accept(candidate)) {
+                        buffered = candidate
+                        hasBuffered = true
+                    }
+                } catch (IOException e) {
+                    throw new DirectoryIteratorException(e)
+                }
+            }
+            return hasBuffered
+        }
+
+        @Override
+        T next() {
+            if (!hasNext()) throw new NoSuchElementException()
+            final out = buffered
+            buffered = null
+            hasBuffered = false
+            return out
         }
     }
 
@@ -291,7 +329,7 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
             throw new IllegalArgumentException("Not a seqera:// URI: $uri")
     }
 
-    private static void validateDirectoryExists(SeqeraFileSystem fs, SeqeraPath sp) throws NoSuchFileException {
+    private static void validateSharedDirectoryExists(SeqeraFileSystem fs, SeqeraPath sp) throws NoSuchFileException {
         final d = sp.depth()
         if (d == 0) return
         // Depth 1+: ensure org/workspace cache is loaded
@@ -300,27 +338,5 @@ class SeqeraFileSystemProvider extends FileSystemProvider {
             throw new NoSuchFileException("seqera://${sp.org}", null, "Organisation not found")
         if (d >= 2)
             fs.resolveWorkspaceId(sp.org, sp.workspace)
-        if (d >= 3 && sp.resourceType != 'datasets')
-            throw new NoSuchFileException("seqera://${sp.org}/${sp.workspace}/${sp.resourceType}", null, "Unsupported resource type")
     }
-
-    private static DatasetVersionDto resolveVersion(SeqeraFileSystem fs, DatasetDto dataset, SeqeraPath sp) throws IOException {
-        final pinnedVersion = sp.version
-        final versions = fs.resolveVersions(dataset.id, dataset.workspaceId)
-        if (versions.isEmpty())
-            throw new NoSuchFileException(sp.toString(), null, "No versions available for dataset '${dataset.name}'")
-        if (pinnedVersion) {
-            final found = versions.find { DatasetVersionDto v -> String.valueOf(v.version) == pinnedVersion }
-            if (!found)
-                throw new NoSuchFileException(sp.toString(), null, "Version '${pinnedVersion}' not found for dataset '${dataset.name}'")
-            return found
-        }
-        // Latest non-disabled version
-        final latest = versions.findAll { DatasetVersionDto v -> !v.disabled }
-                               .max { DatasetVersionDto v -> v.version }
-        if (!latest)
-            throw new NoSuchFileException(sp.toString(), null, "No enabled versions for dataset '${dataset.name}'")
-        return latest
-    }
-
 }
