@@ -1,0 +1,42 @@
+---
+title: storeDir
+description: Reference for the `storeDir` process directive.
+---
+
+# `storeDir`
+
+The `storeDir` directive stores task outputs in a permanent *store directory* instead of the work directory.
+
+On subsequent runs, each task is executed only if the declared output files do not exist in the store directory. When the files are present, the task is skipped and these files are used as the task outputs.
+
+## Usage
+
+The following example shows how to use the `storeDir` directive to create a directory containing a BLAST database for each species specified by an input parameter:
+
+```nextflow
+process make_blast_db {
+    storeDir '/db/genomes'
+
+    input:
+    path species
+
+    output:
+    path "${dbName}.*"
+
+    script:
+    dbName = species.baseName
+    """
+    makeblastdb -dbtype nucl -in ${species} -out ${dbName}
+    """
+}
+```
+
+Caveats:
+
+- The `env`, `eval`, and `stdout` output qualifiers cannot be used with `storeDir` because they rely on helper files in the task directory. Use `path` outputs instead.
+
+- If a process uses `storeDir` and all of its outputs are optional, the process is always skipped, even if the store directory is empty. Avoid this issue by specifying at least one required file output.
+
+- The `storeDir` directive is not a replacement for publishing outputs. Use the [publishDir](./publish-dir) directive or [workflow outputs][workflow-output-def] instead.
+
+[workflow-output-def]: ../../../workflow#outputs
