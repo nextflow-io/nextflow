@@ -11,7 +11,7 @@ Agents are a preview feature. Their syntax and behavior may change in future rel
 
 An *agent* is a process-shaped primitive that wraps an LLM-driven step: it declares typed inputs and outputs, renders a prompt, calls a language model — optionally letting the model call Nextflow modules as tools — and emits the result on a channel. Each invocation runs as an ordinary Nextflow task, so work directories, retries, parallelism, `-resume` and lineage all apply.
 
-Agents require the typed DSL (`nextflow.enable.types = true`) and a runner plugin: **`langchain4j`** (`nf-agent`), which calls the model from the driver JVM, or **`pi`** (`nf-agent-pi`), which runs the agent in a container.
+An agent declares typed inputs and outputs like a typed process, but needs no `nextflow.enable.types` flag of its own — the flag is per file, and a typed process in the same file still requires it. Agents do require a runner plugin: **`langchain4j`** (`nf-agent`), which calls the model from the driver JVM, or **`pi`** (`nf-agent-pi`), which runs the agent in a container.
 
 ## Quick start
 
@@ -177,7 +177,7 @@ agent shouty {
 }
 ```
 
-A tool call marshals the model's JSON arguments into channel values and runs the module as a real dataflow node — normal executor, container and cache machinery, its own work directory — then serializes the outputs back to the model. File outputs are returned as absolute path strings, never contents.
+A tool call marshals the model's JSON arguments into channel values and runs the module as a real dataflow node — normal executor, container and cache machinery, its own work directory — then serializes the outputs back to the model. A file output is returned as an absolute path string, except for a small structured text file — one whose extension is `json`, `tsv`, `csv`, `txt`, `tab`, `yaml`, `yml`, `log` or `md`, whose content is not binary, and which fits `maxToolOutputInlineSize` — whose contents are inlined so the model can reason over them. An inline candidate over the limit becomes a path handle annotated with the reason.
 
 Tool schemas come from module metadata (nf-core registry, or a sibling `meta.yml`) when available: tuple inputs are flattened, so `tuple(val(meta), path(fastq))` becomes `{meta, fastq}`, with required fields marked and `additionalProperties: false`. Otherwise they are derived from a typed process's declared scalar I/O; tuple, `path` and `meta` I/O without metadata fails loudly.
 
@@ -276,10 +276,10 @@ agent {
 
 A body directive always wins over the config value.
 
-`executor` defaults to `local`, never to the global `executor.name`. An in-JVM runner accepts no other value and runs its tasks on a dedicated `agent` executor, because an agent body blocks on the LLM call and on the tool sub-tasks it dispatches. `container` is the only source of an agent's image; a runner never supplies a default.
+`executor` defaults to `local`, never to the global `executor.name`. An in-JVM runner accepts no other value and runs its tasks on a dedicated `agent` executor, because an agent body blocks on the LLM call and on the tool sub-tasks it dispatches. `container` comes from the `agent` scope alone, never from `process.container`. A runner whose runtime lives in an image supplies that image as the default, which is why `pi` needs no `agent.container` — see [The runner image](#the-runner-image).
 
 :::note
-`agent.rpc.*` is read once per session, so a value inside a selector block resolves but has no effect.
+`agent.rpc.port`, `agent.rpc.tls` and `agent.rpc.capabilityTimeout` are read once per session from the plain scope, so a value inside a selector block resolves but has no effect. `agent.rpc.remoteHost` is resolved per agent definition, so a selector does apply to it.
 :::
 
 ### Selectors
@@ -381,11 +381,11 @@ Azure OpenAI needs a different client and is not reachable this way. On `pi`, `b
 
 Every invocation runs as a real task on the standard `TaskProcessor`/`TaskRun` machinery:
 
-- **Parallel map** — one task per queue item, up to `maxForks`. On the local executor concurrency is gated by CPU count and drops to serial on a 1-vCPU machine; raise `executor.cpus` above physical cores, since LLM calls are I/O-bound.
+- **Parallel map** — one task per queue item, up to `maxForks`, which defaults to `10` for an agent. An in-JVM (`langchain4j`) agent runs on the dedicated `agent` executor, whose monitor applies no cpu or capacity throttle, so `maxForks` is the only bound. A containerized (`pi`) agent on the `local` executor is gated by CPU count like any local task and drops to serial on a 1-vCPU machine; raise `executor.cpus` above physical cores there, since LLM calls are I/O-bound.
 - **Fan-in** — a collection-typed input (e.g. `Bag<Finding>`) fed from `collect()` fires the agent once over the whole bag.
 - Retries, work directories, progress reporting and lineage as for any task.
 
-Tool calls are brokered back to the driver and run as ordinary tasks, on their own executor and container. Independent tool calls — including repeat calls to the same tool — are dispatched concurrently; what is serialized is a single agent's own loop, which waits for each tool result before asking for the next.
+Tool calls are brokered back to the driver and run as ordinary tasks, on their own executor and container. On `langchain4j` one tool call is dispatched at a time, on the agent's own thread; on `pi` the broker dispatches each call on its own thread, so the calls a model issues together — including repeat calls to the same tool — run concurrently. Either runner's agent waits for the results it asked for before asking for more.
 
 :::note
 **Output order over a queue is not preserved.** Correlate by key or `join`, never by positional `zip`.
@@ -395,7 +395,7 @@ Tool calls are brokered back to the driver and run as ordinary tasks, on their o
 
 An agent call replays from cache without calling the model. The key covers the runner, model, resolved endpoint, instruction, goal, `maxIterations`, the prompt and its captured variables, the inputs, the output schema, the skills, and — for module tools — a fingerprint of each tool's schema and backing process script. Runner-native tools (`fs:`, `shell:`) have no schema to hash, so they contribute their resolved references plus the runner's identity and version instead: the same `fs:read` is a different implementation on each runner.
 
-Resume *replays a stored generation*: reproducible, but stale if the model changes server-side. Pin a dated snapshot (`openai/gpt-4o-2024-08-06`) rather than a floating alias; a cache-writing run warns when an alias is used. Set `cache false` to opt an agent out.
+Resume *replays a stored generation*: reproducible, but stale if the model changes server-side. Pin a dated snapshot (`openai/gpt-4o-2024-08-06`) rather than a floating alias: nothing warns when an alias is used, and the snapshot the provider actually served is only visible after the fact, as the `AgentRun` record's `resolvedModel`. Set `cache false` to opt an agent out.
 
 ## Containerized agents
 
@@ -521,7 +521,7 @@ A **resumed** agent task writes no lineage record: a cache hit fires no task-com
 
 - No `nextflow run` tool. `shell:bash` exists on `pi` only; on `langchain4j` it is rejected before the run starts.
 - `nf:module_run` exposes declared process inputs only. A stock nf-core module hides its tuning flags in `task.ext.args`, which is not in the schema, so the agent cannot tune it without a wrapper process that surfaces the knob as an input. Where a knob *is* an input, a convergence loop works today — see [`10_convergence-loop`](https://github.com/nextflow-io/nextflow/tree/master/examples/agents/10_convergence-loop).
-- Within one agent, tool calls are serialized: one completes before the next is dispatched. Calls from different agent tasks run concurrently.
+- Within one agent on `langchain4j`, tool calls are serialized: one completes before the next is dispatched (concurrent tool execution is never enabled). On `pi` they are dispatched concurrently. Calls from different agent tasks always run concurrently.
 - A failing tool **task** aborts the run. Only dispatch-level errors — unknown tool, malformed arguments — return `{"error": ...}` to the model for retry.
 - The legacy `tools` forms — bare process name, module path, registry reference — are removed. Use `include` plus `nf:module_run:<NAME>`.
 - A glob is forward-open: `nf:*` and `fs:*` acquire tools added in a later release, changing the resume key. Explicit references are the reproducible choice.
