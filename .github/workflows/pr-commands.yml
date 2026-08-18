@@ -1,4 +1,10 @@
-name: Claude PR Review
+name: PR commands
+# Single entry point for comment/review-driven commands, so each comment fires
+# one workflow run (not one per command). Routes to either:
+#   - Claude   : a maintainer comment or review mentioning @claude on a PR (runs a formal review)
+#   - e2e      : a maintainer comments a line starting with /e2e-prod or /e2e-stage,
+#                followed by the full commit SHA to test, on a pull request
+#                (delegates to the reusable e2e.yml workflow).
 
 on:
   issue_comment:
@@ -9,11 +15,14 @@ on:
     types: [submitted]
 
 concurrency:
-  group: claude-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
+  group: pr-commands-${{ github.event.issue.number || github.event.pull_request.number || github.run_id }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
-  claude-code-action:
+  claude:
     # Three guards. The actor check breaks the feedback loop: this workflow
     # fires on pull_request_review, and Claude's own review body usually echoes
     # the @claude mention that triggered it. The author_association check keeps
@@ -148,3 +157,23 @@ jobs:
           # needed for the --body-file review body.
           claude_args: |
             --allowedTools "Read,Grep,Glob,Write,Bash(gh pr view:*),Bash(gh pr diff:*),Bash(gh pr review:*),Bash(gh pr comment:*),Bash(gh pr checks:*)"
+
+  # Maintainer /e2e-prod or /e2e-stage <full SHA> on a PR. The reusable workflow
+  # inherits github.event.comment.* and parses the command from the comment
+  # itself. This `if:` is only a cheap pre-filter to avoid spinning up a runner
+  # for unrelated comments — it is NOT the security boundary. The e2e workflow
+  # builds and runs PR content (incl. forks) with publish-capable secrets, so
+  # the real authorization (live collaborator-permission check, not the
+  # comment's cached author_association) and the pinned-SHA check that closes
+  # the TOCTOU race both live in e2e.yml, where an API call can gate the run.
+  e2e:
+    if: >-
+      github.event_name == 'issue_comment' && github.event.issue.pull_request &&
+      ( contains(github.event.comment.body, '/e2e-prod') || contains(github.event.comment.body, '/e2e-stage') )
+    permissions:
+      contents: read
+      pull-requests: write
+    uses: ./.github/workflows/e2e.yml
+    secrets:
+      SEQERA_PUBLIC_CR_PASSWORD: ${{ secrets.SEQERA_PUBLIC_CR_PASSWORD }}
+      AUTOMATION_GITHUB_TOKEN: ${{ secrets.AUTOMATION_GITHUB_TOKEN }}
