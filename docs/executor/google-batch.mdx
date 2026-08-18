@@ -21,15 +21,36 @@ Use the following process directives to control resource requests and other job 
 - [resourcelabels][process-resourcelabels]
 - [time][process-time]
 
+The following [hints][process-hints] are supported:
+
+- `scheduling.spotAttempts`: Run a process on Spot for its first N attempts, then automatically fall back to on-demand (`STANDARD`) for later attempts. The value is a positive integer N: attempts `1` to `N` request a Spot VM, attempts after `N` request on-demand. The attempt count is the greater of the task's execution attempt and its submit attempt, so the fallback is triggered both by a mid-run Spot reclaim and by a failure to obtain a Spot VM (the latter in combination with the [`maxSubmitAwait`][process-maxsubmitawait] directive). Requires `errorStrategy 'retry'` with `maxRetries` set high enough to reach the on-demand attempts. For example:
+
+  ```nextflow
+  process EXAMPLE {
+      errorStrategy 'retry'
+      maxRetries 3
+      hints 'scheduling.spotAttempts': '2'   // Spot for attempts 1 and 2, on-demand from attempt 3
+  }
+  ```
+
+  This key may be used as-is or with the `google-batch/` prefix to restrict it to this executor.
+
+  :::note
+  `scheduling.spotAttempts` is distinct from the [`google.batch.maxSpotAttempts`][config-maxspotattempts] config option, despite the similar name. `google.batch.maxSpotAttempts` sets the number of times Cloud Batch retries a job *internally* after a Spot reclaim, and each retry requests a Spot VM again; it applies to every process in the run. `scheduling.spotAttempts` instead changes the provisioning model across Nextflow-level attempts, and is set per process. The two can be combined.
+  :::
+
 See [Cloud Batch][google-batch] for further configuration details.
 
+[config-maxspotattempts]: ../reference/config/google#googlebatchmaxspotattempts
 [google-batch]: ../google#cloud-batch
 [process-accelerator]: ../reference/process#accelerator
 [process-container]: ../reference/process#container
 [process-containeroptions]: ../reference/process#containeroptions
 [process-cpus]: ../reference/process#cpus
 [process-disk]: ../reference/process#disk
+[process-hints]: ../reference/process#hints
 [process-machinetype]: ../reference/process#machinetype
+[process-maxsubmitawait]: ../reference/process#maxsubmitawait
 [process-memory]: ../reference/process#memory
 [process-resourcelabels]: ../reference/process#resourcelabels
 [process-time]: ../reference/process#time
