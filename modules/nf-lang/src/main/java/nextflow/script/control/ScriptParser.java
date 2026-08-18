@@ -22,6 +22,7 @@ import java.util.Collections;
 
 import groovy.lang.GroovyClassLoader;
 import nextflow.script.dsl.Types;
+import nextflow.script.parser.ScriptAstBuilder;
 import nextflow.script.parser.ScriptParserPluginFactory;
 import org.codehaus.groovy.control.CompilerConfiguration;
 import org.codehaus.groovy.control.SourceUnit;
@@ -96,6 +97,7 @@ public class ScriptParser {
         var config = new CompilerConfiguration();
         config.setPluginFactory(new ScriptParserPluginFactory());
         config.setWarningLevel(WarningMessage.POSSIBLE_ERRORS);
+        config.getOptimizationOptions().put(ScriptAstBuilder.COMMENTS_OPTION, true);
         return config;
     }
 
