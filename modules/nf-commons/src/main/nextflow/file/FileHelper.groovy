@@ -854,11 +854,36 @@ class FileHelper {
         final type = options.type ?: 'any'
         final walkOptions = options.followLinks == false ? EnumSet.noneOf(FileVisitOption.class) : EnumSet.of(FileVisitOption.FOLLOW_LINKS)
         final int maxDepth = getMaxDepth(options.maxDepth, filePattern)
-        final includeHidden = options.hidden as Boolean ?: filePattern.startsWith('.')
+        final syntax = options.syntax ?: 'glob'
+        // NOTE: the dot rule below can only be applied to a glob pattern. When the `regex` syntax
+        // is used the pattern is a regular expression, hence a leading dot is the any-char
+        // meta-character and the slash is not a component separator, therefore splitting it into
+        // path components would be meaningless. For any non-glob syntax the legacy behaviour is
+        // preserved i.e. only a pattern *starting* with a dot enables hidden files, and hidden
+        // directories are not pruned from the tree walk.
+        final isGlob = syntax == 'glob'
+        final includeHidden = options.hidden as Boolean ?: (isGlob ? false : filePattern.startsWith('.'))
+        final dotMatchers = isGlob && !includeHidden
+                ? hiddenComponents(filePattern).collect { getPathMatcherFor("glob:$it", folder.fileSystem) }
+                : Collections.<PathMatcher>emptyList()
         final includeDir = type in ['dir','any']
         final includeFile = type in ['file','any']
-        final syntax = options.syntax ?: 'glob'
         final relative = options.relative == true
+
+        // Implements the POSIX rule (Issue 8, section 2.14.3) also honoured by bash and zsh: a
+        // leading dot in a file name must be matched explicitly by a dot in the corresponding
+        // component of the pattern. Therefore a dot-prefixed component does *not* enable hidden
+        // paths for the whole pattern, it only authorises a hidden name where it appears, e.g.
+        // `.config/**/*.txt` visits `.config` but not `.config/a/.secret`.
+        //
+        // NOTE: the authorisation is checked against the file name alone rather than against the
+        // position of the component within the pattern. Since `**` matches an arbitrary number of
+        // components, a pattern component cannot be reliably aligned with a path component, so the
+        // dot-prefixed components of the pattern are collected up-front and a hidden name is
+        // allowed when it matches any of them as a single-component glob.
+        final Closure<Boolean> allowed = { Path it ->
+            includeHidden || !isHidden(it) || matchesAnyName(dotMatchers, it)
+        }
 
         final matcher = getPathMatcherFor("$syntax:${filePattern}", folder.fileSystem)
         final singleParam = action.getMaximumNumberOfParameters() == 1
@@ -871,7 +896,13 @@ class FileHelper {
                 final path = relativize0(folder, fullPath)
                 log.trace "visitFiles > dir=$path; depth=$depth; includeDir=$includeDir; matches=${matcher.matches(path)}; isDir=${attrs.isDirectory()}"
 
-                if (depth>0 && includeDir && matcher.matches(path) && attrs.isDirectory() && (includeHidden || !isHidden(fullPath))) {
+                // do not descend into a hidden directory unless the pattern authorises it
+                // note: the `depth>0` check is needed because the start folder itself can be
+                // hidden or nested under a hidden directory e.g. a work dir /scratch/.tmp/ab/cdef
+                if( depth>0 && isGlob && !allowed(fullPath) )
+                    return FileVisitResult.SKIP_SUBTREE
+
+                if (depth>0 && includeDir && matcher.matches(path) && attrs.isDirectory() && allowed(fullPath)) {
                     def result = relative ? path : fullPath
                     singleParam ? action.call(result) : action.call(result,attrs)
                 }
@@ -886,7 +917,7 @@ class FileHelper {
                     : fullPath
                 log.trace "visitFiles > file=$path; includeFile=$includeFile; matches=${matcher.matches(path)}; isRegularFile=${attrs.isRegularFile()}"
 
-                if (includeFile && matcher.matches(path) && (attrs.isRegularFile() || (options.followLinks == false && attrs.isSymbolicLink())) && (includeHidden || !isHidden(fullPath))) {
+                if (includeFile && matcher.matches(path) && (attrs.isRegularFile() || (options.followLinks == false && attrs.isSymbolicLink())) && allowed(fullPath)) {
                     def result = relative ? path : fullPath
                     singleParam ? action.call(result) : action.call(result,attrs)
                 }
@@ -924,6 +955,66 @@ class FileHelper {
         // strip the ending slash
         def len = str.length()
         len>0 ? Paths.get(str.substring(0,str.length()-1)) : Paths.get('')
+    }
+
+    /**
+     * Collect the dot-prefixed components of the given glob pattern, e.g. {@code .config} for
+     * the pattern {@code .config/**}. Each of them authorises a hidden file name in the visit,
+     * as prescribed by the POSIX dot rule.
+     *
+     * Note: the {@code .} and {@code ..} components are *not* considered hidden names.
+     *
+     * @param pattern A glob pattern e.g. {@code foo/.bar/*}
+     * @return The list of dot-prefixed components, each one being itself a glob pattern
+     */
+    @PackageScope
+    static List<String> hiddenComponents(String pattern) {
+        final result = new ArrayList<String>()
+        if( !pattern )
+            return result
+        for( String it : pattern.tokenize('/') ) {
+            // strip the escape char, since a dot can be escaped to match it literally
+            final name = it.startsWith('\\') ? it.substring(1) : it
+            if( name=='.' || name=='..' )
+                continue
+            if( name.startsWith('.') )
+                result.add(it)
+        }
+        return result
+    }
+
+    /**
+     * Check if the *name* of the given path matches any of the specified single-component matchers
+     *
+     * Note: the matchers can be the fallback implementation returned by
+     * {@link #getDefaultPathMatcher(java.lang.String)}, which is used when the file system does
+     * not support {@link java.nio.file.FileSystem#getPathMatcher(java.lang.String)} e.g. S3.
+     * That implementation matches against the path {@code toString()}, therefore the name is
+     * matched as a *relative* single-component path, so that no file system specific prefix
+     * (e.g. the S3 bucket) can be prepended to it.
+     *
+     * @param matchers A list of matchers built from a single pattern component
+     * @param path The path whose file name should be checked
+     * @return {@code true} when the path name matches at least one of the given matchers
+     */
+    @PackageScope
+    static boolean matchesAnyName(List<PathMatcher> matchers, Path path) {
+        if( !matchers )
+            return false
+        // note: fileName can be null for the root path
+        final fileName = path.getFileName()
+        if( fileName==null )
+            return false
+        // some file systems report a directory name with a trailing slash, in that case the name
+        // has to be rebuilt because the matcher would not match the ending separator
+        final str = fileName.toString()
+        final name = str.endsWith('/')
+                ? path.getFileSystem().getPath(str.substring(0, str.length()-1))
+                : fileName
+        for( PathMatcher it : matchers )
+            if( it.matches(name) )
+                return true
+        return false
     }
 
     private static boolean isHidden(Path path) {

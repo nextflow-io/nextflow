@@ -19,13 +19,18 @@ package nextflow.file
 import static java.nio.file.LinkOption.*
 
 import java.nio.file.FileAlreadyExistsException
+import java.nio.file.FileStore
 import java.nio.file.FileSystem
+import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
+import java.nio.file.PathMatcher
 import java.nio.file.Paths
 import java.nio.file.StandardCopyOption
+import java.nio.file.WatchService
+import java.nio.file.attribute.UserPrincipalLookupService
 import java.nio.file.spi.FileSystemProvider
 
 import com.google.common.jimfs.Configuration
@@ -599,6 +604,251 @@ class FileHelperTest extends Specification {
         folder.deleteDir()
     }
 
+    def 'should not visit files inside a hidden directory' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        folder.resolve('sub/outs').mkdirs()
+        folder.resolve('sub/outs/keep.txt').text = 'keep me'
+        and:
+        // a file whose own name is *not* dot-prefixed, but that lives inside a hidden directory
+        // e.g. the metadata files created by Fusion under `<workDir>/.fusion/v1/...`
+        folder.resolve('.fusion/v1/sub/outs').mkdirs()
+        folder.resolve('.fusion/v1/sub/outs/md.json').text = 'fusion internal'
+
+        when: 'hidden files are excluded by default'
+        def result = []
+        FileHelper.visitFiles(folder, '**/outs/**', type: 'file', relative: true) { result << it.toString() }
+        then:
+        result.sort() == ['sub/outs/keep.txt']
+
+        when: 'hidden files are explicitly requested'
+        result = []
+        FileHelper.visitFiles(folder, '**/outs/**', type: 'file', relative: true, hidden: true) { result << it.toString() }
+        then:
+        result.sort() == ['.fusion/v1/sub/outs/md.json', 'sub/outs/keep.txt']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should visit files inside a hidden directory named by the pattern' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        folder.resolve('.fusion/v1/.nested').mkdirs()
+        folder.resolve('.fusion/v1/md.json').text = 'fusion internal'
+        // these are hidden in a position the pattern does not authorise
+        folder.resolve('.fusion/v1/.nested/deep.json').text = 'nested hidden dir'
+        folder.resolve('.fusion/.dotfile').text = 'nested hidden file'
+        and:
+        folder.resolve('sub/.hidden').mkdirs()
+        folder.resolve('sub/.hidden/data.txt').text = 'data'
+
+        when: 'the hidden component is the first one'
+        def result = []
+        FileHelper.visitFiles(folder, '.fusion/**', type: 'file', relative: true) { result << it.toString() }
+        then:
+        // the leading `.fusion` authorises that name only, exactly as `shopt -u dotglob` in bash
+        result.sort() == ['.fusion/v1/md.json']
+
+        when: 'the hidden component is *not* the first one'
+        result = []
+        FileHelper.visitFiles(folder, 'sub/.hidden/*', type: 'file', relative: true) { result << it.toString() }
+        then:
+        result.sort() == ['sub/.hidden/data.txt']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should not visit a hidden file in a visible directory' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        folder.resolve('sub').mkdirs()
+        folder.resolve('sub/file.txt').text = 'visible'
+        folder.resolve('sub/.secret.txt').text = 'hidden'
+
+        when:
+        def result = []
+        FileHelper.visitFiles(folder, '**', type: 'file', relative: true) { result << it.toString() }
+        then:
+        result.sort() == ['sub/file.txt']
+
+        when:
+        result = []
+        FileHelper.visitFiles(folder, '**', type: 'file', relative: true, hidden: true) { result << it.toString() }
+        then:
+        result.sort() == ['sub/.secret.txt', 'sub/file.txt']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should visit files when the start folder is itself hidden' () {
+        given:
+        // mimic a task work directory nested under a dot-directory e.g. /scratch/.tmp/ab/cdef
+        def root = Files.createTempDirectory('test')
+        def folder = root.resolve('.tmp/ab/cdef')
+        folder.mkdirs()
+        and:
+        folder.resolve('outs').mkdirs()
+        folder.resolve('outs/keep.txt').text = 'keep me'
+        folder.resolve('.fusion/v1/outs').mkdirs()
+        folder.resolve('.fusion/v1/outs/md.json').text = 'fusion internal'
+
+        when:
+        def result = []
+        FileHelper.visitFiles(folder, 'outs/**', type: 'file', relative: true) { result << it.toString() }
+        then:
+        result.sort() == ['outs/keep.txt']
+
+        cleanup:
+        root?.deleteDir()
+    }
+
+    def 'should keep the legacy behaviour when using regex syntax' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        folder.resolve('rx/.hid').mkdirs()
+        folder.resolve('rx/.hid/keep.json').text = 'keep me'
+
+        when: 'a regex pattern is used, hidden directories are not pruned'
+        def result = []
+        FileHelper.visitFiles(folder, /rx\/\.hid\/keep\.json/, syntax: 'regex', type: 'file', relative: true) { result << it.toString() }
+        then:
+        result == ['rx/.hid/keep.json']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    @Unroll
+    def 'should collect hidden components for #PATTERN' () {
+        expect:
+        FileHelper.hiddenComponents(PATTERN) == EXPECTED
+
+        where:
+        PATTERN             | EXPECTED
+        null                | []
+        ''                  | []
+        '*'                 | []
+        '**'                | []
+        'foo'               | []
+        'foo/**'            | []
+        '.'                 | []
+        '..'                | []
+        '../foo'            | []
+        './foo'             | []
+        'foo/./bar'         | []
+        'foo/../bar'        | []
+        '.git'              | ['.git']
+        '.git/config'       | ['.git']
+        './.git/config'     | ['.git']
+        'a/.b/c'            | ['.b']
+        '*/.git/config'     | ['.git']
+        'outs/.fusion/**'   | ['.fusion']
+        '/abs/.hidden/x'    | ['.hidden']
+        '**/.*/outs/*'      | ['.*']
+        '.a/x/.b/y'         | ['.a','.b']
+        // a dot can be escaped to be matched literally
+        '\\.git/config'     | ['\\.git']
+        'a/\\.b/c'          | ['\\.b']
+        '\\.'               | []
+    }
+
+    def 'should apply the dot rule to each pattern component separately' () {
+        given:
+        // expected values verified against bash 5.3 and zsh 5.9:
+        //   $ shopt -s globstar; echo .config/**/*.txt
+        //   .config/a/plain/y.txt
+        def folder = Files.createTempDirectory('test')
+        and:
+        folder.resolve('.config/a/.secret').mkdirs()
+        folder.resolve('.config/a/plain').mkdirs()
+        folder.resolve('.config/a/.secret/x.txt').text = 'nested hidden dir'
+        folder.resolve('.config/a/plain/y.txt').text = 'visible'
+        folder.resolve('.config/a/.dotleaf.txt').text = 'nested hidden file'
+
+        when: 'the leading dot component only authorises a hidden name in that position'
+        def result = []
+        FileHelper.visitFiles(folder, '.config/**/*.txt', type: 'file', relative: true) { result << it.toString() }
+        then:
+        result.sort() == ['.config/a/plain/y.txt']
+
+        when: 'hidden files are explicitly requested'
+        result = []
+        FileHelper.visitFiles(folder, '.config/**/*.txt', type: 'file', relative: true, hidden: true) { result << it.toString() }
+        then:
+        result.sort() == ['.config/a/.dotleaf.txt', '.config/a/.secret/x.txt', '.config/a/plain/y.txt']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    @Unroll
+    def 'should apply the dot rule as bash does for #PATTERN' () {
+        given:
+        // expected values verified against bash 5.3, zsh 5.9 and CPython glob
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('.foo').mkdirs()
+        folder.resolve('pub').mkdirs()
+        folder.resolve('.foo/bar.txt').text = 'hidden dir'
+        folder.resolve('.secret.txt').text = 'hidden file'
+        folder.resolve('pub/bar.txt').text = 'visible dir'
+        folder.resolve('visible.txt').text = 'visible file'
+
+        when:
+        def result = []
+        FileHelper.visitFiles(folder, PATTERN, type: 'file', relative: true) { result << it.toString() }
+        then:
+        result.sort() == EXPECTED
+
+        cleanup:
+        folder?.deleteDir()
+
+        where:
+        PATTERN      | EXPECTED
+        '*.txt'      | ['visible.txt']
+        '*/bar.txt'  | ['pub/bar.txt']
+        '.*/bar.txt' | ['.foo/bar.txt']
+    }
+
+    @Unroll
+    def 'should authorise a hidden directory named by the pattern for #PATTERN' () {
+        given:
+        // expected values verified against bash 5.3 and zsh 5.9
+        // note: the hidden dirs are nested below `sub` because the Java glob `**` does not
+        // match zero directories, unlike the bash and zsh one
+        def folder = Files.createTempDirectory('test')
+        folder.resolve('sub/.hiddenmid/outs').mkdirs()
+        folder.resolve('sub/.other/outs').mkdirs()
+        folder.resolve('sub/vis/outs').mkdirs()
+        folder.resolve('sub/.hiddenmid/outs/b.txt').text = 'b'
+        folder.resolve('sub/.other/outs/d.txt').text = 'd'
+        folder.resolve('sub/vis/outs/c.txt').text = 'c'
+
+        when:
+        def result = []
+        FileHelper.visitFiles(folder, PATTERN, type: 'file', relative: true) { result << it.toString() }
+        then:
+        result.sort() == EXPECTED
+
+        cleanup:
+        folder?.deleteDir()
+
+        where:
+        PATTERN                 | EXPECTED
+        // a literal dotted component authorises only that name
+        '**/.hiddenmid/outs/*'  | ['sub/.hiddenmid/outs/b.txt']
+        // a dotted glob component authorises any hidden name
+        '**/.*/outs/*'          | ['sub/.hiddenmid/outs/b.txt', 'sub/.other/outs/d.txt']
+        // no dotted component, all hidden dirs are pruned -- this is the issue #7480 case
+        '**/outs/**'            | ['sub/vis/outs/c.txt']
+    }
+
     def 'get max depth'() {
         expect:
         FileHelper.getMaxDepth(1,null) == 1
@@ -1153,5 +1403,62 @@ class FileHelperTest extends Specification {
         's3://example.com////another///path//?and////'      | 's3://example.com/another/path/?and////'
         's3:///example.com////another///path'               | 's3:///example.com/another/path'
         'ftp://example.com//file//path'                     | 'ftp://example.com/file/path'
+    }
+
+    /**
+     * A file system that does not support `getPathMatcher`, like the S3 one, so that the
+     * {@link FileHelper#getDefaultPathMatcher} fallback is used instead
+     */
+    static class NoMatcherFileSystem extends FileSystem {
+        private FileSystem target = FileSystems.getDefault()
+
+        @Override
+        PathMatcher getPathMatcher(String syntaxAndPattern) { throw new UnsupportedOperationException() }
+
+        @Override FileSystemProvider provider() { target.provider() }
+        @Override void close() throws IOException { }
+        @Override boolean isOpen() { target.isOpen() }
+        @Override boolean isReadOnly() { target.isReadOnly() }
+        @Override String getSeparator() { target.getSeparator() }
+        @Override Iterable<Path> getRootDirectories() { target.getRootDirectories() }
+        @Override Iterable<FileStore> getFileStores() { target.getFileStores() }
+        @Override Set<String> supportedFileAttributeViews() { target.supportedFileAttributeViews() }
+        @Override Path getPath(String first, String... more) { target.getPath(first, more) }
+        @Override UserPrincipalLookupService getUserPrincipalLookupService() { throw new UnsupportedOperationException() }
+        @Override WatchService newWatchService() throws IOException { throw new UnsupportedOperationException() }
+    }
+
+    @Unroll
+    def 'should match the hidden component #COMPONENT with the fallback matcher'() {
+        given:
+        // a file system that does not implement `getPathMatcher` e.g. the S3 one, hence the
+        // matcher is the `getDefaultPathMatcher` fallback which matches the path `toString()`
+        def fs = new NoMatcherFileSystem()
+        def matchers = [ FileHelper.getPathMatcherFor("glob:$COMPONENT", fs) ]
+
+        expect:
+        FileHelper.matchesAnyName(matchers, Paths.get(PATH)) == EXPECTED
+
+        where:
+        COMPONENT   | PATH                      | EXPECTED
+        '.fusion'   | '/work/ab/cdef/.fusion'   | true
+        '.fusion'   | '.fusion'                 | true
+        '.fusion'   | '/work/ab/.fusion-other'  | false
+        '.fusion'   | '/work/ab/cdef'           | false
+        '.*'        | '/work/ab/cdef/.fusion'   | true
+        '.*'        | '/work/ab/cdef/.git'      | true
+        '\\.bar'    | '/work/ab/.bar'           | true
+        '.b*'       | '/work/ab/.bar'           | true
+        '.b*'       | '/work/ab/.zzz'           | false
+    }
+
+    def 'should not match a name when there is no hidden component'() {
+        expect:
+        !FileHelper.matchesAnyName([], Paths.get('/work/.fusion'))
+        and:
+        !FileHelper.matchesAnyName(null, Paths.get('/work/.fusion'))
+        and:
+        // the root path has no file name
+        !FileHelper.matchesAnyName([FileHelper.getDefaultPathMatcher('glob:.foo')], Paths.get('/'))
     }
 }

@@ -129,7 +129,7 @@ When `true`, the file name is interpreted as a glob pattern (default: `true`).
 
 ###### `hidden: Boolean`
 
-When `true`, hidden files are included in the matching output files (default: `false`).
+When `true`, hidden files and directories are included in the matching output files (default: `false`). By default the leading `.` of a hidden name must be matched explicitly by the corresponding component of the pattern, and hidden directories are not traversed.
 
 ###### `includeInputs: Boolean`
 
@@ -259,7 +259,7 @@ When `true`, the specified name is interpreted as a glob pattern (default: `true
 
 ###### `hidden`
 
-When `true`, hidden files are included in the matching output files (default: `false`).
+When `true`, hidden files and directories are included in the matching output files (default: `false`). By default the leading `.` of a hidden name must be matched explicitly by the corresponding component of the pattern, and hidden directories are not traversed.
 
 ###### `includeInputs`
 

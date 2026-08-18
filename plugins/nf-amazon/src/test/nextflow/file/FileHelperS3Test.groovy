@@ -82,4 +82,57 @@ class FileHelperS3Test extends Specification {
         's3://foo//this/that'       | new URI('s3:///foo/this/that')
         's3://foo//this///that'     | new URI('s3:///foo/this/that')
     }
+
+    def 'should not implement a path matcher' () {
+        given:
+        Global.session = Mock(Session) { getConfig() >> [:] }
+        def path = FileHelper.asPath('s3://my-bucket/work/ab/cdef/.fusion')
+
+        when:
+        path.getFileSystem().getPathMatcher('glob:*')
+        then:
+        // this is the reason why the `getDefaultPathMatcher` fallback is needed
+        thrown(UnsupportedOperationException)
+    }
+
+    def 'should return a bucket-less file name' () {
+        given:
+        Global.session = Mock(Session) { getConfig() >> [:] }
+        def path = FileHelper.asPath('s3://my-bucket/work/ab/cdef/.fusion')
+
+        expect:
+        // the name must not be turned into a bucket, otherwise it could not be matched
+        path.getFileName().toString() == '.fusion'
+        and:
+        !path.getFileName().isAbsolute()
+        and:
+        path.getFileSystem().getPath('.fusion').toString() == '.fusion'
+    }
+
+    @Unroll
+    def 'should match the hidden component #COMPONENT of a s3 path' () {
+        given:
+        Global.session = Mock(Session) { getConfig() >> [:] }
+        def path = FileHelper.asPath(PATH)
+        and:
+        // the S3 file system does not implement `getPathMatcher`, hence this is the
+        // `getDefaultPathMatcher` fallback, matching against the path `toString()`
+        def matchers = [ FileHelper.getPathMatcherFor("glob:$COMPONENT", path.getFileSystem()) ]
+
+        expect:
+        FileHelper.matchesAnyName(matchers, path) == EXPECTED
+
+        where:
+        COMPONENT   | PATH                                          | EXPECTED
+        '.fusion'   | 's3://my-bucket/work/ab/cdef/.fusion'         | true
+        '.fusion'   | 's3://my-bucket/.fusion'                      | true
+        '.fusion'   | 's3://my-bucket/work/ab/cdef/.fusion-other'   | false
+        '.fusion'   | 's3://my-bucket/work/ab/cdef'                 | false
+        '.fusion'   | 's3://.fusion/work/ab/cdef'                   | false
+        '.*'        | 's3://my-bucket/work/ab/cdef/.fusion'         | true
+        '.*'        | 's3://my-bucket/work/ab/.git'                 | true
+        '\\.bar'    | 's3://my-bucket/work/ab/.bar'                 | true
+        '.b*'       | 's3://my-bucket/work/ab/.bar'                 | true
+        '.b*'       | 's3://my-bucket/work/ab/.zzz'                 | false
+    }
 }
