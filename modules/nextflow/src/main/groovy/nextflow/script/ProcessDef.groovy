@@ -272,6 +272,10 @@ class ProcessDef extends BindableDef implements IterableDef, ChainableDef {
      * static helper so non-{@code ProcessDef} lowerings (e.g. {@code AgentDef} on
      * the tool-free task path) can drive the standard {@link TaskProcessor} pipeline
      * without duplicating the executor/factory wiring.
+     *
+     * NOTE: these static helpers overlap with {@link ProcessFactory}, whose only
+     * remaining role is to be overridden by tests. Both should be consolidated into
+     * a single static factory; deferred to keep the agent changeset small.
      */
     static TaskProcessor createTaskProcessor(Session session, BaseScript owner,
             String processName, String simpleName, String baseName,
