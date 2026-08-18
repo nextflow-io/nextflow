@@ -61,6 +61,9 @@ class AgentBuilder {
             throw new IllegalArgumentException("Unknown agent directive `${name}`")
     }
 
+    // NOTE: replace with internal DSL -- as done for inputs/outputs and config options
+    // -- once the v1 parser is removed. The agent primitive is only supported by the v2
+    // parser, so this dynamic dispatch is provisional and carries no v1 requirement.
     @PackageScope
     Object methodMissing(String name, Object args) {
         checkName(name)
