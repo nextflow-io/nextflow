@@ -76,7 +76,7 @@ Only `prompt:` is structurally required.
 
 ## Inputs, outputs and prompt
 
-I/O uses the same typed declarations as a process, and they mean the same thing: a scalar, a `Path`, or a named `record` type. The destructured `record(...)` and `tuple(...)` forms are rejected at resolution.
+I/O uses the same typed declarations as a process, and they mean the same thing: a scalar, a `Path`, or a named `record` type. Records must be **named**: the destructured `record(...)` form is rejected at resolution in `input:` and `output:` alike, and so is a `tuple(...)` input -- see [Limitations](#limitations).
 
 - `input:` — one or more `name: Type`. Each is bound under `name` in the prompt template and also serialized as JSON and appended to the model message.
 - `output:` — one or more `name: Type`. A single output is emitted bare; multiple outputs come from one model response, split into one channel per output (`myAgent.out.<name>`).
@@ -509,7 +509,8 @@ A **resumed** agent task writes no lineage record: a cache hit fires no task-com
 
 **Language and I/O**
 
-- The destructured `record(...)` form is not supported, and neither is a `tuple(...)` input.
+- A record must be declared as a **named** `record` type. The destructured `record(...)` form is rejected at resolution, in `input:` and `output:` alike, and so is a `tuple(...)` input (declare each component separately instead).
+  The output schema is derived by reflecting on the declared class, and a destructured record has no class to reflect on, so lifting the restriction means carrying the component list through lowering and building the schema from it. Deferred, not ruled out.
 - `Path` is not allowed in output records.
 - An agent has no `stage:` section: staging is inferred from the declared input types only, so a `Path` input cannot be renamed on the way in.
 - A collected `Path` output is matched by name or glob against the task directory; nothing injects that name into the prompt or the output schema, so the prompt has to state it.
