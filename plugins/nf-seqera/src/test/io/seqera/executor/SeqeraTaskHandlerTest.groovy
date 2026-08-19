@@ -1271,10 +1271,77 @@ class SeqeraTaskHandlerTest extends Specification {
         [:]                                  | null
     }
 
+    def 'submit disables the prediction model when the process references task.memory'() {
+        given:
+        Task captured = null
+        def handler = createSubmitHandler(
+            predictionModel: 'qr/v2',
+            memoryReferenced: true,
+            onSubmit: { captured = it },
+        )
+
+        when:
+        handler.submit()
+        then:
+        captured.getPredictionModel() == PredictionModel.NONE
+    }
+
+    def 'submit keeps the run-level prediction model when the process does not reference task.memory'() {
+        given:
+        Task captured = null
+        def handler = createSubmitHandler(
+            predictionModel: 'qr/v2',
+            memoryReferenced: false,
+            onSubmit: { captured = it },
+        )
+
+        when:
+        handler.submit()
+        then:
+        captured.getPredictionModel() == null
+    }
+
+    @Unroll
+    def 'submit does not disable the prediction model when the run-level model is #runModel'() {
+        given:
+        Task captured = null
+        def handler = createSubmitHandler(
+            predictionModel: runModel,
+            memoryReferenced: true,
+            onSubmit: { captured = it },
+        )
+
+        when:
+        handler.submit()
+        then:
+        captured.getPredictionModel() == null
+
+        where:
+        runModel << [null, '', 'none']
+    }
+
+    def 'submit lets an explicit predictionModel hint win over the task.memory check'() {
+        given:
+        Task captured = null
+        def handler = createSubmitHandler(
+            predictionModel: 'qr/v2',
+            memoryReferenced: true,
+            hints: ['seqera/predictionModel': 'qr/v1'],
+            onSubmit: { captured = it },
+        )
+
+        when:
+        handler.submit()
+        then:
+        captured.getPredictionModel() == PredictionModel.QR_V1
+    }
+
     private SeqeraTaskHandler createSubmitHandler(Map args) {
         final hints = args.hints as Map<String,Object> ?: [:]
         final baseMachineReq = args.baseMachineReq as MachineRequirementOpts
         final Closure onSubmit = args.onSubmit as Closure ?: {}
+        final memoryReferenced = args.memoryReferenced as boolean
+        final runPredictionModel = args.predictionModel as String
 
         def taskConfig = Mock(TaskConfig) {
             getCpus() >> 1
@@ -1289,6 +1356,7 @@ class SeqeraTaskHandlerTest extends Specification {
             getContainer() >> 'ubuntu:latest'
             getId() >> TaskId.of(1)
             getHash() >> HashCode.fromInt(1)
+            isDirectiveReferenced('memory') >> memoryReferenced
             lazyName() >> 'sample_task'
         }
         def executor = Mock(SeqeraExecutor) {
@@ -1298,6 +1366,7 @@ class SeqeraTaskHandlerTest extends Specification {
             }
             getSeqeraConfig() >> Mock(ExecutorOpts) {
                 getMachineRequirement() >> baseMachineReq
+                getPredictionModel() >> runPredictionModel
             }
             getRunResourceLabels() >> [:]
         }

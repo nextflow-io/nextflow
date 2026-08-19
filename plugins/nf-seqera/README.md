@@ -107,6 +107,18 @@ seqera {
 }
 ```
 
+> NOTE: When a process references `task.memory` in the script (e.g. `-Xmx${task.memory.toGiga()}g`), resource prediction is disabled for that process. Otherwise, the scheduler could reduce the memory allocation, and the task would try to allocate more memory than is available, and fail with an out-of-memory error.
+
+Set the `seqera/predictionModel` hint explicitly on the process to override this behaviour:
+
+```groovy
+process {
+    withName: FOO {
+        hints = ['seqera/predictionModel': 'qr/v1']
+    }
+}
+```
+
 ## Resources
 
 - [Seqera Platform Documentation](https://docs.seqera.io/)

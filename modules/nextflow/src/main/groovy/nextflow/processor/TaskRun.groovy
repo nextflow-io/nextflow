@@ -985,6 +985,22 @@ class TaskRun implements Cloneable {
     }
 
     /**
+     * Report whether the rendered task command depends on the value of the given
+     * {@code task} directive e.g. {@code memory} for a script interpolating
+     * {@code "-Xmx${task.memory.toGiga()}g"}.
+     *
+     * The command is rendered *before* the task is scheduled, therefore an executor that
+     * adjusts the requested resources at schedule time needs to know whether the command
+     * carries a value it is about to change.
+     *
+     * @param directive The directive name e.g. {@code memory}
+     * @return {@code true} when the task script references the given directive
+     */
+    boolean isDirectiveReferenced(String directive) {
+        return getVariableNames().contains("task.${directive}".toString())
+    }
+
+    /**
      * @param variableNames The collection of variables referenced in the task script
      * @param binding The script global binding
      * @param context The task variable context
@@ -1047,4 +1063,3 @@ class TaskRun implements Cloneable {
         return config?.getStubBlock()?.getSource()
     }
 }
-

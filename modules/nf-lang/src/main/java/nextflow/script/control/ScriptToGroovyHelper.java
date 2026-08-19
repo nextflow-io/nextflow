@@ -46,17 +46,15 @@ public class ScriptToGroovyHelper {
     }
 
     /**
-     * Get the list of variable references in a statement.
+     * Get the list of variable references in a statement:
      *
-     * This method is used to collect variable references that are not
-     * declared as process inputs, so that they are included in the task
-     * hash. This covers:
-     *
-     * - task ext properties (e.g. `task.ext.args`)
+     * - task properties (e.g. `task.ext.args`, `task.memory`)
      * - script params (e.g. `params.x`)
      *
-     * These properties are typically used like inputs, but are not
-     * explicitly declared, so they must be identified by their usage.
+     * Params and `task.ext` properties are collected so that they
+     * can be added to the task hash, since they are indirect inputs.
+     * Other task directives are collected so that the runtime can
+     * check for directive references.
      *
      * The resulting list expression should be provided as the fourth
      * argument of the BodyDef constructor.
@@ -89,7 +87,7 @@ public class ScriptToGroovyHelper {
             }
 
             var name = asPropertyChain(node);
-            if( name.startsWith("task.ext.") || name.startsWith("params.") )
+            if( name.startsWith("task.") || name.startsWith("params.") )
                 variableRefs.add(name);
         }
 
