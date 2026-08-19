@@ -122,6 +122,9 @@ class ScriptLoaderV2 implements ScriptLoader {
 
             for( final name : compileResult.processNames() )
                 ScriptMeta.addResolvedName(name)
+
+            for( final name : compileResult.agentNames() )
+                ScriptMeta.addResolvedAgentName(name)
         }
         catch( CompilationFailedException e ) {
             if( scriptPath )

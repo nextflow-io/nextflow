@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import nextflow.script.ast.ASTNodeMarker;
+import nextflow.script.ast.AgentNode;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
@@ -103,7 +104,9 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         declarations.sort(Comparator.comparing(node -> node.getLineNumber()));
 
         for( var decl : declarations ) {
-            if( decl instanceof ClassNode cn && cn.isEnum() )
+            if( decl instanceof AgentNode an )
+                visitAgent(an);
+            else if( decl instanceof ClassNode cn && cn.isEnum() )
                 visitEnum(cn);
             else if( decl instanceof FeatureFlagNode ffn )
                 visitFeatureFlag(ffn);
@@ -277,6 +280,13 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     private void visitWorkflowHandler(Statement code, String name, BlockStatement main) {
         if( code instanceof BlockStatement block )
             main.addStatement(stmt(callX(varX("workflow"), name, args(closureX(null, block)))));
+    }
+
+    @Override
+    public void visitAgent(AgentNode node) {
+        checkReservedMethodName(node, "agent");
+        var result = new AgentToGroovyVisitor(sourceUnit).transform(node);
+        moduleNode.addStatement(result);
     }
 
     @Override

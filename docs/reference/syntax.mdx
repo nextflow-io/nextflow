@@ -35,6 +35,7 @@ A Nextflow script may contain the following top-level declarations:
 - Parameter declarations (legacy)
 - Workflow definitions
 - Process definitions
+- Agent definitions
 - Function definitions
 - Enum types
 - Record types
@@ -327,6 +328,51 @@ Typed processes use the same behavior as legacy processes for all other sections
 :::
 
 See [Typed processes][process-typed] for more information on the semantics of typed processes.
+
+### Agent
+
+An agent consists of a name and a body. The agent body may define sections for *directives*, *inputs*, *outputs*, and *prompt*:
+
+```nextflow
+agent qa {
+    // directives
+    model 'openai/gpt-5-mini'
+    instruction 'You are a concise scientific assistant.'
+
+    input:
+    question: String
+
+    output:
+    answer: String
+
+    prompt:
+    """
+    Answer briefly: ${question}
+    """
+}
+```
+
+- An agent must define a prompt section. All other sections are optional. Directives do not have an explicit section label, but must be defined first.
+
+- Sections must be defined in the order shown above.
+
+- Agent inputs and outputs are declared with a name and type, in the same manner as a [typed process](#process-typed).
+
+Agents may specify the following sections:
+
+##### `input:`
+
+Consists of one or more agent inputs. Each input has a name and type.
+
+##### `output:`
+
+Consists of one or more *output statements*. Each output has a name and type. An output may also specify a source expression after an equals sign, which collects a file written by the agent instead of asking the model for the value.
+
+##### `prompt:`
+
+Consists of one or more [statements](#statements) and must return a string in the same manner as a [function](#function). The returned string is the prompt sent to the model.
+
+Directives must be [function calls](#function-call). See [Agents][agent-page] for the set of available directives and more information on the semantics of each agent section.
 
 ### Function
 
@@ -954,6 +1000,7 @@ The following legacy features were excluded from this page because they are depr
 
 See [strict syntax][strict-syntax-page] for more information.
 
+[agent-page]: ../agent
 [config-feature-flags]: ./feature-flags
 [operator-page]: ./operator
 [process-page]: ../process

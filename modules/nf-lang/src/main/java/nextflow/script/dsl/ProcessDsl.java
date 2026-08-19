@@ -446,7 +446,8 @@ public interface ProcessDsl extends DslScope {
 
     }
 
-    interface OutputDslV2 extends DslScope {
+    /** {@code file}/{@code files} come from {@link FileOutputDsl}, shared with the agent scope. */
+    interface OutputDslV2 extends FileOutputDsl {
 
         @Description("""
             Get the value of an environment variable from the task environment.
@@ -457,42 +458,6 @@ public interface ProcessDsl extends DslScope {
             Get the standard output of the given command, which is executed in the task environment after the task script.
         """)
         String eval(String command);
-
-        @Description("""
-            Get a file from the task environment that matches the given pattern.
-        """)
-        Path file(
-            @NamedParams({
-                @NamedParam(value = "followLinks", type = Boolean.class),
-                @NamedParam(value = "glob", type = Boolean.class),
-                @NamedParam(value = "hidden", type = Boolean.class),
-                @NamedParam(value = "includeInputs", type = Boolean.class),
-                @NamedParam(value = "maxDepth", type = Integer.class),
-                @NamedParam(value = "optional", type = Boolean.class),
-                @NamedParam(value = "type", type = String.class),
-            })
-            Map<String,?> opts,
-            String name
-        );
-        Path file(String name);
-
-        @Description("""
-            Get the files from the task environment that match the given pattern.
-        """)
-        Set<Path> files(
-            @NamedParams({
-                @NamedParam(value = "followLinks", type = Boolean.class),
-                @NamedParam(value = "glob", type = Boolean.class),
-                @NamedParam(value = "hidden", type = Boolean.class),
-                @NamedParam(value = "includeInputs", type = Boolean.class),
-                @NamedParam(value = "maxDepth", type = Integer.class),
-                @NamedParam(value = "optional", type = Boolean.class),
-                @NamedParam(value = "type", type = String.class),
-            })
-            Map<String,?> opts,
-            String pattern
-        );
-        Set<Path> files(String pattern);
 
         @Description("""
             Get the standard output of the task script.

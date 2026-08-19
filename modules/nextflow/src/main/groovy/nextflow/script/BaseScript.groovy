@@ -129,6 +129,28 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     /**
+     * Define an agent.
+     *
+     * Mirrors {@link #processV2(String, Closure)} — the lowered agent closure runs
+     * against an {@link AgentBuilder} delegate that captures directives, inputs,
+     * outputs and the prompt, then builds the populated {@link AgentDef}.
+     * The agent executes via {@link AgentDef#run} (see the nf-agent plugin runner).
+     *
+     * @param name
+     * @param body
+     */
+    protected void agent(String name, Closure<PromptDef> body) {
+        log.warn1 "Agents are a preview feature -- syntax and behavior may change in future releases"
+        final builder = new AgentBuilder(this, name)
+        final cl = (Closure<PromptDef>) body.clone()
+        cl.setDelegate(builder)
+        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
+        final prompt = cl.call()
+        final agent = builder.withPrompt(prompt).build()
+        meta.addDefinition(agent)
+    }
+
+    /**
      * Define a legacy process.
      *
      * @param name
