@@ -741,4 +741,111 @@ class TaskConfigTest extends Specification {
         [arch:'arm64']      | new Architecture(name:'arm64')
     }
 
+    // ---------------------------------------------------------------------
+    // hasDynamicDirective
+    // ---------------------------------------------------------------------
+
+    def 'should detect a dynamic ext directive' () {
+        given:
+        def config = new TaskConfig(ext: [args: { "-Xmx${task.memory.toGiga()}g" }])
+
+        expect:
+        config.hasDynamicDirective(['ext'])
+    }
+
+    def 'should not detect a static ext directive' () {
+        given:
+        // a static value cannot reference `task`: the config scope does not define it,
+        // therefore `ext.args = "-Xmx${task.memory}g"` is rejected when the config is parsed
+        def config = new TaskConfig(ext: [args: '--threads 4'])
+
+        expect:
+        !config.hasDynamicDirective(['ext'])
+    }
+
+    def 'should detect a dynamic script directive' () {
+        given:
+        def config = new TaskConfig(beforeScript: { "echo ${task.cpus}" })
+
+        expect:
+        config.hasDynamicDirective(['beforeScript'])
+        !config.hasDynamicDirective(['afterScript'])
+    }
+
+    def 'should ignore a directive that is not in the given set' () {
+        given:
+        // the nf-core institutional profiles set `clusterOptions` dynamically, and the
+        // directive is only read by the grid executors -- see SeqeraTaskHandler.COMMAND_DIRECTIVES
+        def config = new TaskConfig(clusterOptions: { "-l h_vmem=${task.memory.toGiga()}G" })
+
+        expect:
+        !config.hasDynamicDirective(['ext', 'beforeScript', 'afterScript'])
+        and:
+        config.hasDynamicDirective(['clusterOptions'])
+    }
+
+    def 'should ignore the config selector blocks' () {
+        given:
+        // `ProcessConfigBuilder#applyConfigDefaults` copies *every* key of the `process` config
+        // scope into each process config, including the `withName:`/`withLabel:` blocks that
+        // were not applied to it -- those hold the directives of *other* processes
+        def config = new TaskConfig(
+            'ext': [args: '--threads 4'],
+            'withName:OTHER': [ext: [args: { "-Xmx${task.memory.toGiga()}g" }]],
+            'withLabel:big': [beforeScript: { "echo ${task.memory}" }] )
+
+        expect:
+        !config.hasDynamicDirective(['ext', 'beforeScript', 'afterScript'])
+    }
+
+    def 'should detect a dynamic named parameter' () {
+        given:
+        def config = new TaskConfig(publishDir: [path: { "/data/${task.cpus}" }, mode: 'copy'])
+
+        expect:
+        config.hasDynamicDirective(['publishDir'])
+    }
+
+    def 'should detect a dynamic value in a repeated directive' () {
+        given:
+        def config = new TaskConfig(module: ['foo/1.0', { "bar/${task.cpus}" }])
+
+        expect:
+        config.hasDynamicDirective(['module'])
+    }
+
+    def 'should detect a lazy gstring directive value' () {
+        given:
+        def config = new TaskConfig(beforeScript: "echo ${-> task.memory}")
+
+        expect:
+        config.hasDynamicDirective(['beforeScript'])
+    }
+
+    def 'should return false when no directive name is given' () {
+        given:
+        def config = new TaskConfig(ext: [args: { 'x' }])
+
+        expect:
+        !config.hasDynamicDirective(null)
+        !config.hasDynamicDirective([])
+    }
+
+    def 'should not resolve any directive value' () {
+        given:
+        // the check must inspect the *raw* values: resolving them would evaluate the user
+        // closures as a side effect, before the task context is even available
+        def resolved = false
+        def config = new TaskConfig(
+            ext: [args: { resolved = true; throw new IllegalStateException('should not be evaluated') }],
+            beforeScript: { resolved = true; throw new IllegalStateException('should not be evaluated') } )
+
+        when:
+        def result = config.hasDynamicDirective(['ext', 'beforeScript', 'afterScript'])
+        then:
+        noExceptionThrown()
+        result
+        !resolved
+    }
+
 }

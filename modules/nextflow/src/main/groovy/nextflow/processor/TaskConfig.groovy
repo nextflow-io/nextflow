@@ -123,6 +123,82 @@ class TaskConfig extends LazyMap implements Cloneable {
         return eval0( result, path.subList(1,path.size()), key )
     }
 
+    /**
+     * Report whether any of the given directives holds a *dynamic* value i.e. a closure
+     * or a lazy GString e.g. {@code ext.args = { "-Xmx${task.memory.toGiga()}g" }}.
+     *
+     * This is a conservative proxy for "the value of this directive may depend on the task
+     * resources". A dynamic value defined in the config file carries no source at runtime --
+     * config closures are only rendered as text by {@code ClosureToStringVisitor}, which runs
+     * for {@code nextflow config} and {@code kuberun} -- so the actual expression cannot be
+     * inspected. Conversely a *static* value cannot reference the task resources at all: the
+     * config scope does not define {@code task}, therefore {@code ext.args = "${task.memory}g"}
+     * is rejected when the config is parsed. Hence a closure is the only shape that can carry
+     * such a reference, and one must be treated as suspect.
+     *
+     * The caller decides which directives matter, because that depends on what the executor
+     * actually does with them e.g. a dynamic {@code clusterOptions} is meaningless to an
+     * executor that never reads it.
+     *
+     * Note the *raw* values are inspected, so that nothing is resolved -- and therefore no
+     * user closure is evaluated -- as a side effect of the check.
+     *
+     * @param names The directive names to inspect e.g. {@code ['ext','beforeScript']}
+     * @return {@code true} when at least one of the given directives holds a dynamic value
+     */
+    boolean hasDynamicDirective(Collection<String> names) {
+        if( !names )
+            return false
+        final target = getTarget()
+        if( !target )
+            return false
+        for( String name : names ) {
+            // Only the named directives are looked up, therefore the `withName:`/`withLabel:`
+            // selector blocks are never inspected. This matters because
+            // `ProcessConfigBuilder#applyConfigDefaults` copies *every* key of the `process`
+            // config scope into each process config, including the selector blocks that were
+            // not applied to it -- those hold the directives of *other* processes. A selector
+            // that *does* match is merged into the top-level directives by then, so true
+            // positives are unaffected.
+            if( isDynamicValue(target.get(name)) )
+                return true
+        }
+        return false
+    }
+
+    /**
+     * Determine whether a raw directive value is dynamic. The values are nested in several
+     * shapes, hence the recursion.
+     */
+    private static boolean isDynamicValue(Object value) {
+        // a dynamic directive e.g. `beforeScript = { ... }`
+        if( value instanceof Closure )
+            return true
+        // a lazy GString e.g. `beforeScript = "echo ${-> task.memory}"` -- same test as
+        // LazyMap#put, which flags exactly these two shapes as dynamic
+        if( value instanceof GString ) {
+            for( Object it : ((GString)value).getValues() )
+                if( it instanceof Closure )
+                    return true
+            return false
+        }
+        // `ext` is re-wrapped as a nested lazy map on put, so its entries are one level down
+        // and must be taken from the target to avoid resolving them -- see #put
+        if( value instanceof LazyMap )
+            return isDynamicValue(((LazyMap)value).getTarget()?.values())
+        // a directive declared with named parameters e.g. `publishDir path: {..}`
+        if( value instanceof Map )
+            return isDynamicValue(((Map)value).values())
+        // a repeatable directive e.g. several `publishDir`, held as a list of values
+        if( value instanceof Collection ) {
+            for( Object it : (Collection)value )
+                if( isDynamicValue(it) )
+                    return true
+            return false
+        }
+        return false
+    }
+
     def getProperty(String name) {
 
         def meta = metaClass.getMetaProperty(name)

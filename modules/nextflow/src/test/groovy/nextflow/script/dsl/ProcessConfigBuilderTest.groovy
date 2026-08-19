@@ -264,4 +264,27 @@ class ProcessConfigBuilderTest extends Specification {
         !config.disk
 
     }
+
+    def 'should report a dynamic directive only for the process matched by the selector' () {
+        given:
+        def settings = [
+                'withName:FOO': [ ext: [args: { "-Xmx${task.memory.toGiga()}g" }] ]
+        ]
+
+        when: 'the selector matches the process'
+        def foo = new ProcessConfig([:])
+        new ProcessConfigBuilder(foo).applyConfig(settings, 'FOO', 'FOO', 'FOO')
+        then:
+        foo.createTaskConfig().hasDynamicDirective(['ext'])
+
+        when: 'the selector does not match the process'
+        // `applyConfigDefaults` still copies the `withName:FOO` block into the config of
+        // *every* process, therefore the check must skip the selector blocks
+        def bar = new ProcessConfig([:])
+        new ProcessConfigBuilder(bar).applyConfig(settings, 'BAR', 'BAR', 'BAR')
+        then:
+        bar.containsKey('withName:FOO')
+        and:
+        !bar.createTaskConfig().hasDynamicDirective(['ext'])
+    }
 }
