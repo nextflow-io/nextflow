@@ -864,8 +864,6 @@ public class ScriptAstBuilder {
             .map(this::processOutput)
             .filter(stmt -> stmt != null)
             .toList();
-        if( statements.size() > 1 )
-            collectSyntaxError(new SyntaxException("Agent should have only one output -- combine multiple outputs into a record", ast( new EmptyStatement(), ctx.OUTPUT() )));
         return ast( block(null, statements), ctx );
     }
 

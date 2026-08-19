@@ -437,32 +437,8 @@ class AgentParserTest extends Specification {
         errors.any { it.getOriginalMessage().contains('Agent output must be declared as `name: Type`') }
     }
 
-    def 'should reject more than one agent output'() {
-        when:
-        // unlike a typed process (a warning there), an agent MUST have a single output: the model
-        // answers one value, so multiple outputs have no lowering -- combine them into a record
-        def errors = check('''\
-            nextflow.enable.types = true
-
-            agent qa {
-                input:
-                q: String
-
-                output:
-                answer: String
-                score: Integer
-
-                prompt:
-                "go"
-            }
-            ''')
-
-        then:
-        errors.any { it.getOriginalMessage().contains('Agent should have only one output') }
-    }
-
     def 'should resolve file/files in an agent output but not the process-only directives'() {
-        when: 'file() is in scope'
+        when: 'the work-dir collectors are in scope'
         def errors = check('''\
             nextflow.enable.types = true
 
@@ -472,24 +448,6 @@ class AgentParserTest extends Specification {
 
                 output:
                 report: Path = file('report.md')
-
-                prompt:
-                "go"
-            }
-            ''')
-
-        then:
-        errors.isEmpty()
-
-        when: 'files() is in scope'
-        errors = check('''\
-            nextflow.enable.types = true
-
-            agent qa {
-                input:
-                q: String
-
-                output:
                 notes: Set<Path> = files('*.txt')
 
                 prompt:

@@ -61,6 +61,53 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
         Thread.interrupted() // clear any leaked interrupt flag from a fatal-tool abort (Test N)
     }
 
+    // -- Test A [LINCHPIN]: N-way output split via getDelegate().put under DELEGATE_ONLY
+    def 'should split a wrapper response into N named output channels'() {
+        given:
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
+            '{"plan":{"title":"t","shards":[{"id":"s1","question":"q1"}]},"count":3}'
+        } as AgentRunner
+
+        when:
+        def result = runScript('''
+            nextflow.enable.types = true
+
+            record Shard { id: String; question: String }
+            record Plan  { title: String; shards: List<Shard> }
+
+            agent planner {
+                model 'openai/gpt-4o'
+                tools()
+                input:
+                brief: String
+                output:
+                plan: Plan
+                count: Long
+                prompt:
+                """
+                Break: ${brief}
+                """
+            }
+
+            workflow {
+                def r = planner(channel.of('brief'))
+                [ r.plan, r.count ]
+            }
+            ''')
+
+        then: 'plan channel (agent.out.plan) yields the Plan record slice'
+        def plan = result[0].val
+        plan instanceof Map
+        plan.title == 't'
+        plan.shards instanceof List
+        plan.shards[0].id == 's1'
+        plan.shards[0].question == 'q1'
+        and: 'count channel (agent.out.count) yields the coerced Long slice'
+        def count = result[1].val
+        count == 3
+        count instanceof Long
+    }
+
     // -- Test B: single-record output stays UNWRAPPED (bare RecordSchema.of)
     def 'should keep a single-record output unwrapped (no wrapper key)'() {
         given:
@@ -254,6 +301,117 @@ class AgentAsTaskIntegrationTest extends Dsl2Spec {
         capturedInput.contains('a') && capturedInput.contains('b') && capturedInput.contains('c')
         and:
         result.val == 'summary'
+    }
+
+    // -- Test F: wrapper schema shape (multi-output)
+    def 'should synthesize an object-root wrapper schema for multiple outputs'() {
+        given:
+        AgentRunnerRequest captured = null
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
+            captured = req; '{"rec":{"title":"t","count":1},"n":2}'
+        } as AgentRunner
+
+        when:
+        runScript('''
+            nextflow.enable.types = true
+
+            record Rec { title: String; count: Long }
+
+            agent multi {
+                model 'openai/gpt-4o'
+                tools()
+                input:
+                q: String
+                output:
+                rec: Rec
+                n: Long
+                prompt: "Q: ${q}"
+            }
+
+            workflow {
+                multi(channel.of('x'))
+            }
+            ''')
+
+        then:
+        captured.outputSchema.type == 'object'
+        (captured.outputSchema.properties.keySet() as List) == ['rec', 'n']
+        captured.outputSchema.required == ['rec', 'n']
+        captured.outputSchema.additionalProperties == false
+        and: 'nested record recursion is intact'
+        captured.outputSchema.properties.rec.type == 'object'
+        captured.outputSchema.properties.rec.properties.containsKey('title')
+    }
+
+    // -- Test G: top-level scalar coercion (multi-output)
+    def 'should coerce top-level scalar outputs to the declared Java type'() {
+        given:
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
+            '{"count":3,"score":0.5}'
+        } as AgentRunner
+
+        when:
+        def result = runScript('''
+            nextflow.enable.types = true
+
+            agent nums {
+                model 'openai/gpt-4o'
+                tools()
+                input:
+                q: String
+                output:
+                count: Long
+                score: Double
+                prompt: "Q: ${q}"
+            }
+
+            workflow {
+                def r = nums(channel.of('x'))
+                [ r.count, r.score ]
+            }
+            ''')
+
+        then:
+        def count = result[0].val
+        def score = result[1].val
+        count == 3
+        count instanceof Long
+        score == 0.5d
+        score instanceof Double
+    }
+
+    // -- Test H: unsupported top-level output type rejected with a clear message
+    def 'should reject an unsupported top-level output type'() {
+        given:
+        AgentRunnerProvider.testRunner = { AgentRunnerRequest req -> 'ignored' } as AgentRunner
+
+        when:
+        runScript('''
+            nextflow.enable.types = true
+
+            agent bad {
+                model 'openai/gpt-4o'
+                tools()
+                input:
+                q: String
+                output:
+                label: String
+                items: List<String>
+                prompt: "Q: ${q}"
+            }
+
+            workflow {
+                bad(channel.of('x'))
+            }
+            ''')
+
+        then:
+        def e = thrown(Exception)
+        allMessages(e).contains('unsupported type')
+        allMessages(e).contains('items')
+        and: 'the message names the supported output set (plan §4.5/§9)'
+        allMessages(e).contains('supported:')
+        allMessages(e).contains('record type')
     }
 
     // -- Test I: parity smoke - the agent runs as a genuine TaskProcessor
