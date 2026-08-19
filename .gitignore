@@ -81,3 +81,7 @@ yarn-error.log*
 
 # local agent example validation output
 examples/agents/.validate/
+
+# nf-core modules an example installs on `nextflow run`/`lint` - they land under the
+# repo's own modules/ dir, which otherwise holds only Gradle subprojects
+/modules/nf-core/

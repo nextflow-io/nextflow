@@ -138,24 +138,35 @@ class AgentToGroovyTest extends Specification {
 
     def 'should lower a file output into an unstager plus a value-carrying output'() {
         when:
-        final blocks = lowerAgent('''
+        final bare = lowerAgent('''
             agent qa {
                 input:
                 q: String
                 output:
                 answer: String
-                report: Path = file('report.md')
-                notes: Set<Path> = files('*.txt')
                 prompt: "go"
             }
             ''')
 
-        then: 'one unstager per file()/files() call, keyed per agent'
-        callNames(blocks.unstagers) == ['_unstage_files', '_unstage_files']
-        unstagerKeys(blocks.unstagers) == ['$path0', '$path1']
+        then: 'a bare output stays 2-arg -- the model answers it, so there is nothing to unstage'
+        bare.unstagers.statements.isEmpty()
+        bare.outputs.statements.collect { arity(it) } == [2]
 
-        and: 'a bare output stays 2-arg (the model answers it); an RHS output carries its closure'
-        blocks.outputs.statements.collect { arity(it) } == [2, 3, 3]
+        when:
+        final file = lowerAgent('''
+            agent qa {
+                input:
+                q: String
+                output:
+                report: Path = file('report.md')
+                prompt: "go"
+            }
+            ''')
+
+        then: 'a file() output lowers to an unstager, keyed per agent, and carries its closure'
+        callNames(file.unstagers) == ['_unstage_files']
+        unstagerKeys(file.unstagers) == ['$path0']
+        file.outputs.statements.collect { arity(it) } == [3]
     }
 
     def 'should not lower env or eval in an agent output'() {
@@ -195,24 +206,30 @@ class AgentToGroovyTest extends Specification {
 
     def 'should lower every file()/files() call form a process output accepts'() {
         given: """the one-arg and two-arg opts forms, singular and plural. DSL resolution matches by
-                  NAME only, so this covers the LOWERING rather than the declared signature"""
-        final blocks = lowerAgent('''
+                  NAME only, so this covers the LOWERING rather than the declared signature. An agent
+                  takes a single output, so each form is declared by its own agent"""
+        final blocks = lowerAgent("""
             nextflow.enable.types = true
 
             agent qa {
                 input:
                 x: String
                 output:
-                one:   Path      = file('report.md')
-                typed: Path      = file(type: 'file', 'report.md')
-                many:  Set<Path> = files('*.tsv')
-                opts:  Set<Path> = files(hidden: true, '*.log')
+                ${declaration}
                 prompt: "go"
             }
-            ''')
+            """)
 
-        expect: 'all four resolve, and each lowers to its own unstager'
-        callNames(blocks.unstagers) == ['_unstage_files'] * 4
+        expect: 'it resolves and lowers to an unstager'
+        callNames(blocks.unstagers) == ['_unstage_files']
+
+        where:
+        declaration << [
+            "one:   Path      = file('report.md')",
+            "typed: Path      = file(type: 'file', 'report.md')",
+            "many:  Set<Path> = files('*.tsv')",
+            "opts:  Set<Path> = files(hidden: true, '*.log')",
+        ]
     }
 
     def 'should resolve file() in an agent output to the same scope a process output resolves it to'() {

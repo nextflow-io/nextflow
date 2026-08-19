@@ -89,6 +89,8 @@ Namespaced tool references, `family[:group]:name` -- `'nf:module_run'`, `'fs:*'`
 
 Agent inputs and outputs use the same syntax as a typed process, with one exception: destructured records and tuples are not supported (see [Limitations](#limitations)).
 
+An agent declares exactly one output -- the model answers a single value. Use a [record type](#structured-output) to return multiple values.
+
 Each input is also serialized as JSON and appended to the model message, so the agent sees it even if it isn't explicitly referenced in the prompt.
 
 The `prompt:` section uses the same syntax as the process `script:` section. The last statement is the prompt:
@@ -469,6 +471,7 @@ See [Agent runs][data-lineage-agent] for more information.
 
 - The process `stage:` section is not supported for agents.
 - Destructured records and tuples are not supported in agent inputs/outputs.
+- An agent declares only one output -- combine multiple values into a record.
 - The `Path` type is not supported in output records.
 - The `output:` section does not support the `env()`, `eval()`, or `stdout()` output functions.
 

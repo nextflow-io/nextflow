@@ -415,47 +415,6 @@ class AgentPathIoTest extends Specification {
         session.error == null
     }
 
-    def 'should keep a work-dir output out of the schema the model is asked to fill'() {
-        given:
-        AgentRunnerRequest captured = null
-        AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
-            captured = req
-            Path.of(req.workDir).resolve('report.md').text = 'body'
-            '{"answer":"42","score":7}'
-        } as AgentRunner
-        and:
-        final tasks = taskProbe()
-
-        when:
-        runWithObserver(tasks.probe, '''
-            nextflow.enable.types = true
-
-            agent qa {
-                model 'openai/gpt-4o'
-                input:
-                q: String
-                output:
-                answer: String
-                score: Long
-                report: Path = file('report.md')
-                prompt: "answer, and write report.md"
-            }
-
-            workflow {
-                qa(channel.of('hello'))
-            }
-            ''')
-
-        then: 'only the model-answered outputs are in the contract the model is given'
-        // if the file output reached buildWrapperSchema it would raise "unsupported type Path",
-        // so this also pins that the partition happens BEFORE the schema is built
-        captured.outputSchema.properties.keySet() == ['answer', 'score'] as Set
-        captured.outputSchema.required == ['answer', 'score']
-        and: 'the file output is still collected'
-        final task = tasks.completed[0]
-        task.outputFiles.toList() == [task.workDir.resolve('report.md')]
-    }
-
     def 'should surface an arity error when the agent writes a different file name'() {
         given: 'a runner that writes the WRONG name'
         AgentRunnerProvider.testRunner = { AgentRunnerRequest req ->
