@@ -945,6 +945,32 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    def 'should preserve comments in an agent' () {
+        expect:
+        checkFormat(
+            '''\
+            nextflow.enable.types = true
+
+            agent reporter {
+                // a directive
+                model 'openai/gpt-4o'
+
+                input:
+                // about sample
+                sample: String
+
+                output:
+                report: String // the report
+
+                prompt:
+                """
+                Write a report for ${sample}.
+                """
+            }
+            '''
+        )
+    }
+
     def 'should preserve comments in an if/else' () {
         expect:
         checkFormat(
