@@ -109,6 +109,18 @@ seqera {
 
 > NOTE: When a process references `task.memory` in the script (e.g. `-Xmx${task.memory.toGiga()}g`), resource prediction is disabled for that process. Otherwise, the scheduler could reduce the memory allocation, and the task would try to allocate more memory than is available, and fail with an out-of-memory error.
 
+The same reference can be hidden in a dynamic directive, where it cannot be inspected:
+
+```groovy
+process {
+    withName: FOO {
+        ext.args = { "-Xmx${task.memory.toGiga()}g" }
+    }
+}
+```
+
+Resource prediction is therefore also disabled for a process that defines `ext`, `beforeScript` or `afterScript` with a closure, whether or not the closure actually depends on the task resources. Use a static value, or set the `seqera/predictionModel` hint explicitly, to keep the prediction enabled.
+
 Set the `seqera/predictionModel` hint explicitly on the process to override this behaviour:
 
 ```groovy

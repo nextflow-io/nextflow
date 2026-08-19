@@ -59,6 +59,32 @@ import nextflow.trace.TraceRecord
 @CompileStatic
 class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
 
+    /**
+     * The directives whose value is rendered into the command executed by this executor, and
+     * that therefore freeze a resource value when they are defined with a closure -- see
+     * {@link #shouldDisablePrediction()}.
+     *
+     * The set is deliberately narrow, because a directive listed here disables the resource
+     * prediction for the whole process as soon as it is dynamic:
+     *
+     * - {@code ext} reaches the command through the script template e.g. {@code ${task.ext.args}}
+     * - {@code beforeScript} and {@code afterScript} are rendered verbatim into the wrapper
+     *   script by {@link nextflow.executor.BashWrapperBuilder}
+     *
+     * Notably excluded:
+     *
+     * - {@code clusterOptions}, {@code queue} and {@code penv} are only read by the grid
+     *   executors. The nf-core institutional profiles set {@code clusterOptions} dynamically
+     *   on every process e.g. {@code { "-l h_vmem=${task.memory}" }}, so tripping on it would
+     *   disable the prediction for an entire pipeline over a directive this executor ignores
+     * - {@code containerOptions} never reaches the command either: {@code BashWrapperBuilder}
+     *   only applies it when {@code containerEnabled && !containerNative}, and
+     *   {@link SeqeraExecutor#isContainerNative()} is always {@code true}
+     * - the resource directives themselves ({@code cpus}, {@code memory}, ...) are resolved at
+     *   submit time, after the command has been rendered, so they carry no stale value
+     */
+    protected static final List<String> COMMAND_DIRECTIVES = List.of('ext', 'beforeScript', 'afterScript')
+
     private SchedClient client
 
     private SeqeraExecutor executor
@@ -190,16 +216,33 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         final runModel = executor.getSeqeraConfig()?.predictionModel
         if( !runModel || runModel == PredictionModel.NONE.getValue() )
             return false
+        final processName = task.processor?.name ?: task.lazyName()
         // Note only `memory` is checked. The scheduler can adjust the cpus as well, but a
         // stale `task.cpus` costs an over-subscribed thread pool whereas a stale
         // `task.memory` fails the task, and `task.cpus` is referenced by nearly every
         // process -- disabling the prediction for those would defeat the feature
-        if( !task.isDirectiveReferenced('memory') )
-            return false
-        // warn once per process rather than once per task: the reference belongs to the
-        // process definition, so every one of its tasks would otherwise report it
-        log.warn1("Process `${task.processor?.name ?: task.lazyName()}` depends on the `task.memory` value -- resource prediction has been disabled for this process to prevent an under-allocation of the requested memory", firstOnly: true)
-        return true
+        if( task.isDirectiveReferenced('memory') ) {
+            // warn once per process rather than once per task: the reference belongs to the
+            // process definition, so every one of its tasks would otherwise report it
+            log.warn1("Process `${processName}` depends on the `task.memory` value -- resource prediction has been disabled for this process to prevent an under-allocation of the requested memory", firstOnly: true)
+            return true
+        }
+        // The check above only sees the *script*. A directive defined with a closure can hide
+        // the same reference where it cannot be inspected, e.g.
+        //
+        //     process.withName:FOO.ext.args = { "-Xmx${task.memory.toGiga()}g" }
+        //
+        // The script then merely shows `task.ext.args`, and the closure is resolved by the
+        // task config at run time carrying no source. Since a *static* directive value cannot
+        // reference `task` at all -- the config scope does not define it -- a dynamic value is
+        // the only shape that can carry such a reference, and is conservatively treated as one.
+        // This over-triggers: `ext.args = { "--threads ${task.cpus}" }` also disables the
+        // prediction even though it never mentions the memory
+        if( task.config?.hasDynamicDirective(COMMAND_DIRECTIVES) ) {
+            log.warn1("Process `${processName}` defines a dynamic command directive that may depend on the `task.memory` value -- resource prediction has been disabled for this process to prevent an under-allocation of the requested memory", firstOnly: true)
+            return true
+        }
+        return false
     }
 
     protected int maxSpotAttempts(MachineRequirementOpts opts) {

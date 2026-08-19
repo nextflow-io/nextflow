@@ -1336,19 +1336,113 @@ class SeqeraTaskHandlerTest extends Specification {
         captured.getPredictionModel() == PredictionModel.QR_V1
     }
 
+    def 'submit disables the prediction model when a command directive is dynamic'() {
+        given:
+        Task captured = null
+        def handler = createSubmitHandler(
+            predictionModel: 'qr/v2',
+            // the script itself does not mention `task.memory`: the reference is hidden in a
+            // config closure, which carries no source at runtime
+            memoryReferenced: false,
+            directives: [ext: [args: { "-Xmx${task.memory.toGiga()}g" }]],
+            onSubmit: { captured = it },
+        )
+
+        when:
+        handler.submit()
+        then:
+        captured.getPredictionModel() == PredictionModel.NONE
+    }
+
+    def 'submit keeps the prediction model when only an out-of-scope directive is dynamic'() {
+        given:
+        Task captured = null
+        def handler = createSubmitHandler(
+            predictionModel: 'qr/v2',
+            memoryReferenced: false,
+            // `clusterOptions` is only read by the grid executors -- the nf-core institutional
+            // profiles set it dynamically on *every* process, so tripping on it would disable
+            // the prediction for the whole pipeline
+            directives: [clusterOptions: { "-l h_vmem=${task.memory.toGiga()}G" }],
+            onSubmit: { captured = it },
+        )
+
+        when:
+        handler.submit()
+        then:
+        captured.getPredictionModel() == null
+    }
+
+    def 'submit keeps the prediction model when the command directives are static'() {
+        given:
+        Task captured = null
+        def handler = createSubmitHandler(
+            predictionModel: 'qr/v2',
+            memoryReferenced: false,
+            directives: [ext: [args: '--threads 4'], beforeScript: 'echo hello'],
+            onSubmit: { captured = it },
+        )
+
+        when:
+        handler.submit()
+        then:
+        captured.getPredictionModel() == null
+    }
+
+    def 'submit does not resolve the dynamic directives while checking them'() {
+        given:
+        Task captured = null
+        def handler = createSubmitHandler(
+            predictionModel: 'qr/v2',
+            memoryReferenced: false,
+            // the check inspects the raw values, therefore a closure that cannot be evaluated
+            // yet -- there is no task context at this point -- must not break the submission
+            directives: [ext: [args: { throw new IllegalStateException('should not be evaluated') }]],
+            onSubmit: { captured = it },
+        )
+
+        when:
+        handler.submit()
+        then:
+        noExceptionThrown()
+        captured.getPredictionModel() == PredictionModel.NONE
+    }
+
+    def 'submit lets an explicit predictionModel hint win over the dynamic directive check'() {
+        given:
+        Task captured = null
+        def handler = createSubmitHandler(
+            predictionModel: 'qr/v2',
+            memoryReferenced: false,
+            directives: [ext: [args: { "-Xmx${task.memory.toGiga()}g" }]],
+            hints: ['seqera/predictionModel': 'qr/v1'],
+            onSubmit: { captured = it },
+        )
+
+        when:
+        handler.submit()
+        then:
+        captured.getPredictionModel() == PredictionModel.QR_V1
+    }
+
     private SeqeraTaskHandler createSubmitHandler(Map args) {
         final hints = args.hints as Map<String,Object> ?: [:]
         final baseMachineReq = args.baseMachineReq as MachineRequirementOpts
         final Closure onSubmit = args.onSubmit as Closure ?: {}
         final memoryReferenced = args.memoryReferenced as boolean
         final runPredictionModel = args.predictionModel as String
+        final directives = args.directives as Map<String,Object>
 
-        def taskConfig = Mock(TaskConfig) {
-            getCpus() >> 1
-            getResourceLabels() >> [:]
-            getResourceLimit(_) >> null
-            getHints() >> hints
-        }
+        // when `directives` is given, use a *real* task config so that the dynamic directive
+        // check runs against the actual raw values rather than a stubbed answer
+        def taskConfig = directives != null
+            ? new TaskConfig(directives + [cpus: 1, hints: hints])
+            : Mock(TaskConfig) {
+                getCpus() >> 1
+                getResourceLabels() >> [:]
+                getResourceLimit(_) >> null
+                getHints() >> hints
+            }
         def taskRun = Mock(TaskRun) {
             getConfig() >> taskConfig
             getWorkDir() >> Paths.get('/work/ab/cd1234')
