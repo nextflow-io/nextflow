@@ -205,6 +205,55 @@ class AgentDefTest extends Specification {
 
     static class TestRec implements nextflow.script.types.Record {}
 
+    static class WrapPlan implements nextflow.script.types.Record {
+        String title
+        Long count
+    }
+
+    def 'buildWrapperSchema builds an object-root wrapper with per-output fragments'() {
+        given:
+        def outs = [
+            new AgentBuilder.AgentOutput('rec', WrapPlan),
+            new AgentBuilder.AgentOutput('n', Long),
+            new AgentBuilder.AgentOutput('score', Double),
+            new AgentBuilder.AgentOutput('flag', Boolean),
+            new AgentBuilder.AgentOutput('label', String),
+        ]
+
+        when:
+        def schema = AgentDef.buildWrapperSchema('agentX', outs)
+
+        then:
+        schema.type == 'object'
+        schema.additionalProperties == false
+        schema.required == ['rec', 'n', 'score', 'flag', 'label']
+        (schema.properties.keySet() as List) == ['rec', 'n', 'score', 'flag', 'label']
+
+        and: 'scalar fragments map to the right JSON-schema type'
+        schema.properties.n.type == 'integer'
+        schema.properties.score.type == 'number'
+        schema.properties.flag.type == 'boolean'
+        schema.properties.label.type == 'string'
+
+        and: 'nested record fragment recursion is intact'
+        schema.properties.rec.type == 'object'
+        schema.properties.rec.properties.title.type == 'string'
+        schema.properties.rec.properties.count.type == 'integer'
+    }
+
+    def 'buildWrapperSchema rejects an unsupported top-level output type'() {
+        when:
+        AgentDef.buildWrapperSchema('agentX', [new AgentBuilder.AgentOutput('p', java.nio.file.Path)])
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains('unsupported type')
+        e.message.contains('`p`')
+        and: 'the message enumerates the supported output set (plan §4.5/§9)'
+        e.message.contains('supported:')
+        e.message.contains('record type')
+    }
+
     def 'scalarOutputSchema represents a Path as an exact string field'() {
         when:
         def schema = AgentDef.scalarOutputSchema(new AgentBuilder.AgentOutput('assembly_path', java.nio.file.Path))

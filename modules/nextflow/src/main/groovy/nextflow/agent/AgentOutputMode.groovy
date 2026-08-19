@@ -19,7 +19,7 @@ import groovy.transform.CompileStatic
 
 /**
  * How an agent's answer comes back: as the model's plain text, as a scalar wrapped in the
- * declared output name, or as a record.
+ * declared output name, as a record, or as an object holding one entry per declared output.
  *
  * <p>The single fact {@link AgentOutputPlan} is built around -- both the decoding of a canonical
  * task's terminal frame and the binding of an in-JVM runner's result are functions of it.
@@ -30,5 +30,6 @@ import groovy.transform.CompileStatic
 enum AgentOutputMode {
     TEXT,
     SCALAR_CONTRACT,
-    RECORD
+    RECORD,
+    WRAPPED
 }

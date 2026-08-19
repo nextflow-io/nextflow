@@ -456,14 +456,15 @@ class AgentDef extends BindableDef implements ChainableDef {
     /**
      * @param outputs the MODEL-ANSWERED outputs only (see the {@code modelOuts} partition in
      *        {@link #buildAgentTaskWithBridge}); an output with an explicit right-hand side is
-     *        not part of the contract the model is given. An agent declares a single output, so
-     *        this holds at most one element.
+     *        not part of the contract the model is given.
      */
-    private static AgentOutputPlan resolveOutputPlan(List<AgentOutput> outputs, List tools) {
-        // an agent whose output is a work-dir collection asks the model for nothing: its
-        // observable result is the file it wrote, and its final text is discarded
+    private static AgentOutputPlan resolveOutputPlan(String agentName, List<AgentOutput> outputs, List tools) {
+        // an agent whose every output is a work-dir collection asks the model for nothing: its
+        // observable result is the files it wrote, and its final text is discarded
         if( !outputs )
             return new AgentOutputPlan(AgentOutputMode.TEXT, null)
+        if( outputs.size() > 1 )
+            return new AgentOutputPlan(AgentOutputMode.WRAPPED, buildWrapperSchema(agentName, outputs))
         final output = outputs[0]
         if( Record.isAssignableFrom(output.type as Class) )
             return new AgentOutputPlan(AgentOutputMode.RECORD, RecordSchema.of(output.type as Class))
@@ -621,7 +622,7 @@ class AgentDef extends BindableDef implements ChainableDef {
         //    `file(...)`/`files(...)` call inside that expression ADDITIONALLY registered an
         //    unstager, which is what makes it a work-dir collection
         final List<AgentOutput> modelOuts = outputs.findAll { it.value == null }
-        final AgentOutputPlan outputPlan = resolveOutputPlan(modelOuts, agentTools)
+        final AgentOutputPlan outputPlan = resolveOutputPlan(name, modelOuts, agentTools)
 
         // -- capture read-only locals for the body closure (resolve lexically under
         //    DELEGATE_ONLY; do NOT reference `this.name`/`this.inputs`/etc. in the body)
@@ -1123,13 +1124,37 @@ class AgentDef extends BindableDef implements ChainableDef {
             final sorted = new TreeMap<String,Object>()
             for( final e : (obj as Map).entrySet() )
                 // coerce a null key to '' so the TreeMap's natural ordering never NPEs
-                // (defensive: RecordSchema.of/scalarOutputSchema only produce String keys)
+                // (defensive: RecordSchema.of/buildWrapperSchema only produce String keys)
                 sorted.put(e.key != null ? e.key.toString() : '', canonicalize(e.value))
             return sorted
         }
         if( obj instanceof Collection )
             return (obj as Collection).collect { canonicalize(it) }
         return obj
+    }
+
+    /**
+     * Synthesize the wrapper object schema for a multi-output agent (design §4.5/§5.3b):
+     * one object whose {@code properties[out.name]} is the record schema (for record
+     * outputs) or the scalar fragment (for supported scalar outputs), all names
+     * {@code required}, {@code additionalProperties:false}. A top-level output whose
+     * type is neither a record nor a supported scalar (e.g. {@code Path}, a top-level
+     * collection) is rejected with a clear message.
+     */
+    static Map buildWrapperSchema(String agentName, List<AgentOutput> outs) {
+        final props = new LinkedHashMap<String,Object>()
+        final required = new ArrayList<String>()
+        for( final o : outs ) {
+            final Class t = o.type as Class
+            final Map frag = (t != null && Record.isAssignableFrom(t))
+                ? RecordSchema.of(t)
+                : RecordSchema.scalarFragment(t)
+            if( frag == null )
+                throw new ScriptRuntimeException("Agent `${agentName}` output `${o.name}` has unsupported type ${t?.name} - supported: String, integer, number, boolean, or a record type")
+            props.put(o.name, frag)
+            required.add(o.name)
+        }
+        return ToolSchema.object(props, required)
     }
 
     /** Machine-readable wrapper for a single scalar output from a tool agent. */

@@ -89,10 +89,9 @@ bash task launches, which hold a pool thread for their whole duration.
 
 ### 2.2 The output contract
 
-`NativeTaskHandler`-style bodies put their return value in `task.stdout` — a single value, and one
-an agent's declared output shares with its collected work-dir files. Neither can travel that way, so
-**the body writes each output into `task.context`**, which `collectOutputsV2` resolves through
-`TaskOutputResolver` and `bindOutputsV2` binds per channel.
+`NativeTaskHandler`-style bodies put their return value in `task.stdout` — a single value. Multiple
+outputs cannot travel that way, so **the body writes each output into `task.context`**, which
+`collectOutputsV2` resolves through `TaskOutputResolver` and `bindOutputsV2` binds per channel.
 
 The body closure runs `DELEGATE_ONLY` with `delegate = task.context`, and output names are dynamic
 strings, so the write is `getDelegate().put(name, value)` — never bare assignment. `task.stdout` is
@@ -148,20 +147,23 @@ fail to resolve in an agent output — a compile error, which is what we want. `
 gained a `filesOnly` mode for the same reason: its `env`/`eval` branches produce a `.command.env`
 that only `BashWrapperBuilder` writes, which an in-JVM agent never has.
 
-### 3.3 Structured output
+### 3.3 Structured output, and the wrapper rule
 
-An agent declares a single output — the model answers one value — so multiple values are returned
-by declaring a `record` output. A named `record` output enables structured output: the record is
-reflected into a JSON schema (`RecordSchema`) that constrains the model's response.
+A named `record` output enables structured output: the record is reflected into a JSON schema
+(`RecordSchema`) that constrains the model's response.
 
-| Output | Schema |
+| Outputs | Schema |
 |---|---|
-| a scalar | none — free-text passthrough |
-| a record | the **bare** `RecordSchema.of(type)` |
+| one scalar | none — free-text passthrough |
+| one record | the **bare** `RecordSchema.of(type)` |
+| more than one | a synthesized wrapper object, one property per output name, all `required`, `additionalProperties: false` |
 
-A record is **not** wrapped in an enclosing object. Wrapping it would burn one of OpenAI's five
-nesting levels (dropping usable record depth 5→4) and change the wire shape, invalidating every
-existing cache entry — for no benefit, since a record schema is already a valid strict object root.
+A single record is **not** wrapped. Wrapping it would burn one of OpenAI's five nesting levels
+(dropping usable record depth 5→4) and change the wire shape, invalidating every existing cache
+entry — for no benefit, since a record schema is already a valid strict object root.
+
+Top-level scalars in the multi-output case need explicit coercion: `JsonSlurper` types JSON numbers
+on its own, so a `count: Long` would otherwise arrive as an `Integer` on the channel.
 
 Optional (`?`) record fields are handled by the runner, not by `RecordSchema`. Under OpenAI strict
 mode langchain4j rewrites the field's type into the nullable union `["string","null"]` and forces
