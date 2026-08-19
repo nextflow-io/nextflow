@@ -9,7 +9,7 @@ record Query {
 // Output record — its fields become the model's JSON-schema contract (structured output).
 record Analysis {
     summary: String
-    confidence: Double
+    confidence: Float
     actionable: Boolean
     key_points: List<String>
 }

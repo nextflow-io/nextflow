@@ -15,7 +15,7 @@ nextflow.enable.types = true
 
 record Analysis {
     summary: String
-    confidence: Double
+    confidence: Float
 }
 
 agent analyst {

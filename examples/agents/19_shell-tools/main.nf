@@ -7,7 +7,7 @@ nextflow.enable.types = true
 record AssemblyStats {
     contig_count: Integer
     total_bases: Integer
-    gc_percent: Double
+    gc_percent: Float
     n50: Integer
     longest_contig: Integer
 }

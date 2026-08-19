@@ -24,7 +24,7 @@ record SampleLabels {
     tissue:     String    // tissue / cell type, e.g. "B lymphocyte [CL:0000236]" or "unknown"
     disease:    String    // e.g. "none [—]" or "unknown"
     assay:      String    // controlled assay term, e.g. "RNA-seq", "ATAC-seq"
-    confidence: Double     // 0..1 overall labelling confidence — the review gate keys on this
+    confidence: Float     // 0..1 overall labelling confidence — the review gate keys on this
     rationale:  String    // free-text phrases keyed on; names any facet left `unknown`
 }
 

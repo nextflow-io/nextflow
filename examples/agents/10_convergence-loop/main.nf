@@ -16,12 +16,12 @@ process score_threshold {
         def tp = 0
         def fp = 0
         def fn = 0
-        def t = threshold as Double
+        def t = threshold as Float
         new File(params.scores as String).eachLine { line, n ->
             if( n == 1 ) return                       // skip header
             def parts = line.trim().split(/\s+/)
             if( parts.size() < 2 ) return
-            def score = parts[0] as Double
+            def score = parts[0] as Float
             def label = parts[1] as Integer
             def pred = score >= t ? 1 : 0
             if( pred == 1 && label == 1 ) { tp = tp + 1 }
@@ -31,7 +31,7 @@ process score_threshold {
         def prec = (tp + fp) > 0 ? (tp / (tp + fp)) : 0.0
         def rec  = (tp + fn) > 0 ? (tp / (tp + fn)) : 0.0
         def f1   = (prec + rec) > 0 ? (2 * prec * rec / (prec + rec)) : 0.0
-        result = String.format('threshold=%.3f tp=%d fp=%d fn=%d precision=%.4f recall=%.4f f1=%.4f', t, tp, fp, fn, prec as Double, rec as Double, f1 as Double)
+        result = String.format('threshold=%.3f tp=%d fp=%d fn=%d precision=%.4f recall=%.4f f1=%.4f', t, tp, fp, fn, prec as Float, rec as Float, f1 as Float)
 }
 
 agent tuner {

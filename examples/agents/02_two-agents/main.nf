@@ -7,7 +7,7 @@ nextflow.enable.types = true
 record Hypothesis {
     statement:  String
     rationale:  String
-    confidence: Double      // the author agent's self-reported confidence, 0..1
+    confidence: Float       // the author agent's self-reported confidence, 0..1
 }
 
 // The final output of the pipeline.

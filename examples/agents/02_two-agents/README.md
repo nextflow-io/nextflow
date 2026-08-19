@@ -28,7 +28,7 @@ agent) by wiring two of them together.
    and stage 2 consumes:
    - `statement: String` — the proposed hypothesis
    - `rationale: String` — a brief justification
-   - `confidence: Double` — the author's self-reported confidence (0–1)
+   - `confidence: Float` — the author's self-reported confidence (0–1)
 
 2. **`Review`** is the pipeline's final output:
    - `verdict: String` — e.g. "plausible", "doubtful"

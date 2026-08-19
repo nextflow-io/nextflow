@@ -34,11 +34,11 @@ every agent task runs in. It is safe to run locally as a first test of the
 
 2. **The `Analysis` output record** has four fields:
    - `summary: String` — a concise plain-text answer
-   - `confidence: Double` — the model's self-reported confidence (0–1)
+   - `confidence: Float` — the model's self-reported confidence (0–1)
    - `actionable: Boolean` — whether the answer implies a concrete next step
    - `key_points: List<String>` — a bullet-list of the main takeaways
 
-   These four types (`String`, `Double`, `Boolean`, `List<String>`) cover the
+   These four types (`String`, `Float`, `Boolean`, `List<String>`) cover the
    full set of scalar and collection types the v1 JSON-schema deriver supports.
 
 3. **The `analyst` agent** is declared with:

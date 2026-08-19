@@ -10,7 +10,7 @@ process qc_verdict {
     container 'ubuntu:24.04'
     input:
     n50_kb: Integer
-    completeness_pct: Double
+    completeness_pct: Float
 
     output:
     verdict: String = stdout()
