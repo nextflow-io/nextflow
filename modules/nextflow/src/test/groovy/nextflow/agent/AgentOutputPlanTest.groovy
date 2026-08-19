@@ -122,11 +122,6 @@ class AgentOutputPlanTest extends Specification {
         plan(AgentOutputMode.SCALAR_CONTRACT).decode(frame('{"answer":"yes"}'), 'answer', String) == 'yes'
     }
 
-    def 'should unwrap the declared output for a wrapped record'() {
-        expect:
-        plan(AgentOutputMode.WRAPPED).decode(frame('{"total":7,"other":1}'), 'total', Integer) == 7
-    }
-
     def 'should reject a scalar contract whose object lacks the declared output'() {
         when:
         plan(AgentOutputMode.SCALAR_CONTRACT).decode(frame(output), 'answer', String)
@@ -137,15 +132,6 @@ class AgentOutputPlanTest extends Specification {
 
         where:
         output << ['{"different":1}', '"a bare string"', '[1,2]', '42']
-    }
-
-    def 'should reject a wrapped answer that is not a JSON object'() {
-        when:
-        plan(AgentOutputMode.WRAPPED).decode(frame('[1,2]'), 'answer', String)
-
-        then:
-        final e = thrown(ScriptRuntimeException)
-        e.message == 'Canonical agent structured output must be a JSON object'
     }
 
     def 'should reject a record answer that is not a JSON object'() {
@@ -159,16 +145,14 @@ class AgentOutputPlanTest extends Specification {
 
     // --- mode predicates ---------------------------------------------------------------------
 
-    def 'should report which modes are structured and which are wrapped'() {
+    def 'should report which modes are structured'() {
         expect:
         plan(mode).isStructured() == structured
-        plan(mode).isWrapped() == wrapped
 
         where:
-        mode                              | structured | wrapped
-        AgentOutputMode.TEXT              | false      | false
-        AgentOutputMode.SCALAR_CONTRACT   | false      | false
-        AgentOutputMode.RECORD            | true       | false
-        AgentOutputMode.WRAPPED           | true       | true
+        mode                              | structured
+        AgentOutputMode.TEXT              | false
+        AgentOutputMode.SCALAR_CONTRACT   | false
+        AgentOutputMode.RECORD            | true
     }
 }

@@ -45,8 +45,7 @@ class AgentOutputPlan {
         this.schema = schema
     }
 
-    boolean isStructured() { mode == AgentOutputMode.RECORD || mode == AgentOutputMode.WRAPPED }
-    boolean isWrapped() { mode == AgentOutputMode.WRAPPED }
+    boolean isStructured() { mode == AgentOutputMode.RECORD }
 
     /**
      * Decode a canonical terminal frame, including a scalar final_answer wrapper.
@@ -65,9 +64,7 @@ class AgentOutputPlan {
                 throw new ScriptRuntimeException('Canonical agent scalar output must be a JSON object containing the declared output')
             return TypeHelper.asType(((Map)value).get(outputName), outputType)
         }
-        if( mode == AgentOutputMode.WRAPPED )
-            return TypeHelper.asType(requireJsonObject(value, 'structured').get(outputName), outputType)
-        return TypeHelper.asRecordType(requireJsonObject(value, 'record'), outputType)
+        return TypeHelper.asRecordType(requireJsonObject(value), outputType)
     }
 
     /**
@@ -90,10 +87,10 @@ class AgentOutputPlan {
         return answer.toString()
     }
 
-    /** The decoded answer as a JSON object, or the {@code kind}-specific failure. */
-    private static Map requireJsonObject(Object value, String kind) {
+    /** The decoded answer as a JSON object. */
+    private static Map requireJsonObject(Object value) {
         if( !(value instanceof Map) )
-            throw new ScriptRuntimeException("Canonical agent ${kind} output must be a JSON object")
+            throw new ScriptRuntimeException('Canonical agent record output must be a JSON object')
         return (Map) value
     }
 
@@ -114,12 +111,7 @@ class AgentOutputPlan {
             return
         }
         final map = new JsonSlurper().parseText(stripFences(result as String)) as Map
-        if( !isWrapped() ) {
-            ctx.put(outputs[0].name, TypeHelper.asRecordType(map, outputs[0].type as Class))
-            return
-        }
-        for( final output : outputs )
-            ctx.put(output.name, TypeHelper.asType(map[output.name], output.type as Class))
+        ctx.put(outputs[0].name, TypeHelper.asRecordType(map, outputs[0].type as Class))
     }
 
     /**
