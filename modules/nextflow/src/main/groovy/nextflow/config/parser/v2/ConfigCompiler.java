@@ -173,8 +173,10 @@ public class ConfigCompiler {
             if( source.getErrorCollector().hasErrors() )
                 return;
 
-            // convert to Groovy
-            new ConfigToGroovyVisitor(source).visit();
+            // convert to Groovy. The directive references are not collected for the rendering
+            // path: `nextflow config` and `kuberun` replace every closure with its source text
+            // below, so the names would be attached to values that are about to be discarded
+            new ConfigToGroovyVisitor(source, !renderClosureAsString).visit();
             new PathCompareVisitor(source).visitClass(cn);
             if( stripSecrets )
                 new StripSecretsVisitor(source).visitClass(cn);

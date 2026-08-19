@@ -985,6 +985,33 @@ class TaskRun implements Cloneable {
     }
 
     /**
+     * The directives whose value is user-authored text baked verbatim into the rendered task
+     * command, and therefore the only ones whose *dynamic config value* can carry a directive
+     * value into the command:
+     *
+     * <ul>
+     * <li>{@code ext} -- interpolated by the task script e.g. {@code ${task.ext.args}};
+     * <li>{@code beforeScript} / {@code afterScript} -- emitted verbatim into
+     *     {@code .command.run} by {@link nextflow.executor.BashWrapperBuilder};
+     * <li>{@code containerOptions} -- appended verbatim to the container run options, for the
+     *     executors that run the container themselves.
+     * </ul>
+     *
+     * The other directives that {@link TaskBean} feeds to the wrapper ({@code module},
+     * {@code shell}, {@code scratch}, {@code stageInMode}, ..) take enumerated or structured
+     * values that cannot meaningfully carry a resource figure, and are left out.
+     *
+     * Deliberately excluded are the *submit* options -- {@code clusterOptions}, {@code queue},
+     * {@code penv} -- which a grid executor puts in the job header rather than in the command.
+     * The nf-core institutional profiles routinely set
+     * {@code clusterOptions = { "-l h_vmem=${task.memory}" }} at the top of the {@code process}
+     * scope; treating that as a command dependency would report *every* process of the
+     * pipeline as depending on {@code task.memory} for an executor that never reads the
+     * directive at all.
+     */
+    private static final List<String> COMMAND_DIRECTIVES = List.of('ext', 'beforeScript', 'afterScript', 'containerOptions')
+
+    /**
      * Report whether the rendered task command depends on the value of the given
      * {@code task} directive e.g. {@code memory} for a script interpolating
      * {@code "-Xmx${task.memory.toGiga()}g"}.
@@ -993,11 +1020,23 @@ class TaskRun implements Cloneable {
      * adjusts the requested resources at schedule time needs to know whether the command
      * carries a value it is about to change.
      *
+     * A reference can enter the command from two places, which do not see each other:
+     *
+     * <ol>
+     * <li>the process definition -- collected as a script variable reference when the script
+     *     is compiled, or by the template engine for a {@code shell} block / template file;
+     * <li>a dynamic directive value declared in the config file, e.g. the common idiom
+     *     {@code process.ext.args = { "-Xmx${task.memory.toGiga()}g" }}. A config value is a
+     *     closure and carries no source text at runtime, so it is collected from the config
+     *     AST instead -- see {@link nextflow.script.DirectiveRefsClosure}.
+     * </ol>
+     *
      * @param directive The directive name e.g. {@code memory}
-     * @return {@code true} when the task script references the given directive
+     * @return {@code true} when the task script or a command directive references it
      */
     boolean isDirectiveReferenced(String directive) {
         return getVariableNames().contains("task.${directive}".toString())
+            || config?.isDirectiveReferenced(directive, COMMAND_DIRECTIVES)
     }
 
     /**

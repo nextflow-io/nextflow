@@ -30,6 +30,7 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
 import nextflow.executor.res.DiskResource
+import nextflow.script.DirectiveRefsClosure
 import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
 import nextflow.util.CmdLineOptionMap
@@ -121,6 +122,85 @@ class TaskConfig extends LazyMap implements Cloneable {
             return result
 
         return eval0( result, path.subList(1,path.size()), key )
+    }
+
+    /**
+     * Report whether any dynamic directive value references the given {@code task} directive
+     * e.g. {@code ext.args = { "-Xmx${task.memory.toGiga()}g" }} references {@code memory}.
+     *
+     * The names are collected at compile time from the config AST and carried by the value
+     * itself, therefore the check does not evaluate any directive.
+     *
+     * @see nextflow.script.DirectiveRefsClosure
+     * @param directive The directive name e.g. {@code memory}
+     * @param fromDirectives The directives whose value may be inspected, e.g. {@code ext};
+     *      {@code null} to inspect them all. A caller passes the subset it actually consumes,
+     *      since a reference made by a directive it ignores tells it nothing -- see
+     *      {@link TaskRun#COMMAND_DIRECTIVES}
+     * @return {@code true} when a directive value references the given directive
+     */
+    boolean isDirectiveReferenced(String directive, Collection<String> fromDirectives = null) {
+        // note the *raw* values are inspected, so that no directive is resolved as a side
+        // effect of the check -- resolving `ext.args` here would evaluate its closure early
+        final entries = getTarget()?.entrySet()
+        if( !entries )
+            return false
+        for( Map.Entry entry : entries ) {
+            // Skip the config selector blocks. `ProcessConfigBuilder#applyConfigDefaults`
+            // copies *every* key of the `process` config scope into each process config,
+            // including the `withName:`/`withLabel:` blocks that were not applied to it.
+            // Those blocks hold the directives of *other* processes, so inspecting them
+            // would report a reference for every process in the pipeline as soon as a single
+            // selector uses a dynamic directive -- which is the norm in nf-core pipelines.
+            // A selector that *does* match is merged into the top-level directives by then,
+            // so true positives are unaffected.
+            if( isSelector(entry.key) )
+                continue
+            // the entry key is the *source* directive, i.e. the one holding the dynamic value
+            if( fromDirectives != null && !fromDirectives.contains(entry.key) )
+                continue
+            if( anyDirectiveRef(Collections.singleton(entry.value), directive) )
+                return true
+        }
+        return false
+    }
+
+    private static boolean isSelector(Object key) {
+        return key instanceof String && (key.startsWith('withName:') || key.startsWith('withLabel:'))
+    }
+
+    /**
+     * Walk the given raw directive values looking for one that declares a reference to the
+     * given directive. The values are nested in several shapes, hence the recursion.
+     */
+    private static boolean anyDirectiveRef(Collection values, String directive) {
+        if( !values )
+            return false
+        for( Object value : values ) {
+            // the marker attached at compile time by ConfigToGroovyVisitor -- the only place
+            // where a reference is actually recorded, every other branch is a container
+            if( value instanceof DirectiveRefsClosure ) {
+                if( value.getDirectiveRefs().contains(directive) )
+                    return true
+            }
+            // `ext` is re-wrapped as a nested lazy map on put, so its entries are one level
+            // down and must be taken from the target to avoid resolving them -- see #put
+            else if( value instanceof LazyMap ) {
+                if( anyDirectiveRef(value.getTarget()?.values(), directive) )
+                    return true
+            }
+            // a directive declared with named parameters e.g. `publishDir path: {..}`
+            else if( value instanceof Map ) {
+                if( anyDirectiveRef((value as Map).values(), directive) )
+                    return true
+            }
+            // a repeatable directive e.g. several `publishDir`, held as a list of values
+            else if( value instanceof Collection ) {
+                if( anyDirectiveRef(value as Collection, directive) )
+                    return true
+            }
+        }
+        return false
     }
 
     def getProperty(String name) {

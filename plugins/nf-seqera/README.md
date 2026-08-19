@@ -109,6 +109,18 @@ seqera {
 
 > NOTE: When a process references `task.memory` in the script (e.g. `-Xmx${task.memory.toGiga()}g`), resource prediction is disabled for that process. Otherwise, the scheduler could reduce the memory allocation, and the task would try to allocate more memory than is available, and fail with an out-of-memory error.
 
+The same applies to a `task.memory` reference made by a dynamic directive value in the config file, when that directive is rendered into the task command -- `ext`, `beforeScript`, `afterScript` or `containerOptions`:
+
+```groovy
+process {
+    withName: FOO {
+        ext.args = { "-Xmx${task.memory.toGiga()}g" }
+    }
+}
+```
+
+> NOTE: The references made in the config file are collected at compile time by the v2 config parser. Setting `NXF_SYNTAX_PARSER=v1` selects the legacy parser, which does not collect them.
+
 Set the `seqera/predictionModel` hint explicitly on the process to override this behaviour:
 
 ```groovy
