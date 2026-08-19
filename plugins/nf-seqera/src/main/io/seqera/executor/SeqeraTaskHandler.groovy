@@ -131,10 +131,14 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             fusionConfig().snapshotsEnabled(),
             maxSpotAttempts(baseMachineOpts)
         )
-        // resolve optional per-task prediction model override from the seqera/predictionModel hint;
-        // when unset the task inherits the run-level model
+        // Resolve the optional per-task prediction model override from the seqera/predictionModel
+        // hint. An explicit hint always wins: the automatic check below is a safety net, and the
+        // user asking for a specific model on a process is a deliberate opt-out of it.
+        // When neither applies the value is left null, so the task inherits the run-level model
         final predictionModelHint = HintHelper.resolvePredictionModel(task.config.getHints())
-        final predictionModel = predictionModelHint ? PredictionModel.fromValue(predictionModelHint) : null
+        final predictionModel = predictionModelHint
+            ? PredictionModel.fromValue(predictionModelHint)
+            : (shouldDisablePrediction() ? PredictionModel.NONE : null)
         // build resource limit from process resourceLimits directive (upper bound for OOM retry scaling)
         final resourceLim = toResourceLimit()
         // validate container - Seqera executor requires all processes to specify a container image
@@ -167,6 +171,40 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
         log.debug "[SEQERA] Enqueueing task for batch submission: ${schedTask}"
         // Enqueue for batch submission - status will be set by setBatchTaskId callback
         executor.getBatchSubmitter().submit(this, schedTask)
+    }
+
+    /**
+     * Determine whether the resource prediction model must be disabled for this task.
+     *
+     * The prediction model can allocate less memory than the task requested. However the task script
+     * is rendered *before* the task is scheduled, therefore a script referencing {@code task.memory}
+     * carries the memory that was requested, not the one that has been allocated e.g. a JVM
+     * {@code -Xmx} setting exceeding the container memory and failing with an out-of-memory error.
+     *
+     * The reference is observed while the command is rendered -- see
+     * {@code TaskRun#isDirectiveReferenced} -- therefore it covers a value reached indirectly
+     * through a dynamic directive e.g. {@code ext.args = { "-Xmx${task.memory.toGiga()}g" }},
+     * but not a directive resolved after the command e.g. {@code beforeScript}.
+     *
+     * @return {@code true} when the task should be submitted with prediction model {@code none}
+     */
+    protected boolean shouldDisablePrediction() {
+        // Nothing to disable unless the run enables a prediction model. Checking this first
+        // also keeps the warning quiet for the runs where the resources are never adjusted,
+        // which would otherwise report a problem that cannot happen
+        final runModel = executor.getSeqeraConfig()?.predictionModel
+        if( !runModel || runModel == PredictionModel.NONE.getValue() )
+            return false
+        // Note only `memory` is checked. The scheduler can adjust the cpus as well, but a
+        // stale `task.cpus` costs an over-subscribed thread pool whereas a stale
+        // `task.memory` fails the task, and `task.cpus` is referenced by nearly every
+        // process -- disabling the prediction for those would defeat the feature
+        if( !task.isDirectiveReferenced('memory') )
+            return false
+        // warn once per process rather than once per task: the reference belongs to the
+        // process definition, so every one of its tasks would otherwise report it
+        log.warn1("Process `${task.processor?.name ?: task.lazyName()}` depends on the `task.memory` value -- resource prediction has been disabled for this process to prevent an under-allocation of the requested memory", firstOnly: true)
+        return true
     }
 
     protected int maxSpotAttempts(MachineRequirementOpts opts) {

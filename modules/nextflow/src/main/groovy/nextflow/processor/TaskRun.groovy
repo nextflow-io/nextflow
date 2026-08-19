@@ -853,9 +853,43 @@ class TaskRun implements Cloneable {
      * @param body A {@code BodyDef} object instance
      */
     void resolve(BodyDef body)  {
-        processor.session.stubRun && config.getStubBlock()
-            ? resolveStub(config.getStubBlock())
-            : resolveBody(body)
+        // record the directives read while the command is rendered -- see #isDirectiveReferenced
+        config?.recordDirectiveReads(true)
+        try {
+            processor.session.stubRun && config.getStubBlock()
+                ? resolveStub(config.getStubBlock())
+                : resolveBody(body)
+        }
+        finally {
+            config?.recordDirectiveReads(false)
+        }
+    }
+
+    /**
+     * Report whether the rendered task command depends on the value of the given
+     * {@code task} directive e.g. {@code memory} for a script interpolating
+     * {@code "-Xmx${task.memory.toGiga()}g"}.
+     *
+     * The command is rendered *before* the task is scheduled, therefore an executor that
+     * adjusts the requested resources at schedule time needs to know whether the command
+     * carries a value it is about to change.
+     *
+     * The reference is *observed*, not inferred: rendering the command reads the directive
+     * off the task config, and {@link #resolve} records the reads while it happens. That
+     * covers every path the command can be rendered through -- the script, a {@code shell}
+     * block, a {@code template} file, and a dynamic directive value the command interpolates,
+     * whether declared in the process or in the config file -- without any of them being
+     * known here.
+     *
+     * ponytail: a directive resolved *after* the command has been rendered is not observed
+     * e.g. `beforeScript = { "-Xmx${task.memory}" }`, which the wrapper builder resolves at
+     * submit time. Widen the recording window to cover the wrapper if that case shows up.
+     *
+     * @param directive The directive name e.g. {@code memory}
+     * @return {@code true} when rendering the command read the given directive
+     */
+    boolean isDirectiveReferenced(String directive) {
+        return config?.isDirectiveRead(directive)
     }
 
     protected void resolveBody(BodyDef body) {

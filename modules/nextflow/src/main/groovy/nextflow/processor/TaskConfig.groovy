@@ -48,6 +48,11 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     private transient Map cache = new LinkedHashMap(20)
 
+    /** The directive names read while {@link #recordReads} is enabled */
+    private transient Set<String> reads = new HashSet<>(10)
+
+    private transient boolean recordReads
+
     TaskConfig() {  }
 
     TaskConfig( Map<String,Object> entries ) {
@@ -63,6 +68,30 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     private void newCache() {
         cache = [:]
+        reads = new HashSet<>(10)
+    }
+
+    /**
+     * Enable or disable the recording of the directive reads.
+     *
+     * The task command is rendered by reading the directives it interpolates off this object,
+     * therefore recording the reads while it happens tells which directives the rendered
+     * command depends on. It is scoped to that window because the directives are read all the
+     * time by the rest of the engine e.g. the executor asking for the memory to request.
+     *
+     * @see nextflow.processor.TaskRun#resolve
+     * @param value Whether the reads must be recorded
+     */
+    void recordDirectiveReads(boolean value) {
+        recordReads = value
+    }
+
+    /**
+     * @param directive The directive name e.g. {@code memory}
+     * @return {@code true} when the given directive was read while the reads were recorded
+     */
+    boolean isDirectiveRead(String directive) {
+        return reads.contains(directive)
     }
 
     /**
@@ -137,6 +166,11 @@ class TaskConfig extends LazyMap implements Cloneable {
     }
 
     def get( String key ) {
+        // note this is the single funnel for a directive read: a property access on this
+        // object either lands here directly or through the matching getter e.g. #getMemory
+        if( recordReads )
+            reads.add(key)
+
         if( cache.containsKey(key) )
             return cache.get(key)
 
