@@ -853,15 +853,16 @@ class TaskRun implements Cloneable {
      * @param body A {@code BodyDef} object instance
      */
     void resolve(BodyDef body)  {
-        // record the directives read while the command is rendered -- see #isDirectiveReferenced
-        config?.recordDirectiveReads(true)
+        // track the directives accessed while the command is rendered -- see #isDirectiveReferenced
+        // note the null guards are load-bearing -- the access below is behind a short-circuit
+        config?.trackDirectiveAccess(true)
         try {
             processor.session.stubRun && config.getStubBlock()
                 ? resolveStub(config.getStubBlock())
                 : resolveBody(body)
         }
         finally {
-            config?.recordDirectiveReads(false)
+            config?.trackDirectiveAccess(false)
         }
     }
 
@@ -874,22 +875,26 @@ class TaskRun implements Cloneable {
      * adjusts the requested resources at schedule time needs to know whether the command
      * carries a value it is about to change.
      *
-     * The reference is *observed*, not inferred: rendering the command reads the directive
-     * off the task config, and {@link #resolve} records the reads while it happens. That
+     * The reference is *observed*, not inferred: rendering the command accesses the directive
+     * off the task config, and {@link #resolve} tracks the accesses while it happens. That
      * covers every path the command can be rendered through -- the script, a {@code shell}
      * block, a {@code template} file, and a dynamic directive value the command interpolates,
      * whether declared in the process or in the config file -- without any of them being
      * known here.
      *
+     * Note it reports the *last* rendering of this task, hence {@code false} until
+     * {@link #resolve} has run, for an {@code exec} task, and for a task array -- which
+     * {@code TaskArrayCollector} assembles without resolving it.
+     *
      * ponytail: a directive resolved *after* the command has been rendered is not observed
      * e.g. `beforeScript = { "-Xmx${task.memory}" }`, which the wrapper builder resolves at
-     * submit time. Widen the recording window to cover the wrapper if that case shows up.
+     * submit time. Widen the tracked action to cover the wrapper if that case shows up.
      *
      * @param directive The directive name e.g. {@code memory}
-     * @return {@code true} when rendering the command read the given directive
+     * @return {@code true} when rendering the command accessed the given directive
      */
     boolean isDirectiveReferenced(String directive) {
-        return config?.isDirectiveRead(directive)
+        return config != null && config.isDirectiveAccessed(directive)
     }
 
     protected void resolveBody(BodyDef body) {
