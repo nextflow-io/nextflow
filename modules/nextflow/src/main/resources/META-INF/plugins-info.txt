@@ -1,3 +1,5 @@
+nf-agent-pi@0.5.0
+nf-agent@0.1.0
 nf-amazon@3.10.1
 nf-azure@1.23.1
 nf-cloudcache@0.6.0

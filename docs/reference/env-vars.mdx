@@ -19,12 +19,38 @@ Defines the path location of the Java VM installation used to run Nextflow.
 
 ## Nextflow settings
 
+##### `NXF_AGENT_API_KEY`
+
+<AddedInVersion version="26.10" />
+
+The credential used to authenticate with the model provider of an [agent][agent-page]. Overridden by the `agent.apiKey` configuration setting, and takes precedence over the API provider's own variable (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, and the others listed under [Other settings](#other-settings)). Unlike those it is provider-neutral: it applies to any model provider, and it is presented to whatever endpoint the agent targets — including one Nextflow cannot attribute to a provider, such as a gateway.
+
+##### `NXF_AGENT_BASE_URL`
+
+<AddedInVersion version="26.10" />
+
+The base URL of the endpoint that serves an [agent][agent-page] model, e.g. `http://localhost:8000/v1`. Overridden by the `agent.baseUrl` configuration setting, and takes precedence over the API provider's own variable (`OPENAI_BASE_URL`, `ANTHROPIC_BASE_URL`, `AZURE_OPENAI_ENDPOINT`). Unlike those it applies to any model provider. When unset, the model provider's default endpoint is used.
+
+:::note
+This value is part of an agent's cache key, so changing it re-runs the agent instead of resuming it. `NXF_AGENT_API_KEY` is not part of the cache key.
+:::
+
 ##### `NXF_AGENT_MODE`
 
 <AddedInVersion version="26.04" />
 
 When `true`, enables agent output mode. In this mode, Nextflow replaces the interactive ANSI log with minimal, structured output optimized for AI agents and non-interactive environments.
 The output uses tagged lines such as `[PIPELINE]`, `[PROCESS]`, `[WARN]`, `[ERROR]`, and `[SUCCESS]`/`[FAILED]` written to standard output (default: `false`).
+
+:::note
+This setting is unrelated to the other `NXF_AGENT_*` variables. It controls how Nextflow formats its own console output for an *external* AI agent, and has no connection to the `agent` script definition.
+:::
+
+##### `NXF_AGENT_RPC_REMOTE_HOST`
+
+<AddedInVersion version="26.10" />
+
+Host name a containerized agent task uses to reach the driver's agent RPC broker, for deployments where that address belongs to the environment rather than to the pipeline. Equivalent to `agent.rpc.remoteHost`, which takes precedence when both are set. These are the first two rungs of a ladder that continues into inference: with neither set, Nextflow derives the address from the executor, the container engine and the driver host, and rejects the configurations no address can serve before the run starts. See [Agents](../agent.mdx).
 
 ##### `NXF_ANSI_LOG`
 
@@ -359,6 +385,30 @@ The Seqera Platform workspace ID. Can also be configured using the `tower.worksp
 
 Defines a proxy server used as a fallback for any protocol (HTTP, HTTPS, FTP) that does not have a scheme-specific proxy variable set. A scheme-specific variable (e.g. `HTTPS_PROXY`) takes precedence over `ALL_PROXY`. Proxy authentication is supported by providing the credentials in the proxy URL.
 
+##### `ANTHROPIC_API_KEY`
+
+<AddedInVersion version="26.10" />
+
+The credential used to authenticate with the model provider of an [agent][agent-page] whose [API provider][agent-provider] is `anthropic`. Used only when neither the `agent.apiKey` configuration setting nor `NXF_AGENT_API_KEY` is set, and only when the endpoint the agent resolved belongs to Anthropic — being an Anthropic credential, it is never presented elsewhere.
+
+##### `ANTHROPIC_BASE_URL`
+
+<AddedInVersion version="26.10" />
+
+The base URL of the endpoint that serves an [agent][agent-page] model whose [API provider][agent-provider] is `anthropic`. Used only when neither the `agent.baseUrl` configuration setting nor `NXF_AGENT_BASE_URL` is set.
+
+##### `AZURE_OPENAI_API_KEY`
+
+<AddedInVersion version="26.10" />
+
+The credential used to authenticate with the model provider of an [agent][agent-page] whose [API provider][agent-provider] is `azure`. Used under the same conditions as `ANTHROPIC_API_KEY`. The `langchain4j` runner cannot reach Azure OpenAI — its URL shape and `api-version` handling need a client it does not ship — so this applies to a runner that can.
+
+##### `AZURE_OPENAI_ENDPOINT`
+
+<AddedInVersion version="26.10" />
+
+The endpoint that serves an [agent][agent-page] model whose [API provider][agent-provider] is `azure` — Azure's spelling of `<PROVIDER>_BASE_URL`. Used only when neither the `agent.baseUrl` configuration setting nor `NXF_AGENT_BASE_URL` is set.
+
 ##### `COLUMNS`
 
 <AddedInVersion version="26.10" />
@@ -373,6 +423,18 @@ Bash sets `COLUMNS` in interactive shells but does not export it, so it is not v
 
 Defines the FTP proxy server. Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `ftp://user:password@proxy-host.com:port`. Credentials containing special characters must be URL-encoded (percent-encoded).
 
+##### `GEMINI_API_KEY`
+
+<AddedInVersion version="26.10" />
+
+The credential used to authenticate with the model provider of an [agent][agent-page] whose [API provider][agent-provider] is `gemini`, or `google` when `GOOGLE_API_KEY` is unset. Used under the same conditions as `ANTHROPIC_API_KEY`.
+
+##### `GOOGLE_API_KEY`
+
+<AddedInVersion version="26.10" />
+
+The credential used to authenticate with the model provider of an [agent][agent-page] whose [API provider][agent-provider] is `google`, or `gemini` when `GEMINI_API_KEY` is unset. Used under the same conditions as `ANTHROPIC_API_KEY`.
+
 ##### `HTTP_PROXY`
 
 Defines the HTTP proxy server. Proxy authentication is supported by providing the credentials in the proxy URL, e.g. `http://user:password@proxy-host.com:port`. Credentials containing special characters must be URL-encoded (percent-encoded).
@@ -385,6 +447,12 @@ Defines the HTTPS proxy server. Proxy authentication is supported by providing t
 When connecting to HTTPS targets through an authenticating proxy, the JDK strips proxy credentials from the `CONNECT` request for the schemes listed in `jdk.http.auth.tunneling.disabledSchemes` (default `Basic`), which can cause a `407` error. Nextflow clears this property automatically when the proxy URL carries credentials. If you set the property yourself, Nextflow does not override it — clear it explicitly to allow Basic proxy authentication over HTTPS with `NXF_OPTS='-Djdk.http.auth.tunneling.disabledSchemes='`.
 :::
 
+##### `MISTRAL_API_KEY`
+
+<AddedInVersion version="26.10" />
+
+The credential used to authenticate with the model provider of an [agent][agent-page] whose [API provider][agent-provider] is `mistral`. Used under the same conditions as `ANTHROPIC_API_KEY`.
+
 ##### `NO_COLOR`
 
 Disables ANSI color codes in Nextflow log output. When this variable is set, Nextflow prints plain text logs following the [NO_COLOR standard](https://no-color.org/).
@@ -395,10 +463,30 @@ If both `NO_COLOR` and `NXF_ANSI_LOG` are set, `NXF_ANSI_LOG` takes precedence.
 
 Defines one or more host names that should not use the proxy server. Separate multiple names using a comma character.
 
+##### `OPENAI_API_KEY`
+
+<AddedInVersion version="26.10" />
+
+The credential used to authenticate with the model provider of an [agent][agent-page] whose [API provider][agent-provider] is `openai`. Used only when neither the `agent.apiKey` configuration setting nor `NXF_AGENT_API_KEY` is set, and only when the endpoint the agent resolved belongs to OpenAI — being an OpenAI credential, it is never presented to another provider or to an unattributed endpoint such as a gateway. Set `agent.apiProvider = 'openai'` to declare that a gateway accepts it.
+
+##### `OPENAI_BASE_URL`
+
+<AddedInVersion version="26.10" />
+
+The base URL of the OpenAI-compatible endpoint that serves an [agent][agent-page] model whose [API provider][agent-provider] is `openai`. Used only when neither the `agent.baseUrl` configuration setting nor `NXF_AGENT_BASE_URL` is set.
+
+##### `OPENROUTER_API_KEY`
+
+<AddedInVersion version="26.10" />
+
+The credential used to authenticate with the model provider of an [agent][agent-page] whose [API provider][agent-provider] is `openrouter` — which includes an `openai/` model pointed at `https://openrouter.ai/…`, since the model prefix names the wire protocol and the endpoint names the credential namespace. Used under the same conditions as `ANTHROPIC_API_KEY`.
+
 ##### `TERMINAL_WIDTH`
 
 Forces the terminal width of ANSI-formatted log output. Overrides automatic terminal width detection and uses the specified width for line wrapping when set to a positive integer. Values that are not positive integers are ignored, in which case Nextflow falls back to `COLUMNS` and then to automatic detection.
 
+[agent-page]: ../agent
+[agent-provider]: ../agent#the-api-provider
 [process-conda]: ./process/directives/conda
 [process-publishdir]: ./process/directives/publish-dir
 [process-spack]: ./process/directives/spack

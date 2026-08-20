@@ -24,6 +24,7 @@ import nextflow.Nextflow
 import nextflow.module.ModuleSpec
 import nextflow.module.ModuleSpecFactory
 import nextflow.module.ModuleStorage
+import nextflow.script.params.DefaultInParam
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.FileInParam
 import nextflow.script.params.InParam
@@ -153,17 +154,63 @@ class ProcessEntryHandler {
      * Gets the input arguments for a process by mapping the session params to
      * declared process inputs.
      *
+     * <p>Delegates to the reusable static {@link #getProcessArguments(ProcessDef, Map, Path)}
+     * binding, passing the sibling {@code meta.yml} resolved from the running script path so
+     * the existing {@code module run} behavior (dot-params, type coercion from {@code meta.yml},
+     * tuple assembly) is preserved exactly.
+     *
      * @param processDef The ProcessDef object containing the process definition
      * @return List of parameter values to pass to the process
      */
-    private List getProcessArguments(ProcessDef processDef, Map params) {
+    protected List getProcessArguments(ProcessDef processDef, Map params) {
+        final scriptPath = script?.getBinding()?.getScriptPath()
+        final moduleSpecPath = scriptPath?.resolveSibling(ModuleStorage.MODULE_MANIFEST_FILE)
+        return getProcessArguments(processDef, params, moduleSpecPath)
+    }
+
+    /**
+     * Maps {@code params} onto the declared inputs of {@code processDef}, returning one element
+     * per input channel (a tuple input becomes a {@code List} of its component values, e.g.
+     * {@code [[id:'s1'], file(reads)]}). This is the reusable, instance-free form of the
+     * {@code module run} param→channel binding: dot-notation params are folded into nested maps,
+     * legacy (V1) inputs are coerced using the input TYPES declared in the sibling module spec
+     * ({@code meta.yml}), and typed (V2) inputs are coerced from their declared
+     * {@link nextflow.script.params.v2.ProcessInput} type.
+     *
+     * @param processDef     the process whose inputs are bound
+     * @param params         the (possibly dotted) param map to bind by input name
+     * @param moduleSpecPath the sibling {@code meta.yml} path used to load input types for the
+     *                       legacy (V1) path; may be {@code null}/missing, in which case an empty
+     *                       type map is used (same as when the spec cannot be loaded)
+     * @return list of values to pass to {@link ProcessDef#run}, one per input channel
+     */
+    static List getProcessArguments(ProcessDef processDef, Map params, Path moduleSpecPath) {
+        return bindProcessArguments(processDef, params, getModuleSpecInputTypes(moduleSpecPath))
+    }
+
+    /**
+     * Variant of {@link #getProcessArguments(ProcessDef, Map, Path)} that takes an already-loaded
+     * {@link ModuleSpec} (no path round-trip), used by callers that already hold the spec (e.g.
+     * the agent tool bridge).
+     *
+     * @param processDef the process whose inputs are bound
+     * @param params     the (possibly dotted) param map to bind by input name
+     * @param spec       the module spec providing input types for the legacy (V1) path; may be
+     *                   {@code null}, in which case an empty type map is used
+     * @return list of values to pass to {@link ProcessDef#run}, one per input channel
+     */
+    static List getProcessArguments(ProcessDef processDef, Map params, ModuleSpec spec) {
+        return bindProcessArguments(processDef, params, spec != null ? moduleSpecInputTypes(spec) : Collections.<String,Class>emptyMap())
+    }
+
+    private static List bindProcessArguments(ProcessDef processDef, Map params, Map<String,Class> paramTypes) {
         try {
             log.debug "Getting input arguments for process: ${processDef.name}"
             log.debug "Session params: ${params}"
 
             final config = processDef.getProcessConfig()
             final inputArgs = config instanceof ProcessConfigV1
-                ? getProcessArgumentsV1(config, params)
+                ? getProcessArgumentsV1(config, params, paramTypes)
                 : getProcessArgumentsV2((ProcessConfigV2) config, params)
 
             log.debug "Final input arguments: ${inputArgs}"
@@ -175,20 +222,23 @@ class ProcessEntryHandler {
         }
     }
 
-    private List getProcessArgumentsV1(ProcessConfigV1 config, Map params) {
+    private static List getProcessArgumentsV1(ProcessConfigV1 config, Map params, Map<String,Class> paramTypes) {
         final declaredInputs = config.getInputs()
 
         if( declaredInputs.isEmpty() ) {
             return []
         }
 
-        // Load parameter types from module spec (if available)
-        final scriptPath = script.getBinding().getScriptPath()
-        final paramTypes = getModuleSpecInputTypes(scriptPath)
-
         // Map declared inputs to command-line arguments
         List arguments = []
         for( final param : declaredInputs ) {
+            // Skip the synthetic `$` control input that a process gains once it has been
+            // `run()` (DefaultInParam): it is a termination-control channel, never a
+            // user-supplied value. It is absent in the typical `module run` path (which binds
+            // BEFORE run) and present when binding a process that was pre-wired/run earlier
+            // (e.g. the agent tool bridge) - skipping it makes both paths produce the same args.
+            if( param instanceof DefaultInParam )
+                continue
             if( param instanceof TupleInParam ) {
                 List tupleElements = []
                 for( final innerParam : param.inner ) {
@@ -257,24 +307,31 @@ class ProcessEntryHandler {
      * @param paramTypes Map of input types from module spec
      * @return Properly typed value for the input
      */
-    private Object getValueForInputV1(InParam param, Map namedArgs, Map<String,Class> paramTypes) {
+    private static Object getValueForInputV1(InParam param, Map namedArgs, Map<String,Class> paramTypes) {
         final name = param.getName()
         final type = paramTypes.get(name)
         final value = namedArgs.get(name)
 
-        if( value == null ) {
-            if( param instanceof FileInParam ) {
+        // File/path inputs: an ABSENT value means "not provided". nf-core path inputs are
+        // optional by convention and default to an empty list (the process script handles the
+        // empty case). An empty value is NOT a stand-in for an absent one: as with most CLI
+        // tools, an optional path input is skipped by supplying nothing at all, not by
+        // supplying the option with an empty value. An empty value therefore falls through to
+        // `file('')`, which fails loudly.
+        if( param instanceof FileInParam ) {
+            if( value == null ) {
                 log.warn "Path input '--${name}' not provided, defaulting to empty list"
                 return []
             }
-            throw new IllegalArgumentException("Missing required parameter: --${name}")
+            return parseFileInput(value.toString())
         }
 
-        // handle file, path, env, stdin inputs
-        switch( param ) {
-            case FileInParam:
-                return parseFileInput(value.toString())
+        // non-file inputs: a missing value is a hard error (required)
+        if( value == null )
+            throw new IllegalArgumentException("Missing required parameter: --${name}")
 
+        // handle env, stdin inputs
+        switch( param ) {
             case EnvInParam:
                 throw new IllegalArgumentException("Process `env` input qualifier is not supported by implicit process entry")
 
@@ -318,7 +375,7 @@ class ProcessEntryHandler {
         return str
     }
 
-    private List getProcessArgumentsV2(ProcessConfigV2 config, Map params) {
+    private static List getProcessArgumentsV2(ProcessConfigV2 config, Map params) {
         final declaredInputs = config.getInputs().getParams()
 
         if( declaredInputs.isEmpty() ) {
@@ -360,7 +417,7 @@ class ProcessEntryHandler {
      * @param namedArgs Map of command-line arguments
      * @return Properly typed value for the input
      */
-    private Object getValueForInputV2(ProcessInput param, Map namedArgs) {
+    private static Object getValueForInputV2(ProcessInput param, Map namedArgs) {
         final name = param.getName()
         final type = param.getType()
         final value = namedArgs.get(name)
@@ -421,7 +478,7 @@ class ProcessEntryHandler {
      * @param fileInput String representation of file path(s)
      * @return Single file or list of files
      */
-    protected Object parseFileInput(String fileInput) {
+    protected static Object parseFileInput(String fileInput) {
         if( fileInput.contains(',') ) {
             // Split by comma, trim whitespace, and convert each to a file
             return fileInput.tokenize(',')

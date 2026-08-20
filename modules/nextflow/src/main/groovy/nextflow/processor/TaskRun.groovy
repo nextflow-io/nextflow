@@ -26,6 +26,7 @@ import com.google.common.hash.HashCode
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.agent.AgentTaskScript
 import nextflow.conda.CondaCache
 import nextflow.conda.CondaConfig
 import nextflow.container.ContainerConfig
@@ -417,10 +418,25 @@ class TaskRun implements Cloneable {
         }
     }
 
+    /**
+     * The script as RECORDED, which is not always the script as executed. The value lands in
+     * {@link nextflow.trace.TraceRecord#script}, i.e. in the resume cache database and in whatever
+     * a trace observer forwards -- {@code nf-tower} POSTs it to Seqera Platform.
+     *
+     * <p>For every ordinary task this is exactly {@link #getScript()} (or the template source),
+     * unchanged. The single exception is an AGENT task, whose script is the RPC proxy launch
+     * command and therefore carries the invocation's capability token on argv -- a bearer
+     * credential for the provider API key the driver sends on the start frame. That token is
+     * work-directory-local by design and must not be persisted or transmitted, so it is redacted
+     * here; {@link nextflow.lineage.LinObserver} omits {@code task.script} from the lineage record
+     * for the same reason. {@link nextflow.processor.TaskBean}, which writes {@code .command.sh},
+     * keeps reading {@link #getScript()} and so keeps the real token.
+     */
     String getTraceScript() {
-        return template!=null && body?.source
+        final text = template!=null && body?.source
             ? body.source
             : getScript()
+        return AgentTaskScript.forTrace(config, text)
     }
 
     boolean hasTypedInputsOutputs() {
@@ -437,9 +453,9 @@ class TaskRun implements Cloneable {
 
         // An `exec` task is the only kind whose context must be persisted: the process body *is*
         // the task execution, therefore whatever it computed lives only in `task.context` and
-        // cannot be re-derived on a cache hit. A script task instead re-evaluates its body -- and
-        // therefore rebuilds its context -- in TaskProcessor.invokeTask, before the cache is
-        // consulted.
+        // cannot be re-derived on a cache hit (this is the in-JVM `agent` body too). A script task
+        // instead re-evaluates its body -- and therefore rebuilds its context -- in
+        // TaskProcessor.invokeTask, before the cache is consulted.
         if( type == ScriptType.GROOVY )
             return true
 

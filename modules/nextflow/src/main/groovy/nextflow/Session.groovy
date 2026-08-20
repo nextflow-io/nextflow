@@ -86,6 +86,7 @@ import nextflow.trace.event.TaskEvent
 import nextflow.trace.event.WorkflowOutputEvent
 import nextflow.util.Barrier
 import nextflow.util.ClassLoaderFactory
+import nextflow.util.CustomThreadFactory
 import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
 import nextflow.util.NameGenerator
@@ -110,6 +111,14 @@ class Session implements ISession {
     final Collection<DataflowProcessor> allOperators = new ConcurrentLinkedQueue<>()
 
     final List<Closure> igniters = new ArrayList<>(20)
+
+    /**
+     * True once the initial dataflow graph has been released. Components created
+     * afterwards (for example request-scoped tool invocations) must start
+     * immediately instead of being appended to an ignition list that has already
+     * been consumed.
+     */
+    private volatile boolean dataflowNetworkFired
 
     final Map<String,DataflowWriteChannel> outputs = [:]
 
@@ -268,6 +277,9 @@ class Session implements ISession {
     private volatile boolean terminated
 
     private volatile ExecutorService execService
+
+    /** Orchestration pool for agent tasks; lazily created -- see {@link #getAgentExecService}. */
+    private volatile ExecutorService agentExecService
 
     private volatile TaskFault fault
 
@@ -548,6 +560,20 @@ class Session implements ISession {
         igniters.add(action)
     }
 
+    /**
+     * Schedule a dataflow processor during graph construction, or start it
+     * immediately when it was created after network ignition.
+     */
+    void addProcessorIgniter( Closure action ) {
+        synchronized( igniters ) {
+            if( !dataflowNetworkFired ) {
+                igniters.add(action)
+                return
+            }
+        }
+        action.call()
+    }
+
     void fireDataflowNetwork(boolean preview=false) {
         checkConfig()
         notifyFlowBegin()
@@ -564,6 +590,9 @@ class Session implements ISession {
     }
 
     private void callIgniters() {
+        synchronized( igniters ) {
+            dataflowNetworkFired = true
+        }
         log.debug "Igniting dataflow network (${igniters.size()})"
         for( Closure action : igniters ) {
             try {
@@ -608,6 +637,52 @@ class Session implements ISession {
         notifyFlowCreate()
 
         return this
+    }
+
+    /**
+     * The ORCHESTRATION pool, distinct from {@link #execService}.
+     *
+     * <p>{@code execService} is the local executor's RUN pool, and every population that draws from
+     * it is already bounded by {@link nextflow.processor.LocalPollingMonitor}'s cpu gate -- which is
+     * why sizing it to the core count has always been correct.
+     *
+     * <p>An agent breaks that invariant by construction. It is not compute but an ORCHESTRATOR: its
+     * body blocks waiting on the tool sub-tasks it dispatches, and it is admitted by
+     * {@link nextflow.processor.AgentPollingMonitor}, which deliberately applies no cpu or capacity
+     * throttle. Sharing one pool therefore creates a dependency edge from a pool member to another
+     * member of the SAME pool -- the textbook deadlock: enough blocked orchestrators and no thread
+     * is left to run the sub-tasks that would release them. No size fixes it, because the number of
+     * concurrent agents is unbounded.
+     *
+     * <p>So orchestration gets its own pool, and the invariant that makes this deadlock-free at ANY
+     * size is directional:
+     *
+     * <blockquote>an orchestration thread may block on the execution pool;
+     * an execution thread must never block on the orchestration pool.</blockquote>
+     *
+     * <p>The dependency crosses a pool boundary in one direction only, so there is no cycle to
+     * close.
+     *
+     * <p>A CACHED pool, deliberately: threads are created on demand, reused while warm and reaped
+     * after 60s, with no ceiling. The JDK recommends exactly this shape here -- direct handoff
+     * "avoids lockups when handling sets of requests that might have internal dependencies", and
+     * "generally require unbounded maximumPoolSizes to avoid rejection". A ceiling would not make
+     * the pool safer: at the ceiling the excess QUEUES, and a queued task that a blocked thread is
+     * waiting for is the same deadlock in a different costume. What bounds agent concurrency is
+     * {@code maxForks} on the agent itself (see {@link nextflow.agent.AgentConfig#DEFAULT_MAX_FORKS}),
+     * which caps admission BEFORE any thread is demanded -- the right layer, and a knob that also
+     * answers the provider's rate limit.
+     *
+     * <p>Created lazily: a run with no agents allocates nothing.
+     */
+    synchronized ExecutorService getAgentExecService() {
+        if( agentExecService == null ) {
+            log.debug "Creating agent orchestration pool"
+            agentExecService = Threads.useVirtual()
+                    ? Executors.newVirtualThreadPerTaskExecutor()
+                    : Executors.newCachedThreadPool(new CustomThreadFactory('nf-agent'))
+        }
+        return agentExecService
     }
 
     ScriptBinding getBinding() { binding }
@@ -727,6 +802,8 @@ class Session implements ISession {
             // shutdown executor service
             execService?.shutdown()
             execService = null
+            agentExecService?.shutdown()
+            agentExecService = null
             log.trace "Session > executor shutdown"
 
             // -- close db
@@ -859,6 +936,7 @@ class Session implements ISession {
         allOperators *. terminate()
 
         execService?.shutdownNow()
+        agentExecService?.shutdownNow()
         GParsConfig.shutdown()
     }
 
@@ -894,8 +972,11 @@ class Session implements ISession {
         final enabled = config.navigate('nextflow.enable.configProcessNamesValidation', true) as boolean
         if( enabled ) {
             final names = ScriptMeta.allProcessNames()
+            final agents = ScriptMeta.allAgentNames()
             log.debug "Process names: ${names.join(', ')}"
-            validateConfig(names)
+            if( agents )
+                log.debug "Agent names: ${agents.join(', ')}"
+            validateConfig(names, agents)
         }
         else {
             log.debug "Config process names validation disabled as requested"
@@ -930,32 +1011,33 @@ class Session implements ISession {
      * Validate the config file
      *
      * @param processNames The list of process names defined in the pipeline script
+     * @param agentNames The list of agent names defined in the pipeline script
      */
-    void validateConfig(Collection<String> processNames) {
-        def warns = validateConfig0(processNames)
+    void validateConfig(Collection<String> processNames, Collection<String> agentNames=[]) {
+        def warns = validateConfig0(processNames, agentNames)
         for( String str : warns )
             log.warn str
     }
 
-    protected List<String> validateConfig0(Collection<String> processNames) {
+    protected List<String> validateConfig0(Collection<String> processNames, Collection<String> agentNames=[]) {
         List<String> result = []
 
-        if( !(config.process instanceof Map) )
-            return result
+        if( config.process instanceof Map ) {
+            // verifies that all process config names have a match with a defined process
+            def keys = (config.process as Map).keySet()
+            for(String key : keys) {
+                if( key.startsWith('withName:') )
+                    checkValidProcessName(processNames, key.substring('withName:'.length()), result)
+            }
+        }
 
-        // verifies that all process config names have a match with a defined process
-        def keys = (config.process as Map).keySet()
-        for(String key : keys) {
-            String name = null
-            if( key.startsWith('withName:') ) {
-                name = key.substring('withName:'.length())
+        // same check for the `agent` scope -- an agent is never matched by a `process`
+        // selector, so the two name sets are validated independently
+        if( config.agent instanceof Map ) {
+            for( String key : (config.agent as Map).keySet() ) {
+                if( key.startsWith('withName:') )
+                    checkValidProcessName(agentNames, key.substring('withName:'.length()), result, 'agent')
             }
-            else if( key.startsWith('$') ) {
-                name = key.substring(1)
-                log.warn1 "Process config \$${name} is deprecated, use withName:'${name}' instead"
-            }
-            if( name )
-                checkValidProcessName(processNames, name, result)
         }
 
         return result
@@ -967,15 +1049,16 @@ class Session implements ISession {
      * @param selector The process name to check
      * @param processNames The list of processes declared in the workflow script
      * @param errorMessage A list of strings used to return the error message to the caller
+     * @param kind The noun used in the warning message ({@code process} or {@code agent})
      * @return {@code true} if the name specified belongs to the list of process names or {@code false} otherwise
      */
-    protected boolean checkValidProcessName(Collection<String> processNames, String selector, List<String> errorMessage)  {
+    protected boolean checkValidProcessName(Collection<String> processNames, String selector, List<String> errorMessage, String kind='process')  {
         final matches = processNames.any { name -> ProcessConfigBuilder.matchesSelector(name, selector) }
         if( matches )
             return true
 
         def suggestion = processNames.closest(selector)
-        def message = "There's no process matching config selector: $selector"
+        def message = "There's no $kind matching config selector: $selector"
         if( suggestion )
             message += " -- Did you mean: ${suggestion.first()}?"
         errorMessage << message.toString()

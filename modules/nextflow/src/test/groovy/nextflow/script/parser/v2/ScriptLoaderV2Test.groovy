@@ -377,4 +377,57 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         e.cause.message.contains 'Publish statements cannot be mixed with other statements in a dynamic publish path'
     }
 
+    def 'should statically resolve agent names apart from process names' () {
+
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+            nextflow.enable.types = true
+
+            process greet {
+                script:
+                """
+                echo hi
+                """
+            }
+
+            agent critic {
+                model 'openai/gpt-5-mini'
+
+                input:
+                q: String
+
+                output:
+                a: String
+
+                prompt:
+                """
+                ${q}
+                """
+            }
+
+            workflow inner {
+                take:
+                ch
+
+                main:
+                greet()
+                critic(ch)
+            }
+
+            workflow {
+                inner(channel.of('x'))
+            }
+            '''
+
+        when: 'the script is compiled but not yet run, so only the static call-site walk has contributed'
+        parser.parse(TEXT)
+
+        then: 'the agent is reported under its fully-qualified name, on the agent axis only'
+        ScriptMeta.allAgentNames() == ['inner:critic'] as Set
+        ScriptMeta.allProcessNames() == ['inner:greet'] as Set
+    }
+
 }
