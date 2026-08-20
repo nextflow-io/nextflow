@@ -97,9 +97,11 @@ class TowerXAuth implements XAuthProvider {
                 .build()
 
         final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
-        log.debug "Refresh cookie response: [${resp.statusCode()}]"
-        if( resp.statusCode() != 200 )
+        if( resp.statusCode() != 200 ) {
+            log.debug "Refresh cookie response: [${resp.statusCode()}] ${resp.body()}"
             return false
+        }
+        log.debug "Refresh cookie response: [${resp.statusCode()}]"
 
         final authCookie = getCookie('JWT')
         final refreshCookie = getCookie('JWT_REFRESH_TOKEN')

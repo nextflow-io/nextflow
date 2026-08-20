@@ -25,8 +25,8 @@
 # with such ID and adds it to the `docker` group, then assigns the docker
 # socket file ownership to that user.
 #
-# Finally it switches the `nextflow` user using the `su` command and
-# executes the original target command line.
+# Finally it switches to the `nextflow` user and executes the original
+# target command line.
 #
 # authors:
 #  Paolo Di Tommaso
@@ -47,16 +47,8 @@ useradd -u "$NXF_USRMAP" -G docker -s /bin/bash nextflow
 chown nextflow /var/run/docker.sock
 chown -R nextflow /.nextflow
 
-# `su` only accepts a command string, so re-quote each arg with `%q`
-# (not a hand-rolled `'$x'` wrap, which breaks — and lets the arg escape
-# the quoting — the moment an arg contains a single quote).
-cli=''; for x in "$@"; do printf -v esc '%q' "$x"; cli+="$esc "; done
-
-# finally run the target command with `nextflow` user
-su nextflow << EOF
-[[ "$NXF_DEBUG_ENTRY" ]] && set -x
-exec bash -c "$cli"
-EOF
+# run the target command as `nextflow`, passing argv through (no shell)
+exec runuser -u nextflow -- "$@"
 
 # otherwise just execute the command
 else
