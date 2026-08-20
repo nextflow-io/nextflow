@@ -16,6 +16,26 @@
 #
 
 [[ "$NXF_DEBUG" == 'x' ]] && set -x
+
+# NXF_DEV selects an automated development build, for testing purposes only:
+# `NXF_DEV=master` for the latest build of the master branch, `NXF_DEV=pr-1234`
+# for the latest build of a pull request. See the repository below for details.
+if [[ $NXF_DEV ]]; then
+    NXF_DEV_REPO=${NXF_DEV_REPO:-'https://github.com/nextflow-io/nextflow-dev-builds'}
+    NXF_BASE=${NXF_BASE:-$NXF_DEV_REPO/releases/download}
+    if [[ ! $NXF_VER ]]; then
+        if command -v curl &>/dev/null; then
+            NXF_VER=$(curl -fsSL "$NXF_DEV_REPO/raw/master/latest/$NXF_DEV" 2>/dev/null)
+        elif command -v wget &>/dev/null; then
+            NXF_VER=$(wget -qO- "$NXF_DEV_REPO/raw/master/latest/$NXF_DEV" 2>/dev/null)
+        fi
+        if [[ ! $NXF_VER ]]; then
+            >&2 echo "ERROR: Cannot find a Nextflow dev build for '$NXF_DEV' -- check $NXF_DEV_REPO"
+            exit 1
+        fi
+    fi
+fi
+
 NXF_VER=${NXF_VER:-'26.07.0-edge'}
 NXF_ORG=${NXF_ORG:-'nextflow-io'}
 NXF_HOME=${NXF_HOME:-$HOME/.nextflow}
@@ -133,6 +153,26 @@ function get_ver() {
         echo_red "ERROR: Cannot find 'curl' nor 'wget' utility -- please install one of them"
         exit 1
     fi
+}
+
+function get_plugins() {
+    # Download and unpack the core plugins bundle of a dev build (see NXF_DEV).
+    # Unlike `get`, a failure here must not abort the launch, so that the caller
+    # can fall back on the released plugins from the plugin registry.
+    local url="$1" target="$2"
+    local tarfile=$(make_temp)
+    local tmpdir="${target}.tmp.$$"
+    if command -v curl &>/dev/null; then
+        curl -fsSL "$url" -o "$tarfile" || { rm -f "$tarfile"; return 1; }
+    else
+        wget -q "$url" -O "$tarfile" || { rm -f "$tarfile"; return 1; }
+    fi
+    mkdir -p "$tmpdir" && tar -xzf "$tarfile" -C "$tmpdir"
+    local status=$?
+    rm -f "$tarfile"
+    [ $status -eq 0 ] && [ ! -e "$target" ] && mv "$tmpdir" "$target"
+    rm -rf "$tmpdir"
+    [ -d "$target" ]
 }
 
 function make_temp() {
@@ -264,6 +304,7 @@ while [[ $# != 0 ]]; do
       ;;
     -self-update|self-update)
       if [[ ! "$cmd" ]]; then
+      [[ $NXF_DEV ]] && die "Cannot self-update when NXF_DEV is set -- unset it and try again"
       [[ -z $NXF_EDGE && $NXF_VER = *-edge ]] && NXF_EDGE=1
       unset NXF_VER
       install "$0" update
@@ -367,6 +408,20 @@ if [ ! -f "$NXF_BIN" ]; then
     tmpfile=$(make_temp)
     get "$NXF_URL" "$tmpfile" "$NXF_BIN"
     mv "$tmpfile" "$NXF_BIN"
+fi
+
+# When running a dev build (see NXF_DEV), use the core plugins compiled from
+# the same source instead of the released ones, so that plugin changes in the
+# build are exercised too. The plugins are unpacked next to the build's jar
+# and that directory is used as the plugins root: plugins present there take
+# precedence over the plugin registry, while any other plugin (e.g. from a
+# third party) is still downloaded from the registry as usual.
+if [[ $NXF_DEV && ! $NXF_PLUGINS_DIR ]]; then
+    if [ -d "$NXF_PATH/plugins" ] || get_plugins "$NXF_BASE/v$NXF_VER/nextflow-$NXF_VER-plugins.tar.gz" "$NXF_PATH/plugins"; then
+        NXF_PLUGINS_DIR="$NXF_PATH/plugins"
+    else
+        echo_yellow "WARN: Cannot download the bundled plugins for dev build '$NXF_VER' -- plugin changes in this build (if any) will NOT be applied, the released plugin versions will be used instead"
+    fi
 fi
 
 COLUMNS=${COLUMNS:-`tty -s && tput cols 2>/dev/null || true`}

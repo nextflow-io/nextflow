@@ -1,0 +1,34 @@
+name: Dev build dispatch
+
+# Triggers an immediate dev build of master in nextflow-io/nextflow-dev-builds
+# on each push, instead of waiting for the scheduled build there.
+#
+# Requires the DEV_BUILDS_DISPATCH_TOKEN secret (fine-grained PAT with
+# actions:write on the nextflow-dev-builds repo). Without it, the push is
+# picked up by the scheduled build within about 30 minutes.
+
+on:
+  push:
+    branches: [master]
+
+permissions: {}
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger dev build of master
+        env:
+          GH_TOKEN: ${{ secrets.DEV_BUILDS_DISPATCH_TOKEN }}
+          DEV_REPO: nextflow-io/nextflow-dev-builds
+        run: |
+          set -euo pipefail
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::notice::DEV_BUILDS_DISPATCH_TOKEN is not set, the scheduled build in $DEV_REPO will pick up this push within about 30 minutes"
+            exit 0
+          fi
+          if gh workflow run build.yml -R "$DEV_REPO" -f branch=master; then
+            echo "dev build of master triggered in $DEV_REPO"
+          else
+            echo "::warning::Failed to trigger dev build in $DEV_REPO, the scheduled build will pick up this push within about 30 minutes"
+          fi
