@@ -1,5 +1,11 @@
 nf-k8s changelog
 ===================
+1.5.6 - 20 Aug 2026
+- Treat a missing `k8s` config scope as an empty one (#7452) [568680fd9]
+- Separate CLI from runtime (#5971) [1dc8cf68f]
+- Split CLI config handling out of ConfigBuilder (#7373) [34ac1d14c]
+- Bump Groovy 4.0.33 (#7429) [c8800d84a]
+
 1.5.5 - 15 Jul 2026
 - Fix CVE-2025-14813: replace discontinued bcprov-ext with bcprov-jdk18on 1.84 (#7284) [17ef32d8b]
 

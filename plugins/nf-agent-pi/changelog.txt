@@ -1,5 +1,8 @@
 nf-agent-pi changelog
 =====================
+0.5.1 - 20 Aug 2026
+- Update google.golang.org/grpc to v1.82.1 to address a security advisory (#7513) [02ef7bb39]
+
 0.5.0 - 9 Aug 2026
 - Bound the wait for the driver connection with a new `--connect-timeout` proxy flag, 30s by
   default, and fail the task naming the endpoint that was tried. The driver now INFERS its RPC
