@@ -1,4 +1,4 @@
-nf-agent-pi@0.5.0
+nf-agent-pi@0.5.1
 nf-agent@0.1.0
 nf-amazon@3.10.2
 nf-azure@1.23.2
