@@ -17,6 +17,7 @@ nf-agent-pi changelog
 - NOTE ON 0.4.1: it was published by hand BEFORE the connect-timeout work above landed, so the
   published `0.4.1` tag does not carry it. That is the drift this release exists to end; treat
   0.5.0, not 0.4.1, as the first tag whose content the tree reproducibly describes.
+- Update google.golang.org/grpc to v1.82.1 to address a security advisory (#7513) [02ef7bb39]
 
 0.4.1 - 9 Aug 2026
 - Wait, up to 2s, for the driver to end the RPC stream before dropping the connection. CloseSend
