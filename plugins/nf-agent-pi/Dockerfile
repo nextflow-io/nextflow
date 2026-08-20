@@ -18,10 +18,10 @@
 # leg of a multi-arch build off QEMU. TARGETOS/TARGETARCH are supplied by BuildKit.
 #
 # Digest-pinned like the runtime base below, so the proxy the release publishes is built by a
-# toolchain this repo names rather than by whatever `1.23-bookworm` points at that day. This is
-# the OCI *index* digest (`docker buildx imagetools inspect golang:1.23-bookworm`), not a
+# toolchain this repo names rather than by whatever `1.25-bookworm` points at that day. This is
+# the OCI *index* digest (`docker buildx imagetools inspect golang:1.25-bookworm`), not a
 # per-architecture manifest digest: a manifest digest would pin the stage to one build host.
-FROM --platform=$BUILDPLATFORM golang:1.23-bookworm@sha256:167053a2bb901972bf2c1611f8f52c44d5fe7e762e5cab213708d82c421614db AS agent-rpc
+FROM --platform=$BUILDPLATFORM golang:1.25-bookworm@sha256:3b4a11519ad929d1e1d261a12cff056f0c85b735253d7d861346b9c6f8b36437 AS agent-rpc
 ARG TARGETOS
 ARG TARGETARCH
 
