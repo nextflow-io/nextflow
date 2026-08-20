@@ -568,11 +568,21 @@ public class S3Client {
         return porBuilder;
     }
 
-    public void uploadDirectory(File source, S3Path target) throws IOException {
+    /**
+     * Upload the content of a local directory to the given S3 path.
+     *
+     * The {@code followLinks} flag must be set explicitly because the SDK v2 transfer manager
+     * defaults to *not* following symbolic links, unlike the SDK v1 {@code TransferManager} which
+     * always dereferenced them. Leaving the default in place makes a source directory that is
+     * itself a symlink fail as "not a directory", and silently skips symlinked files contained
+     * in the uploaded directory. See https://github.com/nextflow-io/nextflow/issues/7509
+     */
+    public void uploadDirectory(File source, S3Path target, boolean followLinks) throws IOException {
         UploadDirectoryRequest request = UploadDirectoryRequest.builder()
                 .bucket(target.getBucket())
                 .s3Prefix(target.getKey())
                 .source(source.toPath())
+                .followSymbolicLinks(followLinks)
                 .uploadFileRequestTransformer(transformUploadRequest(target.getTagsList()))
                 .build();
 
