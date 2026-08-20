@@ -38,6 +38,9 @@ jobs:
       # warns and skips, and Claude cannot see whether the build passed.
       actions: read
       id-token: write
+    # Every step after Authorize must carry the authorized==true guard (or
+    # the complementary ==false path for the reject reply). A step added
+    # later without it would run for an unauthorized actor.
     steps:
       - name: Authorize
         id: authorize
@@ -46,15 +49,25 @@ jobs:
           REPO: ${{ github.repository }}
           ACTOR: ${{ github.event.comment.user.login || github.event.review.user.login }}
         run: |
-          # author_association is a comment property, not the commenter's
-          # actual access — ask GitHub for their real permission instead.
+          # author_association is a comment property, not access — ask GitHub.
+          # `.permission` is admin/write/read/none only (maintain maps to write).
           permission=$(gh api "repos/$REPO/collaborators/$ACTOR/permission" --jq '.permission')
           echo "$ACTOR has '$permission' permission on $REPO"
-          if [ "$permission" = "admin" ] || [ "$permission" = "maintain" ] || [ "$permission" = "write" ]; then
+          if [ "$permission" = "admin" ] || [ "$permission" = "write" ]; then
             echo "authorized=true" >> "$GITHUB_OUTPUT"
           else
             echo "authorized=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Report unauthorized
+        if: ${{ steps.authorize.outputs.authorized == 'false' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+        run: |
+          gh pr comment "$PR_NUMBER" --repo "$REPO" --body \
+            "Only maintainers with write access can trigger a Claude review."
 
       - name: Checkout PR head
         if: ${{ steps.authorize.outputs.authorized == 'true' }}
