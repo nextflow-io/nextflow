@@ -148,6 +148,16 @@ release-plugins:
 release-agent-image:
 	$(gradle) :plugins:nf-agent-pi:releaseImageIfNotExists
 
+#
+# Release pre-flight: verify the pi runner image still builds, for both architectures,
+# publishing nothing. The image is built for real only at release.sh step 1, so drift in its
+# build context -- an agent-rpc/go.mod bump, a stale base-image pin -- is otherwise first
+# exercised by the release itself, after the release commit is already pushed.
+#
+check-agent-image:
+	$(gradle) validateAgentImageVersion
+	plugins/nf-agent-pi/build-image.sh build
+
 publish-artifacts:
 	$(gradle) publishAllPublicationsToSeqeraRepository
 
