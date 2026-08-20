@@ -131,10 +131,10 @@ class SeqeraTaskHandler extends TaskHandler implements FusionAwareTask {
             fusionConfig().snapshotsEnabled(),
             maxSpotAttempts(baseMachineOpts)
         )
-        // Resolve the optional per-task prediction model override from the seqera/predictionModel
-        // hint. An explicit hint always wins: the automatic check below is a safety net, and the
-        // user asking for a specific model on a process is a deliberate opt-out of it.
-        // When neither applies the value is left null, so the task inherits the run-level model
+        // per-task prediction model, in order of precedence:
+        // - an explicit `seqera/predictionModel` hint
+        // - the automatic `task.memory` check, disabling the prediction
+        // - null, so the task inherits the run-level model
         final predictionModelHint = HintHelper.resolvePredictionModel(task.config.getHints())
         final predictionModel = predictionModelHint
             ? PredictionModel.fromValue(predictionModelHint)
