@@ -343,7 +343,7 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
 		log.debug("S3 upload {} from={} to={}", type, localFile, FilesEx.toUriString(target));
 		final S3Client s3Client = target.getFileSystem().getClient();
 		if( isDir ) {
-			s3Client.uploadDirectory(localFile.toFile(), target);
+			s3Client.uploadDirectory(localFile.toFile(), target, opts.followLinks());
 		}
 		else {
 			s3Client.uploadFile(localFile.toFile(), target);
