@@ -476,6 +476,77 @@ class SessionTest extends Specification {
 
     }
 
+    def 'should compute the auto resource labels lazily and memoize them' () {
+        given:
+        def session = new Session([tower: [autoLabels: 'runName']])
+        // the Platform metadata is only filled in at `notifyFlowCreate` i.e. after the session is created
+        def meta = Mock(WorkflowMetadata)
+        session.@workflowMetadata = meta
+
+        when:
+        def labels = session.getAutoResourceLabels()
+        then:
+        // the metadata is only read on the first access
+        (1.._) * meta.getRunName() >> 'crazy_darwin'
+        and:
+        labels == ['nextflow.io/runName': 'crazy_darwin']
+
+        when:
+        def again = session.getAutoResourceLabels()
+        then:
+        0 * meta.getRunName()
+        and:
+        again.is(labels)
+    }
+
+    def 'should return no auto resource labels when the option is not set' () {
+        given:
+        def session = new Session()
+        session.@workflowMetadata = Mock(WorkflowMetadata)
+
+        expect:
+        session.getAutoResourceLabels() == [:]
+    }
+
+    @Unroll
+    def 'should resolve the auto resource labels option scope' () {
+        given:
+        def session = new Session(CONFIG)
+        session.@workflowMetadata = Mock(WorkflowMetadata) {
+            getRunName() >> 'crazy_darwin'
+            getProjectName() >> 'nf-core/rnaseq'
+        }
+
+        expect:
+        session.getAutoResourceLabels().keySet() as List == EXPECTED
+
+        where:
+        CONFIG                                                                          | EXPECTED
+        [tower: [autoLabels: 'runName']]                                                | ['nextflow.io/runName']
+        [tower: [autoLabels: ['runName','projectName']]]                                | ['nextflow.io/projectName','nextflow.io/runName']
+        [tower: [autoLabels: false]]                                                    | []
+        [seqera: [executor: [autoLabels: 'runName']]]                                   | ['nextflow.io/runName']
+        // the deprecated option wins when given, even as `false`
+        [seqera: [executor: [autoLabels: 'projectName']], tower: [autoLabels:'runName']]| ['nextflow.io/projectName']
+        [seqera: [executor: [autoLabels: false]], tower: [autoLabels: true]]            | []
+        // ... and only when given
+        [seqera: [executor: [endpoint: 'http://foo']], tower: [autoLabels: 'runName']]  | ['nextflow.io/runName']
+    }
+
+    def 'should report the offending option name for an invalid auto labels value' () {
+        when:
+        new Session([tower: [autoLabels: 'foo']]).getAutoResourceLabels()
+        then:
+        def e1 = thrown(IllegalArgumentException)
+        e1.message.contains("'tower.autoLabels'")
+
+        when:
+        new Session([seqera: [executor: [autoLabels: 'foo']]]).getAutoResourceLabels()
+        then:
+        def e2 = thrown(IllegalArgumentException)
+        e2.message.contains("'seqera.executor.autoLabels'")
+    }
+
     def 'should notify flow complete only once when abort and destroy race' () {
         given:
         def observer = Mock(TraceObserverV2)

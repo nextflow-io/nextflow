@@ -15,7 +15,13 @@ The `seqera` scope controls the interactions with Seqera services, including the
 
 ##### `seqera.executor.autoLabels`
 
-When `true`, automatically adds workflow metadata labels to the session with the `nextflow.io/` prefix (default: `false`). The following labels are added: `projectName`, `userName`, `runName`, `sessionId`, `resume`, `revision`, `commitId`, `repository`, `manifestName`, `runtimeVersion`. A `seqera.io/runId` label is also added, computed as a SipHash of the session ID and run name. The `userName` label reports the Seqera Platform user that submitted the run, falling back to the OS user running the Nextflow launcher when no Platform identity is available.
+<DeprecatedInVersion version="26.10">
+Use [`tower.autoLabels`][config-tower-autoLabels] instead.
+</DeprecatedInVersion>
+
+Automatically derive [resource labels][process-resource-labels] from the workflow metadata, and attach them to the compute resources created by the executor (default: `false`). Can be specified as `true` (all available metadata labels), `false`, or a list or comma-separated string of short names, e.g. `['runName', 'projectName']`. See [`tower.autoLabels`][config-tower-autoLabels] for the valid names and the resulting label keys.
+
+This option is not limited to the Seqera executor: the labels are attached by every executor supporting the `resourceLabels` directive. When this option is specified in the configuration it takes precedence over `tower.autoLabels`, including when it is set to `false`. Otherwise `tower.autoLabels` is used, and the feature is disabled when neither option is specified.
 
 ##### `seqera.executor.computeEnvId`
 
@@ -133,4 +139,6 @@ The jitter factor for randomizing retry delays (default: `0.25`).
 
 The multiplier for exponential backoff (default: `2.0`).
 
+[config-tower-autoLabels]: ./tower#towerautolabels
+[process-resource-labels]: ../process/directives/resource-labels
 [seqera-executor]: ../../executor/seqera

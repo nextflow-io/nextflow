@@ -734,7 +734,7 @@ class K8sTaskHandlerTest extends Specification {
         task.getName() >> 'hello-world-1'
         task.getProcessor() >> proc
         task.getConfig() >> Mock(TaskConfig) {
-            getResourceLabels() >> [mylabel: 'myvalue']
+            getResourceLabels(_) >> [mylabel: 'myvalue']
         }
         proc.getName() >> 'hello-proc'
         exec.getSession() >> sess
@@ -788,6 +788,126 @@ class K8sTaskHandlerTest extends Specification {
         labels.'nextflow.io/taskName' ==  'hello-world-1'
         labels.'nextflow.io/sessionId' instanceof String
         labels.'nextflow.io/sessionId' == "uuid-${uuid.toString()}".toString()
+    }
+
+    def 'should normalise the auto resource labels only' () {
+        given:
+        def uuid = UUID.randomUUID()
+        def task = Mock(TaskRun)
+        def exec = Mock(K8sExecutor)
+        def proc = Mock(TaskProcessor)
+        def sess = Mock(Session)
+        def handler = Spy(new K8sTaskHandler(executor: exec))
+        and:
+        def config = new TaskConfig(resourceLabels: ['user.io/My Label': 'https://example.com/thing'])
+        config.setAutoResourceLabels([
+                'nextflow.io/repository': 'https://github.com/foo/bar',
+                'seqera.io/platform/workflowId': '1a2b3c',
+                'nextflow.io/revision': '' ])
+
+        when:
+        def labels = handler.getLabels(task)
+        then:
+        handler.getRunName() >> 'pedantic-joe'
+        task.getName() >> 'hello-world-1'
+        task.getProcessor() >> proc
+        task.getConfig() >> config
+        proc.getName() >> 'hello-proc'
+        exec.getSession() >> sess
+        sess.getUniqueId() >> uuid
+        exec.getK8sConfig() >> [:]
+        and:
+        // the auto labels are normalised to comply with the pod label syntax
+        labels.'nextflow.io/repository' == 'github.com_foo_bar'
+        labels.'seqera.io/platform_workflowId' == '1a2b3c'
+        and:
+        // an auto label sanitising to an empty value cannot be applied
+        !labels.containsKey('nextflow.io/revision')
+        and:
+        // the label declared by the process is applied verbatim
+        labels.'user.io/My Label' == 'https://example.com/thing'
+    }
+
+    def 'should keep the executor pod labels on a collision with the resource labels' () {
+        given:
+        def uuid = UUID.randomUUID()
+        def task = Mock(TaskRun)
+        def exec = Mock(K8sExecutor)
+        def proc = Mock(TaskProcessor)
+        def sess = Mock(Session)
+        def handler = Spy(new K8sTaskHandler(executor: exec))
+        and:
+        def config = new TaskConfig(resourceLabels: ['nextflow.io/runName': 'mine'])
+        config.setAutoResourceLabels([
+                'nextflow.io/runName': 'crazy_darwin',
+                'nextflow.io/sessionId': uuid.toString() ])
+
+        when:
+        def labels = handler.getLabels(task)
+        then:
+        handler.getRunName() >> 'pedantic-joe'
+        task.getName() >> 'hello-world-1'
+        task.getProcessor() >> proc
+        task.getConfig() >> config
+        proc.getName() >> 'hello-proc'
+        exec.getSession() >> sess
+        sess.getUniqueId() >> uuid
+        exec.getK8sConfig() >> [:]
+        and:
+        // the pod labels managed by the executor are applied last, therefore they win over
+        // both the auto-derived and the declared resource labels using the same key
+        labels.'nextflow.io/runName' == 'pedantic-joe'
+        labels.'nextflow.io/sessionId' == "uuid-${uuid.toString()}".toString()
+    }
+
+    def 'should submit a pod request with the sanitised auto resource labels' () {
+        given:
+        def WORK_DIR = Paths.get('/some/work/dir')
+        def uuid = UUID.randomUUID()
+        def task = Mock(TaskRun)
+        def exec = Mock(K8sExecutor)
+        def proc = Mock(TaskProcessor)
+        def sess = Mock(Session)
+        def client = Mock(K8sClient)
+        def builder = Mock(K8sWrapperBuilder)
+        def handler = Spy(new K8sTaskHandler(builder: builder, executor: exec))
+        handler.getClient() >> client
+        and:
+        def config = new TaskConfig(resourceLabels: [mylabel: 'myvalue'])
+        config.setAutoResourceLabels([
+                'nextflow.io/repository': 'https://github.com/foo/bar',
+                'seqera.io/platform/workflowId': '1a2b3c' ])
+
+        when:
+        def result = handler.newSubmitRequest(task)
+        then:
+        _ * handler.fusionEnabled() >> false
+        1 * handler.fixOwnership() >> false
+        1 * handler.entrypointOverride() >> false
+        1 * handler.cpuLimitsEnabled() >> false
+        1 * handler.getPodOptions() >> new PodOptions()
+        1 * handler.getSyntheticPodName(task) >> 'nf-123'
+        1 * handler.getAnnotations() >> [:]
+        1 * handler.getContainerMounts() >> []
+        1 * client.getConfig() >> new ClientConfig()
+        _ * handler.getRunName() >> 'pedantic-joe'
+        _ * task.getContainer() >> 'debian:latest'
+        _ * task.getWorkDir() >> WORK_DIR
+        _ * task.getConfig() >> config
+        _ * task.getName() >> 'hello-world-1'
+        _ * task.getProcessor() >> proc
+        _ * proc.getName() >> 'hello-proc'
+        _ * exec.getSession() >> sess
+        _ * exec.getK8sConfig() >> [:]
+        _ * sess.getUniqueId() >> uuid
+        and:
+        // the repository URL is submitted as a legal pod label value, and the two-slash
+        // Platform key as a legal pod label key
+        result.metadata.labels.'nextflow.io/repository' == 'github.com_foo_bar'
+        result.metadata.labels.'seqera.io/platform_workflowId' == '1a2b3c'
+        and:
+        // the label declared by the process is submitted byte-identical
+        result.metadata.labels.mylabel == 'myvalue'
     }
 
     def 'should delete pod if complete' () {
