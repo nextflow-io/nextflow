@@ -344,6 +344,10 @@ class CmdRun extends CmdBase implements HubAware {
         final baseDir = scriptFile.parent
         final cliParams = parsedParams(ConfigBuilder.getConfigVars(baseDir, null))
 
+        // -- the plugins lock file is looked up in the pipeline project directory, so that it can
+        //    be committed along with the pipeline code
+        Plugins.setLockFileDir(baseDir)
+
         /*
          * 2-PHASE CONFIGURATION LOADING STRATEGY
          *
