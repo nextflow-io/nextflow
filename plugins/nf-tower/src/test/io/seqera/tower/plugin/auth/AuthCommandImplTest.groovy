@@ -31,7 +31,7 @@ import java.nio.file.attribute.PosixFilePermission
 import java.nio.file.attribute.PosixFilePermissions
 
 /**
- * Test CmdAuth functionality
+ * Test AuthCommandImpl functionality
  *
  * @author Phil Ewels <phil.ewels@seqera.io>
  */
@@ -895,6 +895,40 @@ param2 = 'value2'"""
         status.table[4][0] == 'Default workspace'
         status.table[4][1].contains('12345')
         status.workspaceInfo == null
+    }
+
+    def 'should show the Platform default workspace when none configured locally'() {
+        given:
+        def config = ['tower.accessToken': 'test-token']
+        def client = Mock(TowerClient) {
+            getUserInfo() >> [userName: 'testuser', id: '123']
+            getDefaultWorkspaceId() >> '777'
+            getUserWorkspaceDetails(_, _) >> [
+                orgName: 'TestOrg',
+                workspaceName: 'DefaultWorkspace',
+                workspaceFullName: 'test-org/default-workspace'
+            ]
+        }
+        def cmd = Spy(new AuthCommandImpl())
+        cmd.createTowerClient(_,_) >> client
+        // the Platform default lookup uses a bounded client
+        cmd.createLookupClient(_,_) >> client
+        cmd.checkApiConnection(_) >> true
+        cmd.listComputeEnvironments(_, _) >> []
+        SysEnv.push([:])  // isolate from real environment variables
+
+        when:
+        def status = cmd.collectStatus(config)
+
+        then:
+        status.table[4][0] == 'Default workspace'
+        status.table[4][1].contains('777')
+        status.table[4][2] == 'platform'
+        status.workspaceInfo != null
+        status.workspaceInfo.workspaceName == 'DefaultWorkspace'
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should collect status from environment variables'() {
