@@ -102,6 +102,12 @@ class CmdLint extends CmdBase {
     @Parameter(names = ['-harshil-alignment'], description = 'Use Harshil alignment')
     boolean harhsilAlignment
 
+    // JCommander only overwrites this field when `-line-length` is given on the
+    // command line, so the default here is used whenever the flag is unset, while
+    // an explicit `-line-length 0` still comes through as zero (disables wrapping).
+    @Parameter(names = ['-line-length'], description = 'Maximum line length for formatting (0 to disable line wrapping)')
+    int lineLength = FormattingOptions.DEFAULT_MAX_LINE_LENGTH
+
     @Parameter(names = ['-sort-declarations'], description = 'Sort script declarations in Nextflow scripts')
     boolean sortDeclarations
 
@@ -152,7 +158,13 @@ class CmdLint extends CmdBase {
             case 'markdown' -> new MarkdownErrorListener()
             default -> new StandardErrorListener(outputMode, launcher.options.ansiLog, launcher.options.quiet)
         }
-        formattingOptions = new FormattingOptions(spaces, !tabs, harhsilAlignment, false, sortDeclarations)
+        if( lineLength < 0 )
+            throw new AbortOperationException("Error: `-line-length` must be zero or greater")
+
+        // with `-tabs`, `spaces` is 0; use a conventional tab display width so
+        // that line-length measurement counts indentation rather than ignoring it
+        final indentWidth = tabs ? 4 : spaces
+        formattingOptions = new FormattingOptions(indentWidth, !tabs, harhsilAlignment, false, sortDeclarations, lineLength)
 
         errorListener.beforeAll()
 

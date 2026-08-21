@@ -15,14 +15,25 @@
  */
 package nextflow.script.formatter;
 
+/**
+ * @param maxLineLength the maximum line length used by line wrapping
+ *                      (0 to disable line wrapping)
+ */
 public record FormattingOptions(
     int tabSize,
     boolean insertSpaces,
     boolean harshilAlignment,
     boolean maheshForm,
-    boolean sortDeclarations
+    boolean sortDeclarations,
+    int maxLineLength
 ) {
+    public static final int DEFAULT_MAX_LINE_LENGTH = 120;
+
     public FormattingOptions(int tabSize, boolean insertSpaces) {
         this(tabSize, insertSpaces, false, false, false);
+    }
+
+    public FormattingOptions(int tabSize, boolean insertSpaces, boolean harshilAlignment, boolean maheshForm, boolean sortDeclarations) {
+        this(tabSize, insertSpaces, harshilAlignment, maheshForm, sortDeclarations, DEFAULT_MAX_LINE_LENGTH);
     }
 }
