@@ -92,6 +92,12 @@ Directory where Conda environments are stored. When using a computing cluster it
 
 Enable the use of Conda recipes defined by using the [conda][process-conda] directive. (default: `false`).
 
+##### `NXF_CONFIG`
+
+<AddedInVersion version="26.08" />
+
+Defines the path to a configuration file that is applied to every pipeline run. The path can be absolute or relative to the launch directory. When set, the file is loaded with a higher priority than the default configuration files but lower than config files specified with `-c`. See [Configuration files][config-files] for the full priority order.
+
 ##### `NXF_CONTAINER_ENTRYPOINT_OVERRIDE`
 
 <DeprecatedInVersion version="22.10" />
@@ -487,6 +493,7 @@ Forces the terminal width of ANSI-formatted log output. Overrides automatic term
 
 [agent-page]: ../agent
 [agent-provider]: ../agent#the-api-provider
+[config-files]: ../config#configuration-files
 [process-conda]: ./process/directives/conda
 [process-publishdir]: ./process/directives/publish-dir
 [process-spack]: ./process/directives/spack
