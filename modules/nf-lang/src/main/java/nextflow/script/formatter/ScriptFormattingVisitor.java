@@ -76,7 +76,9 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         this.sourceUnit = sourceUnit;
         this.options = options;
         this.fmt = new Formatter(options);
-        this.fmt.setComments(CommentAttacher.of(sourceUnit.getAST()));
+        var commentAttacher = CommentAttacher.of(sourceUnit.getAST());
+        this.fmt.setComments(commentAttacher);
+        this.fmt.setFmtDirectives(FmtDirectives.of(sourceUnit.getAST(), () -> FmtDirectives.readSourceText(sourceUnit), commentAttacher));
     }
 
     /**
@@ -173,6 +175,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitFeatureFlag(FeatureFlagNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.append(node.name);
         fmt.append(" = ");
@@ -183,6 +187,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitInclude(IncludeNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         emitInclude(node);
     }
@@ -202,17 +208,33 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
     private int visitIncludeRun(List<ASTNode> declarations, int start) {
         var comments = fmt.getComments();
 
-        // -- collect the run, split into blank-line-separated groups
+        // -- find the end of the run
+        int i = start;
+        while( i < declarations.size() && declarations.get(i) instanceof IncludeNode )
+            i++;
+
+        // a verbatim include (`fmt: skip` / `fmt: off` ... `fmt: on`), or one
+        // suppressed by an earlier verbatim region, must not be reordered or
+        // lost -- fall back to emitting the run in its original order rather
+        // than sorting it
+        for( int j = start; j < i; j++ ) {
+            if( fmt.isVerbatim(declarations.get(j)) ) {
+                for( int k = start; k < i; k++ )
+                    visitInclude((IncludeNode) declarations.get(k));
+                return i - 1;
+            }
+        }
+
+        // -- split the run into blank-line-separated groups
         var groups = new ArrayList<List<IncludeNode>>();
         List<IncludeNode> group = null;
-        int i = start;
-        while( i < declarations.size() && declarations.get(i) instanceof IncludeNode in ) {
+        for( int j = start; j < i; j++ ) {
+            var in = (IncludeNode) declarations.get(j);
             if( group == null || comments.blankLinesBefore(comments.leadingLine(in)) > 0 ) {
                 group = new ArrayList<>();
                 groups.add(group);
             }
             group.add(in);
-            i++;
         }
 
         // -- sort each group independently and emit
@@ -285,6 +307,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitParams(ParamBlockNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.append("params {\n");
         fmt.incIndent();
@@ -314,6 +338,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitParamV1(ParamNodeV1 node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.emitWrappable(() -> {
             fmt.appendIndent();
@@ -337,6 +363,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitWorkflow(WorkflowNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.append("workflow");
         if( !node.isEntry() ) {
@@ -537,6 +565,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitAgent(AgentNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.append("agent ");
         fmt.append(node.getName());
@@ -569,6 +599,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitProcessV2(ProcessNodeV2 node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.append("process ");
         fmt.append(node.getName());
@@ -649,6 +681,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitProcessV1(ProcessNodeV1 node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.append("process ");
         fmt.append(node.getName());
@@ -704,6 +738,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitFunction(FunctionNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.append("def ");
         fmt.append(node.getName());
@@ -726,6 +762,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitRecord(RecordNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.append("record ");
         fmt.append(node.getName());
@@ -756,6 +794,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitEnum(ClassNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.append("enum ");
         fmt.append(node.getName());
@@ -778,6 +818,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitOutputs(OutputBlockNode node) {
+        if( fmt.appendVerbatim(node) )
+            return;
         fmt.appendLeadingComments(node);
         fmt.append("output {\n");
         fmt.incIndent();
@@ -838,6 +880,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             }
 
             // treat as regular directive
+            if( fmt.appendVerbatim(stmt) )
+                return;
             fmt.appendLeadingComments(stmt);
             fmt.visitDirective(stmt, call);
         });
@@ -847,6 +891,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         asBlockStatements(statement).forEach((stmt) -> {
             var call = asMethodCallX(stmt);
             if( call == null )
+                return;
+            if( fmt.appendVerbatim(stmt) )
                 return;
             fmt.appendLeadingComments(stmt);
             fmt.visitDirective(stmt, call);

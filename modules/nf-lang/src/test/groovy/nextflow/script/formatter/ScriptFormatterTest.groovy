@@ -1772,4 +1772,209 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    // -- fmt: skip / fmt: off / fmt: on directives (issue #75)
+
+    def 'should keep a statement verbatim with fmt: skip' () {
+        expect:
+        checkFormat(
+            '''\
+            v=42
+            w  =   1+2  // fmt: skip
+            x=100
+            ''',
+            '''\
+            v = 42
+            w  =   1+2  // fmt: skip
+            x = 100
+            '''
+        )
+    }
+
+    def 'should keep a multi-line statement verbatim with fmt: skip on its last line' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                Channel.of(1, 2)
+                    .map { v -> foo(v) }  // fmt: skip
+                y=1+2
+            }
+            ''',
+            '''\
+            workflow {
+                Channel.of(1, 2)
+                    .map { v -> foo(v) }  // fmt: skip
+                y = 1 + 2
+            }
+            '''
+        )
+    }
+
+    def 'should keep a top-level declaration verbatim with fmt: skip' () {
+        expect:
+        checkFormat(
+            '''\
+            process  foo {
+            input:
+            val   x
+            script:
+            'echo hi'
+            } // fmt: skip
+
+            process bar{
+            script:'echo bar'
+            }
+            ''',
+            '''\
+            process  foo {
+            input:
+            val   x
+            script:
+            'echo hi'
+            } // fmt: skip
+
+            process bar {
+                script:
+                'echo bar'
+            }
+            '''
+        )
+    }
+
+    def 'should keep a region verbatim between fmt: off and fmt: on' () {
+        expect:
+        checkFormat(
+            '''\
+            v=42
+            // fmt: off
+            w  =   1+2
+            x=3
+            // fmt: on
+            y=4
+            ''',
+            '''\
+            v = 42
+            // fmt: off
+            w  =   1+2
+            x=3
+            // fmt: on
+            y = 4
+            '''
+        )
+    }
+
+    def 'should keep everything verbatim after an unterminated fmt: off' () {
+        expect:
+        checkFormat(
+            '''\
+            v = 1
+            // fmt: off
+            w  =   2
+            x=3
+            '''
+        )
+    }
+
+    def 'should preserve a comment inside a fmt: off region with no following statement' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                // fmt: off
+                x = 1
+                // dangling note
+                // fmt: on
+                y=2
+            }
+            ''',
+            '''\
+            workflow {
+                // fmt: off
+                x = 1
+                // dangling note
+                // fmt: on
+                y = 2
+            }
+            '''
+        )
+    }
+
+    def 'should be idempotent when a leading comment and blank line precede fmt: off' () {
+        expect:
+        checkFormat(
+            '''\
+            v = 42
+
+            // genuine comment
+
+            // fmt: off
+            w  =   1+2
+            x=3
+            // fmt: on
+            y=4
+            ''',
+            '''\
+            v = 42
+
+            // genuine comment
+
+            // fmt: off
+            w  =   1+2
+            x=3
+            // fmt: on
+            y = 4
+            '''
+        )
+    }
+
+    def 'should do nothing harmful with a lone fmt: on directive' () {
+        expect:
+        checkFormat(
+            '''\
+            v=1
+            // fmt: on
+            w=2
+            ''',
+            '''\
+            v = 1
+            // fmt: on
+            w = 2
+            '''
+        )
+    }
+
+    def 'should not reorder or lose a verbatim include when sorting' () {
+        expect:
+        checkFormatSorted(
+            '''\
+            include { foo } from './b.nf' // fmt: skip
+            include { bar } from './a.nf'
+            ''',
+            '''\
+            include { foo } from './b.nf' // fmt: skip
+            include { bar } from './a.nf'
+            '''
+        )
+    }
+
+    def 'should preserve blank-line groups when a verbatim include disables sorting of the run' () {
+        expect:
+        checkFormatSorted(
+            '''\
+            include { foo } from './b.nf' // fmt: skip
+            include { bar } from './a.nf'
+
+            include { zed } from './z.nf'
+            include { yak } from './y.nf'
+            ''',
+            '''\
+            include { foo } from './b.nf' // fmt: skip
+            include { bar } from './a.nf'
+
+            include { zed } from './z.nf'
+            include { yak } from './y.nf'
+            '''
+        )
+    }
+
 }
