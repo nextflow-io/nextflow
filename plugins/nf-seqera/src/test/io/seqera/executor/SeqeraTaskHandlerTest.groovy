@@ -1379,6 +1379,54 @@ class SeqeraTaskHandlerTest extends Specification {
         }
     }
 
+    def 'submit leaves Task.labels unset when the task declares no labels of its own'() {
+        given:
+        Task captured = null
+        def batchSubmitter = Mock(SeqeraBatchSubmitter) {
+            submit(_, _) >> { args -> captured = args[1] as Task }
+        }
+        def autoLabels = ['nextflow.io/runName': 'crazy_darwin', 'nextflow.io/resume': 'false']
+        // a real task config, so that the runtime merge of the auto labels is exercised
+        def taskConfig = new TaskConfig([cpus: 2, memory: '1 GB'])
+        taskConfig.setAutoResourceLabels(autoLabels)
+        def taskRun = Mock(TaskRun) {
+            getConfig() >> taskConfig
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getContainer() >> 'docker.io/library/alpine:3'
+            getContainerPlatform() >> 'linux/amd64'
+            getId() >> TaskId.of(1)
+            getHash() >> HashCode.fromInt(1)
+            lazyName() >> 'sample_task'
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getBatchSubmitter() >> batchSubmitter
+            getSeqeraConfig() >> Mock(ExecutorOpts) {
+                getMachineRequirement() >> null
+                getTaskEnvironment() >> [:]
+            }
+            // the run baseline holds the very same auto labels -- see
+            // SeqeraExecutor#computeRunResourceLabels
+            getRunResourceLabels() >> autoLabels
+            ensureRunCreated() >> {}
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionEnabled() >> true
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) {
+                fusionEnv() >> [:]
+            }
+            fusionSubmitCli() >> ['/bin/sh', '-c', 'true']
+        }
+
+        when:
+        handler.submit()
+
+        then: 'the auto labels are attached to the run, therefore not re-sent with every task'
+        captured != null
+        captured.getLabels() == null
+    }
+
     def 'submit leaves Task.labels unset when the task labels equal the run baseline'() {
         given:
         Task captured = null

@@ -52,6 +52,60 @@ Consider the limits and syntax of the corresponding executor when using resource
 Resource labels in Azure are added to auto-pools, rather than jobs, to support cost analysis. A new pool is created for each new set of resource labels. Setting `azure.batch.deletePoolsOnCompletion = true` is recommended when using process-specific resource labels.
 </AddedInVersion>
 
+## Automatic resource labels
+
+<AddedInVersion version="26.10" />
+
+Nextflow can also derive resource labels from the workflow metadata and attach them to the task compute resources, in addition to the labels declared with the `resourceLabels` directive. The feature is disabled by default and is enabled with the [`tower.autoLabels`][config-tower-autoLabels] config option:
+
+```groovy
+// attach all of the available metadata labels
+tower.autoLabels = true
+
+// or select the ones to be attached
+tower.autoLabels = ['projectName', 'runName', 'workspaceId']
+```
+
+The following names can be selected:
+
+| Name             | Label key                         |
+| ---------------- | --------------------------------- |
+| `projectName`    | `nextflow.io/projectName`         |
+| `userName`       | `nextflow.io/userName`            |
+| `runName`        | `nextflow.io/runName`             |
+| `sessionId`      | `nextflow.io/sessionId`           |
+| `resume`         | `nextflow.io/resume`              |
+| `revision`       | `nextflow.io/revision`            |
+| `commitId`       | `nextflow.io/commitId`            |
+| `repository`     | `nextflow.io/repository`          |
+| `manifestName`   | `nextflow.io/manifestName`        |
+| `runtimeVersion` | `nextflow.io/runtimeVersion`      |
+| `workflowId`     | `seqera.io/platform/workflowId`   |
+| `workspaceId`    | `seqera.io/platform/workspaceId`  |
+| `computeEnvId`   | `seqera.io/platform/computeEnvId` |
+
+A label whose metadata value is not available is omitted, so the `seqera.io/platform/*` labels are only attached when workflow monitoring with Seqera Platform is enabled.
+
+Labels declared with the `resourceLabels` directive always take precedence: when a declared label has the same key as an automatic one, the declared value is used. Declared labels are never modified, even when they are not valid for the target executor.
+
+### Label normalization
+
+The automatic labels are normalized as required by the API of the corresponding executor. The normalization is applied to the automatic labels only.
+
+| Executor           | Normalization                                                                                               | `nextflow.io/runName` becomes |
+| ------------------ | ----------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| AWS Batch          | Letters, digits, spaces and `+ - = . _ : / @`; key up to 128 characters, value up to 256                    | unchanged                     |
+| Azure Batch        | Applied as-is, apart from the reserved `microsoft` name prefix                                              | unchanged                     |
+| Google Cloud Batch | Lowercase letters, digits, `_` and `-`; the key must start with a letter; key and value up to 63 characters | `nextflow_io_runname`         |
+| Kubernetes         | Key applied verbatim; values stripped of their URL scheme and slashes, up to 63 characters                  | unchanged                     |
+| Seqera executor    | Applied as-is                                                                                               | unchanged                     |
+
+Values are normalized in the same way. For example, a `repository` value such as `https://github.com/foo/bar` becomes `github.com_foo_bar` on Kubernetes and `https___github_com_foo_bar` on Google Cloud Batch.
+
+:::warning
+On Azure Batch the resource labels are applied as metadata of the auto-pool, and the pool identifier is derived from that metadata. A label that changes on every execution — such as `runName`, `sessionId` or `workflowId` — therefore creates a new pool for each run, and the pools accumulate unless [`azure.batch.deletePoolsOnCompletion`][config-azure-deletePoolsOnCompletion] is enabled. Selecting a stable subset, such as `['projectName', 'workspaceId', 'computeEnvId']`, is recommended on Azure Batch.
+:::
+
 ## See also
 
 - [label](./label) (for shared process configuration)
@@ -59,6 +113,8 @@ Resource labels in Azure are added to auto-pools, rather than jobs, to support c
 
 [awsbatch-executor]: ../../../executor/aws-batch
 [azurebatch-executor]: ../../../executor/azure-batch
+[config-azure-deletePoolsOnCompletion]: ../../config/azure#azurebatchdeletepoolsoncompletion
+[config-tower-autoLabels]: ../../config/tower#towerautolabels
 [google-batch-executor]: ../../../executor/google-batch
 [k8s-executor]: ../../../executor/kubernetes
 [seqera-executor]: ../../../executor/seqera

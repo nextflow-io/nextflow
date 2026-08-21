@@ -22,6 +22,7 @@ import com.google.common.hash.HashCode
 import nextflow.Session
 import nextflow.executor.Executor
 import nextflow.executor.TaskArrayExecutor
+import nextflow.platform.ResourceLabelPolicy
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
@@ -134,6 +135,50 @@ class TaskArrayCollectorTest extends Specification {
         taskArray.getArraySize() == 3
         taskArray.getContainerConfig().getEnvWhitelist() == [ 'ARRAY_JOB_INDEX' ]
         taskArray.isContainerEnabled() == false
+    }
+
+    def 'should create task array with the auto resource labels' () {
+        given:
+        def exec = Mock(DummyExecutor) {
+            getWorkDir() >> TestHelper.createInMemTempDir()
+            getArrayIndexName() >> 'ARRAY_JOB_INDEX'
+        }
+        def config = Spy(ProcessConfig, constructorArgs: [Mock(BaseScript), 'PROC']) {
+            createTaskConfig() >> Mock(TaskConfig)
+            get('resourceLabels') >> ['My.Label': 'Foo/Bar']
+        }
+        def proc = Mock(TaskProcessor) {
+            getConfig() >> config
+            getExecutor() >> exec
+            getName() >> 'PROC'
+            getSession() >> Mock(Session) { getAutoResourceLabels() >> ['nextflow.io/runName': 'crazy_frog'] }
+            isSingleton() >> false
+            getTaskBody() >> { new BodyDef(null, 'source') }
+        }
+        def collector = Spy(new TaskArrayCollector(proc, exec, 5))
+        and:
+        def task = Mock(TaskRun) {
+            index >> 1
+            getHash() >> HashCode.fromString('0123456789abcdef')
+            getWorkDir() >> Paths.get('/work/foo')
+        }
+        def handler = Mock(TaskHandler) {
+            getTask() >> task
+        }
+
+        when:
+        def taskArray = collector.createTaskArray([task])
+        then:
+        1 * handler.withArrayChild(true) >> handler
+        1 * exec.createTaskHandler(task) >> handler
+        1 * handler.prepareLauncher()
+        1 * collector.createArrayTaskScript([handler]) >> 'the-task-array-script'
+        and:
+        // the array job carries the auto labels, merged as they are for a plain task
+        taskArray.config.getResourceLabels() == ['nextflow.io/runName': 'crazy_frog', 'My.Label': 'Foo/Bar']
+        and:
+        // and the executor policy applies to the auto entries only
+        taskArray.config.getResourceLabels(ResourceLabelPolicy.GOOGLE) == ['nextflow_io_runname': 'crazy_frog', 'My.Label': 'Foo/Bar']
     }
 
     def 'should get array ref' () {

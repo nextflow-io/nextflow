@@ -402,6 +402,7 @@ class TaskProcessor {
         task.config.context = task.context
         task.config.process = task.processor.name
         task.config.executor = task.processor.executor.name
+        task.config.setAutoResourceLabels(session?.getAutoResourceLabels())
 
         return task
     }
@@ -763,6 +764,7 @@ class TaskProcessor {
         task.config.index = task.index
         task.config.process = task.processor.name
         task.config.executor = task.processor.executor.name
+        task.config.setAutoResourceLabels(session?.getAutoResourceLabels())
 
         if( config instanceof ProcessConfigV1 )
             initializeTaskRunV1(task)

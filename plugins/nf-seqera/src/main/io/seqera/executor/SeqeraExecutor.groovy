@@ -67,6 +67,11 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
 
     private volatile String workflowId
 
+    /**
+     * The complete set of resource labels attached to the run -- the labels derived from the
+     * workflow metadata plus the config-level {@code process.resourceLabels}. See
+     * {@link #computeRunResourceLabels()}.
+     */
     private volatile Map<String,String> runResourceLabels = Collections.<String,String>emptyMap()
 
     private SeqeraBatchSubmitter batchSubmitter
@@ -146,10 +151,6 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         final computeEnvId = PlatformHelper.getComputeEnvId(towerConfig, SysEnv.get()) ?: seqeraConfig.computeEnvId
 
         computeRunResourceLabels()
-        final labels = new Labels()
-        if( seqeraConfig.autoLabels )
-            labels.withWorkflowMetadata(session.workflowMetadata, seqeraConfig.autoLabels)
-        labels.withProcessResourceLabels(runResourceLabels)
         final predictionModel = seqeraConfig.predictionModel ? PredictionModel.fromValue(seqeraConfig.predictionModel) : null
         final pipeline = new PipelineSpec()
                 .workflowId(workflowId)
@@ -162,7 +163,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
                 .providerConfig(seqeraConfig.providerConfig)
                 .name(session.runName)
                 .machineRequirement(SchemaMapperUtil.toMachineRequirement(seqeraConfig.machineRequirement))
-                .labels(labels.entries)
+                .labels(runResourceLabels)
                 .workspaceId(workspaceId)
                 .pipeline(pipeline)
                 .predictionModel(predictionModel)
@@ -261,16 +262,37 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
         return Collections.unmodifiableMap(runResourceLabels)
     }
 
+    /**
+     * Compute the run-level resource labels: the labels derived from the workflow metadata --
+     * see {@link nextflow.Session#getAutoResourceLabels()} -- overlaid by the config-level
+     * {@code process.resourceLabels}, which win on a key collision.
+     *
+     * This is the baseline {@link SeqeraTaskHandler} deltas the task labels against, therefore
+     * it must hold *every* label the runtime merges into a task config: the auto labels are
+     * injected into each {@link nextflow.processor.TaskConfig}, so a config-only baseline would
+     * re-send all of them with every single task.
+     */
     @PackageScope
     void computeRunResourceLabels() {
+        final labels = new Labels()
+                .withProcessResourceLabels(session.getAutoResourceLabels())
+                .withProcessResourceLabels(configResourceLabels())
+        this.runResourceLabels = labels.entries
+    }
+
+    /**
+     * @return
+     *      The config-level {@code process.resourceLabels}, coerced to strings. A dynamic
+     *      (closure) value is skipped because it can only be resolved per-task
+     */
+    protected Map<String,String> configResourceLabels() {
         final processMap = session.config.process as Map
         final value = processMap?.get('resourceLabels')
         if( value instanceof Closure ) {
             log.debug "Skipping run-level process.resourceLabels: dynamic (closure) values are only resolved per-task"
-            this.runResourceLabels = Collections.<String,String>emptyMap()
-            return
+            return Collections.<String,String>emptyMap()
         }
-        this.runResourceLabels = Labels.toStringMap(value)
+        return Labels.toStringMap(value)
     }
 
     SeqeraBatchSubmitter getBatchSubmitter() {
