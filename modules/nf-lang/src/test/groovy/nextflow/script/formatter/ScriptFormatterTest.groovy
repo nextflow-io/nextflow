@@ -336,6 +336,19 @@ class ScriptFormatterTest extends Specification {
             }
             '''
         )
+        checkFormat(
+            '''\
+            Object hello(Object x,String[] y){
+            Object xy=x ; return xy
+            }
+            ''',
+            '''\
+            def hello(x, y) {
+                def xy = x
+                return xy
+            }
+            '''
+        )
     }
 
     def 'should format an enum definition' () {
