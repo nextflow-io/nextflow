@@ -23,6 +23,8 @@ import java.nio.file.Paths
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.exception.NodeTerminationException
+import nextflow.executor.ExitStatusAwaiter
+import nextflow.util.Duration
 import nextflow.file.http.XPath
 import nextflow.fusion.FusionConfig
 import nextflow.fusion.FusionScriptLauncher
@@ -562,6 +564,133 @@ class K8sTaskHandlerTest extends Specification {
         handler.task.exitStatus == 137
         handler.status == TaskStatus.COMPLETED
         result == true
+    }
+
+    def 'should wait for exit file when missing then complete once it appears' () {
+        given:
+        def workDir = Files.createTempDirectory('test')
+        def exitFile = workDir.resolve('.exitcode')
+        def task = new TaskRun(workDir: workDir)
+        def client = Mock(K8sClient)
+        def noExitCodeTermState = [ reason: "Completed",
+                                    startedAt: "2018-01-13T10:09:36Z",
+                                    finishedAt: "2018-01-13T10:19:36Z" ]
+        def noExitCodeState = [terminated: noExitCodeTermState]
+        and:
+        def handler = Spy(new K8sTaskHandler(
+                task: task,
+                podName: 'pod-xyz',
+                outputFile: workDir.resolve('.command.out'),
+                errorFile: workDir.resolve('.command.err'),
+                exitFile: exitFile,
+                exitAwaiter: new ExitStatusAwaiter(Duration.of('1min')) ))
+        handler.getClient() >> client
+
+        when: 'the exit file does not exist yet'
+        def result = handler.checkIfCompleted()
+        then:
+        1 * handler.getState() >> noExitCodeState
+        0 * handler.updateTimestamps(_)
+        0 * handler.deleteJobIfSuccessful(_)
+        handler.status != TaskStatus.COMPLETED
+        result == false
+
+        when: 'the exit file appears'
+        exitFile.text = '0'
+        result = handler.checkIfCompleted()
+        then:
+        1 * handler.getState() >> noExitCodeState
+        1 * handler.updateTimestamps(noExitCodeTermState)
+        1 * handler.deleteJobIfSuccessful(task) >> null
+        1 * handler.saveJobLogOnError(task) >> null
+        handler.task.exitStatus == 0
+        handler.status == TaskStatus.COMPLETED
+        result == true
+
+        cleanup:
+        workDir?.deleteDir()
+    }
+
+    def 'should wait for exit file when empty then complete once it has content' () {
+        given:
+        def workDir = Files.createTempDirectory('test')
+        def exitFile = workDir.resolve('.exitcode')
+        Files.createFile(exitFile)
+        def task = new TaskRun(workDir: workDir)
+        def client = Mock(K8sClient)
+        def noExitCodeTermState = [ reason: "Completed",
+                                    startedAt: "2018-01-13T10:09:36Z",
+                                    finishedAt: "2018-01-13T10:19:36Z" ]
+        def noExitCodeState = [terminated: noExitCodeTermState]
+        and:
+        def handler = Spy(new K8sTaskHandler(
+                task: task,
+                podName: 'pod-xyz',
+                outputFile: workDir.resolve('.command.out'),
+                errorFile: workDir.resolve('.command.err'),
+                exitFile: exitFile,
+                exitAwaiter: new ExitStatusAwaiter(Duration.of('1min')) ))
+        handler.getClient() >> client
+
+        when: 'the exit file is empty'
+        def result = handler.checkIfCompleted()
+        then:
+        1 * handler.getState() >> noExitCodeState
+        0 * handler.updateTimestamps(_)
+        handler.status != TaskStatus.COMPLETED
+        result == false
+
+        when: 'the exit file is populated'
+        exitFile.text = '143'
+        result = handler.checkIfCompleted()
+        then:
+        1 * handler.getState() >> noExitCodeState
+        1 * handler.updateTimestamps(noExitCodeTermState)
+        1 * handler.deleteJobIfSuccessful(task) >> null
+        1 * handler.saveJobLogOnError(task) >> null
+        handler.task.exitStatus == 143
+        handler.status == TaskStatus.COMPLETED
+        result == true
+
+        cleanup:
+        workDir?.deleteDir()
+    }
+
+    def 'should fall back to MAX_VALUE once the exit file wait times out' () {
+        given:
+        def workDir = Files.createTempDirectory('test')
+        def exitFile = workDir.resolve('.exitcode')
+        def task = new TaskRun(workDir: workDir)
+        def client = Mock(K8sClient)
+        def noExitCodeTermState = [ reason: "Completed",
+                                    startedAt: "2018-01-13T10:09:36Z",
+                                    finishedAt: "2018-01-13T10:19:36Z" ]
+        def noExitCodeState = [terminated: noExitCodeTermState]
+        and:
+        def handler = Spy(new K8sTaskHandler(
+                task: task,
+                podName: 'pod-xyz',
+                outputFile: workDir.resolve('.command.out'),
+                errorFile: workDir.resolve('.command.err'),
+                exitFile: exitFile,
+                exitAwaiter: new ExitStatusAwaiter(Duration.of('50ms')) ))
+        handler.getClient() >> client
+
+        when: 'the exit file never appears and the wait window elapses'
+        handler.checkIfCompleted()
+        sleep(100)
+        def result = handler.checkIfCompleted()
+        then:
+        2 * handler.getState() >> noExitCodeState
+        1 * handler.updateTimestamps(noExitCodeTermState)
+        1 * handler.deleteJobIfSuccessful(task) >> null
+        1 * handler.saveJobLogOnError(task) >> null
+        handler.task.exitStatus == Integer.MAX_VALUE
+        handler.status == TaskStatus.COMPLETED
+        result == true
+
+        cleanup:
+        workDir?.deleteDir()
     }
 
     def 'should kill a pod' () {

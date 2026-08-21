@@ -518,7 +518,20 @@ class BashWrapperBuilderTest extends Specification {
         when:
         def binding = newBashWrapperBuilder().makeBinding()
         then:
-        binding.sync_cmd == 'sync || true'
+        binding.sync_cmd == 'sync --file-system /work/dir || true'
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should suppress sync command when NXF_ENABLE_FS_SYNC=false' () {
+        given:
+        SysEnv.push([NXF_ENABLE_FS_SYNC: 'false'])
+
+        when:
+        def binding = newBashWrapperBuilder().makeBinding()
+        then:
+        binding.sync_cmd == null
 
         cleanup:
         SysEnv.pop()

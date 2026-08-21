@@ -18,6 +18,7 @@ package nextflow.processor
 import static nextflow.processor.ErrorStrategy.*
 
 import java.nio.file.FileSystems
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicInteger
@@ -104,6 +105,7 @@ import nextflow.util.Escape
 import nextflow.util.HashBuilder
 import nextflow.util.LockManager
 import nextflow.util.RecordMap
+import nextflow.util.RetryConfig
 import nextflow.util.TestOnly
 import org.codehaus.groovy.control.CompilerConfiguration
 import org.codehaus.groovy.control.customizers.ASTTransformationCustomizer
@@ -1525,11 +1527,27 @@ class TaskProcessor {
             throw new IllegalArgumentException("Missing 'stdout' for process > ${safeTaskName(task)}")
         }
 
-        if( stdout instanceof Path && !stdout.exists() ) {
-            throw new MissingFileException("Missing 'stdout' file: ${stdout.toUriString()} for process > ${safeTaskName(task)}")
+        if( stdout instanceof Path ) {
+            try {
+                stdout = TaskFileRetry.withRetry(retryConfig(), [NoSuchFileException], "stdout file: ${stdout.toUriString()}") {
+                    stdout.text
+                }
+            }
+            catch( NoSuchFileException e ) {
+                throw new MissingFileException("Missing 'stdout' file: ${stdout.toUriString()} for process > ${safeTaskName(task)}", e)
+            }
         }
 
         task.setOutput(param, stdout)
+    }
+
+    /**
+     * The retry policy used to tolerate task output files (e.g. stdout) that are
+     * momentarily missing right after task completion on a shared/eventually-consistent
+     * filesystem. Overridable in tests.
+     */
+    protected RetryConfig retryConfig() {
+        RetryConfig.config()
     }
 
     protected void collectOutFiles( TaskRun task, FileOutParam param, Path workDir ) {
