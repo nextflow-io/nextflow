@@ -51,7 +51,9 @@ Three properties of the existing code shape the design:
    Kubernetes label key, but an illegal Google Cloud label key (lowercase `[a-z0-9_-]` only,
    must start with a letter). Values are worse: a Kubernetes label value rejects
    `https://github.com/foo/bar`, so `repository`, `revision` and `workflowUrl` cannot be applied
-   verbatim. None of the four executors sanitise today; each passes the map straight to its API.
+   verbatim. Three of the four executors pass the map straight to its API; only Kubernetes
+   sanitises, and it does so for *all* pod labels — `PodSpecBuilder.sanitize` rewrites declared
+   labels too, and throws for a key holding more than one `/`.
 
 3. **Timing is already correct.** `session.start()` fires `notifyFlowCreate()` before the script is
    parsed, and `TowerObserver.onFlowCreate` populates `workflowMetadata.platform` there. Every
@@ -158,6 +160,9 @@ Two accessors result:
   report reflects what was actually applied.
 - `getResourceLabels(ResourceLabelPolicy)` — the same merge, with the *auto* entries sanitised by
   the given policy and the declared entries passed through untouched. Executors call this overload.
+  The collision is decided *before* the sanitisation, so that a label declared with the canonical
+  key (`nextflow.io/runName`) overrides the auto one on a policy that mangles that key, instead of
+  the two turning into distinct entries.
 
 The overload exists because the two requirements meet here: sanitisation is per-executor, but only
 auto-labels may be sanitised. Once the maps are merged an executor can no longer tell one from the
@@ -178,7 +183,7 @@ call site:
 | --- | --- | --- |
 | AWS Batch | permissive charset (`+ - = . _ : / @`), key <= 128, value <= 256 | unchanged |
 | Google Batch | lowercase, `[a-z0-9_-]`, leading letter, <= 63 | `nextflow_io_runname` |
-| Kubernetes | key unchanged; values stripped of scheme and slashes, <= 63 | unchanged (value fixed) |
+| Kubernetes | key prefix kept, any `/` after the first replaced with `_`; values stripped of scheme and slashes, <= 63 | unchanged (value fixed) |
 | Azure Batch | near-identity, minus the reserved `microsoft` name prefix | unchanged |
 | Seqera | identity | unchanged |
 

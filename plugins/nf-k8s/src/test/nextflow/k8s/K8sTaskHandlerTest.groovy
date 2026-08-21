@@ -828,6 +828,38 @@ class K8sTaskHandlerTest extends Specification {
         labels.'user.io/My Label' == 'https://example.com/thing'
     }
 
+    def 'should keep the executor pod labels on a collision with the resource labels' () {
+        given:
+        def uuid = UUID.randomUUID()
+        def task = Mock(TaskRun)
+        def exec = Mock(K8sExecutor)
+        def proc = Mock(TaskProcessor)
+        def sess = Mock(Session)
+        def handler = Spy(new K8sTaskHandler(executor: exec))
+        and:
+        def config = new TaskConfig(resourceLabels: ['nextflow.io/runName': 'mine'])
+        config.setAutoResourceLabels([
+                'nextflow.io/runName': 'crazy_darwin',
+                'nextflow.io/sessionId': uuid.toString() ])
+
+        when:
+        def labels = handler.getLabels(task)
+        then:
+        handler.getRunName() >> 'pedantic-joe'
+        task.getName() >> 'hello-world-1'
+        task.getProcessor() >> proc
+        task.getConfig() >> config
+        proc.getName() >> 'hello-proc'
+        exec.getSession() >> sess
+        sess.getUniqueId() >> uuid
+        exec.getK8sConfig() >> [:]
+        and:
+        // the pod labels managed by the executor are applied last, therefore they win over
+        // both the auto-derived and the declared resource labels using the same key
+        labels.'nextflow.io/runName' == 'pedantic-joe'
+        labels.'nextflow.io/sessionId' == "uuid-${uuid.toString()}".toString()
+    }
+
     def 'should submit a pod request with the sanitised auto resource labels' () {
         given:
         def WORK_DIR = Paths.get('/some/work/dir')

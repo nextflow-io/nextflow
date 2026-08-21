@@ -204,7 +204,9 @@ abstract class ResourceLabelPolicy {
     /**
      * Kubernetes label syntax: the key is an optional DNS subdomain prefix followed by
      * {@code /} and a name matching {@code [A-Za-z0-9]([-_.A-Za-z0-9]*)} of at most 63
-     * characters — so {@code nextflow.io/runName} is applied verbatim. Values follow the
+     * characters — so {@code nextflow.io/runName} is applied verbatim, while a key holding a
+     * second {@code /}, such as {@code seqera.io/platform/workflowId}, becomes
+     * {@code seqera.io/platform_workflowId}. Values follow the
      * name syntax, therefore a URL value such as {@code https://github.com/foo/bar} is
      * stripped of its scheme and of its slashes.
      */

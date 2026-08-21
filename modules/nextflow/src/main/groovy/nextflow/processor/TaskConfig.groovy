@@ -625,10 +625,14 @@ class TaskConfig extends LazyMap implements Cloneable {
         final declared = get('resourceLabels') as Map<String, String> ?: Collections.<String,String>emptyMap()
         if( !autoResourceLabels )
             return declared
-        final auto = policy.sanitize(autoResourceLabels)
+        // the collision is decided *before* the normalisation, so that a label declared with the
+        // canonical key overrides the auto one even when the policy mangles that key
+        final overridden = autoResourceLabels.findAll { k, v -> !declared.containsKey(k) } as Map<String,String>
+        final auto = policy.sanitize(overridden)
         final result = new LinkedHashMap<String, String>(auto.size() + declared.size())
         result.putAll(auto)
-        // the declared labels are applied last, so that they win on a key collision
+        // the declared labels are applied last, so that they win also when the key collision
+        // only shows up once the auto key has been mangled by the policy
         result.putAll(declared)
         return result
     }

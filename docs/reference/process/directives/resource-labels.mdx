@@ -86,7 +86,11 @@ The following names can be selected:
 
 A label whose metadata value is not available is omitted, so the `seqera.io/platform/*` labels are only attached when workflow monitoring with Seqera Platform is enabled.
 
-Labels declared with the `resourceLabels` directive always take precedence: when a declared label has the same key as an automatic one, the declared value is used. Declared labels are never modified, even when they are not valid for the target executor.
+Labels declared with the `resourceLabels` directive always take precedence: when a declared label has the same key as an automatic one, the declared value is used. Declared labels are never modified by the normalization described below, even when they are not valid for the target executor.
+
+:::note
+The Kubernetes executor sanitizes every pod label, including the declared ones, and rejects a label key containing more than one `/` character. It also applies its own `nextflow.io/app`, `nextflow.io/runName`, `nextflow.io/taskName`, `nextflow.io/processName`, `nextflow.io/sessionId` and `nextflow.io/queue` pod labels last, so a resource label using one of those keys is overridden.
+:::
 
 ### Label normalization
 
@@ -97,10 +101,12 @@ The automatic labels are normalized as required by the API of the corresponding 
 | AWS Batch          | Letters, digits, spaces and `+ - = . _ : / @`; key up to 128 characters, value up to 256                    | unchanged                     |
 | Azure Batch        | Applied as-is, apart from the reserved `microsoft` name prefix                                              | unchanged                     |
 | Google Cloud Batch | Lowercase letters, digits, `_` and `-`; the key must start with a letter; key and value up to 63 characters | `nextflow_io_runname`         |
-| Kubernetes         | Key applied verbatim; values stripped of their URL scheme and slashes, up to 63 characters                  | unchanged                     |
+| Kubernetes         | Key prefix up to the first `/` preserved, any further `/` replaced with `_`; values stripped of their URL scheme and slashes, up to 63 characters | unchanged |
 | Seqera executor    | Applied as-is                                                                                               | unchanged                     |
 
 Values are normalized in the same way. For example, a `repository` value such as `https://github.com/foo/bar` becomes `github.com_foo_bar` on Kubernetes and `https___github_com_foo_bar` on Google Cloud Batch.
+
+The two-segment `seqera.io/platform/*` keys are not valid Kubernetes label keys, therefore on Kubernetes they are applied as `seqera.io/platform_workflowId`, `seqera.io/platform_workspaceId` and `seqera.io/platform_computeEnvId`.
 
 :::warning
 On Azure Batch the resource labels are applied as metadata of the auto-pool, and the pool identifier is derived from that metadata. A label that changes on every execution — such as `runName`, `sessionId` or `workflowId` — therefore creates a new pool for each run, and the pools accumulate unless [`azure.batch.deletePoolsOnCompletion`][config-azure-deletePoolsOnCompletion] is enabled. Selecting a stable subset, such as `['projectName', 'workspaceId', 'computeEnvId']`, is recommended on Azure Batch.

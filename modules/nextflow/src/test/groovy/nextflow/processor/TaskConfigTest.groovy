@@ -763,10 +763,11 @@ class TaskConfigTest extends Specification {
             'nextflow.io/runName': 'custom',
             team: 'genomics' ]
         and:
-        // the auto labels come first, then the declared ones
-        labels.keySet() as List == ['nextflow.io/runName', 'nextflow.io/projectName', 'team']
+        // the auto labels come first, then the declared ones -- an overridden auto entry is
+        // dropped, therefore it takes the position of the declared label overriding it
+        labels.keySet() as List == ['nextflow.io/projectName', 'nextflow.io/runName', 'team']
         and:
-        config.getResourceLabelsAsString() == 'nextflow.io/runName=custom,nextflow.io/projectName=nf-core/rnaseq,team=genomics'
+        config.getResourceLabelsAsString() == 'nextflow.io/projectName=nf-core/rnaseq,nextflow.io/runName=custom,team=genomics'
     }
 
     def 'should return the auto resource labels when no label is declared' () {
@@ -809,6 +810,20 @@ class TaskConfigTest extends Specification {
             'nextflow.io/runName': 'crazy_darwin',
             'nextflow.io/repository': 'https://github.com/foo/bar',
             'My.Team/Name': 'Genomics Team' ]
+    }
+
+    def 'should override the auto label declared with the canonical key' () {
+        given:
+        def config = new TaskConfig(resourceLabels: ['nextflow.io/runName': 'custom', 'seqera.io/platform/workflowId': 'mine'])
+        config.setAutoResourceLabels(['nextflow.io/runName': 'crazy_darwin', 'seqera.io/platform/workflowId': '1a2b3c'])
+
+        expect:
+        // the auto entry is dropped before the normalisation, therefore the policy cannot
+        // turn the collision into two distinct keys
+        config.getResourceLabels(ResourceLabelPolicy.GOOGLE) == ['nextflow.io/runName': 'custom', 'seqera.io/platform/workflowId': 'mine']
+        config.getResourceLabels(ResourceLabelPolicy.K8S) == ['nextflow.io/runName': 'custom', 'seqera.io/platform/workflowId': 'mine']
+        config.getResourceLabels(ResourceLabelPolicy.AWS) == ['nextflow.io/runName': 'custom', 'seqera.io/platform/workflowId': 'mine']
+        config.getResourceLabels() == ['nextflow.io/runName': 'custom', 'seqera.io/platform/workflowId': 'mine']
     }
 
     def 'should decide the collision on the sanitized auto key' () {
