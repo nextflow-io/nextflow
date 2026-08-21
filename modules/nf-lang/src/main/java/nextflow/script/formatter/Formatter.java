@@ -916,11 +916,16 @@ public class Formatter extends CodeVisitorSupport {
     }
 
     public static boolean hasType(ClassNode type) {
-        return !ClassHelper.isDynamicTyped(type) || isLegacyType(type);
+        // skip legacy type annotations that have no modern equivalent
+        var legacy = (String) type.getNodeMetaData(ASTNodeMarker.LEGACY_TYPE);
+        if( legacy != null )
+            return !"Object".equals(legacy) && legacy.indexOf('[') == -1;
+        // `Object` is equivalent to no type annotation
+        return !ClassHelper.isDynamicTyped(type) && !ClassHelper.isObjectType(type);
     }
 
     public static boolean hasType(Variable variable) {
-        return !variable.isDynamicTyped() || isLegacyType(variable.getType());
+        return hasType(variable.getType());
     }
 
     public static boolean isLegacyType(ClassNode cn) {
