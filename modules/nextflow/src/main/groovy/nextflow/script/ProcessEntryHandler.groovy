@@ -54,6 +54,20 @@ import org.codehaus.groovy.runtime.typehandling.GroovyCastException
 @CompileStatic
 class ProcessEntryHandler {
 
+    /**
+     * Declared numeric input types a param value is converted to (see {@link #asNumberType}).
+     * Boolean and Path are handled separately: Boolean accepts only the explicit `true`/`false`
+     * spellings rather than Groovy truthiness, and Path resolution also validates existence.
+     */
+    private static final List<Class> NUMBER_TYPES = [
+            Integer, Long, Short, Byte, Float, Double, BigInteger, BigDecimal, Number ]
+
+    /** Numeric types that cannot represent a fractional value. */
+    private static final List<Class> INTEGRAL_TYPES = [ Integer, Long, Short, Byte, BigInteger ]
+
+    /** Non-numeric declared types converted with a plain cast. */
+    private static final List<Class> SCALAR_TYPES = [ String, Character ]
+
     private final BaseScript script
     private final Session session
     private final ProcessDef processDef
@@ -431,40 +445,57 @@ class ProcessEntryHandler {
         if( value instanceof Collection || value instanceof Map )
             return asType(value, param)
 
-        if( value !instanceof CharSequence )
-            return value
-
-        final str = value.toString()
-
         if( type == Boolean ) {
-            if( str.toLowerCase() == 'true' ) return Boolean.TRUE
-            if( str.toLowerCase() == 'false' ) return Boolean.FALSE
+            if( value instanceof Boolean )
+                return value
+            final str = value.toString().toLowerCase()
+            if( str == 'true' ) return Boolean.TRUE
+            if( str == 'false' ) return Boolean.FALSE
+            return value
         }
 
-        if( type == Integer || type == Float ) {
-            if( str.isInteger() ) return str.toInteger()
-            if( str.isLong() ) return str.toLong()
-            if( str.isBigInteger() ) return str.toBigInteger()
-        }
+        if( type == Path )
+            return value instanceof Path ? value : TypeHelper.asPathType(value.toString())
 
-        if( type == Float ) {
-            if( str.isFloat() ) return str.toFloat()
-            if( str.isDouble() ) return str.toDouble()
-            if( str.isBigDecimal() ) return str.toBigDecimal()
-        }
+        // Coerce a scalar to the DECLARED type. A value reaches here either as text (the CLI
+        // passes every param as a String) or as another scalar when supplied programmatically
+        // (JSON, for instance, yields BigDecimal for `96.4` and Integer for `40`), and neither
+        // necessarily matches the declaration. Converting to "whatever the text looks like"
+        // instead left `Double` unhandled altogether and could hand a `Float` input an Integer,
+        // so the wrong type reached the task and was reported as an invalid argument type.
+        if( type in NUMBER_TYPES )
+            return asNumberType(value, param)
 
-        if( type == Path ) {
-            return TypeHelper.asPathType(str)
-        }
+        if( type in SCALAR_TYPES )
+            return asType(value, param)
 
         return value
+    }
+
+    /**
+     * Convert a param value to the declared numeric type. Text is parsed as a decimal number
+     * first (Groovy's cast does not parse strings into numbers), and an integral declared type
+     * rejects fractional text rather than silently truncating it.
+     */
+    private static Object asNumberType(Object value, ProcessInput param) {
+        try {
+            final number = value instanceof Number
+                ? (Number) value
+                : new BigDecimal(value.toString().trim())
+            if( param.type in INTEGRAL_TYPES && new BigDecimal(number.toString()).stripTrailingZeros().scale() > 0 )
+                throw new NumberFormatException("Not an integral value: ${number}")
+            return TypeHelper.asType(number, param.type)
+        }
+        catch( NumberFormatException | GroovyCastException | UnsupportedOperationException e ) {
+            throw new IllegalArgumentException("Parameter `--${param.name}` with type ${Types.getName(param.type)} cannot be assigned to ${value} [${Types.getName(value.getClass())}]")
+        }
     }
 
     private static Object asType(Object value, ProcessInput param) {
         try {
             return TypeHelper.asType(value, param.type)
         }
-        catch( GroovyCastException | UnsupportedOperationException e ) {
+        catch( GroovyCastException | UnsupportedOperationException | NumberFormatException e ) {
             final actualType = value.getClass()
             throw new IllegalArgumentException("Parameter `--${param.name}` with type ${Types.getName(param.type)} cannot be assigned to ${value} [${Types.getName(actualType)}]")
         }

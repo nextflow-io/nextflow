@@ -29,6 +29,7 @@ import nextflow.script.params.v2.ProcessTupleInput
 import nextflow.script.types.Record
 import nextflow.util.RecordMap
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  * Tests for ProcessEntryHandler parameter mapping functionality
@@ -400,6 +401,76 @@ class ProcessEntryHandlerTest extends Specification {
 
         then: 'returns null instead of throwing'
         result == null
+    }
+
+    @Unroll
+    def 'should convert a #value.class.simpleName param to the declared #type.simpleName input type (v2)' () {
+        given: 'a typed input whose declared type differs from the supplied value type'
+        def meta = Mock(ScriptMeta) { getLocalProcessNames() >> [ 'hello' ] }
+        def handler = new ProcessEntryHandler(Mock(BaseScript), Mock(Session), meta)
+
+        when:
+        def result = handler.getValueForInputV2(new ProcessInput('x', type, false), [x: value])
+
+        then: 'the value is converted to the DECLARED type, not to whatever the value looks like'
+        result.class == type
+        result == expected
+
+        where:
+        type       | value                  || expected
+        // a JSON/programmatic value: `96.4` parses as BigDecimal, `40` as Integer
+        Double     | 96.4G                  || 96.4d
+        Double     | 40                     || 40.0d
+        Float      | 96.4G                  || 96.4f
+        Integer    | 40G                    || 40
+        Long       | 40                     || 40L
+        // a CLI value: every param arrives as text
+        Double     | '96.4'                 || 96.4d
+        Double     | '40'                   || 40.0d
+        Float      | '40'                   || 40.0f
+        Integer    | '40'                   || 40
+        Long       | '40'                   || 40L
+        BigDecimal | '96.4'                 || 96.4G
+        String     | 96.4G                  || '96.4'
+    }
+
+    @Unroll
+    def 'should reject the param value #value for a declared #type.simpleName input (v2)' () {
+        given:
+        def meta = Mock(ScriptMeta) { getLocalProcessNames() >> [ 'hello' ] }
+        def handler = new ProcessEntryHandler(Mock(BaseScript), Mock(Session), meta)
+
+        when:
+        handler.getValueForInputV2(new ProcessInput('n50', type, false), [n50: value])
+
+        then: 'the mismatch is reported up front instead of reaching the task'
+        def e = thrown(IllegalArgumentException)
+        e.message == "Parameter `--n50` with type ${type.simpleName} cannot be assigned to ${value} [String]"
+
+        where:
+        type    | value
+        Integer | 'abc'
+        Integer | '3.7'      // fractional text is not silently truncated
+        Long    | '1e'
+        Double  | 'abc'
+    }
+
+    @Unroll
+    def 'should keep boolean and path input handling (v2)' () {
+        given:
+        def meta = Mock(ScriptMeta) { getLocalProcessNames() >> [ 'hello' ] }
+        def handler = new ProcessEntryHandler(Mock(BaseScript), Mock(Session), meta)
+
+        expect:
+        handler.getValueForInputV2(new ProcessInput('x', type, false), [x: value]) == expected
+
+        where:
+        type    | value   || expected
+        Boolean | 'true'  || true
+        Boolean | 'TRUE'  || true
+        Boolean | 'false' || false
+        Boolean | true    || true
+        Boolean | 'yes'   || 'yes'    // unchanged: no Groovy truthiness for an unknown spelling
     }
 
     def 'should throw error for missing required input (v2)' () {
