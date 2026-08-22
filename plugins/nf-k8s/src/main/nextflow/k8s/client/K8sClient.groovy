@@ -420,6 +420,7 @@ class K8sClient {
                 final dummyPodStatus = [
                         terminated: [
                                 reason: "Completed",
+                                exitCode: 0,
                                 startedAt: jobStatus.startTime,
                                 finishedAt: jobStatus.completionTime,
                         ]
