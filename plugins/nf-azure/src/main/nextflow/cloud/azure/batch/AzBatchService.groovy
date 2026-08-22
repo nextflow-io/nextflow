@@ -88,6 +88,7 @@ import nextflow.cloud.azure.config.AzFileShareOpts
 import nextflow.cloud.azure.config.AzPoolOpts
 import nextflow.cloud.azure.config.AzStartTaskOpts
 import nextflow.cloud.azure.config.CopyToolInstallMode
+import nextflow.cloud.azure.nio.AzFileSystemProvider
 import nextflow.cloud.azure.nio.AzPath
 import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
@@ -519,12 +520,20 @@ class AzBatchService implements Closeable {
         return key.size()>MAX_LEN ? key.substring(0,MAX_LEN) : key
     }
 
+    protected String getSasForPath(Path path) {
+        if( path instanceof AzPath ) {
+            final provider = (AzFileSystemProvider) (path as AzPath).fileSystem.provider()
+            return provider.getSasToken(path.getContainerName() as String)
+        }
+        return null
+    }
+
     protected BatchTaskCreateParameters createTask(String poolId, String jobId, TaskRun task) {
         assert poolId, 'Missing Azure Batch poolId argument'
         assert jobId, 'Missing Azure Batch jobId argument'
         assert task, 'Missing Azure Batch task argument'
 
-        final sas = config.storage().sasToken
+        final sas = getSasForPath(task.workDir)
         if( !sas )
             throw new IllegalArgumentException("Missing Azure Blob storage SAS token")
 
