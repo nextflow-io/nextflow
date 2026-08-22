@@ -63,6 +63,11 @@ class FusionHelper {
         for( String env : containerConfig.getEnvWhitelist())
             containerBuilder.addEnv(env)
 
+        // for job arrays, propagate the array index variable (e.g. SLURM_ARRAY_TASK_ID)
+        // into the container environment
+        if( launcher.arrayIndexName )
+            containerBuilder.addEnv(launcher.arrayIndexName)
+
         // patch the cmd wrapping the last item in quotes
         final patchCmd = new ArrayList(runCmd)
         patchCmd[-1] = "'${patchCmd[-1]}'"
