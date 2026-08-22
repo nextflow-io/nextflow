@@ -3,7 +3,7 @@
 - Authors: Ben Sherman
 - Status: accepted
 - Deciders: Ben Sherman, Paolo Di Tommaso
-- Date: 2026-05-1
+- Date: 2026-05-01
 - Tags: lang, static-types
 
 ## Summary
