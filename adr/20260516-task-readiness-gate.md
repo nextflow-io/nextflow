@@ -303,3 +303,4 @@ Other task-scoped extension points (`TaskTipProvider`, the task handler itself) 
 
 - Implementation PR: [nextflow-io/nextflow#7158](https://github.com/nextflow-io/nextflow/pull/7158).
 - This ADR PR: [nextflow-io/nextflow#7151](https://github.com/nextflow-io/nextflow/pull/7151).
+- Extended by [20260823-file-readiness-gate](20260823-file-readiness-gate.md), which covers head-node reads (foreign-file staging, content-based cache hashing) that happen before a task is scheduled and are therefore outside this gate's window.
