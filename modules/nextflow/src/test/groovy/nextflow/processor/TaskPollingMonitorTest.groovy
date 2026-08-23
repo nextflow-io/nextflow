@@ -164,6 +164,8 @@ class TaskPollingMonitorTest extends Specification {
                 getArraySize() >> ARRAY_SIZE
                 getProcessor() >> processor
             }
+            canForkProcess() >> true
+            isReady() >> true
         }
 
         when:
