@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ import nextflow.util.Throttle
 class TaskPollingMonitor implements TaskMonitor {
 
     private static String RATE_FORMAT = ~/^(\d+\.?\d*)\s*([a-zA-Z]*)/
-    
+
     /**
      * The current session object
      */
@@ -220,9 +220,9 @@ class TaskPollingMonitor implements TaskMonitor {
     private boolean checkQueueCapacity(TaskHandler handler) {
         // Calculate slots consumed by this task:
         // - Regular tasks consume 1 slot
-        // - Job arrays consume slots equal to their array size  
+        // - Job arrays consume slots equal to their array size
         int slots = getTaskSlots(handler)
-        
+
         // Prevent job arrays larger than the entire queue capacity
         // This catches configuration errors early with a clear error message
         if (slots > capacity) {
@@ -230,7 +230,7 @@ class TaskPollingMonitor implements TaskMonitor {
                 "Process '${handler.task.name}' declares array size ($slots) " +
                 "which exceeds the executor queue size ($capacity)")
         }
-        
+
         // Check if there's enough remaining capacity for this task:
         // - runningQueue.size() = currently running tasks
         // - slots = slots needed for this new task
@@ -674,7 +674,7 @@ class TaskPollingMonitor implements TaskMonitor {
     final protected void handleException( TaskHandler handler, Throwable error ) {
         def fault = null
         try {
-            if (evict(handler)) { 
+            if (evict(handler)) {
                 handler.decProcessForks()
             }
             fault = handler.task.processor.resumeOrDie(handler?.task, error, handler.getTraceRecord())

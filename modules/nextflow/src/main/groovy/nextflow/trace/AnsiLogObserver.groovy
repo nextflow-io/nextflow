@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,7 +39,7 @@ import org.fusesource.jansi.AnsiConsole
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @CompileStatic
-class AnsiLogObserver implements TraceObserverV2 {
+class AnsiLogObserver implements TraceObserverV2, LogObserver {
 
     static final private String NEWLINE = '\n'
 
@@ -102,12 +102,17 @@ class AnsiLogObserver implements TraceObserverV2 {
 
     private WorkflowStatsObserver statsObserver
 
-    private static Integer getEnvTerminalWidth() {
-        final env = SysEnv.get('TERMINAL_WIDTH')
+    protected static Integer getEnvTerminalWidth() {
+        return parseEnvTerminalWidth('TERMINAL_WIDTH') ?: parseEnvTerminalWidth('COLUMNS')
+    }
+
+    private static Integer parseEnvTerminalWidth(String name) {
+        final env = SysEnv.get(name)
         if( !env )
             return null
         try {
-            return Integer.parseInt(env)
+            final result = Integer.parseInt(env)
+            return result>0 ? result : null
         }
         catch( NumberFormatException e ) {
             // do not log error to avoid catch-22 logging event (this class renders logging events)
@@ -317,7 +322,7 @@ class AnsiLogObserver implements TraceObserverV2 {
 
     synchronized protected void renderProgress(WorkflowStats stats) {
         if( printedLines )
-            AnsiConsole.out.println ansi().cursorUp(printedLines+gapLines+1)
+            AnsiConsole.err.println ansi().cursorUp(printedLines+gapLines+1)
 
         // -- print processes
         final term = ansi()
@@ -330,14 +335,14 @@ class AnsiLogObserver implements TraceObserverV2 {
 
         final str = term.toString()
         final count = printAndCountLines(str)
-        AnsiConsole.out.flush()
+        AnsiConsole.err.flush()
 
         // usually the gap should be negative because `count` should be greater or equal
         // than the previous `printedLines` value (the output should become longer)
         // otherwise cleanup the remaining lines
         gapLines = printedLines > count ? printedLines-count : 0
         if( gapLines>0 ) for(int i=0; i<gapLines; i++ )
-            AnsiConsole.out.print(ansi().eraseLine().newline())
+            AnsiConsole.err.print(ansi().eraseLine().newline())
         // at the end update the value of printed lines
         printedLines = count
     }
@@ -345,10 +350,34 @@ class AnsiLogObserver implements TraceObserverV2 {
     protected int printAndCountLines(String str) {
         if( str ) {
             printAnsiLines(str)
-            return str.count(NEWLINE)
+            return countVisualLines(str)
         }
         else
             return 0
+    }
+
+    /**
+     * Count the number of visual lines the string occupies on the terminal,
+     * accounting for lines that wrap when they exceed the terminal width.
+     */
+    protected int countVisualLines(String str) {
+        final lines = str.split(NEWLINE, -1)
+        int count = 0
+        // the last element after split is always empty (trailing newline), skip it
+        for( int i=0; i<lines.length-1; i++ ) {
+            final visualLen = stripAnsi(lines[i]).length()
+            // each line takes at least 1 visual line, plus extra lines for wrapping
+            count += visualLen > 0 && cols > 0 ? Math.ceil((double)visualLen / cols).intValue() : 1
+        }
+        return count
+    }
+
+    /**
+     * Strip ANSI escape codes and OSC hyperlinks from a string
+     * to determine its visual display width.
+     */
+    protected static String stripAnsi(String str) {
+        return ANSI_ESCAPE.matcher(str).replaceAll('')
     }
 
     protected void renderSummary(WorkflowStats stats) {
@@ -372,7 +401,7 @@ class AnsiLogObserver implements TraceObserverV2 {
                 report += "Failed      : ${stats.failedCountFmt}\n"
 
             printAnsi(report, Color.GREEN, true)
-            AnsiConsole.out.flush()
+            AnsiConsole.err.flush()
         }
     }
 
@@ -383,14 +412,14 @@ class AnsiLogObserver implements TraceObserverV2 {
         fmt = fmt.a(message)
         if( bold ) fmt = fmt.boldOff()
         if( color ) fmt = fmt.fg(Color.DEFAULT)
-        AnsiConsole.out.println(fmt.eraseLine())
+        AnsiConsole.err.println(fmt.eraseLine())
     }
 
     protected void printAnsiLines(String lines) {
         final text = lines
                 .replace('\r','')
                 .replace(NEWLINE, ansi().eraseLine().toString() + NEWLINE)
-        AnsiConsole.out.print(text)
+        AnsiConsole.err.print(text)
     }
 
     protected String fmtWidth(String name, int width, int cols) {
@@ -415,6 +444,7 @@ class AnsiLogObserver implements TraceObserverV2 {
 
     private final static Pattern TAG_REGEX = ~/ \((.+)\)( *)$/
     private final static Pattern LBL_REPLACE = ~/ \(.+\) *$/
+    private final static Pattern ANSI_ESCAPE = ~/\033\[[0-9;]*[a-zA-Z]|\033][^\007]*\007/
 
     // OSC 8 hyperlink escape sequences (using BEL as String Terminator)
     private final static String HYPERLINK_START = '\033]8;;'

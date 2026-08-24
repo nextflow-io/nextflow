@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,6 +48,11 @@ class TaskConfig extends LazyMap implements Cloneable {
 
     private transient Map cache = new LinkedHashMap(20)
 
+    /** The directive names accessed while {@link #trackingAccess} is enabled */
+    private transient Set<String> accessedDirectives = new HashSet<>(10)
+
+    private transient boolean trackingAccess
+
     TaskConfig() {  }
 
     TaskConfig( Map<String,Object> entries ) {
@@ -58,11 +63,44 @@ class TaskConfig extends LazyMap implements Cloneable {
         def copy = (TaskConfig)super.clone()
         copy.setTarget(new HashMap<>(this.getTarget()))
         copy.newCache()
+        // copied, not reset: the copy carries over the command rendered from them
+        // -- see TaskRun#clone -- therefore it depends on the same directives
+        copy.accessedDirectives = new HashSet<>(this.accessedDirectives)
         return copy
     }
 
+    /**
+     * Discard the resolved directive values. Note it does *not* touch the accessed names: the
+     * value cache belongs to a context, the access log to a rendered command.
+     */
     private void newCache() {
         cache = [:]
+    }
+
+    /**
+     * Track the directives accessed while the given action runs.
+     *
+     * The task command is rendered by accessing the directives it interpolates off this object,
+     * therefore tracking the accesses while it happens tells which directives the rendered
+     * command depends on. It is scoped to that action because the directives are accessed all
+     * the time by the rest of the engine e.g. the executor asking for the memory to request.
+     *
+     * The caller must disable it once the command is rendered, including on failure, since
+     * a flag left enabled would report every later access as a dependency of the command.
+     *
+     * @see nextflow.processor.TaskRun#resolve
+     * @param value Whether the directive accesses must be tracked
+     */
+    void trackDirectiveAccess(boolean value) {
+        trackingAccess = value
+    }
+
+    /**
+     * @param directive The directive name e.g. {@code memory}
+     * @return {@code true} when the given directive was accessed while the accesses were tracked
+     */
+    boolean isDirectiveAccessed(String directive) {
+        return accessedDirectives.contains(directive)
     }
 
     /**
@@ -137,6 +175,14 @@ class TaskConfig extends LazyMap implements Cloneable {
     }
 
     def get( String key ) {
+        // note this is the funnel for a directive *property* access, either directly or via the
+        // matching getter e.g. #getMemory. Only #eval (used by the task hasher) and #getRawValue
+        // bypass it -- a directive read through those while tracking would go unnoticed
+        if( trackingAccess )
+            accessedDirectives.add(key)
+
+        // note the access is tracked before the cache is consulted, so a directive already
+        // resolved outside the tracked window is still reported
         if( cache.containsKey(key) )
             return cache.get(key)
 
@@ -152,6 +198,9 @@ class TaskConfig extends LazyMap implements Cloneable {
         else
             result = super.get(key)
 
+        // note a dynamic top-level directive is cached by its resolved value, so a directive its
+        // closure accesses in turn is only seen on the first resolution -- resolving one before
+        // the command is rendered would hide it. `ext` is unaffected: what is cached is its map
         cache.put(key,result)
         return result
     }
@@ -212,9 +261,7 @@ class TaskConfig extends LazyMap implements Cloneable {
     }
 
     boolean getDebug() {
-        // check both `debug` and `echo` for backward
-        // compatibility until `echo` is not removed
-        def value = get('debug') || get('echo')
+        def value = get('debug')
         return toBool(value)
     }
 
@@ -463,7 +510,7 @@ class TaskConfig extends LazyMap implements Cloneable {
             throw new IllegalArgumentException("Unexpected value for clusterOptions process directive - offending value: $opts")
         return null
     }
-    
+
     /**
      * @return Parse the {@code clusterOptions} configuration option and return the entries as a list of values
      */
@@ -527,6 +574,10 @@ class TaskConfig extends LazyMap implements Cloneable {
         if( opts!=null )
             throw new IllegalArgumentException("Invalid `containerOptions` directive value: $opts [${opts.getClass().getName()}]")
         return CmdLineOptionMap.emptyOption()
+    }
+
+    Map<String, Object> getHints() {
+        return get('hints') as Map<String, Object> ?: Collections.<String,Object>emptyMap()
     }
 
     Map<String, String> getResourceLabels() {

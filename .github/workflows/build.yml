@@ -17,41 +17,54 @@ on:
     types: [opened, reopened, synchronize]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+# Cancel in-progress runs on the same ref when a new commit lands. Release
+# branches and master are not cancelled so we never abort a partial release.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+
 jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     timeout-minutes: 100
     strategy:
       fail-fast: false
       matrix:
-        java_version: [17, 24]
+        java_version: [17, 25]
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 1
           submodules: true
+          persist-credentials: false
 
       - name: Get the commit message
         id: get_commit_message
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          REPO: ${{ github.repository }}
         run: |
-            if [ "${{ github.event_name }}" = "pull_request" ]; then
-                echo "GitHub event=pull_request"
-                COMMIT_SHA="${{ github.event.pull_request.head.sha }}"
-                COMMIT_MESSAGE="$(curl -s \
-                  -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
-                  https://api.github.com/repos/${{ github.repository }}/commits/$COMMIT_SHA | jq -r '.commit.message' | head -n 1)"
-                echo "Commit message=$(printf "%s" "$COMMIT_MESSAGE")"
-                echo "commit_message=$(printf "%s" "$COMMIT_MESSAGE")" >> $GITHUB_OUTPUT
-            else
-                echo "GitHub event=${{ github.event_name }}"
-                # Extract only the first line of the commit message
-                COMMIT_MESSAGE="$(git log -1 --pretty=format:'%s')"
-                echo "Commit message=$(printf "%s" "$COMMIT_MESSAGE")"
-                echo "commit_message=$(printf "%s" "$COMMIT_MESSAGE")" >> $GITHUB_OUTPUT
-            fi
+          if [ "$GITHUB_EVENT_NAME" = "pull_request" ]; then
+            echo "GitHub event=pull_request"
+            # `actions/checkout` fetches the PR merge ref, so `git log -1`
+            # gives the merge commit. Ask the API for the PR head instead.
+            COMMIT_MESSAGE=$(gh api "repos/$REPO/commits/$PR_HEAD_SHA" --jq '.commit.message' | head -n 1)
+          else
+            echo "GitHub event=$GITHUB_EVENT_NAME"
+            COMMIT_MESSAGE=$(git log -1 --pretty=format:'%s')
+          fi
+          echo "Commit message=$COMMIT_MESSAGE"
+          echo "commit_message=$COMMIT_MESSAGE" >> "$GITHUB_OUTPUT"
 
       - name: Setup env
         run: |
@@ -62,10 +75,10 @@ jobs:
           NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
 
       - name: Setup Java ${{ matrix.java_version }}
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           java-version: ${{matrix.java_version}}
-          distribution: 'temurin'
+          distribution: 'corretto'
           architecture: x64
           cache: gradle
 
@@ -74,11 +87,10 @@ jobs:
 
       - name: Test
         run: |
-            env | sort
             # configure test env
-            if [[ "$GOOGLE_SECRET" ]]; then
-            echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
-            export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
+            if [ -n "$GOOGLE_SECRET" ]; then
+              printf '%s' "$GOOGLE_SECRET" | base64 -d > "$RUNNER_TEMP/google_credentials.json"
+              export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/google_credentials.json"
             fi
             # run tests
             make test
@@ -99,7 +111,7 @@ jobs:
 
       - name: Publish tests report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: report-unit-tests-jdk-${{ matrix.java_version }}
           path: |
@@ -112,18 +124,21 @@ jobs:
     if: ${{ !contains(needs.build.outputs.commit_message, '[ci fast]') }}
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
-        java_version: [17, 24]
+        java_version: [17, 25]
         test_mode: ["test_integration", "test_parser_v2", "test_docs", "test_aws", "test_azure", "test_google", "test_wave"]
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 1
           submodules: true
+          persist-credentials: false
 
       - name: Setup env
         run: |
@@ -134,22 +149,20 @@ jobs:
           NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
 
       - name: Setup Java ${{ matrix.java_version }}
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           java-version: ${{matrix.java_version}}
-          distribution: 'temurin'
+          distribution: 'corretto'
           architecture: x64
           cache: gradle
 
       - name: Run tests
         run: |
-          env | sort
           # configure test env
-          if [[ "$GOOGLE_SECRET" ]]; then
-          echo $GOOGLE_SECRET | base64 -d > $PWD/google_credentials.json
-          export GOOGLE_APPLICATION_CREDENTIALS=$PWD/google_credentials.json
+          if [ -n "$GOOGLE_SECRET" ]; then
+            printf '%s' "$GOOGLE_SECRET" | base64 -d > "$RUNNER_TEMP/google_credentials.json"
+            export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/google_credentials.json"
           fi
-          cat $HOME/.nextflow/scm
           make clean assemble install
           bash test-ci.sh
         env:
@@ -177,7 +190,7 @@ jobs:
             tar -cvf validation-tests.tar.gz validation
 
       - name: Publish tests report
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         if: always()
         with:
           name: report-${{ matrix.test_mode }}-jdk-${{ matrix.java_version }}
@@ -190,33 +203,39 @@ jobs:
       needs: build
       runs-on: ubuntu-latest
       timeout-minutes: 10
-      permissions:
-          actions: write  # Allow writing to actions
-          contents: write # Allow writing to repository contents
       steps:
           - name: Checkout
-            uses: actions/checkout@v4
+            uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
             with:
                 fetch-depth: 1
                 submodules: true
+                persist-credentials: false
                 
           - name: Setup Java 17
-            uses: actions/setup-java@v4
+            uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
             with:
                 java-version: 17
-                distribution: 'temurin'
+                distribution: 'corretto'
                 architecture: x64
                 cache: gradle
 
           - name: Setup env
+            env:
+              NEEDS_BUILD_OUTPUTS_COMMIT_MESSAGE: ${{ needs.build.outputs.commit_message }}
             run: |
                 wget -q -O wave https://github.com/seqeralabs/wave-cli/releases/download/v1.4.1/wave-1.4.1-linux-x86_64
                 chmod +x wave
                 mv wave /usr/local/bin/
-                echo "COMMIT_MESSAGE=\"${{ needs.build.outputs.commit_message }}\"" >> $GITHUB_ENV
+                # Use heredoc-style delimiter so multi-line / quote-containing
+                # commit messages survive intact (run.sh greps for `[e2e prod]`).
+                {
+                  echo "COMMIT_MESSAGE<<NXF_EOF"
+                  echo "$NEEDS_BUILD_OUTPUTS_COMMIT_MESSAGE"
+                  echo "NXF_EOF"
+                } >> "$GITHUB_ENV"
 
           - name : Docker Login to Seqera public CR
-            uses : docker/login-action@v3
+            uses : docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
             with :
                 registry : "public.cr.seqera.io"
                 username : "public-cr-admin"
@@ -234,45 +253,79 @@ jobs:
     if: ${{ always() && contains(needs.build.outputs.commit_message, '[release]') && needs.build.result == 'success' && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
     needs: [build, test]
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Raised from 10 for the nf-agent-pi image build in release.sh step 1: installing binfmt,
+    # bootstrapping buildkit, pulling two base images and running an emulated arm64 `npm ci`
+    # and `apt-get` do not fit the old budget. Sized as a ceiling, not a budget - a timeout
+    # that fires mid-release.sh is the one failure the step-1 ordering does NOT make harmless,
+    # so erring high costs nothing on a run that succeeds. A cold `build-image.sh build` (both
+    # arches, --no-cache) measures ~15s on an arm64 developer Mac, but that number cannot be
+    # scaled: Docker Desktop runs the amd64 leg under Rosetta at near-native speed (emulated
+    # `npm ci` 5.9s vs 5.6s native), whereas this runner emulates arm64 through QEMU user-mode,
+    # which is slower by a large and unmeasured factor. Revisit once a real release reports its
+    # actual duration.
+    timeout-minutes: 45
     permissions:
-      actions: write
       contents: write
-      packages: write
-      pull-requests: write
-      issues: write
     steps:
+      # Intentionally persists credentials: the `release` task in
+      # packing.gradle runs `git push` and `git push origin vX.Y.Z` against
+      # this repo; both rely on actions/checkout having written the token
+      # into .git/config as http.extraheader.
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           fetch-depth: 0
           submodules: true
 
       - name: Setup Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           java-version: 17
-          distribution: 'temurin'
+          distribution: 'corretto'
           architecture: x64
           cache: gradle
 
       - name: Configure Git
+        env:
+          GIT_USER_NAME: ${{ github.event.pusher.name || github.actor }}
+          GIT_USER_EMAIL: ${{ github.event.pusher.email || format('{0}@users.noreply.github.com', github.actor) }}
         run: |
-          git config --global user.name "${{ github.event.pusher.name || github.actor }}"
-          git config --global user.email "${{ github.event.pusher.email || format('{0}@users.noreply.github.com', github.actor) }}"
+          git config --global user.name "$GIT_USER_NAME"
+          git config --global user.email "$GIT_USER_EMAIL"
 
       - name: Docker Login to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
         with:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # Also authorizes the nf-agent-pi runner image push in release.sh step 1: it publishes to
+      # public.cr.seqera.io/nextflow, the same registry and namespace this release already pushes
+      # `nextflow/nextflow` to (docker/Makefile). No new credential, and this login runs before
+      # `Run release`, so build-image.sh needs none of its own.
       - name: Docker Login to Seqera public CR
-        uses: docker/login-action@v3
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
         with:
           registry: "public.cr.seqera.io"
           username: ${{ vars.SEQERA_PUBLIC_CR_USERNAME }}
           password: ${{ secrets.SEQERA_PUBLIC_CR_PASSWORD }}
+
+      # The nf-agent-pi runner image is multi-arch, and the node stage of its Dockerfile is not
+      # pinned to $BUILDPLATFORM, so `apt-get` and `npm ci` execute on the target platform: the
+      # linux/arm64 leg needs binfmt emulation on this amd64 runner. Placed AFTER the Docker Hub
+      # login on purpose - the action does `docker run --privileged tonistiigi/binfmt`, and an
+      # anonymous Docker Hub pull from a shared runner IP hits `toomanyrequests`, which ahead of
+      # the login would abort every release, including ones whose image push would have skipped.
+      # No docker/setup-buildx-action: ensure_builder in build-image.sh creates and bootstraps
+      # the docker-container builder it then passes to --builder, so the action's builder would
+      # be created and never used.
+      - name: Set up QEMU for the runner image build
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+        with:
+          # Digest-pinned like every action in this file. The input's default is a floating
+          # docker.io/tonistiigi/binfmt:latest, which would otherwise be the only unpinned
+          # thing the release newly depends on.
+          image: docker.io/tonistiigi/binfmt:qemu-v9.2.2@sha256:1b804311fe87047a4c96d38b4b3ef6f62fca8cd125265917a9e3dc3c996c39e6
 
       - name: Run release
         run: |
@@ -292,5 +345,10 @@ jobs:
           # plugin registry
           NPR_API_URL: ${{ vars.NPR_API_URL }}
           NPR_API_KEY: ${{ secrets.NPR_API_KEY }}
+          # nf-agent-pi runner image (step 1). The push itself is authorized by the
+          # `Docker Login to Seqera public CR` step above; these are passed so build-image.sh
+          # can name them when a push is refused.
+          SEQERA_PUBLIC_CR_USERNAME: ${{ vars.SEQERA_PUBLIC_CR_USERNAME }}
+          SEQERA_PUBLIC_CR_PASSWORD: ${{ secrets.SEQERA_PUBLIC_CR_PASSWORD }}
           # GitHub secrets
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

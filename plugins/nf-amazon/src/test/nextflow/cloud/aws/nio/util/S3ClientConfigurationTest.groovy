@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,13 +12,10 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 package nextflow.cloud.aws.nio.util
 
 import nextflow.cloud.aws.config.AwsConfig
-import software.amazon.awssdk.auth.signer.AwsS3V4Signer
-import software.amazon.awssdk.core.client.config.SdkAdvancedClientOption
 import software.amazon.awssdk.http.SdkHttpConfigurationOption
 import spock.lang.Specification
 
@@ -43,6 +40,19 @@ class S3ClientConfigurationTest extends Specification{
         httpClientbuilder.standardOptions.get(SdkHttpConfigurationOption.CONNECTION_TIMEOUT).toMillis()== 20000
         httpClientbuilder.standardOptions.get(SdkHttpConfigurationOption.READ_TIMEOUT).toMillis() == 20000 //socket timeout
         httpClientbuilder.standardOptions.get(SdkHttpConfigurationOption.MAX_CONNECTIONS) == 100
+    }
+
+    def 'create S3 asynchronous client configuration with default socket timeout' (){
+        given:
+        def props = new Properties()
+        def config = new AwsConfig([client: [:]])
+        props.putAll(config.getS3LegacyProperties())
+        when:
+        def clientConfig = S3AsyncClientConfiguration.create(props)
+        then:
+        def httpConfiguration = clientConfig.getCrtHttpConfiguration()
+        httpConfiguration.healthConfiguration().minimumThroughputInBps() == 1
+        httpConfiguration.healthConfiguration().minimumThroughputTimeout().toMillis() == 30000
     }
 
     def 'create S3 asynchronous client configuration' (){
@@ -73,6 +83,9 @@ class S3ClientConfigurationTest extends Specification{
         httpConfiguration.proxyConfiguration().scheme() == 'https'
         httpConfiguration.proxyConfiguration().username() == 'user'
         httpConfiguration.proxyConfiguration().password() == 'pass'
+        //Check Timeout
+        httpConfiguration.healthConfiguration().minimumThroughputInBps() == 1
+        httpConfiguration.healthConfiguration().minimumThroughputTimeout().toMillis() == 20000
         //Check Crt Retry Configuration
         def retryConfig = clientConfig.getCrtRetryConfiguration()
         retryConfig.numRetries() == 3

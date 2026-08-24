@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,12 @@
 
 package nextflow.lineage
 
+import nextflow.NextflowMeta
+import nextflow.extension.FilesEx
 import nextflow.lineage.exception.OutputRelativePathException
+import nextflow.module.ModuleInfo
+import nextflow.module.ModuleSpecFactory
+import nextflow.module.ModuleStorage
 
 import static nextflow.lineage.fs.LinPath.*
 
@@ -26,8 +31,11 @@ import java.nio.file.attribute.BasicFileAttributes
 import java.time.OffsetDateTime
 
 import groovy.transform.CompileStatic
+import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.agent.AgentTaskInfo
+import nextflow.lineage.model.v1beta1.AgentRun
 import nextflow.lineage.model.v1beta1.Checksum
 import nextflow.lineage.model.v1beta1.FileOutput
 import nextflow.lineage.model.v1beta1.DataPath
@@ -40,6 +48,7 @@ import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.processor.TaskHasher
 import nextflow.processor.TaskRun
+import nextflow.script.PlatformMetadata
 import nextflow.script.ScriptMeta
 import nextflow.script.params.BaseParam
 import nextflow.script.params.CmdEvalParam
@@ -55,6 +64,8 @@ import nextflow.script.params.StdInParam
 import nextflow.script.params.StdOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
+import nextflow.script.params.v2.ProcessInput
+import nextflow.script.params.v2.ProcessOutput
 import nextflow.trace.TraceObserverV2
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.TaskEvent
@@ -72,6 +83,9 @@ import nextflow.util.TestOnly
 @Slf4j
 @CompileStatic
 class LinObserver implements TraceObserverV2 {
+    private static Set<String> workflowMetadataPropertiesToRemove = Set.of(
+        "completed", "duration", "exitStatus", "errorMessage", "errorReport", "stats", "success" // Only existing at the end
+    )
     private static Map<Class<? extends BaseParam>, String> taskParamToValue = [
         (StdOutParam)  : "stdout",
         (StdInParam)   : "stdin",
@@ -133,7 +147,7 @@ class LinObserver implements TraceObserverV2 {
     }
 
     protected List<DataPath> collectScriptDataPaths(PathNormalizer normalizer) {
-        final allScripts = allScriptFiles()
+        final allScripts = allScriptFiles().sort()
         final result = new ArrayList<DataPath>(allScripts.size()+1)
         // the main script
         result.add( new DataPath(
@@ -148,7 +162,7 @@ class LinObserver implements TraceObserverV2 {
             final dataPath = new DataPath(normalizer.normalizePath(it.normalize()), Checksum.ofNextflow(it.text))
             result.add(dataPath)
         }
-        return result.sort{it.path}
+        return result
     }
 
     protected String storeWorkflowRun(PathNormalizer normalizer) {
@@ -164,7 +178,8 @@ class LinObserver implements TraceObserverV2 {
             session.uniqueId.toString(),
             session.runName,
             getNormalizedParams(session.params, normalizer),
-            SecretHelper.hideSecrets(session.config.deepClone()) as Map
+            SecretHelper.hideSecrets(session.config.deepClone()) as Map,
+            collectWorkflowMetadata(normalizer)
         )
         final executionHash = CacheHelper.hasher(value).hash().toString()
         store.save(executionHash, value)
@@ -247,12 +262,52 @@ class LinObserver implements TraceObserverV2 {
     }
 
     protected String storeTaskRun(TaskRun task, PathNormalizer normalizer) {
+        // an agent lowers to an ordinary task, so it lands here too - but its identity is the
+        // model/tools/skills it ran with, not a script, and it is recorded as an AgentRun
+        final agentInfo = task.config?.get(AgentTaskInfo.CONFIG_KEY)
+        final value = agentInfo instanceof AgentTaskInfo
+            ? newAgentRun(task, agentInfo, normalizer)
+            : newTaskRun(task, normalizer)
+        // store in the underlying persistence
+        final key = task.hash.toString()
+        store.save(key, value)
+        return key
+    }
+
+    protected AgentRun newAgentRun(TaskRun task, AgentTaskInfo info, PathNormalizer normalizer) {
+        // the checksum covers the canonical agent identity source - the same text that feeds the
+        // resume cache key. NOTE: task.script is deliberately NOT recorded; on the RPC runner path
+        // it embeds the per-invocation capability token, which must never be persisted.
         final codeChecksum = Checksum.ofNextflow(session.stubRun ? task.stubSource : task.source)
-        final value = new nextflow.lineage.model.v1beta1.TaskRun(
+        return new AgentRun(
+            session.uniqueId.toString(),
+            task.getName(),
+            codeChecksum,
+            info.runner,
+            info.model,
+            task.context?.get('$agentResolvedModel') as String,
+            info.instruction,
+            info.goal,
+            info.promptTemplate,
+            info.maxIterations,
+            info.outputSchema,
+            info.tools,
+            info.skills,
+            task.inputs ? manageTaskInputParameters(task.inputs, normalizer) : null,
+            task.isContainerEnabled() ? task.getContainerFingerprint() : null,
+            asUriString(executionHash),
+            getTaskModuleId(task)
+        )
+    }
+
+    protected nextflow.lineage.model.v1beta1.TaskRun newTaskRun(TaskRun task, PathNormalizer normalizer) {
+        final codeChecksum = Checksum.ofNextflow(session.stubRun ? task.stubSource : task.source)
+        return new nextflow.lineage.model.v1beta1.TaskRun(
             session.uniqueId.toString(),
             task.getName(),
             codeChecksum,
             task.script,
+            getTaskOutputEvals(task),
             task.inputs ? manageTaskInputParameters(task.inputs, normalizer) : null,
             task.isContainerEnabled() ? task.getContainerFingerprint() : null,
             normalizer.normalizePath(task.getCondaEnv()),
@@ -263,21 +318,60 @@ class LinObserver implements TraceObserverV2 {
                 normalizer.normalizePath(p.normalize()),
                 Checksum.ofNextflow(p) )
             },
-            asUriString(executionHash)
+            asUriString(executionHash),
+            getTaskModuleId(task)
         )
-
-        // store in the underlying persistence
-        final key = task.hash.toString()
-        store.save(key, value)
-        return key
     }
 
     protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
         return new TaskHasher(task).getTaskGlobalVars()
     }
 
+    protected String getTaskModuleId(TaskRun task) {
+        final ownerScript = task.processor?.getOwnerScript()
+        if( !ownerScript )
+            return null
+
+        final scriptMeta = ScriptMeta.get(ownerScript)
+        if( !scriptMeta || !scriptMeta.isModule() )
+            return null
+        return extractModuleInfo(scriptMeta.getScriptPath())
+    }
+
+    @Memoized
+    protected String extractModuleInfo(Path scriptPath) {
+        if( !scriptPath )
+            return null
+        final moduleDir = scriptPath.getParent()
+        if( !moduleDir )
+            return null
+        final manifestPath = moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
+        // presence of the `.module-info` marker is how we identify a directory as
+        // a Nextflow-managed remote module (vs. any directory that contains a meta.yml)
+        final infoPath = moduleDir.resolve(ModuleInfo.MODULE_INFO_FILE)
+        if( !manifestPath.exists() || !infoPath.exists() )
+            return null
+        try {
+            final spec = ModuleSpecFactory.fromYaml(manifestPath)
+            if( !spec.name || !spec.version ) {
+                log.debug("Incomplete module manifest '${manifestPath.toUriString()}': missing name or version")
+                return null
+            }
+            return "${spec.name}@${spec.version}".toString()
+        }
+        catch( Exception e ) {
+            log.warn("Unable to read module manifest '${manifestPath.toUriString()}': ${e.message}")
+            return null
+        }
+    }
+
     protected List<Path> getTaskBinEntries(TaskRun task) {
         return new TaskHasher(task).getTaskBinEntries(task.source)
+    }
+
+    protected Map<String,String> getTaskOutputEvals(TaskRun task) {
+        final outEvals = task.getOutputEvals()
+        return outEvals ? new LinkedHashMap<String,String>(outEvals) : null
     }
 
     protected String storeTaskOutput(TaskRun task, Path path) {
@@ -396,14 +490,20 @@ class LinObserver implements TraceObserverV2 {
     protected static String getParameterType(Object param) {
         if( param instanceof BaseParam )
             return taskParamToValue.get(param.class)
+        // typed (v2) process/agent params are not BaseParam, so without this they would be
+        // recorded as the literal type names 'ProcessInput'/'ProcessOutput'
+        if( param instanceof ProcessInput )
+            return Path.isAssignableFrom(param.getType() ?: Object) ? 'path' : 'val'
+        if( param instanceof ProcessOutput )
+            return Path.isAssignableFrom(param.getType() ?: Object) ? 'path' : 'val'
         // return generic types
         if( param instanceof Path )
             return Path.simpleName
-        if (param instanceof CharSequence)
+        if( param instanceof CharSequence )
             return String.simpleName
         if( param instanceof Collection )
             return Collection.simpleName
-        if( param instanceof Map)
+        if( param instanceof Map )
             return Map.simpleName
         if( param==null ) {
             log.debug "Unexpected lineage param type null"
@@ -482,5 +582,29 @@ class LinObserver implements TraceObserverV2 {
             )
         }
         return paths
+    }
+
+    /**
+     * Collects lineage data from workflow metadata applying the following transformations:
+     *  - Normalizes paths against the original remote URL, or work directory and convert to URI strings
+     *  - Remove transient properties (completed, duration, exitStatus, errorMessage, errorReport, stats, success)
+     *  - Convert Nextflow metadata as Json Map
+     * @param normalizer
+     * @return Map with workflow metadata or null when error
+     */
+    private Map collectWorkflowMetadata(PathNormalizer normalizer) {
+        try {
+            def metadata = session.workflowMetadata.toMap()
+                .collectEntries { it.value instanceof Path ? [it.key, FilesEx.toUriString(it.value as Path) ] : [it.key, it.value] }
+            metadata.removeAll {it.key.toString() in workflowMetadataPropertiesToRemove }
+            if( metadata.containsKey("nextflow") )
+                metadata["nextflow"] = (metadata["nextflow"] as NextflowMeta).toJsonMap()
+            if( metadata.containsKey("configFiles") )
+                metadata["configFiles"] = (metadata["configFiles"] as List<Path>).collect {normalizer.normalizePath(it)}
+            return metadata
+        } catch( Throwable e) {
+            log.debug("Error creating metadata", e)
+            return null
+        }
     }
 }

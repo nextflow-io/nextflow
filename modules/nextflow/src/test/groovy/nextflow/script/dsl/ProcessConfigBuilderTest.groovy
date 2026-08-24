@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,14 @@ class ProcessConfigBuilderTest extends Specification {
 
     def createBuilder() {
         new ProcessConfigBuilder(new ProcessConfig([:]))
+    }
+
+    def 'should return distinct selector names in precedence order'() {
+        expect:
+        ConfigSelectorResolver.distinctNames('declared', 'alias', 'FLOW:alias') ==
+            ['declared', 'alias', 'FLOW:alias']
+        ConfigSelectorResolver.distinctNames('same', 'same', 'same') == ['same']
+        ConfigSelectorResolver.distinctNames('declared', 'alias', 'alias') == ['declared', 'alias']
     }
 
     @Unroll

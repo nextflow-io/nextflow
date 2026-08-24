@@ -90,6 +90,15 @@ The project follows a modular architecture with a plugin-based system for cloud 
 
 - **DCO sign-off required**: All commits must be signed by adding a `Signed-off-by` line to the commit message or by using the `-s` option (see CONTRIBUTING.md for details).
 - **Always use sign-off**: Use `git commit -s` or `git commit --signoff` for commits to avoid DCO bot issues
+- **Attribute AI assistance in commits.** When AI tooling assisted on
+  a change, consider adding an `Assisted-by:` trailer naming the
+  tool(s). For example:
+
+  ```
+  Assisted-by: <tool name and version>
+  ```
+
+  `Co-authored-by:` should only be used for human co-authors.
 - **CI control tags**: Use special tags in commit messages to control CI behavior:
   - `[ci skip]` - Skip the execution of CI tests
   - `[ci fast]` - Run only unit tests and skip integration tests
@@ -110,7 +119,7 @@ The project follows a modular architecture with a plugin-based system for cloud 
 
 Follow these actions to make a new release:
 
-- Update the `changelog.txt` file in each plugin sub-project (if any change has been done).
+- Update the `CHANGELOG.md` file in each plugin sub-project (if any change has been done).
 - Update the `VERSION` file in in each plugin sub-project.
   Use a semantic version number depending the impact of the change, or do not change
   if no changes have been done to the plugin.
@@ -119,14 +128,17 @@ Follow these actions to make a new release:
 - Commit the version and changelog files changes independently for each plugin. Use as commit
   message the template `Bump plugin-name@version` e.g. `Bump nf-amazon@2.0.0.
 - Update `VERSION` file in the project root using a calendar-like versioning scheme. Versions in the 4-th and 10-th month are "stable releases", e.g. `25.10.0`, while versions in all other months are "edge releases", e.g. `25.09.0-edge`.
-- Update the project root `changelog.txt` with changes since the past release. Use the git log
+- Update the project root `CHANGELOG.md` with changes since the past release. Use the git log
   command to determine what changed e.g. `git log v<PREVIOUS VERSION>..`
+- Run `make check-agent-image` to confirm the nf-agent-pi runner image still builds and its
+  version is in step with its build context. A failure here means bumping the plugin VERSION,
+  fixing the Dockerfile, or both — do it before cutting the release commit.
 - Run `make releaseInfo` to update the version number and generate checksums.
 - Run this command to stage for commit the release files:
     ```
     git add \
       VERSION \
-      changelog.txt \
+      CHANGELOG.md \
       nextflow \
       nextflow.md5 \
       nextflow.sha1 \

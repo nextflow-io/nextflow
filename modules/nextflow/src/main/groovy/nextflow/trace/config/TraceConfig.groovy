@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -54,7 +54,7 @@ class TraceConfig implements ConfigScope {
 
     @ConfigOption(types=[String])
     @Description("""
-        Comma-separated list of [trace fields](https://nextflow.io/docs/latest/tracing.html#trace-report) to include in the report.
+        Comma-separated list of [trace fields](https://docs.seqera.io/nextflow/reports#trace-file) to include in the report.
     """)
     final List<String> fields
 

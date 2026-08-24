@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,9 @@
 
 package nextflow.script
 
-import spock.lang.Specification
-
+import nextflow.NF
 import nextflow.extension.OpCall
+import spock.lang.Specification
 
 /**
  *
@@ -27,7 +27,7 @@ import nextflow.extension.OpCall
 class WorkflowBindingTest extends Specification {
 
     def setupSpec() {
-        WorkflowBinding.init()
+        NF.init()
     }
 
     def 'should lookup variables' () {
@@ -51,13 +51,13 @@ class WorkflowBindingTest extends Specification {
         def ARGS = ['alpha','beta'] as Object[]
         def binding = Spy(WorkflowBinding)
         binding.@meta = Mock(ScriptMeta)
-        
+
         // should invoke an extension component
         when:
         def result = binding.invokeMethod('foo', ARGS)
         then:
         1 * binding.getComponent0('foo') >> FOO
-        1 * FOO.invoke_o(ARGS) >> 'Hello'
+        1 * FOO.invoke_a(ARGS) >> 'Hello'
         result == 'Hello'
 
         // should invoke an extension operator
@@ -69,13 +69,28 @@ class WorkflowBindingTest extends Specification {
         (result as OpCall).methodName == 'map'
         (result as OpCall).args == ARGS
 
-        // should throw missing method exception 
+        // should throw missing method exception
         when:
         binding.invokeMethod('foo', ARGS)
         then:
         1 * binding.getComponent0('foo') >> null
         thrown(MissingMethodException)
 
+    }
+
+    def 'should not fail when tracing a method call' () {
+        given:
+        def BOOM = new Object() {
+            @Override
+            String toString() { throw new MissingPropertyException('task', Object) }
+        }
+        def ARGS = [BOOM] as Object[]
+
+        when:
+        def result = WorkflowBinding.renderArgs(ARGS)
+        then:
+        noExceptionThrown()
+        result == '<unable to render args: MissingPropertyException>'
     }
 
     def 'should get an extension method as variable' () {

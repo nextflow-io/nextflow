@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@ package nextflow.script.formatter
 
 import nextflow.script.control.ScriptParser
 import nextflow.script.control.ScriptResolveVisitor
-import nextflow.script.types.Types
+import nextflow.script.dsl.Types
 import spock.lang.Shared
 import spock.lang.Specification
 import test.TestUtils
@@ -43,6 +43,7 @@ class ScriptFormatterTest extends Specification {
         assert !TestUtils.hasSyntaxErrors(source)
         def formatter = new ScriptFormattingVisitor(source, new FormattingOptions(4, true))
         formatter.visit()
+        assert formatter.getMissingComments().isEmpty()
         return formatter.toString()
     }
 
@@ -111,7 +112,7 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
-    def 'should format a workflow definition' () {
+    def 'should format a legacy workflow definition' () {
         expect:
         checkFormat(
             '''\
@@ -151,14 +152,21 @@ class ScriptFormatterTest extends Specification {
             }
             '''
         )
+    }
 
+    def 'should format a typed workflow definition' () {
+        expect:
         checkFormat(
             '''\
+            nextflow.enable.types = true
+
             workflow hello{
             take: x:Integer ; y:Integer ; main: xy=x*y ; emit: result:Integer = xy
             }
             ''',
             '''\
+            nextflow.enable.types = true
+
             workflow hello {
                 take:
                 x: Integer
@@ -204,30 +212,84 @@ class ScriptFormatterTest extends Specification {
         expect:
         checkFormat(
             '''\
-            nextflow.preview.types=true
+            nextflow.enable.types=true
 
             process hello{
-            debug(true) ; input: (id,infile):Tuple<String,Path> ; index:Path ; stage: stageAs('input.txt',infile) ; output: result=tuple(id,file('output.txt')) ; script: 'cat input.txt > output.txt'
+            debug(true) ; input: tuple(id:String,infile:Path) ; index:Path ; stage: stageAs(infile,'input.txt') ; output: result=tuple(id,file('output.txt')) ; script: 'cat input.txt > output.txt'
             }
             ''',
             '''\
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process hello {
                 debug true
 
                 input:
-                (id, infile): Tuple<String, Path>
+                tuple(id: String, infile: Path)
                 index: Path
 
                 stage:
-                stageAs 'input.txt', infile
+                stageAs infile, 'input.txt'
 
                 output:
                 result = tuple(id, file('output.txt'))
 
                 script:
                 'cat input.txt > output.txt'
+            }
+            '''
+        )
+
+        checkFormat(
+            '''\
+            nextflow.enable.types=true
+
+            process hello{
+            input: record(id:String,infile:Path) ; script: 'cat input.txt > output.txt'
+            }
+            ''',
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                record(
+                    id: String,
+                    infile: Path
+                )
+
+                script:
+                'cat input.txt > output.txt'
+            }
+            '''
+        )
+    }
+
+    // -- an `agent` declaration must survive `nextflow lint -format`. Before the AgentNode
+    //    branch was added to the declaration dispatch, the node was walked and emitted NOTHING,
+    //    so formatting an agent module's `main.nf` deleted its entire content.
+    def 'should format an agent definition' () {
+        expect:
+        checkFormat(
+            '''\
+            nextflow.enable.types = true
+
+            agent reporter {
+                model 'openai/gpt-4o'
+                instruction 'You write QA reports.'
+                skills 'qa-report', 'style'
+
+                input:
+                sample: String
+                depth: Integer
+
+                output:
+                report: String
+
+                prompt:
+                """
+                Write a report for ${sample} at depth ${depth}.
+                """
             }
             '''
         )
@@ -292,16 +354,37 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    def 'should format a record definition' () {
+        expect:
+        checkFormat(
+            '''\
+            record FastqPair{id:String;fastq_1: Path;fastq_2: Path?}
+            ''',
+            '''\
+            record FastqPair {
+                id: String
+                fastq_1: Path
+                fastq_2: Path?
+            }
+            '''
+        )
+    }
+
     def 'should format an output block' () {
         expect:
         checkFormat(
             '''\
+            workflow{}
+
             output{
             foo{path'foo'}
             bar{path'bar';index{path'index.csv'}}
             }
             ''',
             '''\
+            workflow {
+            }
+
             output {
                 foo {
                     path 'foo'
@@ -317,12 +400,17 @@ class ScriptFormatterTest extends Specification {
         )
         checkFormat(
             '''\
+            workflow{}
+
             output{
             foo:Path{path'foo'}
             bar:Channel<Path>{path'bar';index{path'index.csv'}}
             }
             ''',
             '''\
+            workflow {
+            }
+
             output {
                 foo: Path {
                     path 'foo'
@@ -340,7 +428,7 @@ class ScriptFormatterTest extends Specification {
 
     def 'should not sort script declarations by default' () {
         given:
-        def source = 
+        def source =
             '''\
             params.foo = 'bar'
 
@@ -620,6 +708,14 @@ class ScriptFormatterTest extends Specification {
             [(x): 1]
             '''
         )
+        checkFormat(
+            '''\
+            [(x.y):1]
+            ''',
+            '''\
+            [(x.y): 1]
+            '''
+        )
     }
 
     def 'should format a closure' () {
@@ -716,11 +812,490 @@ class ScriptFormatterTest extends Specification {
             !(2+2==4)
             (1+2)*3
             x%2==0?'x is even!':'x is odd!'
+            (false?'foo':true)?'bar':'baz'
             ''',
             '''\
             !(2 + 2 == 4)
             (1 + 2) * 3
             x % 2 == 0 ? 'x is even!' : 'x is odd!'
+            (false ? 'foo' : true) ? 'bar' : 'baz'
+            '''
+        )
+    }
+
+    /// COMMENTS
+
+    def 'should preserve a trailing comment' () {
+        expect:
+        checkFormat(
+            '''\
+            params.index = null     // path to the index
+            ''',
+            '''\
+            params.index = null // path to the index
+            '''
+        )
+        checkFormat(
+            '''\
+            workflow {
+                x = 1 // about x
+                y = 2 // about y
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            workflow {
+                x = 1 // the last statement
+            }
+            '''
+        )
+    }
+
+    def 'should preserve a dangling comment' () {
+        expect:
+        // at the end of a block
+        checkFormat(
+            '''\
+            workflow {
+                x = channel.of(1)
+
+                // PROCESS_1(x)
+                // PROCESS_2(x)
+            }
+            '''
+        )
+        // in an empty block
+        checkFormat(
+            '''\
+            workflow {
+                // nothing here yet
+            }
+            '''
+        )
+        // at the end of the file
+        checkFormat(
+            '''\
+            workflow {
+                println('hi')
+            }
+
+            // process something {
+            // }
+            '''
+        )
+    }
+
+    def 'should preserve comments in a list or map literal' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                x = [
+                    // first
+                    1,
+                    2, // second
+                ]
+                y = [
+                    a: 1, // one
+                    // two
+                    b: 2,
+                ]
+            }
+            '''
+        )
+    }
+
+    def 'should preserve comments in call arguments' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                FOO(
+                    // first arg
+                    1,
+                    2, // second arg
+                )
+            }
+            '''
+        )
+    }
+
+    def 'should preserve comments in a process' () {
+        expect:
+        checkFormat(
+            '''\
+            process FOO {
+                // a directive
+                cpus 2
+
+                input:
+                // about x
+                val x
+
+                output:
+                path 'out.txt' // the output
+
+                script:
+                """
+                echo hi
+                """
+            }
+            '''
+        )
+    }
+
+    def 'should preserve comments in an agent' () {
+        expect:
+        checkFormat(
+            '''\
+            nextflow.enable.types = true
+
+            agent reporter {
+                // a directive
+                model 'openai/gpt-4o'
+
+                input:
+                // about sample
+                sample: String
+
+                output:
+                report: String // the report
+
+                prompt:
+                """
+                Write a report for ${sample}.
+                """
+            }
+            '''
+        )
+    }
+
+    def 'should preserve comments in an if/else' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                if (true) {
+                    // then branch
+                    x = 1
+                }
+                else {
+                    // else branch
+                    x = 2
+                }
+            }
+            '''
+        )
+    }
+
+    def 'should preserve a comment before an else branch' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                if (x) {
+                    a()
+                }
+                // otherwise
+                else if (y) {
+                    b()
+                }
+                // last resort
+                else {
+                    c()
+                }
+            }
+            '''
+        )
+    }
+
+    def 'should preserve a block comment' () {
+        expect:
+        checkFormat(
+            '''\
+            /*
+             * A block comment
+             */
+            workflow {
+                println('hi')
+            }
+            '''
+        )
+    }
+
+    def 'should preserve a file header' () {
+        expect:
+        checkFormat(
+            '''\
+            #!/usr/bin/env nextflow
+            /*
+             * Copyright 2013-2024, Seqera Labs
+             */
+
+            // enable the output DSL
+            nextflow.preview.output = true
+
+            /*
+             * Command line input parameter
+             */
+            params.query = 'data/sample.fa'
+            '''
+        )
+    }
+
+    def 'should preserve comments in a params block' () {
+        expect:
+        checkFormat(
+            '''\
+            params {
+                // Comma-separated list of IDs.
+                input: String
+
+                // Whether to save intermediate outputs.
+                save_intermeds: Boolean = false
+            }
+
+            workflow {
+                println(params.input)
+            }
+            '''
+        )
+    }
+
+    def 'should preserve comments on a function' () {
+        expect:
+        checkFormat(
+            '''\
+            /*
+             * does a thing
+             */
+            def foo(x) {
+                return x // give it back
+            }
+            '''
+        )
+    }
+
+    def 'should preserve a trailing comment on a single-line if' () {
+        expect:
+        // the branch is expanded onto its own line, so the comment trails
+        // the statement as a whole
+        checkFormat(
+            '''\
+            workflow {
+                if (!group) group = [1] // if new, create a new entry
+            }
+            ''',
+            '''\
+            workflow {
+                if (!group) {
+                    group = [1]
+                } // if new, create a new entry
+            }
+            '''
+        )
+    }
+
+    def 'should preserve a comment after a closure parameter list' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                x = [1, 2, 2, 3].reduce([:]) { acc, v -> // 'acc' collects all values
+                    acc[v] = 1
+                    return acc // give it back
+                }
+            }
+            ''',
+            '''\
+            workflow {
+                x = [1, 2, 2, 3].reduce([:]) { acc, v ->
+                    // 'acc' collects all values
+                    acc[v] = 1
+                    return acc // give it back
+                }
+            }
+            '''
+        )
+    }
+
+    def 'should preserve comments in a crlf source' () {
+        given:
+        def source = "// lead\r\nworkflow {\r\n    x = 1   // trail\r\n}\r\n"
+
+        expect:
+        format(source) == "// lead\nworkflow {\n    x = 1 // trail\n}\n"
+    }
+
+    def 'should hoist a comment that has no place to go' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+                x = 1 +
+                    // about the second operand
+                    2
+            }
+            ''',
+            '''\
+            workflow {
+                // about the second operand
+                x = 1 + 2
+            }
+            '''
+        )
+    }
+
+    def 'should preserve comments on method chain links' () {
+        expect:
+        // an end-of-line comment trails the link it follows
+        checkFormat(
+            '''\
+            workflow {
+                result = channel.of(1, 2)
+                    .map { it * 2 } // double
+                    .filter { it > 2 }
+                    .view()
+            }
+            '''
+        )
+        // an own-line comment leads the link it precedes
+        checkFormat(
+            '''\
+            workflow {
+                result = channel.of(1, 2)
+                    .map { it * 2 }
+                    // about the filter
+                    .filter { it > 2 }
+                    .view()
+            }
+            '''
+        )
+        // a comment forces the chain to wrap even when the source is one line
+        checkFormat(
+            '''\
+            workflow {
+                result = channel.of(1, 2).map { it * 2 } // double
+                    .view()
+            }
+            ''',
+            '''\
+            workflow {
+                result = channel.of(1, 2)
+                    .map { it * 2 } // double
+                    .view()
+            }
+            '''
+        )
+        // a namespace receiver is broken onto its own line for a comment
+        checkFormat(
+            '''\
+            workflow {
+                channel // about of
+                    .of(1)
+                    .view()
+            }
+            '''
+        )
+    }
+
+    /// MULTI-LINE STRINGS
+
+    def 'should re-indent a multi-line string with its statement' () {
+        expect:
+        // the statement moves right, so the string body moves right
+        checkFormat(
+            '''\
+            process FOO {
+              script:
+              """
+              echo hi
+                echo there
+              """
+            }
+            ''',
+            '''\
+            process FOO {
+                script:
+                """
+                echo hi
+                  echo there
+                """
+            }
+            '''
+        )
+        // the statement moves left, so the string body moves left
+        checkFormat(
+            '''\
+            process FOO {
+                script:
+                  """
+                  echo hi
+                    echo there
+                  """
+            }
+            ''',
+            '''\
+            process FOO {
+                script:
+                """
+                echo hi
+                  echo there
+                """
+            }
+            '''
+        )
+    }
+
+    def 'should never shift a string line past its content' () {
+        expect:
+        // `beta` has no indentation to give up, so it stays put and the
+        // relative indentation of the string body is not preserved
+        checkFormat(
+            '''\
+            workflow {
+                    x = """
+                      alpha
+            beta
+                      """
+                    println(x)
+            }
+            ''',
+            '''\
+            workflow {
+                x = """
+                  alpha
+            beta
+                  """
+                println(x)
+            }
+            '''
+        )
+    }
+
+    def 'should not re-indent a string whose statement starts mid-line' () {
+        expect:
+        // the closure body moved because the chain was wrapped, not because
+        // its indentation changed, so there is nothing meaningful to shift by
+        checkFormat(
+            '''\
+            workflow {
+              channel.of(1).map { v -> v }.view { """
+              value: ${v}
+              """ }
+            }
+            ''',
+            '''\
+            workflow {
+                channel.of(1)
+                    .map { v -> v }
+                    .view {
+                        """
+              value: ${v}
+              """
+                    }
+            }
             '''
         )
     }

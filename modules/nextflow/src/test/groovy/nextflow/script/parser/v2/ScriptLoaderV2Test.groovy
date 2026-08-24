@@ -1,9 +1,26 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.script.parser.v2
 
 import java.nio.file.Files
 
 import nextflow.Session
 import nextflow.exception.ScriptCompilationException
+import nextflow.processor.TaskProcessor
 import nextflow.script.BaseScript
 import nextflow.script.ScriptMeta
 import nextflow.script.WorkflowDef
@@ -164,7 +181,7 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         def parser = new ScriptLoaderV2(session)
 
         def TEXT = '''
-            workflow { 
+            workflow {
                 channel.of(1, 2, 3).view { it -> "${it}" }
             }
             '''
@@ -184,7 +201,7 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         def parser = new ScriptLoaderV2(session)
 
         def TEXT = '''
-            workflow { 
+            workflow {
                 assert "${'hello'}" == 'hello'
                 assert "${'hello'}" in ['hello']
             }
@@ -205,7 +222,7 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         session.executorFactory = new MockExecutorFactory()
         def parser = new ScriptLoaderV2(session)
 
-        def TEXT = '''
+        def TEXT = '''\
             process HELLO {
                 tag props.name
 
@@ -232,24 +249,33 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         noExceptionThrown()
     }
 
-    def 'should strip unsupported type annotations' () {
+    def 'should not wrap process directives that cannot be dynamic' () {
 
         given:
         def session = new Session()
+        session.executorFactory = new MockExecutorFactory()
         def parser = new ScriptLoaderV2(session)
 
-        def TEXT = '''
-            // strip cast type
-            ['1', '1.fastq', '2.fastq'] as Tuple<String,String,String>
+        def TEXT = '''\
+            process ECHO {
+                secret secrets.NCBI_API_KEY ? "NCBI_API_KEY" : ""
 
-            // strip type annotation in variable declaration
-            def ch: Channel = channel.empty()
+                script:
+                """
+                echo "NCBI_API_KEY=\\$NCBI_API_KEY"
+                """
+            }
+
+            workflow {
+                ECHO()
+            }
             '''
 
         when:
         parser.parse(TEXT)
         parser.runScript()
-
+        and:
+        TaskProcessor.currentProcessor().createTaskPreview().toTaskBean()
         then:
         noExceptionThrown()
     }
@@ -262,7 +288,7 @@ class ScriptLoaderV2Test extends Dsl2Spec {
 
         def TEXT = '''
 
-            nextflow.preview.types = true
+            nextflow.enable.types = true
 
             process hello {
 
@@ -319,36 +345,6 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         parser.getResult() == null
     }
 
-    def 'should support enums' () {
-
-        given:
-        def session = new Session()
-        def parser = new ScriptLoaderV2(session)
-
-        def TEXT = '''
-            enum Day {
-                MONDAY,
-                TUESDAY,
-                WEDNESDAY,
-                THURSDAY,
-                FRIDAY,
-                SATURDAY,
-                SUNDAY
-            }
-
-            workflow {
-                Day.TUESDAY
-            }
-            '''
-
-        when:
-        parser.parse(TEXT)
-        parser.runScript()
-
-        then:
-        parser.getResult().toString() == 'TUESDAY'
-    }
-
     def 'should report error for invalid publish statements in output block' () {
         given:
         def session = new Session()
@@ -379,6 +375,59 @@ class ScriptLoaderV2Test extends Dsl2Spec {
         then:
         def e = thrown(ScriptCompilationException)
         e.cause.message.contains 'Publish statements cannot be mixed with other statements in a dynamic publish path'
+    }
+
+    def 'should statically resolve agent names apart from process names' () {
+
+        given:
+        def session = new Session()
+        def parser = new ScriptLoaderV2(session)
+
+        def TEXT = '''
+            nextflow.enable.types = true
+
+            process greet {
+                script:
+                """
+                echo hi
+                """
+            }
+
+            agent critic {
+                model 'openai/gpt-5-mini'
+
+                input:
+                q: String
+
+                output:
+                a: String
+
+                prompt:
+                """
+                ${q}
+                """
+            }
+
+            workflow inner {
+                take:
+                ch
+
+                main:
+                greet()
+                critic(ch)
+            }
+
+            workflow {
+                inner(channel.of('x'))
+            }
+            '''
+
+        when: 'the script is compiled but not yet run, so only the static call-site walk has contributed'
+        parser.parse(TEXT)
+
+        then: 'the agent is reported under its fully-qualified name, on the agent axis only'
+        ScriptMeta.allAgentNames() == ['inner:critic'] as Set
+        ScriptMeta.allProcessNames() == ['inner:greet'] as Set
     }
 
 }

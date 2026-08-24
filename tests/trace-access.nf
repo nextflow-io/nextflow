@@ -1,5 +1,5 @@
 process foo {
-  memory { task.attempt > 1 ? task.previousTrace.memory * 2 : (1.GB) }
+  memory { task.attempt > 1 ? task.previousTrace.memory * 2 : (256.MB) }
   errorStrategy 'retry'
   maxRetries 3
   input:

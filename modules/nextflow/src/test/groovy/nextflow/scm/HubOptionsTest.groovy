@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +16,6 @@
 
 package nextflow.scm
 
-import nextflow.cli.HubOptions
 import spock.lang.Specification
 
 /**
@@ -28,19 +27,15 @@ class HubOptionsTest extends Specification {
     def testUser() {
 
         when:
-        def cmd = [:] as HubOptions
-        cmd.hubUser = credential
+        def opts = new HubOptions(null, credential)
         then:
-        cmd.getHubUser() == user
-        cmd.getHubPassword() == password
+        opts.getUser() == user
+        opts.getPassword() == password
 
         where:
-        credential      | user  | password
-        null            | null  | null
+        credential      | user      | password
+        null            | null      | null
         'paolo'         | 'paolo'   | null
         'paolo:secret'  | 'paolo'   | 'secret'
-
-
-
     }
 }

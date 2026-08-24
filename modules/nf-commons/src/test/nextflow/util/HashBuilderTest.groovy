@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -69,7 +69,7 @@ class HashBuilderTest extends Specification {
         path3.delete()
 
     }
-    
+
     def 'should validate is asset file'() {
         when:
         def BASE = Paths.get("/some/pipeline/dir")
@@ -136,7 +136,7 @@ class HashBuilderTest extends Specification {
         folder.resolve('dir1/xxx/yyy/bar2').text = "I'm bar 2 within yyy"
         and:
         // create the same directory structure using a different
-        // creation order, the resulting hash should be the same 
+        // creation order, the resulting hash should be the same
         folder.resolve('dir2/bar').text = "I'm bar"
         folder.resolve('dir2/foo').text = "I'm foo"
         folder.resolve('dir2/xxx').mkdirs()

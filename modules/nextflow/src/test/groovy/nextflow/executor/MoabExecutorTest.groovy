@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ class MoabExecutorTest extends Specification {
     def 'should cancel a task' () {
         given:
         def exec = new MoabExecutor()
-        
+
         expect:
         exec.killTaskCommand('123') == ['mjobctl', '-c', '123']
         exec.killTaskCommand(['111','222','333']) == ['mjobctl', '-c', '111,222,333']

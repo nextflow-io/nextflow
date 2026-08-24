@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -33,8 +33,8 @@ import static test.TestUtils.tempFile
  */
 class ResolveIncludeTest extends Specification {
 
-    List<SyntaxException> check(List<Path> files) {
-        final parser = new ScriptParser()
+    List<SyntaxException> check(Path projectDir, List<Path> files) {
+        final parser = new ScriptParser(projectDir)
         return TestUtils.check(parser, files)
     }
 
@@ -48,7 +48,7 @@ class ResolveIncludeTest extends Specification {
         def module = root.resolve('hello.nf')
 
         when:
-        def errors = check([main])
+        def errors = check(root, [main])
         then:
         errors.size() == 1
         errors[0].getStartLine() == 1
@@ -72,7 +72,7 @@ class ResolveIncludeTest extends Specification {
             ''')
 
         when:
-        def errors = check([main, module])
+        def errors = check(root, [main, module])
         then:
         errors.size() == 2
         errors[0].getSourceLocator().endsWith('main.nf')
@@ -102,7 +102,7 @@ class ResolveIncludeTest extends Specification {
             ''')
 
         when:
-        def errors = check([main, module])
+        def errors = check(root, [main, module])
         then:
         errors.size() == 1
         errors[0].getSourceLocator().endsWith('main.nf')
@@ -128,9 +128,138 @@ class ResolveIncludeTest extends Specification {
             ''')
 
         when:
-        def errors = check([main, module])
+        def errors = check(root, [main, module])
         then:
         errors.size() == 0
+
+        cleanup:
+        deleteDir(root)
+    }
+
+    // -- agent modules. An `agent` must bind through the ordinary include statement, in both the
+    //    plain-file and the directory (`main.nf`) form. The directory form matters twice over
+    //    because getLocalIncludeUri is duplicated verbatim in ResolveIncludeVisitor and
+    //    ModuleResolver (lint/LSP vs run); only a test driving the include catches a divergence.
+
+    private static final String AGENT_MODULE = '''\
+        nextflow.enable.types = true
+
+        agent reporter {
+            model 'openai/gpt-4o'
+            instruction 'You write QA reports.'
+
+            input:
+            sample: String
+
+            output:
+            report: String
+
+            prompt:
+            """
+            Report on ${sample}.
+            """
+        }
+        '''.stripIndent()
+
+    def 'should resolve an agent include from a module file' () {
+        given:
+        def root = tempDir()
+        def main = tempFile(root, 'main.nf',
+            '''\
+            include { reporter } from './reporter.nf'
+
+            workflow {
+                reporter('s1')
+            }
+            '''.stripIndent())
+        def module = tempFile(root, 'reporter.nf', AGENT_MODULE)
+
+        when:
+        def errors = check(root, [main, module])
+        then:
+        errors.size() == 0
+
+        cleanup:
+        deleteDir(root)
+    }
+
+    def 'should resolve an agent include from a module directory' () {
+        given:
+        def root = tempDir()
+        def main = tempFile(root, 'main.nf',
+            '''\
+            include { reporter } from './mods/reporter'
+
+            workflow {
+                reporter('s1')
+            }
+            '''.stripIndent())
+        def module = tempFile(root, 'mods/reporter/main.nf', AGENT_MODULE)
+
+        when:
+        def errors = check(root, [main, module])
+        then:
+        errors.size() == 0
+
+        cleanup:
+        deleteDir(root)
+    }
+
+    def 'should resolve an aliased agent include at the call site' () {
+        given:
+        def root = tempDir()
+        def main = tempFile(root, 'main.nf',
+            '''\
+            include { reporter as qc } from './mods/reporter'
+
+            workflow {
+                qc('s1')
+            }
+            '''.stripIndent())
+        def module = tempFile(root, 'mods/reporter/main.nf', AGENT_MODULE)
+
+        when:
+        def errors = check(root, [main, module])
+        then:
+        errors.size() == 0
+
+        cleanup:
+        deleteDir(root)
+    }
+
+    def 'should resolve an agent include that is never called' () {
+        given:
+        def root = tempDir()
+        def main = tempFile(root, 'main.nf',
+            '''\
+            include { reporter } from './mods/reporter'
+            '''.stripIndent())
+        def module = tempFile(root, 'mods/reporter/main.nf', AGENT_MODULE)
+
+        when:
+        def errors = check(root, [main, module])
+        then:
+        errors.size() == 0
+
+        cleanup:
+        deleteDir(root)
+    }
+
+    def 'should report an error for an undefined agent include' () {
+        given:
+        def root = tempDir()
+        def main = tempFile(root, 'main.nf',
+            '''\
+            include { nope } from './mods/reporter'
+            '''.stripIndent())
+        def module = tempFile(root, 'mods/reporter/main.nf', AGENT_MODULE)
+
+        when:
+        def errors = check(root, [main, module])
+        then:
+        errors.size() == 1
+        errors[0].getSourceLocator().endsWith('main.nf')
+        errors[0].getOriginalMessage() == "Included name 'nope' is not defined in module '${module}'"
 
         cleanup:
         deleteDir(root)

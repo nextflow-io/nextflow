@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -58,5 +58,5 @@ class S3PathSerializer extends Serializer<S3Path> implements SerializerRegistran
         log.trace "S3Path de-serialization > scheme: $scheme; path: $path"
         return (S3Path) S3PathFactory.create("s3://${path}")
     }
-    
+
 }

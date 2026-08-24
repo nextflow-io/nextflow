@@ -1,5 +1,5 @@
 /*
- * Copyright 2021, Microsoft Corp
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,13 +29,14 @@ import java.nio.file.attribute.UserPrincipalLookupService
 import java.time.Duration
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeoutException
-import java.util.function.Predicate
+import dev.failsafe.function.CheckedPredicate
 
 import com.azure.core.util.polling.SyncPoller
 import com.azure.storage.blob.BlobServiceClient
 import com.azure.storage.blob.models.BlobContainerItem
 import com.azure.storage.blob.models.BlobCopyInfo
 import com.azure.storage.blob.models.BlobItem
+import com.azure.storage.blob.models.BlobListDetails
 import com.azure.storage.blob.models.BlobStorageException
 import com.azure.storage.blob.models.ListBlobsOptions
 import dev.failsafe.Failsafe
@@ -270,8 +271,11 @@ class AzFileSystem extends FileSystem {
         }
 
         // -- list the bucket content
+        final options = new ListBlobsOptions()
+                .setPrefix(prefix)
+                .setDetails(new BlobListDetails().setRetrieveMetadata(true))
         final blobs = dir.containerClient()
-                .listBlobsByHierarchy(prefix)
+                .listBlobsByHierarchy('/', options, null)
                 .iterator()
 
         // wrap the result with a directory stream
@@ -527,7 +531,7 @@ class AzFileSystem extends FileSystem {
      * @param cond A predicate that determines when a retry should be triggered
      * @return The {@link dev.failsafe.RetryPolicy} instance
      */
-    protected <T> RetryPolicy<T> retryPolicy(Predicate<? extends Throwable> cond) {
+    protected <T> RetryPolicy<T> retryPolicy(CheckedPredicate<? extends Throwable> cond) {
         // this is needed because apparently bytebuddy used by testing framework is not able
         // to handle properly this method signature using both generics and `@Memoized` annotation.
         // therefore the `@Memoized` has been moved to the inner method invocation
@@ -535,12 +539,12 @@ class AzFileSystem extends FileSystem {
     }
 
     @Memoized
-    protected RetryPolicy retryPolicy0(Predicate<? extends Throwable> cond) {
+    protected RetryPolicy retryPolicy0(CheckedPredicate<? extends Throwable> cond) {
         final cfg = AzConfig.getConfig().retryConfig()
         final listener = new EventListener<ExecutionAttemptedEvent>() {
             @Override
             void accept(ExecutionAttemptedEvent event) throws Throwable {
-                log.debug("Azure I/O exception - attempt: ${event.attemptCount}; cause: ${event.lastFailure?.message}")
+                log.debug("Azure I/O exception - attempt: ${event.attemptCount}; cause: ${event.lastException?.message}")
             }
         }
         return RetryPolicy.builder()

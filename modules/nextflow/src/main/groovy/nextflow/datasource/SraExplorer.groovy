@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -38,10 +38,11 @@ import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
+import nextflow.util.ProxyConfig
 /**
  * Query NCBI SRA database and returns the retrieved FASTQs to the specified
  * target channel. Inspired to SRA-Explorer by Phil Ewels -- https://ewels.github.io/sra-explorer/
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -285,10 +286,10 @@ class SraExplorer {
             .build()
 
         httpClient = HxClient.newBuilder()
-            .httpClient(HttpClient.newBuilder()
-                .version(HttpClient.Version.HTTP_1_1)
-                .followRedirects(HttpClient.Redirect.NORMAL)
-                .build())
+            .version(HttpClient.Version.HTTP_1_1)
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            // route through the forward proxy when configured
+            .withProxyConfig(ProxyConfig.proxyConfig())
             .retryConfig(config)
             .build()
 

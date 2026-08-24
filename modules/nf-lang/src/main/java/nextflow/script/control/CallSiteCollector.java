@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import nextflow.script.ast.ASTNodeMarker;
+import nextflow.script.ast.AgentNode;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.WorkflowNode;
@@ -63,7 +64,7 @@ public class CallSiteCollector {
 
             if( node.isImplicitThis() ) {
                 var mn = (MethodNode) node.getNodeMetaData(ASTNodeMarker.METHOD_TARGET);
-                if( mn instanceof WorkflowNode || mn instanceof ProcessNode )
+                if( mn instanceof WorkflowNode || mn instanceof ProcessNode || mn instanceof AgentNode )
                     calls.put(node.getMethodAsString(), mn);
             }
         }

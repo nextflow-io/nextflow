@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +17,7 @@
 package nextflow.trace
 
 import nextflow.Session
+import nextflow.SysEnv
 import spock.lang.Specification
 import spock.lang.Unroll
 
@@ -25,6 +26,33 @@ import spock.lang.Unroll
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class AnsiLogObserverTest extends Specification {
+
+    @Unroll
+    def 'should resolve terminal width from environment' () {
+        given:
+        SysEnv.push(ENV)
+
+        expect:
+        AnsiLogObserver.getEnvTerminalWidth() == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        ENV                                         | EXPECTED
+        [:]                                         | null
+        [COLUMNS: '50']                             | 50
+        [COLUMNS: '']                               | null
+        [COLUMNS: 'abc']                            | null
+        [COLUMNS: '0']                              | null
+        [COLUMNS: '-10']                            | null
+        [COLUMNS: '2147483648']                     | null
+        [TERMINAL_WIDTH: '60']                      | 60
+        [TERMINAL_WIDTH: '60', COLUMNS: '50']       | 60
+        [TERMINAL_WIDTH: 'invalid', COLUMNS: '50']  | 50
+        [TERMINAL_WIDTH: '0', COLUMNS: '50']        | 50
+        [TERMINAL_WIDTH: '-1', COLUMNS: '50']       | 50
+    }
 
     @Unroll
     def 'should render a process line' () {
@@ -145,6 +173,36 @@ class AnsiLogObserverTest extends Specification {
         WORKDIR                          | EXPECTED_HREF
         '/work/4e/486876abc'             | 'file:///work/4e/486876abc'
         's3://bucket/work/4e/486876abc'  | 's3://bucket/work/4e/486876abc'
+    }
+
+    def 'should strip ansi escape codes' () {
+        expect:
+        AnsiLogObserver.stripAnsi('hello') == 'hello'
+        AnsiLogObserver.stripAnsi('\033[32mgreen\033[0m') == 'green'
+        AnsiLogObserver.stripAnsi('\033[1;31mbold red\033[0m') == 'bold red'
+        AnsiLogObserver.stripAnsi('\033]8;;http://example.com\007link\033]8;;\007') == 'link'
+        AnsiLogObserver.stripAnsi('\033[2m[\033[0m\033[34mab/123456\033[0m\033[2m] \033[0mfoo') == '[ab/123456] foo'
+    }
+
+    @Unroll
+    def 'should count visual lines with wrapping' () {
+        given:
+        def observer = new AnsiLogObserver()
+        observer.@cols = COLS
+
+        expect:
+        observer.countVisualLines(INPUT) == EXPECTED
+
+        where:
+        COLS | INPUT                        | EXPECTED
+        80   | 'short line\n'               | 1
+        80   | 'line1\nline2\n'             | 2
+        80   | 'a' * 80 + '\n'              | 1       // exactly fits, no wrap
+        80   | 'a' * 81 + '\n'              | 2       // wraps to 2 lines
+        80   | 'a' * 160 + '\n'             | 2       // exactly 2 lines
+        80   | 'a' * 161 + '\n'             | 3       // wraps to 3 lines
+        40   | 'a' * 100 + '\n'             | 3       // 100 chars in 40-col terminal
+        80   | 'short\n' + 'a' * 200 + '\n'| 4       // 1 + 3 lines
     }
 
     def 'should not render hyperlink when cleanup is enabled' () {

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +22,6 @@ import java.nio.file.Paths
 import ch.qos.logback.classic.Level
 import groovyx.gpars.dataflow.DataflowQueue
 import groovyx.gpars.dataflow.DataflowVariable
-import nextflow.cli.CliOptions
 import nextflow.extension.OpCall
 import nextflow.script.BaseScript
 import nextflow.script.ScriptBinding
@@ -48,7 +47,7 @@ class LoggerHelperTest extends Specification {
 
         expect:
         LoggerHelper.getErrorLine(LINE, names) == EXPECTED
-        
+
         where:
         EXPECTED                        | LINE
         null                            | 'at nextflow.script.ScriptRunner.run(ScriptRunner.groovy:289)'
@@ -64,7 +63,7 @@ class LoggerHelperTest extends Specification {
     def 'should create LoggerHelper object' () {
 
         given:
-        def logger = new LoggerHelper(Mock(CliOptions))
+        def logger = new LoggerHelper(new LoggerOptions(false, false, null, null, false, null, null))
         when:
         logger.setDaemon(true)
         then:

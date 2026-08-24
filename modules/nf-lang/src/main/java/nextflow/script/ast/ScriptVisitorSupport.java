@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,10 +40,14 @@ public abstract class ScriptVisitorSupport extends ClassCodeVisitorSupport imple
             visitWorkflow(workflowNode);
         for( var processNode : script.getProcesses() )
             visitProcess(processNode);
+        for( var agentNode : script.getAgents() )
+            visitAgent(agentNode);
         for( var functionNode : script.getFunctions() )
             visitFunction(functionNode);
         for( var classNode : script.getClasses() ) {
-            if( classNode.isEnum() )
+            if( classNode instanceof RecordNode rn )
+                visitRecord(rn);
+            else if( classNode.isEnum() )
                 visitEnum(classNode);
         }
         if( script.getOutputs() != null )
@@ -84,6 +88,13 @@ public abstract class ScriptVisitorSupport extends ClassCodeVisitorSupport imple
     }
 
     @Override
+    public void visitAgent(AgentNode node) {
+        visit(node.directives);
+        visit(node.outputs);
+        visit(node.prompt);
+    }
+
+    @Override
     public void visitProcess(ProcessNode node) {
         if( node instanceof ProcessNodeV2 pn )
             visitProcessV2(pn);
@@ -115,6 +126,12 @@ public abstract class ScriptVisitorSupport extends ClassCodeVisitorSupport imple
     @Override
     public void visitFunction(FunctionNode node) {
         visit(node.getCode());
+    }
+
+    @Override
+    public void visitRecord(RecordNode node) {
+        for( var fn : node.getFields() )
+            visitField(fn);
     }
 
     @Override

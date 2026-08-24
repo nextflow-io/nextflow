@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -40,6 +40,8 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
     private String runCmd0
 
     private Boolean ociMode
+
+    protected boolean resourceLimits
 
     SingularityBuilder(String name) {
         this.image = name
@@ -84,6 +86,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
             this.addEngineOptions(config.engineOptions)
 
         this.ociMode = config.ociMode
+        this.resourceLimits = config.resourceLimits
 
         if( config.runOptions )
             this.addRunOptions(config.runOptions)
@@ -131,6 +134,13 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
         if( ociMode != null )
             result << (ociMode ? '--oci ' : '--no-oci ')
+
+        if( resourceLimits ) {
+            if( cpus )
+                result << "--cpus ${cpus} "
+            if( memory )
+                result << "--memory ${memory} "
+        }
 
         if( autoMounts ) {
             makeVolumes(mounts, result)

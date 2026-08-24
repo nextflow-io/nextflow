@@ -1,11 +1,24 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.trace
 
 import spock.lang.Specification
 
-import java.util.concurrent.Executors
-
 import groovy.json.JsonSlurper
-import nextflow.Session
 
 /**
  *
@@ -21,12 +34,7 @@ class ResourcesAggregatorTest extends Specification {
 
     def 'should render summary json' () {
         given:
-        def executor = Executors.newCachedThreadPool()
-        def session = Mock(Session) {
-            getExecService() >> executor
-        }
-
-        def observer = new ResourcesAggregator(session)
+        def observer = new ResourcesAggregator()
         observer.aggregate(r1)
         observer.aggregate(r2)
         observer.aggregate(r3)
@@ -119,21 +127,13 @@ class ResourcesAggregatorTest extends Specification {
         result[1].timeUsage.q2 == 102.50
         result[1].timeUsage.q3 == 108.75
         result[1].timeUsage.mean == 102.50
-
-        cleanup:
-        observer?.executor?.shutdown()
     }
 
 
     def 'should compute summary list' () {
 
         given:
-        def executor = Executors.newCachedThreadPool()
-        def session = Mock(Session) {
-            getExecService() >> executor
-        }
-
-        def observer = new ResourcesAggregator(session)
+        def observer = new ResourcesAggregator()
         observer.aggregate(r1)
         observer.aggregate(r2)
         observer.aggregate(r3)
@@ -156,20 +156,12 @@ class ResourcesAggregatorTest extends Specification {
         result[1].mem."max" == 22000.0
         result[1].time.min == 18000
         result[1].time.max == 23000
-
-        cleanup:
-        observer?.executor?.shutdown()
     }
 
 
     def 'should maintain insertion order' () {
         given:
-        def executor = Executors.newCachedThreadPool()
-        def session = Mock(Session) {
-            getExecService() >> executor
-        }
-
-        def observer = new ResourcesAggregator(session)
+        def observer = new ResourcesAggregator()
         observer.aggregate(new TraceRecord([process: 'gamma', name: 'gamma-1']))
         observer.aggregate(new TraceRecord([process: 'delta', name: 'delta-1']))
         observer.aggregate(new TraceRecord([process: 'delta', name: 'delta-2']))

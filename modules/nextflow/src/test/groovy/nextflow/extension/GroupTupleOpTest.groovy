@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -146,7 +146,7 @@ class GroupTupleOpTest extends Specification {
         def sampleName = "sample1"
         def gstringKey = "${sampleName}"  // GStringImpl
         def stringKey = "sample1"         // String
-        
+
         def tuples = [
                 [gstringKey, 'file1.txt'],
                 [stringKey, 'file2.txt'],

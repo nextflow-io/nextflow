@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-nextflow.preview.types = true
+nextflow.enable.types = true
 
 process foo {
     output:
@@ -42,5 +42,5 @@ process bar {
 
 
 workflow {
-  foo | bar
+  bar(foo())
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import nextflow.script.ast.AgentNode;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.WorkflowNode;
@@ -28,8 +29,11 @@ import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.control.SourceUnit;
 
 /**
- * Resolve all fully-qualified process names invoked
+ * Resolve all fully-qualified process and agent names invoked
  * (directly or indirectly) by an entry workflow.
+ *
+ * <p>The two kinds are kept apart because they are configured by separate scopes:
+ * a {@code process} selector never applies to an agent, and vice versa.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
@@ -41,8 +45,9 @@ public class ProcessNameResolver {
         this.callSites = callSites;
     }
 
-    public Set<String> resolve(SourceUnit main) {
-        var result = new HashSet<String>();
+    public Names resolve(SourceUnit main) {
+        var processNames = new HashSet<String>();
+        var agentNames = new HashSet<String>();
         var queue = new LinkedList<CallScope>();
 
         if( main.getAST() instanceof ScriptNode sn && sn.getEntry() != null )
@@ -58,13 +63,25 @@ public class ProcessNameResolver {
                 }
                 else if( mn instanceof ProcessNode pn ) {
                     var processName = fullyQualifiedName(scope.name(), name);
-                    result.add(processName);
+                    processNames.add(processName);
+                }
+                else if( mn instanceof AgentNode an ) {
+                    var agentName = fullyQualifiedName(scope.name(), name);
+                    agentNames.add(agentName);
                 }
             });
         }
 
-        return result;
+        return new Names(processNames, agentNames);
     }
+
+    /**
+     * The fully-qualified names invoked by the entry workflow, split by kind.
+     */
+    public record Names(
+        Set<String> processes,
+        Set<String> agents
+    ) {}
 
     private String fullyQualifiedName(String scope, String name) {
         return scope.isEmpty()

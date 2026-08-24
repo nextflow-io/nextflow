@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -56,8 +56,7 @@ import groovyx.gpars.dataflow.DataflowReadChannel
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Global
 import nextflow.Session
-import nextflow.cli.CliOptions
-import nextflow.cli.Launcher
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.exception.PlainExceptionMessage
 import nextflow.exception.ProcessException
@@ -99,7 +98,7 @@ class LoggerHelper {
 
     static private LoggerHelper INSTANCE
 
-    private CliOptions opts
+    private LoggerOptions opts
 
     private boolean rolling = false
 
@@ -148,7 +147,7 @@ class LoggerHelper {
         return this
     }
 
-    LoggerHelper(CliOptions opts) {
+    LoggerHelper(LoggerOptions opts) {
         this.opts = opts
         this.loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory()
     }
@@ -258,9 +257,9 @@ class LoggerHelper {
 
     protected Appender createConsoleAppender() {
 
-        final Appender<ILoggingEvent> result = daemon && opts.isBackground()
+        final Appender<ILoggingEvent> result = daemon && opts.background
                 ? (Appender<ILoggingEvent>) null
-                : (opts.ansiLog ? new CaptureAppender() : new ConsoleAppender<ILoggingEvent>())
+                : ((opts.ansiLog || SysEnv.isAgentMode()) ? new CaptureAppender() : new ConsoleAppender<ILoggingEvent>())
         if( result )  {
             final filter = new ConsoleLoggerFilter( packages )
             filter.setContext(loggerContext)
@@ -357,11 +356,11 @@ class LoggerHelper {
      * @param traceConf The list of packages for which use a Trace logging level
      */
 
-    static void configureLogger( Launcher launcher ) {
-        INSTANCE = new LoggerHelper(launcher.options)
-                .setDaemon(launcher.isDaemon())
+    static void configureLogger(LoggerOptions opts, boolean daemon) {
+        INSTANCE = new LoggerHelper(opts)
+                .setDaemon(daemon)
                 .setRolling(true)
-                .setSyslog(launcher.options.syslog)
+                .setSyslog(opts.syslog)
                 .setup()
     }
 
@@ -703,7 +702,7 @@ class LoggerHelper {
 
     /**
      * Capture logging events and forward them to. This is only used when
-     * ANSI interactive logging is enabled
+     * ANSI interactive logging or agent logging is enabled
      */
     static private class CaptureAppender extends AppenderBase<ILoggingEvent> {
 
@@ -713,21 +712,23 @@ class LoggerHelper {
 
             try {
                 final message = fmtEvent(event, session, false)
-                final renderer = session?.ansiLogObserver
-                if( !renderer || !renderer.started || renderer.stopped )
-                    System.out.println(message)
 
-                else if( event.marker == STICKY )
-                    renderer.appendSticky(message)
-
-                else if( event.level==Level.ERROR )
-                    renderer.appendError(message)
-
-                else if( event.level==Level.WARN )
-                    renderer.appendWarning(message)
-
-                else
-                    renderer.appendInfo(message)
+                final observer = session?.logObserver
+                if( observer ) {
+                    if( !observer.started || observer.stopped )
+                        System.err.println(message)
+                    else if( event.marker == STICKY )
+                        observer.appendSticky(message)
+                    else if( event.level==Level.ERROR )
+                        observer.appendError(message)
+                    else if( event.level==Level.WARN )
+                        observer.appendWarning(message)
+                    else
+                        observer.appendInfo(message)
+                }
+                else {
+                    System.err.println(message)
+                }
             }
             catch (Throwable e) {
                 e.printStackTrace()

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,9 +42,13 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     private ScriptMeta meta
 
+    private boolean typingEnabled
+
+    private ParamsDef paramsDef
+
     private WorkflowDef entryFlow
 
-    private OutputDef publisher
+    private OutputDef outputDef
 
     BaseScript() {
         meta = ScriptMeta.register(this)
@@ -62,6 +66,10 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
     Session getSession() {
         session
+    }
+
+    boolean isTypingEnabled() {
+        return typingEnabled
     }
 
     /**
@@ -98,23 +106,48 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     /**
+     * Enable static typing for the script.
+     */
+    protected void enableTyping() {
+        log.warn1 "Static typing is a preview feature -- syntax and behavior may change in future releases"
+        this.typingEnabled = true
+    }
+
+    /**
      * Define a params block.
      *
+     * @param clazz
      * @param body
      */
-    protected void params(Closure body) {
+    protected void params(Class clazz, Closure body) {
         if( entryFlow )
             throw new IllegalStateException("Workflow params definition must be defined before the entry workflow")
         if( ExecutionStack.withinWorkflow() )
             throw new IllegalStateException("Workflow params definition is not allowed within a workflow")
 
-        final dsl = new ParamsDsl()
-        final cl = (Closure)body.clone()
-        cl.setDelegate(dsl)
-        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
-        cl.call()
+        this.paramsDef = new ParamsDef(clazz, body)
+    }
 
-        dsl.apply(session)
+    /**
+     * Define an agent.
+     *
+     * Mirrors {@link #processV2(String, Closure)} — the lowered agent closure runs
+     * against an {@link AgentBuilder} delegate that captures directives, inputs,
+     * outputs and the prompt, then builds the populated {@link AgentDef}.
+     * The agent executes via {@link AgentDef#run} (see the nf-agent plugin runner).
+     *
+     * @param name
+     * @param body
+     */
+    protected void agent(String name, Closure<PromptDef> body) {
+        log.warn1 "Agents are a preview feature -- syntax and behavior may change in future releases"
+        final builder = new AgentBuilder(this, name)
+        final cl = (Closure<PromptDef>) body.clone()
+        cl.setDelegate(builder)
+        cl.setResolveStrategy(Closure.DELEGATE_FIRST)
+        final prompt = cl.call()
+        final agent = builder.withPrompt(prompt).build()
+        meta.addDefinition(agent)
     }
 
     /**
@@ -177,21 +210,35 @@ abstract class BaseScript extends Script implements ExecutionContext {
     /**
      * Define an output block.
      *
-     * @param closure
+     * @param body
      */
-    protected void output(Closure closure) {
+    protected void output(Closure body) {
         if( !entryFlow )
             throw new IllegalStateException("Workflow output definition must be defined after the entry workflow")
         if( ExecutionStack.withinWorkflow() )
             throw new IllegalStateException("Workflow output definition is not allowed within a workflow")
 
-        publisher = new OutputDef(closure)
+        this.outputDef = new OutputDef(body)
     }
 
+    /**
+     * Include definitions from another script.
+     *
+     * @param include
+     */
     protected IncludeDef include( IncludeDef include ) {
-        if(ExecutionStack.withinWorkflow())
+        if( ExecutionStack.withinWorkflow() )
             throw new IllegalStateException("Include statement is not allowed within a workflow definition")
-        include .setSession(session)
+        return include.setSession(session)
+    }
+
+    /**
+     * Define a custom type.
+     *
+     * @param type
+     */
+    protected void declareType(Class type) {
+        meta.addDefinition(new TypeDef(type))
     }
 
     /**
@@ -232,7 +279,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
             if( meta.hasExecutableProcesses() ) {
                 // Create a workflow to execute the process (single process or first of multiple)
                 final handler = new ProcessEntryHandler(this, session, meta)
-                entryFlow = handler.createAutoProcessEntry()
+                this.entryFlow = handler.createEntryWorkflow()
             }
             else {
                 return result
@@ -241,9 +288,11 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
         // invoke the entry workflow
         session.notifyBeforeWorkflowExecution()
+        if( paramsDef )
+            paramsDef.apply(session)
         final ret = entryFlow.invoke_a(BaseScriptConsts.EMPTY_ARGS)
-        if( publisher )
-            publisher.apply(session)
+        if( outputDef )
+            outputDef.apply(session)
         session.notifyAfterWorkflowExecution()
         return ret
     }

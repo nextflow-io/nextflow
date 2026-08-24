@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@ import java.util.List;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.ModuleNode;
+import org.codehaus.groovy.ast.expr.ConstantExpression;
 import org.codehaus.groovy.control.SourceUnit;
 
 /**
@@ -38,6 +39,7 @@ public class ScriptNode extends ModuleNode {
     private OutputBlockNode outputs;
     private List<WorkflowNode> workflows = new ArrayList<>();
     private List<ProcessNode> processes = new ArrayList<>();
+    private List<AgentNode> agents = new ArrayList<>();
     private List<FunctionNode> functions = new ArrayList<>();
 
     public ScriptNode(SourceUnit sourceUnit) {
@@ -67,6 +69,7 @@ public class ScriptNode extends ModuleNode {
                 declarations.add(wn);
         }
         declarations.addAll(processes);
+        declarations.addAll(agents);
         declarations.addAll(functions);
         declarations.addAll(getTypes());
         return declarations;
@@ -104,13 +107,17 @@ public class ScriptNode extends ModuleNode {
         return processes;
     }
 
+    public List<AgentNode> getAgents() {
+        return agents;
+    }
+
     public List<FunctionNode> getFunctions() {
         return functions;
     }
 
     public List<ClassNode> getTypes() {
         return getClasses().stream()
-            .filter(cn -> cn.isEnum())
+            .filter(cn -> cn instanceof RecordNode || cn.isEnum())
             .toList();
     }
 
@@ -150,7 +157,19 @@ public class ScriptNode extends ModuleNode {
         processes.add(processNode);
     }
 
+    public void addAgent(AgentNode agentNode) {
+        agents.add(agentNode);
+    }
+
     public void addFunction(FunctionNode functionNode) {
         functions.add(functionNode);
+    }
+
+    public boolean isTypingEnabled() {
+        return featureFlags.stream().anyMatch(ffn -> (
+            "nextflow.enable.types".equals(ffn.name)
+                && ffn.value instanceof ConstantExpression ce
+                && Boolean.TRUE.equals(ce.getValue())
+        ));
     }
 }

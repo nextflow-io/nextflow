@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
 import groovy.transform.CompileStatic
+import nextflow.lineage.model.v1beta1.AgentRun
 import nextflow.lineage.model.v1beta1.FileOutput
 import nextflow.lineage.model.v1beta1.LinModel
 import nextflow.lineage.model.v1beta1.TaskOutput
@@ -52,6 +53,7 @@ class LinTypeAdapterFactory<T> extends RuntimeTypeAdapterFactory<T> {
             .registerSubtype(TaskRun, TaskRun.simpleName)
             .registerSubtype(TaskOutput, TaskOutput.simpleName)
             .registerSubtype(FileOutput, FileOutput.simpleName)
+            .registerSubtype(AgentRun, AgentRun.simpleName)
     }
 
     @Override
@@ -91,7 +93,7 @@ class LinTypeAdapterFactory<T> extends RuntimeTypeAdapterFactory<T> {
                 final typeEl = obj.get(getTypeFieldName())
                 if( typeEl==null )
                     throw new JsonParseException("JSON property '${getTypeFieldName()}' not found")
-                
+
                 // Check if this is the new format (has 'spec' field) or old format (data at root level)
                 final specEl = obj.get(SPEC_FIELD)?.asJsonObject
                 if ( specEl != null ) {

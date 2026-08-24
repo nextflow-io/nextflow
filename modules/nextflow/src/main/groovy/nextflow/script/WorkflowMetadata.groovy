@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,7 +34,6 @@ import nextflow.exception.WorkflowScriptErrorException
 import nextflow.trace.WorkflowStats
 import nextflow.util.Duration
 import nextflow.util.TestOnly
-import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Models workflow metadata properties and notification handler
  *
@@ -219,6 +218,12 @@ class WorkflowMetadata {
     FusionMetadata fusion
 
     /**
+     * Metadata specific to Seqera Platform, including:
+     * <li>workflowId: the Platform-assigned workflow identifier
+     */
+    PlatformMetadata platform
+
+    /**
      * The list of files that concurred to create the config object
      */
     List<Path> configFiles
@@ -395,7 +400,7 @@ class WorkflowMetadata {
             errorReport = msg
         }
         else {
-            exitStatus = 0
+            exitStatus = session.isSuccess() ? 0 : 1
         }
     }
 
@@ -406,7 +411,7 @@ class WorkflowMetadata {
     void invokeOnComplete() {
         this.complete = OffsetDateTime.now()
         this.duration = Duration.between( start, complete )
-        this.success = !(session.aborted || session.cancelled)
+        this.success = session.isSuccess()
         this.stats = getWorkflowStats()
 
         setErrorAttributes()
@@ -497,4 +502,14 @@ class WorkflowMetadata {
         session.statsObserver.getStats()
     }
 
+    PlatformMetadata getPlatform() {
+        if( platform!=null )
+            return platform
+        synchronized (this) {
+            if( platform!=null )
+                return platform
+            platform = new PlatformMetadata()
+        }
+        return platform
+    }
 }

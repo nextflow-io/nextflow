@@ -26,7 +26,6 @@ test/*
 tools/*
 tests_other
 other
-docs/_build/
 ./*.txt
 errors/
 misc/
@@ -36,8 +35,49 @@ docker/dist
 docker/nextflow
 temp
 .dockerignore
+# ... except the one that belongs to a committed Dockerfile: it is what keeps a developer's
+# node_modules/ out of the runner image build context - see plugins/nf-agent-pi/Dockerfile
+!plugins/nf-agent-pi/.dockerignore
+# the agent proxy binary a local `go build` leaves beside its source; the image builds it
+# in its own stage, so a checked-in copy would only ever be stale
+plugins/nf-agent-pi/agent-rpc/agent-rpc
 .launch.classpath
 plugins-prod
-sandbox
-wave-tests
-x/*
+/minio
+/sandbox
+/wave-tests
+/test-sched
+/test-module
+/results
+/x/*
+mise.toml
+.netlify/
+
+# Dependencies
+node_modules
+
+# Production
+.docusaurus_site/build
+
+# Generated files
+.docusaurus
+.cache-loader
+.docusaurus_site/nextflow_stable
+.docusaurus_site/versioned_docs
+.docusaurus_site/versioned_sidebars
+.docusaurus_site/versions.json
+
+# Misc
+.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local agent example validation output
+examples/agents/.validate/

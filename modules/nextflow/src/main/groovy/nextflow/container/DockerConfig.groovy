@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,6 +31,12 @@ import nextflow.script.dsl.Description
 @CompileStatic
 @EqualsAndHashCode
 class DockerConfig implements ConfigScope, ContainerConfig {
+
+    @ConfigOption
+    @Description("""
+        Use the `--cpus` flag to limit CPU usage instead of `--cpu-shares` (default: `false`).
+    """)
+    final boolean cpuLimits
 
     @ConfigOption
     @Description("""
@@ -125,6 +131,7 @@ class DockerConfig implements ConfigScope, ContainerConfig {
     DockerConfig() {}
 
     DockerConfig(Map opts) {
+        cpuLimits = opts.cpuLimits as boolean
         enabled = opts.enabled as boolean
         engineOptions = opts.engineOptions
         envWhitelist = ContainerHelper.parseEnvWhitelist(opts.envWhitelist)

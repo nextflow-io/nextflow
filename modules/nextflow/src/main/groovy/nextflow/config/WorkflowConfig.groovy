@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -48,8 +48,8 @@ class WorkflowConfig implements ConfigScope {
 
     @Description("""
         The `workflow.output` scope provides options for publishing workflow outputs.
-    
-        [Read more](https://nextflow.io/docs/latest/reference/config.html#workflow)
+
+        [Read more](https://docs.seqera.io/nextflow/reference/config/workflow)
     """)
     final WorkflowOutputConfig output
 
@@ -104,7 +104,7 @@ class WorkflowOutputConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        When `true` any existing file in the specified folder will be overwritten (default: `'standard'`).
+        Determines when to overwrite an existing file in the output directory (default: `'standard'`).
     """)
     final Object overwrite
 

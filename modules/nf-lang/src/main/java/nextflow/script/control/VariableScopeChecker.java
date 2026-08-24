@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,6 +15,9 @@
  */
 package nextflow.script.control;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.HashSet;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -22,12 +25,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import nextflow.script.ast.AgentNode;
 import nextflow.script.ast.ASTNodeMarker;
-import nextflow.script.dsl.Constant;
-import nextflow.script.dsl.Operator;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.WorkflowNode;
-import nextflow.script.types.Record;
+import nextflow.script.dsl.Constant;
+import nextflow.script.dsl.Operator;
+import nextflow.script.dsl.WorkflowDsl;
+import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
@@ -58,11 +63,11 @@ public class VariableScopeChecker {
 
     private SourceUnit sourceUnit;
 
-    private Map<String,MethodNode> includes = new HashMap<>();
+    private Map<String,AnnotatedNode> includes = new HashMap<>();
 
     private VariableScope currentScope;
 
-    private Set<Variable> declaredVariables = Collections.newSetFromMap(new IdentityHashMap<>());
+    private Set<Variable> unusedVariables = Collections.newSetFromMap(new IdentityHashMap<>());
 
     public VariableScopeChecker(SourceUnit sourceUnit, ClassNode classScope) {
         this.sourceUnit = sourceUnit;
@@ -78,16 +83,16 @@ public class VariableScopeChecker {
         return currentScope;
     }
 
-    public void include(String name, MethodNode variable) {
+    public void include(String name, AnnotatedNode variable) {
         includes.put(name, variable);
     }
 
-    public MethodNode getInclude(String name) {
+    public AnnotatedNode getInclude(String name) {
         return includes.get(name);
     }
 
     public void checkUnusedVariables() {
-        for( var variable : declaredVariables ) {
+        for( var variable : unusedVariables ) {
             if( variable instanceof ASTNode node && !variable.getName().startsWith("_") ) {
                 var message = variable instanceof Parameter
                     ? "Parameter was not used -- prefix with `_` to suppress warning"
@@ -130,7 +135,7 @@ public class VariableScopeChecker {
             }
         }
         currentScope.putDeclaredVariable(variable);
-        declaredVariables.add(variable);
+        unusedVariables.add(variable);
     }
 
     /**
@@ -175,7 +180,7 @@ public class VariableScopeChecker {
                 break;
             scope = scope.getParent();
         }
-        declaredVariables.remove(variable);
+        unusedVariables.remove(variable);
         return variable;
     }
 
@@ -187,7 +192,15 @@ public class VariableScopeChecker {
      * @param node
      */
     private Variable findDslVariable(ClassNode cn, String name, ASTNode node) {
-        while( cn != null ) {
+        var classScope = cn;
+        var queue = new ArrayDeque<ClassNode>();
+        var seen = new HashSet<ClassNode>();
+        // ArrayDeque rejects null elements, and this is reached with a null class scope
+        if( cn != null ) {
+            queue.add(cn);
+            seen.add(cn);
+        }
+        while( (cn = queue.poll()) != null ) {
             for( var mn : cn.getMethods() ) {
                 // processes, workflows, and operators can be accessed as variables, e.g. with pipes
                 if( isDataflowMethod(mn) && name.equals(mn.getName()) ) {
@@ -204,19 +217,23 @@ public class VariableScopeChecker {
                 return wrapMethodAsVariable(mn, name);
             }
 
-            cn = cn.getInterfaces().length > 0
-                ? cn.getInterfaces()[0]
-                : null;
+            enqueueSupertypes(cn, queue, seen);
         }
 
-        if( includes.containsKey(name) )
-            return wrapMethodAsVariable(includes.get(name), name);
+        // an included definition can be accessed as a variable in a workflow
+        // (less strict here since plugin includes aren't resolved at this point)
+        if( isWorkflowScope(classScope) && includes.get(name) instanceof MethodNode mn )
+            return wrapMethodAsVariable(mn, name);
 
         return null;
     }
 
+    private static boolean isWorkflowScope(ClassNode cn) {
+        return cn != null && WorkflowDsl.class.isAssignableFrom(cn.getTypeClass());
+    }
+
     public static boolean isDataflowMethod(MethodNode mn) {
-        return mn instanceof ProcessNode || mn instanceof WorkflowNode || isOperator(mn);
+        return mn instanceof ProcessNode || mn instanceof WorkflowNode || mn instanceof AgentNode || isOperator(mn);
     }
 
     public static boolean isOperator(MethodNode mn) {
@@ -236,15 +253,9 @@ public class VariableScopeChecker {
     }
 
     private static ClassNode methodOutputType(MethodNode mn) {
-        if( !(mn instanceof ProcessNode || mn instanceof WorkflowNode) )
-            return mn.getReturnType();
-        var cn = new ClassNode(Record.class);
-        var fn = new FieldNode("out", mn.getModifiers() & 0xF, mn.getReturnType(), cn, null);
-        fn.setHasNoRealSourcePosition(true);
-        fn.setDeclaringClass(cn);
-        fn.setSynthetic(true);
-        cn.addField(fn);
-        return cn;
+        if( mn instanceof ProcessNode || mn instanceof WorkflowNode || mn instanceof AgentNode )
+            return ClassHelper.dynamicType();
+        return mn.getReturnType();
     }
 
     /**
@@ -258,7 +269,13 @@ public class VariableScopeChecker {
         VariableScope scope = currentScope;
         while( scope != null ) {
             ClassNode cn = scope.getClassScope();
-            while( cn != null ) {
+            var queue = new ArrayDeque<ClassNode>();
+            var seen = new HashSet<ClassNode>();
+            if( cn != null ) {
+                queue.add(cn);
+                seen.add(cn);
+            }
+            while( (cn = queue.poll()) != null ) {
                 // built-in functions are methods not annotated as @Constant
                 var methods = cn.getDeclaredMethods(name).stream()
                     .filter(mn -> !findAnnotation(mn, Constant.class).isPresent())
@@ -274,15 +291,13 @@ public class VariableScopeChecker {
                 if( directive && scope == currentScope )
                     return Collections.emptyList();
 
-                cn = cn.getInterfaces().length > 0
-                    ? cn.getInterfaces()[0]
-                    : null;
+                enqueueSupertypes(cn, queue, seen);
             }
             scope = scope.getParent();
         }
 
-        return includes.containsKey(name)
-            ? List.of(includes.get(name))
+        return includes.get(name) instanceof MethodNode mn
+            ? List.of(mn)
             : Collections.emptyList();
     }
 
@@ -359,6 +374,25 @@ public class VariableScopeChecker {
         @Override
         public ASTNode getOtherNode() {
             return otherNode;
+        }
+    }
+
+
+    /**
+     * The next DSL scope to search, walking the interface graph breadth-first.
+     *
+     * <p>A DSL scope is an interface, and an interface may extend several. Following only
+     * {@code getInterfaces()[0]} made resolution depend on DECLARATION ORDER: a scope written
+     * {@code extends A, B} resolved everything A inherits and nothing B does, silently, so adding a
+     * second parent to a shared scope such as {@code ProcessDsl.OutputDslV2} would have stopped
+     * `file()` resolving in every process output block in every pipeline with no error and no test
+     * to catch it. Breadth-first over all parents removes the ordering rule; the {@code seen} set
+     * keeps a diamond from being searched twice.
+     */
+    private static void enqueueSupertypes(ClassNode cn, Deque<ClassNode> queue, Set<ClassNode> seen) {
+        for( var itf : cn.getInterfaces() ) {
+            if( seen.add(itf) )
+                queue.add(itf);
         }
     }
 

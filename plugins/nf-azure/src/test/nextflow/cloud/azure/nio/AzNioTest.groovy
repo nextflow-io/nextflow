@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.cloud.azure.nio
 
 import java.nio.charset.Charset
@@ -187,7 +203,7 @@ class AzNioTest extends Specification implements AzBaseSpec {
         when:
         def bucketName = createBucket()
         def target = Paths.get(new URI("az://$bucketName/data/file.txt"))
-        
+
         and:
         def stream = new ByteArrayInputStream(new String(TEXT).bytes)
         Files.copy(stream, target)
@@ -926,6 +942,29 @@ class AzNioTest extends Specification implements AzBaseSpec {
 
         cleanup:
         deleteBucket(bucket1)
+    }
+
+    def 'should detect a virtual directory without a trailing slash' () {
+        given:
+        def bucketName = createBucket()
+
+        when: 'a blob exists under a prefix, without any explicit directory marker'
+        def containerClient = storageClient.getBlobContainerClient(bucketName)
+        containerClient.getBlobClient("output/file.txt").upload(new ByteArrayInputStream("hello".bytes), "hello".length())
+
+        and: 'the prefix is referenced without a trailing slash'
+        def path = "az://$bucketName/output"
+        def azPath = Path.of(new URI(path))
+        def nioPath = Path.of(new URI(path))
+        def file = Path.of(new URI("az://$bucketName/output/file.txt"))
+
+        then: 'it is recognised as a directory (via both entry points) while the blob is a file'
+        azPath.isDirectory()        // the Groovy call nf-schema makes, via the FilesEx extension
+        Files.isDirectory(nioPath)  // the plain NIO call
+        !Files.isDirectory(file)
+
+        cleanup:
+        deleteBucket(bucketName)
     }
 
 }

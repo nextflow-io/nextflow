@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -125,23 +125,23 @@ class GithubRepositoryProvider extends RepositoryProvider {
     List<RepositoryEntry> listDirectory(String path, int depth) {
         // Get the tree SHA for the specific directory
         String treeSha = getTreeSha(path)
-        
+
         // Build the Trees API URL
         String url = getTreeUrl(treeSha, depth > 1)
-        
+
         // Make the API call and parse response
         Map response = invokeAndParseResponse(url)
         List<Map> treeEntries = response.get('tree') as List<Map>
-        
+
         if (!treeEntries) {
             return []
         }
-        
+
         List<RepositoryEntry> entries = []
-        
+
         for (Map entry : treeEntries) {
             String entryPath = entry.get('path') as String
-            
+
             // Include if within depth limit: depth=0 includes immediate children only,
             // depth=1 includes children+grandchildren, depth=2 includes children+grandchildren+great-grandchildren, etc.
             int entryDepth = entryPath.split("/").length - 1
@@ -149,7 +149,7 @@ class GithubRepositoryProvider extends RepositoryProvider {
                 entries.add(createRepositoryEntry(entry, path))
             }
         }
-        
+
         return entries.sort { it.name }
     }
 
@@ -165,12 +165,12 @@ class GithubRepositoryProvider extends RepositoryProvider {
     private String getTreeSha(String path) {
         // Normalize path using base class helper
         def normalizedPath = normalizePath(path)
-        
+
         if (normalizedPath && !normalizedPath.isEmpty()) {
             // For subdirectory, we need to find the tree SHA by traversing from root
             return getTreeShaForPath(normalizedPath)
         }
-        
+
         // For root directory, get the commit SHA and then the tree SHA
         String commitSha = getCommitSha()
         Map commit = invokeAndParseResponse("${config.endpoint}/repos/$project/git/commits/$commitSha")
@@ -182,23 +182,23 @@ class GithubRepositoryProvider extends RepositoryProvider {
         // Start from root tree
         String currentTreeSha = getTreeSha("")
         String[] pathParts = path.split("/")
-        
+
         for (String part : pathParts) {
             String url = getTreeUrl(currentTreeSha, false)
             Map response = invokeAndParseResponse(url)
             List<Map> treeEntries = response.get('tree') as List<Map>
-            
-            Map foundEntry = treeEntries.find { 
+
+            Map foundEntry = treeEntries.find {
                 it.get('path') == part && it.get('type') == 'tree'
             }
-            
+
             if (!foundEntry) {
                 throw new IllegalArgumentException("Directory not found: $path")
             }
-            
+
             currentTreeSha = foundEntry.get('sha') as String
         }
-        
+
         return currentTreeSha
     }
 
@@ -216,7 +216,7 @@ class GithubRepositoryProvider extends RepositoryProvider {
                 return revision
             }
         }
-        
+
         // Default to main/master branch
         try {
             Map ref = invokeAndParseResponse("${config.endpoint}/repos/$project/git/refs/heads/main")
@@ -232,21 +232,21 @@ class GithubRepositoryProvider extends RepositoryProvider {
 
     private RepositoryEntry createRepositoryEntry(Map entry, String basePath) {
         String entryPath = entry.get('path') as String
-        
+
         // Create absolute path using base class helper
         def normalizedBasePath = normalizePath(basePath)
         String fullPath = normalizedBasePath && !normalizedBasePath.isEmpty() ? "/${normalizedBasePath}/${entryPath}" : ensureAbsolutePath(entryPath)
-        
+
         // For name, use just the entry path (which is relative to the directory we're listing)
         String name = entryPath
         if (entryPath.contains("/")) {
             name = entryPath.substring(entryPath.lastIndexOf("/") + 1)
         }
-        
+
         EntryType type = entry.get('type') == 'tree' ? EntryType.DIRECTORY : EntryType.FILE
         String sha = entry.get('sha') as String
         Long size = entry.get('size') as Long
-        
+
         return new RepositoryEntry(
             name: name,
             path: fullPath,

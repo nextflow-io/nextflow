@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ plugins {
 rootProject.name = 'nextflow-prj'
 
 include 'nextflow'
+include 'nf-cli-v1'
 include 'nf-commons'
 include 'nf-httpfs'
 include 'nf-lang'
@@ -47,3 +48,10 @@ include 'plugins:nf-codecommit'
 include 'plugins:nf-wave'
 include 'plugins:nf-cloudcache'
 include 'plugins:nf-k8s'
+include 'plugins:nf-seqera'
+include 'plugins:nf-agent'
+include 'plugins:nf-agent-pi'
+
+//includeBuild('../plugin-registry')
+//includeBuild '../sched'
+//includeBuild('../libseqera')

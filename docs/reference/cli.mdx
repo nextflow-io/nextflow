@@ -1,0 +1,86 @@
+---
+title: CLI reference
+description: Reference for the top-level Nextflow CLI options and commands.
+---
+
+# CLI reference
+
+The [Nextflow CLI][cli-page] takes top-level options, a command, and the command's arguments:
+
+```console
+$ nextflow [options] COMMAND [arg...]
+```
+
+[Options](#options) apply to every command. Each [command](#commands) has its own reference page with usage, options, subcommands, and examples.
+
+## Options
+
+| Option | Description |
+| ------ | ----------- |
+| `-C` | Comma-separated list of configuration files to use as the configuration set. Nextflow ignores all default configuration files. |
+| `-D` | Set JVM properties, for example `-Dfile.encoding=UTF-8`. Equivalent to the `NXF_JVM_ARGS` environment variable. |
+| `-bg` | Run Nextflow in the background. You can close your terminal without terminating the pipeline run. |
+| `-c, -config` | Comma-separated list of configuration files to add to the configuration set. |
+| `-h` | Print available commands and options. |
+| `-log` | Set Nextflow log file path (default: `.nextflow.log`). Must be a local path. |
+| `-q, -quiet` | Do not print the Nextflow banner and execution progress to the console. Does not affect error messages. |
+| <code style={{whiteSpace: 'nowrap'}}>-remote-debug</code> | Enable JVM interactive remote debugging (experimental). |
+| `-syslog` | Send logs to a [Syslog](https://en.wikipedia.org/wiki/Syslog) server, for example `localhost:514`. |
+| `-trace` | Enable trace level logging for the specified packages. Separate multiple packages with a comma, for example `-trace nextflow,io.seqera`. |
+| `-v, -version` | Print the program version. |
+
+
+## Commands
+
+| Command | Description |
+| ------- | ----------- |
+| [`auth`][cli-auth] | Manage Seqera Platform authentication. |
+| [`clean`][cli-clean] | Clean up cache and work directories. |
+| [`clone`][cli-clone] | Clone a remote project into a folder. |
+| [`config`][cli-config] | Print the resolved pipeline configuration. |
+| [`console`][cli-console] | Launch the Nextflow interactive console. |
+| [`drop`][cli-drop] | Delete the local copy of a project. |
+| [`fs`][cli-fs] | Perform basic filesystem operations. |
+| [`help`][cli-help] | Print the top-level help or specific help for a command. |
+| [`info`][cli-info] | Print project or system runtime information. |
+| [`inspect`][cli-inspect] | Inspect process settings in a pipeline project. |
+| [`kuberun`][cli-kuberun] | Launch a Nextflow pipeline on a Kubernetes cluster. |
+| [`launch`][cli-launch] | Launch a workflow in Seqera Platform. |
+| [`lineage`][cli-lineage] | Inspect lineage metadata for Nextflow runs. |
+| [`lint`][cli-lint] | Lint Nextflow scripts and config files. |
+| [`list`][cli-list] | List all downloaded projects. |
+| [`log`][cli-log] | Print the execution history and log information. |
+| [`logfile`][cli-logfile] | Print the contents of a Nextflow log file. |
+| [`module`][cli-module] | Manage Nextflow modules. |
+| [`plugin`][cli-plugin] | Manage plugins and run plugin-specific commands. |
+| [`pull`][cli-pull] | Download or update a project. |
+| [`run`][cli-run] | Execute a pipeline. |
+| [`secrets`][cli-secrets] | Manage pipeline secrets. |
+| [`self-update`][cli-self-update] | Update the Nextflow runtime to the latest available version. |
+| [`view`][cli-view] | View a project's script file(s). |
+
+[cli-page]: ../cli
+[cli-auth]: ./cli/auth
+[cli-clean]: ./cli/clean
+[cli-clone]: ./cli/clone
+[cli-config]: ./cli/config
+[cli-console]: ./cli/console
+[cli-drop]: ./cli/drop
+[cli-fs]: ./cli/fs
+[cli-help]: ./cli/help
+[cli-info]: ./cli/info
+[cli-inspect]: ./cli/inspect
+[cli-kuberun]: ./cli/kuberun
+[cli-launch]: ./cli/launch
+[cli-lineage]: ./cli/lineage
+[cli-lint]: ./cli/lint
+[cli-list]: ./cli/list
+[cli-log]: ./cli/log
+[cli-logfile]: ./cli/logfile
+[cli-module]: ./cli/module
+[cli-plugin]: ./cli/plugin
+[cli-pull]: ./cli/pull
+[cli-run]: ./cli/run
+[cli-secrets]: ./cli/secrets
+[cli-self-update]: ./cli/self-update
+[cli-view]: ./cli/view

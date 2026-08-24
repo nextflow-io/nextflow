@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -193,10 +193,11 @@ class DurationTest extends Specification {
 
         given:
         def start = Instant.now()
-        def end = start.plusMillis(1000)
 
         expect:
-        Duration.between(start, end) == Duration.of('1sec')
+        Duration.between(start, start.plusMillis(1000)) == Duration.of('1sec')
+        and: 'guard against non-monotonic wall clock'
+        Duration.between(start, start.minusMillis(228)) == Duration.of(0)
     }
 
     // TemporalAmount interface tests

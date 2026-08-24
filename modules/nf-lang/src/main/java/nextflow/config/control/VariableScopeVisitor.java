@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -145,7 +145,8 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
      * Determine whether a config option can access the process
      * DSL for dynamic settings.
      *
-     * This includes options in the `process` config scope and `executor.jobName`.
+     * This includes options in the `process` and `agent` config scopes
+     * and `executor.jobName`.
      *
      * @param scopes
      * @param node
@@ -153,7 +154,7 @@ class VariableScopeVisitor extends ConfigVisitorSupport {
     private static boolean isProcessScope(List<String> scopes, ConfigAssignNode node) {
         if( scopes.isEmpty() )
             return false;
-        if( "process".equals(scopes.get(0)) )
+        if( "process".equals(scopes.get(0)) || "agent".equals(scopes.get(0)) )
             return true;
         var option = node.names.get(node.names.size() - 1);
         return scopes.size() == 1

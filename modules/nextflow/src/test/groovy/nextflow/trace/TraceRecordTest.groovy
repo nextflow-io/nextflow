@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -279,15 +279,32 @@ class TraceRecordTest extends Specification {
         rec.secureEnvString('AWS_KEY=12345') == 'AWS_KEY=[secure]'
 
         rec.secureEnvString('''\
-                foo=hello    
+                foo=hello
                 aws_key=d7sds89
                 git_token=909s-ds-'''
                 .stripIndent() ) ==
                 '''\
-                foo=hello    
+                foo=hello
                 aws_key=[secure]
                 git_token=[secure]'''.stripIndent()
 
+    }
+
+    def 'should remove an LLM provider api key from the recorded env' () {
+        given: 'the twin of SecretHelper.SECRET_REGEX. A trace record is persisted in the resume'
+        // cache and POSTed to Seqera Platform by nf-tower, and the out-of-band credential channel
+        // the agent docs recommend for a containerized runner puts the key in exactly this field
+        def rec = new TraceRecord()
+
+        expect:
+        rec.secureEnvString('OPENAI_API_KEY=sk-1234') == 'OPENAI_API_KEY=[secure]'
+        rec.secureEnvString('ANTHROPIC_API_KEY=sk-ant') == 'ANTHROPIC_API_KEY=[secure]'
+        rec.secureEnvString('NXF_AGENT_API_KEY=sk-nxf') == 'NXF_AGENT_API_KEY=[secure]'
+        rec.secureEnvString('api_key=snake') == 'api_key=[secure]'
+
+        and: 'through the field accessors, which is how a task environment actually gets there'
+        new TraceRecord().tap { it.env = 'FOO=bar\nOPENAI_API_KEY=sk-5678\n' }.store.env ==
+            'FOO=bar\nOPENAI_API_KEY=[secure]\n'
     }
 
     def 'should store safe env' () {
@@ -371,6 +388,74 @@ class TraceRecordTest extends Specification {
 
         then:
         rec2.getNumSpotInterruptions() == null
+    }
+
+    def 'should manage gpuMetrics and not persist it across serialization'() {
+        given:
+        def rec = new TraceRecord()
+
+        expect:
+        rec.getGpuMetrics() == null
+
+        when:
+        rec.setGpuMetrics([name: 'Tesla T4', pct: 75, peak: 100])
+
+        then:
+        rec.getGpuMetrics() == [name: 'Tesla T4', pct: 75, peak: 100]
+
+        when:
+        def buf = rec.serialize()
+        def rec2 = TraceRecord.deserialize(buf)
+
+        then:
+        rec2.getGpuMetrics() == null
+    }
+
+    def 'should parse Fusion trace file'() {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def file = folder.resolve('.fusion/trace.json')
+        file.parent.mkdir()
+        file.text = '{"proc":{"realtime":100},"gpu":{"name":"Tesla T4","mem":15360,"driver":"580.126.09","active_time":651030,"pct":75,"peak":100,"pct_mem":40.1,"peak_mem":74.1,"avg_mem":6161,"peak_mem_used":11388,"avg_mem_bw_util":43,"peak_mem_bw_util":83},"cgroup":{"version":"v2"}}'
+
+        when:
+        def json = TraceRecord.parseFusionTraceFile(file)
+
+        then:
+        json.proc.realtime == 100
+        json.gpu.name == 'Tesla T4'
+        json.gpu.mem == 15360
+        json.gpu.driver == '580.126.09'
+        json.gpu.pct == 75
+        json.gpu.peak == 100
+        json.cgroup.version == 'v2'
+    }
+
+    def 'should parse Fusion trace file without gpu block'() {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def file = folder.resolve('trace.json')
+        file.text = '{"proc":{"realtime":100},"cgroup":{"version":"v2"}}'
+
+        when:
+        def json = TraceRecord.parseFusionTraceFile(file)
+
+        then:
+        json.proc.realtime == 100
+        json.gpu == null
+    }
+
+    def 'should throw exception when Fusion trace file has malformed JSON'() {
+        given:
+        def folder = TestHelper.createInMemTempDir()
+        def file = folder.resolve('trace.json')
+        file.text = 'not valid json'
+
+        when:
+        TraceRecord.parseFusionTraceFile(file)
+
+        then:
+        thrown(Exception)
     }
 
 }

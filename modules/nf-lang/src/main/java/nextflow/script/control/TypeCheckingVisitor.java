@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 package nextflow.script.control;
 
 import nextflow.script.ast.ASTNodeMarker;
+import nextflow.script.ast.AgentNode;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
@@ -58,7 +59,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
     @Override
     public void visitMethodCallExpression(MethodCallExpression node) {
         var defNode = (MethodNode) node.getNodeMetaData(ASTNodeMarker.METHOD_TARGET);
-        if( defNode instanceof ProcessNode || defNode instanceof WorkflowNode )
+        if( defNode instanceof ProcessNode || defNode instanceof WorkflowNode || defNode instanceof AgentNode )
             checkMethodCallArguments(node, defNode);
         super.visitMethodCallExpression(node);
     }

@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.plugin
 
 import nextflow.util.CacheHelper
@@ -11,11 +27,13 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
 import nextflow.BuildInfo
+import nextflow.config.RegistryConfig
 import com.github.zafarkhaja.semver.Version
 import org.pf4j.Plugin
 import org.pf4j.PluginDescriptor
 import org.pf4j.PluginRuntimeException
 import org.pf4j.PluginWrapper
+import org.pf4j.update.DefaultUpdateRepository
 import org.pf4j.update.PluginInfo
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -67,6 +85,33 @@ class PluginUpdaterTest extends Specification {
         manager.localRoot.resolve(PLUGIN).exists()
         manager.localRoot.resolve(PLUGIN).isLink()
         manager.localRoot.resolve(PLUGIN).resolve('MANIFEST.MF').text == local.resolve(PLUGIN).resolve('MANIFEST.MF').text
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should detect already-installed pinned plugin from the on-disk store' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and:
+        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0'])
+        and:
+        def local = localCache(folder.resolve('plugins'), ['1.0.0'])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, false)
+
+        expect:
+        // at prefetch time the local plugins have NOT been loaded into the manager yet
+        manager.getPlugin(PLUGIN_ID) == null
+        and:
+        // pinned + present in the store -> already installed, no remote metadata needed
+        updater.isAlreadyInstalled(PluginRef.parse('my-plugin@1.0.0'))
+        and:
+        // pinned but a different version is not installed
+        !updater.isAlreadyInstalled(PluginRef.parse('my-plugin@9.9.9'))
+        and:
+        // unpinned spec always needs remote metadata to resolve the latest release
+        !updater.isAlreadyInstalled(PluginRef.parse('my-plugin'))
 
         cleanup:
         folder?.deleteDir()
@@ -417,13 +462,178 @@ class PluginUpdaterTest extends Specification {
         then:
         matcher.matches() == EXPECTED
         !EXPECTED || matcher.group(1) == PLUGIN
-        
+
         where:
         FILE_NAME                               | EXPECTED  | PLUGIN
         'foo'                                   | false     | null
         'foo.json'                              | false     | null
         'nf-foo-1.0.0-meta.json'                | true      | 'nf-foo'
         'xpack-google-1.0.0-beta.3-meta.json'   | true      | 'xpack-google'
+    }
+
+    def 'should replace the default registry with the configured registries' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0'])
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, false)
+        and:
+        def cfg = new RegistryConfig([url: ['https://reg-a.example/api', 'https://reg-b.example/api']])
+
+        when:
+        updater.addRegistryRepos(cfg)
+        def repos = updater.getRepositories()
+
+        then: 'the default registry repo is dropped; only the configured registries remain, in order'
+        repos.size() == 2
+        repos[0] instanceof HttpPluginRepository
+        repos[0].id == 'registry-0'
+        repos[0].url.toString().startsWith('https://reg-a.example/api')
+        and:
+        repos[1] instanceof HttpPluginRepository
+        repos[1].id == 'registry-1'
+        repos[1].url.toString().startsWith('https://reg-b.example/api')
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should replace the default registry even when a configured url matches it' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def remote = new URL('http://primary.example/api')
+        def updater = new PluginUpdater(manager, local, remote, false)
+        and:
+        def cfg = new RegistryConfig([url: ['http://primary.example/api', 'http://other.example/api']])
+
+        when:
+        updater.addRegistryRepos(cfg)
+        def repos = updater.getRepositories()
+
+        then: 'the default registry is replaced and all configured registries are added, in order'
+        repos.size() == 2
+        repos*.id == ['registry-0', 'registry-1']
+        repos[0].url.toString().startsWith('http://primary.example/api')
+        repos[1].url.toString().startsWith('http://other.example/api')
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should not add registry repos when offline' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0'])
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, true)
+        and:
+        def cfg = new RegistryConfig([url: ['https://reg.example/api']])
+
+        when:
+        updater.addRegistryRepos(cfg)
+        def repos = updater.getRepositories()
+
+        then:
+        repos.size() == 1
+        repos[0].id == 'downloaded'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should be no-op when registry config is null' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0'])
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, false)
+        def before = updater.getRepositories().size()
+
+        when:
+        updater.addRegistryRepos(null)
+
+        then:
+        updater.getRepositories().size() == before
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should apply the registry config only once when invoked repeatedly' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0'])
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, false)
+        and:
+        def cfg = new RegistryConfig([url: ['https://reg-a.example/api', 'https://reg-b.example/api']])
+
+        when:
+        updater.addRegistryRepos(cfg)
+        updater.addRegistryRepos(cfg)
+        def repos = updater.getRepositories()
+
+        then: 'the second call is a no-op: only the two configured registries remain, no duplicates'
+        repos.size() == 2
+        repos*.id == ['registry-0', 'registry-1']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should not let a later repository override the default on a version clash' () {
+        given: 'the default registry (first) plus a second repository, mirroring the NXF_PLUGINS_TEST_REPOSITORY layout [default, extra]'
+        def folder = Files.createTempDirectory('test')
+        def defaultRepo = remoteRepository(folder.resolve('default'), ['1.0.0'])
+        def extraRepo = remoteRepository(folder.resolve('extra'), ['1.0.0', '2.0.0'])
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, defaultRepo, false)
+        updater.addRepository(new DefaultUpdateRepository('extra', extraRepo))
+
+        when:
+        def releases = updater.getPluginsMap()['my-plugin'].releases
+
+        then: 'first-listed (default) wins the 1.0.0 clash; the extra repo only contributes 2.0.0'
+        releases.size() == 2
+        releases.find { it.version == '1.0.0' }.url.contains('default')
+        releases.find { it.version == '2.0.0' }.url.contains('extra')
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should union plugin releases across registries, first-listed wins' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        and: 'two registries serving the same plugin id with overlapping versions'
+        def repoA = remoteRepository(folder.resolve('repoA'), ['1.0.0', '2.0.0'])
+        def repoB = remoteRepository(folder.resolve('repoB'), ['1.5.0', '2.0.0'])
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, repoA, false)
+        updater.addRepository(new DefaultUpdateRepository('repo-b', repoB))
+
+        when:
+        def merged = updater.getPluginsMap()['my-plugin']
+        def releases = merged.releases
+
+        then: 'releases from both registries are unioned, de-duplicated by version'
+        releases.size() == 3
+        releases*.version.toSet() == ['1.0.0', '2.0.0', '1.5.0'].toSet()
+        and: 'on a version clash the earlier-listed registry (repoA) wins'
+        releases.find { it.version == '2.0.0' }.url.contains('repoA')
+        and: 'the copied PluginInfo keeps the source repositoryId for diagnostics'
+        merged.repositoryId == 'nextflow.io'
+
+        cleanup:
+        folder?.deleteDir()
     }
 
     // -------------------------------------------------------------------------------------
@@ -537,16 +747,16 @@ class PluginUpdaterTest extends Specification {
         def local = localCache(folder.resolve('plugins'), [])
         def manager = new LocalPluginManager(local)
         def updater = Spy(PluginUpdater, constructorArgs: [manager, local, remote, false])
-        
+
         // Replace repositories with our mock repo
         updater.@repositories = [mockRepo]
-        
+
         and:
         def pluginList = ['my-plugin@1.0.0', 'another-plugin@2.0.0']
 
         when:
         updater.pullPlugins(pluginList)
-        
+
         then:
         // Verify prefetch is called with the correct plugin specs
         1 * mockRepo.prefetch({ List<PluginRef> specs ->
@@ -554,7 +764,7 @@ class PluginUpdaterTest extends Specification {
             specs[0].id == 'my-plugin' && specs[0].version == '1.0.0' &&
             specs[1].id == 'another-plugin' && specs[1].version == '2.0.0'
         })
-        
+
         and:
         // Mock pullPlugin0 to prevent real implementation calls
         2 * updater.pullPlugin0(_, _) >> null

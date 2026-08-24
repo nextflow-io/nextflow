@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,12 @@ package nextflow.script.ast;
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 public enum ASTNodeMarker {
+    // the comments in a source file (ModuleNode)
+    COMMENTS,
+
+    // the packed source position of the `else` keyword (IfStatement)
+    ELSE_POSITION,
+
     // denotes a fully-qualified type annotation (ClassNode)
     FULLY_QUALIFIED,
 
@@ -35,9 +41,6 @@ public enum ASTNodeMarker {
 
     // the number of enclosing parentheses around an expression
     INSIDE_PARENTHESES_LEVEL,
-
-    // the comments preceding a statement or declaration
-    LEADING_COMMENTS,
 
     // the verbatim text of a Groovy-style type annotation (ClassNode)
     LEGACY_TYPE,
@@ -62,9 +65,6 @@ public enum ASTNodeMarker {
 
     // denotes that an expression list has a trailing comma
     TRAILING_COMMA,
-
-    // the trailing comment on the same line as a statement or declaration
-    TRAILING_COMMENT,
 
     // the verbatim text of a string literal or gstring expression
     VERBATIM_TEXT

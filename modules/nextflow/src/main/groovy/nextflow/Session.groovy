@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,6 +22,7 @@ import java.nio.file.Paths
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
+import java.util.concurrent.atomic.AtomicBoolean
 import java.util.function.Consumer
 
 import com.google.common.hash.HashCode
@@ -37,6 +38,7 @@ import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
 import nextflow.conda.CondaConfig
 import nextflow.config.Manifest
+import nextflow.container.AppleContainerConfig
 import nextflow.container.ApptainerConfig
 import nextflow.container.CharliecloudConfig
 import nextflow.container.ContainerConfig
@@ -45,14 +47,17 @@ import nextflow.container.PodmanConfig
 import nextflow.container.SarusConfig
 import nextflow.container.ShifterConfig
 import nextflow.container.SingularityConfig
+import nextflow.container.SmolVmConfig
 import nextflow.dag.DAG
 import nextflow.exception.AbortOperationException
+import nextflow.exception.AbortRunException
 import nextflow.exception.AbortSignalException
 import nextflow.exception.IllegalConfigException
 import nextflow.exception.MissingLibraryException
 import nextflow.exception.ScriptCompilationException
 import nextflow.executor.ExecutorFactory
 import nextflow.extension.CH
+import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FilePorter
 import nextflow.plugin.Plugins
@@ -69,7 +74,7 @@ import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
 import nextflow.script.dsl.ProcessConfigBuilder
 import nextflow.spack.SpackConfig
-import nextflow.trace.AnsiLogObserver
+import nextflow.trace.LogObserver
 import nextflow.trace.TraceObserver
 import nextflow.trace.TraceObserverFactory
 import nextflow.trace.TraceObserverFactoryV2
@@ -80,8 +85,8 @@ import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.TaskEvent
 import nextflow.trace.event.WorkflowOutputEvent
 import nextflow.util.Barrier
-import nextflow.util.ConfigHelper
-import nextflow.util.Duration
+import nextflow.util.ClassLoaderFactory
+import nextflow.util.CustomThreadFactory
 import nextflow.util.HistoryFile
 import nextflow.util.LoggerHelper
 import nextflow.util.NameGenerator
@@ -106,6 +111,14 @@ class Session implements ISession {
     final Collection<DataflowProcessor> allOperators = new ConcurrentLinkedQueue<>()
 
     final List<Closure> igniters = new ArrayList<>(20)
+
+    /**
+     * True once the initial dataflow graph has been released. Components created
+     * afterwards (for example request-scoped tool invocations) must start
+     * immediately instead of being appended to an ignition list that has already
+     * been consumed.
+     */
+    private volatile boolean dataflowNetworkFired
 
     final Map<String,DataflowWriteChannel> outputs = [:]
 
@@ -148,6 +161,11 @@ class Session implements ISession {
      * The folder where workflow outputs are stored
      */
     Path outputDir
+
+    /**
+     * Output format for workflow outputs
+     */
+    String outputFormat
 
     /**
      * The folder where tasks temporary files are stored
@@ -260,11 +278,14 @@ class Session implements ISession {
 
     private volatile ExecutorService execService
 
+    /** Orchestration pool for agent tasks; lazily created -- see {@link #getAgentExecService}. */
+    private volatile ExecutorService agentExecService
+
     private volatile TaskFault fault
 
     private volatile Throwable error
 
-    private volatile boolean shutdownInitiated
+    private final AtomicBoolean shutdownInitiated = new AtomicBoolean(false)
 
     private Queue<Runnable> shutdownCallbacks = new ConcurrentLinkedQueue<>()
 
@@ -311,9 +332,11 @@ class Session implements ISession {
 
     boolean ansiLog
 
+    boolean agentLog
+
     boolean disableJobsCancellation
 
-    AnsiLogObserver ansiLogObserver
+    LogObserver logObserver
 
     FilePorter getFilePorter() { filePorter }
 
@@ -407,6 +430,7 @@ class Session implements ISession {
 
         // -- init output dir
         this.outputDir = FileHelper.toCanonicalPath(config.outputDir ?: 'results')
+        this.outputFormat = config.outputFormat
 
         // -- init work dir
         this.workDir = FileHelper.toCanonicalPath(config.workDir ?: 'work')
@@ -436,7 +460,8 @@ class Session implements ISession {
      */
     Session init( ScriptFile scriptFile, List<String> args=null, Map<String,?> cliParams=null, Map<String,?> configParams=null ) {
 
-        if(!workDir.mkdirs()) throw new AbortOperationException("Cannot create work-dir: $workDir -- Make sure you have write permissions or specify a different directory by using the `-w` command line option")
+        if(!workDir.mkdirs())
+            throw new AbortOperationException("Cannot create work-dir '${FilesEx.toUriString(workDir)}' -- Make sure you have write permissions or specify a different directory by using the `-w` command line option")
         log.debug "Work-dir: ${workDir.toUriString()} [${FileHelper.getPathFsType(workDir)}]"
 
         if( config.bucketDir ) {
@@ -535,6 +560,20 @@ class Session implements ISession {
         igniters.add(action)
     }
 
+    /**
+     * Schedule a dataflow processor during graph construction, or start it
+     * immediately when it was created after network ignition.
+     */
+    void addProcessorIgniter( Closure action ) {
+        synchronized( igniters ) {
+            if( !dataflowNetworkFired ) {
+                igniters.add(action)
+                return
+            }
+        }
+        action.call()
+    }
+
     void fireDataflowNetwork(boolean preview=false) {
         checkConfig()
         notifyFlowBegin()
@@ -551,6 +590,9 @@ class Session implements ISession {
     }
 
     private void callIgniters() {
+        synchronized( igniters ) {
+            dataflowNetworkFired = true
+        }
         log.debug "Igniting dataflow network (${igniters.size()})"
         for( Closure action : igniters ) {
             try {
@@ -597,24 +639,57 @@ class Session implements ISession {
         return this
     }
 
+    /**
+     * The ORCHESTRATION pool, distinct from {@link #execService}.
+     *
+     * <p>{@code execService} is the local executor's RUN pool, and every population that draws from
+     * it is already bounded by {@link nextflow.processor.LocalPollingMonitor}'s cpu gate -- which is
+     * why sizing it to the core count has always been correct.
+     *
+     * <p>An agent breaks that invariant by construction. It is not compute but an ORCHESTRATOR: its
+     * body blocks waiting on the tool sub-tasks it dispatches, and it is admitted by
+     * {@link nextflow.processor.AgentPollingMonitor}, which deliberately applies no cpu or capacity
+     * throttle. Sharing one pool therefore creates a dependency edge from a pool member to another
+     * member of the SAME pool -- the textbook deadlock: enough blocked orchestrators and no thread
+     * is left to run the sub-tasks that would release them. No size fixes it, because the number of
+     * concurrent agents is unbounded.
+     *
+     * <p>So orchestration gets its own pool, and the invariant that makes this deadlock-free at ANY
+     * size is directional:
+     *
+     * <blockquote>an orchestration thread may block on the execution pool;
+     * an execution thread must never block on the orchestration pool.</blockquote>
+     *
+     * <p>The dependency crosses a pool boundary in one direction only, so there is no cycle to
+     * close.
+     *
+     * <p>A CACHED pool, deliberately: threads are created on demand, reused while warm and reaped
+     * after 60s, with no ceiling. The JDK recommends exactly this shape here -- direct handoff
+     * "avoids lockups when handling sets of requests that might have internal dependencies", and
+     * "generally require unbounded maximumPoolSizes to avoid rejection". A ceiling would not make
+     * the pool safer: at the ceiling the excess QUEUES, and a queued task that a blocked thread is
+     * waiting for is the same deadlock in a different costume. What bounds agent concurrency is
+     * {@code maxForks} on the agent itself (see {@link nextflow.agent.AgentConfig#DEFAULT_MAX_FORKS}),
+     * which caps admission BEFORE any thread is demanded -- the right layer, and a knob that also
+     * answers the provider's rate limit.
+     *
+     * <p>Created lazily: a run with no agents allocates nothing.
+     */
+    synchronized ExecutorService getAgentExecService() {
+        if( agentExecService == null ) {
+            log.debug "Creating agent orchestration pool"
+            agentExecService = Threads.useVirtual()
+                    ? Executors.newVirtualThreadPerTaskExecutor()
+                    : Executors.newCachedThreadPool(new CustomThreadFactory('nf-agent'))
+        }
+        return agentExecService
+    }
+
     ScriptBinding getBinding() { binding }
 
     @Memoized
-    ClassLoader getClassLoader() { getClassLoader0() }
-
-    @PackageScope
-    ClassLoader getClassLoader0() {
-        // extend the class-loader if required
-        final gcl = new GroovyClassLoader()
-        final libraries = ConfigHelper.resolveClassPaths(getLibDir())
-
-        for( Path lib : libraries ) {
-            def path = lib.complete()
-            log.debug "Adding to the classpath library: ${path}"
-            gcl.addClasspath(path.toString())
-        }
-
-        return gcl
+    ClassLoader getClassLoader() {
+        ClassLoaderFactory.create(getLibDir())
     }
 
     Barrier getBarrier() { monitorsBarrier }
@@ -727,6 +802,8 @@ class Session implements ISession {
             // shutdown executor service
             execService?.shutdown()
             execService = null
+            agentExecService?.shutdown()
+            agentExecService = null
             log.trace "Session > executor shutdown"
 
             // -- close db
@@ -761,15 +838,17 @@ class Session implements ISession {
     }
 
     final protected void shutdown0() {
-        log.trace "Shutdown: $shutdownCallbacks"
-        shutdownInitiated = true
+        // guard against adding shutdown hooks after shutdown, or calling shutdown more than once
+        if( !shutdownInitiated.compareAndSet(false, true) )
+            return
+        log.trace "Invoking ${shutdownCallbacks.size()} shutdown callbacks"
         while( shutdownCallbacks.size() ) {
             final hook = shutdownCallbacks.poll()
             try {
                 hook.run()
             }
             catch( Exception e ) {
-                log.debug "Failed to execute shutdown hook: $hook", e
+                log.debug "Failed to execute shutdown hook: ${hook.class.name}", e
             }
         }
 
@@ -832,7 +911,7 @@ class Session implements ISession {
             shutdown0()
             notifyError(null)
             // force termination
-            ansiLogObserver?.forceTermination()
+            logObserver?.forceTermination()
             executorFactory?.signalExecutors()
             processesBarrier.forceTermination()
             monitorsBarrier.forceTermination()
@@ -857,6 +936,7 @@ class Session implements ISession {
         allOperators *. terminate()
 
         execService?.shutdownNow()
+        agentExecService?.shutdownNow()
         GParsConfig.shutdown()
     }
 
@@ -892,8 +972,11 @@ class Session implements ISession {
         final enabled = config.navigate('nextflow.enable.configProcessNamesValidation', true) as boolean
         if( enabled ) {
             final names = ScriptMeta.allProcessNames()
+            final agents = ScriptMeta.allAgentNames()
             log.debug "Process names: ${names.join(', ')}"
-            validateConfig(names)
+            if( agents )
+                log.debug "Agent names: ${agents.join(', ')}"
+            validateConfig(names, agents)
         }
         else {
             log.debug "Config process names validation disabled as requested"
@@ -904,6 +987,22 @@ class Session implements ISession {
         NF.isModuleBinariesEnabled()
     }
 
+    /**
+     * Whether the entry script was launched directly as a module via
+     * `nextflow module run`. Used to decide whether the entry script's
+     * `resources/` bundle (and module bin paths) should be picked up
+     * even though the script is not being loaded via `include`.
+     */
+    private volatile boolean moduleRun
+
+    boolean isModuleRun() {
+        return moduleRun
+    }
+
+    void setModuleRun(boolean value) {
+        this.moduleRun = value
+    }
+
     boolean failOnIgnore() {
         config.navigate('workflow.failOnIgnore', false) as boolean
     }
@@ -912,32 +1011,33 @@ class Session implements ISession {
      * Validate the config file
      *
      * @param processNames The list of process names defined in the pipeline script
+     * @param agentNames The list of agent names defined in the pipeline script
      */
-    void validateConfig(Collection<String> processNames) {
-        def warns = validateConfig0(processNames)
+    void validateConfig(Collection<String> processNames, Collection<String> agentNames=[]) {
+        def warns = validateConfig0(processNames, agentNames)
         for( String str : warns )
             log.warn str
     }
 
-    protected List<String> validateConfig0(Collection<String> processNames) {
+    protected List<String> validateConfig0(Collection<String> processNames, Collection<String> agentNames=[]) {
         List<String> result = []
 
-        if( !(config.process instanceof Map) )
-            return result
+        if( config.process instanceof Map ) {
+            // verifies that all process config names have a match with a defined process
+            def keys = (config.process as Map).keySet()
+            for(String key : keys) {
+                if( key.startsWith('withName:') )
+                    checkValidProcessName(processNames, key.substring('withName:'.length()), result)
+            }
+        }
 
-        // verifies that all process config names have a match with a defined process
-        def keys = (config.process as Map).keySet()
-        for(String key : keys) {
-            String name = null
-            if( key.startsWith('withName:') ) {
-                name = key.substring('withName:'.length())
+        // same check for the `agent` scope -- an agent is never matched by a `process`
+        // selector, so the two name sets are validated independently
+        if( config.agent instanceof Map ) {
+            for( String key : (config.agent as Map).keySet() ) {
+                if( key.startsWith('withName:') )
+                    checkValidProcessName(agentNames, key.substring('withName:'.length()), result, 'agent')
             }
-            else if( key.startsWith('$') ) {
-                name = key.substring(1)
-                log.warn1 "Process config \$${name} is deprecated, use withName:'${name}' instead"
-            }
-            if( name )
-                checkValidProcessName(processNames, name, result)
         }
 
         return result
@@ -949,15 +1049,16 @@ class Session implements ISession {
      * @param selector The process name to check
      * @param processNames The list of processes declared in the workflow script
      * @param errorMessage A list of strings used to return the error message to the caller
+     * @param kind The noun used in the warning message ({@code process} or {@code agent})
      * @return {@code true} if the name specified belongs to the list of process names or {@code false} otherwise
      */
-    protected boolean checkValidProcessName(Collection<String> processNames, String selector, List<String> errorMessage)  {
+    protected boolean checkValidProcessName(Collection<String> processNames, String selector, List<String> errorMessage, String kind='process')  {
         final matches = processNames.any { name -> ProcessConfigBuilder.matchesSelector(name, selector) }
         if( matches )
             return true
 
         def suggestion = processNames.closest(selector)
-        def message = "There's no process matching config selector: $selector"
+        def message = "There's no $kind matching config selector: $selector"
         if( suggestion )
             message += " -- Did you mean: ${suggestion.first()}?"
         errorMessage << message.toString()
@@ -973,8 +1074,8 @@ class Session implements ISession {
             log.warn "Shutdown hook cannot be null\n${ExceptionUtils.getStackTrace(new Exception())}"
             return
         }
-        if( shutdownInitiated )
-            throw new IllegalStateException("Session shutdown already initiated — Hook cannot be added: $hook")
+        if( shutdownInitiated.get() )
+            throw new IllegalStateException("Session shutdown already initiated -- Hook cannot be added: ${hook.class.name}")
         shutdownCallbacks.add(hook)
     }
 
@@ -1053,7 +1154,6 @@ class Session implements ISession {
     }
 
     void notifyAfterWorkflowExecution() {
-
     }
 
     void notifyFlowBegin() {
@@ -1108,6 +1208,11 @@ class Session implements ISession {
             final observer = observers.get(i)
             try {
                 action.accept(observer)
+            }
+            catch (AbortRunException e) {
+                // AbortRunException are forwarded to produce an error in the execution
+                log.error("Abort exception produced when notifying an event - $e.message")
+                throw e
             }
             catch ( Throwable e ) {
                 log.debug(e.getMessage(), e)
@@ -1187,6 +1292,8 @@ class Session implements ISession {
             new SingularityConfig(config.singularity as Map ?: Collections.emptyMap()),
             new ApptainerConfig(config.apptainer as Map ?: Collections.emptyMap()),
             new CharliecloudConfig(config.charliecloud as Map ?: Collections.emptyMap()),
+            new AppleContainerConfig(config.appleContainer as Map ?: Collections.emptyMap()),
+            new SmolVmConfig(config.smolvm as Map ?: Collections.emptyMap()),
         ] as List<ContainerConfig>
 
         if( engine ) {
@@ -1278,8 +1385,8 @@ class Session implements ISession {
     }
 
     void printConsole(String str, boolean newLine=false) {
-        if( ansiLogObserver )
-            ansiLogObserver.appendInfo(str)
+        if( logObserver )
+            logObserver.appendInfo(str)
         else if( newLine )
             System.out.println(str)
         else
@@ -1287,7 +1394,7 @@ class Session implements ISession {
     }
 
     void printConsole(Path file) {
-        ansiLogObserver ? ansiLogObserver.appendInfo(file.text) : Files.copy(file, System.out)
+        logObserver ? logObserver.appendInfo(file.text) : Files.copy(file, System.out)
     }
 
     private volatile ThreadPoolManager finalizePoolManager

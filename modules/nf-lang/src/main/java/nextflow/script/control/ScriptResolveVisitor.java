@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,21 +15,35 @@
  */
 package nextflow.script.control;
 
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import nextflow.script.ast.AgentNode;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FunctionNode;
+import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.OutputNode;
 import nextflow.script.ast.ParamNodeV1;
 import nextflow.script.ast.ProcessNodeV1;
 import nextflow.script.ast.ProcessNodeV2;
+import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
+import nextflow.script.ast.TupleParameter;
 import nextflow.script.ast.WorkflowNode;
+import nextflow.script.types.Record;
+import nextflow.script.types.Tuple;
+import org.codehaus.groovy.ast.ASTNode;
+import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.DynamicVariable;
+import org.codehaus.groovy.ast.GenericsType;
 import org.codehaus.groovy.ast.Parameter;
+import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
@@ -46,13 +60,19 @@ import static nextflow.script.ast.ASTUtils.*;
  */
 public class ScriptResolveVisitor extends ScriptVisitorSupport {
 
+    private static final ClassNode RECORD_TYPE = ClassHelper.makeCached(Record.class);
+    private static final ClassNode TUPLE_TYPE = ClassHelper.makeCached(Tuple.class);
+
     private SourceUnit sourceUnit;
+
+    private List<ClassNode> imports;
 
     private ResolveVisitor resolver;
 
     public ScriptResolveVisitor(SourceUnit sourceUnit, CompilationUnit compilationUnit, List<ClassNode> defaultImports, List<ClassNode> libImports) {
         this.sourceUnit = sourceUnit;
-        this.resolver = new ResolveVisitor(sourceUnit, compilationUnit, defaultImports, libImports);
+        this.imports = new ArrayList<>(defaultImports);
+        this.resolver = new ResolveVisitor(sourceUnit, compilationUnit, imports, libImports);
     }
 
     @Override
@@ -67,7 +87,15 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
             var variableScopeVisitor = new VariableScopeVisitor(sourceUnit);
             variableScopeVisitor.declare();
             variableScopeVisitor.visit();
-    
+
+            // append included types to default imports
+            for( var includeNode : sn.getIncludes() ) {
+                for( var entry : includeNode.entries ) {
+                    if( entry.getTarget() instanceof ClassNode cn )
+                        imports.add(cn);
+                }
+            }
+
             // resolve type names
             if( sn.getParams() != null )
                 visitParams(sn.getParams());
@@ -75,13 +103,21 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
                 visitParamV1(paramNode);
             for( var workflowNode : sn.getWorkflows() )
                 visitWorkflow(workflowNode);
+            for( var agentNode : sn.getAgents() )
+                visitAgent(agentNode);
             for( var processNode : sn.getProcesses() )
                 visitProcess(processNode);
             for( var functionNode : sn.getFunctions() )
                 visitFunction(functionNode);
+            for( var type : sn.getClasses() ) {
+                if( type instanceof RecordNode rn )
+                    visitRecord(rn);
+                else if( type.isEnum() )
+                    visitEnum(type);
+            }
             if( sn.getOutputs() != null )
                 visitOutputs(sn.getOutputs());
-    
+
             // report errors for any unresolved variable references
             new DynamicVariablesVisitor().visit(sn);
         }
@@ -110,6 +146,71 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
         resolver.visit(node.onError);
     }
 
+    @Override
+    public void visitAgent(AgentNode node) {
+        for( var input : node.inputs ) {
+            // a destructured `record(...)` input parses to a TupleParameter
+            // whose type is the bare Record type -- reject it explicitly; any
+            // other resolvable type (scalar, path, named record) is allowed
+            if( input instanceof TupleParameter tp ) {
+                if( RECORD_TYPE.equals(input.getType()) )
+                    rejectDestructuredRecord(input, agentInputLabel(tp, "record"));
+                else
+                    // a tuple input declares no context slot for its components, so an agent
+                    // would silently half-ignore it (no input JSON entry, nothing to stage)
+                    resolver.addError(agentInputLabel(tp, "tuple") + ": tuple inputs are not supported -- declare each component as a separate input", input);
+                continue;
+            }
+            resolver.resolveOrFail(input.getType(), input);
+        }
+        resolver.visit(node.directives);
+        resolveTypedOutputs(node.outputs);
+        checkAgentOutputs(node.outputs);
+        resolver.visit(node.outputs);
+        resolver.visit(node.prompt);
+    }
+
+    /**
+     * Name a destructuring input in a diagnostic. A {@link TupleParameter} is constructed with an
+     * EMPTY name, so it has to be identified by its components — otherwise a script with several
+     * inputs gets a message that names none of them.
+     */
+    private static String agentInputLabel(TupleParameter tp, String form) {
+        var names = new ArrayList<String>();
+        for( var component : tp.components )
+            names.add(component.getName());
+        return "Agent input `" + form + "(" + String.join(", ", names) + ")`";
+    }
+
+    /**
+     * An agent output must be a named declaration, because the name is the channel it binds and
+     * the key the model answers under. The shared `processOutput` grammar rule also admits a bare
+     * expression (a process lowers it to the implicit `$out`), which an agent has nothing to do
+     * with -- reject it here rather than let it be dropped and resurface as a runtime
+     * "must declare exactly one output".
+     */
+    private void checkAgentOutputs(Statement block) {
+        for( var stmt : asBlockStatements(block) ) {
+            if( !(stmt instanceof ExpressionStatement stmtX) )
+                continue;
+            var output = stmtX.getExpression();
+            // a destructured `record(...)` output parses to a `record` method call
+            if( output instanceof MethodCallExpression mce && "record".equals(mce.getMethodAsString()) ) {
+                rejectDestructuredRecord(mce, "Agent output");
+                continue;
+            }
+            if( output instanceof VariableExpression )
+                continue;
+            if( output instanceof AssignmentExpression ae && ae.getLeftExpression() instanceof VariableExpression )
+                continue;
+            resolver.addError("Agent output must be declared as `name: Type` -- a bare expression is not supported", output);
+        }
+    }
+
+    private void rejectDestructuredRecord(ASTNode ctx, String label) {
+        resolver.addError(label + " must use a named record type; destructured `record(...)` is not yet supported for agents", ctx);
+    }
+
     private void resolveTypedOutputs(Statement block) {
         for( var stmt : asBlockStatements(block) ) {
             var stmtX = (ExpressionStatement)stmt;
@@ -126,8 +227,16 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitProcessV2(ProcessNodeV2 node) {
-        for( var input : node.inputs )
+        for( var input : asFlatParams(node.inputs) ) {
             resolver.resolveOrFail(input.getType(), input);
+        }
+        for( var input : node.inputs ) {
+            var type = input.getType();
+            if( input instanceof TupleParameter tp && RECORD_TYPE.equals(type) )
+                resolveRecordInput(tp);
+            if( input instanceof TupleParameter tp && TUPLE_TYPE.equals(type) )
+                resolveTupleInput(tp);
+        }
         resolver.visit(node.directives);
         resolver.visit(node.stagers);
         resolveTypedOutputs(node.outputs);
@@ -136,6 +245,22 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
         resolver.visit(node.when);
         resolver.visit(node.exec);
         resolver.visit(node.stub);
+    }
+
+    private void resolveRecordInput(TupleParameter tp) {
+        var type = tp.getType();
+        for( var param : tp.components ) {
+            var fn = new FieldNode(param.getName(), Modifier.PUBLIC, param.getType(), type, null);
+            fn.setDeclaringClass(type);
+            type.addField(fn);
+        }
+    }
+
+    private void resolveTupleInput(TupleParameter tp) {
+        var genericsTypes = Arrays.stream(tp.components)
+            .map(p -> new GenericsType(p.getType()))
+            .toArray(GenericsType[]::new);
+        tp.getType().setGenericsTypes(genericsTypes);
     }
 
     @Override
@@ -156,6 +281,11 @@ public class ScriptResolveVisitor extends ScriptVisitorSupport {
         }
         resolver.resolveOrFail(node.getReturnType(), node);
         resolver.visit(node.getCode());
+    }
+
+    @Override
+    public void visitField(FieldNode node) {
+        resolver.resolveOrFail(node.getType(), node);
     }
 
     @Override

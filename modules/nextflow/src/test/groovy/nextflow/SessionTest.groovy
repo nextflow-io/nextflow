@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,6 +19,9 @@ package nextflow
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.attribute.PosixFilePermission
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
@@ -31,12 +34,15 @@ import nextflow.script.ScriptFile
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceHelper
+import nextflow.trace.TraceObserverV2
 import nextflow.trace.WorkflowStatsObserver
 import nextflow.util.Duration
 import nextflow.util.VersionNumber
 import spock.lang.Specification
 import spock.lang.Unroll
 import test.TestHelper
+
+import static test.ScriptHelper.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -233,13 +239,69 @@ class SessionTest extends Specification {
 
     }
 
+    def 'the agent orchestration pool is separate from the execution pool and grows on demand' () {
+        given:
+        def session = new Session([poolSize: 2])
+        session.start()
+
+        expect: 'the execution pool keeps its historical fixed shape, sized to poolSize'
+        ((ThreadPoolExecutor) session.execService).getMaximumPoolSize() == 2
+
+        and: 'orchestration draws from a DIFFERENT pool, so an agent cannot consume an execution thread'
+        !session.getAgentExecService().is(session.execService)
+
+        and: 'and holds no threads until an agent actually runs'
+        ((ThreadPoolExecutor) session.getAgentExecService()).getPoolSize() == 0
+
+        and: 'it is unbounded, so a blocked orchestrator can always be given a thread'
+        ((ThreadPoolExecutor) session.getAgentExecService()).getMaximumPoolSize() == Integer.MAX_VALUE
+
+        when: 'far more blocked orchestrators than the execution pool could ever admit'
+        def pool = (ThreadPoolExecutor) session.getAgentExecService()
+        int n = 50
+        def started = new CountDownLatch(n)
+        def release = new CountDownLatch(1)
+        n.times { pool.submit({ started.countDown(); release.await() } as Runnable) }
+
+        // sharing one fixed pool would admit only poolSize of these, and the tool sub-tasks they
+        // block on would never get a thread -- the deadlock this partition removes
+        then: 'all of them run concurrently'
+        started.await(30, TimeUnit.SECONDS)
+        pool.getPoolSize() >= n
+
+        and: 'none of it consumed the execution pool'
+        ((ThreadPoolExecutor) session.execService).getPoolSize() == 0
+
+        cleanup:
+        release.countDown()
+        pool.shutdownNow()
+        session.execService.shutdownNow()
+    }
+
     def 'should get a warning message' () {
 
         given:
-        def session = new Session([process: ['$foo': [cpus:1], '$bar':[mem:'10GB']]])
+        def session = new Session([process: ['withName:foo': [cpus:1], 'withName:bar':[mem:'10GB']]])
         expect:
         session.validateConfig0(['foo','bar','baz']) == []
         session.validateConfig0(['foo','baz']) == ["There's no process matching config selector: bar -- Did you mean: baz?"]
+    }
+
+    def 'should validate agent selectors against the agent names' () {
+        given:
+        def session = new Session([agent: [
+            model: 'openai/gpt-5-mini',
+            'withName:critic': [cpus: 2],
+            'withName:planer': [cpus: 4],
+            'withLabel:reasoning': [cpus: 8] ]])
+
+        expect: 'a matched agent selector is silent; the typo is reported as an agent, not a process'
+        session.validateConfig0([], ['critic','planner']) == ["There's no agent matching config selector: planer -- Did you mean: planner?"]
+
+        and: 'agent names never satisfy a `process` selector, and vice versa'
+        new Session([process: ['withName:critic': [cpus:2]]]).validateConfig0([], ['critic'])
+            == ["There's no process matching config selector: critic"]
+        session.validateConfig0(['critic','planner'], []).size() == 2
     }
 
     @Unroll
@@ -347,12 +409,6 @@ class SessionTest extends Specification {
         'foo|bar'   | ['baz']       | "There's no process matching config selector: foo|bar"
     }
 
-
-    static Map cfg(String config) {
-        new ConfigSlurper().parse(config).toMap()
-    }
-
-
     def 'should fetch containers definition' () {
 
         String text
@@ -362,7 +418,7 @@ class SessionTest extends Specification {
                 process.container = 'beta'
                 '''
         then:
-        new Session(cfg(text)).fetchContainers() == 'beta'
+        new Session(loadConfig(text)).fetchContainers() == 'beta'
 
 
         when:
@@ -373,7 +429,7 @@ class SessionTest extends Specification {
                 }
                 '''
         then:
-        new Session(cfg(text)).fetchContainers() == ['proc1': 'alpha', 'proc2': 'beta']
+        new Session(loadConfig(text)).fetchContainers() == ['proc1': 'alpha', 'proc2': 'beta']
 
 
         when:
@@ -386,7 +442,7 @@ class SessionTest extends Specification {
                 process.container = 'gamma'
                 '''
         then:
-        new Session(cfg(text)).fetchContainers() == ['proc1': 'alpha', 'proc2': 'beta', 'default': 'gamma']
+        new Session(loadConfig(text)).fetchContainers() == ['proc1': 'alpha', 'proc2': 'beta', 'default': 'gamma']
 
 
         when:
@@ -395,7 +451,7 @@ class SessionTest extends Specification {
                 '''
 
         def meta = Mock(WorkflowMetadata); meta.getRevision() >> '1.2'
-        def session = new Session(cfg(text))
+        def session = new Session(loadConfig(text))
         session.binding.setVariable('workflow',meta)
         then:
         session.fetchContainers() == 'ngi/rnaseq:1.2'
@@ -418,5 +474,24 @@ class SessionTest extends Specification {
         false | false
         true  | true
 
+    }
+
+    def 'should notify flow complete only once when abort and destroy race' () {
+        given:
+        def observer = Mock(TraceObserverV2)
+        def session = new Session()
+        session.@observersV2 = [observer]
+
+        when:
+        // certain error conditions can abort the session on a separate thread
+        // while the main thread winds it down via destroy()
+        // both call shutdown0() -> notifyFlowComplete() concurrently
+        def t1 = Thread.start { session.abort() }
+        def t2 = Thread.start { session.destroy() }
+        t1.join()
+        t2.join()
+
+        then:
+        1 * observer.onFlowComplete()
     }
 }

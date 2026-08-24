@@ -1,0 +1,47 @@
+#!/bin/bash
+#
+# Test agent output mode error handling (NXF_AGENT_MODE=true)
+#
+
+set -e
+
+# Run workflow with agent mode enabled (expect failure)
+NXF_AGENT_MODE=true $NXF_CMD -q run $NXF_SCRIPT > stdout.txt 2> stderr.txt && {
+    echo "ERROR: Workflow should have failed"
+    exit 1
+}
+
+# Verify agent output format contains error info
+if ! grep -q '\[PIPELINE\]' stdout.txt; then
+    echo "ERROR: Missing [PIPELINE] in agent output"
+    cat stdout.txt
+    exit 1
+fi
+
+if ! grep -q '\[ERROR\]' stdout.txt; then
+    echo "ERROR: Missing [ERROR] in agent output"
+    cat stdout.txt
+    exit 1
+fi
+
+if ! grep -q '\[FAILED\]' stdout.txt; then
+    echo "ERROR: Missing [FAILED] in agent output"
+    cat stdout.txt
+    exit 1
+fi
+
+# Verify error contains exit code
+if ! grep -q 'exit: 127' stdout.txt; then
+    echo "ERROR: Missing exit code in error output"
+    cat stdout.txt
+    exit 1
+fi
+
+# Verify error contains workdir
+if ! grep -q 'workdir:' stdout.txt; then
+    echo "ERROR: Missing workdir in error output"
+    cat stdout.txt
+    exit 1
+fi
+
+echo "Agent error output mode test passed"

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -52,6 +52,24 @@ class GitlabRepositoryProviderTest extends Specification {
         false       | new ProviderConfig('gitlab').setUser('foo')
         true        | new ProviderConfig('gitlab').setUser('foo').setPassword('bar')
         true        | new ProviderConfig('gitlab').setToken('xyz')
+    }
+
+    @Unroll
+    def 'should return git credentials' () {
+        given:
+        def provider = new GitlabRepositoryProvider('pditommaso/tutorial', CONFIG)
+
+        when:
+        def credentials = provider.getGitCredentials()
+
+        then:
+        credentials != null
+
+        where:
+        CONFIG                                                                    | _
+        new ProviderConfig('gitlab').setUser('foo').setPassword('bar')            | _
+        new ProviderConfig('gitlab').setUser('foo').setToken('xyz')               | _
+        new ProviderConfig('gitlab').setUser('foo').setPassword('bar').setToken('xyz') | _
     }
 
     @Requires({System.getenv('NXF_GITLAB_ACCESS_TOKEN')})

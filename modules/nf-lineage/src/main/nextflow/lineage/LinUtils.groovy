@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +25,7 @@ import java.time.ZoneId
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.lineage.model.v1beta1.AgentRun
 import nextflow.lineage.model.v1beta1.TaskRun
 import nextflow.lineage.model.v1beta1.WorkflowRun
 import nextflow.lineage.serde.LinEncoder
@@ -103,7 +104,7 @@ class LinUtils {
      * @return return 'true' if the parent is a Task/Workflow run and the first element in fragment is 'output'. Otherwise 'false'
      */
     static boolean isSearchingOutputs(LinSerializable record, String fragment) {
-        return (record instanceof WorkflowRun || record instanceof TaskRun) && fragment && fragment.tokenize('.')[0] == 'output'
+        return (record instanceof WorkflowRun || record instanceof TaskRun || record instanceof AgentRun) && fragment && fragment.tokenize('.')[0] == 'output'
     }
 
     /**
@@ -127,7 +128,7 @@ class LinUtils {
 
     /**
      * Check if an record fulfill the parameter-value
-     * 
+     *
      * @param record Object to evaluate
      * @param params parameter-value pairs to evaluate
      * @return true if all record parameters exist and matches with the value, otherwise false.

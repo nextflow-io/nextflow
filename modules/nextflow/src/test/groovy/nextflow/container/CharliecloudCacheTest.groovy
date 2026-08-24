@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -105,7 +105,7 @@ class CharliecloudCacheTest extends Specification {
 
         when:
         def cache = new CharliecloudCache([cacheDir: "$cacheDir"] as CharliecloudConfig, [CH_IMAGE_STORAGE: "$charliecloudCacheDir"])
-     
+
         then:
         cache.getCacheDir() == charliecloudCacheDir
 
@@ -124,7 +124,7 @@ class CharliecloudCacheTest extends Specification {
 
         when:
         def cache = new CharliecloudCache(new CharliecloudConfig([:]), [NXF_CHARLIECLOUD_CACHEDIR: "$cacheDir", CH_IMAGE_STORAGE: "$charliecloudCacheDir"])
-     
+
         then:
         cache.getCacheDir() == charliecloudCacheDir
 
@@ -163,7 +163,7 @@ class CharliecloudCacheTest extends Specification {
         def cache = new CharliecloudCache([writeFake: false] as CharliecloudConfig, [ NXF_CHARLIECLOUD_CACHEDIR: "$cacheDir", CH_IMAGE_STORAGE: "$cacheDir" ])
         and:
         cache.getCacheDir()
-        
+
         then:
         def e = thrown(Exception)
         e.message == "`NXF_CHARLIECLOUD_CACHEDIR` env variable must be different from env variable `CH_IMAGE_STORAGE`"

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +23,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.dag.MermaidHtmlRenderer
 import nextflow.lineage.LinStore
+import nextflow.lineage.model.v1beta1.AgentRun
 import nextflow.lineage.model.v1beta1.FileOutput
 import nextflow.lineage.model.v1beta1.TaskRun
 import nextflow.lineage.model.v1beta1.WorkflowRun
@@ -102,10 +103,12 @@ class LinDagRenderer {
             visitFileOutput(lid, record)
         else if( record instanceof TaskRun )
             visitTaskRun(lid, record)
+        else if( record instanceof AgentRun )
+            visitAgentRun(lid, record)
         else if( record instanceof WorkflowRun )
             visitWorkflowRun(lid, record)
         else
-            throw new Exception("Cannot render lineage for type ${record.getClass().getSimpleName()} -- must be a FileOutput, TaskRun, or WorkflowRun")
+            throw new Exception("Cannot render lineage for type ${record.getClass().getSimpleName()} -- must be a FileOutput, TaskRun, AgentRun, or WorkflowRun")
     }
 
     private void visitFileOutput(String lid, FileOutput fileOutput) {
@@ -128,6 +131,15 @@ class LinDagRenderer {
     private void visitTaskRun(String lid, TaskRun taskRun) {
         addNode(lid, "${taskRun.name} [${lid}]", NodeType.TASK)
         for( final param : taskRun.input ) {
+            visitParameter(lid, param.value)
+        }
+    }
+
+    private void visitAgentRun(String lid, AgentRun agentRun) {
+        // ponytail: rendered with the same node shape as a task. Give agents their own shape
+        // if/when a diagram with both is common enough that telling them apart matters.
+        addNode(lid, "${agentRun.name} [${lid}]", NodeType.TASK)
+        for( final param : agentRun.input ) {
             visitParameter(lid, param.value)
         }
     }

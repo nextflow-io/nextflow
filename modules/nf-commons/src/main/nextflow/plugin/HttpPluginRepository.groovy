@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.plugin
 
 
@@ -9,8 +25,9 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import io.seqera.http.HxClient
 import io.seqera.npr.api.schema.v1.ListDependenciesResponse
-import io.seqera.npr.api.schema.v1.Plugin
+import io.seqera.npr.api.schema.v1.PluginDependency
 import nextflow.BuildInfo
+import nextflow.util.ProxyConfig
 import nextflow.util.RetryConfig
 import org.pf4j.PluginRuntimeException
 import org.pf4j.update.FileDownloader
@@ -36,7 +53,9 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
     private final URI url
     private final HxClient httpClient
 
-    private Map<String, PluginInfo> plugins
+    // Initialised eagerly so that getPlugin()/refresh() are safe to call even when prefetch()
+    // was skipped (e.g. PluginUpdater skip-if-installed) or failed (non-fatal degradation).
+    private Map<String, PluginInfo> plugins = new HashMap<>()
 
     HttpPluginRepository(String id, URI url) {
         this.id = id
@@ -45,6 +64,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
             ? URI.create(url.toString() + "/")
             : url
         this.httpClient = HxClient.newBuilder()
+                .withProxyConfig(ProxyConfig.proxyConfig())
                 .retryConfig(RetryConfig.config())
                 .build()
     }
@@ -66,8 +86,17 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
     // like any other implementation of UpdateRepository.
     @Override
     void prefetch(List<PluginRef> plugins) {
-        if (plugins && !plugins.isEmpty()) {
+        if (!plugins)
+            return
+        try {
             this.plugins = fetchMetadata(plugins)
+        }
+        catch (PluginRuntimeException e) {
+            // Don't abort Nextflow startup if the registry is unreachable or rate-limited:
+            // downstream code will either resolve the plugins from the local store or fail
+            // with a more specific error when the metadata is actually needed.
+            log.warn "Failed to prefetch plugin metadata from ${url} - cause: ${e.message}"
+            this.plugins = new HashMap<>()
         }
     }
 
@@ -83,10 +112,6 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
 
     @Override
     Map<String, PluginInfo> getPlugins() {
-        if (plugins==null) {
-            log.warn "getPlugins() called before prefetch() - plugins map will be empty"
-            return Map.of()
-        }
         return Collections.unmodifiableMap(plugins)
     }
 
@@ -97,6 +122,10 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
 
     @Override
     void refresh() {
+        // nothing to refresh when no metadata was prefetched (null or empty): avoid a
+        // pointless registry round-trip. In Groovy an empty or null map is falsy.
+        if( !plugins )
+            return
         plugins = fetchMetadataByIds(plugins.keySet())
     }
 
@@ -156,7 +185,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
                 throw new PluginRuntimeException("Failed to download plugin metadata: Failed to parse response body")
             }
             final result = new HashMap<String, PluginInfo>()
-            for( Plugin plugin : decoded.plugins ) {
+            for( PluginDependency plugin : decoded.plugins ) {
                 if( plugin.releases ) {
                     final pluginInfo = mapToPluginInfo(plugin)
                     result.put(plugin.id, pluginInfo)
@@ -179,14 +208,14 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
      * @param plugin The Plugin object from the repository API response
      * @return A PluginInfo object compatible with pf4j's update repository interface
      */
-    static protected PluginInfo mapToPluginInfo(Plugin plugin) {
+    static protected PluginInfo mapToPluginInfo(PluginDependency plugin) {
         assert plugin.releases, "Plugin releases cannot be empty"
 
         final pluginInfo = new PluginInfo()
         pluginInfo.id = plugin.id
         pluginInfo.projectUrl = plugin.projectUrl
         pluginInfo.provider = plugin.provider
-        
+
         // Map releases to PluginInfo.PluginRelease
         pluginInfo.releases = new ArrayList<>()
         for (def release : plugin.releases) {
@@ -198,7 +227,7 @@ class HttpPluginRepository implements PrefetchUpdateRepository {
             pluginRelease.requires = release.requires
             pluginInfo.releases.add(pluginRelease)
         }
-        
+
         return pluginInfo
     }
 

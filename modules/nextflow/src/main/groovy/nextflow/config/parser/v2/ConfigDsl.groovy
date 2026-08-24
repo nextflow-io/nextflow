@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -36,6 +36,13 @@ import nextflow.file.FileHelper
 @Slf4j
 @CompileStatic
 class ConfigDsl extends Script {
+
+    /**
+     * The config scopes accepting `withName:`/`withLabel:` selectors. Agents are
+     * configured with the same selector semantics as processes, in their own
+     * independent {@code agent} scope.
+     */
+    private static final List<String> SELECTOR_SCOPES = List.of('process', 'agent')
 
     private boolean ignoreIncludes
 
@@ -128,13 +135,61 @@ class ConfigDsl extends Script {
         }
     }
 
+    /**
+     * Assign a value to a config option.
+     *
+     * When assigning a param, if the param was specified
+     * on the command line, then the command line value takes
+     * precedence. CLI params are applied here in order to ensure
+     * that if the param is referenced later in the config file,
+     * the command line value is used.
+     *
+     * @param names
+     * @param value
+     */
     void assign(List<String> names, Object value) {
         if( names.size() == 2 && names.first() == 'params' ) {
-            declareParam(names.last(), value)
-            if( cliParams.containsKey(names.last()) )
-                return
+            final name = names.last()
+            declareParam(name, value)
+            if( cliParams.containsKey(name) )
+                value = asDeclaredType(cliParams[name], value)
         }
         navigate(names.init()).put(names.last(), value)
+    }
+
+    /**
+     * Convert a CLI param override to an appropriate type based
+     * on the default param value in the config file.
+     *
+     * Note: this applies only to numbers and booleans.
+     *
+     * @param value
+     * @param declValue
+     */
+    private Object asDeclaredType(Object value, Object declValue) {
+        if( value == null )
+            return null
+
+        if( value !instanceof CharSequence )
+            return value
+
+        final str = value.toString()
+
+        if( declValue instanceof Boolean ) {
+            if( str.toLowerCase() == 'true' ) return Boolean.TRUE
+            if( str.toLowerCase() == 'false' ) return Boolean.FALSE
+        }
+
+        if( declValue instanceof Number ) {
+            if( str.isInteger() ) return str.toInteger()
+            if( str.isLong() ) return str.toLong()
+            if( str.isBigInteger() ) return str.toBigInteger()
+            if( str.isFloat() ) return str.toFloat()
+            if( str.isDouble() ) return str.toDouble()
+            if( str.isBigDecimal() ) return str.toBigDecimal()
+        }
+
+        return value
     }
 
     private Map navigate(List<String> names) {
@@ -167,8 +222,8 @@ class ConfigDsl extends Script {
             ? List.of(names.last())
             : names
 
-        if( relativeNames.size() == 1 && relativeNames.last() == 'process' )
-            return new ProcessDsl(this, names)
+        if( relativeNames.size() == 1 && relativeNames.last() in SELECTOR_SCOPES )
+            return new SelectorBlockDsl(this, names)
 
         if( names.size() == 1 && names.first() == 'profiles' )
             return new ProfilesDsl(this, profiles)
@@ -248,8 +303,8 @@ class ConfigDsl extends Script {
             this.scope = scope
         }
 
-        void assign(List<String> names, Object right) {
-            dsl.assign(scope + names, right)
+        void assign(List<String> names, Object value) {
+            dsl.assign(scope + names, value)
         }
 
         void block(String name, Closure closure) {
@@ -257,11 +312,11 @@ class ConfigDsl extends Script {
         }
 
         void withLabel(String label, Closure closure) {
-            throw new ConfigParseException("Process selectors are only allowed in the `process` scope (offending scope: `${scope.join('.')}`)")
+            throw new ConfigParseException("Config selectors are only allowed in the `process` and `agent` scopes (offending scope: `${scope.join('.')}`)")
         }
 
         void withName(String selector, Closure closure) {
-            throw new ConfigParseException("Process selectors are only allowed in the `process` scope (offending scope: `${scope.join('.')}`)")
+            throw new ConfigParseException("Config selectors are only allowed in the `process` and `agent` scopes (offending scope: `${scope.join('.')}`)")
         }
 
         void includeConfig(String includeFile) {
@@ -273,19 +328,29 @@ class ConfigDsl extends Script {
     }
 
     private static class PluginsDsl extends ConfigBlockDsl {
+        private Set<String> plugins = new LinkedHashSet<>()
+
         PluginsDsl(ConfigDsl dsl) {
             super(dsl, Collections.<String>emptyList())
         }
 
         void id(String value) {
-            final target = dsl.getTarget()
-            final plugins = (Set) target.computeIfAbsent('plugins', (k) -> new HashSet<>())
             plugins.add(value)
+        }
+
+        @Override
+        void apply() {
+            dsl.getTarget().put('plugins', plugins)
         }
     }
 
-    private static class ProcessDsl extends ConfigBlockDsl {
-        ProcessDsl(ConfigDsl dsl, List<String> scope) {
+    /**
+     * The block DSL of a scope accepting `withName:`/`withLabel:` selectors
+     * (see {@link #SELECTOR_SCOPES}). A selector is rewritten into a nested
+     * block whose key carries the selector prefix.
+     */
+    private static class SelectorBlockDsl extends ConfigBlockDsl {
+        SelectorBlockDsl(ConfigDsl dsl, List<String> scope) {
             super(dsl, scope)
         }
 
@@ -310,7 +375,7 @@ class ConfigDsl extends Script {
         }
 
         @Override
-        void assign(List<String> names, Object right) {
+        void assign(List<String> names, Object value) {
             throw new ConfigParseException("Only profile blocks are allowed in the `profiles` scope")
         }
 

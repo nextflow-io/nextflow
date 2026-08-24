@@ -1,5 +1,5 @@
 /*
- * Copyright 2024-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -83,6 +83,71 @@ class TypeCheckingTest extends Specification {
         errors[0].getStartLine() == 11
         errors[0].getStartColumn() == 5
         errors[0].getOriginalMessage() == 'Incorrect number of call arguments, expected 2 but received 1'
+    }
+
+    // -- a wrong-arity call to an `agent` must be a COMPILE error, like a process call. It used to
+    //    be deferred to AgentDef.buildAgentTask at run time, i.e. invisible to `nextflow lint`
+    //    and the LSP -- unacceptable for a module agent, whose consumer cannot edit the module.
+    def 'should report an error for an agent call with the wrong number of arguments' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            agent reporter {
+                model 'openai/gpt-4o'
+                instruction 'i'
+
+                input:
+                sample: String
+
+                output:
+                report: String
+
+                prompt:
+                """
+                Report on ${sample}.
+                """
+            }
+
+            workflow {
+                reporter('a', 'b')
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == 'Incorrect number of call arguments, expected 1 but received 2'
+
+        when: 'the call arity matches the declared inputs'
+        errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            agent reporter {
+                model 'openai/gpt-4o'
+                instruction 'i'
+
+                input:
+                sample: String
+
+                output:
+                report: String
+
+                prompt:
+                """
+                Report on ${sample}.
+                """
+            }
+
+            workflow {
+                reporter('a')
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
     }
 
 }

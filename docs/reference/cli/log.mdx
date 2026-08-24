@@ -1,0 +1,147 @@
+---
+title: nextflow log
+description: Reference for the nextflow log command. Print the execution history and log information.
+---
+
+# `nextflow log`
+
+Print the execution history and log information.
+
+## Usage
+
+```console
+$ nextflow log [options] [run_name | session_id]
+```
+
+## Description
+
+The `log` command queries the execution metadata of pipelines run by Nextflow. Run `nextflow log` with no arguments to list the previous runs. You can identify a run by either its run name or its session ID. Use the options below to filter and format the results when you debug a pipeline or inspect its execution metadata.
+
+## Options
+
+##### `-after`
+
+Show log entries for runs executed *after* the specified one.
+
+##### `-before`
+
+Show log entries for runs executed *before* the specified one.
+
+##### `-but`
+
+Show log entries for all runs *except* the specified one.
+
+##### `-f, -fields`
+
+Comma-separated list of fields to include in the printed log.
+
+The same fields as the `trace.fields` option can be specified here, as well as `stdout` and `stderr`. The trace fields `%cpu` and `%mem` must be specified as `pcpu` and `pmem`, respectively.
+
+Use the `-l` option to see the complete list of available fields.
+
+##### `-F, -filter`
+
+Filter log entries by a custom expression, for example `process =~ /hello.*/ && status == 'COMPLETED'`.
+
+##### `-h, -help`
+
+Print the command usage.
+
+##### `-l, -list-fields`
+
+Show all available fields.
+
+##### `-quiet`
+
+Show only run names.
+
+##### `-s`
+
+Character used to separate column values.
+
+##### `-t, -template`
+
+Text template used to format each record in the log.
+
+## Examples
+
+List the execution logs of all previous runs in a project:
+
+```console
+$ nextflow log
+
+TIMESTAMP           DURATION        RUN NAME        STATUS  REVISION ID     SESSION ID                              COMMAND
+2020-10-07 11:52:24 2.1s            focused_payne   OK      96eb04d6a4      af6adaaa-ad4f-48a2-9f6a-b121e789adf5    nextflow run nextflow-io/hello -r master
+2020-10-07 11:53:00 3.1s            tiny_leavitt    OK      e3b475a61b      4d3b95c5-4385-42b6-b430-c865a70d56a4    nextflow run ./tutorial.nf
+2020-10-07 11:53:29 2.5s            boring_euler    OK      e3b475a61b      a6276975-7173-4208-ae09-ab9d6dce8737    nextflow run tutorial.nf
+```
+
+List only the *run names* of all previous runs in a project:
+
+```console
+$ nextflow log -quiet
+
+focused_payne
+tiny_leavitt
+boring_euler
+```
+
+List the execution entries for a specific execution:
+
+```console
+$ nextflow log tiny_leavitt
+
+work/1f/f1ea9158fb23b53d5083953121d6b6
+work/bf/334115deec60929dc18edf0010032a
+work/a3/06521d75da296d4dd7f4f8caaddad8
+```
+
+List the execution entries *after* a specific execution:
+
+```console
+$ nextflow log -after tiny_leavitt
+
+work/92/c1a9cd9a96e0531d81ca69f5dc3bb7
+work/3f/70944c7a549b6221e1ccc7b4b21b62
+work/0e/2ebdba85f76f6068b21a1bcbf10cab
+```
+
+List the execution entries *before* a specific execution:
+
+```console
+$ nextflow log -before tiny_leavitt
+
+work/5d/ad76f7b7ab3500cf616814ef644b61
+work/c4/69a82b080a477612ba8d8e4c27b579
+work/be/a4fa2aa38f76fd324958c81c2e4603
+work/54/39116773891c47a91e3c1733aad4de
+```
+
+List the execution entries *except* for a specific execution:
+
+```console
+$ nextflow log -but tiny_leavitt
+
+work/5d/ad76f7b7ab3500cf616814ef644b61
+work/c4/69a82b080a477612ba8d8e4c27b579
+work/be/a4fa2aa38f76fd324958c81c2e4603
+work/54/39116773891c47a91e3c1733aad4de
+```
+
+Filter specific fields from the execution log of a process:
+
+```console
+$ nextflow log tiny_leavitt -f 'process,exit,hash,duration'
+
+split_letters       0       1f/f1ea91       112ms
+convert_to_upper    0       bf/334115       144ms
+convert_to_upper    0       a3/06521d       139ms
+```
+
+Filter the execution log of a process with a custom expression:
+
+```console
+$ nextflow log tiny_leavitt -F 'process =~ /split_letters/'
+
+work/1f/f1ea9158fb23b53d5083953121d6b6
+```

@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2025, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,7 +26,9 @@ import nextflow.exception.IllegalArityException
 import nextflow.exception.MissingFileException
 import nextflow.exception.MissingValueException
 import nextflow.script.params.v2.ProcessFileOutput
-import org.codehaus.groovy.runtime.InvokerHelper
+import nextflow.script.types.Bag
+import nextflow.util.HashBag
+import nextflow.util.RecordMap
 /**
  * Implements the resolution of task outputs.
  *
@@ -47,6 +49,44 @@ class TaskOutputResolver implements Map<String,Object> {
         this.declaredFiles = declaredFiles
         this.task = task
         this.delegate = task.context
+    }
+
+    /**
+     * Resolve and normalize an output expression before it is emitted.
+     *
+     * Values from the task context may contain {@link TaskPath}, which is a
+     * task-local view of an input file. It is valid for script interpolation,
+     * but it must not escape through task outputs because downstream tasks
+     * need durable source/work-directory paths for hashing and staging.
+     *
+     * @param value
+     */
+    Object resolve(Object value) {
+        return normalizeValue(resolveLazy(value))
+    }
+
+    Object normalizeValue(Object value) {
+        if( value instanceof TaskPath ) {
+            return value.toRealPath()
+        }
+
+        if( value instanceof Collection ) {
+            final elements = value.collect { el -> normalizeValue(el) }
+            return \
+                value instanceof List ? elements as List :
+                value instanceof Set ? elements as Set :
+                value instanceof Bag ? new HashBag<>(elements) :
+                elements
+        }
+
+        if( value instanceof Map ) {
+            final normalized = value.collectEntries { k, v -> [k, normalizeValue(v)] }
+            return \
+                value instanceof RecordMap ? new RecordMap(normalized as Map<String,?>) :
+                normalized
+        }
+
+        return value
     }
 
     /**
@@ -153,16 +193,28 @@ class TaskOutputResolver implements Map<String,Object> {
     /**
      * Get a variable from the task context.
      *
+     * Returns null when the key is not found rather than throwing, so that
+     * Groovy's Map-based method dispatch can fall back to the closure owner
+     * (the script) for calls like `add(x, y)` in output expressions.
+     *
      * @param name
      */
     @Override
-    @CompileDynamic
     Object get(Object name) {
-        try {
-            return InvokerHelper.getProperty(delegate, name)
-        }
-        catch( MissingPropertyException e ) {
-            throw new MissingValueException("Missing variable in process output: ${e.property}")
-        }
+        return delegate.get(name)
+    }
+
+    /**
+     * Invoke a method on the task context, which delegates to the
+     * owner script. This allows output expressions to call arbitrary
+     * functions defined in the script.
+     *
+     * @param name
+     * @param args
+     */
+    @Override
+    @CompileDynamic
+    Object invokeMethod(String name, Object args) {
+        delegate.invokeMethod(name, args)
     }
 }

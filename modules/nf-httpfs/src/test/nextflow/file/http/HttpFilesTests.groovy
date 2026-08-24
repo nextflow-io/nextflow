@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -109,7 +109,7 @@ class HttpFilesTests extends Specification {
         then:
         lines.size()>0
         lines[0].startsWith('<!DOCTYPE html><html lang="en">')
-        
+
     }
 
     @IgnoreIf({System.getenv('NXF_SMOKE')})
@@ -280,7 +280,7 @@ class HttpFilesTests extends Specification {
             for( Map.Entry<String,String> entry : allHeaders.entrySet() ) {
                 header.set(entry.key, entry.value)
             }
-            
+
             header.set("Content-Type", "text/plain")
             request.sendResponseHeaders(respCode.call(), body.size())
 

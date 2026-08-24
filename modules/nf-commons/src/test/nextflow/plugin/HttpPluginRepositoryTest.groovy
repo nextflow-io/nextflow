@@ -1,3 +1,19 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package nextflow.plugin
 
 
@@ -7,7 +23,6 @@ import java.time.ZonedDateTime
 import com.github.tomakehurst.wiremock.junit.WireMockRule
 import nextflow.BuildInfo
 import org.junit.Rule
-import org.pf4j.PluginRuntimeException
 import spock.lang.Specification
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*
@@ -98,17 +113,18 @@ class HttpPluginRepositoryTest extends Specification {
         unit.prefetch([new PluginRef("nf-fake")])
 
         then:
-        def err = thrown PluginRuntimeException
-        err.message.startsWith("Unable to connect to http://localhost")
+        // Prefetch is an optimization, not a hard requirement: a connection failure must not
+        // abort Nextflow startup. Downstream code falls back to per-plugin lookups.
+        noExceptionThrown()
+        unit.getPlugins() == [:]
     }
 
     // ------------------------------------------------------------------------
 
     def 'handle prefetch error with percent chars in error message'() {
         given:
-        // Test that URLs containing '%' characters (like URL-encoded values) are handled
-        // correctly when an exception occurs. The '%' must be escaped to '%%' to avoid
-        // String.format interpretation in PluginRuntimeException.
+        // Test that URLs containing '%' characters (like URL-encoded values) don't trip
+        // String.format inside PluginRuntimeException when the underlying call fails.
         def repoWithEncodedUrl = new HttpPluginRepository("test-repo", new URI("http://localhost:${wiremock.port()}/path%20with%20spaces/"))
         wiremock.stop()
 
@@ -116,10 +132,9 @@ class HttpPluginRepositoryTest extends Specification {
         repoWithEncodedUrl.prefetch([new PluginRef("nf-fake")])
 
         then:
-        def err = thrown PluginRuntimeException
-        // Verify the error message is properly formatted and contains the URL with encoded spaces
-        err.message.contains("Unable to connect to")
-        err.message.contains("path%20with%20spaces")
+        // Should not throw - in particular, no IllegalFormatException from the '%' chars
+        noExceptionThrown()
+        repoWithEncodedUrl.getPlugins() == [:]
     }
 
     // ------------------------------------------------------------------------
@@ -135,35 +150,25 @@ class HttpPluginRepositoryTest extends Specification {
         unit.prefetch([new PluginRef("nf-fake")])
 
         then:
-        def err = thrown PluginRuntimeException
-        err.message == """\
-            Invalid response while fetching plugin metadata from: http://localhost:${wiremock.port()}/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}
-            - http status: 500
-            - response   : Server error!""".stripIndent()
+        noExceptionThrown()
+        unit.getPlugins() == [:]
     }
 
     // ------------------------------------------------------------------------
 
-    def 'handle prefetch error when metadata service sends back incorrectly formatted response'() {
+    def 'handle prefetch when registry returns empty plugins list'() {
         given:
         wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))
             .willReturn(aResponse()
                 .withStatus(200)
-                .withBody("""{
-                  "not-plugins": [
-                    {
-                      "id": "nf-fake"
-                    }
-                  ]
-                }
-                """)))
+                .withBody('{"plugins": []}')))
 
         when:
         unit.prefetch([new PluginRef("nf-fake")])
 
         then:
-        def err = thrown PluginRuntimeException
-        err.message.startsWith("Unexpected error while fetching plugin metadata from: http://localhost")
+        noExceptionThrown()
+        unit.getPlugins() == [:]
     }
 
     // ------------------------------------------------------------------------
@@ -182,8 +187,27 @@ class HttpPluginRepositoryTest extends Specification {
         unit.prefetch([new PluginRef("nf-fake")])
 
         then:
-        def err = thrown PluginRuntimeException
-        err.message.startsWith("Invalid response while fetching plugin metadata from: http://localhost")
+        noExceptionThrown()
+        unit.getPlugins() == [:]
+    }
+
+    // ------------------------------------------------------------------------
+
+    def 'prefetch degrades gracefully when the registry keeps returning 429'() {
+        given:
+        wiremock.stubFor(get(urlEqualTo("/v1/plugins/dependencies?plugins=nf-fake&nextflowVersion=${BuildInfo.version}"))
+            .willReturn(aResponse()
+                .withStatus(429)
+                .withHeader("Retry-After", "1")
+                .withBody('Too Many Requests')))
+
+        when:
+        unit.prefetch([new PluginRef("nf-fake")])
+
+        then:
+        noExceptionThrown()
+        // The map is initialised to empty so getPlugin() doesn't NPE downstream
+        unit.getPlugins() == [:]
     }
 
     // ------------------------------------------------------------------------
@@ -213,7 +237,7 @@ class HttpPluginRepositoryTest extends Specification {
                           "requires": ">=20.0.0"
                         },
                         {
-                          "version": "1.1.0", 
+                          "version": "1.1.0",
                           "url": "https://example.com/plugin-1.1.0.zip",
                           "date": "${estDateStr}",
                           "sha512sum": "hash2",
@@ -221,7 +245,7 @@ class HttpPluginRepositoryTest extends Specification {
                         },
                         {
                           "version": "1.2.0",
-                          "url": "https://example.com/plugin-1.2.0.zip", 
+                          "url": "https://example.com/plugin-1.2.0.zip",
                           "date": "${cestDateStr}",
                           "sha512sum": "hash3",
                           "requires": ">=22.0.0"
@@ -244,23 +268,23 @@ class HttpPluginRepositoryTest extends Specification {
         then:
         def plugins = unit.getPlugins()
         plugins.size() == 1
-        
+
         def pluginInfo = plugins.get("date-test-plugin")
-        
+
         // Verify basic plugin mapping through the mapToPluginInfo method
         pluginInfo.id == "date-test-plugin"
         pluginInfo.projectUrl == "https://example.com/test-plugin"
         pluginInfo.provider == "Test Provider"
         pluginInfo.releases.size() == 4
         pluginInfo.releases != null // Verify never null
-        
+
         // Verify UTC date conversion (Z suffix)
         def release1 = pluginInfo.releases[0]
         release1.version == "1.0.0"
         release1.date == toDate(ZonedDateTime.of(2023, 12, 25, 14, 30, 45, 0, ZoneOffset.UTC))
         release1.sha512sum == "hash1"
         release1.requires == ">=20.0.0"
-        
+
         // Verify EST date conversion (-05:00 offset)
         def release2 = pluginInfo.releases[1]
         release2.version == "1.1.0"
@@ -268,7 +292,7 @@ class HttpPluginRepositoryTest extends Specification {
         release2.date == toDate(ZonedDateTime.of(2023, 6, 15, 14, 15, 30, 0, ZoneOffset.UTC))
         release2.sha512sum == "hash2"
         release2.requires == ">=21.0.0"
-        
+
         // Verify CEST date conversion (+02:00 offset)
         def release3 = pluginInfo.releases[2]
         release3.version == "1.2.0"
@@ -276,7 +300,7 @@ class HttpPluginRepositoryTest extends Specification {
         release3.date == toDate(ZonedDateTime.of(2023, 8, 10, 14, 45, 0, 0, ZoneOffset.UTC))
         release3.sha512sum == "hash3"
         release3.requires == ">=22.0.0"
-        
+
         // Verify null date handling (missing date field)
         def release4 = pluginInfo.releases[3]
         release4.version == "1.3.0"

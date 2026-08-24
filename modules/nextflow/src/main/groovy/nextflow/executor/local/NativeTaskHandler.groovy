@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.executor.local
@@ -74,7 +73,7 @@ class NativeTaskHandler extends TaskHandler {
         // submit for execution by using session executor service
         // it returns an error when everything is OK
         // of the exception throw in case of error
-        result = session.getExecService().submit(new TaskSubmit(task))
+        result = executor.getExecService().submit(new TaskSubmit(task))
         status = TaskStatus.SUBMITTED
     }
 

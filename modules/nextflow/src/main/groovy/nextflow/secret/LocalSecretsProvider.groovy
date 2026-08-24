@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -12,7 +12,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
  * limitations under the License.
- *
  */
 
 package nextflow.secret
@@ -20,6 +19,7 @@ package nextflow.secret
 import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
+import java.nio.file.attribute.PosixFilePermissions
 
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
@@ -39,7 +39,7 @@ import nextflow.util.Escape
  *
  * The file must only the accessible to the running user and it should accessible via a shared
  * file system when using a batch scheduler based executor
- * 
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
@@ -47,6 +47,8 @@ import nextflow.util.Escape
 class LocalSecretsProvider implements SecretsProvider, Closeable {
 
     final private static String ONLY_OWNER_PERMS = 'rw-------'
+
+    final private static String ONLY_OWNER_DIR_PERMS = 'rwx------'
 
     private Map<String,String> env = SysEnv.get()
 
@@ -68,9 +70,27 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
                 ? Paths.get(name)
                 : Const.APP_HOME_DIR.resolve(name)
         final path = secretFile.parent
-        if( path && !path.exists() && !path.mkdirs() )
-            throw new IllegalStateException("Cannot create directory '${path}' -- make sure a file with the same name doesn't already exist and you have write permissions")
+        if( path && !path.exists() ) {
+            if( !path.mkdirs() )
+                throw new IllegalStateException("Cannot create directory '${path}' -- make sure a file with the same name doesn't already exist and you have write permissions")
+            // restrict the secrets directory to the owner (defense in depth)
+            restrictDirPermissions(path)
+        }
         return secretFile
+    }
+
+    /**
+     * Restrict a secrets directory to the owner. This is defense-in-depth only — the security
+     * guarantee lives on the store file permissions — so a failure (e.g. a non-POSIX filesystem
+     * that does not support {@code chmod}) is logged but never aborts the operation.
+     */
+    private static void restrictDirPermissions(Path dir) {
+        try {
+            dir.setPermissions(ONLY_OWNER_DIR_PERMS)
+        }
+        catch( Exception e ) {
+            log.warn "Cannot restrict permissions on secrets directory '${dir}' - ${e.message}"
+        }
     }
 
     protected Map<String,Secret> makeSecretsSet() {
@@ -145,13 +165,24 @@ class LocalSecretsProvider implements SecretsProvider, Closeable {
     protected void storeSecrets(Collection<Secret> secrets) {
         assert secrets != null
         final parent = storeFile.getParent()
-        if( !parent.exists() && !parent.mkdirs() )
-            throw new IOException("Unable to create directory: $parent -- Check file system permissions" )
-        // save the secrets as JSON file
+        if( !parent.exists() ) {
+            if( !parent.mkdirs() )
+                throw new IOException("Unable to create directory: $parent -- Check file system permissions" )
+            // restrict the secrets directory to the owner when we create it (defense in depth)
+            restrictDirPermissions(parent)
+        }
+        // Create the store file already restricted to the owner *before* writing any secret content.
+        // Writing the JSON first and only then applying the permissions leaves a race window in which
+        // the file is world-readable (e.g. 0644 under the common umask 022) while it already holds the
+        // secret values, allowing another local user to read them. Because 'rw-------' has no group/other
+        // bits, the umask cannot widen it, so the file is atomically created with owner-only access.
+        if( !storeFile.exists() )
+            Files.createFile(storeFile, PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString(ONLY_OWNER_PERMS)))
+        // re-assert owner-only permissions in case the file already existed with broader access
+        storeFile.setPermissions(ONLY_OWNER_PERMS)
+        // save the secrets as JSON file into the now owner-only file
         final json = new GsonBuilder().setPrettyPrinting().create().toJson(secrets)
         Files.write(storeFile, json.getBytes('utf-8'))
-        // allow only the current user to read-write the file
-        storeFile.setPermissions(ONLY_OWNER_PERMS)
     }
 
     @Override

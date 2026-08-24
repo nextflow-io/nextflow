@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -169,7 +169,7 @@ class WorkflowStatsTest extends Specification {
         given:
         def stats = new WorkflowStats(succeededCount: 20, cachedCount: 40, ignoredCount: 60, failedCount: 140)
 
-        expect: 
+        expect:
         stats.getSucceedPct() == 10.0f
         stats.getCachedPct() == 20.0f
         stats.getIgnoredPct() == 30.0f
@@ -208,7 +208,7 @@ class WorkflowStatsTest extends Specification {
         def stats = new WorkflowStats(
                         pendingCount: PENDING,
                         records: [0: rec])
-        
+
         when:
         stats.markPending( Mock(TaskProcessor) { getId() >> 0 } )
         then:
@@ -348,7 +348,7 @@ class WorkflowStatsTest extends Specification {
         then:
         1 * trace.get('realtime')  >> DURATION.millis
         1 * trace.get('cpus') >> 1
-        
+
         and:
         stats.failedCount == FAILED +1
         stats.runningCount == RUNNING -1

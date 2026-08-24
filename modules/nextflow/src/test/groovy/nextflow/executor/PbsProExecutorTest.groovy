@@ -1,5 +1,5 @@
 /*
- * Copyright 2013-2024, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -211,7 +211,7 @@ class PbsProExecutorTest extends Specification {
         def executor = createExecutor()
 
         expect:
-        executor.queueStatusCommand(null) == ['bash','-c', "set -o pipefail; qstat -f \$( qstat -B | grep -E -v '(^Server|^---)' | awk -v ORS=' ' '{print \"@\"\$1}' ) | { grep -E '(Job Id:|job_state =)' || true; }"]
+        executor.queueStatusCommand(null) == ['bash','-c', "set -o pipefail; qstat -f \$( qstat -B -f | awk -v ORS=' ' '\$1 == \"Server:\" {print \"@\"\$2}' ) | { grep -E '(Job Id:|job_state =)' || true; }"]
         executor.queueStatusCommand('xxx') == ['bash','-c', "set -o pipefail; qstat -f xxx | { grep -E '(Job Id:|job_state =)' || true; }"]
         executor.queueStatusCommand('xxx').each { assert it instanceof String }
     }
@@ -297,7 +297,7 @@ class PbsProExecutorTest extends Specification {
         'foo[]'     | 1             | 'foo[1]'
         'bar[]'     | 2             | 'bar[2]'
     }
-    
+
     def 'should set pbs account' () {
         given:
         // task
