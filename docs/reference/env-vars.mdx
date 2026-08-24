@@ -178,6 +178,18 @@ For example, with `NXF_FILE_ROOT=/some/root/path`, the use of `file('hello')` wi
 
 When set to `true`, collect task resource metrics (CPU, memory, I/O) from the Fusion trace file (`.fusion/trace.json`) produced in the task work directory, replacing the metrics collected by the default bash command-trace wrapper. Requires Fusion to be enabled. GPU metrics from Fusion are always collected regardless of this setting (default: `false`).
 
+##### `NXF_GIT_CONNECT_TIMEOUT`
+
+<AddedInVersion version="26.10" />
+
+Defines the timeout to establish the HTTP connection with the Git hosting service API e.g. GitHub, GitLab, etc. as a duration string e.g. `30s` (default: `60s`).
+
+##### `NXF_GIT_READ_TIMEOUT`
+
+<AddedInVersion version="26.10" />
+
+Defines the timeout to receive the response for a HTTP request made to the Git hosting service API e.g. GitHub, GitLab, etc. as a duration string e.g. `30s` (default: `60s`).
+
 ##### `NXF_HOME`
 
 Nextflow home directory (default: `$HOME/.nextflow`).
