@@ -17,6 +17,7 @@
 package nextflow.scm
 
 import java.net.http.HttpClient
+import java.net.http.HttpConnectTimeoutException
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.net.http.HttpTimeoutException
@@ -138,6 +139,24 @@ class RepositoryProviderTest extends Specification {
         true        | new SocketException()
         false       | new SocketException(new UnresolvedAddressException())
         false       | new SocketTimeoutException()
+        true        | new HttpConnectTimeoutException('connect timed out')
+        false       | new HttpTimeoutException('request timed out')
+    }
+
+    def 'should retry connect timeouts via the http client retry condition' () {
+        given:
+        def provider = Spy(RepositoryProvider)
+
+        when:
+        def condition = provider.retryConfig0().getRetryCondition()
+        then:
+        // a connect timeout is retried, either direct or as the cause of another error
+        condition.test(new HttpConnectTimeoutException('connect timed out'))
+        condition.test(new IOException(new HttpConnectTimeoutException('connect timed out')))
+        // a read timeout is not retried
+        !condition.test(new HttpTimeoutException('request timed out'))
+        // an exception without a cause does not throw a NPE
+        !condition.test(new IOException('generic failure'))
     }
 
     def 'should not validate when max length is not configured via SysEnv' () {

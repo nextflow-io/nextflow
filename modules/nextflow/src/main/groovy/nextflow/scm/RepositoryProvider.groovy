@@ -518,6 +518,13 @@ abstract class RepositoryProvider {
     }
 
     protected boolean isRetryable(Throwable t) {
+        // a connect timeout is always safe to retry because the TCP handshake
+        // never completed, therefore no request data reached the server; the
+        // check must target the connect subclass specifically - its parent
+        // HttpTimeoutException (read timeout) means the request reached the
+        // server and must remain fail-fast
+        if( t instanceof HttpConnectTimeoutException )
+            return true
         // only retry SocketException and ignore generic IOException
         return t instanceof SocketException && !isCausedByUnresolvedAddressException(t)
     }
@@ -547,7 +554,9 @@ abstract class RepositoryProvider {
             return httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray())
         }
         catch( HttpConnectTimeoutException e ) {
-            throw new IOException("Unable to connect to '${request.uri()}' within ${connectTimeout().toSeconds()}s - make sure the host is reachable or increase the timeout setting the variable NXF_GIT_CONNECT_TIMEOUT", e)
+            // the underlying client retries connect timeouts - see isRetryable() -
+            // therefore this is only reached once all attempts are exhausted
+            throw new IOException("Unable to connect to '${request.uri()}' within ${connectTimeout().toSeconds()}s (after ${retryConfig.maxAttempts} attempts) - make sure the host is reachable or increase the timeout setting the variable NXF_GIT_CONNECT_TIMEOUT", e)
         }
         catch( HttpTimeoutException e ) {
             throw new IOException("No response received from '${request.uri()}' within ${readTimeout().toSeconds()}s - make sure the host is reachable or increase the timeout setting the variable NXF_GIT_READ_TIMEOUT", e)
