@@ -19,8 +19,10 @@ package nextflow.scm
 import static nextflow.util.StringUtils.*
 
 import java.net.http.HttpClient
+import java.net.http.HttpConnectTimeoutException
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.net.http.HttpTimeoutException
 import java.nio.channels.UnresolvedAddressException
 import java.time.Duration
 import java.util.concurrent.Executors
@@ -54,6 +56,16 @@ import org.eclipse.jgit.transport.UsernamePasswordCredentialsProvider
 @Slf4j
 @CompileStatic
 abstract class RepositoryProvider {
+
+    /**
+     * Default timeout to establish the connection with the SCM server
+     */
+    static final public Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(60)
+
+    /**
+     * Default timeout to receive the response from the SCM server
+     */
+    static final public Duration DEFAULT_READ_TIMEOUT = Duration.ofSeconds(60)
 
     @Canonical
     static class TagInfo {
@@ -223,10 +235,46 @@ abstract class RepositoryProvider {
         final builder = HttpRequest
             .newBuilder()
             .uri(new URI(api))
+            .timeout(readTimeout())
         final auth0 = getAuth()
         if( auth0 )
             builder.headers(auth0)
         return builder.GET().build()
+    }
+
+    /**
+     * The timeout to establish the connection with the SCM server. It can be overridden
+     * by the {@code NXF_GIT_CONNECT_TIMEOUT} environment variable specifying it as
+     * a duration string e.g. {@code 30s}
+     *
+     * @return The connect timeout as a {@link Duration} object
+     */
+    protected Duration connectTimeout() {
+        return timeout0('NXF_GIT_CONNECT_TIMEOUT', DEFAULT_CONNECT_TIMEOUT)
+    }
+
+    /**
+     * The timeout to receive the response once the connection with the SCM server is
+     * established. It can be overridden by the {@code NXF_GIT_READ_TIMEOUT} environment
+     * variable specifying it as a duration string e.g. {@code 30s}
+     *
+     * @return The read timeout as a {@link Duration} object
+     */
+    protected Duration readTimeout() {
+        return timeout0('NXF_GIT_READ_TIMEOUT', DEFAULT_READ_TIMEOUT)
+    }
+
+    static private Duration timeout0(String name, Duration defValue) {
+        final value = SysEnv.get(name)
+        if( !value )
+            return defValue
+        try {
+            return Duration.ofMillis( nextflow.util.Duration.of(value).toMillis() )
+        }
+        catch( Exception e ) {
+            log.warn "Invalid value for variable ${name}: '${value}' - using default: ${defValue.toSeconds()}s"
+            return defValue
+        }
     }
 
     /**
@@ -495,13 +543,21 @@ abstract class RepositoryProvider {
         if( httpClient==null )
             httpClient = newHttpClient()
 
-        return httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray())
+        try {
+            return httpClient.send(request, HttpResponse.BodyHandlers.ofByteArray())
+        }
+        catch( HttpConnectTimeoutException e ) {
+            throw new IOException("Unable to connect to '${request.uri()}' within ${connectTimeout().toSeconds()}s - make sure the host is reachable or increase the timeout setting the variable NXF_GIT_CONNECT_TIMEOUT", e)
+        }
+        catch( HttpTimeoutException e ) {
+            throw new IOException("No response received from '${request.uri()}' within ${readTimeout().toSeconds()}s - make sure the host is reachable or increase the timeout setting the variable NXF_GIT_READ_TIMEOUT", e)
+        }
     }
 
     private HxClient newHttpClient() {
         final builder = HxClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
-            .connectTimeout(Duration.ofSeconds(60))
+            .connectTimeout(connectTimeout())
             .followRedirects(HttpClient.Redirect.NORMAL)
             // route through the forward proxy when configured
             .withProxyConfig(ProxyConfig.proxyConfig())

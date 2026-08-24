@@ -19,9 +19,13 @@ package nextflow.scm
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.net.http.HttpTimeoutException
 import java.nio.channels.UnresolvedAddressException
+import java.time.Duration
 import javax.net.ssl.SSLSession
 
+import com.sun.net.httpserver.HttpHandler
+import com.sun.net.httpserver.HttpServer
 import nextflow.SysEnv
 import nextflow.exception.HttpResponseLengthExceedException
 import nextflow.util.RetryConfig
@@ -179,6 +183,84 @@ class RepositoryProviderTest extends Specification {
 
         cleanup:
         SysEnv.pop()
+    }
+
+    def 'should use default http timeouts' () {
+        given:
+        SysEnv.push([:])
+        def provider = Spy(RepositoryProvider)
+
+        expect:
+        provider.connectTimeout() == RepositoryProvider.DEFAULT_CONNECT_TIMEOUT
+        provider.readTimeout() == RepositoryProvider.DEFAULT_READ_TIMEOUT
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should override http timeouts via env variables' () {
+        given:
+        SysEnv.push([NXF_GIT_CONNECT_TIMEOUT: '5s', NXF_GIT_READ_TIMEOUT: '250ms'])
+        def provider = Spy(RepositoryProvider)
+
+        expect:
+        provider.connectTimeout() == Duration.ofSeconds(5)
+        provider.readTimeout() == Duration.ofMillis(250)
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should fallback to default timeouts when the value is invalid' () {
+        given:
+        SysEnv.push([NXF_GIT_CONNECT_TIMEOUT: 'foo', NXF_GIT_READ_TIMEOUT: 'bar'])
+        def provider = Spy(RepositoryProvider)
+
+        expect:
+        provider.connectTimeout() == RepositoryProvider.DEFAULT_CONNECT_TIMEOUT
+        provider.readTimeout() == RepositoryProvider.DEFAULT_READ_TIMEOUT
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should set the read timeout on the http request' () {
+        given:
+        SysEnv.push([NXF_GIT_READ_TIMEOUT: '250ms'])
+        def provider = Spy(RepositoryProvider)
+
+        when:
+        def request = provider.newRequest('http://foo.com/bar')
+        then:
+        request.timeout().get() == Duration.ofMillis(250)
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should fail with a timeout error when the server does not reply' () {
+        given:
+        def server = HttpServer.create(new InetSocketAddress(0), 0)
+        server.createContext('/stall', { exchange ->
+            sleep 5_000
+            exchange.sendResponseHeaders(200, 0)
+            exchange.close()
+        } as HttpHandler)
+        server.start()
+        and:
+        SysEnv.push([NXF_GIT_READ_TIMEOUT: '500ms'])
+        def provider = Spy(RepositoryProvider)
+
+        when:
+        provider.invokeBytes("http://localhost:${server.address.port}/stall")
+        then:
+        def e = thrown(IOException)
+        e.message.startsWith("No response received from 'http://localhost:${server.address.port}/stall'")
+        e.cause instanceof HttpTimeoutException
+
+        cleanup:
+        SysEnv.pop()
+        server.stop(0)
     }
 
     private createMockResponseWithContentLength(long contentLength) {
