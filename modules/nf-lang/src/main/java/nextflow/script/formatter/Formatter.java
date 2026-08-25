@@ -925,7 +925,13 @@ public class Formatter extends CodeVisitorSupport {
     }
 
     public static boolean hasType(Variable variable) {
-        return hasType(variable.getType());
+        var type = variable.getType();
+        // the legacy annotation is recorded on the type node
+        if( isLegacyType(type) )
+            return hasType(type);
+        // `isDynamicTyped()` records that the source declared no type, which
+        // the resolver may since have overwritten (e.g. an untyped catch)
+        return !variable.isDynamicTyped() && !ClassHelper.isObjectType(type);
     }
 
     public static boolean isLegacyType(ClassNode cn) {

@@ -584,6 +584,19 @@ class ScriptFormatterTest extends Specification {
             }
             '''
         )
+        checkFormat(
+            '''\
+            try{println(file('foo.txt').text)}catch(e){log.warn("Could not load foo.txt")}
+            ''',
+            '''\
+            try {
+                println(file('foo.txt').text)
+            }
+            catch (e) {
+                log.warn("Could not load foo.txt")
+            }
+            '''
+        )
     }
 
     def 'should format a method chain' () {
