@@ -25,7 +25,6 @@ import com.azure.storage.blob.BlobServiceClient
 import com.azure.storage.blob.BlobServiceClientBuilder
 import com.azure.storage.blob.models.UserDelegationKey
 import com.azure.storage.blob.sas.BlobContainerSasPermission
-import com.azure.storage.blob.sas.BlobSasPermission
 import com.azure.storage.blob.sas.BlobServiceSasSignatureValues
 import com.azure.storage.common.StorageSharedKeyCredential
 import com.azure.storage.common.policy.RequestRetryOptions
@@ -69,16 +68,6 @@ class AzHelper {
     }
 
     static BlobContainerSasPermission CONTAINER_PERMS = new BlobContainerSasPermission()
-            .setAddPermission(true)
-            .setCreatePermission(true)
-            .setDeletePermission(true)
-            .setListPermission(true)
-            .setMovePermission(true)
-            .setReadPermission(true)
-            .setTagsPermission(true)
-            .setWritePermission(true)
-
-    static BlobSasPermission BLOB_PERMS = new BlobSasPermission()
             .setAddPermission(true)
             .setCreatePermission(true)
             .setDeletePermission(true)

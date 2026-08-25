@@ -1,5 +1,9 @@
 nf-azure changelog
 ===================
+1.24.0 - TBD
+- Fix nf-azure plugin tier-1 bugs found during technical debt audit (#6831)
+- Honor `AZURE_MANAGED_IDENTITY_USER` / `AZURE_MANAGED_IDENTITY_SYSTEM` env var fallbacks for managed identity config. NOTE: on a host exporting these variables, a run configured with a service principal may now switch to managed identity, since `azure.managedIdentity` is checked before `azure.activeDirectory`.
+
 1.23.2 - 20 Aug 2026
 - Bump netty and Apache HttpComponents to patched releases (#7484) [3aef1da9a]
 - Detect Azure virtual directories without a trailing slash (#6428) [b4ab2e165]
