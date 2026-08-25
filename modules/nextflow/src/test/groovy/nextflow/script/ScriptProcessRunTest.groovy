@@ -46,7 +46,7 @@ class ScriptProcessRunTest extends Dsl2Spec {
         '''
 
         when:
-        def result = runScript(SCRIPT)
+        def result = runScript(SCRIPT, moduleRun: true)
 
         then:
         // For single process execution, the result should contain the process output
@@ -70,7 +70,7 @@ class ScriptProcessRunTest extends Dsl2Spec {
         """
 
         when:
-        def result = runScript(SCRIPT)
+        def result = runScript(SCRIPT, moduleRun: true)
 
         then:
         result != null
@@ -102,7 +102,7 @@ class ScriptProcessRunTest extends Dsl2Spec {
         '''
 
         when:
-        runScript(SCRIPT)
+        runScript(SCRIPT, moduleRun: true)
 
         then:
         def e = thrown(AbortOperationException)
@@ -127,6 +127,27 @@ class ScriptProcessRunTest extends Dsl2Spec {
         '''
 
         when:
+        runScript(SCRIPT, moduleRun: true)
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('No entry workflow specified')
+    }
+
+    def 'should not execute a single process directly without module run' () {
+        given:
+        def SCRIPT = '''
+        params.sampleId = 'SAMPLE_001'
+
+        process testProcess {
+            input: val sampleId
+            output: val result
+            exec:
+                result = "Processed: $sampleId"
+        }
+        '''
+
+        when:
         runScript(SCRIPT)
 
         then:
@@ -146,7 +167,7 @@ class ScriptProcessRunTest extends Dsl2Spec {
         '''
 
         when:
-        runScript(SCRIPT)
+        runScript(SCRIPT, moduleRun: true)
 
         then:
         def e = thrown(Exception)
@@ -176,7 +197,7 @@ class ScriptProcessRunTest extends Dsl2Spec {
             '''
 
         when:
-        runScript(module, config: [params: [alignment_mode: 'false']])
+        runScript(module, moduleRun: true, config: [params: [alignment_mode: 'false']])
         then:
         Global.session.isSuccess()
 

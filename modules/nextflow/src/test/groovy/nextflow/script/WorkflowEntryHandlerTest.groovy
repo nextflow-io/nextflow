@@ -19,6 +19,7 @@ package nextflow.script
 import java.nio.file.Files
 
 import nextflow.Session
+import nextflow.exception.AbortOperationException
 import nextflow.exception.ScriptRuntimeException
 import spock.lang.Timeout
 import test.Dsl2Spec
@@ -200,6 +201,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
     def 'should auto-run a named workflow with a scalar input'() {
         when:
         def result = runScript(
+            moduleRun: true,
             '''\
             nextflow.enable.types = true
 
@@ -216,7 +218,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         )
 
         then:
-        result != null
+        result.val == 'Hello, World!'
     }
 
     def 'should auto-run a named workflow with a CSV samplesheet input'() {
@@ -230,6 +232,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
 
         when:
         def result = runScript(
+            moduleRun: true,
             '''\
             nextflow.enable.types = true
 
@@ -246,7 +249,8 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         )
 
         then:
-        result != null
+        result.val == [id: '1', value: 'alpha']
+        result.val == [id: '2', value: 'beta']
 
         cleanup:
         csvFile?.delete()
@@ -259,6 +263,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
 
         when:
         def result = runScript(
+            moduleRun: true,
             '''\
             nextflow.enable.types = true
 
@@ -275,7 +280,8 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         )
 
         then:
-        result != null
+        result.val == [id: 1, name: 's1']
+        result.val == [id: 2, name: 's2']
 
         cleanup:
         jsonFile?.delete()
@@ -291,6 +297,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
 
         when:
         def result = runScript(
+            moduleRun: true,
             '''\
             nextflow.enable.types = true
 
@@ -300,7 +307,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
                 outdir: String
 
                 emit:
-                out = samples
+                out = samples.map { s -> "${outdir}/${s.id}" }
             }
             ''',
             config: [params: [samples: csvFile.toString(), outdir: 'results']],
@@ -308,7 +315,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         )
 
         then:
-        result != null
+        result.val == 'results/1'
 
         cleanup:
         csvFile?.delete()
@@ -317,6 +324,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
     def 'should throw for a missing workflow input'() {
         when:
         runScript(
+            moduleRun: true,
             '''\
             nextflow.enable.types = true
 
@@ -347,6 +355,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
 
         when:
         def result = runScript(
+            moduleRun: true,
             '''\
             nextflow.enable.types = true
 
@@ -386,6 +395,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
 
         when:
         runScript(
+            moduleRun: true,
             '''\
             nextflow.enable.types = true
 
@@ -418,6 +428,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         when:
         def params = [dur: '2h', mem: '4.GB', ver: '1.2.3', num: '5.5', val: '42']
         def result = runScript(
+            moduleRun: true,
             '''\
             nextflow.enable.types = true
 
@@ -450,6 +461,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
     def 'should pass null for an omitted optional input'() {
         when:
         def result = runScript(
+            moduleRun: true,
             '''\
             nextflow.enable.types = true
 
@@ -473,6 +485,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
     def 'should reject a collection input given on the command line'() {
         when:
         runScript(
+            moduleRun: true,
             '''\
             nextflow.enable.types = true
 
@@ -496,6 +509,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
     def 'should convert collection elements for an input from config'() {
         when:
         def result = runScript(
+            moduleRun: true,
             '''\
             nextflow.enable.types = true
 
@@ -504,20 +518,21 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
                 sizes: List<Integer>
 
                 emit:
-                out = sizes.collect { v -> v.getClass().simpleName }
+                out = sizes
             }
             ''',
-            config: [params: [sizes: ['1', '2']]],
-            configParams: [sizes: ['1', '2']]
+            config: [params: [sizes: ['1', '12']]],
+            configParams: [sizes: ['1', '12']]
         )
 
         then:
-        result.val == ['Integer', 'Integer']
+        result.val == [1, 12]
     }
 
     def 'should reject a parameter that is not a workflow input'() {
         when:
         runScript(
+            moduleRun: true,
             '''\
             nextflow.enable.types = true
 
@@ -542,6 +557,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         when:
         // An explicit (unnamed) entry workflow takes priority over WorkflowEntryHandler
         def result = runScript(
+            moduleRun: true,
             '''\
             workflow {
                 "explicit entry"
@@ -560,6 +576,189 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         then:
         // The explicit entry workflow ran
         result != null
+    }
+
+    def 'should coerce an integral command line value to a Float input'() {
+        when:
+        def result = runScript(
+            moduleRun: true,
+            '''\
+            nextflow.enable.types = true
+
+            workflow CHECK {
+                take:
+                num: Float
+
+                emit:
+                out = [num.getClass().simpleName, num]
+            }
+            ''',
+            config: [params: [num: '5']],
+            params: [num: '5']
+        )
+
+        then:
+        result.val == ['Float', 5.0f]
+    }
+
+    def 'should resolve a Path input and require it to exist'() {
+        given:
+        def file = Files.createTempFile('data', '.txt')
+
+        when:
+        def result = runScript(
+            moduleRun: true,
+            '''\
+            nextflow.enable.types = true
+
+            workflow CHECK {
+                take:
+                data: Path
+
+                emit:
+                out = [data.getClass().simpleName, data.name]
+            }
+            ''',
+            config: [params: [data: file.toString()]],
+            params: [data: file.toString()]
+        )
+
+        then:
+        result.val == ['UnixPath', file.name]
+
+        cleanup:
+        file?.delete()
+    }
+
+    def 'should reject a Path input that does not exist'() {
+        when:
+        runScript(
+            moduleRun: true,
+            '''\
+            nextflow.enable.types = true
+
+            workflow CHECK {
+                take:
+                data: Path
+
+                emit:
+                out = data
+            }
+            ''',
+            config: [params: [data: '/some/missing/file.txt']],
+            params: [data: '/some/missing/file.txt']
+        )
+
+        then:
+        def e = thrown(Exception)
+        e.message.contains('/some/missing/file.txt')
+    }
+
+    def 'should convert collection elements for Set and Bag inputs from config'() {
+        when:
+        def params = [ids: ['1', '2'], tags: ['a', 'b']]
+        def result = runScript(
+            moduleRun: true,
+            '''\
+            nextflow.enable.types = true
+
+            workflow CHECK {
+                take:
+                ids: Set<Integer>
+                tags: Bag<String>
+
+                emit:
+                out = [ids.getClass().simpleName, ids.toList(), tags.getClass().simpleName, tags.size()]
+            }
+            ''',
+            config: [params: params],
+            configParams: params
+        )
+
+        then:
+        result.val == ['LinkedHashSet', [1, 2], 'HashBag', 2]
+    }
+
+    def 'should convert numeric record fields from a samplesheet'() {
+        given:
+        def csvFile = Files.createTempFile('samples', '.csv')
+        csvFile.text = '''\
+            id,count,ratio
+            s1,7,1.5
+            '''.stripIndent()
+
+        when:
+        def result = runScript(
+            moduleRun: true,
+            '''\
+            nextflow.enable.types = true
+
+            record Sample {
+                id: String
+                count: Integer
+                ratio: Float
+            }
+
+            workflow RNASEQ {
+                take:
+                samples: Channel<Sample>
+
+                emit:
+                out = samples.map { s -> [s.count, s.ratio] }
+            }
+            ''',
+            config: [params: [samples: csvFile.toString()]],
+            params: [samples: csvFile.toString()]
+        )
+
+        then:
+        result.val == [7, 1.5f]
+
+        cleanup:
+        csvFile?.delete()
+    }
+
+    def 'should reject a named workflow in a script that does not enable typing'() {
+        when:
+        runScript(
+            moduleRun: true,
+            '''\
+            workflow GREET {
+                take:
+                name
+                emit:
+                greeting = "Hello, ${name}!"
+            }
+            ''',
+            params: [name: 'World']
+        )
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains('does not enable static typing')
+    }
+
+    def 'should not execute a named workflow directly without module run'() {
+        when:
+        runScript(
+            '''\
+            nextflow.enable.types = true
+
+            workflow GREET {
+                take:
+                name: String
+
+                emit:
+                greeting = "Hello, ${name}!"
+            }
+            ''',
+            config: [params: [name: 'World']],
+            params: [name: 'World']
+        )
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('No entry workflow specified')
     }
 
 }

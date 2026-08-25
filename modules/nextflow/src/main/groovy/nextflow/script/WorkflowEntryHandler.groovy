@@ -64,7 +64,7 @@ class WorkflowEntryHandler {
             throw new IllegalStateException("Direct execution of named workflows is only supported for scripts with exactly one named workflow")
 
         if( !script.isTypingEnabled() )
-            throw new IllegalStateException("Direct execution of named workflows is only supported when static typing is enabled")
+            throw new ScriptRuntimeException("Workflow `${workflowNames.first()}` cannot be executed directly because it is not typed -- static typing is required to map pipeline parameters to workflow inputs")
 
         final workflowName = workflowNames.first()
         this.workflowDef = meta.getWorkflow(workflowName)

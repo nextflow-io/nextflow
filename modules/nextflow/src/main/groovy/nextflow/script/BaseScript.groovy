@@ -273,12 +273,15 @@ abstract class BaseScript extends Script implements ExecutionContext {
         }
 
         if( !entryFlow ) {
-            if( meta.hasExecutableWorkflows() ) {
+            // a process or named workflow can be executed directly only
+            // when the script was launched via `nextflow module run`
+            final moduleRun = session.isModuleRun()
+            if( moduleRun && meta.hasExecutableWorkflows() ) {
                 // Execute a single named workflow directly
                 final handler = new WorkflowEntryHandler(this, session, meta)
                 this.entryFlow = handler.createEntryWorkflow()
             }
-            else if( meta.hasExecutableProcesses() ) {
+            else if( moduleRun && meta.hasExecutableProcesses() ) {
                 // Execute a single process directly
                 final handler = new ProcessEntryHandler(this, session, meta)
                 this.entryFlow = handler.createEntryWorkflow()

@@ -31,6 +31,7 @@ import nextflow.script.types.Bag
 import nextflow.script.types.Record
 import nextflow.util.HashBag
 import nextflow.util.RecordMap
+import org.codehaus.groovy.runtime.StringGroovyMethods
 import org.codehaus.groovy.runtime.typehandling.DefaultTypeTransformation
 import org.codehaus.groovy.runtime.typehandling.GroovyCastException
 
@@ -113,7 +114,23 @@ class TypeHelper {
         if( type == Path )
             return TypeHelper.asPathType(value.toString())
 
-        return DefaultTypeTransformation.castToType(value, getRawType(type))
+        final rawType = getRawType(type)
+
+        // a string must be parsed, because the default coercion converts a
+        // single-character string to a char (e.g. '1' becomes 49) and treats
+        // any non-empty string as `true`
+        if( value instanceof CharSequence ) {
+            final str = value.toString()
+            if( Number.class.isAssignableFrom(rawType) )
+                return StringGroovyMethods.asType(str, rawType)
+            if( rawType == Boolean ) {
+                if( str.equalsIgnoreCase('true') ) return Boolean.TRUE
+                if( str.equalsIgnoreCase('false') ) return Boolean.FALSE
+                throw new AbortOperationException("Value '${str}' cannot be converted to a Boolean")
+            }
+        }
+
+        return DefaultTypeTransformation.castToType(value, rawType)
     }
 
     /**

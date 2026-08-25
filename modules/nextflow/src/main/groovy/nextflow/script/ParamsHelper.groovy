@@ -64,7 +64,7 @@ class ParamsHelper {
             if( str.toLowerCase() == 'false' ) return Boolean.FALSE
         }
 
-        if( decl.type == Integer || decl.type == Float ) {
+        if( decl.type == Integer ) {
             if( str.isInteger() ) return str.toInteger()
             if( str.isLong() ) return str.toLong()
             if( str.isBigInteger() ) return str.toBigInteger()
