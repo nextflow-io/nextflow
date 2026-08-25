@@ -889,13 +889,32 @@ class ConfigParserV2Test extends Specification {
             '''
 
         when:
-        // seed a pre-existing binding value, as ConfigBuilder does for outputDir, so this
-        // exercises the same "reassignment overrides an existing binding entry" scenario
-        def config = new ConfigParserV2().setBinding([workDir: 'default-work']).parse(CONFIG)
+        // defensive copy -- getConfigVars() is memoized, and setBinding() keeps the map
+        // it's given live, so parsing must not mutate the cached instance in place
+        def binding = new HashMap(ConfigBuilder.getConfigVars(Path.of('.').toRealPath(), [:]))
+        def config = new ConfigParserV2().setBinding(binding).parse(CONFIG)
 
         then:
         config.workDir == 'custom-work'
         config.report.file == 'custom-work/execution_report.html'
+    }
+
+    def 'should resolve outputDir/workDir to their pre-seeded defaults when never reassigned' () {
+        given:
+        def CONFIG = '''
+            report {
+                outputFile = "${outputDir}/execution_report.html"
+                workFile = "${workDir}/execution_report.html"
+            }
+            '''
+
+        when:
+        def binding = new HashMap(ConfigBuilder.getConfigVars(Path.of('.').toRealPath(), [:]))
+        def config = new ConfigParserV2().setBinding(binding).parse(CONFIG)
+
+        then:
+        config.report.outputFile == "${binding.outputDir}/execution_report.html"
+        config.report.workFile == "${binding.workDir}/execution_report.html"
     }
 
     static class ConfigFileHandler implements HttpHandler {

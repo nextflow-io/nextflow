@@ -94,6 +94,8 @@ class ConfigCmdAdapter {
     ConfigCmdAdapter setCmdRun(CmdRun cmdRun) {
         this.cmdRun = cmdRun
         builder.setProfile(cmdRun.profile)
+        builder.setOutputDir(cmdRun.outputDir)
+        builder.setWorkDir(cmdRun.workDir)
         return this
     }
 

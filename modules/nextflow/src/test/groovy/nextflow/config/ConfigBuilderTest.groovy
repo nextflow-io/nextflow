@@ -1039,4 +1039,91 @@ class ConfigBuilderTest extends Specification {
         SysEnv.pop()
     }
 
+    def 'should make a CLI-supplied outputDir available for config interpolation' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def cliOutputDir = folder.resolve('cli-output')
+        def text = '''
+        resolvedOutputDir = "$outputDir"
+        '''
+
+        when:
+        def cfg = new ConfigBuilder()
+                .setBaseDir(folder)
+                .setOutputDir(cliOutputDir.toString())
+                .build([text])
+        then:
+        cfg.resolvedOutputDir == cliOutputDir.toString()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should make a CLI-supplied workDir available for config interpolation' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def cliWorkDir = folder.resolve('cli-work')
+        def text = '''
+        resolvedWorkDir = "$workDir"
+        '''
+
+        when:
+        def cfg = new ConfigBuilder()
+                .setBaseDir(folder)
+                .setWorkDir(cliWorkDir.toString())
+                .build([text])
+        then:
+        cfg.resolvedWorkDir == cliWorkDir.toString()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should let a CLI-supplied outputDir override a config assignment' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def cliOutputDir = folder.resolve('cli-output')
+        def text = '''
+        outputDir = 'config-output'
+        resolvedOutputDir = "$outputDir"
+        '''
+
+        when:
+        def cfg = new ConfigBuilder()
+                .setBaseDir(folder)
+                .setOutputDir(cliOutputDir.toString())
+                .build([text])
+        then:
+        cfg.outputDir == cliOutputDir
+        cfg.resolvedOutputDir == cliOutputDir.toString()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should propagate a CLI-supplied outputDir through an included config, overriding its own assignment' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def cliOutputDir = folder.resolve('cli-output')
+        def snippet = folder.resolve('included.config')
+        snippet.text = '''
+        outputDir = 'included-config-output'
+        resolvedOutputDir = "$outputDir"
+        '''
+        def text = """
+        includeConfig "$snippet"
+        """
+
+        when:
+        def cfg = new ConfigBuilder()
+                .setBaseDir(folder)
+                .setOutputDir(cliOutputDir.toString())
+                .build([text])
+        then:
+        cfg.resolvedOutputDir == cliOutputDir.toString()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 }

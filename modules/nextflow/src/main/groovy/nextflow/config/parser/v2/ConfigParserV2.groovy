@@ -39,6 +39,8 @@ class ConfigParserV2 implements ConfigParser {
 
     private Map cliParams = [:]
 
+    private Map cliConfigVars = [:]
+
     private Map configParams = [:]
 
     private boolean ignoreIncludes = false
@@ -115,6 +117,12 @@ class ConfigParserV2 implements ConfigParser {
     }
 
     @Override
+    ConfigParserV2 setCliConfigVars(Map vars) {
+        this.cliConfigVars = vars
+        return this
+    }
+
+    @Override
     Set<String> getDeclaredProfiles() {
         return declaredProfiles
     }
@@ -148,6 +156,7 @@ class ConfigParserV2 implements ConfigParser {
             script.setStripSecrets(stripSecrets)
             script.setParams(cliParams)
             script.setConfigParams(configParams)
+            script.setCliConfigVars(cliConfigVars)
             script.setProfiles(appliedProfiles)
             script.run()
 

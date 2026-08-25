@@ -56,6 +56,8 @@ class ConfigDsl extends Script {
 
     private Map cliParams
 
+    private Map cliConfigVars = [:]
+
     private List<String> profiles
 
     private Map target = [params: [:]]
@@ -91,6 +93,10 @@ class ConfigDsl extends Script {
 
     void setConfigParams(Map params) {
         (target.params as Map).putAll(params)
+    }
+
+    void setCliConfigVars(Map vars) {
+        this.cliConfigVars = vars
     }
 
     void setProfiles(List<String> profiles) {
@@ -147,7 +153,8 @@ class ConfigDsl extends Script {
      * A top-level assignment (e.g. `outputDir = ...`) also updates the script
      * binding, so that a later reference to the same name -- in this file or
      * in one it includes -- resolves to the assigned value instead of the
-     * binding's original (e.g. default) value.
+     * binding's original (e.g. default) value. A CLI-supplied value for that
+     * name takes precedence over the config's own assignment.
      *
      * @param names
      * @param value
@@ -159,6 +166,8 @@ class ConfigDsl extends Script {
             if( cliParams.containsKey(name) )
                 value = asDeclaredType(cliParams[name], value)
         }
+        if( names.size() == 1 && cliConfigVars.containsKey(names.first()) )
+            value = cliConfigVars[names.first()]
         navigate(names.init()).put(names.last(), value)
         if( names.size() == 1 )
             getBinding().setVariable(names.first(), value)
@@ -272,6 +281,7 @@ class ConfigDsl extends Script {
                 .setBinding(binding.getVariables())
                 .setParams(cliParams)
                 .setConfigParams(target.params as Map)
+                .setCliConfigVars(cliConfigVars)
                 .setProfiles(profiles)
         final config = parser.parse(configText, includePath)
         declaredProfiles.addAll(parser.getDeclaredProfiles())

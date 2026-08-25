@@ -25,6 +25,7 @@ import nextflow.NF
 import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.exception.ConfigParseException
+import nextflow.file.FileHelper
 import nextflow.secret.SecretsLoader
 import nextflow.secret.SecretsProvider
 /**
@@ -43,6 +44,10 @@ class ConfigBuilder {
     protected Path currentDir
 
     protected Map<String,?> cliParams
+
+    protected String outputDir
+
+    protected String workDir
 
     protected String profile = DEFAULT_PROFILE
 
@@ -92,6 +97,16 @@ class ConfigBuilder {
 
     ConfigBuilder setCliParams(Map<String,?> cliParams) {
         this.cliParams = cliParams
+        return this
+    }
+
+    ConfigBuilder setOutputDir(String value) {
+        this.outputDir = value
+        return this
+    }
+
+    ConfigBuilder setWorkDir(String value) {
+        this.workDir = value
         return this
     }
 
@@ -159,6 +174,7 @@ class ConfigBuilder {
         binding.put('projectDir', base)
         binding.put('launchDir', Path.of('.').toRealPath())
         binding.put('outputDir', Path.of('results').complete())
+        binding.put('workDir', Path.of('work').complete())
         binding.put('secrets', secretContext)
         return binding
     }
@@ -203,7 +219,20 @@ class ConfigBuilder {
             }
             binding.putAll(configVars())
 
+            // a CLI-supplied `-output-dir`/`-work-dir` takes precedence over the config's own
+            // default -- and over a same-named config assignment, via setCliConfigVars -- so
+            // that a config expression referencing `outputDir`/`workDir` sees the same value
+            // the session ultimately uses
+            final cliConfigVars = [:]
+            if( outputDir )
+                cliConfigVars.outputDir = FileHelper.toCanonicalPath(outputDir)
+            if( workDir )
+                cliConfigVars.workDir = FileHelper.toCanonicalPath(workDir)
+            binding.putAll(cliConfigVars)
+
             parser.setBinding(binding)
+            if( cliConfigVars )
+                parser.setCliConfigVars(cliConfigVars)
 
             // merge of the provided configuration files
             for( final entry : configEntries ) {

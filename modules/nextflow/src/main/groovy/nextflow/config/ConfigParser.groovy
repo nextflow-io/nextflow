@@ -73,6 +73,16 @@ interface ConfigParser {
     ConfigParser setProfiles(List<String> profiles)
 
     /**
+     * Define CLI-supplied values for implicit config variables (e.g. `outputDir`,
+     * `workDir`) that should take precedence over a same-named config assignment.
+     *
+     * @param vars
+     */
+    default ConfigParser setCliConfigVars(Map vars) {
+        return this
+    }
+
+    /**
      * Toggle whether to render compilation errors with ANSI colors.
      *
      * @param value
