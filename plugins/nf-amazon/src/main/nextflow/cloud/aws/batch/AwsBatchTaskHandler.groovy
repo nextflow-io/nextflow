@@ -43,6 +43,7 @@ import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
 import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskHandler
+import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
 import nextflow.trace.TraceRecord
@@ -814,8 +815,36 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
     }
 
     protected String getJobName(TaskRun task) {
-        final result = prependWorkflowPrefix(task.name, environment)
-        return normalizeJobName(result)
+        final defaultName = normalizeJobName(prependWorkflowPrefix(task.name, environment))
+        final customName = customJobName(task)
+        if( !customName )
+            return defaultName
+
+        final result = normalizeJobName(customName)
+        if( !result || !(result[0] ==~ /[a-zA-Z0-9]/) )
+            return defaultName
+        return result
+    }
+
+    /**
+     * Resolve the `jobName` property defined in the Nextflow config file.
+     *
+     * @param task The underlying task to be executed
+     * @return The custom job name for the specified task, or {@code null} if it cannot be resolved
+     */
+    protected String customJobName(TaskRun task) {
+        try {
+            final custom = (Closure) executor.config.getExecConfigProp(executor.name, 'jobName', null)
+            if( !custom )
+                return null
+
+            final ctx = [(TaskProcessor.TASK_CONTEXT_PROPERTY_NAME): task.config]
+            return custom.cloneWith(ctx).call()?.toString()
+        }
+        catch( Exception e ) {
+            log.debug "Unable to resolve job custom name", e
+            return null
+        }
     }
 
     /**
@@ -1115,4 +1144,3 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         return -Math.floorDiv(-x,y);
     }
 }
-
