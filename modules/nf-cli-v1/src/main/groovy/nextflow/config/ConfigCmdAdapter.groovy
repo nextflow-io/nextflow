@@ -96,6 +96,7 @@ class ConfigCmdAdapter {
         builder.setProfile(cmdRun.profile)
         builder.setOutputDir(cmdRun.outputDir)
         builder.setWorkDir(cmdRun.workDir)
+        builder.setWorkDirDefault(SysEnv.get('NXF_WORK'))
         return this
     }
 

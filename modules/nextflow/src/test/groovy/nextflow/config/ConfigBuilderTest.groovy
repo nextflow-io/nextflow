@@ -1079,6 +1079,52 @@ class ConfigBuilderTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should use a weaker workDir default for config interpolation when no CLI flag is given' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def envWorkDir = folder.resolve('env-work')
+        SysEnv.push('NXF_WORK': envWorkDir.toString())
+        def text = '''
+        resolvedWorkDir = "$workDir"
+        '''
+
+        when:
+        def cfg = new ConfigBuilder()
+                .setBaseDir(folder)
+                .setWorkDirDefault(SysEnv.get('NXF_WORK'))
+                .build([text])
+        then:
+        cfg.resolvedWorkDir == envWorkDir.toString()
+
+        cleanup:
+        folder?.deleteDir()
+        SysEnv.pop()
+    }
+
+    def 'should let a config assignment override the weaker NXF_WORK default' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def envWorkDir = folder.resolve('env-work')
+        SysEnv.push('NXF_WORK': envWorkDir.toString())
+        def text = '''
+        workDir = 'config-work'
+        resolvedWorkDir = "$workDir"
+        '''
+
+        when:
+        def cfg = new ConfigBuilder()
+                .setBaseDir(folder)
+                .setWorkDirDefault(SysEnv.get('NXF_WORK'))
+                .build([text])
+        then:
+        cfg.workDir == 'config-work'
+        cfg.resolvedWorkDir == 'config-work'
+
+        cleanup:
+        folder?.deleteDir()
+        SysEnv.pop()
+    }
+
     def 'should let a CLI-supplied outputDir override a config assignment' () {
         given:
         def folder = Files.createTempDirectory('test')

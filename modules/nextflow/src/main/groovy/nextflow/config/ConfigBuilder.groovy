@@ -49,6 +49,8 @@ class ConfigBuilder {
 
     protected String workDir
 
+    protected String workDirDefault
+
     protected String profile = DEFAULT_PROFILE
 
     protected boolean validateProfile
@@ -107,6 +109,16 @@ class ConfigBuilder {
 
     ConfigBuilder setWorkDir(String value) {
         this.workDir = value
+        return this
+    }
+
+    /**
+     * A weaker `workDir` default (e.g. from `NXF_WORK`): visible to config-time
+     * interpolation like the hardcoded default, but -- unlike a `-work-dir` CLI
+     * flag -- must not override an explicit config assignment.
+     */
+    ConfigBuilder setWorkDirDefault(String value) {
+        this.workDirDefault = value
         return this
     }
 
@@ -229,6 +241,12 @@ class ConfigBuilder {
             if( workDir )
                 cliConfigVars.workDir = FileHelper.toCanonicalPath(workDir)
             binding.putAll(cliConfigVars)
+
+            // a weaker workDir default (e.g. NXF_WORK) still needs to be visible to config-time
+            // interpolation, but must not override an explicit config assignment the way the
+            // CLI flag above does
+            if( !workDir && workDirDefault )
+                binding.put('workDir', FileHelper.toCanonicalPath(workDirDefault))
 
             parser.setBinding(binding)
             if( cliConfigVars )
