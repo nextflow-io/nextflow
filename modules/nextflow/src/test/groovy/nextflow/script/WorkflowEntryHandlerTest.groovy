@@ -735,7 +735,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
 
         then:
         def e = thrown(ScriptRuntimeException)
-        e.message.contains('does not enable static typing')
+        e.message.contains('static typing is required')
     }
 
     def 'should not execute a named workflow directly without module run'() {
