@@ -108,6 +108,13 @@ class PublishOp {
     protected void onNext(value) {
         log.trace "Received value for workflow output '${name}': ${value}"
 
+        // if output directory is disabled, report output files by
+        // their work directory path instead of publishing them
+        if( session.outputDir == null ) {
+            publishedValues << value
+            return
+        }
+
         // evaluate dynamic path
         final targetResolver = getTargetDir(value)
         if( targetResolver == null )
@@ -223,13 +230,13 @@ class PublishOp {
             : publishedValues
 
         // publish workflow output
-        final indexPath = indexOpts
+        final indexPath = session.outputDir && indexOpts
             ? session.outputDir.resolve(indexOpts.path)
             : null
         session.notifyWorkflowOutput(new WorkflowOutputEvent(name, outputValue, indexPath))
 
         // write value to index file
-        if( indexOpts ) {
+        if( indexPath ) {
             final ext = indexPath.getExtension()
             indexPath.parent.mkdirs()
             if( ext == 'csv' ) {

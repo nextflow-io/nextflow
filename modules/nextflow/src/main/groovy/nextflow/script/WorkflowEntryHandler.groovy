@@ -107,13 +107,14 @@ class WorkflowEntryHandler {
         }
     }
 
-    // TODO: disable output directory so that workflow output is produced without
-    // actually copying files to output directory
     private void publishOutputs() {
         final outputNames = workflowDef.getDeclaredOutputs()
         final dsl = new OutputDsl()
         for( final name : outputNames )
             dsl.declare(name, { -> })
+        // disable the output directory -- report output files by
+        // their work directory path instead of publishing them
+        session.outputDir = null
         dsl.apply(session)
     }
 
