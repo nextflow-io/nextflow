@@ -144,6 +144,11 @@ class ConfigDsl extends Script {
      * that if the param is referenced later in the config file,
      * the command line value is used.
      *
+     * A top-level assignment (e.g. `outputDir = ...`) also updates the script
+     * binding, so that a later reference to the same name -- in this file or
+     * in one it includes -- resolves to the assigned value instead of the
+     * binding's original (e.g. default) value.
+     *
      * @param names
      * @param value
      */
@@ -155,6 +160,8 @@ class ConfigDsl extends Script {
                 value = asDeclaredType(cliParams[name], value)
         }
         navigate(names.init()).put(names.last(), value)
+        if( names.size() == 1 )
+            getBinding().setVariable(names.first(), value)
     }
 
     /**
