@@ -16,6 +16,8 @@
 
 package nextflow.script
 
+import java.lang.reflect.Type
+
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
@@ -38,9 +40,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 
     private BodyDef body
 
-    private List<String> declaredInputs
-
-    private Map<String,Class> declaredInputTypes
+    private List<Param> declaredInputs
 
     private List<String> declaredOutputs
 
@@ -66,7 +66,6 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         this.body = copy.call()
         // now it can access the parameters
         this.declaredInputs = new ArrayList<>(resolver.getTakes())
-        this.declaredInputTypes = new HashMap<>(resolver.getTakeTypes())
         this.declaredOutputs = new ArrayList<>(resolver.getEmits())
         this.variableNames = getVarNames0()
     }
@@ -103,9 +102,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 
     @PackageScope BodyDef getBody() { body }
 
-    @PackageScope List<String> getDeclaredInputs() { declaredInputs }
-
-    @PackageScope Map<String,Class> getDeclaredInputTypes() { declaredInputTypes }
+    @PackageScope List<Param> getDeclaredInputs() { declaredInputs }
 
     @PackageScope List<String> getDeclaredOutputs() { declaredOutputs }
 
@@ -119,7 +116,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         def variableNames = body.getValNames()
         if( variableNames ) {
             Set<String> declaredNames = []
-            declaredNames.addAll( declaredInputs )
+            declaredNames.addAll( declaredInputs*.name )
             if( declaredNames )
                 variableNames = variableNames - declaredNames
         }
@@ -136,7 +133,7 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 
         // attach declared inputs with the invocation arguments
         for( int i=0; i< declaredInputs.size(); i++ ) {
-            final name = declaredInputs[i]
+            final name = declaredInputs[i].name
             context.setProperty( name, params[i] )
         }
     }
@@ -227,20 +224,22 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 @CompileStatic
 class WorkflowParamsDsl {
 
-    List<String> takes = new ArrayList<>(10)
-    Map<String,Class> takeTypes = new HashMap<>()
+    List<Param> takes = new ArrayList<>(10)
     List<String> emits = new ArrayList<>(10)
 
     /**
      * Called by generated code for each workflow take parameter.
      *
-     * @param name the parameter name
-     * @param type the parameter type (may be Object for untyped workflows)
+     * @param name     the parameter name
+     * @param clazz    the hidden class holding the declared take types,
+     *                 or null for an untyped workflow (see ScriptToGroovyVisitor)
+     * @param optional whether the parameter type is nullable
      */
-    void _take_(String name, Class type = null) {
-        takes.add(name)
-        if( type != null && type != Object )
-            takeTypes.put(name, type)
+    void _take_(String name, Class clazz = null, boolean optional = false) {
+        final type = clazz != null
+            ? clazz.getField(name).getGenericType()
+            : null
+        takes.add(new Param(name, type != Object ? type : null, optional, null))
     }
 
     void _emit_(String name) {

@@ -24,7 +24,6 @@ import java.util.stream.Collectors;
 
 import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AgentNode;
-import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.IncludeNode;
@@ -45,14 +44,11 @@ import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.CodeVisitorSupport;
 import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.MethodNode;
-import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.VariableScope;
 import org.codehaus.groovy.ast.expr.ArgumentListExpression;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
-import org.codehaus.groovy.ast.expr.VariableExpression;
-import org.codehaus.groovy.ast.stmt.BlockStatement;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
 import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
@@ -166,7 +162,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitParams(ParamBlockNode node) {
-        var paramsType = new RecordNode(packageName(moduleNode) + "." + "__Params");
+        var paramsType = new RecordNode(sgh.packageName(moduleNode) + "." + "__Params");
         for( var param : node.declarations ) {
             var fn = new FieldNode(
                 param.getName(),
@@ -194,11 +190,6 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         moduleNode.addStatement(result);
     }
 
-    private static String packageName(ScriptNode moduleNode) {
-        var scriptClass = moduleNode.getClasses().get(0);
-        return scriptClass.getNameWithoutPackage();
-    }
-
     @Override
     public void visitParamV1(ParamNodeV1 node) {
         var result = stmt(assignX(node.target, node.value));
@@ -209,77 +200,8 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     public void visitWorkflow(WorkflowNode node) {
         if( !node.isEntry() )
             checkReservedMethodName(node, "workflow");
-
-        var main = node.main instanceof BlockStatement block ? block : new BlockStatement();
-        visitWorkflowEmits(node.emits, main);
-        visitWorkflowPublishers(node.publishers, main);
-        visitWorkflowHandler(node.onComplete, "setOnComplete", main);
-        visitWorkflowHandler(node.onError, "setOnError", main);
-
-        var bodyDef = stmt(createX(
-            "nextflow.script.BodyDef",
-            args(
-                closureX(null, main),
-                constX(null),
-                constX("workflow")
-            )
-        ));
-        var closure = closureX(null, block(new VariableScope(), List.of(
-            workflowTakes(node.getParameters()),
-            node.emits,
-            bodyDef
-        )));
-        var arguments = node.isEntry()
-            ? args(closure)
-            : args(constX(node.getName()), closure);
-        var result = stmt(callThisX("workflow", arguments));
+        var result = new WorkflowToGroovyVisitor(sourceUnit).transform(node);
         moduleNode.addStatement(result);
-    }
-
-    private Statement workflowTakes(Parameter[] takes) {
-        var statements = Arrays.stream(takes)
-            .map((take) ->
-                stmt(callThisX("_take_", args(constX(take.getName()), classX(take.getType()))))
-            )
-            .toList();
-        return block(null, statements);
-    }
-
-    private void visitWorkflowEmits(Statement emits, BlockStatement main) {
-        for( var stmt : asBlockStatements(emits) ) {
-            var es = (ExpressionStatement)stmt;
-            var emit = es.getExpression();
-            if( emit instanceof VariableExpression ve ) {
-                es.setExpression(callThisX("_emit_", args(constX(ve.getName()))));
-            }
-            else if( emit instanceof AssignmentExpression ae ) {
-                var target = (VariableExpression)ae.getLeftExpression();
-                main.addStatement(assignS(target, emit));
-                es.setExpression(callThisX("_emit_", args(constX(target.getName()))));
-                main.addStatement(es);
-            }
-            else {
-                var target = varX("$out");
-                main.addStatement(assignS(target, emit));
-                es.setExpression(callThisX("_emit_", args(constX(target.getName()))));
-                main.addStatement(es);
-            }
-        }
-    }
-
-    private void visitWorkflowPublishers(Statement publishers, BlockStatement main) {
-        for( var stmt : asBlockStatements(publishers) ) {
-            var es = (ExpressionStatement)stmt;
-            var publish = (BinaryExpression)es.getExpression();
-            var target = asVarX(publish.getLeftExpression());
-            es.setExpression(callThisX("_publish_", args(constX(target.getName()), publish.getRightExpression())));
-            main.addStatement(es);
-        }
-    }
-
-    private void visitWorkflowHandler(Statement code, String name, BlockStatement main) {
-        if( code instanceof BlockStatement block )
-            main.addStatement(stmt(callX(varX("workflow"), name, args(closureX(null, block)))));
     }
 
     @Override

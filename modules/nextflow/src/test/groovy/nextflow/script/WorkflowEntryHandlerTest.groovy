@@ -38,8 +38,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
     private WorkflowEntryHandler makeHandler(List<String> inputs = []) {
         def workflowDef = Mock(WorkflowDef) {
             getName() >> 'HELLO'
-            getDeclaredInputs() >> inputs
-            getDeclaredInputTypes() >> [:]
+            getDeclaredInputs() >> inputs.collect { n -> new Param(n, null, false, null) }
         }
         def session = Mock(Session) { getParams() >> [:] }
         def script  = Mock(BaseScript) {
@@ -153,8 +152,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         given:
         def workflowDef = Mock(WorkflowDef) {
             getName() >> 'HELLO'
-            getDeclaredInputs() >> ['samples']
-            getDeclaredInputTypes() >> [:]
+            getDeclaredInputs() >> [new Param('samples', String, false, null)]
         }
         def session = Mock(Session)
         def script  = Mock(BaseScript) {
@@ -167,7 +165,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         def handler = new WorkflowEntryHandler(script, session, meta)
 
         when:
-        handler.getWorkflowArguments(workflowDef, [:])
+        handler.getWorkflowArguments(workflowDef)
 
         then:
         def e = thrown(ScriptRuntimeException)
@@ -179,7 +177,6 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         def workflow1 = Mock(WorkflowDef) {
             getName() >> 'FIRST'
             getDeclaredInputs() >> []
-            getDeclaredInputTypes() >> [:]
         }
         def session = Mock(Session) { getParams() >> [:] }
         def script  = Mock(BaseScript) {
@@ -214,7 +211,8 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
                 greeting = "Hello, ${name}!"
             }
             ''',
-            config: [params: [name: 'World']]
+            config: [params: [name: 'World']],
+            params: [name: 'World']
         )
 
         then:
@@ -243,7 +241,8 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
                 out = samples
             }
             ''',
-            config: [params: [samples: csvFile.toString()]]
+            config: [params: [samples: csvFile.toString()]],
+            params: [samples: csvFile.toString()]
         )
 
         then:
@@ -271,7 +270,8 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
                 out = samples
             }
             ''',
-            config: [params: [samples: jsonFile.toString()]]
+            config: [params: [samples: jsonFile.toString()]],
+            params: [samples: jsonFile.toString()]
         )
 
         then:
@@ -303,7 +303,8 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
                 out = samples
             }
             ''',
-            config: [params: [samples: csvFile.toString(), outdir: 'results']]
+            config: [params: [samples: csvFile.toString(), outdir: 'results']],
+            params: [samples: csvFile.toString(), outdir: 'results']
         )
 
         then:
@@ -333,6 +334,208 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         then:
         def e = thrown(ScriptRuntimeException)
         e.message.contains('requires input `name`')
+    }
+
+    def 'should convert samplesheet records to the declared element type'() {
+        given:
+        def fastq = Files.createTempFile('reads', '.fastq')
+        def csvFile = Files.createTempFile('samples', '.csv')
+        csvFile.text = """\
+            id,fastq_1
+            s1,${fastq}
+            """.stripIndent()
+
+        when:
+        def result = runScript(
+            '''\
+            nextflow.enable.types = true
+
+            record Sample {
+                id: String
+                fastq_1: Path
+            }
+
+            workflow RNASEQ {
+                take:
+                samples: Channel<Sample>
+
+                emit:
+                out = samples.map { s -> [s.getClass().simpleName, s.fastq_1.getClass().simpleName] }
+            }
+            ''',
+            config: [params: [samples: csvFile.toString()]],
+            params: [samples: csvFile.toString()]
+        )
+
+        then:
+        // each record is cast to the record type and `fastq_1` to a Path
+        result.val == ['RecordMap', 'UnixPath']
+
+        cleanup:
+        csvFile?.delete()
+        fastq?.delete()
+    }
+
+    def 'should reject a samplesheet that is missing a required record field'() {
+        given:
+        def csvFile = Files.createTempFile('samples', '.csv')
+        csvFile.text = '''\
+            id,wrong_column
+            s1,oops
+            '''.stripIndent()
+
+        when:
+        runScript(
+            '''\
+            nextflow.enable.types = true
+
+            record Sample {
+                id: String
+                fastq_1: Path
+            }
+
+            workflow RNASEQ {
+                take:
+                samples: Channel<Sample>
+
+                emit:
+                out = samples
+            }
+            ''',
+            config: [params: [samples: csvFile.toString()]],
+            params: [samples: csvFile.toString()]
+        )
+
+        then:
+        def e = thrown(Exception)
+        e.message.contains("is missing field 'fastq_1' required by record type 'Sample'")
+
+        cleanup:
+        csvFile?.delete()
+    }
+
+    def 'should coerce scalar inputs to the declared type'() {
+        when:
+        def params = [dur: '2h', mem: '4.GB', ver: '1.2.3', num: '5.5', val: '42']
+        def result = runScript(
+            '''\
+            nextflow.enable.types = true
+
+            workflow CHECK {
+                take:
+                dur: Duration
+                mem: MemoryUnit
+                ver: VersionNumber
+                num: Float
+                val: Value<Integer>
+
+                emit:
+                out = val.map { v -> [
+                    dur.getClass().simpleName,
+                    mem.getClass().simpleName,
+                    ver.getClass().simpleName,
+                    num.getClass().simpleName,
+                    v.getClass().simpleName
+                ] }
+            }
+            ''',
+            config: [params: params],
+            params: params
+        )
+
+        then:
+        result.val == ['Duration', 'MemoryUnit', 'VersionNumber', 'Float', 'Integer']
+    }
+
+    def 'should pass null for an omitted optional input'() {
+        when:
+        def result = runScript(
+            '''\
+            nextflow.enable.types = true
+
+            workflow OPT {
+                take:
+                required: String
+                threads: Integer?
+
+                emit:
+                out = "${required}:${threads}"
+            }
+            ''',
+            config: [params: [required: 'hello']],
+            params: [required: 'hello']
+        )
+
+        then:
+        result.val == 'hello:null'
+    }
+
+    def 'should reject a collection input given on the command line'() {
+        when:
+        runScript(
+            '''\
+            nextflow.enable.types = true
+
+            workflow COLL {
+                take:
+                ids: List<String>
+
+                emit:
+                out = ids
+            }
+            ''',
+            config: [params: [ids: 'a,b,c']],
+            params: [ids: 'a,b,c']
+        )
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains('cannot be assigned to a,b,c')
+    }
+
+    def 'should convert collection elements for an input from config'() {
+        when:
+        def result = runScript(
+            '''\
+            nextflow.enable.types = true
+
+            workflow COLL {
+                take:
+                sizes: List<Integer>
+
+                emit:
+                out = sizes.collect { v -> v.getClass().simpleName }
+            }
+            ''',
+            config: [params: [sizes: ['1', '2']]],
+            configParams: [sizes: ['1', '2']]
+        )
+
+        then:
+        result.val == ['Integer', 'Integer']
+    }
+
+    def 'should reject a parameter that is not a workflow input'() {
+        when:
+        runScript(
+            '''\
+            nextflow.enable.types = true
+
+            workflow GREET {
+                take:
+                name: String
+
+                emit:
+                greeting = "Hello, ${name}!"
+            }
+            ''',
+            config: [params: [name: 'World', bogus: '1']],
+            params: [name: 'World', bogus: '1']
+        )
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains('Parameter `bogus` was specified on the command line but is not an input of workflow `GREET`')
     }
 
     def 'should prefer explicit entry workflow over named workflow'() {

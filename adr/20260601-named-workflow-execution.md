@@ -109,6 +109,30 @@ output {
 
 Each `take:` input becomes a param, and each `emit:` output becomes a published output with no `path` directive. Only typed workflows can be executed directly, since the input types are needed to map pipeline parameters to workflow inputs.
 
+### Mapping parameters to workflow inputs
+
+Each `take:` input becomes a pipeline parameter of the same name, and the declared type determines how the parameter value is interpreted. This is the same mapping that the `params` block already performs for an entry workflow, so direct execution should reuse that mechanism rather than define a second set of rules. A workflow that is executed directly and an entry workflow that wraps it must accept the same command line.
+
+A parameter value can come from the command line, a params file, or the config. Command-line values are always strings and must be parsed according to the declared type. Values from a params file or config are already structured -- numbers, lists, maps -- and only need to be converted where the declared type is more specific than the source syntax, such as `Path` or a record type.
+
+The following coercions apply:
+
+| Declared type | Command line | Params file / config |
+| ------------- | ------------ | -------------------- |
+| `Boolean`, `Integer`, `Float`, `String` | parsed from the string | used as-is |
+| `Duration`, `MemoryUnit`, `VersionNumber` | parsed from the string | parsed if given as a string |
+| `Path` | resolved to a path, which must exist | resolved to a path |
+| `List<E>`, `Set<E>`, `Bag<E>` | not supported | each element converted to `E` |
+| `Map<K,V>`, `Tuple`, `Record`, record types | not supported | each value converted to its declared type; record fields are validated |
+| `Channel<E>` | a samplesheet path, loaded as described below | a samplesheet path |
+| `Value<V>` | parsed as `V`, then wrapped in a value channel | converted to `V`, then wrapped in a value channel |
+
+Composite types cannot be expressed as a single command-line string, so they must be supplied through a params file or the config. Nextflow does not attempt to split a command-line string into a collection, because there is no separator that is safe for every element type.
+
+An input is required unless it is declared as nullable (e.g. `samples: Channel<Sample>?`), in which case an unspecified parameter is passed as `null`. Unlike a param declaration, a `take:` input cannot specify a default value; a workflow that needs a default should declare the input as nullable and apply the default in its `main:` section, so that the default is applied whether the workflow is executed directly or called by another workflow.
+
+After coercion, the value is checked for assignability against the declared type. An error that names the parameter, the declared type, and the offending value is preferable to passing an ill-typed value into the workflow.
+
 ### Loading input channels from samplesheets
 
 A channel param such as `samples: Channel<Sample>` is supplied on the command line as a samplesheet path, so Nextflow needs to load record channels directly from samplesheets. This can be done by loading the samplesheet data based on the file extension (CSV, JSON, YAML), casting each record to the given record type, and loading the collection as a channel.

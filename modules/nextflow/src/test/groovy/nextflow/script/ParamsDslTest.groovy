@@ -28,6 +28,10 @@ import nextflow.script.types.Record
 import spock.lang.Specification
 import spock.lang.Unroll
 
+import nextflow.util.Duration
+import nextflow.util.MemoryUnit
+import nextflow.util.VersionNumber
+
 import static test.ScriptHelper.*
 /**
  *
@@ -61,6 +65,32 @@ class ParamsDslTest extends Specification {
 
         cleanup:
         inputFile?.delete()
+    }
+
+    def 'should parse duration, memory and version params'() {
+        given:
+        def cliParams = [time: '2h', memory: '4.GB', version: '1.2.3']
+
+        when:
+        def result = runScript(
+            '''\
+            params {
+                time: Duration
+                memory: MemoryUnit
+                version: VersionNumber
+            }
+
+            workflow { params }
+            ''',
+            config: [params: cliParams],
+            params: cliParams
+        )
+        then:
+        result == [
+            time: Duration.of('2h'),
+            memory: MemoryUnit.of('4.GB'),
+            version: new VersionNumber('1.2.3')
+        ]
     }
 
     def 'should allow optional param'() {

@@ -16,6 +16,8 @@
 
 package nextflow.script
 
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
 import java.nio.file.Path
 
 import groovy.json.JsonSlurper
@@ -26,6 +28,7 @@ import nextflow.Session
 import nextflow.dataflow.ChannelNamespace
 import nextflow.exception.ScriptRuntimeException
 import nextflow.file.FileHelper
+import nextflow.script.dsl.Types
 import nextflow.script.types.Channel
 import nextflow.script.types.Value
 import nextflow.splitter.CsvSplitter
@@ -81,7 +84,7 @@ class WorkflowEntryHandler {
         final entryBody = { ->
             final entryExecutionClosure = { ->
                 // Map parameters to workflow inputs
-                final inputs = getWorkflowArguments(workflowDef, session.params)
+                final inputs = getWorkflowArguments(workflowDef)
                 // Execute the named workflow
                 final output = workflowDef.run(inputs as Object[]) as ChannelOut
                 // Publish workflow emits as pipeline outputs
@@ -121,101 +124,113 @@ class WorkflowEntryHandler {
     /**
      * Resolves the workflow input arguments from the current session params.
      *
-     * For each declared input ({@code take:} parameter) of the named workflow:
-     * - If the input is typed as {@code Channel<T>}, the param value is resolved
-     *   as a samplesheet path or collection and loaded into a channel
-     * - If the param value is a collection, it is loaded into a channel via
-     *   {@code channel.fromList()}
-     * - If the param value is a string path to a samplesheet (CSV, JSON, YAML),
-     *   the file is loaded and its contents are emitted as a channel
-     * - Otherwise the value is passed directly as a workflow variable
+     * Each declared input ({@code take:} parameter) of the named workflow becomes
+     * a pipeline parameter of the same name, and the declared type determines how
+     * the parameter value is interpreted. This is the same mapping performed by
+     * the {@code params} block for an entry workflow.
      *
      * @param workflowDef
-     * @param params
      */
-    private List getWorkflowArguments(WorkflowDef workflowDef, Map params) {
+    protected List getWorkflowArguments(WorkflowDef workflowDef) {
         final inputs = workflowDef.getDeclaredInputs()
-        final inputTypes = workflowDef.getDeclaredInputTypes()
+        final inputNames = inputs*.name
+        final cliParams = session.cliParams ?: [:]
+        final configParams = session.configParams ?: [:]
 
-        log.debug "Getting input arguments for workflow: ${workflowDef.name}"
-        log.debug "Session params: ${params}"
-
-        final arguments = []
-        for( final name : inputs ) {
-            final value = params.get(name)
-            if( value == null && !params.containsKey(name) )
-                throw new ScriptRuntimeException("Workflow `${workflowDef.name}` requires input `${name}` but no parameter `--${name}` was provided")
-
-            final type = inputTypes.get(name)
-            arguments.add(resolveInput(name, type, value))
+        for( final name : cliParams.keySet() ) {
+            if( name !in inputNames && !configParams.containsKey(name) )
+                throw new ScriptRuntimeException("Parameter `${name}` was specified on the command line but is not an input of workflow `${workflowDef.name}`")
         }
 
-        log.debug "Final input arguments: ${arguments}"
+        final arguments = []
+        for( final decl : inputs ) {
+            final name = decl.name
+            if( cliParams.containsKey(name) )
+                arguments.add(resolveInput(decl, cliParams.get(name), true))
+            else if( configParams.containsKey(name) )
+                arguments.add(resolveInput(decl, configParams.get(name), false))
+            else if( decl.optional )
+                arguments.add(null)
+            else
+                throw new ScriptRuntimeException("Workflow `${workflowDef.name}` requires input `${name}` but no parameter `--${name}` was provided")
+        }
         return arguments
     }
 
     /**
-     * Resolves a single workflow input value.
+     * Resolves a single workflow input value against its declared type.
      *
-     * When the declared type is {@code Channel} (or a subtype), the value is
-     * always resolved to a channel — either by loading a samplesheet file or by
-     * wrapping an existing collection with {@code channel.fromList()}.
+     * A {@code Channel<E>} input is loaded from a samplesheet file, with each
+     * record converted to the element type. A {@code Value<V>} input is
+     * converted to {@code V} and wrapped in a value channel. Any other input is
+     * converted directly to the declared type.
      *
-     * For other (or unknown) types the value is passed through as-is, unless it
-     * happens to be a collection or a samplesheet path, in which case a channel
-     * is also created (heuristic fallback for untyped workflows).
-     *
-     * @param name  the input name (for error messages)
-     * @param type  the declared type of the input, or {@code null} if untyped
-     * @param value the raw param value
-     * @return a {@code ChannelImpl} if the value resolves to a channel, or the
-     *         raw value for scalar inputs
+     * @param decl    the declared input
+     * @param value   the raw param value
+     * @param fromCli whether the value came from the command line (and is
+     *                therefore a string that may need to be parsed)
      */
-    protected Object resolveInput(String name, Class type, Object value) {
+    protected Object resolveInput(Param decl, Object value, boolean fromCli) {
         if( value == null )
+            return null
+
+        // an untyped input is passed through as-is
+        if( decl.type == null )
             return value
 
-        // TODO: need to generate __Params class to preserve input types
-        if( type == Channel ) {
-            if( value instanceof Collection ) {
-                return ChannelNamespace.fromList((Collection)value)
-            }
-            if( value instanceof String ) {
-                final path = FileHelper.asPath(value)
-                return ChannelNamespace.fromList(loadFromFile(name, path))
-            }
-            throw new ScriptRuntimeException("Workflow input `${name}` expects a Channel but received: ${value} [${value.class.simpleName}]")
-        }
+        final rawType = TypeHelper.getRawType(decl.type)
 
-        if( type == Value ) {
-            return ChannelNamespace.value(value)
-        }
+        if( rawType == Channel )
+            return ChannelNamespace.fromList(loadChannelInput(decl, value))
 
-        if( value !instanceof String )
-            return TypeHelper.asType(value, type)
+        if( rawType == Value )
+            return ChannelNamespace.value(resolveScalarInput(elementDecl(decl), value, fromCli))
 
-        final str = (String) value
+        return resolveScalarInput(decl, value, fromCli)
+    }
 
-        if( type == Boolean ) {
-            if( str.toLowerCase() == 'true' ) return Boolean.TRUE
-            if( str.toLowerCase() == 'false' ) return Boolean.FALSE
-        }
+    private Object resolveScalarInput(Param decl, Object value, boolean fromCli) {
+        final result = fromCli
+            ? ParamsHelper.resolveFromCli(decl, value)
+            : ParamsHelper.resolveFromCode(decl, value)
 
-        if( type == Integer || type == Float ) {
-            if( str.isInteger() ) return str.toInteger()
-            if( str.isLong() ) return str.toLong()
-        }
+        final expectedType = TypeHelper.getRawType(decl.type)
+        final actualType = result?.getClass()
+        if( actualType != null && !ParamsHelper.isAssignableFrom(expectedType, actualType) )
+            throw new ScriptRuntimeException("Workflow input `${decl.name}` with type ${Types.getName(decl.type)} cannot be assigned to ${result} [${Types.getName(actualType)}]")
 
-        if( type == Float ) {
-            if( str.isFloat() ) return str.toFloat()
-            if( str.isDouble() ) return str.toDouble()
-        }
+        return result
+    }
 
-        if( type == Path ) {
-            return TypeHelper.asPathType(str)
-        }
+    /**
+     * Loads a channel input from a samplesheet file, converting each record
+     * to the declared element type.
+     *
+     * @param decl
+     * @param value
+     */
+    private List loadChannelInput(Param decl, Object value) {
+        if( value !instanceof CharSequence && value !instanceof Path )
+            throw new ScriptRuntimeException("Workflow input `${decl.name}` with type ${Types.getName(decl.type)} should be a samplesheet file, but received: ${value} [${Types.getName(value.getClass())}]")
 
-        return value
+        final path = value instanceof Path
+            ? (Path)value
+            : FileHelper.asPath(value.toString())
+        final elementType = elementDecl(decl).type
+        return loadFromFile(decl.name, path).collect { el -> TypeHelper.asType(el, elementType) }
+    }
+
+    /**
+     * Returns the declared input for the element type of a parameterized
+     * input type, e.g. {@code Sample} for {@code Channel<Sample>}.
+     *
+     * @param decl
+     */
+    private static Param elementDecl(Param decl) {
+        final elementType = decl.type instanceof ParameterizedType
+            ? ((ParameterizedType)decl.type).getActualTypeArguments()[0]
+            : (Type)Object
+        return new Param(decl.name, elementType, decl.optional, null)
     }
 
     /**

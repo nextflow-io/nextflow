@@ -133,7 +133,7 @@ class ScriptLoaderV2Test extends Dsl2Spec {
 
         then:
         meta.definitions.size() == 2
-        meta.getWorkflow('hello').declaredInputs == ['foo', 'bar']
+        meta.getWorkflow('hello').declaredInputs*.name == ['foo', 'bar']
         meta.getWorkflow('hello').declaredOutputs == ['result']
     }
 
