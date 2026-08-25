@@ -63,10 +63,9 @@ class ProcessEntryHandler {
         this.session = session
 
         final processNames = meta.getLocalProcessNames()
-        if( processNames.isEmpty() )
-            throw new IllegalStateException("No processes found for automatic execution")
+        if( processNames.size() != 1 )
+            throw new IllegalStateException("Direct execution of processes is only supported for scripts with exactly one process")
 
-        // Always pick the first process (whether single or multiple processes)
         final processName = processNames.first()
         this.processDef = meta.getProcess(processName)
     }

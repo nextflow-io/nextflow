@@ -19,6 +19,7 @@ package nextflow.script
 import java.nio.file.Files
 
 import nextflow.Global
+import nextflow.exception.AbortOperationException
 import test.Dsl2Spec
 
 import static test.ScriptHelper.*
@@ -80,7 +81,7 @@ class ScriptProcessRunTest extends Dsl2Spec {
         Files.deleteIfExists(tempFile)
     }
 
-    def 'should handle multiple processes by running the first one' () {
+    def 'should fail when multiple processes and no entry workflow' () {
         given:
         def SCRIPT = '''
         params.input = 'test'
@@ -101,12 +102,36 @@ class ScriptProcessRunTest extends Dsl2Spec {
         '''
 
         when:
-        def result = runScript(SCRIPT)
+        runScript(SCRIPT)
 
         then:
-        result != null
-        println "Multi-process result: $result"
-        println "Multi-process result class: ${result?.getClass()}"
+        def e = thrown(AbortOperationException)
+        e.message.contains('No entry workflow specified')
+    }
+
+    def 'should fail when a process and a named workflow are both defined' () {
+        given:
+        def SCRIPT = '''
+        process testProcess {
+            input: val input
+            output: val result
+            exec:
+                result = "Got: $input"
+        }
+
+        workflow testWorkflow {
+            take: input
+            main:
+                testProcess(input)
+        }
+        '''
+
+        when:
+        runScript(SCRIPT)
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('No entry workflow specified')
     }
 
     def 'should fail when required parameter is missing' () {

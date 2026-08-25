@@ -274,19 +274,20 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
         if( !entryFlow ) {
             if( meta.hasExecutableWorkflows() ) {
-                // Create an entry workflow that calls the single named workflow automatically
+                // Execute a single named workflow directly
                 final handler = new WorkflowEntryHandler(this, session, meta)
                 this.entryFlow = handler.createEntryWorkflow()
             }
             else if( meta.hasExecutableProcesses() ) {
-                // Create a workflow to execute the process (single process or first of multiple)
+                // Execute a single process directly
                 final handler = new ProcessEntryHandler(this, session, meta)
                 this.entryFlow = handler.createEntryWorkflow()
             }
-            else if( meta.getLocalWorkflowNames() ) {
-                throw new AbortOperationException("No entry workflow specified")
+            else if( meta.getLocalProcessNames() || meta.getLocalWorkflowNames() ) {
+                throw new AbortOperationException("No entry workflow specified -- script must define an entry workflow, a single process or named workflow, or be a code snippet")
             }
             else {
+                // NOTE: remove after v1 parser is removed
                 return result
             }
         }
