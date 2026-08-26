@@ -79,10 +79,6 @@ class ParamsDslTest extends Specification {
     }
 
     def 'should report error for missing required param'() {
-        given:
-        def cliParams = [:]
-        def configParams = [outdir: 'results']
-
         when:
         runScript(
             '''\
@@ -93,12 +89,28 @@ class ParamsDslTest extends Specification {
 
             workflow { params }
             ''',
-            params: cliParams,
-            configParams: configParams
+            params: [:],
+            configParams: [outdir: 'results']
         )
         then:
         def e = thrown(ScriptRuntimeException)
-        e.message == 'Parameter `input` is required but was not specified on the command line, params file, or config'
+        e.message == 'Parameter `input` is required but no value was provided'
+
+        when:
+        runScript(
+            '''\
+            params {
+                limit: Integer = 10
+            }
+
+            workflow { params.limit }
+            ''',
+            configParams: [limit: null]
+        )
+
+        then:
+        e = thrown(ScriptRuntimeException)
+        e.message == 'Parameter `limit` is required but no value was provided'
     }
 
     def 'should report error for invalid param'() {
@@ -299,22 +311,21 @@ class ParamsDslTest extends Specification {
         e.message == "Input record [id:1, name:sample1] is missing field 'value' required by record type 'Sample'"
     }
 
-    def 'should report a required param given a null value'() {
+    def 'should apply a null param value over the declared default'() {
         when:
-        runScript(
+        def result = runScript(
             '''\
             params {
-                limit: Integer
+                limit: Integer? = 10
             }
 
             workflow { params.limit }
             ''',
-            params: [limit: null]
+            configParams: [limit: null]
         )
 
         then:
-        def e = thrown(ScriptRuntimeException)
-        e.message == 'Parameter `limit` is required but was not specified on the command line, params file, or config'
+        result == null
     }
 
 }

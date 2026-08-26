@@ -60,28 +60,28 @@ class ParamsDsl {
         final params = new HashMap<String,?>()
         for( final name : declarations.keySet() ) {
             final decl = declarations[name]
-            final cliValue = cliParams[name]
-            final configValue = configParams[name]
-            if( cliValue != null ) {
-                params[name] = ParamsHelper.resolveFromCli(decl, cliValue)
+            if( cliParams.containsKey(name) ) {
+                params[name] = ParamsHelper.resolveFromCli(decl, cliParams[name])
             }
-            else if( configValue != null ) {
-                params[name] = ParamsHelper.resolveFromCode(decl, configValue)
+            else if( configParams.containsKey(name) ) {
+                params[name] = ParamsHelper.resolveFromCode(decl, configParams[name])
             }
             else if( decl.defaultValue != null ) {
                 params[name] = ParamsHelper.resolveFromCode(decl, decl.defaultValue)
             }
-            else if( decl.optional ) {
+            else {
                 params[name] = null
             }
-            else {
-                throw new ScriptRuntimeException("Parameter `$name` is required but was not specified on the command line, params file, or config")
+
+            if( params[name] == null && !decl.optional ) {
+                throw new ScriptRuntimeException("Parameter `$name` is required but no value was provided")
             }
 
             final expectedType = TypeHelper.getRawType(decl.type)
             final actualType = params[name]?.getClass()
-            if( actualType != null && !ParamsHelper.isAssignableFrom(expectedType, actualType) )
+            if( actualType != null && !ParamsHelper.isAssignableFrom(expectedType, actualType) ) {
                 throw new ScriptRuntimeException("Parameter `$name` with type ${Types.getName(decl.type)} cannot be assigned to ${params[name]} [${Types.getName(actualType)}]")
+            }
         }
 
         // propagate resolved params to all scripts for legacy compatibility

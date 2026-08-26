@@ -327,7 +327,7 @@ class ProcessEntryHandler {
 
         // non-file inputs: a missing value is a hard error (required)
         if( value == null )
-            throw new IllegalArgumentException("Missing required parameter: --${name}")
+            throw new IllegalArgumentException("Parameter `--${name}` is required but no value was provided")
 
         // handle env, stdin inputs
         switch( decl ) {
@@ -425,20 +425,18 @@ class ProcessEntryHandler {
         final type = input.getType()
         final decl = new Param(name, type, input.isOptional(), null)
 
-        final cliValue = cliParams.get(name)
-        final value = params.get(name)
-
-        if( cliValue == null && value == null ) {
-            if( decl.isOptional() )
-                return null
-            throw new IllegalArgumentException("Missing required parameter: --${name}")
-        }
-
         // a command-line value is a string that must be parsed, whereas a
         // config or script value is already structured
-        final result = cliValue != null
-            ? ParamsHelper.resolveFromCli(decl, cliValue)
-            : ParamsHelper.resolveFromCode(decl, value)
+        final result =
+            cliParams.containsKey(name) ? ParamsHelper.resolveFromCli(decl, cliParams.get(name)) :
+            params.containsKey(name) ? ParamsHelper.resolveFromCode(decl, params.get(name)) :
+            null
+
+        if( result == null ) {
+            if( decl.isOptional() )
+                return null
+            throw new IllegalArgumentException("Parameter `--${name}` is required but no value was provided")
+        }
 
         // report a value that could not be converted
         final actualType = result?.getClass()

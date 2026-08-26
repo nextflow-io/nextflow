@@ -154,16 +154,16 @@ class WorkflowEntryHandler {
         final arguments = []
         for( final decl : inputs ) {
             final name = decl.name
-            final cliValue = cliParams.get(name)
-            final configValue = configParams.get(name)
-            if( cliValue != null )
-                arguments.add(resolveInput(decl, cliValue, true))
-            else if( configValue != null )
-                arguments.add(resolveInput(decl, configValue, false))
-            else if( decl.optional )
-                arguments.add(null)
-            else
-                throw new ScriptRuntimeException("Workflow `${workflowDef.name}` requires input `${name}` but no parameter `--${name}` was provided")
+            final value =
+                cliParams.containsKey(name) ? resolveInput(decl, cliParams.get(name), true) :
+                configParams.containsKey(name) ? resolveInput(decl, configParams.get(name), false) :
+                null
+
+            if( value == null && !decl.optional ) {
+                throw new ScriptRuntimeException("Parameter `--${name}` is required but no value was provided")
+            }
+
+            arguments.add(value)
         }
         return arguments
     }
@@ -267,7 +267,7 @@ class WorkflowEntryHandler {
     protected List loadFromFile(String name, Path file) {
         final ext = file.getExtension()
         final value = switch( ext ) {
-            case 'csv'         -> new CsvSplitter().options(header: true, sep: ',').target(file).list()
+            case 'csv'         -> loadFromCsv(file)
             case 'json'        -> new JsonSlurper().parse(file)
             case 'yaml', 'yml' -> new YamlSlurper().parse(file)
             default -> throw new ScriptRuntimeException("Unrecognized file format '${ext}' for input file '${file}' for workflow input `${name}` -- should be CSV, JSON, or YAML")
@@ -275,6 +275,18 @@ class WorkflowEntryHandler {
         if( value !instanceof List )
             throw new ScriptRuntimeException("Input file '${file}' for workflow input `${name}` must contain a list of records, but got: ${value.class.simpleName}")
         return (List)value
+    }
+
+    /**
+     * Loads a CSV samplesheet as a list of records.
+     *
+     * @param file
+     */
+    private static List loadFromCsv(Path file) {
+        final rows = new CsvSplitter().options(header: true, sep: ',').target(file).list()
+        return rows.collect { row ->
+            ((Map)row).collectEntries { k, v -> [ k, v != '' ? v : null ] }
+        }
     }
 
 }

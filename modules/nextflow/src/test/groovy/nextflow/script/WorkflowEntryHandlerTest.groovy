@@ -237,7 +237,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
 
         then:
         def e = thrown(ScriptRuntimeException)
-        e.message.contains('requires input `name`')
+        e.message.contains('Parameter `--name` is required but no value was provided')
     }
 
     def 'should convert samplesheet records to the declared element type'() {
@@ -572,7 +572,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         e.message.contains('No entry workflow specified')
     }
 
-    def 'should treat a null param value as not provided'() {
+    def 'should report a required input with no value'() {
         when:
         // e.g. a blank entry in a params file -- a required input must not be
         // silently satisfied by null
@@ -593,7 +593,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
 
         then:
         def e = thrown(ScriptRuntimeException)
-        e.message.contains('Workflow `GREET` requires input `name` but no parameter `--name` was provided')
+        e.message.contains('Parameter `--name` is required but no value was provided')
     }
 
     def 'should pass a null param value to a nullable input'() {
@@ -703,6 +703,76 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         then: 'the param and declared type are named, rather than a bare NumberFormatException'
         def e = thrown(ScriptRuntimeException)
         e.message.contains('Parameter `ids` with type List<Integer> cannot be assigned to')
+    }
+
+    def 'should load a blank samplesheet cell as a missing value'() {
+        given:
+        def fastq = Files.createTempFile('reads', '.fq')
+        def file = Files.createTempFile('samples', '.csv')
+        file.text = "id,fastq_1,fastq_2\ns1,${fastq},\n"
+
+        when: 'an optional field is left blank rather than omitted'
+        def result = runWorkflow(
+            '''\
+            nextflow.enable.types = true
+
+            record Sample {
+                id: String
+                fastq_1: Path
+                fastq_2: Path?
+            }
+
+            workflow GREET {
+                take:
+                samples: Channel<Sample>
+
+                emit:
+                out = samples.map { s -> "${s.id}:${s.fastq_2}" }
+            }
+            ''',
+            [samples: file.toString()]
+        )
+
+        then:
+        result.val == 's1:null'
+
+        cleanup:
+        file?.delete()
+        fastq?.delete()
+    }
+
+    def 'should report a required record field left blank in a samplesheet'() {
+        given:
+        def file = Files.createTempFile('samples', '.csv')
+        file.text = 'id,count\ns1,\n'
+
+        when:
+        runWorkflow(
+            '''\
+            nextflow.enable.types = true
+
+            record Sample {
+                id: String
+                count: Integer
+            }
+
+            workflow GREET {
+                take:
+                samples: Channel<Sample>
+
+                emit:
+                out = samples
+            }
+            ''',
+            [samples: file.toString()]
+        )
+
+        then: 'the missing field is named, rather than an empty-string conversion failure'
+        def e = thrown(Exception)
+        e.message.contains("missing field 'count'")
+
+        cleanup:
+        file?.delete()
     }
 
 }
