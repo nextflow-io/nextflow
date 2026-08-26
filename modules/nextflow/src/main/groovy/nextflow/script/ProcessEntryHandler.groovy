@@ -119,6 +119,9 @@ class ProcessEntryHandler {
         final dsl = new OutputDsl()
         for( final name : outputNames )
             dsl.declare(name, { -> })
+        // disable the output directory -- report output files by
+        // their work directory path instead of publishing them
+        session.outputDir = null
         dsl.apply(session)
     }
 
@@ -153,7 +156,7 @@ class ProcessEntryHandler {
      * the command line and in the config to the declared process inputs.
      *
      * <p>Uses the same binding as the reusable static
-     * {@link #getProcessArguments(ProcessDef, Map, Path)}, passing the sibling
+     * {@link #getProcessArguments(ProcessDef, Map, ModuleSpec)}, passing the sibling
      * {@code meta.yml} resolved from the running script path so the existing
      * {@code module run} behavior (dot-params, type coercion from {@code meta.yml},
      * tuple assembly) is preserved exactly.
@@ -177,25 +180,10 @@ class ProcessEntryHandler {
      * per input channel (a tuple input becomes a {@code List} of its component values, e.g.
      * {@code [[id:'s1'], file(reads)]}). This is the reusable, instance-free form of the
      * {@code module run} param→channel binding: dot-notation params are folded into nested maps,
-     * legacy (V1) inputs are coerced using the input TYPES declared in the sibling module spec
-     * ({@code meta.yml}), and typed (V2) inputs are coerced from their declared
-     * {@link nextflow.script.params.v2.ProcessInput} type.
-     *
-     * @param processDef     the process whose inputs are bound
-     * @param params         the (possibly dotted) param map to bind by input name
-     * @param moduleSpecPath the sibling {@code meta.yml} path used to load input types for the
-     *                       legacy (V1) path; may be {@code null}/missing, in which case an empty
-     *                       type map is used (same as when the spec cannot be loaded)
-     * @return list of values to pass to {@link ProcessDef#run}, one per input channel
-     */
-    static List getProcessArguments(ProcessDef processDef, Map params, Path moduleSpecPath) {
-        return bindProcessArguments(processDef, getModuleSpecInputTypes(moduleSpecPath), params, params)
-    }
-
-    /**
-     * Variant of {@link #getProcessArguments(ProcessDef, Map, Path)} that takes an already-loaded
-     * {@link ModuleSpec} (no path round-trip), used by callers that already hold the spec (e.g.
-     * the agent tool bridge).
+     * legacy (V1) inputs are coerced using the input TYPES declared in the given module spec,
+     * and typed (V2) inputs are coerced from their declared
+     * {@link nextflow.script.params.v2.ProcessInput} type. Every value is treated as
+     * command-line text.
      *
      * @param processDef the process whose inputs are bound
      * @param params     the (possibly dotted) param map to bind by input name

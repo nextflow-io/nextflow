@@ -572,4 +572,137 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         e.message.contains('No entry workflow specified')
     }
 
+    def 'should treat a null param value as not provided'() {
+        when:
+        // e.g. a blank entry in a params file -- a required input must not be
+        // silently satisfied by null
+        runWorkflow(
+            '''\
+            nextflow.enable.types = true
+
+            workflow GREET {
+                take:
+                name: String
+
+                emit:
+                greeting = "Hello, ${name}!"
+            }
+            ''',
+            [name: null]
+        )
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains('Workflow `GREET` requires input `name` but no parameter `--name` was provided')
+    }
+
+    def 'should pass a null param value to a nullable input'() {
+        when:
+        def result = runWorkflow(
+            '''\
+            nextflow.enable.types = true
+
+            workflow GREET {
+                take:
+                name: String?
+
+                emit:
+                greeting = "Hello, ${name ?: 'World'}!"
+            }
+            ''',
+            [name: null]
+        )
+
+        then:
+        result.val == 'Hello, World!'
+    }
+
+    def 'should reject a channel element type that is not a record'() {
+        given:
+        def file = Files.createTempFile('samples', '.csv')
+        file.text = 'id\ns1\ns2\n'
+
+        when:
+        // a samplesheet record would otherwise be stringified, e.g. '[id:s1]'
+        runWorkflow(
+            '''\
+            nextflow.enable.types = true
+
+            workflow GREET {
+                take:
+                samples: Channel<String>
+
+                emit:
+                out = samples
+            }
+            ''',
+            [samples: file.toString()]
+        )
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains('cannot be loaded from a samplesheet')
+
+        cleanup:
+        file?.delete()
+    }
+
+    def 'should report an invalid samplesheet record with the param and file'() {
+        given:
+        def file = Files.createTempFile('samples', '.csv')
+        file.text = 'id,count\ns1,abc\n'
+
+        when:
+        runWorkflow(
+            '''\
+            nextflow.enable.types = true
+
+            record Sample {
+                id: String
+                count: Integer
+            }
+
+            workflow GREET {
+                take:
+                samples: Channel<Sample>
+
+                emit:
+                out = samples
+            }
+            ''',
+            [samples: file.toString()]
+        )
+
+        then: 'the param and file are named, rather than a bare NumberFormatException'
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains('Invalid record in samplesheet')
+        e.message.contains('workflow input `samples`')
+
+        cleanup:
+        file?.delete()
+    }
+
+    def 'should report a collection element that cannot be converted'() {
+        when:
+        runWorkflow(
+            '''\
+            nextflow.enable.types = true
+
+            workflow GREET {
+                take:
+                ids: List<Integer>
+
+                emit:
+                out = ids
+            }
+            ''',
+            [ids: ['a', 'b']],
+            true
+        )
+
+        then: 'the param and declared type are named, rather than a bare NumberFormatException'
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains('Parameter `ids` with type List<Integer> cannot be assigned to')
+    }
+
 }

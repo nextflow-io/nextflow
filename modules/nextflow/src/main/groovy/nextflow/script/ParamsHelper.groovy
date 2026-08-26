@@ -186,11 +186,21 @@ class ParamsHelper {
         return fallback
     }
 
+    /**
+     * Convert a composite value (a collection, map, or record) to the
+     * declared type, reporting a conversion failure in terms of the param
+     * rather than the underlying element -- a NumberFormatException from an
+     * element of a `List<Integer>`, for example, names neither the param nor
+     * the declared type.
+     *
+     * @param value
+     * @param decl
+     */
     private static Object asType(Object value, Param decl) {
         try {
             return TypeHelper.asType(value, decl.type)
         }
-        catch( GroovyCastException | UnsupportedOperationException e ) {
+        catch( GroovyCastException | UnsupportedOperationException | IllegalArgumentException e ) {
             final actualType = value.getClass()
             throw new ScriptRuntimeException("Parameter `${decl.name}` with type ${Types.getName(decl.type)} cannot be assigned to ${value} [${Types.getName(actualType)}]")
         }

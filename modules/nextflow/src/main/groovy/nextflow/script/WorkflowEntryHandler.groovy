@@ -29,6 +29,7 @@ import nextflow.dataflow.ChannelNamespace
 import nextflow.exception.ScriptRuntimeException
 import nextflow.script.dsl.Types
 import nextflow.script.types.Channel
+import nextflow.script.types.Record
 import nextflow.script.types.Value
 import nextflow.splitter.CsvSplitter
 import nextflow.util.TypeHelper
@@ -153,10 +154,12 @@ class WorkflowEntryHandler {
         final arguments = []
         for( final decl : inputs ) {
             final name = decl.name
-            if( cliParams.containsKey(name) )
-                arguments.add(resolveInput(decl, cliParams.get(name), true))
-            else if( configParams.containsKey(name) )
-                arguments.add(resolveInput(decl, configParams.get(name), false))
+            final cliValue = cliParams.get(name)
+            final configValue = configParams.get(name)
+            if( cliValue != null )
+                arguments.add(resolveInput(decl, cliValue, true))
+            else if( configValue != null )
+                arguments.add(resolveInput(decl, configValue, false))
             else if( decl.optional )
                 arguments.add(null)
             else
@@ -221,7 +224,19 @@ class WorkflowEntryHandler {
             ? (Path)value
             : TypeHelper.asPathType(value.toString())
         final elementType = elementDecl(decl).type
-        return loadFromFile(decl.name, path).collect { el -> TypeHelper.asType(el, elementType) }
+        final elementRawType = TypeHelper.getRawType(elementType)
+
+        if( !Map.isAssignableFrom(elementRawType) && !Record.isAssignableFrom(elementRawType) )
+            throw new ScriptRuntimeException("Workflow input `${decl.name}` with type ${Types.getName(decl.type)} cannot be loaded from a samplesheet -- the element type should be Map, Record, or a record type")
+
+        return loadFromFile(decl.name, path).collect { el ->
+            try {
+                TypeHelper.asType(el, elementType)
+            }
+            catch( Exception e ) {
+                throw new ScriptRuntimeException("Invalid record in samplesheet '${path}' for workflow input `${decl.name}` -- ${e.message}")
+            }
+        }
     }
 
     /**

@@ -19,6 +19,7 @@ package nextflow.script
 import java.nio.file.Path
 
 import nextflow.Session
+import nextflow.module.ModuleSpec
 import nextflow.script.params.FileInParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.v2.ProcessInput
@@ -101,7 +102,7 @@ class ProcessEntryHandlerTest extends Specification {
         }
 
         when:
-        def args = ProcessEntryHandler.getProcessArguments(processDef, ['id': 'abc', 'greeting': 'hello'], (Path)null)
+        def args = ProcessEntryHandler.getProcessArguments(processDef, ['id': 'abc', 'greeting': 'hello'], (ModuleSpec)null)
 
         then: 'a single RecordMap is returned'
         args.size() == 1
@@ -127,7 +128,7 @@ class ProcessEntryHandlerTest extends Specification {
         }
 
         when:
-        def args = ProcessEntryHandler.getProcessArguments(processDef, ['sample': ['id': 'a', 'text': 'hello']], (Path)null)
+        def args = ProcessEntryHandler.getProcessArguments(processDef, ['sample': ['id': 'a', 'text': 'hello']], (ModuleSpec)null)
 
         then: 'the nested map is converted into a record of the declared type'
         args.size() == 1

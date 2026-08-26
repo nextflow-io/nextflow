@@ -24,6 +24,12 @@ $NXF_RUN --sampleId "SAMPLE_001" --dataFile "../../data/sample_data.txt" --threa
 # Check that file processing worked (5 lines in sample_data.txt)
 [[ `grep -c '5 sample_data.txt' stdout` == 1 ]] || false
 
+# Output files are not published when a process is executed directly --
+# the output file is reported by its work directory path
+[[ ! -d results ]] || false
+[[ `grep -c 'analysis.txt' stdout` == 1 ]] || false
+[[ `grep -c '/results/analysis.txt' stdout` == 0 ]] || false
+
 #
 # Test with relative path
 #
