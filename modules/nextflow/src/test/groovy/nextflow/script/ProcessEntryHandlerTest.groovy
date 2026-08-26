@@ -101,7 +101,7 @@ class ProcessEntryHandlerTest extends Specification {
         }
 
         when:
-        def args = handler.getProcessArguments(processDef, ['id': 'abc', 'greeting': 'hello'])
+        def args = ProcessEntryHandler.getProcessArguments(processDef, ['id': 'abc', 'greeting': 'hello'], (Path)null)
 
         then: 'a single RecordMap is returned'
         args.size() == 1
@@ -127,7 +127,7 @@ class ProcessEntryHandlerTest extends Specification {
         }
 
         when:
-        def args = handler.getProcessArguments(processDef, ['sample': ['id': 'a', 'text': 'hello']])
+        def args = ProcessEntryHandler.getProcessArguments(processDef, ['sample': ['id': 'a', 'text': 'hello']], (Path)null)
 
         then: 'the nested map is converted into a record of the declared type'
         args.size() == 1
@@ -240,13 +240,13 @@ class ProcessEntryHandlerTest extends Specification {
     def 'should resolve a typed input like a pipeline parameter (v2)' () {
         expect:
         // the full type matrix is covered by ParamsHelperTest
-        handler.getValueForInputV2(new ProcessInput('x', Integer, false), [x: '42']) == 42
-        handler.getValueForInputV2(new ProcessInput('x', Duration, false), [x: '2h']) == Duration.of('2h')
+        handler.getValueForInputV2(new ProcessInput('x', Integer, false), [x: '42'], [x: '42']) == 42
+        handler.getValueForInputV2(new ProcessInput('x', Duration, false), [x: '2h'], [x: '2h']) == Duration.of('2h')
     }
 
     def 'should reject a param value that cannot be converted to the declared input type (v2)' () {
         when:
-        handler.getValueForInputV2(new ProcessInput('n50', type, false), [n50: value])
+        handler.getValueForInputV2(new ProcessInput('n50', type, false), [n50: value], [n50: value])
 
         then: 'the mismatch is reported up front instead of reaching the task'
         def e = thrown(IllegalArgumentException)
@@ -258,13 +258,28 @@ class ProcessEntryHandlerTest extends Specification {
         Float   | 'abc'
     }
 
+    def 'should resolve a config value as structured, not as command-line text (v2)' () {
+        given:
+        def decl = new ProcessInput('flag', Boolean, false)
+
+        expect: 'a command-line value is parsed'
+        handler.getValueForInputV2(decl, [flag: 'false'], [flag: 'false']) == false
+
+        when: 'the same value comes from the config, where a Boolean is expected to be a Boolean'
+        handler.getValueForInputV2(decl, [flag: 'false'], [:])
+
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == 'Parameter `--flag` with type Boolean cannot be assigned to false [String]'
+    }
+
     def 'should return null for missing optional input (v2)' () {
         // Regression test for https://github.com/nextflow-io/nextflow/issues/7161
         given:
         def param = new ProcessInput('gzi', Path, true)
 
         when: 'a v2 optional path input is not provided'
-        def result = handler.getValueForInputV2(param, [:])
+        def result = handler.getValueForInputV2(param, [:], [:])
 
         then: 'returns null instead of throwing'
         result == null
@@ -275,7 +290,7 @@ class ProcessEntryHandlerTest extends Specification {
         def param = new ProcessInput('reads', Path, false)
 
         when:
-        handler.getValueForInputV2(param, [:])
+        handler.getValueForInputV2(param, [:], [:])
 
         then:
         def e = thrown(IllegalArgumentException)

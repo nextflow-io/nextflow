@@ -97,6 +97,19 @@ class ParamsHelperTest extends Specification {
         '999999999999999999999999999'  | 999999999999999999999999999G
     }
 
+    def 'should widen a value that is too large for a Float'() {
+        expect:
+        final result = ParamsHelper.resolveFromCli(param(Float), VALUE)
+        result == EXPECTED
+        result.getClass() == EXPECTED.getClass()
+
+        where:
+        VALUE     | EXPECTED
+        '3.4e38'  | 3.4e38f
+        '1e39'    | 1e39d          // too large for a Float, but fits a Double
+        '1e400'   | 1e400G         // too large for a Double
+    }
+
     def 'should leave a value that the declared type cannot represent unconverted'() {
         when:
         // the value is reported by the caller as not assignable to the

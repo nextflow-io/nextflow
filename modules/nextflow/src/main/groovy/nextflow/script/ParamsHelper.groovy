@@ -102,6 +102,11 @@ class ParamsHelper {
      * command-line value is always a string, so the value is normalized to
      * the declared type.
      *
+     * The value is converted to the narrowest representation that can hold
+     * it -- Integer, Long, or BigInteger for an integral value, Float,
+     * Double, or BigDecimal for a fractional one -- so that no precision is
+     * lost for a value that is too large for the declared type.
+     *
      * Returns null if the declared type is not numeric, or if the value
      * cannot be represented by it -- an Integer rejects a fractional value
      * rather than silently truncating it. The value is then reported by the
@@ -115,18 +120,45 @@ class ParamsHelper {
             return null
         try {
             final number = new BigDecimal(value.toString().trim())
-            if( decl.type == Float )
-                return number.floatValue()
-            // widen an integral value that is too large for an Integer,
-            // and reject a fractional one
-            final integer = number.toBigIntegerExact()
-            return integer.bitLength() < Integer.SIZE
-                ? integer.intValue()
-                : ( integer.bitLength() < Long.SIZE ? integer.longValue() : integer )
+            return decl.type == Float
+                ? asFloatType(number)
+                : asIntegerType(number)
         }
         catch( NumberFormatException | ArithmeticException e ) {
             return null
         }
+    }
+
+    /**
+     * Convert a number to a Float, widening it to a Double or BigDecimal
+     * if it is too large to be represented by a Float.
+     *
+     * @param number
+     */
+    private static Number asFloatType(BigDecimal number) {
+        final floatValue = number.floatValue()
+        if( !floatValue.isInfinite() )
+            return floatValue
+        final doubleValue = number.doubleValue()
+        return !doubleValue.isInfinite()
+            ? doubleValue
+            : number
+    }
+
+    /**
+     * Convert a number to an Integer, widening it to a Long or BigInteger if
+     * it is too large to be represented by an Integer. A fractional value is
+     * rejected rather than being truncated.
+     *
+     * @param number
+     */
+    private static Number asIntegerType(BigDecimal number) {
+        final integer = number.toBigIntegerExact()
+        if( integer.bitLength() < Integer.SIZE )
+            return integer.intValue()
+        return integer.bitLength() < Long.SIZE
+            ? integer.longValue()
+            : integer
     }
 
     /**

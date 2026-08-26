@@ -172,7 +172,9 @@ workflow {
 }
 ```
 
-Where `loadData()` is a generic data-loading function that supports multiple file formats (CSV, JSON, YAML, etc). The file contents must be compatible with the declared element type; an error is thrown if they are not. CSV files must include a header row and use a comma as the column separator. This function may be extended via plugin to support additional formats (e.g. Parquet).
+Where `loadData()` is a generic data-loading function that supports multiple file formats (CSV, JSON, YAML, etc). The file contents must be compatible with the declared element type; an error is thrown if they are not. CSV files must include a header row and use a comma as the column separator.
+
+*Future work:* the supported formats are currently a fixed set (CSV, JSON, YAML) implemented internally, and `loadData()` is not available to pipeline code. Exposing it as a function and allowing it to be extended via plugin to support additional formats (e.g. Parquet) is deferred.
 
 The channel input can use a generic type such as `Map` or `Record`, or a custom record type to enable further validation. In the above example, using the `Sample` type ensures that each samplesheet row is validated against the record fields and the `fastq_1` and `fastq_2` columns are treated as file paths.
 

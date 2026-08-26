@@ -262,6 +262,11 @@ abstract class BaseScript extends Script implements ExecutionContext {
             return result
         }
 
+        // a module defines a single process or named workflow, which is
+        // executed directly -- there is no entry workflow to select
+        if( binding.entryName && session.isModuleRun() )
+            throw new AbortOperationException("Option `-entry` is not supported when a script is executed as a module")
+
         // if an `entryName` was specified via the command line, override the `entryFlow` to be executed
         if( binding.entryName && !(entryFlow=meta.getWorkflow(binding.entryName) ) ) {
             def msg = "Unknown workflow entry name: ${binding.entryName}"

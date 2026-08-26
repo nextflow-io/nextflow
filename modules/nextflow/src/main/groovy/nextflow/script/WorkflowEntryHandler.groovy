@@ -27,7 +27,6 @@ import groovy.yaml.YamlSlurper
 import nextflow.Session
 import nextflow.dataflow.ChannelNamespace
 import nextflow.exception.ScriptRuntimeException
-import nextflow.file.FileHelper
 import nextflow.script.dsl.Types
 import nextflow.script.types.Channel
 import nextflow.script.types.Value
@@ -37,13 +36,16 @@ import nextflow.util.TypeHelper
 /**
  * Helper class for named workflow execution.
  *
- * This feature enables direct execution of a named workflow without
- * an explicit entry workflow:
- * - Scripts with a single named workflow run it automatically:
- *   {@code nextflow run script.nf --param value}
- * - Command-line parameters are mapped directly to workflow inputs ({@code take:})
- * - Inputs of collection type are loaded from samplesheet files (CSV, JSON, YAML)
- * - Non-collection inputs are passed through as values
+ * A script that defines a single named workflow and no processes can be
+ * executed directly, without an explicit entry workflow:
+ * {@code nextflow module run script.nf --param value}
+ *
+ * Each input ({@code take:}) becomes a pipeline parameter of the same name,
+ * and its declared type determines how the param value is interpreted -- a
+ * {@code Channel<E>} input is loaded from a samplesheet file (CSV, JSON,
+ * YAML), while any other input is converted to the declared type. The
+ * workflow emits are printed to standard output, without publishing them
+ * to an output directory.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
@@ -63,11 +65,17 @@ class WorkflowEntryHandler {
         if( workflowNames.size() != 1 )
             throw new IllegalStateException("Direct execution of named workflows is only supported for scripts with exactly one named workflow")
 
-        if( !script.isTypingEnabled() )
-            throw new ScriptRuntimeException("Workflow `${workflowNames.first()}` cannot be executed directly because it is not typed -- static typing is required to map pipeline parameters to workflow inputs")
-
         final workflowName = workflowNames.first()
+        if( !script.isTypingEnabled() )
+            throw new ScriptRuntimeException("Workflow `${workflowName}` cannot be executed directly because it is not typed -- static typing is required to map pipeline parameters to workflow inputs")
+
         this.workflowDef = meta.getWorkflow(workflowName)
+
+        // every input must be typed, because the declared type determines
+        // how the corresponding param value is interpreted
+        final untyped = workflowDef.getDeclaredInputs().findAll { decl -> decl.type == null }*.name
+        if( untyped )
+            throw new ScriptRuntimeException("Workflow `${workflowName}` cannot be executed directly because the following inputs are not typed: ${untyped.join(', ')}")
     }
 
     /**
@@ -174,10 +182,6 @@ class WorkflowEntryHandler {
         if( value == null )
             return null
 
-        // an untyped input is passed through as-is
-        if( decl.type == null )
-            return value
-
         final rawType = TypeHelper.getRawType(decl.type)
 
         if( rawType == Channel )
@@ -215,7 +219,7 @@ class WorkflowEntryHandler {
 
         final path = value instanceof Path
             ? (Path)value
-            : FileHelper.asPath(value.toString())
+            : TypeHelper.asPathType(value.toString())
         final elementType = elementDecl(decl).type
         return loadFromFile(decl.name, path).collect { el -> TypeHelper.asType(el, elementType) }
     }

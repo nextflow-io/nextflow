@@ -504,6 +504,51 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         e.message.contains('static typing is required')
     }
 
+    def 'should reject a workflow input that is not typed'() {
+        when:
+        runWorkflow(
+            '''\
+            nextflow.enable.types = true
+
+            workflow GREET {
+                take:
+                name
+
+                emit:
+                greeting = "Hello, ${name}!"
+            }
+            ''',
+            [name: 'World']
+        )
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains('the following inputs are not typed: name')
+    }
+
+    def 'should report a samplesheet file that does not exist'() {
+        when:
+        runWorkflow(
+            '''\
+            nextflow.enable.types = true
+
+            workflow RNASEQ {
+                take:
+                samples: Channel<Record>
+
+                emit:
+                out = samples
+            }
+            ''',
+            [samples: '/some/missing/samples.csv']
+        )
+
+        then:
+        // the file is reported by name, rather than as a raw NoSuchFileException
+        def e = thrown(Exception)
+        e.message.contains("Input file '/some/missing/samples.csv' does not exist")
+    }
+
     def 'should not execute a named workflow directly without module run'() {
         when:
         runScript(
