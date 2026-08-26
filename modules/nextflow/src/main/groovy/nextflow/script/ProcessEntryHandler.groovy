@@ -171,8 +171,7 @@ class ProcessEntryHandler {
      */
     protected List getProcessArguments(ProcessDef processDef) {
         final scriptPath = script?.getBinding()?.getScriptPath()
-        final moduleSpecPath = scriptPath?.resolveSibling(ModuleStorage.MODULE_MANIFEST_FILE)
-        return bindProcessArguments(processDef, getModuleSpecInputTypes(moduleSpecPath), session.params ?: [:], session.cliParams ?: [:])
+        return bindProcessArguments(processDef, getModuleSpecInputTypes(scriptPath), session.params ?: [:], session.cliParams ?: [:])
     }
 
     /**

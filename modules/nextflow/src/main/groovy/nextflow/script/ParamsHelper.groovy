@@ -108,9 +108,10 @@ class ParamsHelper {
      * lost for a value that is too large for the declared type.
      *
      * Returns null if the declared type is not numeric, or if the value
-     * cannot be represented by it -- an Integer rejects a fractional value
-     * rather than silently truncating it. The value is then reported by the
-     * caller as not assignable to the declared type.
+     * cannot be represented by it -- an Integer accepts an integral value in
+     * any notation (e.g. `3`, `3.0`, `3e2`) but rejects one with a fractional
+     * part, rather than silently truncating it. The value is then reported by
+     * the caller as not assignable to the declared type.
      *
      * @param decl
      * @param value
@@ -188,10 +189,10 @@ class ParamsHelper {
 
     /**
      * Convert a composite value (a collection, map, or record) to the
-     * declared type, reporting a conversion failure in terms of the param
-     * rather than the underlying element -- a NumberFormatException from an
+     * declared type, reporting a conversion failure in terms of the param as
+     * well as the underlying element -- a NumberFormatException from an
      * element of a `List<Integer>`, for example, names neither the param nor
-     * the declared type.
+     * the declared type on its own.
      *
      * @param value
      * @param decl
@@ -202,7 +203,8 @@ class ParamsHelper {
         }
         catch( GroovyCastException | UnsupportedOperationException | IllegalArgumentException e ) {
             final actualType = value.getClass()
-            throw new ScriptRuntimeException("Parameter `${decl.name}` with type ${Types.getName(decl.type)} cannot be assigned to ${value} [${Types.getName(actualType)}]")
+            final detail = e.message ? " -- ${e.message}" : ''
+            throw new ScriptRuntimeException("Parameter `${decl.name}` with type ${Types.getName(decl.type)} cannot be assigned to ${value} [${Types.getName(actualType)}]${detail}")
         }
     }
 

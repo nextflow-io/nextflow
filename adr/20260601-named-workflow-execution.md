@@ -130,7 +130,7 @@ The following coercions apply:
 | `Map<K,V>`, `Record` | not supported | used as-is |
 | `Tuple` | not supported | not supported |
 | record types | not supported | map converted to record; fields are validated and converted to declared type |
-| `Channel<E>` | a samplesheet path, loaded as described below | a samplesheet path |
+| `Channel<E>` | a samplesheet path, loaded as described below; `E` must be a `Map`, `Record`, or record type | same as the command line |
 | `Value<V>` | parsed as `V`, then wrapped in a value channel | converted to `V`, then wrapped in a value channel |
 
 Composite types cannot be expressed as a single command-line string, so they must be supplied through the config. Nextflow does not attempt to split a command-line string into a collection, because there is no separator that is safe for every element type.
@@ -176,7 +176,7 @@ Where `loadData()` is a generic data-loading function that supports multiple fil
 
 *Future work:* the supported formats are currently a fixed set (CSV, JSON, YAML) implemented internally, and `loadData()` is not available to pipeline code. Exposing it as a function and allowing it to be extended via plugin to support additional formats (e.g. Parquet) is deferred.
 
-The channel input can use a generic type such as `Map` or `Record`, or a custom record type to enable further validation. In the above example, using the `Sample` type ensures that each samplesheet row is validated against the record fields and the `fastq_1` and `fastq_2` columns are treated as file paths.
+The channel input can use a generic type such as `Map` or `Record`, or a custom record type to enable further validation. It cannot use a scalar element type such as `Path` or `String`, because a samplesheet record is a set of named fields, not a single value. In the above example, using the `Sample` type ensures that each samplesheet row is validated against the record fields and the `fastq_1` and `fastq_2` columns are treated as file paths.
 
 ### Saving output channels to index files
 

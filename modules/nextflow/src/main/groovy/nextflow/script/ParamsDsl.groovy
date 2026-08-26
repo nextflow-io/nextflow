@@ -60,11 +60,13 @@ class ParamsDsl {
         final params = new HashMap<String,?>()
         for( final name : declarations.keySet() ) {
             final decl = declarations[name]
-            if( cliParams.containsKey(name) ) {
-                params[name] = ParamsHelper.resolveFromCli(decl, cliParams[name])
+            final cliValue = cliParams[name]
+            final configValue = configParams[name]
+            if( cliValue != null ) {
+                params[name] = ParamsHelper.resolveFromCli(decl, cliValue)
             }
-            else if( configParams.containsKey(name) ) {
-                params[name] = ParamsHelper.resolveFromCode(decl, configParams[name])
+            else if( configValue != null ) {
+                params[name] = ParamsHelper.resolveFromCode(decl, configValue)
             }
             else if( decl.defaultValue != null ) {
                 params[name] = ParamsHelper.resolveFromCode(decl, decl.defaultValue)

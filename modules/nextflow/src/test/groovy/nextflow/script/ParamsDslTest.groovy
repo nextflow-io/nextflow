@@ -299,4 +299,22 @@ class ParamsDslTest extends Specification {
         e.message == "Input record [id:1, name:sample1] is missing field 'value' required by record type 'Sample'"
     }
 
+    def 'should report a required param given a null value'() {
+        when:
+        runScript(
+            '''\
+            params {
+                limit: Integer
+            }
+
+            workflow { params.limit }
+            ''',
+            params: [limit: null]
+        )
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message == 'Parameter `limit` is required but was not specified on the command line, params file, or config'
+    }
+
 }
