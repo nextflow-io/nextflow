@@ -28,10 +28,6 @@ import nextflow.script.types.Record
 import spock.lang.Specification
 import spock.lang.Unroll
 
-import nextflow.util.Duration
-import nextflow.util.MemoryUnit
-import nextflow.util.VersionNumber
-
 import static test.ScriptHelper.*
 /**
  *
@@ -65,32 +61,6 @@ class ParamsDslTest extends Specification {
 
         cleanup:
         inputFile?.delete()
-    }
-
-    def 'should parse duration, memory and version params'() {
-        given:
-        def cliParams = [time: '2h', memory: '4.GB', version: '1.2.3']
-
-        when:
-        def result = runScript(
-            '''\
-            params {
-                time: Duration
-                memory: MemoryUnit
-                version: VersionNumber
-            }
-
-            workflow { params }
-            ''',
-            config: [params: cliParams],
-            params: cliParams
-        )
-        then:
-        result == [
-            time: Duration.of('2h'),
-            memory: MemoryUnit.of('4.GB'),
-            version: new VersionNumber('1.2.3')
-        ]
     }
 
     def 'should allow optional param'() {
@@ -194,12 +164,12 @@ class ParamsDslTest extends Specification {
     }
 
     @Unroll
-    def 'should validate float param with default value'() {
+    def 'should validate a numeric param default given in any numeric literal'() {
         when:
         runScript(
             """\
             params {
-                factor: Float = ${DEF_VALUE}
+                factor: ${TYPE} = ${DEF_VALUE}
             }
 
             workflow { params }
@@ -209,26 +179,13 @@ class ParamsDslTest extends Specification {
         noExceptionThrown()
 
         where:
-        DEF_VALUE << [ '0.1f', '0.1d', '0.1g' ]
-    }
-
-    @Unroll
-    def 'should validate integer param with default value'() {
-        when:
-        runScript(
-            """\
-            params {
-                factor: Integer = ${DEF_VALUE}
-            }
-
-            workflow { params }
-            """
-        )
-        then:
-        noExceptionThrown()
-
-        where:
-        DEF_VALUE << [ '100i', '100l', '100g' ]
+        TYPE      | DEF_VALUE
+        'Float'   | '0.1f'
+        'Float'   | '0.1d'
+        'Float'   | '0.1g'
+        'Integer' | '100i'
+        'Integer' | '100l'
+        'Integer' | '100g'
     }
 
     def 'should validate record collection param'() {

@@ -29,6 +29,10 @@ import static test.ScriptHelper.*
 /**
  * Tests for {@link WorkflowEntryHandler}.
  *
+ * The per-type mapping of a param value to a declared input type is covered
+ * by {@link ParamsHelperTest} -- the tests here only assert that a workflow
+ * input routes through it.
+ *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Timeout(10)
@@ -36,9 +40,9 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
 
     // ── unit: loadFromFile ────────────────────────────────────────────────────
 
-    private WorkflowEntryHandler makeHandler(List<String> inputs = []) {
+    private WorkflowEntryHandler makeHandler(List<String> inputs = [], List<String> workflowNames = ['HELLO']) {
         def workflowDef = Mock(WorkflowDef) {
-            getName() >> 'HELLO'
+            getName() >> workflowNames.first()
             getDeclaredInputs() >> inputs.collect { n -> new Param(n, null, false, null) }
         }
         def session = Mock(Session) { getParams() >> [:] }
@@ -46,73 +50,32 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
             isTypingEnabled() >> true
         }
         def meta    = Mock(ScriptMeta) {
-            getLocalWorkflowNames() >> ['HELLO']
-            getWorkflow('HELLO') >> workflowDef
+            getLocalWorkflowNames() >> workflowNames
+            getWorkflow(workflowNames.first()) >> workflowDef
         }
         return new WorkflowEntryHandler(script, session, meta)
     }
 
-    def 'should load records from a CSV file'() {
+    def 'should load records from a samplesheet'() {
         given:
-        def csvFile = Files.createTempFile('test', '.csv')
-        csvFile.text = '''\
-            id,name
-            1,sample1
-            2,sample2
-            '''.stripIndent()
+        def file = Files.createTempFile('test', ".${EXT}")
+        file.text = TEXT
 
         when:
-        def result = makeHandler().loadFromFile('samples', csvFile.toAbsolutePath())
+        def result = makeHandler().loadFromFile('samples', file.toAbsolutePath())
 
         then:
-        result instanceof List
-        result.size() == 2
-        result[0].id == '1'
-        result[0].name == 'sample1'
+        result == EXPECTED
 
         cleanup:
-        csvFile?.delete()
-    }
+        file?.delete()
 
-    def 'should load records from a JSON file'() {
-        given:
-        def jsonFile = Files.createTempFile('test', '.json')
-        jsonFile.text = '[{"id":1,"name":"s1"},{"id":2,"name":"s2"}]'
-
-        when:
-        def result = makeHandler().loadFromFile('samples', jsonFile.toAbsolutePath())
-
-        then:
-        result instanceof List
-        result.size() == 2
-        result[0].id == 1
-        result[1].name == 's2'
-
-        cleanup:
-        jsonFile?.delete()
-    }
-
-    def 'should load records from a YAML file'() {
-        given:
-        def yamlFile = Files.createTempFile('test', '.yml')
-        yamlFile.text = '''\
-            - id: 1
-              name: s1
-            - id: 2
-              name: s2
-            '''.stripIndent()
-
-        when:
-        def result = makeHandler().loadFromFile('samples', yamlFile.toAbsolutePath())
-
-        then:
-        result instanceof List
-        result.size() == 2
-        result[0].id == 1
-        result[1].name == 's2'
-
-        cleanup:
-        yamlFile?.delete()
+        where:
+        EXT    | TEXT                                             | EXPECTED
+        // CSV has no types, so every value is a string
+        'csv'  | 'id,name\n1,sample1\n2,sample2\n'                | [[id: '1', name: 'sample1'], [id: '2', name: 'sample2']]
+        'json' | '[{"id":1,"name":"s1"},{"id":2,"name":"s2"}]'    | [[id: 1, name: 's1'], [id: 2, name: 's2']]
+        'yml'  | '- id: 1\n  name: s1\n- id: 2\n  name: s2\n'     | [[id: 1, name: 's1'], [id: 2, name: 's2']]
     }
 
     def 'should throw for unrecognized samplesheet format'() {
@@ -147,49 +110,9 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         jsonFile?.delete()
     }
 
-    // ── unit: getWorkflowArguments / error cases ──────────────────────────────
-
-    def 'should throw for a missing required workflow input'() {
-        given:
-        def workflowDef = Mock(WorkflowDef) {
-            getName() >> 'HELLO'
-            getDeclaredInputs() >> [new Param('samples', String, false, null)]
-        }
-        def session = Mock(Session)
-        def script  = Mock(BaseScript) {
-            isTypingEnabled() >> true
-        }
-        def meta    = Mock(ScriptMeta) {
-            getLocalWorkflowNames() >> ['HELLO']
-            getWorkflow('HELLO') >> workflowDef
-        }
-        def handler = new WorkflowEntryHandler(script, session, meta)
-
-        when:
-        handler.getWorkflowArguments(workflowDef)
-
-        then:
-        def e = thrown(ScriptRuntimeException)
-        e.message.contains('requires input `samples`')
-    }
-
     def 'should throw error when multiple workflows are defined'() {
-        given:
-        def workflow1 = Mock(WorkflowDef) {
-            getName() >> 'FIRST'
-            getDeclaredInputs() >> []
-        }
-        def session = Mock(Session) { getParams() >> [:] }
-        def script  = Mock(BaseScript) {
-            isTypingEnabled() >> true
-        }
-        def meta    = Mock(ScriptMeta) {
-            getLocalWorkflowNames() >> ['FIRST', 'SECOND']
-            getWorkflow('FIRST') >> workflow1
-        }
-
         when:
-        def handler = new WorkflowEntryHandler(script, session, meta)
+        makeHandler([], ['FIRST', 'SECOND'])
 
         then:
         def e = thrown(IllegalStateException)
@@ -198,10 +121,20 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
 
     // ── integration tests ─────────────────────────────────────────────────────
 
+    /**
+     * Run a script as `nextflow module run`, with the given params supplied
+     * either on the command line (raw strings) or in the config (structured
+     * values) -- the two are resolved differently.
+     */
+    private static Object runWorkflow(String text, Map params, boolean fromConfig = false) {
+        return fromConfig
+            ? runScript(moduleRun: true, text, config: [params: params], configParams: params)
+            : runScript(moduleRun: true, text, config: [params: params], params: params)
+    }
+
     def 'should auto-run a named workflow with a scalar input'() {
         when:
-        def result = runScript(
-            moduleRun: true,
+        def result = runWorkflow(
             '''\
             nextflow.enable.types = true
 
@@ -213,8 +146,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
                 greeting = "Hello, ${name}!"
             }
             ''',
-            config: [params: [name: 'World']],
-            params: [name: 'World']
+            [name: 'World']
         )
 
         then:
@@ -231,8 +163,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
             '''.stripIndent()
 
         when:
-        def result = runScript(
-            moduleRun: true,
+        def result = runWorkflow(
             '''\
             nextflow.enable.types = true
 
@@ -244,8 +175,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
                 out = samples
             }
             ''',
-            config: [params: [samples: csvFile.toString()]],
-            params: [samples: csvFile.toString()]
+            [samples: csvFile.toString()]
         )
 
         then:
@@ -254,37 +184,6 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
 
         cleanup:
         csvFile?.delete()
-    }
-
-    def 'should auto-run a named workflow with a JSON samplesheet input'() {
-        given:
-        def jsonFile = Files.createTempFile('samples', '.json')
-        jsonFile.text = '[{"id":1,"name":"s1"},{"id":2,"name":"s2"}]'
-
-        when:
-        def result = runScript(
-            moduleRun: true,
-            '''\
-            nextflow.enable.types = true
-
-            workflow PROCESS_SAMPLES {
-                take:
-                samples: Channel<Record>
-
-                emit:
-                out = samples
-            }
-            ''',
-            config: [params: [samples: jsonFile.toString()]],
-            params: [samples: jsonFile.toString()]
-        )
-
-        then:
-        result.val == [id: 1, name: 's1']
-        result.val == [id: 2, name: 's2']
-
-        cleanup:
-        jsonFile?.delete()
     }
 
     def 'should auto-run a named workflow with multiple inputs'() {
@@ -296,8 +195,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
             '''.stripIndent()
 
         when:
-        def result = runScript(
-            moduleRun: true,
+        def result = runWorkflow(
             '''\
             nextflow.enable.types = true
 
@@ -310,8 +208,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
                 out = samples.map { s -> "${outdir}/${s.id}" }
             }
             ''',
-            config: [params: [samples: csvFile.toString(), outdir: 'results']],
-            params: [samples: csvFile.toString(), outdir: 'results']
+            [samples: csvFile.toString(), outdir: 'results']
         )
 
         then:
@@ -323,8 +220,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
 
     def 'should throw for a missing workflow input'() {
         when:
-        runScript(
-            moduleRun: true,
+        runWorkflow(
             '''\
             nextflow.enable.types = true
 
@@ -336,7 +232,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
                 greeting = "Hello!"
             }
             ''',
-            params: [:]
+            [:]
         )
 
         then:
@@ -349,19 +245,20 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         def fastq = Files.createTempFile('reads', '.fastq')
         def csvFile = Files.createTempFile('samples', '.csv')
         csvFile.text = """\
-            id,fastq_1
-            s1,${fastq}
+            id,fastq_1,count,ratio
+            s1,${fastq},7,1.5
             """.stripIndent()
 
         when:
-        def result = runScript(
-            moduleRun: true,
+        def result = runWorkflow(
             '''\
             nextflow.enable.types = true
 
             record Sample {
                 id: String
                 fastq_1: Path
+                count: Integer
+                ratio: Float
             }
 
             workflow RNASEQ {
@@ -369,16 +266,15 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
                 samples: Channel<Sample>
 
                 emit:
-                out = samples.map { s -> [s.getClass().simpleName, s.fastq_1.getClass().simpleName] }
+                out = samples.map { s -> [s.getClass().simpleName, s.fastq_1.getClass().simpleName, s.count, s.ratio] }
             }
             ''',
-            config: [params: [samples: csvFile.toString()]],
-            params: [samples: csvFile.toString()]
+            [samples: csvFile.toString()]
         )
 
         then:
-        // each record is cast to the record type and `fastq_1` to a Path
-        result.val == ['RecordMap', 'UnixPath']
+        // each record is cast to the record type, and each field to its declared type
+        result.val == ['RecordMap', 'UnixPath', 7, 1.5f]
 
         cleanup:
         csvFile?.delete()
@@ -394,8 +290,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
             '''.stripIndent()
 
         when:
-        runScript(
-            moduleRun: true,
+        runWorkflow(
             '''\
             nextflow.enable.types = true
 
@@ -412,8 +307,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
                 out = samples
             }
             ''',
-            config: [params: [samples: csvFile.toString()]],
-            params: [samples: csvFile.toString()]
+            [samples: csvFile.toString()]
         )
 
         then:
@@ -424,44 +318,58 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         csvFile?.delete()
     }
 
-    def 'should coerce scalar inputs to the declared type'() {
+    def 'should wrap a Value input in a channel'() {
         when:
-        def params = [dur: '2h', mem: '4.GB', ver: '1.2.3', num: '5.5', val: '42']
-        def result = runScript(
-            moduleRun: true,
+        def result = runWorkflow(
             '''\
             nextflow.enable.types = true
 
             workflow CHECK {
                 take:
-                dur: Duration
-                mem: MemoryUnit
-                ver: VersionNumber
-                num: Float
                 val: Value<Integer>
 
                 emit:
-                out = val.map { v -> [
-                    dur.getClass().simpleName,
-                    mem.getClass().simpleName,
-                    ver.getClass().simpleName,
-                    num.getClass().simpleName,
-                    v.getClass().simpleName
-                ] }
+                out = val.map { v -> [v.getClass().simpleName, v] }
             }
             ''',
-            config: [params: params],
-            params: params
+            [val: '42']
         )
 
         then:
-        result.val == ['Duration', 'MemoryUnit', 'VersionNumber', 'Float', 'Integer']
+        // the param is resolved to the element type, then wrapped in a channel
+        result.val == ['Integer', 42]
+    }
+
+    def 'should resolve a Path input and require it to exist'() {
+        given:
+        def file = Files.createTempFile('data', '.txt')
+
+        when:
+        def result = runWorkflow(
+            '''\
+            nextflow.enable.types = true
+
+            workflow CHECK {
+                take:
+                data: Path
+
+                emit:
+                out = [data.getClass().simpleName, data.name]
+            }
+            ''',
+            [data: file.toString()]
+        )
+
+        then:
+        result.val == ['UnixPath', file.name]
+
+        cleanup:
+        file?.delete()
     }
 
     def 'should pass null for an omitted optional input'() {
         when:
-        def result = runScript(
-            moduleRun: true,
+        def result = runWorkflow(
             '''\
             nextflow.enable.types = true
 
@@ -474,8 +382,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
                 out = "${required}:${threads}"
             }
             ''',
-            config: [params: [required: 'hello']],
-            params: [required: 'hello']
+            [required: 'hello']
         )
 
         then:
@@ -484,8 +391,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
 
     def 'should reject a collection input given on the command line'() {
         when:
-        runScript(
-            moduleRun: true,
+        runWorkflow(
             '''\
             nextflow.enable.types = true
 
@@ -497,8 +403,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
                 out = ids
             }
             ''',
-            config: [params: [ids: 'a,b,c']],
-            params: [ids: 'a,b,c']
+            [ids: 'a,b,c']
         )
 
         then:
@@ -508,31 +413,35 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
 
     def 'should convert collection elements for an input from config'() {
         when:
-        def result = runScript(
-            moduleRun: true,
-            '''\
+        def result = runWorkflow(
+            """\
             nextflow.enable.types = true
 
             workflow COLL {
                 take:
-                sizes: List<Integer>
+                values: ${DECL}
 
                 emit:
-                out = sizes
+                out = [values.getClass().simpleName, values.toList().sort()]
             }
-            ''',
-            config: [params: [sizes: ['1', '12']]],
-            configParams: [sizes: ['1', '12']]
+            """,
+            [values: PARAM],
+            true
         )
 
         then:
-        result.val == [1, 12]
+        result.val == [EXPECTED_CLASS, EXPECTED]
+
+        where:
+        DECL            | PARAM        | EXPECTED_CLASS  | EXPECTED
+        'List<Integer>' | ['1', '12']  | 'ArrayList'     | [1, 12]
+        'Set<Integer>'  | ['1', '2']   | 'LinkedHashSet' | [1, 2]
+        'Bag<String>'   | ['a', 'b']   | 'HashBag'       | ['a', 'b']
     }
 
     def 'should reject a parameter that is not a workflow input'() {
         when:
-        runScript(
-            moduleRun: true,
+        runWorkflow(
             '''\
             nextflow.enable.types = true
 
@@ -544,8 +453,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
                 greeting = "Hello, ${name}!"
             }
             ''',
-            config: [params: [name: 'World', bogus: '1']],
-            params: [name: 'World', bogus: '1']
+            [name: 'World', bogus: '1']
         )
 
         then:
@@ -556,8 +464,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
     def 'should prefer explicit entry workflow over named workflow'() {
         when:
         // An explicit (unnamed) entry workflow takes priority over WorkflowEntryHandler
-        def result = runScript(
-            moduleRun: true,
+        def result = runWorkflow(
             '''\
             workflow {
                 "explicit entry"
@@ -570,183 +477,17 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
                 out = x
             }
             ''',
-            params: [x: 'ignored']
+            [x: 'ignored']
         )
 
         then:
-        // The explicit entry workflow ran
-        result != null
-    }
-
-    def 'should coerce an integral command line value to a Float input'() {
-        when:
-        def result = runScript(
-            moduleRun: true,
-            '''\
-            nextflow.enable.types = true
-
-            workflow CHECK {
-                take:
-                num: Float
-
-                emit:
-                out = [num.getClass().simpleName, num]
-            }
-            ''',
-            config: [params: [num: '5']],
-            params: [num: '5']
-        )
-
-        then:
-        result.val == ['Float', 5.0f]
-    }
-
-    def 'should resolve a Path input and require it to exist'() {
-        given:
-        def file = Files.createTempFile('data', '.txt')
-
-        when:
-        def result = runScript(
-            moduleRun: true,
-            '''\
-            nextflow.enable.types = true
-
-            workflow CHECK {
-                take:
-                data: Path
-
-                emit:
-                out = [data.getClass().simpleName, data.name]
-            }
-            ''',
-            config: [params: [data: file.toString()]],
-            params: [data: file.toString()]
-        )
-
-        then:
-        result.val == ['UnixPath', file.name]
-
-        cleanup:
-        file?.delete()
-    }
-
-    def 'should reject a Path input that does not exist'() {
-        when:
-        runScript(
-            moduleRun: true,
-            '''\
-            nextflow.enable.types = true
-
-            workflow CHECK {
-                take:
-                data: Path
-
-                emit:
-                out = data
-            }
-            ''',
-            config: [params: [data: '/some/missing/file.txt']],
-            params: [data: '/some/missing/file.txt']
-        )
-
-        then:
-        def e = thrown(Exception)
-        e.message.contains('/some/missing/file.txt')
-    }
-
-    def 'should convert collection elements for Set and Bag inputs from config'() {
-        when:
-        def params = [ids: ['1', '2'], tags: ['a', 'b']]
-        def result = runScript(
-            moduleRun: true,
-            '''\
-            nextflow.enable.types = true
-
-            workflow CHECK {
-                take:
-                ids: Set<Integer>
-                tags: Bag<String>
-
-                emit:
-                out = [ids.getClass().simpleName, ids.toList(), tags.getClass().simpleName, tags.size()]
-            }
-            ''',
-            config: [params: params],
-            configParams: params
-        )
-
-        then:
-        result.val == ['LinkedHashSet', [1, 2], 'HashBag', 2]
-    }
-
-    def 'should convert numeric record fields from a samplesheet'() {
-        given:
-        def csvFile = Files.createTempFile('samples', '.csv')
-        csvFile.text = '''\
-            id,count,ratio
-            s1,7,1.5
-            '''.stripIndent()
-
-        when:
-        def result = runScript(
-            moduleRun: true,
-            '''\
-            nextflow.enable.types = true
-
-            record Sample {
-                id: String
-                count: Integer
-                ratio: Float
-            }
-
-            workflow RNASEQ {
-                take:
-                samples: Channel<Sample>
-
-                emit:
-                out = samples.map { s -> [s.count, s.ratio] }
-            }
-            ''',
-            config: [params: [samples: csvFile.toString()]],
-            params: [samples: csvFile.toString()]
-        )
-
-        then:
-        result.val == [7, 1.5f]
-
-        cleanup:
-        csvFile?.delete()
-    }
-
-    def 'should convert a number from config to the declared input type'() {
-        when:
-        def params = [ratio: 96.4G, count: 40]
-        def result = runScript(
-            moduleRun: true,
-            '''\
-            nextflow.enable.types = true
-
-            workflow CHECK {
-                take:
-                ratio: Float
-                count: Integer
-
-                emit:
-                out = [ratio.getClass().simpleName, ratio, count.getClass().simpleName]
-            }
-            ''',
-            config: [params: params],
-            configParams: params
-        )
-
-        then:
-        result.val == ['Float', 96.4f, 'Integer']
+        // the explicit entry workflow ran, and the named one was not invoked
+        result == 'explicit entry'
     }
 
     def 'should reject a named workflow in a script that does not enable typing'() {
         when:
-        runScript(
-            moduleRun: true,
+        runWorkflow(
             '''\
             workflow GREET {
                 take:
@@ -755,7 +496,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
                 greeting = "Hello, ${name}!"
             }
             ''',
-            params: [name: 'World']
+            [name: 'World']
         )
 
         then:

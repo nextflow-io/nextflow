@@ -31,9 +31,8 @@ import org.codehaus.groovy.runtime.typehandling.GroovyCastException
 /**
  * Resolves a declared param against a given value.
  *
- * Used both by the `params` block of an entry workflow and by the
- * `take:` inputs of a named workflow that is executed directly, so
- * that both accept the same command line.
+ * Used by pipeline params, typed workflows, and typed processes, so
+ * that they all map a given value to a declared type the same way.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */

@@ -81,18 +81,16 @@ class ScriptProcessRunTest extends Dsl2Spec {
         Files.deleteIfExists(tempFile)
     }
 
-    def 'should fail when multiple processes and no entry workflow' () {
-        given:
-        def SCRIPT = '''
-        params.input = 'test'
-
+    static final String ONE_PROCESS = '''
         process firstProcess {
             input: val input
             output: val result
             exec:
                 result = "First: $input"
         }
+        '''
 
+    static final String TWO_PROCESSES = ONE_PROCESS + '''
         process secondProcess {
             input: val input
             output: val result
@@ -101,58 +99,28 @@ class ScriptProcessRunTest extends Dsl2Spec {
         }
         '''
 
-        when:
-        runScript(SCRIPT, moduleRun: true)
-
-        then:
-        def e = thrown(AbortOperationException)
-        e.message.contains('No entry workflow specified')
-    }
-
-    def 'should fail when a process and a named workflow are both defined' () {
-        given:
-        def SCRIPT = '''
-        process testProcess {
-            input: val input
-            output: val result
-            exec:
-                result = "Got: $input"
-        }
-
+    static final String PROCESS_AND_WORKFLOW = ONE_PROCESS + '''
         workflow testWorkflow {
             take: input
             main:
-                testProcess(input)
+                firstProcess(input)
         }
         '''
 
+    def 'should not execute a definition directly when it is not the only one, or without module run' () {
         when:
-        runScript(SCRIPT, moduleRun: true)
+        runScript(SCRIPT, moduleRun: MODULE_RUN, config: [params: [input: 'test']])
 
         then:
         def e = thrown(AbortOperationException)
         e.message.contains('No entry workflow specified')
-    }
 
-    def 'should not execute a single process directly without module run' () {
-        given:
-        def SCRIPT = '''
-        params.sampleId = 'SAMPLE_001'
-
-        process testProcess {
-            input: val sampleId
-            output: val result
-            exec:
-                result = "Processed: $sampleId"
-        }
-        '''
-
-        when:
-        runScript(SCRIPT)
-
-        then:
-        def e = thrown(AbortOperationException)
-        e.message.contains('No entry workflow specified')
+        where:
+        SCRIPT               | MODULE_RUN
+        TWO_PROCESSES        | true
+        PROCESS_AND_WORKFLOW | true
+        // a single process is executable, but only via `nextflow module run`
+        ONE_PROCESS          | false
     }
 
     def 'should fail when required parameter is missing' () {
