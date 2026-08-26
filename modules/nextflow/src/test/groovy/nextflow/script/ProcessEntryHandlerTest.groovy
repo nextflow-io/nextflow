@@ -27,7 +27,10 @@ import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessInputsDef
 import nextflow.script.params.v2.ProcessTupleInput
 import nextflow.script.types.Record
+import nextflow.util.Duration
+import nextflow.util.MemoryUnit
 import nextflow.util.RecordMap
+import nextflow.util.VersionNumber
 import spock.lang.Specification
 
 /**
@@ -382,6 +385,63 @@ class ProcessEntryHandlerTest extends Specification {
         then:
         def e = thrown(IllegalArgumentException)
         e.message == 'Missing required parameter: --id'
+    }
+
+    def 'should resolve a typed input like a pipeline parameter (v2)' () {
+        given:
+        def session = Mock(Session)
+        def script = Mock(BaseScript)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> [ 'hello' ]
+        }
+        def handler = new ProcessEntryHandler(script, session, meta)
+
+        when:
+        def result = handler.getValueForInputV2(new ProcessInput('x', type, false), [x: value])
+
+        then:
+        result.getClass() == expected
+        result == parsed
+
+        where:
+        type        | value     | expected      | parsed
+        Boolean     | 'false'   | Boolean       | false
+        Integer     | '42'      | Integer       | 42
+        Float       | '5.5'     | Float         | 5.5f
+        Float       | '5'       | Float         | 5.0f
+        String      | 'hello'   | String        | 'hello'
+        Duration    | '2h'      | Duration      | Duration.of('2h')
+        MemoryUnit  | '4.GB'    | MemoryUnit    | MemoryUnit.of('4.GB')
+        VersionNumber | '1.2.3' | VersionNumber | new VersionNumber('1.2.3')
+        // a value can be given as any number, and is normalized to the declared type
+        Float       | 96.4G     | Float         | 96.4f
+        Float       | 96.4d     | Float         | 96.4f
+        Float       | 40        | Float         | 40.0f
+        Integer     | 40G       | Integer       | 40
+        Integer     | 40.0G     | Integer       | 40
+    }
+
+    def 'should reject a param value that cannot be converted to the declared input type (v2)' () {
+        given:
+        def session = Mock(Session)
+        def script = Mock(BaseScript)
+        def meta = Mock(ScriptMeta) {
+            getLocalProcessNames() >> [ 'hello' ]
+        }
+        def handler = new ProcessEntryHandler(script, session, meta)
+
+        when:
+        handler.getValueForInputV2(new ProcessInput('n50', type, false), [n50: value])
+
+        then: 'the mismatch is reported up front instead of reaching the task'
+        def e = thrown(IllegalArgumentException)
+        e.message == "Parameter `--n50` with type ${type.simpleName} cannot be assigned to ${value} [String]"
+
+        where:
+        type    | value
+        Integer | 'abc'
+        Integer | '3.7'      // a fractional value is not silently truncated
+        Float   | 'abc'
     }
 
     def 'should return null for missing optional input (v2)' () {

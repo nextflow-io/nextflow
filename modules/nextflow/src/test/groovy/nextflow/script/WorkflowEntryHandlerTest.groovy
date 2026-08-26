@@ -718,6 +718,31 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         csvFile?.delete()
     }
 
+    def 'should convert a number from config to the declared input type'() {
+        when:
+        def params = [ratio: 96.4G, count: 40]
+        def result = runScript(
+            moduleRun: true,
+            '''\
+            nextflow.enable.types = true
+
+            workflow CHECK {
+                take:
+                ratio: Float
+                count: Integer
+
+                emit:
+                out = [ratio.getClass().simpleName, ratio, count.getClass().simpleName]
+            }
+            ''',
+            config: [params: params],
+            configParams: params
+        )
+
+        then:
+        result.val == ['Float', 96.4f, 'Integer']
+    }
+
     def 'should reject a named workflow in a script that does not enable typing'() {
         when:
         runScript(

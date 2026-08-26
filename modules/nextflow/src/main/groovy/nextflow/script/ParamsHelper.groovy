@@ -54,6 +54,10 @@ class ParamsHelper {
         if( value instanceof Collection || value instanceof Map )
             return asType(value, decl)
 
+        final number = asNumberType(decl, value)
+        if( number != null )
+            return number
+
         if( value !instanceof CharSequence )
             return value
 
@@ -62,18 +66,6 @@ class ParamsHelper {
         if( decl.type == Boolean ) {
             if( str.toLowerCase() == 'true' ) return Boolean.TRUE
             if( str.toLowerCase() == 'false' ) return Boolean.FALSE
-        }
-
-        if( decl.type == Integer ) {
-            if( str.isInteger() ) return str.toInteger()
-            if( str.isLong() ) return str.toLong()
-            if( str.isBigInteger() ) return str.toBigInteger()
-        }
-
-        if( decl.type == Float ) {
-            if( str.isFloat() ) return str.toFloat()
-            if( str.isDouble() ) return str.toDouble()
-            if( str.isBigDecimal() ) return str.toBigDecimal()
         }
 
         return resolveFromString(decl, str, value)
@@ -94,10 +86,48 @@ class ParamsHelper {
         if( value instanceof Collection || value instanceof Map )
             return asType(value, decl)
 
+        final number = asNumberType(decl, value)
+        if( number != null )
+            return number
+
         if( value !instanceof CharSequence )
             return value
 
         return resolveFromString(decl, value.toString(), value)
+    }
+
+    /**
+     * Convert a value to a declared numeric type. Integer and Float are the
+     * only numeric types in the Nextflow type system, but a value can be
+     * given as any number (e.g. a Double or BigDecimal in the config), and a
+     * command-line value is always a string, so the value is normalized to
+     * the declared type.
+     *
+     * Returns null if the declared type is not numeric, or if the value
+     * cannot be represented by it -- an Integer rejects a fractional value
+     * rather than silently truncating it. The value is then reported by the
+     * caller as not assignable to the declared type.
+     *
+     * @param decl
+     * @param value
+     */
+    private static Number asNumberType(Param decl, Object value) {
+        if( decl.type != Integer && decl.type != Float )
+            return null
+        try {
+            final number = new BigDecimal(value.toString().trim())
+            if( decl.type == Float )
+                return number.floatValue()
+            // widen an integral value that is too large for an Integer,
+            // and reject a fractional one
+            final integer = number.toBigIntegerExact()
+            return integer.bitLength() < Integer.SIZE
+                ? integer.intValue()
+                : ( integer.bitLength() < Long.SIZE ? integer.longValue() : integer )
+        }
+        catch( NumberFormatException | ArithmeticException e ) {
+            return null
+        }
     }
 
     /**

@@ -24,6 +24,7 @@ import nextflow.Nextflow
 import nextflow.module.ModuleSpec
 import nextflow.module.ModuleSpecFactory
 import nextflow.module.ModuleStorage
+import nextflow.script.dsl.Types
 import nextflow.script.params.DefaultInParam
 import nextflow.script.params.EnvInParam
 import nextflow.script.params.FileInParam
@@ -32,11 +33,8 @@ import nextflow.script.params.StdInParam
 import nextflow.script.params.TupleInParam
 import nextflow.script.params.v2.ProcessInput
 import nextflow.script.params.v2.ProcessTupleInput
-import nextflow.script.dsl.Types
 import nextflow.script.types.Record
 import nextflow.util.RecordMap
-import nextflow.util.TypeHelper
-import org.codehaus.groovy.runtime.typehandling.GroovyCastException
 
 /**
  * Helper class for process entry execution feature.
@@ -412,13 +410,15 @@ class ProcessEntryHandler {
     /**
      * Gets the appropriate value for a typed process input.
      *
+     * A typed input is resolved in the same way as a pipeline parameter,
+     * so that a process and a workflow accept the same command line.
+     *
      * @param param Input declaration
      * @param namedArgs Map of command-line arguments
      * @return Properly typed value for the input
      */
     private static Object getValueForInputV2(ProcessInput param, Map namedArgs) {
         final name = param.getName()
-        final type = param.getType()
         final value = namedArgs.get(name)
 
         if( value == null ) {
@@ -427,46 +427,16 @@ class ProcessEntryHandler {
             throw new IllegalArgumentException("Missing required parameter: --${name}")
         }
 
-        if( value instanceof Collection || value instanceof Map )
-            return asType(value, param)
+        final type = param.getType()
+        final result = ParamsHelper.resolveFromCli(new Param(name, type, param.isOptional(), null), value)
 
-        if( value !instanceof CharSequence )
-            return value
+        // report a value that could not be converted, instead of passing
+        // an ill-typed value to the task
+        final actualType = result?.getClass()
+        if( type != null && actualType != null && !ParamsHelper.isAssignableFrom(type, actualType) )
+            throw new IllegalArgumentException("Parameter `--${name}` with type ${Types.getName(type)} cannot be assigned to ${result} [${Types.getName(actualType)}]")
 
-        final str = value.toString()
-
-        if( type == Boolean ) {
-            if( str.toLowerCase() == 'true' ) return Boolean.TRUE
-            if( str.toLowerCase() == 'false' ) return Boolean.FALSE
-        }
-
-        if( type == Integer || type == Float ) {
-            if( str.isInteger() ) return str.toInteger()
-            if( str.isLong() ) return str.toLong()
-            if( str.isBigInteger() ) return str.toBigInteger()
-        }
-
-        if( type == Float ) {
-            if( str.isFloat() ) return str.toFloat()
-            if( str.isDouble() ) return str.toDouble()
-            if( str.isBigDecimal() ) return str.toBigDecimal()
-        }
-
-        if( type == Path ) {
-            return TypeHelper.asPathType(str)
-        }
-
-        return value
-    }
-
-    private static Object asType(Object value, ProcessInput param) {
-        try {
-            return TypeHelper.asType(value, param.type)
-        }
-        catch( GroovyCastException | UnsupportedOperationException e ) {
-            final actualType = value.getClass()
-            throw new IllegalArgumentException("Parameter `--${param.name}` with type ${Types.getName(param.type)} cannot be assigned to ${value} [${Types.getName(actualType)}]")
-        }
+        return result
     }
 
     /**
