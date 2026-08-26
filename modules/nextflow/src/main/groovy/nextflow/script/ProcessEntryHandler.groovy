@@ -428,15 +428,15 @@ class ProcessEntryHandler {
      * A typed input is resolved in the same way as a pipeline parameter,
      * so that a process and a workflow accept the same command line.
      *
-     * @param decl Input declaration
+     * @param input Input declaration
      * @param params All param values, as structured by the config and the script
      * @param cliParams The param values given on the command line or in a params file
      * @return Properly typed value for the input
      */
-    private static Object getValueForInputV2(ProcessInput decl, Map params, Map cliParams) {
-        final name = decl.getName()
-        final type = decl.getType()
-        final decl = new Param(name, type, decl.isOptional(), null)
+    private static Object getValueForInputV2(ProcessInput input, Map params, Map cliParams) {
+        final name = input.getName()
+        final type = input.getType()
+        final decl = new Param(name, type, input.isOptional(), null)
 
         final cliValue = cliParams.get(name)
         final value = params.get(name)
