@@ -54,7 +54,7 @@ dependencies {
     compileOnly 'org.pf4j:pf4j:3.14.1'
 
     api 'com.google.auth:google-auth-library-oauth2-http:1.39.1'
-    api 'com.google.cloud:google-cloud-batch:0.75.0'
+    api 'com.google.cloud:google-cloud-batch:0.96.0'
     api 'com.google.cloud:google-cloud-logging:3.23.5'
     api 'com.google.cloud:google-cloud-nio:0.128.5'
     api 'com.google.cloud:google-cloud-storage:2.58.0'

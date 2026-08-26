@@ -74,6 +74,16 @@ For Google Batch, use [Batch-debian images](https://docs.cloud.google.com/batch/
 The default Container-Optimized OS (`batch-cos`) is not compatible with the Ops Agent.
 :::
 
+##### `google.batch.instanceFlexibility`
+
+<AddedInVersion version="26.10" />
+
+Enable [instance flexibility](https://cloud.google.com/batch/docs/create-run-job-instance-flexibility) (default: `false`). When enabled, a `machineType` directive that specifies two or more explicit machine types allows Google Batch to launch the task with any of them, depending on the available capacity.
+
+:::note
+Instance flexibility is a preview feature of Google Batch, therefore these jobs are submitted using the Batch `v1alpha` API.
+:::
+
 ##### `google.batch.logsPath`
 
 <AddedInVersion version="26.04" />
