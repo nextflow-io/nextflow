@@ -48,5 +48,5 @@ echo ''
 echo '=== Testing missing required input ==='
 $NXF_RUN --prefix Hello > stdout3 2>&1 || true
 
-[[ $(grep -c 'requires input' stdout3) == 1 ]] || false
+[[ $(grep -c 'Parameter `--samples` is required but no value was provided' stdout3) == 1 ]] || false
 [[ $(grep -c 'samples' stdout3) -ge 1 ]] || false
