@@ -31,6 +31,8 @@ When `true` enables the generation of the DAG file (default: `false`).
 
 Graph file name (default: `'dag-<timestamp>.html'`).
 
+Relative paths are resolved against the workflow output directory when it is defined, otherwise the launch directory.
+
 The output format is inferred from the file extension. The following formats are supported:
 
 ###### `dot`

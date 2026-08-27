@@ -15,6 +15,8 @@ Create the execution report on workflow completion (default: `false`).
 
 The path of the created execution report file (default: `'report-<timestamp>.html'`).
 
+Relative paths are resolved against the workflow output directory when it is defined, otherwise the launch directory.
+
 ##### `report.overwrite`
 
 Overwrite any existing report file with the same name (default: `false`).
