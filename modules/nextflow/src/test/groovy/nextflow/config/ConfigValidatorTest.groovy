@@ -28,6 +28,33 @@ class ConfigValidatorTest extends Specification {
     @Rule
     OutputCapture capture = new OutputCapture()
 
+    def 'should validate per-executor config options' () {
+        when:
+        new ConfigValidator().validate([
+            executor: [
+                '$local': [
+                    cpus: 8,
+                    memory: '128 GB'
+                ]
+            ]
+        ])
+        then:
+        !capture.toString().contains('Unrecognized config option')
+    }
+
+    def 'should warn about invalid per-executor config options' () {
+        when:
+        new ConfigValidator().validate([
+            executor: [
+                '$local': [
+                    cpu: 8
+                ]
+            ]
+        ])
+        then:
+        capture.toString().contains('Unrecognized config option \'executor.cpu\'')
+    }
+
     def 'should warn about invalid config options' () {
         when:
         new ConfigValidator().validate([

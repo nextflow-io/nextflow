@@ -128,12 +128,13 @@ class ConfigValidator {
     }
 
     /**
-     * Determine whether a scope name is a process selector.
+     * Determine whether a scope name is a selector, i.e. a process selector
+     * (`withLabel:`, `withName:`) or a per-executor selector (`$<executor>`).
      *
      * @param name
      */
     private boolean isSelector(String name) {
-        return name.startsWith('withLabel:') || name.startsWith('withName:')
+        return name.startsWith('withLabel:') || name.startsWith('withName:') || name.startsWith('$')
     }
 
     /**
