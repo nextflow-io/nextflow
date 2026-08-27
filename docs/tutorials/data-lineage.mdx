@@ -241,6 +241,27 @@ $ nextflow lineage view lid://862df53160e07cd823c0c3960545e747
 
 Every task run is represented in the lineage store as a `TaskRun`, which includes information such as the name, script, inputs, and software dependencies. From here, you can continue traversing through the file inputs to view upstream tasks.
 
+### Task outputs
+
+A `TaskRun` record lists the task's inputs but not its outputs. A task LID *is* the [task hash][cache-resume-task-hash], which is computed from the inputs, script, and environment that determine the task -- output values do not contribute to it. Task results are therefore recorded as a separate lineage entry, retrieved with the `#output` fragment of the task LID. For example, view the outputs of the `QUANT` task that produced one of the inputs above:
+
+```console
+$ nextflow lineage view lid://eff8846883b46c5a76f11e7e4480a6c8#output
+[
+  {
+    "type": "path",
+    "name": "pair_id",
+    "value": "lid://eff8846883b46c5a76f11e7e4480a6c8/ggal_gut"
+  }
+]
+```
+
+Each entry is one declared task output: `type` is the output qualifier (`path`, `val`, `env`, `eval`, or `stdout`), `name` is the declared output name (`null` when the output declares only a file pattern), and `value` is a `lid://` reference for file outputs or the literal value otherwise.
+
+:::note
+These are the task outputs in the work directory, which are distinct from the workflow outputs published by the run. See [Use lineage with workflow outputs](#use-lineage-with-workflow-outputs).
+:::
+
 ### Agent runs
 
 An [agent][agent-page] also runs as a task, but its provenance is not a script -- it is the model that was called and the prompt, tools and skills it was called with. Agent executions are therefore recorded as a separate `AgentRun` record in place of a `TaskRun`:
