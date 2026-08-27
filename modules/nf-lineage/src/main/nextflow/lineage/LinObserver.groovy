@@ -541,16 +541,17 @@ class LinObserver implements TraceObserverV2 {
      * @throws IllegalArgumentException
      */
     protected String getWorkflowRelative(Path path) throws IllegalArgumentException{
-        final outputDirAbs = session.outputDir.toAbsolutePath()
+        // the output directory is disabled when a named workflow is executed directly
+        final outputDirAbs = session.outputDir?.toAbsolutePath()
         if (path.isAbsolute()) {
-            if (path.startsWith(outputDirAbs)) {
+            if (outputDirAbs && path.startsWith(outputDirAbs)) {
                 return outputDirAbs.relativize(path).toString()
             }
             log.debug("Cannot get relative path for workflow output '${path.toUriString()}'")
             throw new OutputRelativePathException()
         }
         final pathAbs = path.toAbsolutePath()
-        if (pathAbs.startsWith(outputDirAbs)) {
+        if (outputDirAbs && pathAbs.startsWith(outputDirAbs)) {
             return outputDirAbs.relativize(pathAbs).toString()
         }
         if (path.normalize().getName(0).toString() == "..") {

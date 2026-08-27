@@ -336,23 +336,41 @@ class ScriptMeta {
     }
 
     /**
-     * Check if this script has standalone processes that can be executed
+     * Check if this script has a named workflow that can be executed
+     * automatically without an explicit entry workflow.
+     *
+     * @return true if the script has exactly one named workflow
+     */
+    boolean hasExecutableWorkflows() {
+        // Don't allow execution of true modules (those are meant for inclusion)
+        if( isModule() )
+            return false
+
+        // Must not have any process definitions
+        if( !getLocalProcessNames().isEmpty() )
+            return false
+
+        // Must have exactly one workflow
+        return getLocalWorkflowNames().size() == 1
+    }
+
+    /**
+     * Check if this script has a standalone process that can be executed
      * automatically without requiring workflows
      *
-     * @return true if the script has one or more processes and no workflows
+     * @return true if the script has exactly one process and no workflows
      */
     boolean hasExecutableProcesses() {
         // Don't allow execution of true modules (those are meant for inclusion)
         if( isModule() )
             return false
 
-        // Must have at least one process
-        final processNames = getLocalProcessNames()
-        if( processNames.isEmpty() )
+        // Must not have any workflow definitions
+        if( !getLocalWorkflowNames().isEmpty() )
             return false
 
-        // Must not have any workflow definitions (including unnamed workflow)
-        return getLocalWorkflowNames().isEmpty()
+        // Must have exactly one process
+        return getLocalProcessNames().size() == 1
     }
 
     void addModule(BaseScript script, String name, String alias) {

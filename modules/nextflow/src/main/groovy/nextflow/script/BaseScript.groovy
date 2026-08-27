@@ -262,6 +262,11 @@ abstract class BaseScript extends Script implements ExecutionContext {
             return result
         }
 
+        // a module defines a single process or named workflow, which is
+        // executed directly -- there is no entry workflow to select
+        if( binding.entryName && session.isModuleRun() )
+            throw new AbortOperationException("Option `-entry` is not supported when a script is executed as a module")
+
         // if an `entryName` was specified via the command line, override the `entryFlow` to be executed
         if( binding.entryName && !(entryFlow=meta.getWorkflow(binding.entryName) ) ) {
             def msg = "Unknown workflow entry name: ${binding.entryName}"
@@ -273,15 +278,24 @@ abstract class BaseScript extends Script implements ExecutionContext {
         }
 
         if( !entryFlow ) {
-            if( meta.getLocalWorkflowNames() )
-                throw new AbortOperationException("No entry workflow specified")
-            // Check if we have standalone processes that can be executed automatically
-            if( meta.hasExecutableProcesses() ) {
-                // Create a workflow to execute the process (single process or first of multiple)
+            // a process or named workflow can be executed directly only
+            // when the script was launched via `nextflow module run`
+            final moduleRun = session.isModuleRun()
+            if( moduleRun && meta.hasExecutableWorkflows() ) {
+                // Execute a single named workflow directly
+                final handler = new WorkflowEntryHandler(this, session, meta)
+                this.entryFlow = handler.createEntryWorkflow()
+            }
+            else if( moduleRun && meta.hasExecutableProcesses() ) {
+                // Execute a single process directly
                 final handler = new ProcessEntryHandler(this, session, meta)
                 this.entryFlow = handler.createEntryWorkflow()
             }
+            else if( meta.getLocalProcessNames() || meta.getLocalWorkflowNames() ) {
+                throw new AbortOperationException("No entry workflow specified -- script must define an entry workflow, a single process or named workflow, or be a code snippet")
+            }
             else {
+                // NOTE: remove after v1 parser is removed
                 return result
             }
         }

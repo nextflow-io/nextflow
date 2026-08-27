@@ -13,4 +13,5 @@ resume-typed-value-output.nf
 task-ext-block.nf
 topic-channel-typed.nf
 type-annotations.nf
+workflow-entry.nf
 workflow-oncomplete-v2.nf
