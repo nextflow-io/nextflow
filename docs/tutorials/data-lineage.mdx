@@ -480,6 +480,32 @@ Every run records a `WorkflowRun`, a `TaskRun` (or `AgentRun`) and a `TaskOutput
 A published file is recorded only if it is written inside the run's output directory (`outputDir`, which defaults to `results`). The `output` block always publishes there, whereas a `publishDir` directive pointing outside `outputDir` leaves only the work directory copy in the lineage store.
 :::
 
+## Lineage store layout
+
+When lineage is enabled, Nextflow writes each record to the store as a `.data.json` file in a directory named after the record's lineage ID. Everything after the `lid://` prefix becomes the directory path, so `lid://<hash>` maps to `<store>/<hash>/.data.json` and `lid://<hash>/report.html` maps to `<store>/<hash>/report.html/.data.json`.
+
+```
+<store>/
+├── .history/
+│   └── <workflow-hash>                   # index entry: timestamp, run name, session ID, run LID
+├── <workflow-hash>/
+│   ├── .data.json                        # WorkflowRun
+│   └── <path-relative-to-outputDir>/
+│       └── .data.json                    # FileOutput (published copy)
+├── <workflow-hash>#output/
+│   └── .data.json                        # WorkflowOutput (only with an output block)
+├── <task-hash>/
+│   ├── .data.json                        # TaskRun or AgentRun
+│   └── <path-relative-to-task-work-dir>/
+│       └── .data.json                    # FileOutput (work directory copy, one per output file)
+└── <task-hash>#output/
+    └── .data.json                        # TaskOutput
+```
+
+:::note
+`<store>` is the lineage store location, which defaults to `.lineage` in the launch directory. The `#` in `<workflow-hash>#output` and `<task-hash>#output` is a literal character in the directory name.
+:::
+
 ## Use lineage in a Nextflow script
 
 Since lineage IDs are valid URIs, output files in the lineage store can be accessed by their LID in a Nextflow script, like any other path. The LID path returns the *real* path as defined by the `path` field in the `FileOutput` record.
