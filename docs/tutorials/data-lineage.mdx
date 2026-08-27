@@ -243,7 +243,7 @@ Every task run is represented in the lineage store as a `TaskRun`, which include
 
 ### Task outputs
 
-A `TaskRun` record lists the task's inputs but not its outputs. A task LID *is* the [task hash][cache-resume-task-hash], which is computed from the inputs, script, and environment that determine the task -- output values do not contribute to it. Task results are therefore recorded as a separate lineage entry, retrieved with the `#output` fragment of the task LID. For example, view the outputs of the `QUANT` task that produced one of the inputs above:
+A `TaskRun` record lists the task's inputs but not its outputs. A task LID *is* the [task hash][cache-resume-task-hash], computed from the inputs, script, and environment. Output values do not contribute to it. Task outputs are therefore recorded as a separate lineage entry, retrieved with the `#output` fragment of the task LID. For example, view the outputs of the `QUANT` task that produced one of the inputs shown earlier:
 
 ```console
 $ nextflow lineage view lid://eff8846883b46c5a76f11e7e4480a6c8#output
@@ -256,10 +256,10 @@ $ nextflow lineage view lid://eff8846883b46c5a76f11e7e4480a6c8#output
 ]
 ```
 
-Each entry is one declared task output: `type` is the output qualifier (`path`, `val`, `env`, `eval`, or `stdout`), `name` is the declared output name (`null` when the output declares only a file pattern), and `value` is a `lid://` reference for file outputs or the literal value otherwise.
+Each entry is one declared task output. `type` is the output qualifier (`path`, `val`, `env`, `eval`, or `stdout`), `name` is the output name (`null` when the output declares only a file pattern), and `value` is a `lid://` reference for file outputs or the literal value otherwise.
 
 :::note
-These are the task outputs in the work directory, which are distinct from the workflow outputs published by the run. See [Use lineage with workflow outputs](#use-lineage-with-workflow-outputs).
+These are the task outputs in the work directory, not the workflow outputs published by the run. See [Use lineage with workflow outputs](#use-lineage-with-workflow-outputs).
 :::
 
 ### Agent runs
@@ -465,7 +465,7 @@ See [Labels][workflow-output-labels] for details on assigning labels to workflow
 
 ### Record coverage
 
-Every run records a `WorkflowRun`, a `TaskRun` (or `AgentRun`) and a `TaskOutput` for each task, and a `FileOutput` for each task output file in the work directory, whether or not the pipeline declares an `output` block. The `output` block adds the `WorkflowOutput` record and guarantees that published files are recorded:
+Nextflow records the workflow run, its tasks, and its task output files whether or not the pipeline declares an `output` block. The `output` block adds the `WorkflowOutput` record and guarantees that published files are recorded:
 
 | Record                                 | Without `output` block            | With `output` block |
 | ------                                 | ---------------------             | ------------------- |
@@ -482,7 +482,7 @@ A published file is recorded only if it is written inside the run's output direc
 
 ## Lineage store layout
 
-When lineage is enabled, Nextflow writes each record to the store as a `.data.json` file in a directory named after the record's lineage ID. Everything after the `lid://` prefix becomes the directory path, so `lid://<hash>` maps to `<store>/<hash>/.data.json` and `lid://<hash>/report.html` maps to `<store>/<hash>/report.html/.data.json`.
+Nextflow writes each record to the store as a `.data.json` file in a directory named after the record's lineage ID. Everything after the `lid://` prefix becomes the directory path. `lid://<hash>` maps to `<store>/<hash>/.data.json`, and `lid://<hash>/report.html` maps to `<store>/<hash>/report.html/.data.json`.
 
 ```
 <store>/
@@ -503,7 +503,7 @@ When lineage is enabled, Nextflow writes each record to the store as a `.data.js
 ```
 
 :::note
-`<store>` is the lineage store location, which defaults to `.lineage` in the launch directory. The `#` in `<workflow-hash>#output` and `<task-hash>#output` is a literal character in the directory name.
+`<store>` is the lineage store location. The `#` in `<workflow-hash>#output` and `<task-hash>#output` is a literal character in the directory name.
 :::
 
 ## Use lineage in a Nextflow script
