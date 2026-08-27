@@ -463,6 +463,23 @@ Labels can be used to filter files when querying lineage records with the `nextf
 
 See [Labels][workflow-output-labels] for details on assigning labels to workflow outputs.
 
+### Record coverage
+
+Every run records a `WorkflowRun`, a `TaskRun` (or `AgentRun`) and a `TaskOutput` for each task, and a `FileOutput` for each task output file in the work directory, whether or not the pipeline declares an `output` block. The `output` block adds the `WorkflowOutput` record and guarantees that published files are recorded:
+
+| Record                                 | Without `output` block            | With `output` block |
+| ------                                 | ---------------------             | ------------------- |
+| `WorkflowRun`                          | ✓                                 | ✓ |
+| `TaskRun`                              | ✓                                 | ✓ |
+| `TaskOutput`                           | ✓                                 | ✓ |
+| `FileOutput` (work directory)          | ✓                                 | ✓ |
+| `FileOutput` (published file)          | ✓ if published under `outputDir`  | ✓ |
+| `WorkflowOutput`                       | ✗                                 | ✓ |
+
+:::note
+A published file is recorded only if it is written inside the run's output directory (`outputDir`, which defaults to `results`). The `output` block always publishes there, whereas a `publishDir` directive pointing outside `outputDir` leaves only the work directory copy in the lineage store.
+:::
+
 ## Use lineage in a Nextflow script
 
 Since lineage IDs are valid URIs, output files in the lineage store can be accessed by their LID in a Nextflow script, like any other path. The LID path returns the *real* path as defined by the `path` field in the `FileOutput` record.
