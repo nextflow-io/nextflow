@@ -377,9 +377,9 @@ The `record()` approach works "out of the box", and it isn't much more verbose, 
 
 ## Links
 
-- Community issues: #2085, #2127
+- Community issues: [#2085](https://github.com/nextflow-io/nextflow/issues/2085), [#2127](https://github.com/nextflow-io/nextflow/issues/2127)
 - Related nf-core discussion: https://github.com/nf-core/modules/issues/4311
-- Original implementation: #4553
+- Original implementation: [#4553](https://github.com/nextflow-io/nextflow/pull/4553)
 - nf-core/fetchngs POC: https://github.com/nf-core/fetchngs/pull/309
 - Inspired by: [Simple Made Easy](https://github.com/matthiasn/talk-transcripts/blob/master/Hickey_Rich/SimpleMadeEasy.md)
 - Type systems: [Nominal typing](https://en.wikipedia.org/wiki/Nominal_type_system) vs [Structural typing](https://en.wikipedia.org/wiki/Structural_type_system) vs [Duck typing](https://en.wikipedia.org/wiki/Duck_typing)
