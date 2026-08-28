@@ -52,11 +52,14 @@ class ScriptMeta {
 
     static private Set<String> resolvedProcessNames = new HashSet<>(20)
 
+    static private Set<String> resolvedAgentNames = new HashSet<>(20)
+
     @TestOnly
     static void reset() {
         REGISTRY.clear()
         scriptsByPath.clear()
         resolvedProcessNames.clear()
+        resolvedAgentNames.clear()
     }
 
     static ScriptMeta get(BaseScript script) {
@@ -78,6 +81,15 @@ class ScriptMeta {
         return result
     }
 
+    static Set<String> allAgentNames() {
+        def result = new HashSet()
+        for( ScriptMeta entry : REGISTRY.values() )
+            result.addAll( entry.getAgentNames() )
+        // add all resolved names
+        result.addAll(resolvedAgentNames)
+        return result
+    }
+
     static Set<ProcessDef> allProcesses() {
         final result = new HashSet()
         for( final entry : REGISTRY.values() ) {
@@ -89,6 +101,10 @@ class ScriptMeta {
 
     static void addResolvedName(String name) {
         resolvedProcessNames.add(name)
+    }
+
+    static void addResolvedAgentName(String name) {
+        resolvedAgentNames.add(name)
     }
 
     static Map<String,Path> allScriptNames() {
@@ -284,6 +300,22 @@ class ScriptMeta {
         return result
     }
 
+    Set<String> getAgentNames() {
+        def result = new HashSet(definitions.size() + imports.size())
+        // local definitions
+        for( def item : definitions.values() ) {
+            if( item instanceof AgentDef )
+                result.add(item.name)
+        }
+        // agents from imports -- an aliased include is a clone carrying the alias as its name,
+        // so both the declared name and the alias are valid `withName:` targets
+        for( def item: imports.values() ) {
+            if( item instanceof AgentDef )
+                result.add(item.name)
+        }
+        return result
+    }
+
     Set<String> getLocalProcessNames() {
         def result = new HashSet(definitions.size() + imports.size())
         // local definitions
@@ -304,23 +336,41 @@ class ScriptMeta {
     }
 
     /**
-     * Check if this script has standalone processes that can be executed
+     * Check if this script has a named workflow that can be executed
+     * automatically without an explicit entry workflow.
+     *
+     * @return true if the script has exactly one named workflow
+     */
+    boolean hasExecutableWorkflows() {
+        // Don't allow execution of true modules (those are meant for inclusion)
+        if( isModule() )
+            return false
+
+        // Must not have any process definitions
+        if( !getLocalProcessNames().isEmpty() )
+            return false
+
+        // Must have exactly one workflow
+        return getLocalWorkflowNames().size() == 1
+    }
+
+    /**
+     * Check if this script has a standalone process that can be executed
      * automatically without requiring workflows
      *
-     * @return true if the script has one or more processes and no workflows
+     * @return true if the script has exactly one process and no workflows
      */
     boolean hasExecutableProcesses() {
         // Don't allow execution of true modules (those are meant for inclusion)
         if( isModule() )
             return false
 
-        // Must have at least one process
-        final processNames = getLocalProcessNames()
-        if( processNames.isEmpty() )
+        // Must not have any workflow definitions
+        if( !getLocalWorkflowNames().isEmpty() )
             return false
 
-        // Must not have any workflow definitions (including unnamed workflow)
-        return getLocalWorkflowNames().isEmpty()
+        // Must have exactly one process
+        return getLocalProcessNames().size() == 1
     }
 
     void addModule(BaseScript script, String name, String alias) {

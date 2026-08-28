@@ -306,6 +306,63 @@ class ScriptAstBuilderTest extends Specification {
         errors[0].getOriginalMessage() == "Invalid workflow emit -- must be a name, assignment, or expression"
     }
 
+    def 'should report an error for an invalid output assignment' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                output:
+                target <<= 'world'
+
+                script:
+                ""
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 5
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Invalid output declaration in typed process -- must be a name, assignment, or expression"
+
+        when:
+        errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                output:
+                target.name = 'world'
+
+                script:
+                ""
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 5
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Invalid output declaration in typed process -- must be a name, assignment, or expression"
+
+        when:
+        errors = check(
+            '''\
+            workflow hello {
+                emit:
+                target <<= 'world'
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 3
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Invalid workflow emit -- must be a name, assignment, or expression"
+    }
+
     def 'should report error for defining a typed process without preview flag' () {
         when:
         def errors = check(

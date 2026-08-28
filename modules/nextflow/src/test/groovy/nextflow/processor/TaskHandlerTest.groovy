@@ -20,6 +20,7 @@ import java.util.concurrent.atomic.LongAdder
 
 import nextflow.Session
 import nextflow.SysEnv
+import nextflow.agent.AgentTaskInfo
 import nextflow.executor.Executor
 import nextflow.trace.TraceRecord
 import nextflow.util.Duration
@@ -468,5 +469,66 @@ class TaskHandlerTest extends Specification {
         VALUE   | _
         false   | _
         true    | _
+    }
+
+    /**
+     * The trace record is persisted in the resume cache DB and POSTed to Seqera Platform by
+     * nf-tower. An agent task's script is the RPC proxy launch command, whose `--token` is a bearer
+     * credential for the provider API key the driver sends on the start frame -- so it must not be
+     * in there. LinObserver already omits task.script from the lineage record for the same reason.
+     */
+    def 'the trace record of an agent task carries no capability token'() {
+        given:
+        def token = 'Y2FwYWJpbGl0eS10b2tlbi0zMi1ieXRlcw'
+        def script = "exec '/opt/nf-agent/agent-rpc' '--endpoint' 'driver:41235' " +
+            "'--invocation' 'inv-1' '--fingerprint' 'aabb' '--token' '${token}' '--' '/usr/bin/node' 'runner.mjs'"
+        def agentInfo = new AgentTaskInfo('pi', 'openai/gpt-5-mini', 'be helpful', null, 'p', 20, null, null, null)
+        def task = new TaskRun(id: new TaskId(7), name: 'agentTask', script: script,
+            config: new TaskConfig([(AgentTaskInfo.CONFIG_KEY): agentInfo]))
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> new Session()
+        task.processor.getName() >> 'summarize'
+        task.processor.getExecutor() >> Mock(Executor)
+        task.processor.getProcessEnvironment() >> [:]
+        task.context = new TaskContext(Mock(Script), [:], 'none')
+
+        def handler = Spy(TaskHandler)
+        handler.task = task
+        handler.status = TaskStatus.COMPLETED
+
+        when:
+        def record = handler.getTraceRecord()
+
+        then: 'the token value is nowhere in the record'
+        !record.script.contains(token)
+        record.script.contains("'--token' '[REDACTED]'")
+        and: 'and the rest of the launch command still is -- a fingerprint is a public commitment'
+        record.script.contains("'--endpoint' 'driver:41235'")
+        record.script.contains("'--fingerprint' 'aabb'")
+        and: 'the EXECUTED script is untouched: .command.sh keeps the real token'
+        task.script == script
+        task.getScript() == script
+    }
+
+    def 'the trace record of an ordinary task is unchanged by the agent redaction'() {
+        given: 'the agent seam sits on the path taken by EVERY task, so this is the contract'
+        def script = 'echo hello --token not-really-a-flag'
+        def task = new TaskRun(id: new TaskId(8), name: 'plainTask', script: script, config: new TaskConfig([:]))
+        task.processor = Mock(TaskProcessor)
+        task.processor.getSession() >> new Session()
+        task.processor.getName() >> 'plain'
+        task.processor.getExecutor() >> Mock(Executor)
+        task.processor.getProcessEnvironment() >> [:]
+        task.context = new TaskContext(Mock(Script), [:], 'none')
+
+        def handler = Spy(TaskHandler)
+        handler.task = task
+        handler.status = TaskStatus.COMPLETED
+
+        when:
+        def record = handler.getTraceRecord()
+
+        then: 'byte-identical, even though it happens to contain the flag the redactor looks for'
+        record.script == script
     }
 }

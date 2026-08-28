@@ -1,0 +1,46 @@
+---
+title: clusterOptions
+description: Reference for the `clusterOptions` process directive.
+---
+
+# `clusterOptions`
+
+The `clusterOptions` directive specifies additional submission options for grid executors. You can use it to specify options for your cluster that are not supported directly by other process directives.
+
+## Usage
+
+The cluster options can be a string:
+
+```nextflow
+process hello {
+    clusterOptions '-x 1 -y 2'
+
+    // ...
+}
+```
+
+<ChangedInVersion version="24.04">
+Prior to this version, grid executors that require each option to be on a separate line in the job script attempted to split multiple options using different conventions. Multiple options can now be specified more clearly using a string list, as shown in the following example.
+</ChangedInVersion>
+
+The cluster options can also be a string list:
+
+```nextflow
+process hello {
+    clusterOptions '-x 1', '-y 2', '--flag'
+
+    // ...
+}
+```
+
+Grid executors that require one option per line write each option to a separate line. Grid executors that allow multiple options per line write all options to a single line, the same as with a string. This form is useful to control how the options are split across lines when the scheduler requires it.
+
+:::warning
+Do not use the `clusterOptions` directive to specify options that are supported as process directives, such as `queue`, `memory`, and `time`. Using both at the same time causes undefined behavior. Most HPC schedulers either fail or ignore one or the other.
+:::
+
+## Executor support
+
+This directive is only used by grid executors. See [Executors][executor-page] for the executors that support this directive.
+
+[executor-page]: ../../../executor

@@ -1,0 +1,190 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+plugins {
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
+}
+
+nextflowPlugin {
+    // A minimum core requirement, written into the jar manifest as `Plugin-Requires` and enforced
+    // by BasePlugin.start(), so it must never exceed the root VERSION or the plugin cannot load
+    // from this checkout. Bumping it to the release this plugin ships in is a release-phase step,
+    // as CLAUDE.md's release process requires.
+    nextflowVersion = '26.08.0-edge'
+
+    provider = "${nextflowPluginProvider}"
+    description = 'Provides a Pi-backed external agent runner for Nextflow agents'
+    className = 'nextflow.agent.pi.PiAgentPlugin'
+    useDefaultDependencies = false
+    generateSpec = false
+    extensionPoints = [
+        'nextflow.agent.pi.PiAgentRunner'
+    ]
+}
+
+// The plugin ships no runtime: the `agent-rpc` proxy and the Node harness live in the
+// container image built by the Dockerfile in this directory, so this build needs neither
+// a Go toolchain nor npm. `agent-rpc/`, `harness/`, `package.json` and `package-lock.json`
+// remain in the repo as the image build context - see the Dockerfile.
+sourceSets {
+    main.java.srcDirs = []
+    main.groovy.srcDirs = ['src/main']
+    // no hand-written main resource; the one there is - the image coordinate - is generated,
+    // and is wired in below with srcDir(<task>) so it carries its own task dependency
+    main.resources.srcDirs = []
+    test.groovy.srcDirs = ['src/test']
+    test.java.srcDirs = []
+    // carries only the Pi SDK stub PiHarnessProtocolTest runs the harness against
+    test.resources.srcDirs = ['src/testResources']
+}
+
+// ------------------------------------------------------- the image coordinate the jar declares
+//
+// The coordinate is generated, never typed: DEFAULT_REGISTRY and IMAGE come out of build-image.sh
+// and the tag out of this project's VERSION, so what the jar asks for is by construction the
+// reference `build-image.sh push` publishes and `build-image.sh ref` prints. PiAgentRunner reads
+// it back as the runner's default container, which is why the plugin and its image cannot drift.
+//
+// This deliberately does NOT shell out to `build-image.sh ref`: Gradle 9 removed Project.exec, and
+// making `:plugins:nf-agent-pi:jar` require bash buys nothing. Cross-checking the two compositions
+// is PiAgentPackagingTest's job, where it is an independent recomputation rather than a tautology.
+final imageScript = layout.projectDirectory.file('build-image.sh').asFile
+final imageVersionFile = layout.projectDirectory.file('VERSION').asFile
+final imageResourcesDir = layout.buildDirectory.dir('generated/image-resources').get().asFile
+
+final generateImageCoordinate = tasks.register('generateImageCoordinate') {
+    description = 'Generate META-INF/nf-agent-pi-image.properties from build-image.sh and VERSION'
+    inputs.file(imageScript)
+    inputs.file(imageVersionFile)
+    outputs.dir(imageResourcesDir)
+    doLast {
+        final lines = imageScript.readLines()
+        // anchored, and exactly one hit: `DEFAULT_REGISTRY=x` and `IMAGE=x` are top-level plain
+        // assignments in the script, while the getopts arms that reassign them are indented
+        final assignment = { String key ->
+            final found = lines.findResults { String line ->
+                final m = (line =~ ('^' + key + '=(\\S+)$'))
+                m.matches() ? m.group(1) : null
+            }
+            if( found.size() != 1 )
+                throw new GradleException("Expected exactly one `${key}=<value>` line in ${imageScript} but found ${found.size()} - the runner image coordinate is composed there; update generateImageCoordinate if it moved")
+            // this reads the line as TEXT, so a quoted or interpolated value would be embedded
+            // verbatim and differ from what bash composes. Refuse it here, where the message names
+            // the cause, rather than shipping a jar for PiAgentPackagingTest to catch by mismatch
+            if( !(found[0] ==~ /[A-Za-z0-9._:\/-]+/) )
+                throw new GradleException("`${key}=${found[0]}` in ${imageScript} is not a plain literal - this line is read as text, so keep it unquoted and free of shell expansion")
+            return found[0]
+        }
+        // mirrors `${REGISTRY%/}/$IMAGE:$TAG` and `tr -d '[:space:]' < VERSION` in the script
+        final registry = assignment('DEFAULT_REGISTRY').replaceFirst('/$', '')
+        final tag = imageVersionFile.text.replaceAll(/\s/, '')
+        if( !tag )
+            throw new GradleException("${imageVersionFile} is empty - it is the tag of the runner image")
+        final target = new File(imageResourcesDir, 'META-INF/nf-agent-pi-image.properties')
+        target.parentFile.mkdirs()
+        // written as text rather than with Properties.store(), which escapes the `:` before the
+        // tag. Properties.load() splits on the FIRST `=`, `:` or blank - here the `=` after
+        // `image` - so the registry's own colons and slashes survive the round trip either way.
+        target.text = [
+            '# Generated by :plugins:nf-agent-pi:generateImageCoordinate -- do not edit.',
+            '# The reference `plugins/nf-agent-pi/build-image.sh ref` prints and `push` publishes.',
+            "image=${registry}/${assignment('IMAGE')}:${tag}",
+            '' ].join('\n')
+    }
+}
+
+// a TaskProvider, not a bare directory: the source set then carries the generator as a task
+// dependency, so processResources - and anything else consuming main resources - is wired
+// automatically instead of relying on a dependsOn that a new consumer would silently miss
+sourceSets.main.resources.srcDir(generateImageCoordinate)
+
+// -------------------------------------------------------- publishing the image with the release
+//
+// Publishing the runner image is part of the Nextflow release: release.sh step 1 runs
+// `make release-agent-image`, which runs this task. This shells out and reimplements nothing -
+// build-image.sh owns the buildx builder, the platform list, the if-not-exists gate and the
+// post-push manifest verification, and remains the manual escape hatch. This task only puts it
+// in the release's dependency graph.
+//
+// Deliberately NOT wired into assemble/check/build: an ordinary build must not touch docker.
+// `Exec` fails the build on a non-zero exit, which is the whole point - a failed image build
+// aborts release.sh at step 1, before anything at all has been published.
+tasks.register('releaseImageIfNotExists', Exec) {
+    group = 'release'
+    description = 'Build and push the pi runner image, unless that tag is already published'
+    // The drift guard must run BEFORE the push, not merely somewhere in the release.
+    //
+    // It hangs off validatePluginVersions, which release.sh reaches only at steps 2 and 5 -- i.e.
+    // AFTER this step has already published. The uncovered case is not hypothetical: bump VERSION
+    // in commit A, change the build context in commit B, release. This step finds the tag absent,
+    // pushes B's content under the new tag and exits 0; step 2 then fails the guard and aborts the
+    // release. "A failure publishes nothing" still holds, but "nothing is published for a release
+    // that never happens" does not -- and the tag is the one artifact here that is immutable, so a
+    // remediation that reverts B leaves the registry holding the drifted build for good.
+    dependsOn rootProject.tasks.named('validateAgentImageVersion')
+    // generateImageCoordinate embeds DEFAULT_REGISTRY, which is what the jar asks for, while the
+    // script's REGISTRY honours NF_AGENT_PI_REGISTRY. Set during a release, the two would name
+    // different images and the jar would ask for one the release never published - the exact drift
+    // this whole arrangement exists to prevent, and nothing downstream would notice because the
+    // push and the jar are built by separate Gradle invocations. Refuse it rather than pick a side.
+    doFirst {
+        final override = System.getenv('NF_AGENT_PI_REGISTRY')
+        if( override )
+            throw new GradleException("NF_AGENT_PI_REGISTRY=${override} is set, but the plugin jar embeds the registry from build-image.sh - a release would publish one image and ship a jar asking for another. Unset it, or push by hand with `build-image.sh push -r`.")
+    }
+    commandLine 'bash', imageScript.absolutePath, 'push'
+}
+
+configurations {
+    runtimeClasspath.exclude group: 'org.slf4j', module: 'slf4j-api'
+}
+
+dependencies {
+    compileOnly project(':nextflow')
+    compileOnly 'org.slf4j:slf4j-api:2.0.17'
+    compileOnly 'org.pf4j:pf4j:3.14.1'
+
+    // Driver-side RPC broker for canonical agent tasks. Bundled with the runner
+    // plugin (not core) so a distribution without an agent runner ships no gRPC.
+    api 'io.grpc:grpc-api:1.75.0'
+    api 'io.grpc:grpc-stub:1.75.0'
+    api 'io.grpc:grpc-netty-shaded:1.75.0'
+
+    // Self-signed certificate construction for the broker's per-run TLS identity: the JDK has no
+    // public API for it. Same pinned versions as nf-k8s -- PF4J isolates plugin classloaders, so
+    // that copy is not visible here; bump the two together.
+    api 'org.bouncycastle:bcprov-jdk18on:1.84'
+    api 'org.bouncycastle:bcpkix-jdk18on:1.84'
+
+    testImplementation(testFixtures(project(':nextflow')))
+    testImplementation 'org.apache.groovy:groovy:4.0.31'
+    testImplementation 'org.apache.groovy:groovy-json:4.0.31'
+}
+
+// PiAgentPackagingTest asserts on the REAL artifacts - that the runtime is not vendored back into
+// either of them - so build both before the tests run and tell them where they are. The
+// distribution zip is what a user downloads, so it is ratcheted alongside the jar: a `from(...)`
+// added to packagePlugin alone would otherwise slip past a jar-only assertion.
+tasks.named('test') {
+    dependsOn tasks.named('jar'), tasks.named('packagePlugin')
+    systemProperty 'nf.agent.pi.jar', tasks.named('jar').get().archiveFile.get().asFile.absolutePath
+    systemProperty 'nf.agent.pi.zip', tasks.named('packagePlugin', Zip).get().archiveFile.get().asFile.absolutePath
+    // the harness spec runs `node` against a copy of harness/runner.mjs; it skips when node is absent
+    systemProperty 'nf.agent.pi.harness', layout.projectDirectory.file('harness/runner.mjs').asFile.absolutePath
+    systemProperty 'nf.agent.pi.dockerfile', layout.projectDirectory.file('Dockerfile').asFile.absolutePath
+    // PiAgentPackagingTest runs `build-image.sh ref` to recompute the coordinate independently of
+    // generateImageCoordinate above, so the two ways of composing it are compared, not assumed
+    systemProperty 'nf.agent.pi.buildscript', imageScript.absolutePath
+}
