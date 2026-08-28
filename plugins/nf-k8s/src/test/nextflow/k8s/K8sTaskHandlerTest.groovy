@@ -759,6 +759,31 @@ class K8sTaskHandlerTest extends Specification {
         state == STATE3
     }
 
+    def 'should not query the API once the state is terminated' () {
+        given:
+        def POD_NAME = 'pod-xyz'
+        def client = Mock(K8sClient)
+        def handler = Spy(new K8sTaskHandler(podName: POD_NAME))
+        handler.getClient() >> client
+        and:
+        Map TERMINATED = [terminated: [exitCode: 0]]
+
+        when:
+        def state = handler.getState()
+        then:
+        1 * client.podState(POD_NAME) >> TERMINATED
+        state == TERMINATED
+
+        // the terminated state is final: no further request is made even after
+        // the cache expires, because the pod may have been deleted in the meanwhile
+        when:
+        sleep 1_500
+        state = handler.getState()
+        then:
+        0 * client.podState(POD_NAME)
+        state == TERMINATED
+    }
+
     def 'should return nodeTermination state' () {
         given:
         def POD_NAME = 'pod-xyz'

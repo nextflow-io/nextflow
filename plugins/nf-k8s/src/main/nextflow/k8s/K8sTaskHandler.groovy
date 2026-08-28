@@ -345,6 +345,13 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
      * @return Retrieve the submitted pod state
      */
     protected Map getState() {
+        // the terminated state is final: once observed there's no need to query the API again.
+        // this matters when the task completion is deferred waiting for the exit file to become
+        // visible, because in the meanwhile the pod or job can be reaped by the cluster
+        // (e.g. when `ttlSecondsAfterFinished` is set) making the API reply with a 404 error
+        if( state?.terminated )
+            return state
+
         final now = System.currentTimeMillis()
         try {
             final delta =  now - timestamp;
