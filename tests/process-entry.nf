@@ -23,7 +23,10 @@ process analyzeData {
     val sampleId
     path dataFile
     val threads
-    
+
+    output:
+    path 'analysis.txt'
+
     script:
     """
     echo "Single process execution test"
@@ -39,5 +42,6 @@ process analyzeData {
     fi
     
     echo "Analysis completed for sample ${sampleId}"
+    echo "${sampleId}" > analysis.txt
     """
 }

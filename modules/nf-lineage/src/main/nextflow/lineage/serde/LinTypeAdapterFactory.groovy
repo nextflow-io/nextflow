@@ -24,6 +24,7 @@ import com.google.gson.reflect.TypeToken
 import com.google.gson.stream.JsonReader
 import com.google.gson.stream.JsonWriter
 import groovy.transform.CompileStatic
+import nextflow.lineage.model.v1beta1.AgentRun
 import nextflow.lineage.model.v1beta1.FileOutput
 import nextflow.lineage.model.v1beta1.LinModel
 import nextflow.lineage.model.v1beta1.TaskOutput
@@ -52,6 +53,7 @@ class LinTypeAdapterFactory<T> extends RuntimeTypeAdapterFactory<T> {
             .registerSubtype(TaskRun, TaskRun.simpleName)
             .registerSubtype(TaskOutput, TaskOutput.simpleName)
             .registerSubtype(FileOutput, FileOutput.simpleName)
+            .registerSubtype(AgentRun, AgentRun.simpleName)
     }
 
     @Override

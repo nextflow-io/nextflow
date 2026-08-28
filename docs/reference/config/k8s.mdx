@@ -44,7 +44,11 @@ This setting is useful when the Kubernetes authentication token has a limited li
 
 ##### `k8s.computeResourceType`
 
-Whether to use Kubernetes `Pod` or `Job` resource type to carry out Nextflow tasks (default: `Pod`).
+<ChangedInVersion version="26.10">
+The default value was changed from `Pod` to `Job`.
+</ChangedInVersion>
+
+Whether to use Kubernetes `Pod` or `Job` resource type to carry out Nextflow tasks (default: `Job`).
 
 ##### `k8s.context`
 
@@ -143,4 +147,4 @@ Max attempts when retrying failed API requests (default: `4`).
 
 Max delay when retrying failed API requests (default: `90s`).
 
-[process-pod]: ../process#pod
+[process-pod]: ../process/directives/pod

@@ -1,5 +1,15 @@
 nf-seqera changelog
 ====================
+0.24.0 - 20 Aug 2026
+- Report the task directives read while the command is rendered (#7506) [1b4e75729]
+- Stop fabricating a memory request for the Seqera executor (#7488) [cdf425437]
+- Bound Seqera executor scheduler requests with a request timeout (#7466) [ed08167fa]
+- Use Platform user identity for the Seqera executor userName label (#7413) [1bb78e244]
+- Align Seqera executor maxSpotAttempts and Fusion handling (#7412) [22214c5ab]
+- Add seqera.executor.maxCpusPerUser option (#7367) [a2ef3963e]
+- Support authenticated forward HTTP/HTTPS proxies across the client stack (#7331) [064a03873]
+- Bump Groovy 4.0.33 (#7429) [c8800d84a]
+
 0.23.0 - 15 Jul 2026
 - Add seqera.executor.providerConfig option (#7335) [5b8ce02da]
 - Send pipeline-secret references to the Seqera Scheduler (#7314) [df61a13fa]

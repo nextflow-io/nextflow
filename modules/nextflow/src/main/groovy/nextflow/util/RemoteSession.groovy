@@ -149,6 +149,8 @@ class RemoteSession implements Serializable, Closeable {
         while( (entry=zip.getNextEntry()) != null ) {
 
             def file = target.resolve(entry.getName());
+            if( !file.normalize().startsWith(target.normalize()) )
+                throw new IllegalArgumentException("Unsafe zip entry path: ${entry.getName()}")
             if(entry.isDirectory()) {
                 continue
             }

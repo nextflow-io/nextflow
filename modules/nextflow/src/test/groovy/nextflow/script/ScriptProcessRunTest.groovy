@@ -19,6 +19,7 @@ package nextflow.script
 import java.nio.file.Files
 
 import nextflow.Global
+import nextflow.exception.AbortOperationException
 import test.Dsl2Spec
 
 import static test.ScriptHelper.*
@@ -45,7 +46,7 @@ class ScriptProcessRunTest extends Dsl2Spec {
         '''
 
         when:
-        def result = runScript(SCRIPT)
+        def result = runScript(SCRIPT, moduleRun: true)
 
         then:
         // For single process execution, the result should contain the process output
@@ -69,7 +70,7 @@ class ScriptProcessRunTest extends Dsl2Spec {
         """
 
         when:
-        def result = runScript(SCRIPT)
+        def result = runScript(SCRIPT, moduleRun: true)
 
         then:
         result != null
@@ -80,18 +81,16 @@ class ScriptProcessRunTest extends Dsl2Spec {
         Files.deleteIfExists(tempFile)
     }
 
-    def 'should handle multiple processes by running the first one' () {
-        given:
-        def SCRIPT = '''
-        params.input = 'test'
-
+    static final String ONE_PROCESS = '''
         process firstProcess {
             input: val input
             output: val result
             exec:
                 result = "First: $input"
         }
+        '''
 
+    static final String TWO_PROCESSES = ONE_PROCESS + '''
         process secondProcess {
             input: val input
             output: val result
@@ -100,13 +99,28 @@ class ScriptProcessRunTest extends Dsl2Spec {
         }
         '''
 
+    static final String PROCESS_AND_WORKFLOW = ONE_PROCESS + '''
+        workflow testWorkflow {
+            take: input
+            main:
+                firstProcess(input)
+        }
+        '''
+
+    def 'should not execute a definition directly when it is not the only one, or without module run' () {
         when:
-        def result = runScript(SCRIPT)
+        runScript(SCRIPT, moduleRun: MODULE_RUN, config: [params: [input: 'test']])
 
         then:
-        result != null
-        println "Multi-process result: $result"
-        println "Multi-process result class: ${result?.getClass()}"
+        def e = thrown(AbortOperationException)
+        e.message.contains('No entry workflow specified')
+
+        where:
+        SCRIPT               | MODULE_RUN
+        TWO_PROCESSES        | true
+        PROCESS_AND_WORKFLOW | true
+        // a single process is executable, but only via `nextflow module run`
+        ONE_PROCESS          | false
     }
 
     def 'should fail when required parameter is missing' () {
@@ -121,11 +135,11 @@ class ScriptProcessRunTest extends Dsl2Spec {
         '''
 
         when:
-        runScript(SCRIPT)
+        runScript(SCRIPT, moduleRun: true)
 
         then:
         def e = thrown(Exception)
-        e.message.contains('Missing required parameter: --requiredParam')
+        e.message.contains('Parameter `--requiredParam` is required but no value was provided')
     }
 
     def 'should cast boolean parameter to boolean' () {
@@ -151,7 +165,7 @@ class ScriptProcessRunTest extends Dsl2Spec {
             '''
 
         when:
-        runScript(module, config: [params: [alignment_mode: 'false']])
+        runScript(module, moduleRun: true, config: [params: [alignment_mode: 'false']])
         then:
         Global.session.isSuccess()
 

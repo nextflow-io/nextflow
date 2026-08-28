@@ -1,0 +1,10 @@
+# Nextflow run artifacts and auto-installed/registry-fetched modules
+**/work/
+**/.nextflow*
+**/modules/
+*.log
+run.log
+
+# No rule for data fixtures: they live once in examples/data/, which ignores its own
+# contents, and the examples that need them carry a `data` symlink into it. 19_shell-tools
+# is the one example with a real data/ directory, and its FASTA is committed on purpose.

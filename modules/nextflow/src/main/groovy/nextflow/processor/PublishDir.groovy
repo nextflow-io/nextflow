@@ -556,7 +556,9 @@ class PublishDir {
     }
 
     protected void makeDirs(Path dir) {
-        if( !dir || makeCache.containsKey(dir) )
+        // nameCount==0 means a filesystem root e.g. an S3 bucket, which
+        // always exists and cannot be created
+        if( !dir || dir.nameCount==0 || makeCache.containsKey(dir) )
             return
 
         try {

@@ -142,6 +142,65 @@ class OutputDslTest extends Specification {
         root?.deleteDir()
     }
 
+    def 'should not publish outputs when the output directory is disabled'() {
+        given:
+        def root = Files.createTempDirectory('test')
+        def outputDir = root.resolve('results')
+        def workDir = root.resolve('work')
+        def work1 = workDir.resolve('ab/1234'); Files.createDirectories(work1)
+        def file1 = work1.resolve('file1.txt'); file1.text = 'Hello'
+        and:
+        def config = [
+            outputDir: outputDir,
+            workDir: workDir
+        ]
+        and:
+        SysEnv.push(NXF_FILE_ROOT: root.toString())
+
+        when:
+        def session = Spy(createSession(config))
+        // the output directory is disabled when a named workflow is executed directly
+        session.outputDir = null
+
+        session.outputs.put('foo', Channel.of(file1))
+
+        def dsl = new OutputDsl()
+        dsl.declare('foo') {
+        }
+        dsl.apply(session)
+        session.fireDataflowNetwork()
+        def output = dsl.getOutput()
+
+        then:
+        // the output file is reported by its work directory path
+        output == [foo: [file1]]
+        and:
+        // no output directory is created and no file is published
+        !Files.exists(outputDir)
+        0 * session.notifyFilePublish(_)
+
+        cleanup:
+        SysEnv.pop()
+        root?.deleteDir()
+    }
+
+    def 'should print outputs when the output directory is disabled'() {
+        given:
+        def file1 = Path.of('/work/ab/1234/file1.txt')
+        def session = Mock(Session) {
+            getOutputDir() >> null
+        }
+
+        when:
+        OutputDsl.printOutput(session, [foo: [file1]])
+
+        then:
+        // the output file is listed, without a bogus 'null' output directory header
+        1 * session.printConsole({ String it ->
+            it.contains('/work/ab/1234/file1.txt') && !it.contains('null')
+        })
+    }
+
     def 'should preserve non-task output files in workflow output'() {
         given:
         def root = Files.createTempDirectory('test')

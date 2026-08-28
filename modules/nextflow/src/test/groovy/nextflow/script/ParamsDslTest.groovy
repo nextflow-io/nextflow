@@ -79,10 +79,6 @@ class ParamsDslTest extends Specification {
     }
 
     def 'should report error for missing required param'() {
-        given:
-        def cliParams = [:]
-        def configParams = [outdir: 'results']
-
         when:
         runScript(
             '''\
@@ -93,12 +89,28 @@ class ParamsDslTest extends Specification {
 
             workflow { params }
             ''',
-            params: cliParams,
-            configParams: configParams
+            params: [:],
+            configParams: [outdir: 'results']
         )
         then:
         def e = thrown(ScriptRuntimeException)
-        e.message == 'Parameter `input` is required but was not specified on the command line, params file, or config'
+        e.message == 'Parameter `input` is required but no value was provided'
+
+        when:
+        runScript(
+            '''\
+            params {
+                limit: Integer = 10
+            }
+
+            workflow { params.limit }
+            ''',
+            configParams: [limit: null]
+        )
+
+        then:
+        e = thrown(ScriptRuntimeException)
+        e.message == 'Parameter `limit` is required but no value was provided'
     }
 
     def 'should report error for invalid param'() {
@@ -164,12 +176,12 @@ class ParamsDslTest extends Specification {
     }
 
     @Unroll
-    def 'should validate float param with default value'() {
+    def 'should validate a numeric param default given in any numeric literal'() {
         when:
         runScript(
             """\
             params {
-                factor: Float = ${DEF_VALUE}
+                factor: ${TYPE} = ${DEF_VALUE}
             }
 
             workflow { params }
@@ -179,26 +191,13 @@ class ParamsDslTest extends Specification {
         noExceptionThrown()
 
         where:
-        DEF_VALUE << [ '0.1f', '0.1d', '0.1g' ]
-    }
-
-    @Unroll
-    def 'should validate integer param with default value'() {
-        when:
-        runScript(
-            """\
-            params {
-                factor: Integer = ${DEF_VALUE}
-            }
-
-            workflow { params }
-            """
-        )
-        then:
-        noExceptionThrown()
-
-        where:
-        DEF_VALUE << [ '100i', '100l', '100g' ]
+        TYPE      | DEF_VALUE
+        'Float'   | '0.1f'
+        'Float'   | '0.1d'
+        'Float'   | '0.1g'
+        'Integer' | '100i'
+        'Integer' | '100l'
+        'Integer' | '100g'
     }
 
     def 'should validate record collection param'() {
@@ -310,6 +309,23 @@ class ParamsDslTest extends Specification {
         then:
         def e = thrown(AbortOperationException)
         e.message == "Input record [id:1, name:sample1] is missing field 'value' required by record type 'Sample'"
+    }
+
+    def 'should apply a null param value over the declared default'() {
+        when:
+        def result = runScript(
+            '''\
+            params {
+                limit: Integer? = 10
+            }
+
+            workflow { params.limit }
+            ''',
+            configParams: [limit: null]
+        )
+
+        then:
+        result == null
     }
 
 }

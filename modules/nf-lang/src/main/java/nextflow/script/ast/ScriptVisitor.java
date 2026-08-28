@@ -35,6 +35,8 @@ public interface ScriptVisitor extends GroovyCodeVisitor {
 
     void visitWorkflow(WorkflowNode node);
 
+    void visitAgent(AgentNode node);
+
     void visitProcess(ProcessNode node);
 
     void visitProcessV2(ProcessNodeV2 node);
