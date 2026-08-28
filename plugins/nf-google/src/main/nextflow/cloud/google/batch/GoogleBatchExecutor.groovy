@@ -21,8 +21,7 @@ import static nextflow.cloud.google.batch.GoogleBatchScriptLauncher.*
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 
-import com.google.api.gax.rpc.DeadlineExceededException
-import com.google.api.gax.rpc.UnavailableException
+import com.google.api.gax.rpc.ResourceExhaustedException
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
@@ -132,8 +131,8 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
     @Override
     protected TaskMonitor createTaskMonitor() {
         // create the throttling executor services
-        submitter = createExecutorService('GoogleBatch-executor')
-        reaper = createExecutorService('GoogleBatch-reaper')
+        this.submitter = createExecutorService('GoogleBatch-executor')
+        this.reaper = createExecutorService('GoogleBatch-reaper')
 
         final pollInterval = config.getPollInterval(name, Duration.of('10 sec'))
         final dumpInterval = config.getMonitorDumpInterval(name)
@@ -156,21 +155,19 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
      * Creates a {@link ThrottlingExecutor} service to throttle
      * API requests to the Google Batch service.
      *
-     * @param name The executor service name
+     * @param poolName The executor service thread pool name
      * @return A {@link ThrottlingExecutor} instance
      */
-    private ThrottlingExecutor createExecutorService(String name) {
+    private ThrottlingExecutor createExecutorService(String poolName) {
         final qs = 5_000
         final limit = config.getExecConfigProp(name, 'submitRateLimit', '50/s') as String
         final size = Runtime.runtime.availableProcessors() * 5
 
         final opts = new ThrottlingExecutor.Options()
-                .retryOn { Throwable t ->
-                    t instanceof UnavailableException ||
-                    t instanceof DeadlineExceededException ||
-                    t instanceof IOException ||
-                    t.cause instanceof IOException
-                }
+                // note: transient errors (unavailable, deadline exceeded, I/O) are already
+                // retried by the retry policy in BatchClient, therefore only the quota
+                // exhaustion error is handled here to trigger the submission auto-throttle
+                .retryOn { Throwable t -> t instanceof ResourceExhaustedException }
                 .onFailure { Throwable t -> session?.abort(t) }
                 .onRateLimitChange { RateUnit rate -> logRateLimitChange(rate) }
                 .withRateLimit(limit)
@@ -179,7 +176,7 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
                 .withKeepAlive(Duration.of('1 min'))
                 .withAutoThrottle(true)
                 .withMaxRetries(10)
-                .withPoolName(name)
+                .withPoolName(poolName)
 
         ThrottlingExecutor.create(opts)
     }
