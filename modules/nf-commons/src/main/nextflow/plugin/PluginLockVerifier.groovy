@@ -124,32 +124,35 @@ class PluginLockVerifier {
 
         final actual = sha512Tree(pluginDir)
         final entry = lock.getEntry(fqid)
+        if( entry == null )
+            pinOrRefuse(fqid, actual)            // not yet locked: TOFU pin, or strict refusal
+        else if( actual != entry.sha512 )
+            reportMismatch(fqid, actual, entry)  // differs from the pinned hash
+    }
 
-        // coordinate not yet locked
-        if( entry == null ) {
-            // strict mode auto-pins nothing: a plugin that reaches the loader without a lock entry
-            // has bypassed verification (eg. an unpinned coordinate resolved past the committed
-            // version and was already extracted in a shared cache), so refuse it rather than trust
-            // it on sight — the download short-circuit means pf4j's own verifier never ran either
-            if( getMode() == Mode.STRICT )
-                throw new AbortOperationException(
-                        "Plugin '$fqid' is not present in the plugins lock file: $lockPath\n" +
-                        "- pin the plugin version in the `plugins` config scope, or re-run with NXF_PLUGINS_LOCK_MODE=warn to record it")
-            // warn/default: pin it on first sight (trust-on-first-use), never fail
-            warnOnVersionDrift(fqid)
-            pin(fqid, actual)
-            return
-        }
-        // matches the committed hash
-        if( actual == entry.sha512 )
-            return
+    /**
+     * Handle a coordinate not yet in the lock. Strict mode refuses it: a plugin reaching the loader
+     * unpinned has bypassed verification — an unpinned coordinate can resolve past the committed
+     * version to a tree already extracted in a shared cache, where the download short-circuit means
+     * pf4j's own verifier never ran either. Otherwise pin it on first sight (trust-on-first-use).
+     */
+    private void pinOrRefuse(String fqid, String actual) {
+        if( getMode() == Mode.STRICT )
+            throw new AbortOperationException(
+                    "Plugin '$fqid' is not present in the plugins lock file: $lockPath\n" +
+                    "- pin the plugin version in the `plugins` config scope, or re-run with NXF_PLUGINS_LOCK_MODE=warn to record it")
+        warnOnVersionDrift(fqid)
+        pin(fqid, actual)
+    }
 
-        // mismatch: the extracted plugin differs from what the lock pinned
-        // note: `off` is handled upfront by the `enabled` flag, so only strict/warn get here
+    /**
+     * Handle an extracted tree that differs from the committed hash: abort in strict mode, otherwise
+     * warn once per coordinate. ({@code off} never reaches here — the verifier is disabled upfront.)
+     */
+    private void reportMismatch(String fqid, String actual, PluginLockFile.Entry entry) {
         final reason = "Plugin '$fqid' does not match the plugins lock file\n- expected: ${entry.sha512}\n- actual  : ${actual}"
         if( getMode() == Mode.STRICT )
             throw new AbortOperationException("$reason\n- delete the entry from the plugins lock file and re-run to re-pin, or restore the expected plugin")
-        // warn only once per coordinate to avoid log spam
         if( notified.add(fqid) )
             log.warn "$reason\n- delete the entry from the plugins lock file and re-run to re-pin"
     }
@@ -202,40 +205,51 @@ class PluginLockVerifier {
      */
     static String sha512Tree(Path dir) {
         final md = MessageDigest.getInstance('SHA-512')
-        // TreeMap keyed by relative path -> deterministic, sorted iteration order
-        final files = new TreeMap<String, Path>()
+        for( Map.Entry<String,Path> it : collectEntries(dir).entrySet() )
+            digestEntry(md, it.key, it.value)
+        return HexFormat.of().formatHex(md.digest())
+    }
+
+    /**
+     * Collect the entries that make up a plugin's executable content, keyed by relative path (with
+     * forward slashes) so iteration is sorted and platform-independent. Regular files and symbolic
+     * links are included: a symlink is not dereferenced here, but pf4j loads what it points to (eg.
+     * a jar dropped under lib/ as a link), so it must contribute to the digest.
+     */
+    private static SortedMap<String,Path> collectEntries(Path dir) {
+        final files = new TreeMap<String,Path>()
         Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
             @Override
             FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                // hash regular files and symbolic links. A symlink is never dereferenced here, but
-                // it must contribute to the digest: pf4j loads what it points to regardless (eg. a
-                // jar dropped under lib/ as a link), so an added or retargeted link has to change
-                // the hash or it would slip past verification while running on the classpath
                 if( attrs.isRegularFile() || attrs.isSymbolicLink() )
                     files.put(dir.relativize(file).toString().replace('\\', '/'), file)
                 return FileVisitResult.CONTINUE
             }
         })
-        final buffer = new byte[8192]
-        for( Map.Entry<String, Path> it : files.entrySet() ) {
-            md.update(it.key.getBytes('UTF-8'))
-            md.update((byte) 0)
-            if( Files.isSymbolicLink(it.value) ) {
-                // domain-separate a link ('L') from a regular file ('F') and hash its target path
-                // rather than following it, so dangling or directory links neither throw nor recurse
-                md.update((byte) 'L'.charAt(0))
-                md.update(Files.readSymbolicLink(it.value).toString().replace('\\', '/').getBytes('UTF-8'))
-            }
-            else {
-                md.update((byte) 'F'.charAt(0))
-                try (InputStream is = Files.newInputStream(it.value)) {
-                    int read
-                    while( (read = is.read(buffer)) != -1 )
-                        md.update(buffer, 0, read)
-                }
-            }
-            md.update((byte) 0)
+        return files
+    }
+
+    /**
+     * Feed one entry into the digest: its relative path, a type tag domain-separating a link ('L')
+     * from a regular file ('F'), then the link target (not followed, so a dangling or directory
+     * link neither throws nor recurses) or the file bytes.
+     */
+    private static void digestEntry(MessageDigest md, String rel, Path file) {
+        md.update(rel.getBytes('UTF-8'))
+        md.update((byte) 0)
+        if( Files.isSymbolicLink(file) ) {
+            md.update((byte) 'L'.charAt(0))
+            md.update(Files.readSymbolicLink(file).toString().replace('\\', '/').getBytes('UTF-8'))
         }
-        return HexFormat.of().formatHex(md.digest())
+        else {
+            md.update((byte) 'F'.charAt(0))
+            final buffer = new byte[8192]
+            try (InputStream is = Files.newInputStream(file)) {
+                int read
+                while( (read = is.read(buffer)) != -1 )
+                    md.update(buffer, 0, read)
+            }
+        }
+        md.update((byte) 0)
     }
 }
