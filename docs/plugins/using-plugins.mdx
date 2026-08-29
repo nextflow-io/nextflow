@@ -94,7 +94,11 @@ Use [`NXF_PLUGINS_LOCK_MODE`][using-plugins-env-vars] to control what happens wh
 | `off`            | Disables the lockfile entirely.               |
 
 :::note
-The lockfile covers plugins that Nextflow resolves from a plugin registry. It does not apply to plugins resolved from the development classpath (`NXF_PLUGINS_MODE=dev`) or embedded in an application that uses Nextflow as a library.
+The lockfile covers plugins that Nextflow resolves from a plugin registry while running a pipeline. It does not apply to:
+
+- plugins resolved from the development classpath (`NXF_PLUGINS_MODE=dev`) or embedded in an application that uses Nextflow as a library;
+- the SCM provider plugin used to fetch a pipeline from a private Git host (for example `nf-codecommit`), because it is started to locate the project directory, before the lockfile itself can be found;
+- the `nextflow plugin install` and `nextflow plugin pull` commands, which neither verify nor record plugins. Populate the lockfile from a pipeline run rather than these commands.
 :::
 
 The lockfile does not replace a private cache directory. A private cache prevents Nextflow from loading untrusted artifacts in the first place. The lockfile confirms only that the code it loads matches what the pipeline pinned.
