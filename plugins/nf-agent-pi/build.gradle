@@ -170,7 +170,7 @@ dependencies {
 
     testImplementation(testFixtures(project(':nextflow')))
     testImplementation 'org.apache.groovy:groovy:4.0.31'
-    testImplementation 'org.apache.groovy:groovy-json:4.0.31'
+    testImplementation 'org.apache.groovy:groovy-json:4.0.33'
 }
 
 // PiAgentPackagingTest asserts on the REAL artifacts - that the runtime is not vendored back into
