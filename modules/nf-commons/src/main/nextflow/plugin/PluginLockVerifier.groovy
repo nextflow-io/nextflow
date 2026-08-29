@@ -44,8 +44,12 @@ import nextflow.exception.AbortOperationException
  * mismatch against a committed entry is a verification failure, gated by
  * {@code NXF_PLUGINS_LOCK_MODE}:
  * <ul>
- *   <li>{@code strict} - abort with an {@link AbortOperationException}</li>
- *   <li>{@code warn} (default) - log a warning once per coordinate and proceed</li>
+ *   <li>{@code strict} - abort with an {@link AbortOperationException}, both on a hash mismatch and
+ *       when a plugin reaches the loader without a corresponding lock entry (nothing is auto-pinned,
+ *       so a version that resolved past the pin and is already extracted in the cache cannot slip
+ *       through unverified)</li>
+ *   <li>{@code warn} (default) - log a warning once per coordinate and proceed; a coordinate missing
+ *       from the lock is pinned on first sight (trust-on-first-use)</li>
  *   <li>{@code off} - disable the feature altogether ie. no hashing, no pinning, no reporting</li>
  * </ul>
  *
@@ -121,8 +125,18 @@ class PluginLockVerifier {
         final actual = sha512Tree(pluginDir)
         final entry = lock.getEntry(fqid)
 
-        // coordinate not yet locked: pin it on first sight (trust-on-first-use), never fail
+        // coordinate not yet locked
         if( entry == null ) {
+            // strict mode auto-pins nothing: a plugin that reaches the loader without a lock entry
+            // has bypassed verification (eg. an unpinned coordinate resolved past the committed
+            // version and was already extracted in a shared cache), so refuse it rather than trust
+            // it on sight — the download short-circuit means pf4j's own verifier never ran either
+            if( getMode() == Mode.STRICT )
+                throw new AbortOperationException(
+                        "Plugin '$fqid' is not present in the plugins lock file: $lockPath\n" +
+                        "- pin the plugin version in the `plugins` config scope, or re-run with NXF_PLUGINS_LOCK_MODE=warn to record it")
+            // warn/default: pin it on first sight (trust-on-first-use), never fail
+            warnOnVersionDrift(fqid)
             pin(fqid, actual)
             return
         }
@@ -160,10 +174,28 @@ class PluginLockVerifier {
     }
 
     /**
-     * Compute a canonical sha512 digest over the content of a directory tree. The digest covers,
-     * for every regular file (visited in sorted relative-path order for determinism), its relative
-     * path and its bytes - not timestamps or permissions - so it is stable across extractions and
-     * platforms while still detecting any change to the files that will be executed.
+     * Warn when the lock already pins a <em>different</em> version of the same plugin id than the
+     * one about to be pinned. This usually means an unpinned plugin resolved to a newer release
+     * than the one recorded in the lock, so the drift is surfaced instead of silently accumulating
+     * a second entry for the same plugin.
+     */
+    private void warnOnVersionDrift(String fqid) {
+        final p = fqid.lastIndexOf('@')
+        if( p < 0 )
+            return
+        // include the trailing '@' so 'nf-amazon@' does not match 'nf-amazon-extra@...'
+        final prefix = fqid.substring(0, p + 1)
+        final others = lock.getEntries().keySet().findAll { it != fqid && it.startsWith(prefix) }
+        if( others )
+            log.warn "Plugin '$fqid' is being added to the plugins lock file, which already pins a different version: ${others.join(', ')}"
+    }
+
+    /**
+     * Compute a canonical sha512 digest over the content of a directory tree. Visiting entries in
+     * sorted relative-path order for determinism, the digest covers every regular file (its relative
+     * path and its bytes) and every symbolic link (its relative path and its target) - not
+     * timestamps or permissions - so it is stable across extractions and platforms while still
+     * detecting any change to the files, or links, that will be loaded and executed.
      *
      * @param dir The directory to hash
      * @return The lowercase hex-encoded sha512 digest (128 chars)
@@ -175,9 +207,11 @@ class PluginLockVerifier {
         Files.walkFileTree(dir, new SimpleFileVisitor<Path>() {
             @Override
             FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                // only regular files are hashed; symlinks and other special entries are skipped
-                // because they cannot be read as a byte stream in a portable way
-                if( attrs.isRegularFile() )
+                // hash regular files and symbolic links. A symlink is never dereferenced here, but
+                // it must contribute to the digest: pf4j loads what it points to regardless (eg. a
+                // jar dropped under lib/ as a link), so an added or retargeted link has to change
+                // the hash or it would slip past verification while running on the classpath
+                if( attrs.isRegularFile() || attrs.isSymbolicLink() )
                     files.put(dir.relativize(file).toString().replace('\\', '/'), file)
                 return FileVisitResult.CONTINUE
             }
@@ -186,10 +220,19 @@ class PluginLockVerifier {
         for( Map.Entry<String, Path> it : files.entrySet() ) {
             md.update(it.key.getBytes('UTF-8'))
             md.update((byte) 0)
-            try (InputStream is = Files.newInputStream(it.value)) {
-                int read
-                while( (read = is.read(buffer)) != -1 )
-                    md.update(buffer, 0, read)
+            if( Files.isSymbolicLink(it.value) ) {
+                // domain-separate a link ('L') from a regular file ('F') and hash its target path
+                // rather than following it, so dangling or directory links neither throw nor recurse
+                md.update((byte) 'L'.charAt(0))
+                md.update(Files.readSymbolicLink(it.value).toString().replace('\\', '/').getBytes('UTF-8'))
+            }
+            else {
+                md.update((byte) 'F'.charAt(0))
+                try (InputStream is = Files.newInputStream(it.value)) {
+                    int read
+                    while( (read = is.read(buffer)) != -1 )
+                        md.update(buffer, 0, read)
+                }
             }
             md.update((byte) 0)
         }

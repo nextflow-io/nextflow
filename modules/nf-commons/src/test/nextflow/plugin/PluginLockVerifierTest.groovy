@@ -95,16 +95,40 @@ class PluginLockVerifierTest extends Specification {
         [a, b, c].each { it.deleteDir() }
     }
 
-    def 'sha512Tree should skip non-regular files' () {
+    def 'sha512Tree should account for symbolic links' () {
         given:
-        def dir = pluginDir(['classes/A.class': 'aaa'])
-        final expected = PluginLockVerifier.sha512Tree(dir)
+        def base = ['classes/A.class': 'aaa', 'lib/real.jar': 'jar']
+        def a = pluginDir(base)
+        def b = pluginDir(base)
+        final plain = PluginLockVerifier.sha512Tree(a)
         and:
-        // a symlink to a directory cannot be read as a byte stream: it must be skipped
-        Files.createSymbolicLink(dir.resolve('link'), dir.resolve('classes'))
+        // pf4j loads a jar dropped under lib/ even as a symlink, so an added link MUST change the
+        // hash - otherwise a poisoned tree passes strict verification while on the classpath
+        Files.createSymbolicLink(a.resolve('lib/evil.jar'), a.resolve('lib/real.jar'))
 
         expect:
-        PluginLockVerifier.sha512Tree(dir) == expected
+        // adding the link moves the hash (the attack the digest has to catch)
+        PluginLockVerifier.sha512Tree(a) != plain
+        and:
+        // the same tree without the link still hashes deterministically across extractions
+        PluginLockVerifier.sha512Tree(b) == plain
+
+        cleanup:
+        [a, b].each { it.deleteDir() }
+    }
+
+    def 'sha512Tree should be sensitive to a symlink target change' () {
+        given:
+        def dir = pluginDir(['classes/A.class': 'aaa', 'lib/x.jar': 'x', 'lib/y.jar': 'y'])
+        Files.createSymbolicLink(dir.resolve('lib/link.jar'), dir.resolve('lib/x.jar'))
+        final before = PluginLockVerifier.sha512Tree(dir)
+        and:
+        // re-point the link at a different file: the target is part of the digest
+        Files.delete(dir.resolve('lib/link.jar'))
+        Files.createSymbolicLink(dir.resolve('lib/link.jar'), dir.resolve('lib/y.jar'))
+
+        expect:
+        PluginLockVerifier.sha512Tree(dir) != before
 
         cleanup:
         dir.deleteDir()
@@ -153,7 +177,8 @@ class PluginLockVerifierTest extends Specification {
 
     def 'should pin a coordinate missing from the lock on first sight (TOFU)' () {
         given:
-        SysEnv.push([NXF_PLUGINS_LOCK_MODE: 'strict'])
+        // TOFU pinning is the default (warn) bootstrap behaviour; strict never auto-pins
+        SysEnv.push([NXF_PLUGINS_LOCK_MODE: 'warn'])
         and:
         def dir = pluginDir(['classes/A.class': 'hello'])
         final sha = PluginLockVerifier.sha512Tree(dir)
@@ -171,6 +196,60 @@ class PluginLockVerifierTest extends Specification {
         // the entry was appended to the lock file on disk
         def written = PluginLockFile.read(lockPath)
         written.getEntry('nf-foo@1.0.0').sha512 == sha
+
+        cleanup:
+        SysEnv.pop()
+        dir.deleteDir()
+        Files.deleteIfExists(lockPath)
+    }
+
+    def 'strict mode should abort when a loaded plugin is not present in the lock' () {
+        given:
+        // an unpinned plugin can resolve past the lock to a version already extracted in the cache;
+        // strict must refuse it rather than trust-on-first-use, or verification is bypassed
+        SysEnv.push([NXF_PLUGINS_LOCK_MODE: 'strict'])
+        and:
+        def dir = pluginDir(['classes/A.class': 'hello'])
+        // lock is enabled and holds a *different* coordinate, but not the one being loaded
+        def lockPath = lockFileWith(['nf-foo@1.0.0': 'deadbeef'])
+        def verifier = new PluginLockVerifier(lockPath)
+        final before = lockPath.text
+
+        when:
+        verifier.verify('nf-foo@2.0.0', dir)
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('is not present in the plugins lock file')
+        and:
+        // strict never writes: the committed lock (eg. a managed clone) is left untouched
+        lockPath.text == before
+
+        cleanup:
+        SysEnv.pop()
+        dir.deleteDir()
+        Files.deleteIfExists(lockPath)
+    }
+
+    def 'warn mode should pin an unpinned coordinate even when another version is already locked' () {
+        given:
+        SysEnv.push([NXF_PLUGINS_LOCK_MODE: 'warn'])
+        and:
+        def dir = pluginDir(['classes/A.class': 'hello'])
+        final sha = PluginLockVerifier.sha512Tree(dir)
+        def lockPath = lockFileWith(['nf-foo@1.0.0': 'deadbeef'])
+        def verifier = new PluginLockVerifier(lockPath)
+
+        when:
+        // a different version of the same plugin -> pinned (with a drift warning), never fails
+        verifier.verify('nf-foo@2.0.0', dir)
+
+        then:
+        noExceptionThrown()
+        and:
+        def written = PluginLockFile.read(lockPath)
+        written.getEntry('nf-foo@2.0.0').sha512 == sha
+        written.getEntry('nf-foo@1.0.0').sha512 == 'deadbeef'
 
         cleanup:
         SysEnv.pop()
@@ -295,7 +374,8 @@ class PluginLockVerifierTest extends Specification {
 
     def 'should warn instead of aborting when the lock file cannot be written' () {
         given:
-        SysEnv.push([NXF_PLUGINS_LOCK_MODE: 'strict'])
+        // pinning only happens in warn/default mode; a failed pin must never abort the run
+        SysEnv.push([NXF_PLUGINS_LOCK_MODE: 'warn'])
         and:
         def dir = pluginDir(['classes/A.class': 'hello'])
         def folder = Files.createTempDirectory('test')
