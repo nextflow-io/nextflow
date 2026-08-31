@@ -27,6 +27,7 @@ import groovy.util.logging.Slf4j
 import nextflow.NF
 import nextflow.exception.DuplicateModuleFunctionException
 import nextflow.exception.MissingModuleComponentException
+import nextflow.exception.ScriptRuntimeException
 import nextflow.script.bundle.ResourcesBundle
 import nextflow.util.TestOnly
 
@@ -240,6 +241,35 @@ class ScriptMeta {
         definitions.get(name) ?: imports.get(name)
     }
 
+    /**
+     * The name used to include the pipeline (i.e. the `params` / `workflow` /
+     * `output` trio) of a script as a named workflow.
+     */
+    static final String PIPELINE_NAME = 'workflow'
+
+    /**
+     * The pipeline defined by this script, i.e. its entry workflow together
+     * with its params and output blocks.
+     *
+     * It is not a script definition, because it is only meaningful when the
+     * script is included by another script.
+     */
+    PipelineDef getPipeline() {
+        return new PipelineDef(script)
+    }
+
+    /**
+     * The name used to include the output block of a script as a record type.
+     */
+    static final String OUTPUT_NAME = 'output'
+
+    /**
+     * The output block defined by this script, as a record type.
+     */
+    OutputTypeDef getOutputType() {
+        return new OutputTypeDef(script)
+    }
+
     WorkflowDef getWorkflow(String name) {
         final result = getComponent(name)
         return result instanceof WorkflowDef ? result : null
@@ -378,25 +408,59 @@ class ScriptMeta {
     }
 
     void addModule(ScriptMeta script, String name, String alias) {
-        assert script
-        assert name
-        // include a specific
-        def item = script.getComponent(name)
-        if( !item )
-            throw new MissingModuleComponentException(script, name)
-        addModule0(item, alias)
+        addModules(script, [new IncludeDef.Module(name, alias)])
     }
 
-    protected void addModule0(ComponentDef component, String alias=null) {
+    /**
+     * Include the given components of a module script.
+     *
+     * The entries of a single include statement are added together, because
+     * an included output type refers to the pipeline included alongside it.
+     *
+     * @param script
+     * @param modules
+     */
+    void addModules(ScriptMeta script, List<IncludeDef.Module> modules) {
+        assert script
+        PipelineDef pipeline = null
+        OutputTypeDef outputType = null
+
+        for( final module : modules ) {
+            assert module.name
+            // a definition of the module takes precedence over a block of the
+            // pipeline with the same name, matching the compiler
+            def item = script.getComponent(module.name)
+            if( !item && PIPELINE_NAME == module.name && script.script.getEntryFlow() )
+                item = script.getPipeline()
+            if( !item && OUTPUT_NAME == module.name && script.script.hasOutputs() )
+                item = script.getOutputType()
+            if( !item )
+                throw new MissingModuleComponentException(script, module.name)
+            final added = addModule0(item, module.alias)
+            if( added instanceof PipelineDef )
+                pipeline = added
+            if( added instanceof OutputTypeDef )
+                outputType = added
+        }
+
+        if( outputType != null ) {
+            if( pipeline == null )
+                throw new ScriptRuntimeException("Cannot include the output block of a pipeline without including the pipeline itself -- add `${PIPELINE_NAME} as <NAME>` to the same include declaration")
+            pipeline.setOutputType(outputType)
+        }
+    }
+
+    protected ComponentDef addModule0(ComponentDef component, String alias=null) {
         assert component
 
         final name = alias ?: component.name
         if( !NF.isSyntaxParserV2() )
             checkComponentName(component, name)
-        if( name != component.name )
-            imports.put(name, component.cloneWithName(name))
-        else
-            imports.put(name, component)
+        final result = name != component.name
+            ? component.cloneWithName(name)
+            : component
+        imports.put(name, result)
+        return result
     }
 
     @Memoized

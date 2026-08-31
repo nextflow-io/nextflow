@@ -66,6 +66,140 @@ The operator library supports static typing and records. All operators work in b
 
 For more information about best practices when migrating existing code, see [Using operators with static typing][migrating-static-types-operators].
 
+## Pipeline composition
+
+<AddedInVersion version="26.10" />
+
+An entire pipeline -- the `params` block, entry workflow, and `output` block of a script -- can be included as a named workflow and called like any other workflow. The params block acts as the `take:` section and the output block acts as the `emit:` section.
+
+Given the following pipeline:
+
+```nextflow
+// pipelines/rnaseq.nf
+nextflow.enable.types = true
+
+params {
+    input: Channel<Sample>
+    aligner: String = 'star_salmon'
+    fasta: Path
+}
+
+workflow {
+    main:
+    // ...
+
+    publish:
+    bams = ch_bams
+    multiqc = val_multiqc
+}
+
+output {
+    bams: Channel<Path> { path 'bams' }
+    multiqc: Path { path 'multiqc' }
+}
+```
+
+It can be included and called as follows:
+
+```nextflow
+include { workflow as RNASEQ } from './pipelines/rnaseq.nf'
+
+workflow {
+    main:
+    rnaseq = RNASEQ(
+        input: samples,
+        fasta: file('index.fasta')
+    )
+    rnaseq.bams.view()      // Channel<Path>
+    rnaseq.multiqc.view()   // Value<Path>
+}
+```
+
+The included pipeline must be aliased to a specific name (`RNASEQ`), which is also used to scope its processes in the config:
+
+```nextflow
+process {
+    withName: 'RNASEQ:.*:STAR_ALIGN' {
+        cpus   = 12
+        memory = 72.GB
+    }
+}
+```
+
+Because the included pipeline is part of the calling pipeline's dataflow graph, it can consume a channel produced by another pipeline, and begin working on each item as soon as it is emitted.
+
+Note the following:
+
+- The pipeline is called with named arguments, one for each param, so that params with a default value can be omitted. A record can also be given as a single argument.
+
+- The outputs published by the included pipeline are emitted to the calling workflow instead of being published. Only the calling pipeline decides what is published, by declaring its own `output` block.
+
+- Params and outputs are not inherited. The calling pipeline declares its own params and outputs and passes them explicitly to the included pipeline.
+
+### Importing the params and output blocks
+
+Re-declaring every param of an included pipeline gets tedious. The `params` and `output` blocks can be imported as record types instead:
+
+```nextflow
+include {
+    params as RnaseqParams ;
+    workflow as NFCORE_RNASEQ ;
+    output as RnaseqOutput
+} from './pipelines/rnaseq.nf'
+
+params {
+    strandedness: String = 'auto'   // unique to this pipeline
+    rnaseq: RnaseqParams            // input, aligner, fasta
+}
+
+workflow {
+    main:
+    rnaseq = NFCORE_RNASEQ( params.rnaseq + record(input: samples) )
+
+    publish:
+    rnaseq = rnaseq
+}
+
+output {
+    rnaseq: RnaseqOutput {}
+}
+```
+
+`RnaseqParams` is a *partial* record type: every field is nullable, so a user can provide any rnaseq param as `--rnaseq.<name>`, the calling pipeline can override specific params with `params.rnaseq + record(input: samples)`, and the `NFCORE_RNASEQ()` call reports any param that is still missing.
+
+`RnaseqOutput` is a record type of the rnaseq outputs. Declaring an output with this type is equivalent to re-declaring each rnaseq output with its own output directives, and publishing the record of channels returned by the call publishes each of them. It is all-or-nothing: to publish only some outputs, or publish them somewhere else, declare each output separately.
+
+Note the following:
+
+- A param that the pipeline defaults (`aligner`) can be omitted from the record. The pipeline applies its own default when it is called.
+
+- `rnaseq.input` is supplied by the dataflow, so a user cannot set it.
+
+- `rnaseq.fasta` must still be provided, but the error surfaces at the `NFCORE_RNASEQ()` call rather than at launch.
+
+A pipeline receives its params when it is called, so `params` refers to a single execution of the pipeline. A pipeline can be included under any number of aliases, and each alias resolves its own params. As with a named workflow, a pipeline can be called only once per alias -- include it again under a different alias to call it again.
+
+A pipeline and its output block must be included in the same include declaration, and each declaration can include a pipeline only once:
+
+```nextflow
+include { workflow as NFCORE_RNASEQ ; output as RnaseqOutput } from './pipelines/nf-core/rnaseq'
+include { workflow as NFCORE_RNASEQ_TEST } from './pipelines/nf-core/rnaseq'
+```
+
+Pipeline inclusion only captures the pipeline script and the modules it includes -- it does not capture external context such as the config or the `lib` directory. As a result, an included pipeline should be written so that it works when included by another pipeline:
+
+- Pipeline parameters should be declared in the `params` block. The config should only declare *config params*, i.e. params that only affect config settings.
+
+- Project-level assets (`projectDir`, `bin`, `lib`) should not be used, since the calling pipeline has a different project root. Module-level assets can be safely used through the module `resources/` bundle and `moduleDir`.
+
+- Params should be referred to only in the entry workflow and output block. A process or workflow that reads `params` directly should declare an explicit input instead.
+
+- Process configuration defaults (`container`, `conda`, `ext`) should be specified in the process definition or avoided in favor of process inputs.
+
+- Workflow outputs should be published using the `output` block, not `publishDir`.
+
+None of these constraints are absolute -- each of them can be circumvented by replicating the external context in the calling pipeline. Following them simply makes it easier to include a pipeline with minimal extra work.
+
 ## Validation
 
 The language server validates each workflow input and output against its declared type. Calling a workflow with an argument whose type does not match its `take:` declaration, or emitting a value that does not match its `emit:` declaration, is reported as an error before the pipeline runs.
