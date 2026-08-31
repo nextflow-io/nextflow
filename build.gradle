@@ -123,7 +123,7 @@ allprojects {
         testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.5'
 
         // Documentation required libraries
-        groovyDoc 'org.fusesource.jansi:jansi:2.4.0'
+        groovyDoc 'org.fusesource.jansi:jansi:2.4.3'
         groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.33"
         groovyDoc "org.apache.groovy:groovy-ant:4.0.33"
     }
