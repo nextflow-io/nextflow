@@ -69,9 +69,10 @@ abstract class RepositoryProvider {
     static final public Duration DEFAULT_REQUEST_TIMEOUT = Duration.of('60s')
 
     /**
-     * The environment variable prefix used to resolve the HTTP client settings
+     * The environment variable prefix used to resolve the HTTP client settings,
+     * mirroring the {@code scm.httpClient} config path
      */
-    static final private String HTTP_CLIENT_ENV_PREFIX = 'NXF_GIT_'
+    static final private String HTTP_CLIENT_ENV_PREFIX = 'NXF_SCM_HTTPCLIENT_'
 
     @Canonical
     static class TagInfo {
@@ -155,9 +156,9 @@ abstract class RepositoryProvider {
 
     /**
      * The HTTP client timeout settings. When none has been set explicitly they are resolved
-     * from the {@code NXF_GIT_CONNECT_TIMEOUT} and {@code NXF_GIT_REQUEST_TIMEOUT} environment
-     * variables, falling back to the defaults - the environment being the only source available
-     * this early, since SCM resolution completes before any Nextflow config has been parsed.
+     * from the {@code NXF_SCM_HTTPCLIENT_CONNECT_TIMEOUT} and {@code NXF_SCM_HTTPCLIENT_REQUEST_TIMEOUT}
+     * environment variables, falling back to the defaults - the environment being the only source
+     * available this early, since SCM resolution completes before any Nextflow config has been parsed.
      *
      * @return The {@link HttpClientOpts} for this provider; never null
      */
@@ -173,14 +174,18 @@ abstract class RepositoryProvider {
      * <p>
      * That file is the one config source that is both already loaded when SCM resolution runs
      * and shared with an embedder building the same map by hand - unlike {@code nextflow.config},
-     * which is not parsed until the project has been fetched.
+     * which is not parsed until the project has been fetched. Each option resolves the same way
+     * {@link RetryConfig} resolves its own: the config map first, then the environment variable
+     * derived from {@link #HTTP_CLIENT_ENV_PREFIX} and the option name, then the default.
      *
      * @param scmConfig The parsed SCM config file contents, or null when there is none
      * @return The resulting {@link HttpClientOpts}; never null
      */
     static HttpClientOpts httpClientOpts(Map scmConfig) {
         final opts = (Map) scmConfig?.get('httpClient') ?: Collections.emptyMap()
-        return new HttpClientOpts(opts, HTTP_CLIENT_ENV_PREFIX, DEFAULT_CONNECT_TIMEOUT, DEFAULT_REQUEST_TIMEOUT)
+        final connectTimeout = RetryConfig.valueOf(opts, 'connectTimeout', HTTP_CLIENT_ENV_PREFIX, DEFAULT_CONNECT_TIMEOUT, Duration)
+        final requestTimeout = RetryConfig.valueOf(opts, 'requestTimeout', HTTP_CLIENT_ENV_PREFIX, DEFAULT_REQUEST_TIMEOUT, Duration)
+        return new HttpClientOpts(connectTimeout, requestTimeout)
     }
 
     String getProject() {
@@ -534,7 +539,7 @@ abstract class RepositoryProvider {
         // a connect timeout is always safe to retry because the TCP handshake
         // never completed, therefore no request data reached the server; the
         // check must target the connect subclass specifically - its parent
-        // HttpTimeoutException (read timeout) means the request reached the
+        // HttpTimeoutException (request timeout) means the request reached the
         // server and must remain fail-fast
         if( t instanceof HttpConnectTimeoutException )
             return true
@@ -569,14 +574,14 @@ abstract class RepositoryProvider {
         catch( HttpConnectTimeoutException e ) {
             // the underlying client retries connect timeouts - see isRetryable() -
             // therefore this is only reached once all attempts are exhausted
-            throw new IOException("Unable to connect to '${request.uri()}' within ${getHttpClientOpts().connectTimeout().toSeconds()}s (after ${retryConfig.maxAttempts} attempts) - make sure the host is reachable or increase the timeout setting the variable NXF_GIT_CONNECT_TIMEOUT", e)
+            throw new IOException("Unable to connect to '${request.uri()}' within ${getHttpClientOpts().connectTimeout().toSeconds()}s (after ${retryConfig.maxAttempts} attempts) - make sure the host is reachable or increase the timeout setting the variable NXF_SCM_HTTPCLIENT_CONNECT_TIMEOUT", e)
         }
         catch( HttpTimeoutException e ) {
             // report the bound actually applied to the request i.e. connect + request; it is
             // null only when the request timeout is unbounded, in which case no timeout was
             // set on the request and this branch is unreachable
             final elapsed = getHttpClientOpts().httpRequestTimeout()
-            throw new IOException("No response received from '${request.uri()}'${elapsed ? " within ${elapsed.toSeconds()}s" : ''} - make sure the host is reachable or increase the timeout setting the variable NXF_GIT_REQUEST_TIMEOUT", e)
+            throw new IOException("No response received from '${request.uri()}'${elapsed ? " within ${elapsed.toSeconds()}s" : ''} - make sure the host is reachable or increase the timeout setting the variable NXF_SCM_HTTPCLIENT_REQUEST_TIMEOUT", e)
         }
     }
 
