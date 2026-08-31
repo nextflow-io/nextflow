@@ -24,7 +24,6 @@ import java.net.http.HttpRequest
 import java.net.http.HttpResponse
 import java.net.http.HttpTimeoutException
 import java.nio.channels.UnresolvedAddressException
-import java.time.Duration
 import java.util.concurrent.Executors
 import java.util.function.Predicate
 
@@ -40,6 +39,8 @@ import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import nextflow.exception.HttpResponseLengthExceedException
 import nextflow.exception.RateLimitExceededException
+import nextflow.util.Duration
+import nextflow.util.HttpClientOpts
 import nextflow.util.ProxyConfig
 import nextflow.util.RetryConfig
 import nextflow.util.Threads
@@ -60,12 +61,17 @@ abstract class RepositoryProvider {
     /**
      * Default timeout to establish the connection with the SCM server
      */
-    static final public Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(60)
+    static final public Duration DEFAULT_CONNECT_TIMEOUT = Duration.of('60s')
 
     /**
      * Default timeout to receive the response from the SCM server
      */
-    static final public Duration DEFAULT_READ_TIMEOUT = Duration.ofSeconds(60)
+    static final public Duration DEFAULT_REQUEST_TIMEOUT = Duration.of('60s')
+
+    /**
+     * The environment variable prefix used to resolve the HTTP client settings
+     */
+    static final private String HTTP_CLIENT_ENV_PREFIX = 'NXF_GIT_'
 
     @Canonical
     static class TagInfo {
@@ -103,6 +109,11 @@ abstract class RepositoryProvider {
     private RetryConfig retryConfig
 
     /**
+     * The timeout options to be used for http requests
+     */
+    private HttpClientOpts httpClientOpts
+
+    /**
      * The pipeline qualified name following the syntax {@code owner/repository}
      */
     protected String project
@@ -135,6 +146,25 @@ abstract class RepositoryProvider {
     RepositoryProvider setRetryConfig(RetryConfig retryConfig) {
         this.retryConfig = retryConfig
         return this
+    }
+
+    RepositoryProvider setHttpClientOpts(HttpClientOpts httpClientOpts) {
+        this.httpClientOpts = httpClientOpts
+        return this
+    }
+
+    /**
+     * The HTTP client timeout settings. When none has been set explicitly they are resolved
+     * from the {@code NXF_GIT_CONNECT_TIMEOUT} and {@code NXF_GIT_REQUEST_TIMEOUT} environment
+     * variables, falling back to the defaults - the environment being the only source available
+     * this early, since SCM resolution completes before any Nextflow config has been parsed.
+     *
+     * @return The {@link HttpClientOpts} for this provider; never null
+     */
+    protected HttpClientOpts getHttpClientOpts() {
+        if( httpClientOpts==null )
+            httpClientOpts = new HttpClientOpts(Collections.emptyMap(), HTTP_CLIENT_ENV_PREFIX, DEFAULT_CONNECT_TIMEOUT, DEFAULT_REQUEST_TIMEOUT)
+        return httpClientOpts
     }
 
     String getProject() {
@@ -235,46 +265,13 @@ abstract class RepositoryProvider {
         final builder = HttpRequest
             .newBuilder()
             .uri(new URI(api))
-            .timeout(readTimeout())
+        final timeout = getHttpClientOpts().httpRequestTimeout()
+        if( timeout != null )
+            builder.timeout(timeout)
         final auth0 = getAuth()
         if( auth0 )
             builder.headers(auth0)
         return builder.GET().build()
-    }
-
-    /**
-     * The timeout to establish the connection with the SCM server. It can be overridden
-     * by the {@code NXF_GIT_CONNECT_TIMEOUT} environment variable specifying it as
-     * a duration string e.g. {@code 30s}
-     *
-     * @return The connect timeout as a {@link Duration} object
-     */
-    protected Duration connectTimeout() {
-        return timeout0('NXF_GIT_CONNECT_TIMEOUT', DEFAULT_CONNECT_TIMEOUT)
-    }
-
-    /**
-     * The timeout to receive the response once the connection with the SCM server is
-     * established. It can be overridden by the {@code NXF_GIT_READ_TIMEOUT} environment
-     * variable specifying it as a duration string e.g. {@code 30s}
-     *
-     * @return The read timeout as a {@link Duration} object
-     */
-    protected Duration readTimeout() {
-        return timeout0('NXF_GIT_READ_TIMEOUT', DEFAULT_READ_TIMEOUT)
-    }
-
-    static private Duration timeout0(String name, Duration defValue) {
-        final value = SysEnv.get(name)
-        if( !value )
-            return defValue
-        try {
-            return Duration.ofMillis( nextflow.util.Duration.of(value).toMillis() )
-        }
-        catch( Exception e ) {
-            log.warn "Invalid value for variable ${name}: '${value}' - using default: ${defValue.toSeconds()}s"
-            return defValue
-        }
     }
 
     /**
@@ -556,17 +553,17 @@ abstract class RepositoryProvider {
         catch( HttpConnectTimeoutException e ) {
             // the underlying client retries connect timeouts - see isRetryable() -
             // therefore this is only reached once all attempts are exhausted
-            throw new IOException("Unable to connect to '${request.uri()}' within ${connectTimeout().toSeconds()}s (after ${retryConfig.maxAttempts} attempts) - make sure the host is reachable or increase the timeout setting the variable NXF_GIT_CONNECT_TIMEOUT", e)
+            throw new IOException("Unable to connect to '${request.uri()}' within ${getHttpClientOpts().connectTimeout().toSeconds()}s (after ${retryConfig.maxAttempts} attempts) - make sure the host is reachable or increase the timeout setting the variable NXF_GIT_CONNECT_TIMEOUT", e)
         }
         catch( HttpTimeoutException e ) {
-            throw new IOException("No response received from '${request.uri()}' within ${readTimeout().toSeconds()}s - make sure the host is reachable or increase the timeout setting the variable NXF_GIT_READ_TIMEOUT", e)
+            throw new IOException("No response received from '${request.uri()}' within ${getHttpClientOpts().requestTimeout().toSeconds()}s - make sure the host is reachable or increase the timeout setting the variable NXF_GIT_REQUEST_TIMEOUT", e)
         }
     }
 
     private HxClient newHttpClient() {
         final builder = HxClient.newBuilder()
             .version(HttpClient.Version.HTTP_1_1)
-            .connectTimeout(connectTimeout())
+            .connectTimeout(getHttpClientOpts().connectTimeout())
             .followRedirects(HttpClient.Redirect.NORMAL)
             // route through the forward proxy when configured
             .withProxyConfig(ProxyConfig.proxyConfig())

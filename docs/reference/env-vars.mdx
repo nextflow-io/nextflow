@@ -182,13 +182,17 @@ When set to `true`, collect task resource metrics (CPU, memory, I/O) from the Fu
 
 <AddedInVersion version="26.10" />
 
-Defines the timeout to establish the HTTP connection with the Git hosting service API e.g. GitHub, GitLab, etc. as a duration string e.g. `30s` (default: `60s`). Connection attempts that time out are automatically retried, so a persistently unreachable host only fails after the connect timeout multiplied by the retry policy max attempts i.e. about 5 minutes with default settings. Deployments that require bounded latency should set a lower value e.g. `5s`, which caps the worst case at about 30 seconds including the retry backoff, while a transient connection stall recovers in a few seconds on retry.
+Defines the timeout to establish the HTTP connection with the Git hosting service API e.g. GitHub, GitLab, etc. as a duration string e.g. `30s` (default: `60s`). It must be greater than zero.
 
-##### `NXF_GIT_READ_TIMEOUT`
+Connection attempts that time out are retried, because a connection that was never established proves the request did not reach the server. A persistently unreachable host therefore only fails after this timeout multiplied by the retry policy max attempts, i.e. about 5 minutes with the default settings. Deployments that require bounded latency should set a lower value e.g. `5s`, which caps the worst case at about 30 seconds including the retry backoff, while a transient connection stall recovers in a few seconds on retry. The retry behaviour itself is tuned with the `NXF_RETRY_POLICY_*` variables.
+
+##### `NXF_GIT_REQUEST_TIMEOUT`
 
 <AddedInVersion version="26.10" />
 
-Defines the timeout to receive the response for a HTTP request made to the Git hosting service API e.g. GitHub, GitLab, etc. as a duration string e.g. `30s` (default: `60s`).
+Defines the timeout to receive the response for a HTTP request made to the Git hosting service API e.g. GitHub, GitLab, etc. as a duration string e.g. `30s` (default: `60s`). Set it to `0s` to wait indefinitely.
+
+Unlike a connect timeout, a request that times out waiting for the response is not retried, since it did reach the server and may already have been acted on.
 
 ##### `NXF_HOME`
 
