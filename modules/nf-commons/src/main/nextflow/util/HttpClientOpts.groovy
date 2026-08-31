@@ -16,14 +16,9 @@
 
 package nextflow.util
 
-import com.google.common.base.CaseFormat
 import groovy.transform.CompileStatic
 import groovy.transform.EqualsAndHashCode
 import groovy.transform.ToString
-import nextflow.SysEnv
-import nextflow.config.spec.ConfigOption
-import nextflow.config.spec.ConfigScope
-import nextflow.script.dsl.Description
 
 /**
  * Model the HTTP client timeout settings used to reach a remote service.
@@ -33,79 +28,37 @@ import nextflow.script.dsl.Description
  * Only the second one protects against a server that accepts the connection and then never
  * replies.
  * <p>
- * Values resolve the same way {@link RetryConfig} resolves its own: the config map first,
- * then the environment variable derived from {@code envPrefix} and the option name, then the
- * default. The env fallback matters because some clients — SCM repository access above all —
- * run before any Nextflow config has been parsed, so the config map is the only route that
- * exists for an embedder and the environment is the only route that exists for an operator.
+ * This is a plain value holder: it carries the two timeouts and derives the values the
+ * {@link java.net.http.HttpClient} API expects. Resolving them from a config map or the
+ * environment is left to the caller that owns the client — see e.g.
+ * {@code nextflow.scm.RepositoryProvider} — so that each client keeps its own option names,
+ * environment prefix and defaults, following the same resolution shape as {@link RetryConfig}.
  *
  * @author Rob Syme <rob.syme@gmail.com>
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @ToString(includeNames = true, includePackage = false)
 @EqualsAndHashCode
 @CompileStatic
-class HttpClientOpts implements ConfigScope {
+class HttpClientOpts {
 
-    @ConfigOption
-    @Description("""
-        The maximum time to wait for the connection to the remote service to be established,
-        applied to a single attempt. It bounds only reaching the service, never waiting for
-        its response — see `requestTimeout` for that. It must be greater than zero: unlike
-        `requestTimeout`, `0 sec` is not accepted as "unbounded".
-    """)
     final private Duration connectTimeout
-
-    @ConfigOption
-    @Description("""
-        The maximum time to wait for a response from the remote service once the connection
-        has been established, applied to a single attempt. Set to `0 sec` to wait
-        indefinitely.
-    """)
     final private Duration requestTimeout
 
     /**
-     * @param config    The config map holding the {@code connectTimeout} / {@code requestTimeout}
-     *                  entries, or an empty map to resolve from the environment
-     * @param envPrefix The prefix of the environment variables to fall back to e.g. {@code NXF_GIT_}
-     *                  yields {@code NXF_GIT_CONNECT_TIMEOUT} and {@code NXF_GIT_REQUEST_TIMEOUT}
-     * @param defConnectTimeout The connect timeout to use when neither source provides a value
-     * @param defRequestTimeout The request timeout to use when neither source provides a value
+     * @param connectTimeout The maximum time to wait for the connection to the remote service
+     *                  to be established, applied to a single attempt. It must be greater than
+     *                  zero: unlike {@code requestTimeout}, {@code 0} is not accepted as "unbounded".
+     * @param requestTimeout The maximum time to wait for a response once the connection has been
+     *                  established, applied to a single attempt. {@code 0} means wait indefinitely.
      */
-    HttpClientOpts(Map config, String envPrefix, Duration defConnectTimeout, Duration defRequestTimeout) {
-        connectTimeout = duration0(config, 'connectTimeout', envPrefix, defConnectTimeout)
-        requestTimeout = duration0(config, 'requestTimeout', envPrefix, defRequestTimeout)
+    HttpClientOpts(Duration connectTimeout, Duration requestTimeout) {
         // zero is not "unbounded" here — a connect phase that never gives up is not a bound
-        // worth expressing, and HttpClient.Builder rejects it. Catch it at the config edge so
-        // the message names the option rather than surfacing from the builder later on.
-        if( connectTimeout.toMillis() <= 0 )
+        // worth expressing, and HttpClient.Builder rejects it anyway
+        if( connectTimeout==null || connectTimeout.toMillis() <= 0 )
             throw new IllegalArgumentException("Config option 'connectTimeout' must be greater than zero - offending value: ${connectTimeout}")
-    }
-
-    /**
-     * Resolve one option, reporting the source that carried the offending value when it does
-     * not parse. {@link RetryConfig#valueOf} raises a bare "Not a valid duration value", which
-     * is of little use when the value came from an environment variable the user has to find.
-     */
-    private static Duration duration0(Map config, String name, String envPrefix, Duration defValue) {
-        try {
-            return RetryConfig.valueOf(config, name, envPrefix, defValue, Duration)
-        }
-        catch( IllegalArgumentException e ) {
-            final fromConfig = config?.get(name)
-            final source = fromConfig != null
-                ? "config option '${name}'"
-                : "variable ${envKey(envPrefix, name)}"
-            final value = fromConfig != null
-                ? fromConfig
-                : SysEnv.get(envKey(envPrefix, name))
-            throw new IllegalArgumentException("Invalid duration value for ${source}: '${value}'", e)
-        }
-    }
-
-    private static String envKey(String envPrefix, String name) {
-        if( !envPrefix.endsWith('_') )
-            envPrefix += '_'
-        return envPrefix.toUpperCase() + CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, name)
+        this.connectTimeout = connectTimeout
+        this.requestTimeout = requestTimeout
     }
 
     /**
@@ -123,7 +76,7 @@ class HttpClientOpts implements ConfigScope {
      * @return The timeout, or null to wait indefinitely
      */
     java.time.Duration requestTimeout() {
-        final long millis = requestTimeout.toMillis()
+        final long millis = requestTimeout != null ? requestTimeout.toMillis() : 0
         return millis > 0 ? java.time.Duration.ofMillis(millis) : null
     }
 
