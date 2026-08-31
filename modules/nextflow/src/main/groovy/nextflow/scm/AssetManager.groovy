@@ -35,6 +35,7 @@ import nextflow.exception.AmbiguousPipelineNameException
 import nextflow.scm.HubOptions
 import nextflow.script.ScriptFile
 import nextflow.SysEnv
+import nextflow.util.HttpClientOpts
 import nextflow.util.IniFile
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.api.errors.RefNotFoundException
@@ -89,6 +90,11 @@ class AssetManager implements Closeable {
     private RepositoryStrategy strategy
 
     /**
+     * The http client settings declared in the SCM config file
+     */
+    private HttpClientOpts httpClientOpts
+
+    /**
      * Create a new asset manager object with default parameters
      */
     AssetManager() {
@@ -134,6 +140,7 @@ class AssetManager implements Closeable {
     AssetManager build( String pipelineName, Map config = null, HubOptions hubOpts = null, String revision = null, String mainScript = null ) {
 
         this.providerConfigs = ProviderConfig.createFromMap(config)
+        this.httpClientOpts = RepositoryProvider.httpClientOpts(config)
 
         this.project = resolveName(pipelineName)
         if( mainScript )
@@ -516,7 +523,9 @@ class AssetManager implements Closeable {
         if( !config )
             throw new AbortOperationException("Unknown repository configuration provider: $providerName")
 
-        return RepositoryFactory.newRepositoryProvider(config, project)
+        return RepositoryFactory
+            .newRepositoryProvider(config, project)
+            .setHttpClientOpts(httpClientOpts ?: RepositoryProvider.httpClientOpts(null))
     }
 
     AssetManager setLocalPath(File path) {

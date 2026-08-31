@@ -320,6 +320,31 @@ class RepositoryProviderTest extends Specification {
         server.stop(0)
     }
 
+    def 'should build the http client opts from the scm config map' () {
+        given:
+        SysEnv.push([NXF_GIT_CONNECT_TIMEOUT: '5s'])
+
+        when: 'the scm file carries an httpClient block'
+        def opts = RepositoryProvider.httpClientOpts([httpClient: [connectTimeout: '30s', requestTimeout: '90s']])
+        then: 'it wins over the env variable'
+        opts.connectTimeout() == Duration.ofSeconds(30)
+        opts.requestTimeout() == Duration.ofSeconds(90)
+
+        when: 'the scm file has no httpClient block'
+        opts = RepositoryProvider.httpClientOpts([providers: [github: [user: 'foo']]])
+        then: 'the env variable applies, then the default'
+        opts.connectTimeout() == Duration.ofSeconds(5)
+        opts.requestTimeout() == Duration.ofSeconds(60)
+
+        when: 'there is no scm config at all'
+        opts = RepositoryProvider.httpClientOpts(null)
+        then:
+        opts.connectTimeout() == Duration.ofSeconds(5)
+
+        cleanup:
+        SysEnv.pop()
+    }
+
     private createMockResponseWithContentLength(long contentLength) {
         return new HttpResponse<byte[]>() {
             @Override
