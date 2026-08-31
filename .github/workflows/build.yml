@@ -253,7 +253,17 @@ jobs:
     if: ${{ always() && contains(needs.build.outputs.commit_message, '[release]') && needs.build.result == 'success' && (needs.test.result == 'success' || needs.test.result == 'skipped') }}
     needs: [build, test]
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # Raised from 10 for the nf-agent-pi image build in release.sh step 1: installing binfmt,
+    # bootstrapping buildkit, pulling two base images and running an emulated arm64 `npm ci`
+    # and `apt-get` do not fit the old budget. Sized as a ceiling, not a budget - a timeout
+    # that fires mid-release.sh is the one failure the step-1 ordering does NOT make harmless,
+    # so erring high costs nothing on a run that succeeds. A cold `build-image.sh build` (both
+    # arches, --no-cache) measures ~15s on an arm64 developer Mac, but that number cannot be
+    # scaled: Docker Desktop runs the amd64 leg under Rosetta at near-native speed (emulated
+    # `npm ci` 5.9s vs 5.6s native), whereas this runner emulates arm64 through QEMU user-mode,
+    # which is slower by a large and unmeasured factor. Revisit once a real release reports its
+    # actual duration.
+    timeout-minutes: 45
     permissions:
       contents: write
     steps:
@@ -289,12 +299,33 @@ jobs:
           username: ${{ vars.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # Also authorizes the nf-agent-pi runner image push in release.sh step 1: it publishes to
+      # public.cr.seqera.io/nextflow, the same registry and namespace this release already pushes
+      # `nextflow/nextflow` to (docker/Makefile). No new credential, and this login runs before
+      # `Run release`, so build-image.sh needs none of its own.
       - name: Docker Login to Seqera public CR
         uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
         with:
           registry: "public.cr.seqera.io"
           username: ${{ vars.SEQERA_PUBLIC_CR_USERNAME }}
           password: ${{ secrets.SEQERA_PUBLIC_CR_PASSWORD }}
+
+      # The nf-agent-pi runner image is multi-arch, and the node stage of its Dockerfile is not
+      # pinned to $BUILDPLATFORM, so `apt-get` and `npm ci` execute on the target platform: the
+      # linux/arm64 leg needs binfmt emulation on this amd64 runner. Placed AFTER the Docker Hub
+      # login on purpose - the action does `docker run --privileged tonistiigi/binfmt`, and an
+      # anonymous Docker Hub pull from a shared runner IP hits `toomanyrequests`, which ahead of
+      # the login would abort every release, including ones whose image push would have skipped.
+      # No docker/setup-buildx-action: ensure_builder in build-image.sh creates and bootstraps
+      # the docker-container builder it then passes to --builder, so the action's builder would
+      # be created and never used.
+      - name: Set up QEMU for the runner image build
+        uses: docker/setup-qemu-action@96fe6ef7f33517b61c61be40b68a1882f3264fb8 # v4.2.0
+        with:
+          # Digest-pinned like every action in this file. The input's default is a floating
+          # docker.io/tonistiigi/binfmt:latest, which would otherwise be the only unpinned
+          # thing the release newly depends on.
+          image: docker.io/tonistiigi/binfmt:qemu-v9.2.2@sha256:1b804311fe87047a4c96d38b4b3ef6f62fca8cd125265917a9e3dc3c996c39e6
 
       - name: Run release
         run: |
@@ -314,5 +345,10 @@ jobs:
           # plugin registry
           NPR_API_URL: ${{ vars.NPR_API_URL }}
           NPR_API_KEY: ${{ secrets.NPR_API_KEY }}
+          # nf-agent-pi runner image (step 1). The push itself is authorized by the
+          # `Docker Login to Seqera public CR` step above; these are passed so build-image.sh
+          # can name them when a push is refused.
+          SEQERA_PUBLIC_CR_USERNAME: ${{ vars.SEQERA_PUBLIC_CR_USERNAME }}
+          SEQERA_PUBLIC_CR_PASSWORD: ${{ secrets.SEQERA_PUBLIC_CR_PASSWORD }}
           # GitHub secrets
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

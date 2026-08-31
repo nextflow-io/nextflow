@@ -1048,6 +1048,25 @@ class FileHelperTest extends Specification {
         null                 | '1234://xyz.com/abc'
     }
 
+    @Unroll
+    def 'should detect shared file system type'() {
+        expect:
+        FileHelper.isSharedFsType(TYPE) == EXPECTED
+
+        where:
+        TYPE        | EXPECTED
+        'nfs'       | true
+        'lustre'    | true
+        'ceph'      | true
+        'beegfs'    | true
+        'gpfs'      | true
+        'ext2/ext3' | false
+        'xfs'       | false
+        'overlayfs' | false
+        'tmpfs'     | false
+        null        | false
+    }
+
     def 'should check symlink status'() {
         given:
         def folder = Files.createTempDirectory('test')

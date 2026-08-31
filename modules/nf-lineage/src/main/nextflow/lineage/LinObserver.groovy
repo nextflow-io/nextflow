@@ -34,6 +34,8 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.agent.AgentTaskInfo
+import nextflow.lineage.model.v1beta1.AgentRun
 import nextflow.lineage.model.v1beta1.Checksum
 import nextflow.lineage.model.v1beta1.FileOutput
 import nextflow.lineage.model.v1beta1.DataPath
@@ -62,6 +64,8 @@ import nextflow.script.params.StdInParam
 import nextflow.script.params.StdOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
+import nextflow.script.params.v2.ProcessInput
+import nextflow.script.params.v2.ProcessOutput
 import nextflow.trace.TraceObserverV2
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.TaskEvent
@@ -258,8 +262,47 @@ class LinObserver implements TraceObserverV2 {
     }
 
     protected String storeTaskRun(TaskRun task, PathNormalizer normalizer) {
+        // an agent lowers to an ordinary task, so it lands here too - but its identity is the
+        // model/tools/skills it ran with, not a script, and it is recorded as an AgentRun
+        final agentInfo = task.config?.get(AgentTaskInfo.CONFIG_KEY)
+        final value = agentInfo instanceof AgentTaskInfo
+            ? newAgentRun(task, agentInfo, normalizer)
+            : newTaskRun(task, normalizer)
+        // store in the underlying persistence
+        final key = task.hash.toString()
+        store.save(key, value)
+        return key
+    }
+
+    protected AgentRun newAgentRun(TaskRun task, AgentTaskInfo info, PathNormalizer normalizer) {
+        // the checksum covers the canonical agent identity source - the same text that feeds the
+        // resume cache key. NOTE: task.script is deliberately NOT recorded; on the RPC runner path
+        // it embeds the per-invocation capability token, which must never be persisted.
         final codeChecksum = Checksum.ofNextflow(session.stubRun ? task.stubSource : task.source)
-        final value = new nextflow.lineage.model.v1beta1.TaskRun(
+        return new AgentRun(
+            session.uniqueId.toString(),
+            task.getName(),
+            codeChecksum,
+            info.runner,
+            info.model,
+            task.context?.get('$agentResolvedModel') as String,
+            info.instruction,
+            info.goal,
+            info.promptTemplate,
+            info.maxIterations,
+            info.outputSchema,
+            info.tools,
+            info.skills,
+            task.inputs ? manageTaskInputParameters(task.inputs, normalizer) : null,
+            task.isContainerEnabled() ? task.getContainerFingerprint() : null,
+            asUriString(executionHash),
+            getTaskModuleId(task)
+        )
+    }
+
+    protected nextflow.lineage.model.v1beta1.TaskRun newTaskRun(TaskRun task, PathNormalizer normalizer) {
+        final codeChecksum = Checksum.ofNextflow(session.stubRun ? task.stubSource : task.source)
+        return new nextflow.lineage.model.v1beta1.TaskRun(
             session.uniqueId.toString(),
             task.getName(),
             codeChecksum,
@@ -278,11 +321,6 @@ class LinObserver implements TraceObserverV2 {
             asUriString(executionHash),
             getTaskModuleId(task)
         )
-
-        // store in the underlying persistence
-        final key = task.hash.toString()
-        store.save(key, value)
-        return key
     }
 
     protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
@@ -452,6 +490,12 @@ class LinObserver implements TraceObserverV2 {
     protected static String getParameterType(Object param) {
         if( param instanceof BaseParam )
             return taskParamToValue.get(param.class)
+        // typed (v2) process/agent params are not BaseParam, so without this they would be
+        // recorded as the literal type names 'ProcessInput'/'ProcessOutput'
+        if( param instanceof ProcessInput )
+            return Path.isAssignableFrom(param.getType() ?: Object) ? 'path' : 'val'
+        if( param instanceof ProcessOutput )
+            return Path.isAssignableFrom(param.getType() ?: Object) ? 'path' : 'val'
         // return generic types
         if( param instanceof Path )
             return Path.simpleName
@@ -497,16 +541,17 @@ class LinObserver implements TraceObserverV2 {
      * @throws IllegalArgumentException
      */
     protected String getWorkflowRelative(Path path) throws IllegalArgumentException{
-        final outputDirAbs = session.outputDir.toAbsolutePath()
+        // the output directory is disabled when a named workflow is executed directly
+        final outputDirAbs = session.outputDir?.toAbsolutePath()
         if (path.isAbsolute()) {
-            if (path.startsWith(outputDirAbs)) {
+            if (outputDirAbs && path.startsWith(outputDirAbs)) {
                 return outputDirAbs.relativize(path).toString()
             }
             log.debug("Cannot get relative path for workflow output '${path.toUriString()}'")
             throw new OutputRelativePathException()
         }
         final pathAbs = path.toAbsolutePath()
-        if (pathAbs.startsWith(outputDirAbs)) {
+        if (outputDirAbs && pathAbs.startsWith(outputDirAbs)) {
             return outputDirAbs.relativize(pathAbs).toString()
         }
         if (path.normalize().getName(0).toString() == "..") {

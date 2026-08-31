@@ -108,6 +108,13 @@ class PublishOp {
     protected void onNext(value) {
         log.trace "Received value for workflow output '${name}': ${value}"
 
+        // if output directory is disabled, report output files by
+        // their work directory path instead of publishing them
+        if( session.outputDir == null ) {
+            publishedValues << value
+            return
+        }
+
         // evaluate dynamic path
         final targetResolver = getTargetDir(value)
         if( targetResolver == null )
@@ -148,7 +155,7 @@ class PublishOp {
         // the base output directory
         final outputDir = session.outputDir
         if( pathResolver == null )
-            return outputDir.resolve(path)
+            return outputDir.resolve(path).normalize()
 
         // if the publish path is a closure, invoke it on the
         // published value
@@ -162,12 +169,12 @@ class PublishOp {
         // the resulting mapping to create a saveAs closure
         final mapping = dsl.build()
         if( mapping instanceof Map<String,String> )
-            return { filename -> filename in mapping ? outputDir.resolve(mapping[filename]) : null }
+            return { filename -> filename in mapping ? outputDir.resolve(mapping[filename]).normalize() : null }
 
         // if the resolved publish path is a string, resolve it
         // against the base output directory
         if( resolvedPath instanceof CharSequence )
-            return outputDir.resolve(resolvedPath.toString())
+            return outputDir.resolve(resolvedPath.toString()).normalize()
 
         final invalid = mapping ?: resolvedPath
         throw new ScriptRuntimeException("Invalid `path` directive for workflow output '${name}' -- expected a string or publish statements, but received: ${invalid} [${invalid.class.simpleName}]")
@@ -223,13 +230,13 @@ class PublishOp {
             : publishedValues
 
         // publish workflow output
-        final indexPath = indexOpts
+        final indexPath = session.outputDir && indexOpts
             ? session.outputDir.resolve(indexOpts.path)
             : null
         session.notifyWorkflowOutput(new WorkflowOutputEvent(name, outputValue, indexPath))
 
         // write value to index file
-        if( indexOpts ) {
+        if( indexPath ) {
             final ext = indexPath.getExtension()
             indexPath.parent.mkdirs()
             if( ext == 'csv' ) {

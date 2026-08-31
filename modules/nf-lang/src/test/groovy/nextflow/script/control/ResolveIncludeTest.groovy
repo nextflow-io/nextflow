@@ -136,4 +136,133 @@ class ResolveIncludeTest extends Specification {
         deleteDir(root)
     }
 
+    // -- agent modules. An `agent` must bind through the ordinary include statement, in both the
+    //    plain-file and the directory (`main.nf`) form. The directory form matters twice over
+    //    because getLocalIncludeUri is duplicated verbatim in ResolveIncludeVisitor and
+    //    ModuleResolver (lint/LSP vs run); only a test driving the include catches a divergence.
+
+    private static final String AGENT_MODULE = '''\
+        nextflow.enable.types = true
+
+        agent reporter {
+            model 'openai/gpt-4o'
+            instruction 'You write QA reports.'
+
+            input:
+            sample: String
+
+            output:
+            report: String
+
+            prompt:
+            """
+            Report on ${sample}.
+            """
+        }
+        '''.stripIndent()
+
+    def 'should resolve an agent include from a module file' () {
+        given:
+        def root = tempDir()
+        def main = tempFile(root, 'main.nf',
+            '''\
+            include { reporter } from './reporter.nf'
+
+            workflow {
+                reporter('s1')
+            }
+            '''.stripIndent())
+        def module = tempFile(root, 'reporter.nf', AGENT_MODULE)
+
+        when:
+        def errors = check(root, [main, module])
+        then:
+        errors.size() == 0
+
+        cleanup:
+        deleteDir(root)
+    }
+
+    def 'should resolve an agent include from a module directory' () {
+        given:
+        def root = tempDir()
+        def main = tempFile(root, 'main.nf',
+            '''\
+            include { reporter } from './mods/reporter'
+
+            workflow {
+                reporter('s1')
+            }
+            '''.stripIndent())
+        def module = tempFile(root, 'mods/reporter/main.nf', AGENT_MODULE)
+
+        when:
+        def errors = check(root, [main, module])
+        then:
+        errors.size() == 0
+
+        cleanup:
+        deleteDir(root)
+    }
+
+    def 'should resolve an aliased agent include at the call site' () {
+        given:
+        def root = tempDir()
+        def main = tempFile(root, 'main.nf',
+            '''\
+            include { reporter as qc } from './mods/reporter'
+
+            workflow {
+                qc('s1')
+            }
+            '''.stripIndent())
+        def module = tempFile(root, 'mods/reporter/main.nf', AGENT_MODULE)
+
+        when:
+        def errors = check(root, [main, module])
+        then:
+        errors.size() == 0
+
+        cleanup:
+        deleteDir(root)
+    }
+
+    def 'should resolve an agent include that is never called' () {
+        given:
+        def root = tempDir()
+        def main = tempFile(root, 'main.nf',
+            '''\
+            include { reporter } from './mods/reporter'
+            '''.stripIndent())
+        def module = tempFile(root, 'mods/reporter/main.nf', AGENT_MODULE)
+
+        when:
+        def errors = check(root, [main, module])
+        then:
+        errors.size() == 0
+
+        cleanup:
+        deleteDir(root)
+    }
+
+    def 'should report an error for an undefined agent include' () {
+        given:
+        def root = tempDir()
+        def main = tempFile(root, 'main.nf',
+            '''\
+            include { nope } from './mods/reporter'
+            '''.stripIndent())
+        def module = tempFile(root, 'mods/reporter/main.nf', AGENT_MODULE)
+
+        when:
+        def errors = check(root, [main, module])
+        then:
+        errors.size() == 1
+        errors[0].getSourceLocator().endsWith('main.nf')
+        errors[0].getOriginalMessage() == "Included name 'nope' is not defined in module '${module}'"
+
+        cleanup:
+        deleteDir(root)
+    }
+
 }

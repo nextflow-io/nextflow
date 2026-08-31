@@ -59,6 +59,7 @@ module.exports = {
                 "working-with-files",
                 "process",
                 "workflow",
+                "agent",
                 {
                     type: "category",
                     label: "Static typing",
@@ -191,7 +192,64 @@ module.exports = {
                         "reference/stdlib-groovy"
                     ]
                 },
-                "reference/process",
+                {
+                    type: "category",
+                    label: "Process",
+                    link: { type: "doc", id: "reference/process" },
+                    items: [
+                        "reference/process/task-properties",
+                        "reference/process/inputs-outputs-typed",
+                        "reference/process/inputs-outputs",
+                        {
+                            type: "category",
+                            label: "Directives",
+                            link: { type: "doc", id: "reference/process/directives" },
+                            items: [
+                                    "reference/process/directives/accelerator",
+                                    "reference/process/directives/after-script",
+                                    "reference/process/directives/arch",
+                                    "reference/process/directives/array",
+                                    "reference/process/directives/before-script",
+                                    "reference/process/directives/cache",
+                                    "reference/process/directives/cluster-options",
+                                    "reference/process/directives/conda",
+                                    "reference/process/directives/container",
+                                    "reference/process/directives/container-options",
+                                    "reference/process/directives/cpus",
+                                    "reference/process/directives/debug",
+                                    "reference/process/directives/disk",
+                                    "reference/process/directives/error-strategy",
+                                    "reference/process/directives/executor",
+                                    "reference/process/directives/ext",
+                                    "reference/process/directives/fair",
+                                    "reference/process/directives/hints",
+                                    "reference/process/directives/label",
+                                    "reference/process/directives/machine-type",
+                                    "reference/process/directives/max-errors",
+                                    "reference/process/directives/max-forks",
+                                    "reference/process/directives/max-retries",
+                                    "reference/process/directives/max-submit-await",
+                                    "reference/process/directives/memory",
+                                    "reference/process/directives/module",
+                                    "reference/process/directives/penv",
+                                    "reference/process/directives/pod",
+                                    "reference/process/directives/publish-dir",
+                                    "reference/process/directives/queue",
+                                    "reference/process/directives/resource-labels",
+                                    "reference/process/directives/resource-limits",
+                                    "reference/process/directives/scratch",
+                                    "reference/process/directives/secret",
+                                    "reference/process/directives/shell",
+                                    "reference/process/directives/spack",
+                                    "reference/process/directives/stage-in-mode",
+                                    "reference/process/directives/stage-out-mode",
+                                    "reference/process/directives/store-dir",
+                                    "reference/process/directives/tag",
+                                    "reference/process/directives/time"
+                            ]
+                        }
+                    ]
+                },
                 "reference/operator"
             ]
         },
