@@ -37,6 +37,7 @@ import nextflow.file.FileHelper
 import nextflow.file.LogicalDataPath
 import nextflow.lineage.LinPropertyValidator
 import nextflow.lineage.LinStore
+import nextflow.lineage.model.v1beta1.AgentRun
 import nextflow.lineage.model.v1beta1.Checksum
 import nextflow.lineage.model.v1beta1.FileOutput
 import nextflow.lineage.model.v1beta1.TaskRun
@@ -239,7 +240,7 @@ class LinPath implements Path, LogicalDataPath {
             return getTargetPathFromOutput(object, subpath)
         }
         // Intermediate run case
-        if( asIntermediatePath && (object instanceof WorkflowRun || object instanceof TaskRun) ) {
+        if( asIntermediatePath && (object instanceof WorkflowRun || object instanceof TaskRun || object instanceof AgentRun) ) {
             return new LinIntermediatePath(fs, "$filePath/${subpath.join('/')}")
         }
 

@@ -123,7 +123,7 @@ allprojects {
         testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.10.5'
 
         // Documentation required libraries
-        groovyDoc 'org.fusesource.jansi:jansi:2.4.0'
+        groovyDoc 'org.fusesource.jansi:jansi:2.4.3'
         groovyDoc "org.apache.groovy:groovy-groovydoc:4.0.33"
         groovyDoc "org.apache.groovy:groovy-ant:4.0.33"
     }
@@ -272,6 +272,127 @@ task releaseInfo {
 }}
 
 /*
+ * Guard the nf-agent-pi runner image against silent version drift.
+ *
+ * That image IS the distribution unit of the `pi` agent runner, and its tag is the plugin
+ * VERSION -- a tag `build-image.sh push` treats as immutable, publishing only when it does not
+ * exist yet. So build-context content that lands WITHOUT a version bump can never reach a
+ * registry under the tag that names it: the release ships a jar hard-pinned to a tag whose
+ * content this tree no longer describes, permanently. This task fails the release instead.
+ *
+ * It hangs off validatePluginVersions so it runs on every path that already validates plugin
+ * versions -- `upload`, `deploy` and `release` -- and therefore always before the git tag. It is
+ * deliberately NOT attached to :plugins:nf-agent-pi:releaseImageIfNotExists: drift is exactly the
+ * case where the tag already exists and that push is skipped, so this check has to be independent
+ * of it.
+ *
+ * What it cannot see: it compares git trees, not the registry, so a tag pushed by hand outside
+ * the release chain is invisible to it. That is covered by inspecting the reference
+ * `plugins/nf-agent-pi/build-image.sh ref` prints, before merging -- doing it here would drag
+ * docker into `upload` and `deploy`.
+ */
+task validateAgentImageVersion {
+    // a question about git history has no file inputs that could make it up-to-date
+    outputs.upToDateWhen { false }
+
+    doLast {
+        final pluginDir = 'plugins/nf-agent-pi'
+        final ignoreFile = file("$pluginDir/.dockerignore")
+        // Self-check, so the guard cannot silently degrade into a no-op that reports success on
+        // every release -- which would be worse than no guard, since the release plan records
+        // this task passing as proof that it works.
+        final disconnected = { String why -> new GradleException(
+                "the nf-agent-pi drift guard derived no usable paths from $pluginDir/.dockerignore " +
+                "- a rename or an allowlist edit has disconnected it: $why" as String) }
+
+        // The `!` allowlist in .dockerignore is already the single statement of what enters the
+        // image, so derive the guarded paths from it instead of repeating them here. Deriving is
+        // what keeps the guard honest: agent-rpc/main_test.go is deliberately not admitted to the
+        // build context, and a hand-written `agent-rpc/**` would fire on a test-only change.
+        if( !ignoreFile.exists() )
+            throw disconnected("$ignoreFile does not exist")
+        // Prefix every entry: .dockerignore paths are relative to the BUILD CONTEXT while a git
+        // pathspec is relative to the repo root. Unprefixed they match nothing at all.
+        final derived = ignoreFile.readLines()
+                .collect { it.trim() }
+                .findAll { it.startsWith('!') }
+                .collect { "$pluginDir/${it.substring(1).trim()}" as String }
+        if( !derived )
+            throw disconnected('it admits no `!` allowlist entry')
+        // the Dockerfile and the allowlist itself are build inputs too, and neither is derivable
+        // from the allowlist
+        final guarded = derived + ["$pluginDir/Dockerfile" as String, "$pluginDir/.dockerignore" as String]
+        final absent = guarded.findAll { !file(it).exists() }
+        if( absent )
+            throw disconnected("these paths do not exist: ${absent.join(', ')}")
+
+        final git = { List<String> args ->
+            try {
+                final proc = new ProcessBuilder(['git'] + args)
+                        .directory(rootProject.rootDir)
+                        .redirectError(ProcessBuilder.Redirect.DISCARD)
+                        .start()
+                final out = proc.inputStream.getText('UTF-8')
+                return [ ok: proc.waitFor()==0, out: out.trim() ]
+            }
+            catch( IOException e ) {
+                return [ ok: false, out: '' ]   // git is not on PATH
+            }
+        }
+
+        // Not knowing the answer is a warning, never a failure. No git, not a git repo, and a
+        // shallow clone all land here. The release job checks out with fetch-depth: 0, so in the
+        // environment that matters the data is there.
+        //
+        // A shallow clone is excluded explicitly, and NOT because `git log` comes back empty:
+        // measured at depths 2, 3 and 5, it does not. The graft boundary is recorded as having no
+        // parents, so a path-limited log reports the BOUNDARY commit as the one that last set
+        // VERSION even when the real bump is older than the window - and the diff from there is
+        // whatever the window happens to contain, i.e. a false failure on a correct tree.
+        final versionFile = file("$pluginDir/VERSION")
+        if( !versionFile.exists() ) {
+            println "! nf-agent-pi drift guard skipped: $pluginDir/VERSION does not exist"
+            return
+        }
+        final shallow = git(['rev-parse', '--is-shallow-repository'])
+        if( !shallow.ok ) {
+            println "! nf-agent-pi drift guard skipped: git is not on PATH, or ${rootProject.rootDir} is not a git repository"
+            return
+        }
+        if( shallow.out == 'true' ) {
+            println "! nf-agent-pi drift guard skipped: this is a shallow clone, so the commit that last set $pluginDir/VERSION cannot be located - fetch the full history to run it"
+            return
+        }
+        final base = git(['log', '-1', '--format=%H', '--', "$pluginDir/VERSION" as String])
+        if( !base.ok || !base.out ) {
+            println "! nf-agent-pi drift guard skipped: no commit in this history sets $pluginDir/VERSION"
+            return
+        }
+
+        // The window is the last VERSION bump, not the last release tag. The invariant is "the
+        // image tag this tree names is not already published with different content", which
+        // release tags do not track -- plugins/nf-agent-pi/VERSION does not even exist at the
+        // current one, so a tag-anchored guard would be vacuous for a whole release cycle. This
+        // task reads no tag at all, which is also why an unreleased branch cannot upset it.
+        final version = versionFile.text.trim()
+        final diff = git(['diff', '--name-only', "${base.out}..HEAD" as String, '--'] + guarded)
+        if( !diff.ok ) {
+            println "! nf-agent-pi drift guard skipped: cannot diff ${base.out.take(9)}..HEAD"
+            return
+        }
+        if( diff.out )
+            throw new GradleException(
+                    "the nf-agent-pi image build context changed since $pluginDir/VERSION was last " +
+                    "bumped (${base.out.take(9)}, version $version) but the version did not - bump it " +
+                    "and add a changelog.txt entry so the release publishes a new image tag; " +
+                    "$version is already published and immutable.\nChanged:\n  " +
+                    diff.out.readLines().join('\n  ') as String)
+
+        println "✅ nf-agent-pi image validation passed: build context unchanged since $version (${base.out.take(9)})"
+    }
+}
+
+/*
  * Validate that plugins-info.txt matches plugin VERSION files and that build-info.properties
  * contains the correct build number and commit ID when running in GitHub Actions.
  *
@@ -279,11 +400,12 @@ task releaseInfo {
  * 1. All plugin versions in plugins-info.txt match their corresponding VERSION files
  * 2. The build number in build-info.properties matches GITHUB_RUN_NUMBER (in CI)
  * 3. The commit ID in build-info.properties matches GITHUB_SHA (in CI)
+ * 4. The nf-agent-pi runner image has not drifted from its VERSION (validateAgentImageVersion)
  *
  * This validation prevents releases with stale or mismatched metadata.
  */
 task validatePluginVersions {
-    dependsOn buildInfo
+    dependsOn buildInfo, validateAgentImageVersion
     inputs.file('modules/nextflow/src/main/resources/META-INF/plugins-info.txt')
     inputs.file('modules/nextflow/src/main/resources/META-INF/build-info.properties')
     inputs.files(fileTree('plugins') { include '*/VERSION' })
@@ -307,6 +429,48 @@ task validatePluginVersions {
             }
             throw new GradleException("Plugin version mismatch:\n${diffs.join('\n')}\nRun 'make assemble' to fix.")
         }
+
+        // A plugin's `nextflowVersion` is a MINIMUM core requirement, written into the jar manifest
+        // as `Plugin-Requires` and enforced at runtime by BasePlugin.start(). One that names a core
+        // NEWER than this tree's own VERSION is therefore unloadable from this checkout -- every run
+        // of that plugin aborts at plugin start with "Failed requirement" -- and, worse, a release
+        // cut at the current VERSION would ship a plugin the core it ships with refuses to load.
+        //
+        // That is easy to write by accident: the requirement has to name the release the plugin
+        // ships IN, which is the NEXT root VERSION, so a plugin authored ahead of a version bump is
+        // correct-looking and broken until the bump lands. Checking it here means the bump cannot be
+        // forgotten silently -- this task runs on `upload`, `deploy` and `release`, i.e. always
+        // before the git tag.
+        final coreVersion = rootProject.file('VERSION').text.trim()
+        // ordered as one number rather than a list: Groovy will not compare two ArrayLists with `>`.
+        // The multipliers leave room for a 2-digit month and a 4-digit patch, which is well beyond
+        // anything the calendar scheme in CLAUDE.md produces.
+        final calver = { String v ->
+            final m = (v =~ /^(\d+)\.(\d+)\.(\d+)/)
+            return m ? (m[0][1] as int) * 1000000 + (m[0][2] as int) * 10000 + (m[0][3] as int) : null
+        }
+        final core = calver(coreVersion)
+        if( core == null )
+            throw new GradleException("Cannot parse the root VERSION `${coreVersion}` as a calendar version")
+        final ahead = []
+        expected.each { p ->
+            final gradleFile = new File(p.projectDir, 'build.gradle')
+            // anchored on the assignment the plugin DSL uses; a plugin that omits it inherits the
+            // default and is not this check's business
+            final line = gradleFile.readLines().find { it =~ /^\s*nextflowVersion\s*=/ }
+            if( !line )
+                return
+            final declared = (line =~ /['"]([^'"]+)['"]/).with { it ? it[0][1] : null }
+            final v = declared ? calver(declared) : null
+            if( v == null )
+                throw new GradleException("Cannot parse `nextflowVersion` for ${p.name}: ${line.trim()}")
+            if( v > core )
+                ahead << "  ${p.name} requires >=${declared}, but the root VERSION is ${coreVersion}"
+        }
+        if( ahead )
+            throw new GradleException(
+                "Plugin requires a Nextflow version newer than this tree:\n${ahead.join('\n')}\n" +
+                "Bump the root VERSION to the release these plugins ship in, or lower their `nextflowVersion`.")
 
         // Validate build-info.properties - require GitHub Actions environment variables
         if (!System.getenv('GITHUB_RUN_NUMBER')) {

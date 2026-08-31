@@ -1,5 +1,13 @@
 nf-tower changelog
 ===================
+1.29.2 - 20 Aug 2026
+- Fix independently-verified findings from a security audit (#7503) [5400da660]
+- Separate CLI from runtime (#5971) [1dc8cf68f]
+- Split CLI config handling out of ConfigBuilder (#7373) [34ac1d14c]
+- Support authenticated forward HTTP/HTTPS proxies across the client stack (#7331) [064a03873]
+- Use the wiremock self-contained distribution in nf-tower (#7485) [3db6edfa2]
+- Bump Groovy 4.0.33 (#7429) [c8800d84a]
+
 1.29.1 - 15 Jul 2026
 - Bump jackson-databind to patched versions to fix deserialization CVEs (#7322) [8d4423e8a]
 - Fix Fusion license token cache keying by product and version (#7320) [d95f5062c]

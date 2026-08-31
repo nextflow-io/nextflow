@@ -163,6 +163,10 @@ Enable process execution in an Apptainer container.
 
 Enable process execution in a Charliecloud container.
 
+##### `-with-agent-trace`
+
+Log a readable trace of each [agent][agent-page]'s execution — its turns, the model reasoning and the tool invocations — at `INFO` level; tool inputs and outputs are logged at `DEBUG`. Equivalent to the `agent.trace` configuration setting.
+
 ##### `-with-cloudcache`
 
 Store cache metadata in an object storage bucket with the Cloud cache plugin.
@@ -276,6 +280,7 @@ $ nextflow run main.nf -params-file pipeline_params.yml
 
 See [Pipeline parameters][cli-params] for more information about writing custom parameters files.
 
+[agent-page]: ../../agent
 [cache-compare-hashes]: ../../cache-and-resume#comparing-the-hashes-of-two-runs
 [cli-params]: ../../cli#pipeline-parameters
 [tracing-page]: ../../reports

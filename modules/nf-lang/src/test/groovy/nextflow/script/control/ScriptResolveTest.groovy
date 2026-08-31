@@ -100,6 +100,30 @@ class ScriptResolveTest extends Specification {
         errors[0].getOriginalMessage() == '`x` is already declared'
     }
 
+    def 'should resolve a DSL function inherited from a supertype that is not first in the extends list'() {
+        when: """`file()` reaches a process output through OutputDslV2 -> FileOutputDsl. Resolution
+                 used to follow getInterfaces()[0] only, so this resolved purely because that parent
+                 happened to sit first -- and a later `extends A, FileOutputDsl` would have broken
+                 `file()` in every process output block in every pipeline, silently."""
+        def errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process CHECK {
+                input:
+                x: String
+                output:
+                report: Path = file('report.md')
+                script:
+                "true"
+            }
+            '''
+        )
+
+        then: 'it resolves, whatever position the declaring supertype occupies'
+        errors.size() == 0
+    }
+
     def 'should report an error for an unrecognized process directive' () {
         when:
         def errors = check(
@@ -532,6 +556,36 @@ class ScriptResolveTest extends Specification {
 
         cleanup:
         deleteDir(root)
+    }
+
+    def 'should resolve every typed process output directive after the file/files extraction'() {
+        when:
+        // `file`/`files` now come from the shared FileOutputDsl rather than being declared on
+        // ProcessDsl.OutputDslV2. This pins that the process-only three (`env`/`eval`/`stdout`)
+        // survived the extraction; WHICH `file` resolves is pinned separately in AgentToGroovyTest,
+        // because a global `ScriptDsl.file` matches by name and would mask a broken scope here
+        def errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process FOO {
+                input:
+                x: String
+
+                output:
+                report: Path = file('report.md')
+                notes: Set<Path> = files(hidden: true, '*.txt')
+                home: String = env('HOME')
+                lines: String = eval('wc -l report.md')
+                log: String = stdout()
+
+                script:
+                "true"
+            }
+            ''')
+
+        then:
+        errors.size() == 0
     }
 
 }

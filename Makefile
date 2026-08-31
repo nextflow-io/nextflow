@@ -139,6 +139,25 @@ dockerPack:
 release-plugins:
 	$(gradle) releasePluginToRegistryIfNotExists
 
+#
+# Publish the `pi` agent runner image, which is the distribution unit of the nf-agent-pi
+# runtime. Runs first in release.sh, because it is the only release step that reaches a
+# third-party registry and it must not be able to abort a release that has already
+# published something. A no-op when the tag is already published.
+#
+release-agent-image:
+	$(gradle) :plugins:nf-agent-pi:releaseImageIfNotExists
+
+#
+# Release pre-flight: verify the pi runner image still builds, for both architectures,
+# publishing nothing. The image is built for real only at release.sh step 1, so drift in its
+# build context -- an agent-rpc/go.mod bump, a stale base-image pin -- is otherwise first
+# exercised by the release itself, after the release commit is already pushed.
+#
+check-agent-image:
+	$(gradle) validateAgentImageVersion
+	plugins/nf-agent-pi/build-image.sh build
+
 publish-artifacts:
 	$(gradle) publishAllPublicationsToSeqeraRepository
 
