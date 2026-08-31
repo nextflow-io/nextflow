@@ -29,6 +29,7 @@ import com.sun.net.httpserver.HttpHandler
 import com.sun.net.httpserver.HttpServer
 import nextflow.SysEnv
 import nextflow.exception.HttpResponseLengthExceedException
+import nextflow.util.HttpClientOpts
 import nextflow.util.RetryConfig
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -210,8 +211,8 @@ class RepositoryProviderTest extends Specification {
         def provider = Spy(RepositoryProvider)
 
         expect:
-        provider.connectTimeout() == RepositoryProvider.DEFAULT_CONNECT_TIMEOUT
-        provider.readTimeout() == RepositoryProvider.DEFAULT_READ_TIMEOUT
+        provider.httpClientOpts.connectTimeout() == Duration.ofSeconds(60)
+        provider.httpClientOpts.requestTimeout() == Duration.ofSeconds(60)
 
         cleanup:
         SysEnv.pop()
@@ -219,39 +220,75 @@ class RepositoryProviderTest extends Specification {
 
     def 'should override http timeouts via env variables' () {
         given:
-        SysEnv.push([NXF_GIT_CONNECT_TIMEOUT: '5s', NXF_GIT_READ_TIMEOUT: '250ms'])
+        SysEnv.push([NXF_GIT_CONNECT_TIMEOUT: '5s', NXF_GIT_REQUEST_TIMEOUT: '250ms'])
         def provider = Spy(RepositoryProvider)
 
         expect:
-        provider.connectTimeout() == Duration.ofSeconds(5)
-        provider.readTimeout() == Duration.ofMillis(250)
+        provider.httpClientOpts.connectTimeout() == Duration.ofSeconds(5)
+        provider.httpClientOpts.requestTimeout() == Duration.ofMillis(250)
 
         cleanup:
         SysEnv.pop()
     }
 
-    def 'should fallback to default timeouts when the value is invalid' () {
+    def 'should fail when the timeout value is not a duration' () {
         given:
-        SysEnv.push([NXF_GIT_CONNECT_TIMEOUT: 'foo', NXF_GIT_READ_TIMEOUT: 'bar'])
+        SysEnv.push([NXF_GIT_CONNECT_TIMEOUT: 'foo'])
         def provider = Spy(RepositoryProvider)
 
-        expect:
-        provider.connectTimeout() == RepositoryProvider.DEFAULT_CONNECT_TIMEOUT
-        provider.readTimeout() == RepositoryProvider.DEFAULT_READ_TIMEOUT
+        when:
+        provider.getHttpClientOpts()
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('NXF_GIT_CONNECT_TIMEOUT')
 
         cleanup:
         SysEnv.pop()
     }
 
-    def 'should set the read timeout on the http request' () {
+    def 'should prefer the http client opts set explicitly over the env variables' () {
         given:
-        SysEnv.push([NXF_GIT_READ_TIMEOUT: '250ms'])
+        SysEnv.push([NXF_GIT_CONNECT_TIMEOUT: '5s', NXF_GIT_REQUEST_TIMEOUT: '250ms'])
+        def provider = Spy(RepositoryProvider)
+        and:
+        provider.setHttpClientOpts(new HttpClientOpts(
+            [connectTimeout: '30s', requestTimeout: '90s'],
+            'NXF_GIT_',
+            RepositoryProvider.DEFAULT_CONNECT_TIMEOUT,
+            RepositoryProvider.DEFAULT_REQUEST_TIMEOUT))
+
+        expect:
+        provider.httpClientOpts.connectTimeout() == Duration.ofSeconds(30)
+        provider.httpClientOpts.requestTimeout() == Duration.ofSeconds(90)
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should set the request timeout on the http request as connect plus request' () {
+        given:
+        SysEnv.push([NXF_GIT_CONNECT_TIMEOUT: '5s', NXF_GIT_REQUEST_TIMEOUT: '250ms'])
         def provider = Spy(RepositoryProvider)
 
         when:
         def request = provider.newRequest('http://foo.com/bar')
         then:
-        request.timeout().get() == Duration.ofMillis(250)
+        // HttpRequest.timeout() spans the connect phase too, so it carries the sum
+        request.timeout().get() == Duration.ofMillis(5_250)
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should not set a request timeout when the request timeout is unbounded' () {
+        given:
+        SysEnv.push([NXF_GIT_REQUEST_TIMEOUT: '0s'])
+        def provider = Spy(RepositoryProvider)
+
+        when:
+        def request = provider.newRequest('http://foo.com/bar')
+        then:
+        !request.timeout().isPresent()
 
         cleanup:
         SysEnv.pop()
@@ -267,7 +304,7 @@ class RepositoryProviderTest extends Specification {
         } as HttpHandler)
         server.start()
         and:
-        SysEnv.push([NXF_GIT_READ_TIMEOUT: '500ms'])
+        SysEnv.push([NXF_GIT_CONNECT_TIMEOUT: '1s', NXF_GIT_REQUEST_TIMEOUT: '500ms'])
         def provider = Spy(RepositoryProvider)
 
         when:
@@ -275,6 +312,7 @@ class RepositoryProviderTest extends Specification {
         then:
         def e = thrown(IOException)
         e.message.startsWith("No response received from 'http://localhost:${server.address.port}/stall'")
+        e.message.contains('NXF_GIT_REQUEST_TIMEOUT')
         e.cause instanceof HttpTimeoutException
 
         cleanup:
