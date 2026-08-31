@@ -163,8 +163,24 @@ abstract class RepositoryProvider {
      */
     protected HttpClientOpts getHttpClientOpts() {
         if( httpClientOpts==null )
-            httpClientOpts = new HttpClientOpts(Collections.emptyMap(), HTTP_CLIENT_ENV_PREFIX, DEFAULT_CONNECT_TIMEOUT, DEFAULT_REQUEST_TIMEOUT)
+            httpClientOpts = httpClientOpts(null)
         return httpClientOpts
+    }
+
+    /**
+     * Build the HTTP client settings from the {@code httpClient} block of the SCM config file
+     * i.e. {@code ~/.nextflow/scm} or wherever {@code NXF_SCM_FILE} points.
+     * <p>
+     * That file is the one config source that is both already loaded when SCM resolution runs
+     * and shared with an embedder building the same map by hand - unlike {@code nextflow.config},
+     * which is not parsed until the project has been fetched.
+     *
+     * @param scmConfig The parsed SCM config file contents, or null when there is none
+     * @return The resulting {@link HttpClientOpts}; never null
+     */
+    static HttpClientOpts httpClientOpts(Map scmConfig) {
+        final opts = (Map) scmConfig?.get('httpClient') ?: Collections.emptyMap()
+        return new HttpClientOpts(opts, HTTP_CLIENT_ENV_PREFIX, DEFAULT_CONNECT_TIMEOUT, DEFAULT_REQUEST_TIMEOUT)
     }
 
     String getProject() {

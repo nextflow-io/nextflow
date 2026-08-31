@@ -469,6 +469,20 @@ class AssetManagerTest extends Specification {
 
     }
 
+    def 'should pass the scm config http client opts to the provider' () {
+        given:
+        def config = [
+            httpClient: [connectTimeout: '30s', requestTimeout: '90s'],
+            providers: [github: [user: 'foo', password: 'bar']] ]
+
+        when:
+        def manager = new AssetManager().build('nextflow-io/hello', config)
+        def provider = manager.createHubProvider('github')
+        then:
+        provider.getHttpClientOpts().connectTimeout() == java.time.Duration.ofSeconds(30)
+        provider.getHttpClientOpts().requestTimeout() == java.time.Duration.ofSeconds(90)
+    }
+
     def testCreateProviderFor(){
 
         when:
