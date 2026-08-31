@@ -1,0 +1,4 @@
+# Nextflow run artifacts
+.nextflow*
+work/
+results/

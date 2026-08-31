@@ -113,7 +113,7 @@ Included pipelines should be committed to the meta-pipeline repository. The pipe
 
 Pipeline inclusion only captures the pipeline's main script and included modules -- it does not capture external context such as config or the `lib` directory. As a result, the pipeline should be written in a way that works when included in another pipeline:
 
-1. Pipeline parameters should be defined in the script `params` block. The config should only declare *config params* (params that only affect config settings).
+1. Pipeline parameters should be defined in the script `params` block and referenced only in the entry workflow and `output` block. The config should only declare *config params* (params that only affect config settings).
 
 2. Project-level assets (`projectDir`, `bin`, `lib`) should not be used since the meta-pipeline will have a different project root. Module-level assets can be safely used through the module `resources/` bundle and `moduleDir`.
 
@@ -418,7 +418,9 @@ This way, the developer only needs to declare one param for each included pipeli
 
 Notes:
 
-- `rnaseq.input` is always overridden by the dataflow, so a user-supplied value (`--rnaseq.input`) would be silently discarded. Nextflow can warn when a phantom input is set.
+- `output` must be included in the same include declaration as the corresponding `workflow`, so that param references can be resolved correctly.
+
+- `rnaseq.input` is always overridden by the dataflow, so a user cannot set it.
 
 - `rnaseq.fasta` must still be provided by the user, but the error surfaces at the `NFCORE_RNASEQ()` call rather than at launch.
 

@@ -27,6 +27,7 @@ import nextflow.exception.IllegalInvocationException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
 import nextflow.extension.OpCall
+import nextflow.util.RecordMap
 import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Models the execution context of a workflow component
@@ -126,10 +127,18 @@ class WorkflowBinding extends Binding  {
     }
 
     private Object invoke0(ComponentDef component, Object args) {
-        final componentTyped = component instanceof WorkflowDef && component.getOwner().isTypingEnabled()
+        final componentTyped = isTypedComponent(component)
         final args1 = DataflowTypeHelper.normalizeArray(args, componentTyped)
         final result = component.invoke_a(args1)
         return DataflowTypeHelper.normalize(result, owner?.isTypingEnabled())
+    }
+
+    private static boolean isTypedComponent(ComponentDef component) {
+        if( component instanceof WorkflowDef )
+            return component.getOwner().isTypingEnabled()
+        if( component instanceof PipelineDef )
+            return component.getOwner().isTypingEnabled()
+        return false
     }
 
     @Override
@@ -191,6 +200,28 @@ class WorkflowBinding extends Binding  {
             source = source[0]
         }
 
+        // a record of channels -- e.g. the outputs of an included pipeline --
+        // publishes each of its fields as a separate output
+        if( isRecordOfChannels(source) ) {
+            for( final entry : (Map<String,Object>)source )
+                publish0(entry.key, entry.value)
+            return
+        }
+
+        publish0(name, source)
+    }
+
+    private static boolean isRecordOfChannels(Object source) {
+        if( source !instanceof RecordMap || !source )
+            return false
+        return ((Map)source).values().every { value ->
+            value instanceof ChannelImpl || value instanceof ValueImpl || value instanceof DataflowWriteChannel
+        }
+    }
+
+    private void publish0(String name, Object source) {
+        if( owner.session.outputs.containsKey(name) )
+            throw new ScriptRuntimeException("Workflow output '${name}' was assigned more than once -- an output record is published under the names of its fields, so two pipelines that share an output name cannot both be published")
         owner.session.outputs[name] =
             source instanceof ChannelImpl ? source.getSource() :
             source instanceof ValueImpl ? source.getSource() :

@@ -103,9 +103,7 @@ class IncludeDef {
             ? loadModuleV2(moduleFile, ownerParams, session)
             : loadModuleV1(moduleFile, resolveParams(ownerParams), session)
         // -- add it to the inclusions
-        for( Module module : modules ) {
-            meta.addModule(moduleScript, module.name, module.alias)
-        }
+        meta.addModules(ScriptMeta.get(moduleScript), modules)
     }
 
     private Map resolveParams(ScriptBinding.ParamsMap ownerParams) {
@@ -132,12 +130,30 @@ class IncludeDef {
      * @param session The current workflow run
      */
     @PackageScope
-    @Memoized
     static BaseScript loadModuleV2(Path path, Map params, Session session) {
         final script = ScriptMeta.getScriptByPath(path)
         if( !script )
             throw new IllegalStateException("Unable to find module script for path: $path")
         script.getBinding().setParams(params)
+        return runModuleV2(path, session)
+    }
+
+    /**
+     * Execute a module script exactly once, no matter how many scripts
+     * include it.
+     *
+     * NOTE: the params of the including script must not be part of the memo
+     * key -- {@link ScriptBinding.ParamsMap} does not implement {@code hashCode}
+     * by value, so two scripts that include the same module would each get a
+     * cache miss and execute the module again.
+     *
+     * @param path    The included script path
+     * @param session The current workflow run
+     */
+    @PackageScope
+    @Memoized
+    static BaseScript runModuleV2(Path path, Session session) {
+        final script = ScriptMeta.getScriptByPath(path)
         script.run()
         return script
     }
