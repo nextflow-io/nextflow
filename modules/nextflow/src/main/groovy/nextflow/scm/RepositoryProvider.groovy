@@ -572,7 +572,11 @@ abstract class RepositoryProvider {
             throw new IOException("Unable to connect to '${request.uri()}' within ${getHttpClientOpts().connectTimeout().toSeconds()}s (after ${retryConfig.maxAttempts} attempts) - make sure the host is reachable or increase the timeout setting the variable NXF_GIT_CONNECT_TIMEOUT", e)
         }
         catch( HttpTimeoutException e ) {
-            throw new IOException("No response received from '${request.uri()}' within ${getHttpClientOpts().requestTimeout().toSeconds()}s - make sure the host is reachable or increase the timeout setting the variable NXF_GIT_REQUEST_TIMEOUT", e)
+            // report the bound actually applied to the request i.e. connect + request; it is
+            // null only when the request timeout is unbounded, in which case no timeout was
+            // set on the request and this branch is unreachable
+            final elapsed = getHttpClientOpts().httpRequestTimeout()
+            throw new IOException("No response received from '${request.uri()}'${elapsed ? " within ${elapsed.toSeconds()}s" : ''} - make sure the host is reachable or increase the timeout setting the variable NXF_GIT_REQUEST_TIMEOUT", e)
         }
     }
 
