@@ -24,6 +24,7 @@ import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 
 import groovyx.gpars.dataflow.DataflowReadChannel
+import nextflow.exception.ExitException
 import nextflow.exception.StopSplitIterationException
 import nextflow.exception.WorkflowScriptErrorException
 import nextflow.extension.GroupKey
@@ -219,20 +220,12 @@ class Nextflow {
      * @param exitCode The exit code to be returned
      * @param message The message that will be reported in the log file (optional)
      */
-    @Deprecated
     static void exit(int exitCode, String message = null) {
-        if( session.aborted ) {
-            log.debug "Ignoring exit because execution is already aborted -- message=$message"
-            return
-        }
-
-        if ( exitCode && message ) {
+        if( exitCode && message )
             log.error message
-        }
-        else if ( message ) {
+        else if( message )
             log.info message
-        }
-        System.exit(exitCode)
+        throw new ExitException(exitCode, message)
     }
 
     /**
@@ -240,7 +233,6 @@ class Nextflow {
      *
      * @param message The message that will be reported in the log file
      */
-    @Deprecated
     static void exit( String message ) {
         exit(0, message)
     }
