@@ -196,6 +196,8 @@ Connection attempts that time out are retried, because a connection that was nev
 
 Defines the timeout to receive the response for a HTTP request made to the Git hosting service API e.g. GitHub, GitLab, etc. as a duration string e.g. `30s` (default: `60s`). Set it to `0s` to wait indefinitely.
 
+Unlike a connect timeout, a request that times out waiting for the response is not retried, since it did reach the server and may already have been acted on.
+
 ##### `NXF_JAVA_HOME`
 
 Defines the path location of the Java VM installation used to run Nextflow. This variable overrides the `JAVA_HOME` variable if defined.
@@ -301,8 +303,6 @@ Delay multiplier used for HTTP retryable operations (default: `2.0`).
 ##### `NXF_SCM_FILE`
 
 Defines the path location of the SCM config file .
-
-Unlike a connect timeout, a request that times out waiting for the response is not retried, since it did reach the server and may already have been acted on.
 
 ##### `NXF_SINGULARITY_CACHEDIR`
 
