@@ -87,6 +87,10 @@ include { hello as sayHello } from './some/module'
 
 The include source should be a string literal. Each include clause should specify a name, and may also specify an *alias*. In the above example, `hello` is included under the alias `sayHello`.
 
+:::note
+[Enum](#enum-type) and [record](#record-type) types cannot be aliased. They must be included under their original name.
+:::
+
 Include clauses can be separated by semi-colons or newlines:
 
 ```nextflow
@@ -95,7 +99,7 @@ include { hello ; bye as goodbye } from './some/module'
 
 // newlines
 include {
-hello
+    hello
     bye as goodbye
 } from './some/module'
 ```
