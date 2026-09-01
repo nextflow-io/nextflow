@@ -55,6 +55,36 @@ class ConfigValidatorTest extends Specification {
         capture.toString().contains('Unrecognized config option \'executor.cpu\'')
     }
 
+    def 'should validate per-executor config options within a profile' () {
+        when:
+        new ConfigValidator().validate([
+            profiles: [
+                test: [
+                    executor: [
+                        '$local': [ cpus: 8 ]
+                    ]
+                ]
+            ]
+        ])
+        then:
+        !capture.toString().contains('Unrecognized config option')
+    }
+
+    def 'should not treat a $ selector outside the executor scope as a selector' () {
+        when:
+        new ConfigValidator().validate([
+            docker: [
+                '$foo': [ enabled: true ]
+            ],
+            process: [
+                '$bar': [ cpus: 2 ]
+            ]
+        ])
+        then:
+        capture.toString().contains('Unrecognized config option \'docker.$foo.enabled\'')
+        capture.toString().contains('Unrecognized config option \'process.$bar.cpus\'')
+    }
+
     def 'should warn about invalid config options' () {
         when:
         new ConfigValidator().validate([

@@ -115,7 +115,7 @@ class ConfigValidator {
                 names.clear()
 
             if( value instanceof Map ) {
-                if( isSelector(key) )
+                if( isSelector(names) )
                     names.removeLast()
                 if( isMapOption(names) )
                     continue
@@ -128,13 +128,20 @@ class ConfigValidator {
     }
 
     /**
-     * Determine whether a scope name is a selector, i.e. a process selector
-     * (`withLabel:`, `withName:`) or a per-executor selector (`$<executor>`).
+     * Determine whether the last name in a scope path is a selector, i.e. a
+     * process selector (`withLabel:`, `withName:`) or a per-executor selector
+     * (`$<executor>`).
      *
-     * @param name
+     * @param names
      */
-    private boolean isSelector(String name) {
-        return name.startsWith('withLabel:') || name.startsWith('withName:') || name.startsWith('$')
+    private boolean isSelector(List<String> names) {
+        if( !names )
+            return false
+        final name = names.last()
+        if( name.startsWith('withLabel:') || name.startsWith('withName:') )
+            return true
+        // per-executor selector in the `executor` scope, e.g. `executor.$local`
+        return name.startsWith('$') && names.size() == 2 && names.first() == 'executor'
     }
 
     /**
