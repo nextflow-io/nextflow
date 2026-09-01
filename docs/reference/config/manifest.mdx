@@ -95,16 +95,20 @@ Project short name.
 
 ##### `manifest.nextflowVersion`
 
-Minimum required Nextflow version.
+Nextflow version required to run the pipeline.
 
-This setting may be useful to ensure that a specific version is used:
+Nextflow compares the current version against this requirement and prints a warning when it is not met. With the `!` prefix, Nextflow stops execution instead.
+
+This setting does not download or select a Nextflow version. The version that runs is determined by how Nextflow was installed or launched. Use [`NXF_VER`][version-selection] to select a version at the command line, or the Nextflow version selector when launching from Seqera Platform.
+
+The following version requirements are supported:
 
 ```groovy
 manifest.nextflowVersion = '1.2.3'        // exact match
 manifest.nextflowVersion = '1.2+'         // 1.2 or later (excluding 2 and later)
 manifest.nextflowVersion = '>=1.2'        // 1.2 or later
 manifest.nextflowVersion = '>=1.2, <=1.5' // any version in the 1.2 .. 1.5 range
-manifest.nextflowVersion = '!>=1.2'       // with ! prefix, stop execution if current version does not match required version.
+manifest.nextflowVersion = '!>=1.2'       // stop execution if the version does not match
 ```
 
 See [VersionNumber][stdlib-types-versionnumber] for details.
@@ -122,3 +126,4 @@ Pull submodules recursively from the Git repository.
 Project version number.
 
 [stdlib-types-versionnumber]: ../stdlib-types/version-number
+[version-selection]: ../../updating-nextflow#version-selection
