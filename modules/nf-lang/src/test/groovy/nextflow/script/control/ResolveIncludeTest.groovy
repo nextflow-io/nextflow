@@ -114,6 +114,32 @@ class ResolveIncludeTest extends Specification {
         deleteDir(root)
     }
 
+    def 'should report an error for an aliased type include' () {
+        given:
+        def root = tempDir()
+        def main = tempFile(root, 'main.nf',
+            '''\
+            include { Thing as Alias } from './types.nf'
+            ''')
+        def module = tempFile(root, 'types.nf',
+            '''\
+            record Thing {
+                id: String
+            }
+            ''')
+
+        when:
+        def errors = check(root, [main, module])
+        then:
+        errors.size() == 1
+        errors[0].getSourceLocator().endsWith('main.nf')
+        errors[0].getStartLine() == 1
+        errors[0].getOriginalMessage() == 'Included types cannot be aliased'
+
+        cleanup:
+        deleteDir(root)
+    }
+
     def 'should resolve an include' () {
         given:
         def root = tempDir()
