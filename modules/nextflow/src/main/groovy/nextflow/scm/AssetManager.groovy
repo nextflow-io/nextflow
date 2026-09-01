@@ -525,7 +525,7 @@ class AssetManager implements Closeable {
 
         return RepositoryFactory
             .newRepositoryProvider(config, project)
-            .setHttpClientOpts(httpClientOpts ?: RepositoryProvider.httpClientOpts(null))
+            .setHttpClientOpts(httpClientOpts ?: RepositoryProvider.httpClientOpts())
     }
 
     AssetManager setLocalPath(File path) {
