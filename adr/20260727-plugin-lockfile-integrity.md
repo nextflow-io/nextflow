@@ -1,7 +1,7 @@
 # Plugin Lockfile Integrity
 
 - Authors: Paolo Di Tommaso <paolo.ditommaso@gmail.com>
-- Status: draft
+- Status: proposed
 - Date: 2026-07-27
 - Tags: plugins, security, registry, integrity
 
@@ -142,11 +142,11 @@ This keeps steady-state launches on a private cache nearly free, runs the full h
 
 | Mode | Tree hash mismatch (locked entry) | Coordinate missing from lock |
 |------|-----------------------------------|------------------------------|
-| `strict` | **Abort** with a re-pin hint | Auto-pin (trust-on-first-use) |
+| `strict` | **Abort** with a re-pin hint | **Abort** — an unpinned coordinate is refused, not pinned |
 | `warn` (default when the file is present) | Log a warning once and proceed | Auto-pin |
 | `off` | Feature disabled — no hashing, no pinning, no reporting | — |
 
-In `strict` and `warn` the mode gates only the **mismatch** outcome: a coordinate missing from the lock is auto-pinned, not gated. `off` is a complete escape hatch — the lock file is not even read — so that a run can always be unblocked without deleting a file committed in the pipeline repository. Default is `warn` for a friendly rollout; `strict` is opt-in for teams that want a fail-closed guarantee. Unlike a directory-ownership guard, **either default is silent in normal operation** — a mismatch is a real, rare, actionable event, not per-run noise on healthy caches.
+In `warn`, a coordinate missing from the lock is auto-pinned (trust-on-first-use) and only the **mismatch** outcome is gated. `strict` gates both: it refuses a coordinate that reaches the loader without a lock entry, because an unpinned coordinate can resolve past the committed version to a tree already extracted in a shared cache — where the download short-circuit means pf4j's own verifier never ran either — and auto-pinning it would silently record attacker-supplied bytes. Populate the lock in `warn` mode, commit it, then switch to `strict`. `off` is a complete escape hatch — the lock file is not even read — so that a run can always be unblocked without deleting a file committed in the pipeline repository. Default is `warn` for a friendly rollout; `strict` is opt-in for teams that want a fail-closed guarantee. Unlike a directory-ownership guard, **either default is silent in normal operation** — a mismatch is a real, rare, actionable event, not per-run noise on healthy caches.
 
 ### Relationship to PR #7308
 
@@ -170,6 +170,8 @@ PR #7308 proposed a `PluginSecurity` directory guard that flags a plugin directo
 - **Verification**:
   - matching tree passes;
   - mismatch **aborts** in `strict`, **warns once** in `warn`, and `off` leaves the verifier dormant;
+  - a coordinate missing from the lock **aborts** in `strict` and is auto-pinned in `warn`;
+  - in `warn`, pinning a coordinate whose plugin id is already locked at a different version logs a version-drift warning;
   - a lock file that cannot be written (eg. a read-only checkout) warns instead of aborting the run;
   - **cache poisoning**: pinning a good tree then editing an extracted file in place is detected as a mismatch — regardless of directory ownership.
 - **No-network guarantee**: verification and pinning operate purely on local files; no branch re-fetches from the registry.

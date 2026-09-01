@@ -62,7 +62,7 @@ The plugin cache is shared across pipelines and has no access controls. On multi
 
 ### Lockfile
 
-<AddedInVersion version="26.07" />
+<AddedInVersion version="26.10" />
 
 A `plugins.lock` file pins the exact plugin code a pipeline expects. For each plugin, it records the `sha512` hash of the **extracted plugin directory** — the code Nextflow loads and runs — keyed by `id@version`. Commit the file to the pipeline repository so that everyone who runs the pipeline executes the same plugin code.
 
@@ -87,11 +87,17 @@ Nextflow never rewrites an existing entry. If a plugin changes legitimately, del
 
 Use [`NXF_PLUGINS_LOCK_MODE`][using-plugins-env-vars] to control what happens when a hash does not match:
 
-| Mode             | Behavior                                     |
-| ---------------- | -------------------------------------------- |
-| `warn` (default) | Logs a warning once per plugin and continues. |
-| `strict`         | Aborts the run.                               |
-| `off`            | Disables the lockfile entirely.               |
+| Mode             | Behavior                                                                                        |
+| ---------------- | ----------------------------------------------------------------------------------------------- |
+| `warn` (default) | Logs a warning once per plugin and continues.                                                    |
+| `strict`         | Aborts the run. It also aborts when a plugin is loaded that has no entry in the lockfile at all. |
+| `off`            | Disables the lockfile entirely.                                                                  |
+
+Because `strict` refuses a plugin that is missing from the lockfile, populate the file with a `warn` mode run and commit it before switching to `strict`.
+
+:::note
+When developing a plugin locally, set `NXF_PLUGINS_LOCK_MODE=off` if you test against a pipeline that has a `plugins.lock` file. Installing a locally built plugin over a cached one changes its hash, which the lockfile reports as a mismatch.
+:::
 
 :::note
 The lockfile covers plugins that Nextflow resolves from a plugin registry while running a pipeline. It does not apply to:

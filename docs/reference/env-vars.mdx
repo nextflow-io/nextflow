@@ -238,9 +238,9 @@ The path where the plugin archives are loaded and stored (default: `$NXF_HOME/pl
 
 ##### `NXF_PLUGINS_LOCK_MODE`
 
-<AddedInVersion version="26.07" />
+<AddedInVersion version="26.10" />
 
-Controls how Nextflow reacts when a plugin's extracted directory does not match the hash recorded in the `plugins.lock` file: `warn` logs a warning once per plugin and continues, `strict` aborts the run, and `off` disables the lockfile entirely, so that no hashing, pinning, or reporting takes place (default: `warn`). Verification is dormant when no `plugins.lock` file is present.
+Controls how Nextflow reacts when a plugin's extracted directory does not match the hash recorded in the `plugins.lock` file: `warn` logs a warning once per plugin and continues, `strict` aborts the run — and also aborts when a plugin is loaded that has no entry in the lockfile at all — and `off` disables the lockfile entirely, so that no hashing, pinning, or reporting takes place (default: `warn`). Verification is dormant when no `plugins.lock` file is present.
 
 ##### `NXF_PLUGINS_REGISTRY_URL`
 
