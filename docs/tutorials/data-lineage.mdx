@@ -59,6 +59,8 @@ Nextflow will automatically record the workflow run, task executions, and output
 
 Now that you have generated some lineage metadata, you can explore it from the command line using the [lineage][cli-lineage] command.
 
+### Workflow runs
+
 First, use the `list` subcommand to list the workflow runs in the lineage store:
 
 ```console
@@ -101,16 +103,12 @@ $ nextflow lineage view lid://16b31030474f2e96c55f4940bca3ab64
 
 Every workflow run is represented in the lineage store as a `WorkflowRun` record. It includes information such as the pipeline repository, revision, run name, parameters, resolved config, and run metadata.
 
-Every lineage record is stored in the same envelope: `version` is the version of the lineage data model, `kind` is the record type, and `spec` is the record itself.
-
-:::note
-While the record type is serialized as `kind`, it is queried as `type` by the `find` subcommand and the `fromLineage` channel factory, e.g. `nextflow lineage find type=TaskRun`.
-:::
+### Workflow outputs
 
 The output files of a workflow run can be accessed as `lid://<WORKFLOW_RUN_HASH>/<PATH>`, where `<PATH>` is the file path relative to the workflow output directory.
 
 :::note
-Files must be published to the workflow output directory as defined by the `outputDir` config option (or `-output-dir` command line option) in order to be recorded as workflow outputs in the lineage store.
+Files must be published to the run's output directory (`outputDir` config option or `-output-dir` command line option) in order to be recorded as workflow outputs in the lineage store.
 :::
 
 List the output directory to see the available files:
@@ -186,6 +184,8 @@ $ nextflow lineage view lid://862df53160e07cd823c0c3960545e747/multiqc_report.ht
 
 This record is the task output for the same file -- it has a value for `taskRun` which is the same as its `source`.
 
+### Task runs
+
 View the lineage record for the task that produced this file:
 
 ```console
@@ -241,9 +241,26 @@ $ nextflow lineage view lid://862df53160e07cd823c0c3960545e747
 
 Every task run is represented in the lineage store as a `TaskRun`, which includes information such as the name, script, inputs, and software dependencies. From here, you can continue traversing through the file inputs to view upstream tasks.
 
+### Task outputs
+
+The previous example traced a workflow output to its producing task. Conversely, the outputs of a task can be retrieved with the `#output` fragment of the task LID. For example, view the outputs of the `QUANT` task that produced one of the inputs shown earlier:
+
+```console
+$ nextflow lineage view lid://eff8846883b46c5a76f11e7e4480a6c8#output
+[
+  {
+    "type": "path",
+    "name": "pair_id",
+    "value": "lid://eff8846883b46c5a76f11e7e4480a6c8/ggal_gut"
+  }
+]
+```
+
+Each entry is one declared task output. `type` is the output qualifier (`path`, `val`, `env`, `eval`, or `stdout`), `name` is the output name (`null` when the output declares only a file pattern), and `value` is a `lid://` reference for file outputs or the literal value otherwise.
+
 ### Agent runs
 
-An [agent][agent-page] also runs as a task, but its provenance is not a script -- it is the model that was called and the prompt, tools and skills it was called with. Agent executions are therefore recorded as a separate `AgentRun` record in place of a `TaskRun`:
+An [agent][agent-page] also runs as a task, but its provenance is a model and prompt rather than a script. Agent executions are therefore recorded as a separate `AgentRun` record in place of a `TaskRun`:
 
 ```console
 $ nextflow lineage view lid://c47bf9183c56715c9bca1a67a4acdc68
@@ -285,18 +302,11 @@ $ nextflow lineage view lid://c47bf9183c56715c9bca1a67a4acdc68
 }
 ```
 
-The fields that make an agent run reproducible are:
-
-- `model` is the model that was requested, while `resolvedModel` is the concrete model the provider actually served. These differ when a floating alias (`openai/gpt-4o`) resolves to a dated snapshot -- which is why pinning a snapshot is recommended for [reproducible resume][agent-page]. `resolvedModel` is `null` when the runner executes out of process or the agent is not cacheable.
-- `promptTemplate` is the verbatim source text of the `prompt:` block -- quote delimiters, indentation and trailing newline included -- not the rendered text. Combined with `input`, it tells you what the model was asked.
-- `tools` and `skills` list what the agent was allowed to use, and `outputSchema` is the JSON schema its response had to satisfy.
-- `codeChecksum` covers the agent's canonical identity -- the same text that feeds the [task hash][cache-resume-task-hash] -- so two agent runs with the same LID were driven by the same model, prompt, schema and skills.
-
 An agent's results are recorded as a `TaskOutput`, exactly like a process, so agent outputs traverse and query the same way as any other task output.
 
-:::note
-Agent runs record the prompt *template*, never the rendered prompt, and do not record token usage. See [Data lineage][agent-lineage] in the agent documentation for the full list of what is and is not captured.
-:::
+See [Data lineage][agent-lineage] in the agent documentation for the full list of what is and is not captured.
+
+### Lineage graph
 
 Finally, use the `render` subcommand to render the entire lineage of the MULTIQC report as an HTML report:
 
@@ -415,13 +425,21 @@ $ nextflow lineage view lid://9410d13abeec617640b5fe9735ba12fc#output
 ]
 ```
 
-This view can be used to traverse output files directly instead of inferring LIDs from the workflow output directory.
+This record is a `WorkflowOutput` record. It provides a structured view of all published output files, allowing you to traverse them directly from the workflow run.
+
+Nextflow types are represented in workflow outputs as follows:
 
 | Type         | JSON representation         | Nextflow type |
 | ----         | -------------------         | ------------- |
 | `Collection` | array (or index file path)  | `Bag`, `List`, `Set` |
 | `Map`        | object                      | `Map`, `Record` |
 | `Path`       | string with `lid://` prefix | `Path` |
+
+:::note
+Files published via `publishDir` are also recorded in lineage, as long as they are published inside the run's output directory (`outputDir`, which defaults to `results`). The `WorkflowOutput` record does not capture these outputs, so they can only be retrieved by direct lookup (see [Workflow outputs](#workflow-outputs)).
+:::
+
+### Output labels
 
 When labels are assigned to a workflow output with the `label` directive, they appear in the `labels` field of each corresponding `FileOutput` record:
 
