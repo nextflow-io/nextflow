@@ -20,7 +20,7 @@ import groovy.json.JsonSlurper
 import io.seqera.npr.client.RegistryClient
 import io.seqera.npr.api.schema.v1.Module
 import io.seqera.npr.api.schema.v1.ModuleChannel
-import io.seqera.npr.api.schema.v1.ModuleKind
+// import io.seqera.npr.api.schema.v1.ModuleKind
 import io.seqera.npr.api.schema.v1.ModuleChannelItem
 import io.seqera.npr.api.schema.v1.ModuleMetadata
 import io.seqera.npr.api.schema.v1.ModuleRelease
@@ -50,7 +50,7 @@ class CmdModuleViewTest extends Specification {
     def 'should display module info in formatted output'() {
         given:
         def metadata = new ModuleMetadata(
-            kind: ModuleKind.WORKFLOW,
+            // kind: ModuleKind.WORKFLOW,
             description: 'FastQC quality control analysis',
             authors: ['nf-core', 'community'],
             keywords: ['quality-control', 'fastqc', 'reads']
@@ -98,8 +98,9 @@ class CmdModuleViewTest extends Specification {
         output.contains('Usage Template:')
 
         and: 'the module kind is shown'
-        output.contains('Kind:')
-        output.contains('Workflow')
+        // TODO: re-enable once npr-api exposes the `kind` field (registry seqeralabs/nextflow-registry#366 not released yet)
+        // output.contains('Kind:')
+        // output.contains('Workflow')
     }
 
     def 'should display component name in formatted and json output'() {
@@ -235,7 +236,8 @@ class CmdModuleViewTest extends Specification {
         json.usageTemplate != null
 
         and: 'kind defaults to Process when the registry does not report one'
-        json.kind == 'Process'
+        // TODO: re-enable once npr-api exposes the `kind` field (registry seqeralabs/nextflow-registry#366 not released yet)
+        // json.kind == 'Process'
     }
 
     def 'should display module info with tools'() {
