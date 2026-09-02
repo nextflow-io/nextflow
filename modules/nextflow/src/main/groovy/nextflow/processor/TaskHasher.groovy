@@ -76,10 +76,14 @@ class TaskHasher {
         }
 
         // add eval output commands
+        //
+        // note: the map is hashed as an unordered collection of entries, so the
+        // hash does not depend on the map iteration order, while still binding
+        // each eval output name to its command
         final outEvals = task.getOutputEvals()
         if( outEvals ) {
             keys.add("eval_outputs")
-            keys.add(computeEvalOutputCommands(outEvals))
+            keys.add(outEvals)
         }
 
         // add variables referenced in the task script but not declared as input/output
@@ -146,44 +150,6 @@ class TaskHasher {
         }
 
         return hash
-    }
-
-    /**
-     * Compute a deterministic string representation of eval output commands for cache hashing.
-     * This method creates a consistent hash key based on the semantic names and command values
-     * of eval outputs, ensuring cache invalidation when eval outputs change.
-     *
-     * @param outEvals Map of eval parameter names to their command strings
-     * @return A concatenated string of "name=command" pairs, sorted for deterministic hashing
-     */
-    protected static String computeEvalOutputCommands(Map<String, String> outEvals) {
-        // Assert precondition that outEvals should not be null or empty when this method is called
-        assert outEvals != null && !outEvals.isEmpty(), "Eval outputs should not be null or empty"
-
-        final result = new StringBuilder()
-
-        // Sort entries by key for deterministic ordering. This ensures that the same set of
-        // eval outputs always produces the same hash regardless of map iteration order,
-        // which is critical for cache consistency across different JVM runs.
-        // Without sorting, HashMap iteration order can vary between executions, leading to
-        // different cache keys for identical eval output configurations and causing
-        // unnecessary cache misses and task re-execution
-        final sortedEntries = outEvals.entrySet().sort { a, b -> a.key.compareTo(b.key) }
-
-        // Build content using for loop to concatenate "name=command" pairs.
-        // This creates a symmetric pattern with input parameter hashing where both
-        // the parameter name and its value contribute to the cache key
-        for( final entry : sortedEntries ) {
-            // Add newline separator between entries for readability in debug scenarios
-            if( result.length() > 0 ) {
-                result.append('\n')
-            }
-            // Format: "semantic_name=bash_command" - both name and command value are
-            // included because changing either should invalidate the task cache
-            result.append(entry.key).append('=').append(entry.value)
-        }
-
-        return result.toString()
     }
 
     /**
