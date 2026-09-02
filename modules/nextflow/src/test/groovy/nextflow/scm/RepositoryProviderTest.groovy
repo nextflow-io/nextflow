@@ -205,7 +205,7 @@ class RepositoryProviderTest extends Specification {
 
     def 'should fail when the timeout value is not a duration' () {
         given:
-        SysEnv.push([NXF_SCM_HTTPCLIENT_CONNECT_TIMEOUT: 'foo'])
+        SysEnv.push([NXF_HTTPCLIENT_CONNECT_TIMEOUT: 'foo'])
         def provider = Spy(RepositoryProvider)
 
         when:
@@ -220,7 +220,7 @@ class RepositoryProviderTest extends Specification {
 
     def 'should prefer the http client opts set explicitly over the env variables' () {
         given:
-        SysEnv.push([NXF_SCM_HTTPCLIENT_CONNECT_TIMEOUT: '5s', NXF_SCM_HTTPCLIENT_REQUEST_TIMEOUT: '250ms'])
+        SysEnv.push([NXF_HTTPCLIENT_CONNECT_TIMEOUT: '5s', NXF_HTTPCLIENT_REQUEST_TIMEOUT: '250ms'])
         def provider = Spy(RepositoryProvider)
         and:
         provider.setHttpClientOpts(new HttpClientOpts(
@@ -252,8 +252,8 @@ class RepositoryProviderTest extends Specification {
 
         where:
         env                                                                                     | expected
-        [NXF_SCM_HTTPCLIENT_CONNECT_TIMEOUT: '5s', NXF_SCM_HTTPCLIENT_REQUEST_TIMEOUT: '250ms']  | Duration.ofMillis(5_250)
-        [NXF_SCM_HTTPCLIENT_REQUEST_TIMEOUT: '0s']                                               | null
+        [NXF_HTTPCLIENT_CONNECT_TIMEOUT: '5s', NXF_HTTPCLIENT_REQUEST_TIMEOUT: '250ms']  | Duration.ofMillis(5_250)
+        [NXF_HTTPCLIENT_REQUEST_TIMEOUT: '0s']                                               | null
     }
 
     def 'should fail with a timeout error when the server does not reply' () {
@@ -266,7 +266,7 @@ class RepositoryProviderTest extends Specification {
         } as HttpHandler)
         server.start()
         and:
-        SysEnv.push([NXF_SCM_HTTPCLIENT_CONNECT_TIMEOUT: '1s', NXF_SCM_HTTPCLIENT_REQUEST_TIMEOUT: '500ms'])
+        SysEnv.push([NXF_HTTPCLIENT_CONNECT_TIMEOUT: '1s', NXF_HTTPCLIENT_REQUEST_TIMEOUT: '500ms'])
         def provider = Spy(RepositoryProvider)
 
         when:
@@ -274,7 +274,7 @@ class RepositoryProviderTest extends Specification {
         then:
         def e = thrown(IOException)
         e.message.startsWith("No response received from 'http://localhost:${server.address.port}/stall'")
-        e.message.contains('NXF_SCM_HTTPCLIENT_REQUEST_TIMEOUT')
+        e.message.contains('NXF_HTTPCLIENT_REQUEST_TIMEOUT')
         e.cause instanceof HttpTimeoutException
 
         cleanup:
@@ -284,7 +284,7 @@ class RepositoryProviderTest extends Specification {
 
     def 'should build the http client opts from the scm config map' () {
         given:
-        SysEnv.push([NXF_SCM_HTTPCLIENT_CONNECT_TIMEOUT: '5s'])
+        SysEnv.push([NXF_HTTPCLIENT_CONNECT_TIMEOUT: '5s'])
 
         when: 'the scm file carries an httpClient block'
         def opts = RepositoryProvider.httpClientOpts([httpClient: [connectTimeout: '30s', requestTimeout: '90s']])
@@ -299,7 +299,7 @@ class RepositoryProviderTest extends Specification {
         opts.requestTimeout() == Duration.ofSeconds(60)
 
         when: 'there is no scm config at all'
-        opts = RepositoryProvider.httpClientOpts(null)
+        opts = RepositoryProvider.httpClientOpts()
         then:
         opts.connectTimeout() == Duration.ofSeconds(5)
 

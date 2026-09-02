@@ -69,10 +69,19 @@ abstract class RepositoryProvider {
     static final public Duration DEFAULT_REQUEST_TIMEOUT = Duration.of('60s')
 
     /**
-     * The environment variable prefix used to resolve the HTTP client settings,
-     * mirroring the {@code scm.httpClient} config path
+     * The environment variable prefix used to resolve the HTTP client settings.
+     * <p>
+     * It is deliberately client-agnostic rather than SCM-specific, for the same reason the
+     * retry policy of this very client resolves from the global {@code NXF_RETRY_POLICY_*}:
+     * {@link HttpClientOpts} lives in nf-commons so that other clients can take the same
+     * settings without repainting the variable names.
+     * <p>
+     * Note there is no matching {@code nextflow.config} scope, and cannot be - the config
+     * file is not parsed until the project has been fetched. The config-map half of the
+     * resolution reads the top-level {@code httpClient} block of the SCM config file
+     * instead; see {@link #httpClientOpts(Map)}.
      */
-    static final private String HTTP_CLIENT_ENV_PREFIX = 'NXF_SCM_HTTPCLIENT_'
+    static final private String HTTP_CLIENT_ENV_PREFIX = 'NXF_HTTPCLIENT_'
 
     @Canonical
     static class TagInfo {
@@ -156,7 +165,7 @@ abstract class RepositoryProvider {
 
     /**
      * The HTTP client timeout settings. When none has been set explicitly they are resolved
-     * from the {@code NXF_SCM_HTTPCLIENT_CONNECT_TIMEOUT} and {@code NXF_SCM_HTTPCLIENT_REQUEST_TIMEOUT}
+     * from the {@code NXF_HTTPCLIENT_CONNECT_TIMEOUT} and {@code NXF_HTTPCLIENT_REQUEST_TIMEOUT}
      * environment variables, falling back to the defaults - the environment being the only source
      * available this early, since SCM resolution completes before any Nextflow config has been parsed.
      *
@@ -164,7 +173,7 @@ abstract class RepositoryProvider {
      */
     protected HttpClientOpts getHttpClientOpts() {
         if( httpClientOpts==null )
-            httpClientOpts = httpClientOpts(null)
+            httpClientOpts = httpClientOpts()
         return httpClientOpts
     }
 
@@ -181,7 +190,7 @@ abstract class RepositoryProvider {
      * @param scmConfig The parsed SCM config file contents, or null when there is none
      * @return The resulting {@link HttpClientOpts}; never null
      */
-    static HttpClientOpts httpClientOpts(Map scmConfig) {
+    static HttpClientOpts httpClientOpts(Map scmConfig=null) {
         final opts = (Map) scmConfig?.get('httpClient') ?: Collections.emptyMap()
         final connectTimeout = RetryConfig.valueOf(opts, 'connectTimeout', HTTP_CLIENT_ENV_PREFIX, DEFAULT_CONNECT_TIMEOUT, Duration)
         final requestTimeout = RetryConfig.valueOf(opts, 'requestTimeout', HTTP_CLIENT_ENV_PREFIX, DEFAULT_REQUEST_TIMEOUT, Duration)
@@ -574,14 +583,14 @@ abstract class RepositoryProvider {
         catch( HttpConnectTimeoutException e ) {
             // the underlying client retries connect timeouts - see isRetryable() -
             // therefore this is only reached once all attempts are exhausted
-            throw new IOException("Unable to connect to '${request.uri()}' within ${getHttpClientOpts().connectTimeout().toSeconds()}s (after ${retryConfig.maxAttempts} attempts) - make sure the host is reachable or increase the timeout setting the variable NXF_SCM_HTTPCLIENT_CONNECT_TIMEOUT", e)
+            throw new IOException("Unable to connect to '${request.uri()}' within ${getHttpClientOpts().connectTimeout().toSeconds()}s (after ${retryConfig.maxAttempts} attempts) - make sure the host is reachable or increase the timeout setting the variable NXF_HTTPCLIENT_CONNECT_TIMEOUT", e)
         }
         catch( HttpTimeoutException e ) {
             // report the bound actually applied to the request i.e. connect + request; it is
             // null only when the request timeout is unbounded, in which case no timeout was
             // set on the request and this branch is unreachable
             final elapsed = getHttpClientOpts().httpRequestTimeout()
-            throw new IOException("No response received from '${request.uri()}'${elapsed ? " within ${elapsed.toSeconds()}s" : ''} - make sure the host is reachable or increase the timeout setting the variable NXF_SCM_HTTPCLIENT_REQUEST_TIMEOUT", e)
+            throw new IOException("No response received from '${request.uri()}'${elapsed ? " within ${elapsed.toSeconds()}s" : ''} - make sure the host is reachable or increase the timeout setting the variable NXF_HTTPCLIENT_REQUEST_TIMEOUT", e)
         }
     }
 
