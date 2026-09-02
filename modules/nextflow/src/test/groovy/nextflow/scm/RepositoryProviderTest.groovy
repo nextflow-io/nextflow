@@ -17,13 +17,19 @@
 package nextflow.scm
 
 import java.net.http.HttpClient
+import java.net.http.HttpConnectTimeoutException
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.net.http.HttpTimeoutException
 import java.nio.channels.UnresolvedAddressException
+import java.time.Duration
 import javax.net.ssl.SSLSession
 
+import com.sun.net.httpserver.HttpHandler
+import com.sun.net.httpserver.HttpServer
 import nextflow.SysEnv
 import nextflow.exception.HttpResponseLengthExceedException
+import nextflow.util.HttpClientOpts
 import nextflow.util.RetryConfig
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -136,6 +142,22 @@ class RepositoryProviderTest extends Specification {
         false       | new SocketTimeoutException()
     }
 
+    def 'should retry connect timeouts via the http client retry condition' () {
+        given:
+        def provider = Spy(RepositoryProvider)
+
+        when:
+        def condition = provider.retryConfig0().getRetryCondition()
+        then:
+        // a connect timeout is retried, either direct or as the cause of another error
+        condition.test(new HttpConnectTimeoutException('connect timed out'))
+        condition.test(new IOException(new HttpConnectTimeoutException('connect timed out')))
+        // a read timeout is not retried
+        !condition.test(new HttpTimeoutException('request timed out'))
+        // an exception without a cause does not throw a NPE
+        !condition.test(new IOException('generic failure'))
+    }
+
     def 'should not validate when max length is not configured via SysEnv' () {
         given:
         def provider = Spy(RepositoryProvider)
@@ -176,6 +198,110 @@ class RepositoryProviderTest extends Specification {
         provider.checkMaxLength(response)
         then:
         thrown(HttpResponseLengthExceedException)
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should fail when the timeout value is not a duration' () {
+        given:
+        SysEnv.push([NXF_SCM_HTTPCLIENT_CONNECT_TIMEOUT: 'foo'])
+        def provider = Spy(RepositoryProvider)
+
+        when:
+        provider.getHttpClientOpts()
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains('foo')
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should prefer the http client opts set explicitly over the env variables' () {
+        given:
+        SysEnv.push([NXF_SCM_HTTPCLIENT_CONNECT_TIMEOUT: '5s', NXF_SCM_HTTPCLIENT_REQUEST_TIMEOUT: '250ms'])
+        def provider = Spy(RepositoryProvider)
+        and:
+        provider.setHttpClientOpts(new HttpClientOpts(
+            nextflow.util.Duration.of('30s'),
+            nextflow.util.Duration.of('90s')))
+
+        expect:
+        provider.httpClientOpts.connectTimeout() == Duration.ofSeconds(30)
+        provider.httpClientOpts.requestTimeout() == Duration.ofSeconds(90)
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should apply the request timeout to the http request as connect plus request' () {
+        given:
+        SysEnv.push(env)
+        def provider = Spy(RepositoryProvider)
+
+        when:
+        def request = provider.newRequest('http://foo.com/bar')
+        then:
+        // HttpRequest.timeout() spans the connect phase too, so it carries the sum;
+        // an unbounded request timeout applies none
+        request.timeout().orElse(null) == expected
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        env                                                                                     | expected
+        [NXF_SCM_HTTPCLIENT_CONNECT_TIMEOUT: '5s', NXF_SCM_HTTPCLIENT_REQUEST_TIMEOUT: '250ms']  | Duration.ofMillis(5_250)
+        [NXF_SCM_HTTPCLIENT_REQUEST_TIMEOUT: '0s']                                               | null
+    }
+
+    def 'should fail with a timeout error when the server does not reply' () {
+        given:
+        def server = HttpServer.create(new InetSocketAddress(0), 0)
+        server.createContext('/stall', { exchange ->
+            sleep 5_000
+            exchange.sendResponseHeaders(200, 0)
+            exchange.close()
+        } as HttpHandler)
+        server.start()
+        and:
+        SysEnv.push([NXF_SCM_HTTPCLIENT_CONNECT_TIMEOUT: '1s', NXF_SCM_HTTPCLIENT_REQUEST_TIMEOUT: '500ms'])
+        def provider = Spy(RepositoryProvider)
+
+        when:
+        provider.invokeBytes("http://localhost:${server.address.port}/stall")
+        then:
+        def e = thrown(IOException)
+        e.message.startsWith("No response received from 'http://localhost:${server.address.port}/stall'")
+        e.message.contains('NXF_SCM_HTTPCLIENT_REQUEST_TIMEOUT')
+        e.cause instanceof HttpTimeoutException
+
+        cleanup:
+        SysEnv.pop()
+        server.stop(0)
+    }
+
+    def 'should build the http client opts from the scm config map' () {
+        given:
+        SysEnv.push([NXF_SCM_HTTPCLIENT_CONNECT_TIMEOUT: '5s'])
+
+        when: 'the scm file carries an httpClient block'
+        def opts = RepositoryProvider.httpClientOpts([httpClient: [connectTimeout: '30s', requestTimeout: '90s']])
+        then: 'it wins over the env variable'
+        opts.connectTimeout() == Duration.ofSeconds(30)
+        opts.requestTimeout() == Duration.ofSeconds(90)
+
+        when: 'the scm file has no httpClient block'
+        opts = RepositoryProvider.httpClientOpts([providers: [github: [user: 'foo']]])
+        then: 'the env variable applies, then the default'
+        opts.connectTimeout() == Duration.ofSeconds(5)
+        opts.requestTimeout() == Duration.ofSeconds(60)
+
+        when: 'there is no scm config at all'
+        opts = RepositoryProvider.httpClientOpts(null)
+        then:
+        opts.connectTimeout() == Duration.ofSeconds(5)
 
         cleanup:
         SysEnv.pop()
