@@ -27,9 +27,19 @@ Print the command usage.
 
 ## Subcommands
 
-##### `create [namespace/name]` {#module-create}
+##### `create [options] [namespace/name]` {#module-create}
 
 Create a new module with a basic `main.nf`, `meta.yml`, and `README.md`.
+
+The following options are available:
+
+###### `-kind` (`Process`)
+
+The kind of module to scaffold: `Process` (default) or `Workflow`.
+
+###### `-typed`
+
+Scaffold a module with static typing. Adds `nextflow.enable.types = true` and typed `input`/`output` (process) or `take`/`emit` (workflow) declarations.
 
 ##### `install [options] [namespace/name]` {#module-install}
 
@@ -49,7 +59,7 @@ Reinstall the module even if a locally modified copy exists. Without this flag, 
 ##### `list [options]` {#module-list}
 
 List the modules installed in your project.
-Shows each module's name, version, and integrity status, which reports whether the module was modified locally.
+Shows each module's name, version, kind (`Process` or `Workflow`), and integrity status, which reports whether the module was modified locally.
 
 The following options are available:
 

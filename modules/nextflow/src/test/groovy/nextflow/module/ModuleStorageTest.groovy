@@ -20,7 +20,9 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.GZIPOutputStream
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 
 import nextflow.exception.AbortOperationException
 
@@ -530,5 +532,49 @@ class ModuleStorageTest extends Specification {
 
         // Cleanup temp directory
         tempModuleDir.deleteDir()
+    }
+
+    def 'should exclude the nested vendored modules directory from the publish bundle'() {
+        given: 'a module with its own files, a resources dir, and a vendored dependency'
+        def moduleDir = tempDir.resolve('mod')
+        Files.createDirectories(moduleDir)
+        Files.writeString(moduleDir.resolve('main.nf'), "workflow FOO { }\n")
+        Files.writeString(moduleDir.resolve('meta.yml'), "name: nf-core/foo\nversion: 1.0.0\nkind: Workflow\ndescription: demo\n")
+        Files.writeString(moduleDir.resolve('README.md'), "# foo\n")
+        Files.createDirectories(moduleDir.resolve('resources'))
+        Files.writeString(moduleDir.resolve('resources').resolve('data.txt'), "hello\n")
+        and: 'a vendored dependency under the nested modules/ directory'
+        def dep = moduleDir.resolve('modules').resolve('nf-core').resolve('dep')
+        Files.createDirectories(dep)
+        Files.writeString(dep.resolve('main.nf'), "workflow DEP { }\n")
+        Files.writeString(dep.resolve('meta.yml'), "name: nf-core/dep\nversion: 2.0.0\nkind: Workflow\ndescription: dep\n")
+
+        when:
+        def bundle = tempDir.resolve('bundle.tar.gz')
+        ModuleStorage.createBundle(moduleDir, bundle)
+        def entries = listEntries(bundle)
+
+        then: 'the module own files and resources are bundled'
+        entries.contains('main.nf')
+        entries.contains('meta.yml')
+        entries.contains('README.md')
+        entries.any { it.startsWith('resources/') }
+
+        and: 'nothing from the nested vendored modules/ directory is bundled'
+        !entries.any { it == 'modules/' || it.startsWith('modules/') }
+    }
+
+    private List<String> listEntries(Path bundle) {
+        final result = new ArrayList<String>()
+        Files.newInputStream(bundle).withCloseable { fis ->
+            new GzipCompressorInputStream(fis).withCloseable { gzis ->
+                new TarArchiveInputStream(gzis).withCloseable { tis ->
+                    TarArchiveEntry entry
+                    while ((entry = tis.nextTarEntry) != null)
+                        result.add(entry.name)
+                }
+            }
+        }
+        return result
     }
 }
