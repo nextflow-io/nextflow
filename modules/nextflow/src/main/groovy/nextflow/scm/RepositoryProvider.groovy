@@ -69,8 +69,17 @@ abstract class RepositoryProvider {
     static final public Duration DEFAULT_REQUEST_TIMEOUT = Duration.of('60s')
 
     /**
-     * The environment variable prefix used to resolve the HTTP client settings,
-     * mirroring the {@code nextflow.httpClient} config path
+     * The environment variable prefix used to resolve the HTTP client settings.
+     * <p>
+     * It is deliberately client-agnostic rather than SCM-specific, for the same reason the
+     * retry policy of this very client resolves from the global {@code NXF_RETRY_POLICY_*}:
+     * {@link HttpClientOpts} lives in nf-commons so that other clients can take the same
+     * settings without repainting the variable names.
+     * <p>
+     * Note there is no matching {@code nextflow.config} scope, and cannot be - the config
+     * file is not parsed until the project has been fetched. The config-map half of the
+     * resolution reads the top-level {@code httpClient} block of the SCM config file
+     * instead; see {@link #httpClientOpts(Map)}.
      */
     static final private String HTTP_CLIENT_ENV_PREFIX = 'NXF_HTTPCLIENT_'
 
