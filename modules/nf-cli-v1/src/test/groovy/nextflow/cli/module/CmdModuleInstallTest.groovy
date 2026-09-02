@@ -90,6 +90,52 @@ class CmdModuleInstallTest extends Specification {
         Files.exists(moduleDir.resolve(ModuleInfo.MODULE_INFO_FILE))
     }
 
+    def 'should reject -update-deps combined with -force'() {
+        given:
+        def cmd = new CmdModuleInstall()
+        cmd.args = ['nf-core/fastqc']
+        cmd.root = tempDir
+        cmd.updateDeps = true
+        cmd.force = true
+
+        when:
+        cmd.run()
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('cannot be used together')
+    }
+
+    def 'should ignore -update-deps and install normally when the module is not installed'() {
+        given:
+        def cmd = new CmdModuleInstall()
+        cmd.launcher = Mock(Launcher) {
+            getOptions() >> null
+        }
+        cmd.args = ['nf-core/fastqc']
+        cmd.root = tempDir
+        cmd.updateDeps = true
+
+        and:
+        def modulePackage = createModulePackage('nf-core', 'fastqc', '1.0.0')
+        def mockClient = Mock(RegistryClient)
+        mockClient.getModule('nf-core/fastqc') >> new Module(
+            name: 'nf-core/fastqc',
+            latest: new ModuleRelease(version: '1.0.0')
+        )
+        mockClient.downloadModuleRelease('nf-core/fastqc', '1.0.0', _) >> { String name, String version, Path dest ->
+            Files.write(dest, modulePackage)
+            return dest
+        }
+        cmd.client = mockClient
+
+        when:
+        cmd.run()
+
+        then: 'a normal install happens (the flag is a no-op for a not-yet-installed module)'
+        Files.exists(tempDir.resolve('modules/nf-core/fastqc/main.nf'))
+    }
+
     def 'should install module with specific version'() {
         given:
         def cmd = new CmdModuleInstall()

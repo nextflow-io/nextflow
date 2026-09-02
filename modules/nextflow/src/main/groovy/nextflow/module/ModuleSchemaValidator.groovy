@@ -30,6 +30,7 @@ import com.networknt.schema.ValidationMessage
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.BuildInfo
+import nextflow.SysEnv
 import nextflow.exception.AbortOperationException
 import org.yaml.snakeyaml.Yaml
 
@@ -45,7 +46,46 @@ class ModuleSchemaValidator {
     static final String DEFAULT_SCHEMA_URL =
         'https://raw.githubusercontent.com/nextflow-io/schemas/refs/heads/main/module/v1/schema.json'
 
+    /**
+     * Env var to override the schema location used to validate module specs, e.g. while
+     * the published remote schema does not yet include newer fields (kind, requires.modules).
+     */
+    static final String SCHEMA_ENV_VAR = 'NXF_MODULE_SPEC_SCHEMA'
+
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper()
+
+    /**
+     * Resolve the schema location to validate a {@code meta.yml} against, honoring, in order:
+     * an explicit value (e.g. a {@code -schema} CLI flag), the {@code NXF_MODULE_SPEC_SCHEMA}
+     * env var, the {@code $schema} field declared in the meta.yml, then the default remote
+     * schema URL.
+     *
+     * @param metaYaml the meta.yml being validated (may be used to read its `$schema` field)
+     * @param explicit an explicit override (e.g. from a CLI flag), or null
+     * @return the schema location (URL, file: URI, or local path)
+     */
+    static String resolveSchemaLocation(Path metaYaml, String explicit) {
+        if( explicit )
+            return explicit
+        final fromEnv = SysEnv.get(SCHEMA_ENV_VAR, '')
+        if( fromEnv )
+            return fromEnv
+        final fromMeta = readSchemaField(metaYaml)
+        if( fromMeta )
+            return fromMeta
+        return DEFAULT_SCHEMA_URL
+    }
+
+    private static String readSchemaField(Path metaYaml) {
+        try( final stream = Files.newInputStream(metaYaml) ) {
+            final data = new Yaml().load(stream)
+            return data instanceof Map ? (((Map) data).get('$schema') as String) : null
+        }
+        catch( Exception e ) {
+            // meta.yml unreadable/absent here -- structure validation reports it later
+            return null
+        }
+    }
 
     /**
      * Validate a meta.yml file against the JSON schema located at the given
@@ -65,7 +105,7 @@ class ModuleSchemaValidator {
     }
 
     static List<String> validate(Path metaYaml) {
-        return validate(metaYaml, DEFAULT_SCHEMA_URL)
+        return validate(metaYaml, resolveSchemaLocation(metaYaml, null))
     }
 
     private static JsonNode parseSchema(String schemaText, String schemaLocation) {
