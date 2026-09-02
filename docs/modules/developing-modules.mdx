@@ -27,6 +27,12 @@ The command creates a module directory with the following files:
 - `meta.yml`: The module spec describing metadata, inputs, and outputs.
 - `README.md`: Documentation for the module.
 
+By default this scaffolds a *process* module. Use `-kind Workflow` to scaffold a *workflow* module, and `-typed` to use static typing.
+
+```console
+$ nextflow module create myorg/my-workflow -kind Workflow -typed
+```
+
 See [module create][cli-module-create] for the full command reference.
 
 ## Module structure
@@ -184,6 +190,8 @@ $ nextflow module spec \
 ```
 
 When updating an existing module spec, it is incorporated into the new file.
+
+For a workflow module, the `input` and `output` sections are derived from the workflow's `take:` and `emit:` declarations. Types are inferred only for typed workflows.
 
 See [module spec][cli-module-spec] for the full command reference.
 
