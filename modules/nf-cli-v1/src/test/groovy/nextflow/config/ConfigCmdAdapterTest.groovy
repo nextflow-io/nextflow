@@ -331,8 +331,8 @@ class ConfigCmdAdapterTest extends Specification {
         and:
         def paramsFile = Files.createTempFile('test', '.yml')
         paramsFile.text = '''
-            alpha: "Hello" 
-            beta: "World" 
+            alpha: "Hello"
+            beta: "World"
             omega: "Last"
             theta: "${baseDir}/something"
             '''.stripIndent()
@@ -374,8 +374,8 @@ class ConfigCmdAdapterTest extends Specification {
         setup:
         def params = Files.createTempFile('test', '.yml')
         params.text = '''
-            alpha: "Hello" 
-            beta: "World" 
+            alpha: "Hello"
+            beta: "World"
             omega: "Last"
             '''.stripIndent()
         and:
@@ -388,7 +388,7 @@ class ConfigCmdAdapterTest extends Specification {
         params.delta = 'Foo'
         params.gamma = "I'm gamma"
         params.omega = "I'm the last"
-        
+
         process {
           publishDir = [path: params.alpha]
         }
@@ -1249,7 +1249,7 @@ class ConfigCmdAdapterTest extends Specification {
         !config.process.spack
     }
 
-    def 'SHOULD SET `RESUME` OPTION'() {
+    def 'should normalize the `resume` option'() {
 
         given:
         def env = [:]
@@ -1281,6 +1281,26 @@ class ConfigCmdAdapterTest extends Specification {
         builder.configRunOptions(config, env, new CmdRun(resume: 'xxx-yyy'))
         then:
         config.resume == 'xxx-yyy'
+    }
+
+    def 'should normalize the `resume` option for commands other than `run`' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def configFile = folder.resolve('my.config')
+        configFile.text = 'resume = true'
+
+        when:
+        // no `cmdRun`, ie. any command other than `run`
+        SysEnv.push(NXF_CONFIG_FILE: configFile.toString(), NXF_IGNORE_RESUME_HISTORY: 'true')
+        new ConfigCmdAdapter().buildConfigObject()
+        then:
+        // the alias is resolved instead of being passed along as the string 'true',
+        // which would fail later with 'Invalid UUID string: true'
+        thrown(AbortOperationException)
+
+        cleanup:
+        SysEnv.pop()
+        folder?.deleteDir()
     }
 
     def 'should set `workDir`' () {
@@ -1615,13 +1635,13 @@ class ConfigCmdAdapterTest extends Specification {
             baz {
                 x = "Ciao"
                 y = "mundo"
-                z { 
+                z {
                     alpha = "Hallo"
                     beta  = "World"
                 }
             }
-            
-        }        
+
+        }
         """
 
         when:
@@ -1697,7 +1717,7 @@ class ConfigCmdAdapterTest extends Specification {
         def config = folder.resolve('nf.config')
         config.text = '''\
         params.test.foo = "foo_def"
-        params.test.bar = "bar_def"        
+        params.test.bar = "bar_def"
         '''.stripIndent()
 
         when:
@@ -1708,7 +1728,7 @@ class ConfigCmdAdapterTest extends Specification {
         cfg1.params.test.foo == "foo_def"
         cfg1.params.test.bar == "bar_def"
 
-        
+
         when:
         def cfg2 = configWithParams([params: ['test.foo': 'CLI_FOO']], [userConfig: [config.toString()]])
         then:
@@ -1759,12 +1779,12 @@ class ConfigCmdAdapterTest extends Specification {
         def config = folder.resolve('nf.yaml')
         config.text = '''\
             title: "something"
-            nested: 
+            nested:
               name: "Mike"
               and:
                 more: nesting
                 still:
-                  another: layer      
+                  another: layer
         '''.stripIndent()
 
         when:
@@ -1833,4 +1853,3 @@ class ConfigCmdAdapterTest extends Specification {
     }
 
 }
-

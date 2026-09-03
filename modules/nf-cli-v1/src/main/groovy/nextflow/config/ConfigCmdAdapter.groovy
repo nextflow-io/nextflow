@@ -140,8 +140,13 @@ class ConfigCmdAdapter {
         validateConfigFiles(configFiles)
         final config = buildGivenFiles(configFiles)
 
+        // -- `run` command-line options (if applicable)
         if( cmdRun )
             configRunOptions(config, SysEnv.get(), cmdRun)
+
+        // -- normalize the `resume` option
+        if( config.isSet('resume') )
+            config.resume = normalizeResumeId(config.resume as String)
 
         return config
     }
@@ -397,9 +402,6 @@ class ConfigCmdAdapter {
         // -- sets the resume option
         if( cmdRun.resume )
             config.resume = cmdRun.resume
-
-        if( config.isSet('resume') )
-            config.resume = normalizeResumeId(config.resume as String)
 
         // -- sets `dumpHashes` option
         if( cmdRun.dumpHashes ) {
