@@ -21,6 +21,7 @@ import java.nio.file.Path
 import nextflow.Session
 import nextflow.script.ProcessConfig
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.util.CacheHelper
 import spock.lang.Specification
 /**
  *
@@ -162,23 +163,23 @@ class TaskHasherTest extends Specification {
         ]
     }
 
-    def 'should compute hash entries for eval outputs'() {
+    def 'should hash eval outputs independently of map order'() {
+        given:
+        // same entries, different insertion order and different map implementation
+        def evals1 = new LinkedHashMap(['nxf_out_eval_0': 'echo one', 'nxf_out_eval_1': 'echo two'])
+        def evals2 = new HashMap(['nxf_out_eval_1': 'echo two', 'nxf_out_eval_0': 'echo one'])
 
-        when:
-        def result1 = TaskHasher.computeEvalOutputCommands([
-            'nxf_out_eval_2': 'echo "value2"',
-            'nxf_out_eval_1': 'echo "value1"',
-            'nxf_out_eval_3': 'echo "value3"'
-        ])
+        expect:
+        CacheHelper.hasher(evals1).hash() == CacheHelper.hasher(evals2).hash()
+    }
 
-        def result2 = TaskHasher.computeEvalOutputCommands([
-            'nxf_out_eval_3': 'echo "value3"',
-            'nxf_out_eval_1': 'echo "value1"',
-            'nxf_out_eval_2': 'echo "value2"'
-        ])
+    def 'should hash eval outputs depending on the name-command binding'() {
+        given:
+        // same names and same commands, but paired the other way round
+        def evals1 = ['nxf_out_eval_0': 'echo one', 'nxf_out_eval_1': 'echo two']
+        def evals2 = ['nxf_out_eval_0': 'echo two', 'nxf_out_eval_1': 'echo one']
 
-        then:
-        result1 == result2
-        result1 == 'nxf_out_eval_1=echo "value1"\nnxf_out_eval_2=echo "value2"\nnxf_out_eval_3=echo "value3"'
+        expect:
+        CacheHelper.hasher(evals1).hash() != CacheHelper.hasher(evals2).hash()
     }
 }
