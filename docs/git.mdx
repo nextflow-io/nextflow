@@ -58,6 +58,33 @@ SCM server name including the protocol prefix, e.g., `https://github.com`.
 
 SCM API `endpoint` URL, e.g., `https://api.github.com` (default: the same as `providers.<provider>.server`).
 
+### HTTP client settings
+
+The `httpClient` section configures the timeouts applied to the API requests Nextflow makes to the Git hosting service. These settings apply to every provider:
+
+```groovy
+httpClient {
+    connectTimeout = '10 sec'
+    requestTimeout = '45 sec'
+}
+```
+
+##### `httpClient.connectTimeout`
+
+<AddedInVersion version="26.10" />
+
+The maximum time to wait for the connection to the Git hosting service API to be established, applied to a single attempt (default: `60 sec`). It must be greater than zero. Can also be set with the `NXF_HTTPCLIENT_CONNECT_TIMEOUT` environment variable.
+
+##### `httpClient.requestTimeout`
+
+<AddedInVersion version="26.10" />
+
+The maximum time to wait for a response from the Git hosting service API once the connection has been established, applied to a single attempt (default: `60 sec`). Set it to `0 sec` to wait indefinitely. Can also be set with the `NXF_HTTPCLIENT_REQUEST_TIMEOUT` environment variable.
+
+:::note
+These settings cannot be defined in `nextflow.config`. Nextflow resolves the pipeline repository before it parses the pipeline config, so the SCM config file and the environment variables are the only sources available at that point.
+:::
+
 ## Git providers
 
 ### Bitbucket
