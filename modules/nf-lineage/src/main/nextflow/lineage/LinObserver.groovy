@@ -46,7 +46,6 @@ import nextflow.lineage.model.v1beta1.WorkflowOutput
 import nextflow.lineage.model.v1beta1.WorkflowRun
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
-import nextflow.processor.TaskHasher
 import nextflow.processor.TaskRun
 import nextflow.script.PlatformMetadata
 import nextflow.script.ScriptMeta
@@ -324,7 +323,7 @@ class LinObserver implements TraceObserverV2 {
     }
 
     protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
-        return new TaskHasher(task).getTaskGlobalVars()
+        return task.getTaskGlobalVars()
     }
 
     protected String getTaskModuleId(TaskRun task) {
@@ -366,7 +365,7 @@ class LinObserver implements TraceObserverV2 {
     }
 
     protected List<Path> getTaskBinEntries(TaskRun task) {
-        return new TaskHasher(task).getTaskBinEntries(task.source)
+        return task.getTaskBinEntries(task.source)
     }
 
     protected Map<String,String> getTaskOutputEvals(TaskRun task) {
