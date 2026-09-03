@@ -50,6 +50,7 @@ class ManifestTest extends Specification {
             name: 'foo',
             organization: 'My Organization',
             icon: 'icon.png',
+            diagram: 'docs/images/diagram.svg',
             docsUrl: 'https://docs.io',
             license: 'Apache v2'
         ]
@@ -71,6 +72,7 @@ class ManifestTest extends Specification {
         manifest.name == 'foo'
         manifest.organization == 'My Organization'
         manifest.icon == 'icon.png'
+        manifest.diagram == 'docs/images/diagram.svg'
         manifest.docsUrl == 'https://docs.io'
         manifest.license == 'Apache v2'
 
@@ -94,6 +96,7 @@ class ManifestTest extends Specification {
         manifest.docsUrl == null
         manifest.organization == null
         manifest.icon == null
+        manifest.diagram == null
         manifest.license == null
 
     }
