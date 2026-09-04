@@ -111,6 +111,20 @@ include { hello } from './some/module'
 include { bye as goodbye } from './some/module'
 ```
 
+<AddedInVersion version="26.10" />
+
+The `workflow` name refers to the entire pipeline defined by the included script, i.e. its params block, entry workflow, and output block. The `params` and `output` names refer to the params block and output block as record types. Each of them must be given an alias:
+
+```nextflow
+include {
+    params as RnaseqParams ;
+    workflow as RNASEQ ;
+    output as RnaseqOutput
+} from './pipelines/rnaseq.nf'
+```
+
+See [pipeline composition][pipeline-composition] for more information.
+
 ### Params block
 
 The params block consists of one or more *parameter declarations*. A parameter declaration consists of a name, type, and an optional default value:
@@ -1015,3 +1029,4 @@ See [strict syntax][strict-syntax-page] for more information.
 [strict-syntax-page]: ../strict-syntax
 [workflow-output-def]: ../workflow#outputs
 [workflow-typed-page]: ../workflow-typed
+[pipeline-composition]: ../workflow-typed#pipeline-composition

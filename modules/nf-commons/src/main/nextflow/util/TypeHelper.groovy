@@ -210,6 +210,18 @@ class TypeHelper {
         return new RecordMap(result)
     }
 
+    /**
+     * Returns {@code true} if every field of a record type is nullable, so
+     * that an empty record is a valid value of the type -- e.g. the params
+     * block of an included pipeline, whose params can be supplied by the
+     * calling pipeline instead of the user.
+     *
+     * @param type the record type class
+     */
+    static boolean isPartialRecordType(Class type) {
+        return recordFields(type).values().every { field -> field.isAnnotationPresent(Nullable.class) }
+    }
+
     @Memoized
     private static Map<String,Field> recordFields(Class type) {
         final fields = type.getDeclaredFields()

@@ -16,7 +16,11 @@
 
 package nextflow.script
 
+import groovyx.gpars.dataflow.DataflowQueue
+import nextflow.Global
 import nextflow.NF
+import nextflow.Session
+import nextflow.util.RecordMap
 import nextflow.extension.OpCall
 import spock.lang.Specification
 
@@ -122,6 +126,35 @@ class WorkflowBindingTest extends Specification {
         (result as OpCall).methodName == 'map'
         (result as OpCall).args == [] as Object[]
 
+    }
+
+    def 'should publish a record of channels field by field' () {
+        given:
+        def outputs = [:]
+        def session = Mock(Session) { getOutputs() >> outputs }
+        Global.session = session
+        def owner = Mock(BaseScript) { getSession() >> session }
+        def binding = new WorkflowBinding()
+        binding.setOwner(owner)
+        and:
+        def ch1 = new DataflowQueue()
+        def ch2 = new DataflowQueue()
+
+        when:
+        binding._publish_('foo', new RecordMap([a: ch1, b: ch2]))
+        then:
+        outputs == [a: ch1, b: ch2]
+
+        when:
+        outputs.clear()
+        // a plain map is published as a single value, even when every
+        // one of its values is a channel
+        binding._publish_('bar', [a: ch1, b: ch2])
+        then:
+        outputs.keySet() == ['bar'] as Set
+
+        cleanup:
+        Global.session = null
     }
 
 }

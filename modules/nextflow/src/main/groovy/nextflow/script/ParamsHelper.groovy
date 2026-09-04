@@ -208,6 +208,39 @@ class ParamsHelper {
         }
     }
 
+    /**
+     * The implicit value of a param for which no value was provided.
+     *
+     * A param whose type is a record with no required fields -- e.g. the
+     * params block of an included pipeline -- defaults to an empty record,
+     * so that a calling pipeline can supply the pipeline's params by
+     * dataflow instead of requiring the user to provide a value at launch.
+     * Any params that the calling pipeline does not supply either are
+     * reported when the pipeline is called.
+     *
+     * @param decl
+     */
+    static Object emptyRecord(Param decl) {
+        final type = TypeHelper.getRawType(decl.type)
+        return Record.class.isAssignableFrom(type) && TypeHelper.isPartialRecordType(type)
+            ? new RecordMap([:])
+            : null
+    }
+
+    /**
+     * Check that a resolved value can be assigned to the declared type
+     * of a param.
+     *
+     * @param decl
+     * @param value
+     */
+    static void checkAssignable(Param decl, Object value) {
+        final expectedType = TypeHelper.getRawType(decl.type)
+        final actualType = value?.getClass()
+        if( actualType != null && !isAssignableFrom(expectedType, actualType) )
+            throw new ScriptRuntimeException("Parameter `${decl.name}` with type ${Types.getName(decl.type)} cannot be assigned to ${value} [${Types.getName(actualType)}]")
+    }
+
     static boolean isAssignableFrom(Class target, Class source) {
         // any numeric value can be assigned to Float
         if( target == Float.class )
