@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import nextflow.module.spi.RemoteModuleResolver;
 import nextflow.module.spi.RemoteModuleResolverProvider;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.IncludeNode;
@@ -137,15 +138,15 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
     }
 
     private URI getIncludeUri(String source) {
-        var parent = Path.of(uri).getParent();
         if( ModuleResolver.isLocalModule(source) ) {
-            return getLocalIncludeUri(parent, source);
+            return getLocalIncludeUri(Path.of(uri).getParent(), source);
         }
         else {
-            // Resolve a remote module relative to the including file's directory (context-relative),
-            // so a workflow module's own dependencies are found under its nested `modules/` directory
-            // (nested vendoring). For the top-level script this parent is the project directory.
-            var base = parent != null ? parent : projectDir;
+            // Resolve a remote module relative to the including module's directory
+            // (context-relative), so a workflow module's own dependencies are found under its
+            // nested `modules/` directory (nested vendoring). Any other script -- the entry
+            // script, or a plain local script -- resolves against the project directory.
+            var base = RemoteModuleResolver.resolveBaseDir(uri, projectDir);
             return RemoteModuleResolverProvider.getInstance()
                 .resolve(source, base)
                 .normalize()

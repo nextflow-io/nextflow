@@ -30,6 +30,7 @@ import nextflow.Session
 import nextflow.exception.IllegalModulePathException
 import nextflow.exception.ScriptCompilationException
 import nextflow.module.ModuleReference
+import nextflow.module.spi.RemoteModuleResolver
 import nextflow.module.spi.RemoteModuleResolverProvider
 import nextflow.plugin.Plugins
 import nextflow.plugin.extension.PluginExtensionProvider
@@ -182,10 +183,10 @@ class IncludeDef {
     Path resolveRemoteModulePath(String moduleName) {
         // Use SPI to get the remote module resolver implementation
         def resolver = RemoteModuleResolverProvider.getInstance()
-        // Resolve relative to the including file's directory (context-relative) so that a
+        // Resolve relative to the including module's directory (context-relative) so that a
         // workflow module's own dependencies are found under its nested `modules/` directory
-        // (nested vendoring). For the top-level script this is the project base dir.
-        final base = getOwnerPath()?.getParent() ?: session.baseDir
+        // (nested vendoring). Any other script resolves against the project base dir.
+        final base = RemoteModuleResolver.resolveBaseDir(getOwnerPath(), session.baseDir)
         return resolver.resolve(moduleName, base)
     }
 
