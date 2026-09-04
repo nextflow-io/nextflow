@@ -22,6 +22,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Const
+import nextflow.exception.AbortOperationException
 
 /**
  * Validates module structure and module spec (meta.yml).
@@ -59,8 +60,14 @@ class ModuleValidator {
         if( errors )
             return errors
 
-        // Level 3: validate the module script against its kind
         final scriptPath = moduleDir.resolve(Const.DEFAULT_MAIN_FILE_NAME)
+
+        // Level 2c: reconcile the declared dependencies with the script's includes
+        errors.addAll(validateDependencies(spec, scriptPath))
+        if( errors )
+            return errors
+
+        // Level 3: validate the module script against its kind
         if( spec.isWorkflow() ) {
             errors.addAll(validateWorkflow(spec, scriptPath))
         }
@@ -114,6 +121,50 @@ class ModuleValidator {
         } catch (Exception e) {
             log.warn "Failed to check module size: ${e.message}"
         }
+
+        return errors
+    }
+
+    /**
+     * Reconcile a module's declared {@code requires.modules} with the includes in its script: every
+     * included module must be a registry module (a module is distributed on its own, so a local
+     * include would not resolve for a consumer), and the declared dependencies must be exactly the
+     * included modules. Parsing is syntactic only, so a module that includes not-yet-installed
+     * modules can still be validated.
+     *
+     * @param spec       the parsed module spec
+     * @param scriptPath the module's main.nf
+     */
+    static List<String> validateDependencies(ModuleSpec spec, Path scriptPath) {
+        final errors = new ArrayList<String>()
+
+        final includes = ModuleSpecFactory.includes(scriptPath)
+        for( final source : includes.local )
+            errors << "Module script includes a local module '${source}' -- a module can only include registry modules".toString()
+
+        // an include source that is not a path is a module reference -- report a malformed one
+        // rather than letting it abort the validation
+        final included = new ArrayList<String>()
+        for( final source : includes.remote ) {
+            try {
+                included.add(ModuleReference.parse(source).fullName)
+            }
+            catch( AbortOperationException e ) {
+                errors << e.message
+            }
+        }
+        if( errors )
+            return errors
+
+        final declared = spec.requiresModules.collect { ModuleResolver.parseDependency(it).reference.fullName }
+
+        for( final name : included )
+            if( !(name in declared) )
+                errors << "Module '${name}' is included by the module script but not declared in requires.modules".toString()
+
+        for( final name : declared )
+            if( !(name in included) )
+                errors << "Module '${name}' is declared in requires.modules but not included by the module script".toString()
 
         return errors
     }

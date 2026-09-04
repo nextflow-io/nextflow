@@ -1017,4 +1017,86 @@ class ModuleSpecFactoryTest extends Specification {
         spec.topics[0].components[2].type == 'string'
     }
 
+
+    private void vendorDependency(String scope, String name, String version) {
+        final dir = tempDir.resolve("modules/${scope}/${name}")
+        java.nio.file.Files.createDirectories(dir)
+        dir.resolve('main.nf').text = """\
+            process STAR_ALIGN {
+                input:
+                path reads
+                output:
+                path 'out.bam'
+                script:
+                \"\"\"
+                touch out.bam
+                \"\"\"
+            }
+            """.stripIndent()
+        dir.resolve('meta.yml').text = "name: ${scope}/${name}\nversion: ${version}\ndescription: a dep\n"
+    }
+
+    def 'should infer requires.modules from the script includes'() {
+        given:
+        vendorDependency('nf-core', 'star/align', '1.2.3')
+        def mainNf = tempDir.resolve('main.nf')
+        mainNf.text = '''\
+            include { STAR_ALIGN } from 'nf-core/star/align'
+
+            workflow ALIGN_WF {
+                take:
+                ch_reads
+
+                main:
+                ch_out = STAR_ALIGN(ch_reads)
+
+                emit:
+                aligned = ch_out
+            }
+            '''.stripIndent()
+
+        when: 'no version is declared -- it is taken from the vendored copy'
+        def spec = ModuleSpecFactory.fromScript(mainNf, namespace: 'my-namespace')
+
+        then:
+        spec.requiresModules == ['nf-core/star/align@1.2.3']
+
+        when: 'the previous spec pins a version -- the pin is preserved'
+        def oldSpec = new ModuleSpec(requiresModules: ['nf-core/star/align@0.9.0'])
+        spec = ModuleSpecFactory.fromScript(mainNf, oldSpec, namespace: 'my-namespace')
+
+        then:
+        spec.requiresModules == ['nf-core/star/align@0.9.0']
+
+        when: 'a declared dependency is no longer included -- it is dropped'
+        oldSpec = new ModuleSpec(requiresModules: ['nf-core/star/align@0.9.0', 'nf-core/gone@1.0.0'])
+        spec = ModuleSpecFactory.fromScript(mainNf, oldSpec, namespace: 'my-namespace')
+
+        then:
+        spec.requiresModules == ['nf-core/star/align@0.9.0']
+    }
+
+    def 'should reject a local module when inferring requires.modules'() {
+        given:
+        def mainNf = tempDir.resolve('main.nf')
+        mainNf.text = '''\
+            include { HELPER } from './helper.nf'
+
+            workflow ALIGN_WF {
+                take:
+                ch_reads
+                emit:
+                ch_reads
+            }
+            '''.stripIndent()
+
+        when:
+        ModuleSpecFactory.inferRequiresModules(mainNf, new ModuleSpec())
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('cannot include local modules')
+        e.message.contains('./helper.nf')
+    }
+
 }

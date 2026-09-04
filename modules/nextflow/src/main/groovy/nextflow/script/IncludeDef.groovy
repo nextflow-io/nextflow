@@ -33,6 +33,7 @@ import nextflow.module.ModuleReference
 import nextflow.module.spi.RemoteModuleResolverProvider
 import nextflow.plugin.Plugins
 import nextflow.plugin.extension.PluginExtensionProvider
+import nextflow.script.control.ModuleResolver as ScriptModuleResolver
 import nextflow.script.parser.v1.ScriptLoaderV1
 /**
  * Implements a script inclusion
@@ -170,7 +171,7 @@ class IncludeDef {
             throw new IllegalModulePathException("Cannot resolve module path: ${result.toUriString()}")
         }
         final str = include.toString()
-        if( str.startsWith('./') || str.startsWith('../') ) {
+        if( ScriptModuleResolver.isLocalModule(str) ) {
             return getOwnerPath().resolveSibling(str).normalize()
         }
         // Not a local path — treat as remote module reference (scope/name)

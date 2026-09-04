@@ -92,7 +92,10 @@ public class ModuleResolver {
 
     private URI getIncludeUri(URI uri, String source) {
         var parent = Path.of(uri).getParent();
-        if( isRemoteModule(source) ) {
+        if( isLocalModule(source) ) {
+            return getLocalIncludeUri(parent, source);
+        }
+        else {
             // Resolve a remote module relative to the including file's directory (context-relative),
             // so a workflow module's own dependencies are discovered under its nested `modules/`
             // directory (nested vendoring). For the top-level script this parent is the project dir.
@@ -102,22 +105,15 @@ public class ModuleResolver {
                 .normalize()
                 .toUri();
         }
-        else {
-            return getLocalIncludeUri(parent, source);
-        }
     }
 
     /**
-     * Module name pattern matching the canonical format used by ModuleReference.
-     * Scope: lowercase alphanumeric with dots/underscores/hyphens.
-     * Name: one or more slash-separated segments, each lowercase alphanumeric with dots/underscores/hyphens.
+     * @return true if the given include source refers to a local module, i.e. it is a path to a
+     * script. Any other include source is a remote module reference -- a malformed one is
+     * reported as an invalid module reference by the resolver.
      */
-    private static final String REMOTE_MODULE_PATTERN = "^[a-z0-9][a-z0-9._\\-]*/[a-z][a-z0-9._\\-]*(/[a-z][a-z0-9._\\-]*)*$";
-
-    static boolean isRemoteModule(String source) {
-        if( source.startsWith("/") || source.startsWith("./") || source.startsWith("../") )
-            return false;
-        return source.matches(REMOTE_MODULE_PATTERN);
+    public static boolean isLocalModule(String source) {
+        return source.startsWith("/") || source.startsWith("./") || source.startsWith("../");
     }
 
     private static URI getLocalIncludeUri(Path parent, String source) {

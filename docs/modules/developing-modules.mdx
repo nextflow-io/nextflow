@@ -191,7 +191,7 @@ $ nextflow module spec \
 
 When updating an existing module spec, it is incorporated into the new file.
 
-For a workflow module, the `input` and `output` sections are derived from the workflow's `take:` and `emit:` declarations. Types are inferred only for typed workflows.
+For a workflow module, the `input` and `output` sections are derived from the workflow's `take:` and `emit:` declarations. The `requires.modules` section is derived from the module script's include declarations.
 
 See [module spec][cli-module-spec] for the full command reference.
 
@@ -202,11 +202,6 @@ Use the `module validate` command to check that a module is ready for publishing
 ```console
 $ nextflow module validate myorg/my-module
 ```
-
-The command verifies that:
-
-- All required files are present (`main.nf`, `meta.yml`, `README.md`).
-- The module spec contains all required fields (name, version, description, and license).
 
 See [module validate][cli-module-validate] for the full command reference.
 

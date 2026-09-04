@@ -28,6 +28,7 @@ import nextflow.script.ast.ProcessNodeV2
 import nextflow.script.ast.ScriptNode
 import nextflow.script.ast.WorkflowNode
 import nextflow.script.control.ScriptParser
+import nextflow.script.control.ModuleResolver as ScriptModuleResolver
 import org.yaml.snakeyaml.Yaml
 
 import static nextflow.module.ModuleSpec.ModuleParam
@@ -95,7 +96,7 @@ class ModuleSpecFactory {
         spec.authors = opts.authors as List<String> ?: oldSpec.authors
         spec.maintainers = oldSpec.maintainers
         spec.requires = oldSpec.requires
-        spec.requiresModules = oldSpec.requiresModules
+        spec.requiresModules = inferRequiresModules(path, oldSpec)
         spec.tools = oldSpec.tools
         spec._passthrough = oldSpec._passthrough
 
@@ -153,6 +154,78 @@ class ModuleSpecFactory {
         spec.outputs = visitor.visitEmits(workflow)
 
         return spec
+    }
+
+    /**
+     * The modules included by a module script, split into remote modules (registry references)
+     * and local modules (a relative or absolute path).
+     */
+    static class ScriptIncludes {
+        final List<String> remote
+        final List<String> local
+
+        ScriptIncludes(List<String> remote, List<String> local) {
+            this.remote = remote
+            this.local = local
+        }
+    }
+
+    /**
+     * The modules included by the given module script, in declaration order and de-duplicated.
+     * Parsing is syntactic only, so includes of not-yet-installed modules do not cause a failure.
+     */
+    static ScriptIncludes includes(Path path) {
+        final remote = new LinkedHashSet<String>()
+        final local = new LinkedHashSet<String>()
+        for( final include : parseScript(path, false).getIncludes() ) {
+            final source = include.source.getText()
+            if( ScriptModuleResolver.isLocalModule(source) )
+                local.add(source)
+            else
+                remote.add(source)
+        }
+        return new ScriptIncludes(new ArrayList<String>(remote), new ArrayList<String>(local))
+    }
+
+    /**
+     * Infer a module's {@code requires.modules} dependencies from the include declarations in its
+     * script, so that the declared dependencies cannot drift from what the module actually
+     * includes. A module can only include registry modules -- a module is distributed on its own,
+     * so a local include would not resolve for a consumer.
+     *
+     * An include declares only the module name, so each dependency is pinned to an exact version
+     * taken from the previous spec if the module is still included, otherwise from the locally
+     * vendored copy of the dependency.
+     *
+     * @param path    the module script
+     * @param oldSpec the previous module spec, whose pinned versions are preserved
+     */
+    static List<String> inferRequiresModules(Path path, ModuleSpec oldSpec) {
+        final includes = includes(path)
+        if( includes.local )
+            throw new AbortOperationException("Module script cannot include local modules: ${includes.local.join(', ')} -- a module can only include registry modules")
+
+        // versions pinned by the previous spec
+        final pinned = new HashMap<String, String>()
+        for( final dep : oldSpec.requiresModules ) {
+            final parsed = ModuleResolver.parseDependency(dep)
+            pinned.put(parsed.reference.fullName, parsed.version)
+        }
+
+        // the module's dependencies are vendored under its own `modules` directory
+        final storage = new ModuleStorage(path.parent)
+
+        final result = new ArrayList<String>()
+        for( final source : includes.remote ) {
+            final reference = ModuleReference.parse(source)
+            final name = reference.fullName
+            final version = pinned.get(name)
+                ?: (storage.isInstalled(reference) ? storage.getInstalledModule(reference).installedVersion : null)
+            if( !version )
+                throw new AbortOperationException("Cannot determine the version of module dependency '${name}' -- install it with 'nextflow module install ${name}' and try again")
+            result.add("${name}@${version}".toString())
+        }
+        return result
     }
 
     static ModuleSpec fromScript(Map opts = [:], Path path) {

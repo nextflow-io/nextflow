@@ -206,4 +206,147 @@ class ModuleValidatorTest extends Specification {
         errors.any { it.contains('1 inputs but workflow declares 2 take') }
     }
 
+
+    def 'a module whose declared dependencies match its includes passes validation' () {
+        given:
+        def dir = moduleDir(
+            '''\
+            include { STAR_ALIGN } from 'nf-core/star/align'
+
+            workflow FOO {
+                take:
+                ch_in
+                main:
+                ch_out = STAR_ALIGN(ch_in)
+                emit:
+                ch_out
+            }
+            '''.stripIndent(),
+            '''\
+            name: nf-core/demo_wf
+            version: 1.0.0
+            kind: Workflow
+            description: a demo workflow module
+            requires:
+              modules:
+                - nf-core/star/align@1.2.3
+            '''.stripIndent())
+
+        when:
+        def errors = ModuleValidator.validate(dir, schema())
+
+        then:
+        errors.isEmpty()
+    }
+
+    def 'a module that includes an undeclared dependency fails validation' () {
+        given:
+        def dir = moduleDir(
+            '''\
+            include { STAR_ALIGN } from 'nf-core/star/align'
+
+            workflow FOO {
+                take:
+                ch_in
+                emit:
+                ch_in
+            }
+            '''.stripIndent(),
+            '''\
+            name: nf-core/demo_wf
+            version: 1.0.0
+            kind: Workflow
+            description: a demo workflow module
+            '''.stripIndent())
+
+        when:
+        def errors = ModuleValidator.validate(dir, schema())
+
+        then:
+        errors.any { it.contains("Module 'nf-core/star/align' is included") && it.contains('not declared') }
+    }
+
+    def 'a module that declares a dependency it does not include fails validation' () {
+        given:
+        def dir = moduleDir(
+            '''\
+            workflow FOO {
+                take:
+                ch_in
+                emit:
+                ch_in
+            }
+            '''.stripIndent(),
+            '''\
+            name: nf-core/demo_wf
+            version: 1.0.0
+            kind: Workflow
+            description: a demo workflow module
+            requires:
+              modules:
+                - nf-core/star/align@1.2.3
+            '''.stripIndent())
+
+        when:
+        def errors = ModuleValidator.validate(dir, schema())
+
+        then:
+        errors.any { it.contains("Module 'nf-core/star/align' is declared") && it.contains('not included') }
+    }
+
+    def 'a module that includes a local module fails validation' () {
+        given:
+        def dir = moduleDir(
+            '''\
+            include { HELPER } from './helper.nf'
+
+            workflow FOO {
+                take:
+                ch_in
+                emit:
+                ch_in
+            }
+            '''.stripIndent(),
+            '''\
+            name: nf-core/demo_wf
+            version: 1.0.0
+            kind: Workflow
+            description: a demo workflow module
+            '''.stripIndent())
+
+        when:
+        def errors = ModuleValidator.validate(dir, schema())
+
+        then:
+        errors.any { it.contains('includes a local module') && it.contains('./helper.nf') }
+    }
+
+    def 'a module with a malformed module include fails validation' () {
+        given:
+        def dir = moduleDir(
+            '''\
+            include { FASTQC } from 'nf-core/fastqc@1.2.3'
+
+            workflow FOO {
+                take:
+                ch_in
+                emit:
+                ch_in
+            }
+            '''.stripIndent(),
+            '''\
+            name: nf-core/demo_wf
+            version: 1.0.0
+            kind: Workflow
+            description: a demo workflow module
+            '''.stripIndent())
+
+        when:
+        def errors = ModuleValidator.validate(dir, schema())
+
+        then: 'it is reported as an invalid module reference, not as a local include'
+        errors.any { it.contains('Invalid module reference') && it.contains('nf-core/fastqc@1.2.3') }
+        !errors.any { it.contains('local module') }
+    }
+
 }
