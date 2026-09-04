@@ -42,6 +42,10 @@ class Checksum {
     }
 
     static Checksum ofNextflow(Path path) {
-        new Checksum(CacheHelper.hasher(path).hash().toString(), 'nextflow', CacheHelper.HashMode.DEFAULT().toString().toLowerCase())
+        ofNextflow(path, CacheHelper.HashMode.DEFAULT())
+    }
+
+    static Checksum ofNextflow(Path path, CacheHelper.HashMode mode) {
+        new Checksum(CacheHelper.hasher(path, mode).hash().toString(), 'nextflow', mode.toString().toLowerCase())
     }
 }

@@ -16,6 +16,8 @@
 
 package nextflow.lineage.model
 
+import java.nio.file.Files
+
 import nextflow.lineage.model.v1beta1.Checksum
 import nextflow.util.CacheHelper
 import spock.lang.Specification
@@ -54,5 +56,43 @@ class ChecksumTest extends Specification {
         checksum1.algorithm == 'nextflow'
         checksum1.value == CacheHelper.hasher('1234567890abcdef').hash().toString()
         checksum1.mode == 'standard'
+    }
+
+    def 'should hash a path in the mode it reports'() {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def file = folder.resolve('foo.txt'); file.text = 'Hello world'
+
+        when:
+        def checksum = Checksum.ofNextflow(file, MODE)
+
+        then:
+        checksum.algorithm == 'nextflow'
+        checksum.mode == EXPECTED
+        checksum.value == CacheHelper.hasher(file, MODE).hash().toString()
+
+        cleanup:
+        folder?.deleteDir()
+
+        where:
+        MODE                          | EXPECTED
+        CacheHelper.HashMode.STANDARD | 'standard'
+        CacheHelper.HashMode.LENIENT  | 'lenient'
+        CacheHelper.HashMode.DEEP     | 'deep'
+        CacheHelper.HashMode.SHA256   | 'sha256'
+    }
+
+    def 'should give identical files the same deep checksum'() {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def one = folder.resolve('one.txt'); one.text = 'Hello world'
+        def two = folder.resolve('two.txt'); two.text = 'Hello world'
+
+        expect:
+        Checksum.ofNextflow(one, CacheHelper.HashMode.DEEP).value ==
+            Checksum.ofNextflow(two, CacheHelper.HashMode.DEEP).value
+
+        cleanup:
+        folder?.deleteDir()
     }
 }
