@@ -106,19 +106,19 @@ class LinObserver implements TraceObserverV2 {
     private Map<String,String> outputsStoreDirLid = new HashMap<String,String>(10)
     private PathNormalizer normalizer
 
-    LinObserver(Session session, LinStore store){
+    LinObserver(Session session, LinStore store) {
         this.session = session
         this.store = store
     }
 
     @TestOnly
-    String getExecutionHash(){ executionHash }
+    String getExecutionHash() { executionHash }
 
     @TestOnly
-    String setExecutionHash(String hash){ this.executionHash = hash }
+    String setExecutionHash(String hash) { this.executionHash = hash }
 
     @TestOnly
-    String setNormalizer(PathNormalizer normalizer){  this.normalizer = normalizer }
+    String setNormalizer(PathNormalizer normalizer) {  this.normalizer = normalizer }
 
     @Override
     void onFlowBegin() {
@@ -134,8 +134,8 @@ class LinObserver implements TraceObserverV2 {
     }
 
     @Override
-    void onFlowComplete(){
-        if(workflowOutput?.output ){
+    void onFlowComplete() {
+        if(workflowOutput?.output ) {
             workflowOutput.createdAt = OffsetDateTime.now()
             final key = executionHash + '#output'
             this.store.save(key, workflowOutput)
@@ -186,7 +186,7 @@ class LinObserver implements TraceObserverV2 {
         return executionHash
     }
 
-    protected static List<Parameter> getNormalizedParams(Map<String, Object> params, PathNormalizer normalizer){
+    protected static List<Parameter> getNormalizedParams(Map<String, Object> params, PathNormalizer normalizer) {
         final normalizedParams = new LinkedList<Parameter>()
         for( Map.Entry<String,Object> entry : params ) {
             final key = entry.key
@@ -208,7 +208,7 @@ class LinObserver implements TraceObserverV2 {
         storeTaskResults(task, normalizer)
     }
 
-    protected String storeTaskResults(TaskRun task, PathNormalizer normalizer){
+    protected String storeTaskResults(TaskRun task, PathNormalizer normalizer) {
         final outputParams = getNormalizedTaskOutputs(task, normalizer)
         final value = new TaskOutput( asUriString(task.hash.toString()), asUriString(executionHash), OffsetDateTime.now(), outputParams )
         final key = task.hash.toString() + '#output'
@@ -216,7 +216,7 @@ class LinObserver implements TraceObserverV2 {
         return key
     }
 
-    private List<Parameter> getNormalizedTaskOutputs(TaskRun task, PathNormalizer normalizer){
+    private List<Parameter> getNormalizedTaskOutputs(TaskRun task, PathNormalizer normalizer) {
         final outputs = task.getOutputs()
         final outputParams = new LinkedList<Parameter>()
         for( Map.Entry<OutParam,Object> entry : outputs ) {
@@ -406,7 +406,7 @@ class LinObserver implements TraceObserverV2 {
         return executionHash + SEPARATOR + rel
     }
 
-    protected String getTaskRelative(TaskRun task, Path path){
+    protected String getTaskRelative(TaskRun task, Path path) {
         if (path.isAbsolute()) {
             final rel = getTaskRelative0(task, path)
             if (rel)
@@ -421,7 +421,7 @@ class LinObserver implements TraceObserverV2 {
         return path.normalize().toString()
     }
 
-    private String getTaskRelative0(TaskRun task, Path path){
+    private String getTaskRelative0(TaskRun task, Path path) {
         final workDirAbsolute = task.workDir.toAbsolutePath()
         if (path.startsWith(workDirAbsolute)) {
             return workDirAbsolute.relativize(path).toString()
@@ -462,15 +462,15 @@ class LinObserver implements TraceObserverV2 {
                 event.labels)
             store.save(key, value)
         }
-        catch (OutputRelativePathException ignored ){
-            log.warn1("Lineage for workflow output is not supported by publishDir directive")
+        catch (OutputRelativePathException ignored) {
+            log.warn1("Lineage was not recorded for published file '${event.target.toUriString()}' because it is outside the output directory")
         }
         catch (Throwable e) {
             log.warn("Unexpected error storing published file '${event.target.toUriString()}' for workflow '${executionHash}'", e)
         }
     }
 
-    String getSourceReference(Path source){
+    String getSourceReference(Path source) {
         final hash = FileHelper.getTaskHashFromPath(source, session.workDir)
         if (hash) {
             final target = FileHelper.getWorkFolder(session.workDir, hash).relativize(source).toString()
@@ -512,12 +512,12 @@ class LinObserver implements TraceObserverV2 {
         return param.class.simpleName
     }
 
-    private Object convertPathsToLidReferences(Object value){
+    private Object convertPathsToLidReferences(Object value) {
         if( value instanceof Path ) {
             try {
                 final key = getWorkflowOutputKey(value)
                 return asUriString(key)
-            } catch (Throwable e){
+            } catch (Throwable e) {
                 //Workflow output key not found
                 return value
             }
@@ -572,7 +572,7 @@ class LinObserver implements TraceObserverV2 {
         return managedInputs
     }
 
-    private List<Object> manageFileInParam(List<FileHolder> files, PathNormalizer normalizer){
+    private List<Object> manageFileInParam(List<FileHolder> files, PathNormalizer normalizer) {
         final paths = new LinkedList<Object>();
         for( FileHolder it : files ) {
             final path = it.sourcePath ?: it.storePath
