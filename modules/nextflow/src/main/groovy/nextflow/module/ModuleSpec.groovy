@@ -98,6 +98,14 @@ class ModuleSpec {
                 validateModuleParam("topic[${i}]", topics[i], errors)
         }
 
+        // topics and tools describe a process, so they are not valid for a workflow module
+        if( isWorkflow() ) {
+            if( topics )
+                errors << "Invalid setting 'topics' -- only a process module can declare topics"
+            if( tools )
+                errors << "Invalid setting 'tools' -- only a process module can declare tools"
+        }
+
         return errors
     }
 
