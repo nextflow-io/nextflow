@@ -27,8 +27,6 @@ The module system should be extended to include both standalone *processes* and 
 
 - **Pipeline inclusion**: *pipelines* are distinct from *workflows* -- they specify params, publishing, and config, not just workflow logic.
 
-- **Workflow execution**: executing a workflow directly is covered by the [direct execution for named workflows ADR](20260601-named-workflow-execution.md).
-
 ## Solution
 
 Extend the definition of *module* to include both standalone *processes* and standalone *workflows*. Allow workflow modules to be published, installed, included, and executed via the Nextflow registry. Store installed workflows under `modules/<scope>/<name>/` alongside process modules. Allow each workflow module to have its own `modules` directory for transitive dependencies.
@@ -115,7 +113,23 @@ output:
     description: File containing samtools idxstats output
 ```
 
-### Workflow inclusion and storage
+Input/output types are an approximation of the source code, intended for documentation purposes only.
+
+### Module CLI
+
+Workflow modules are served by the same `nextflow module` commands as process modules. Beyond `install`, `publish`, and `run`, each subcommand has an implication:
+
+- `create`: a `-kind` option (`Process` by default, or `Workflow`) scaffolds a basic workflow module, and `-typed` scaffolds a statically-typed one.
+
+- `list`: reports each installed module's kind alongside its version and integrity status.
+
+- `spec`: for a workflow module, the `input` and `output` sections are derived from the workflow's `take:` and `emit:` declarations, in place of a process's `input:`/`output:` blocks. Types are inferred only for typed workflows.
+
+- `validate`: a workflow module must define exactly one workflow, and where the `meta.yml` declares an `input`/`output` interface it must match the workflow's `take`/`emit` arity.
+
+- `view`: renders workflow modules, showing the kind and the workflow's `take`/`emit` interface rather than a process's inputs and outputs.
+
+### Module inclusion and storage
 
 Workflow modules use the same include syntax and naming conventions as process modules:
 
@@ -179,6 +193,45 @@ my-pipeline/
 
 Note that `fastq_align_star` declares only its *direct* dependencies (`star/align` and `bam_sort_stats_samtools`) in `requires.modules`. The `samtools` processes are transitive dependencies of `bam_sort_stats_samtools` and are vendored within *its* own `modules` directory, not directly under `fastq_align_star`. Because each workflow module vendors its own dependencies, the same module may appear more than once in the tree when it is used by multiple workflows.
 
+#### Include resolution
+
+A module include is resolved relative to the *including file's* directory, not the project root. For the top-level script this is the project directory, so `modules/<scope>/<name>/` is unchanged. For a module's own `main.nf`, it is that module's directory, so an include in a workflow module resolves against the module's nested `modules/` directory.
+
+There is no upward search: a nested include is never satisfied by a module vendored higher in the tree. This keeps resolution local and unambiguous -- a module's behavior does not depend on what its consumer happens to have installed -- at the cost of duplication in the tree.
+
+Auto-installation follows the same rule: an include of a module that is not vendored installs it at the level of the including file, at the version pinned in the including module's `requires.modules` if present. A pinned dependency that is vendored at a different version is upgraded to the pinned version, consistent with `module install`. An include from the top level has no pins to honor -- there is no pipeline spec yet -- and installs the latest version.
+
+#### Dependency cycles
+
+A dependency cycle is an error. Cycles are detected by module name, regardless of version, which guarantees termination.
+
+A diamond -- the same module reached through two sibling branches -- is not a cycle and is allowed. Each branch vendors its own copy.
+
+### Module integrity and distribution
+
+The published module bundle excludes the nested `modules/` directory. Dependencies are re-resolved from the registry at install time. As a consequence, a module's integrity checksum, which includes vendored dependencies, is computed after the module and its dependencies are installed.
+
+Editing a vendored dependency therefore marks the *parent* module as locally modified. This makes a single check sufficient to detect drift anywhere below a module, rather than requiring the tree to be walked.
+
+#### Publishing a module with dependencies
+
+When publishing a module, the declared dependencies (`requires.modules`) must match the include declarations, and every dependency must be a published registry module with a pinned version. This is checked at publish time, so that a published module is not dead on arrival. A set of interdependent modules must be published bottom-up.
+
+#### Updating module dependencies locally
+
+A module's declared dependencies live in its `meta.yml`, which the consuming project owns once the module is installed. This way, a pipeline author can pin a workflow module's transitive dependencies to different versions *for their project*, without forking or republishing the module:
+
+1. Edit the versions in `meta.yml` (or any nested `meta.yml`)
+2. Re-vendor top-level module with `nextflow module install <module> -update-deps`
+
+Re-vendoring installs newly declared dependencies, updates changed versions, and prunes vendored dependencies that are no longer declared. The module checksum is not refreshed, so it remains marked as locally-modified. A vendored dependency with local modifications is never overwritten or pruned; the operation fails so the user can reconcile it.
+
+#### Cross-registry dependencies
+
+Nextflow can resolve modules against a list of registries through the `registry.url` config option, trying each in turn. For example, a private registry may contain workflows that depend on modules in the public registry. This registry configuration is not part of the module spec.
+
+As a result, the module consumer should use the same configuration as the module publisher to ensure that transitive dependencies are resolved correctly. Alternatively, the module publisher can use a single registry (mirroring other registries as needed) to keep workflow modules self-contained.
+
 ## Alternatives
 
 ### Workflows vs processes
@@ -214,6 +267,8 @@ Workflow modules, unlike process modules, can include other modules (both proces
 Currently, nf-core enforces a flat module structure. nf-core modules are currently versioned by commit hash and workflows pin exact versions. There is no way to resolve conflicts between workflows. Instead, all nf-core workflows are kept in sync at publish time. This approach places the maintenance burden on *module developers* -- when updating a module, you must also update all consuming workflows.
 
 Instead, the ADR avoids this problem entirely by allowing each workflow to have its own `modules` directory. The downside is that modules will be duplicated in the project, making the project larger and increasing the number of scripts to be parsed.
+
+Future work could explore deduplicated install with version ranges as an alternative *install mode* to nested vendoring. Resolving a range to a single shared version would eliminate the duplication, but it requires (1) module authors publishing proper semantic versions, and (2) Nextflow performing real conflict resolution across the dependency graph.
 
 ## Links
 
