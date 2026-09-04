@@ -16,8 +16,11 @@
 
 package nextflow.trace
 
+import java.nio.file.Path
+
 import groovy.transform.CompileStatic
 import nextflow.Session
+import nextflow.file.FileHelper
 import nextflow.trace.config.DagConfig
 import nextflow.trace.config.ReportConfig
 import nextflow.trace.config.TimelineConfig
@@ -68,28 +71,42 @@ class DefaultObserverFactory implements TraceObserverFactoryV2 {
         final opts = session.config.report as Map ?: Collections.emptyMap()
         final config = new ReportConfig(opts)
         if( config.enabled )
-            result << new ReportObserver(config)
+            result << new ReportObserver(config, resolve(config.file))
     }
 
     protected void createTimelineObserver(Collection<TraceObserverV2> result) {
         final opts = session.config.timeline as Map ?: Collections.emptyMap()
         final config = new TimelineConfig(opts)
         if( config.enabled )
-            result << new TimelineObserver(config)
+            result << new TimelineObserver(config, resolve(config.file))
     }
 
     protected void createGraphObserver(Collection<TraceObserverV2> result) {
         final opts = session.config.dag as Map ?: Collections.emptyMap()
         final config = new DagConfig(opts)
         if( config.enabled )
-            result << new GraphObserver(config)
+            result << new GraphObserver(config, resolve(config.file))
     }
 
     protected void createTraceFileObserver(Collection<TraceObserverV2> result) {
         final opts = session.config.trace as Map ?: Collections.emptyMap()
         final config = new TraceConfig(opts)
         if( config.enabled )
-            result << new TraceFileObserver(config)
+            result << new TraceFileObserver(config, resolve(config.file))
+    }
+
+    /**
+     * Report files are resolved against the workflow output directory
+     * when it is defined, otherwise the launch directory.
+     */
+    protected Path resolve(String file) {
+        final path = FileHelper.asPath(file)
+        if( path.isAbsolute() )
+            return path
+        final baseDir = session.config.outputDir
+            ? session.outputDir
+            : Path.of('.').complete()
+        return baseDir.resolve(file)
     }
 
 }

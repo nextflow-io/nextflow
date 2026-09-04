@@ -17,7 +17,7 @@
 package nextflow
 
 import java.nio.file.Files
-import java.nio.file.Paths
+import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermission
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ThreadPoolExecutor
@@ -29,7 +29,6 @@ import nextflow.container.DockerConfig
 import nextflow.container.PodmanConfig
 import nextflow.container.SarusConfig
 import nextflow.exception.AbortOperationException
-import nextflow.file.FileHelper
 import nextflow.script.ScriptFile
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceFileObserver
@@ -64,9 +63,9 @@ class SessionTest extends Specification {
 
         when:
         session = new Session()
-        session.baseDir = Paths.get('some/folder')
+        session.baseDir = Path.of('some/folder')
         then:
-        session.baseDir == Paths.get('some/folder')
+        session.baseDir == Path.of('some/folder')
         session.binDir == null
 
         when:
@@ -102,7 +101,7 @@ class SessionTest extends Specification {
 
         when:
         session = new Session()
-        session.setBaseDir(Paths.get('/some/path'))
+        session.setBaseDir(Path.of('/some/path'))
         then:
         session.getLibDir() == []
 
@@ -139,6 +138,9 @@ class SessionTest extends Specification {
         def session
         def result
         def observer
+        and:
+        def launchDir = Path.of('.').complete()
+        def outputDir = Path.of('/some/results')
 
         when:
         session = [:] as Session
@@ -154,7 +156,7 @@ class SessionTest extends Specification {
         observer = result[1] as TraceFileObserver
         then:
         result.size() == 2
-        observer.tracePath == FileHelper.asPath('name.txt')
+        observer.tracePath == launchDir.resolve('name.txt')
         observer.separator == '\t'
 
         when:
@@ -164,7 +166,7 @@ class SessionTest extends Specification {
         observer = result[1] as TraceFileObserver
         then:
         result.size() == 2
-        observer.tracePath == FileHelper.asPath('alpha.txt')
+        observer.tracePath == launchDir.resolve('alpha.txt')
         observer.separator == 'x'
         observer.fields == ['task_id','name','exit']
 
@@ -182,9 +184,27 @@ class SessionTest extends Specification {
         observer = result[1] as TraceFileObserver
         then:
         result.size() == 2
-        observer.tracePath == FileHelper.asPath('trace-20221001.txt')
+        observer.tracePath == launchDir.resolve('trace-20221001.txt')
         observer.separator == '\t'
         observer.fields == ['task_id','name','exit','vmem']
+
+        when: 'output dir is defined'
+        session = [:] as Session
+        session.config = [outputDir: '/some/results', trace: [enabled: true, file: 'trace.txt']]
+        session.outputDir = outputDir
+        result = session.createObserversV2()
+        observer = result[1] as TraceFileObserver
+        then: 'the trace file is resolved against it'
+        observer.tracePath == outputDir.resolve('trace.txt')
+
+        when: 'the file is an absolute path'
+        session = [:] as Session
+        session.config = [outputDir: '/some/results', trace: [enabled: true, file: '/other/trace.txt']]
+        session.outputDir = outputDir
+        result = session.createObserversV2()
+        observer = result[1] as TraceFileObserver
+        then: 'it is used as-is'
+        observer.tracePath == Path.of('/other/trace.txt')
 
     }
 

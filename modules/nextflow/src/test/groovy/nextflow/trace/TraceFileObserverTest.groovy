@@ -17,6 +17,7 @@
 package nextflow.trace
 
 import java.nio.file.Files
+import java.nio.file.Path
 
 import nextflow.Session
 import nextflow.executor.Executor
@@ -46,7 +47,7 @@ class TraceFileObserverTest extends Specification {
 
     def createObserver() {
         def config = new TraceConfig([:])
-        return new TraceFileObserver(config)
+        return new TraceFileObserver(config, Path.of(config.file))
     }
 
     def 'test set fields'() {
@@ -116,7 +117,7 @@ class TraceFileObserverTest extends Specification {
 
         // the observer class under test
         def config = new TraceConfig(file: file.toString())
-        def observer = new TraceFileObserver(config)
+        def observer = new TraceFileObserver(config, file)
 
         when:
         observer.onFlowCreate(null)
@@ -260,7 +261,7 @@ class TraceFileObserverTest extends Specification {
 
         // observer with overwrite=false (the default)
         def config = new TraceConfig(file: file.toString())
-        def observer = new TraceFileObserver(config)
+        def observer = new TraceFileObserver(config, file)
 
         when: 'onFlowCreate fails to create the file'
         observer.onFlowCreate(null)

@@ -25,7 +25,6 @@ import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import groovyx.gpars.agent.Agent
 import nextflow.Session
-import nextflow.file.FileHelper
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskId
 import nextflow.trace.config.TraceConfig
@@ -75,8 +74,8 @@ class TraceFileObserver implements TraceObserverV2 {
 
     private boolean useRawNumber
 
-    TraceFileObserver(TraceConfig config) {
-        tracePath = FileHelper.asPath(config.file)
+    TraceFileObserver(TraceConfig config, Path tracePath) {
+        this.tracePath = tracePath
         overwrite = config.overwrite
         separator = config.sep
         useRawNumbers(config.raw)

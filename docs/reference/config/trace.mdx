@@ -189,6 +189,8 @@ The name of the CPU model used to execute the task. This data is read from`/proc
 
 Trace file name (default: `'trace-<timestamp>.txt'`).
 
+Relative paths are resolved against the workflow output directory when it is defined, otherwise the launch directory.
+
 ##### `trace.overwrite`
 
 Overwrite any existing trace file with the same name (default: `false`).
