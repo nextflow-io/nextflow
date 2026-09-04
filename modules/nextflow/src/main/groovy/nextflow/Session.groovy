@@ -60,6 +60,7 @@ import nextflow.extension.CH
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FilePorter
+import nextflow.platform.AutoLabels
 import nextflow.plugin.Plugins
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskFault
@@ -1267,6 +1268,30 @@ class Session implements ISession {
     SpackConfig getSpackConfig() {
         final opts = config.spack as Map ?: Collections.emptyMap()
         return new SpackConfig(opts, getSystemEnv())
+    }
+
+    /**
+     * The resource labels derived from the workflow metadata, as selected by the
+     * {@code tower.autoLabels} option, or by the deprecated {@code seqera.executor.autoLabels}
+     * when the latter is given in the configuration.
+     *
+     * Note the labels are computed on first access instead of at initialisation, because the
+     * Platform metadata is only filled in when the {@code onFlowCreate} event is fired i.e.
+     * after the session is created and before the script is parsed.
+     *
+     * @return The auto-derived labels, or an empty map when the option is not enabled
+     */
+    @Memoized
+    Map<String,String> getAutoResourceLabels() {
+        final legacy = config.navigate('seqera.executor') as Map
+        // the deprecated Seqera executor option wins when explicitly given, even as `false`
+        final legacyGiven = legacy != null && legacy.containsKey('autoLabels')
+        final optionName = legacyGiven ? 'seqera.executor.autoLabels' : 'tower.autoLabels'
+        final value = legacyGiven ? legacy.get('autoLabels') : config.navigate('tower.autoLabels')
+        final names = AutoLabels.parse(value, optionName)
+        if( !names )
+            return Collections.<String,String>emptyMap()
+        return AutoLabels.labelsFor(workflowMetadata, names)
     }
 
     /**

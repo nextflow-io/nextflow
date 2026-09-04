@@ -40,6 +40,7 @@ import nextflow.k8s.model.PodEnv
 import nextflow.k8s.model.PodOptions
 import nextflow.k8s.model.PodSpecBuilder
 import nextflow.k8s.model.ResourceType
+import nextflow.platform.ResourceLabelPolicy
 import nextflow.processor.TaskHandler
 import nextflow.processor.TaskRun
 import nextflow.processor.TaskStatus
@@ -298,7 +299,9 @@ class K8sTaskHandler extends TaskHandler implements FusionAwareTask {
         if( labels ) {
             result.putAll(labels)
         }
-        final resLabels = task.config.getResourceLabels()
+        // the auto-derived labels are normalised to comply with the pod label syntax,
+        // while the ones declared by the process are applied verbatim
+        final resLabels = task.config.getResourceLabels(ResourceLabelPolicy.K8S)
         if( resLabels )
             result.putAll(resLabels)
         result.'nextflow.io/app' = 'nextflow'

@@ -30,6 +30,7 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.res.AcceleratorResource
 import nextflow.executor.res.DiskResource
+import nextflow.platform.ResourceLabelPolicy
 import nextflow.script.TaskClosure
 import nextflow.util.CmdLineHelper
 import nextflow.util.CmdLineOptionMap
@@ -51,6 +52,16 @@ class TaskConfig extends LazyMap implements Cloneable {
     /** The directive names accessed while {@link #trackingAccess} is enabled */
     private transient Set<String> accessedDirectives = new HashSet<>(10)
 
+    /**
+     * The resource labels derived from the workflow metadata, assigned by the task processor
+     * -- see {@link nextflow.Session#getAutoResourceLabels()}.
+     *
+     * Note it is held aside from the directives map on purpose: it is not a directive, it must
+     * not take part in the directive resolution and it must not shadow a `resourceLabels`
+     * declared by the process.
+     */
+    private transient Map<String,String> autoResourceLabels = Collections.<String,String>emptyMap()
+
     private transient boolean trackingAccess
 
     TaskConfig() {  }
@@ -66,6 +77,8 @@ class TaskConfig extends LazyMap implements Cloneable {
         // copied, not reset: the copy carries over the command rendered from them
         // -- see TaskRun#clone -- therefore it depends on the same directives
         copy.accessedDirectives = new HashSet<>(this.accessedDirectives)
+        // note: the auto labels map is immutable, therefore the copy can share it
+        copy.autoResourceLabels = this.autoResourceLabels
         return copy
     }
 
@@ -580,8 +593,48 @@ class TaskConfig extends LazyMap implements Cloneable {
         return get('hints') as Map<String, Object> ?: Collections.<String,Object>emptyMap()
     }
 
+    /**
+     * Assign the resource labels derived from the workflow metadata. They are merged *under*
+     * the labels declared by the process -- see {@link #getResourceLabels()}.
+     *
+     * @param labels The auto-derived labels, or {@code null} when the feature is disabled
+     */
+    void setAutoResourceLabels(Map<String,String> labels) {
+        this.autoResourceLabels = labels ?: Collections.<String,String>emptyMap()
+    }
+
+    /**
+     * @return
+     *      The resource labels declared by the process, merged over the labels derived from
+     *      the workflow metadata. A label declared by the process always wins, therefore this
+     *      is what the trace records and the execution report observe
+     */
     Map<String, String> getResourceLabels() {
-        return get('resourceLabels') as Map<String, String> ?: Collections.<String,String>emptyMap()
+        return getResourceLabels(ResourceLabelPolicy.IDENTITY)
+    }
+
+    /**
+     * Same as {@link #getResourceLabels()} but the auto-derived labels are normalised by the
+     * given policy, so that they can be applied by the target executor backend. The labels
+     * declared by the process are passed through untouched.
+     *
+     * @param policy The {@link ResourceLabelPolicy} of the executor backend applying the labels
+     * @return The resource labels to be applied to the task compute resources
+     */
+    Map<String, String> getResourceLabels(ResourceLabelPolicy policy) {
+        final declared = get('resourceLabels') as Map<String, String> ?: Collections.<String,String>emptyMap()
+        if( !autoResourceLabels )
+            return declared
+        // the collision is decided *before* the normalisation, so that a label declared with the
+        // canonical key overrides the auto one even when the policy mangles that key
+        final overridden = autoResourceLabels.findAll { k, v -> !declared.containsKey(k) } as Map<String,String>
+        final auto = policy.sanitize(overridden)
+        final result = new LinkedHashMap<String, String>(auto.size() + declared.size())
+        result.putAll(auto)
+        // the declared labels are applied last, so that they win also when the key collision
+        // only shows up once the auto key has been mangled by the policy
+        result.putAll(declared)
+        return result
     }
 
     String getResourceLabelsAsString() {

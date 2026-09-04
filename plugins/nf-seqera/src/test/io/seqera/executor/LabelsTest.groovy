@@ -16,10 +16,6 @@
 
 package io.seqera.executor
 
-import nextflow.NextflowMeta
-import nextflow.config.Manifest
-import nextflow.script.PlatformMetadata
-import nextflow.script.WorkflowMetadata
 import spock.lang.Specification
 
 /**
@@ -28,60 +24,6 @@ import spock.lang.Specification
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class LabelsTest extends Specification {
-
-    def 'should create labels with all workflow metadata'() {
-        given:
-        def sessionId = UUID.randomUUID()
-        def workflow = Mock(WorkflowMetadata) {
-            getProjectName() >> 'nf-core/rnaseq'
-            getUserName() >> 'pditommaso'
-            getRunName() >> 'crazy_darwin'
-            getSessionId() >> sessionId
-            isResume() >> true
-            getRevision() >> '3.12.0'
-            getCommitId() >> 'abc1234'
-            getRepository() >> 'https://github.com/nf-core/rnaseq'
-            getManifest() >> new Manifest([name: 'nf-core/rnaseq'])
-        }
-
-        when:
-        def labels = new Labels()
-                .withWorkflowMetadata(workflow)
-
-        then:
-        labels.entries['nextflow.io/projectName'] == 'nf-core/rnaseq'
-        labels.entries['nextflow.io/userName'] == 'pditommaso'
-        labels.entries['nextflow.io/runName'] == 'crazy_darwin'
-        labels.entries['nextflow.io/sessionId'] == sessionId.toString()
-        labels.entries['nextflow.io/resume'] == 'true'
-        labels.entries['nextflow.io/revision'] == '3.12.0'
-        labels.entries['nextflow.io/commitId'] == 'abc1234'
-        labels.entries['nextflow.io/repository'] == 'https://github.com/nf-core/rnaseq'
-        labels.entries['nextflow.io/manifestName'] == 'nf-core/rnaseq'
-        labels.entries['nextflow.io/runtimeVersion'] == NextflowMeta.instance.version.toString()
-    }
-
-    def 'should prefer the platform user name over the OS user name'() {
-        given:
-        def platform = new PlatformMetadata()
-        if( platformUser )
-            platform.user = new PlatformMetadata.User(id: '1', userName: platformUser)
-        def workflow = Mock(WorkflowMetadata) {
-            getUserName() >> 'ec2-user'
-            getPlatform() >> platform
-        }
-
-        when:
-        def labels = new Labels().withWorkflowMetadata(workflow, ['userName'] as Set)
-
-        then:
-        labels.entries['nextflow.io/userName'] == expected
-
-        where:
-        platformUser    | expected
-        'jane.doe'      | 'jane.doe'
-        null            | 'ec2-user'
-    }
 
     def 'should compute stable runId from sessionId and runName'() {
         given:
@@ -92,36 +34,6 @@ class LabelsTest extends Specification {
         Labels.runId(sid, runName) == Labels.runId(sid, runName)
         Labels.runId(sid, runName) != Labels.runId(sid, 'other_name')
         Labels.runId(sid, runName) != Labels.runId(UUID.randomUUID().toString(), runName)
-    }
-
-    def 'should omit null workflow metadata from labels'() {
-        given:
-        def workflow = Mock(WorkflowMetadata) {
-            getProjectName() >> 'hello'
-            getUserName() >> 'user1'
-            getRunName() >> 'happy_turing'
-            getSessionId() >> UUID.randomUUID()
-            isResume() >> false
-            getRevision() >> null
-            getCommitId() >> null
-            getRepository() >> null
-            getManifest() >> new Manifest([:])
-        }
-
-        when:
-        def labels = new Labels()
-                .withWorkflowMetadata(workflow)
-
-        then:
-        labels.entries.containsKey('nextflow.io/projectName')
-        labels.entries.containsKey('nextflow.io/userName')
-        labels.entries.containsKey('nextflow.io/runName')
-        labels.entries.containsKey('nextflow.io/sessionId')
-        labels.entries['nextflow.io/resume'] == 'false'
-        !labels.entries.containsKey('nextflow.io/revision')
-        !labels.entries.containsKey('nextflow.io/commitId')
-        !labels.entries.containsKey('nextflow.io/repository')
-        !labels.entries.containsKey('nextflow.io/manifestName')
     }
 
     def 'should add scheduler labels'() {
@@ -146,121 +58,6 @@ class LabelsTest extends Specification {
         !labels.entries.containsKey('seqera:sched:clusterId')
     }
 
-    def 'should include platform workspaceId and computeEnvId when available'() {
-        given:
-        def platform = new PlatformMetadata('wf-abc123')
-        platform.workspace = new PlatformMetadata.Workspace(workspaceId: '1234')
-        platform.computeEnv = new PlatformMetadata.ComputeEnv(id: 'ce-abc')
-        def workflow = Mock(WorkflowMetadata) {
-            getRunName() >> 'happy_turing'
-            getSessionId() >> UUID.randomUUID()
-            isResume() >> false
-            getManifest() >> new Manifest([:])
-            getPlatform() >> platform
-        }
-
-        when:
-        def labels = new Labels()
-                .withWorkflowMetadata(workflow, ['workspaceId', 'computeEnvId'] as Set)
-
-        then:
-        labels.entries.keySet() == ['seqera.io/platform/workspaceId', 'seqera.io/platform/computeEnvId'] as Set
-        labels.entries['seqera.io/platform/workspaceId'] == '1234'
-        labels.entries['seqera.io/platform/computeEnvId'] == 'ce-abc'
-    }
-
-    def 'should include platform workflowId when available'() {
-        given:
-        def workflow = Mock(WorkflowMetadata) {
-            getProjectName() >> 'hello'
-            getUserName() >> 'user1'
-            getRunName() >> 'happy_turing'
-            getSessionId() >> UUID.randomUUID()
-            isResume() >> false
-            getManifest() >> new Manifest([:])
-            getPlatform() >> new PlatformMetadata('wf-abc123')
-        }
-
-        when:
-        def labels = new Labels()
-                .withWorkflowMetadata(workflow)
-
-        then:
-        labels.entries['seqera.io/platform/workflowId'] == 'wf-abc123'
-    }
-
-    def 'should omit platform workflowId when not set'() {
-        given:
-        def workflow = Mock(WorkflowMetadata) {
-            getProjectName() >> 'hello'
-            getUserName() >> 'user1'
-            getRunName() >> 'happy_turing'
-            getSessionId() >> UUID.randomUUID()
-            isResume() >> false
-            getManifest() >> new Manifest([:])
-            getPlatform() >> new PlatformMetadata()
-        }
-
-        when:
-        def labels = new Labels()
-                .withWorkflowMetadata(workflow)
-
-        then:
-        !labels.entries.containsKey('seqera.io/platform/workflowId')
-    }
-
-    def 'should emit only included workflow metadata labels'() {
-        given:
-        def workflow = Mock(WorkflowMetadata) {
-            getProjectName() >> 'nf-core/rnaseq'
-            getRunName() >> 'crazy_darwin'
-            getSessionId() >> UUID.randomUUID()
-            isResume() >> false
-            getRevision() >> '3.12.0'
-            getManifest() >> new Manifest([name: 'nf-core/rnaseq'])
-        }
-
-        when:
-        def labels = new Labels()
-                .withWorkflowMetadata(workflow, ['runName', 'revision'] as Set)
-
-        then:
-        labels.entries.keySet() == ['nextflow.io/runName', 'nextflow.io/revision'] as Set
-    }
-
-    def 'should emit only the workflowId label when filtered to workflowId'() {
-        given:
-        def workflow = Mock(WorkflowMetadata) {
-            getProjectName() >> 'hello'
-            getRunName() >> 'happy_turing'
-            getSessionId() >> UUID.randomUUID()
-            isResume() >> false
-            getManifest() >> new Manifest([:])
-            getPlatform() >> new PlatformMetadata('wf-abc123')
-        }
-
-        when:
-        def labels = new Labels()
-                .withWorkflowMetadata(workflow, ['workflowId'] as Set)
-
-        then:
-        labels.entries.keySet() == ['seqera.io/platform/workflowId'] as Set
-    }
-
-    def 'should emit nothing for an empty include set'() {
-        given:
-        def workflow = Mock(WorkflowMetadata) {
-            getProjectName() >> 'hello'
-        }
-
-        when:
-        def labels = new Labels()
-                .withWorkflowMetadata(workflow, [] as Set)
-
-        then:
-        labels.entries.isEmpty()
-    }
-
     def 'should add process resource labels coercing values to string'() {
         when:
         def labels = new Labels()
@@ -282,19 +79,10 @@ class LabelsTest extends Specification {
         b.entries.isEmpty()
     }
 
-    def 'should let process resource labels override workflow metadata on key collision'() {
-        given:
-        def workflow = Mock(WorkflowMetadata) {
-            getProjectName() >> 'hello'
-            getRunName() >> 'happy_turing'
-            getSessionId() >> UUID.randomUUID()
-            isResume() >> false
-            getManifest() >> new Manifest([:])
-        }
-
+    def 'should let the resource labels added last win on key collision'() {
         when:
         def labels = new Labels()
-                .withWorkflowMetadata(workflow)
+                .withProcessResourceLabels(['nextflow.io/runName': 'happy_turing', 'nextflow.io/projectName': 'hello'])
                 .withProcessResourceLabels(['nextflow.io/runName': 'custom', team: 'a'])
 
         then:

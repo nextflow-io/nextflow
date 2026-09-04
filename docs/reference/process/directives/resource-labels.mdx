@@ -52,6 +52,65 @@ Consider the limits and syntax of the corresponding executor when using resource
 Resource labels in Azure are added to auto-pools, rather than jobs, to support cost analysis. A new pool is created for each new set of resource labels. Setting `azure.batch.deletePoolsOnCompletion = true` is recommended when using process-specific resource labels.
 </AddedInVersion>
 
+## Automatic resource labels
+
+<AddedInVersion version="26.10" />
+
+Nextflow can derive resource labels from the workflow metadata and attach them to the compute resources for each task, in addition to the labels declared with the `resourceLabels` directive. Automatic labels are disabled by default. Enable them with the [`tower.autoLabels`][config-tower-autoLabels] config option:
+
+```groovy
+// attach all of the available metadata labels
+tower.autoLabels = true
+// or select the ones to be attached
+tower.autoLabels = ['projectName', 'runName', 'workspaceId']
+```
+
+Available names and their label keys:
+
+| Name             | Label key                         |
+| ---------------- | --------------------------------- |
+| `projectName`    | `nextflow.io/projectName`         |
+| `userName`       | `nextflow.io/userName`            |
+| `runName`        | `nextflow.io/runName`             |
+| `sessionId`      | `nextflow.io/sessionId`           |
+| `resume`         | `nextflow.io/resume`              |
+| `revision`       | `nextflow.io/revision`            |
+| `commitId`       | `nextflow.io/commitId`            |
+| `repository`     | `nextflow.io/repository`          |
+| `manifestName`   | `nextflow.io/manifestName`        |
+| `runtimeVersion` | `nextflow.io/runtimeVersion`      |
+| `workflowId`     | `seqera.io/platform/workflowId`   |
+| `workspaceId`    | `seqera.io/platform/workspaceId`  |
+| `computeEnvId`   | `seqera.io/platform/computeEnvId` |
+
+Nextflow omits any label whose metadata value is not available. The `seqera.io/platform/*` labels are attached only when workflow monitoring with Seqera Platform is enabled.
+
+Labels declared with the `resourceLabels` directive always take precedence. When a declared label has the same key as an automatic label, Nextflow uses the declared value. The normalization described later never modifies declared labels, even when they are not valid for the target executor.
+
+:::note
+The Kubernetes executor sanitizes every pod label, including declared labels, and rejects a label key that contains more than one `/` character. The executor applies its own `nextflow.io/app`, `nextflow.io/runName`, `nextflow.io/taskName`, `nextflow.io/processName`, `nextflow.io/sessionId`, and `nextflow.io/queue` pod labels last, so these override any resource label that uses the same key.
+:::
+
+### Label normalization
+
+The executor normalizes automatic labels to meet the requirements of its API. Declared labels are not normalized.
+
+| Executor           | Normalization                                                                                                                               | `nextflow.io/runName` becomes |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| AWS Batch          | Letters, digits, spaces, and `+ - = . _ : / @`. Key up to 128 characters, value up to 256.                                                   | unchanged                     |
+| Azure Batch        | None, apart from the reserved `microsoft` name prefix.                                                                                       | unchanged                     |
+| Google Cloud Batch | Lowercase letters, digits, `_`, and `-`. The key must start with a letter. Key and value up to 63 characters.                                | `nextflow_io_runname`         |
+| Kubernetes         | The key prefix up to the first `/` is preserved, and any further `/` becomes `_`. Values are stripped of their URL scheme and slashes, up to 63 characters. | unchanged      |
+| Seqera executor    | None.                                                                                                                                        | unchanged                     |
+
+The same rules apply to label values. For example, the `repository` value `https://github.com/foo/bar` becomes `github.com_foo_bar` on Kubernetes and `https___github_com_foo_bar` on Google Cloud Batch.
+
+The two-segment `seqera.io/platform/*` keys are not valid Kubernetes label keys. The Kubernetes executor applies them as `seqera.io/platform_workflowId`, `seqera.io/platform_workspaceId`, and `seqera.io/platform_computeEnvId`.
+
+:::warning
+On Azure Batch, the executor applies resource labels as metadata of the auto-pool and derives the pool identifier from that metadata. A label that changes on every run, such as `runName`, `sessionId`, or `workflowId`, creates a new pool for each run. The pools accumulate unless you enable [`azure.batch.deletePoolsOnCompletion`][config-azure-deletePoolsOnCompletion]. Select a stable subset instead, for example `['projectName', 'workspaceId', 'computeEnvId']`.
+:::
+
 ## See also
 
 - [label](./label) (for shared process configuration)
@@ -59,6 +118,8 @@ Resource labels in Azure are added to auto-pools, rather than jobs, to support c
 
 [awsbatch-executor]: ../../../executor/aws-batch
 [azurebatch-executor]: ../../../executor/azure-batch
+[config-azure-deletePoolsOnCompletion]: ../../config/azure#azurebatchdeletepoolsoncompletion
+[config-tower-autoLabels]: ../../config/tower#towerautolabels
 [google-batch-executor]: ../../../executor/google-batch
 [k8s-executor]: ../../../executor/kubernetes
 [seqera-executor]: ../../../executor/seqera

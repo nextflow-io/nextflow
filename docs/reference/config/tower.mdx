@@ -13,6 +13,25 @@ The unique access token for your Seqera Platform account.
 
 Your `accessToken` can be obtained from your Seqera Platform instance in the [Tokens page](https://cloud.seqera.io/tokens).
 
+##### `tower.autoLabels`
+
+<AddedInVersion version="26.10" />
+
+Derive [resource labels][process-resource-labels] from the workflow metadata and attach them to the compute resources that the executor creates (default: `false`). Accepted values:
+
+- `true`: attach all available metadata labels.
+- `false`: attach no labels.
+- A list or comma-separated string of short names: attach only the named labels. For example, `['runName', 'projectName']` or `'runName,projectName'`.
+
+Valid short names, by label prefix:
+
+- `nextflow.io/`: `projectName`, `userName`, `runName`, `sessionId`, `resume`, `revision`, `commitId`, `repository`, `manifestName`, `runtimeVersion`
+- `seqera.io/platform/`: `workflowId`, `workspaceId`, `computeEnvId`
+
+The `userName` label reports the Seqera Platform user who submitted the run. When no Platform identity is available, the label reports the OS user that runs the Nextflow launcher.
+
+Every executor that supports the `resourceLabels` directive attaches these labels and normalizes them as the corresponding cloud API requires. Labels declared with the [`resourceLabels`][process-resource-labels] directive always take precedence.
+
 ##### `tower.computeEnvId`
 
 The compute environment ID in your Seqera Platform account used to launch pipelines (default: the primary compute environment in the selected workspace).
@@ -42,3 +61,5 @@ The HTTP read timeout for Seqera Platform API requests (default: `'60s'`).
 The workspace ID in Seqera Platform in which to save the run (default: the launching user's personal workspace).
 
 The workspace ID can also be specified using the environment variable `TOWER_WORKSPACE_ID` (config file has priority over the environment variable).
+
+[process-resource-labels]: ../process/directives/resource-labels

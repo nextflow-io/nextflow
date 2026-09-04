@@ -436,10 +436,11 @@ class TaskProcessorTest extends Specification {
 
     def 'should create a task preview' () {
         given:
-        def config = new ProcessConfig([cpus: 10, memory: '100 GB'])
+        def config = new ProcessConfig([cpus: 10, memory: '100 GB', resourceLabels: [team: 'genomics']])
         def EXEC = Mock(Executor) { getName()>>'exec-name'}
         def BODY = Mock(BodyDef) { getType()>>ScriptType.SCRIPTLET }
-        def processor = new TaskProcessor(config: config, name: 'proc-name', executor: EXEC, taskBody: BODY)
+        def SESS = Mock(Session) { getAutoResourceLabels() >> ['nextflow.io/runName': 'crazy_darwin'] }
+        def processor = new TaskProcessor(config: config, name: 'proc-name', executor: EXEC, taskBody: BODY, session: SESS)
 
         when:
         def result = processor.createTaskPreview()
@@ -448,6 +449,41 @@ class TaskProcessorTest extends Specification {
         result.config.executor == 'exec-name'
         result.config.getCpus() == 10
         result.config.getMemory() == MemoryUnit.of('100 GB')
+        and:
+        // the auto resource labels are merged under the declared ones
+        result.config.getResourceLabels() == ['nextflow.io/runName': 'crazy_darwin', team: 'genomics']
+    }
+
+    def 'should create a task run with the auto resource labels' () {
+        given:
+        def config = new ProcessConfig([resourceLabels: [team: 'genomics', 'nextflow.io/runName': 'custom']])
+        def EXEC = Mock(Executor) { getName()>>'exec-name'}
+        def BODY = Mock(BodyDef) { getType()>>ScriptType.SCRIPTLET }
+        def SESS = Mock(Session) { getAutoResourceLabels() >> ['nextflow.io/runName': 'crazy_darwin', 'nextflow.io/sessionId': '1a2b3c'] }
+        def processor = new TaskProcessor(config: config, name: 'proc-name', executor: EXEC, taskBody: BODY, session: SESS)
+
+        when:
+        def task = processor.createTaskRun(new TaskStartParams(TaskId.of(1), 1))
+        then:
+        // the auto labels reach the task config, and the declared label still wins
+        task.config.getResourceLabels() == [
+                'nextflow.io/sessionId': '1a2b3c',
+                'nextflow.io/runName': 'custom',
+                team: 'genomics' ]
+    }
+
+    def 'should create a task run with no auto resource labels when the feature is off' () {
+        given:
+        def config = new ProcessConfig([resourceLabels: [team: 'genomics']])
+        def EXEC = Mock(Executor) { getName()>>'exec-name'}
+        def BODY = Mock(BodyDef) { getType()>>ScriptType.SCRIPTLET }
+        def SESS = Mock(Session) { getAutoResourceLabels() >> [:] }
+        def processor = new TaskProcessor(config: config, name: 'proc-name', executor: EXEC, taskBody: BODY, session: SESS)
+
+        when:
+        def task = processor.createTaskRun(new TaskStartParams(TaskId.of(1), 1))
+        then:
+        task.config.getResourceLabels() == [team: 'genomics']
     }
 
     @Unroll
