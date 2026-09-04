@@ -61,7 +61,8 @@ class CmdModuleValidate extends CmdBase {
             throw new AbortOperationException("Incorrect number of arguments -- usage: nextflow module validate <namespace/name>")
 
         final moduleDir = determineModuleDir(args[0])
-        final schemaLocation = schema ?: ModuleSchemaValidator.DEFAULT_SCHEMA_URL
+        final manifest = moduleDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
+        final schemaLocation = ModuleSchemaValidator.resolveSchemaLocation(manifest, schema)
         final errors = ModuleValidator.validate(moduleDir, schemaLocation)
 
         if( errors ) {

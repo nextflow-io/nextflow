@@ -38,6 +38,138 @@ class CmdModuleCreateTest extends Specification {
         then:
         content.contains("Module: myorg/hello")
         content.contains("process HELLO")
+        and: 'typed by default'
+        content.contains("nextflow.enable.types = true")
+        content.contains("greeting: String")
+    }
+
+    def 'should generate a workflow module main.nf with -kind Workflow'() {
+        when:
+        def content = CmdModuleCreate.mainNf('myorg', 'hello', 'Workflow')
+
+        then:
+        content.contains("Workflow module: myorg/hello")
+        content.contains("workflow HELLO")
+        content.contains("take:")
+        content.contains("emit:")
+        !content.contains("process ")
+        and: 'typed by default'
+        content.contains("nextflow.enable.types = true")
+    }
+
+    def 'should generate a legacy workflow module meta.yml with kind Workflow'() {
+        when:
+        def content = CmdModuleCreate.metaYml('myorg', 'hello', 'Workflow', false)
+
+        then:
+        content.contains("name: myorg/hello")
+        content.contains("kind: Workflow")
+
+        and: 'the legacy scaffold take/emit are documented as channels'
+        content.contains("input:")
+        content.contains("name: greeting")
+        content.contains("type: channel")
+        content.contains("name: result")
+
+        and: 'a legacy module declares no Nextflow version requirement'
+        !content.contains("requires:")
+    }
+
+    def 'generated legacy workflow scaffold passes validation'() {
+        given:
+        def moduleDir = tempDir.resolve('modules/myorg/hello')
+        Files.createDirectories(moduleDir)
+        moduleDir.resolve('main.nf').text = CmdModuleCreate.mainNf('myorg', 'hello', 'Workflow', false)
+        moduleDir.resolve('meta.yml').text = CmdModuleCreate.metaYml('myorg', 'hello', 'Workflow', false)
+        moduleDir.resolve('README.md').text = '# hello\n'
+        and: 'a permissive schema'
+        def schema = tempDir.resolve('schema.json')
+        schema.text = '{"$schema":"https://json-schema.org/draft/2020-12/schema","type":"object",' +
+            '"properties":{"name":{"type":"string"},"description":{"type":"string"}},"required":["name","description"]}'
+
+        expect: 'no errors -- interface counts match take/emit and there are no TODO placeholders'
+        nextflow.module.ModuleValidator.validate(moduleDir, schema.toString()).isEmpty()
+    }
+
+    def 'should default to a process module'() {
+        expect:
+        CmdModuleCreate.mainNf('myorg', 'hello').contains("process HELLO")
+        !CmdModuleCreate.metaYml('myorg', 'hello').contains("kind:")
+    }
+
+    def 'should generate a typed process module by default'() {
+        when:
+        def content = CmdModuleCreate.mainNf('myorg', 'hello', 'Process')
+
+        then:
+        content.contains("nextflow.enable.types = true")
+        content.contains("process HELLO")
+        content.contains("greeting: String")               // typed input
+        content.contains("stdout()")                       // typed stdout output
+        content.contains("script:")                          // keeps a shell script block
+        !content.contains("val greeting")                    // not the untyped form
+        !content.contains("exec:")
+
+        and:
+        def meta = CmdModuleCreate.metaYml('myorg', 'hello', 'Process')
+        meta.contains("name: message")
+        meta.contains('nextflow: ">=26.04.0"')   // typed processes require Nextflow >=26.04
+    }
+
+    def 'should generate a legacy process module with -legacy'() {
+        when:
+        def content = CmdModuleCreate.mainNf('myorg', 'hello', 'Process', false)
+
+        then:
+        content.contains("process HELLO")
+        content.contains("val greeting")
+        content.contains("stdout")
+        !content.contains("nextflow.enable.types")
+
+        and: 'a legacy process module declares no Nextflow version requirement'
+        !CmdModuleCreate.metaYml('myorg', 'hello', 'Process', false).contains("requires:")
+    }
+
+    def 'generated typed workflow scaffold parses as a workflow'() {
+        given:
+        def nf = tempDir.resolve('main.nf')
+        nf.text = CmdModuleCreate.mainNf('myorg', 'hello', 'Workflow')
+
+        expect:
+        nextflow.module.ModuleSpecFactory.definesWorkflow(nf)
+    }
+
+    def 'generated typed process scaffold parses cleanly'() {
+        given:
+        def nf = tempDir.resolve('main.nf')
+        nf.text = CmdModuleCreate.mainNf('myorg', 'hello', 'Process')
+
+        expect:
+        // parses without error (no workflow defined -> false, but must not throw)
+        !nextflow.module.ModuleSpecFactory.definesWorkflow(nf)
+    }
+
+    def 'should generate a typed workflow module with -kind Workflow'() {
+        when:
+        def content = CmdModuleCreate.mainNf('myorg', 'hello', 'Workflow')
+
+        then:
+        content.contains("nextflow.enable.types = true")
+        content.contains("workflow HELLO")
+        content.contains("greeting: String")            // typed take
+        content.contains("result: String = message")    // typed emit
+        !content.contains("process ")
+
+        and: 'the meta.yml derives input/output from the take/emit'
+        def meta = CmdModuleCreate.metaYml('myorg', 'hello', 'Workflow')
+        meta.contains("kind: Workflow")
+        meta.contains("input:")
+        meta.contains("name: greeting")
+        meta.contains("output:")
+        meta.contains("name: result")
+
+        and: 'typed workflows require Nextflow >=26.04'
+        meta.contains('nextflow: ">=26.04.0"')
     }
 
     def 'should translate special chars in process name to underscore and uppercase'() {

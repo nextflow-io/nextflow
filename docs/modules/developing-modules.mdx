@@ -27,6 +27,12 @@ The command creates a module directory with the following files:
 - `meta.yml`: The module spec describing metadata, inputs, and outputs.
 - `README.md`: Documentation for the module.
 
+By default this scaffolds a *process* module with static typing. Use `-kind Workflow` to scaffold a *workflow* module, and `-legacy` to scaffold a module without static typing.
+
+```console
+$ nextflow module create myorg/my-workflow -kind Workflow
+```
+
 See [module create][cli-module-create] for the full command reference.
 
 ## Module structure
@@ -185,6 +191,8 @@ $ nextflow module spec \
 
 When updating an existing module spec, it is incorporated into the new file.
 
+For a workflow module, the `input` and `output` sections are derived from the workflow's `take:` and `emit:` declarations. The `requires.modules` section is derived from the module script's include declarations.
+
 See [module spec][cli-module-spec] for the full command reference.
 
 ## Validating a module
@@ -194,11 +202,6 @@ Use the `module validate` command to check that a module is ready for publishing
 ```console
 $ nextflow module validate myorg/my-module
 ```
-
-The command verifies that:
-
-- All required files are present (`main.nf`, `meta.yml`, `README.md`).
-- The module spec contains all required fields (name, version, description, and license).
 
 See [module validate][cli-module-validate] for the full command reference.
 

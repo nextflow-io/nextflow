@@ -27,9 +27,19 @@ Print the command usage.
 
 ## Subcommands
 
-##### `create [namespace/name]` {#module-create}
+##### `create [options] [namespace/name]` {#module-create}
 
 Create a new module with a basic `main.nf`, `meta.yml`, and `README.md`.
+
+The following options are available:
+
+###### `-kind` (`Process`)
+
+The kind of module to scaffold: `Process` (default) or `Workflow`.
+
+###### `-legacy`
+
+Scaffold a module without static typing. By default a module is scaffolded with typed input/output declarations.
 
 ##### `install [options] [namespace/name]` {#module-install}
 
@@ -49,7 +59,7 @@ Reinstall the module even if a locally modified copy exists. Without this flag, 
 ##### `list [options]` {#module-list}
 
 List the modules installed in your project.
-Shows each module's name, version, and integrity status, which reports whether the module was modified locally.
+Shows each module's name, version, kind (`Process` or `Workflow`), and integrity status, which reports whether the module was modified locally.
 
 The following options are available:
 
@@ -170,7 +180,12 @@ Output mode for info results. Options: `text` (default), `json`.
 
 Validate a module before publishing to the registry.
 
-Verifies that the required files `main.nf`, `meta.yml`, and `README.md` are present, and that the module spec contains the required name, version, description, and license fields.
+Verifies that:
+
+- All required files are present (`main.nf`, `meta.yml`, `README.md`).
+- The module spec contains all required fields (name, version, description, and license).
+- Every module included by the module script is a registry module, not a local module.
+- The dependencies declared in `requires.modules` are exactly the modules included by the module script.
 
 ## Examples
 

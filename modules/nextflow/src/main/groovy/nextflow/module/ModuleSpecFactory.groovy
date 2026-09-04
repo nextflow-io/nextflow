@@ -22,13 +22,17 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.AbortOperationException
+import nextflow.script.ast.ProcessNode
 import nextflow.script.ast.ProcessNodeV1
 import nextflow.script.ast.ProcessNodeV2
 import nextflow.script.ast.ScriptNode
+import nextflow.script.ast.WorkflowNode
 import nextflow.script.control.ScriptParser
+import nextflow.script.control.ModuleResolver as ScriptModuleResolver
 import org.yaml.snakeyaml.Yaml
 
 import static nextflow.module.ModuleSpec.ModuleParam
+import static nextflow.script.ast.ASTUtils.asBlockStatements
 
 /**
  * Factory methods for module specs.
@@ -43,6 +47,7 @@ class ModuleSpecFactory {
     private static final List<String> MODULE_SPEC_FIELDS = [
         'name',
         'version',
+        'kind',
         'description',
         'keywords',
         'license',
@@ -91,32 +96,31 @@ class ModuleSpecFactory {
         spec.authors = opts.authors as List<String> ?: oldSpec.authors
         spec.maintainers = oldSpec.maintainers
         spec.requires = oldSpec.requires
+        spec.requiresModules = inferRequiresModules(path, oldSpec)
         spec.tools = oldSpec.tools
         spec._passthrough = oldSpec._passthrough
 
-        // load script
-        final parser = new ScriptParser()
-        final sourceUnit = parser.parse(path.toFile())
-        parser.analyze()
+        // parse with semantic analysis so that statically-typed declarations resolve their types
+        // (an unresolved type cannot be inferred and is rendered as a TODO placeholder)
+        final scriptNode = parseScript(path)
+        final processes = scriptNode.getProcesses()
+        final workflows = scriptNode.getWorkflows().findAll { WorkflowNode w -> !w.isEntry() }
 
-        final scriptNode = sourceUnit.getAST()
-        if( scriptNode !instanceof ScriptNode )
-            throw new AbortOperationException("Error parsing module script -- run `nextflow lint ${path}` to check for errors")
+        if( !processes.isEmpty() )
+            return fromProcessScript(opts, path, oldSpec, spec, processes)
+        if( !workflows.isEmpty() )
+            return fromWorkflowScript(opts, oldSpec, spec, workflows)
 
-        final errors = sourceUnit.getErrorCollector().getErrors()
-        if( errors != null && !errors.isEmpty() )
-            throw new AbortOperationException("Error parsing module script -- run `nextflow lint ${path}` to check for errors")
+        throw new AbortOperationException("Module script does not define any process or workflow: ${path}")
+    }
 
-        // get process definition in script
-        final processes = ((ScriptNode) scriptNode).getProcesses()
-        if( processes.isEmpty() )
-            throw new AbortOperationException("Module script does not define any processes: ${path}")
+    private static ModuleSpec fromProcessScript(Map opts, Path path, ModuleSpec oldSpec, ModuleSpec spec, List<ProcessNode> processes) {
         if( processes.size() > 1 )
             throw new AbortOperationException("Module script defines multiple processes: ${path}")
 
         // infer module spec properties from process definition
         final process = processes[0]
-
+        spec.kind = oldSpec.kind
         spec.name = opts.name ?: "${opts.namespace}/${process.name.toLowerCase()}"
 
         if( process instanceof ProcessNodeV1 ) {
@@ -135,8 +139,158 @@ class ModuleSpecFactory {
         return spec
     }
 
+    private static ModuleSpec fromWorkflowScript(Map opts, ModuleSpec oldSpec, ModuleSpec spec, List<WorkflowNode> workflows) {
+        if( workflows.size() > 1 )
+            throw new AbortOperationException("Module script defines multiple workflows")
+
+        // infer module spec properties from the workflow's take:/emit: interface. Types are taken
+        // from the source when statically typed; an untyped take/emit renders a TODO placeholder.
+        final workflow = workflows[0]
+        spec.kind = ModuleSpec.KIND_WORKFLOW
+        spec.name = opts.name ?: "${opts.namespace}/${workflow.name.toLowerCase()}"
+
+        final visitor = new ModuleSpecVisitorV2(oldSpec)
+        spec.inputs = visitor.visitTakes(workflow)
+        spec.outputs = visitor.visitEmits(workflow)
+
+        return spec
+    }
+
+    /**
+     * The modules included by a module script, split into remote modules (registry references)
+     * and local modules (a relative or absolute path).
+     */
+    static class ScriptIncludes {
+        final List<String> remote
+        final List<String> local
+
+        ScriptIncludes(List<String> remote, List<String> local) {
+            this.remote = remote
+            this.local = local
+        }
+    }
+
+    /**
+     * The modules included by the given module script, in declaration order and de-duplicated.
+     * Parsing is syntactic only, so includes of not-yet-installed modules do not cause a failure.
+     */
+    static ScriptIncludes includes(Path path) {
+        final remote = new LinkedHashSet<String>()
+        final local = new LinkedHashSet<String>()
+        for( final include : parseScript(path, false).getIncludes() ) {
+            final source = include.source.getText()
+            if( ScriptModuleResolver.isLocalModule(source) )
+                local.add(source)
+            else
+                remote.add(source)
+        }
+        return new ScriptIncludes(new ArrayList<String>(remote), new ArrayList<String>(local))
+    }
+
+    /**
+     * Infer a module's {@code requires.modules} dependencies from the include declarations in its
+     * script, so that the declared dependencies cannot drift from what the module actually
+     * includes. A module can only include registry modules -- a module is distributed on its own,
+     * so a local include would not resolve for a consumer.
+     *
+     * An include declares only the module name, so each dependency is pinned to an exact version
+     * taken from the previous spec if the module is still included, otherwise from the locally
+     * vendored copy of the dependency.
+     *
+     * @param path    the module script
+     * @param oldSpec the previous module spec, whose pinned versions are preserved
+     */
+    static List<String> inferRequiresModules(Path path, ModuleSpec oldSpec) {
+        final includes = includes(path)
+        if( includes.local )
+            throw new AbortOperationException("Module script cannot include local modules: ${includes.local.join(', ')} -- a module can only include registry modules")
+
+        // versions pinned by the previous spec
+        final pinned = new HashMap<String, String>()
+        for( final dep : oldSpec.requiresModules ) {
+            final parsed = ModuleResolver.parseDependency(dep)
+            pinned.put(parsed.reference.fullName, parsed.version)
+        }
+
+        // the module's dependencies are vendored under its own `modules` directory
+        final storage = new ModuleStorage(path.parent)
+
+        final result = new ArrayList<String>()
+        for( final source : includes.remote ) {
+            final reference = ModuleReference.parse(source)
+            final name = reference.fullName
+            final version = pinned.get(name)
+                ?: (storage.isInstalled(reference) ? storage.getInstalledModule(reference).installedVersion : null)
+            if( !version )
+                throw new AbortOperationException("Cannot determine the version of module dependency '${name}' -- install it with 'nextflow module install ${name}' and try again")
+            result.add("${name}@${version}".toString())
+        }
+        return result
+    }
+
     static ModuleSpec fromScript(Map opts = [:], Path path) {
         return fromScript(opts, path, new ModuleSpec())
+    }
+
+    /**
+     * Parse a module script and return its AST root, failing on parse errors.
+     *
+     * @param path    the module script
+     * @param analyze whether to run semantic analysis (include resolution etc.); disable it when
+     *                only the syntactic structure is needed, so that includes of not-yet-installed
+     *                modules do not cause a failure
+     */
+    private static ScriptNode parseScript(Path path, boolean analyze = true) {
+        final parser = new ScriptParser()
+        final sourceUnit = parser.parse(path.toFile())
+        if( analyze )
+            parser.analyze()
+
+        final scriptNode = sourceUnit.getAST()
+        if( scriptNode !instanceof ScriptNode )
+            throw new AbortOperationException("Error parsing module script -- run `nextflow lint ${path}` to check for errors")
+
+        final errors = sourceUnit.getErrorCollector().getErrors()
+        if( errors != null && !errors.isEmpty() )
+            throw new AbortOperationException("Error parsing module script -- run `nextflow lint ${path}` to check for errors")
+
+        return (ScriptNode) scriptNode
+    }
+
+    /**
+     * @return true if the given module script defines at least one workflow. Parsing is
+     * syntactic only, so a workflow that includes not-yet-installed modules still validates.
+     */
+    static boolean definesWorkflow(Path path) {
+        return !parseScript(path, false).getWorkflows().isEmpty()
+    }
+
+    /**
+     * The take/emit arity of a workflow, used to reconcile a workflow module's
+     * {@code take:}/{@code emit:} interface with its meta.yml input/output.
+     */
+    static class WorkflowInterface {
+        final int takes
+        final int emits
+
+        WorkflowInterface(int takes, int emits) {
+            this.takes = takes
+            this.emits = emits
+        }
+    }
+
+    /**
+     * The take/emit arity of every workflow defined by the given script. Parsing is
+     * syntactic only, so a workflow that includes not-yet-installed modules still parses.
+     */
+    static List<WorkflowInterface> workflowInterfaces(Path path) {
+        final List<WorkflowInterface> result = []
+        for( final WorkflowNode wf : parseScript(path, false).getWorkflows() ) {
+            final takes = wf.getParameters() != null ? wf.getParameters().length : 0
+            final emits = asBlockStatements(wf.emits).size()
+            result.add(new WorkflowInterface(takes, emits))
+        }
+        return result
     }
 
     /**
@@ -155,12 +309,13 @@ class ModuleSpecFactory {
             final spec = new ModuleSpec()
             spec.name = data.name as String
             spec.version = data.version as String
+            spec.kind = data.kind as String
             spec.description = data.description as String
             spec.keywords = data.keywords as List<String> ?: []
             spec.license = data.license as String
             spec.authors = data.authors as List<String> ?: []
             spec.maintainers = data.maintainers as List<String> ?: []
-            spec.requires = data.requires as Map<String, String> ?: [:]
+            parseRequires(data.requires, spec)
             spec.tools = data.tools as List<Map> ?: []
 
             final inputs = data.input
@@ -195,6 +350,39 @@ class ModuleSpecFactory {
         catch( Exception e ) {
             throw new AbortOperationException("Failed to parse module spec: ${path}", e)
         }
+    }
+
+    /**
+     * Parse the `requires` block, separating the transitive module dependency
+     * list (`requires.modules`) from scalar constraints (e.g. `requires.nextflow`).
+     *
+     * @param requires the raw `requires` value from the parsed yaml
+     * @param spec the module spec to populate
+     */
+    private static void parseRequires(Object requires, ModuleSpec spec) {
+        if( requires == null ) {
+            spec.requires = [:]
+            spec.requiresModules = []
+            return
+        }
+        if( requires !instanceof Map )
+            throw new Exception("invalid spec requires")
+        final reqMap = requires as Map<String, Object>
+        final mods = reqMap.get('modules')
+        if( mods instanceof List )
+            spec.requiresModules = mods.collect { it as String }
+        else if( mods != null )
+            throw new Exception("invalid spec requires.modules")
+        else
+            spec.requiresModules = []
+        final scalar = new LinkedHashMap<String, String>()
+        for( final entry : reqMap.entrySet() ) {
+            if( entry.key == 'modules' )
+                continue
+            if( entry.value != null )
+                scalar[entry.key as String] = entry.value as String
+        }
+        spec.requires = scalar
     }
 
     /**
