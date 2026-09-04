@@ -349,4 +349,38 @@ class ModuleValidatorTest extends Specification {
         !errors.any { it.contains('local module') }
     }
 
+
+    def 'a workflow module declaring process-only fields fails validation' () {
+        given:
+        def dir = moduleDir(
+            '''\
+            workflow FOO {
+                take:
+                ch_in
+                emit:
+                ch_in
+            }
+            '''.stripIndent(),
+            '''\
+            name: nf-core/demo_wf
+            version: 1.0.0
+            kind: Workflow
+            description: a demo workflow module
+            tools:
+              - samtools:
+                  description: a process-only field
+            topics:
+              - name: versions
+                type: file
+                description: a process-only field
+            '''.stripIndent())
+
+        when:
+        def errors = ModuleValidator.validate(dir, schema())
+
+        then:
+        errors.any { it.contains("Invalid setting 'topics'") }
+        errors.any { it.contains("Invalid setting 'tools'") }
+    }
+
 }

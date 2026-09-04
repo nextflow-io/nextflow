@@ -220,15 +220,13 @@ class ModuleSpecVisitorV2 {
     private static final ClassNode CHANNEL_TYPE = ClassHelper.makeCached(nextflow.script.types.Channel)
     private static final ClassNode PATH_TYPE = ClassHelper.makeCached(java.nio.file.Path)
     private static final ClassNode RECORD_TYPE = ClassHelper.makeCached(nextflow.script.types.Record)
+    private static final ClassNode VALUE_TYPE = ClassHelper.makeCached(nextflow.script.types.Value)
 
     private static String paramType(ClassNode type) {
         if( !type )
             return null
 
-        // generic documentation tags for statically-typed declarations -- the authoritative
-        // types live in the source take:/emit: and typed input/output (parsed at `module run`)
-        if( isChannelType(type) )
-            return 'channel'
+        // a record declared in the module script is not resolved yet
         if( isRecordType(type) )
             return 'record'
 
@@ -255,13 +253,13 @@ class ModuleSpecVisitorV2 {
             case ClassHelper.STRING_TYPE:
             case ClassHelper.GSTRING_TYPE:
                 return 'string'
+            case CHANNEL_TYPE:
+                return 'channel'
+            case VALUE_TYPE:
+                return 'value'
             default:
                 return null
         }
-    }
-
-    private static boolean isChannelType(ClassNode type) {
-        return type.equals(CHANNEL_TYPE) || type.implementsInterface(CHANNEL_TYPE)
     }
 
     private static boolean isRecordType(ClassNode type) {
