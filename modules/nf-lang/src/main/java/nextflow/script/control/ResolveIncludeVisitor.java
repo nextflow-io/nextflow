@@ -138,7 +138,10 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
 
     private URI getIncludeUri(String source) {
         var parent = Path.of(uri).getParent();
-        if( ModuleResolver.isRemoteModule(source) ) {
+        if( ModuleResolver.isLocalModule(source) ) {
+            return getLocalIncludeUri(parent, source);
+        }
+        else {
             // Resolve a remote module relative to the including file's directory (context-relative),
             // so a workflow module's own dependencies are found under its nested `modules/` directory
             // (nested vendoring). For the top-level script this parent is the project directory.
@@ -147,9 +150,6 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
                 .resolve(source, base)
                 .normalize()
                 .toUri();
-        }
-        else {
-            return getLocalIncludeUri(parent, source);
         }
     }
 

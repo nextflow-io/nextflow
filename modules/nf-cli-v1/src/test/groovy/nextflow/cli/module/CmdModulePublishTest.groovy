@@ -160,7 +160,9 @@ class CmdModulePublishTest extends Specification {
     private Path workflowModuleWithDep(String depRef) {
         final dir = tempDir.resolve('wf-module')
         Files.createDirectories(dir)
-        dir.resolve('main.nf').text = 'workflow FOO {\n  take:\n  ch_in\n  emit:\n  ch_in\n}\n'
+        final depName = depRef.contains('@') ? depRef.substring(0, depRef.lastIndexOf('@')) : depRef
+        dir.resolve('main.nf').text = "include { DEP } from '${depName}'\n\nworkflow FOO {\n  take:\n  ch_in\n  emit:\n  ch_in\n}\n"
+
         dir.resolve('README.md').text = '# wf'
         dir.resolve('meta.yml').text = """\
             name: test/wf
