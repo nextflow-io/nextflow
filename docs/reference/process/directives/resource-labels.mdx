@@ -56,17 +56,16 @@ Resource labels in Azure are added to auto-pools, rather than jobs, to support c
 
 <AddedInVersion version="26.10" />
 
-Nextflow can also derive resource labels from the workflow metadata and attach them to the task compute resources, in addition to the labels declared with the `resourceLabels` directive. The feature is disabled by default and is enabled with the [`tower.autoLabels`][config-tower-autoLabels] config option:
+Nextflow can derive resource labels from the workflow metadata and attach them to the compute resources for each task, in addition to the labels declared with the `resourceLabels` directive. Automatic labels are disabled by default. Enable them with the [`tower.autoLabels`][config-tower-autoLabels] config option:
 
 ```groovy
 // attach all of the available metadata labels
 tower.autoLabels = true
-
 // or select the ones to be attached
 tower.autoLabels = ['projectName', 'runName', 'workspaceId']
 ```
 
-The following names can be selected:
+Available names and their label keys:
 
 | Name             | Label key                         |
 | ---------------- | --------------------------------- |
@@ -84,12 +83,12 @@ The following names can be selected:
 | `workspaceId`    | `seqera.io/platform/workspaceId`  |
 | `computeEnvId`   | `seqera.io/platform/computeEnvId` |
 
-A label whose metadata value is not available is omitted, so the `seqera.io/platform/*` labels are only attached when workflow monitoring with Seqera Platform is enabled.
+Nextflow omits any label whose metadata value is not available. The `seqera.io/platform/*` labels are attached only when workflow monitoring with Seqera Platform is enabled.
 
-Labels declared with the `resourceLabels` directive always take precedence: when a declared label has the same key as an automatic one, the declared value is used. Declared labels are never modified by the normalization described below, even when they are not valid for the target executor.
+Labels declared with the `resourceLabels` directive always take precedence. When a declared label has the same key as an automatic label, Nextflow uses the declared value. The normalization described later never modifies declared labels, even when they are not valid for the target executor.
 
 :::note
-The Kubernetes executor sanitizes every pod label, including the declared ones, and rejects a label key containing more than one `/` character. It also applies its own `nextflow.io/app`, `nextflow.io/runName`, `nextflow.io/taskName`, `nextflow.io/processName`, `nextflow.io/sessionId` and `nextflow.io/queue` pod labels last, so a resource label using one of those keys is overridden.
+The Kubernetes executor sanitizes every pod label, including declared labels, and rejects a label key that contains more than one `/` character. The executor applies its own `nextflow.io/app`, `nextflow.io/runName`, `nextflow.io/taskName`, `nextflow.io/processName`, `nextflow.io/sessionId`, and `nextflow.io/queue` pod labels last, so these override any resource label that uses the same key.
 :::
 
 ### Label normalization
