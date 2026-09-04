@@ -93,22 +93,22 @@ The Kubernetes executor sanitizes every pod label, including declared labels, an
 
 ### Label normalization
 
-The automatic labels are normalized as required by the API of the corresponding executor. The normalization is applied to the automatic labels only.
+The executor normalizes automatic labels to meet the requirements of its API. Declared labels are not normalized.
 
-| Executor           | Normalization                                                                                               | `nextflow.io/runName` becomes |
-| ------------------ | ----------------------------------------------------------------------------------------------------------- | ----------------------------- |
-| AWS Batch          | Letters, digits, spaces and `+ - = . _ : / @`; key up to 128 characters, value up to 256                    | unchanged                     |
-| Azure Batch        | Applied as-is, apart from the reserved `microsoft` name prefix                                              | unchanged                     |
-| Google Cloud Batch | Lowercase letters, digits, `_` and `-`; the key must start with a letter; key and value up to 63 characters | `nextflow_io_runname`         |
-| Kubernetes         | Key prefix up to the first `/` preserved, any further `/` replaced with `_`; values stripped of their URL scheme and slashes, up to 63 characters | unchanged |
-| Seqera executor    | Applied as-is                                                                                               | unchanged                     |
+| Executor           | Normalization                                                                                                                               | `nextflow.io/runName` becomes |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| AWS Batch          | Letters, digits, spaces, and `+ - = . _ : / @`. Key up to 128 characters, value up to 256.                                                   | unchanged                     |
+| Azure Batch        | None, apart from the reserved `microsoft` name prefix.                                                                                       | unchanged                     |
+| Google Cloud Batch | Lowercase letters, digits, `_`, and `-`. The key must start with a letter. Key and value up to 63 characters.                                | `nextflow_io_runname`         |
+| Kubernetes         | The key prefix up to the first `/` is preserved, and any further `/` becomes `_`. Values are stripped of their URL scheme and slashes, up to 63 characters. | unchanged      |
+| Seqera executor    | None.                                                                                                                                        | unchanged                     |
 
-Values are normalized in the same way. For example, a `repository` value such as `https://github.com/foo/bar` becomes `github.com_foo_bar` on Kubernetes and `https___github_com_foo_bar` on Google Cloud Batch.
+The same rules apply to label values. For example, the `repository` value `https://github.com/foo/bar` becomes `github.com_foo_bar` on Kubernetes and `https___github_com_foo_bar` on Google Cloud Batch.
 
-The two-segment `seqera.io/platform/*` keys are not valid Kubernetes label keys, therefore on Kubernetes they are applied as `seqera.io/platform_workflowId`, `seqera.io/platform_workspaceId` and `seqera.io/platform_computeEnvId`.
+The two-segment `seqera.io/platform/*` keys are not valid Kubernetes label keys. The Kubernetes executor applies them as `seqera.io/platform_workflowId`, `seqera.io/platform_workspaceId`, and `seqera.io/platform_computeEnvId`.
 
 :::warning
-On Azure Batch the resource labels are applied as metadata of the auto-pool, and the pool identifier is derived from that metadata. A label that changes on every execution — such as `runName`, `sessionId` or `workflowId` — therefore creates a new pool for each run, and the pools accumulate unless [`azure.batch.deletePoolsOnCompletion`][config-azure-deletePoolsOnCompletion] is enabled. Selecting a stable subset, such as `['projectName', 'workspaceId', 'computeEnvId']`, is recommended on Azure Batch.
+On Azure Batch, the executor applies resource labels as metadata of the auto-pool and derives the pool identifier from that metadata. A label that changes on every run, such as `runName`, `sessionId`, or `workflowId`, creates a new pool for each run. The pools accumulate unless you enable [`azure.batch.deletePoolsOnCompletion`][config-azure-deletePoolsOnCompletion]. Select a stable subset instead, for example `['projectName', 'workspaceId', 'computeEnvId']`.
 :::
 
 ## See also
