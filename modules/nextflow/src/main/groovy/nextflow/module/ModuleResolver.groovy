@@ -250,6 +250,31 @@ class ModuleResolver {
     }
 
     /**
+     * Return the version pinned for the given module in the {@code requires.modules} section of
+     * the module spec in {@code baseDir}, or {@code null} if there is no spec there (e.g. the
+     * project root) or the module is not declared as a dependency.
+     *
+     * Used to honor a parent module's pins when a dependency is resolved at include time.
+     */
+    static String pinnedVersion(Path baseDir, ModuleReference reference) {
+        final manifest = baseDir.resolve(ModuleStorage.MODULE_MANIFEST_FILE)
+        if( !Files.exists(manifest) )
+            return null
+        try {
+            for( final dep : ModuleSpecFactory.fromYaml(manifest).requiresModules ) {
+                final parsed = parseDependency(dep)
+                if( parsed.reference.fullName == reference.fullName )
+                    return parsed.version
+            }
+        }
+        catch( Exception e ) {
+            // best-effort: a genuinely broken spec is reported by the install itself
+            log.debug "Unable to read dependency pins from ${manifest}: ${e.message}"
+        }
+        return null
+    }
+
+    /**
      * Install a module together with its transitive {@code requires.modules}
      * dependencies, using nested per-module vendoring.
      *

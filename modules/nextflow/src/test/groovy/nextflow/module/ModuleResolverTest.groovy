@@ -190,4 +190,28 @@ class ModuleResolverTest extends Specification {
         cleanup:
         FileHelper.deletePath(moduleDir)
     }
+
+    def 'should read the pinned dependency version from the module spec'() {
+        given:
+        def moduleDir = tempDir.resolve('modules/nf-core/my-workflow')
+        Files.createDirectories(moduleDir)
+        moduleDir.resolve('meta.yml').text = """\
+            name: my-workflow
+            requires:
+              nextflow: '>=26.04.0'
+              modules:
+                - nf-core/fastqc@1.2.3
+                - nf-core/multiqc
+            """.stripIndent()
+
+        expect:
+        ModuleResolver.pinnedVersion(moduleDir, new ModuleReference('nf-core', 'fastqc')) == '1.2.3'
+        and: 'a dependency declared without a version is not pinned'
+        ModuleResolver.pinnedVersion(moduleDir, new ModuleReference('nf-core', 'multiqc')) == null
+        and: 'a module that is not a declared dependency is not pinned'
+        ModuleResolver.pinnedVersion(moduleDir, new ModuleReference('nf-core', 'bwa')) == null
+        and: 'a directory without a module spec has no pins'
+        ModuleResolver.pinnedVersion(tempDir, new ModuleReference('nf-core', 'fastqc')) == null
+    }
+
 }

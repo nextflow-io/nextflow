@@ -60,8 +60,11 @@ class DefaultRemoteModuleResolver implements RemoteModuleResolver {
             // Parse module reference
             def reference = ModuleReference.parse(moduleName)
 
+            // Honor the version pinned by the including module's `requires.modules`
+            def version = ModuleResolver.pinnedVersion(baseDir, reference)
+
             // Resolve module (will auto-install if missing or version mismatch)
-            def mainFile = resolver.resolve(reference, null, true)
+            def mainFile = resolver.resolve(reference, version, true)
 
             log.debug "Module ${reference} resolved to ${mainFile}"
             return mainFile
