@@ -119,7 +119,7 @@ Input/output types are an approximation of the source code, intended for documen
 
 Workflow modules are served by the same `nextflow module` commands as process modules. Beyond `install`, `publish`, and `run`, each subcommand has an implication:
 
-- `create`: a `-kind` option (`Process` by default, or `Workflow`) scaffolds a basic workflow module, and `-typed` scaffolds a statically-typed one.
+- `create`: a `-kind` option (`Process` by default, or `Workflow`) scaffolds a basic workflow module.
 
 - `list`: reports each installed module's kind alongside its version and integrity status.
 

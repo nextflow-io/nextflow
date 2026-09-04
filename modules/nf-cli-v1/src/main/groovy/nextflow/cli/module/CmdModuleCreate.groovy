@@ -41,8 +41,8 @@ class CmdModuleCreate extends CmdBase {
     @Parameter(names = ['-kind'], description = "Module kind: Process (default) or Workflow")
     String kind
 
-    @Parameter(names = ['-typed'], description = "Generate a typed module", arity = 0)
-    boolean typed
+    @Parameter(names = ['-legacy'], description = "Generate a legacy module, i.e. without static typing", arity = 0)
+    boolean legacy
 
     @Override
     String getName() {
@@ -92,7 +92,7 @@ class CmdModuleCreate extends CmdBase {
 
         validateSegment('namespace', namespace)
         validateSegments('name', name)
-        createModule(namespace, name, normalizeKind(kind), typed)
+        createModule(namespace, name, normalizeKind(kind), !legacy)
     }
 
     static private String normalizeKind(String value) {
@@ -119,7 +119,7 @@ class CmdModuleCreate extends CmdBase {
         return Path.of('modules')
     }
 
-    protected void createModule(String namespace, String name, String kind = 'Process', boolean typed = false) {
+    protected void createModule(String namespace, String name, String kind = 'Process', boolean typed = true) {
         final moduleDir = modulesBase().resolve(namespace).resolve(name)
         if( Files.exists(moduleDir) )
             throw new AbortOperationException("Module directory already exists: $moduleDir")
@@ -142,7 +142,7 @@ class CmdModuleCreate extends CmdBase {
         final defName = name.replaceAll('[^a-zA-Z0-9_]', '_').toUpperCase()
         println "Module created successfully at path: $moduleDir"
         println ""
-        // an untyped workflow module cannot be run directly, show inclusion instead
+        // a legacy workflow module cannot be run directly, show inclusion instead
         if( kind == 'Workflow' && !typed ) {
             println "Include the workflow module in a pipeline:"
             println ""
@@ -162,7 +162,7 @@ class CmdModuleCreate extends CmdBase {
             : new BufferedReader(new InputStreamReader(System.in)).readLine()
     }
 
-    static String mainNf(String namespace, String name, String kind = 'Process', boolean typed = false) {
+    static String mainNf(String namespace, String name, String kind = 'Process', boolean typed = true) {
         final defName = name.replaceAll('[^a-zA-Z0-9_]', '_').toUpperCase()
 
         if( kind == 'Workflow' && typed ) {
@@ -254,10 +254,10 @@ class CmdModuleCreate extends CmdBase {
         """.stripIndent()
     }
 
-    static String metaYml(String namespace, String name, String kind = 'Process', boolean typed = false) {
+    static String metaYml(String namespace, String name, String kind = 'Process', boolean typed = true) {
         if( kind == 'Workflow' && typed ) {
             // typed workflow: derive input/output from the scaffold's take:/emit:
-            // (typed workflows require Nextflow 26.04.0+)
+            // (typed workflows require Nextflow >=26.04)
             return """\
             name: ${namespace}/${name}
             version: 1.0.0
@@ -277,7 +277,7 @@ class CmdModuleCreate extends CmdBase {
             """.stripIndent()
         }
         if( kind == 'Workflow' ) {
-            // untyped workflow: take/emit have no declared types, but the generated scaffold's
+            // legacy workflow: take/emit have no declared types, but the generated scaffold's
             // take/emit are channels, so the interface is documented with the generic channel type
             return """\
             name: ${namespace}/${name}
@@ -285,8 +285,6 @@ class CmdModuleCreate extends CmdBase {
             kind: Workflow
             description: A brief description of the ${namespace}/${name} workflow module
             license: Apache-2.0
-            requires:
-              nextflow: ">=24.04.0"
             input:
               - name: greeting
                 type: channel
@@ -298,14 +296,14 @@ class CmdModuleCreate extends CmdBase {
             """.stripIndent()
         }
         if( typed ) {
-            // typed process (requires Nextflow 25.10.0+)
+            // typed process (requires Nextflow >=26.04)
             return """\
             name: ${namespace}/${name}
             version: 1.0.0
             description: A brief description of the ${namespace}/${name} module
             license: Apache-2.0
             requires:
-              nextflow: ">=25.10.0"
+              nextflow: ">=26.04.0"
             input:
               - name: greeting
                 type: string
