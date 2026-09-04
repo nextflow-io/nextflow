@@ -17,15 +17,20 @@ Your `accessToken` can be obtained from your Seqera Platform instance in the [To
 
 <AddedInVersion version="26.10" />
 
-Automatically derive [resource labels][process-resource-labels] from the workflow metadata, and attach them to the compute resources created by the executor (default: `false`). Can be specified as:
+Derive [resource labels][process-resource-labels] from the workflow metadata and attach them to the compute resources that the executor creates (default: `false`). Accepted values:
 
-- `true`: include all available metadata labels
-- `false`: disable
-- a list or comma-separated string of short names, e.g. `['runName', 'projectName']` or `'runName,projectName'`
+- `true`: attach all available metadata labels.
+- `false`: attach no labels.
+- A list or comma-separated string of short names: attach only the named labels. For example, `['runName', 'projectName']` or `'runName,projectName'`.
 
-The valid names are `projectName`, `userName`, `runName`, `sessionId`, `resume`, `revision`, `commitId`, `repository`, `manifestName`, `runtimeVersion`, `workflowId`, `workspaceId`, and `computeEnvId`. They are attached with the `nextflow.io/` prefix, apart from `workflowId`, `workspaceId` and `computeEnvId` which use the `seqera.io/platform/` prefix. The `userName` label reports the Seqera Platform user that submitted the run, falling back to the OS user running the Nextflow launcher when no Platform identity is available.
+Valid short names, by label prefix:
 
-The labels derived from the workflow metadata are attached by every executor supporting the `resourceLabels` directive, and are normalized as required by the corresponding cloud API. Labels declared with the `resourceLabels` directive always take precedence. See [resourceLabels][process-resource-labels] for details.
+- `nextflow.io/`: `projectName`, `userName`, `runName`, `sessionId`, `resume`, `revision`, `commitId`, `repository`, `manifestName`, `runtimeVersion`
+- `seqera.io/platform/`: `workflowId`, `workspaceId`, `computeEnvId`
+
+The `userName` label reports the Seqera Platform user who submitted the run. When no Platform identity is available, the label reports the OS user that runs the Nextflow launcher.
+
+Every executor that supports the `resourceLabels` directive attaches these labels and normalizes them as the corresponding cloud API requires. Labels declared with the [`resourceLabels`][process-resource-labels] directive always take precedence.
 
 ##### `tower.computeEnvId`
 
