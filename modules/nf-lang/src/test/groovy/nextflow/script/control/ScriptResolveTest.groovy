@@ -401,6 +401,48 @@ class ScriptResolveTest extends Specification {
         errors[0].getOriginalMessage() == 'Processes cannot be called from within a closure'
     }
 
+    def 'should report an error for a return statement in a workflow body' () {
+        when:
+        def errors = check(
+            '''\
+            workflow {
+                main:
+                if( params.help )
+                    return
+
+                publish:
+                nums = channel.of(1, 2, 3)
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 4
+        errors[0].getStartColumn() == 9
+        errors[0].getOriginalMessage() == 'Return statement cannot be used in a workflow body -- use `exit()` instead'
+    }
+
+    def 'should not report an error for a return statement in a closure' () {
+        when:
+        def errors = check(
+            '''\
+            workflow {
+                main:
+                nums = channel.of(1, 2, 3).map { v ->
+                    if( v == 2 )
+                        return 0
+                    return v
+                }
+
+                publish:
+                out = nums
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
     def 'should report an error for an invalid workflow invocation' () {
         when:
         def errors = check(

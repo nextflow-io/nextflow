@@ -123,7 +123,6 @@ public interface ScriptDsl extends DslScope {
     """)
     void error(String message);
 
-    @Deprecated
     @Description("""
         Stop the pipeline execution and return an exit code and optional error message.
     """)
