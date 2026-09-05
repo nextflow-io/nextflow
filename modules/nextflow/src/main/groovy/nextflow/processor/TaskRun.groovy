@@ -16,6 +16,7 @@
 
 package nextflow.processor
 
+import java.lang.reflect.UndeclaredThrowableException
 import java.nio.file.FileSystems
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -742,12 +743,41 @@ class TaskRun implements Cloneable {
         if( !configImage )
             configImage = null
 
-        final info = containerResolver().resolveImage(this, configImage as String)
+        final info = resolveImage0(configImage as String)
         // track the key of the container used
         if( info!=null )
             this.containerKey = info.hashKey
         // return the info
         return info
+    }
+
+    /**
+     * Resolve the container image for this task, normalising any failure raised by the
+     * {@link ContainerResolver} implementation to a {@link ProcessUnrecoverableException}.
+     *
+     * Container resolution runs while computing the task hash, well before the task reaches
+     * the executor. A resolver failing with a plain (unchecked) exception therefore reaches
+     * {@code TaskProcessor.resumeOrDie} unwrapped, where the {@code error instanceof ProcessException}
+     * guard rejects it and the configured {@code errorStrategy} is never consulted at all --
+     * silently downgrading `finish` to `terminate` and killing in-flight tasks. Wrapping the
+     * failure here lets the normal error-strategy classification run: `retry`/`ignore` are still
+     * escalated to `terminate` because the error is unrecoverable, while `finish` is honoured.
+     *
+     * @param imageName The container image name declared by the task, or {@code null}
+     * @return The resolved {@link ContainerInfo}, possibly {@code null}
+     */
+    private ContainerInfo resolveImage0(String imageName) {
+        try {
+            return containerResolver().resolveImage(this, imageName)
+        }
+        catch( Exception e ) {
+            // a proxied resolver rethrows a checked exception wrapped in an UndeclaredThrowableException
+            final err = e instanceof UndeclaredThrowableException && e.cause ? e.cause : e
+            // errors that already carry the process semantics are left untouched
+            if( err instanceof ProcessException )
+                throw err
+            throw new ProcessUnrecoverableException("Unable to resolve container image '${imageName}' -- Cause: ${err.message ?: err}", err)
+        }
     }
 
     /**
