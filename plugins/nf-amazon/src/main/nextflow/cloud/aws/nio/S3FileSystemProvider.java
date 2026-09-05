@@ -48,6 +48,7 @@ import java.nio.file.attribute.FileAttribute;
 import java.nio.file.attribute.FileAttributeView;
 import java.nio.file.attribute.FileTime;
 import java.nio.file.spi.FileSystemProvider;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.HashMap;
@@ -61,6 +62,7 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import software.amazon.awssdk.core.ResponseInputStream;
+import software.amazon.awssdk.core.exception.SdkException;
 import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.model.S3Object;
 import com.google.common.base.Preconditions;
@@ -77,6 +79,8 @@ import nextflow.extension.FilesEx;
 import nextflow.file.CopyOptions;
 import nextflow.file.FileHelper;
 import nextflow.file.FileSystemTransferAware;
+import nextflow.file.ResumableFileSystem;
+import nextflow.file.ResumableUpload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -109,7 +113,7 @@ import static java.lang.String.format;
  *
  *
  */
-public class S3FileSystemProvider extends FileSystemProvider implements FileSystemTransferAware {
+public class S3FileSystemProvider extends FileSystemProvider implements FileSystemTransferAware, ResumableFileSystem {
 
     private static final Logger log = LoggerFactory.getLogger(S3FileSystemProvider.class);
 
@@ -345,20 +349,139 @@ public class S3FileSystemProvider extends FileSystemProvider implements FileSyst
     }
 
     private S3OutputStream createUploaderOutputStream( S3Path fileToUpload ) {
+        return createUploaderOutputStream(fileToUpload, null, null);
+    }
+
+    private S3OutputStream createUploaderOutputStream( S3Path fileToUpload, String uploadId, List<CompletedPart> completedParts ) {
         S3Client s3 = fileToUpload.getFileSystem().getClient();
         Properties props = fileToUpload.getFileSystem().properties();
 
         final String storageClass = fileToUpload.getStorageClass()!=null ? fileToUpload.getStorageClass() : props.getProperty("upload_storage_class");
         final S3MultipartOptions opts = props != null ? new S3MultipartOptions(props) : new S3MultipartOptions();
         final S3ObjectId objectId = fileToUpload.toS3ObjectId();
-        S3OutputStream stream = new S3OutputStream(s3.getClient(), objectId, opts)
+        final S3OutputStream stream = uploadId == null
+                ? new S3OutputStream(s3.getClient(), objectId, opts)
+                : new S3OutputStream(s3.getClient(), objectId, opts, uploadId, completedParts);
+        return stream
                 .setCannedAcl(s3.getCannedAcl())
                 .setStorageClass(storageClass)
                 .setStorageEncryption(props.getProperty("storage_encryption"))
                 .setKmsKeyId(props.getProperty("storage_kms_key_id"))
                 .setContentType(fileToUpload.getContentType())
                 .setTags(fileToUpload.getTagsList());
-        return stream;
+    }
+
+    @Override
+    public ResumableUpload newUpload(Path target, CopyOption... options) throws IOException {
+        if( !(target instanceof S3Path) )
+            return null;
+        final S3Path s3Path = (S3Path)target;
+        final S3OutputStream stream = createUploaderOutputStream(s3Path, null, null);
+        return new S3ResumableUpload(stream, 0);
+    }
+
+    @Override
+    public ResumableUpload resumeUpload(Path target) throws IOException {
+        if( !(target instanceof S3Path) )
+            return null;
+        final S3Path s3Path = (S3Path)target;
+        final software.amazon.awssdk.services.s3.S3Client awsClient = s3Path.getFileSystem().getClient().getClient();
+        final String bucket = s3Path.getBucket();
+        final String key = s3Path.getKey();
+
+        // find the most recent in-progress multipart upload for this object, paging through all
+        // results since listMultipartUploads returns at most 1000 entries per call
+        MultipartUpload upload = null;
+        String keyMarker = null;
+        String uploadIdMarker = null;
+        ListMultipartUploadsResponse listResp;
+        do {
+            try {
+                listResp = awsClient.listMultipartUploads(
+                        ListMultipartUploadsRequest.builder()
+                                .bucket(bucket)
+                                .prefix(key)
+                                .keyMarker(keyMarker)
+                                .uploadIdMarker(uploadIdMarker)
+                                .build());
+            }
+            catch( final SdkException e ) {
+                throw new IOException("Failed to list Amazon S3 multipart uploads", e);
+            }
+            for( final MultipartUpload candidate : listResp.uploads() ) {
+                if( key.equals(candidate.key()) && (upload == null || candidate.initiated().isAfter(upload.initiated())) )
+                    upload = candidate;
+            }
+            keyMarker = listResp.nextKeyMarker();
+            uploadIdMarker = listResp.nextUploadIdMarker();
+        } while( Boolean.TRUE.equals(listResp.isTruncated()) );
+
+        if( upload == null )
+            return null;
+
+        // recover the already-uploaded parts, paging through all results since listParts returns
+        // at most 1000 entries per call
+        final List<CompletedPart> completedParts = new ArrayList<>();
+        long committedBytes = 0;
+        Integer partNumberMarker = null;
+        ListPartsResponse partsResp;
+        do {
+            try {
+                partsResp = awsClient.listParts(
+                        ListPartsRequest.builder()
+                                .bucket(bucket)
+                                .key(key)
+                                .uploadId(upload.uploadId())
+                                .partNumberMarker(partNumberMarker)
+                                .build());
+            }
+            catch( final SdkException e ) {
+                throw new IOException("Failed to list Amazon S3 multipart upload parts", e);
+            }
+            for( final Part part : partsResp.parts() ) {
+                completedParts.add(CompletedPart.builder().partNumber(part.partNumber()).eTag(part.eTag()).build());
+                committedBytes += part.size();
+            }
+            partNumberMarker = partsResp.nextPartNumberMarker();
+        } while( Boolean.TRUE.equals(partsResp.isTruncated()) );
+
+        final S3OutputStream stream = createUploaderOutputStream(s3Path, upload.uploadId(), completedParts);
+        return new S3ResumableUpload(stream, committedBytes);
+    }
+
+    private static class S3ResumableUpload implements ResumableUpload {
+        private final S3OutputStream stream;
+        private final long committedBytes;
+
+        S3ResumableUpload(S3OutputStream stream, long committedBytes) {
+            this.stream = stream;
+            this.committedBytes = committedBytes;
+        }
+
+        @Override
+        public long committedBytes() {
+            return committedBytes;
+        }
+
+        @Override
+        public OutputStream outputStream() {
+            return stream;
+        }
+
+        @Override
+        public void complete() throws IOException {
+            stream.close();
+        }
+
+        @Override
+        public void abandon() throws IOException {
+            stream.abandon();
+        }
+
+        @Override
+        public void abort() throws IOException {
+            stream.abort();
+        }
     }
 
     @Override

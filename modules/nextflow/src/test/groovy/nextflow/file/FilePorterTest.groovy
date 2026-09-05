@@ -18,21 +18,29 @@ package nextflow.file
 
 import java.nio.file.FileSystems
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.Semaphore
 
+import com.github.tomakehurst.wiremock.junit.WireMockRule
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.ProcessStageException
+import org.junit.Rule
 import spock.lang.Ignore
 import spock.lang.Specification
 import test.TestHelper
+
+import static com.github.tomakehurst.wiremock.client.WireMock.*
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Slf4j
 class FilePorterTest extends Specification {
+
+    @Rule
+    WireMockRule wireMockRule = new WireMockRule(0)
 
 
     def 'should get the max retries value' () {
@@ -49,6 +57,279 @@ class FilePorterTest extends Specification {
         then:
         porter.maxRetries == 88
 
+    }
+
+
+    def 'should determine whether a download can resume' () {
+
+        given:
+        def httpSource = 'http://localhost:1234/file.txt' as Path
+        def ftpSource = 'ftp://localhost/file.txt' as Path
+        def localSource = TestHelper.createInMemTempFile('local.txt', 'hello')
+
+        and:
+        def folder = Files.createTempDirectory('test')
+        def partial = folder.resolve('partial.txt'); partial.text = 'partial'
+        def empty = folder.resolve('empty.txt'); empty.text = ''
+        def missing = folder.resolve('missing.txt')
+
+        and:
+        def porter = new FilePorter.FileTransfer(httpSource, partial, 3, Mock(Semaphore))
+
+        expect:
+        // http source with a partial file -> resumable
+        porter.canResumeDownload(httpSource, partial)
+        // no partial file yet -> not resumable
+        !porter.canResumeDownload(httpSource, missing)
+        // empty target -> not resumable
+        !porter.canResumeDownload(httpSource, empty)
+        // ftp source -> not resumable (no byte-range resume)
+        !porter.canResumeDownload(ftpSource, partial)
+        // local source -> not resumable
+        !porter.canResumeDownload(localSource, partial)
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+
+    def 'should keep a partial file when resuming a retry' () {
+
+        given:
+        def source = 'http://localhost:1234/file.txt' as Path
+        def folder = Files.createTempDirectory('test')
+        def target = folder.resolve('file.txt')
+
+        and:
+        def transfer = new RetryTransfer(source, target, 3)
+
+        when:
+        transfer.stageForeignFile(source, target)
+
+        then:
+        !transfer.cleaned
+        target.text == 'complete'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+
+    def 'should discard a partial file when retries are exhausted' () {
+
+        given:
+        def source = 'http://localhost:1234/file.txt' as Path
+        def folder = Files.createTempDirectory('test')
+        def target = folder.resolve('file.txt')
+
+        and:
+        def transfer = new AlwaysFailTransfer(source, target, 3)
+
+        when:
+        transfer.stageForeignFile(source, target)
+
+        then:
+        thrown(ProcessStageException)
+        transfer.cleaned
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+
+    def 'should retry when a socket exception interrupts the download' () {
+
+        given:
+        def source = 'http://localhost:1234/file.txt' as Path
+        def folder = Files.createTempDirectory('test')
+        def target = folder.resolve('file.txt')
+
+        and:
+        def transfer = new SocketResetTransfer(source, target, 3)
+
+        when:
+        transfer.stageForeignFile(source, target)
+
+        then:
+        !transfer.cleaned
+        target.text == 'complete'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+
+    def 'should not retry a missing source file' () {
+        given:
+        def source = 'http://localhost:1234/file.txt' as Path
+        def folder = Files.createTempDirectory('test')
+        def target = folder.resolve('file.txt')
+
+        and:
+        def transfer = new NoSuchFileTransfer(source, target, 3)
+
+        when:
+        transfer.stageForeignFile(source, target)
+
+        then:
+        thrown(ProcessStageException)
+        transfer.attempts == 1
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+
+    def 'should abort an in-progress upload on terminal failure' () {
+        given:
+        def provider = Mock(ResumableFileSystem)
+        def upload = Mock(ResumableUpload)
+        def source = 'http://localhost:1234/file.txt' as Path
+        def folder = Files.createTempDirectory('test')
+        def target = folder.resolve('file.txt')
+
+        and:
+        def transfer = new FilePorter.FileTransfer(source, target, 3, Mock(Semaphore))
+
+        when:
+        transfer.abortResumableUpload(provider, target)
+
+        then:
+        1 * provider.resumeUpload(target) >> upload
+        1 * upload.abort()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+
+    def 'should resume a partial download via the copyPath seam' () {
+
+        given:
+        def localhost = "http://localhost:${wireMockRule.port()}"
+        def FULL = 'ABCDEFGHIJKLMNOPQRST'   // 20 bytes
+        def REMAINING = 'KLMNOPQRST'        // remaining 10 bytes
+
+        // first (non-ranged) request returns a truncated body with a full Content-Length
+        wireMockRule.stubFor(get(urlEqualTo('/file.txt'))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader('Content-Length', '20')
+                .withBody('ABCDEFGHIJ')))    // only 10 bytes -> truncated download
+
+        // ranged request returns the remaining bytes
+        wireMockRule.stubFor(get(urlEqualTo('/file.txt'))
+            .atPriority(1)
+            .withHeader('Range', equalTo('bytes=10-'))
+            .willReturn(aResponse()
+                .withStatus(206)
+                .withHeader('Content-Range', 'bytes 10-19/20')
+                .withHeader('Content-Length', '10')
+                .withBody(REMAINING)))
+
+        def source = "${localhost}/file.txt" as Path
+        def folder = Files.createTempDirectory('test')
+        def target = folder.resolve('file.txt')
+
+        and:
+        def transfer = new FilePorter.FileTransfer(source, target, 3, new Semaphore(100))
+
+        when:
+        transfer.stageForeignFile(source, target)
+
+        then:
+        target.text == FULL
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+
+    static class RetryTransfer extends FilePorter.FileTransfer {
+        int attempts = 0
+        boolean cleaned = false
+
+        RetryTransfer(Path source, Path target, int maxRetries) {
+            super(source, target, maxRetries, new Semaphore(100))
+        }
+
+        @Override
+        protected void cleanup(Path path) {
+            cleaned = true
+            super.cleanup(path)
+        }
+
+        @Override
+        Path copyForeignFile(Path source, Path target, boolean resume) {
+            if( attempts++ == 0 ) {
+                target.text = 'partial'
+                throw new IOException('boom')
+            }
+            target.text = 'complete'
+            return target
+        }
+    }
+
+
+    static class AlwaysFailTransfer extends FilePorter.FileTransfer {
+        boolean cleaned = false
+
+        AlwaysFailTransfer(Path source, Path target, int maxRetries) {
+            super(source, target, maxRetries, new Semaphore(100))
+        }
+
+        @Override
+        protected void cleanup(Path path) {
+            cleaned = true
+            super.cleanup(path)
+        }
+
+        @Override
+        Path copyForeignFile(Path source, Path target, boolean resume) {
+            target.text = 'partial'
+            throw new IOException('boom')
+        }
+    }
+
+
+    static class SocketResetTransfer extends FilePorter.FileTransfer {
+        int attempts = 0
+        boolean cleaned = false
+
+        SocketResetTransfer(Path source, Path target, int maxRetries) {
+            super(source, target, maxRetries, new Semaphore(100))
+        }
+
+        @Override
+        protected void cleanup(Path path) {
+            cleaned = true
+            super.cleanup(path)
+        }
+
+        @Override
+        Path copyForeignFile(Path source, Path target, boolean resume) {
+            if( attempts++ == 0 ) {
+                target.text = 'partial'
+                throw new SocketException('Connection reset')
+            }
+            target.text = 'complete'
+            return target
+        }
+    }
+
+
+    static class NoSuchFileTransfer extends FilePorter.FileTransfer {
+        int attempts = 0
+
+        NoSuchFileTransfer(Path source, Path target, int maxRetries) {
+            super(source, target, maxRetries, new Semaphore(100))
+        }
+
+        @Override
+        Path copyForeignFile(Path source, Path target, boolean resume) {
+            attempts++
+            throw new NoSuchFileException(source.toString())
+        }
     }
 
 
