@@ -19,8 +19,10 @@ package nextflow.processor
 
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.LongAdder
 
 import nextflow.Session
+import nextflow.exception.ProcessException
 import nextflow.util.Duration
 import nextflow.util.ThrottlingExecutor
 import spock.lang.Specification
@@ -186,6 +188,34 @@ class ParallelPollingMonitorTest extends Specification {
         then:
         def e = thrown(IllegalArgumentException)
         e.message.contains("Process 'oversized_array' declares array size (10) which exceeds the executor queue size (5)")
+    }
+
+    def 'should release the forks slot when the parallel submit fails' () {
+        given:
+        def adder = new LongAdder()
+        def processor = Mock(TaskProcessor) { getForksCount() >> adder }
+        def session = Mock(Session) { isSuccess() >> true }
+        and:
+        def opts = new ThrottlingExecutor.Options().withRateLimit('100/sec')
+        def exec = ThrottlingExecutor.create(opts)
+        def monitor = Spy(new ParallelPollingMonitor(exec, [session: session, name: 'foo', pollInterval: '1sec']))
+        and:
+        def handler = Spy(TaskHandler) { getTraceRecord() >> null }
+        handler.task = Mock(TaskRun) { getProcessor() >> processor }
+        handler.submit() >> { throw new ProcessException('Cannot submit task') }
+
+        when:
+        // the slot is taken by the monitor before handing the submit to the executor
+        handler.incProcessForks()
+        monitor.submit(handler)
+        exec.shutdown()
+        exec.awaitTermination(1, TimeUnit.MINUTES)
+
+        then:
+        // onFailure must give the slot back -- the handler never reached the running queue
+        adder.intValue() == 0
+        and:
+        monitor.runningQueue.size() == 0
     }
 
 }
