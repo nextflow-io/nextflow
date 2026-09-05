@@ -30,6 +30,7 @@ class AzCopyOpts implements ConfigScope {
 
     static public final String DEFAULT_BLOCK_SIZE = "4"
     static public final String DEFAULT_BLOB_TIER = "None"
+    static public final String DEFAULT_OPTS = ""
 
     @ConfigOption
     @Description("""
@@ -43,9 +44,16 @@ class AzCopyOpts implements ConfigScope {
     """)
     final String blobTier
 
+    @ConfigOption
+    @Description("""
+        Extra command line options appended to the `azcopy` upload and download commands e.g. `'--put-md5 --log-level ERROR'`.
+    """)
+    final String opts
+
     AzCopyOpts() {
         this.blockSize = DEFAULT_BLOCK_SIZE
         this.blobTier =  DEFAULT_BLOB_TIER
+        this.opts = DEFAULT_OPTS
     }
 
 
@@ -53,6 +61,7 @@ class AzCopyOpts implements ConfigScope {
         assert config!=null
         this.blockSize = config.blockSize ?: DEFAULT_BLOCK_SIZE
         this.blobTier = config.blobTier ?: DEFAULT_BLOB_TIER
+        this.opts = config.opts ?: DEFAULT_OPTS
     }
 
 }
