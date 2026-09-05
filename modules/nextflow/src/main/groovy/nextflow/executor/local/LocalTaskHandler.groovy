@@ -19,6 +19,7 @@ package nextflow.executor.local
 import java.nio.file.FileSystems
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.concurrent.TimeUnit
 
 import groovy.transform.Canonical
 import groovy.transform.CompileStatic
@@ -44,6 +45,12 @@ import nextflow.util.ProcessHelper
 @Slf4j
 @CompileStatic
 class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
+
+    /**
+     * Max time to wait for a destroyed process to actually terminate before
+     * giving up on reading its exit status
+     */
+    private static final long EXIT_STATUS_TIMEOUT_MILLIS = 5_000
 
     @Canonical
     static class TaskResult {
@@ -231,7 +238,7 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
              */
             if( elapsedTimeMillis() > wallTimeMillis ) {
                 destroy()
-                task.exitStatus = process.exitValue()
+                task.exitStatus = readExitStatus()
                 task.stdout = outputFile
                 task.stderr = errorFile
                 task.error = new ProcessException("Process exceeded running time limit (${task.config.getTime()})")
@@ -243,6 +250,39 @@ class LocalTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         return false
+    }
+
+    /**
+     * Read the exit status of the underlying process after it has been destroyed.
+     *
+     * {@link Process#destroy()} only *requests* termination: the signal is delivered
+     * asynchronously and the JVM may not have reaped the child by the time this method
+     * runs. Calling {@link Process#exitValue()} directly in that window throws an
+     * {@link IllegalThreadStateException} which, being raised from the task polling
+     * thread, propagates up and aborts the whole session instead of failing the
+     * single task that timed out.
+     *
+     * Wait a bounded amount of time for the process to actually terminate, and fall
+     * back to a synthetic status rather than throwing if it does not.
+     *
+     * @return The process exit status, or {@link Integer#MAX_VALUE} if it cannot be determined
+     */
+    protected int readExitStatus() {
+        try {
+            if( process.waitFor(EXIT_STATUS_TIMEOUT_MILLIS, TimeUnit.MILLISECONDS) )
+                return process.exitValue()
+            log.debug "Process for task '${task.name}' did not terminate within ${EXIT_STATUS_TIMEOUT_MILLIS} ms after being destroyed -- unable to determine exit status"
+        }
+        catch( InterruptedException e ) {
+            Thread.currentThread().interrupt()
+            log.debug "Interrupted while waiting for task '${task.name}' to terminate -- unable to determine exit status"
+        }
+        catch( IllegalThreadStateException e ) {
+            // should not happen since waitFor returned true, but be defensive:
+            // this exception must never escape the task polling thread
+            log.debug "Unable to read exit status for task '${task.name}' -- cause: ${e.message}"
+        }
+        return Integer.MAX_VALUE
     }
 
 
