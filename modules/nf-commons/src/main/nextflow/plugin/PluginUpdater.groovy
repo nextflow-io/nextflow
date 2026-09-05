@@ -73,6 +73,10 @@ class PluginUpdater extends UpdateManager {
 
     private DefaultPlugins defaultPlugins = DefaultPlugins.INSTANCE
 
+    private Path lockFile
+
+    private PluginLockVerifier lockVerifier
+
     protected PluginUpdater(CustomPluginManager pluginManager) {
         super(pluginManager)
         this.pluginManager = pluginManager
@@ -357,6 +361,29 @@ class PluginUpdater extends UpdateManager {
         return load0(id, version)
     }
 
+    /**
+     * Set the {@code plugins.lock} file used to verify plugins against their pinned hash. It is
+     * expected to be the pipeline project directory ie. the directory holding the main script,
+     * so that the lock file can be committed along with the pipeline code. When unset, plugin
+     * verification is dormant.
+     *
+     * @param path The {@code plugins.lock} file path
+     */
+    synchronized void setLockFile(Path path) {
+        this.lockFile = path
+        // discard any verifier created against the previous location
+        this.lockVerifier = null
+    }
+
+    /**
+     * Lazily create the {@link PluginLockVerifier}. The lock file is read once and cached.
+     */
+    protected synchronized PluginLockVerifier getLockVerifier() {
+        if( lockVerifier == null )
+            lockVerifier = new PluginLockVerifier(lockFile)
+        return lockVerifier
+    }
+
     private Path download0(String id, String version) {
         // 0. check if version is specified
         if( !version )
@@ -508,6 +535,10 @@ class PluginUpdater extends UpdateManager {
         if( !FilesEx.exists(pluginPath.resolve('classes/META-INF/MANIFEST.MF')) ) {
             log.warn("Plugin '${pluginPath.getFileName()}' installation looks corrupted - Delete the following directory and run nextflow again: $pluginPath")
         }
+
+        // verify (or pin) the extracted plugin directory against the plugins lock, before loading
+        // and executing its code. This covers both a fresh download and a reused (warm) cache.
+        getLockVerifier().verify("${id}@${version}", pluginPath)
 
         // load the plugin from the file system
         PluginWrapper wrapper = pluginManager.loadPluginFromPath(pluginPath)
