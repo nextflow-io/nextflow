@@ -200,6 +200,16 @@ class ConfigCmdAdapter {
             result << local
         }
 
+        /**
+         * Config file specified with the `NXF_CONFIG` environment variable
+         */
+        final nxfConfig = SysEnv.get('NXF_CONFIG')
+        if( nxfConfig ) {
+            final configFile = currentDir.resolve(nxfConfig)
+            log.debug "Found config from NXF_CONFIG: $configFile"
+            result << configFile
+        }
+
         final customConfigs = []
         if( userConfigFiles )
             customConfigs.addAll(userConfigFiles)
