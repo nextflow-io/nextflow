@@ -18,11 +18,13 @@ package io.seqera.tower.plugin.launch
 
 import io.seqera.http.HxClient
 import io.seqera.tower.plugin.TowerClient
+import nextflow.SysEnv
 import nextflow.cli.LaunchOptions
 import nextflow.exception.AbortOperationException
 import org.junit.Rule
 import spock.lang.Specification
 import spock.lang.TempDir
+import spock.lang.Unroll
 import test.OutputCapture
 
 import java.nio.file.Files
@@ -710,37 +712,26 @@ class LaunchCommandImplTest extends Specification {
 
     // ===== Workspace Resolution Tests =====
 
-    def 'should use workspace ID from config'() {
-        given:
-        def cmd = new LaunchCommandImpl()
-        def config = ['tower.workspaceId': 12345L]
-
-        when:
-        def workspaceId = cmd.resolveWorkspaceId(config, null, 'token', 'endpoint')
-
-        then:
-        workspaceId == 12345L
-    }
-
-    def 'should lookup workspace by name'() {
-        given:
-        def config = [:]
+    def 'should prefer the -workspace name over the config and the environment'() {
+        given: 'a workspace set in the config AND in the environment'
         def workspaces = [
             [workspaceId: 111, workspaceName: 'ws1'],
             [workspaceId: 222, workspaceName: 'ws2']
         ]
-        def client = Mock(TowerClient) {
-            getUserInfo() >> [id: 'user-123']
-        }
+        def client = Mock(TowerClient) { getUserInfo() >> [id: 'user-123'] }
         def cmd = Spy(new LaunchCommandImpl())
-        cmd.createTowerClient(_,_) >> client
+        cmd.createTowerClient(_, _) >> client
         cmd.listUserWorkspaces(_, _) >> workspaces
+        SysEnv.push([TOWER_WORKSPACE_ID: '5000'])
 
-        when:
-        def workspaceId = cmd.resolveWorkspaceId(config, 'ws2', 'token', 'endpoint')
+        when: 'the -workspace flag names a different workspace'
+        def workspaceId = cmd.resolveWorkspaceId(['tower.workspaceId': 12345L], 'ws2', 'token', 'endpoint')
 
-        then:
+        then: 'the explicit flag wins over both'
         workspaceId == 222
+
+        cleanup:
+        SysEnv.pop()
     }
 
     def 'should throw error when workspace not found by name'() {
@@ -751,7 +742,7 @@ class LaunchCommandImplTest extends Specification {
         }
         def cmd = Spy(new LaunchCommandImpl())
         cmd.createTowerClient(_,_) >> client
-        cmd.listUserWorkspaces(_, _, _) >> []
+        cmd.listUserWorkspaces(_, _) >> []
 
         when:
         cmd.resolveWorkspaceId(config, 'nonexistent', 'token', 'endpoint')
@@ -761,16 +752,31 @@ class LaunchCommandImplTest extends Specification {
         ex.message.contains('Workspace \'nonexistent\' not found')
     }
 
-    def 'should return null when no workspace specified'() {
+    @Unroll
+    def 'should resolve workspace id from #SOURCE when no name is given'() {
         given:
-        def cmd = new LaunchCommandImpl()
-        def config = [:]
+        def client = Mock(TowerClient) { getDefaultWorkspaceId() >> PLATFORM_DEFAULT }
+        def cmd = Spy(new LaunchCommandImpl())
+        cmd.createTowerClient(_, _) >> client
+        // the Platform default lookup uses a bounded client
+        cmd.createLookupClient(_, _) >> client
+        SysEnv.push(ENV)
 
         when:
-        def workspaceId = cmd.resolveWorkspaceId(config, null, 'token', 'endpoint')
+        def workspaceId = cmd.resolveWorkspaceId(CONFIG, null, 'token', 'endpoint')
 
         then:
-        workspaceId == null
+        workspaceId == EXPECTED
+
+        cleanup:
+        SysEnv.pop()
+
+        where:
+        SOURCE             | CONFIG                        | ENV                          | PLATFORM_DEFAULT | EXPECTED
+        'config'           | ['tower.workspaceId': 12345L] | [:]                          | '999'            | 12345L
+        'env var'          | [:]                           | [TOWER_WORKSPACE_ID: '5000'] | '999'            | 5000L
+        'platform default' | [:]                           | [:]                          | '999'            | 999L
+        'none'             | [:]                           | [:]                          | null             | null
     }
 
     // ===== Launch Result Tests =====

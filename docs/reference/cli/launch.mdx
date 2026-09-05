@@ -83,6 +83,14 @@ The directory where intermediate result files are stored.
 
 The Seqera Platform workspace name.
 
+The workspace is resolved in the following order:
+
+1. This `-workspace` option
+2. The `tower.workspaceId` configuration setting
+3. The `TOWER_WORKSPACE_ID` environment variable
+4. The default workspace configured in your Seqera Platform account
+5. Your personal workspace
+
 ##### `-workspace-secret`
 
 <AddedInVersion version="26.04" />

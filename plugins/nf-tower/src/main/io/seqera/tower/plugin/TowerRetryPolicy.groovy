@@ -17,6 +17,7 @@
 package io.seqera.tower.plugin
 
 
+import groovy.util.logging.Slf4j
 import io.seqera.util.retry.Retryable
 import nextflow.config.spec.ConfigOption
 import nextflow.config.spec.ConfigScope
@@ -40,6 +41,7 @@ import nextflow.util.RetryConfig
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
+@Slf4j
 class TowerRetryPolicy implements Retryable.Config, ConfigScope {
 
     /**
@@ -64,7 +66,7 @@ class TowerRetryPolicy implements Retryable.Config, ConfigScope {
 
     @ConfigOption
     @Description("""
-        Maximum number of retry attempts for Tower operations (default: `10`).
+        Maximum number of attempts for Tower operations, including the initial one (default: `10`). Use `-1` for no limit.
     """)
     int maxAttempts
 
@@ -81,10 +83,33 @@ class TowerRetryPolicy implements Retryable.Config, ConfigScope {
     double multiplier
 
     TowerRetryPolicy(Map opts, Map legacy=Map.of()) {
-        this.delay = opts.delay as Duration ?: legacy.backOffDelay as Duration ?: RetryConfig.DEFAULT_DELAY
-        this.maxDelay = opts.maxDelay as Duration ?: RetryConfig.DEFAULT_MAX_DELAY
-        this.maxAttempts = opts.maxAttempts as Integer ?: legacy.maxRetries as Integer ?: DEFAULT_MAX_ATTEMPTS
-        this.jitter = opts.jitter as Double ?: RetryConfig.DEFAULT_JITTER
-        this.multiplier = opts.multiplier as Double ?: legacy.backOffBase as Double ?: RetryConfig.DEFAULT_MULTIPLIER
+        // note: use explicit null checks rather than the elvis operator, because 0 and 0.0
+        // are falsy in Groovy -- `jitter = 0` or `maxAttempts = 0` are meaningful settings
+        // and must not be silently replaced by the defaults
+        this.delay = firstOf(opts.delay, legacy.backOffDelay, RetryConfig.DEFAULT_DELAY) as Duration
+        this.maxDelay = firstOf(opts.maxDelay, RetryConfig.DEFAULT_MAX_DELAY) as Duration
+        this.maxAttempts = firstOf(opts.maxAttempts, legacy.maxRetries, DEFAULT_MAX_ATTEMPTS) as Integer
+        this.jitter = firstOf(opts.jitter, RetryConfig.DEFAULT_JITTER) as Double
+        this.multiplier = firstOf(opts.multiplier, legacy.backOffBase, RetryConfig.DEFAULT_MULTIPLIER) as Double
+        // `maxAttempts` counts the initial attempt, and -1 is the retry library's value for
+        // "retry indefinitely". Anything else below 1 would mean "never run the operation at
+        // all" and is rejected by the library, so warn and fall back to a single attempt --
+        // which is what `0` was almost certainly meant to express -- rather than abort a run
+        // over a setting that used to be silently ignored.
+        if( maxAttempts < 1 && maxAttempts != -1 ) {
+            log.warn "Invalid value for config option 'tower.retryPolicy.maxAttempts' -- offending value: $maxAttempts -- using 1 (no retries) instead"
+            this.maxAttempts = 1
+        }
+    }
+
+    /**
+     * Return the first non-null value, so that a legitimate falsy setting such as
+     * `0` or `0.0` is honoured instead of falling through to the default.
+     */
+    private static Object firstOf(Object... values) {
+        for( Object it : values )
+            if( it != null )
+                return it
+        return null
     }
 }
