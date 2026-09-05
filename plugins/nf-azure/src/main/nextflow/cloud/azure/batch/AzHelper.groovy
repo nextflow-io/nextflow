@@ -98,9 +98,19 @@ class AzHelper {
 
 
     static String generateContainerSasWithActiveDirectory(Path path, Duration duration) {
-        final key = generateUserDelegationKey(az0(path), duration)
+        final azPath = az0(path)
+        final key = generateUserDelegationKey(azPath, duration)
+        return generateContainerUserDelegationSas(azPath.containerClient(), duration, key)
+    }
 
-        return generateContainerUserDelegationSas(az0(path).containerClient(), duration, key)
+    static String generateContainerSasWithAccountKey(BlobContainerClient client, Duration duration) {
+        final startTime = OffsetDateTime.now()
+        final expiryTime = startTime.plusSeconds(duration.toSeconds())
+        final signature = new BlobServiceSasSignatureValues()
+                .setPermissions(CONTAINER_PERMS)
+                .setStartTime(startTime)
+                .setExpiryTime(expiryTime)
+        return client.generateSas(signature)
     }
 
     static String generateAccountSasWithAccountKey(Path path, Duration duration) {
@@ -108,9 +118,10 @@ class AzHelper {
     }
 
     static UserDelegationKey generateUserDelegationKey(Path path, Duration duration) {
+        return generateUserDelegationKey(az0(path).getFileSystem().getBlobServiceClient(), duration)
+    }
 
-        final client = az0(path).getFileSystem().getBlobServiceClient()
-
+    static UserDelegationKey generateUserDelegationKey(BlobServiceClient client, Duration duration) {
         final startTime = OffsetDateTime.now()
         final indicatedExpiryTime = startTime.plusHours(duration.toHours())
 
@@ -120,9 +131,7 @@ class AzHelper {
 
         final expiryTime = (indicatedExpiryTime.toEpochSecond() <= maxExpiryTime.toEpochSecond()) ? indicatedExpiryTime : maxExpiryTime
 
-        final delegationKey = client.getUserDelegationKey(startTime, expiryTime)
-
-        return delegationKey
+        return client.getUserDelegationKey(startTime, expiryTime)
     }
 
     static String generateContainerUserDelegationSas(BlobContainerClient client, Duration duration, UserDelegationKey key) {
@@ -157,6 +166,7 @@ class AzHelper {
         return client.generateAccountSas(signature)
     }
 
+    // Only used with Fusion and account key, preserved for backwards compatibility
     static String generateAccountSas(String accountName, String accountKey, Duration duration) {
         final client = getOrCreateBlobServiceWithKey(accountName, accountKey)
         return generateAccountSas(client, duration)
@@ -232,7 +242,10 @@ class AzHelper {
 
     @Memoized
     static protected RequestRetryOptions requestRetryOptions() {
-        final cfg = AzConfig.getConfig().retryConfig()
+        // Fall back to defaults when no Nextflow session exists (e.g. unit tests, NIO-only usage)
+        final cfg = nextflow.Global.session
+                ? AzConfig.getConfig().retryConfig()
+                : new AzRetryConfig()
         return requestRetryOptions0(cfg)
     }
 
