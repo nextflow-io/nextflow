@@ -99,6 +99,13 @@ class ProcessBuilder {
         this.config = config
     }
 
+    /**
+     * The noun used in the user-visible messages, i.e. what is being configured. Always
+     * {@code process} here; {@link ProcessConfigBuilder} overrides it because agent tasks
+     * reuse this builder through their own {@code agent} config scope.
+     */
+    protected String getKind() { 'process' }
+
     // NOTE: replace with internal DSL after v1 parser is removed
     def methodMissing( String name, def args ) {
         if( DIRECTIVES.contains(name) || name == 'when' || name == 'stub' ) {
@@ -260,7 +267,7 @@ class ProcessBuilder {
 
         // -- check that label has a valid syntax
         if( !isValidLabel(value) )
-            throw new IllegalConfigException("Not a valid process label: $value -- Label must consist of alphanumeric characters or '_', must start with an alphabetic character and must end with an alphanumeric character")
+            throw new IllegalConfigException("Not a valid ${getKind()} label: $value -- Label must consist of alphanumeric characters or '_', must start with an alphabetic character and must end with an alphanumeric character")
 
         // -- get the current label, it must be a list
         def allLabels = (List)config.get('label')

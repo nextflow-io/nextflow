@@ -1,0 +1,32 @@
+---
+title: container
+description: Reference for the `container` process directive.
+---
+
+# `container`
+
+The `container` directive defines the container required by each task.
+
+## Usage
+
+For example:
+
+```nextflow
+process hello_docker {
+    container 'busybox:latest'
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+The corresponding container runtime (for example, Docker or Singularity) must be running on the compute nodes where tasks are executed. See [Containers][container-page] for the container runtimes supported by Nextflow.
+
+:::note
+This directive is ignored by [native processes][process-native] (that is, `exec` processes).
+:::
+
+[container-page]: ../../../container
+[process-native]: ../../../process#native-execution

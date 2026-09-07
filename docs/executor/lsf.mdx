@@ -19,8 +19,8 @@ Use the following process directives to control resource requests and other job 
 
 LSF supports both *per-core* and *per-job* memory limits. Nextflow assumes the *per-core* mode and divides the requested [memory][process-memory] by the number of requested [cpus][process-cpus]. When LSF runs in *per-job* mode, set the `executor.perJobMemLimit` config option. See the [Platform LSF documentation](https://www.ibm.com/support/knowledgecenter/SSETD4_9.1.3/lsf_config_ref/lsf.conf.lsb_job_memlimit.5.dita) for more information.
 
-[process-clusteroptions]: ../reference/process#clusteroptions
-[process-cpus]: ../reference/process#cpus
-[process-memory]: ../reference/process#memory
-[process-queue]: ../reference/process#queue
-[process-time]: ../reference/process#time
+[process-clusteroptions]: ../reference/process/directives/cluster-options
+[process-cpus]: ../reference/process/directives/cpus
+[process-memory]: ../reference/process/directives/memory
+[process-queue]: ../reference/process/directives/queue
+[process-time]: ../reference/process/directives/time

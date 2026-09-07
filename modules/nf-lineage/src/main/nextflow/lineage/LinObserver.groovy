@@ -34,6 +34,8 @@ import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.agent.AgentTaskInfo
+import nextflow.lineage.model.v1beta1.AgentRun
 import nextflow.lineage.model.v1beta1.Checksum
 import nextflow.lineage.model.v1beta1.FileOutput
 import nextflow.lineage.model.v1beta1.DataPath
@@ -62,6 +64,8 @@ import nextflow.script.params.StdInParam
 import nextflow.script.params.StdOutParam
 import nextflow.script.params.ValueInParam
 import nextflow.script.params.ValueOutParam
+import nextflow.script.params.v2.ProcessInput
+import nextflow.script.params.v2.ProcessOutput
 import nextflow.trace.TraceObserverV2
 import nextflow.trace.event.FilePublishEvent
 import nextflow.trace.event.TaskEvent
@@ -102,19 +106,19 @@ class LinObserver implements TraceObserverV2 {
     private Map<String,String> outputsStoreDirLid = new HashMap<String,String>(10)
     private PathNormalizer normalizer
 
-    LinObserver(Session session, LinStore store){
+    LinObserver(Session session, LinStore store) {
         this.session = session
         this.store = store
     }
 
     @TestOnly
-    String getExecutionHash(){ executionHash }
+    String getExecutionHash() { executionHash }
 
     @TestOnly
-    String setExecutionHash(String hash){ this.executionHash = hash }
+    String setExecutionHash(String hash) { this.executionHash = hash }
 
     @TestOnly
-    String setNormalizer(PathNormalizer normalizer){  this.normalizer = normalizer }
+    String setNormalizer(PathNormalizer normalizer) {  this.normalizer = normalizer }
 
     @Override
     void onFlowBegin() {
@@ -130,8 +134,8 @@ class LinObserver implements TraceObserverV2 {
     }
 
     @Override
-    void onFlowComplete(){
-        if(workflowOutput?.output ){
+    void onFlowComplete() {
+        if(workflowOutput?.output ) {
             workflowOutput.createdAt = OffsetDateTime.now()
             final key = executionHash + '#output'
             this.store.save(key, workflowOutput)
@@ -182,7 +186,7 @@ class LinObserver implements TraceObserverV2 {
         return executionHash
     }
 
-    protected static List<Parameter> getNormalizedParams(Map<String, Object> params, PathNormalizer normalizer){
+    protected static List<Parameter> getNormalizedParams(Map<String, Object> params, PathNormalizer normalizer) {
         final normalizedParams = new LinkedList<Parameter>()
         for( Map.Entry<String,Object> entry : params ) {
             final key = entry.key
@@ -204,7 +208,7 @@ class LinObserver implements TraceObserverV2 {
         storeTaskResults(task, normalizer)
     }
 
-    protected String storeTaskResults(TaskRun task, PathNormalizer normalizer){
+    protected String storeTaskResults(TaskRun task, PathNormalizer normalizer) {
         final outputParams = getNormalizedTaskOutputs(task, normalizer)
         final value = new TaskOutput( asUriString(task.hash.toString()), asUriString(executionHash), OffsetDateTime.now(), outputParams )
         final key = task.hash.toString() + '#output'
@@ -212,7 +216,7 @@ class LinObserver implements TraceObserverV2 {
         return key
     }
 
-    private List<Parameter> getNormalizedTaskOutputs(TaskRun task, PathNormalizer normalizer){
+    private List<Parameter> getNormalizedTaskOutputs(TaskRun task, PathNormalizer normalizer) {
         final outputs = task.getOutputs()
         final outputParams = new LinkedList<Parameter>()
         for( Map.Entry<OutParam,Object> entry : outputs ) {
@@ -258,8 +262,47 @@ class LinObserver implements TraceObserverV2 {
     }
 
     protected String storeTaskRun(TaskRun task, PathNormalizer normalizer) {
+        // an agent lowers to an ordinary task, so it lands here too - but its identity is the
+        // model/tools/skills it ran with, not a script, and it is recorded as an AgentRun
+        final agentInfo = task.config?.get(AgentTaskInfo.CONFIG_KEY)
+        final value = agentInfo instanceof AgentTaskInfo
+            ? newAgentRun(task, agentInfo, normalizer)
+            : newTaskRun(task, normalizer)
+        // store in the underlying persistence
+        final key = task.hash.toString()
+        store.save(key, value)
+        return key
+    }
+
+    protected AgentRun newAgentRun(TaskRun task, AgentTaskInfo info, PathNormalizer normalizer) {
+        // the checksum covers the canonical agent identity source - the same text that feeds the
+        // resume cache key. NOTE: task.script is deliberately NOT recorded; on the RPC runner path
+        // it embeds the per-invocation capability token, which must never be persisted.
         final codeChecksum = Checksum.ofNextflow(session.stubRun ? task.stubSource : task.source)
-        final value = new nextflow.lineage.model.v1beta1.TaskRun(
+        return new AgentRun(
+            session.uniqueId.toString(),
+            task.getName(),
+            codeChecksum,
+            info.runner,
+            info.model,
+            task.context?.get('$agentResolvedModel') as String,
+            info.instruction,
+            info.goal,
+            info.promptTemplate,
+            info.maxIterations,
+            info.outputSchema,
+            info.tools,
+            info.skills,
+            task.inputs ? manageTaskInputParameters(task.inputs, normalizer) : null,
+            task.isContainerEnabled() ? task.getContainerFingerprint() : null,
+            asUriString(executionHash),
+            getTaskModuleId(task)
+        )
+    }
+
+    protected nextflow.lineage.model.v1beta1.TaskRun newTaskRun(TaskRun task, PathNormalizer normalizer) {
+        final codeChecksum = Checksum.ofNextflow(session.stubRun ? task.stubSource : task.source)
+        return new nextflow.lineage.model.v1beta1.TaskRun(
             session.uniqueId.toString(),
             task.getName(),
             codeChecksum,
@@ -278,11 +321,6 @@ class LinObserver implements TraceObserverV2 {
             asUriString(executionHash),
             getTaskModuleId(task)
         )
-
-        // store in the underlying persistence
-        final key = task.hash.toString()
-        store.save(key, value)
-        return key
     }
 
     protected Map<String,Object> getTaskGlobalVars(TaskRun task) {
@@ -368,7 +406,7 @@ class LinObserver implements TraceObserverV2 {
         return executionHash + SEPARATOR + rel
     }
 
-    protected String getTaskRelative(TaskRun task, Path path){
+    protected String getTaskRelative(TaskRun task, Path path) {
         if (path.isAbsolute()) {
             final rel = getTaskRelative0(task, path)
             if (rel)
@@ -383,7 +421,7 @@ class LinObserver implements TraceObserverV2 {
         return path.normalize().toString()
     }
 
-    private String getTaskRelative0(TaskRun task, Path path){
+    private String getTaskRelative0(TaskRun task, Path path) {
         final workDirAbsolute = task.workDir.toAbsolutePath()
         if (path.startsWith(workDirAbsolute)) {
             return workDirAbsolute.relativize(path).toString()
@@ -424,15 +462,15 @@ class LinObserver implements TraceObserverV2 {
                 event.labels)
             store.save(key, value)
         }
-        catch (OutputRelativePathException ignored ){
-            log.warn1("Lineage for workflow output is not supported by publishDir directive")
+        catch (OutputRelativePathException ignored) {
+            log.warn1("Lineage was not recorded for published file '${event.target.toUriString()}' because it is outside the output directory")
         }
         catch (Throwable e) {
             log.warn("Unexpected error storing published file '${event.target.toUriString()}' for workflow '${executionHash}'", e)
         }
     }
 
-    String getSourceReference(Path source){
+    String getSourceReference(Path source) {
         final hash = FileHelper.getTaskHashFromPath(source, session.workDir)
         if (hash) {
             final target = FileHelper.getWorkFolder(session.workDir, hash).relativize(source).toString()
@@ -452,6 +490,12 @@ class LinObserver implements TraceObserverV2 {
     protected static String getParameterType(Object param) {
         if( param instanceof BaseParam )
             return taskParamToValue.get(param.class)
+        // typed (v2) process/agent params are not BaseParam, so without this they would be
+        // recorded as the literal type names 'ProcessInput'/'ProcessOutput'
+        if( param instanceof ProcessInput )
+            return Path.isAssignableFrom(param.getType() ?: Object) ? 'path' : 'val'
+        if( param instanceof ProcessOutput )
+            return Path.isAssignableFrom(param.getType() ?: Object) ? 'path' : 'val'
         // return generic types
         if( param instanceof Path )
             return Path.simpleName
@@ -468,12 +512,12 @@ class LinObserver implements TraceObserverV2 {
         return param.class.simpleName
     }
 
-    private Object convertPathsToLidReferences(Object value){
+    private Object convertPathsToLidReferences(Object value) {
         if( value instanceof Path ) {
             try {
                 final key = getWorkflowOutputKey(value)
                 return asUriString(key)
-            } catch (Throwable e){
+            } catch (Throwable e) {
                 //Workflow output key not found
                 return value
             }
@@ -497,16 +541,17 @@ class LinObserver implements TraceObserverV2 {
      * @throws IllegalArgumentException
      */
     protected String getWorkflowRelative(Path path) throws IllegalArgumentException{
-        final outputDirAbs = session.outputDir.toAbsolutePath()
+        // the output directory is disabled when a named workflow is executed directly
+        final outputDirAbs = session.outputDir?.toAbsolutePath()
         if (path.isAbsolute()) {
-            if (path.startsWith(outputDirAbs)) {
+            if (outputDirAbs && path.startsWith(outputDirAbs)) {
                 return outputDirAbs.relativize(path).toString()
             }
             log.debug("Cannot get relative path for workflow output '${path.toUriString()}'")
             throw new OutputRelativePathException()
         }
         final pathAbs = path.toAbsolutePath()
-        if (pathAbs.startsWith(outputDirAbs)) {
+        if (outputDirAbs && pathAbs.startsWith(outputDirAbs)) {
             return outputDirAbs.relativize(pathAbs).toString()
         }
         if (path.normalize().getName(0).toString() == "..") {
@@ -527,7 +572,7 @@ class LinObserver implements TraceObserverV2 {
         return managedInputs
     }
 
-    private List<Object> manageFileInParam(List<FileHolder> files, PathNormalizer normalizer){
+    private List<Object> manageFileInParam(List<FileHolder> files, PathNormalizer normalizer) {
         final paths = new LinkedList<Object>();
         for( FileHolder it : files ) {
             final path = it.sourcePath ?: it.storePath

@@ -45,6 +45,19 @@ class AzPath implements Path {
 
     private AzFileAttributes attributes
 
+    /**
+     * Records the trailing slash used to build this path, *not* whether the object
+     * store holds a directory at this location — blob storage has no directories,
+     * only virtual prefixes inferred from the blobs below them.
+     *
+     * NOTE: do not expose this as a public {@code isDirectory()} getter. It would
+     * shadow the {@code FilesEx.isDirectory(Path)} extension method, so
+     * {@code path.isDirectory()} would answer from the path string instead of
+     * storage, and {@code az://container/output} would be reported as a file (#6427).
+     * Use {@link java.nio.file.Files#isDirectory} instead, which resolves virtual
+     * directories through {@link AzFileSystem#readAttributes}. The field is also read
+     * by the generated {@code equals}/{@code hashCode}, which must stay I/O-free.
+     */
     @PackageScope
     boolean directory
 
@@ -91,10 +104,6 @@ class AzPath implements Path {
     AzPath setAttributes(AzFileAttributes attrs) {
         this.attributes = attrs
         return this
-    }
-
-    boolean isDirectory() {
-        return directory
     }
 
     String checkContainerName() {

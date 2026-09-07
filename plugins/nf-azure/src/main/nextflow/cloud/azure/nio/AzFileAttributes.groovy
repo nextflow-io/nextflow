@@ -61,16 +61,17 @@ class AzFileAttributes implements BasicFileAttributes {
         directory = client.blobName.endsWith('/')
         size = props.getBlobSize()
 
-        // Support for Azure Data Lake Storage Gen2 with hierarchical namespace enabled
+        // Support for Azure Data Lake Storage Gen2 with hierarchical namespace enabled.
         final meta = props.getMetadata()
-        if( meta.containsKey("hdi_isfolder") && size == 0 ){
-            directory = meta.get("hdi_isfolder")
+        if( isDirectoryMarker(meta, size) ) {
+            directory = true
+            size = 0
         }
     }
 
     AzFileAttributes(String containerName, BlobItem item) {
         objectId = "/${containerName}/${item.name}"
-        directory = item.name.endsWith('/')
+        directory = item.name.endsWith('/') || isDirectoryMarker(item.getMetadata(), item.properties.getContentLength())
         if( !directory ) {
             creationTime = time(item.properties.getCreationTime())
             updateTime = time(item.properties.getLastModified())
@@ -93,6 +94,10 @@ class AzFileAttributes implements BasicFileAttributes {
     protected AzFileAttributes(BlobContainerClient client, String blobName) {
         objectId = "/$client.blobContainerName/$blobName"
         directory = blobName.endsWith('/')
+    }
+
+    static protected boolean isDirectoryMarker(Map<String,String> metadata, long size) {
+        metadata?.get('hdi_isfolder') == 'true' && size == 0
     }
 
 

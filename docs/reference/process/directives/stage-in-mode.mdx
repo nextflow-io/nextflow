@@ -1,0 +1,28 @@
+---
+title: stageInMode
+description: Reference for the `stageInMode` process directive.
+---
+
+# `stageInMode`
+
+The `stageInMode` directive defines how input files are staged into the task work directory.
+
+## Options
+
+The following modes are available:
+
+##### `'copy'`
+
+Input files are staged in the task work directory by creating a copy.
+
+##### `'link'`
+
+Input files are staged in the task work directory by creating a hard link for each file.
+
+##### `'rellink'`
+
+Input files are staged in the task work directory by creating a symbolic link with a relative path for each file.
+
+##### `'symlink'`
+
+Input files are staged in the task work directory by creating a symbolic link with an absolute path for each file (default).

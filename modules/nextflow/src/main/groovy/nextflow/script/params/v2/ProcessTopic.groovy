@@ -26,7 +26,7 @@ import nextflow.script.params.OutParam
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
-class ProcessTopic {
+class ProcessTopic implements Cloneable {
 
     /**
      * Lazy expression (e.g. closure) which defines the output value

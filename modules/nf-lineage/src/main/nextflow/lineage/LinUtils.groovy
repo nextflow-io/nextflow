@@ -25,6 +25,7 @@ import java.time.ZoneId
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.lineage.model.v1beta1.AgentRun
 import nextflow.lineage.model.v1beta1.TaskRun
 import nextflow.lineage.model.v1beta1.WorkflowRun
 import nextflow.lineage.serde.LinEncoder
@@ -103,7 +104,7 @@ class LinUtils {
      * @return return 'true' if the parent is a Task/Workflow run and the first element in fragment is 'output'. Otherwise 'false'
      */
     static boolean isSearchingOutputs(LinSerializable record, String fragment) {
-        return (record instanceof WorkflowRun || record instanceof TaskRun) && fragment && fragment.tokenize('.')[0] == 'output'
+        return (record instanceof WorkflowRun || record instanceof TaskRun || record instanceof AgentRun) && fragment && fragment.tokenize('.')[0] == 'output'
     }
 
     /**

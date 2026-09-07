@@ -349,6 +349,10 @@ PARAMS          : 'params';
 INCLUDE         : 'include';
 FROM            : 'from';
 
+// -- agent definition
+AGENT           : 'agent';
+PROMPT          : 'prompt';
+
 // -- process definition
 PROCESS         : 'process';
 EXEC            : 'exec';

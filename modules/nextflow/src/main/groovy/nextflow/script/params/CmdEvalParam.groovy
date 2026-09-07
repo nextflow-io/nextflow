@@ -16,8 +16,6 @@
 
 package nextflow.script.params
 
-import java.util.concurrent.atomic.AtomicInteger
-
 import groovy.transform.InheritConstructors
 import groovy.transform.Memoized
 
@@ -29,18 +27,19 @@ import groovy.transform.Memoized
 @InheritConstructors
 class CmdEvalParam extends BaseOutParam implements OptionalParam {
 
-    private static AtomicInteger counter = new AtomicInteger()
-
     private Object target
 
-    private int count
-
-    {
-        count = counter.incrementAndGet()
-    }
-
+    /**
+     * The eval output name is derived from the parameter position in the process
+     * output block, so that it is stable across runs. Note: it must not depend on
+     * a global counter, otherwise adding or removing an `eval` output in one process
+     * would change the name -- and therefore the task hash -- of unrelated processes,
+     * invalidating their cache. See https://github.com/nextflow-io/nextflow/issues/7572
+     */
     String getName() {
-        return "nxf_out_eval_${count}"
+        return mapIndex >= 0
+            ? "nxf_out_eval_${index}_${mapIndex}"
+            : "nxf_out_eval_${index}"
     }
 
     BaseOutParam bind( def obj ) {

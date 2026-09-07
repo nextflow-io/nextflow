@@ -19,6 +19,7 @@ package nextflow.k8s
 import java.util.concurrent.TimeUnit
 
 import com.google.common.cache.CacheBuilder
+import nextflow.Session
 import nextflow.k8s.client.ClientConfig
 import nextflow.k8s.client.K8sClient
 import spock.lang.Specification
@@ -27,6 +28,20 @@ import spock.lang.Specification
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class K8sExecutorTest extends Specification {
+
+    def 'should resolve the k8s config when the config has no k8s scope' () {
+        given: 'a pipeline that selects the k8s executor but declares no `k8s` block'
+        def executor = Spy(K8sExecutor)
+        executor.session = Mock(Session) { getConfig() >> [:] }
+
+        when:
+        def config = executor.getK8sConfig()
+
+        then: 'the absent scope resolves to an empty config instead of throwing'
+        noExceptionThrown()
+        config instanceof K8sConfig
+        config.getNamespace() == null
+    }
 
     def 'should cache k8s client and refresh after expiration' () {
         given:
