@@ -156,12 +156,12 @@ jobs:
           architecture: x64
           cache: gradle
 
-      # Diagnostic only: snapshot the kernel TCP counters before the Wave tests so
-      # the "after" step can show whether the run's own connections were reset
-      # (see the nstat.* files in the uploaded report). Scoped to test_wave; safe
-      # to remove once the transient connectivity failures are understood.
+      # Diagnostic only: snapshot the kernel TCP counters before the tests so the
+      # "after" step can show whether the run's own connections were reset (see the
+      # nstat.* files in the uploaded report). Runs on every test_mode because the
+      # transient connectivity failures are not limited to the Wave job; safe to
+      # remove once they are understood.
       - name: TCP counters (before)
-        if: matrix.test_mode == 'test_wave'
         run: nstat -az | sort > "$RUNNER_TEMP/nstat.before"
 
       - name: Run tests
@@ -192,7 +192,7 @@ jobs:
           AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
 
       - name: TCP counters (after)
-        if: ${{ always() && matrix.test_mode == 'test_wave' }}
+        if: always()
         run: |
           if [ ! -f "$RUNNER_TEMP/nstat.before" ]; then
             echo "(no before snapshot; skipping)"; exit 0
