@@ -156,34 +156,13 @@ jobs:
           architecture: x64
           cache: gradle
 
-      # Diagnostic only: background probe to catch transient TCP resets / connect
-      # failures to the Seqera endpoints hit by the Wave tests (see netprobe.log in
-      # the uploaded report). Scoped to test_wave; safe to remove once resolved.
-      - name: Start network probe
+      # Diagnostic only: snapshot the kernel TCP counters before the Wave tests so
+      # the "after" step can show whether the run's own connections were reset
+      # (see the nstat.* files in the uploaded report). Scoped to test_wave; safe
+      # to remove once the transient connectivity failures are understood.
+      - name: TCP counters (before)
         if: matrix.test_mode == 'test_wave'
-        run: |
-          cat > "$RUNNER_TEMP/netprobe.sh" <<'EOF'
-          #!/usr/bin/env bash
-          hosts="wave.seqera.io public.cr.seqera.io api.cloud.seqera.io"
-          while true; do
-            ts=$(date -u +%H:%M:%S.%3N)
-            for h in $hosts; do
-              ips=$(dig +short "$h" 2>/dev/null | grep -E '^[0-9]+\.' || getent ahostsv4 "$h" | awk '{print $1}' | sort -u)
-              for ip in $ips; do
-                out=$(curl -sS --max-time 5 --resolve "$h:443:$ip" -o /dev/null \
-                      -w "code=%{http_code} conn=%{time_connect} tls=%{time_appconnect} total=%{time_total}" \
-                      "https://$h/" 2>&1) \
-                  && echo "$ts $h $ip OK   $out" \
-                  || echo "$ts $h $ip FAIL $out"
-              done
-            done
-            sleep 2
-          done
-          EOF
-          chmod +x "$RUNNER_TEMP/netprobe.sh"
-          nohup "$RUNNER_TEMP/netprobe.sh" > "$RUNNER_TEMP/netprobe.log" 2>&1 &
-          echo $! > "$RUNNER_TEMP/netprobe.pid"
-          echo "network probe started (pid $(cat "$RUNNER_TEMP/netprobe.pid"))"
+        run: nstat -az | sort > "$RUNNER_TEMP/nstat.before"
 
       - name: Run tests
         run: |
@@ -212,17 +191,23 @@ jobs:
           AZURE_BATCH_ACCOUNT_NAME: nfbatchtest
           AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
 
-      - name: Stop network probe
+      - name: TCP counters (after)
         if: ${{ always() && matrix.test_mode == 'test_wave' }}
         run: |
-          if [ -f "$RUNNER_TEMP/netprobe.pid" ]; then
-            kill "$(cat "$RUNNER_TEMP/netprobe.pid")" 2>/dev/null || true
+          if [ ! -f "$RUNNER_TEMP/nstat.before" ]; then
+            echo "(no before snapshot; skipping)"; exit 0
           fi
-          cp "$RUNNER_TEMP/netprobe.log" netprobe.log 2>/dev/null || true
-          echo "===== netprobe FAIL lines ====="
-          grep -F FAIL netprobe.log || echo "(no probe failures recorded)"
-          echo "===== netprobe tail (last 40) ====="
-          tail -n 40 netprobe.log || true
+          nstat -az | sort > "$RUNNER_TEMP/nstat.after"
+          cp "$RUNNER_TEMP/nstat.before" nstat.before 2>/dev/null || true
+          cp "$RUNNER_TEMP/nstat.after"  nstat.after  2>/dev/null || true
+          echo "===== reset / retransmit / abort counters (after) ====="
+          grep -E 'TcpOutRsts|TcpRetransSegs|TcpExtTCPAbortOn|TcpAttemptFails|TcpExtTCPSynRetrans' nstat.after || echo "(none present)"
+          echo "===== changed TCP counters (before -> after) ====="
+          # nstat -az columns: name value rate; join on name, print where value changed
+          join "$RUNNER_TEMP/nstat.before" "$RUNNER_TEMP/nstat.after" \
+            | awk '$2 != $4 { printf "%-34s %14s -> %-14s (delta %d)\n", $1, $2, $4, $4 - $2 }'
+          echo "===== socket summary (ss -s) ====="
+          ss -s || true
 
       - name: Tar integration tests
         if: always()
@@ -238,7 +223,8 @@ jobs:
           path: |
             validation-tests.tar.gz
             integration-tests.tar.gz
-            netprobe.log
+            nstat.before
+            nstat.after
 
   test-e2e:
       if: ${{ contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]') }}
