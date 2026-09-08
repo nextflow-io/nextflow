@@ -164,6 +164,35 @@ jobs:
       - name: TCP counters (before)
         run: nstat -az | sort > "$RUNNER_TEMP/nstat.before"
 
+      # Diagnostic only: capture packet headers to/from the Seqera endpoints that
+      # have shown transient drops, so the pcap can be correlated to the failing
+      # request timestamp — something the host-wide nstat counters cannot do.
+      # Filtered to the resolved endpoint IPs on :443 and truncated to headers, so
+      # the capture stays small on legs that never touch these hosts. Safe to
+      # remove once the transient connectivity failures are understood.
+      - name: Packet capture (start)
+        continue-on-error: true
+        run: |
+          set +e  # diagnostic must never fail the job
+          hosts="wave.seqera.io api.cloud.seqera.io public.cr.seqera.io"
+          ips=$(for h in $hosts; do getent ahostsv4 "$h" | awk '{print $1}'; done | sort -u)
+          { echo "# resolved $(date -u +%FT%TZ)"; \
+            for h in $hosts; do echo "$h -> $(getent ahostsv4 "$h" | awk '{print $1}' | sort -u | paste -sd, -)"; done; } \
+            > "$RUNNER_TEMP/pcap.hosts"
+          echo "===== resolved Seqera endpoints ====="; cat "$RUNNER_TEMP/pcap.hosts"
+          if [ -z "$ips" ]; then echo "no IPs resolved; skipping capture"; exit 0; fi
+          filt=$(echo "$ips" | awk 'NR==1{printf "host %s",$1; next}{printf " or host %s",$1}')
+          echo "BPF: tcp and port 443 and ($filt)"
+          sudo tcpdump -i any -n -s 128 -w "$RUNNER_TEMP/seqera.pcap" -Z root \
+            "tcp and port 443 and ($filt)" >/dev/null 2>"$RUNNER_TEMP/tcpdump.err" &
+          echo $! > "$RUNNER_TEMP/tcpdump.pid"
+          sleep 1
+          if kill -0 "$(cat "$RUNNER_TEMP/tcpdump.pid")" 2>/dev/null; then
+            echo "tcpdump started (pid $(cat "$RUNNER_TEMP/tcpdump.pid"))"
+          else
+            echo "tcpdump failed to start:"; cat "$RUNNER_TEMP/tcpdump.err" 2>/dev/null || true
+          fi
+
       - name: Run tests
         run: |
           # configure test env
@@ -209,6 +238,23 @@ jobs:
           echo "===== socket summary (ss -s) ====="
           ss -s || true
 
+      - name: Packet capture (stop)
+        if: always()
+        continue-on-error: true
+        run: |
+          set +e  # diagnostic must never fail the job
+          pidf="$RUNNER_TEMP/tcpdump.pid"
+          if [ ! -f "$pidf" ]; then echo "(no capture pid; skipping)"; exit 0; fi
+          sudo kill -INT "$(cat "$pidf")" 2>/dev/null || true
+          sleep 2
+          cp "$RUNNER_TEMP/seqera.pcap" seqera.pcap 2>/dev/null || true
+          cp "$RUNNER_TEMP/pcap.hosts"  pcap.hosts  2>/dev/null || true
+          echo "===== resolved endpoints ====="; cat "$RUNNER_TEMP/pcap.hosts" 2>/dev/null || true
+          echo "===== capture size ====="; ls -lh "$RUNNER_TEMP/seqera.pcap" 2>/dev/null || echo "(no pcap)"
+          echo "===== RST packets to/from Seqera endpoints (with timestamps) ====="
+          sudo tcpdump -tttt -n -r "$RUNNER_TEMP/seqera.pcap" 'tcp[tcpflags] & tcp-rst != 0' 2>/dev/null | head -200 \
+            || echo "(none captured / unreadable)"
+
       - name: Tar integration tests
         if: always()
         run: | 
@@ -225,6 +271,8 @@ jobs:
             integration-tests.tar.gz
             nstat.before
             nstat.after
+            seqera.pcap
+            pcap.hosts
 
   test-e2e:
       if: ${{ contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]') }}
