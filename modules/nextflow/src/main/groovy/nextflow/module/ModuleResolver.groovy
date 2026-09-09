@@ -25,6 +25,7 @@ import nextflow.exception.AbortOperationException
 
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.regex.Pattern
 
 /**
  * Core module resolution logic that coordinates registry, storage, and version management
@@ -115,18 +116,6 @@ class ModuleResolver {
     }
 
     /**
-     * Install or update a module
-     *
-     * @param reference The module reference
-     * @param version Optional specific version (null = latest)
-     * @param force Force reinstall even if already installed
-     * @return Path to the installed module's main.nf file
-     */
-    Path installModule(ModuleReference reference, String version = null, boolean force = false) {
-        return installInto(storage, reference, version, force).mainFile
-    }
-
-    /**
      * Install or update a module into the given storage and return the resulting
      * {@link InstalledModule}. The storage's base directory determines where the
      * module is placed -- the project root for a top-level module, or a parent
@@ -139,9 +128,21 @@ class ModuleResolver {
      * @return the installed module
      */
     private InstalledModule installInto(ModuleStorage store, ModuleReference reference, String version, boolean force) {
-        // Check if already installed locally before hitting the registry
-        if( store.isInstalled(reference) ) {
+        // Check if already installed locally before hitting the registry. `force` means "reinstall
+        // regardless", so it skips the reuse paths entirely -- otherwise a corrupted or modified
+        // module could never be repaired, since reuse happens before the checks below.
+        if( !force && store.isInstalled(reference) ) {
             def installed = store.getInstalledModule(reference)
+            def integrity = installed.integrity
+
+            // A corrupted module cannot be reused whatever version is asked for -- its files are
+            // missing, so returning it would only defer the failure to the caller
+            if( integrity == ModuleIntegrity.CORRUPTED ) {
+                throw new AbortOperationException(
+                    "Module ${reference} is corrupted (missing required files). " +
+                        "Use '-force' to reinstall it."
+                )
+            }
 
             // No specific version requested -- use the local module as-is
             if( !version ) {
@@ -155,14 +156,13 @@ class ModuleResolver {
             }
 
             // Version mismatch -- check for local modifications before overwriting
-            def integrity = installed.integrity
-            if( integrity == ModuleIntegrity.MODIFIED && !force ) {
+            if( integrity == ModuleIntegrity.MODIFIED ) {
                 throw new AbortOperationException(
                     "Module ${reference} has local modifications. " +
                         "Use '-force' to override, or save your changes first."
                 )
             }
-            if( integrity == ModuleIntegrity.NO_REMOTE_MODULE && !force ) {
+            if( integrity == ModuleIntegrity.NO_REMOTE_MODULE ) {
                 throw new AbortOperationException(
                     "Folder 'modules/${reference}' already exists and is not a valid remote module. " +
                         "Use '-force' to override, or save your changes first."
@@ -237,8 +237,17 @@ class ModuleResolver {
     }
 
     /**
-     * Parse a {@code requires.modules} entry of the form
-     * {@code scope/name[@<version-or-constraint>]}.
+     * A dependency version must be an exact semantic version, optionally with a pre-release or
+     * build suffix (which covers the git-sha form, e.g. {@code 0.0.0-4e3e10e}).
+     */
+    private static final Pattern EXACT_VERSION =
+        ~/^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(-[0-9A-Za-z-.]+)?(\+[0-9A-Za-z-.]+)?$/
+
+    /**
+     * Parse a {@code requires.modules} entry of the form {@code scope/name@<version>}.
+     *
+     * The version must be pinned to an exact semantic version -- ranges and constraints are not
+     * supported, so that a module resolves to the same dependency tree wherever it is installed.
      */
     protected static DependencySpec parseDependency(String dep) {
         final idx = dep.lastIndexOf('@')
@@ -246,6 +255,11 @@ class ModuleResolver {
             return new DependencySpec(ModuleReference.parse(dep), null)
         final name = dep.substring(0, idx)
         final version = dep.substring(idx + 1)
+        if( version && !EXACT_VERSION.matcher(version).matches() )
+            throw new AbortOperationException(
+                "Invalid module dependency '${dep}' -- '${version}' is not an exact version. " +
+                    "A dependency must be pinned to an exact version, e.g. '${name}@1.0.0'."
+            )
         return new DependencySpec(ModuleReference.parse(name), version ?: null)
     }
 
@@ -372,7 +386,7 @@ class ModuleResolver {
         // whether the module is already present at the requested version -- installInto will reuse
         // it as-is, so we must not touch its checksum (preserving any local modification status)
         final existing = store.getInstalledModule(reference)
-        final reused = existing != null && (!version || existing.installedVersion == version)
+        final reused = !force && existing != null && (!version || existing.installedVersion == version)
 
         // install this module at the current level
         final installed = installInto(store, reference, version, force)

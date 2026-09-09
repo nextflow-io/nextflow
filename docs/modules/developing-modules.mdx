@@ -82,12 +82,11 @@ process FASTQC {
 Registry modules are subject to the following constraints:
 
 - The module must contain a single script called `main.nf`
-- The module must define a single process
-- The module must not define any named workflows
+- The module must define a single process or named workflow
 - The module may define an entry workflow to override the default behavior of `module run`.
-- The module may define any number of functions
+- The module may define any number of functions and types
 
-Local scripts can define any number of processes, workflows, and functions. As a best practice, each process and named workflow should be defined in its own script.
+Local scripts can define any number of processes, workflows, functions, and types. As a best practice, each process and named workflow should be defined in its own script.
 
 ### meta.yml
 

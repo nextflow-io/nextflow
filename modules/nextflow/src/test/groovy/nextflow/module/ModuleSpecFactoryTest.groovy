@@ -77,8 +77,8 @@ class ModuleSpecFactoryTest extends Specification {
             requires:
               nextflow: ">=24.04.0"
               modules:
-                - nf-core/star/align@>=1.0.0
-                - nf-core/samtools/sort@>=1.2.0,<2.0.0
+                - nf-core/star/align@1.0.0
+                - nf-core/samtools/sort@1.2.0
             '''.stripIndent()
 
         when:
@@ -89,7 +89,7 @@ class ModuleSpecFactoryTest extends Specification {
         spec.kind == 'Workflow'
         spec.isWorkflow()
         spec.requires == ['nextflow': '>=24.04.0']
-        spec.requiresModules == ['nf-core/star/align@>=1.0.0', 'nf-core/samtools/sort@>=1.2.0,<2.0.0']
+        spec.requiresModules == ['nf-core/star/align@1.0.0', 'nf-core/samtools/sort@1.2.0']
     }
 
     def 'should default to process kind and empty requiresModules when absent' () {
@@ -1097,6 +1097,103 @@ class ModuleSpecFactoryTest extends Specification {
         def e = thrown(AbortOperationException)
         e.message.contains('cannot include local modules')
         e.message.contains('./helper.nf')
+    }
+
+    def 'should ignore plugin includes when inferring requires.modules'() {
+        given:
+        vendorDependency('nf-core', 'star/align', '1.2.3')
+        def mainNf = tempDir.resolve('main.nf')
+        mainNf.text = '''\
+            include { sayHello } from 'plugin/nf-hello'
+            include { STAR_ALIGN } from 'nf-core/star/align'
+
+            workflow ALIGN_WF {
+                take:
+                ch_reads
+                main:
+                sayHello()
+                ch_out = STAR_ALIGN(ch_reads)
+                emit:
+                aligned = ch_out
+            }
+            '''.stripIndent()
+
+        when:
+        def includes = ModuleSpecFactory.includes(mainNf)
+
+        then: 'a plugin extension is neither a local include nor a registry dependency'
+        includes.remote == ['nf-core/star/align']
+        includes.local == []
+
+        and: 'so it does not turn up as an unresolvable dependency'
+        ModuleSpecFactory.inferRequiresModules(mainNf, new ModuleSpec()) == ['nf-core/star/align@1.2.3']
+    }
+
+    def 'should treat a script path without a ./ prefix as a local include'() {
+        given:
+        def mainNf = tempDir.resolve('main.nf')
+        mainNf.text = '''\
+            include { HELPER } from 'lib/helper.nf'
+
+            workflow ALIGN_WF {
+                take:
+                ch_reads
+                emit:
+                ch_reads
+            }
+            '''.stripIndent()
+
+        when:
+        ModuleSpecFactory.inferRequiresModules(mainNf, new ModuleSpec())
+
+        then: 'it is reported as a local include, not as a missing registry module'
+        def e = thrown(AbortOperationException)
+        e.message.contains('cannot include local modules')
+        e.message.contains('lib/helper.nf')
+    }
+
+    def 'should carry over tools only for a process module'() {
+        given:
+        def tools = [[fastqc: [description: 'FastQC', homepage: 'https://example.com']]]
+        def oldSpec = new ModuleSpec(tools: tools)
+
+        and: 'a process module'
+        def processNf = tempDir.resolve('process.nf')
+        processNf.text = '''\
+            process FASTQC {
+                script:
+                """
+                fastqc
+                """
+            }
+            '''.stripIndent()
+
+        and: 'a workflow module'
+        def workflowNf = tempDir.resolve('workflow.nf')
+        workflowNf.text = '''\
+            workflow ALIGN_WF {
+                take:
+                ch_reads
+                emit:
+                ch_reads
+            }
+            '''.stripIndent()
+
+        when:
+        def processSpec = ModuleSpecFactory.fromScript(processNf, oldSpec, namespace: 'my-namespace')
+
+        then:
+        processSpec.tools == tools
+        processSpec.validate() == []
+
+        when:
+        def workflowSpec = ModuleSpecFactory.fromScript(workflowNf, oldSpec, namespace: 'my-namespace')
+
+        then: 'tools describe a process, so a workflow module drops them'
+        workflowSpec.isWorkflow()
+        !workflowSpec.tools
+        and: 'the generated spec is accepted by its own validation'
+        workflowSpec.validate() == []
     }
 
 }

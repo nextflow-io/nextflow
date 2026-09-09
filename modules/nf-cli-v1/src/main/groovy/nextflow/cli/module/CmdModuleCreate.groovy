@@ -309,8 +309,7 @@ class CmdModuleCreate extends CmdBase {
                 type: string
                 description: A greeting string
             output:
-              - name: message
-                type: string
+              - type: string
                 description: The greeting message
             """.stripIndent()
         }
@@ -324,8 +323,7 @@ class CmdModuleCreate extends CmdBase {
             type: string
             description: A greeting string
         output:
-          - name: stdout
-            type: string
+          - type: string
             description: The greeting message
         """.stripIndent()
     }

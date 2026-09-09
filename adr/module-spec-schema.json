@@ -75,7 +75,7 @@
           "description": "Direct module dependencies (workflow modules): 'scope/name@<version>' references pinned to an exact semver, including the git-sha pre-release form (e.g. 0.0.0-4e3e10e). Version constraints/ranges are NOT supported -- each dependency is installed at its pinned version in isolation.",
           "items": {
             "type": "string",
-            "pattern": "^[a-z0-9][a-z0-9-]*/[a-z0-9][a-z0-9_/-]*@(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(-[0-9A-Za-z-.]+)?$"
+            "pattern": "^([a-z0-9][a-z0-9._-]*/)?[a-z][a-z0-9._-]*(/[a-z][a-z0-9._-]*)*@(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)(-[0-9A-Za-z-.]+)?$"
           },
           "uniqueItems": true
         }
@@ -243,6 +243,7 @@
             "file",
             "directory",
             "channel",
+            "value",
             "record"
           ]
         },
