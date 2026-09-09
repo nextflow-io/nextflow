@@ -176,9 +176,15 @@ jobs:
         continue-on-error: true
         run: |
           set +e  # diagnostic must never fail the job
+          # Record the runner's public egress IP so a failing run can be correlated
+          # against the Seqera VPC flow logs: was the SYN seen at the AWS edge or not?
+          runner_ip=$(curl -s --max-time 5 https://checkip.amazonaws.com 2>/dev/null | tr -d '[:space:]')
+          [ -z "$runner_ip" ] && runner_ip=$(curl -s --max-time 5 https://api.ipify.org 2>/dev/null | tr -d '[:space:]')
+          echo "===== runner public egress IP: ${runner_ip:-UNKNOWN} ====="
           hosts="wave.seqera.io api.cloud.seqera.io public.cr.seqera.io"
           ips=$(for h in $hosts; do getent ahostsv4 "$h" | awk '{print $1}'; done | sort -u)
           { echo "# resolved $(date -u +%FT%TZ)"; \
+            echo "runner_public_ip -> ${runner_ip:-UNKNOWN}"; \
             for h in $hosts; do echo "$h -> $(getent ahostsv4 "$h" | awk '{print $1}' | sort -u | paste -sd, -)"; done; } \
             > "$RUNNER_TEMP/pcap.hosts"
           echo "===== resolved Seqera endpoints ====="; cat "$RUNNER_TEMP/pcap.hosts"
