@@ -201,10 +201,13 @@ class CmdModulePublish extends CmdBase {
         if( spec.keywords ) {
             println "  Keywords: ${spec.keywords.join(', ')}"
         }
-        if( spec.requires ) {
+        if( spec.requires || spec.requiresModules ) {
             println "  Requires:"
-            spec.requires.each { name, version ->
+            spec.requires?.each { name, version ->
                 println "    - ${name}: ${version}"
+            }
+            spec.requiresModules?.each { module ->
+                println "    - module: ${module}"
             }
         }
         println ""
