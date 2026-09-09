@@ -298,4 +298,76 @@ class ModuleResolverDependencyTest extends Specification {
         main.toString().endsWith('modules/nf-core/mafft_align/main.nf')
     }
 
+    def '-force reinstalls a locally modified module and its dependencies' () {
+        given:
+        module('nf-core/aln', '1.0.0', ['nf-core/samtools/sort@1.0.0'])
+        module('nf-core/samtools/sort', '1.0.0')
+        def resolver = new ModuleResolver(tempDir, mockClient())
+        def storage = new ModuleStorage(tempDir)
+        def reference = ModuleReference.parse('nf-core/aln')
+        resolver.installWithDependencies(reference, '1.0.0')
+
+        and: 'the user edits the installed module'
+        tempDir.resolve('modules/nf-core/aln/main.nf').text = 'workflow FOO { /* edited */ }'
+        assert storage.getInstalledModule(reference).integrity == ModuleIntegrity.MODIFIED
+
+        when: 'the same version is reinstalled with force'
+        resolver.installWithDependencies(reference, '1.0.0', true)
+
+        then: 'the edit is discarded and the checksum is refreshed over the whole subtree'
+        tempDir.resolve('modules/nf-core/aln/main.nf').text == "workflow FOO {\n}\n"
+        storage.getInstalledModule(reference).integrity == ModuleIntegrity.VALID
+        installedAt('modules/nf-core/aln/modules/nf-core/samtools/sort')
+    }
+
+    def '-force reinstalls over a corrupted module folder' () {
+        given: 'a hand-made module folder with no meta.yml'
+        module('nf-core/aln', '1.0.0')
+        def resolver = new ModuleResolver(tempDir, mockClient())
+        def moduleDir = tempDir.resolve('modules/nf-core/aln')
+        Files.createDirectories(moduleDir)
+        moduleDir.resolve('main.nf').text = 'workflow FOO { /* mine */ }'
+        def reference = ModuleReference.parse('nf-core/aln')
+
+        when: 'installed without force'
+        resolver.installWithDependencies(reference, null, false)
+
+        then: 'the folder is not silently reused -- the user is pointed at -force'
+        def e = thrown(AbortOperationException)
+        e.message.contains('corrupted')
+        e.message.contains('-force')
+
+        when: 'installed with force'
+        resolver.installWithDependencies(reference, null, true)
+
+        then:
+        noExceptionThrown()
+        versionAt('modules/nf-core/aln') == '1.0.0'
+        new ModuleStorage(tempDir).getInstalledModule(reference).integrity == ModuleIntegrity.VALID
+    }
+
+    def 'a dependency version must be pinned to an exact version' () {
+        when:
+        ModuleResolver.parseDependency('nf-core/aln@1.0.0')
+
+        then:
+        noExceptionThrown()
+
+        when: 'the git-sha pre-release form'
+        ModuleResolver.parseDependency('nf-core/aln@0.0.0-4e3e10e')
+
+        then:
+        noExceptionThrown()
+
+        when:
+        ModuleResolver.parseDependency(dep)
+
+        then:
+        def e = thrown(AbortOperationException)
+        e.message.contains('is not an exact version')
+
+        where:
+        dep << ['nf-core/aln@>=1.0.0', 'nf-core/aln@>=1.0.0,<2.0.0', 'nf-core/aln@1.0', 'nf-core/aln@latest']
+    }
+
 }

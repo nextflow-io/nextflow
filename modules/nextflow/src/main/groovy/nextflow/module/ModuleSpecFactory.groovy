@@ -87,8 +87,20 @@ class ModuleSpecFactory {
      * @param oldSpec
      */
     static ModuleSpec fromScript(Map opts = [:], Path path, ModuleSpec oldSpec) {
+        // parse process or workflow definition from script
+        final scriptNode = parseScript(path)
+        final processes = scriptNode.getProcesses()
+        final workflows = scriptNode.getWorkflows().findAll { WorkflowNode w -> !w.isEntry() }
+
+        if( processes.size() + workflows.size() != 1 )
+            throw new AbortOperationException("Module script should define a single process or workflow: ${path}")
+
+        // determine module kind
+        final kind = !processes.isEmpty() ? ModuleSpec.KIND_PROCESS : ModuleSpec.KIND_WORKFLOW
+
         // create initial module spec
         final spec = new ModuleSpec()
+        spec.kind = kind
         spec.version = opts.version as String ?: oldSpec.version
         spec.description = opts.description as String ?: oldSpec.description
         spec.keywords = oldSpec.keywords
@@ -97,31 +109,17 @@ class ModuleSpecFactory {
         spec.maintainers = oldSpec.maintainers
         spec.requires = oldSpec.requires
         spec.requiresModules = inferRequiresModules(path, oldSpec)
-        spec.tools = oldSpec.tools
         spec._passthrough = oldSpec._passthrough
 
-        // parse with semantic analysis so that statically-typed declarations resolve their types
-        // (an unresolved type cannot be inferred and is rendered as a TODO placeholder)
-        final scriptNode = parseScript(path)
-        final processes = scriptNode.getProcesses()
-        final workflows = scriptNode.getWorkflows().findAll { WorkflowNode w -> !w.isEntry() }
-
-        if( !processes.isEmpty() )
-            return fromProcessScript(opts, path, oldSpec, spec, processes)
-        if( !workflows.isEmpty() )
-            return fromWorkflowScript(opts, oldSpec, spec, workflows)
-
-        throw new AbortOperationException("Module script does not define any process or workflow: ${path}")
+        // infer remaining properties from module script
+        return kind == ModuleSpec.KIND_PROCESS
+            ? fromProcessScript(opts, oldSpec, spec, processes[0])
+            : fromWorkflowScript(opts, oldSpec, spec, workflows[0])
     }
 
-    private static ModuleSpec fromProcessScript(Map opts, Path path, ModuleSpec oldSpec, ModuleSpec spec, List<ProcessNode> processes) {
-        if( processes.size() > 1 )
-            throw new AbortOperationException("Module script defines multiple processes: ${path}")
-
-        // infer module spec properties from process definition
-        final process = processes[0]
-        spec.kind = oldSpec.kind
+    private static ModuleSpec fromProcessScript(Map opts, ModuleSpec oldSpec, ModuleSpec spec, ProcessNode process) {
         spec.name = opts.name ?: "${opts.namespace}/${process.name.toLowerCase()}"
+        spec.tools = oldSpec.tools
 
         if( process instanceof ProcessNodeV1 ) {
             final visitor = new ModuleSpecVisitorV1(oldSpec)
@@ -139,14 +137,7 @@ class ModuleSpecFactory {
         return spec
     }
 
-    private static ModuleSpec fromWorkflowScript(Map opts, ModuleSpec oldSpec, ModuleSpec spec, List<WorkflowNode> workflows) {
-        if( workflows.size() > 1 )
-            throw new AbortOperationException("Module script defines multiple workflows")
-
-        // infer module spec properties from the workflow's take:/emit: interface. Types are taken
-        // from the source when statically typed; an untyped take/emit renders a TODO placeholder.
-        final workflow = workflows[0]
-        spec.kind = ModuleSpec.KIND_WORKFLOW
+    private static ModuleSpec fromWorkflowScript(Map opts, ModuleSpec oldSpec, ModuleSpec spec, WorkflowNode workflow) {
         spec.name = opts.name ?: "${opts.namespace}/${workflow.name.toLowerCase()}"
 
         final visitor = new ModuleSpecVisitorV2(oldSpec)
@@ -179,7 +170,12 @@ class ModuleSpecFactory {
         final local = new LinkedHashSet<String>()
         for( final include : parseScript(path, false).getIncludes() ) {
             final source = include.source.getText()
-            if( ScriptModuleResolver.isLocalModule(source) )
+            // a plugin extension is not a module and is resolved by the plugin system, so it is
+            // neither a local include nor a registry dependency
+            if( source.startsWith('plugin/') )
+                continue
+            // a script path is a local include, whether or not it is prefixed with `./`
+            if( ScriptModuleResolver.isLocalModule(source) || source.endsWith('.nf') )
                 local.add(source)
             else
                 remote.add(source)

@@ -150,9 +150,15 @@ class ModuleStorage {
         Map infoProps = ModuleInfo.load(moduleDir)
         installed.expectedChecksum = infoProps?.checksum
         installed.registryUrl = infoProps?.registryUrl
-        final spec = ModuleSpecFactory.fromYaml(installed.manifestFile)
-        installed.installedVersion = spec.version
-        installed.kind = spec.kind ?: ModuleSpec.KIND_PROCESS
+
+        // a directory without a readable spec is a module folder that is corrupted or was never
+        // installed from a registry -- report it as such via the integrity status, instead of
+        // failing here and taking down the recovery paths that would otherwise handle it
+        if( Files.exists(installed.manifestFile) ) {
+            final spec = ModuleSpecFactory.fromYaml(installed.manifestFile)
+            installed.installedVersion = spec.version
+            installed.kind = spec.kind ?: ModuleSpec.KIND_PROCESS
+        }
         return installed
     }
 

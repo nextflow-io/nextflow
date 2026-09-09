@@ -112,7 +112,7 @@ class CmdModuleCreateTest extends Specification {
 
         and:
         def meta = CmdModuleCreate.metaYml('myorg', 'hello', 'Process')
-        meta.contains("name: message")
+        meta.contains("name: greeting")
         meta.contains('nextflow: ">=26.04.0"')   // typed processes require Nextflow >=26.04
     }
 

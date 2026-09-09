@@ -180,7 +180,7 @@ class ModuleResolverTest extends Specification {
         ModuleChecksum.save(moduleDir, 'wrong-checksum')
 
         when:
-        resolver.installModule(reference, '2.0.0', false)
+        resolver.installWithDependencies(reference, '2.0.0', false)
 
         then:
         def e = thrown(AbortOperationException)

@@ -577,4 +577,23 @@ class ModuleStorageTest extends Specification {
         }
         return result
     }
+
+    def 'should report a module folder without a spec as corrupted'() {
+        given: 'a module folder that was never installed from a registry'
+        def storage = new ModuleStorage(tempDir)
+        def reference = new ModuleReference('nf-core', 'fastqc')
+        def moduleDir = storage.getModuleDir(reference)
+        Files.createDirectories(moduleDir)
+        moduleDir.resolve('main.nf').text = 'process FASTQC { }'
+
+        when:
+        def installed = storage.getInstalledModule(reference)
+
+        then: 'it is reported via the integrity status, not by throwing, so that the recovery paths keyed on that status stay reachable'
+        noExceptionThrown()
+        installed != null
+        installed.installedVersion == null
+        installed.integrity == ModuleIntegrity.CORRUPTED
+    }
+
 }
