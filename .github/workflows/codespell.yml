@@ -28,8 +28,12 @@ jobs:
         with:
           only_warn: 1
 
-      # Committable suggestions. No-ops on fork PRs (read-only token)
-      - run: pipx run codespell --write-changes
+      # Committable suggestions. No-ops on fork PRs (read-only token).
+      # codespell exits non-zero for typos it will not auto-fix (multiple
+      # candidates), so ignore it -- reviewdog must still see the fixes it made
+      - run: pipx run codespell --write-changes || true
+      # Fork PRs get a read-only token, so posting suggestions 403s -- never fail on it
       - uses: reviewdog/action-suggester@2558ba17e65a9039e73764a73009fc05fef28a46 # v1.24.3
+        continue-on-error: true
         with:
           tool_name: codespell
