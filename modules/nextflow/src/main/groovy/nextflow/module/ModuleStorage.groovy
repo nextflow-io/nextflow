@@ -49,6 +49,7 @@ class ModuleStorage {
     public static final String MODULE_MANIFEST_FILE = "meta.yml"
     public static final String MODULE_README_FILE = "README.md"
     public static final String MODULES_DIR = "modules"
+    public static final String MODULE_TESTS_DIR = "tests"
     private final Path modulesDir
 
     /**
@@ -306,6 +307,10 @@ class ModuleStorage {
             new ZipInputStream(fis).withCloseable { zis ->
                 ZipEntry entry
                 while ((entry = zis.nextEntry) != null) {
+                    if( isExcludedEntry(entry.name) ) {
+                        zis.closeEntry()
+                        continue
+                    }
                     def targetPath = targetDir.resolve(entry.name)
 
                     // Security check: prevent zip slip
@@ -343,6 +348,8 @@ class ModuleStorage {
                 new TarArchiveInputStream(gzis).withCloseable { tis ->
                     TarArchiveEntry entry
                     while ((entry = tis.nextTarEntry) != null) {
+                        if( isExcludedEntry(entry.name) )
+                            continue
                         def targetPath = targetDir.resolve(entry.name)
 
                         // Security check: prevent tar slip
@@ -365,6 +372,26 @@ class ModuleStorage {
                 }
             }
         }
+    }
+
+    /**
+     * Whether an archive entry should be skipped when installing a module bundle.
+     *
+     * The {@code tests/} directory holds the module's nf-test suite, which belongs to the module
+     * author and not to the consuming project: it is not executed by the pipeline, and with
+     * workflow modules vendoring their own dependencies it would be duplicated at every level of
+     * the tree. Likewise a bundle must never carry vendored dependencies -- they are re-resolved
+     * from the registry at install time.
+     *
+     * @param entryName The archive entry name
+     * @return true if the entry must not be extracted
+     */
+    private static boolean isExcludedEntry(String entryName) {
+        final name = entryName.startsWith('./') ? entryName.substring(2) : entryName
+        for( String dir : [MODULE_TESTS_DIR, MODULES_DIR] )
+            if( name == dir || name.startsWith(dir + '/') )
+                return true
+        return false
     }
 
     /**
