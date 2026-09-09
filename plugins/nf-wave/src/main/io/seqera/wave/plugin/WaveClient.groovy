@@ -20,6 +20,7 @@ import static nextflow.util.SysHelper.*
 
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
+import java.net.http.HttpTimeoutException
 import java.net.http.HttpResponse
 import java.nio.file.Path
 import java.nio.file.Paths
@@ -43,6 +44,7 @@ import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import io.seqera.http.HxClient
+import io.seqera.http.HxConfig
 import io.seqera.util.trace.TraceUtils
 import io.seqera.wave.api.BuildStatusResponse
 import io.seqera.wave.api.ContainerStatus
@@ -168,6 +170,14 @@ class WaveClient {
      */
     protected HxClient.Builder newHttpClientBuilder() {
         final builder = HxClient.newBuilder()
+                // Retry read/response timeouts too (on top of the default rule, which already retries
+                // connect timeouts and other IOExceptions). Since lib-httpx 2.5.0 a bare
+                // HttpTimeoutException raised after the request was sent is not retried by default; a
+                // transient mid-flight stall on a Wave call should get another attempt. Wave container
+                // resolution is idempotent by content, so re-sending is safe. See HxConfig.defaultRetryCondition.
+                .config( HxConfig.newBuilder()
+                        .retryCondition({ t -> HxConfig.defaultRetryCondition((Throwable)t) || t instanceof HttpTimeoutException } as java.util.function.Predicate)
+                        .build() )
                 .version(HttpClient.Version.HTTP_1_1)
                 .followRedirects(HttpClient.Redirect.NEVER)
                 .connectTimeout(config.httpOpts().connectTimeout())

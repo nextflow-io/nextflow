@@ -18,6 +18,8 @@ package io.seqera.tower.plugin
 
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
+import java.net.http.HttpTimeoutException
+import java.util.function.Predicate
 import java.util.regex.Matcher
 
 import groovy.json.JsonGenerator
@@ -27,6 +29,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.TupleConstructor
 import groovy.util.logging.Slf4j
 import io.seqera.http.HxClient
+import io.seqera.http.HxConfig
 import io.seqera.tower.plugin.exception.ForbiddenException
 import io.seqera.tower.plugin.exception.NotFoundException
 import io.seqera.tower.plugin.exception.UnauthorizedException
@@ -223,6 +226,14 @@ class TowerClient {
 
     protected void initHttpClient() {
         final builder = HxClient.newBuilder()
+            // Opt read/response timeouts back into the retry set, on top of the default rule (which
+            // already retries connect timeouts and other IOExceptions). Since lib-httpx 2.5.0 a bare
+            // HttpTimeoutException raised *after* the request was sent is not retried by default; for
+            // best-effort telemetry a transient mid-flight stall should get another attempt rather
+            // than failing the run on the first timeout. See HxConfig.defaultRetryCondition.
+            .config( HxConfig.newBuilder()
+                .retryCondition({ t -> HxConfig.defaultRetryCondition((Throwable)t) || t instanceof HttpTimeoutException } as Predicate)
+                .build() )
         // auth settings
         setupClientAuth(builder, getAccessToken())
         // retry + proxy settings (proxy applies to the main client and the token-refresh client)
