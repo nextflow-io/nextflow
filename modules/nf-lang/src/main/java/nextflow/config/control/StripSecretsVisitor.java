@@ -89,7 +89,7 @@ public class StripSecretsVisitor extends ClassCodeExpressionTransformer {
 
     /**
      * Replace any reference to a secret with a string literal
-     * in order to not dislose the secret value when printin the config.
+     * in order to not disclose the secret value when printing the config.
      *
      * @param node
      */

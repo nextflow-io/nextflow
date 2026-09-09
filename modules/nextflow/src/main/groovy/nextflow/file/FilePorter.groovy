@@ -415,7 +415,7 @@ class FilePorter {
     static private boolean checkPathIntegrity(Path source, Path target) {
         try {
             // the file must have the same size. this is needed
-            // to prevent re-using broken files left by a previous interrupted download
+            // to prevent reusing broken files left by a previous interrupted download
             final attrs = Files.readAttributes(source, BasicFileAttributes)
             final same = attrs.isDirectory()
                     ? checkDirIntegrity0(source, target)

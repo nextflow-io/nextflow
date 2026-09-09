@@ -31,7 +31,7 @@ process printVars {
 
     script:
     """
-    echo indx: ${task.index}
+    echo index: ${task.index}
     echo proc: ${task.process}
     echo exec: ${task.executor}
     echo cpus: ${task.cpus}

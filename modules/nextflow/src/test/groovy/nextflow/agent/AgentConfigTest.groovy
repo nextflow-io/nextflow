@@ -642,7 +642,7 @@ class AgentConfigTest extends Specification {
         [OPENAI_BASE_URL: 'http://oai/v1']                                   | [apiProvider: 'anthropic'] | 'openai/gpt-4o'             || null
         [ANTHROPIC_BASE_URL: 'http://ant/v1']                                | [apiProvider: 'anthropic'] | 'openai/gpt-4o'             || 'http://ant/v1'
         and: 'no invented conventions: these variables are read by nobody'
-        [MISTRAL_BASE_URL: 'http://mis/v1']                                  | [:]                        | 'mistral/mistral-large'     || null
+        [MISTRAL_BASE_URL: 'http://mistral/v1']                              | [:]                        | 'mistral/mistral-large'     || null
         [OPENROUTER_BASE_URL: 'http://or/v1']                                | [:]                        | 'openrouter/x'              || null
         [GOOGLE_BASE_URL: 'http://goo/v1']                                   | [:]                        | 'google/gemini-2.0-flash'   || null
         and: 'nothing set means "use the provider default"'

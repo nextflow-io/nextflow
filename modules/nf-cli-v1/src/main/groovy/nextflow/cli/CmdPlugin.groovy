@@ -258,7 +258,7 @@ class CmdPlugin extends CmdBase implements UsageAware {
             gitCmd.call()
         }
         catch (Exception e) {
-            throw new AbortOperationException("Unable to clone pluging template repository - cause: ${e.message}")
+            throw new AbortOperationException("Unable to clone plugin template repository - cause: ${e.message}")
         }
     }
 

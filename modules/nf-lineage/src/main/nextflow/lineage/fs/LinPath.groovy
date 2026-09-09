@@ -266,7 +266,7 @@ class LinPath implements Path, LogicalDataPath {
      * Get a metadata sub-object as LinMetadataPath.
      * If the requested sub-object is the workflow or task outputs, retrieves the outputs from the outputs description.
      *
-     * @param fs LinFilesystem for the te.
+     * @param fs LinFileSystem associated to the LinPath
      * @param key Parent metadata key.
      * @param object Parent object.
      * @param children Array of string in indicating the properties to navigate to get the sub-object.
