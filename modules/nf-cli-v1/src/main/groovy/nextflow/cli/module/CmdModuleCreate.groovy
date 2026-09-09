@@ -131,7 +131,7 @@ class CmdModuleCreate extends CmdBase {
         moduleDir.resolve('main.nf').text = mainNf(namespace, name, kind, typed)
 
         // create README.md
-        moduleDir.resolve('README.md').text = readmeMd(namespace, name)
+        moduleDir.resolve('README.md').text = readmeMd(namespace, name, kind, typed)
 
         // create meta.yml
         moduleDir.resolve('meta.yml').text = metaYml(namespace, name, kind, typed)
@@ -174,13 +174,15 @@ class CmdModuleCreate extends CmdBase {
 
             nextflow.enable.types = true
 
+            include { HELLO } from 'nextflow-io/hello'
+
             workflow ${defName} {
                 take:
                 greeting: String
 
                 main:
                 // TODO: implement the workflow logic
-                message = greeting
+                message = HELLO(greeting)
 
                 emit:
                 result: String = message
@@ -195,16 +197,18 @@ class CmdModuleCreate extends CmdBase {
              * TODO: rename the workflow, replace the example take/emit, and implement the logic.
              */
 
+            include { HELLO } from 'nextflow-io/hello'
+
             workflow ${defName} {
                 take:
-                ch_message
+                ch_greeting
 
                 main:
                 // TODO: implement the workflow logic
-                ch_greeting = ch_message
+                ch_message = HELLO(ch_greeting)
 
                 emit:
-                result = ch_greeting
+                result = ch_message
             }
             """.stripIndent()
         }
@@ -266,6 +270,8 @@ class CmdModuleCreate extends CmdBase {
             license: Apache-2.0
             requires:
               nextflow: ">=26.04.0"
+              modules:
+                - nextflow-io/hello@1.0.0
             input:
               - name: greeting
                 type: string
@@ -285,6 +291,9 @@ class CmdModuleCreate extends CmdBase {
             kind: Workflow
             description: A brief description of the ${namespace}/${name} workflow module
             license: Apache-2.0
+            requires:
+              modules:
+                - nextflow-io/hello@1.0.0
             input:
               - name: greeting
                 type: channel
@@ -328,7 +337,10 @@ class CmdModuleCreate extends CmdBase {
         """.stripIndent()
     }
 
-    static String readmeMd(String namespace, String name) {
+    static String readmeMd(String namespace, String name, String kind = 'Process', boolean typed = true) {
+        final dependencies = kind == 'Workflow'
+            ? '- [nextflow-io/hello](https://registry.nextflow.io/modules/nextflow-io/hello)'
+            : 'None.'
         """\
         # ${namespace}/${name}
 
@@ -346,7 +358,7 @@ class CmdModuleCreate extends CmdBase {
 
         ## Dependencies
 
-        None.
+        ${dependencies}
 
         ## License
 

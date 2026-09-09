@@ -72,7 +72,13 @@ class CmdModuleCreateTest extends Specification {
         content.contains("name: result")
 
         and: 'a legacy module declares no Nextflow version requirement'
-        !content.contains("requires:")
+        !content.contains("nextflow:")
+
+        and: 'the scaffold depends on the nextflow-io/hello module'
+        content.contains("modules:")
+        content.contains("- nextflow-io/hello@1.0.0")
+        CmdModuleCreate.mainNf('myorg', 'hello', 'Workflow', false).contains("include { HELLO } from 'nextflow-io/hello'")
+        CmdModuleCreate.readmeMd('myorg', 'hello', 'Workflow', false).contains('nextflow-io/hello')
     }
 
     def 'generated legacy workflow scaffold passes validation'() {
@@ -170,6 +176,13 @@ class CmdModuleCreateTest extends Specification {
 
         and: 'typed workflows require Nextflow >=26.04'
         meta.contains('nextflow: ">=26.04.0"')
+
+        and: 'the scaffold depends on the nextflow-io/hello module'
+        content.contains("include { HELLO } from 'nextflow-io/hello'")
+        content.contains("message = HELLO(greeting)")
+        meta.contains("modules:")
+        meta.contains("- nextflow-io/hello@1.0.0")
+        CmdModuleCreate.readmeMd('myorg', 'hello', 'Workflow').contains('nextflow-io/hello')
     }
 
     def 'should translate special chars in process name to underscore and uppercase'() {
