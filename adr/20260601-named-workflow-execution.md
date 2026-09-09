@@ -11,7 +11,7 @@ Introduce the ability to execute named workflows directly with the `nextflow mod
 
 ## Problem Statement
 
-Consider the following entry workflow which simply wraps a named workflow:
+Consider the following entry workflow, which wraps a named workflow:
 
 ```groovy
 params {
@@ -44,6 +44,8 @@ output {
 Where the `RNASEQ` workflow is defined as follows:
 
 ```groovy
+nextflow.enable.types = true
+
 workflow RNASEQ {
     take:
     samples: Channel<Sample>
@@ -64,7 +66,7 @@ record AlignedSample { /* ... */ }
 
 This example demonstrates that most of the `params` / `workflow` / `output` trio can be equivalently expressed by a named workflow: the `params` block mirrors the `take:` section, and the `output` block and `publish:` section together mirror the `emit:` section.
 
-Named workflows typically consume and produce channels so that they can be composed into larger pipelines. But this prevents them from being directly executable -- the purpose of an entry workflow is to translate between dataflow logic and the external world. If this translation could be inferred automatically, it would allow a named workflow to be both executable and composable, eliminating the need to define explicit entry workflows.
+Named workflows typically consume and produce channels so that they can be composed into larger pipelines. But this prevents them from being directly executable, because the purpose of an entry workflow is to translate between dataflow logic and the external world. If this translation could be inferred automatically, it would allow a named workflow to be both executable and composable, eliminating the need to define explicit entry workflows.
 
 ## Solution
 
@@ -117,7 +119,7 @@ Each `take:` input becomes a pipeline parameter of the same name, and the declar
 - A `Boolean` param defaults to `false`, whereas a `Boolean` input is required unless it is nullable.
 - A `Channel<E>` or `Value<V>` input is mapped to a channel, which a `params` block does not do.
 
-A parameter value can come from the command line, a params file, or the config. Command-line and params-file values are treated the same way: they are parsed according to the declared type, since a command-line value is always a string and a params file is merged into the command-line params. Values from the config are already structured -- numbers, lists, maps -- and only need to be converted where the declared type is more specific than the source syntax, such as `Path` or a record type.
+A parameter value can come from the command line, a params file, or the config. Command-line and params-file values are treated the same way: they are parsed according to the declared type, since a command-line value is always a string and a params file is merged into the command-line params. Values from the config are already structured as numbers, lists, and maps, so they only need to be converted where the declared type is more specific than the source syntax, such as `Path` or a record type.
 
 The following coercions apply:
 
@@ -146,6 +148,8 @@ A channel param such as `samples: Channel<Sample>` is supplied on the command li
 For example, given the following named workflow:
 
 ```groovy
+nextflow.enable.types = true
+
 workflow RNASEQ {
     take:
     samples: Channel<Sample>
@@ -160,7 +164,7 @@ record Sample {
 }
 ```
 
-The `samples` param desugars to a path -- a CSV, JSON, or YAML file -- which is loaded as follows:
+The `samples` param desugars to a path to a CSV, JSON, or YAML file, which is loaded as follows:
 
 ```groovy
 params {
@@ -180,8 +184,8 @@ The channel input can use a generic type such as `Map` or `Record`, or a custom 
 
 ### Saving output channels to index files
 
-The `emit:` section of a workflow can be treated like the `publish:` section of a entry workflow, defining which files are *terminal outputs* vs *intermediate outputs*. However, the output directory structure cannot be automatically inferred from the `emit:` section. It is normally specified by the output `path` directive, and does not necessarily correspond to the structure of the output channels.
+The `emit:` section of a workflow can be treated like the `publish:` section of an entry workflow, defining which files are *terminal outputs* vs *intermediate outputs*. However, the output directory structure cannot be automatically inferred from the `emit:` section. It is normally specified by the output `path` directive, and does not necessarily correspond to the structure of the output channels.
 
 When executing a named workflow directly, output files are not published to an output directory. Instead, the workflow output printed by Nextflow simply refers to output files by their work directory path.
 
-This approach aligns with our goal to create a global content-addressable data store for files produced by Nextflow pipelines. A global data store with global search, caching, and automatic cleanup eliminates the need for per-run output directories. If needed, an output directory can be reconstructed from the structured workflow output.
+This approach supports our goal of creating a global content-addressable data store for files produced by Nextflow pipelines. A global data store with global search, caching, and automatic cleanup eliminates the need for per-run output directories. If needed, an output directory can be reconstructed from the structured workflow output.

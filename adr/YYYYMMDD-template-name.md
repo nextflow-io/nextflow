@@ -8,32 +8,32 @@
 
 Technical Story: [description | ticket/issue URL] <!-- optional -->
 
-## Summary 
+## Summary
 
 Quick description of the problem and the context. Should not take more than 2-3 lines.
 
 ## Problem Statement
 
-Description of the technical problem to solve or to decision to make. This should be concise but provide all required details and the context related to the technical decision to be taken.
+Description of the technical problem to solve, or the decision to make. Keep it concise, but give all the details and context needed for the decision at hand.
 
 ## Goals or Decision Drivers
 
-Depending the context define clearly what are the goals or what are the most important decision drivers.
+Depending on the context, state clearly what the goals are, or what the most important decision drivers are.
 
 - [driver 1, e.g., a force, facing concern, …]
 - [driver 2, e.g., a force, facing concern, …]
-- … <!-- numbers of drivers can vary -->
+- … <!-- number of drivers can vary -->
 
 ## Non-goals
 
-Define what's out of the scope of this ADR.
+Define what is out of scope for this ADR.
 
 ## Considered Options <!-- optional -->
 
 - [option 1]
 - [option 2]
 - [option 3]
-- … <!-- numbers of options can vary -->
+- … <!-- number of options can vary -->
 
 
 ## Pros and Cons of the Options <!-- optional -->
@@ -45,7 +45,7 @@ Define what's out of the scope of this ADR.
 - Good, because [argument a]
 - Good, because [argument b]
 - Bad, because [argument c]
-- … <!-- numbers of pros and cons can vary -->
+- … <!-- number of pros and cons can vary -->
 
 ### [option 2]
 
@@ -54,21 +54,21 @@ Define what's out of the scope of this ADR.
 - Good, because [argument a]
 - Good, because [argument b]
 - Bad, because [argument c]
-- … <!-- numbers of pros and cons can vary -->
+- … <!-- number of pros and cons can vary -->
 
 
 ## Solution or decision outcome
 
-Summarize the solution or decision outcome in one-two lines.
+Summarize the solution or decision outcome in one or two lines.
 
 ## Rationale & discussion
 
-Describe the solution or the decision outcome discussing how decision drivers have been applied and how it matches the declared goals. This section is expected to be concise though providing comprehensive description of the technical solution and covering all uncertainty or ambiguous points.
+Describe the solution or decision outcome. Explain how the decision drivers were applied and how the outcome matches the declared goals. Keep this section concise, but describe the technical solution in full and settle any point that is still ambiguous.
 
 ## Links <!-- optional -->
 
 - [Link type](link to adr) <!-- example: Refined by [xxx](yyyymmdd-xxx.md) -->
-- … <!-- numbers of links can vary -->
+- … <!-- number of links can vary -->
 
 ## More information
 

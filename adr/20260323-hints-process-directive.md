@@ -20,15 +20,15 @@ Many executors can be configured in various ways on a per-task basis. For exampl
 
 - Seqera Scheduler supports a variety of resource and scheduling settings, including spot/on-demand provisioning.
 
-These settings can be exposed by Nextflow as executor-specific config options, such as `google.batch.spot`, but config options are applied globally. In order to apply a setting to specific processes or tasks, it must be exposed as a process directive.
+These settings can be exposed by Nextflow as executor-specific config options, such as `google.batch.spot`, but config options are applied globally. To apply a setting to specific processes or tasks, it must be exposed as a process directive.
 
-Process directives in Nextflow aim to provide a common vocabulary for executing tasks in many different environments. Directives such as `cpus`, `memory`, and `time` have broadly the same meaning across most executors, making it easier for users to write portable pipelines.
+Process directives in Nextflow aim to provide a common vocabulary for executing tasks in many different environments. Directives such as `cpus`, `memory`, and `time` have broadly the same meaning across most executors, so users can write portable pipelines.
 
 At the same time, many executors have custom settings not shared by other executors, and it is not practical to create a new process directive for every new setting. There are over 40 [process directives](https://docs.seqera.io/nextflow/reference/process#directives) at the time of writing, and every new directive adds cognitive load when a user is trying to find the right directive for a given situation.
 
-There exist a few generic process directives already:
+A few generic process directives already exist:
 
-- The `clusterOptions` directive can be used to specify command-line arguments, primarily for HPC schedulers
+- The `clusterOptions` directive specifies command-line arguments, primarily for HPC schedulers
 - The `ext` directive supports arbitrary key-values, but is designed primarily to customize the task script (e.g. tool arguments), not executor behavior
 - The `resourceLabels` directive also supports arbitrary key-values, but is intended for tagging and tracking resources, not controlling them
 
@@ -42,11 +42,11 @@ A new directive is needed to support executor-specific settings at a per-task le
 
 - Provide a single extension point that executors can consume selectively
 
-- Allow settings to be specified as key-values, providing validation where possible
+- Allow settings to be specified as key-values, with validation where possible
 
 ## Non-goals
 
-- Replacing existing directives (`cpus`, `memory`, `accelerator`, `queue`) — those remain the right place for standard resources
+- Replacing existing directives (`cpus`, `memory`, `accelerator`, `queue`), which remain the right place for standard resources
 
 ## Decision
 
@@ -83,7 +83,7 @@ process {
 }
 ```
 
-Keys are strings. Values may be any raw data type: strings, numbers, booleans, lists, or maps. Executors are responsible for defining which hints they recognize and what value type each hint expects.
+Keys are strings. Values may be any raw data type: strings, numbers, booleans, lists, or maps. Each executor defines which hints it recognizes and what value type each hint expects.
 
 In the above example, the `consumableResources` hint is given as a map of resource name to quantity. The AWS Batch executor supplies it to each job request using `ConsumableResourceProperties`.
 
@@ -105,7 +105,7 @@ hints 'seqera/scheduling.provisioningModel': 'spot'
 hints 'k8s/nodeSelector': 'gpu=true'
 ```
 
-The executor prefix gives pipeline developers the ability to target specific executors and have assurance that it won't accidentally apply to other executors (e.g. if another executor adds support for the same hint in the future).
+The executor prefix lets pipeline developers target specific executors and be sure the hint won't accidentally apply to other executors (e.g. if another executor adds support for the same hint in the future).
 
 ### Validation
 
