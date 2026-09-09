@@ -471,7 +471,7 @@ class ModuleStorageTest extends Specification {
     /**
      * Helper method to create a test package file
      */
-    private void createTestPackage(Path packageFile) {
+    private void createTestPackage(Path packageFile, Map<String,String> extraFiles = [:]) {
         // Create a temporary directory with module content
         def tempModuleDir = Files.createTempDirectory('temp-module-')
 
@@ -504,6 +504,13 @@ class ModuleStorageTest extends Specification {
         // Create README
         tempModuleDir.resolve('README.md').text = '# FastQC Module'
 
+        // Create any extra files requested by the test
+        for( entry in extraFiles ) {
+            final file = tempModuleDir.resolve(entry.key)
+            Files.createDirectories(file.parent)
+            file.text = entry.value
+        }
+
         // Create tar.gz archive using Java libraries
         Files.newOutputStream(packageFile).withCloseable { fos ->
             new GZIPOutputStream(fos).withCloseable { gzos ->
@@ -532,6 +539,31 @@ class ModuleStorageTest extends Specification {
 
         // Cleanup temp directory
         tempModuleDir.deleteDir()
+    }
+
+    def 'should not install nf-tests or vendored deps from the bundle'() {
+        given:
+        def storage = new ModuleStorage(tempDir)
+        def reference = new ModuleReference('nf-core', 'fastqc')
+        def packageFile = Files.createTempFile('module-', '.tgz')
+        createTestPackage(packageFile, [
+            'tests/main.nf.test': 'nextflow_process { }',
+            'tests/main.nf.test.snap': '{}',
+            'modules/nf-core/other/main.nf': 'process OTHER { }',
+            'resources/usr/bin/helper.py': 'print("keep me")',
+        ])
+
+        when:
+        def installed = storage.installModule(reference, '1.0.0', packageFile, 'http://registry.com')
+
+        then:
+        Files.exists(installed.mainFile)
+        Files.exists(installed.directory.resolve('resources/usr/bin/helper.py'))
+        !Files.exists(installed.directory.resolve('tests'))
+        !Files.exists(installed.directory.resolve('modules'))
+
+        cleanup:
+        packageFile?.delete()
     }
 
     def 'should exclude the nested vendored modules directory from the publish bundle'() {

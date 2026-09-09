@@ -207,6 +207,22 @@ A dependency cycle is an error. Cycles are detected by module name, regardless o
 
 A diamond -- the same module reached through two sibling branches -- is not a cycle and is allowed. Each branch vendors its own copy.
 
+#### Impact on project size
+
+To mitigate the impact of duplication on project size, module tests are not installed from the registry bundle. Tests are validated before a module is published, so they don't need to be stored in the pipeline.
+
+The following table shows the impact of nested vendoring on nf-core/rnaseq 3.26.0, which contains 97 nf-core components:
+
+| Layout | Size | Files |
+| --- | --- | --- |
+| Baseline (flat `modules/` + `subworkflows/`) | 2.87 MB | 566 |
+| Nested vendoring (with tests) | 3.77 MB | 830 |
+| Nested vendoring (without tests) | 0.89 MB | 419 |
+
+Nested vendoring installs 144 copies of the 97 components. Only 43 modules are installed at the top level. The most duplicated modules are: `samtools/index` (7 times), `bam_stats_samtools` (6 times), and `samtools/{flagstat,idxstats,stats}` (6 times).
+
+Tests account for 78% of baseline disk size (2.23 of 2.87 MB), dominated by nf-test snapshots. Duplicating them would cost an extra 0.90 MB, whereas excluding them saves 2.88 MB across the vendored tree. Therefore, not installing tests more than pays for the duplication.
+
 ### Module integrity and distribution
 
 The published module bundle excludes the nested `modules/` directory. Dependencies are re-resolved from the registry at install time. As a consequence, a module's integrity checksum, which includes vendored dependencies, is computed after the module and its dependencies are installed.
