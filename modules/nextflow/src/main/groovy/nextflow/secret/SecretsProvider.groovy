@@ -37,6 +37,13 @@ interface SecretsProvider extends ExtensionPoint, Closeable {
     /**
      * Retrieve a {@code Secret} by the name from the secret provider
      *
+     * A secret that does not exist is not an error condition. Implementations must either
+     * return {@code null} or throw a {@link MissingSecretException}, so that expressions
+     * such as {@code secrets.FOO ?: 'default'} can be used to make a secret optional.
+     *
+     * Any other exception is taken to mean the lookup itself failed, e.g. missing
+     * permissions or connectivity issues, and is propagated to the caller.
+     *
      * @param name The secret name
      * @return The {@code Secret} instance with the given name or {@code null} otherwise
      */

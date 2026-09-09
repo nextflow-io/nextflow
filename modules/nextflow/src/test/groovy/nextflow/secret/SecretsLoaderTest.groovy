@@ -91,6 +91,33 @@ class SecretsLoaderTest extends Specification {
         SysEnv.pop()
     }
 
+    def 'should resolve a missing secret to null' () {
+        given:
+        def provider = Mock(SecretsProvider)
+
+        when:
+        def result = SecretsLoader.secretContext(provider).FOO
+        then:
+        1 * provider.getSecret('FOO') >> { throw new MissingSecretException("Unknown secret 'FOO'") }
+        and:
+        result == null
+    }
+
+    def 'should propagate provider errors other than a missing secret' () {
+        given:
+        def provider = Mock(SecretsProvider)
+
+        when:
+        SecretsLoader.secretContext(provider).FOO
+        then:
+        1 * provider.getSecret('FOO') >> { throw new AbortOperationException('Permission denied') }
+        and:
+        def e = thrown(AbortOperationException)
+        e.message == 'Permission denied'
+        and:
+        !(e instanceof MissingSecretException)
+    }
+
     def 'should note create secret context' () {
         given:
         SysEnv.push(NXF_ENABLE_SECRETS: "false")

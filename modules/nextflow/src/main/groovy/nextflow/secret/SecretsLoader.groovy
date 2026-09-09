@@ -68,7 +68,17 @@ class SecretsLoader {
             def getProperty(String name) {
                 if( !provider )
                     throw new AbortOperationException("Unable to resolve secrets.$name - no secret provider is available")
-                provider.getSecret(name)?.value
+                try {
+                    return provider.getSecret(name)?.value
+                }
+                catch( MissingSecretException e ) {
+                    // the provider explicitly reported the secret does not exist. resolve it
+                    // to `null` so that expressions such as `secrets.FOO ?: 'default'` can be
+                    // used to make a secret optional. any other error (missing permissions,
+                    // connectivity, etc) is a genuine failure and must not be swallowed here
+                    log.debug "Secret '$name' is not available - cause: ${e.message}"
+                    return null
+                }
             }
         }
     }
