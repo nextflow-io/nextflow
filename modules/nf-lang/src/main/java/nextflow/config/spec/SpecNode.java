@@ -106,11 +106,16 @@ public sealed interface SpecNode {
             var name = method.getName();
             var desc = annotatedDescription(method, "");
             var option = (Option) children.get(name);
-            if( option == null )
-                children.put(name, option = new Option(desc, new ArrayList<>()));
-            else if( option.description().isEmpty() && !desc.isEmpty() )
-                children.put(name, option = new Option(desc, option.types()));
-            option.types.add(method.getParameterTypes()[0]);
+            if( option == null ) {
+                option = new Option(desc, new ArrayList<>());
+                children.put(name, option);
+            }
+            else if( option.description().isEmpty() && !desc.isEmpty() ) {
+                option = new Option(desc, option.types());
+                children.put(name, option);
+            }
+            var paramType = method.getParameterTypes()[0];
+            option.types.add(paramType);
         }
         return new Scope(description, children);
     }
