@@ -165,12 +165,13 @@ jobs:
         run: nstat -az | sort > "$RUNNER_TEMP/nstat.before"
 
       # Diagnostic only: capture packet headers to/from the Seqera endpoints that
-      # have shown transient drops (so the pcap can be correlated to the failing
-      # request timestamp — something the host-wide nstat counters cannot do) and,
-      # alongside it, a background mtr path-trace over tcp/443 to locate on which
-      # hop the loss occurs. Filtered to the resolved endpoint IPs on :443 and
-      # truncated to headers, so the capture stays small on legs that never touch
-      # these hosts. Safe to remove once the transient failures are understood.
+      # have shown transient drops, so the pcap can be correlated to the failing
+      # request timestamp — something the host-wide nstat counters cannot do.
+      # Filtered to the resolved endpoint IPs on :443 and truncated to headers, so
+      # the capture stays small on legs that never touch these hosts. Safe to
+      # remove once the transient connectivity failures are understood.
+      # (An mtr path-trace was tried here but removed: GitHub's Azure runners
+      # return no ICMP Time-Exceeded, so every report came back empty.)
       - name: Packet capture (start)
         continue-on-error: true
         run: |
@@ -192,28 +193,6 @@ jobs:
             echo "tcpdump started (pid $(cat "$RUNNER_TEMP/tcpdump.pid"))"
           else
             echo "tcpdump failed to start:"; cat "$RUNNER_TEMP/tcpdump.err" 2>/dev/null || true
-          fi
-          # Path trace: a background loop that mtr's each endpoint IP over tcp/443
-          # (the real HTTPS path, not ICMP) every ~20s with UTC-stamped rounds, so
-          # per-hop loss around the failure timestamp shows *where* the drop is.
-          if ! command -v mtr >/dev/null 2>&1; then
-            sudo apt-get update -qq >/dev/null 2>&1 && sudo apt-get install -y -qq mtr-tiny >/dev/null 2>&1
-          fi
-          if command -v mtr >/dev/null 2>&1; then
-            ( while true; do
-                ts=$(date -u +%FT%TZ)
-                for ip in $ips; do
-                  ( echo "### $ts tcp/443 -> $ip"; \
-                    sudo mtr --report --report-cycles 10 --tcp --port 443 --no-dns -n "$ip"; echo; ) \
-                    >> "$RUNNER_TEMP/mtr.$ip.log" 2>&1 &
-                done
-                wait
-                sleep 10
-              done ) &
-            echo $! > "$RUNNER_TEMP/mtr.pid"
-            echo "mtr path-trace loop started (pid $(cat "$RUNNER_TEMP/mtr.pid"))"
-          else
-            echo "mtr unavailable; skipping path trace"
           fi
 
       - name: Run tests
@@ -277,22 +256,6 @@ jobs:
           echo "===== RST packets to/from Seqera endpoints (with timestamps) ====="
           sudo tcpdump -tttt -n -r "$RUNNER_TEMP/seqera.pcap" 'tcp[tcpflags] & tcp-rst != 0' 2>/dev/null | head -200 \
             || echo "(none captured / unreadable)"
-          # stop the path-trace loop and assemble its log
-          if [ -f "$RUNNER_TEMP/mtr.pid" ]; then
-            sudo kill "$(cat "$RUNNER_TEMP/mtr.pid")" 2>/dev/null || true
-            sudo pkill -f 'mtr --report' 2>/dev/null || true
-            sleep 1
-          fi
-          if ls "$RUNNER_TEMP"/mtr.*.log >/dev/null 2>&1; then
-            cat "$RUNNER_TEMP"/mtr.*.log > mtr.log 2>/dev/null || true
-            echo "===== path-trace rounds captured: $(grep -c '^### ' mtr.log 2>/dev/null || echo 0) ====="
-            echo "===== hops with packet loss (round header | hop row) ====="
-            awk '/^### /{hdr=$0; next}
-                 /\|--/{ for(i=1;i<=NF;i++) if($i ~ /%$/){ if($i+0 > 0) print hdr" | "$0; break } }' \
-              mtr.log | head -80 || echo "(no loss rows / mtr absent)"
-          else
-            echo "(no mtr log)"
-          fi
 
       - name: Tar integration tests
         if: always()
@@ -312,7 +275,6 @@ jobs:
             nstat.after
             seqera.pcap
             pcap.hosts
-            mtr.log
 
   test-e2e:
       if: ${{ contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]') }}
