@@ -114,6 +114,7 @@ scriptDeclaration
     |   paramDeclarationV1          #paramDeclV1Alt
     |   recordDef                   #recordDefAlt
     |   enumDef                     #enumDefAlt
+    |   agentDef                    #agentDefAlt
     |   processDef                  #processDefAlt
     |   workflowDef                 #workflowDefAlt
     |   outputDef                   #outputDefAlt
@@ -280,6 +281,36 @@ processExec
 
 processStub
     :   STUB COLON nls blockStatements
+    ;
+
+// -- agent definition
+agentDef
+    :   AGENT name=identifier nls LBRACE
+        body=agentBody?
+        sep? RBRACE
+    ;
+
+agentBody
+    :   (sep agentDirectives)?
+        (sep agentInputs)?
+        (sep agentOutputs)?
+        sep agentPrompt
+    ;
+
+agentDirectives
+    :   statement (sep statement)*
+    ;
+
+agentInputs
+    :   INPUT COLON nls processInput (sep processInput)*
+    ;
+
+agentOutputs
+    :   OUTPUT COLON nls processOutput (sep processOutput)*
+    ;
+
+agentPrompt
+    :   PROMPT COLON nls blockStatements
     ;
 
 // -- workflow definition
@@ -598,6 +629,8 @@ identifier
     |   PARAMS
     |   FROM
     |   RECORD
+    |   AGENT
+    |   PROMPT
     |   PROCESS
     |   EXEC
     |   INPUT
@@ -802,6 +835,8 @@ keywords
     |   INCLUDE
     |   FROM
     |   RECORD
+    |   AGENT
+    |   PROMPT
     |   PROCESS
     |   EXEC
     |   INPUT

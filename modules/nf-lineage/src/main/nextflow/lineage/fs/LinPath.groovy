@@ -37,6 +37,7 @@ import nextflow.file.FileHelper
 import nextflow.file.LogicalDataPath
 import nextflow.lineage.LinPropertyValidator
 import nextflow.lineage.LinStore
+import nextflow.lineage.model.v1beta1.AgentRun
 import nextflow.lineage.model.v1beta1.Checksum
 import nextflow.lineage.model.v1beta1.FileOutput
 import nextflow.lineage.model.v1beta1.TaskRun
@@ -239,7 +240,7 @@ class LinPath implements Path, LogicalDataPath {
             return getTargetPathFromOutput(object, subpath)
         }
         // Intermediate run case
-        if( asIntermediatePath && (object instanceof WorkflowRun || object instanceof TaskRun) ) {
+        if( asIntermediatePath && (object instanceof WorkflowRun || object instanceof TaskRun || object instanceof AgentRun) ) {
             return new LinIntermediatePath(fs, "$filePath/${subpath.join('/')}")
         }
 
@@ -577,7 +578,7 @@ class LinPath implements Path, LogicalDataPath {
         if( !path )
             throw new IllegalArgumentException("Missing 'path' argument")
         if( !path.startsWith(LID_PROT) )
-            throw new IllegalArgumentException("Invalid LID file system path URI - it must start with '${LID_PROT}' prefix - offendinf value: $path")
+            throw new IllegalArgumentException("Invalid LID file system path URI - it must start with '${LID_PROT}' prefix - offending value: $path")
         if( path.startsWith(LID_PROT + SEPARATOR) && path.length() > 7 )
             throw new IllegalArgumentException("Invalid LID file system path URI - make sure the schema prefix does not container more than two slash characters or a query in the root '/' - offending value: $path")
         if( path == LID_PROT ) //Empty path case

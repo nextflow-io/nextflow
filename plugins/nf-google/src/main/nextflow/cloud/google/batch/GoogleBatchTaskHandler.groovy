@@ -807,7 +807,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( isActive() ) {
             log.trace "[GOOGLE BATCH] Process `${task.lazyName()}` - deleting job name=$jobId"
             if( executor.shouldDeleteJob(jobId) )
-                client.deleteJob(jobId)
+                executor.reaper.submit({ client.deleteJob(jobId) })
         }
         else {
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - invalid delete action"

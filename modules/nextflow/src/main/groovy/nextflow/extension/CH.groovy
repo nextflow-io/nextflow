@@ -122,7 +122,7 @@ class CH {
         }
     }
 
-    static void init() { bridges.clear() }
+    static void init() { bridges.clear(); allTopics.clear() }
 
     @PackageScope
     static DataflowWriteChannel close0(DataflowWriteChannel source) {

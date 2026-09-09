@@ -124,7 +124,7 @@ class RetryConfig implements Retryable.Config {
         // try to get the value from the config map
         final cfg = config?.get(name)
         if( cfg != null ) {
-            return toType(cfg, type)
+            return toType0(cfg, type, "config option '$name'")
         }
         // try to fallback to the sys environment
         if( !prefix.endsWith('_') )
@@ -132,10 +132,28 @@ class RetryConfig implements Retryable.Config {
         final key = prefix.toUpperCase() + CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, name)
         final env = SysEnv.get(key)
         if( env != null ) {
-            return toType(env, type)
+            return toType0(env, type, "variable $key")
         }
         // return the default value
         return defValue
+    }
+
+    /**
+     * Convert the value, naming the source that carried it when it does not parse. The
+     * underlying error reports the offending value alone e.g. "Not a valid duration value:
+     * foo", which leaves the user hunting for which setting it came from.
+     *
+     * @param value  The raw value to convert
+     * @param type   The target type
+     * @param source A description of where the value came from, used in the error message
+     */
+    static private <T> T toType0(Object value, Class<T> type, String source) {
+        try {
+            return toType(value, type)
+        }
+        catch( IllegalArgumentException e ) {
+            throw new IllegalArgumentException("Invalid value for $source - ${e.message}", e)
+        }
     }
 
     @CompileDynamic

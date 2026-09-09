@@ -91,6 +91,40 @@ class ExecutorFactoryTest extends Specification {
     }
 
 
+    def 'should resolve an executor instance by name with no task body' () {
+        given:
+        def session = Mock(Session)
+        def factory = Spy(ExecutorFactory)
+        def executor = Mock(SgeExecutor)
+
+        when: 'a name is resolved through the REAL name -> class map'
+        def result = factory.getExecutorByName('sge', session)
+        then: 'the named executor is instantiated, with no script-type check to downgrade it'
+        1 * factory.createExecutor(SgeExecutor, 'sge', session) >> executor
+        0 * factory.isTypeSupported(_, _)
+        result.is(executor)
+
+        when: 'the same executor is asked for again'
+        result = factory.getExecutorByName('sge', session)
+        then: 'the cached instance is returned - an executor is created at most once per run'
+        0 * factory.createExecutor(_, _, _)
+        result.is(executor)
+
+        and: 'cached under the same key getExecutor reads, so the task runs on this very instance'
+        factory.executors.get(SgeExecutor).is(executor)
+    }
+
+    def 'should reject an unknown executor name instead of falling back to local' () {
+        given:
+        def factory = Spy(ExecutorFactory)
+
+        when:
+        factory.getExecutorByName('xyz', Mock(Session))
+        then: 'the name error surfaces - it is never silently answered with the local executor'
+        thrown(IllegalArgumentException)
+        0 * factory.createExecutor(_, _, _)
+    }
+
     def 'should check type supported'() {
 
         setup:

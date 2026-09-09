@@ -127,7 +127,7 @@ class AzFileSystem extends FileSystem {
         final containers = new ArrayList()
         storageClient
                 .listBlobContainers()
-                .forEach { BlobContainerItem it -> provider.getPath(it.getName()) }
+                .forEach { BlobContainerItem it -> containers.add(provider.getPath(it.getName())) }
         return containers
     }
 

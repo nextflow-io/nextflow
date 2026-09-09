@@ -1,5 +1,11 @@
 nf-wave changelog
 ==================
+1.22.0 - 20 Aug 2026
+- Add smolvm container engine support (#7386) [5b23a4e97]
+- Fix spurious 'Unrecognized config option' warning for wave.build.compression and wave.build.conda (#7355) [37da32c7f]
+- Support authenticated forward HTTP/HTTPS proxies across the client stack (#7331) [064a03873]
+- Bump Groovy 4.0.33 (#7429) [c8800d84a]
+
 1.21.1 - 15 Jul 2026
 - Recognize parameterized Map config options and wave.build.compression sub-keys in config validation (#7335) [5b8ce02da]
 

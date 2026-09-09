@@ -59,6 +59,7 @@ module.exports = {
                 "working-with-files",
                 "process",
                 "workflow",
+                "agent",
                 {
                     type: "category",
                     label: "Static typing",

@@ -113,8 +113,9 @@ class SimpleHttpClientTest extends Specification{
         def PAYLOAD = '{"hello":"world!"}'
         def RESULT = '{"status":"OK"}'
         def TOKEN = 'my:secret'
-        def PORT = 9900
-        def ENDPOINT = "http://localhost:$PORT/foo"
+        // ephemeral port - see the note in ConfigParserV1Test: a fixed port races the other
+        // HTTP-serving tests, including ones in modules whose test tasks run concurrently
+        def PORT = 0
         def AGENT = 'NEXTFLOW/1.0'
 
         def expectedPayload
@@ -138,6 +139,8 @@ class SimpleHttpClientTest extends Specification{
             }
         });
         server.start()
+        // resolved AFTER start: with PORT=0 the real port is only known once bound
+        def ENDPOINT = "http://localhost:${server.address.port}/foo".toString()
 
         when:
         def client = new SimpleHttpClient()

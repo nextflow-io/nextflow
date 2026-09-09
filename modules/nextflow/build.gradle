@@ -74,3 +74,11 @@ dependencies {
     testFixturesApi 'com.google.jimfs:jimfs:1.2'
 }
 
+// The agent AST and its generated classes make this the heaviest Groovy compilation in the
+// build, and the compiler daemon's 384m default is not enough for it. Kept per-module rather
+// than raised globally: no other subproject needs it. The matching TEST heap bump this branch
+// used to declare here is gone -- `Separate CLI from runtime` (#5971) sets minHeapSize and
+// maxHeapSize for every subproject in the root build.gradle, at the same values.
+tasks.withType(GroovyCompile).configureEach {
+    groovyOptions.forkOptions.memoryMaximumSize = '2048m'
+}

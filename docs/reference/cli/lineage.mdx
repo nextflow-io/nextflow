@@ -53,7 +53,7 @@ List the Nextflow runs with lineage enabled and print the lineage ID (LID) of ea
 
 Render the lineage graph for a lineage record as an HTML file (default output path: `./lineage.html`).
 
-The lineage record should be of type `FileOutput`, `TaskRun`, or `WorkflowRun`.
+The lineage record should be of type `FileOutput`, `TaskRun`, `AgentRun`, or `WorkflowRun`.
 
 ##### `view <lid>`
 
@@ -77,6 +77,12 @@ View the lineage record of a published file:
 
 ```console
 $ nextflow lineage view lid://16b31030474f2e96c55f4940bca3ab64/multiqc_report.html
+```
+
+View the outputs of a task run:
+
+```console
+$ nextflow lineage view lid://862df53160e07cd823c0c3960545e747#output
 ```
 
 Find all tasks belonging to a given run:

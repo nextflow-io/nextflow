@@ -125,10 +125,16 @@ on_exit() {
     local exit_status=${nxf_main_ret:=0}
     [[ ${exit_status} -eq 0 && ${nxf_unstage_ret:=0} -ne 0 ]] && exit_status=${nxf_unstage_ret:=0}
     [[ ${exit_status} -eq 0 && ${last_err} -ne 0 ]] && exit_status=${last_err}
-    printf -- $exit_status {{exit_file}}
     set +u
-    {{cleanup_cmd}}
+    ## Flush the pending writes *before* publishing the exit status: the `.exitcode`
+    ## file is the completion marker polled by the executors, therefore it must not
+    ## become visible to the driver before everything else the task has written into
+    ## the work directory. On a shared file system with delayed write-back the driver
+    ## may otherwise observe a task as completed while its outputs are still missing
+    ## or truncated.
     {{sync_cmd}}
+    printf -- $exit_status {{exit_file}}
+    {{cleanup_cmd}}
     exit $exit_status
 }
 

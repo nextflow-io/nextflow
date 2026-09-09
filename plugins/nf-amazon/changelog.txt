@@ -1,5 +1,10 @@
 nf-amazon changelog
 ===================
+3.10.2 - 20 Aug 2026
+- Bump netty and Apache HttpComponents to patched releases (#7484) [3aef1da9a]
+- Bump Groovy 4.0.33 (#7429) [c8800d84a]
+- Drop transient object tags when publishing files to S3 (#7344) [f1f1e6012]
+
 3.10.1 - 15 Jul 2026
 - Round up CPUs to nearest valid value for AWS Batch Fargate (#7295) [fd6012b52]
 - Fix containerOptions --opt=value parsing for AWS Batch (#5190) (#7288) [b1f31a368]

@@ -265,6 +265,36 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    // -- an `agent` declaration must survive `nextflow lint -format`. Before the AgentNode
+    //    branch was added to the declaration dispatch, the node was walked and emitted NOTHING,
+    //    so formatting an agent module's `main.nf` deleted its entire content.
+    def 'should format an agent definition' () {
+        expect:
+        checkFormat(
+            '''\
+            nextflow.enable.types = true
+
+            agent reporter {
+                model 'openai/gpt-4o'
+                instruction 'You write QA reports.'
+                skills 'qa-report', 'style'
+
+                input:
+                sample: String
+                depth: Integer
+
+                output:
+                report: String
+
+                prompt:
+                """
+                Write a report for ${sample} at depth ${depth}.
+                """
+            }
+            '''
+        )
+    }
+
     def 'should format a function definition' () {
         expect:
         checkFormat(
@@ -302,6 +332,19 @@ class ScriptFormatterTest extends Specification {
             '''\
             def hello(x: Integer, y: Integer) -> Integer {
                 def xy = x * y
+                return xy
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            Object hello(Object x,String[] y){
+            Object xy=x ; return xy
+            }
+            ''',
+            '''\
+            def hello(x, y) {
+                def xy = x
                 return xy
             }
             '''
@@ -537,6 +580,19 @@ class ScriptFormatterTest extends Specification {
                 println(file('foo.txt').text)
             }
             catch (e: IOException) {
+                log.warn("Could not load foo.txt")
+            }
+            '''
+        )
+        checkFormat(
+            '''\
+            try{println(file('foo.txt').text)}catch(e){log.warn("Could not load foo.txt")}
+            ''',
+            '''\
+            try {
+                println(file('foo.txt').text)
+            }
+            catch (e) {
                 log.warn("Could not load foo.txt")
             }
             '''
@@ -909,6 +965,32 @@ class ScriptFormatterTest extends Specification {
                 script:
                 """
                 echo hi
+                """
+            }
+            '''
+        )
+    }
+
+    def 'should preserve comments in an agent' () {
+        expect:
+        checkFormat(
+            '''\
+            nextflow.enable.types = true
+
+            agent reporter {
+                // a directive
+                model 'openai/gpt-4o'
+
+                input:
+                // about sample
+                sample: String
+
+                output:
+                report: String // the report
+
+                prompt:
+                """
+                Write a report for ${sample}.
                 """
             }
             '''

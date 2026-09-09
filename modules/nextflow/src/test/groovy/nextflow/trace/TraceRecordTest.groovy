@@ -290,6 +290,23 @@ class TraceRecordTest extends Specification {
 
     }
 
+    def 'should remove an LLM provider api key from the recorded env' () {
+        given: 'the twin of SecretHelper.SECRET_REGEX. A trace record is persisted in the resume'
+        // cache and POSTed to Seqera Platform by nf-tower, and the out-of-band credential channel
+        // the agent docs recommend for a containerized runner puts the key in exactly this field
+        def rec = new TraceRecord()
+
+        expect:
+        rec.secureEnvString('OPENAI_API_KEY=sk-1234') == 'OPENAI_API_KEY=[secure]'
+        rec.secureEnvString('ANTHROPIC_API_KEY=sk-ant') == 'ANTHROPIC_API_KEY=[secure]'
+        rec.secureEnvString('NXF_AGENT_API_KEY=sk-nxf') == 'NXF_AGENT_API_KEY=[secure]'
+        rec.secureEnvString('api_key=snake') == 'api_key=[secure]'
+
+        and: 'through the field accessors, which is how a task environment actually gets there'
+        new TraceRecord().tap { it.env = 'FOO=bar\nOPENAI_API_KEY=sk-5678\n' }.store.env ==
+            'FOO=bar\nOPENAI_API_KEY=[secure]\n'
+    }
+
     def 'should store safe env' () {
         given:
         def rec = new TraceRecord()

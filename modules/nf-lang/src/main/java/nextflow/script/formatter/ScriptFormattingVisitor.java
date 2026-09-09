@@ -20,6 +20,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import nextflow.script.ast.AgentNode;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
@@ -129,7 +130,9 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         }
 
         for( var decl : declarations ) {
-            if( decl instanceof ClassNode cn && cn.isEnum() )
+            if( decl instanceof AgentNode an )
+                visitAgent(an);
+            else if( decl instanceof ClassNode cn && cn.isEnum() )
                 visitEnum(cn);
             else if( decl instanceof FeatureFlagNode ffn )
                 visitFeatureFlag(ffn);
@@ -457,6 +460,38 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             fmt.append(" = ");
             fmt.visit(source);
         }
+    }
+
+    @Override
+    public void visitAgent(AgentNode node) {
+        fmt.appendLeadingComments(node);
+        fmt.append("agent ");
+        fmt.append(node.getName());
+        fmt.append(" {\n");
+        fmt.incIndent();
+        if( !node.directives.isEmpty() ) {
+            visitDirectives(node.directives);
+            fmt.appendNewLine();
+        }
+        var inputs = node.inputs;
+        if( inputs.length > 0 ) {
+            fmt.appendIndent();
+            fmt.append("input:\n");
+            visitTypedInputs(inputs);
+            fmt.appendNewLine();
+        }
+        if( !node.outputs.isEmpty() ) {
+            visitProcessOutputs(node.outputs);
+            fmt.appendNewLine();
+        }
+        fmt.appendIndent();
+        fmt.append("prompt:\n");
+        fmt.visit(node.prompt);
+        fmt.appendDanglingComments(node);
+        fmt.decIndent();
+        fmt.append("}");
+        fmt.appendTrailingComment(node);
+        fmt.appendNewLine();
     }
 
     @Override

@@ -5,7 +5,7 @@ description: Reference for the k8s executor, which submits tasks to a Kubernetes
 
 # Kubernetes
 
-The `k8s` executor runs pipeline tasks on a [Kubernetes](http://kubernetes.io/) cluster. It submits each task as a Kubernetes pod, or as a Kubernetes job when [`k8s.computeResourceType`][config-k8s] is set to `Job`.
+The `k8s` executor runs pipeline tasks on a [Kubernetes](http://kubernetes.io/) cluster. It submits each task as a Kubernetes job, or as a Kubernetes pod when [`k8s.computeResourceType`][config-k8s] is set to `Pod`.
 
 Use the following process directives to control resource requests and other job characteristics:
 

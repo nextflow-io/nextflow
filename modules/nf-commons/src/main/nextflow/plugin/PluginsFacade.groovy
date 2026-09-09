@@ -478,8 +478,23 @@ class PluginsFacade implements PluginStateListener {
         if( (Bolts.navigate(config,'wave.enabled') || Bolts.navigate(config,'fusion.enabled')) && !specs.find {it.id == 'nf-wave' } ) {
             specs << defaultPlugins.getPlugin('nf-wave')
         }
-        if( Bolts.navigate(config,'process.executor')=='seqera') {
+        if( 'seqera' in configuredExecutors(config) ) {
             specs << defaultPlugins.getPlugin('nf-seqera')
+        }
+
+        // the `agent` scope names the RUNNER; the plugin providing it is loaded automatically, as an
+        // executor or a work-dir scheme is above. Skipped when the user declared an agent plugin
+        // themselves: adding a second one would make the runner ambiguous
+        // (see nextflow.agent.AgentRunnerProvider#get) instead of resolving it.
+        // Keyed on the scope being present, not merely on the runner name: `agentRunnerPlugin(null)`
+        // answers "the default runner", which must not pull nf-agent into every pipeline that
+        // never mentions an agent.
+        final agentScope = Bolts.navigate(config,'agent')
+        final agentPlugin = agentScope
+                ? agentRunnerPlugin(Bolts.navigate(config,'agent.runner') as String)
+                : null
+        if( agentPlugin && !specs.find { it.id in AGENT_RUNNER_PLUGINS.values() } ) {
+            specs << defaultPlugins.getPlugin(agentPlugin)
         }
 
         // add cloudcache plugin when cloudcache is enabled in the config
@@ -489,6 +504,40 @@ class PluginsFacade implements PluginStateListener {
 
         log.debug "Plugins resolved requirement=$specs"
         return specs
+    }
+
+    /**
+     * Maps an {@code agent.runner} name to the plugin that contributes it. The runner name is the
+     * user-facing selector, so the plugin id is an implementation detail they should not have to
+     * repeat in the {@code plugins} scope -- exactly as {@code process.executor = 'k8s'} does not
+     * require declaring {@code nf-k8s}.
+     */
+    private static final Map<String,String> AGENT_RUNNER_PLUGINS = Collections.unmodifiableMap(
+            [ 'pi': 'nf-agent-pi', 'langchain4j': 'nf-agent' ] as Map<String,String> )
+
+    /**
+     * The plugin to load for the configured agent runner: the mapped one when the name is known,
+     * and the in-JVM {@code langchain4j} runner when {@code agent.runner} is unset -- it needs
+     * neither a container nor a reachable broker address, so it is the safe default for a bare
+     * {@code agent} scope.
+     *
+     * <p>{@code null} for an unrecognised name: it may come from a third-party plugin the user
+     * declared themselves, and guessing a plugin id from it would replace a clear
+     * "Unknown agent runner" error with a confusing download failure.
+     */
+    protected static String agentRunnerPlugin(String runner) {
+        return runner ? AGENT_RUNNER_PLUGINS.get(runner) : 'nf-agent'
+    }
+
+    /**
+     * Every executor name a run may need a plugin for. An AGENT resolves its executor from the
+     * {@code agent} scope independently of {@code process} -- it defaults to `local` and never
+     * inherits the global executor -- so an agent offloaded to Kubernetes pulls nf-k8s even when
+     * every process stays local, and the two placements may need different plugins.
+     */
+    private static List<String> configuredExecutors(Map config) {
+        return [ Bolts.navigate(config, 'process.executor')?.toString(),
+                 Bolts.navigate(config, 'agent.executor')?.toString() ]
     }
 
     protected List<PluginRef> defaultPluginsConf(Map config) {
@@ -506,18 +555,18 @@ class PluginsFacade implements PluginStateListener {
         final plugins = new ArrayList<PluginRef>()
         final workDir = config.workDir as String
         final bucketDir = config.bucketDir as String
-        final executor = Bolts.navigate(config, 'process.executor')
+        final executors = configuredExecutors(config)
 
-        if( executor == 'awsbatch' || workDir?.startsWith('s3://') || bucketDir?.startsWith('s3://') || env.containsKey('NXF_ENABLE_AWS_SES') )
+        if( 'awsbatch' in executors || workDir?.startsWith('s3://') || bucketDir?.startsWith('s3://') || env.containsKey('NXF_ENABLE_AWS_SES') )
             plugins << defaultPlugins.getPlugin('nf-amazon')
 
-        if( executor == 'google-lifesciences' || executor == 'google-batch' || workDir?.startsWith('gs://') || bucketDir?.startsWith('gs://')  )
+        if( 'google-lifesciences' in executors || 'google-batch' in executors || workDir?.startsWith('gs://') || bucketDir?.startsWith('gs://')  )
             plugins << defaultPlugins.getPlugin('nf-google')
 
-        if( executor == 'azurebatch' || workDir?.startsWith('az://') || bucketDir?.startsWith('az://') )
+        if( 'azurebatch' in executors || workDir?.startsWith('az://') || bucketDir?.startsWith('az://') )
             plugins << defaultPlugins.getPlugin('nf-azure')
 
-        if( executor == 'k8s' )
+        if( 'k8s' in executors )
             plugins << defaultPlugins.getPlugin('nf-k8s')
 
         if( Bolts.navigate(config, 'weblog.enabled'))

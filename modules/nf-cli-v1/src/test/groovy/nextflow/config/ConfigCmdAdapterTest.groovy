@@ -691,6 +691,14 @@ class ConfigCmdAdapterTest extends Specification {
         config.trace.enabled
     }
 
+    def 'run with agent trace flag sets agent.trace'() {
+        when:
+        def config = new ConfigObject()
+        new ConfigCmdAdapter().configRunOptions(config, [:], new CmdRun(withAgentTrace: true))
+        then:
+        config.agent.trace == true
+    }
+
     def 'should set session report options' () {
 
         given:
