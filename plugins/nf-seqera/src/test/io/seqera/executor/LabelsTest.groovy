@@ -25,37 +25,19 @@ import spock.lang.Specification
  */
 class LabelsTest extends Specification {
 
-    def 'should add process resource labels coercing values to string'() {
-        when:
-        def labels = new Labels()
-                .withProcessResourceLabels([team: 'genomics', priority: 7, retain: true])
-
-        then:
-        labels.entries['team'] == 'genomics'
-        labels.entries['priority'] == '7'
-        labels.entries['retain'] == 'true'
+    def 'should merge label maps coercing values with the overlay winning on collision'() {
+        expect:
+        Labels.merge(
+                ['nextflow.io/runName': 'happy_turing', 'nextflow.io/projectName': 'hello'],
+                ['nextflow.io/runName': 'custom', team: 7]
+        ) == ['nextflow.io/runName': 'custom', 'nextflow.io/projectName': 'hello', team: '7']
     }
 
-    def 'should ignore null or empty process resource labels'() {
-        when:
-        def a = new Labels().withProcessResourceLabels(null)
-        def b = new Labels().withProcessResourceLabels([:])
-
-        then:
-        a.entries.isEmpty()
-        b.entries.isEmpty()
-    }
-
-    def 'should let the resource labels added last win on key collision'() {
-        when:
-        def labels = new Labels()
-                .withProcessResourceLabels(['nextflow.io/runName': 'happy_turing', 'nextflow.io/projectName': 'hello'])
-                .withProcessResourceLabels(['nextflow.io/runName': 'custom', team: 'a'])
-
-        then:
-        labels.entries['nextflow.io/runName'] == 'custom'
-        labels.entries['team'] == 'a'
-        labels.entries['nextflow.io/projectName'] == 'hello'
+    def 'should treat a null or empty map as no labels when merging'() {
+        expect:
+        Labels.merge(null, null) == [:]
+        Labels.merge(['team': 'a'], null) == ['team': 'a']
+        Labels.merge(null, ['team': 'a']) == ['team': 'a']
     }
 
     def 'should coerce map values to strings'() {

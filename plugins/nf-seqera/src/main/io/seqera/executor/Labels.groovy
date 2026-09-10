@@ -30,26 +30,15 @@ import groovy.transform.CompileStatic
 @CompileStatic
 class Labels {
 
-    private final Map<String,String> entries = new LinkedHashMap<>(20)
-
     /**
-     * Add resource labels, either auto-derived from the workflow metadata or declared as
-     * config-level {@code process.resourceLabels}. Values are coerced to string via
-     * {@link String#valueOf} to satisfy the scheduler API typing. Labels added last win
-     * on a key collision.
+     * Merge the two label maps, coercing keys and values to string via {@link #toStringMap}.
+     * These are the labels auto-derived from the workflow metadata ({@code base}), overlaid by
+     * the config-level {@code process.resourceLabels} ({@code overlay}) which win on a key collision.
      */
-    Labels withProcessResourceLabels(Map<String,?> map) {
-        if( !map ) return this
-        for( Map.Entry<String,?> entry : map.entrySet() )
-            entries.put(entry.key.toString(), String.valueOf(entry.value))
-        return this
-    }
-
-    /**
-     * @return all labels as an unmodifiable map
-     */
-    Map<String,String> getEntries() {
-        return Collections.unmodifiableMap(entries)
+    static Map<String,String> merge(Map<String,?> base, Map<String,?> overlay) {
+        final result = new LinkedHashMap<String,String>(toStringMap(base))
+        result.putAll(toStringMap(overlay))
+        return result
     }
 
     /**

@@ -274,10 +274,7 @@ class SeqeraExecutor extends Executor implements ExtensionPoint {
      */
     @PackageScope
     void computeRunResourceLabels() {
-        final labels = new Labels()
-                .withProcessResourceLabels(session.getAutoResourceLabels())
-                .withProcessResourceLabels(configResourceLabels())
-        this.runResourceLabels = labels.entries
+        this.runResourceLabels = Labels.merge(session.getAutoResourceLabels(), configResourceLabels())
     }
 
     /**

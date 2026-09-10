@@ -182,12 +182,10 @@ abstract class ResourceLabelPolicy {
         String sanitizeKey(String key) {
             if( !key )
                 return ''
-            final scrubbed = INVALID.matcher(key.toLowerCase(Locale.ROOT)).replaceAll('_')
             // the key must begin with a letter, hence drop whatever comes before the first one
-            int start = 0
-            while( start < scrubbed.length() && !Character.isLetter(scrubbed.charAt(start)) )
-                start++
-            return truncate(scrubbed.substring(start), 63)
+            // -- safe as an ASCII regex since INVALID has already reduced it to [a-z0-9_-]
+            final scrubbed = INVALID.matcher(key.toLowerCase(Locale.ROOT)).replaceAll('_').replaceFirst(/^[^a-z]+/, '')
+            return truncate(scrubbed, 63)
         }
 
         @Override
