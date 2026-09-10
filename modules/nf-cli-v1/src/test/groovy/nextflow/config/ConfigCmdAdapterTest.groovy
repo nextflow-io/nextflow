@@ -1283,24 +1283,31 @@ class ConfigCmdAdapterTest extends Specification {
         config.resume == 'xxx-yyy'
     }
 
-    def 'should normalize the `resume` option for commands other than `run`' () {
+    @Unroll
+    def 'should ignore the `resume` option for commands other than `run` [#VALUE]' () {
         given:
         def folder = Files.createTempDirectory('test')
         def configFile = folder.resolve('my.config')
-        configFile.text = 'resume = true'
+        configFile.text = "resume = $VALUE"
+        and:
+        SysEnv.push(NXF_IGNORE_RESUME_HISTORY: 'true')
 
         when:
         // no `cmdRun`, ie. any command other than `run`
-        SysEnv.push(NXF_CONFIG_FILE: configFile.toString(), NXF_IGNORE_RESUME_HISTORY: 'true')
-        new ConfigCmdAdapter().buildConfigObject()
+        def config = new ConfigCmdAdapter()
+            .setOptions(new CliOptions(config: [configFile.toString()]))
+            .buildConfigObject()
         then:
-        // the alias is resolved instead of being passed along as the string 'true',
-        // which would fail later with 'Invalid UUID string: true'
-        thrown(AbortOperationException)
+        // `resume` only applies to `run`, so it must not be passed along as a session id,
+        // which would fail later with 'Invalid UUID string'
+        !config.resume
 
         cleanup:
         SysEnv.pop()
         folder?.deleteDir()
+
+        where:
+        VALUE << ['true', 'false', "'last'"]
     }
 
     def 'should set `workDir`' () {

@@ -144,9 +144,9 @@ class ConfigCmdAdapter {
         if( cmdRun )
             configRunOptions(config, SysEnv.get(), cmdRun)
 
-        // -- normalize the `resume` option
+        // -- normalize the `resume` option (only applies to the `run` command)
         if( config.isSet('resume') )
-            config.resume = normalizeResumeId(config.resume as String)
+            config.resume = cmdRun ? normalizeResumeId(config.resume as String) : null
 
         return config
     }
