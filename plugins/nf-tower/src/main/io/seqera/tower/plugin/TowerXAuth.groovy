@@ -24,7 +24,6 @@ import java.util.regex.Pattern
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import io.seqera.http.HxProxyConfig
 import nextflow.file.http.XAuthProvider
 import nextflow.util.ProxyConfig
 import nextflow.util.StringUtils
@@ -65,7 +64,7 @@ class TowerXAuth implements XAuthProvider {
                 .connectTimeout(Duration.ofSeconds(10))
         // route through the forward proxy when configured (this client is a plain JDK
         // HttpClient, so apply the selector + proxy authenticator explicitly)
-        final HxProxyConfig proxy = ProxyConfig.proxyConfig()
+        final proxy = ProxyConfig.proxyConfig()
         if( proxy ) {
             builder.proxy(proxy.toProxySelector())
             if( proxy.hasCredentials() )

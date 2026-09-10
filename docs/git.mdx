@@ -60,7 +60,7 @@ SCM API `endpoint` URL, e.g., `https://api.github.com` (default: the same as `pr
 
 ### HTTP client settings
 
-The `httpClient` section configures the timeouts applied to the API requests Nextflow makes to the Git hosting service. These settings apply to every provider:
+The `httpClient` section sets the timeouts for API requests to the Git hosting service. These settings apply to every provider:
 
 ```groovy
 httpClient {
@@ -73,16 +73,16 @@ httpClient {
 
 <AddedInVersion version="26.10" />
 
-The maximum time to wait for the connection to the Git hosting service API to be established, applied to a single attempt (default: `60 sec`). It must be greater than zero. Can also be set with the `NXF_HTTPCLIENT_CONNECT_TIMEOUT` environment variable.
+Maximum time to wait for a connection to the Git hosting service API, for a single attempt (default: `60 sec`). Must be greater than zero. Can also be set with the `NXF_HTTPCLIENT_CONNECT_TIMEOUT` environment variable.
 
 ##### `httpClient.requestTimeout`
 
 <AddedInVersion version="26.10" />
 
-The maximum time to wait for a response from the Git hosting service API once the connection has been established, applied to a single attempt (default: `60 sec`). Set it to `0 sec` to wait indefinitely. Can also be set with the `NXF_HTTPCLIENT_REQUEST_TIMEOUT` environment variable.
+Maximum time to wait for a response from the Git hosting service API after the connection is established, for a single attempt (default: `60 sec`). Set to `0 sec` to wait indefinitely. Can also be set with the `NXF_HTTPCLIENT_REQUEST_TIMEOUT` environment variable.
 
 :::note
-These settings cannot be defined in `nextflow.config`. Nextflow resolves the pipeline repository before it parses the pipeline config, so the SCM config file and the environment variables are the only sources available at that point.
+These settings cannot be set in `nextflow.config`. Nextflow resolves the pipeline repository before it parses the pipeline config. Only the SCM config file and environment variables are available at that point.
 :::
 
 ## Git providers

@@ -186,17 +186,17 @@ Nextflow home directory (default: `$HOME/.nextflow`).
 
 <AddedInVersion version="26.10" />
 
-Defines the timeout to establish the HTTP connection with the Git hosting service API e.g. GitHub, GitLab, etc. as a duration string e.g. `30s` (default: `60s`). It must be greater than zero.
+Maximum time to wait for a connection to the Git hosting service API, such as GitHub or GitLab, for a single attempt (default: `60s`). Must be greater than zero.
 
-Connection attempts that time out are retried, because a connection that was never established proves the request did not reach the server. A persistently unreachable host therefore only fails after this timeout multiplied by the retry policy max attempts, i.e. about 5 minutes with the default settings. Deployments that require bounded latency should set a lower value e.g. `5s`, which caps the worst case at about 30 seconds including the retry backoff, while a transient connection stall recovers in a few seconds on retry. The retry behaviour itself is tuned with the `NXF_RETRY_POLICY_*` variables.
+Nextflow retries connection attempts that time out, because the request never reached the server. An unreachable host fails after this timeout multiplied by `NXF_RETRY_POLICY_MAX_ATTEMPTS`, about 5 minutes with the default settings. Set a lower value, such as `5s`, to cap the worst case at about 30 seconds. The `NXF_RETRY_POLICY_*` variables configure the retry behavior.
 
 ##### `NXF_HTTPCLIENT_REQUEST_TIMEOUT`
 
 <AddedInVersion version="26.10" />
 
-Defines the timeout to receive the response for a HTTP request made to the Git hosting service API e.g. GitHub, GitLab, etc. as a duration string e.g. `30s` (default: `60s`). Set it to `0s` to wait indefinitely.
+Maximum time to wait for a response from the Git hosting service API after the connection is established, for a single attempt (default: `60s`). Set to `0s` to wait indefinitely.
 
-Unlike a connect timeout, a request that times out waiting for the response is not retried, since it did reach the server and may already have been acted on.
+Nextflow does not retry requests that time out waiting for a response, because the request reached the server and the server may already have processed it.
 
 ##### `NXF_JAVA_HOME`
 

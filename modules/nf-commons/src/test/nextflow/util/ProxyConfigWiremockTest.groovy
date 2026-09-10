@@ -22,6 +22,7 @@ import java.net.http.HttpResponse
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import io.seqera.http.HxClient
+import io.seqera.util.net.ProxyConfig as NetProxyConfig
 import spock.lang.Specification
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*
@@ -72,7 +73,7 @@ class ProxyConfigWiremockTest extends Specification {
     def 'should route an HxClient request through the authenticating proxy'() {
         given: 'a resolved http proxy with credentials pointing at WireMock'
         stubAuthenticatingProxy()
-        ProxyConfig.register(new ProxyConfig(protocol: 'http', host: '127.0.0.1', port: wireMock.port() as String, username: 'alice', password: 's3cret'))
+        ProxyConfig.setConfig(NetProxyConfig.fromEnvironment([HTTP_PROXY: "http://alice:s3cret@127.0.0.1:${wireMock.port()}".toString()]))
 
         and: 'an HxClient wired the same way the production sites are'
         def client = HxClient.newBuilder()
@@ -93,7 +94,7 @@ class ProxyConfigWiremockTest extends Specification {
     def 'should get 407 when the proxy requires credentials that are not configured'() {
         given: 'a resolved http proxy WITHOUT credentials'
         stubAuthenticatingProxy()
-        ProxyConfig.register(new ProxyConfig(protocol: 'http', host: '127.0.0.1', port: wireMock.port() as String))
+        ProxyConfig.setConfig(NetProxyConfig.fromEnvironment([HTTP_PROXY: "http://127.0.0.1:${wireMock.port()}".toString()]))
 
         and:
         def client = HxClient.newBuilder()
