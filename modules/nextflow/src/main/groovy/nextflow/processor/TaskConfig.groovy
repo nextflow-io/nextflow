@@ -77,8 +77,7 @@ class TaskConfig extends LazyMap implements Cloneable {
         // copied, not reset: the copy carries over the command rendered from them
         // -- see TaskRun#clone -- therefore it depends on the same directives
         copy.accessedDirectives = new HashSet<>(this.accessedDirectives)
-        // note: the auto labels map is immutable, therefore the copy can share it
-        copy.autoResourceLabels = this.autoResourceLabels
+        // note: the immutable auto labels map is already carried over by super.clone(), so it is shared as-is
         return copy
     }
 

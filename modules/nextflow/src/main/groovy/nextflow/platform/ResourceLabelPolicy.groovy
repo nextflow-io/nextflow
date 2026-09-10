@@ -182,7 +182,7 @@ abstract class ResourceLabelPolicy {
         String sanitizeKey(String key) {
             if( !key )
                 return ''
-            final scrubbed = INVALID.matcher(key.toLowerCase()).replaceAll('_')
+            final scrubbed = INVALID.matcher(key.toLowerCase(Locale.ROOT)).replaceAll('_')
             // the key must begin with a letter, hence drop whatever comes before the first one
             int start = 0
             while( start < scrubbed.length() && !Character.isLetter(scrubbed.charAt(start)) )
@@ -194,7 +194,7 @@ abstract class ResourceLabelPolicy {
         String sanitizeValue(String value) {
             if( !value )
                 return ''
-            return truncate(INVALID.matcher(value.toLowerCase()).replaceAll('_'), 63)
+            return truncate(INVALID.matcher(value.toLowerCase(Locale.ROOT)).replaceAll('_'), 63)
         }
 
         @Override
@@ -250,7 +250,7 @@ abstract class ResourceLabelPolicy {
         }
 
         private static String prefix0(String value) {
-            final scrubbed = trimNonAlphanumeric(PREFIX_INVALID.matcher(value.toLowerCase()).replaceAll('-'))
+            final scrubbed = trimNonAlphanumeric(PREFIX_INVALID.matcher(value.toLowerCase(Locale.ROOT)).replaceAll('-'))
             return trimNonAlphanumeric(truncate(scrubbed, 253))
         }
     }

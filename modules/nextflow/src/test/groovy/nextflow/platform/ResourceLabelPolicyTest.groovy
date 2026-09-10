@@ -237,4 +237,20 @@ class ResourceLabelPolicyTest extends Specification {
         ResourceLabelPolicy.AZURE.name == 'azure'
     }
 
+    // -- locale independence
+
+    def 'should lowercase labels independently of the default locale'() {
+        given: 'a default locale whose lowercasing of I yields a dotless ı, not the ASCII i (Turkish)'
+        def previous = Locale.getDefault()
+        Locale.setDefault(Locale.forLanguageTag('tr-TR'))
+
+        expect: 'the google and k8s policies still fold I to the ASCII i'
+        ResourceLabelPolicy.GOOGLE.sanitizeKey('seqera.io/platform/workflowId') == 'seqera_io_platform_workflowid'
+        ResourceLabelPolicy.GOOGLE.sanitizeValue('WorkflowId') == 'workflowid'
+        ResourceLabelPolicy.K8S.sanitizeKey('NEXTFLOW.IO/runName') == 'nextflow.io/runName'
+
+        cleanup:
+        Locale.setDefault(previous)
+    }
+
 }

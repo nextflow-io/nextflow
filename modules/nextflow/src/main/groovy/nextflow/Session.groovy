@@ -970,6 +970,9 @@ class Session implements ISession {
     ExecutorService getExecService() { execService }
 
     @PackageScope void checkConfig() {
+        // validate the auto-labels option up-front, so an invalid value aborts the run here
+        // -- before any task is created -- instead of lazily during task creation
+        resolveAutoResourceLabelNames()
         final enabled = config.navigate('nextflow.enable.configProcessNamesValidation', true) as boolean
         if( enabled ) {
             final names = ScriptMeta.allProcessNames()
@@ -1285,15 +1288,27 @@ class Session implements ISession {
      */
     @Memoized
     Map<String,String> getAutoResourceLabels() {
+        final names = resolveAutoResourceLabelNames()
+        if( !names )
+            return Collections.<String,String>emptyMap()
+        return AutoLabels.labelsFor(workflowMetadata, names)
+    }
+
+    /**
+     * Resolve and validate the auto-labels option, returning the selected workflow metadata
+     * short names. Unlike {@link #getAutoResourceLabels()} this does not read the Platform
+     * metadata, so it can be invoked at config-check time (see {@link #checkConfig()}) to fail
+     * fast on an invalid value, before the pipeline starts creating tasks.
+     *
+     * @return The selected short names, empty when the feature is disabled
+     */
+    protected Set<String> resolveAutoResourceLabelNames() {
         final legacy = config.navigate('seqera.executor') as Map
         // the deprecated Seqera executor option wins when explicitly given, even as `false`
         final legacyGiven = legacy != null && legacy.containsKey('autoLabels')
         final optionName = legacyGiven ? 'seqera.executor.autoLabels' : 'tower.autoLabels'
         final value = legacyGiven ? legacy.get('autoLabels') : config.navigate('tower.autoLabels')
-        final names = AutoLabels.parse(value, optionName)
-        if( !names )
-            return Collections.<String,String>emptyMap()
-        return AutoLabels.labelsFor(workflowMetadata, names)
+        return AutoLabels.parse(value, optionName)
     }
 
     /**

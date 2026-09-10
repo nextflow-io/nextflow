@@ -547,6 +547,14 @@ class SessionTest extends Specification {
         e2.message.contains("'seqera.executor.autoLabels'")
     }
 
+    def 'should fail fast on an invalid auto labels value at config check' () {
+        when: 'the config is checked, before any task is created'
+        new Session([tower: [autoLabels: 'foo']]).checkConfig()
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("'tower.autoLabels'")
+    }
+
     def 'should notify flow complete only once when abort and destroy race' () {
         given:
         def observer = Mock(TraceObserverV2)

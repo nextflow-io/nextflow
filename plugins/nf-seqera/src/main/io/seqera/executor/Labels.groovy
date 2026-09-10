@@ -16,8 +16,6 @@
 
 package io.seqera.executor
 
-import com.google.common.hash.Hashing
-
 import groovy.transform.CompileStatic
 
 /**
@@ -25,7 +23,7 @@ import groovy.transform.CompileStatic
  *
  * Builds the labels map from the resource labels attached to the run -- the auto-derived
  * workflow metadata labels, see {@link nextflow.platform.AutoLabels}, and the config-level
- * {@code process.resourceLabels} -- and the scheduler metadata ({@code seqera:sched:*}).
+ * {@code process.resourceLabels}.
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
@@ -33,21 +31,6 @@ import groovy.transform.CompileStatic
 class Labels {
 
     private final Map<String,String> entries = new LinkedHashMap<>(20)
-
-    /**
-     * Add {@code seqera:sched:*} scheduler labels
-     */
-    Labels withSchedRunId(String runId) {
-        if( runId )
-            entries.put('seqera:sched:runId', runId)
-        return this
-    }
-
-    Labels withSchedClusterId(String clusterId) {
-        if( clusterId )
-            entries.put('seqera:sched:clusterId', clusterId)
-        return this
-    }
 
     /**
      * Add resource labels, either auto-derived from the workflow metadata or declared as
@@ -67,19 +50,6 @@ class Labels {
      */
     Map<String,String> getEntries() {
         return Collections.unmodifiableMap(entries)
-    }
-
-    /**
-     * Compute a run identifier as SipHash of sessionId + runName
-     */
-    protected static String runId(String sessionId, String runName) {
-        return Hashing
-                .sipHash24()
-                .newHasher()
-                .putUnencodedChars(sessionId)
-                .putUnencodedChars(runName)
-                .hash()
-                .toString()
     }
 
     /**

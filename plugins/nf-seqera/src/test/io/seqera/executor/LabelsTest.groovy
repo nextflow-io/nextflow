@@ -25,39 +25,6 @@ import spock.lang.Specification
  */
 class LabelsTest extends Specification {
 
-    def 'should compute stable runId from sessionId and runName'() {
-        given:
-        def sid = 'e2315a82-49b0-4langc3-a58a-0d7d52f7e3a1'
-        def runName = 'crazy_darwin'
-
-        expect:
-        Labels.runId(sid, runName) == Labels.runId(sid, runName)
-        Labels.runId(sid, runName) != Labels.runId(sid, 'other_name')
-        Labels.runId(sid, runName) != Labels.runId(UUID.randomUUID().toString(), runName)
-    }
-
-    def 'should add scheduler labels'() {
-        when:
-        def labels = new Labels()
-                .withSchedRunId('run-123')
-                .withSchedClusterId('cluster-456')
-
-        then:
-        labels.entries['seqera:sched:runId'] == 'run-123'
-        labels.entries['seqera:sched:clusterId'] == 'cluster-456'
-    }
-
-    def 'should skip null scheduler labels'() {
-        when:
-        def labels = new Labels()
-                .withSchedRunId(null)
-                .withSchedClusterId(null)
-
-        then:
-        !labels.entries.containsKey('seqera:sched:runId')
-        !labels.entries.containsKey('seqera:sched:clusterId')
-    }
-
     def 'should add process resource labels coercing values to string'() {
         when:
         def labels = new Labels()
