@@ -81,7 +81,7 @@ A new `AutoLabels` class provides what is today private to nf-seqera:
 - `parse(Object) -> Set<String>`, which accepts `true` (all names), `false` (none), a list, or a comma-separated string, and rejects unknown names with the existing error text.
 - `labelsFor(WorkflowMetadata, Set<String>) -> Map<String,String>`, the canonical `nextflow.io/*` and `seqera.io/platform/*` mapping, including the `userName` fallback from the Platform user to the OS user.
 
-`Session` gains a memoized `getAutoResourceLabels()` that reads `PlatformHelper.config().autoLabels`, parses it, and maps the metadata; it returns an empty map when the option is unset. The computation is lazy on first access, not eager in `init()`, because the Platform fields are only populated at `notifyFlowCreate` and any earlier snapshot would capture nulls. Entries whose source value is absent are omitted, so a run without nf-tower active still gets the metadata labels the runtime knows on its own.
+`Session` gains a memoized `getAutoResourceLabels()` that loads the auto-labels config and maps the workflow metadata. The computation is lazy on first access, not eager in `init()`, because the Platform fields aren't populated until `notifyFlowCreate`. Entries with no source value are omitted, so a run without nf-tower still gets the metadata labels from the core runtime.
 
 ### Runtime: the merge
 
@@ -89,8 +89,8 @@ A new `AutoLabels` class provides what is today private to nf-seqera:
 
 Two accessors result:
 
-- `getResourceLabels()`, auto labels merged under declared labels, where a declared label wins on key collision. This is what `TaskBean`, trace records and the execution report observe, so the report reflects what was actually applied.
-- `getResourceLabels(ResourceLabelPolicy)`, the same merge, with the *auto* entries sanitized by the given policy and the declared entries passed through untouched. Executors call this overload. The collision is decided *before* the sanitization, so that a label declared with the canonical key (`nextflow.io/runName`) overrides the auto one on a policy that mangles that key, instead of the two turning into distinct entries.
+- `getResourceLabels()`, auto labels merged under declared labels, where a declared label wins on key collision.
+- `getResourceLabels(ResourceLabelPolicy)`, the same merge, with the *auto* entries sanitized by the given policy and the declared entries passed through untouched. Executors call this overload. The collision is decided *before* the sanitization, so that a label declared with the canonical key (`nextflow.io/runName`) overrides the auto one on a policy that mangles that key.
 
 The overload exists because the two requirements meet here: sanitization is per-executor, but only auto-labels may be sanitized. Once the maps are merged an executor can no longer tell one from the other, so the distinction has to be preserved at the merge. The policy travels inward rather than the auto subset traveling outward.
 
