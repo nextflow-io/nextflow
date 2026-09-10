@@ -560,14 +560,19 @@ class ConfigCmdAdapter {
     }
 
     private String normalizeResumeId( String uniqueId ) {
-        if( !uniqueId )
+        if( !uniqueId || uniqueId == 'false' )
             return null
         if( uniqueId == 'last' || uniqueId == 'true' ) {
-            if( HistoryFile.disabled() )
-                throw new AbortOperationException("The resume session id should be specified via `-resume` option when history file tracking is disabled")
+            if( HistoryFile.disabled()) {
+                // Abort just when run command, otherwise return null.
+                if( cmdRun )
+                    throw new AbortOperationException("The resume session id should be specified via `-resume` option when history file tracking is disabled")
+                else
+                    return null
+            }
             uniqueId = HistoryFile.DEFAULT.getLast()?.sessionId
 
-            if( !uniqueId ) {
+            if( !uniqueId && cmdRun) { //Warn just when run command
                 log.warn "It appears you have never run this project before -- Option `-resume` is ignored"
             }
         }

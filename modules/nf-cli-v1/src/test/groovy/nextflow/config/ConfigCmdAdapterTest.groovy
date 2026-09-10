@@ -19,6 +19,8 @@ package nextflow.config
 import java.nio.file.Files
 import java.nio.file.Path
 
+import nextflow.Global
+import nextflow.Session
 import nextflow.SysEnv
 import nextflow.cli.CliOptions
 import nextflow.cli.CmdConfig
@@ -1249,7 +1251,7 @@ class ConfigCmdAdapterTest extends Specification {
         !config.process.spack
     }
 
-    def 'should normalize the `resume` option'() {
+    def 'should set the `resume` option'() {
 
         given:
         def env = [:]
@@ -1283,19 +1285,112 @@ class ConfigCmdAdapterTest extends Specification {
         config.resume == 'xxx-yyy'
     }
 
-    def 'should normalize the `resume` option for commands other than `run`' () {
+    @Unroll
+    def 'should normalize the `resume` option for commands other than `run` [#VALUE]' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def configFile = folder.resolve('my.config')
+        configFile.text = "resume = $VALUE"
+        and:
+        SysEnv.push(NXF_IGNORE_RESUME_HISTORY: 'true')
+
+        when:
+        // no `cmdRun`, ie. any command other than `run`
+        def config = new ConfigCmdAdapter()
+            .setOptions(new CliOptions(config: [configFile.toString()]))
+            .buildConfigObject()
+        then:
+        // the `resume` flag only applies to the `run` command, therefore it must not be
+        // passed along as a session id, which would fail with `Invalid UUID string`
+        !config.resume
+
+        cleanup:
+        SysEnv.pop()
+        folder?.deleteDir()
+
+        where:
+        VALUE << ['true', 'false', "'last'"]
+    }
+
+    @Unroll
+    def 'should create a session when the config sets `resume = #VALUE`' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def configFile = folder.resolve('my.config')
+        configFile.text = "resume = $VALUE"
+        and:
+        SysEnv.push(NXF_IGNORE_RESUME_HISTORY: 'true')
+
+        when:
+        // any command other than `run` that creates a session from the config, eg. `lineage`
+        def config = new ConfigCmdAdapter()
+            .setOptions(new CliOptions(config: [configFile.toString()]))
+            .build()
+        def session = new Session(config)
+        then:
+        noExceptionThrown()
+        !session.resumeMode
+
+        cleanup:
+        SysEnv.pop()
+        Global.session = null
+        folder?.deleteDir()
+
+        where:
+        VALUE << ['true', 'false']
+    }
+
+    def 'should normalize the `resume` option for the `run` command' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def configFile = folder.resolve('my.config')
+        def opts = new CliOptions(config: [configFile.toString()])
+
+        when:
+        configFile.text = 'resume = false'
+        def config = new ConfigCmdAdapter()
+            .setOptions(opts)
+            .setCmdRun(new CmdRun())
+            .buildConfigObject()
+        then:
+        !config.resume
+
+        when:
+        configFile.text = 'resume = false'
+        config = new ConfigCmdAdapter()
+            .setOptions(opts)
+            .setCmdRun(new CmdRun(resume: 'aa-bb-cc'))
+            .buildConfigObject()
+        then:
+        config.resume == 'aa-bb-cc'
+
+        when:
+        configFile.text = "resume = 'xx-yy-zz'"
+        config = new ConfigCmdAdapter()
+            .setOptions(opts)
+            .setCmdRun(new CmdRun())
+            .buildConfigObject()
+        then:
+        config.resume == 'xx-yy-zz'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should fail to resume the `run` command when the history file is disabled' () {
         given:
         def folder = Files.createTempDirectory('test')
         def configFile = folder.resolve('my.config')
         configFile.text = 'resume = true'
+        and:
+        SysEnv.push(NXF_IGNORE_RESUME_HISTORY: 'true')
 
         when:
-        // no `cmdRun`, ie. any command other than `run`
-        SysEnv.push(NXF_CONFIG_FILE: configFile.toString(), NXF_IGNORE_RESUME_HISTORY: 'true')
-        new ConfigCmdAdapter().buildConfigObject()
+        new ConfigCmdAdapter()
+            .setOptions(new CliOptions(config: [configFile.toString()]))
+            .setCmdRun(new CmdRun())
+            .buildConfigObject()
         then:
-        // the alias is resolved instead of being passed along as the string 'true',
-        // which would fail later with 'Invalid UUID string: true'
         thrown(AbortOperationException)
 
         cleanup:
