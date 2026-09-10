@@ -87,10 +87,6 @@ Nextflow omits any label whose metadata value is not available. The `seqera.io/p
 
 Labels declared with the `resourceLabels` directive always take precedence. When a declared label has the same key as an automatic label, Nextflow uses the declared value. The normalization described later never modifies declared labels, even when they are not valid for the target executor.
 
-:::note
-The Kubernetes executor sanitizes every pod label, including declared labels, and rejects a label key that contains more than one `/` character. The executor applies its own `nextflow.io/app`, `nextflow.io/runName`, `nextflow.io/taskName`, `nextflow.io/processName`, `nextflow.io/sessionId`, and `nextflow.io/queue` pod labels last, so these override any resource label that uses the same key.
-:::
-
 ### Label normalization
 
 The executor normalizes automatic labels to meet the requirements of its API. Declared labels are not normalized.

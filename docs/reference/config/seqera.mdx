@@ -21,13 +21,7 @@ Use [`tower.autoLabels`][config-tower-autoLabels] instead.
 
 Derive [resource labels][process-resource-labels] from the workflow metadata and attach them to the compute resources that the executor creates (default: `false`). Accepts the same values as [`tower.autoLabels`][config-tower-autoLabels]: `true` (all available metadata labels), `false`, or a list or comma-separated string of short names, for example `['runName', 'projectName']`. That entry also lists the valid names and the resulting label keys.
 
-This option is not limited to the Seqera executor. Every executor that supports the `resourceLabels` directive attaches the labels.
-
-Precedence:
-
-- If `seqera.executor.autoLabels` is set, it takes precedence over `tower.autoLabels`, including when set to `false`.
-- If only `tower.autoLabels` is set, that value applies.
-- If neither option is set, no labels are derived.
+This option applies to every executor that supports the `resourceLabels` directive, not just the Seqera executor. It takes precedence over `tower.autoLabels` when set, including when set to `false`.
 
 ##### `seqera.executor.computeEnvId`
 
