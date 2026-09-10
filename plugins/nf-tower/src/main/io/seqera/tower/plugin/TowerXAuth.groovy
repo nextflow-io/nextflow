@@ -25,6 +25,7 @@ import java.util.regex.Pattern
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.file.http.XAuthProvider
+import nextflow.util.StringUtils
 
 /**
  * Implements Tower authentication strategy for resources accessed
@@ -83,16 +84,18 @@ class TowerXAuth implements XAuthProvider {
                 .build()
 
         final resp = httpClient.send(req, HttpResponse.BodyHandlers.ofString())
-        log.debug "Refresh cookie response: [${resp.statusCode()}] ${resp.body()}"
-        if( resp.statusCode() != 200 )
+        if( resp.statusCode() != 200 ) {
+            log.debug "Refresh cookie response: [${resp.statusCode()}] ${resp.body()}"
             return false
+        }
+        log.debug "Refresh cookie response: [${resp.statusCode()}]"
 
         final authCookie = getCookie('JWT')
         final refreshCookie = getCookie('JWT_REFRESH_TOKEN')
 
         // set the new bearer token in the current client session
         if( authCookie?.value ) {
-            log.trace "Updating http client bearer token=$authCookie.value"
+            log.trace "Updating http client bearer token=${StringUtils.redact(authCookie.value)}"
             accessToken = authCookie.value
         }
         else {
@@ -101,7 +104,7 @@ class TowerXAuth implements XAuthProvider {
 
         // set the new refresh token
         if( refreshCookie?.value ) {
-            log.trace "Updating http client refresh token=$refreshCookie.value"
+            log.trace "Updating http client refresh token=${StringUtils.redact(refreshCookie.value)}"
             refreshToken = refreshCookie.value
         }
         else {
