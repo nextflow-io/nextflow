@@ -18,6 +18,7 @@ package nextflow.platform
 
 import nextflow.SysEnv
 import spock.lang.Specification
+import spock.lang.Unroll
 
 /**
  * Test PlatformHelper functionality
@@ -122,5 +123,40 @@ class PlatformHelperTest extends Specification {
     def 'should return null computeEnvId when not configured'() {
         expect:
         PlatformHelper.getComputeEnvId([:], [:]) == null
+    }
+
+    def 'should detect a Platform-driven run'() {
+        expect:
+        !PlatformHelper.isPlatformRun([:])
+        !PlatformHelper.isPlatformRun([TOWER_WORKSPACE_ID: '100'])
+        PlatformHelper.isPlatformRun([TOWER_WORKFLOW_ID: 'wf-1'])
+    }
+
+    @Unroll
+    def 'should resolve effective workspace id from #SOURCE'() {
+        expect:
+        PlatformHelper.getEffectiveWorkspaceId(OPTS, ENV, () -> DEFAULT) == EXPECTED
+
+        where:
+        SOURCE             | OPTS                | ENV                                            | DEFAULT | EXPECTED
+        'config'           | [workspaceId: '200']| [:]                                            | '999'   | '200'
+        'env var'          | [:]                 | [TOWER_WORKSPACE_ID: '100']                    | '999'   | '100'
+        'platform default' | [:]                 | [:]                                            | '999'   | '999'
+        'nothing set'      | [:]                 | [:]                                            | null    | null
+        // a Platform-driven run is authoritative: never override with the account default
+        'platform run'     | [:]                 | [TOWER_WORKFLOW_ID: 'wf-1']                    | '999'   | null
+        'platform run env' | [:]                 | [TOWER_WORKFLOW_ID: 'wf-1', TOWER_WORKSPACE_ID: '100'] | '999' | '100'
+    }
+
+    def 'should not query the platform default when a local workspace is set'() {
+        given:
+        def queried = false
+
+        when:
+        final result = PlatformHelper.getEffectiveWorkspaceId([workspaceId: '200'], [:], () -> { queried = true; '999' })
+
+        then:
+        result == '200'
+        !queried
     }
 }
