@@ -610,6 +610,7 @@ EscapeSequence
     |   UnicodeEscape
     |   DollarEscape
     |   LineEscape
+    |   InvalidEscape
     ;
 
 fragment
@@ -639,6 +640,11 @@ DollarEscape
 fragment
 LineEscape
     :   Backslash LineTerminator
+    ;
+
+fragment
+InvalidEscape
+    :   Backslash .
     ;
 
 fragment

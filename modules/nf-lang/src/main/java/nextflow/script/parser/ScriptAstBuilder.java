@@ -113,6 +113,7 @@ import org.codehaus.groovy.syntax.SyntaxException;
 import org.codehaus.groovy.syntax.Types;
 
 import static nextflow.script.ast.ASTUtils.*;
+import static nextflow.script.parser.EscapeUtils.checkEscapes;
 import static nextflow.script.parser.PositionConfigureUtils.ast;
 import static nextflow.script.parser.PositionConfigureUtils.tokenPosition;
 import static nextflow.script.parser.ScriptParser.*;
@@ -1654,6 +1655,7 @@ public class ScriptAstBuilder {
 
     private ConstantExpression string(ParserRuleContext ctx) {
         var text = ctx.getText();
+        checkEscapes(text, ctx).forEach(this::collectSyntaxError);
         var result = constX(stringLiteral(text));
         result.putNodeMetaData(ASTNodeMarker.VERBATIM_TEXT, text);
         return result;
@@ -1756,6 +1758,7 @@ public class ScriptAstBuilder {
 
     private ConstantExpression gstringText(ParserRuleContext ctx, String beginQuotation) {
         var text = ctx.getText();
+        checkEscapes(text, ctx).forEach(this::collectSyntaxError);
         var quotedText = new StringBuilder(text)
             .insert(0, beginQuotation)
             .append(beginQuotation)
