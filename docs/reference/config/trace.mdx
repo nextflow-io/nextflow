@@ -7,6 +7,12 @@ description: Reference for the trace config scope, which controls the generation
 
 The `trace` scope controls the generation of the [trace file][trace-report].
 
+##### `trace.directory`
+
+<AddedInVersion version="26.10" />
+
+The directory where the trace file should be saved. Must be a relative path, which is resolved against the workflow output directory (`outputDir`). Cannot be used when `trace.file` is an absolute path. By default, it is not used and `trace.file` is resolved against the launch directory.
+
 ##### `trace.enabled`
 
 Create the trace file on workflow completion (default: `false`).
