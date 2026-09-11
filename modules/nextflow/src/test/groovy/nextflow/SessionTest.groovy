@@ -17,7 +17,7 @@
 package nextflow
 
 import java.nio.file.Files
-import java.nio.file.Paths
+import java.nio.file.Path
 import java.nio.file.attribute.PosixFilePermission
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ThreadPoolExecutor
@@ -29,7 +29,6 @@ import nextflow.container.DockerConfig
 import nextflow.container.PodmanConfig
 import nextflow.container.SarusConfig
 import nextflow.exception.AbortOperationException
-import nextflow.file.FileHelper
 import nextflow.script.ScriptFile
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceFileObserver
@@ -64,9 +63,9 @@ class SessionTest extends Specification {
 
         when:
         session = new Session()
-        session.baseDir = Paths.get('some/folder')
+        session.baseDir = Path.of('some/folder')
         then:
-        session.baseDir == Paths.get('some/folder')
+        session.baseDir == Path.of('some/folder')
         session.binDir == null
 
         when:
@@ -102,7 +101,7 @@ class SessionTest extends Specification {
 
         when:
         session = new Session()
-        session.setBaseDir(Paths.get('/some/path'))
+        session.setBaseDir(Path.of('/some/path'))
         then:
         session.getLibDir() == []
 
@@ -139,6 +138,8 @@ class SessionTest extends Specification {
         def session
         def result
         def observer
+        and:
+        def outputDir = Path.of('/some/results')
 
         when:
         session = [:] as Session
@@ -154,7 +155,7 @@ class SessionTest extends Specification {
         observer = result[1] as TraceFileObserver
         then:
         result.size() == 2
-        observer.tracePath == FileHelper.asPath('name.txt')
+        observer.tracePath == Path.of('name.txt')
         observer.separator == '\t'
 
         when:
@@ -164,7 +165,7 @@ class SessionTest extends Specification {
         observer = result[1] as TraceFileObserver
         then:
         result.size() == 2
-        observer.tracePath == FileHelper.asPath('alpha.txt')
+        observer.tracePath == Path.of('alpha.txt')
         observer.separator == 'x'
         observer.fields == ['task_id','name','exit']
 
@@ -182,9 +183,43 @@ class SessionTest extends Specification {
         observer = result[1] as TraceFileObserver
         then:
         result.size() == 2
-        observer.tracePath == FileHelper.asPath('trace-20221001.txt')
+        observer.tracePath == Path.of('trace-20221001.txt')
         observer.separator == '\t'
         observer.fields == ['task_id','name','exit','vmem']
+
+        when: 'the trace directory is defined'
+        session = [:] as Session
+        session.config = [trace: [enabled: true, directory: 'pipeline_info', file: 'trace.txt']]
+        session.outputDir = outputDir
+        result = session.createObserversV2()
+        observer = result[1] as TraceFileObserver
+        then: 'the trace file is resolved against the output directory'
+        observer.tracePath == outputDir.resolve('pipeline_info/trace.txt')
+
+        when: 'the trace directory is the current directory'
+        session = [:] as Session
+        session.config = [trace: [enabled: true, directory: '.', file: 'trace.txt']]
+        session.outputDir = outputDir
+        result = session.createObserversV2()
+        observer = result[1] as TraceFileObserver
+        then: 'the trace file is placed in the output directory'
+        observer.tracePath == outputDir.resolve('trace.txt')
+
+        when: 'the trace directory is an absolute path'
+        session = [:] as Session
+        session.config = [trace: [enabled: true, directory: '/pipeline_info']]
+        session.outputDir = outputDir
+        session.createObserversV2()
+        then:
+        thrown(AbortOperationException)
+
+        when: 'the trace file is an absolute path'
+        session = [:] as Session
+        session.config = [trace: [enabled: true, directory: 'pipeline_info', file: '/other/trace.txt']]
+        session.outputDir = outputDir
+        session.createObserversV2()
+        then:
+        thrown(AbortOperationException)
 
     }
 

@@ -48,6 +48,12 @@ class TraceConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        The directory where the trace file should be saved, relative to the workflow output directory.
+    """)
+    final String directory
+
+    @ConfigOption
+    @Description("""
         Create the execution trace file on workflow completion (default: `false`).
     """)
     final boolean enabled
@@ -86,6 +92,7 @@ class TraceConfig implements ConfigScope {
     TraceConfig() {}
 
     TraceConfig(Map opts) {
+        directory = opts.directory
         enabled = opts.enabled as boolean
         fields = parseFields(opts.fields)
         file = opts.file ?: defaultFileName()
