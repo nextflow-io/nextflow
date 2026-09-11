@@ -1271,6 +1271,24 @@ class BashWrapperBuilderTest extends Specification {
         binding.containsKey('after_script')
     }
 
+    def 'should run the after script from the exit trap' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+
+        when:
+        def wrapper = newBashWrapperBuilder(workDir: folder, afterScript: 'cleanup_that').buildNew0()
+
+        then:
+        // the after script must run from `on_exit`, not from the tail of `nxf_main`:
+        // `nxf_main` bails out to the exit trap under `set -e` when the task fails
+        // before the command is launched e.g. a failing beforeScript or input staging
+        wrapper.contains('on_exit')
+        wrapper.tokenize('\n').findIndexOf { it.contains('cleanup_that') } < wrapper.tokenize('\n').findIndexOf { it.contains('nxf_main() {') }
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should get output env capture snippet' () {
         given:
         def builder = new BashWrapperBuilder(Mock(TaskBean))
