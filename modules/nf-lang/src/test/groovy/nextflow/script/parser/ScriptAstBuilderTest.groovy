@@ -610,7 +610,7 @@ class ScriptAstBuilderTest extends Specification {
         errors[0].getOriginalMessage() == "Unexpected character: '\$'"
 
         when:
-        // invalid escape sequence in a gstring (the `\\` matches no rule)
+        // invalid escape sequence in a gstring
         errors = check(
             '''\
             "abc \\q def"
@@ -620,7 +620,58 @@ class ScriptAstBuilderTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 1
         errors[0].getStartColumn() == 6
-        errors[0].getOriginalMessage() == "Unexpected character: '\\'"
+        errors[0].getOriginalMessage() == "Invalid escape sequence: '\\q'"
+    }
+
+    def 'should report an invalid escape sequence at the exact position' () {
+        when:
+        // an invalid escape should not be reported at the start of the string
+        def errors = check(
+            '''\
+            x = \'\'\'
+                gsub(/\\./, "0")
+            \'\'\'
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 2
+        errors[0].getStartColumn() == 11
+        errors[0].getOriginalMessage() == "Invalid escape sequence: '\\.'"
+
+        when:
+        errors = check(
+            '''\
+            x = \'a\\.b\'
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 7
+        errors[0].getOriginalMessage() == "Invalid escape sequence: '\\.'"
+
+        when:
+        // a unicode escape must be followed by four hex digits
+        errors = check(
+            '''\
+            x = \'\\uZZZZ\'
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getOriginalMessage() == "Invalid escape sequence: '\\u'"
+
+        when:
+        // valid escapes and slashy strings should not be flagged
+        errors = check(
+            '''\
+            x = \'a\\n\\t\\\\\\u00e9\\101b\'
+            y = /a\\.b/
+            '''
+        )
+        then:
+        errors.size() == 0
     }
 
     def 'should allow escaped and interpolated gstring characters' () {
