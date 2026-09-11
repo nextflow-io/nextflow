@@ -46,7 +46,7 @@ class GoogleBatchLauncherSpecMock implements GoogleBatchLauncherSpec {
         return runCommand
     }
 
-    Map<String,String> getEnvironment() {
+    Map<String,String> getBatchEnvironment() {
         return environment
     }
 }
