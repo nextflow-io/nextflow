@@ -208,6 +208,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             for( int i=0; i<task.children.size(); i++ ) {
                 final handler = task.children[i] as GoogleBatchTaskHandler
                 final arrayTaskId = executor.getArrayTaskId(jobId, i)
+                // propagate the machine info resolved for the array job to each child task,
+                // otherwise every array-child trace record reports a null machine type/cost
+                handler.@machineInfo = this.machineInfo
                 handler.updateStatus(jobId, arrayTaskId, uid)
             }
         }

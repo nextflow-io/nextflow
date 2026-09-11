@@ -44,6 +44,7 @@ import nextflow.executor.Executor
 import nextflow.executor.ExecutorConfig
 import nextflow.executor.res.AcceleratorResource
 import nextflow.executor.res.DiskResource
+import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskBean
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskProcessor
@@ -1197,6 +1198,28 @@ class GoogleBatchTaskHandlerTest extends Specification {
         result.getContainer().getOptions() == '--foo'
         result.getContainer().getVolumesList() == ['/mnt:/mnt:rw']
         result.getEnvironment().getVariablesMap() == [VAR1: 'value1']
+    }
+
+    def 'should propagate machine info to array child tasks on update status' () {
+        given:
+        def child0 = Spy(GoogleBatchTaskHandler)
+        def child1 = Spy(GoogleBatchTaskHandler)
+        def arrayTask = new TaskArrayRun(children: [child0, child1])
+        def exec = Mock(GoogleBatchExecutor) {
+            getArrayTaskId('job-1', 0) >> '0.0'
+            getArrayTaskId('job-1', 1) >> '0.1'
+        }
+        def handler = Spy(GoogleBatchTaskHandler)
+        handler.task = arrayTask
+        handler.@executor = exec
+        handler.@machineInfo = new CloudMachineInfo(type: 'n2-standard-4', zone: 'europe-west2', priceModel: PriceModel.spot)
+
+        when:
+        handler.updateStatus('job-1', '0', 'uid-1')
+
+        then:
+        child0.@machineInfo == handler.@machineInfo
+        child1.@machineInfo == handler.@machineInfo
     }
 
     def 'should resolve zone from status events: #DESCRIPTION' () {
