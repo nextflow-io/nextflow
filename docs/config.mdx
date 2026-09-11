@@ -14,7 +14,8 @@ When you launch a pipeline script, Nextflow detects configuration files from mul
 1. `$NXF_HOME/config` (defaults to `$HOME/.nextflow/config`)
 2. `nextflow.config` in the project directory
 3. `nextflow.config` in the launch directory
-4. Config files specified with `-c <config-files>`
+4. The config file specified by the `NXF_CONFIG` environment variable
+5. Config files specified with `-c <config-files>`
 
 :::tip
 You can use the `-C <config-file>` option to specify a fixed set of configuration files and ignore all other files.

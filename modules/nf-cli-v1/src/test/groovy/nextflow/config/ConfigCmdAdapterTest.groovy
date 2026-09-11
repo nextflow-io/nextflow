@@ -258,6 +258,50 @@ class ConfigCmdAdapterTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should fetch the config file from NXF_CONFIG env var' () {
+        given:
+        def folder = File.createTempDir()
+        def adminConfig = new File(folder,'admin.config').absoluteFile
+        adminConfig.text = '''
+        process.name = 'admin'
+        params.one = 'x'
+        params.two = 'y'
+        '''
+
+        // relative path to current dir
+        when:
+        SysEnv.push(NXF_CONFIG: 'admin.config')
+        def config = new ConfigCmdAdapter() .setCurrentDir(folder.toPath()) .build()
+        SysEnv.pop()
+        then:
+        config.params.one == 'x'
+        config.params.two == 'y'
+        config.process.name == 'admin'
+
+        // absolute path
+        when:
+        SysEnv.push(NXF_CONFIG: adminConfig.toString())
+        config = new ConfigCmdAdapter() .build()
+        SysEnv.pop()
+        then:
+        config.params.one == 'x'
+        config.params.two == 'y'
+        config.process.name == 'admin'
+
+        // NXF_CONFIG should take precedence over the local nextflow.config
+        when:
+        new File(folder,'nextflow.config').text = 'process.name = "local"; params.one = "local"'
+        SysEnv.push(NXF_CONFIG: 'admin.config')
+        config = new ConfigCmdAdapter() .setCurrentDir(folder.toPath()) .build()
+        SysEnv.pop()
+        then:
+        config.params.one == 'x'
+        config.process.name == 'admin'
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'CLI params should overrides the ones in one or more profiles' () {
 
         setup:
