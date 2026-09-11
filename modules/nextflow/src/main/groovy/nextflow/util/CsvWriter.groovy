@@ -40,15 +40,22 @@ class CsvWriter {
 
         final columns = columnHeaders(header, records)
         if( columns )
-            path << columns.collect(column -> "\"${column}\"").join(sep) << '\n'
+            path << columns.collect(column -> formatCsvValue(column)).join(sep) << '\n'
 
         if( records.isEmpty() )
             path << ''
 
         for( final record : records ) {
             final values = rowValues(record, columns)
-            path << values.collect(v -> "\"${toCsvString(v)}\"").join(sep) << '\n'
+            path << values.collect(v -> formatCsvValue(v)).join(sep) << '\n'
         }
+    }
+
+    private String formatCsvValue(value) {
+        final str = toCsvString(value)
+        final escaped = str.replace('"', '""')
+        final needsQuote = escaped != str || str.contains(sep) || str.contains('\r') || str.contains('\n')
+        return needsQuote ? "\"${escaped}\"" : str
     }
 
     private static Collection columnHeaders(Object header, List records) {
