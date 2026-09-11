@@ -46,7 +46,7 @@ interface GoogleBatchLauncherSpec {
         return ['/bin/bash','-o','pipefail','-c', runCommand() ]
     }
 
-    default Map<String,String> getEnvironment() {
+    default Map<String,String> getBatchEnvironment() {
         return Map.of()
     }
 }
