@@ -562,6 +562,44 @@ class GoogleBatchTaskHandlerTest extends Specification {
         handler.getJobError() == null
     }
 
+    def 'should determine the instance selections' () {
+        given:
+        def handler = new GoogleBatchTaskHandler(batchConfig: new BatchConfig([instanceFlexibility: ENABLED]))
+        def config = Mock(TaskConfig) { getMachineType() >> MACHINE_TYPE }
+
+        expect:
+        handler.instanceSelections(config) == EXPECTED
+
+        where:
+        ENABLED | MACHINE_TYPE                   | EXPECTED
+        false   | 'n2-standard-4,c3-standard-4'  | []
+        true    | null                           | []
+        true    | 'n2-standard-4'                | []
+        true    | 'n2-*,c2-*'                    | []
+        true    | 'n?-standard-4,c3-standard-4'  | []
+        true    | 'template://my-template'       | []
+        true    | 'n2-standard-4,c3-standard-4'  | ['n2-standard-4','c3-standard-4']
+        true    | 'n2-standard-4, c3-standard-4' | ['n2-standard-4','c3-standard-4']
+    }
+
+    def 'should not set the machine type when using instance flexibility' () {
+        given:
+        def task = Mock(TaskRun) {
+            lazyName() >> 'foo (1)'
+            getConfig() >> Mock(TaskConfig) { getMachineType() >> 'n2-standard-4,c3-standard-4' }
+        }
+        def handler = Spy(new GoogleBatchTaskHandler(task: task, batchConfig: new BatchConfig([instanceFlexibility: true])))
+
+        when:
+        def result = handler.buildInstancePolicyOrTemplate(task, null)
+        then:
+        _ * handler.fusionEnabled() >> false
+        0 * handler.findBestMachineType(_,_) >> null
+        and:
+        !result.policy.getPolicy().getMachineType()
+        !handler.getMachineInfo()
+    }
+
     def 'should find best instance type' () {
         given:
         def workDir = Path.of('/work/dir')

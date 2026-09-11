@@ -37,6 +37,12 @@ import com.google.cloud.batch.v1.Task
 import com.google.cloud.batch.v1.TaskGroupName
 import com.google.cloud.batch.v1.TaskName
 import com.google.cloud.batch.v1.TaskStatus
+import com.google.cloud.batch.v1alpha.AllocationPolicy as AlphaAllocationPolicy
+import com.google.cloud.batch.v1alpha.BatchServiceClient as AlphaBatchServiceClient
+import com.google.cloud.batch.v1alpha.BatchServiceSettings as AlphaBatchServiceSettings
+import com.google.cloud.batch.v1alpha.Job as AlphaJob
+import com.google.cloud.batch.v1alpha.LocationName as AlphaLocationName
+import com.google.protobuf.util.JsonFormat
 import dev.failsafe.Failsafe
 import dev.failsafe.RetryPolicy
 import dev.failsafe.event.EventListener
@@ -58,6 +64,7 @@ class BatchClient {
     protected String projectId
     protected String location
     protected BatchServiceClient batchServiceClient
+    private AlphaBatchServiceClient alphaServiceClient
     protected GoogleOpts config
     private Map<String, TaskStatusRecord> arrayTaskStatus = new ConcurrentHashMap<String, TaskStatusRecord>()
 
@@ -105,6 +112,59 @@ class BatchClient {
         return apply(()-> batchServiceClient.createJob(parent, job, jobId))
     }
 
+    /**
+     * Submit a job adding an instance flexibility policy for the specified machine types,
+     * so that Batch can choose any of them depending on the available capacity.
+     *
+     * Instance flexibility is only available in the Batch v1alpha API (preview), therefore
+     * the job is converted to the corresponding v1alpha message and submitted with a
+     * dedicated client. The resulting job is a regular Batch job and can be inspected
+     * with the v1 API as any other job.
+     *
+     * @param jobId The job unique id
+     * @param job The job to be submitted
+     * @param machineTypes The machine types allowed for this job
+     * @return The unique id of the submitted job
+     */
+    String submitJobWithInstanceFlexibility(String jobId, Job job, List<String> machineTypes) {
+        final parent = AlphaLocationName.of(projectId, location)
+        final alphaJob = toAlphaJob(job, machineTypes)
+        final result = apply(()-> alphaClient().createJob(parent, alphaJob, jobId))
+        return result.getUid()
+    }
+
+    /**
+     * Convert a v1 job to the corresponding v1alpha job, adding the instance flexibility
+     * policy for the specified machine types
+     *
+     * @param job The job to be converted
+     * @param machineTypes The machine types allowed for this job
+     * @return The v1alpha job
+     */
+    protected AlphaJob toAlphaJob(Job job, List<String> machineTypes) {
+        final builder = AlphaJob.newBuilder()
+        JsonFormat.parser().merge(JsonFormat.printer().print(job), builder)
+        builder.getAllocationPolicyBuilder().setInstanceFlexibilityPolicy(
+            AlphaAllocationPolicy.InstanceFlexibilityPolicy.newBuilder()
+                .putInstanceSelections('nextflow', AlphaAllocationPolicy.InstanceSelection.newBuilder()
+                    .addAllMachineTypes(machineTypes)
+                    .build())
+        )
+        return builder.build()
+    }
+
+    synchronized protected AlphaBatchServiceClient alphaClient() {
+        if( alphaServiceClient )
+            return alphaServiceClient
+        final provider = createCredentialsProvider(config)
+        final settings = AlphaBatchServiceSettings
+            .newBuilder()
+            .setHeaderProvider(FixedHeaderProvider.create('user-agent', 'Nextflow'))
+        if( provider )
+            settings.setCredentialsProvider(provider)
+        return alphaServiceClient = AlphaBatchServiceClient.create(settings.build())
+    }
+
     Job describeJob(String jobId) {
         final name = JobName.of(projectId, location, jobId)
         return apply(()-> batchServiceClient.getJob(name))
@@ -140,6 +200,7 @@ class BatchClient {
 
     void shutdown() {
         batchServiceClient.close()
+        alphaServiceClient?.close()
     }
 
     String getLocation() {

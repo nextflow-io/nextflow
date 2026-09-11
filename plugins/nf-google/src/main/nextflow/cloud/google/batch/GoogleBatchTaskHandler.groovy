@@ -196,8 +196,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
          */
         final req = newSubmitRequest(task, spec0(launcher))
         log.trace "[GOOGLE BATCH] new job request > $req"
-        final resp = client.submitJob(jobId, req)
-        final uid = resp.getUid()
+        final selections = instanceSelections(task.config)
+        final uid = selections
+            ? client.submitJobWithInstanceFlexibility(jobId, req, selections)
+            : client.submitJob(jobId, req).getUid()
         updateStatus(jobId, '0', uid)
         log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` submitted > job=$jobId; uid=$uid; work-dir=${task.getWorkDirStr()}"
     }
@@ -401,8 +403,12 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         else {
             final instancePolicy = AllocationPolicy.InstancePolicy.newBuilder()
 
+            // when two or more machine types are specified, let Batch choose one of them
+            // via the instance flexibility policy added at submit time
+            final selections = instanceSelections(task.config)
+
             if( fusionEnabled() && !disk ) {
-                final reqMachineType = task.config.getMachineType()
+                final reqMachineType = selections ? selections.first() : task.config.getMachineType()
                 disk = new DiskResource(
                     request: '375 GB',
                     type: reqMachineType ? chooseFusionDiskType(reqMachineType) : 'local-ssd'
@@ -410,7 +416,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - adding local volume as fusion scratch: $disk"
             }
 
-            final machineType = findBestMachineType(task.config, disk?.type == 'local-ssd')
+            final machineType = selections
+                ? null
+                : findBestMachineType(task.config, disk?.type == 'local-ssd')
 
             if( machineType ) {
                 instancePolicy.setMachineType(machineType.type)
@@ -916,6 +924,26 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
     protected GoogleBatchMachineTypeSelector.MachineType bestMachineType0(int cpus, int memory, String location, boolean spot, boolean localSSD, List<String> families) {
         return GoogleBatchMachineTypeSelector.INSTANCE.bestMachineType(cpus, memory, location, spot, localSSD, families)
+    }
+
+    /**
+     * The list of machine types to be allowed by the job instance flexibility policy, that is
+     * when instance flexibility is enabled and the `machineType` directive specifies two or more
+     * explicit machine types e.g. `machineType 'n2-standard-4,c3-standard-4'`.
+     *
+     * Patterns containing `*` or `?` are not included because they are resolved to a single
+     * machine type by the machine type selector.
+     *
+     * @param config The task config
+     * @return The allowed machine types or an empty list when instance flexibility does not apply
+     */
+    protected List<String> instanceSelections(TaskConfig config) {
+        if( !batchConfig.instanceFlexibility )
+            return List.<String>of()
+        final machineType = config.getMachineType()
+        if( !machineType || !machineType.contains(',') || machineType.contains('*') || machineType.contains('?') )
+            return List.<String>of()
+        return machineType.tokenize(',').collect(it -> it.trim())
     }
 
     protected GoogleBatchMachineTypeSelector.MachineType findBestMachineType(TaskConfig config, boolean localSSD) {
