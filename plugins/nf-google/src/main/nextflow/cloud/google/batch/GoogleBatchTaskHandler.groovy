@@ -299,7 +299,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( task instanceof TaskArrayRun ) {
             final arraySize = task.getArraySize()
             taskGroup.setTaskCount(arraySize)
+            applyScheduling(taskGroup, task.config, arraySize)
         }
+        else if( hasSchedulingHint(task.config) )
+            log.warn1 "Google Batch hints '${SCHEDULING_POLICY_HINT}'/'${SCHEDULING_PARALLELISM_HINT}' apply only to array tasks and are ignored for process `${task.lazyName()}`"
 
         return taskGroup.build()
     }
@@ -356,6 +359,83 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     static class InstancePolicyResult {
         AllocationPolicy.InstancePolicyOrTemplate policy
         boolean requiresScratchVolume
+    }
+
+    private static final String HINT_PREFIX = 'google-batch/'
+    private static final String SCHEDULING_POLICY_HINT = 'scheduling.policy'
+    private static final String SCHEDULING_PARALLELISM_HINT = 'scheduling.parallelism'
+    private static final Set<String> KNOWN_HINTS = Set.of(SCHEDULING_POLICY_HINT, SCHEDULING_PARALLELISM_HINT)
+    private static final String SUPPORTED_HINTS_MSG =
+        KNOWN_HINTS.collect { HINT_PREFIX + it }.sort().join(', ')
+
+    /**
+     * Validate the google-batch prefixed hints, throwing if a prefixed key is not supported
+     *
+     * @param hints The hints map from the task config
+     */
+    protected void validateHints(Map<String,Object> hints) {
+        if( !hints )
+            return
+        final unknown = []
+        for( final key : hints.keySet() ) {
+            if( !key?.startsWith(HINT_PREFIX) )
+                continue
+            if( !KNOWN_HINTS.contains(key.substring(HINT_PREFIX.length())) )
+                unknown.add(key)
+        }
+        if( unknown )
+            throw new IllegalArgumentException("Unknown Google Batch hint(s): ${unknown.collect { "'$it'" }.join(', ')} -- supported keys are: ${SUPPORTED_HINTS_MSG}")
+    }
+
+    /**
+     * Check whether the config sets an array scheduling hint, in bare or prefixed form
+     *
+     * @param config The task config
+     * @return {@code true} if a scheduling hint is present
+     */
+    private boolean hasSchedulingHint(TaskConfig config) {
+        final hints = config?.getHints()
+        if( !hints )
+            return false
+        return [SCHEDULING_POLICY_HINT, SCHEDULING_PARALLELISM_HINT].any {
+            hints.containsKey(it) || hints.containsKey(HINT_PREFIX + it)
+        }
+    }
+
+    /**
+     * Apply the array task-group scheduling hints (scheduling.policy, scheduling.parallelism) for Google Batch
+     *
+     * @param taskGroup The task group builder to update
+     * @param config The task config carrying the hints
+     * @param arraySize The number of tasks in the array
+     */
+    protected void applyScheduling(TaskGroup.Builder taskGroup, TaskConfig config, int arraySize) {
+        final hints = config.getHints()
+        if( !hints )
+            return
+
+        final policyValue = hints.get(HINT_PREFIX + SCHEDULING_POLICY_HINT) ?: hints.get(SCHEDULING_POLICY_HINT)
+        final policy = policyValue != null ? policyValue.toString().trim().toLowerCase().replace('-', '_') : null
+
+        if( policy == 'in_order' ) {
+            // IN_ORDER requires parallelism=1 and runs tasks sequentially by index
+            taskGroup.setSchedulingPolicy(TaskGroup.SchedulingPolicy.IN_ORDER)
+            taskGroup.setParallelism(1)
+            return
+        }
+        if( policy != null && policy != 'as_soon_as_possible' )
+            throw new IllegalArgumentException("Invalid '${SCHEDULING_POLICY_HINT}' hint value: '${policyValue}' -- it must be one of: in_order, as_soon_as_possible")
+
+        // cap concurrent tasks, clamped to the array size
+        final parallelismValue = hints.get(HINT_PREFIX + SCHEDULING_PARALLELISM_HINT) ?: hints.get(SCHEDULING_PARALLELISM_HINT)
+        if( parallelismValue == null )
+            return
+        final Integer m = parallelismValue instanceof Number
+            ? (parallelismValue as Integer)
+            : (parallelismValue.toString().trim().isInteger() ? parallelismValue.toString().trim() as Integer : null)
+        if( m == null || m < 1 )
+            throw new IllegalArgumentException("Invalid '${SCHEDULING_PARALLELISM_HINT}' hint value: '${parallelismValue}' -- it must be a positive integer")
+        taskGroup.setParallelism(Math.min(m, arraySize))
     }
 
     /**
@@ -553,6 +633,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected Job newSubmitRequest(TaskRun task, GoogleBatchLauncherSpec launcher) {
+        // validate the task's hints once per submission
+        validateHints(task.config.getHints())
+
         // container validation
         if( !task.container )
             throw new ProcessUnrecoverableException("Process `${task.lazyName()}` failed because the container image was not specified")
