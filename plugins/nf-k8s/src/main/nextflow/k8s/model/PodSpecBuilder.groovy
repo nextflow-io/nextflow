@@ -680,11 +680,19 @@ class PodSpecBuilder {
     @PackageScope
     String getAcceleratorType(AcceleratorResource accelerator) {
 
-        def type = accelerator.type ?: 'nvidia.com'
+        // Default to standard NVIDIA GPU if left entirely blank.
+        def type = accelerator.type?.toLowerCase() ?: 'nvidia.com'
 
         if ( type.contains('/') )
             // Assume the user has fully specified the resource type.
             return type
+
+        // Map common vendor shorthands to their standard K8s Extended Resource strings.
+        if (type =~ /\b(nvidia|tesla|ampere|h100|a100)\b/)  return 'nvidia.com/gpu'
+        if (type =~ /\b(amd|radeon|instinct)\b/)            return 'amd.com/gpu'
+        if (type =~ /\b(tpu|google)\b/)                     return 'google.com/tpu'
+        if (type =~ /\b(neuron|inferentia|trainium|aws)\b/) return 'aws.amazon.com/neuron'
+        if (type =~ /\b(intel|gaudi)\b/)                    return 'gpu.intel.com/i915'
 
         // Assume we're using GPU and update as necessary.
         if( !type.contains('.') ) type += '.com'
