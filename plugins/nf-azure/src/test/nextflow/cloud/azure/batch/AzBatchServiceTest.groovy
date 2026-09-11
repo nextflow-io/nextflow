@@ -689,6 +689,7 @@ class AzBatchServiceTest extends Specification {
         then:
         1 * azure.getPoolSpec(POOL_ID) >> SPEC
         1 * azure.computeSlots(TASK, SPEC) >> 4
+        1 * azure.getSasForPath(_) >> SAS
         1 * azure.resourceFileUrls(TASK, SAS) >> []
         1 * azure.outputFileUrls(TASK, SAS) >> []
         and:
@@ -733,6 +734,7 @@ class AzBatchServiceTest extends Specification {
         then:
         1 * azure.getPoolSpec(POOL_ID) >> SPEC
         1 * azure.computeSlots(TASK, SPEC) >> 4
+        1 * azure.getSasForPath(_) >> SAS
         1 * azure.resourceFileUrls(TASK, SAS) >> []
         1 * azure.outputFileUrls(TASK, SAS) >> []
         and:
@@ -778,6 +780,7 @@ class AzBatchServiceTest extends Specification {
         then:
         1 * azure.getPoolSpec(POOL_ID) >> SPEC
         1 * azure.computeSlots(TASK, SPEC) >> 4
+        1 * azure.getSasForPath(_) >> SAS
         1 * azure.resourceFileUrls(TASK, SAS) >> []
         1 * azure.outputFileUrls(TASK, SAS) >> []
         and:

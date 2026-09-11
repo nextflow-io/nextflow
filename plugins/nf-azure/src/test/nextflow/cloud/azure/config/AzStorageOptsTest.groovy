@@ -78,4 +78,5 @@ class AzStorageOptsTest extends Specification {
         storageOpts.fileShares.get('file1').getMountPath() == 'mountPath1'
         storageOpts.fileShares.get('file1').getMountOptions() == AzFileShareOpts.DEFAULT_MOUNT_OPTIONS
     }
+
 }
