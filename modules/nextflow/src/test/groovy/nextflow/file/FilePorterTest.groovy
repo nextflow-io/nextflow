@@ -18,12 +18,14 @@ package nextflow.file
 
 import java.nio.file.FileSystems
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import java.nio.file.Path
 import java.util.concurrent.Semaphore
 
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.ProcessStageException
+import nextflow.util.Duration
 import spock.lang.Ignore
 import spock.lang.Specification
 import test.TestHelper
@@ -49,6 +51,21 @@ class FilePorterTest extends Specification {
         then:
         porter.maxRetries == 88
 
+    }
+
+    def 'should get the retry delay value' () {
+
+        when:
+        def session = new Session()
+        def porter = new FilePorter(session)
+        then:
+        porter.retryDelay == Duration.of('250ms')
+
+        when:
+        session = new Session([filePorter: [retryDelay: '2sec']])
+        porter = new FilePorter(session)
+        then:
+        porter.retryDelay == Duration.of('2sec')
     }
 
 
@@ -142,6 +159,55 @@ class FilePorterTest extends Specification {
         @Override
         void run() throws Exception {
             throw new ProcessStageException('Cannot stage file')
+        }
+    }
+
+    static class FlakyHttpStage extends FilePorter.FileTransfer {
+
+        int count
+
+        FlakyHttpStage(Path path, Path stagePath, int maxRetries, Duration retryDelay) {
+            super(path, stagePath, maxRetries, retryDelay, new Semaphore(100))
+        }
+
+        @Override
+        protected Path stageForeignFile0(Path source, Path target) {
+            if( count++ == 0 )
+                throw new NoSuchFileException(source.toString())
+            target.text = 'OK'
+            return target
+        }
+    }
+
+    static class FlakyDnsStage extends FilePorter.FileTransfer {
+
+        int count
+
+        FlakyDnsStage(Path path, Path stagePath, int maxRetries, Duration retryDelay) {
+            super(path, stagePath, maxRetries, retryDelay, new Semaphore(100))
+        }
+
+        @Override
+        protected Path stageForeignFile0(Path source, Path target) {
+            if( count++ == 0 )
+                throw new IOException('raw.githubusercontent.com')
+            target.text = 'OK'
+            return target
+        }
+    }
+
+    static class MissingHttpStage extends FilePorter.FileTransfer {
+
+        int count
+
+        MissingHttpStage(Path path, Path stagePath, int maxRetries, Duration retryDelay) {
+            super(path, stagePath, maxRetries, retryDelay, new Semaphore(100))
+        }
+
+        @Override
+        protected Path stageForeignFile0(Path source, Path target) {
+            count++
+            throw new NoSuchFileException('404 not found')
         }
     }
 
@@ -305,6 +371,60 @@ class FilePorterTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+    }
+
+    def 'should retry transient no such file for http sources' () {
+        given:
+        def source = 'https://raw.githubusercontent.com/org/repo/main/file.txt' as Path
+        def target = Files.createTempDirectory('stage').resolve('file.txt')
+        and:
+        def transfer = new FlakyHttpStage(source, target, 1, Duration.of('1ms'))
+
+        when:
+        transfer.stageForeignFile(source, target)
+
+        then:
+        target.text == 'OK'
+        transfer.count == 2
+
+        cleanup:
+        target?.parent?.deleteDir()
+    }
+
+    def 'should retry transient dns-like failure for http sources' () {
+        given:
+        def source = 'https://raw.githubusercontent.com/org/repo/main/file.txt' as Path
+        def target = Files.createTempDirectory('stage').resolve('file.txt')
+        and:
+        def transfer = new FlakyDnsStage(source, target, 1, Duration.of('1ms'))
+
+        when:
+        transfer.stageForeignFile(source, target)
+
+        then:
+        target.text == 'OK'
+        transfer.count == 2
+
+        cleanup:
+        target?.parent?.deleteDir()
+    }
+
+    def 'should not retry missing http resource' () {
+        given:
+        def source = 'https://raw.githubusercontent.com/org/repo/main/missing.txt' as Path
+        def target = Files.createTempDirectory('stage').resolve('missing.txt')
+        and:
+        def transfer = new MissingHttpStage(source, target, 3, Duration.of('1ms'))
+
+        when:
+        transfer.stageForeignFile(source, target)
+
+        then:
+        thrown(ProcessStageException)
+        transfer.count == 1
+
+        cleanup:
+        target?.parent?.deleteDir()
     }
 
     def 'should check valid files' () {
