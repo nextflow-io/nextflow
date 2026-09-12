@@ -17,6 +17,7 @@
 package nextflow.executor.local
 
 import java.nio.file.Path
+import java.util.concurrent.TimeUnit
 
 import nextflow.Global
 import nextflow.container.DockerConfig
@@ -101,6 +102,7 @@ class LocalTaskHandlerTest extends Specification {
             elapsedTimeMillis() >> 200
         }
         handler.@process = Mock(Process) {
+            waitFor(_ as long, _ as TimeUnit) >> true   // process has already terminated
             exitValue() >> 143  // Typical exit code for SIGTERM
         }
         handler.status = TaskStatus.RUNNING
@@ -113,5 +115,66 @@ class LocalTaskHandlerTest extends Specification {
         1 * task.setExitStatus(143)
         1 * task.setError(_ as ProcessException)
         handler.status == TaskStatus.COMPLETED
+    }
+
+    def 'should not throw when the process has not exited yet after being destroyed' () {
+        given: 'a task over its time limit whose process has not been reaped yet'
+        def task = Mock(TaskRun) {
+            getWorkDir() >> Path.of('/tmp/test-work-dir')
+            getConfig() >> Mock(TaskConfig) { getTime() >> Duration.of(100) }
+        }
+        and:
+        def handler = Spy(new LocalTaskHandler(task, Mock(LocalExecutor))) {
+            buildTaskWrapper() >> {}
+            elapsedTimeMillis() >> 200
+        }
+        and: 'exitValue() throws, as ProcessImpl does before the child is reaped'
+        handler.@process = Mock(Process) {
+            waitFor(_ as long, _ as TimeUnit) >> false
+            exitValue() >> { throw new IllegalThreadStateException('process hasn\'t exited') }
+        }
+        handler.status = TaskStatus.RUNNING
+
+        when:
+        def completed = handler.checkIfCompleted()
+
+        then: 'the task completes instead of propagating the exception to the poll loop'
+        noExceptionThrown()
+        completed == true
+        1 * task.setExitStatus(Integer.MAX_VALUE)
+        1 * task.setError(_ as ProcessException)
+        handler.status == TaskStatus.COMPLETED
+    }
+
+    def 'should read the exit status of a real process killed on timeout' () {
+        given: 'a genuinely running process, destroyed the way checkIfCompleted does'
+        def task = Mock(TaskRun) {
+            getWorkDir() >> Path.of('/tmp/test-work-dir')
+            getConfig() >> Mock(TaskConfig) { getTime() >> Duration.of(100) }
+        }
+        and:
+        def handler = Spy(new LocalTaskHandler(task, Mock(LocalExecutor))) {
+            buildTaskWrapper() >> {}
+            elapsedTimeMillis() >> 200
+        }
+        and:
+        def proc = new ProcessBuilder('bash', '-c', 'sleep 300')
+                .redirectErrorStream(true)
+                .redirectOutput(new File('/dev/null'))
+                .start()
+        handler.@process = proc
+        handler.status = TaskStatus.RUNNING
+
+        when:
+        def completed = handler.checkIfCompleted()
+
+        then: 'SIGTERM is observed rather than IllegalThreadStateException'
+        noExceptionThrown()
+        completed == true
+        1 * task.setExitStatus(143)
+        handler.status == TaskStatus.COMPLETED
+
+        cleanup:
+        proc?.destroyForcibly()
     }
 }
