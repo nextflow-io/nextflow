@@ -28,20 +28,40 @@ import nextflow.Session
 @CompileStatic
 class OutputDef {
 
+    private BaseScript owner
+
     private Closure closure
 
-    OutputDef(Closure closure) {
+    OutputDef(BaseScript owner, Closure closure) {
+        this.owner = owner
         this.closure = closure
     }
 
-    void apply(Session session) {
-        final dsl = new OutputDsl()
+    void apply(Session session, ScriptBinding.ParamsMap params) {
+        dsl(params).apply(session)
+    }
+
+    /**
+     * The declared outputs, keyed by name, with their output directives
+     * resolved against the given params.
+     *
+     * The output block is evaluated on each use, because the output
+     * directives can refer to the params of the pipeline, and a pipeline
+     * can be executed more than once in a run.
+     *
+     * @param params
+     */
+    Map<String,Map> getDeclarations(ScriptBinding.ParamsMap params) {
+        return dsl(params).getDeclarations()
+    }
+
+    private OutputDsl dsl(ScriptBinding.ParamsMap params) {
+        final dsl = new OutputDsl(owner, params)
         final cl = (Closure)closure.clone()
         cl.setDelegate(dsl)
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
         cl.call()
-
-        dsl.apply(session)
+        return dsl
     }
 
 }

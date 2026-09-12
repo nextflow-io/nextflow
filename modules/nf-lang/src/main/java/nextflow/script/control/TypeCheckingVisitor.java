@@ -65,6 +65,10 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
     }
 
     private void checkMethodCallArguments(MethodCallExpression node, MethodNode defNode) {
+        // an included pipeline is called with named arguments,
+        // which are checked at runtime against its params block
+        if( defNode instanceof WorkflowNode wn && wn.isEntry() )
+            return;
         var argsCount = asMethodCallArguments(node).size();
         var paramsCount = defNode.getParameters().length;
         if( argsCount != paramsCount )

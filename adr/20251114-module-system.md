@@ -1,9 +1,9 @@
-# Module System for Nextflow
+# Module system
 
 - Authors: Paolo Di Tommaso
 - Status: approved
 - Date: 2025-01-06
-- Tags: modules, dsl, registry, versioning, architecture
+- Tags: modules, dsl, registry, versioning
 - Version: 2.7
 
 ## Updates
@@ -927,4 +927,3 @@ output:
     description: Software versions
     pattern: "versions.yml"
 ```
-

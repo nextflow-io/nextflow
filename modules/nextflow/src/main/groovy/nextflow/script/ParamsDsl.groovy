@@ -22,6 +22,7 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
+import nextflow.extension.Bolts
 import nextflow.script.dsl.Types
 import nextflow.util.TypeHelper
 /**
@@ -33,11 +34,14 @@ import nextflow.util.TypeHelper
 @CompileStatic
 class ParamsDsl {
 
+    private BaseScript owner
+
     private Class clazz
 
     private Map<String,Param> declarations = [:]
 
-    ParamsDsl(Class clazz) {
+    ParamsDsl(BaseScript owner, Class clazz) {
+        this.owner = owner
         this.clazz = clazz
     }
 
@@ -48,7 +52,15 @@ class ParamsDsl {
         declarations[name] = new Param(name, type, optional, defaultValue)
     }
 
-    void apply(Session session) {
+    Map<String,Param> getDeclarations() { declarations }
+
+    /**
+     * Resolve the declared params against the command line and config,
+     * and return them.
+     *
+     * @param session
+     */
+    ScriptBinding.ParamsMap apply(Session session) {
         final cliParams = session.cliParams ?: [:]
         final configParams = session.configParams ?: [:]
 
@@ -61,7 +73,12 @@ class ParamsDsl {
         for( final name : declarations.keySet() ) {
             final decl = declarations[name]
             if( cliParams.containsKey(name) ) {
-                params[name] = ParamsHelper.resolveFromCli(decl, cliParams[name])
+                // a nested param (e.g. `--rnaseq.aligner`) overrides only the
+                // fields it names, keeping the rest of the config value
+                final value = cliParams[name] instanceof Map && configParams[name] instanceof Map
+                    ? Bolts.deepMerge((Map)configParams[name], (Map)cliParams[name])
+                    : cliParams[name]
+                params[name] = ParamsHelper.resolveFromCli(decl, value)
             }
             else if( configParams.containsKey(name) ) {
                 params[name] = ParamsHelper.resolveFromCode(decl, configParams[name])
@@ -70,18 +87,14 @@ class ParamsDsl {
                 params[name] = ParamsHelper.resolveFromCode(decl, decl.defaultValue)
             }
             else {
-                params[name] = null
+                params[name] = ParamsHelper.emptyRecord(decl)
             }
 
             if( params[name] == null && !decl.optional ) {
                 throw new ScriptRuntimeException("Parameter `$name` is required but no value was provided")
             }
 
-            final expectedType = TypeHelper.getRawType(decl.type)
-            final actualType = params[name]?.getClass()
-            if( actualType != null && !ParamsHelper.isAssignableFrom(expectedType, actualType) ) {
-                throw new ScriptRuntimeException("Parameter `$name` with type ${Types.getName(decl.type)} cannot be assigned to ${params[name]} [${Types.getName(actualType)}]")
-            }
+            ParamsHelper.checkAssignable(decl, params[name])
         }
 
         // propagate resolved params to all scripts for legacy compatibility
@@ -91,8 +104,17 @@ class ParamsDsl {
             if( !scriptPath )
                 continue
             final script = ScriptMeta.getScriptByPath(scriptPath)
+            // a script that declares its own params block resolves its params
+            // independently -- a pipeline included by this script receives its
+            // params from the pipeline call, not from the calling pipeline
+            if( !script.is(owner) && script.getParamDeclarations() )
+                continue
             script.binding.setParams(params, true)
         }
+
+        // the resolved params of the owner script also include any config
+        // param that the script does not declare
+        return owner.binding.getParams()
     }
 
 }
