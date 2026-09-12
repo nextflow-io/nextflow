@@ -28,6 +28,7 @@ import nextflow.Session
 import nextflow.container.inspect.ContainerInspectMode
 import nextflow.exception.AbortOperationException
 import nextflow.exception.AbortRunException
+import nextflow.exception.ExitException
 import nextflow.plugin.Plugins
 import nextflow.util.HistoryFile
 /**
@@ -134,6 +135,15 @@ class ScriptRunner {
             await()
             // shutdown session
             shutdown()
+        }
+        catch( ExitException e ) {
+            // the script requested to stop the execution via `exit()`
+            log.debug "Exit requested by the pipeline script -- exitCode=${e.exitCode}; message=${e.message ?: '-'}"
+            if( e.exitCode )
+                session.abort(e)
+            else
+                shutdown()
+            throw e
         }
         catch (Throwable e) {
             session.abort(e)
