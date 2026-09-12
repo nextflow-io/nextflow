@@ -194,7 +194,7 @@ class ParallelPollingMonitorTest extends Specification {
         given:
         def adder = new LongAdder()
         def processor = Mock(TaskProcessor) { getForksCount() >> adder }
-        def session = Mock(Session) { isSuccess() >> true }
+        def session = Mock(Session) { isSuccess() >> true; canSubmitTasks() >> true }
         and:
         def opts = new ThrottlingExecutor.Options().withRateLimit('100/sec')
         def exec = ThrottlingExecutor.create(opts)
