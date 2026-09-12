@@ -137,11 +137,21 @@ class CmdModuleView extends CmdBase {
         }
     }
 
+    // TODO: re-enable once npr-api exposes the `kind` field -- the registry side (seqeralabs/nextflow-registry#366) is not released yet
+    // /**
+    //  * The module kind, defaulting to {@code Process} when the registry does not report one
+    //  * (older registries or process modules that predate the field).
+    //  */
+    // private static String kindOf(ModuleMetadata metadata) {
+    //     return metadata.kind != null ? metadata.kind.toString() : 'Process'
+    // }
+
     private void printFormattedInfo(ModuleReference reference, ModuleRelease release, String moduleUrl) {
         ModuleMetadata metadata = release.metadata
         println ""
         println "Module:      ${reference}"
         println "Version:     ${release.version}"
+        // println "Kind:        ${kindOf(metadata)}"
         println "URL:         ${moduleUrl}"
         println "Description: ${metadata.description ?: release.description ?: 'N/A'}"
 
@@ -292,6 +302,7 @@ class CmdModuleView extends CmdBase {
             name       : reference.toString(),
             fullName   : reference.fullName,
             version    : release.version,
+            // kind       : kindOf(metadata),
             url        : moduleUrl,
             description: metadata.description ?: release.description,
             componentName: metadata.componentName,

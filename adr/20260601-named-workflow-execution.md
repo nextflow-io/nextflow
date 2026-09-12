@@ -44,6 +44,8 @@ output {
 Where the `RNASEQ` workflow is defined as follows:
 
 ```groovy
+nextflow.enable.types = true
+
 workflow RNASEQ {
     take:
     samples: Channel<Sample>
@@ -146,6 +148,8 @@ A channel param such as `samples: Channel<Sample>` is supplied on the command li
 For example, given the following named workflow:
 
 ```groovy
+nextflow.enable.types = true
+
 workflow RNASEQ {
     take:
     samples: Channel<Sample>

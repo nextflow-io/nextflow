@@ -27,9 +27,19 @@ Print the command usage.
 
 ## Subcommands
 
-##### `create [namespace/name]` {#module-create}
+##### `create [options] [namespace/name]` {#module-create}
 
 Create a new module with a basic `main.nf`, `meta.yml`, and `README.md`.
+
+The following options are available:
+
+###### `-kind` (`Process`)
+
+The kind of module to scaffold: `Process` (default) or `Workflow`.
+
+###### `-legacy`
+
+Scaffold a module without static typing. By default a module is scaffolded with typed input/output declarations.
 
 ##### `install [options] [namespace/name]` {#module-install}
 
@@ -38,18 +48,22 @@ Nextflow stores downloaded modules in the `modules/` directory and writes a `.mo
 
 The following options are available:
 
+###### `-force`
+
+Reinstall the module even if it is already installed. Without this flag, Nextflow reuses an installed module and does not overwrite a locally modified one.
+
+###### `-update-deps`
+
+Re-vendor an installed module's dependencies from its `meta.yml`, leaving the module itself untouched. Nextflow installs each declared dependency at its pinned version, transitively, and removes any of the module's own direct dependencies that are no longer declared. If the module is not installed, Nextflow installs it as usual. Cannot be combined with `-force`.
+
 ###### `-version`
 
 Module version to install, for example `1.0.0`. Defaults to the latest version.
 
-###### `-force`
-
-Reinstall the module even if a locally modified copy exists. Without this flag, Nextflow does not overwrite locally modified modules.
-
 ##### `list [options]` {#module-list}
 
 List the modules installed in your project.
-Shows each module's name, version, and integrity status, which reports whether the module was modified locally.
+Shows each module's name, version, kind (`Process` or `Workflow`), and integrity status, which reports whether the module was modified locally.
 
 The following options are available:
 
@@ -106,7 +120,7 @@ Module version to run, for example `1.0.0`. Defaults to the latest version.
 ##### `search [options] [query]` {#module-search}
 
 Search for modules in the registry by keyword or name.
-Returns the matching modules with their names, versions, descriptions, and download statistics.
+Returns the name and description of each matching module.
 
 The following options are available:
 
@@ -170,7 +184,12 @@ Output mode for info results. Options: `text` (default), `json`.
 
 Validate a module before publishing to the registry.
 
-Verifies that the required files `main.nf`, `meta.yml`, and `README.md` are present, and that the module spec contains the required name, version, description, and license fields.
+Verifies that:
+
+- All required files are present (`main.nf`, `meta.yml`, `README.md`).
+- The module spec contains all required fields (name, version, description, and license).
+- Every module included by the module script is a registry module, not a local module.
+- The dependencies declared in `requires.modules` are exactly the modules included by the module script, each pinned to an exact version.
 
 ## Examples
 
