@@ -57,6 +57,23 @@ class ConfigFormatterTest extends Specification {
         return true
     }
 
+    String formatWrapped(String contents, int lineLength) {
+        def source = parser.parse('main.nf', contents)
+        assert !source.getErrorCollector().hasErrors()
+        def formatter = new ConfigFormattingVisitor(source, new FormattingOptions(4, true, false, false, false, lineLength))
+        formatter.visit()
+        assert formatter.getMissingComments().isEmpty()
+        return formatter.toString()
+    }
+
+    boolean checkFormatWrapped(String input, String output, int lineLength = 40) {
+        input = input.stripIndent()
+        output = output.stripIndent()
+        assert formatWrapped(input, lineLength) == output
+        assert formatWrapped(output, lineLength) == output
+        return true
+    }
+
     def 'should format a config assignment' () {
         expect:
         checkFormat(
@@ -147,6 +164,48 @@ class ConfigFormatterTest extends Specification {
                 """
             }
             '''
+        )
+    }
+
+    // -- line-length wrapping (issue #26)
+
+    def 'should wrap a long config assignment and leave a short one alone' () {
+        expect:
+        checkFormatWrapped(
+            '''\
+            process.ext.args = [alpha, beta, gamma, delta, epsilon, zeta]
+            ''',
+            '''\
+            process.ext.args = [
+                alpha,
+                beta,
+                gamma,
+                delta,
+                epsilon,
+                zeta,
+            ]
+            '''
+        )
+        checkFormatWrapped(
+            '''\
+            process.ext.args = [alpha, beta]
+            ''',
+            '''\
+            process.ext.args = [alpha, beta]
+            '''
+        )
+    }
+
+    def 'should not wrap a long config assignment when maxLineLength is disabled' () {
+        expect:
+        checkFormatWrapped(
+            '''\
+            process.ext.args = [alpha, beta, gamma, delta, epsilon, zeta]
+            ''',
+            '''\
+            process.ext.args = [alpha, beta, gamma, delta, epsilon, zeta]
+            ''',
+            0
         )
     }
 

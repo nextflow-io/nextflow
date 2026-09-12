@@ -109,19 +109,21 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
     @Override
     public void visitConfigAssign(ConfigAssignNode node) {
         fmt.appendLeadingComments(node);
-        fmt.appendIndent();
-        var name = String.join(".", node.names);
-        fmt.append(name);
-        if( currentAlignmentWidth > 0 ) {
-            var padding = currentAlignmentWidth - name.length();
-            fmt.append(" ".repeat(padding));
-        }
-        fmt.append(" = ");
-        var sid = fmt.beginStatement(node);
-        fmt.visit(node.value);
-        fmt.endStatement(sid);
-        fmt.appendTrailingComment(node);
-        fmt.appendNewLine();
+        fmt.emitWrappable(() -> {
+            fmt.appendIndent();
+            var name = String.join(".", node.names);
+            fmt.append(name);
+            if( currentAlignmentWidth > 0 ) {
+                var padding = currentAlignmentWidth - name.length();
+                fmt.append(" ".repeat(padding));
+            }
+            fmt.append(" = ");
+            var sid = fmt.beginStatement(node);
+            fmt.visit(node.value);
+            fmt.endStatement(sid);
+            fmt.appendTrailingComment(node);
+            fmt.appendNewLine();
+        });
     }
 
     private static final Pattern IDENTIFIER = Pattern.compile("[a-zA-Z_]+[a-zA-Z0-9_]*");
