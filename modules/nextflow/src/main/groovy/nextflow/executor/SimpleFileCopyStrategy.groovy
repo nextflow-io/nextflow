@@ -167,7 +167,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      * to the shared working directory
      */
     @Override
-    String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
+    String getUnstageOutputFilesScript(List<String> outputFiles, Path unstageDir) {
         final patterns = normalizeGlobStarPaths(outputFiles)
         // create a bash script that will copy the out file to the working directory
         log.trace "Unstaging file path: $patterns"
@@ -179,11 +179,17 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         for( String it : patterns )
             escape.add( Escape.path(it) )
 
-        final mode = stageoutMode ?: ( workDir==targetDir ? 'copy' : 'move' )
+        // NOTE: the mode is determined by comparing the *task* work and target dirs, not
+        // the `unstageDir` argument: an executor may remap the latter to a container mount
+        // path (e.g. Google Batch), which would never match the work dir and therefore
+        // always select 'move'. Moving relocates a symlink verbatim instead of resolving
+        // it, which corrupts outputs that are links to staged inputs.
+        // See https://github.com/nextflow-io/nextflow/issues/4819
+        final mode = stageoutMode ?: ( this.targetDir==null || this.workDir==this.targetDir ? 'copy' : 'move' )
         return """\
             IFS=\$'\\n'
             for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
-                ${stageOutCommand('$name', targetDir, mode)}
+                ${stageOutCommand('$name', unstageDir, mode)}
             done
             unset IFS""".stripIndent(true)
     }
