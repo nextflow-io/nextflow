@@ -61,6 +61,25 @@ class ScriptFormatterTest extends Specification {
         return true
     }
 
+    String formatSorted(String contents) {
+        scriptParser.compiler().getSources().clear()
+        def source = scriptParser.parse('main.nf', contents)
+        new ScriptResolveVisitor(source, scriptParser.compiler().compilationUnit(), Types.DEFAULT_SCRIPT_IMPORTS, Collections.emptyList()).visit()
+        assert !TestUtils.hasSyntaxErrors(source)
+        def formatter = new ScriptFormattingVisitor(source, new FormattingOptions(4, true, false, false, true))
+        formatter.visit()
+        assert formatter.getMissingComments().isEmpty()
+        return formatter.toString()
+    }
+
+    boolean checkFormatSorted(String input, String output) {
+        input = input.stripIndent()
+        output = output.stripIndent()
+        assert formatSorted(input) == output
+        assert formatSorted(output) == output
+        return true
+    }
+
     def 'should format a code snippet' () {
         expect:
         checkFormat(
@@ -96,6 +115,204 @@ class ScriptFormatterTest extends Specification {
                 foo ;
                 bar
             } from './foobar.nf'
+            '''
+        )
+    }
+
+    def 'should sort includes alphabetically by source path' () {
+        expect:
+        checkFormatSorted(
+            '''\
+            include { foo } from './b.nf'
+            include { bar } from './a.nf'
+            ''',
+            '''\
+            include { bar } from './a.nf'
+            include { foo } from './b.nf'
+            '''
+        )
+    }
+
+    def 'should leave already-sorted includes unchanged' () {
+        expect:
+        checkFormatSorted(
+            '''\
+            include { alpha } from './alpha.nf'
+            include { beta } from './beta.nf'
+            ''',
+            '''\
+            include { alpha } from './alpha.nf'
+            include { beta } from './beta.nf'
+            '''
+        )
+    }
+
+    def 'should sort includes independently within blank-line-separated groups' () {
+        expect:
+        checkFormatSorted(
+            '''\
+            include { foo } from './b.nf'
+            include { bar } from './a.nf'
+
+            include { zed } from './z.nf'
+            include { yak } from './y.nf'
+            ''',
+            '''\
+            include { bar } from './a.nf'
+            include { foo } from './b.nf'
+
+            include { yak } from './y.nf'
+            include { zed } from './z.nf'
+            '''
+        )
+    }
+
+    def 'should move a per-include leading comment with its include when sorted' () {
+        expect:
+        checkFormatSorted(
+            '''\
+            include { foo } from './b.nf'
+            // comment about bar
+            include { bar } from './a.nf'
+            ''',
+            '''\
+            // comment about bar
+            include { bar } from './a.nf'
+            include { foo } from './b.nf'
+            '''
+        )
+    }
+
+    def 'should keep a group-header comment at the top of its group when the first include changes' () {
+        expect:
+        checkFormatSorted(
+            '''\
+            // group header
+            include { foo } from './b.nf'
+            include { bar } from './a.nf'
+            ''',
+            '''\
+            // group header
+            include { bar } from './a.nf'
+            include { foo } from './b.nf'
+            '''
+        )
+    }
+
+    def 'should preserve a trailing comment on an include when sorted' () {
+        expect:
+        checkFormatSorted(
+            '''\
+            include { foo } from './b.nf' // foo comment
+            include { bar } from './a.nf'
+            ''',
+            '''\
+            include { bar } from './a.nf'
+            include { foo } from './b.nf' // foo comment
+            '''
+        )
+    }
+
+    def 'should not sort includes when sortDeclarations is disabled' () {
+        expect:
+        checkFormat(
+            '''\
+            include { foo } from './b.nf'
+            include { bar } from './a.nf'
+            '''
+        )
+    }
+
+    def 'should be idempotent when sorting includes across multiple groups' () {
+        given:
+        def output =
+            '''\
+            include { bar } from './a.nf'
+            include { foo } from './b.nf'
+
+            include { yak } from './y.nf'
+            include { zed } from './z.nf'
+            '''.stripIndent()
+
+        expect:
+        formatSorted(output) == output
+        formatSorted(formatSorted(output)) == output
+    }
+
+    def 'should preserve the blank line above the include block when the first include is reordered' () {
+        expect:
+        checkFormatSorted(
+            '''\
+            nextflow.preview.output = true
+
+            include { foo } from './b.nf'
+            include { bar } from './a.nf'
+            ''',
+            '''\
+            nextflow.preview.output = true
+
+            include { bar } from './a.nf'
+            include { foo } from './b.nf'
+            '''
+        )
+    }
+
+    def 'should preserve multiple blank lines between include groups' () {
+        expect:
+        checkFormatSorted(
+            '''\
+            include { foo } from './b.nf'
+            include { bar } from './a.nf'
+
+
+            include { zed } from './z.nf'
+            include { yak } from './y.nf'
+            ''',
+            '''\
+            include { bar } from './a.nf'
+            include { foo } from './b.nf'
+
+
+            include { yak } from './y.nf'
+            include { zed } from './z.nf'
+            '''
+        )
+    }
+
+    def 'should preserve a blank line within an include leading comment block when sorted' () {
+        expect:
+        checkFormatSorted(
+            '''\
+            // header
+
+            // note
+            include { aaa } from './a.nf'
+            include { bbb } from './b.nf'
+            ''',
+            '''\
+            // header
+
+            // note
+            include { aaa } from './a.nf'
+            include { bbb } from './b.nf'
+            '''
+        )
+    }
+
+    def 'should preserve a blank line between an include comment and its include when sorted' () {
+        expect:
+        checkFormatSorted(
+            '''\
+            include { bbb } from './b.nf'
+            // note
+
+            include { aaa } from './a.nf'
+            ''',
+            '''\
+            // note
+
+            include { aaa } from './a.nf'
+            include { bbb } from './b.nf'
             '''
         )
     }

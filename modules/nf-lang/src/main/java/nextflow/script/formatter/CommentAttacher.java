@@ -146,6 +146,29 @@ public class CommentAttacher {
     }
 
     /**
+     * The source line at which a node's leading block begins: the line of its
+     * first own-line leading comment if it has one, otherwise the node's own
+     * line. Used to place blank lines above a reordered node.
+     */
+    public int leadingLine(ASTNode node) {
+        var leading = leading(node);
+        return !leading.isEmpty() && leading.get(0).ownLine
+            ? leading.get(0).line
+            : node.getLineNumber();
+    }
+
+    /**
+     * Move the leading comments of one node to the front of another node's leading
+     * comments, used when reordering declarations so a group header stays on top.
+     */
+    public void moveLeadingComments(ASTNode from, ASTNode to) {
+        var fromList = leading.remove(from);
+        if( fromList == null || fromList.isEmpty() )
+            return;
+        leading.computeIfAbsent(to, (k) -> new ArrayList<>()).addAll(0, fromList);
+    }
+
+    /**
      * Get the comments that were attached but never printed. Should always
      * be empty -- a non-empty result is a formatter bug that would silently
      * delete source.
