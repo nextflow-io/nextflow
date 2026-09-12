@@ -80,6 +80,8 @@ public class Formatter extends CodeVisitorSupport {
 
     private CommentAttacher comments = CommentAttacher.of(null);
 
+    private FmtDirectives fmtDirectives = FmtDirectives.of(null, null, comments);
+
     private int stringIndentDelta = 0;
 
     public Formatter(FormattingOptions options) {
@@ -92,6 +94,50 @@ public class Formatter extends CodeVisitorSupport {
 
     public CommentAttacher getComments() {
         return comments;
+    }
+
+    public void setFmtDirectives(FmtDirectives fmtDirectives) {
+        this.fmtDirectives = fmtDirectives;
+    }
+
+    /**
+     * Emit a node excluded from formatting by a `fmt: skip` or `fmt: off`
+     * ... `fmt: on` directive verbatim from the source text, or nothing if
+     * the node is part of a verbatim region emitted by an earlier node.
+     * Returns false if the node is not part of any verbatim region, in
+     * which case the caller should format it normally.
+     *
+     * A leading comment of the node that falls within the verbatim text
+     * (e.g. the `fmt: off` comment itself) is already part of that text, so
+     * it -- and its blank-line gap -- is skipped here just like
+     * {@link #appendLeadingComments}, except that the final blank-line gap
+     * is measured up to the text's own first line rather than the node's,
+     * since the two can differ (`fmt: off` may precede the node by several
+     * lines, and that gap is already part of the text).
+     */
+    public boolean appendVerbatim(ASTNode node) {
+        if( fmtDirectives.isSuppressed(node) )
+            return true;
+        var text = fmtDirectives.verbatimText(node);
+        if( text == null )
+            return false;
+        for( var comment : visible(comments.leading(node)) ) {
+            appendBlankLines(comment.line);
+            appendComment(comment);
+        }
+        appendBlankLines(fmtDirectives.verbatimStartLine(node));
+        append(text);
+        appendNewLine();
+        return true;
+    }
+
+    /**
+     * Determine whether a node is excluded from formatting by a fmt directive,
+     * either because it carries verbatim text itself or because it is part of
+     * a verbatim region emitted by an earlier node.
+     */
+    public boolean isVerbatim(ASTNode node) {
+        return fmtDirectives.isSuppressed(node) || fmtDirectives.verbatimText(node) != null;
     }
 
     public void append(char c) {
@@ -114,13 +160,29 @@ public class Formatter extends CodeVisitorSupport {
     }
 
     /**
+     * The comments in a list that are not already printed as part of a
+     * verbatim region (see {@link FmtDirectives#coversComment}) -- e.g. the
+     * `fmt: on` that closes a region, attached as a leading comment of the
+     * node that follows. Filtering them out up front keeps the blank-line
+     * accounting in the callers indexed against what is actually printed.
+     * The blank lines around a skipped comment are handled correctly anyway,
+     * since {@link #appendBlankLines} measures the gap from the source rather
+     * than from what was printed.
+     */
+    private List<Comment> visible(List<Comment> list) {
+        if( !fmtDirectives.coversAnyComment() )
+            return list;
+        return list.stream().filter(c -> !fmtDirectives.coversComment(c)).toList();
+    }
+
+    /**
      * Append the comments that precede a node, along with any blank lines
      * that separate them from each other and from the node.
      *
      * @param node
      */
     public void appendLeadingComments(ASTNode node) {
-        for( var comment : comments.leading(node) ) {
+        for( var comment : visible(comments.leading(node)) ) {
             appendBlankLines(comment.line);
             appendComment(comment);
         }
@@ -136,7 +198,7 @@ public class Formatter extends CodeVisitorSupport {
      * @param node
      */
     public void appendCommentsBefore(ASTNode node) {
-        for( var comment : comments.leading(node) )
+        for( var comment : visible(comments.leading(node)) )
             appendComment(comment);
     }
 
@@ -162,7 +224,7 @@ public class Formatter extends CodeVisitorSupport {
      * @param node
      */
     public void appendInnerComments(ASTNode node) {
-        var leading = comments.leading(node);
+        var leading = visible(comments.leading(node));
         for( int i = 0; i < leading.size(); i++ ) {
             if( i > 0 )
                 appendBlankLines(leading.get(i).line);
@@ -176,12 +238,16 @@ public class Formatter extends CodeVisitorSupport {
 
     /**
      * Append the comments that belong to a construct but not to any
-     * particular child, e.g. a comment before a closing brace.
+     * particular child, e.g. a comment before a closing brace. A comment
+     * already printed as part of a verbatim region (e.g. one that falls
+     * between a `fmt: off` and its matching `fmt: on` but has no following
+     * statement of its own) is skipped, since re-emitting it here -- after
+     * the verbatim text that already contains it -- would duplicate it.
      *
      * @param node
      */
     public void appendDanglingComments(ASTNode node) {
-        for( var comment : comments.dangling(node) ) {
+        for( var comment : visible(comments.dangling(node)) ) {
             appendBlankLines(comment.line);
             appendComment(comment);
         }
@@ -192,7 +258,7 @@ public class Formatter extends CodeVisitorSupport {
     }
 
     public void appendTrailingComment(ASTNode node) {
-        for( var comment : comments.trailing(node) ) {
+        for( var comment : visible(comments.trailing(node)) ) {
             this.comments.markEmitted(comment);
             append(' ');
             append(comment.text.replace('\n', ' '));
@@ -405,6 +471,8 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitIfElse(IfStatement node) {
+        if( appendVerbatim(node) )
+            return;
         visitIfElse(node, true);
     }
 
@@ -452,6 +520,8 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitExpressionStatement(ExpressionStatement node) {
+        if( appendVerbatim(node) )
+            return;
         appendLeadingComments(node);
         emitWrappable(() -> {
             var cre = currentRootExpr;
@@ -478,6 +548,8 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitReturnStatement(ReturnStatement node) {
+        if( appendVerbatim(node) )
+            return;
         appendLeadingComments(node);
         emitWrappable(() -> {
             var cre = currentRootExpr;
@@ -495,6 +567,8 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitAssertStatement(AssertStatement node) {
+        if( appendVerbatim(node) )
+            return;
         appendLeadingComments(node);
         emitWrappable(() -> {
             appendIndent();
@@ -513,6 +587,8 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitTryCatchFinally(TryCatchStatement node) {
+        if( appendVerbatim(node) )
+            return;
         appendLeadingComments(node);
         appendIndent();
         append("try {\n");
@@ -530,6 +606,8 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitThrowStatement(ThrowStatement node) {
+        if( appendVerbatim(node) )
+            return;
         appendLeadingComments(node);
         emitWrappable(() -> {
             appendIndent();
@@ -648,6 +726,8 @@ public class Formatter extends CodeVisitorSupport {
     }
 
     public void visitDirective(ASTNode owner, MethodCallExpression call) {
+        if( appendVerbatim(owner) )
+            return;
         emitWrappable(() -> {
             appendIndent();
             var sid = beginStatement(owner);

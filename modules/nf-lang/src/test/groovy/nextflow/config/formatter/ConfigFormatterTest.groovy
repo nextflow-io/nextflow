@@ -209,4 +209,37 @@ class ConfigFormatterTest extends Specification {
         )
     }
 
+    // -- fmt: skip / fmt: off / fmt: on directives (issue #75)
+
+    def 'should keep a config assignment verbatim with fmt: skip' () {
+        expect:
+        checkFormat(
+            '''\
+            process.cpus=2  // fmt: skip
+            process.memory='4 GB'
+            ''',
+            '''\
+            process.cpus=2  // fmt: skip
+            process.memory = '4 GB'
+            '''
+        )
+    }
+
+    def 'should keep a region of a config file verbatim between fmt: off and fmt: on' () {
+        expect:
+        checkFormat(
+            '''\
+            process.cpus = 2
+
+            // fmt: off
+            docker{
+            enabled=true
+            }
+            // fmt: on
+
+            process.memory = '4 GB'
+            '''
+        )
+    }
+
 }
