@@ -358,6 +358,77 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         boolean requiresScratchVolume
     }
 
+    private static final String HINT_PREFIX = 'google-batch/'
+    private static final String SPOT_ATTEMPTS_HINT = 'scheduling.spotAttempts'
+    private static final Set<String> KNOWN_HINTS = Set.of(SPOT_ATTEMPTS_HINT)
+    private static final String SUPPORTED_HINTS_MSG =
+        KNOWN_HINTS.collect { HINT_PREFIX + it }.sort().join(', ')
+
+    /**
+     * Validate the google-batch prefixed hints, throwing if a prefixed key is not supported
+     *
+     * @param hints The hints map from the task config
+     */
+    protected void validateHints(Map<String,Object> hints) {
+        if( !hints )
+            return
+        final unknown = []
+        for( final key : hints.keySet() ) {
+            if( !key?.startsWith(HINT_PREFIX) )
+                continue
+            if( !KNOWN_HINTS.contains(key.substring(HINT_PREFIX.length())) )
+                unknown.add(key)
+        }
+        if( unknown )
+            throw new IllegalArgumentException("Unknown Google Batch hint(s): ${unknown.collect { "'$it'" }.join(', ')} -- supported keys are: ${SUPPORTED_HINTS_MSG}")
+    }
+
+    /**
+     * Resolve the effective provisioning model for a task, honouring the scheduling.spotAttempts hint
+     *
+     * @param config The task config
+     * @return The effective provisioning model
+     */
+    protected AllocationPolicy.ProvisioningModel resolveProvisioningModel(TaskConfig config) {
+        final spotAttempts = resolveSpotAttempts(config)
+        if( spotAttempts != null ) {
+            // run on spot for the first N attempts, then fall back to on-demand (STANDARD).
+            // `attempt` covers a mid-run reclaim; `submitAttempt` covers a failure to obtain a VM
+            // (via `maxSubmitAwait`), so the larger of the two drives the escalation
+            final attempt = Math.max(config.getAttempt(), config.getSubmitAttempt())
+            return attempt <= spotAttempts
+                ? AllocationPolicy.ProvisioningModel.SPOT
+                : AllocationPolicy.ProvisioningModel.STANDARD
+        }
+        // otherwise use the global config: spot wins over preemptible, else on-demand
+        if( batchConfig.spot )
+            return AllocationPolicy.ProvisioningModel.SPOT
+        if( batchConfig.preemptible )
+            return AllocationPolicy.ProvisioningModel.PREEMPTIBLE
+        return AllocationPolicy.ProvisioningModel.STANDARD
+    }
+
+    /**
+     * The scheduling.spotAttempts hint value, or null when unset; throws on a non-positive integer
+     *
+     * @param config The task config
+     * @return The number of leading attempts to run on spot, or null
+     */
+    protected Integer resolveSpotAttempts(TaskConfig config) {
+        final hints = config?.getHints()
+        if( !hints )
+            return null
+        final value = hints.get(HINT_PREFIX + SPOT_ATTEMPTS_HINT) ?: hints.get(SPOT_ATTEMPTS_HINT)
+        if( value == null )
+            return null
+        final n = value instanceof Number
+            ? (value as Integer)
+            : (value.toString().trim().isInteger() ? value.toString().trim() as Integer : null)
+        if( n == null || n < 1 )
+            throw new IllegalArgumentException("Invalid '${SPOT_ATTEMPTS_HINT}' hint value: '${value}' -- it must be a positive integer")
+        return n
+    }
+
     /**
      * Build the instance policy or template for job allocation.
      * Note: This method sets machineInfo field as a side effect.
@@ -392,6 +463,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
             if( batchConfig.spot )
                 log.warn1 'Config option `google.batch.spot` ignored because an instance template was specified'
+
+            final hints = task.config.getHints()
+            if( hints?.containsKey(SPOT_ATTEMPTS_HINT) || hints?.containsKey(HINT_PREFIX + SPOT_ATTEMPTS_HINT) )
+                log.warn1 "Google Batch hint '${SPOT_ATTEMPTS_HINT}' ignored because an instance template was specified"
 
             instancePolicyOrTemplate
                 .setInstallGpuDrivers(batchConfig.getInstallGpuDrivers())
@@ -479,11 +554,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             if( batchConfig.cpuPlatform )
                 instancePolicy.setMinCpuPlatform(batchConfig.cpuPlatform)
 
-            if( batchConfig.preemptible )
-                instancePolicy.setProvisioningModel(AllocationPolicy.ProvisioningModel.PREEMPTIBLE)
-
-            if( batchConfig.spot )
-                instancePolicy.setProvisioningModel(AllocationPolicy.ProvisioningModel.SPOT)
+            final provisioningModel = resolveProvisioningModel(task.config)
+            if( provisioningModel != AllocationPolicy.ProvisioningModel.STANDARD )
+                instancePolicy.setProvisioningModel(provisioningModel)
 
             instancePolicyOrTemplate.setPolicy(instancePolicy)
         }
@@ -553,6 +626,9 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
     }
 
     protected Job newSubmitRequest(TaskRun task, GoogleBatchLauncherSpec launcher) {
+        // validate the task's hints once per submission
+        validateHints(task.config.getHints())
+
         // container validation
         if( !task.container )
             throw new ProcessUnrecoverableException("Process `${task.lazyName()}` failed because the container image was not specified")
@@ -922,7 +998,10 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final location = client.location
         final cpus = config.getCpus()
         final memory = config.getMemory() ? config.getMemory().toMega().toInteger() : 1024
-        final spot = batchConfig.spot ?: batchConfig.preemptible
+        // price as spot when the effective provisioning model is SPOT or PREEMPTIBLE
+        final provisioningModel = resolveProvisioningModel(config)
+        final spot = provisioningModel == AllocationPolicy.ProvisioningModel.SPOT \
+                  || provisioningModel == AllocationPolicy.ProvisioningModel.PREEMPTIBLE
         final machineType = config.getMachineType()
         final families = machineType ? machineType.tokenize(',') : List.<String>of()
         final priceModel = spot ? PriceModel.spot : PriceModel.standard

@@ -27,6 +27,7 @@ import nextflow.exception.ProcessException
 
 import java.nio.file.Path
 
+import com.google.cloud.batch.v1.AllocationPolicy
 import com.google.cloud.batch.v1.GCS
 import com.google.cloud.batch.v1.StatusEvent
 import com.google.cloud.batch.v1.TaskStatus
@@ -1379,6 +1380,91 @@ class GoogleBatchTaskHandlerTest extends Specification {
         // ? replacing the family discriminator digit is treated as a literal character (not a wildcard)
         'e?-standard-4'       | 'local-ssd'          // 'e?' does not match regex ^e2-.*$, so not classified as e2
         'h?-standard-88'      | 'local-ssd'          // 'h?' does not match regex ^h3-.*$, so not classified as h3
+    }
+
+    // provisioning model resolution: scheduling.spotAttempts spot -> on-demand fallback
+
+    private GoogleBatchTaskHandler provisioningHandler(boolean useSpot = false, boolean usePreemptible = false) {
+        def task = Mock(TaskRun) { hashLog >> '1234567890'; getWorkDir() >> Path.of('/work/dir') }
+        def cfg = Mock(BatchConfig) {
+            getSpot() >> useSpot; isSpot() >> useSpot
+            getPreemptible() >> usePreemptible; isPreemptible() >> usePreemptible
+        }
+        def exec = Mock(GoogleBatchExecutor) { getClient() >> Mock(BatchClient); getBatchConfig() >> cfg }
+        return Spy(new GoogleBatchTaskHandler(task, exec))
+    }
+
+    def 'should resolve provisioning model from spotAttempts hint' () {
+        given:
+        def handler = provisioningHandler(GLOBAL_SPOT, GLOBAL_PREEMPT)
+        def config = Mock(TaskConfig) { getHints() >> HINTS; getAttempt() >> ATTEMPT; getSubmitAttempt() >> SUBMIT }
+
+        expect:
+        handler.resolveProvisioningModel(config) == AllocationPolicy.ProvisioningModel.valueOf(EXPECTED)
+
+        where:
+        HINTS                                         | ATTEMPT | SUBMIT | GLOBAL_SPOT | GLOBAL_PREEMPT || EXPECTED
+        ['scheduling.spotAttempts': '2']              | 1       | 1      | false       | false          || 'SPOT'
+        ['scheduling.spotAttempts': '2']              | 2       | 1      | false       | false          || 'SPOT'
+        ['scheduling.spotAttempts': '2']              | 3       | 1      | false       | false          || 'STANDARD'
+        ['scheduling.spotAttempts': '2']              | 1       | 3      | false       | false          || 'STANDARD'   // submitAttempt (stockout) drives the fallback
+        ['scheduling.spotAttempts': '2']              | 1       | 2      | false       | false          || 'SPOT'
+        ['scheduling.spotAttempts': 2]                | 1       | 1      | false       | false          || 'SPOT'
+        ['google-batch/scheduling.spotAttempts': '1'] | 2       | 1      | false       | false          || 'STANDARD'
+        [:]                                           | 1       | 1      | true        | false          || 'SPOT'        // global fallback, unchanged
+        [:]                                           | 1       | 1      | false       | true           || 'PREEMPTIBLE'
+        [:]                                           | 1       | 1      | false       | false          || 'STANDARD'
+        [:]                                           | 1       | 1      | true        | true           || 'SPOT'        // spot wins over preemptible
+    }
+
+    def 'should throw on invalid spotAttempts hint' () {
+        given:
+        def handler = provisioningHandler()
+        def config = Mock(TaskConfig) { getHints() >> HINTS }
+
+        when:
+        handler.resolveSpotAttempts(config)
+
+        then:
+        thrown(IllegalArgumentException)
+
+        where:
+        HINTS << [
+            ['scheduling.spotAttempts': 'lots'],
+            ['scheduling.spotAttempts': '0'],
+            ['scheduling.spotAttempts': -1],
+        ]
+    }
+
+    def 'should accept known and unprefixed google-batch hints' () {
+        given:
+        def handler = provisioningHandler()
+
+        when:
+        handler.validateHints(HINTS)
+
+        then:
+        noExceptionThrown()
+
+        where:
+        HINTS << [
+            null,
+            [:],
+            ['google-batch/scheduling.spotAttempts': '2'],
+            ['scheduling.spotAttempts': '2'],    // bare (unprefixed) keys are not validated
+            ['other-executor/foo': 'bar'],       // foreign-executor keys are left untouched
+        ]
+    }
+
+    def 'should reject unknown prefixed google-batch hints' () {
+        given:
+        def handler = provisioningHandler()
+
+        when:
+        handler.validateHints(['google-batch/scheduling.unknown': 'x'])
+
+        then:
+        thrown(IllegalArgumentException)
     }
 
 }
