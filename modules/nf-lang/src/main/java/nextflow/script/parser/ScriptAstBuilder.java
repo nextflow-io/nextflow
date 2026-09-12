@@ -671,7 +671,7 @@ public class ScriptAstBuilder {
         Statement result;
         if( ctx.statement() != null ) {
             result = statement(ctx.statement());
-            if( !(result instanceof ExpressionStatement) ) {
+            if( !isEmitExpression(result) ) {
                 collectSyntaxError(new SyntaxException("Invalid output declaration in typed process -- must be a name, assignment, or expression", result));
                 return null;
             }
@@ -968,7 +968,7 @@ public class ScriptAstBuilder {
         Statement result;
         if( ctx.statement() != null ) {
             result = statement(ctx.statement());
-            if( !(result instanceof ExpressionStatement) ) {
+            if( !isEmitExpression(result) ) {
                 collectSyntaxError(new SyntaxException("Invalid workflow emit -- must be a name, assignment, or expression", result));
                 return null;
             }
@@ -992,7 +992,8 @@ public class ScriptAstBuilder {
     private boolean isEmitExpression(Statement stmt) {
         if( stmt instanceof ExpressionStatement es ) {
             var exp = es.getExpression();
-            return !(exp instanceof VariableExpression || exp instanceof AssignmentExpression);
+            return !(exp instanceof VariableExpression)
+                && !(exp instanceof BinaryExpression be && be.getOperation().isA(Types.ASSIGNMENT_OPERATOR));
         }
         return false;
     }

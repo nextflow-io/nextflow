@@ -1,0 +1,52 @@
+set -e
+
+# a named workflow can be executed directly only via `nextflow module run`
+NXF_RUN="$NXF_CMD -q module run $NXF_SCRIPT"
+
+DATA=$(cd ../../data && pwd)
+
+cat > samples.csv <<EOF
+id,data
+alpha,$DATA/sample_data.txt
+beta,$DATA/results_data.txt
+EOF
+
+#
+# Test direct execution of a named workflow
+#
+echo ''
+echo '=== Testing named workflow direct execution ==='
+$NXF_RUN --samples samples.csv --prefix Hello | tee stdout
+
+# each emit is reported as a workflow output
+[[ `grep -c 'greetings:' stdout` == 1 ]] || false
+[[ `grep -c 'info:' stdout` == 1 ]] || false
+
+# the samplesheet is loaded as a channel of records, with `data` as a path
+[[ `grep -c 'Hello, alpha (sample_data.txt)' stdout` == 1 ]] || false
+[[ `grep -c 'Hello, beta (results_data.txt)' stdout` == 1 ]] || false
+
+# the scalar input is mapped, and the omitted optional input is null
+[[ `grep -c 'prefix=Hello limit=null' stdout` == 1 ]] || false
+
+# no output directory is created
+[[ ! -d results ]] || false
+
+#
+# Test that an optional input can be given
+#
+echo ''
+echo '=== Testing optional workflow input ==='
+$NXF_RUN --samples samples.csv --prefix Hi --limit 5 | tee stdout2
+
+[[ `grep -c 'prefix=Hi limit=5' stdout2` == 1 ]] || false
+
+#
+# Test that a missing required input is reported
+#
+echo ''
+echo '=== Testing missing required input ==='
+$NXF_RUN --prefix Hello > stdout3 2>&1 || true
+
+[[ $(grep -c 'Parameter `--samples` is required but no value was provided' stdout3) == 1 ]] || false
+[[ $(grep -c 'samples' stdout3) -ge 1 ]] || false

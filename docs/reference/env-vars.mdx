@@ -70,6 +70,8 @@ Defines the directory where downloaded pipeline repositories are stored (default
 
 Defines the base cache directory when using the default cache store (default: `"$launchDir/.nextflow"`).
 
+This must be a local directory. To store the task cache in object storage, use [`NXF_CLOUDCACHE_PATH`](#nxf_cloudcache_path).
+
 ##### `NXF_CHARLIECLOUD_CACHEDIR`
 
 Directory where remote Charliecloud images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
@@ -78,7 +80,7 @@ Directory where remote Charliecloud images are stored. When using a computing cl
 
 <AddedInVersion version="23.10" />
 
-Defines the base cache path when using the cloud cache store.
+Defines the base cache path when using the cloud cache store. See [Cache stores][cache-stores] for more information.
 
 ##### `NXF_CLOUD_DRIVER`
 
@@ -181,6 +183,28 @@ When set to `true`, collect task resource metrics (CPU, memory, I/O) from the Fu
 ##### `NXF_HOME`
 
 Nextflow home directory (default: `$HOME/.nextflow`).
+
+##### `NXF_HTTPCLIENT_CONNECT_TIMEOUT`
+
+<AddedInVersion version="26.10" />
+
+Maximum time to wait for a connection to the Git hosting service API, such as GitHub or GitLab, for a single attempt (default: `60s`). Must be greater than zero.
+
+Nextflow retries connection attempts that time out, because the request never reached the server. An unreachable host fails after this timeout multiplied by `NXF_RETRY_POLICY_MAX_ATTEMPTS`, about 5 minutes with the default settings. Set a lower value, such as `5s`, to cap the worst case at about 30 seconds. The `NXF_RETRY_POLICY_*` variables configure the retry behavior.
+
+##### `NXF_HTTPCLIENT_REQUEST_TIMEOUT`
+
+<AddedInVersion version="26.10" />
+
+Maximum time to wait for a response from the Git hosting service API after the connection is established, for a single attempt (default: `60s`). Set to `0s` to wait indefinitely.
+
+Nextflow does not retry requests that time out waiting for a response, because the request reached the server and the server may already have processed it.
+
+##### `NXF_IGNORE_RESUME_HISTORY`
+
+Disables the history file (`.nextflow/history`) used to track previous runs (default: `false`).
+
+When the history file is disabled, `nextflow run` requires an explicit run name (`-name`), and `-resume` requires an explicit session ID. See [Cache stores][cache-stores] for more information.
 
 ##### `NXF_JAVA_HOME`
 
@@ -292,9 +316,17 @@ Defines the path location of the SCM config file .
 
 Directory where remote Singularity images are stored. When using a computing cluster it must be a shared folder accessible from all compute nodes.
 
+:::note
+The `NXF_SINGULARITY_CACHEDIR` variable is not applied when a container image is specified using an `oras://` URI. In that case, the image reference is passed directly to Singularity, independently of Nextflow's caching mechanism.
+:::
+
 ##### `NXF_SINGULARITY_LIBRARYDIR`
 
 Directory where remote Singularity images are retrieved. It should be a directory accessible to all compute nodes.
+
+:::note
+The `NXF_SINGULARITY_LIBRARYDIR` variable is not applied when a container image is specified using an `oras://` URI. In that case, the image reference is passed directly to Singularity, independently of Nextflow's caching mechanism.
+:::
 
 ##### `NXF_SPACK_CACHEDIR`
 
@@ -487,6 +519,7 @@ Forces the terminal width of ANSI-formatted log output. Overrides automatic term
 
 [agent-page]: ../agent
 [agent-provider]: ../agent#the-api-provider
+[cache-stores]: ../cache-and-resume#cache-stores
 [process-conda]: ./process/directives/conda
 [process-publishdir]: ./process/directives/publish-dir
 [process-spack]: ./process/directives/spack

@@ -131,6 +131,10 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         for( var entry : node.entries ) {
             if( entry.getTarget() == null )
                 continue;
+            if( entry.getTarget() instanceof ClassNode && entry.alias != null ) {
+                vsc.addError("Included types cannot be aliased", entry);
+                continue;
+            }
             var name = entry.getNameOrAlias();
             var otherInclude = vsc.getInclude(name);
             if( otherInclude != null )
