@@ -103,16 +103,30 @@ class CsvParser {
 
     private String readQuotedValue(String line, List<String> result) {
         def value = line.substring(1)
-        def p = value.indexOf( (int)quote )
+        // find the closing quote, skipping doubled quotes used to escape
+        // a literal quote character (RFC 4180)
+        int p = -1
+        for( int i = 0; i < value.length(); i++ ) {
+            if( value.charAt(i) != quote )
+                continue
+            if( i + 1 < value.length() && value.charAt(i + 1) == quote ) {
+                i++
+                continue
+            }
+            p = i
+            break
+        }
         if( p == -1 )
             throw new IllegalStateException("Missing double-quote termination in CSV value -- offending line: $line")
-        result.add( stripBlanks(value.substring(0,p)) )
 
-        def next = p+1
-        if( next<value.size() ) {
+        final q = String.valueOf(quote)
+        result.add( stripBlanks(value.substring(0, p).replace(q + q, q)) )
+
+        def next = p + 1
+        if( next < value.size() ) {
             if( value.charAt(next) != separator )
                 throw new IllegalStateException("Invalid CSV value -- offending line: $line")
-            return value.substring(next+1)
+            return value.substring(next + 1)
         }
         else {
             return null
