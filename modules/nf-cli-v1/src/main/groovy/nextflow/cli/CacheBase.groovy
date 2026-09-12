@@ -67,7 +67,8 @@ trait CacheBase {
     }
 
     CacheDB cacheFor(HistoryFile.Record entry) {
-        CacheFactory.create(entry.sessionId, entry.runName, basePath)
+        // no session is available outside of a workflow execution
+        CacheFactory.create(null, entry.sessionId, entry.runName, basePath)
     }
 
     List<HistoryFile.Record> listIds() {

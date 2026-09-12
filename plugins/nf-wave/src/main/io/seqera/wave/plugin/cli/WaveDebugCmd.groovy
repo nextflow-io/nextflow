@@ -88,7 +88,7 @@ class WaveDebugCmd {
         if( !history.exists() || history.empty() || !(runRecord=history.findByIdOrName('last')[0]) )
             throw new AbortOperationException("It looks no pipeline was executed in this folder (or execution history is empty)")
 
-        this.cacheDb = CacheFactory.create(runRecord.sessionId, runRecord.runName)
+        this.cacheDb = CacheFactory.create(session, runRecord.sessionId, runRecord.runName)
         cacheDb.openForRead()
         try {
             final trace = getOrFindTrace(criteria)

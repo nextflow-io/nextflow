@@ -20,6 +20,7 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.Session
 import nextflow.plugin.Plugins
 import org.pf4j.ExtensionPoint
 
@@ -32,15 +33,23 @@ import org.pf4j.ExtensionPoint
 @CompileStatic
 abstract class CacheFactory implements ExtensionPoint {
 
-    protected abstract CacheDB newInstance(UUID uniqueId, String runName, Path home=null)
+    protected abstract CacheDB newInstance(Session session, UUID uniqueId, String runName, Path home=null)
 
-    static CacheDB create(UUID uniqueId, String runName, Path home=null) {
+    /**
+     * Whether this factory applies to the given session.
+     *
+     * @param session The current {@link Session}, or null when running outside of a workflow
+     *        execution e.g. the `log` and `clean` commands
+     */
+    protected boolean enabled(Session session) { true }
+
+    static CacheDB create(Session session, UUID uniqueId, String runName, Path home=null) {
         final all = Plugins.getPriorityExtensions(CacheFactory)
-        if( !all )
+        final factory = all.find(it -> it.enabled(session))
+        if( !factory )
             throw new IllegalStateException("Unable to find Nextflow cache factory")
-        final factory = all.first()
         log.debug "Using Nextflow cache factory: ${factory.getClass().getName()}"
-        return factory.newInstance(uniqueId, runName, home)
+        return factory.newInstance(session, uniqueId, runName, home)
     }
 
 }
