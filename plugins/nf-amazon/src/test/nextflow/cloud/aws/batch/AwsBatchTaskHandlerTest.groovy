@@ -30,6 +30,7 @@ import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.Executor
+import nextflow.executor.ExecutorConfig
 import nextflow.fusion.FusionScriptLauncher
 import nextflow.processor.Architecture
 import nextflow.processor.BatchContext
@@ -1283,11 +1284,60 @@ class AwsBatchTaskHandlerTest extends Specification {
         result == EXPECTED
 
         where:
-        ENV                             | NAME      | EXPECTED
-        [:]                             | 'foo'     | 'foo'
-        [TOWER_WORKFLOW_ID: '12345']    | 'foo'     | 'tw-12345-foo'
-        [TOWER_WORKFLOW_ID: '12345']    | 'foo'     | 'tw-12345-foo'
-        [TOWER_WORKFLOW_ID: '12345']    | 'foo(12)' | 'tw-12345-foo12'
+        ENV                          | NAME      | EXPECTED
+        [:]                          | 'foo'     | 'foo'
+        [TOWER_WORKFLOW_ID: '12345'] | 'foo'     | 'tw-12345-foo'
+        [TOWER_WORKFLOW_ID: '12345'] | 'foo'     | 'tw-12345-foo'
+        [TOWER_WORKFLOW_ID: '12345'] | 'foo(12)' | 'tw-12345-foo12'
+    }
+
+    def 'should get custom job name' () {
+        given:
+        def config = new ExecutorConfig(jobName: { "123-${task.name}" })
+        def executor = Mock(AwsBatchExecutor) {
+            getName() >> 'awsbatch'
+            getConfig() >> config
+        }
+        def handler = Spy(new AwsBatchTaskHandler(executor: executor))
+        def task = Mock(TaskRun) {
+            getName() >> 'fallback'
+            getConfig() >> new TaskConfig(name: 'hello world')
+        }
+
+        expect:
+        handler.getJobName(task) == '123-hello_world'
+    }
+
+    @Unroll
+    def 'should use default job name when custom job name cannot be resolved' () {
+        given:
+        def config = Mock(ExecutorConfig) {
+            getExecConfigProp('awsbatch', 'jobName', null) >> CUSTOM
+        }
+        def executor = Mock(AwsBatchExecutor) {
+            getName() >> 'awsbatch'
+            getConfig() >> config
+        }
+        def handler = Spy(new AwsBatchTaskHandler(executor: executor))
+        def task = Mock(TaskRun) {
+            getName() >> 'task (1)'
+            getConfig() >> Mock(TaskConfig)
+        }
+
+        expect:
+        handler.getJobName(task) == 'task_1'
+
+        where:
+        CUSTOM << [
+            null,
+            { null },
+            { '' },
+            { '***' },
+            { '   ' },
+            { '_custom' },
+            { '-custom' },
+            { throw new IllegalStateException('boom') }
+        ]
     }
 
     @Unroll
