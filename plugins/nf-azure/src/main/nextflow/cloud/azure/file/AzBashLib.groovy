@@ -30,6 +30,7 @@ class AzBashLib extends BashFunLib<AzBashLib> {
 
     private String blockSize = AzCopyOpts.DEFAULT_BLOCK_SIZE
     private String blobTier = AzCopyOpts.DEFAULT_BLOB_TIER
+    private String opts = AzCopyOpts.DEFAULT_OPTS
 
 
     AzBashLib withBlockSize(String value) {
@@ -45,11 +46,18 @@ class AzBashLib extends BashFunLib<AzBashLib> {
     }
 
 
+    AzBashLib withOpts(String value) {
+        if( value )
+            this.opts = value
+        return this
+    }
+
     protected String setupAzCopyOpts() {
         """
         # custom env variables used for azcopy opts
         export AZCOPY_BLOCK_SIZE_MB=${blockSize}
         export AZCOPY_BLOCK_BLOB_TIER=${blobTier}
+        export AZCOPY_OPTS="${opts}"
         """.stripIndent(true)
     }
 
@@ -64,12 +72,12 @@ class AzBashLib extends BashFunLib<AzBashLib> {
 
             if [[ -d $name ]]; then
               if [[ "$base_name" == "$name" ]]; then
-                azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                azcopy cp "$name" "$target?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB $AZCOPY_OPTS
               else
-                azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+                azcopy cp "$name" "$target/$dir_name?$AZ_SAS" --recursive --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB $AZCOPY_OPTS
               fi
             else
-              azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB
+              azcopy cp "$name" "$target/$name?$AZ_SAS" --block-blob-tier $AZCOPY_BLOCK_BLOB_TIER --block-size-mb $AZCOPY_BLOCK_SIZE_MB $AZCOPY_OPTS
             fi
         }
 
@@ -80,10 +88,10 @@ class AzBashLib extends BashFunLib<AzBashLib> {
             local ret
             mkdir -p "$basedir"
 
-            ret=$(azcopy cp "$source?$AZ_SAS" "$target" 2>&1) || {
+            ret=$(azcopy cp "$source?$AZ_SAS" "$target" $AZCOPY_OPTS 2>&1) || {
                 ## if fails check if it was trying to download a directory
                 mkdir -p $target
-                azcopy cp "$source/*?$AZ_SAS" "$target" --recursive >/dev/null || {
+                azcopy cp "$source/*?$AZ_SAS" "$target" --recursive $AZCOPY_OPTS >/dev/null || {
                     rm -rf $target
                     >&2 echo "Unable to download path: $source"
                     exit 1
@@ -106,6 +114,7 @@ class AzBashLib extends BashFunLib<AzBashLib> {
                 .withDelayBetweenAttempts(delayBetweenAttempts)
                 .withBlobTier(opts.blobTier)
                 .withBlockSize(opts.blockSize)
+                .withOpts(opts.opts)
                 .render()
     }
 
