@@ -1242,14 +1242,26 @@ class Session implements ISession {
         }
 
         log.trace "Cleaning-up workdir"
+        int skipped = 0
         try (CacheDB db = CacheFactory.create(uniqueId, runName).openForRead()) {
             db.eachRecord { HashCode hash, TraceRecord record ->
+                final taskDir = record.workDir as String
+                final scheme = FileHelper.getUrlProtocol(taskDir)
+                if( scheme && scheme != 'file' ) {
+                    // a hybrid run can offload tasks to a remote work dir (e.g. `-bucket-dir`)
+                    // which cleanup does not support -- skip it and keep the local ones
+                    log.trace "Skipping cleanup of remote task dir: $taskDir"
+                    skipped++
+                    return
+                }
                 def deleted = db.removeTaskEntry(hash)
                 if( deleted ) {
                     // delete folder
-                    FileHelper.deletePath(FileHelper.asPath(record.workDir))
+                    FileHelper.deletePath(FileHelper.asPath(taskDir))
                 }
             }
+            if( skipped )
+                log.warn "The `cleanup` option is not supported for remote work directories -- $skipped task director${skipped==1 ? 'y was' : 'ies were'} not deleted"
             log.trace "Clean workdir complete"
         }
         catch( Exception e ) {
