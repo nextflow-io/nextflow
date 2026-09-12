@@ -22,7 +22,7 @@ compileJava {
 }
 
 dependencies {
-  antlr 'me.sunlan:antlr4:4.13.2.13'
+  antlr 'me.sunlan:antlr4:4.13.2.15'
   api 'org.apache.groovy:groovy:4.0.33'
   api 'org.pf4j:pf4j:3.14.1'
 

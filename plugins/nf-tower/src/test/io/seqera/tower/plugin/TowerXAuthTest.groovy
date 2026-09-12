@@ -16,6 +16,7 @@
 
 package io.seqera.tower.plugin
 
+import io.seqera.util.net.ProxyConfig as NetProxyConfig
 import nextflow.util.ProxyConfig
 import spock.lang.Specification
 
@@ -40,7 +41,7 @@ class TowerXAuthTest extends Specification {
 
     def 'should route the token-refresh HttpClient through the configured proxy'() {
         given:
-        ProxyConfig.register(new ProxyConfig(protocol: 'https', host: 'proxy.example.com', port: '8080', username: 'foo', password: 'bar'))
+        ProxyConfig.setConfig(NetProxyConfig.fromUri('https://foo:bar@proxy.example.com:8080'))
 
         when:
         def auth = new TowerXAuth('http://tower.example.com', 'tok', 'refresh')
@@ -52,7 +53,7 @@ class TowerXAuthTest extends Specification {
 
     def 'should route through the proxy without an authenticator when the proxy has no credentials'() {
         given:
-        ProxyConfig.register(new ProxyConfig(protocol: 'https', host: 'proxy.example.com', port: '8080'))
+        ProxyConfig.setConfig(NetProxyConfig.fromUri('https://proxy.example.com:8080'))
 
         when:
         def auth = new TowerXAuth('http://tower.example.com', 'tok', 'refresh')

@@ -1,0 +1,28 @@
+---
+title: maxSubmitAwait
+description: Reference for the `maxSubmitAwait` process directive.
+---
+
+# `maxSubmitAwait`
+
+The `maxSubmitAwait` directive defines how long a task can remain in the submission queue without being executed. Tasks that exceed this duration in the queue fail.
+
+## Usage
+
+Use it with the `retry` error strategy to re-submit tasks to a different queue or with different resource requirements. For example:
+
+```nextflow
+process hello {
+    errorStrategy 'retry'
+    maxSubmitAwait 10.m
+    maxRetries 3
+    queue "${task.submitAttempt==1 ? 'spot-compute' : 'on-demand-compute'}"
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+In this example, each task is submitted to the `spot-compute` queue on the first attempt (`task.submitAttempt==1`). If a task remains in the queue for more than 10 minutes, it fails and is re-submitted to the `on-demand-compute` queue.

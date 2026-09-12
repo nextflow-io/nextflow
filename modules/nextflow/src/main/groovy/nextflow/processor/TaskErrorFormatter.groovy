@@ -23,6 +23,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
+import nextflow.agent.AgentTaskScript
 import nextflow.exception.FailedGuardException
 import nextflow.exception.ProcessEvalException
 import nextflow.exception.ShowOnlyExceptionMessage
@@ -110,8 +111,24 @@ class TaskErrorFormatter {
         // task with `script:` block
         if( task.script ) {
             // -- print the executed command
+            //
+            // Redacted the same way TaskRun.getTraceScript() redacts the trace record, and for the
+            // same reason: an agent task's script is the RPC proxy launch command, so it carries the
+            // invocation's capability token on argv, and this report does not stay local. It is
+            // logged (TaskProcessor.formatTaskError -> log.error), so it reaches .nextflow.log, and
+            // it becomes session.fault.report -> WorkflowMetadata.errorReport, which nf-tower POSTs
+            // to Seqera Platform on completion. A failing agent task is the COMMON case for this
+            // path -- an unpullable image, an unroutable agent.rpc.remoteHost, a proxy startup
+            // timeout -- so leaving it verbatim would publish a live credential exactly when things
+            // go wrong.
+            //
+            // forTrace(config, script) rather than task.getTraceScript(): the latter substitutes the
+            // template source when there is one, and this block deliberately prints the EXECUTED
+            // command (labelled with the template name). forTrace returns every non-agent script
+            // unchanged, so template and ordinary tasks are byte-identical to before.
+            final script = AgentTaskScript.forTrace(task.config, task.script)
             message << "Command executed${task.template ? " [$task.template]": ''}:\n".toString()
-            for( final line : task.script.stripIndent(true).trim().readLines() )
+            for( final line : script.stripIndent(true).trim().readLines() )
                 message << "  ${line}".toString()
 
             // -- the exit status

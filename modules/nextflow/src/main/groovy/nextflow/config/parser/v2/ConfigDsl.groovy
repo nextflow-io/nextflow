@@ -37,6 +37,13 @@ import nextflow.file.FileHelper
 @CompileStatic
 class ConfigDsl extends Script {
 
+    /**
+     * The config scopes accepting `withName:`/`withLabel:` selectors. Agents are
+     * configured with the same selector semantics as processes, in their own
+     * independent {@code agent} scope.
+     */
+    private static final List<String> SELECTOR_SCOPES = List.of('process', 'agent')
+
     private boolean ignoreIncludes
 
     private boolean renderClosureAsString
@@ -215,8 +222,8 @@ class ConfigDsl extends Script {
             ? List.of(names.last())
             : names
 
-        if( relativeNames.size() == 1 && relativeNames.last() == 'process' )
-            return new ProcessDsl(this, names)
+        if( relativeNames.size() == 1 && relativeNames.last() in SELECTOR_SCOPES )
+            return new SelectorBlockDsl(this, names)
 
         if( names.size() == 1 && names.first() == 'profiles' )
             return new ProfilesDsl(this, profiles)
@@ -305,11 +312,11 @@ class ConfigDsl extends Script {
         }
 
         void withLabel(String label, Closure closure) {
-            throw new ConfigParseException("Process selectors are only allowed in the `process` scope (offending scope: `${scope.join('.')}`)")
+            throw new ConfigParseException("Config selectors are only allowed in the `process` and `agent` scopes (offending scope: `${scope.join('.')}`)")
         }
 
         void withName(String selector, Closure closure) {
-            throw new ConfigParseException("Process selectors are only allowed in the `process` scope (offending scope: `${scope.join('.')}`)")
+            throw new ConfigParseException("Config selectors are only allowed in the `process` and `agent` scopes (offending scope: `${scope.join('.')}`)")
         }
 
         void includeConfig(String includeFile) {
@@ -337,8 +344,13 @@ class ConfigDsl extends Script {
         }
     }
 
-    private static class ProcessDsl extends ConfigBlockDsl {
-        ProcessDsl(ConfigDsl dsl, List<String> scope) {
+    /**
+     * The block DSL of a scope accepting `withName:`/`withLabel:` selectors
+     * (see {@link #SELECTOR_SCOPES}). A selector is rewritten into a nested
+     * block whose key carries the selector prefix.
+     */
+    private static class SelectorBlockDsl extends ConfigBlockDsl {
+        SelectorBlockDsl(ConfigDsl dsl, List<String> scope) {
             super(dsl, scope)
         }
 

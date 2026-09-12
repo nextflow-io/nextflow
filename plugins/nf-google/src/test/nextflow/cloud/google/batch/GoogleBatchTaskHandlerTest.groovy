@@ -52,6 +52,7 @@ import nextflow.script.BaseScript
 import nextflow.script.ProcessConfig
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
+import nextflow.util.ThrottlingExecutor
 import spock.lang.Specification
 /**
  *
@@ -621,6 +622,7 @@ class GoogleBatchTaskHandlerTest extends Specification {
         given:
         def client = Mock(BatchClient)
         def executor = Mock(GoogleBatchExecutor)
+        def reaper = Mock(ThrottlingExecutor)
         def task = Mock(TaskRun)
         def handler = Spy(GoogleBatchTaskHandler)
         handler.@executor = executor
@@ -642,6 +644,8 @@ class GoogleBatchTaskHandlerTest extends Specification {
         then:
         handler.isActive() >> true
         1 * executor.shouldDeleteJob('job1') >> true
+        1 * executor.getReaper() >> reaper
+        1 * reaper.submit(_) >> { List args -> args[0].asType(Runnable).run(); null }
         and:
         1 * client.deleteJob('job1') >> null
 

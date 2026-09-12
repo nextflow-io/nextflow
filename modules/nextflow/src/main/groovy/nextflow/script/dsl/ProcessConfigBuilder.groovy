@@ -16,8 +16,6 @@
 
 package nextflow.script.dsl
 
-import java.util.regex.Pattern
-
 import groovy.transform.TypeChecked
 import groovy.util.logging.Slf4j
 import nextflow.exception.ConfigParseException
@@ -32,9 +30,31 @@ import nextflow.script.ProcessConfig
 @TypeChecked
 class ProcessConfigBuilder extends ProcessBuilder {
 
-    ProcessConfigBuilder(ProcessConfig config) {
+    /**
+     * The noun used in the user-visible messages, i.e. what is being configured
+     * ({@code process} or {@code agent}).
+     */
+    private final String kind
+
+    /**
+     * The keys of the config scope that are NOT task directives and must therefore be
+     * skipped instead of applied (e.g. the agent-only options of the {@code agent}
+     * scope). Empty for the {@code process} scope, whose behaviour is unchanged.
+     */
+    private final Set<String> ignoredKeys
+
+    ProcessConfigBuilder(ProcessConfig config, String kind='process', Set<String> ignoredKeys=Collections.<String>emptySet()) {
         super(config)
+        this.kind = kind
+        this.ignoredKeys = ignoredKeys
     }
+
+    /**
+     * Report the configured noun to the inherited directive methods too, so that e.g. an
+     * invalid {@code label} value is reported as an agent label when configuring an agent.
+     */
+    @Override
+    protected String getKind() { kind }
 
     /**
      * Apply process config settings from the config file to a process.
@@ -49,23 +69,16 @@ class ProcessConfigBuilder extends ProcessBuilder {
         final processLabels = config.getLabels() ?: ['']
         applyConfigSelectorWithLabels(configProcessScope, processLabels)
 
-        // -- apply settings defined in the config file using the process base name
-        applyConfigSelectorWithName(configProcessScope, baseName)
-
-        // -- apply settings defined in the config file using the process simple name
-        if( simpleName && simpleName!=baseName )
-            applyConfigSelectorWithName(configProcessScope, simpleName)
-
-        // -- apply settings defined in the config file using the process fully qualified name (ie. with the execution scope)
-        if( fullyQualifiedName && (fullyQualifiedName!=simpleName || fullyQualifiedName!=baseName) )
-            applyConfigSelectorWithName(configProcessScope, fullyQualifiedName)
+        // -- apply settings by name, from the declared name to the fully-qualified name
+        for( final name : ConfigSelectorResolver.distinctNames(baseName, simpleName, fullyQualifiedName) )
+            applyConfigSelectorWithName(configProcessScope, name)
 
         // -- apply defaults
         applyConfigDefaults(configProcessScope)
 
         // -- check for conflicting settings
         if( config.scratch && config.stageInMode == 'rellink' ) {
-            log.warn("Directives `scratch` and `stageInMode=rellink` conflict with each other -- Enforcing default stageInMode for process `$simpleName`")
+            log.warn("Directives `scratch` and `stageInMode=rellink` conflict with each other -- Enforcing default stageInMode for $kind `$simpleName`")
             config.remove('stageInMode')
         }
     }
@@ -86,21 +99,14 @@ class ProcessConfigBuilder extends ProcessBuilder {
      * @param labels
      */
     protected void applyConfigSelectorWithLabels(Map<String,?> configDirectives, List<String> labels) {
-        final prefix = 'withLabel:'
-        for( String rule : configDirectives.keySet() ) {
-            if( !rule.startsWith(prefix) )
-                continue
-            final pattern = rule.substring(prefix.size()).trim()
-            if( !matchesLabels(labels, pattern) )
-                continue
-
-            log.debug "Config settings `$rule` matches labels `${labels.join(',')}` for process with name $processName"
-            final settings = configDirectives.get(rule)
+        for( final match : ConfigSelectorResolver.matchingLabelSelectors(configDirectives, labels) ) {
+            log.debug "Config settings `${match.rule}` matches labels `${labels.join(',')}` for process with name $processName"
+            final settings = match.settings
             if( settings instanceof Map ) {
                 applyConfigSettings(settings)
             }
             else if( settings != null ) {
-                throw new ConfigParseException("Unknown config settings for process labeled ${labels.join(',')} -- settings=$settings ")
+                throw new ConfigParseException("Unknown config settings for $kind labeled ${labels.join(',')} -- settings=$settings ")
             }
         }
     }
@@ -113,18 +119,7 @@ class ProcessConfigBuilder extends ProcessBuilder {
      * @param pattern
      */
     static boolean matchesLabels(List<String> labels, String pattern) {
-        final isNegated = pattern.startsWith('!')
-        if( isNegated )
-            pattern = pattern.substring(1).trim()
-
-        final regex = Pattern.compile(pattern)
-        for (label in labels) {
-            if (regex.matcher(label).matches()) {
-                return !isNegated
-            }
-        }
-
-        return isNegated
+        return ConfigSelectorResolver.matchesLabels(labels, pattern)
     }
 
     /**
@@ -143,21 +138,14 @@ class ProcessConfigBuilder extends ProcessBuilder {
      * @param target
      */
     protected void applyConfigSelectorWithName(Map<String,?> configDirectives, String target) {
-        final prefix = 'withName:'
-        for( String rule : configDirectives.keySet() ) {
-            if( !rule.startsWith(prefix) )
-                continue
-            final pattern = rule.substring(prefix.size()).trim()
-            if( !matchesSelector(target, pattern) )
-                continue
-
-            log.debug "Config settings `$rule` matches process $processName"
-            def settings = configDirectives.get(rule)
+        for( final match : ConfigSelectorResolver.matchingNameSelectors(configDirectives, target) ) {
+            log.debug "Config settings `${match.rule}` matches process $processName"
+            final settings = match.settings
             if( settings instanceof Map ) {
                 applyConfigSettings(settings)
             }
             else if( settings != null ) {
-                throw new ConfigParseException("Unknown config settings for process with name: $target  -- settings=$settings ")
+                throw new ConfigParseException("Unknown config settings for $kind with name: $target  -- settings=$settings ")
             }
         }
     }
@@ -170,10 +158,7 @@ class ProcessConfigBuilder extends ProcessBuilder {
      * @param pattern
      */
     static boolean matchesSelector(String name, String pattern) {
-        final isNegated = pattern.startsWith('!')
-        if( isNegated )
-            pattern = pattern.substring(1).trim()
-        return Pattern.compile(pattern).matcher(name).matches() ^ isNegated
+        return ConfigSelectorResolver.matchesName(name, pattern)
     }
 
     /**
@@ -189,8 +174,11 @@ class ProcessConfigBuilder extends ProcessBuilder {
             if( entry.key.startsWith("withLabel:") || entry.key.startsWith("withName:"))
                 continue
 
+            if( entry.key in ignoredKeys )      // e.g. the agent-only options of the `agent` scope
+                continue
+
             if( !DIRECTIVES.contains(entry.key) )
-                log.warn "Unknown directive `$entry.key` for process `$processName`"
+                log.warn "Unknown directive `$entry.key` for $kind `$processName`"
 
             if( entry.key == 'params' ) // <-- patch issue #242
                 continue
@@ -218,7 +206,7 @@ class ProcessConfigBuilder extends ProcessBuilder {
      */
     protected void applyConfigDefaults( Map defaults ) {
         for( String key : defaults.keySet() ) {
-            if( key == 'params' )
+            if( key == 'params' || key in ignoredKeys )
                 continue
             final value = defaults.get(key)
             final current = config.getProperty(key)

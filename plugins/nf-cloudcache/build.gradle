@@ -19,7 +19,7 @@ plugins {
 }
 
 nextflowPlugin {
-    nextflowVersion = '25.08.0-edge'
+    nextflowVersion = '26.08.0-edge'
 
     provider = "${nextflowPluginProvider}"
     description = 'Implements cloud-based caching system to optimize workflow performance by reducing redundant computations and data transfers'

@@ -1,0 +1,49 @@
+---
+title: time
+description: Reference for the `time` process directive.
+---
+
+# `time`
+
+The `time` directive defines the maximum runtime for each task.
+
+## Usage
+
+For example:
+
+```nextflow
+process hello {
+    time 1.h
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+Use the following suffixes to specify duration values:
+
+- `ms`: milliseconds
+- `s`: seconds
+- `m`: minutes
+- `h`: hours
+- `d`: days
+
+See [Duration][stdlib-types-duration] for more information.
+
+## Executor support
+
+This directive is only used by certain executors. See [Executors][executor-page] for the executors that support this directive.
+
+## See also
+
+- [cpus](./cpus)
+- [disk](./disk)
+- [memory](./memory)
+- [queue](./queue)
+- [Dynamic task resources][dynamic-task-resources]
+
+[dynamic-task-resources]: ../../../process#dynamic-task-resources
+[executor-page]: ../../../executor
+[stdlib-types-duration]: ../../stdlib-types/duration

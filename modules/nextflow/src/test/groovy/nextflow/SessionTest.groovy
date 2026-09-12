@@ -19,6 +19,9 @@ package nextflow
 import java.nio.file.Files
 import java.nio.file.Paths
 import java.nio.file.attribute.PosixFilePermission
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ThreadPoolExecutor
+import java.util.concurrent.TimeUnit
 
 import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
@@ -236,13 +239,69 @@ class SessionTest extends Specification {
 
     }
 
+    def 'the agent orchestration pool is separate from the execution pool and grows on demand' () {
+        given:
+        def session = new Session([poolSize: 2])
+        session.start()
+
+        expect: 'the execution pool keeps its historical fixed shape, sized to poolSize'
+        ((ThreadPoolExecutor) session.execService).getMaximumPoolSize() == 2
+
+        and: 'orchestration draws from a DIFFERENT pool, so an agent cannot consume an execution thread'
+        !session.getAgentExecService().is(session.execService)
+
+        and: 'and holds no threads until an agent actually runs'
+        ((ThreadPoolExecutor) session.getAgentExecService()).getPoolSize() == 0
+
+        and: 'it is unbounded, so a blocked orchestrator can always be given a thread'
+        ((ThreadPoolExecutor) session.getAgentExecService()).getMaximumPoolSize() == Integer.MAX_VALUE
+
+        when: 'far more blocked orchestrators than the execution pool could ever admit'
+        def pool = (ThreadPoolExecutor) session.getAgentExecService()
+        int n = 50
+        def started = new CountDownLatch(n)
+        def release = new CountDownLatch(1)
+        n.times { pool.submit({ started.countDown(); release.await() } as Runnable) }
+
+        // sharing one fixed pool would admit only poolSize of these, and the tool sub-tasks they
+        // block on would never get a thread -- the deadlock this partition removes
+        then: 'all of them run concurrently'
+        started.await(30, TimeUnit.SECONDS)
+        pool.getPoolSize() >= n
+
+        and: 'none of it consumed the execution pool'
+        ((ThreadPoolExecutor) session.execService).getPoolSize() == 0
+
+        cleanup:
+        release.countDown()
+        pool.shutdownNow()
+        session.execService.shutdownNow()
+    }
+
     def 'should get a warning message' () {
 
         given:
-        def session = new Session([process: ['$foo': [cpus:1], '$bar':[mem:'10GB']]])
+        def session = new Session([process: ['withName:foo': [cpus:1], 'withName:bar':[mem:'10GB']]])
         expect:
         session.validateConfig0(['foo','bar','baz']) == []
         session.validateConfig0(['foo','baz']) == ["There's no process matching config selector: bar -- Did you mean: baz?"]
+    }
+
+    def 'should validate agent selectors against the agent names' () {
+        given:
+        def session = new Session([agent: [
+            model: 'openai/gpt-5-mini',
+            'withName:critic': [cpus: 2],
+            'withName:planer': [cpus: 4],
+            'withLabel:reasoning': [cpus: 8] ]])
+
+        expect: 'a matched agent selector is silent; the typo is reported as an agent, not a process'
+        session.validateConfig0([], ['critic','planner']) == ["There's no agent matching config selector: planer -- Did you mean: planner?"]
+
+        and: 'agent names never satisfy a `process` selector, and vice versa'
+        new Session([process: ['withName:critic': [cpus:2]]]).validateConfig0([], ['critic'])
+            == ["There's no process matching config selector: critic"]
+        session.validateConfig0(['critic','planner'], []).size() == 2
     }
 
     @Unroll

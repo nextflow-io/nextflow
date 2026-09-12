@@ -105,6 +105,14 @@ The instance provisioning mode. Can be `'spot'`, `'ondemand'`, or `'spotFirst'`.
 
 The maximum number of concurrent vCPUs a single user may consume across all of their runs on this compute environment (default: no limit). A task requesting more `cpus` than this cap fails instead of being queued.
 
+##### `seqera.executor.httpClient.connectTimeout`
+
+The maximum time to wait for a connection to the Seqera scheduler service to be established, applied to a single attempt (default: `'10 sec'`). It bounds only reaching the service, never waiting for its response — see `seqera.executor.httpClient.requestTimeout` for that. A timed-out connection proves the request never arrived, so it is retried under `seqera.executor.retryPolicy` for every request, task submissions included. It must be greater than zero — unlike `requestTimeout`, `'0 sec'` is not accepted as "unbounded".
+
+##### `seqera.executor.httpClient.requestTimeout`
+
+The maximum time to wait for a response from the Seqera scheduler service, applied to a single attempt (default: `'45 sec'`). A timed-out poll or cancel is retried under `seqera.executor.retryPolicy`, so the worst case for one call is `requestTimeout` times `seqera.executor.retryPolicy.maxAttempts` plus the accumulated delays; a timed-out task submission is not re-sent, since the scheduler may already be creating the tasks. Set to `'0 sec'` to wait indefinitely.
+
 ##### `seqera.executor.retryPolicy.delay`
 
 The initial delay when a failing HTTP request is retried (default: `'450ms'`).

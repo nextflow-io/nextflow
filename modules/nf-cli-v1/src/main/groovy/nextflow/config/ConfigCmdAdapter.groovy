@@ -140,8 +140,13 @@ class ConfigCmdAdapter {
         validateConfigFiles(configFiles)
         final config = buildGivenFiles(configFiles)
 
+        // -- `run` command-line options (if applicable)
         if( cmdRun )
             configRunOptions(config, SysEnv.get(), cmdRun)
+
+        // -- normalize the `resume` option (only applies to the `run` command)
+        if( config.isSet('resume') )
+            config.resume = cmdRun ? normalizeResumeId(config.resume as String) : null
 
         return config
     }
@@ -398,9 +403,6 @@ class ConfigCmdAdapter {
         if( cmdRun.resume )
             config.resume = cmdRun.resume
 
-        if( config.isSet('resume') )
-            config.resume = normalizeResumeId(config.resume as String)
-
         // -- sets `dumpHashes` option
         if( cmdRun.dumpHashes ) {
             config.dumpHashes = cmdRun.dumpHashes != '-' ? cmdRun.dumpHashes : 'default'
@@ -427,6 +429,13 @@ class ConfigCmdAdapter {
             config.trace.enabled = true
             if( cmdRun.withTrace != '-' )
                 config.trace.file = cmdRun.withTrace
+        }
+
+        // -- sets agent execution trace option
+        if( cmdRun.withAgentTrace ) {
+            if( !(config.agent instanceof Map) )
+                config.agent = [:]
+            config.agent.trace = true
         }
 
         // -- sets report report options

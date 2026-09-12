@@ -550,16 +550,20 @@ class ConfigParserV1Test extends Specification {
         given:
         def folder = Files.createTempDirectory('test')
         folder.resolve('conf').mkdir()
-        // launch web server
-        HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);
+        // launch web server on an EPHEMERAL port: a fixed one collides with the other tests that
+        // serve HTTP (`SimpleHttpClientTest`, and `PluginsFacadeTest`/`HttpFilesTests` in modules
+        // whose test tasks Gradle runs concurrently with this one), and the loser of that race
+        // fails with a BindException that has nothing to do with what is under test
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        final port = server.address.port
         server.createContext("/", new ConfigFileHandler(folder));
         server.start()
 
         // main `nextflow.config` file
-        folder.resolve('nextflow.config').text = '''
+        folder.resolve('nextflow.config').text = """
         includeConfig 'conf/base.config'
-        includeConfig 'http://localhost:9900/conf/remote.config'
-        '''
+        includeConfig 'http://localhost:${port}/conf/remote.config'
+        """
 
         folder.resolve('conf/base.config').text = '''
         params.foo = 'Hello'
@@ -574,7 +578,7 @@ class ConfigParserV1Test extends Specification {
         '''
 
         when:
-        def url = 'http://localhost:9900/nextflow.config' as Path
+        def url = "http://localhost:${port}/nextflow.config".toString() as Path
         def cfg = new ConfigBuilder().build([url])
         then:
         cfg.params.foo == 'Hello'

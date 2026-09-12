@@ -18,6 +18,7 @@ package nextflow.processor
 
 import java.nio.file.Path
 
+import nextflow.agent.AgentTaskInfo
 import nextflow.exception.FailedGuardException
 import nextflow.exception.ProcessEvalException
 import spock.lang.Specification
@@ -316,6 +317,66 @@ class TaskErrorFormatterTest extends Specification {
         then:
         result.contains('Command exit status:')
         result.contains('-')
+    }
+
+    def 'should redact the RPC capability token from a failing agent task report'() {
+        given: 'this report does not stay local -- TaskProcessor logs it to .nextflow.log and it'
+        // becomes session.fault.report -> workflow.errorReport, which nf-tower POSTs to Platform.
+        // An agent task script is the proxy launch command, so it carries the capability token,
+        // and a live token buys the provider credential off the start frame.
+        def formatter = new TaskErrorFormatter()
+        def token = 'cap-6f21ab9d7e0c4415'
+        def script = "exec '/opt/nf-agent/agent-rpc' '--endpoint' 'driver:41235' " +
+            "'--invocation' 'inv-1' '--fingerprint' 'aabb' '--token' '${token}' '--' '/usr/bin/node' 'runner.mjs'"
+        def agentInfo = new AgentTaskInfo('pi', 'openai/gpt-5-mini', 'be helpful', null, 'p', 20, null, null, null)
+        def task = Mock(TaskRun) {
+            getWorkDir() >> Path.of('/work/dir')
+            getWorkDirStr() >> '/work/dir'
+            getScript() >> script
+            getConfig() >> new TaskConfig([(AgentTaskInfo.CONFIG_KEY): agentInfo])
+            getTemplate() >> null
+            getExitStatus() >> 1
+            dumpStdout(_) >> []
+            dumpStderr(_) >> []
+            isContainerEnabled() >> false
+        }
+
+        when:
+        def result = formatter.formatTaskError([], new RuntimeException('Task failed'), task).join('\n')
+
+        then: 'the token is gone'
+        !result.contains(token)
+        result.contains("'--token' '[REDACTED]'")
+
+        and: 'and everything that is not a secret is kept, so the report stays diagnosable'
+        result.contains("'--endpoint' 'driver:41235'")
+        result.contains("'--invocation' 'inv-1'")
+        result.contains("'--fingerprint' 'aabb'")
+    }
+
+    def 'should leave an ordinary task script untouched even when it mentions a token'() {
+        given: 'the redaction sits on the path EVERY failing task takes, so a process that happens'
+        // to name --token must be reported verbatim
+        def formatter = new TaskErrorFormatter()
+        def script = "curl -H 'x' https://api.example.com --token 'not-an-agent-token'"
+        def task = Mock(TaskRun) {
+            getWorkDir() >> Path.of('/work/dir')
+            getWorkDirStr() >> '/work/dir'
+            getScript() >> script
+            getConfig() >> new TaskConfig([:])
+            getTemplate() >> null
+            getExitStatus() >> 1
+            dumpStdout(_) >> []
+            dumpStderr(_) >> []
+            isContainerEnabled() >> false
+        }
+
+        when:
+        def result = formatter.formatTaskError([], new RuntimeException('Task failed'), task).join('\n')
+
+        then:
+        result.contains("--token 'not-an-agent-token'")
+        !result.contains('[REDACTED]')
     }
 
 }

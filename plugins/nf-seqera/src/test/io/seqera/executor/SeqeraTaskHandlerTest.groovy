@@ -873,6 +873,79 @@ class SeqeraTaskHandlerTest extends Specification {
         handler.getGrantedTime() == Duration.of('6h').toMillis()
     }
 
+    def 'should request memory only when the directive declares a usable figure: #scenario'() {
+        given:
+        def taskConfig = Mock(TaskConfig) { getMemory() >> memory }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getConfig() >> taskConfig
+            getProcessor() >> Mock(TaskProcessor) { getName() >> 'test_process' }
+        }
+        def executor = Mock(SeqeraExecutor) { getClient() >> Mock(SchedClient); getRunResourceLabels() >> [:] }
+        def handler = new SeqeraTaskHandler(taskRun, executor)
+
+        expect: 'an unusable figure leaves the axis unset, so the scheduler applies and reports its own default'
+        handler.memoryMiB() == expected
+
+        where:
+        scenario                            | memory                     | expected
+        'declared'                          | MemoryUnit.of('2 GB')      | 2048
+        'absent'                            | null                       | null
+        'exactly 1 MiB'                     | MemoryUnit.of('1 MB')      | 1
+        // Exactly zero is the only invalid figure that can reach here: MemoryUnit(long) asserts
+        // non-negative, and TaskConfig maps a falsy directive to null, so only the string form
+        // survives -- its *string* is truthy
+        'string-form zero, the only real 0' | MemoryUnit.of('0 GB')      | null
+        // A positive sub-MiB directive truncates to 0 and is forwarded on purpose: normalising a
+        // non-positive request is the scheduler's job, and restating it here would split one rule
+        // across two codebases. nf-core/bwa/index computes `6.B * fasta.size()`, which lands here
+        // for the small reference a test profile supplies
+        'positive but sub-MiB'              | MemoryUnit.of(6) * 100_000 | 0
+    }
+
+    def 'submit should leave memoryMiB unset when the process declares no memory'() {
+        given:
+        Task capturedTask = null
+        def batchSubmitter = Mock(SeqeraBatchSubmitter) {
+            submit(_, _) >> { args -> capturedTask = args[1] as Task }
+        }
+        def executor = Mock(SeqeraExecutor) {
+            getClient() >> Mock(SchedClient)
+            getBatchSubmitter() >> batchSubmitter
+            getSeqeraConfig() >> Mock(ExecutorOpts) { getMachineRequirement() >> null }
+            getRunResourceLabels() >> [:]
+        }
+        def taskConfig = Mock(TaskConfig) {
+            getCpus() >> 2
+            getMemory() >> null
+            getAccelerator() >> null
+            getDisk() >> null
+        }
+        def taskRun = Mock(TaskRun) {
+            getWorkDir() >> Paths.get('/work/ab/cd1234')
+            getWorkDirStr() >> '/work/ab/cd1234'
+            getConfig() >> taskConfig
+            getContainer() >> 'ubuntu:latest'
+            getContainerPlatform() >> null
+            lazyName() >> 'test_task'
+            getId() >> TaskId.of(1)
+            getHash() >> HashCode.fromString('abcd1234')
+        }
+        def handler = Spy(new SeqeraTaskHandler(taskRun, executor)) {
+            fusionEnabled() >> true
+            fusionSubmitCli() >> ['bash', '-c', 'echo hello']
+            fusionLauncher() >> Mock(nextflow.fusion.FusionScriptLauncher) { fusionEnv() >> [:] }
+        }
+
+        when:
+        handler.submit()
+
+        then: 'the axis reaches the scheduler absent, not as a fabricated figure'
+        capturedTask != null
+        capturedTask.getResourceRequirement().memoryMiB == null
+        capturedTask.getResourceRequirement().cpuShares == 2048
+    }
+
     def 'should build resource limit from task config'() {
         given:
         def taskConfig = Mock(TaskConfig) {
@@ -1198,10 +1271,77 @@ class SeqeraTaskHandlerTest extends Specification {
         [:]                                  | null
     }
 
+    def 'submit disables the prediction model when the process references task.memory'() {
+        given:
+        Task captured = null
+        def handler = createSubmitHandler(
+            predictionModel: 'qr/v2',
+            memoryReferenced: true,
+            onSubmit: { captured = it },
+        )
+
+        when:
+        handler.submit()
+        then:
+        captured.getPredictionModel() == PredictionModel.NONE
+    }
+
+    def 'submit keeps the run-level prediction model when the process does not reference task.memory'() {
+        given:
+        Task captured = null
+        def handler = createSubmitHandler(
+            predictionModel: 'qr/v2',
+            memoryReferenced: false,
+            onSubmit: { captured = it },
+        )
+
+        when:
+        handler.submit()
+        then:
+        captured.getPredictionModel() == null
+    }
+
+    @Unroll
+    def 'submit does not disable the prediction model when the run-level model is #runModel'() {
+        given:
+        Task captured = null
+        def handler = createSubmitHandler(
+            predictionModel: runModel,
+            memoryReferenced: true,
+            onSubmit: { captured = it },
+        )
+
+        when:
+        handler.submit()
+        then:
+        captured.getPredictionModel() == null
+
+        where:
+        runModel << [null, '', 'none']
+    }
+
+    def 'submit lets an explicit predictionModel hint win over the task.memory check'() {
+        given:
+        Task captured = null
+        def handler = createSubmitHandler(
+            predictionModel: 'qr/v2',
+            memoryReferenced: true,
+            hints: ['seqera/predictionModel': 'qr/v1'],
+            onSubmit: { captured = it },
+        )
+
+        when:
+        handler.submit()
+        then:
+        captured.getPredictionModel() == PredictionModel.QR_V1
+    }
+
     private SeqeraTaskHandler createSubmitHandler(Map args) {
         final hints = args.hints as Map<String,Object> ?: [:]
         final baseMachineReq = args.baseMachineReq as MachineRequirementOpts
         final Closure onSubmit = args.onSubmit as Closure ?: {}
+        final memoryReferenced = args.memoryReferenced as boolean
+        final runPredictionModel = args.predictionModel as String
 
         def taskConfig = Mock(TaskConfig) {
             getCpus() >> 1
@@ -1216,6 +1356,7 @@ class SeqeraTaskHandlerTest extends Specification {
             getContainer() >> 'ubuntu:latest'
             getId() >> TaskId.of(1)
             getHash() >> HashCode.fromInt(1)
+            isDirectiveReferenced('memory') >> memoryReferenced
             lazyName() >> 'sample_task'
         }
         def executor = Mock(SeqeraExecutor) {
@@ -1225,6 +1366,7 @@ class SeqeraTaskHandlerTest extends Specification {
             }
             getSeqeraConfig() >> Mock(ExecutorOpts) {
                 getMachineRequirement() >> baseMachineReq
+                getPredictionModel() >> runPredictionModel
             }
             getRunResourceLabels() >> [:]
         }

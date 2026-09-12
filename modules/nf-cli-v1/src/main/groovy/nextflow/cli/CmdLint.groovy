@@ -367,6 +367,14 @@ class CmdLint extends CmdBase {
 
         final formatter = new ScriptFormattingVisitor(source, formattingOptions)
         formatter.visit()
+
+        // refuse to format a file whose comments would not be preserved
+        final missing = formatter.getMissingComments()
+        if( missing ) {
+            log.warn "Not formatting ${file} -- ${missing.size()} comment(s) would be lost:\n${missing.collect(it -> '  ' + it).join('\n')}"
+            return file.text
+        }
+
         return formatter.toString()
     }
 
@@ -382,6 +390,14 @@ class CmdLint extends CmdBase {
 
         final formatter = new ConfigFormattingVisitor(source, formattingOptions)
         formatter.visit()
+
+        // refuse to format a file whose comments would not be preserved
+        final missing = formatter.getMissingComments()
+        if( missing ) {
+            log.warn "Not formatting ${file} -- ${missing.size()} comment(s) would be lost:\n${missing.collect(it -> '  ' + it).join('\n')}"
+            return file.text
+        }
+
         return formatter.toString()
     }
 

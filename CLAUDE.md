@@ -130,6 +130,9 @@ Follow these actions to make a new release:
 - Update `VERSION` file in the project root using a calendar-like versioning scheme. Versions in the 4-th and 10-th month are "stable releases", e.g. `25.10.0`, while versions in all other months are "edge releases", e.g. `25.09.0-edge`.
 - Update the project root `CHANGELOG.md` with changes since the past release. Use the git log
   command to determine what changed e.g. `git log v<PREVIOUS VERSION>..`
+- Run `make check-agent-image` to confirm the nf-agent-pi runner image still builds and its
+  version is in step with its build context. A failure here means bumping the plugin VERSION,
+  fixing the Dockerfile, or both — do it before cutting the release commit.
 - Run `make releaseInfo` to update the version number and generate checksums.
 - Run this command to stage for commit the release files:
     ```

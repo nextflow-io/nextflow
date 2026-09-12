@@ -584,7 +584,7 @@ class TaskProcessor {
     }
 
     private start(DataflowProcessor op) {
-        session.addIgniter {
+        session.addProcessorIgniter {
             log.debug "Starting process > $name"
             op.start()
         }

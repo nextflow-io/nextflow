@@ -1,5 +1,11 @@
 nf-azure changelog
 ===================
+1.23.2 - 20 Aug 2026
+- Bump netty and Apache HttpComponents to patched releases (#7484) [3aef1da9a]
+- Detect Azure virtual directories without a trailing slash (#6428) [b4ab2e165]
+- Bump Groovy 4.0.33 (#7429) [c8800d84a]
+- Update dependency com.azure:azure-identity to v1.18.4 (#7389) [353567cd6]
+
 1.23.1 - 15 Jul 2026
 - Bump jackson-databind to patched versions to fix deserialization CVEs (#7322) [8d4423e8a]
 - Tolerate stale/transient resize errors on autoscale Azure Batch pools (#7312) [46392e625]

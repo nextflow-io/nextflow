@@ -472,10 +472,28 @@ class FileHelper {
     }
 
     /**
-     * Check if the specified path is a NFS mount
+     * The file system types that are known to be network shared file systems, and
+     * therefore may expose a delayed view of the writes made by another client.
+     * These are the values reported by {@code stat -f -c %T}.
+     */
+    private static final Set<String> SHARED_FS_TYPES = Set.of('nfs', 'lustre', 'ceph', 'beegfs', 'gpfs')
+
+    /**
+     * Check if the given file system type, as reported by {@code stat -f -c %T},
+     * denotes a network shared file system
+     *
+     * @param type The file system type name
+     * @return {@code true} when the type is a shared file system, {@code false} otherwise
+     */
+    static boolean isSharedFsType(String type) {
+        return type != null && type in SHARED_FS_TYPES
+    }
+
+    /**
+     * Check if the specified path is a shared file system mount
      *
      * @param path The path to verify
-     * @return The {@code true} when the path is a NFS mount {@code false} otherwise
+     * @return The {@code true} when the path is a shared file system mount {@code false} otherwise
      */
     @Memoized
     static boolean isPathSharedFS(Path path) {
@@ -483,8 +501,7 @@ class FileHelper {
         if( path.getFileSystem() != FileSystems.getDefault() )
             return false
 
-        final type = getPathFsType(path)
-        final result = type == 'nfs' || type == 'lustre'
+        final result = isSharedFsType(getPathFsType(path))
         log.debug "FS path type ($result): $path"
         return result
     }
