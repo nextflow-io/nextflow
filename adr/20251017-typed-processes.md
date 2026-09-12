@@ -202,7 +202,7 @@ Outputs can be arbitrary expressions, rather that being restricted to specific q
 
 ### Nullable outputs
 
-By default, the `file()` and `files()` function raise an error if the given file is missing. These functions can be called with `optionel: true` to allow missing files. This way, it is possible to declare a tuple output that contains nullable values:
+By default, the `file()` and `files()` function raise an error if the given file is missing. These functions can be called with `optional: true` to allow missing files. This way, it is possible to declare a tuple output that contains nullable values:
 
 ```groovy
 process MAYBE {
