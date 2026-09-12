@@ -31,6 +31,23 @@ import spock.lang.Unroll
  */
 class PluginsFacadeTest extends Specification {
 
+    def 'setLockFileDir should resolve plugins.lock under the given dir' () {
+        given:
+        def dir = Files.createTempDirectory('proj')
+        def updater = Mock(PluginUpdater)
+        def facade = new PluginsFacade()
+        facade.@updater = updater
+
+        when:
+        facade.setLockFileDir(dir)
+
+        then:
+        1 * updater.setLockFile(dir.resolve('plugins.lock'))
+
+        cleanup:
+        dir?.deleteDir()
+    }
+
     def 'should setup plugins' () {
         given:
         HttpServer server = HttpServer.create(new InetSocketAddress(9900), 0);

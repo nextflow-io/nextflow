@@ -27,7 +27,9 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
 import nextflow.BuildInfo
+import nextflow.SysEnv
 import nextflow.config.RegistryConfig
+import nextflow.exception.AbortOperationException
 import com.github.zafarkhaja.semver.Version
 import org.pf4j.Plugin
 import org.pf4j.PluginDescriptor
@@ -768,6 +770,91 @@ class PluginUpdaterTest extends Specification {
         and:
         // Mock pullPlugin0 to prevent real implementation calls
         2 * updater.pullPlugin0(_, _) >> null
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    // ---------------------------------------------------------------------------
+    // plugins.lock integration: pin the wiring, not just the verifier in isolation
+
+    def 'installPlugin should verify and pin the extracted tree against the plugins lock file' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0'])
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, false)
+        and:
+        // an empty but present lock file -> feature enabled, nothing pinned yet
+        def lockPath = folder.resolve('plugins.lock'); lockPath.text = ''
+        updater.setLockFile(lockPath)
+
+        when:
+        updater.installPlugin(PLUGIN_ID, '1.0.0')
+
+        then:
+        // verify() ran on the load path (a refactor that drops the call would fail here) and pinned
+        // the hash of the extracted directory actually loaded
+        def lock = PluginLockFile.read(lockPath)
+        lock.getEntry("${PLUGIN_ID}@1.0.0")?.sha512 ==~ /[0-9a-f]{128}/
+        lock.getEntry("${PLUGIN_ID}@1.0.0").sha512 == PluginLockVerifier.sha512Tree(local.resolve("${PLUGIN_ID}-1.0.0"))
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'installPlugin in strict mode should abort before loading when the tree does not match the lock' () {
+        given:
+        SysEnv.push([NXF_PLUGINS_LOCK_MODE: 'strict'])
+        def folder = Files.createTempDirectory('test')
+        def remote = remoteRepository(folder.resolve('repo'), ['1.0.0'])
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remote, false)
+        and:
+        // pin a bogus hash so the freshly-extracted tree cannot match: verify() must abort ahead of
+        // loadPluginFromPath(), so the ordering of the two calls in load0() is what this pins
+        def lockPath = folder.resolve('plugins.lock')
+        new PluginLockFile().addEntry("${PLUGIN_ID}@1.0.0", new PluginLockFile.Entry('deadbeef')).write(lockPath)
+        updater.setLockFile(lockPath)
+
+        when:
+        updater.installPlugin(PLUGIN_ID, '1.0.0')
+
+        then:
+        thrown(AbortOperationException)
+        and:
+        // the plugin was never handed to the loader
+        manager.getPlugin(PLUGIN_ID) == null
+
+        cleanup:
+        SysEnv.pop()
+        folder?.deleteDir()
+    }
+
+    def 'setLockFile should invalidate the cached verifier' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def local = localCache(folder.resolve('plugins'), [])
+        def manager = new LocalPluginManager(local)
+        def updater = new PluginUpdater(manager, local, remoteRepository(folder.resolve('repo'), []), false)
+        and:
+        def lock1 = folder.resolve('a.lock'); lock1.text = ''
+        def lock2 = folder.resolve('b.lock'); lock2.text = ''
+
+        when:
+        updater.setLockFile(lock1)
+        def v1 = updater.getLockVerifier()
+        then:
+        // the same instance is reused while the location is unchanged
+        v1.is(updater.getLockVerifier())
+
+        when:
+        updater.setLockFile(lock2)
+        then:
+        // pointing at a new location discards the cached verifier
+        !updater.getLockVerifier().is(v1)
 
         cleanup:
         folder?.deleteDir()
