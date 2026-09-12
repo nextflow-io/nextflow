@@ -39,6 +39,7 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionConfig
+import nextflow.platform.ResourceLabelPolicy
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
 import nextflow.processor.TaskArrayRun
@@ -830,7 +831,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
          * create the request object
          */
         final opts = getAwsOptions()
-        final labels = task.config.getResourceLabels()
+        // the labels are applied as Batch job tags, therefore the auto-derived ones are normalised
+        // to the tag syntax while the user-declared ones are passed through untouched. Note that
+        // Batch allows at most 50 tags per job, which is not enforced here
+        final labels = task.config.getResourceLabels(ResourceLabelPolicy.AWS)
         final builder = SubmitJobRequest.builder()
         builder.jobName(getJobName(task))
         builder.jobQueue(getJobQueue(task))

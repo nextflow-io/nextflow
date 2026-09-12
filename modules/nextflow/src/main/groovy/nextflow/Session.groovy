@@ -60,6 +60,7 @@ import nextflow.extension.CH
 import nextflow.extension.FilesEx
 import nextflow.file.FileHelper
 import nextflow.file.FilePorter
+import nextflow.platform.AutoLabels
 import nextflow.plugin.Plugins
 import nextflow.processor.ErrorStrategy
 import nextflow.processor.TaskFault
@@ -969,6 +970,9 @@ class Session implements ISession {
     ExecutorService getExecService() { execService }
 
     @PackageScope void checkConfig() {
+        // validate the auto-labels option up-front, so an invalid value aborts the run here
+        // -- before any task is created -- instead of lazily during task creation
+        resolveAutoResourceLabelNames()
         final enabled = config.navigate('nextflow.enable.configProcessNamesValidation', true) as boolean
         if( enabled ) {
             final names = ScriptMeta.allProcessNames()
@@ -1267,6 +1271,42 @@ class Session implements ISession {
     SpackConfig getSpackConfig() {
         final opts = config.spack as Map ?: Collections.emptyMap()
         return new SpackConfig(opts, getSystemEnv())
+    }
+
+    /**
+     * The resource labels derived from the workflow metadata, as selected by the
+     * {@code tower.autoLabels} option, or by the deprecated {@code seqera.executor.autoLabels}
+     * when the latter is given in the configuration.
+     *
+     * Note the labels are computed on first access instead of at initialisation, because the
+     * Platform metadata is only filled in when the {@code onFlowCreate} event is fired i.e.
+     * after the session is created and before the script is parsed.
+     *
+     * @return The auto-derived labels, or an empty map when the option is not enabled
+     */
+    @Memoized
+    Map<String,String> getAutoResourceLabels() {
+        final names = resolveAutoResourceLabelNames()
+        if( !names )
+            return Collections.<String,String>emptyMap()
+        return AutoLabels.labelsFor(workflowMetadata, names)
+    }
+
+    /**
+     * Resolve and validate the auto-labels option, returning the selected workflow metadata
+     * short names. Unlike {@link #getAutoResourceLabels()} this does not read the Platform
+     * metadata, so it can be invoked at config-check time (see {@link #checkConfig()}) to fail
+     * fast on an invalid value, before the pipeline starts creating tasks.
+     *
+     * @return The selected short names, empty when the feature is disabled
+     */
+    protected Set<String> resolveAutoResourceLabelNames() {
+        final legacy = config.navigate('seqera.executor') as Map
+        // the deprecated Seqera executor option wins when explicitly given, even as `false`
+        final legacyGiven = legacy != null && legacy.containsKey('autoLabels')
+        final optionName = legacyGiven ? 'seqera.executor.autoLabels' : 'tower.autoLabels'
+        final value = legacyGiven ? legacy.get('autoLabels') : config.navigate('tower.autoLabels')
+        return AutoLabels.parse(value, optionName)
     }
 
     /**
