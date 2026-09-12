@@ -35,8 +35,45 @@ public class ByteBufferInputStream extends InputStream {
 
     ByteBuffer buf;
 
+    /**
+     * Position to rewind to on {@link #reset()}: the mark when one was set, otherwise the position
+     * the stream started at.
+     */
+    private int mark;
+
     public ByteBufferInputStream(ByteBuffer buf) {
         this.buf = buf;
+        this.mark = buf.position();
+    }
+
+    /**
+     * Mark/reset IS supported: the content is a buffer already in memory, so rewinding is a position
+     * assignment. It matters because the AWS SDK asks a {@code RequestBody} for a fresh stream on
+     * every attempt: over a stream that reports {@code markSupported() == false} it builds a
+     * one-shot provider, and a RETRY then fails with "Content input stream does not support
+     * mark/reset, and was already read once" instead of re-sending. Both {@code S3OutputStream}
+     * upload paths pass this stream -- single-part {@code putObject} and multipart
+     * {@code uploadPart} -- so without mark/reset one transient 5xx on any driver-side S3 write
+     * aborted the operation instead of being retried.
+     */
+    @Override
+    public boolean markSupported() {
+        return true;
+    }
+
+    @Override
+    public synchronized void mark(int readlimit) {
+        this.mark = buf.position();
+    }
+
+    @Override
+    public synchronized void reset() {
+        buf.position(mark);
+    }
+
+    @Override
+    public int available() {
+        return buf.remaining();
     }
 
     public int read() throws IOException {
