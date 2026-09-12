@@ -1,0 +1,281 @@
+name: Nextflow e2e
+# Launches the Seqera Platform "showcase" end-to-end test. Reusable workflow,
+# triggered two ways:
+#   - workflow_call    : from build.yml (commit [e2e ...] tag / dispatch input)
+#                        and from pr-commands.yml (a maintainer's /e2e-* comment).
+#   - workflow_dispatch: run e2e standalone (no build/test gate) for a chosen env.
+#
+# The workflow_call path from build.yml always builds/tests github.sha — content
+# that only landed there because it was already pushed by someone with write
+# access, so it's inherently trusted. The pr-commands.yml path is different: it
+# runs against arbitrary, attacker-controlled PR content (code AND fork), gated
+# only by a maintainer's comment. Two things make that safe:
+#   - Authorization is re-checked here against the live collaborator-permission
+#     API (not the comment's cached `author_association`, which a mere org
+#     MEMBER can carry without write access to this repo).
+#   - The comment must name the exact commit SHA to test, and that SHA must
+#     still be the PR's head at the moment this runs. Without a pinned SHA, the
+#     window between "maintainer reads the comment trigger fire" and "workflow
+#     resolves the PR head" is a race: a contributor can force-push malicious
+#     code into that gap and have it built/tested with this workflow's secrets
+#     before anyone reviewed it. Pinning to a SHA named in the (already
+#     comment-body of the trusted maintainer) closes that race — whatever runs
+#     is exactly what was named, immutably.
+# A further split protects the secrets themselves: everything derived from the
+# untrusted checkout (`work/`) — Gradle/Make/Dockerfile — runs with no secrets
+# in scope. The scripts that DO see SEQERA_PUBLIC_CR_PASSWORD /
+# AUTOMATION_GITHUB_TOKEN are always read from a separate, trusted checkout
+# (`trusted/`, this repo at the ref that triggered the run), never from `work/`
+# — so a malicious PR can't rewrite the script that consumes its own approval.
+#
+# What it does: builds a snapshot Nextflow launcher container, then dispatches
+# seqera-showcase-<env>.yml in seqeralabs/showcase-automation and surfaces the
+# resulting run URL (see .github/scripts/e2e-build.sh, e2e-publish.sh).
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Platform environment to test against (production|staging). Omit to parse a /e2e-* PR comment.'
+        type: string
+        required: false
+        default: ''
+    secrets:
+      SEQERA_PUBLIC_CR_PASSWORD:
+        description: 'Seqera public container registry password (docker login)'
+        required: true
+      AUTOMATION_GITHUB_TOKEN:
+        description: 'Token used to dispatch & read the showcase-automation run'
+        required: true
+    outputs:
+      environment:
+        description: 'Environment the e2e test ran against'
+        value: ${{ jobs.e2e.outputs.environment }}
+      launcher_image:
+        description: 'Wave launcher image used for the test'
+        value: ${{ jobs.e2e.outputs.launcher_image }}
+      showcase_url:
+        description: 'URL of the dispatched showcase-automation run'
+        value: ${{ jobs.e2e.outputs.showcase_url }}
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Platform environment to test against'
+        type: choice
+        options:
+          - staging
+          - production
+        default: staging
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+    outputs:
+      environment: ${{ steps.launch.outputs.environment }}
+      launcher_image: ${{ steps.launch.outputs.launcher_image }}
+      showcase_url: ${{ steps.launch.outputs.showcase_url }}
+    steps:
+      - name: Resolve command
+        id: resolve
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          INPUT_ENVIRONMENT: ${{ inputs.environment }}
+          # Passed via env (not inlined) to avoid script injection from comments.
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          # Prefer the explicit input (build.yml / workflow_dispatch); note that
+          # github.event_name is the *caller's* event, so a comment-triggered call
+          # arrives as 'issue_comment' here, not 'workflow_call'.
+          environment="$INPUT_ENVIRONMENT"
+          sha=""
+          attempted="false"
+          reason=""
+          if [ -z "$environment" ] && [ "$EVENT_NAME" = "issue_comment" ]; then
+            if printf '%s\n' "$COMMENT_BODY" | grep -qE '^[[:space:]]*/e2e-(prod|stage)\b'; then
+              attempted="true"
+              # a line starting with /e2e-prod or /e2e-stage, followed by the
+              # full 40-character commit SHA to test — see rationale above.
+              line=$(printf '%s\n' "$COMMENT_BODY" | grep -m1 -E '^[[:space:]]*/e2e-(prod|stage)[[:space:]]+[0-9a-f]{40}([[:space:]]|$)' || true)
+              if [ -z "$line" ]; then
+                reason="bad-syntax"
+              else
+                cmd=$(printf '%s' "$line" | grep -oE '/e2e-(prod|stage)' | head -n1)
+                sha=$(printf '%s' "$line" | grep -oE '[0-9a-f]{40}' | head -n1)
+                case "$cmd" in
+                  /e2e-prod) environment="production" ;;
+                  /e2e-stage) environment="staging" ;;
+                esac
+              fi
+            fi
+          fi
+          if [ -z "$environment" ] || [ -n "$reason" ]; then
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "Resolved environment: $environment"
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "environment=$environment" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "attempted=$attempted" >> "$GITHUB_OUTPUT"
+          echo "reason=$reason" >> "$GITHUB_OUTPUT"
+
+      - name: Authorize
+        id: authorize
+        if: ${{ github.event_name == 'issue_comment' && steps.resolve.outputs.should_run == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          ACTOR: ${{ github.event.comment.user.login }}
+          NAMED_SHA: ${{ steps.resolve.outputs.sha }}
+        run: |
+          # `author_association` (used previously) is a property of the comment,
+          # not the commenter's current access — an org MEMBER carries it with
+          # no write access to this repo. Ask GitHub for the real permission.
+          permission=$(gh api "repos/$REPO/collaborators/$ACTOR/permission" --jq '.permission')
+          echo "$ACTOR has '$permission' permission on $REPO"
+          if [ "$permission" != "admin" ] && [ "$permission" != "maintain" ] && [ "$permission" != "write" ]; then
+            echo "authorized=false" >> "$GITHUB_OUTPUT"
+            echo "reason=unauthorized" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          head_sha=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json headRefOid --jq '.headRefOid')
+          if [ "$head_sha" != "$NAMED_SHA" ]; then
+            echo "authorized=false" >> "$GITHUB_OUTPUT"
+            echo "reason=stale-sha" >> "$GITHUB_OUTPUT"
+            echo "current_sha=$head_sha" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          repo=$(gh pr view "$PR_NUMBER" --repo "$REPO" --json headRepositoryOwner,headRepository --jq '.headRepositoryOwner.login + "/" + .headRepository.name')
+          echo "authorized=true" >> "$GITHUB_OUTPUT"
+          echo "repo=$repo" >> "$GITHUB_OUTPUT"
+
+      - name: Gate
+        id: gate
+        run: |
+          run="${{ steps.resolve.outputs.should_run == 'true' && (github.event_name != 'issue_comment' || steps.authorize.outputs.authorized == 'true') }}"
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+
+      - name: Acknowledge comment
+        if: ${{ github.event_name == 'issue_comment' && steps.gate.outputs.run == 'true' }}
+        continue-on-error: true  # cosmetic reaction; never fail the run over it
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          COMMENT_ID: ${{ github.event.comment.id }}
+        run: |
+          gh api --method POST "repos/$REPO/issues/comments/$COMMENT_ID/reactions" -f content=eyes
+
+      - name: Report rejected command
+        if: ${{ github.event_name == 'issue_comment' && steps.resolve.outputs.attempted == 'true' && steps.gate.outputs.run != 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REASON: ${{ steps.resolve.outputs.reason || steps.authorize.outputs.reason }}
+          CURRENT_SHA: ${{ steps.authorize.outputs.current_sha }}
+        run: |
+          case "$REASON" in
+            bad-syntax)
+              body="/e2e-prod and /e2e-stage require the full 40-character commit SHA to test, e.g. \`/e2e-stage \$(git rev-parse HEAD)\`. This pins the run to an exact, reviewed commit."
+              ;;
+            unauthorized)
+              body="Only maintainers with write access can launch the e2e showcase test."
+              ;;
+            stale-sha)
+              body="The named commit is no longer the PR head (current head: \`${CURRENT_SHA}\`). Re-run the command with the current head SHA."
+              ;;
+            *)
+              exit 0
+              ;;
+          esac
+          gh pr comment "$PR_NUMBER" --repo "$REPO" --body "$body"
+
+      - name: Checkout target
+        if: ${{ steps.gate.outputs.run == 'true' }}
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          path: work
+          fetch-depth: 1
+          submodules: true
+          persist-credentials: false
+          repository: ${{ steps.authorize.outputs.repo || github.repository }}
+          ref: ${{ steps.resolve.outputs.sha || github.sha }}
+
+      - name: Checkout trusted scripts
+        if: ${{ steps.gate.outputs.run == 'true' }}
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          path: trusted
+          fetch-depth: 1
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts
+          sparse-checkout-cone-mode: false
+
+      - name: Setup Java 17
+        if: ${{ steps.gate.outputs.run == 'true' }}
+        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        with:
+          java-version: 17
+          distribution: 'temurin'
+          architecture: x64
+          cache: gradle
+
+      - name: Install Wave CLI
+        if: ${{ steps.gate.outputs.run == 'true' }}
+        run: |
+          wget -q -O wave https://github.com/seqeralabs/wave-cli/releases/download/v1.4.1/wave-1.4.1-linux-x86_64
+          chmod +x wave
+          mv wave /usr/local/bin/
+
+      - name: Build launcher context
+        if: ${{ steps.gate.outputs.run == 'true' }}
+        # Runs make/gradle from the untrusted checkout — deliberately no secrets
+        # in scope here (see header comment).
+        run: bash trusted/.github/scripts/e2e-build.sh
+        env:
+          REPO_ROOT: ${{ github.workspace }}/work
+          GRADLE_OPTS: '-Dorg.gradle.daemon=false'
+
+      - name: Docker Login to Seqera public CR
+        if: ${{ steps.gate.outputs.run == 'true' }}
+        uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+        with:
+          registry: "public.cr.seqera.io"
+          username: "public-cr-admin"
+          password: ${{ secrets.SEQERA_PUBLIC_CR_PASSWORD }}
+
+      - name: Publish and launch e2e test
+        id: launch
+        if: ${{ steps.gate.outputs.run == 'true' }}
+        # Always the trusted copy of the script — never work/.github/scripts —
+        # since this step is the only one holding the registry and automation
+        # secrets (see header comment).
+        run: bash trusted/.github/scripts/e2e-publish.sh
+        env:
+          CTX: ${{ github.workspace }}/work/.github/test-e2e
+          ENVIRONMENT: ${{ steps.resolve.outputs.environment }}
+          GITHUB_TOKEN: ${{ secrets.AUTOMATION_GITHUB_TOKEN }}
+
+      - name: Post result to pull request
+        if: ${{ github.event_name == 'issue_comment' && steps.gate.outputs.run == 'true' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+          E2E_ENV: ${{ steps.launch.outputs.environment }}
+          LAUNCHER_IMAGE: ${{ steps.launch.outputs.launcher_image }}
+          SHOWCASE_URL: ${{ steps.launch.outputs.showcase_url }}
+        run: |
+          gh pr comment "$PR_NUMBER" --repo "$REPO" --body \
+            "🚀 e2e showcase launched against \`${E2E_ENV}\`: [showcase run](${SHOWCASE_URL}) (launcher \`${LAUNCHER_IMAGE}\`). CI only launches the test — open the run to confirm it passed."
