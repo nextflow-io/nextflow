@@ -13,7 +13,7 @@ Extend workflows and dataflow logic to provide first-class support for static ty
 
 Workflow logic in Nextflow consists of composing processes, channels, and *dataflow operators* (or just *operators*). Operators are essential for transforming, filtering, and combining channels to control the flow of data through a pipeline.
 
-However, workflows were not originally designed with static typing in mind. The introduction of static typing throughout the rest of the language has revealed several gaps in the design of workflow logic.
+However, workflows were not originally designed with static typing in mind. Adding static typing to the rest of the language revealed several gaps in the design of workflow logic.
 
 ### Operators
 
@@ -21,7 +21,7 @@ Many operators cannot be statically type-checked because they do not have well-d
 
 A broader issue is that the operator library is very large, which makes it difficult to find the right operator for a given situation. Several operators deal with additional concerns such as reading/writing specific data formats, which blurs the distinction between dataflow logic and the domain-specific aspects of a workflow. Several operators rely on the ordering of values in a channel, which can cause non-deterministic behavior and hinder reproducibility.
 
-The need for static typing is also an opportunity to address these issues by encouraging the use of a core subset of operators that provide all necessary functionality and support static typing.
+The need for static typing is also an opportunity to address these issues by encouraging a core subset of operators that covers the necessary functionality and supports static typing.
 
 ### Dataflow syntax
 
@@ -59,11 +59,11 @@ Here we see several syntax variants:
 
 - Process outputs can be accessed using the `.out` property on the process name (alt 2) or by assignment (alt 3). The `.out` property can refer to a single output or a record of outputs, depending on the process definition.
 
-Every syntax variant has a cost -- it make code look less familiar to new users, it can cause counterproductive debates over which variant is "better", and it makes Nextflow code less consistent overall. Even if you stick to your preferred syntax, you still have to learn the other variants because you might encounter them when reading someone else's code.
+Every syntax variant has a cost. It makes code look less familiar to new users, it can cause counterproductive debates over which variant is "better", and it makes Nextflow code less consistent overall. Even if you stick to your preferred syntax, you still have to learn the other variants because you might encounter them when reading someone else's code.
 
-Therefore, syntax sugar should be used judiciously -- it should provide some value that makes adding it worth the aforementioned cost. The variants shown in alt 1 and alt 2 do not add much value relative to their cost.
+Therefore, syntax sugar should be used judiciously. It should provide enough value to be worth that cost. The variants shown in alt 1 and alt 2 do not add much value relative to their cost.
 
-Even the pipe (`|`), which is loved by many users, can rarely be used in its ideal form because processes usually have additional arguments that can’t be specified in a pipe chain.
+Even the pipe (`|`), which is loved by many users, can rarely be used in its ideal form because processes usually have additional arguments that can't be specified in a pipe chain.
 
 ## Goals
 
@@ -77,9 +77,9 @@ Even the pipe (`|`), which is loved by many users, can rarely be used in its ide
 
 ## Non-goals
 
-- Remove support for existing workflow syntax and semantics -- static typing should be opt-in
+- Remove support for existing workflow syntax and semantics. Static typing should be opt-in
 
-- Change the way that processes are called -- processes are still called directly with channels, preserving the common mental model of "processes connected by channels"
+- Change the way that processes are called. Processes are still called directly with channels, preserving the common mental model of "processes connected by channels"
 
 ## Solution
 
@@ -131,11 +131,11 @@ The operator library is extended to support static typing and records:
 
 All operators can be used with or without static typing, with some caveats:
 
-- Some operators have stricter semantics when static typing is enabled via `nextflow.enable.types`. These changes are necessary in order to support static typing effectively. They should not affect the majority of existing code.
+- Some operators have stricter semantics when static typing is enabled via `nextflow.enable.types`. These changes are necessary to support static typing. They should not affect the majority of existing code.
 
-- Some operators are discouraged from use with static typing. While they can still be used, the type checker will not be able to validate them. Users should be encouraged to migrate away from them in favor of the *core operators* that are statically typed.
+- Some operators are discouraged from use with static typing. While they can still be used, the type checker will not be able to validate them. Users should migrate away from them in favor of the statically typed *core operators*.
 
-The accompanying reference documentation and best practices guide explain these updates in detail. Here we highlight the most important changes.
+The accompanying reference documentation and best practices guide explain these updates in detail. Here we describe the most important changes.
 
 The *core operators* are:
 
@@ -199,11 +199,11 @@ Typed workflows do not support the following syntax variants:
 - Special dataflow operators `|` and `&` → use assignments and method calls instead
   - The equivalent bitwise operators are still allowed
 
-- Using the `.out` property to access process and workflow outputs → use assignments instead  
+- Using the `.out` property to access process and workflow outputs → use assignments instead
 
-These restrictions are designed to make Nextflow code more consistent across the board and more familiar to users from other programming languages. Things like variable assignments and method calls in Nextflow look and feel the same as most other languages, whereas things like `set` assignments and the `.out` property make Nextflow code feel more unfamiliar without adding much value.
+These restrictions make Nextflow code more consistent and more familiar to users coming from other programming languages. Variable assignments and method calls in Nextflow look the same as in most other languages, whereas `set` assignments and the `.out` property make Nextflow code feel unfamiliar without adding much value.
 
-This aspect of the language is becoming more salient as code is increasingly read and written by AI agents. Agents need many examples of a programming language in order to use it effectively, so when a niche language has many syntax variants or syntax that deviates heavily from the common patterns used by other languages, it hurts the agent's ability to read and write code in that language.
+This matters more now that AI agents read and write so much code. Agents need many examples of a programming language to use it well, so a niche language with many syntax variants, or with syntax that deviates heavily from the patterns used by other languages, is harder for an agent to read and write.
 
 ## Distinguishing between typed and legacy workflows
 
@@ -215,13 +215,13 @@ Static typing has been introduced as multiple independent features:
 - Record types
 - Typed workflows (this proposal)
 
-This incremental approach was done in contrast to DSL2, which was a monolithic change that required an entire pipeline to be updated at once. With static typing, each new feature can be adopted independently of the others, rather than requiring all new features to be adopted at once (e.g. "DSL3").
+We chose this incremental approach in contrast to DSL2, a monolithic change that required updating an entire pipeline at once. With static typing, each new feature can be adopted independently of the others, rather than all at once (e.g. "DSL3").
 
 Most of the features for static typing are new concepts that can be used alongside existing code. However, typed processes and typed workflows modify existing concepts (`process` and `workflow` definitions), so they require a feature flag.
 
-The `nextflow.enable.types` feature flag will be used to distinguish between typed and legacy code, indefinitely. It would only be removed if the support for legacy syntax was removed, which is unlikely since DSL2 has been the standard Nextflow syntax for many years.
+The `nextflow.enable.types` feature flag will be used to distinguish between typed and legacy code, indefinitely. It would only be removed if support for legacy syntax was removed, which is unlikely since DSL2 has been the standard Nextflow syntax for many years.
 
-To help distinguish between typed and legacy workflows, the use of type annotations should be allowed only for typed workflows:
+To help distinguish between typed and legacy workflows, type annotations should be allowed only in typed workflows:
 
 ```groovy
 // legacy workflow
@@ -261,7 +261,7 @@ Typed and legacy workflows use different underlying dataflow types:
 
 - **Typed workflows (v2)** use wrapper types: `ChannelImpl` (wraps a `DataflowBroadcast`) and `ValueImpl` (wraps a `DataflowVariable`). These wrappers implement the new operators and integrate with the type system.
 
-While a given script must be entirely typed or entirely legacy (controlled by the `nextflow.enable.types` flag), **typed and legacy workflows can call each other across different scripts**. This interoperability enables incremental migration -- individual scripts can be migrated to static typing without having to update the entire pipeline at once.
+While a given script must be entirely typed or entirely legacy (controlled by the `nextflow.enable.types` flag), **typed and legacy workflows can call each other across different scripts**. This interoperability enables incremental migration. Individual scripts can adopt static typing without updating the entire pipeline at once.
 
 ### Normalization at call sites
 
@@ -273,7 +273,7 @@ Normalization can occur in either direction:
 
 - **v1 → v2 (wrap)**: when passing legacy channels to a typed component, `DataflowBroadcast` / `DataflowVariable` are wrapped as `ChannelImpl` / `ValueImpl`.
 
-The normalization is applied twice per call: once to the arguments (converted to match the *callee's* semantics), and once to the return value (converted to match the *caller's* semantics).
+The runtime applies normalization twice per call: once to the arguments (converted to match the *callee's* semantics), and once to the return value (converted to match the *caller's* semantics).
 
 ### Example: typed workflow calling a legacy workflow
 
@@ -343,13 +343,13 @@ workflow {
 
 ### Process and workflow outputs (`ChannelOut`)
 
-Processes and workflows -- regardless of whether they are legacy or typed -- always return a `ChannelOut`, a specialized class that can contain one or more named outputs (`DataflowBroadcast` / `DataflowVariable`).
+Processes and workflows, whether legacy or typed, always return a `ChannelOut`, a specialized class that can contain one or more named outputs (`DataflowBroadcast` / `DataflowVariable`).
 
-When a `ChannelOut` is returned to a typed workflow, it is normalized as follows:
+When a `ChannelOut` is returned to a typed workflow, the runtime normalizes it as follows:
 
-- If the `ChannelOut` contains only one output, it is unwrapped to the underlying `DataflowBroadcast` / `DataflowVariable` and then wrapped as a `ChannelImpl` / `ValueImpl`.
+- If the `ChannelOut` contains only one output, the runtime unwraps it to the underlying `DataflowBroadcast` / `DataflowVariable` and then wraps it as a `ChannelImpl` / `ValueImpl`.
 
-- If the `ChannelOut` contains multiple outputs, it is converted to a record (`RecordMap`), where each named output is wrapped as a `ChannelImpl` / `ValueImpl`.
+- If the `ChannelOut` contains multiple outputs, the runtime converts it to a record (`RecordMap`), where each named output is wrapped as a `ChannelImpl` / `ValueImpl`.
 
 For example:
 
@@ -395,10 +395,10 @@ workflow {
 
 A process call is essentially a task function wrapped in a `map` operation. But processes are called directly on channels, which has a few implications:
 
-- The true structure of process calls are somewhat obscured
+- The true structure of process calls is obscured
 - Process calls can have a different return type (`Channel` or `Value`) depending on how they are called
 - Processes can only be called as a `map` operation, not with other operators like `reduce`
-- Processes can not be chained like operator calls (without additional syntax like `|`)
+- Processes cannot be chained like operator calls (without additional syntax like `|`)
 
 These limitations could be addressed by calling processes in operator closures instead of calling them directly with channels:
 
@@ -428,29 +428,29 @@ process SALMON {
 }
 ```
 
-This syntax brings a number of benefits:
+This syntax has several benefits:
 
 - The `map` operation is explicit, making process calls consistent with other operator logic
-- The process call matches the process definition -- it accepts and returns regular values, not channels or dataflow values
+- The process call matches the process definition, accepting and returning regular values rather than channels or dataflow values
 - Processes can be chained without needing a pipe syntax (e.g. `ch.map(FOO).map(BAR).map(BAZ) ...`)
-- Processes could theoretically be composed with other operators (e.g. an iterative process with the `reduce` operator)
+- Processes could be composed with other operators (e.g. an iterative process with the `reduce` operator)
 - The closure around the process call can be used to handle process inputs and outputs without additional operator calls
 
 Decoupling the process lifecycle from an implicit `map` operation, however, breaks a key assumption of the Nextflow runtime:
 
-- Handling a process call in an arbitrary closure instead of as an implicit `map` operation is significantly more complex, and would likely require new language semantics and compiler transformations to implement.
+- Handling a process call in an arbitrary closure instead of as an implicit `map` operation is much more complex, and would likely require new language semantics and compiler transformations to implement.
 - Alternatively, the compiler could restrict such closures to specific patterns (e.g. a single process call with some statements before and after), but this would add complexity for developer experience (i.e. having to remember which patterns are allowed in which cases).
 
-Additionally, some of the problems that motivated this approach have been addressed by type checking and records:
+Type checking and records have also addressed some of the problems that motivated this approach:
 
 - The type checker can infer the return type of a direct process call from the call arguments (e.g. `Channel` vs `Value`)
 - Records and record types provide additional flexibility that eliminates much of the adaptor logic that was required between tuple channels and processes
 
-Ultimately, this change would mostly be a cosmetic syntax improvement that would do little to improve the developer experience, but would introduce a great deal of complexity to the compiler and runtime. It would also be a significant break from the way that Nextflow workflows have been written since the introduction of DSL2.
+Ultimately, this change would mostly be a cosmetic syntax improvement that would do little for the developer experience, while adding a great deal of complexity to the compiler and runtime. It would also be a sharp break from the way Nextflow workflows have been written since DSL2.
 
 ### Processes as operator closures
 
-A moderated version of calling processes in operator closures is to call them *as* operator closures:
+A more moderate version of calling processes in operator closures is to call them *as* operator closures:
 
 ```groovy
 ch_samples = channel.of(...)
@@ -463,9 +463,9 @@ SALMON(ch_samples, fasta)
 ch_samples.map(SALMON, index: fasta)
 ```
 
-The process name takes the place of the `map` closure. The channel calling `map` is supplied as the first process input, and any additional inputs are supplied as named arguments to `map`.
+The process name takes the place of the `map` closure. The channel calling `map` becomes the first process input, and any additional inputs are supplied as named arguments to `map`.
 
-This approach avoids much of the aforementioned complexity risk while retaining many of the benefits.
+This approach avoids much of that complexity risk while keeping many of the benefits.
 
 For example, process calls can be chained with other operator calls:
 
@@ -500,9 +500,9 @@ workflow {
 
 This particular pattern was proposed as a cleaner alternative to the experimental [recursion](https://docs.seqera.io/nextflow/workflow#process-and-workflow-recursion) feature. As long as the process matches the signature of the accumulator closure (two inputs and one output), the process can be executed iteratively.
 
-While this approach avoids most of the potential complexity that would be required to call processes in operator closures, it is still a significant syntax change with dubious relative benefit.
+While this approach avoids most of the complexity required to call processes in operator closures, it is still a significant syntax change with dubious benefit.
 
-Investigating these approaches revealed an important trade-off -- Nextflow sacrifices a small amount of syntactic precision in order to make process calls prominent in the workflow logic. While calling processes in an operator would be more correct and provide some additional flexibility (e.g. using processes with other operators), it would make workflows feel much more like "operators that call processes in closures" instead of "processes connected by channels".
+Investigating these approaches revealed an important trade-off. Nextflow sacrifices a small amount of syntactic precision to make process calls prominent in the workflow logic. While calling processes in an operator would be more correct and provide some additional flexibility (e.g. using processes with other operators), it would make workflows feel much more like "operators that call processes in closures" instead of "processes connected by channels".
 
 The reality is that most Nextflow users think of their pipelines as "processes connected by channels", and operator logic is a minor detail at best and a confusing distraction at worst. While we can and should make channel operators as simple and pleasant to use as possible, it should be in service of making them less prominent in the language, not more.
 
@@ -528,9 +528,9 @@ vals.subscribe { _vals ->
 }
 ```
 
-This is a common frustration for many users, that dataflow values don't quite work like regular values, even though it seems like they should.
+It frustrates many users that dataflow values don't quite work like regular values, even though it seems like they should.
 
-A solution could be to make dataflow values *implicit* -- users would use them like regular values (i.e. the first example above) and the compiler would translate the user's code into explicit dataflow logic (i.e. the second example).
+A solution could be to make dataflow values *implicit*, so that users write them like regular values (i.e. the first example above) and the compiler translates that code into explicit dataflow logic (i.e. the second example).
 
 To do this, the compiler would need to:
 
@@ -542,14 +542,14 @@ In the end, however, this change does not seem worthwhile:
 
 - It makes type inference an essential part of the compilation process rather than an optional enhancement.
 
-- The above example is simple to understand, but it is easy to construct more complicated examples that quickly cast doubt on whether the compiler could solve this problem in general.
+- The above example is simple to understand, but it is easy to construct more complicated examples that cast doubt on whether the compiler could solve this problem in general.
 
-- Even if there is a general solution, any mistake or edge case would likely lead to unexpected behavior that would be extremely difficult to debug (e.g. a low-level compiler error, compiled code that is silently incorrect).
+- Even if there is a general solution, any mistake or edge case would likely lead to unexpected behavior that is very hard to debug (e.g. a low-level compiler error, compiled code that is silently incorrect).
 
-Additionally, most of the problems that motivated this idea have been effectively solved by type checking:
+Type checking has also solved most of the problems that motivated this idea:
 
-- There is now an explicit `Value` type which allows both developers and the type checker to distinguish between channels and dataflow values.
+- There is now an explicit `Value` type that lets both developers and the type checker distinguish between channels and dataflow values.
 
 - While users still can't use a dataflow value in an `if` statement, they can get clear and early feedback on whether their code is valid, which is what ultimately matters.
 
-- Being transparent about regular values vs dataflow values in the language may be for the best anyway -- it provides a clear picture of how things are working "under the hood", and it is still far simpler than the async programming models employed by most languages.
+- Being transparent about regular values vs dataflow values in the language may be for the best anyway. It gives a clear picture of how things work "under the hood", and it is still far simpler than the async programming models used by most languages.
