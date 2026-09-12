@@ -355,6 +355,7 @@ public interface ProcessDsl extends DslScope {
         """)
         void stageOutMode(String value);
 
+        @Deprecated
         @Description("""
             The `storeDir` directive allows you to use an external directory as a *permanent* cache for process outputs.
 
