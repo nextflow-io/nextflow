@@ -1,0 +1,13 @@
+id: no-wildcard-import
+language: groovy
+severity: warning
+message: Avoid wildcard imports; import specific classes.
+note: |
+  Nextflow's developer style guide mandates single-class imports (the IntelliJ
+  setup raises the "class count to use import with star" thresholds to 99, which
+  effectively disables star imports). Wildcard imports also invite name collisions
+  as the codebase evolves; a recent illustration (in Java, nextflow-io/nextflow#7100)
+  was a clash between the AWS SDK's and the JDK's AccessDeniedException when both
+  packages were star-imported. Import the specific classes instead.
+rule:
+  pattern: import $X.*
