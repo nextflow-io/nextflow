@@ -99,7 +99,7 @@ public interface ProcessDsl extends DslScope {
         void beforeScript(String value);
 
         @Description("""
-            The `cache` directive allows you to store the process results to a local cache. When the cache is enabled *and* the pipeline is launched with the `-resume` option, any task executions that are already cached will be re-used.
+            The `cache` directive allows you to store the process results to a local cache. When the cache is enabled *and* the pipeline is launched with the `-resume` option, any task executions that are already cached will be reused.
 
             [Read more](https://docs.seqera.io/nextflow/reference/process#cache)
         """)

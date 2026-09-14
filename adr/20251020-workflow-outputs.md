@@ -11,15 +11,15 @@ Introduce a unified, dataflow-centric way to declare the top-level outputs of a 
 
 ## Problem Statement
 
-In Nextflow DSL1, each process used `publishDir` to copy output files from the work directory to an external location. Nextflow DSL2 inherited this approach but it became increasingly problematic as pipelines grew larger and more modular:
+In Nextflow DSL1, each process used `publishDir` to copy output files from the work directory to an external location. Nextflow DSL2 inherited this approach, which became a problem as pipelines grew larger and more modular:
 
-- **Mismatch with reusable modules**: Publishing rules often depend on how a process is used in a given pipeline. Setting `publishDir` inside a module process makes the module less reusable, since the publish path and mode are baked into the process definition. Using process selectors in configuration is verbose and fragile.
+- **Mismatch with reusable modules**: Publishing rules often depend on how a process is used in a given pipeline. Setting `publishDir` inside a module process makes the module less reusable, because the publish path and mode are fixed in the process definition. Using process selectors in configuration is verbose and fragile.
 
 - **Fragmented outputs**: Publishing logic is scattered across many module files. There is no single place to see what a pipeline produces or to reason about the output structure.
 
-- **Redundant configuration**: Common settings like the base output directory and publish mode must be repeated in every `publishDir` declaration, leading to duplication.
+- **Redundant configuration**: Common settings like the base output directory and publish mode must be repeated in every `publishDir` declaration.
 
-- **Mismatch with channels**: Channels carry both files and structured metadata (e.g., sample IDs, quality flags). The `publishDir` directive matches files with glob patterns and cannot capture metadata unless it happens to be written to a file. This mismatch makes it difficult to produce structured, self-describing outputs.
+- **Mismatch with channels**: Channels carry both files and structured metadata (e.g., sample IDs, quality flags). The `publishDir` directive matches files with glob patterns and cannot capture metadata unless the metadata happens to be written to a file. As a result, structured, self-describing outputs are hard to produce.
 
 ## Goals
 
@@ -37,11 +37,11 @@ In Nextflow DSL1, each process used `publishDir` to copy output files from the w
 
 ## Non-goals
 
-- Removing support for `publishDir` immediately -- `publishDir` should continue to work without modification, although it may eventually be phased out as users migrate away from it.
+- Removing support for `publishDir` immediately. It should continue to work without modification, although it may eventually be phased out as users migrate away from it.
 
-- Publishing outputs from processes or named workflows -- only the entry workflow has a `publish:` section.
+- Publishing outputs from processes or named workflows. Only the entry workflow has a `publish:` section.
 
-- Defining a JSON schema for workflow outputs -- schema/spec generation will be explored in the future.
+- Defining a JSON schema for workflow outputs. Schema/spec generation will be explored in the future.
 
 ## Decision
 
@@ -78,7 +78,7 @@ output {
 
 Every output assigned in `publish:` must be declared in the `output` block, and vice versa. A mismatch is a compile-time error.
 
-Each output declaration can specify a type annotation for documentation and type checking support. Type annotations are optional and do not change runtime behavior. They are used by the type checker to validate the `publish:` section and the `path` directive.
+Each output declaration can specify a type annotation for documentation and type checking support. Type annotations are optional and do not change runtime behavior. The type checker uses them to validate the `publish:` section and the `path` directive.
 
 ### Output directory
 
@@ -133,7 +133,7 @@ output {
 
 The *publish source* (left-hand side) should be a file or collection of files. The *publish target* (right-hand side) should be a relative path. If the target has a trailing slash, then the source is published *into* the target directory; otherwise the source is published *as* the target name.
 
-A `null` target suppresses publishing for that file, and a `null` source is also a no-op. This way, publishing of individual files can be disabled by either setting the record field to `null` in workflow logic or using a param in the publish statement.
+A `null` target suppresses publishing for that file, and a `null` source is also a no-op. Either way, individual files can be excluded by setting the record field to `null` in workflow logic or by using a param in the publish statement.
 
 ### Index files
 
@@ -151,7 +151,7 @@ output {
 }
 ```
 
-The index file is essentially a *samplesheet* -- it preserves the structure of files and metadata in the published channel, and can be easily passed as input to downstream pipelines. Metadata fields (sample IDs, quality flags, etc.) do not need to be written to a separate metadata file or encoded into file paths.
+The index file is a *samplesheet*. It preserves the structure of files and metadata in the published channel, and can be passed as input to downstream pipelines. Metadata fields (sample IDs, quality flags, etc.) do not need to be written to a separate metadata file or encoded into file paths.
 
 Files that did not originate from the work directory are not published, but are still included in the index.
 
@@ -187,9 +187,9 @@ output {
 
 Earlier iterations allowed for workflow outputs to be published from subworkflows or processes, instead of requiring all workflow outputs to be propagated up to the entry workflow.
 
-While this approach is less verbose, it breaks the modularity of processes and subworkflows. Publishing behavior is inherent to the pipeline, not the individual subcomponents which could be shared across many pipelines. The process or subworkflow should expose all of its outputs as channels, and the calling pipeline should decide whether and how to publish these outputs.
+While this approach is less verbose, it breaks the modularity of processes and subworkflows. Publishing behavior belongs to the pipeline, not to individual subcomponents that could be shared across many pipelines. The process or subworkflow should expose all of its outputs as channels, and the calling pipeline should decide whether and how to publish these outputs.
 
-On the other hand, propagating all workflow outputs to the top will make pipelines more verbose, especially when using "skinny tuple" channels. This issue will be alleviated by migrating from tuples to records -- for this reason, it is recommended that large pipelines be migrated to records before being migrated to workflow outputs.
+On the other hand, propagating all workflow outputs to the top will make pipelines more verbose, especially when using "skinny tuple" channels. Migrating from tuples to records reduces this verbosity, so large pipelines should be migrated to records before they are migrated to workflow outputs.
 
 ## Links
 

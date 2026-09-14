@@ -454,7 +454,7 @@
 ## [Version 25.11.0-edge](https://github.com/nextflow-io/nextflow/releases/tag/v25.11.0-edge) - 28 Nov 2025
 
 - Add Google Batch LogsPolicy PATH option for logging to GCS (#6431) [5b61afe0]
-- Add default value to Apptainer pull timeout config paramter (#6534) [f4548bd1]
+- Add default value to Apptainer pull timeout config parameter (#6534) [f4548bd1]
 - Add test case for printing config with nested includes (#2498) [0876d557]
 - Allow pre-existing write-protected plugins directory to be used (#6594) [33943b5b]
 - Change log level from warn1 to debug1 for K8s Job Pod Warnings (#6523) [74d1b786]
@@ -486,7 +486,7 @@
 - Optimize exit code handling by relying on scheduler status for successful executions (#6484) [454a2ae8]
 - Remove unnecessary runtime checks with strict syntax (#6539) [9e296b85]
 - Remove unused BatchHelper class (#6547) [1c543c05]
-- Remove wiremock-groovy dependency and update tests using this dependecy (#6611) [6f4cf1ac]
+- Remove wiremock-groovy dependency and update tests using this dependency (#6611) [6f4cf1ac]
 - Update bundled Docker runtime to 19.03.15 (#6565) [6c081376]
 - Update migration timeline for plugin registry (#6543) [ecfb62df]
 - Update trace table columns in Reports page (#6483) [064ef346]
@@ -604,7 +604,7 @@
 - Fix GString equality checks with String (#6330) [01e18883]
 - Fix GitHub Actions commit message parsing to use only first line [5bc91622]
 - Fix NPE when contributors omit contribution field in manifest (#6383) [dd2154ca]
-- Fix Platorm refresh token handling [ba78ef74]
+- Fix Platform refresh token handling [ba78ef74]
 - Fix duplicate page and redirects in docs (#6386) [efba138f]
 - Fix false warning for map config options (#6359) [872d124c]
 - Fix groupTuple operator to handle GString vs String keys consistently (#6400) [206cc015]
@@ -760,7 +760,7 @@
 - Fix bug in generated Groovy code (#6082) [f0620656]
 - Fix default imports in included configs (#6096) [8f790615]
 - Fix variable checking in v2 config parser (#6097) [c3e9367b]
-- Force overwritting to trace file (#6105) [b9dace93]
+- Force overwriting to trace file (#6105) [b9dace93]
 - Improve documentation of splitCsv operator (#6131) [f09ae8d7]
 - Make RepositoryProvider readBytes public (#6138) [9221b112]
 - Remove Az Fusion environment variable (#6143) [6c595eac]
@@ -780,7 +780,7 @@
 ## [Version 25.04.3](https://github.com/nextflow-io/nextflow/releases/tag/v25.04.3) - 2 Jun 2025
 
 - Add Platform info to Fusion license (#6142) [375db65a]
-- Force overwritting to trace file (#6105) [59e9d88d]
+- Force overwriting to trace file (#6105) [59e9d88d]
 - Bump nf-tower@1.11.3 [f7509bce]
 
 ## [Version 25.04.2](https://github.com/nextflow-io/nextflow/releases/tag/v25.04.2) - 13 May 2025
@@ -1044,7 +1044,7 @@
 - Fix CLI params normalization (#5661) [e2e prod] [b5d43adc]
 - Fix Execution may hang reading trace file (#5683) [17d7a083]
 - Fix Google Batch hang when internal error during scheduling (#5567) [18f7de13]
-- Fix GroovyCompiler source and target compability [6dd92e3a]
+- Fix GroovyCompiler source and target compatibility [6dd92e3a]
 - Fix Only close the cache db if it is not null (#5631) [93860828]
 - Fix Azure repos when clone URL is used (#5667) [dc6cc414]
 - Fix shell directive with trace command in wrapper script (#4292) [8342889e]
