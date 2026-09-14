@@ -42,7 +42,7 @@ This value is part of an agent's cache key, so changing it re-runs the agent ins
 When `true`, enables agent output mode. In this mode, Nextflow replaces the interactive ANSI log with minimal, structured output optimized for AI agents and non-interactive environments.
 The output uses tagged lines such as `[PIPELINE]`, `[PROCESS]`, `[WARN]`, `[ERROR]`, and `[SUCCESS]`/`[FAILED]` written to standard output.
 
-Agent mode is also enabled automatically when `AGENT` or `CLAUDECODE` is set to a truthy value, as agents typically do. Setting `NXF_AGENT_MODE` overrides that detection in either direction, so `NXF_AGENT_MODE=false` restores the ANSI log for a run that a human watches in an environment an agent created — a detached `tmux` session, for example (default: `false`).
+Nextflow also enables agent mode automatically when `AGENT` or `CLAUDECODE` is set to a truthy value. `NXF_AGENT_MODE` overrides that detection in either direction. Set `NXF_AGENT_MODE=false` to restore the ANSI log when a human watches a run in an agent-created environment, such as a detached `tmux` session.
 
 :::note
 This setting is unrelated to the other `NXF_AGENT_*` variables. It controls how Nextflow formats its own console output for an *external* AI agent, and has no connection to the `agent` script definition.
