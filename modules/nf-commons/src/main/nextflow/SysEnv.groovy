@@ -64,14 +64,21 @@ class SysEnv {
     }
 
     /**
-     * Check if agent output mode is enabled via a truthy {@code NXF_AGENT_MODE}.
+     * Check if agent output mode is enabled via environment variables.
      * When enabled, Nextflow replaces interactive ANSI logging with minimal,
      * structured output optimized for AI agents.
+     *
+     * The mode is auto-detected from a truthy {@code AGENT} or {@code CLAUDECODE}.
+     * {@code NXF_AGENT_MODE} overrides the detection in either direction: when set,
+     * its boolean value decides and the other variables are ignored.
      *
      * @return {@code true} if agent mode is enabled
      */
     static boolean isAgentMode() {
-        return getBool('NXF_AGENT_MODE', false)
+        if( get('NXF_AGENT_MODE') != null )
+            return getBool('NXF_AGENT_MODE', false)
+        return getBool('AGENT', false) ||
+               getBool('CLAUDECODE', false)
     }
 
     static void push(Map<String,String> env) {

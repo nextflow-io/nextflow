@@ -133,13 +133,20 @@ class SysEnvTest extends Specification {
 
         where:
         STATE                       | EXPECTED
-        [:]                         | false
+        [:]                              | false
         [NXF_AGENT_MODE:'true']          | true
         [NXF_AGENT_MODE:'false']         | false
+        // Auto-detected from the environment of an agent
+        [AGENT:'true']                   | true
+        [CLAUDECODE:'true']              | true
+        // NXF_AGENT_MODE overrides the auto-detection in either direction
+        [NXF_AGENT_MODE:'true', AGENT:'false']   | true
+        [NXF_AGENT_MODE:'false', AGENT:'true']   | false
+        [NXF_AGENT_MODE:'false', CLAUDECODE:'1'] | false
+        [NXF_AGENT_MODE:'0', CLAUDECODE:'1']     | false
         // Support '1' as truthy value (common Unix convention)
         [NXF_AGENT_MODE:'1']             | true
-        [NXF_AGENT_MODE:'0']             | false
-        // The environment of an agent no longer enables the mode by itself
-        [AGENT:'1', CLAUDECODE:'1']      | false
+        [AGENT:'1']                      | true
+        [CLAUDECODE:'1']                 | true
     }
 }
