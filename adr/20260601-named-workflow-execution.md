@@ -14,6 +14,8 @@ Introduce the ability to execute named workflows directly with the `nextflow mod
 Consider the following entry workflow, which wraps a named workflow:
 
 ```groovy
+nextflow.enable.types = true
+
 params {
     input: Path
     index: Path
@@ -89,6 +91,8 @@ nextflow module run rnaseq.nf \
 Nextflow executes it as if it were wrapped in the following entry workflow:
 
 ```groovy
+nextflow.enable.types = true
+
 params {
     samples: Channel<Sample>
     index: Path
@@ -167,6 +171,8 @@ record Sample {
 The `samples` param desugars to a path to a CSV, JSON, or YAML file, which is loaded as follows:
 
 ```groovy
+nextflow.enable.types = true
+
 params {
     samples: Path
 }

@@ -38,7 +38,7 @@ Workflow outputs are typically published to an external output directory, organi
 
 - **Modifying the existing cache system.** Lineage should be a supplemental layer on top of the cache and work directory.
 
-- **Committing to open standards such as CID,** IPLD, OpenLineage. The initial implementation should focus on Nextflow-specific use cases, while leaving the door open to future integrations.
+- **Committing to open standards such as CID, IPLD, OpenLineage.** The initial implementation should focus on Nextflow-specific use cases, while leaving the door open to future integrations.
 
 - **Committing to a particular storage model.** The lineage system should expose an interface for *lineage stores* which can be implemented with any storage technology (filesystem, object storage, database, etc).
 
