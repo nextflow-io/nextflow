@@ -77,7 +77,7 @@ class CmdModuleCreateTest extends Specification {
         and: 'the scaffold depends on the nextflow-io/hello module'
         content.contains("modules:")
         content.contains("- nextflow-io/hello@1.0.0")
-        CmdModuleCreate.mainNf('myorg', 'hello', 'Workflow', false).contains("include { HELLO } from 'nextflow-io/hello'")
+        CmdModuleCreate.mainNf('myorg', 'hello', 'Workflow', false).contains("include { HELLO as GREET } from 'nextflow-io/hello'")
         CmdModuleCreate.readmeMd('myorg', 'hello', 'Workflow', false).contains('nextflow-io/hello')
     }
 
@@ -178,8 +178,8 @@ class CmdModuleCreateTest extends Specification {
         meta.contains('nextflow: ">=26.04.0"')
 
         and: 'the scaffold depends on the nextflow-io/hello module'
-        content.contains("include { HELLO } from 'nextflow-io/hello'")
-        content.contains("message = HELLO(greeting)")
+        content.contains("include { HELLO as GREET } from 'nextflow-io/hello'")
+        content.contains("message = GREET(greeting)")
         meta.contains("modules:")
         meta.contains("- nextflow-io/hello@1.0.0")
         CmdModuleCreate.readmeMd('myorg', 'hello', 'Workflow').contains('nextflow-io/hello')

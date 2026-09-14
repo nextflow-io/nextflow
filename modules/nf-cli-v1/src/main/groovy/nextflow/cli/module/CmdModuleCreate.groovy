@@ -174,7 +174,7 @@ class CmdModuleCreate extends CmdBase {
 
             nextflow.enable.types = true
 
-            include { HELLO } from 'nextflow-io/hello'
+            include { HELLO as GREET } from 'nextflow-io/hello'
 
             workflow ${defName} {
                 take:
@@ -182,7 +182,7 @@ class CmdModuleCreate extends CmdBase {
 
                 main:
                 // TODO: implement the workflow logic
-                message = HELLO(greeting)
+                message = GREET(greeting)
 
                 emit:
                 result: String = message
@@ -197,7 +197,7 @@ class CmdModuleCreate extends CmdBase {
              * TODO: rename the workflow, replace the example take/emit, and implement the logic.
              */
 
-            include { HELLO } from 'nextflow-io/hello'
+            include { HELLO as GREET } from 'nextflow-io/hello'
 
             workflow ${defName} {
                 take:
@@ -205,7 +205,7 @@ class CmdModuleCreate extends CmdBase {
 
                 main:
                 // TODO: implement the workflow logic
-                ch_message = HELLO(ch_greeting)
+                ch_message = GREET(ch_greeting)
 
                 emit:
                 result = ch_message
