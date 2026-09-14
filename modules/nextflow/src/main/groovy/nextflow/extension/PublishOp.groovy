@@ -83,7 +83,7 @@ class PublishOp {
 
     /**
      * Perform an action. If an exception is raised, bind the
-     * excpetion to the target and don't perform any more actions.
+     * exception to the target and don't perform any more actions.
      *
      * @param action
      */
