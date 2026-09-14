@@ -530,7 +530,7 @@ class LinPathTest extends Specification {
         then:
         thrown(IllegalArgumentException)
 
-        when: 'getting name with larger index tha namecount'
+        when: 'getting name with larger index than namecount'
         new LinPath(fs, "1234").getName(2)
         then:
         thrown(IllegalArgumentException)
@@ -540,7 +540,7 @@ class LinPathTest extends Specification {
         then:
         thrown(IllegalArgumentException)
 
-        when: 'getting subpath with larger index tha namecount'
+        when: 'getting subpath with larger index than namecount'
         new LinPath(fs, "1234").subpath(0,2)
         then:
         thrown(IllegalArgumentException)

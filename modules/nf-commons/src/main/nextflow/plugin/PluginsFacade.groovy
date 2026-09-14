@@ -238,7 +238,7 @@ class PluginsFacade implements PluginStateListener {
             return new DevPluginManager(root)
         }
         if( embedded ) {
-            // use the custom plugin manager to by-pass the creation of a local plugin repository
+            // use the custom plugin manager to bypass the creation of a local plugin repository
             return new EmbeddedPluginManager(root)
         }
         return new LocalPluginManager(root)
