@@ -23,19 +23,29 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
+import nextflow.cache.CacheDB
+import nextflow.cache.DefaultCacheStore
 import nextflow.config.Manifest
 import nextflow.container.ContainerConfig
 import nextflow.container.DockerConfig
 import nextflow.container.PodmanConfig
 import nextflow.container.SarusConfig
 import nextflow.exception.AbortOperationException
+import nextflow.executor.CachedTaskHandler
 import nextflow.file.FileHelper
+import nextflow.processor.TaskId
+import nextflow.processor.TaskProcessor
+import nextflow.processor.TaskRun
+import nextflow.script.BodyDef
+import nextflow.script.ProcessConfig
 import nextflow.script.ScriptFile
 import nextflow.script.WorkflowMetadata
 import nextflow.trace.TraceFileObserver
 import nextflow.trace.TraceHelper
+import nextflow.trace.TraceRecord
 import nextflow.trace.TraceObserverV2
 import nextflow.trace.WorkflowStatsObserver
+import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import nextflow.util.VersionNumber
 import spock.lang.Specification
@@ -493,5 +503,50 @@ class SessionTest extends Specification {
 
         then:
         1 * observer.onFlowComplete()
+    }
+
+    private void writeCacheEntry(CacheDB cache, String key, String workDir) {
+        final hash = CacheHelper.hasher(key).hash()
+        final proc = Mock(TaskProcessor)
+        proc.getTaskBody() >> new BodyDef(null,'source')
+        proc.getConfig() >> new ProcessConfig([:])
+        proc.isCacheable() >> true
+        final task = Mock(TaskRun)
+        task.getProcessor() >> proc
+        task.getHash() >> hash
+        task.getId() >> TaskId.of(1)
+        final trace = new TraceRecord([task_id: 1, process: 'foo', exit: 0, workdir: workDir])
+        final handler = new CachedTaskHandler(task, trace)
+        cache.writeTaskEntry0(handler, trace)
+        cache.writeTaskIndex0(handler, false)
+    }
+
+    def 'should cleanup local task dirs and skip the remote ones' () {
+        given: 'a local work dir holding one task dir'
+        def cacheHome = Files.createTempDirectory('cache')
+        def work = Files.createTempDirectory('work')
+        def localTask = Files.createDirectories(work.resolve('aa/bbbbbb'))
+        Files.createFile(localTask.resolve('.command.sh'))
+        SysEnv.push(NXF_CACHE_DIR: cacheHome.toString())
+
+        and:
+        def session = new Session([cleanup: true, workDir: work.toString(), runName: 'test_1'])
+
+        and: 'a cache holding one remote task and one local task'
+        def cache = new CacheDB(new DefaultCacheStore(session.uniqueId, 'test_1', cacheHome)).open()
+        writeCacheEntry(cache, 'remote', 's3://some-bucket/48/299e411a526eb1453a5a2acfa0f721')
+        writeCacheEntry(cache, 'local', localTask.toString())
+        cache.close()
+
+        when:
+        session.cleanup()
+
+        then: 'the remote task does not prevent the local one from being deleted'
+        !Files.exists(localTask)
+
+        cleanup:
+        SysEnv.pop()
+        work?.deleteDir()
+        cacheHome?.deleteDir()
     }
 }
