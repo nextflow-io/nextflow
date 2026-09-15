@@ -47,7 +47,11 @@ public class EscapeUtils {
      * @param ctx
      */
     public static List<SyntaxException> checkEscapes(String text, ParserRuleContext ctx) {
-        if( text.indexOf('\\') == -1 || text.startsWith(SLASH_STR) )
+        return checkEscapes(text, ctx, text.startsWith(SLASH_STR));
+    }
+
+    public static List<SyntaxException> checkEscapes(String text, ParserRuleContext ctx, boolean slashy) {
+        if( slashy || text.indexOf('\\') == -1 )
             return Collections.emptyList();
         var errors = new ArrayList<SyntaxException>();
         var line = ctx.getStart().getLine();
@@ -63,7 +67,7 @@ public class EscapeUtils {
                 if( !isEscapable(text, i + 1) )
                     errors.add(new SyntaxException("Invalid escape sequence: '\\" + next + "'", line, column, line, column + 2));
                 i++;
-                if( next == '\n' || next == '\r' ) {
+                if( next == '\n' ) {
                     line++;
                     column = 1;
                 }

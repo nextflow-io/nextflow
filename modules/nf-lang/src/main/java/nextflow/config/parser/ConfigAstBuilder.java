@@ -992,7 +992,7 @@ public class ConfigAstBuilder {
 
     private ConstantExpression gstringText(ParserRuleContext ctx, String beginQuotation) {
         var text = ctx.getText();
-        checkEscapes(text, ctx).forEach(this::collectSyntaxError);
+        checkEscapes(text, ctx, false).forEach(this::collectSyntaxError);
         var quotedText = new StringBuilder(text)
             .insert(0, beginQuotation)
             .append(beginQuotation)

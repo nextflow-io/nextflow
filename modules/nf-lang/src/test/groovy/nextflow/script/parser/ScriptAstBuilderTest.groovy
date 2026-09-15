@@ -22,6 +22,10 @@ import spock.lang.Shared
 import spock.lang.Specification
 import test.TestUtils
 
+import static test.TestUtils.deleteDir
+import static test.TestUtils.tempDir
+import static test.TestUtils.tempFile
+
 /**
  * @see nextflow.script.parser.ScriptAstBuilder
  *
@@ -663,6 +667,47 @@ class ScriptAstBuilderTest extends Specification {
         errors[0].getOriginalMessage() == "Invalid escape sequence: '\\u'"
 
         when:
+        // an invalid escape in a gstring fragment that starts with a slash
+        errors = check(
+            '''\
+            x = "/opt\\q ${params.foo}"
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 10
+        errors[0].getOriginalMessage() == "Invalid escape sequence: '\\q'"
+
+        when:
+        // an invalid escape in a gstring fragment after an interpolation
+        errors = check(
+            '''\
+            x = "out ${params.foo}/res\\q.txt"
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 27
+        errors[0].getOriginalMessage() == "Invalid escape sequence: '\\q'"
+
+        when:
+        // every invalid escape in a file should be reported
+        errors = check(
+            '''\
+            x = \'a\\.b\'
+            y = \'c\\,d\'
+            '''
+        )
+        then:
+        errors.size() == 2
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 7
+        errors[1].getStartLine() == 2
+        errors[1].getStartColumn() == 7
+
+        when:
         // valid escapes and slashy strings should not be flagged
         errors = check(
             '''\
@@ -672,6 +717,24 @@ class ScriptAstBuilderTest extends Specification {
         )
         then:
         errors.size() == 0
+    }
+
+    def 'should report an invalid escape sequence after a line continuation' () {
+        given:
+        def root = tempDir()
+        // a line continuation followed by CRLF spans only one line
+        def main = tempFile(root, 'main.nf', "x = \'\'\'a\\" + "\r\n" + "b\\.c\'\'\'" + "\r\n")
+
+        when:
+        def errors = TestUtils.check(new ScriptParser(), [main])
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 2
+        errors[0].getStartColumn() == 2
+        errors[0].getOriginalMessage() == "Invalid escape sequence: '\\.'"
+
+        cleanup:
+        deleteDir(root)
     }
 
     def 'should allow escaped and interpolated gstring characters' () {
