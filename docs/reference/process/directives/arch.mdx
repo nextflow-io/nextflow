@@ -41,7 +41,7 @@ Examples of values for the architecture `target` option are `cascadelake`, `icel
 
 ## Multiple architectures
 
-You can declare more than one CPU architecture as a comma-separated string, e.g. `arch 'linux/amd64,linux/arm64'`. Each entry can use any of the allowed values listed above, and surrounding whitespace is ignored.
+You can declare more than one CPU architecture as a comma-separated string (e.g., `arch 'linux/amd64,linux/arm64'`). Each entry can use any of the allowed values listed above, and surrounding whitespace is ignored.
 
 :::note
 Multiple architectures are used in full only by executors that support multi-architecture builds (e.g. Seqera Platform). Other executors and the `spack`/Wave build strategies use only the first (primary) architecture in the list, so declare the primary architecture first.
