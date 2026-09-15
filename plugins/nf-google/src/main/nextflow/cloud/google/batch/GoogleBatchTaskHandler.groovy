@@ -328,7 +328,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             container.setOptions(containerOptions)
 
         final env = Environment.newBuilder()
-            .putAllVariables(launcher.getEnvironment())
+            .putAllVariables(launcher.getBatchEnvironment())
             .build()
 
         return Runnable.newBuilder()

@@ -26,11 +26,13 @@ The new `module` command can be used to work with remote modules:
     ```bash
     nextflow module search bwa
     ```
+
 - View module information:
 
     ```bash
     nextflow module view nf-core/bwa/mem
     ```
+
 - Install a module:
 
     ```bash
@@ -169,7 +171,7 @@ Several operators have been extended to support static typing and records:
 
 Breaking changes from the [first preview][static-typing-first-preview]:
 
-- The `nextflow.enable.types` feature flag has been replaced with `nextflow.enable.types`.
+- The `nextflow.preview.types` feature flag has been replaced with `nextflow.enable.types`.
 
 - The `nextflow.enable.types` feature flag must be enabled in order to use type annotations in workflow takes/emits.
 
@@ -197,7 +199,7 @@ See [Migrating to static typing][migrating-static-types] for more information ab
 
 The `hints` process directive allows you to specify executor-specific hints for individual processes.
 
-For example, the AWS Batch executor uses the `consumableReources` hint for [resource-aware scheduling](https://aws.amazon.com/about-aws/whats-new/2025/02/aws-batch-resource-aware-scheduling/):
+For example, the AWS Batch executor uses the `consumableResources` hint for [resource-aware scheduling](https://aws.amazon.com/about-aws/whats-new/2025/02/aws-batch-resource-aware-scheduling/):
 
 ```nextflow
 process hello {
@@ -438,7 +440,7 @@ A Platform access token with appropriate permissions is required to download non
 [operator-page]: ../reference/operator
 [process-hints]: ../reference/process/directives/hints
 [process-typed-page]: ../process-typed
-[script-records]: ../script#records
+[script-records]: ../script#records-and-tuples
 [static-typing-first-preview]: ./25-10#static-typing-preview
 [stdlib-listDirectory]: ../reference/stdlib-types/path#listdirectory---iterablepath
 [strict-syntax-page]: ../strict-syntax
