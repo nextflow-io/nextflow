@@ -298,7 +298,7 @@ class LegacyRepositoryStrategy extends AbstractRepositoryStrategy {
         if( localPath.exists() ) {
             return localPath.toURI().toString()
         }
-        return provider.getCloneUrl()
+        return provider.getConfiguredCloneUrl()
     }
 
     @Override

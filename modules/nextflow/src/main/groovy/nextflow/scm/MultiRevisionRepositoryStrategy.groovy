@@ -197,7 +197,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
             return
 
         try {
-            final cloneURL = provider.getCloneUrl()
+            final cloneURL = provider.getConfiguredCloneUrl()
             log.debug "Pulling bare repo for ${project} -- Using remote clone url: ${cloneURL}"
             def bare = Git.cloneRepository()
             if( provider.hasCredentials() )
@@ -482,7 +482,7 @@ class MultiRevisionRepositoryStrategy extends AbstractRepositoryStrategy {
 
     @Override
     String getGitRepositoryUrl() {
-        return provider.getCloneUrl()
+        return provider.getConfiguredCloneUrl()
     }
 
     @Override
