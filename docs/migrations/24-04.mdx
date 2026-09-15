@@ -115,37 +115,51 @@ The `nf-ga4gh` plugin has since been moved into its own repository, [nextflow-io
 
 ## Miscellaneous
 
-- New config option: `azure.batch.pools.<name>.lowPriority`
-- New config option: `azure.batch.pools.<name>.startTask.script`
-- New config option: `azure.batch.pools.<name>.startTask.privileged`
-- New config option: `executor.account`
-- New config option: `fusion.cacheSize`
-- New config option: `google.batch.maxSpotAttempts`
-- New config option: `k8s.cpuLimits`
-- New config option: `k8s.fuseDevicePlugin`
+- New config option: [`azure.batch.pools.<name>.lowPriority`][config-azure-batch-pools-lowPriority]
+- New config option: [`azure.batch.pools.<name>.startTask.script`][config-azure-batch-pools-startTask-script]
+- New config option: [`azure.batch.pools.<name>.startTask.privileged`][config-azure-batch-pools-startTask-privileged]
+- New config option: [`executor.account`][config-executor-account]
+- New config option: [`fusion.cacheSize`][config-fusion-cacheSize]
+- New config option: [`google.batch.maxSpotAttempts`][config-google-batch-maxSpotAttempts]
+- New config option: [`k8s.cpuLimits`][config-k8s-cpuLimits]
+- New config option: [`k8s.fuseDevicePlugin`][config-k8s-fuseDevicePlugin]
 - New environment variable: `NXF_CLOUDINFO_ENABLED`
-- New environment variable: `NXF_CACHE_DIR`
+- New environment variable: [`NXF_CACHE_DIR`][env-vars-NXF_CACHE_DIR]
 - New plugin extension point: `TaskTipProvider`
-- New `pod` directive option: `schedulerName`
-- New `pod` directive option: `ttlSecondsAfterFinished`
-- New workflow metadata: `workflow.fusion.enabled`
-- New workflow metadata: `workflow.fusion.version`
-- New workflow metadata: `workflow.preview`
-- New workflow metadata: `workflow.wave.enabled`
+- New `pod` directive option: [`schedulerName`][process-pod-schedulerName]
+- New `pod` directive option: [`ttlSecondsAfterFinished`][process-pod-ttlSecondsAfterFinished]
+- New workflow metadata: [`workflow.fusion.enabled`][stdlib-workflow-fusion]
+- New workflow metadata: [`workflow.fusion.version`][stdlib-workflow-fusion]
+- New workflow metadata: [`workflow.preview`][stdlib-workflow-preview]
+- New workflow metadata: [`workflow.wave.enabled`][stdlib-workflow-wave]
 - Support Google Batch [instance templates][google-batch-process]
 - Support the use of [secrets in the pipeline script][secrets-pipeline-script]
 - Upgrade to Groovy 4
 
 [aws-fargate]: ../aws#aws-fargate
-[config-aws]: ../reference/config/aws
-[config-apptainer]: ../reference/config/apptainer
-[config-singularity]: ../reference/config/singularity
 [channel-topic]: ../reference/stdlib-namespaces/channel#topic
+[config-apptainer]: ../reference/config/apptainer
+[config-aws]: ../reference/config/aws
+[config-azure-batch-pools-lowPriority]: ../reference/config/azure#azurebatchpoolsnamelowpriority
+[config-azure-batch-pools-startTask-privileged]: ../reference/config/azure#azurebatchpoolsnamestarttaskprivileged
+[config-azure-batch-pools-startTask-script]: ../reference/config/azure#azurebatchpoolsnamestarttaskscript
+[config-executor-account]: ../reference/config/executor#executoraccount
+[config-fusion-cacheSize]: ../reference/config/fusion#fusioncachesize
+[config-google-batch-maxSpotAttempts]: ../reference/config/google#googlebatchmaxspotattempts
+[config-k8s-cpuLimits]: ../reference/config/k8s#k8scpulimits
+[config-k8s-fuseDevicePlugin]: ../reference/config/k8s#k8sfusedeviceplugin
+[config-singularity]: ../reference/config/singularity
 [config-workflow]: ../reference/config/workflow
 [dynamic-task-resources]: ../process#dynamic-task-resources
+[env-vars-NXF_CACHE_DIR]: ../reference/env-vars#nxf_cache_dir
 [google-batch-process]: ../google#process-definition
 [process-array]: ../reference/process/directives/array
 [process-out-eval]: ../process#eval-output-eval
+[process-pod-schedulerName]: ../reference/process/directives/pod#schedulername-name
+[process-pod-ttlSecondsAfterFinished]: ../reference/process/directives/pod#ttlsecondsafterfinished
 [process-resourcelimits]: ../reference/process/directives/resource-limits
 [secrets-pipeline-script]: ../secrets#pipeline-script
+[stdlib-workflow-fusion]: ../reference/stdlib-namespaces/workflow#fusion
+[stdlib-workflow-preview]: ../reference/stdlib-namespaces/workflow#preview-boolean
+[stdlib-workflow-wave]: ../reference/stdlib-namespaces/workflow#wave
 [workflow-output-def]: ../workflow#outputs
