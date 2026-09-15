@@ -1248,8 +1248,6 @@ class Session implements ISession {
                 final taskDir = record.workDir as String
                 final scheme = FileHelper.getUrlProtocol(taskDir)
                 if( scheme && scheme != 'file' ) {
-                    // a hybrid run can offload tasks to a remote work dir (e.g. `-bucket-dir`)
-                    // which cleanup does not support -- skip it and keep the local ones
                     log.trace "Skipping cleanup of remote task dir: $taskDir"
                     skipped++
                     return
