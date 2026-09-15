@@ -400,6 +400,12 @@ A Platform access token with appropriate permissions is required to download non
 
 - The [strict syntax parser][strict-syntax-page] is now enabled by default. The legacy parser can be enabled by setting the `NXF_SYNTAX_PARSER` environment variable to `v1`.
 
+### Cache-breaking changes
+
+Maps are hashed differently. The hash now includes both map keys and values, where before it included only the values.
+
+This fixes a bug where changing a map input to a task did not re-execute it. However, any process with a map input will be re-executed on the first resume after upgrading.
+
 ## Deprecations
 
 - The `nextflow.enable.strict` feature flag is deprecated. It is not needed when using the [strict parser][strict-syntax-page].

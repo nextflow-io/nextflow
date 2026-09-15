@@ -1,0 +1,211 @@
+---
+title: Migrating to 26.10
+description: Review new features, breaking changes, and deprecations introduced in Nextflow 26.10.
+---
+
+# Migrating to 26.10
+
+[Nextflow 26.10](https://github.com/nextflow-io/nextflow/releases/tag/v26.10.0) is scheduled to release in October 2026.
+
+## New features
+
+### Global cache
+
+The global cache is a cross-pipeline cache backed by cloud object storage, where the work directory itself is the shared, content-addressable cache. It is enabled using the `globalCache` config scope:
+
+```groovy
+globalCache.enabled = true
+globalCache.path = 's3://bucket/cache'
+```
+
+When the global cache is enabled, tasks are not isolated by run, allowing them to be reused across different runs.
+
+Read-only secondary caches can be consulted on a primary miss with `globalCache.secondaryPaths`. The first hit is reused in place and nothing is written back.
+
+Supported on Amazon S3, Azure Blob Storage, and Google Cloud Storage.
+
+### Static typing (out of preview)
+
+[Static typing][static-typing], introduced in Nextflow 25.10 as a preview feature, has been brought out of preview.
+
+The `nextflow.enable.types` flag is still required in every script that uses typed processes or workflows. Nextflow (`nextflow lint` and `nextflow run`) now performs type checking on scripts that enable this flag.
+
+### Workflow modules
+
+The [module system][module-registry] now supports workflows as well as processes.
+
+A module is a standalone process or a standalone workflow. A workflow module can be published to the Nextflow registry, installed, and included using the same commands and include syntax:
+
+```nextflow
+// process module
+include { BWA_MEM } from 'nf-core/bwa/mem'
+
+// workflow module
+include { FASTQ_ALIGN_STAR } from 'nf-core/fastq_align_star'
+```
+
+A workflow module can depend on other modules by declaring them in the module spec and including them in the module script. When a workflow module is installed, it vendors its dependencies under its own `modules` directory, so two workflows can depend on different versions of the same module without conflict.
+
+A typed workflow module can be executed directly with `nextflow module run`:
+
+```bash
+# create a typed workflow module
+nextflow module create -kind Workflow acme/hello
+
+# run the workflow module
+nextflow module run acme/hello --greeting 'Hello world!'
+```
+
+Each `take:` input becomes a param of the same name, and its declared type determines how the value is read. Each `emit:` output is reported as a workflow output.
+
+See [Modules][module-registry] for details.
+
+### Pipeline composition
+
+A pipeline can now be included and called like a named workflow, allowing you to compose pipelines with regular dataflow logic.
+
+Given a pipeline that declares a `params` block, an entry workflow, and an `output` block:
+
+```nextflow
+// pipelines/rnaseq.nf
+params {
+    input: Path
+    aligner: String = 'star_salmon'
+    fasta: Path
+}
+
+workflow {
+    // ...
+}
+
+output {
+    bams: Channel<Path> { path 'bams' }
+    multiqc: Path { path 'multiqc' }
+}
+```
+
+Include it with the `workflow` keyword and call it by name:
+
+```nextflow
+// main.nf
+include { workflow as RNASEQ } from './pipelines/rnaseq.nf'
+
+workflow {
+    rnaseq = RNASEQ(
+        input: file('input.csv'),
+        fasta: file('index.fasta')
+    )
+    rnaseq.bams.view()      // Channel<Path>
+    rnaseq.multiqc.view()   // Value<Path>
+}
+```
+
+The included pipeline runs in the same session, the same DAG, and the same work directory as the including pipeline. The `params` block becomes the `take:` section and the `output` block becomes the `emit:` section. Outputs are channels and dataflow values, so a downstream pipeline can process upstream outputs as they are emitted.
+
+### Agents (preview)
+
+:::warning
+Agents are a preview feature. Their syntax and behavior may change in future releases.
+:::
+
+An agent is a process-shaped primitive that wraps an agent run. It declares typed inputs and outputs, renders a prompt, calls a language model, optionally lets the model call Nextflow modules as tools, and emits the result:
+
+```groovy
+// nextflow.config
+agent.runner = 'pi'
+```
+
+```nextflow
+agent qa {
+    model 'openai/gpt-5-mini'
+    instruction 'You are a concise scientific assistant.'
+
+    input:
+    question: String
+
+    output:
+    answer: String
+
+    prompt:
+    """
+    Answer briefly: ${question}
+    """
+}
+
+workflow {
+    qa('What is FASTQ format?').view()
+}
+```
+
+Each invocation runs as an ordinary Nextflow task with a work directory, retries, parallelism, caching, and lineage. Agents require a runner plugin: `nf-agent` calls the model from the driver JVM, `nf-agent-pi` runs the agent in a container using [Pi](https://pi.dev/).
+
+See [Agents][agent-page] for details.
+
+## Enhancements
+
+### Formatter preserves comments
+
+The Nextflow formatter (`nextflow lint -format`) now preserves all comments in scripts and config files. Previously, comments were preserved only in specific locations, otherwise they were discarded.
+
+### `logfile` command
+
+The new `logfile` command prints a `.nextflow.log` file, with optional level filtering and follow mode:
+
+```console
+$ nextflow logfile kickass_rutherford -level ERROR
+$ nextflow logfile last -f
+```
+
+The argument can be a run name, a session id or a unique prefix of one, the literal `last`, or a path to a log file.
+
+See the [`logfile`][cli-logfile] command reference for details.
+
+### Accelerator directive for local executor
+
+The local executor now allocates accelerators such as GPUs to tasks that request them with the `accelerator` directive. Set the environment variable for your accelerator type to declare which devices are available. See [Local executor][executor-local] for details.
+
+### Configurable plugin registries
+
+Nextflow resolves plugins from the public registry at `https://registry.nextflow.io` by default. Additional registries can now be configured through the `registry` config scope, and are tried in order. See [Plugin registry][plugin-registry] for details.
+
+### smolvm container engine
+
+Nextflow can run tasks in [smolvm](https://github.com/smol-machines/smolvm) microVMs. See [smolvm][container-smolvm] for details.
+
+## Breaking changes
+
+- The `echo` process directive was removed. Use `debug` instead.
+
+- The Kubernetes executor uses Jobs by default instead of Pods. Set [`k8s.computeResourceType`][config-k8s-computeResourceType] to `Pod` to keep the previous behavior.
+
+- Nextflow console output is written to standard error instead of standard output, so that the output of commands such as `nextflow inspect` and `nextflow run -output-format json` is not mixed with log messages.
+
+### Cache-breaking changes
+
+The hash function for `eval` commands was changed. This fixes a bug where tasks with `eval` outputs did not have a stable hash across runs. However, every process with an `eval` output will be re-executed on the first resume after upgrading.
+
+## Deprecations
+
+- The `storeDir` process directive is deprecated. Use explicit workflow logic to reuse an intermediate output if it is present and compute it otherwise. See [`storeDir`][process-storeDir] for an example.
+
+## Miscellaneous
+
+- New config option: [`apptainer.resourceLimits`][config-apptainer-resourceLimits]
+- New config option: [`docker.cpuLimits`][config-docker-cpuLimits]
+- New config option: [`manifest.diagram`][config-manifest-diagram]
+- New config option: [`singularity.resourceLimits`][config-singularity-resourceLimits]
+
+[agent-page]: ../agent
+[cli-logfile]: ../reference/cli/logfile
+[config-apptainer-resourceLimits]: ../reference/config/apptainer#apptainerresourcelimits
+[config-docker-cpuLimits]: ../reference/config/docker#dockercpulimits
+[config-globalcache]: ../reference/config/globalcache
+[config-k8s-computeResourceType]: ../reference/config/k8s#k8scomputeresourcetype
+[config-manifest-diagram]: ../reference/config/manifest#manifestdiagram
+[config-singularity-resourceLimits]: ../reference/config/singularity#singularityresourcelimits
+[container-smolvm]: ../container/smolvm
+[executor-local]: ../executor/local#accelerators
+[module-registry]: ../modules
+[plugin-registry]: ../plugins/plugin-registry#configuring-plugin-registries
+[process-storeDir]: ../reference/process/directives/store-dir
+[static-typing]: ../static-typing
