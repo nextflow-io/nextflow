@@ -491,7 +491,7 @@ class Session implements ISession {
         binding.setParams( (Map)config.params )
         binding.setArgs( new ScriptRunner.ArgsList(args) )
 
-        cache = CacheFactory.create(uniqueId,runName).open()
+        cache = CacheFactory.create(this, uniqueId, runName).open()
 
         return this
     }
@@ -1242,7 +1242,7 @@ class Session implements ISession {
         }
 
         log.trace "Cleaning-up workdir"
-        try (CacheDB db = CacheFactory.create(uniqueId, runName).openForRead()) {
+        try (CacheDB db = CacheFactory.create(this, uniqueId, runName).openForRead()) {
             db.eachRecord { HashCode hash, TraceRecord record ->
                 def deleted = db.removeTaskEntry(hash)
                 if( deleted ) {

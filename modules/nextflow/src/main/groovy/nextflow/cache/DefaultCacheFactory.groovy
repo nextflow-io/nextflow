@@ -19,6 +19,7 @@ package nextflow.cache
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import nextflow.Session
 import nextflow.exception.AbortOperationException
 import nextflow.plugin.Priority
 
@@ -34,7 +35,7 @@ import nextflow.plugin.Priority
 class DefaultCacheFactory extends CacheFactory {
 
     @Override
-    protected CacheDB newInstance(UUID uniqueId, String runName, Path home) {
+    protected CacheDB newInstance(Session session, UUID uniqueId, String runName, Path home) {
         if( !uniqueId ) throw new AbortOperationException("Missing cache `uuid`")
         if( !runName ) throw new AbortOperationException("Missing cache `runName`")
         final store = new DefaultCacheStore(uniqueId, runName, home)
