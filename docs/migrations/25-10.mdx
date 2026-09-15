@@ -289,24 +289,28 @@ This feature addresses previous inconsistencies in timestamp representations.
 
 ## Miscellaneous
 
-- New config option: `docker.registryOverride`
-- New config options: `wave.build.compression.*`
-- New executor: Fujitsu Technical Computing Suite (`tcs`)
-- Support Java 25
+- New config option: [`docker.registryOverride`][config-docker-registryOverride]
+- New config options: [`wave.build.compression.*`][config-wave-build-compression]
+- New executor: [Fujitsu Technical Computing Suite (`tcs`)][executor-tcs]
+- Support [Java 25][install-requirements]
 
 [aws-java-sdk-v2-page]: ../guides/aws-java-sdk-v2
 [cli-auth]: ../reference/cli/auth
 [cli-launch]: ../reference/cli/launch
+[config-docker-registryOverride]: ../reference/config/docker#dockerregistryoverride
+[config-wave-build-compression]: ../reference/config/wave#wavebuildcompressionmode
 [config-workflow-handlers]: ../config#workflow-handlers
 [dev-plugins-extension-points-config]: ../plugins/developing-plugins#configuration
 [dynamic-directives]: ../process#dynamic-directives
+[executor-tcs]: ../executor/tcs
 [gradle-plugin-page]: ../guides/gradle-plugin
-[migrating-workflow-outputs]: ../tutorials/workflow-outputs
+[install-requirements]: ../install#requirements
 [migrating-static-types]: ../tutorials/static-types
+[migrating-workflow-outputs]: ../tutorials/workflow-outputs
 [plugin-registry-page]: ../plugins/plugin-registry
 [stdlib-types]: ../reference/stdlib-types
 [strict-syntax-page]: ../strict-syntax
-[workflow-output-def]: ../workflow#outputs
-[workflow-typed-params]: ../typed-parameters
-[workflow-params-legacy]: ../workflow#parameters
 [workflow-handlers]: ../notifications#workflow-handlers
+[workflow-output-def]: ../workflow#outputs
+[workflow-params-legacy]: ../workflow#parameters
+[workflow-typed-params]: ../typed-parameters
