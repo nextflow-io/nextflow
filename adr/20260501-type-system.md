@@ -14,15 +14,15 @@ Implement a type system for the Nextflow language: standard types, type annotati
 
 Nextflow is a dynamically-typed language, which means that the types of values are determined at runtime rather than compile-time. This approach allowed Nextflow to iterate rapidly early in its history, and it allowed non-technical users to write pipelines without learning advanced programming techniques.
 
-However, as Nextflow has matured and gained industry adoption, there is an increasing need to provide a first-class experience that supports the development of large production pipelines. Dynamic typing has several limitations in this regard:
+However, as Nextflow has matured and gained industry adoption, there is an increasing need to support the development of large production pipelines. Dynamic typing has several limitations in this regard:
 
 - **Poor data modeling.** Users need to be able to *model their domain*, that is, to describe the structure of their data as it flows through a pipeline. However, this cannot be done if the language does not have syntax for expressing types. Users can add comments, but comments cannot be verified by the compiler, so they can quickly become out of sync with the code.
 
 - **Poor error checking.** Users need early and actionable error feedback when developing a Nextflow pipeline. However, a dynamically-typed language tends to report more errors at runtime, which are harder and more expensive to fix than compile-time errors.
 
-The strict syntax parser allows Nextflow to surface many errors at compile-time that it could not do before. However, because Nextflow is dynamically-typed, there are entire categories of errors which cannot be detected at compile-time because the compiler does not have sufficient information.
+The strict syntax parser reports many errors at compile-time that Nextflow previously missed. However, because Nextflow is dynamically-typed, entire categories of errors still cannot be detected at compile-time, because the compiler does not have enough information.
 
-Therefore, a type system is needed to allow users to model their data domain in a way that can be verified at compile-time. Static typing will make Nextflow code (1) easier for users to read and understand and (2) easier for the compiler to surface errors as early as possible.
+Therefore, a type system is needed to allow users to model their data domain in a way that can be verified at compile-time. Static typing will make Nextflow code (1) easier for users to read and understand and (2) easier for the compiler to check, so that errors are reported as early as possible.
 
 ## Goals
 
@@ -34,11 +34,11 @@ Therefore, a type system is needed to allow users to model their data domain in 
 
 ## Non-goals
 
-- Removing support for dynamically-typed code -- existing code should continue to work, and it should be possible to use dynamically-typed scripts with statically-typed scripts.
+- Removing support for dynamically-typed code. Existing code should continue to work, and it should be possible to use dynamically-typed scripts with statically-typed scripts.
 
-- Replacing the existing runtime types -- the type system should use existing types as much as possible, so that existing code continues to work.
+- Replacing the existing runtime types. The type system should use existing types as much as possible, so that existing code continues to work.
 
-- Implementing null analysis -- while a syntax for nullable types may be introduced, static null analysis will be explored in future efforts.
+- Implementing null analysis. A syntax for nullable types may be introduced, but static null analysis will be explored in future efforts.
 
 ## Decision
 
@@ -48,21 +48,21 @@ Define the standard types for Nextflow as a focused subset of Groovy types with 
 
 ### Standard library
 
-Nextflow inherits a rich set of types from Groovy (and Java by extension). However, Groovy provides significantly more types and methods than are necessary for writing Nextflow pipelines.
+Nextflow inherits many types from Groovy (and Java by extension). However, Groovy provides far more types and methods than are needed to write Nextflow pipelines.
 
 Just as the [strict parser](./20250508-strict-syntax-parser.md) allows us to define Nextflow's syntax independently from Groovy, a standard library is needed to define the set of constants, functions, and types in Nextflow. This way, the user does not need to consult external documentation (e.g. Groovy/Java APIs) to know what they can use in Nextflow.
 
-The standard types are documented [here](https://docs.seqera.io/nextflow/reference/stdlib-types). They are designed based on the following considerations:
+The standard types are documented [here](https://docs.seqera.io/nextflow/reference/stdlib-types). Their design follows these considerations:
 
-- Use existing Java/Groovy types as much as possible: `Boolean`, `Float`, `Integer`, `Path`, `String`, `List`, `Map`, `Set`. These types have been battle-tested by the Java ecosystem and are already used in existing code.
+- Use existing Java/Groovy types as much as possible: `Boolean`, `Float`, `Integer`, `Path`, `String`, `List`, `Map`, `Set`. These types are proven in the Java ecosystem and are already used in existing code.
 
 - Provide a minimal and focused set of types. Use reference types over primitive types (e.g. `Integer` over `int`). Use interfaces over implementations (e.g. `List` over `ArrayList`). For each type, include only the methods that are needed. Every additional type and method adds cognitive overhead for users, so they should only be included when they add value.
 
 - Types should be easy to hash (e.g. MD5) so that they can be used with task caching.
 
-- Types should be easy to serialize (e.g. to/from JSON) so that they can be integrated seamlessly with external data storage.
+- Types should be easy to serialize (e.g. to/from JSON) so that they can be integrated with external data storage.
 
-- Encourage composition over inheritance for data modeling. Inheritance is an advanced programming technique that adds a lot of complexity to the type checker and isn't needed in Nextflow anyway. When it is useful, the standard library uses *traits* to model shared behaviors among multiple concrete types. For example, the `Iterable` trait is used by the collection types (`List`, `Set`, `Bag`).
+- Encourage composition over inheritance for data modeling. Inheritance is an advanced programming technique that adds a lot of complexity to the type checker and isn't needed in Nextflow. When it is useful, the standard library uses *traits* to model shared behaviors among multiple concrete types. For example, the `Iterable` trait is used by the collection types (`List`, `Set`, `Bag`).
 
 Nextflow types can be parameterized like Java/Groovy, e.g. `Channel<Record>` or `Map<String,Integer>`. Wildcards are supported (e.g. `List<?>`), but lower/upper bounds are not (e.g. `List<? extends Record>`). Since inheritance is not used, lower/upper bounds are not needed, which simplifies both the language and the type checker.
 
@@ -169,9 +169,9 @@ def isSraId(id: String) -> Boolean {
 }
 ```
 
-The `<name>: <type>` syntax emphasizes the name as the identity and the type as an optional enhancement. It is increasingly used by modern languages such as Python, Rust, and TypeScript, so it will be familiar to most users coming from other languages.
+The `<name>: <type>` syntax emphasizes the name as the identity and the type as an optional addition. It is increasingly used by modern languages such as Python, Rust, and TypeScript, so it will be familiar to most users coming from other languages.
 
-Notably, Java and Groovy use `<type> <name>`. This syntax was never formally part of the Nextflow language, but some advanced users do use them for functions and local variables. To ease the transition for these users, the strict parser should be able to recognize Groovy type annotations and convert them to Nextflow type annotations.
+Notably, Java and Groovy use `<type> <name>`. This syntax was never formally part of the Nextflow language, but some advanced users do use it for functions and local variables. To ease the transition for these users, the strict parser should be able to recognize Groovy type annotations and convert them to Nextflow type annotations.
 
 Any type annotation can be marked as *nullable* by appending a `?`:
 
@@ -179,7 +179,7 @@ Any type annotation can be marked as *nullable* by appending a `?`:
 def x_opt: String? = null
 ```
 
-Static null checking will not be implemented yet, but it can be used for documentation purposes. Null checking may be implemented at runtime, such as the `params` block and typed process inputs.
+Static null checking is not implemented yet, but the annotation still documents intent. Null checking may be implemented at runtime, such as in the `params` block and typed process inputs.
 
 The implementations of type annotations for specific language features are described in the following ADRs:
 
@@ -194,7 +194,7 @@ Static type checking is an additional compilation phase in which the type of eve
 
 Type checking should provide an additional layer of validation without imposing undue burden on the user.
 
-- The type checker should infer the types of expressions where possible, in order to minimize the amount of extra work required to benefit from type checking. Users should only need to specify the types of inputs -- pipeline parameters, workflow takes, process inputs, etc -- since the type checker can infer all downstream code from there.
+- The type checker should infer the types of expressions where possible, to minimize the extra work required to benefit from type checking. Users should only need to specify the types of inputs, such as pipeline parameters, workflow takes, and process inputs, since the type checker can infer all downstream code from there.
 
 - When the type of an expression cannot be resolved, the type checker should not immediately treat it as an error. Depending on the context, it may be more appropriate to ignore it or report a warning instead. This way, users can adopt static typing progressively rather than taking an "all-or-nothing" approach.
 
@@ -204,7 +204,7 @@ Type checking will be implemented using a similar approach as the strict parser:
 2. Introduce type checking in the linter (`nextflow lint`) to enable CLI usage
 3. Introduce type checking in the runtime (`nextflow run`)
 
-This phased approach allows us to refine the type checker based on real usage before we enable it across the board.
+This phased approach allows us to refine the type checker based on real usage before we enable it everywhere.
 
 We may want to give users some control over the strictness of the type checker. For example, an optional "strict" type checking mode could provide maximum validation (treat all ambiguous types as errors), whereas the default mode would take a balanced approach (flag ambiguous types and other non-blocking issues as warnings).
 
