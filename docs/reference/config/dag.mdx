@@ -23,6 +23,12 @@ Controls the maximum depth at which to render sub-workflows (default: no limit).
 
 Controls the direction of the DAG, can be `'LR'` (left-to-right) or `'TB'` (top-to-bottom) (default: `'TB'`).
 
+##### `dag.directory`
+
+<AddedInVersion version="26.10" />
+
+The directory where the DAG file should be saved. Must be a relative path, which is resolved against the workflow output directory (`outputDir`). Cannot be used when `dag.file` is an absolute path. By default, it is not used and `dag.file` is resolved against the launch directory.
+
 ##### `dag.enabled`
 
 When `true` enables the generation of the DAG file (default: `false`).

@@ -7,6 +7,12 @@ description: Reference for the report config scope, which controls the generatio
 
 The `report` scope controls the generation of the [execution report][execution-report].
 
+##### `report.directory`
+
+<AddedInVersion version="26.10" />
+
+The directory where the report file should be saved. Must be a relative path, which is resolved against the workflow output directory (`outputDir`). Cannot be used when `report.file` is an absolute path. By default, it is not used and `report.file` is resolved against the launch directory.
+
 ##### `report.enabled`
 
 Create the execution report on workflow completion (default: `false`).

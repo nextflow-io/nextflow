@@ -7,6 +7,12 @@ description: Reference for the timeline config scope, which controls the generat
 
 The `timeline` scope controls the generation of the [execution timeline][timeline-report].
 
+##### `timeline.directory`
+
+<AddedInVersion version="26.10" />
+
+The directory where the timeline file should be saved. Must be a relative path, which is resolved against the workflow output directory (`outputDir`). Cannot be used when `timeline.file` is an absolute path. By default, it is not used and `timeline.file` is resolved against the launch directory.
+
 ##### `timeline.enabled`
 
 Create the execution timeline on workflow completion (default: `false`).
