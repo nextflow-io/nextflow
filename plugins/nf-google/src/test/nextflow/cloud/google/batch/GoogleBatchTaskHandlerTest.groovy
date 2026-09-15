@@ -434,6 +434,58 @@ class GoogleBatchTaskHandlerTest extends Specification {
         trace.numSpotInterruptions == 1
     }
 
+    // Regression: https://github.com/nextflow-io/nextflow/issues/7627
+    def 'should mount built-in local SSD scratch for #TYPE with explicit disk #EXPLICIT' () {
+        given:
+        def workDir = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
+        def exec = Mock(GoogleBatchExecutor) {
+            getBatchConfig() >> new BatchConfig([bootDiskSize: '50 GB'])
+        }
+        def task = Mock(TaskRun) {
+            getHashLog() >> 'abcd1234'
+            getWorkDir() >> workDir
+            getContainer() >> 'debian:latest'
+            getConfig() >> Mock(TaskConfig) {
+                getCpus() >> CPUS
+                getMachineType() >> TYPE
+                getResourceLabels() >> [:]
+                getDiskResource() >> (EXPLICIT ? new DiskResource(request: '375 GB', type: 'local-ssd') : null)
+            }
+        }
+        def launcher = new GoogleBatchLauncherSpecMock('bash .command.run', [], [])
+        def handler = Spy(new GoogleBatchTaskHandler(task, exec))
+
+        when:
+        def req = handler.newSubmitRequest(task, launcher)
+
+        then:
+        handler.fusionEnabled() >> true
+        handler.findBestMachineType(_, true) >> new GoogleBatchMachineTypeSelector.MachineType(
+            type: TYPE, family: FAMILY, cpusPerVm: CPUS, location: 'us-central1', priceModel: PriceModel.standard)
+        and:
+        def spec = req.getTaskGroups(0).getTaskSpec()
+        def policy = req.getAllocationPolicy().getInstances(0).getPolicy()
+        policy.getDisksCount() == 1
+        policy.getDisks(0).getDeviceName() == 'scratch'
+        policy.getDisks(0).getNewDisk().getType() == 'local-ssd'
+        policy.getDisks(0).getNewDisk().getSizeGb() == SIZE
+        spec.getVolumesCount() == 1
+        spec.getVolumes(0).getDeviceName() == 'scratch'
+        spec.getVolumes(0).getMountPath() == '/tmp'
+        spec.getComputeResource().getBootDiskMib() == 50 * 1024
+        policy.getBootDisk().getType() == (FAMILY.startsWith('c4') ? 'hyperdisk-balanced' : '')
+
+        where:
+        [TYPE, FAMILY, CPUS, SIZE, EXPLICIT] << [
+            ['c3-standard-8-lssd', 'c3', 8, 750],
+            ['c3d-standard-8-lssd', 'c3d', 8, 375],
+            ['c3d-standard-16-lssd', 'c3d', 16, 375],
+            ['c4-standard-16-lssd', 'c4', 16, 750],
+            ['c4a-standard-8-lssd', 'c4a', 8, 750],
+            ['c4d-standard-16-lssd', 'c4d', 16, 375],
+        ].collectMany { row -> [row + [false], row + [true]] }
+    }
+
     def 'should create submit request with fusion enabled' () {
         given:
         def WORK_DIR = CloudStorageFileSystem.forBucket('foo').getPath('/scratch')
