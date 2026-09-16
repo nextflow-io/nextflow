@@ -25,6 +25,7 @@ import java.nio.file.FileSystems
 import java.nio.file.FileVisitOption
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
+import java.nio.file.InvalidPathException
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -1066,12 +1067,37 @@ class FileHelper {
             }
 
             FileVisitResult postVisitDirectory(Path dir, IOException exc) {
-                Files.delete(dir)
+                deleteDirEntry(dir)
                 FileVisitResult.CONTINUE
             }
 
         })
     }
+
+    /**
+     * Delete a directory while walking a file tree, tolerating object stores where a
+     * directory is only a key prefix and cannot be deleted on its own.
+     *
+     * Google Cloud Storage keeps a zero-byte placeholder object for every directory created
+     * through gcsfuse, and the NIO provider refuses to delete it. It reports this either as a
+     * {@link NoSuchFileException}, or as a {@code CloudStoragePseudoDirectoryException} once a
+     * placeholder is left behind. The latter is an unchecked {@link InvalidPathException} that
+     * would otherwise escape the walk and abort the caller. Neither means the delete failed,
+     * so both are ignored.
+     *
+     * @param dir The directory to delete
+     */
+    static void deleteDirEntry(Path dir) {
+        try {
+            Files.delete(dir)
+        }
+        catch( NoSuchFileException | InvalidPathException e ) {
+            if( FilesEx.getScheme(dir) != 'gs' )
+                throw e
+            log.debug "Ignoring GCS pseudo-directory that cannot be deleted: ${FilesEx.toUriString(dir)}"
+        }
+    }
+
     /**
      * List the content of a file system path
      *

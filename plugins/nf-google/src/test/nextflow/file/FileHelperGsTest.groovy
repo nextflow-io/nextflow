@@ -21,11 +21,17 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
+import com.google.cloud.storage.BlobId
+import com.google.cloud.storage.BlobInfo
+import com.google.cloud.storage.Storage
+import com.google.cloud.storage.StorageOptions
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
 import spock.lang.Ignore
+import spock.lang.IgnoreIf
+import spock.lang.Requires
 import spock.lang.Specification
 import spock.lang.Unroll
 /**
@@ -151,6 +157,40 @@ class FileHelperGsTest extends Specification {
         STR                         | EXPECTED
         'gs://foo//this/that'       | new URI('gs://foo/this/that')
         'gs://foo//this///that'     | new URI('gs://foo/this/that')
+    }
+
+    /**
+     * Google Batch mounts the work dir with gcsfuse, which creates a zero-byte object with a
+     * trailing slash for every directory. The NIO provider refuses to delete such an object, so
+     * it survives the recursive delete and makes the parent look non-empty, at which point the
+     * provider throws the unchecked CloudStoragePseudoDirectoryException.
+     *
+     * See https://github.com/nextflow-io/nextflow/issues/5647
+     */
+    @IgnoreIf({System.getenv('NXF_SMOKE')})
+    @Requires({System.getenv('GOOGLE_APPLICATION_CREDENTIALS') && System.getenv('NXF_GS_TEST_BUCKET')})
+    def 'should delete a directory holding a gcsfuse placeholder object' () {
+        given:
+        def bucket = System.getenv('NXF_GS_TEST_BUCKET')
+        def storage = StorageOptions.getDefaultInstance().getService()
+        def prefix = "nf-test-${UUID.randomUUID()}"
+        def base = CloudStorageFileSystem.forBucket(bucket).getPath("/$prefix")
+        and:
+        Files.write(base.resolve('.command.sh'), 'echo hello'.bytes)
+        Files.write(base.resolve('output/reads.txt'), 'data'.bytes)
+        storage.create(BlobInfo.newBuilder(BlobId.of(bucket, "$prefix/output/")).build(), new byte[0])
+
+        when:
+        FileHelper.deletePath(base)
+
+        then:
+        noExceptionThrown()
+        and:
+        // every real object is gone, only the placeholder may survive
+        storage.list(bucket, Storage.BlobListOption.prefix(prefix)).iterateAll().count { !it.name.endsWith('/') } == 0
+
+        cleanup:
+        storage?.list(bucket, Storage.BlobListOption.prefix(prefix))?.iterateAll()?.each { it.delete() }
     }
 
 }
