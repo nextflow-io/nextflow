@@ -133,7 +133,7 @@ class FilesEx {
                 }
 
                 public FileVisitResult postVisitDirectory(Path dir, IOException exc) {
-                    Files.delete(dir)
+                    FileHelper.deleteDirEntry(dir)
                     FileVisitResult.CONTINUE
                 }
 

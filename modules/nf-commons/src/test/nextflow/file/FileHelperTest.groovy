@@ -1173,4 +1173,25 @@ class FileHelperTest extends Specification {
         's3:///example.com////another///path'               | 's3:///example.com/another/path'
         'ftp://example.com//file//path'                     | 'ftp://example.com/file/path'
     }
+
+    def 'should delete a local directory and rethrow when it cannot be deleted' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def missing = folder.resolve('missing')
+
+        when:
+        FileHelper.deleteDirEntry(folder)
+        then:
+        !Files.exists(folder)
+
+        when:
+        // the pseudo-directory exemption applies to gs paths only, a local path must still fail
+        FileHelper.deleteDirEntry(missing)
+        then:
+        thrown(NoSuchFileException)
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 }
