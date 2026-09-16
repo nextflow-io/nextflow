@@ -101,18 +101,21 @@ class BaseTaskHasherDumpTest extends Specification {
             getOutputEvals() >> [:]
             getCondaEnv() >> null
             getSpackEnv() >> null
+            lazyName() >> 'PIPE:FOO (1)'
         }
         def helper = Spy(new TaskHasher(task))
         helper.getTaskGlobalVars() >> [:]
         helper.getTaskBinEntries(_) >> []
 
         when:
-        def output = new BaseTaskHasher(new HashContext(task, helper), StdSpecs.STD_V4).dumpLegacy()
+        def hasher = new BaseTaskHasher(new HashContext(task, helper), StdSpecs.STD_V4)
+        def hash = hasher.compute()
+        def output = hasher.dumpLegacy(hash)
 
         then:
         output.size() > 0
         and:
-        output.contains('PIPE:FOO')
+        output.contains('PIPE:FOO (1)')
         output.contains('cache hash:')
         output.contains('mode:')
         output.contains('entries:')
