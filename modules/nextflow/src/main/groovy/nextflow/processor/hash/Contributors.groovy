@@ -148,11 +148,12 @@ class Contributors {
     /**
      * TaskConfig.getStubBlock() is protected and lives in a different package
      * (nextflow.processor), so it is not reachable from here under @CompileStatic.
-     * TaskRun.getStubSource() is the existing public equivalent: it is null iff
-     * getStubBlock() is null, since a real stub closure's source is never null.
+     * TaskRun.hasStubBlock() is a public accessor added for this purpose that
+     * mirrors the exact predicate TaskHasher.compute() uses: whether the block
+     * exists, not whether its source happens to be non-null.
      */
     static final Contributor STUB_MARKER = of('stubMarker') { HashContext ctx ->
-        if( ctx.session.stubRun && ctx.task.getStubSource() != null ) {
+        if( ctx.session.stubRun && ctx.task.hasStubBlock() ) {
             return ['stub-run'] as List<Object>
         }
         return [] as List<Object>

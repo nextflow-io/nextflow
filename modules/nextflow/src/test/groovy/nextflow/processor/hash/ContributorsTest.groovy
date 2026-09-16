@@ -116,6 +116,30 @@ class ContributorsTest extends Specification {
         Contributors.EVAL_OUTPUTS_DERIVED_STRING.emit(ctx) == ['eval_outputs', 'alpha=echo a\nbeta=echo b']
     }
 
+    def 'stub marker emits only when the session is a stub run and the task has a stub block'() {
+        given:
+        // TaskHasher.compute() and Contributors.STUB_MARKER are both @CompileStatic,
+        // and the static compiler resolves `session.stubRun` to isStubRun() (verified
+        // by decompiling both) rather than getStubRun() — stub that method explicitly
+        // so the interaction matches what actually gets invoked.
+        def session = Mock(Session) { isStubRun() >> stubRunValue }
+        def processor = Mock(TaskProcessor) { getSession() >> session }
+        def task = Mock(TaskRun) {
+            getProcessor() >> processor
+            hasStubBlock() >> hasStub
+        }
+        def ctx = ctxFor(task, Mock(TaskHasher))
+
+        expect:
+        Contributors.STUB_MARKER.emit(ctx) == expected
+
+        where:
+        stubRunValue | hasStub | expected
+        true         | true    | ['stub-run']
+        false        | true    | []
+        true         | false   | []
+    }
+
     def 'canonical names are distinct across all contributors'() {
         given:
         def all = [
