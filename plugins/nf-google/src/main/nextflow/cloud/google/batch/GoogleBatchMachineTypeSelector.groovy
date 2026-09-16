@@ -124,6 +124,8 @@ class GoogleBatchMachineTypeSelector {
         if (families == null)
             families = Collections.<String>emptyList()
 
+        final memoryGB = Math.ceil(memoryMB / 1024.0 as float) as int
+
         // Check if a specific machine type was defined
         if (families.size() == 1) {
             final familyOrType = families.get(0)
@@ -133,9 +135,12 @@ class GoogleBatchMachineTypeSelector {
             final machineType = getAvailableMachineTypes(region, spot).find { it.type == familyOrType }
             if( machineType )
                 return machineType
-        }
 
-        final memoryGB = Math.ceil(memoryMB / 1024.0 as float) as int
+            // an explicit machine type is always honoured, even when the cloud info
+            // service does not know about it e.g. a newly released family
+            if( !familyOrType.contains('*') && !familyOrType.contains('?') )
+                return new MachineType(type: familyOrType, family: familyOrType.split('-')[0], cpusPerVm: cpus, memPerVm: memoryGB, gpusPerVm: 0, location: region, priceModel: spot ? PriceModel.spot : PriceModel.standard)
+        }
 
         if (!families ) {
             families = fusionEnabled
