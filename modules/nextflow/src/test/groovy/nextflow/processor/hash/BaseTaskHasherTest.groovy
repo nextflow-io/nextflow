@@ -25,6 +25,8 @@ import nextflow.processor.TaskProcessor
 import nextflow.processor.TaskRun
 import nextflow.script.ProcessConfig
 import nextflow.script.TaskClosure
+import nextflow.script.bundle.ResourcesBundle
+import nextflow.script.params.InParam
 import spock.lang.Specification
 
 class BaseTaskHasherTest extends Specification {
@@ -46,14 +48,13 @@ class BaseTaskHasherTest extends Specification {
         def processor = Mock(TaskProcessor) {
             getName() >> 'PIPE:FOO'
             getSession() >> session
-            getConfig() >> Mock(ProcessConfig)
+            getConfig() >> Mock(ProcessConfig) { getHashMode() >> nextflow.util.CacheHelper.HashMode.STANDARD }
             getModuleBundle() >> null
         }
         def config = Mock(TaskConfig) {
             getModule() >> ['gcc/11']
             getArchitecture() >> new Architecture('linux/amd64')
             getStubBlock() >> null
-            getHashMode() >> nextflow.util.CacheHelper.HashMode.STANDARD
         }
         def task = Mock(TaskRun) {
             getSource() >> 'echo hello'
@@ -91,14 +92,13 @@ class BaseTaskHasherTest extends Specification {
         def processor = Mock(TaskProcessor) {
             getName() >> 'PIPE:FOO'
             getSession() >> session
-            getConfig() >> Mock(ProcessConfig)
+            getConfig() >> Mock(ProcessConfig) { getHashMode() >> nextflow.util.CacheHelper.HashMode.STANDARD }
             getModuleBundle() >> null
         }
         def config = Mock(TaskConfig) {
             getModule() >> ['gcc/11']
             getArchitecture() >> new Architecture('linux/amd64')
             getStubBlock() >> Mock(TaskClosure)
-            getHashMode() >> nextflow.util.CacheHelper.HashMode.STANDARD
         }
         def task = Mock(TaskRun) {
             getSource() >> 'echo hello'
@@ -114,6 +114,52 @@ class BaseTaskHasherTest extends Specification {
         def helper = Spy(new TaskHasher(task))
         helper.getTaskGlobalVars() >> [foo: 'a', bar: 'b']
         helper.getTaskBinEntries(_) >> []
+        return [task: task, helper: helper]
+    }
+
+    /**
+     * Same as {@link #fixture()} but exercises the three keys that never fire there:
+     * CONTAINER, BIN_ENTRIES (with more than one entry, so a wrong-arity contributor
+     * -- one value instead of N -- would be caught), and MODULE_BUNDLE.
+     */
+    private Map richFixture() {
+        def session = Mock(Session) {
+            getUniqueId() >> UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c')
+            enableModuleBinaries() >> true
+            getStubRun() >> false
+        }
+        def bundle = Mock(ResourcesBundle) {
+            hasEntries() >> true
+            fingerprint() >> 'bundle-fingerprint'
+        }
+        def processor = Mock(TaskProcessor) {
+            getName() >> 'PIPE:FOO'
+            getSession() >> session
+            getConfig() >> Mock(ProcessConfig) { getHashMode() >> nextflow.util.CacheHelper.HashMode.STANDARD }
+            getModuleBundle() >> bundle
+        }
+        def config = Mock(TaskConfig) {
+            getModule() >> ['gcc/11']
+            getArchitecture() >> new Architecture('linux/amd64')
+            getStubBlock() >> null
+        }
+        def inParam = Mock(InParam) {
+            getName() >> 'reads'
+        }
+        def task = Mock(TaskRun) {
+            getSource() >> 'echo hello'
+            getProcessor() >> processor
+            getConfig() >> config
+            isContainerEnabled() >> true
+            getContainerFingerprint() >> 'sha256:abcdef'
+            getInputs() >> [(inParam): 'value.txt']
+            getOutputEvals() >> [alpha: 'echo a']
+            getCondaEnv() >> Paths.get('env.yml')
+            getSpackEnv() >> Paths.get('spack.yaml')
+        }
+        def helper = Spy(new TaskHasher(task))
+        helper.getTaskGlobalVars() >> [foo: 'a', bar: 'b']
+        helper.getTaskBinEntries(_) >> [Paths.get('bin/foo.sh'), Paths.get('bin/bar.sh')]
         return [task: task, helper: helper]
     }
 
@@ -134,6 +180,20 @@ class BaseTaskHasherTest extends Specification {
     def 'std/v4 reproduces the legacy TaskHasher for a stub-run task'() {
         given:
         def f = stubRunFixture()
+        def legacy = f.helper as TaskHasher
+        def ctx = new HashContext(f.task as TaskRun, legacy)
+
+        when:
+        def expected = legacy.compute()
+        def actual = new BaseTaskHasher(ctx, StdSpecs.STD_V4).compute()
+
+        then:
+        actual == expected
+    }
+
+    def 'std/v4 reproduces the legacy TaskHasher when container, bin entries, and module bundle all fire'() {
+        given:
+        def f = richFixture()
         def legacy = f.helper as TaskHasher
         def ctx = new HashContext(f.task as TaskRun, legacy)
 
