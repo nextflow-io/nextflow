@@ -85,6 +85,10 @@ public class HashBuilder {
 
     private Path basePath;
 
+    private boolean orderIndependentMaps = true;
+
+    private boolean cacheFunnelFirst = true;
+
     public HashBuilder() {}
 
     public HashBuilder withHasher(Hasher hasher) {
@@ -99,6 +103,16 @@ public class HashBuilder {
 
     public HashBuilder withBasePath(Path basePath) {
         this.basePath = basePath;
+        return this;
+    }
+
+    public HashBuilder withOrderIndependentMaps(boolean value) {
+        this.orderIndependentMaps = value;
+        return this;
+    }
+
+    public HashBuilder withCacheFunnelFirst(boolean value) {
+        this.cacheFunnelFirst = value;
         return this;
     }
 
@@ -146,11 +160,20 @@ public class HashBuilder {
                 with(item);
         }
 
-        else if( value instanceof CacheFunnel )
+        else if( cacheFunnelFirst && value instanceof CacheFunnel )
             ((CacheFunnel)value).funnel(hasher, mode);
 
-        else if( value instanceof Map )
-            hashUnorderedCollection(hasher, ((Map) value).entrySet(), mode);
+        else if( value instanceof Map ) {
+            if( orderIndependentMaps ) {
+                hashUnorderedCollection(hasher, ((Map) value).entrySet(), mode);
+            }
+            else {
+                // note: pre-#6679 behaviour — the map contributes its values only
+                for( Object item : ((Map)value).values() ) {
+                    with(item);
+                }
+            }
+        }
 
         else if( value instanceof Map.Entry ) {
             Map.Entry entry = (Map.Entry)value;
@@ -181,6 +204,9 @@ public class HashBuilder {
 
         else if( value instanceof SerializableMarker)
             hasher.putInt( value.hashCode() );
+
+        else if( !cacheFunnelFirst && value instanceof CacheFunnel )
+            ((CacheFunnel)value).funnel(hasher, mode);
 
         else if( value instanceof Enum )
             hasher.putUnencodedChars( value.getClass().getName() + "." + value );
