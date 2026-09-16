@@ -66,4 +66,27 @@ class BaseTaskHasher {
             throw new UnexpectedException(msg, e)
         }
     }
+
+    /**
+     * Per-key digest of this task under this spec, for explaining a cache miss.
+     *
+     * Strictly additive: it recomputes nothing that feeds compute(), and a key that
+     * emits no value is omitted rather than digested as empty.
+     */
+    @CompileStatic
+    Map<HashKey,HashCode> explain() {
+        final mode = ctx.task.processor.getConfig().getHashMode()
+        final result = new LinkedHashMap<HashKey,HashCode>()
+        for( KeyBinding binding : spec.bindings ) {
+            final values = binding.contributor.emit(ctx)
+            if( !values ) {
+                continue
+            }
+            result.put(binding.key, spec.encoding
+                .apply(new HashBuilder().withHasher(HashBuilder.defaultHasher()).withMode(mode))
+                .with(values)
+                .build())
+        }
+        return result
+    }
 }
