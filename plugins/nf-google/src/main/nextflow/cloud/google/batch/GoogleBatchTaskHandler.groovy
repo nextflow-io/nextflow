@@ -202,19 +202,22 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` submitted > job=$jobId; uid=$uid; work-dir=${task.getWorkDirStr()}"
     }
 
-    protected void updateStatus(String jobId, String taskId, String uid) {
+    protected void updateStatus(String jobId, String taskId, String uid, CloudMachineInfo machineInfo=null) {
         if( task instanceof TaskArrayRun ) {
-            // update status for children
+            // update status for children, propagating the machine info resolved for the
+            // array job so each child trace record reports its machine type and cost
             for( int i=0; i<task.children.size(); i++ ) {
                 final handler = task.children[i] as GoogleBatchTaskHandler
                 final arrayTaskId = executor.getArrayTaskId(jobId, i)
-                handler.updateStatus(jobId, arrayTaskId, uid)
+                handler.updateStatus(jobId, arrayTaskId, uid, this.machineInfo)
             }
         }
         else {
             this.jobId = jobId
             this.taskId = taskId
             this.uid = uid
+            if( machineInfo != null )
+                this.machineInfo = machineInfo
             this.status = TaskStatus.SUBMITTED
         }
     }
