@@ -93,6 +93,7 @@ import nextflow.cloud.types.CloudMachineInfo
 import nextflow.cloud.types.PriceModel
 import nextflow.fusion.FusionHelper
 import nextflow.fusion.FusionScriptLauncher
+import nextflow.platform.ResourceLabelPolicy
 import nextflow.processor.TaskRun
 import nextflow.util.CacheHelper
 import nextflow.util.MemoryUnit
@@ -752,7 +753,10 @@ class AzBatchService implements Closeable {
             throw new IllegalArgumentException(msg)
         }
 
-        final metadata = task.config.getResourceLabels()
+        // normalise the auto-derived labels for the Azure Batch metadata syntax; the labels
+        // declared by the process are applied verbatim. Note: the pool id is derived from this
+        // map, therefore a label changing at each run implies a new auto-pool at each run
+        final metadata = task.config.getResourceLabels(ResourceLabelPolicy.AZURE)
         final key = CacheHelper.hasher([vmType.name, opts, metadata]).hash().toString()
         final poolId = "nf-pool-$key-$vmType.name"
         return new AzVmPoolSpec(poolId: poolId, vmType: vmType, opts: opts, metadata: metadata)

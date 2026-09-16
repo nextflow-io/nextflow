@@ -210,26 +210,44 @@ class SeqeraExecutorTest extends Specification {
         new SeqeraExecutor().isSecretNative()
     }
 
-    def 'should expose run resource labels coerced from config-level process.resourceLabels'() {
+    def 'should build the run baseline from the auto labels and the config-level process.resourceLabels'() {
         given:
         SysEnv.push([:])
         def executor = new SeqeraExecutor()
         executor.session = Mock(Session) {
+            getAutoResourceLabels() >> ['nextflow.io/runName': 'crazy_darwin']
             getConfig() >> [process: [resourceLabels: [team: 'a', priority: 7]]]
         }
 
         when:
         executor.computeRunResourceLabels()
 
-        then:
-        executor.runResourceLabels == [team: 'a', priority: '7']
+        then: 'the baseline is the complete label set, so the per-task delta can collapse to empty'
+        executor.runResourceLabels == ['nextflow.io/runName': 'crazy_darwin', team: 'a', priority: '7']
     }
 
-    def 'should yield empty run resource labels when process.resourceLabels is absent'() {
+    def 'should let the config-level process.resourceLabels win over an auto label'() {
         given:
         SysEnv.push([:])
         def executor = new SeqeraExecutor()
         executor.session = Mock(Session) {
+            getAutoResourceLabels() >> ['nextflow.io/runName': 'crazy_darwin']
+            getConfig() >> [process: [resourceLabels: ['nextflow.io/runName': 'custom']]]
+        }
+
+        when:
+        executor.computeRunResourceLabels()
+
+        then:
+        executor.runResourceLabels == ['nextflow.io/runName': 'custom']
+    }
+
+    def 'should yield an empty run baseline when neither auto nor config-level labels are given'() {
+        given:
+        SysEnv.push([:])
+        def executor = new SeqeraExecutor()
+        executor.session = Mock(Session) {
+            getAutoResourceLabels() >> [:]
             getConfig() >> [:]
         }
 
@@ -240,12 +258,13 @@ class SeqeraExecutorTest extends Specification {
         executor.runResourceLabels == [:]
     }
 
-    def 'should skip run resource labels when process.resourceLabels is a closure'() {
+    def 'should skip a dynamic process.resourceLabels while keeping the auto labels in the baseline'() {
         given:
         SysEnv.push([:])
         def executor = new SeqeraExecutor()
         def dynamic = { [team: 'a', priority: 7] }
         executor.session = Mock(Session) {
+            getAutoResourceLabels() >> ['nextflow.io/runName': 'crazy_darwin']
             getConfig() >> [process: [resourceLabels: dynamic]]
         }
 
@@ -254,7 +273,7 @@ class SeqeraExecutorTest extends Specification {
 
         then:
         noExceptionThrown()
-        executor.runResourceLabels == [:]
+        executor.runResourceLabels == ['nextflow.io/runName': 'crazy_darwin']
     }
 
     def 'createRun populates CreateRunRequest.labels with config-level resourceLabels merged with auto-labels'() {
@@ -267,33 +286,25 @@ class SeqeraExecutorTest extends Specification {
                 new CreateRunResponse().runId('run-1')
             }
         }
-        def platform = new nextflow.script.PlatformMetadata('wf-abc123')
-        platform.workspace = new nextflow.script.PlatformMetadata.Workspace(workspaceId: '1234')
-        platform.computeEnv = new nextflow.script.PlatformMetadata.ComputeEnv(id: 'ce-abc')
-        def workflowMeta = Mock(WorkflowMetadata) {
-            getProjectName() >> 'my-project'
-            getUserName() >> 'alice'
-            getRunName() >> 'test-run'
-            getSessionId() >> UUID.fromString('00000000-0000-0000-0000-000000000001')
-            getResume() >> false
-            getRevision() >> null
-            getCommitId() >> null
-            getRepository() >> null
-            getManifest() >> null
-            getPlatform() >> platform
-        }
+        def autoLabels = [
+            'nextflow.io/projectName': 'my-project',
+            'nextflow.io/runName': 'test-run',
+            'seqera.io/platform/workspaceId': '1234',
+            'seqera.io/platform/computeEnvId': 'ce-abc'
+        ]
         def sessionConfig = [
             process: [resourceLabels: [team: 'platform', priority: 3]],
-            seqera: [executor: [endpoint: 'https://sched.example.com', provider: 'aws', region: 'us-east-1', autoLabels: true]],
+            seqera: [executor: [endpoint: 'https://sched.example.com', provider: 'aws', region: 'us-east-1']],
             tower: [:]
         ]
         def session = Mock(Session) {
+            getAutoResourceLabels() >> autoLabels
             getConfig() >> sessionConfig
-            getWorkflowMetadata() >> workflowMeta
+            getWorkflowMetadata() >> Mock(WorkflowMetadata) { getPlatform() >> null }
             getWorkDir() >> java.nio.file.Paths.get('/work')
             getRunName() >> 'test-run'
         }
-        def seqeraOpts = new ExecutorOpts(endpoint: 'https://sched.example.com', provider: 'aws', region: 'us-east-1', autoLabels: true)
+        def seqeraOpts = new ExecutorOpts(endpoint: 'https://sched.example.com', provider: 'aws', region: 'us-east-1')
         def executor = new SeqeraExecutor()
         executor.session = session
         executor.@seqeraConfig = seqeraOpts
@@ -310,6 +321,42 @@ class SeqeraExecutorTest extends Specification {
         captured.getLabels()['nextflow.io/runName'] == 'test-run'
         captured.getLabels()['seqera.io/platform/workspaceId'] == '1234'
         captured.getLabels()['seqera.io/platform/computeEnvId'] == 'ce-abc'
+
+        cleanup:
+        executor.batchSubmitter?.shutdown()
+    }
+
+    def 'createRun honours the deprecated seqera.executor.autoLabels over tower.autoLabels'() {
+        given:
+        SysEnv.push([:])
+        CreateRunRequest captured = null
+        def mockClient = Mock(SchedClient) {
+            createRun(_) >> { args ->
+                captured = args[0] as CreateRunRequest
+                new CreateRunResponse().runId('run-1')
+            }
+        }
+        // a real session, so that the label set the executor sends is the one resolved by
+        // `Session#getAutoResourceLabels` out of the two config options
+        def session = new Session([
+            seqera: [executor: [endpoint: 'https://sched.example.com', autoLabels: 'projectName']],
+            tower: [autoLabels: 'runName']
+        ])
+        session.@workflowMetadata = Mock(WorkflowMetadata) {
+            getProjectName() >> 'my-project'
+            getRunName() >> 'test-run'
+        }
+        def executor = new SeqeraExecutor()
+        executor.session = session
+        executor.@seqeraConfig = new ExecutorOpts(endpoint: 'https://sched.example.com', autoLabels: 'projectName')
+        executor.@client = mockClient
+
+        when:
+        executor.createRun()
+
+        then:
+        captured != null
+        captured.getLabels() == ['nextflow.io/projectName': 'my-project']
 
         cleanup:
         executor.batchSubmitter?.shutdown()
