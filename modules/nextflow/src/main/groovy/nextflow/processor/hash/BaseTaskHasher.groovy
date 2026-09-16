@@ -16,6 +16,7 @@
 package nextflow.processor.hash
 
 import com.google.common.hash.HashCode
+import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.UnexpectedException
@@ -88,5 +89,18 @@ class BaseTaskHasher {
                 .build())
         }
         return result
+    }
+
+    /**
+     * Named per-key entries for `-dump-hashes json`, prefixed by the spec identity.
+     */
+    @CompileStatic
+    String dumpJson() {
+        final entries = new ArrayList<Map<String,Object>>()
+        entries.add([spec: spec.id, fingerprint: spec.fingerprint()] as Map<String,Object>)
+        for( Map.Entry<HashKey,HashCode> e : explain().entrySet() ) {
+            entries.add([key: e.key.name(), hash: e.value.toString()] as Map<String,Object>)
+        }
+        return JsonOutput.prettyPrint(JsonOutput.toJson(entries))
     }
 }
