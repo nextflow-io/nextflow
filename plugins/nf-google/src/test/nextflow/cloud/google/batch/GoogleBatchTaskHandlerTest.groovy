@@ -826,6 +826,41 @@ class GoogleBatchTaskHandlerTest extends Specification {
         TaskStatus.State.SUCCEEDED  | JobStatus.State.SUCCEEDED | 1             | null                                                          | 50001     | false          | nextflow.processor.TaskStatus.COMPLETED   | 0                 | true      | null
     }
 
+    def 'should report task logs when the exit status is unknown' () {
+        given:
+        def jobId = '1'
+        def taskId = '1'
+        def client = Mock(BatchClient){
+            getTaskInArrayStatus(jobId, taskId) >> makeTaskStatus(TaskStatus.State.SUCCEEDED, null, null)
+            getTaskStatus(jobId, taskId) >> makeTaskStatus(TaskStatus.State.SUCCEEDED, null, null)
+            getJobStatus(jobId) >> makeJobStatus(JobStatus.State.SUCCEEDED, null)
+        }
+        def logging = Mock(BatchLogging)
+        def executor = Mock(GoogleBatchExecutor){
+            getLogging() >> logging
+        }
+        def task = new TaskRun()
+        task.name = 'hello'
+        def handler = Spy(new GoogleBatchTaskHandler(jobId: jobId, taskId: taskId, uid: 'uid-1', client: client, task: task, isArrayChild: ARRAY_CHILD, status: nextflow.processor.TaskStatus.RUNNING, executor: executor))
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+        // the exit file is missing e.g. the task was unable to write to the work dir
+        _ * handler.readExitFile() >> Integer.MAX_VALUE
+        and:
+        1 * logging.stdout('uid-1', taskId) >> 'some output'
+        1 * logging.stderr('uid-1', taskId) >> 'Permission denied'
+        and:
+        result
+        handler.status == nextflow.processor.TaskStatus.COMPLETED
+        handler.task.exitStatus == Integer.MAX_VALUE
+        handler.task.stdout == 'some output'
+        handler.task.stderr == 'Permission denied'
+
+        where:
+        ARRAY_CHILD << [true, false]
+    }
+
     StatusEvent makeStatusEventWithTime(long seconds, Integer exitCode) {
         def builder = StatusEvent.newBuilder()
             .setEventTime(Timestamp.newBuilder().setSeconds(seconds).build())
