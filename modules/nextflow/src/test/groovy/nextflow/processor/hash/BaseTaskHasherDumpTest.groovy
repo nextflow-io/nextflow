@@ -72,4 +72,51 @@ class BaseTaskHasherDumpTest extends Specification {
         and:
         json[1..-1].every { it.hash instanceof String && it.hash.length() > 0 }
     }
+
+    def 'dumpLegacy produces non-empty output with header and entries'() {
+        given:
+        def session = Mock(Session) {
+            getUniqueId() >> UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c')
+            enableModuleBinaries() >> false
+            getStubRun() >> false
+        }
+        def processor = Mock(TaskProcessor) {
+            getName() >> 'PIPE:FOO'
+            getSession() >> session
+            getConfig() >> Mock(ProcessConfig)
+            getModuleBundle() >> null
+        }
+        def config = Mock(TaskConfig) {
+            getModule() >> []
+            getArchitecture() >> null
+            getStubBlock() >> null
+            getHashMode() >> CacheHelper.HashMode.STANDARD
+        }
+        def task = Mock(TaskRun) {
+            getSource() >> 'echo a'
+            getProcessor() >> processor
+            getConfig() >> config
+            isContainerEnabled() >> false
+            getInputs() >> [:]
+            getOutputEvals() >> [:]
+            getCondaEnv() >> null
+            getSpackEnv() >> null
+        }
+        def helper = Spy(new TaskHasher(task))
+        helper.getTaskGlobalVars() >> [:]
+        helper.getTaskBinEntries(_) >> []
+
+        when:
+        def output = new BaseTaskHasher(new HashContext(task, helper), StdSpecs.STD_V4).dumpLegacy()
+
+        then:
+        output.size() > 0
+        and:
+        output.contains('PIPE:FOO')
+        output.contains('cache hash:')
+        output.contains('mode:')
+        output.contains('entries:')
+        and:
+        output.split('\n').findAll { it.startsWith('  ') }.size() > 0
+    }
 }
