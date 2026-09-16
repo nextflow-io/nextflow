@@ -20,8 +20,13 @@ classDiagram
         operator : DataflowProcessor
         taskBody : BodyDef
     }
-    TaskProcessor --> TaskRun : invokeTask
-    TaskProcessor --> PublishDir : finalizeTask
+    TaskProcessor --* TaskRunner
+    TaskProcessor --> PublishDir : taskCompleted
+
+    class TaskRunner {
+        processor : TaskProcessor
+    }
+    TaskRunner --> TaskRun : submit
 
     class TaskRun {
         config : TaskConfig
