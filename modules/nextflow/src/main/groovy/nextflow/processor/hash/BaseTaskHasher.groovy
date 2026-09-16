@@ -94,7 +94,6 @@ class BaseTaskHasher {
     /**
      * Named per-key entries for `-dump-hashes json`, prefixed by the spec identity.
      */
-    @CompileStatic
     String dumpJson() {
         final entries = new ArrayList<Map<String,Object>>()
         entries.add([spec: spec.id, fingerprint: spec.fingerprint()] as Map<String,Object>)
@@ -107,13 +106,11 @@ class BaseTaskHasher {
     /**
      * Per-entry dump for `-dump-hashes` (legacy format), iterating the flat key list.
      */
-    @CompileStatic
-    String dumpLegacy() {
+    String dumpLegacy(HashCode hash) {
         final mode = ctx.task.processor.getConfig().getHashMode()
         final keys = collectKeys()
-        final hash = compute()
         final buffer = new StringBuilder()
-        buffer.append("[${ctx.processor.name}] cache hash: ${hash}; mode: $mode; entries: \n")
+        buffer.append("[${ctx.task.lazyName()}] cache hash: ${hash}; mode: $mode; entries: \n")
         for( final entry : keys ) {
             buffer.append("  ${CacheHelper.hasher(entry, mode).hash()} [${entry?.getClass()?.getName()}] $entry \n")
         }
