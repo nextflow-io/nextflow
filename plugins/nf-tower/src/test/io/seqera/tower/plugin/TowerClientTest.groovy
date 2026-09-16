@@ -25,6 +25,7 @@ import io.seqera.http.HxClient
 import nextflow.exception.AbortRunException
 import nextflow.util.Duration
 import spock.lang.Specification
+import spock.lang.Unroll
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
@@ -249,6 +250,221 @@ class TowerClientTest extends Specification {
         then: 'a timeout produces an error response with code 0'
         response.code == 0
         response.message.contains('Unable to connect')
+
+        cleanup:
+        wireMock.stop()
+    }
+
+    @Unroll
+    def 'should resolve the default workspace id when #SCENARIO' () {
+        given:
+        def wireMock = new WireMockServer(0)
+        wireMock.start()
+        wireMock.stubFor(
+            WireMock.get(WireMock.urlPathEqualTo('/user-info'))
+                .willReturn(WireMock.aResponse().withStatus(STATUS)
+                    .withHeader('Content-Type', 'application/json')
+                    .withBody(BODY)))
+        and:
+        TowerConfig config = Mock(TowerConfig) {
+            getHttpReadTimeout() >> Duration.of('5 s')
+            getHttpConnectTimeout() >> Duration.of('5 s')
+            getEndpoint() >> wireMock.baseUrl()
+            getAccessToken() >> 'token'
+        }
+        TowerClient client = new TowerClient(config)
+
+        expect:
+        client.getDefaultWorkspaceId() == EXPECTED
+
+        cleanup:
+        wireMock.stop()
+
+        where:
+        SCENARIO                       | STATUS | BODY                                                                             | EXPECTED
+        'the field is present'         | 200    | '{"user":{"id":1},"needConsent":false,"defaultWorkspaceId":42}'                  | '42'
+        'the field is absent'          | 200    | '{"user":{"id":1},"needConsent":false}'                                          | null
+        'the field is null'            | 200    | '{"user":{"id":1},"needConsent":false,"defaultWorkspaceId":null}'                | null
+        'the endpoint returns an error'| 500    | 'boom'                                                                           | null
+    }
+
+    def 'should fetch user-info only once per client' () {
+        given:
+        def wireMock = new WireMockServer(0)
+        wireMock.start()
+        wireMock.stubFor(
+            WireMock.get(WireMock.urlPathEqualTo('/user-info'))
+                .willReturn(WireMock.aResponse().withStatus(200)
+                    .withHeader('Content-Type', 'application/json')
+                    .withBody('{"user":{"id":1,"userName":"me"},"defaultWorkspaceId":42}')))
+        and:
+        TowerConfig config = Mock(TowerConfig) {
+            getHttpReadTimeout() >> Duration.of('5 s')
+            getHttpConnectTimeout() >> Duration.of('5 s')
+            getEndpoint() >> wireMock.baseUrl()
+            getAccessToken() >> 'token'
+        }
+        TowerClient client = new TowerClient(config)
+
+        when: 'both accessors of the same endpoint are used'
+        client.getUserInfo()
+        client.getDefaultWorkspaceId()
+
+        then: 'the response is shared, not re-fetched'
+        wireMock.verify(1, WireMock.getRequestedFor(WireMock.urlPathEqualTo('/user-info')))
+
+        cleanup:
+        wireMock.stop()
+    }
+
+    /** A client backed by WireMock, with `/user-info` and the user's workspace list stubbed */
+    private TowerClient stubClient(WireMockServer wireMock, String defaultWorkspaceId, List<String> workspaces) {
+        wireMock.stubFor(
+            WireMock.get(WireMock.urlPathEqualTo('/user-info'))
+                .willReturn(WireMock.aResponse().withStatus(200)
+                    .withHeader('Content-Type', 'application/json')
+                    .withBody("""{"user":{"id":1,"userName":"me"},"defaultWorkspaceId":${defaultWorkspaceId ?: 'null'}}""")))
+        final entries = workspaces.collect { """{"orgName":"acme","workspaceId":${it},"workspaceName":"ws-${it}"}""" }
+        wireMock.stubFor(
+            WireMock.get(WireMock.urlPathEqualTo('/user/1/workspaces'))
+                .willReturn(WireMock.aResponse().withStatus(200)
+                    .withHeader('Content-Type', 'application/json')
+                    .withBody("""{"orgsAndWorkspaces":[${entries.join(',')}]}""")))
+        TowerConfig config = Mock(TowerConfig) {
+            getHttpReadTimeout() >> Duration.of('5 s')
+            getHttpConnectTimeout() >> Duration.of('5 s')
+            getEndpoint() >> wireMock.baseUrl()
+            getAccessToken() >> 'token'
+        }
+        return new TowerClient(config)
+    }
+
+    def 'should label a workspace with its org and name' () {
+        given:
+        def wireMock = new WireMockServer(0)
+        wireMock.start()
+        def client = stubClient(wireMock, '42', ['42'])
+
+        expect: 'a workspace the account can see is named'
+        client.workspaceLabel('42') == '42 [acme / ws-42]'
+
+        and: 'one it cannot see degrades to the bare id rather than failing'
+        client.workspaceLabel('999') == '999'
+
+        and: 'a null id is passed through'
+        client.workspaceLabel(null) == null
+
+        cleanup:
+        wireMock.stop()
+    }
+
+    def 'should not throw when the workspace name cannot be resolved' () {
+        given:
+        def wireMock = new WireMockServer(0)
+        wireMock.start()
+        // note: 404 rather than 5xx -- server errors are retried, which would make this
+        // test walk the full retry ladder
+        wireMock.stubFor(
+            WireMock.get(WireMock.anyUrl())
+                .willReturn(WireMock.aResponse().withStatus(404).withBody('nope')))
+        and:
+        TowerConfig config = Mock(TowerConfig) {
+            getHttpReadTimeout() >> Duration.of('5 s')
+            getHttpConnectTimeout() >> Duration.of('5 s')
+            getEndpoint() >> wireMock.baseUrl()
+            getAccessToken() >> 'token'
+        }
+        def client = new TowerClient(config)
+
+        expect: 'labelling is best-effort -- it must be safe to use while building an error'
+        client.workspaceLabel('42') == '42'
+
+        cleanup:
+        wireMock.stop()
+    }
+
+    def 'should explain that the role is insufficient for a visible workspace' () {
+        given:
+        def wireMock = new WireMockServer(0)
+        wireMock.start()
+        def client = stubClient(wireMock, '42', ['42'])
+
+        when: 'the workspace is visible to the account but the call is refused'
+        def msg = client.workspaceAccessError('42', 403)
+
+        then: 'the cause is stated, not guessed at'
+        msg.contains('does not have permission to launch runs')
+        and: 'the workspace is named, not just numbered'
+        msg.contains('42 [acme / ws-42]')
+        and: 'the remedy and the docs are given'
+        msg.contains("'launch' role")
+        msg.contains('tower.workspaceId')
+        msg.contains('https://docs.seqera.io/platform-cloud/orgs-and-teams/roles')
+        and: 'it says where the workspace came from, because that decides the fix'
+        msg.contains('default workspace configured in your Seqera Platform account')
+
+        cleanup:
+        wireMock.stop()
+    }
+
+    def 'should explain that a workspace is not available to the account' () {
+        given:
+        def wireMock = new WireMockServer(0)
+        wireMock.start()
+        def client = stubClient(wireMock, '42', ['42'])
+
+        when: 'the workspace is not one the account can see'
+        def msg = client.workspaceAccessError('999', STATUS)
+
+        then: 'the message does not claim it is a permissions problem'
+        msg.contains('is not available to your account')
+        !msg.contains("'launch' role")
+        and: 'and does not claim it is the account default, because it is not'
+        !msg.contains('default workspace configured in your Seqera Platform account')
+
+        cleanup:
+        wireMock.stop()
+
+        where:
+        STATUS << [403, 404]
+    }
+
+    def 'should not attribute a cause for statuses it cannot explain' () {
+        given:
+        def wireMock = new WireMockServer(0)
+        wireMock.start()
+        def client = stubClient(wireMock, '42', ['42'])
+
+        expect: 'a server-side failure falls back to the generic HTTP report'
+        client.workspaceAccessError('42', 500) == null
+
+        and: 'so does a rejected token -- it says nothing about the workspace'
+        client.workspaceAccessError('42', 401) == null
+
+        cleanup:
+        wireMock.stop()
+    }
+
+    def 'should not attribute a cause when the visibility lookup itself fails' () {
+        given:
+        def wireMock = new WireMockServer(0)
+        wireMock.start()
+        // note: 404 rather than 5xx -- server errors are retried, which would make this
+        // test walk the full retry ladder
+        wireMock.stubFor(
+            WireMock.get(WireMock.anyUrl())
+                .willReturn(WireMock.aResponse().withStatus(404).withBody('nope')))
+        and:
+        TowerConfig config = Mock(TowerConfig) {
+            getHttpReadTimeout() >> Duration.of('5 s')
+            getHttpConnectTimeout() >> Duration.of('5 s')
+            getEndpoint() >> wireMock.baseUrl()
+            getAccessToken() >> 'token'
+        }
+        def client = new TowerClient(config)
+
+        expect: 'without the workspace list the two causes are indistinguishable, so neither is claimed'
+        client.workspaceAccessError('42', 403) == null
 
         cleanup:
         wireMock.stop()

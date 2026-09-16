@@ -39,6 +39,6 @@ The HTTP read timeout for Seqera Platform API requests (default: `'60s'`).
 
 ##### `tower.workspaceId`
 
-The workspace ID in Seqera Platform in which to save the run (default: the launching user's personal workspace).
+The workspace ID in Seqera Platform in which to save the run (default: the user's default workspace configured in Seqera Platform, or the personal workspace if no default is set).
 
-The workspace ID can also be specified using the environment variable `TOWER_WORKSPACE_ID` (config file has priority over the environment variable).
+The workspace ID can also be specified using the environment variable `TOWER_WORKSPACE_ID` (config file has priority over the environment variable). When neither is set, Nextflow uses the default workspace configured in your Seqera Platform account, if any.

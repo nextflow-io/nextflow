@@ -71,4 +71,38 @@ class TowerConfigTest extends Specification {
         config.httpConnectTimeout == Duration.of('5s')
         config.httpReadTimeout == Duration.of('2m')
     }
+
+    def 'should bound retries and timeouts for a best-effort lookup'() {
+        given: 'options carrying the telemetry retry policy and long timeouts'
+        def opts = [
+            accessToken       : 'xyz',
+            endpoint          : 'http://foo.com',
+            httpConnectTimeout: Duration.of('60s'),
+            httpReadTimeout   : Duration.of('60s') ]
+
+        when:
+        def config = TowerConfig.forLookup(opts, [:])
+
+        then: 'the lookup gets a single attempt and short timeouts'
+        config.retryPolicy.maxAttempts == 1
+        config.httpConnectTimeout == TowerConfig.LOOKUP_TIMEOUT
+        config.httpReadTimeout == TowerConfig.LOOKUP_TIMEOUT
+
+        and: 'everything else is carried over unchanged'
+        config.accessToken == 'xyz'
+        config.endpoint == 'http://foo.com'
+
+        and: 'the caller options are not modified'
+        opts.httpConnectTimeout == Duration.of('60s')
+        opts.httpReadTimeout == Duration.of('60s')
+        !opts.containsKey('retryPolicy')
+    }
+
+    def 'should bound a lookup even when the config asks for many retries'() {
+        when: 'the user configured an aggressive retry policy for telemetry'
+        def config = TowerConfig.forLookup([accessToken: 'xyz', retryPolicy: [maxAttempts: 10]], [:])
+
+        then: 'the lookup is still bounded to one attempt'
+        config.retryPolicy.maxAttempts == 1
+    }
 }

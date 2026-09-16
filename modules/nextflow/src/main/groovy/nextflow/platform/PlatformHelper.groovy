@@ -16,6 +16,8 @@
 
 package nextflow.platform
 
+import java.util.function.Supplier
+
 import groovy.transform.CompileStatic
 import nextflow.Global
 import nextflow.Session
@@ -28,6 +30,52 @@ import nextflow.SysEnv
  */
 @CompileStatic
 class PlatformHelper {
+
+    /**
+     * Extract the `tower` scope options from a flattened config map, stripping the
+     * `tower.` prefix so the result can be passed to the accessors in this class.
+     *
+     * @param flatConfig a flattened config map, e.g. `['tower.endpoint': '...']`
+     * @return the `tower` options keyed without the prefix, e.g. `[endpoint: '...']`
+     */
+    static Map towerOpts(Map flatConfig) {
+        return flatConfig
+            .findAll { it.key.toString().startsWith('tower.') }
+            .collectEntries { k, v -> [(k.toString().substring('tower.'.length())): v] }
+    }
+
+    /**
+     * A run made by Seqera Platform is signalled by the {@code TOWER_WORKFLOW_ID}
+     * environment variable. In that case the settings must be taken from the
+     * environment only, because Platform has already decided them for this run.
+     *
+     * @param env the applicable environment variables
+     * @return {@code true} when the current run was launched by Platform
+     */
+    static boolean isPlatformRun(Map<String,String> env) {
+        return env.get('TOWER_WORKFLOW_ID') as boolean
+    }
+
+    /**
+     * Resolve the workspace effectively used for a run: the locally configured
+     * value wins, otherwise fall back to the user's server-side default workspace
+     * in Seqera Platform.
+     *
+     * The Platform lookup is supplied by the caller so that this class stays free
+     * of any I/O and of any dependency on the Platform API client.
+     *
+     * @param opts the configuration options for Platform (e.g. `session.config.navigate('tower')`)
+     * @param env the applicable environment variables
+     * @param platformDefault supplies the Platform default workspace ID, queried only when needed
+     * @return the workspace ID to use, or null to use the personal workspace
+     */
+    static String getEffectiveWorkspaceId(Map opts, Map<String,String> env, Supplier<String> platformDefault) {
+        final local = getWorkspaceId(opts, env)
+        // a local setting always wins; for a Platform-driven run the environment is authoritative
+        if( local || isPlatformRun(env) )
+            return local
+        return platformDefault.get()
+    }
 
     /**
      * Get the configured Platform API endpoint: if the endpoint is not provided in the configuration, we fallback to the
@@ -114,7 +162,7 @@ class PlatformHelper {
      * @return the Platform access token
      */
     static String getAccessToken(Map opts, Map<String,String> env) {
-        final token = env.get('TOWER_WORKFLOW_ID')
+        final token = isPlatformRun(env)
             ? env.get('TOWER_ACCESS_TOKEN')
             : opts.containsKey('accessToken') ? opts.accessToken as String : env.get('TOWER_ACCESS_TOKEN')
         return token
@@ -130,7 +178,7 @@ class PlatformHelper {
      * @return the Platform refresh token
      */
     static String getRefreshToken(Map opts, Map<String,String> env) {
-        final token = env.get('TOWER_WORKFLOW_ID')
+        final token = isPlatformRun(env)
             ? env.get('TOWER_REFRESH_TOKEN')
             : opts.containsKey('refreshToken') ? opts.refreshToken as String : env.get('TOWER_REFRESH_TOKEN')
         return token
@@ -140,13 +188,21 @@ class PlatformHelper {
      * Return the Platform Workspace ID: if `TOWER_WORKFLOW_ID` is provided in the environment, it means we are running
      * in a Platform-made run and we should ONLY retrieve the workspace ID from the environment. Otherwise, check the
      * configuration or fallback to the environment. If no workspace ID is found, return null.
+     *
+     * Note for callers passing the `tower` scope of a live session config: when the user set no
+     * workspace of their own, the workspace configured as default in their Seqera Platform
+     * account is resolved during session init and written into that map, so this can return a
+     * value that appears nowhere in the user's configuration files. That is deliberate -- it is
+     * what keeps the run, Wave, the Fusion licence and the Seqera executor in the same
+     * workspace. See {@code TowerFactory.publishDefaultWorkspaceId}.
+     *
      * @param opts
      * @param env
      * @return
      */
     static String getWorkspaceId(Map opts, Map<String,String> env) {
         try {
-            final workspaceId = env.get('TOWER_WORKFLOW_ID')
+            final workspaceId = isPlatformRun(env)
                 ? env.get('TOWER_WORKSPACE_ID')
                 : opts.workspaceId as Long ?: env.get('TOWER_WORKSPACE_ID') as Long
             return workspaceId
@@ -167,7 +223,7 @@ class PlatformHelper {
      * @return the Platform compute environment ID, or null
      */
     static String getComputeEnvId(Map opts, Map<String,String> env) {
-        final computeEnvId = env.get('TOWER_WORKFLOW_ID')
+        final computeEnvId = isPlatformRun(env)
             ? env.get('TOWER_COMPUTE_ENV_ID')
             : opts.containsKey('computeEnvId') ? opts.computeEnvId as String : env.get('TOWER_COMPUTE_ENV_ID')
         return computeEnvId
