@@ -103,4 +103,20 @@ class BaseTaskHasher {
         }
         return JsonOutput.prettyPrint(JsonOutput.toJson(entries))
     }
+
+    /**
+     * Per-entry dump for `-dump-hashes` (legacy format), iterating the flat key list.
+     */
+    @CompileStatic
+    String dumpLegacy() {
+        final mode = ctx.task.processor.getConfig().getHashMode()
+        final keys = collectKeys()
+        final hash = compute()
+        final buffer = new StringBuilder()
+        buffer.append("[${ctx.processor.name}] cache hash: ${hash}; mode: $mode; entries: \n")
+        for( final entry : keys ) {
+            buffer.append("  ${CacheHelper.hasher(entry, mode).hash()} [${entry?.getClass()?.getName()}] $entry \n")
+        }
+        return buffer.toString()
+    }
 }
