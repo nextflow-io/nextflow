@@ -27,6 +27,42 @@ import nextflow.util.EncodingRules
 @CompileStatic
 class StdSpecs {
 
+    /** Before #6679 "Record types" (2026-03-09): legacy encoding, no module bundle key. */
+    static final TaskHashSpec STD_V1 = new TaskHashSpec('std/v1', [
+        new KeyBinding(HashKey.SESSION_ID, Contributors.SESSION_ID),
+        new KeyBinding(HashKey.PROCESS_NAME, Contributors.PROCESS_NAME),
+        new KeyBinding(HashKey.TASK_SOURCE, Contributors.TASK_SOURCE),
+        new KeyBinding(HashKey.CONTAINER, Contributors.CONTAINER),
+        new KeyBinding(HashKey.INPUTS, Contributors.INPUTS_RAW),
+        new KeyBinding(HashKey.EVAL_OUTPUTS, Contributors.EVAL_OUTPUTS_DERIVED_STRING),
+        new KeyBinding(HashKey.SCRIPT_VARS, Contributors.SCRIPT_VARS),
+        new KeyBinding(HashKey.BIN_ENTRIES, Contributors.BIN_ENTRIES),
+        new KeyBinding(HashKey.ENV_MODULES, Contributors.ENV_MODULES),
+        new KeyBinding(HashKey.CONDA, Contributors.CONDA),
+        new KeyBinding(HashKey.SPACK, Contributors.SPACK_AND_ARCH),
+        new KeyBinding(HashKey.STUB_MARKER, Contributors.STUB_MARKER)
+    ], EncodingRules.LEGACY)
+
+    /** #6679 (2026-03-09) to #6914 (2026-07-17): record-types encoding, still no module bundle. */
+    static final TaskHashSpec STD_V2 = new TaskHashSpec('std/v2', STD_V1.bindings, EncodingRules.RECORD_TYPES)
+
+    /** #6914 (2026-07-17) to #7575 (2026-09-03): module bundle key added. */
+    static final TaskHashSpec STD_V3 = new TaskHashSpec('std/v3', [
+        new KeyBinding(HashKey.SESSION_ID, Contributors.SESSION_ID),
+        new KeyBinding(HashKey.PROCESS_NAME, Contributors.PROCESS_NAME),
+        new KeyBinding(HashKey.TASK_SOURCE, Contributors.TASK_SOURCE),
+        new KeyBinding(HashKey.CONTAINER, Contributors.CONTAINER),
+        new KeyBinding(HashKey.INPUTS, Contributors.INPUTS_RAW),
+        new KeyBinding(HashKey.EVAL_OUTPUTS, Contributors.EVAL_OUTPUTS_DERIVED_STRING),
+        new KeyBinding(HashKey.SCRIPT_VARS, Contributors.SCRIPT_VARS),
+        new KeyBinding(HashKey.BIN_ENTRIES, Contributors.BIN_ENTRIES),
+        new KeyBinding(HashKey.MODULE_BUNDLE, Contributors.MODULE_BUNDLE),
+        new KeyBinding(HashKey.ENV_MODULES, Contributors.ENV_MODULES),
+        new KeyBinding(HashKey.CONDA, Contributors.CONDA),
+        new KeyBinding(HashKey.SPACK, Contributors.SPACK_AND_ARCH),
+        new KeyBinding(HashKey.STUB_MARKER, Contributors.STUB_MARKER)
+    ], EncodingRules.RECORD_TYPES)
+
     /** Current master: post-#7575 (2026-09-03), eval hashed as a raw map. */
     static final TaskHashSpec STD_V4 = new TaskHashSpec('std/v4', [
         new KeyBinding(HashKey.SESSION_ID, Contributors.SESSION_ID),
@@ -47,7 +83,7 @@ class StdSpecs {
     static final TaskHashSpec DEFAULT = STD_V4
 
     static List<TaskHashSpec> all() {
-        return [STD_V4]
+        return [STD_V1, STD_V2, STD_V3, STD_V4]
     }
 
     static TaskHashSpec byId(String id) {
