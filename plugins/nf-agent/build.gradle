@@ -60,6 +60,14 @@ dependencies {
     api 'dev.langchain4j:langchain4j-open-ai:1.17.0'
     api 'dev.langchain4j:langchain4j:1.17.0'
     api 'dev.langchain4j:langchain4j-skills:1.17.0-beta27'
+    // langchain4j pulls jackson 2.21.3 transitively. Raise it to the patched 2.21.5 across every
+    // configuration - including testFixtures* - with an api-scoped constraint. Addresses
+    // GHSA-rmj7-2vxq-3g9f, GHSA-j3rv-43j4-c7qm (PolymorphicTypeValidator bypasses),
+    // GHSA-r7wm-3cxj-wff9 (jackson-core async parser) and the related deserialization advisories.
+    constraints {
+        api('com.fasterxml.jackson.core:jackson-databind:2.21.5') { because 'jackson-databind deserialization CVEs' }
+        api('com.fasterxml.jackson.core:jackson-core:2.21.5') { because 'GHSA-r7wm-3cxj-wff9' }
+    }
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation "org.apache.groovy:groovy:4.0.33"
