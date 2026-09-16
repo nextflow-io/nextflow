@@ -260,7 +260,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             visitTypedInputs(takes);
         }
         if( !node.main.isEmpty() ) {
-            if( takes.length > 0 || !node.emits.isEmpty() || !node.publishers.isEmpty() ) {
+            if( takes.length > 0 || !node.emits.isEmpty() || !node.publishers.isEmpty() || !node.onComplete.isEmpty() || !node.onError.isEmpty() ) {
                 fmt.appendNewLine();
                 fmt.appendIndent();
                 fmt.append("main:\n");

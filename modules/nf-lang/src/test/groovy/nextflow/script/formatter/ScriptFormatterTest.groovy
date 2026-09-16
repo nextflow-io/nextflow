@@ -153,6 +153,45 @@ class ScriptFormatterTest extends Specification {
         )
     }
 
+    def 'should preserve the main section label with onComplete or onError' () {
+        expect:
+        checkFormat(
+            '''\
+            workflow {
+            main: def x = 1 ; onComplete: println 'done'
+            }
+            ''',
+            '''\
+            workflow {
+
+                main:
+                def x = 1
+
+                onComplete:
+                println('done')
+            }
+            '''
+        )
+
+        checkFormat(
+            '''\
+            workflow {
+            main: def x = 1 ; onError: println 'failed'
+            }
+            ''',
+            '''\
+            workflow {
+
+                main:
+                def x = 1
+
+                onError:
+                println('failed')
+            }
+            '''
+        )
+    }
+
     def 'should format a typed workflow definition' () {
         expect:
         checkFormat(
