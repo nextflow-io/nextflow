@@ -13,7 +13,7 @@ Add the ability to include a workflow as a module from the Nextflow registry.
 
 A Nextflow *module* is currently defined as a standalone process definition (with corresponding spec file). The [module system ADR](20251114-module-system.md) defines how these modules are published, distributed, and executed through the Nextflow registry.
 
-There is a similar need to share and re-use workflows. The nf-core community has curated a collection of re-usable workflows in the [nf-core/modules](https://github.com/nf-core/modules) repository.
+There is a similar need to share and reuse workflows. The nf-core community has curated a collection of reusable workflows in the [nf-core/modules](https://github.com/nf-core/modules) repository.
 
 The module system should be extended to include both standalone *processes* and *workflows*.
 
@@ -254,7 +254,7 @@ As a result, the module consumer should use the same configuration as the module
 
 One alternative is to treat workflows as a separate concept from modules, restricting the definition of *module* to only include standalone processes.
 
-However, the broader meaning of *module* is a re-usable component, and both processes and workflows are re-usable components, so it makes more sense to extend the module system rather than introduce a parallel system for workflows. A parallel system would also require duplicating a lot of existing code (registry API, CLI, etc).
+However, the broader meaning of *module* is a reusable component, and both processes and workflows are reusable components, so it makes more sense to extend the module system rather than introduce a parallel system for workflows. A parallel system would also require duplicating a lot of existing code (registry API, CLI, etc).
 
 Process modules and workflow modules can be distinguished by different specializations of the module spec (`kind: Process` vs `kind: Workflow`).
 

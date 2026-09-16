@@ -25,6 +25,7 @@ import groovy.transform.CompileStatic
 import nextflow.cli.CmdBase
 import nextflow.exception.AbortOperationException
 import nextflow.module.ModuleInfo
+import nextflow.module.ModuleReference
 
 /**
  * Module create subcommand -- creates a new module skeleton
@@ -76,7 +77,13 @@ class CmdModuleCreate extends CmdBase {
             name = readLine()?.trim()
             if( !name )
                 throw new AbortOperationException("Module name cannot be empty")
+        }
 
+        // enforce the same naming rules as module references, so that a created
+        // module can always be included and executed
+        ModuleReference.parse("${namespace}/${name}")
+
+        if( !args ) {
             println ""
             println "  Module namespace : $namespace"
             println "  Module name      : $name"
@@ -90,8 +97,6 @@ class CmdModuleCreate extends CmdBase {
             }
         }
 
-        validateSegment('namespace', namespace)
-        validateSegments('name', name)
         createModule(namespace, name, normalizeKind(kind), !legacy)
     }
 
@@ -102,17 +107,6 @@ class CmdModuleCreate extends CmdBase {
         if( k != 'Process' && k != 'Workflow' )
             throw new AbortOperationException("Invalid module kind '${value}' -- must be 'Process' or 'Workflow'")
         return k
-    }
-
-    static private void validateSegment(String field, String value) {
-        if( !value.matches('[a-zA-Z0-9][a-zA-Z0-9._\\-]*') )
-                throw new AbortOperationException("Invalid module $field '${value}' -- only alphanumeric characters, hyphens, underscores and dots are allowed, and must start with an alphanumeric character")
-    }
-
-    static private void validateSegments(String field, String value) {
-        for( String segment : value.tokenize('/') ) {
-            validateSegment(field, segment)
-        }
     }
 
     protected Path modulesBase() {

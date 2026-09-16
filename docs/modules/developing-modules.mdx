@@ -15,6 +15,8 @@ Use the `module create` command to scaffold a new module with the required files
 $ nextflow module create myorg/my-module
 ```
 
+The namespace and name must be lowercase, and may contain digits, dots, underscores, and hyphens. The name of the process or workflow *definition* in `main.nf` is independent of the module name -- by convention it is the module name in uppercase, e.g. `HELLO` for module `myorg/hello`.
+
 If you omit the name, the command prompts you for details:
 
 ```console

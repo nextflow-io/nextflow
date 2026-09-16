@@ -208,10 +208,10 @@ class CmdModuleCreateTest extends Specification {
 
         then:
         def ex = thrown(AbortOperationException)
-        ex.message.contains('namespace')
+        ex.message.contains('Invalid module reference')
 
         where:
-        namespace << ['.hidden', '..', 'has space', '../evil', ]
+        namespace << ['.hidden', '..', 'has space', '../evil', 'MyOrg']
     }
 
     def 'should reject invalid name'() {
@@ -223,10 +223,10 @@ class CmdModuleCreateTest extends Specification {
 
         then:
         def ex = thrown(AbortOperationException)
-        ex.message.contains('name')
+        ex.message.contains('Invalid module reference')
 
         where:
-        name << ['.hidden', '..', 'has space', 'sub/.hidden', 'sub/..', 'sub/has space']
+        name << ['.hidden', '..', 'has space', 'sub/.hidden', 'sub/..', 'sub/has space', 'Hello']
     }
 
     def 'should accept valid namespace and name'() {
@@ -247,7 +247,7 @@ class CmdModuleCreateTest extends Specification {
         'myorg'     | 'hello'
         'my-org'    | 'my-tool'
         'org123'    | 'tool.v2'
-        'My_Org'    | 'My_Tool'
+        'my_org'    | 'my_tool'
         'myorg'     | 'submodule/hello'
         'myorg'     | 'sub/nested/tool'
     }
