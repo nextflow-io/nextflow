@@ -225,29 +225,32 @@ class PipelineDefTest extends Dsl2Spec {
         result.val == 'Hello, World!'
     }
 
-    def 'should publish the outputs of an included pipeline from its output record' () {
+    def 'should include the output block of a pipeline as a record type' () {
         given:
-        def script = pipeline("""
+        def script = pipeline('''
+            workflow SHOUT {
+                take:
+                greet: GreetOutput
+
+                main:
+                messages = greet.messages.map { message -> message.toUpperCase() }
+
+                emit:
+                messages: Channel<String> = messages
+            }
+
             workflow {
                 main:
-                greet = GREET( names: channel.of('World') )
-
-                publish:
-                greet = greet
+                SHOUT(GREET( names: channel.of('World') ))
             }
-
-            output {
-                greet: GreetOutput {}
-            }
-            """)
+            ''')
 
         when:
-        // the output block declares one output for each output of the included
-        // pipeline, and the record of channels is published field by field --
-        // a mismatch on either side is reported when the output block is applied
-        runScript([config: [outputDir: folder.resolve('results').toString()]], script)
+        // the output block is imported as a record type of the pipeline
+        // outputs -- it declares no outputs of its own
+        def result = runScript(script)
         then:
-        noExceptionThrown()
+        result.val == 'HELLO, WORLD!'
     }
 
     def 'should scope the processes of an included pipeline by its name' () {

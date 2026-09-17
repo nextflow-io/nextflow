@@ -45,28 +45,12 @@ class PipelineDef extends BindableDef implements ChainableDef {
 
     private String name
 
-    private OutputTypeDef outputType
-
     PipelineDef(BaseScript pipeline, String name='workflow') {
         this.pipeline = pipeline
         this.name = name
     }
 
     BaseScript getOwner() { pipeline }
-
-    /**
-     * Declare the output type included alongside this pipeline, i.e. the
-     * `output` name in the same include statement.
-     *
-     * The output directives of a pipeline can refer to its params, so they
-     * are resolved when the pipeline is executed and handed to the output
-     * type, rather than being resolved by the calling pipeline.
-     *
-     * @param outputType
-     */
-    void setOutputType(OutputTypeDef outputType) {
-        this.outputType = outputType
-    }
 
     String getName() { name }
 
@@ -83,7 +67,6 @@ class PipelineDef extends BindableDef implements ChainableDef {
         final params = new ScriptBinding.ParamsMap(resolveParams(args))
         final published = runEntryWorkflow(params)
         final declarations = pipeline.getOutputDeclarations(params)
-        outputType?.setDeclarations(declarations)
         return collectOutputs(declarations.keySet(), published)
     }
 

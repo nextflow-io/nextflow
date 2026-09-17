@@ -33,14 +33,11 @@ import nextflow.extension.PublishOp
 @CompileStatic
 class OutputDsl {
 
-    private BaseScript owner
-
     private ScriptBinding.ParamsMap params
 
     private Map<String,Map> declarations = [:]
 
-    OutputDsl(BaseScript owner=null, ScriptBinding.ParamsMap params=null) {
-        this.owner = owner
+    OutputDsl(ScriptBinding.ParamsMap params=null) {
         this.params = params
     }
 
@@ -62,48 +59,16 @@ class OutputDsl {
     private Map<String,DataflowVariable> dataflowOutputs = [:]
 
     void declare(String name, Closure closure) {
-        declare(name, null, closure)
-    }
-
-    void declare(String name, String typeName, Closure closure) {
-        final options = options(closure)
-        final outputType = outputType(typeName)
-
-        // an output declared with an included output type is equivalent to
-        // re-declaring each output of the included pipeline
-        if( outputType ) {
-            if( options )
-                throw new ScriptRuntimeException("Workflow output '${name}' with type ${typeName} cannot declare its own output directives -- declare each output separately instead")
-            for( final entry : outputType.getDeclarations() )
-                declare0(entry.key, entry.value)
-            return
-        }
-
-        declare0(name, options)
-    }
-
-    private void declare0(String name, Map options) {
         if( declarations.containsKey(name) )
             throw new ScriptRuntimeException("Workflow output '${name}' is declared more than once in the workflow output block")
 
-        declarations[name] = options
-    }
-
-    private static Map options(Closure closure) {
         final dsl = new DeclareDsl()
         final cl = (Closure)closure.clone()
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
         cl.setDelegate(dsl)
         cl.call()
 
-        return dsl.getOptions()
-    }
-
-    private OutputTypeDef outputType(String typeName) {
-        if( !typeName || !owner )
-            return null
-        final component = ScriptMeta.get(owner).getComponent(typeName)
-        return component instanceof OutputTypeDef ? component : null
+        declarations[name] = dsl.getOptions()
     }
 
     Map<String,Map> getDeclarations() { declarations }

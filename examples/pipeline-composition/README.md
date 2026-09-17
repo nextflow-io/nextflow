@@ -19,13 +19,12 @@ workflow {
 
 The `params` block acts as the `take:` section, so the pipeline is called with named arguments and params with a default value can be omitted. The `output` block acts as the `emit:` section, so `fetchngs.samples` is a channel that the calling workflow can operate on.
 
-The two blocks can also be imported as record types, which is what `main.nf` does. That way the meta-pipeline declares one param per included pipeline instead of replicating every param:
+The `params` and `output` blocks can also be imported as record types, which is what `main.nf` does for `params`. That way the meta-pipeline declares one param per included pipeline instead of replicating every param:
 
 ```nextflow
 include {
     params as RnaseqParams ;
-    workflow as NFCORE_RNASEQ ;
-    output as RnaseqOutput
+    workflow as NFCORE_RNASEQ
 } from './pipelines/nf-core/rnaseq'
 
 params {
@@ -80,7 +79,7 @@ $ nextflow run . --rnaseq.aligner hisat2
 
 `nextflow.config` sets `params.rnaseq.fasta`, and the two are merged. `aligner` is left unset by both, so rnaseq applies its own default. `input` is overridden by the dataflow, whatever the user passes.
 
-**Outputs flow through the imported record.** `output { rnaseq: RnaseqOutput {} }` re-declares each rnaseq output with the directives rnaseq gave it, which is why the BAM files land in `bams/` without `main.nf` saying so. It is all-or-nothing: to publish only some of them, declare each output separately.
+**Outputs are declared by the meta-pipeline.** The rnaseq outputs arrive as channels, and `main.nf` decides which ones to publish and where, in its own `output` block. The output directives of the included pipeline are not inherited.
 
 **Only the calling pipeline publishes.** `fetchngs` publishes its samples to `fastq/`, but nothing lands there when it is included, because `main.nf` doesn't declare that output. The outputs of an included pipeline are emitted to the calling workflow, which decides what to publish.
 

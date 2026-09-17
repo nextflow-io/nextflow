@@ -4,9 +4,9 @@
 // analyzes them with `nf-core/rnaseq`, composing the two pipelines with
 // regular dataflow logic.
 //
-// The params and output blocks of each included pipeline are imported as
-// record types, so that the meta-pipeline declares one param per pipeline
-// instead of replicating every param.
+// The params block of each included pipeline is imported as a record type,
+// so that the meta-pipeline declares one param per pipeline instead of
+// replicating every param.
 
 nextflow.enable.types = true
 
@@ -17,8 +17,7 @@ include {
 
 include {
     params as RnaseqParams ;
-    workflow as NFCORE_RNASEQ ;
-    output as RnaseqOutput
+    workflow as NFCORE_RNASEQ
 } from './pipelines/nf-core/rnaseq'
 
 params {
@@ -41,9 +40,13 @@ workflow {
     rnaseq = NFCORE_RNASEQ( params.rnaseq + record(input: ch_samples) )
 
     publish:
-    rnaseq = rnaseq
+    bams = rnaseq.bams
+    counts = rnaseq.counts
+    multiqc = rnaseq.multiqc
 }
 
 output {
-    rnaseq: RnaseqOutput {}
+    bams: Channel<Path> { path 'bams' }
+    counts: Channel<Path> { path 'counts' }
+    multiqc: Path { path 'multiqc' }
 }

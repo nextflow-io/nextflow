@@ -105,7 +105,9 @@ class IncludeDef {
             ? loadModuleV2(moduleFile, ownerParams, session)
             : loadModuleV1(moduleFile, resolveParams(ownerParams), session)
         // -- add it to the inclusions
-        meta.addModules(ScriptMeta.get(moduleScript), modules)
+        for( Module module : modules ) {
+            meta.addModule(moduleScript, module.name, module.alias)
+        }
     }
 
     private Map resolveParams(ScriptBinding.ParamsMap ownerParams) {

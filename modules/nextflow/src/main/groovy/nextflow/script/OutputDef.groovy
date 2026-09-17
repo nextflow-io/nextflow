@@ -28,12 +28,9 @@ import nextflow.Session
 @CompileStatic
 class OutputDef {
 
-    private BaseScript owner
-
     private Closure closure
 
-    OutputDef(BaseScript owner, Closure closure) {
-        this.owner = owner
+    OutputDef(Closure closure) {
         this.closure = closure
     }
 
@@ -56,7 +53,7 @@ class OutputDef {
     }
 
     private OutputDsl dsl(ScriptBinding.ParamsMap params) {
-        final dsl = new OutputDsl(owner, params)
+        final dsl = new OutputDsl(params)
         final cl = (Closure)closure.clone()
         cl.setDelegate(dsl)
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)

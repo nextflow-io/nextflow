@@ -89,17 +89,6 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     /**
-     * Whether this script defines an output block.
-     *
-     * The declared outputs are not resolved, because the output directives
-     * of a pipeline can refer to its params, which are not resolved until
-     * the pipeline is executed.
-     */
-    boolean hasOutputs() {
-        return outputDef != null
-    }
-
-    /**
      * The outputs declared in the output block of this script, keyed by
      * name, with their output directives resolved against the given params.
      *
@@ -257,7 +246,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
         if( ExecutionStack.withinWorkflow() )
             throw new IllegalStateException("Workflow output definition is not allowed within a workflow")
 
-        this.outputDef = new OutputDef(this, body)
+        this.outputDef = new OutputDef(body)
     }
 
     /**

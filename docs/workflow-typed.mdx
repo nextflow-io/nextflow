@@ -152,22 +152,24 @@ params {
     rnaseq: RnaseqParams            // input, aligner, fasta
 }
 
+workflow NFCORE_RNASEQ_QC {
+    take:
+    rnaseq: RnaseqOutput
+
+    main:
+    // ...
+}
+
 workflow {
     main:
     rnaseq = NFCORE_RNASEQ( params.rnaseq + record(input: samples) )
-
-    publish:
-    rnaseq = rnaseq
-}
-
-output {
-    rnaseq: RnaseqOutput {}
+    NFCORE_RNASEQ_QC( rnaseq )
 }
 ```
 
 `RnaseqParams` is a *partial* record type: every field is nullable, so a user can provide any rnaseq param as `--rnaseq.<name>`, the calling pipeline can override specific params with `params.rnaseq + record(input: samples)`, and the `NFCORE_RNASEQ()` call reports any param that is still missing.
 
-`RnaseqOutput` is a record type of the rnaseq outputs. Declaring an output with this type is equivalent to re-declaring each rnaseq output with its own output directives, and publishing the record of channels returned by the call publishes each of them. It is all-or-nothing: to publish only some outputs, or publish them somewhere else, declare each output separately.
+`RnaseqOutput` is a record type of the rnaseq outputs, i.e. the type of the record returned by the `NFCORE_RNASEQ()` call. It declares no outputs of its own -- the calling pipeline declares its own `output` block, as it would for any other workflow.
 
 Note the following:
 
@@ -178,13 +180,6 @@ Note the following:
 - `rnaseq.fasta` must still be provided, but the error surfaces at the `NFCORE_RNASEQ()` call rather than at launch.
 
 A pipeline receives its params when it is called, so `params` refers to a single execution of the pipeline. A pipeline can be included under any number of aliases, and each alias resolves its own params. As with a named workflow, a pipeline can be called only once per alias -- include it again under a different alias to call it again.
-
-A pipeline and its output block must be included in the same include declaration, and each declaration can include a pipeline only once:
-
-```nextflow
-include { workflow as NFCORE_RNASEQ ; output as RnaseqOutput } from './pipelines/nf-core/rnaseq'
-include { workflow as NFCORE_RNASEQ_TEST } from './pipelines/nf-core/rnaseq'
-```
 
 Pipeline inclusion only captures the pipeline script and the modules it includes -- it does not capture external context such as the config or the `lib` directory. As a result, an included pipeline should be written so that it works when included by another pipeline:
 

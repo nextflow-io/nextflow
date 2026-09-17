@@ -4,9 +4,13 @@
 - Status: proposed
 - Date: 2026-06-08
 - Tags: pipelines, modules, dsl, registry
-- Version: 1.2
+- Version: 1.3
 
 ## Updates
+
+### Version 1.3 (2026-09-17)
+
+- **Included output block is only a record type**: including the `output` block of a pipeline provides a record type of its outputs and nothing else, mirroring the `params` block. Declaring an output with this type no longer re-declares each output of the included pipeline with its output directives. The meta-pipeline declares its outputs like any other pipeline.
 
 ### Version 1.2 (2026-07-13)
 
@@ -366,9 +370,9 @@ In practice, the meta-pipeline will likely need to recreate the configuration sh
 - Manifest (name, authors, description, etc)
 - Plugins
 
-### Reducing params/output boilerplate
+### Reducing params boilerplate
 
-In the example above, the meta-pipeline re-declares the params and outputs from each included pipeline. This boilerplate can be avoided by importing each pipeline's `params` block and `output` block as *record types*:
+In the example above, the meta-pipeline re-declares the params from each included pipeline. This boilerplate can be avoided by importing each pipeline's `params` block as a *record type*:
 
 ```groovy
 include {
@@ -378,8 +382,7 @@ include {
 
 include {
     params as RnaseqParams;
-    workflow as NFCORE_RNASEQ;
-    output as RnaseqOutput
+    workflow as NFCORE_RNASEQ
 } from 'nf-core/rnaseq'
 
 params {
@@ -402,28 +405,28 @@ workflow {
     rnaseq = NFCORE_RNASEQ( params.rnaseq + record(input: ch_samples) )
 
     publish:
-    rnaseq = rnaseq
+    multiqc = rnaseq.multiqc
+    bams    = rnaseq.bams
+    counts  = rnaseq.counts
 }
 
 output {
-    rnaseq: RnaseqOutput {}
+    multiqc: Path { path 'multiqc' }
+    bams: Channel<Path> { path 'bams' }
+    counts: Channel<Path> { path 'counts' }
 }
 ```
 
 `RnaseqParams` is a *partial record type* -- all of its fields are nullable and defaulted fields keep their defaults. The user can provide any rnaseq param as `--rnaseq.<name>`, the meta-pipeline can override specific params (`params.rnaseq + record(input: ch_samples)`), and the `NFCORE_RNASEQ()` call validates that all required params are present.
 
-`RnaseqOutput` is a record type of the rnaseq outputs which preserves their output directives (`path`, `index`). Declaring a top-level output with this type (`rnaseq: RnaseqOutput`) is equivalent to redeclaring each rnaseq output.
+This way, the developer only needs to declare one param for each included pipeline (`fetchngs: FetchngsParams`, `rnaseq: RnaseqParams`).
 
-This way, the developer only needs to declare one param for each included pipeline (`fetchngs: FetchngsParams`, `rnaseq: RnaseqParams`), and one output for each pipeline whose outputs should be published (`rnaseq: RnaseqOutput`).
+The `output` block can be included in the same way (`output as RnaseqOutput`), which gives a name to the type of the record returned by the pipeline call, e.g. to declare a workflow input of that type. It provides only the type -- the meta-pipeline declares its own outputs.
 
 Notes:
-
-- `output` must be included in the same include declaration as the corresponding `workflow`, so that param references can be resolved correctly.
 
 - `rnaseq.input` is always overridden by the dataflow, so a user cannot set it.
 
 - `rnaseq.fasta` must still be provided by the user, but the error surfaces at the `NFCORE_RNASEQ()` call rather than at launch.
 
-- The fetchngs outputs were not published in the base example, so they are not published here either.
-
-- Output record types are all-or-nothing. If the developer wants to publish only some outputs or publish them in a different way, they need to redeclare each output like normal.
+- Output directives are not inherited. A meta-pipeline that publishes an output of an included pipeline decides for itself where it is published.

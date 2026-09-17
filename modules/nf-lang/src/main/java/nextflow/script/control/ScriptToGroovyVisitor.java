@@ -146,13 +146,13 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitInclude(IncludeNode node) {
-        // an included params block is only a type -- add it to this script
-        // so that it is compiled, and don't include it at runtime
+        // an included params or output block is only a type -- add it to this
+        // script so that it is compiled, and don't include it at runtime
         for( var entry : node.entries ) {
-            if( isParamsBlockType(entry) ) {
+            if( isPipelineBlockType(entry) ) {
                 var cn = (ClassNode) entry.getTarget();
                 // the type is qualified by the including script, so that two
-                // scripts can include the same params block
+                // scripts can include the same block
                 if( cn.getName().indexOf('.') == -1 )
                     cn.setName(sgh.packageName(moduleNode) + "." + cn.getName());
                 moduleNode.addClass(cn);
@@ -160,7 +160,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         }
 
         var entries = (List<Expression>) node.entries.stream()
-            .filter((entry) -> !isParamsBlockType(entry))
+            .filter((entry) -> !isPipelineBlockType(entry))
             .map((entry) -> {
                 var name = constX(entry.name);
                 return entry.alias != null
@@ -176,15 +176,14 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     }
 
     /**
-     * Whether an include entry refers to the `params` block of an included
-     * pipeline, rather than a definition of the module that happens to have
-     * the same name.
+     * Whether an include entry refers to the `params` or `output` block of an
+     * included pipeline, rather than a definition of the module that happens
+     * to have the same name.
      *
      * @param entry
      */
-    private static boolean isParamsBlockType(IncludeEntryNode entry) {
-        return "params".equals(entry.name)
-            && entry.getTarget() instanceof ClassNode cn
+    private static boolean isPipelineBlockType(IncludeEntryNode entry) {
+        return entry.getTarget() instanceof ClassNode cn
             && cn.getNodeMetaData(ResolveIncludeVisitor.PIPELINE_BLOCK_TYPE) != null;
     }
 
@@ -270,12 +269,8 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             .map((output) -> {
                 new PublishDslVisitor().visit(output.body);
                 var name = constX(output.getName());
-                var type = output.getType();
-                var typeName = ClassHelper.isDynamicTyped(type)
-                    ? constX(null)
-                    : constX(type.getNameWithoutPackage());
                 var body = closureX(null, output.body);
-                return stmt(callThisX("declare", args(name, typeName, body)));
+                return stmt(callThisX("declare", args(name, body)));
             })
             .toList();
         var closure = closureX(null, block(new VariableScope(), statements));

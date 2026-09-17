@@ -136,9 +136,7 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
         }
         var scriptNode = (ScriptNode) includeUnit.getAST();
         var definitions = getDefinitions(includeUri);
-        var pipelineEntries = 0;
         var hasPipeline = false;
-        var hasOutput = false;
         for( var entry : node.entries ) {
             var includedName = entry.name;
             var definitionNode = definitions.stream()
@@ -161,19 +159,10 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
                     addError("An included pipeline must be aliased, e.g. `" + includedName + " as MY_PIPELINE`", node);
                     continue;
                 }
-                if( PIPELINE_NAME.equals(includedName) && ++pipelineEntries > 1 ) {
-                    addError("A pipeline can be included only once in an include declaration -- use a separate include declaration for each alias", node);
-                    continue;
-                }
                 hasPipeline |= PIPELINE_NAME.equals(includedName);
-                hasOutput |= OUTPUT_NAME.equals(includedName);
             }
             entry.setTarget(includedNode);
         }
-        // the output block of an included pipeline is resolved against the params
-        // of the pipeline, so it can only be included alongside the pipeline itself
-        if( hasOutput && !hasPipeline )
-            addError("The output block of a pipeline can be included only alongside the pipeline itself -- add `" + PIPELINE_NAME + " as MY_PIPELINE` to this include declaration", node);
         if( hasPipeline )
             checkPipelineParams(node, includeUri);
     }
@@ -332,12 +321,10 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
 
     private static final String PIPELINE_NAME = "workflow";
 
-    private static final String OUTPUT_NAME = "output";
-
     /**
      * The `params` and `output` blocks of an included pipeline can be included
-     * as record types, so that a calling pipeline can declare a single param or
-     * output for the entire pipeline instead of replicating each one.
+     * as record types, so that a calling pipeline can refer to the params or
+     * outputs of the pipeline as a whole instead of replicating each one.
      *
      * The params record type is *partial* -- every field is nullable, because
      * a param can be provided by the calling pipeline instead of the user, and
