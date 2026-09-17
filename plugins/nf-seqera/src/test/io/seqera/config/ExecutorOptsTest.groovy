@@ -16,6 +16,7 @@
 
 package io.seqera.config
 
+import nextflow.platform.AutoLabels
 import nextflow.util.Duration
 import spock.lang.Specification
 
@@ -188,7 +189,7 @@ class ExecutorOptsTest extends Specification {
         config.machineRequirement.provisioning == 'spot'
     }
 
-    def 'should enable all auto labels when set to true' () {
+    def 'should parse the auto labels with the runtime helper' () {
         when:
         def config = new ExecutorOpts([
             endpoint: 'https://sched.example.com',
@@ -196,95 +197,7 @@ class ExecutorOptsTest extends Specification {
         ])
 
         then:
-        config.autoLabels == ExecutorOpts.VALID_AUTO_LABELS
-    }
-
-    def 'should disable auto labels when set to false' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            autoLabels: false
-        ])
-
-        then:
-        config.autoLabels.isEmpty()
-    }
-
-    def 'should accept auto labels as a list of short names' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            autoLabels: ['runName', 'projectName']
-        ])
-
-        then:
-        config.autoLabels == ['runName', 'projectName'] as Set
-    }
-
-    def 'should accept workspaceId and computeEnvId in auto labels' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            autoLabels: ['workspaceId', 'computeEnvId']
-        ])
-
-        then:
-        config.autoLabels == ['workspaceId', 'computeEnvId'] as Set
-    }
-
-    def 'should trim whitespace in auto labels list entries' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            autoLabels: [' runName', 'projectName ']
-        ])
-
-        then:
-        config.autoLabels == ['runName', 'projectName'] as Set
-    }
-
-    def 'should accept auto labels as a comma-separated string' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            autoLabels: 'runName,projectName,workflowId'
-        ])
-
-        then:
-        config.autoLabels == ['runName', 'projectName', 'workflowId'] as Set
-    }
-
-    def 'should tolerate whitespace around comma-separated auto labels' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            autoLabels: 'runName, projectName ,workflowId'
-        ])
-
-        then:
-        config.autoLabels == ['runName', 'projectName', 'workflowId'] as Set
-    }
-
-    def 'should treat empty auto labels list as disabled' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            autoLabels: []
-        ])
-
-        then:
-        config.autoLabels.isEmpty()
-    }
-
-    def 'should treat empty auto labels string as disabled' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            autoLabels: ''
-        ])
-
-        then:
-        config.autoLabels.isEmpty()
+        config.autoLabels == AutoLabels.VALID_NAMES
     }
 
     def 'should reject unknown auto labels name' () {

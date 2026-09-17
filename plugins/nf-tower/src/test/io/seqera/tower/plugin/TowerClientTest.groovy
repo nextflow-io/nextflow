@@ -16,7 +16,9 @@
 
 package io.seqera.tower.plugin
 
+import java.net.http.HttpConnectTimeoutException
 import java.net.http.HttpResponse
+import java.net.http.HttpTimeoutException
 import java.time.Instant
 
 import com.github.tomakehurst.wiremock.WireMockServer
@@ -34,6 +36,19 @@ class TowerClientTest extends Specification {
     protected boolean aroundNow(value) {
         def now = Instant.now().toEpochMilli()
         value > now-1_000 && value <= now
+    }
+
+    def 'should retry request timeouts' () {
+        // The trace calls are idempotent telemetry, so - unlike the httpx default, which
+        // excludes a request timeout raised after the request was sent - a stalled request
+        // is safe to re-send and must be retried rather than aborting the run.
+        expect:
+        TowerClient.retryCondition(new HttpTimeoutException('request timeout'))
+        TowerClient.retryCondition(new HttpConnectTimeoutException('connect timeout'))
+        TowerClient.retryCondition(new SocketTimeoutException('socket timeout'))
+        TowerClient.retryCondition(new IOException('connection reset'))
+        and:
+        !TowerClient.retryCondition(new RuntimeException('not an I/O error'))
     }
 
     def 'should parse response' () {

@@ -21,6 +21,7 @@ import static nextflow.util.SysHelper.*
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.net.http.HttpTimeoutException
 import java.nio.file.Path
 import java.nio.file.Paths
 import java.time.Duration
@@ -30,6 +31,7 @@ import java.time.ZoneId
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
+import java.util.function.Predicate
 
 import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
@@ -43,6 +45,7 @@ import groovy.transform.Canonical
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import io.seqera.http.HxClient
+import io.seqera.http.HxConfig
 import io.seqera.util.trace.TraceUtils
 import io.seqera.wave.api.BuildStatusResponse
 import io.seqera.wave.api.ContainerStatus
@@ -168,6 +171,11 @@ class WaveClient {
      */
     protected HxClient.Builder newHttpClientBuilder() {
         final builder = HxClient.newBuilder()
+                // seed the retry condition first: config() replaces the config builder (and its
+                // proxy/auth), so it must precede withProxyConfig() and the auth settings below
+                .config( HxConfig.newBuilder()
+                        .retryCondition({ Object t -> retryCondition((Throwable) t) } as Predicate)
+                        .build() )
                 .version(HttpClient.Version.HTTP_1_1)
                 .followRedirects(HttpClient.Redirect.NEVER)
                 .connectTimeout(config.httpOpts().connectTimeout())
@@ -194,6 +202,16 @@ class WaveClient {
         return newHttpClientBuilder()
                 .retryConfig(config.retryOpts())
                 .build()
+    }
+
+    /**
+     * Retry-on-exception rule for the Wave/Tower HTTP clients. Retries the httpx default network
+     * conditions, plus a request timeout raised after the request was sent - which the httpx
+     * default deliberately excludes (see {@link HxConfig#defaultRetryCondition}) - so a single
+     * transient stall does not fail an otherwise recoverable request.
+     */
+    protected static boolean retryCondition(Throwable t) {
+        return HxConfig.defaultRetryCondition(t) || t instanceof HttpTimeoutException
     }
 
     WaveConfig config() { return config }

@@ -65,21 +65,24 @@ dependencies {
         exclude group: 'org.slf4j', module: 'slf4j-api'
     }
 
-    // Force patched jackson on the 2.18 line (required by the Azure SDK) to address
-    // GHSA-72hv-8253-57qq (jackson-core DoS) and the jackson-databind deserialization
-    // advisories fixed in 2.18.9 (PolymorphicTypeValidator and @JsonView/@JsonIgnore bypasses)
-    runtimeOnly 'com.fasterxml.jackson.core:jackson-core:2.18.9'
-    runtimeOnly 'com.fasterxml.jackson.core:jackson-databind:2.18.9'
-
-    // Pin azure-core-http-netty to a version that brings patched netty
-    // (4.1.137.Final) to address the netty-codec advisories fixed in 4.1.136.Final,
-    // notably GHSA-93wv-jw9v-4972, GHSA-jppx-w49h-x2qq, GHSA-558v-64gr-wgg4 and
-    // GHSA-mfg7-5gfp-c4w3 (reference-count leaks, decoder hangs and memory exhaustion)
-    implementation 'com.azure:azure-core-http-netty:1.16.7'
-    // The netty BOM aligns the whole netty family on the patched release: reactor-netty,
-    // pulled in by azure-core-http-netty, otherwise leaves netty-codec-dns and
-    // netty-resolver-dns behind on 4.1.135.Final
-    implementation platform('io.netty:netty-bom:4.1.137.Final')
+    // Raise the vulnerable transitive dependencies of the Azure SDK across ALL configurations -
+    // including testFixtures*, which implementation/runtimeOnly pins never reach. Constraints lift
+    // a transitive version without adding a direct dependency edge; `api` scope is what propagates
+    // to the consumer and testFixtures* classpaths.
+    constraints {
+        // jackson stays on the 2.18 line required by the Azure SDK; addresses GHSA-72hv-8253-57qq
+        // (jackson-core DoS) and the jackson-databind deserialization advisories fixed in 2.18.9
+        api('com.fasterxml.jackson.core:jackson-databind:2.18.9') { because 'jackson-databind deserialization CVEs' }
+        api('com.fasterxml.jackson.core:jackson-core:2.18.9') { because 'GHSA-72hv-8253-57qq' }
+        api('com.fasterxml.jackson.core:jackson-annotations:2.18.9') { because 'keep jackson aligned' }
+    }
+    // netty artifacts do not self-align: reactor-netty requests netty-codec-dns and
+    // netty-resolver-dns independently and leaves them on 4.1.135.Final while the rest of the
+    // family is on 4.1.137.Final. The BOM is netty's own alignment artifact, so it replaces four
+    // hand-written constraints; `api` so the alignment also reaches the testFixtures* classpaths.
+    // 4.1.137.Final carries the netty-codec advisories fixed in 4.1.136.Final, notably
+    // GHSA-93wv-jw9v-4972, GHSA-jppx-w49h-x2qq, GHSA-558v-64gr-wgg4 and GHSA-mfg7-5gfp-c4w3.
+    api platform('io.netty:netty-bom:4.1.137.Final')
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
