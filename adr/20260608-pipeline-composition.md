@@ -10,7 +10,7 @@
 
 ### Version 1.3 (2026-09-17)
 
-- **Included output block is only a record type**: including the `output` block of a pipeline provides a record type of its outputs and nothing else, mirroring the `params` block. Declaring an output with this type no longer re-declares each output of the included pipeline with its output directives. The meta-pipeline declares its outputs like any other pipeline.
+- **Included output block is only a record type**: including the `output` block of a pipeline provides a record type of its outputs and nothing else, mirroring the `params` block. Declaring an output with this type no longer redeclares each output of the included pipeline with its output directives. The meta-pipeline declares its outputs like any other pipeline.
 
 ### Version 1.2 (2026-07-13)
 
@@ -372,7 +372,7 @@ In practice, the meta-pipeline will likely need to recreate the configuration sh
 
 ### Reducing params boilerplate
 
-In the example above, the meta-pipeline re-declares the params from each included pipeline. This boilerplate can be avoided by importing each pipeline's `params` block as a *record type*:
+In the example above, the meta-pipeline redeclares the params from each included pipeline. This boilerplate can be avoided by importing each pipeline's `params` block as a *record type*:
 
 ```groovy
 include {
