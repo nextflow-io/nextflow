@@ -19,11 +19,19 @@ package nextflow.cloud.aws.nio
 import java.nio.file.AccessDeniedException
 import java.nio.file.NoSuchFileException
 
+import software.amazon.awssdk.core.ResponseBytes
 import software.amazon.awssdk.awscore.exception.AwsErrorDetails
 import software.amazon.awssdk.awscore.exception.AwsServiceException
 import software.amazon.awssdk.core.exception.SdkClientException
 import software.amazon.awssdk.core.exception.SdkException
+import nextflow.cloud.aws.AwsClientFactory
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest
+import software.amazon.awssdk.services.s3.model.GetObjectRequest
+import software.amazon.awssdk.services.s3.model.GetObjectResponse
+import software.amazon.awssdk.services.s3.model.RequestPayer
+import software.amazon.awssdk.services.s3.model.PutObjectRequest
+import software.amazon.awssdk.services.s3.model.PutObjectResponse
+import software.amazon.awssdk.services.s3.model.ServerSideEncryption
 import software.amazon.awssdk.services.s3.model.NoSuchBucketException
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException
 import software.amazon.awssdk.services.s3.model.Tag
@@ -35,6 +43,64 @@ import spock.lang.Unroll
  * Tests for the AWS SDK → NIO exception conversion in {@link S3Client#convertAwsException}.
  */
 class S3ClientTest extends Specification {
+
+    def 'the claim PUT carries the bucket-policy settings its sibling writes apply'() {
+        given: 'a client configured with server-side encryption, as an encrypting bucket requires'
+        def sdk = Mock(software.amazon.awssdk.services.s3.S3Client)
+        def factory = Mock(AwsClientFactory) { getS3Client(_, _) >> sdk }
+        def client = new S3Client(factory, new Properties(), false)
+        client.setStorageEncryption('aws:kms')
+        client.setKmsKeyId('key-123')
+        and:
+        PutObjectRequest captured = null
+
+        when:
+        def created = client.putObjectIfAbsent('bkt', 'work/aa/bb/.command.claim')
+
+        then:
+        1 * sdk.putObject(_ as PutObjectRequest, _) >> { PutObjectRequest r, def body ->
+            captured = r; return PutObjectResponse.builder().build()
+        }
+        created
+
+        and: 'the conditional create is intact -- that is what makes the claim atomic'
+        captured.ifNoneMatch() == '*'
+
+        and: 'and SSE/KMS are applied, so a `deny unless encrypted` policy cannot 403 every claim'
+        captured.serverSideEncryption() == ServerSideEncryption.AWS_KMS
+        captured.ssekmsKeyId() == 'key-123'
+    }
+
+    def 'requester-pays reaches the claim PUT and the ranged GET, not only getObject'() {
+        given: 'a client on a requester-pays bucket'
+        def sdk = Mock(software.amazon.awssdk.services.s3.S3Client)
+        def factory = Mock(AwsClientFactory) { getS3Client(_, _) >> sdk }
+        def client = new S3Client(factory, new Properties(), false)
+        client.setRequesterPaysEnabled('true')
+        and:
+        PutObjectRequest put = null
+        GetObjectRequest get = null
+
+        when: 'the work-dir claim -- without the payer this 403s, and a 403 is deliberately NOT read'
+        and: 'as "lost the race", so the run dies with an error pointing nowhere near the cause'
+        client.putObjectIfAbsent('bkt', 'work/aa/bb/.command.claim')
+        then:
+        1 * sdk.putObject(_ as PutObjectRequest, _) >> { PutObjectRequest r, def body ->
+            put = r; return PutObjectResponse.builder().build()
+        }
+        put.requestPayer() == RequestPayer.REQUESTER
+
+        when: 'the sampled identity\'s ranged read'
+        client.getObjectRange(GetObjectRequest.builder().bucket('bkt').key('k').range('bytes=0-9').build())
+        then:
+        1 * sdk.getObjectAsBytes(_ as GetObjectRequest) >> { GetObjectRequest r ->
+            get = r; return ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), new byte[0])
+        }
+        get.requestPayer() == RequestPayer.REQUESTER
+        and: 'the range the caller built is preserved'
+        get.range() == 'bytes=0-9'
+
+    }
 
     def 'should map NoSuchBucketException to NoSuchFileException'() {
         given:

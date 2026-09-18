@@ -32,6 +32,8 @@ nextflowPlugin {
         'nextflow.cloud.azure.file.AzPathFactory',
         'nextflow.cloud.azure.file.AzPathSerializer',
         'nextflow.cloud.azure.fusion.AzFusionEnv',
+        'nextflow.cloud.azure.nio.AzAtomicLockProvider',
+        'nextflow.cloud.azure.nio.AzObjectStoreReader',
     ]
 }
 
