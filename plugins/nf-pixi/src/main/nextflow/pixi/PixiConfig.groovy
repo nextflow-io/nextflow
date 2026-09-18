@@ -19,9 +19,9 @@ package nextflow.pixi
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
-import nextflow.config.schema.ConfigOption
-import nextflow.config.schema.ConfigScope
-import nextflow.config.schema.ScopeName
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
 import nextflow.script.dsl.Description
 import nextflow.util.Duration
 
@@ -36,6 +36,12 @@ import nextflow.util.Duration
 """)
 @CompileStatic
 class PixiConfig implements ConfigScope {
+
+    @ConfigOption
+    @Description("""
+        The list of conda channels used to resolve packages given as a package list (default: `['conda-forge']`).
+    """)
+    final List<String> channels
 
     @ConfigOption
     @Description("""
@@ -69,6 +75,7 @@ class PixiConfig implements ConfigScope {
             ? opts.enabled as boolean
             : (env.NXF_PIXI_ENABLED?.toString() == 'true')
         cacheDir = opts.cacheDir
+        channels = opts.channels != null ? (opts.channels as List).collect { it.toString() } : ['conda-forge']
         createOptions = opts.createOptions
         createTimeout = opts.createTimeout as Duration ?: Duration.of('20min')
     }
@@ -88,4 +95,6 @@ class PixiConfig implements ConfigScope {
     Path cacheDir() {
         cacheDir as Path
     }
+
+    List<String> channels() { channels }
 }

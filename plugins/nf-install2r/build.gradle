@@ -1,5 +1,5 @@
 /*
- * Copyright 2021-2023, Seqera Labs
+ * Copyright 2013-2026, Seqera Labs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -13,11 +13,24 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+plugins {
+    id 'io.nextflow.nextflow-plugin' version "${nextflowPluginVersion}"
+    id 'java-test-fixtures'
+}
 
-apply plugin: 'java'
-apply plugin: 'java-test-fixtures'
-apply plugin: 'idea'
-apply plugin: 'groovy'
+nextflowPlugin {
+    nextflowVersion = '26.08.0-edge'
+
+    provider = "${nextflowPluginProvider}"
+    description = 'R install2.r (littler) package provider for the `package` directive'
+    className = 'nextflow.install2r.Install2rPlugin'
+    useDefaultDependencies = false
+    generateSpec = false
+    extensionPoints = [
+        'nextflow.install2r.Install2rProviderExtension',
+        'nextflow.install2r.Install2rConfig',
+    ]
+}
 
 sourceSets {
     main.java.srcDirs = []
@@ -25,7 +38,7 @@ sourceSets {
     main.resources.srcDirs = ['src/resources']
     test.groovy.srcDirs = ['src/test']
     test.java.srcDirs = []
-    test.resources.srcDirs = ['src/testResources']
+    test.resources.srcDirs = []
 }
 
 configurations {
@@ -36,10 +49,10 @@ configurations {
 dependencies {
     compileOnly project(':nextflow')
     compileOnly 'org.slf4j:slf4j-api:2.0.17'
-    compileOnly 'org.pf4j:pf4j:3.12.0'
+    compileOnly 'org.pf4j:pf4j:3.14.1'
 
     testImplementation(testFixtures(project(":nextflow")))
     testImplementation project(':nextflow')
-    testImplementation "org.apache.groovy:groovy:4.0.28"
-    testImplementation "org.apache.groovy:groovy-nio:4.0.28"
+    testImplementation "org.apache.groovy:groovy:4.0.33"
+    testImplementation "org.apache.groovy:groovy-nio:4.0.33"
 }

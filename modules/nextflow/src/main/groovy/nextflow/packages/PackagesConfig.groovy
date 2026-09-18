@@ -17,9 +17,9 @@
 package nextflow.packages
 
 import groovy.transform.CompileStatic
-import nextflow.config.schema.ConfigOption
-import nextflow.config.schema.ConfigScope
-import nextflow.config.schema.ScopeName
+import nextflow.config.spec.ConfigOption
+import nextflow.config.spec.ConfigScope
+import nextflow.config.spec.ScopeName
 import nextflow.script.dsl.Description
 
 /**
@@ -42,7 +42,8 @@ class PackagesConfig implements ConfigScope {
     @ConfigOption
     @Description("""
         Auto-detect a provider manifest file (e.g. `environment.yml`, `requirements.txt`) in the
-        process module directory when a process does not declare a `package` directive (default: `true`).
+        module directory when a process defined in an included module script does not declare a `package`,
+        `conda`, `spack` or `container` directive (default: `true`).
     """)
     final boolean autoDetect
 

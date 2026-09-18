@@ -62,6 +62,8 @@ class PixiCache {
 
     private Path configCacheDir0
 
+    private List<String> channels = ['conda-forge']
+
     @PackageScope String getCreateOptions() { createOptions }
 
     @PackageScope Duration getCreateTimeout() { createTimeout }
@@ -89,6 +91,9 @@ class PixiCache {
 
         if( config.cacheDir() )
             configCacheDir0 = config.cacheDir().toAbsolutePath()
+
+        if( config.channels() )
+            channels = config.channels()
     }
 
     /**
@@ -310,7 +315,7 @@ class PixiCache {
 name = "nextflow-env"
 version = "0.1.0"
 description = "Nextflow generated Pixi environment"
-channels = ["conda-forge"]
+channels = [${channels.collect { '"' + it + '"' }.join(', ')}]
 platforms = ["${currentPixiPlatform()}"]
 
 [dependencies]
@@ -326,7 +331,7 @@ ${toTomlDependencies(pixiEnv)}
         }
         catch( Exception e ){
             // clean-up to avoid to keep eventually corrupted image file
-            prefixPath.delete()
+            prefixPath.deleteDir()
             throw e
         }
         return prefixPath

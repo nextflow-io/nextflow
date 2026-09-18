@@ -79,6 +79,44 @@ class PixiCacheTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should write the configured channels into the generated manifest' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def prefixPath = folder.resolve('env-ch')
+        def cache = Spy(PixiCache)
+        cache.@createOptions = null
+        cache.@createTimeout = nextflow.util.Duration.of('20min')
+        cache.@channels = ['conda-forge', 'bioconda']
+
+        when:
+        cache.createLocalPixiEnv0('samtools', prefixPath)
+        then:
+        1 * cache.runCommand({ String cmd -> cmd.contains('pixi install') }) >> 0
+        prefixPath.resolve('pixi.toml').text.contains('channels = ["conda-forge", "bioconda"]')
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should remove the partially created prefix when pixi install fails' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def prefixPath = folder.resolve('env-fail')
+        def cache = Spy(PixiCache)
+        cache.@createOptions = null
+        cache.@createTimeout = nextflow.util.Duration.of('20min')
+
+        when:
+        cache.createLocalPixiEnv0('samtools', prefixPath)
+        then:
+        1 * cache.runCommand(_) >> { throw new IllegalStateException('boom') }
+        thrown(IllegalStateException)
+        !prefixPath.exists()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should resolve a prefix for a custom-named toml file and read its content' () {
         given:
         def folder = Files.createTempDirectory('test')
