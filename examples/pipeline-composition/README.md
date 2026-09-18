@@ -41,11 +41,19 @@ pipeline-composition/
 ├── data/                   # accession list and reference genome
 └── pipelines/
     └── nf-core/
-        ├── fetchngs/main.nf
-        └── rnaseq/main.nf
+        ├── fetchngs/
+        │   ├── main.nf
+        │   └── modules/nf-core/
+        │       └── sratools/fasterqdump/main.nf
+        └── rnaseq/
+            ├── main.nf
+            └── modules/nf-core/
+                ├── multiqc/main.nf
+                ├── salmon/quant/main.nf
+                └── star/align/main.nf
 ```
 
-Each included pipeline is an ordinary Nextflow pipeline, vendored into the meta-pipeline repository. It can still be run on its own:
+Each included pipeline is an ordinary Nextflow pipeline, with its own `modules/` directory, vendored into the meta-pipeline repository. It can still be run on its own:
 
 ```console
 $ nextflow run ./pipelines/nf-core/fetchngs --ids ./data/ids.txt

@@ -6,34 +6,10 @@
 
 nextflow.enable.types = true
 
-record Sample {
-    id: String
-    fastq_1: Path
-    fastq_2: Path
-}
+include { SRATOOLS_FASTERQDUMP } from './modules/nf-core/sratools/fasterqdump'
 
 params {
     ids: Path       // file of SRA/ENA accessions, one per line
-}
-
-process SRATOOLS_FASTERQDUMP {
-    tag "${id}"
-
-    input:
-    id: String
-
-    output:
-    record(
-        id: id,
-        fastq_1: file('*_1.fastq'),
-        fastq_2: file('*_2.fastq')
-    )
-
-    script:
-    """
-    echo "@${id}/1" > ${id}_1.fastq
-    echo "@${id}/2" > ${id}_2.fastq
-    """
 }
 
 workflow {
@@ -47,4 +23,10 @@ workflow {
 
 output {
     samples: Channel<Sample> { path 'fastq' }
+}
+
+record Sample {
+    id: String
+    fastq_1: Path
+    fastq_2: Path
 }
