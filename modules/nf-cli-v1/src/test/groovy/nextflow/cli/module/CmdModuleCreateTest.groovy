@@ -179,6 +179,44 @@ class CmdModuleCreateTest extends Specification {
         moduleDir.resolve('meta.yml').text.contains('version: 1.0.0')
     }
 
+    def 'should prompt for namespace and name when no args are given'() {
+        given:
+        def cmd = Spy(CmdModuleCreate) {
+            modulesBase() >> tempDir.resolve('modules')
+        }
+        and:
+        def stdin = System.in
+        System.setIn(new ByteArrayInputStream('myorg\nhello\ny\n'.bytes))
+
+        when:
+        cmd.run()
+
+        then:
+        Files.exists(tempDir.resolve('modules/myorg/hello/main.nf'))
+
+        cleanup:
+        System.setIn(stdin)
+    }
+
+    def 'should not create the module when the prompt is not confirmed'() {
+        given:
+        def cmd = Spy(CmdModuleCreate) {
+            modulesBase() >> tempDir.resolve('modules')
+        }
+        and:
+        def stdin = System.in
+        System.setIn(new ByteArrayInputStream('myorg\nhello\nn\n'.bytes))
+
+        when:
+        cmd.run()
+
+        then:
+        !Files.exists(tempDir.resolve('modules/myorg/hello'))
+
+        cleanup:
+        System.setIn(stdin)
+    }
+
     def 'should create .module-info file'() {
         given:
         def cmd = Spy(CmdModuleCreate) {
