@@ -33,7 +33,28 @@ import nextflow.extension.PublishOp
 @CompileStatic
 class OutputDsl {
 
+    private ScriptBinding.ParamsMap params
+
     private Map<String,Map> declarations = [:]
+
+    OutputDsl(ScriptBinding.ParamsMap params=null) {
+        this.params = params
+    }
+
+    /**
+     * The output directives of a pipeline can refer to its params, so the
+     * params of the pipeline are resolved against the output block rather
+     * than against the script that declares it, which is shared by every
+     * execution of the pipeline.
+     *
+     * @param name
+     */
+    @Override
+    Object getProperty(String name) {
+        if( name == 'params' && params != null )
+            return params
+        return super.getProperty(name)
+    }
 
     private Map<String,DataflowVariable> dataflowOutputs = [:]
 
@@ -49,6 +70,8 @@ class OutputDsl {
 
         declarations[name] = dsl.getOptions()
     }
+
+    Map<String,Map> getDeclarations() { declarations }
 
     void apply(Session session) {
         final outputs = session.outputs

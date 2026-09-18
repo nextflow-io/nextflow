@@ -26,6 +26,7 @@ import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AgentNode;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
+import nextflow.script.ast.IncludeEntryNode;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.OutputBlockNode;
 import nextflow.script.ast.ParamBlockNode;
@@ -145,7 +146,21 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitInclude(IncludeNode node) {
+        // an included params or output block is only a type -- add it to this
+        // script so that it is compiled, and don't include it at runtime
+        for( var entry : node.entries ) {
+            if( isPipelineBlockType(entry) ) {
+                var cn = (ClassNode) entry.getTarget();
+                // the type is qualified by the including script, so that two
+                // scripts can include the same block
+                if( cn.getName().indexOf('.') == -1 )
+                    cn.setName(sgh.packageName(moduleNode) + "." + cn.getName());
+                moduleNode.addClass(cn);
+            }
+        }
+
         var entries = (List<Expression>) node.entries.stream()
+            .filter((entry) -> !isPipelineBlockType(entry))
             .map((entry) -> {
                 var name = constX(entry.name);
                 return entry.alias != null
@@ -158,6 +173,18 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         var from = callX(include, "from", args(node.source));
         var result = stmt(callX(from, "load0", args(varX("params"))));
         moduleNode.addStatement(result);
+    }
+
+    /**
+     * Whether an include entry refers to the `params` or `output` block of an
+     * included pipeline, rather than a definition of the module that happens
+     * to have the same name.
+     *
+     * @param entry
+     */
+    private static boolean isPipelineBlockType(IncludeEntryNode entry) {
+        return entry.getTarget() instanceof ClassNode cn
+            && cn.getNodeMetaData(ResolveIncludeVisitor.PIPELINE_BLOCK_TYPE) != null;
     }
 
     @Override

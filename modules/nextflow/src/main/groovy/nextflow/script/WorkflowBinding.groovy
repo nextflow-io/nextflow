@@ -126,10 +126,18 @@ class WorkflowBinding extends Binding  {
     }
 
     private Object invoke0(ComponentDef component, Object args) {
-        final componentTyped = component instanceof WorkflowDef && component.getOwner().isTypingEnabled()
+        final componentTyped = isTypedComponent(component)
         final args1 = DataflowTypeHelper.normalizeArray(args, componentTyped)
         final result = component.invoke_a(args1)
         return DataflowTypeHelper.normalize(result, owner?.isTypingEnabled())
+    }
+
+    private static boolean isTypedComponent(ComponentDef component) {
+        if( component instanceof WorkflowDef )
+            return component.getOwner().isTypingEnabled()
+        if( component instanceof PipelineDef )
+            return component.getOwner().isTypingEnabled()
+        return false
     }
 
     @Override
