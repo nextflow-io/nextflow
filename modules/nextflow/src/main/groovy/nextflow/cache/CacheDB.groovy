@@ -89,6 +89,42 @@ class CacheDB implements Closeable {
         return new TaskEntry(trace,ctx)
     }
 
+    /**
+     * Dispatch an asynchronous cache write on the {@link #writer} agent, logging any failure
+     * instead of letting the agent swallow it. A dropped entry / index write
+     * would otherwise leave a successfully executed task non-resumable with no trace: the run still
+     * succeeds, but the task re-executes on the next resume. Surfacing the error makes that visible
+     * (and is the natural hook for a future retry at the store level).
+     *
+     * @param what   short description of the write for the log message (typically the task hash)
+     * @param action the store mutation to run on the writer thread
+     */
+    protected void dispatchWrite(String what, Closure action) {
+        writer.send {
+            try {
+                action.call()
+            }
+            catch( Throwable e ) {
+                log.warn("Unable to persist cache record for ${what} -- the task will re-execute on the next resume", e)
+            }
+        }
+    }
+
+    /**
+     * Bump the reference count of an entry that already exists, which also refreshes the stored
+     * object's last-modified stamp.
+     *
+     * <b>The count is advisory for a shared store.</b> This is a read-modify-write with no
+     * compare-and-set behind {@link CacheStore}, so two runs resuming the same task can read the same
+     * value and write the same increment, losing one. That is harmless today only because neither
+     * consumer of the count is reachable for a shared cache: {@link #removeTaskEntry} — the only
+     * decrement, and the only path that can delete on reaching zero — is called from
+     * {@code Session.cleanup}, which returns before opening the cache for a non-{@code file:} work
+     * dir, and from {@code CmdClean}, which a shared cache's {@code CacheDB} may refuse by
+     * overriding it; and a cross-run cache ages entries by the object's last-modified time, not by
+     * the count. Eviction tooling that reads the count instead would need a genuinely atomic update
+     * here.
+     */
     void incTaskEntry( HashCode hash ) {
         final payload = store.getEntry(hash)
         if( !payload ) {
@@ -99,11 +135,15 @@ class CacheDB implements Closeable {
         final record = (List)KryoHelper.deserialize(payload)
         // third record contains the reference count for this record
         record[2] = ((Integer)record[2]) +1
-        // save it again
-        store.putEntry(hash, KryoHelper.serialize(record))
+        // save it again -- an update of the record just read, not a new entry (see updateEntry)
+        store.updateEntry(hash, KryoHelper.serialize(record))
 
     }
 
+    /**
+     * Decrement the reference count, deleting the entry when it reaches zero. Callers must not invoke
+     * this on a shared cache — see the advisory-count note on {@link #incTaskEntry}.
+     */
     boolean removeTaskEntry( HashCode hash ) {
         final payload = store.getEntry(hash)
         if( !payload ) {
@@ -114,9 +154,9 @@ class CacheDB implements Closeable {
         final record = (List)KryoHelper.deserialize(payload)
         // third record contains the reference count for this record
         def count = record[2] = ((Integer)record[2]) -1
-        // save or delete
+        // save or delete -- as in incTaskEntry, saving is an update of the record just read
         if( count > 0 ) {
-            store.putEntry(hash, KryoHelper.serialize(record))
+            store.updateEntry(hash, KryoHelper.serialize(record))
             return false
         }
         else {
@@ -153,18 +193,18 @@ class CacheDB implements Closeable {
     }
 
     void putTaskAsync( TaskHandler handler, TraceRecord trace ) {
-        writer.send { writeTaskEntry0(handler, trace) }
+        dispatchWrite("task entry ${handler.task.hash}") { writeTaskEntry0(handler, trace) }
     }
 
     void cacheTaskAsync( TaskHandler handler ) {
-        writer.send {
+        dispatchWrite("cached task ${handler.task.hash}") {
             writeTaskIndex0(handler,true)
             incTaskEntry(handler.task.hash)
         }
     }
 
     void putIndexAsync(TaskHandler handler ) {
-        writer.send { writeTaskIndex0(handler) }
+        dispatchWrite("task index ${handler.task.hash}") { writeTaskIndex0(handler) }
     }
 
     @PackageScope
