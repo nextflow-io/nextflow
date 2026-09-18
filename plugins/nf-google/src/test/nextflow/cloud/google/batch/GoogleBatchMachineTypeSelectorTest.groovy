@@ -16,6 +16,7 @@
 
 package nextflow.cloud.google.batch
 
+import nextflow.cloud.types.PriceModel
 import nextflow.cloud.google.batch.GoogleBatchMachineTypeSelector.MachineType
 import nextflow.util.MemoryUnit
 import spock.lang.IgnoreIf
@@ -71,6 +72,23 @@ class GoogleBatchMachineTypeSelectorTest extends Specification {
         8    | 8000 | 'reg'  | true  | false  | ['n4d-*']                  | 'n4d-type16'
 
 
+    }
+
+    def 'should honour an explicit machine type unknown to the cloud info service'() {
+        given:
+        final selector = Spy(GoogleBatchMachineTypeSelector) {
+            getAvailableMachineTypes('reg', true) >> MACHINE_TYPES
+        }
+
+        when:
+        final result = selector.bestMachineType(8, 32768, 'reg', true, false, ['c2d-standard-8'])
+
+        then:
+        result.type == 'c2d-standard-8'
+        result.family == 'c2d'
+        result.cpusPerVm == 8
+        result.memPerVm == 32
+        result.priceModel == PriceModel.spot
     }
 
     def 'should not select a machine type'() {
