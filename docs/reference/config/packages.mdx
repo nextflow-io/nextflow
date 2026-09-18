@@ -15,7 +15,7 @@ Each package provider is configured by its own scope, e.g. [`conda`][config-cond
 
 ##### `packages.autoDetect`
 
-Auto-detect a provider manifest file (e.g. `environment.yml`, `requirements.txt`) in the process module directory when a process does not declare a `package` directive (default: `true`).
+Auto-detect a provider manifest file (e.g. `environment.yml`, `requirements.txt`) in the module directory when a process defined in an included module script does not declare a `package`, `conda`, `spack` or `container` directive (default: `true`).
 
 ##### `packages.provider`
 

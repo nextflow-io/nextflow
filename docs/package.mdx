@@ -115,7 +115,7 @@ packages {
 
 ### Provider-Specific Settings
 
-Each provider can have its own configuration:
+Each provider is configured through its own config scope:
 
 ```groovy
 // nextflow.config
@@ -125,17 +125,16 @@ conda {
     channels = ['conda-forge', 'bioconda']
 }
 
+pixi {
+    channels = ['conda-forge', 'bioconda']
+}
+
 packages {
     provider = "conda"
-    conda {
-        channels = ['conda-forge', 'bioconda', 'defaults']
-        useMicromamba = true
-    }
-    pixi {
-        channels = ['conda-forge', 'bioconda']
-    }
 }
 ```
+
+Provider settings live in the provider's own top-level scope (`conda`, `pixi`, `uv`, `nix`, `guix`, `pak`, `install2r`), not under `packages`.
 
 ## Advanced Usage
 
@@ -156,7 +155,7 @@ process fromFile {
 
 ### Automatic environment file detection
 
-When a process does not declare a `package` directive, Nextflow automatically looks in the process **module directory** for a known manifest file and uses it, analogous to how Wave automatically picks up a `Dockerfile`. This means you can drop a manifest file next to your module and omit the directive entirely:
+When a process defined in an included module script does not declare a `package` directive, Nextflow automatically looks in the **module directory** for a known manifest file and uses it, analogous to how Wave automatically picks up a `Dockerfile`. This means you can drop a manifest file next to your module and omit the directive entirely:
 
 ```
 modules/
@@ -186,7 +185,7 @@ packages {
 }
 ```
 
-An explicit `package` directive always takes precedence over auto-detection. Other providers expose their manifest file names through the provider plugin API (`getManifestFileNames()`), so additional managers can opt in to auto-detection.
+An explicit `package` directive always takes precedence over auto-detection. Auto-detection is skipped for processes defined in the entry script (the project root often holds unrelated manifests) and for processes that already declare a `conda`, `spack` or `container` directive. Other providers expose their manifest file names through the provider plugin API (`getManifestFileNames()`), so additional managers can opt in to auto-detection.
 
 ### Custom-named manifest files
 
@@ -205,7 +204,7 @@ process customManifest {
 
 | Provider | Recognised as a manifest file when the path ends with |
 |---|---|
-| `conda` | `.yml`, `.yaml` (conda env file) or `.txt` (package list), any base name; a remote `.yml`/`.yaml` URL also works |
+| `conda` | `.yml`, `.yaml` (conda env file), any base name; a remote `.yml`/`.yaml` URL also works; or any existing file whose first line is `@EXPLICIT` (conda explicit spec) |
 | `uv` | `.txt`, `.in` (requirements), any base name; or a path ending in `pyproject.toml` |
 | `pixi` | `.toml`, `.lock`, any base name |
 | `guix` | any existing file (used as a `--manifest` file) |
@@ -263,7 +262,6 @@ Each provider is supplied by its own `nf-<provider>` plugin. Load the plugins yo
 | Provider (`provider:`) | Plugin | Manages | Wave-compatible |
 |---|---|---|---|
 | `conda` | `nf-conda` | Conda packages / environment files | Yes |
-| `mamba` / `micromamba` | `nf-conda` | Conda packages (mamba backend) | Yes |
 | `pixi` | `nf-pixi` | Conda packages (pixi) | Yes (built as conda) |
 | `uv` | `nf-uv` | Python packages (uv virtual environments) | No (local only) |
 | `nix` | `nf-nix` | Nix packages / flake refs | No (local only) |
@@ -282,7 +280,7 @@ The conda provider supports:
 - Package specifications with version constraints
 - Custom channels
 - Environment files (`.yml`, `.yaml`)
-- Micromamba as an alternative backend
+- Mamba or Micromamba as an alternative backend (`conda.useMamba`, `conda.useMicromamba`)
 
 ```nextflow
 process condaExample {
@@ -598,7 +596,7 @@ You can inspect created environments using provider-specific commands:
 ```bash
 # For conda environments
 conda env list
-conda list -n nextflow-env-hash
+conda list --prefix <cacheDir>/env-<hash>
 
 # For pixi environments
 pixi info
@@ -606,7 +604,7 @@ pixi info
 
 ## Integration with Wave
 
-The package management system integrates with Wave containers. Wave can only build conda-based package environments, so when Wave is enabled, processes using the `conda`, `mamba`, `micromamba`, or `pixi` providers are automatically containerized, while processes using local-only providers (`uv`, `nix`, `guix`, `pak`, `install2r`) skip Wave and their environments are created locally by the corresponding provider plugin. This allows mixed pipelines, e.g. conda processes built by Wave alongside uv processes created locally:
+The package management system integrates with Wave containers. Wave can only build conda-based package environments, so when Wave is enabled, processes using the `conda` or `pixi` providers are automatically containerized, while processes using local-only providers (`uv`, `nix`, `guix`, `pak`, `install2r`) skip Wave and their environments are created locally by the corresponding provider plugin. This allows mixed pipelines, e.g. conda processes built by Wave alongside uv processes created locally:
 
 ```groovy
 // nextflow.config
