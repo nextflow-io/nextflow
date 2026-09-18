@@ -584,7 +584,7 @@ class BashWrapperBuilder {
 
         // a failure here must abort the task: silently running without the
         // requested environment would produce misleading downstream errors
-        def packageManager = new PackageManager(Global.session)
+        def packageManager = (Global.session as nextflow.Session).getPackageManager()
         def envPath = packageManager.createEnvironment(packageSpec)
         def activationScript = packageManager.getActivationScript(packageSpec, envPath)
 

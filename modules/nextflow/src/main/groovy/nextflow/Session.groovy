@@ -74,6 +74,7 @@ import nextflow.script.ScriptMeta
 import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
 import nextflow.script.dsl.ProcessConfigBuilder
+import nextflow.packages.PackageManager
 import nextflow.spack.SpackConfig
 import nextflow.trace.LogObserver
 import nextflow.trace.TraceObserver
@@ -1275,6 +1276,15 @@ class Session implements ISession {
     CondaConfig getCondaConfig() {
         final opts = config.conda as Map ?: Collections.emptyMap()
         return new CondaConfig(opts, getSystemEnv())
+    }
+
+    /**
+     * The package manager for the `package` directive. Memoized because its
+     * construction probes every provider plugin for its tool binary.
+     */
+    @Memoized
+    PackageManager getPackageManager() {
+        return new PackageManager(this)
     }
 
     @Memoized

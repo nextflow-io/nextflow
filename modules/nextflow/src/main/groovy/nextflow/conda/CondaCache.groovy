@@ -339,7 +339,7 @@ class CondaCache {
 
         else {
             final channelsOpt = channels.collect(it -> "-c $it ").join('')
-            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} ${channelsOpt}$condaEnv"
+            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} ${channelsOpt}${Escape.shell(condaEnv.tokenize() as String[])}"
         }
 
         try {

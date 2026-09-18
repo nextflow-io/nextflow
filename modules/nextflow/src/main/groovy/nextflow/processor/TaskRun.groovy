@@ -738,8 +738,6 @@ class TaskRun implements Cloneable {
         if (!PackageManager.isEnabled(processor.session))
             return null
 
-        def packageManager = new PackageManager(processor.session)
-
         // No explicit `package` directive: optionally auto-detect a manifest
         // file (e.g. environment.yml, requirements.txt) in the process module
         // directory, analogous to how Wave auto-detects a Dockerfile.
@@ -753,7 +751,7 @@ class TaskRun implements Cloneable {
             if (!autoDetect)
                 return null
             final moduleDir = getModuleDir()
-            return moduleDir ? packageManager.detectSpec(moduleDir) : null
+            return moduleDir ? processor.session.getPackageManager().detectSpec(moduleDir) : null
         }
 
         // Parse the explicit package configuration
@@ -768,10 +766,16 @@ class TaskRun implements Cloneable {
         }
     }
 
+    /**
+     * The directory of the module script that defines this process, used for
+     * manifest auto-detection. Processes defined in the entry script return
+     * {@code null}: the project root commonly holds unrelated manifests
+     * (e.g. a `requirements.txt` for tooling) that must not be picked up.
+     */
     private Path getModuleDir() {
         final script = processor.getOwnerScript()
         final meta = script ? ScriptMeta.get(script) : null
-        return meta?.getModuleDir()
+        return meta?.isModule() ? meta.getModuleDir() : null
     }
 
     protected ContainerInfo containerInfo() {
