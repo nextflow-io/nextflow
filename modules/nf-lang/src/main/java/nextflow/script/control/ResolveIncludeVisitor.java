@@ -332,9 +332,9 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
      */
     private static ClassNode pipelineBlockType(ScriptNode sn, IncludeEntryNode entry) {
         if( "params".equals(entry.name) && sn.getParams() != null )
-            return recordType(entry.getNameOrAlias(), List.of(sn.getParams().declarations), true);
+            return recordType(entry.getNameOrAlias(), sn.getParams(), List.of(sn.getParams().declarations), true);
         if( "output".equals(entry.name) && sn.getOutputs() != null )
-            return recordType(entry.getNameOrAlias(), List.copyOf(sn.getOutputs().declarations), false);
+            return recordType(entry.getNameOrAlias(), sn.getOutputs(), List.copyOf(sn.getOutputs().declarations), false);
         return null;
     }
 
@@ -343,13 +343,24 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
     /**
      * Marks a record type synthesized for the `params` or `output` block of an
      * included pipeline, so that it can be distinguished from a definition of
-     * the module with the same name.
+     * the module with the same name. The metadata value is the block that the
+     * type was synthesized from, so that tooling can navigate to it.
      */
     public static final String PIPELINE_BLOCK_TYPE = "nextflow.pipelineBlockType";
 
-    private static ClassNode recordType(String name, List<? extends Parameter> declarations, boolean nullable) {
+    /**
+     * Get the `params` or `output` block that a record type was synthesized
+     * from, or null if the type is a definition of the module.
+     *
+     * @param cn
+     */
+    public static ASTNode getPipelineBlock(ClassNode cn) {
+        return (ASTNode) cn.getNodeMetaData(PIPELINE_BLOCK_TYPE);
+    }
+
+    private static ClassNode recordType(String name, ASTNode block, List<? extends Parameter> declarations, boolean nullable) {
         var cn = new RecordNode(name);
-        cn.putNodeMetaData(PIPELINE_BLOCK_TYPE, Boolean.TRUE);
+        cn.putNodeMetaData(PIPELINE_BLOCK_TYPE, block);
         for( var declaration : declarations ) {
             var fn = new FieldNode(declaration.getName(), java.lang.reflect.Modifier.PUBLIC, declaration.getType(), cn, null);
             fn.setDeclaringClass(cn);
