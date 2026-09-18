@@ -139,4 +139,42 @@ class ConfigAstBuilderTest extends Specification {
         errors[0].getOriginalMessage() == "Variable declarations cannot be mixed with config statements"
     }
 
+    def 'should report an invalid escape sequence at the exact position' () {
+        when:
+        def errors = check(
+            '''\
+            params.x = \'a\\.b\'
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 14
+        errors[0].getOriginalMessage() == "Invalid escape sequence: '\\.'"
+
+        when:
+        // an invalid escape in a gstring fragment after an interpolation
+        errors = check(
+            '''\
+            params.x = "${params.y}/res\\q.txt"
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 28
+        errors[0].getOriginalMessage() == "Invalid escape sequence: '\\q'"
+
+        when:
+        // valid escapes and slashy strings should not be flagged
+        errors = check(
+            '''\
+            params.x = \'a\\n\\t\\\\\\u00e9\\101b\'
+            params.y = /a\\.b/
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
 }
