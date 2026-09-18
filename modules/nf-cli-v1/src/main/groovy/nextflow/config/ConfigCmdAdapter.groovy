@@ -478,7 +478,7 @@ class ConfigCmdAdapter {
         }
 
         if( cmdRun.withWebLog ) {
-            log.warn "The command line option '-with-weblog' is no longer supported -- use the 'nf-weblog' plugin instead, see https://github.com/nextflow-io/nf-weblog"
+            throw new AbortOperationException("The command line option '-with-weblog' is no longer supported -- use the 'nf-weblog' plugin instead, see https://github.com/nextflow-io/nf-weblog")
         }
 
         // -- sets tower options

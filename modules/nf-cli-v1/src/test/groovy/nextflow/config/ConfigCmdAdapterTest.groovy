@@ -809,17 +809,16 @@ class ConfigCmdAdapterTest extends Specification {
         config.dag.enabled
     }
 
-    def 'should ignore the weblog option' () {
+    def 'should reject the weblog option' () {
 
         given:
         def env = [:]
         def builder = [:] as ConfigCmdAdapter
 
         when:
-        def config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun(withWebLog: 'http://foo.com'))
+        builder.configRunOptions(new ConfigObject(), env, new CmdRun(withWebLog: 'http://foo.com'))
         then:
-        !config.weblog
+        thrown(AbortOperationException)
 
     }
 
