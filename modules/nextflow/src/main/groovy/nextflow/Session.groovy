@@ -1283,6 +1283,7 @@ class Session implements ISession {
         return new SpackConfig(opts, getSystemEnv())
     }
 
+
     /**
      * The resource labels derived from the workflow metadata, as selected by the
      * {@code tower.autoLabels} option, or by the deprecated {@code seqera.executor.autoLabels}

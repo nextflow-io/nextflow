@@ -51,6 +51,8 @@ import nextflow.script.params.FileOutParam
 import nextflow.script.params.InParam
 import nextflow.script.params.OutParam
 import nextflow.script.params.ValueOutParam
+import nextflow.packages.PackageManager
+import nextflow.packages.PackageSpec
 import nextflow.spack.SpackCache
 import nextflow.util.ArrayBag
 /**
@@ -691,9 +693,15 @@ class TaskRun implements Cloneable {
         if( !config.conda || !getCondaConfig().isEnabled() )
             return null
 
+        // Show deprecation warning if new package system is enabled
+        if (PackageManager.isEnabled(processor.session)) {
+            log.warn "The 'conda' directive is deprecated when preview.package is enabled. Use 'package \"${config.conda}\", provider: \"conda\"' instead"
+        }
+
         final cache = new CondaCache(getCondaConfig())
         cache.getCachePathFor(config.conda as String)
     }
+
 
     Path getSpackEnv() {
         // note: use an explicit function instead of a closure or lambda syntax, otherwise
@@ -714,6 +722,36 @@ class TaskRun implements Cloneable {
 
         final cache = new SpackCache(processor.session.getSpackConfig())
         cache.getCachePathFor(config.spack as String, arch)
+    }
+
+    PackageSpec getPackageSpec() {
+        // note: use an explicit function instead of a closure or lambda syntax
+        cache0.computeIfAbsent('packageSpec', new Function<String,PackageSpec>() {
+            @Override
+            PackageSpec apply(String it) {
+                return getPackageSpec0()
+            }})
+    }
+
+    private PackageSpec getPackageSpec0() {
+        if (!PackageManager.isEnabled(processor.session))
+            return null
+
+        if (!config.package)
+            return null
+
+        def packageManager = new PackageManager(processor.session)
+        
+        // Parse the package configuration
+        def packageDef = config.package
+        def defaultProvider = processor.session.config.navigate('packages.provider', 'conda') as String
+        
+        try {
+            return PackageManager.parseSpec(packageDef, defaultProvider)
+        } catch (Exception e) {
+            log.warn "Failed to parse package specification: ${e.message}"
+            return null
+        }
     }
 
     protected ContainerInfo containerInfo() {
@@ -1081,6 +1119,7 @@ class TaskRun implements Cloneable {
     CondaConfig getCondaConfig() {
         return processor.session.getCondaConfig()
     }
+
 
     String getStubSource() {
         return config?.getStubBlock()?.getSource()

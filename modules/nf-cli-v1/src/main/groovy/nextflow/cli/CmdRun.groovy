@@ -261,6 +261,7 @@ class CmdRun extends CmdBase implements HubAware {
     @Parameter(names=['-without-spack'], description = 'Disable the use of Spack environments', hidden = true)
     Boolean withoutSpack
 
+
     @Parameter(names=['-offline'], description = 'Do not check for remote project updates')
     boolean offline = System.getenv('NXF_OFFLINE')=='true'
 
