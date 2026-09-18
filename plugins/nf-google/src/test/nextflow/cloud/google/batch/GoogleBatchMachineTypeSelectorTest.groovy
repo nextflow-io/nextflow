@@ -125,9 +125,27 @@ class GoogleBatchMachineTypeSelectorTest extends Specification {
         '200 GB'  | 'c2-standard-4'   | 'c2'   | 4    | '375 GB'
         '50 GB'   | 'c2d-highmem-56'  | 'c2d'  | 56   | '1500 GB'
         '750 GB'  | 'm3-megamem-64'   | 'm3'   | 64   | '1500 GB'
-        '100 GB'  | 'c4-standard-8-lssd'  | 'c4'   | 8    | '0'
-        '100 GB'  | 'c4a-standard-8-lssd' | 'c4a'  | 8    | '0'
-        '100 GB'  | 'c4d-standard-8-lssd' | 'c4d'  | 8    | '0'
+        '100 GB'  | 'c4-standard-8-lssd'  | 'c4'   | 8    | '375 GB'
+        '100 GB'  | 'c4a-standard-8-lssd' | 'c4a'  | 8    | '750 GB'
+        '100 GB'  | 'c4d-standard-8-lssd' | 'c4d'  | 8    | '375 GB'
+        '375 GB'  | 'c4a-standard-64-lssd' | 'c4a' | 64   | '5250 GB'
+        '375 GB'  | 'c4a-standard-72-lssd' | 'c4a' | 72   | '6000 GB'
+        '750 GB'  | 'c3-standard-8-lssd'   | 'c3'  | 8    | '750 GB'
+        '375 GB'  | 'c4-standard-32-lssd'  | 'c4'  | 32   | '1875 GB'
+        '375 GB'  | 'c4d-standard-384-lssd'| 'c4d' | 384  | '12000 GB'
+    }
+
+    def 'should reject a scratch request larger than the built-in SSD capacity' () {
+        given:
+        def machine = new MachineType(type: 'c3d-standard-8-lssd', family: 'c3d', cpusPerVm: 8)
+
+        when:
+        GoogleBatchMachineTypeSelector.INSTANCE.findValidLocalSSDSize(MemoryUnit.of('750 GB'), machine)
+
+        then:
+        def error = thrown(IllegalArgumentException)
+        error.message.contains('c3d-standard-8-lssd')
+        error.message.contains('375 GB')
     }
 
     def 'should know when hyperdisk is required'() {
