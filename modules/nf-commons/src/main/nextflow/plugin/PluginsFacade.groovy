@@ -569,9 +569,6 @@ class PluginsFacade implements PluginStateListener {
         if( 'k8s' in executors )
             plugins << defaultPlugins.getPlugin('nf-k8s')
 
-        if( Bolts.navigate(config, 'weblog.enabled'))
-            plugins << new PluginRef('nf-weblog')
-
         return plugins
     }
 
