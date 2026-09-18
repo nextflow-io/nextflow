@@ -20,7 +20,9 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.util.zip.GZIPOutputStream
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
+import org.apache.commons.compress.archivers.tar.TarArchiveInputStream
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream
+import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream
 
 import nextflow.exception.AbortOperationException
 
@@ -469,7 +471,7 @@ class ModuleStorageTest extends Specification {
     /**
      * Helper method to create a test package file
      */
-    private void createTestPackage(Path packageFile) {
+    private void createTestPackage(Path packageFile, Map<String,String> extraFiles = [:]) {
         // Create a temporary directory with module content
         def tempModuleDir = Files.createTempDirectory('temp-module-')
 
@@ -502,6 +504,13 @@ class ModuleStorageTest extends Specification {
         // Create README
         tempModuleDir.resolve('README.md').text = '# FastQC Module'
 
+        // Create any extra files requested by the test
+        for( entry in extraFiles ) {
+            final file = tempModuleDir.resolve(entry.key)
+            Files.createDirectories(file.parent)
+            file.text = entry.value
+        }
+
         // Create tar.gz archive using Java libraries
         Files.newOutputStream(packageFile).withCloseable { fos ->
             new GZIPOutputStream(fos).withCloseable { gzos ->
@@ -531,4 +540,92 @@ class ModuleStorageTest extends Specification {
         // Cleanup temp directory
         tempModuleDir.deleteDir()
     }
+
+    def 'should not install nf-tests or vendored deps from the bundle'() {
+        given:
+        def storage = new ModuleStorage(tempDir)
+        def reference = new ModuleReference('nf-core', 'fastqc')
+        def packageFile = Files.createTempFile('module-', '.tgz')
+        createTestPackage(packageFile, [
+            'tests/main.nf.test': 'nextflow_process { }',
+            'tests/main.nf.test.snap': '{}',
+            'modules/nf-core/other/main.nf': 'process OTHER { }',
+            'resources/usr/bin/helper.py': 'print("keep me")',
+        ])
+
+        when:
+        def installed = storage.installModule(reference, '1.0.0', packageFile, 'http://registry.com')
+
+        then:
+        Files.exists(installed.mainFile)
+        Files.exists(installed.directory.resolve('resources/usr/bin/helper.py'))
+        !Files.exists(installed.directory.resolve('tests'))
+        !Files.exists(installed.directory.resolve('modules'))
+
+        cleanup:
+        packageFile?.delete()
+    }
+
+    def 'should exclude the nested vendored modules directory from the publish bundle'() {
+        given: 'a module with its own files, a resources dir, and a vendored dependency'
+        def moduleDir = tempDir.resolve('mod')
+        Files.createDirectories(moduleDir)
+        Files.writeString(moduleDir.resolve('main.nf'), "workflow FOO { }\n")
+        Files.writeString(moduleDir.resolve('meta.yml'), "name: nf-core/foo\nversion: 1.0.0\nkind: Workflow\ndescription: demo\n")
+        Files.writeString(moduleDir.resolve('README.md'), "# foo\n")
+        Files.createDirectories(moduleDir.resolve('resources'))
+        Files.writeString(moduleDir.resolve('resources').resolve('data.txt'), "hello\n")
+        and: 'a vendored dependency under the nested modules/ directory'
+        def dep = moduleDir.resolve('modules').resolve('nf-core').resolve('dep')
+        Files.createDirectories(dep)
+        Files.writeString(dep.resolve('main.nf'), "workflow DEP { }\n")
+        Files.writeString(dep.resolve('meta.yml'), "name: nf-core/dep\nversion: 2.0.0\nkind: Workflow\ndescription: dep\n")
+
+        when:
+        def bundle = tempDir.resolve('bundle.tar.gz')
+        ModuleStorage.createBundle(moduleDir, bundle)
+        def entries = listEntries(bundle)
+
+        then: 'the module own files and resources are bundled'
+        entries.contains('main.nf')
+        entries.contains('meta.yml')
+        entries.contains('README.md')
+        entries.any { it.startsWith('resources/') }
+
+        and: 'nothing from the nested vendored modules/ directory is bundled'
+        !entries.any { it == 'modules/' || it.startsWith('modules/') }
+    }
+
+    private List<String> listEntries(Path bundle) {
+        final result = new ArrayList<String>()
+        Files.newInputStream(bundle).withCloseable { fis ->
+            new GzipCompressorInputStream(fis).withCloseable { gzis ->
+                new TarArchiveInputStream(gzis).withCloseable { tis ->
+                    TarArchiveEntry entry
+                    while ((entry = tis.nextTarEntry) != null)
+                        result.add(entry.name)
+                }
+            }
+        }
+        return result
+    }
+
+    def 'should report a module folder without a spec as corrupted'() {
+        given: 'a module folder that was never installed from a registry'
+        def storage = new ModuleStorage(tempDir)
+        def reference = new ModuleReference('nf-core', 'fastqc')
+        def moduleDir = storage.getModuleDir(reference)
+        Files.createDirectories(moduleDir)
+        moduleDir.resolve('main.nf').text = 'process FASTQC { }'
+
+        when:
+        def installed = storage.getInstalledModule(reference)
+
+        then: 'it is reported via the integrity status, not by throwing, so that the recovery paths keyed on that status stay reachable'
+        noExceptionThrown()
+        installed != null
+        installed.installedVersion == null
+        installed.integrity == ModuleIntegrity.CORRUPTED
+    }
+
 }

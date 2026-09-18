@@ -30,6 +30,10 @@ import org.yaml.snakeyaml.Yaml
 @CompileStatic
 class ModuleSpec {
 
+    static final String KIND_PROCESS = 'Process'
+
+    static final String KIND_WORKFLOW = 'Workflow'
+
     static final String TODO_TYPE = 'TODO: Add type'
 
     static final String TODO_DESCRIPTION = 'TODO: Add description'
@@ -56,12 +60,14 @@ class ModuleSpec {
 
     String name
     String version
+    String kind
     String description
     List<String> keywords
     String license
     List<String> authors
     List<String> maintainers
     Map<String, String> requires
+    List<String> requiresModules
     List<Map> tools
     List<ModuleParam> inputs
     List<ModuleParam> outputs
@@ -92,6 +98,14 @@ class ModuleSpec {
                 validateModuleParam("topic[${i}]", topics[i], errors)
         }
 
+        // topics and tools describe a process, so they are not valid for a workflow module
+        if( isWorkflow() ) {
+            if( topics )
+                errors << "Invalid setting 'topics' -- only a process module can declare topics"
+            if( tools )
+                errors << "Invalid setting 'tools' -- only a process module can declare tools"
+        }
+
         return errors
     }
 
@@ -116,6 +130,14 @@ class ModuleSpec {
      */
     boolean isValid() {
         return validate().isEmpty()
+    }
+
+    /**
+     * @return true if this is a workflow module (kind: Workflow), false otherwise
+     * (absent kind defaults to a process module).
+     */
+    boolean isWorkflow() {
+        return kind == KIND_WORKFLOW
     }
 
     /**
@@ -145,6 +167,8 @@ class ModuleSpec {
             result['name'] = name
         if( version )
             result['version'] = version
+        if( kind )
+            result['kind'] = kind
         if( description )
             result['description'] = description
         if( keywords )
@@ -155,8 +179,14 @@ class ModuleSpec {
             result['authors'] = authors
         if( maintainers )
             result['maintainers'] = maintainers
-        if( requires )
-            result['requires'] = requires
+        if( requires || requiresModules ) {
+            final req = new LinkedHashMap<String, Object>()
+            if( requires )
+                req.putAll(requires)
+            if( requiresModules )
+                req['modules'] = requiresModules
+            result['requires'] = req
+        }
         if( tools )
             result['tools'] = tools
         if( inputs )
