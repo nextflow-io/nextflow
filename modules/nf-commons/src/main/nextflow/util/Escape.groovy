@@ -72,6 +72,18 @@ class Escape {
         path(val.toString())
     }
 
+    /**
+     * Quote a value so that the shell treats it as a single literal word,
+     * neutralising every metacharacter (e.g. {@code numpy>=1.24} or {@code pkg; rm -rf}).
+     */
+    static String shell(String arg) {
+        "'" + arg.replace("'", "'\\''") + "'"
+    }
+
+    static String shell(String[] args) {
+        args.collect { shell(it) }.join(' ')
+    }
+
     static String cli(String[] args) {
         args.collect { cli(it) }.join(' ')
     }

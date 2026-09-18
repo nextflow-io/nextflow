@@ -58,7 +58,7 @@ class GuixCacheTest extends Specification {
         cache.createLocalGuixEnv0('bwa samtools', prefixPath)
         then:
         1 * cache.runCommand({ String c ->
-            c.contains('guix package') && c.contains('--install') && c.contains('bwa samtools')
+            c.contains('guix package') && c.contains('--install') && c.contains("'bwa' 'samtools'")
         }) >> 0
 
         cleanup:
@@ -150,7 +150,7 @@ class GuixCacheTest extends Specification {
         cache.createLocalGuixEnv0('bwa samtools bcftools', prefixPath)
         then:
         1 * cache.runCommand({ String c ->
-            c.contains('guix package') && c.contains('--install') && c.contains('bwa samtools bcftools') && !c.contains('--manifest=')
+            c.contains('guix package') && c.contains('--install') && c.contains("'bwa' 'samtools' 'bcftools'") && !c.contains('--manifest=')
         }) >> 0
 
         cleanup:

@@ -121,6 +121,12 @@ class TaskHasher {
             keys.add(conda)
         }
 
+        // add package specification (`package` directive)
+        final pkg = task.getPackageSpec()
+        if( pkg ) {
+            keys.add(pkg.toString())
+        }
+
         // add spack packages (`spack` and `arch` directives)
         final spack = task.getSpackEnv()
         final arch = task.getConfig().getArchitecture()

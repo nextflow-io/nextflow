@@ -200,7 +200,7 @@ class GuixCache {
         String opts = effectiveOptions ? "$effectiveOptions " : ''
         def cmd = isManifestFile(spec)
             ? "guix package --profile=${Escape.path(prefixPath)} ${opts}--manifest=${Escape.path(spec as Path)}"
-            : "guix package --profile=${Escape.path(prefixPath)} ${opts}--install $spec"
+            : "guix package --profile=${Escape.path(prefixPath)} ${opts}--install ${Escape.shell(spec.tokenize() as String[])}"
 
         try {
             runCommand( cmd )

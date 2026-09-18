@@ -58,7 +58,7 @@ class Install2rCacheTest extends Specification {
         cache.createLocalInstall2rEnv0('dplyr ggplot2', prefixPath)
         then:
         1 * cache.runCommand({ String c ->
-            c.contains('install2.r') && c.contains('-l') && c.contains('dplyr ggplot2')
+            c.contains('install2.r') && c.contains('-l') && c.contains("'dplyr' 'ggplot2'")
         }) >> 0
 
         cleanup:

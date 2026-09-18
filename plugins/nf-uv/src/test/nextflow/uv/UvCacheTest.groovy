@@ -126,6 +126,26 @@ class UvCacheTest extends Specification {
         thrown(IllegalArgumentException)
     }
 
+    def 'should shell-quote version constraints in the package list' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def prefixPath = folder.resolve('env-abc123')
+        def cache = Spy(UvCache)
+        cache.@installOptions = null
+        cache.@pythonVersion = null
+        cache.@createTimeout = nextflow.util.Duration.of('20min')
+
+        when:
+        cache.createLocalUvEnv0('numpy>=1.24 pandas; touch pwned', prefixPath)
+        then:
+        1 * cache.runCommand({ String cmd ->
+            cmd.endsWith("'numpy>=1.24' 'pandas;' 'touch' 'pwned'")
+        }) >> 0
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should create the correct uv venv command for package list' () {
         given:
         def folder = Files.createTempDirectory('test')
@@ -139,7 +159,7 @@ class UvCacheTest extends Specification {
         cache.createLocalUvEnv0('numpy pandas', prefixPath)
         then:
         1 * cache.runCommand({ String cmd ->
-            cmd.contains('uv venv') && cmd.contains('uv pip install') && cmd.contains('numpy pandas')
+            cmd.contains('uv venv') && cmd.contains('uv pip install') && cmd.contains("'numpy' 'pandas'")
         }) >> 0
 
         cleanup:

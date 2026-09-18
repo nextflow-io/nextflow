@@ -151,6 +151,20 @@ class PakCache {
         return getCacheDir().resolve("env-$hash")
     }
 
+    /**
+     * Render a value as a double-quoted R string literal. The expression is
+     * passed to {@code Rscript -e '...'} inside single quotes, so a single quote
+     * cannot be represented and is rejected instead of breaking out of the shell
+     * quoting.
+     */
+    @PackageScope
+    static String rString(Object value) {
+        final str = value.toString()
+        if( str.contains("'") )
+            throw new IllegalArgumentException("Invalid character in pak package specification: $str")
+        return '"' + str.replace('\\', '\\\\').replace('"', '\\"') + '"'
+    }
+
     @PackageScope
     boolean isManifestFile(String spec) {
         spec.contains('/') && Files.isRegularFile(spec as Path)
@@ -203,12 +217,12 @@ class PakCache {
             // a DESCRIPTION file: install the declared dependencies of the package
             // in its directory (ask=FALSE for non-interactive safety)
             final path = spec as Path
-            cmd = "mkdir -p ${Escape.path(prefixPath)} && Rscript -e 'pak::local_install_deps(\"${path.parent}\", lib=\"${prefixPath}\", ask = FALSE${opts})'"
+            cmd = "mkdir -p ${Escape.path(prefixPath)} && Rscript -e 'pak::local_install_deps(${rString(path.parent)}, lib=${rString(prefixPath)}, ask = FALSE${opts})'"
         }
         else {
             // build an R character vector of package names, e.g. "dplyr", "ggplot2"
-            def pkgs = spec.tokenize().collect { "\"" + it + "\"" }.join(', ')
-            cmd = "mkdir -p ${Escape.path(prefixPath)} && Rscript -e 'pak::pkg_install(c(${pkgs}), lib=\"${prefixPath}\"${opts})'"
+            def pkgs = spec.tokenize().collect { rString(it) }.join(', ')
+            cmd = "mkdir -p ${Escape.path(prefixPath)} && Rscript -e 'pak::pkg_install(c(${pkgs}), lib=${rString(prefixPath)}${opts})'"
         }
 
         try {

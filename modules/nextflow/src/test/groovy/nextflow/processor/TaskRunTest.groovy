@@ -1062,6 +1062,22 @@ class TaskRunTest extends Specification {
         spec.entries == ['numpy pandas']
     }
 
+    def 'should not auto-detect a manifest when the process declares its own environment' () {
+        given:
+        def task = new TaskRun(config: new TaskConfig(directive))
+        task.processor = Mock(TaskProcessor) {
+            getSession() >> Mock(Session) {
+                getConfig() >> [nextflow: [preview: [package: true]]]
+            }
+        }
+
+        expect:
+        task.getPackageSpec() == null
+
+        where:
+        directive << [ [conda: 'samtools'], [spack: 'samtools'], [container: 'ubuntu:22.04'] ]
+    }
+
     def 'should not auto-detect a manifest when auto-detection is disabled' () {
         given: 'the feature is enabled but there is no package directive and auto-detect is off'
         def task = new TaskRun(config: new TaskConfig([:]))

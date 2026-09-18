@@ -196,12 +196,12 @@ class NixCache {
         // map each token to a flake installable, e.g. 'bwa' -> 'nixpkgs#bwa'
         final installables = spec.tokenize().collect { String t ->
             t.contains('#') ? t : "${flakeRef}#${t}".toString()
-        }.join(' ')
+        } as String[]
 
         // per-process `options` override the config-level `nix.installOptions`
         final effectiveOptions = installOptionsOverride ?: installOptions
         String opts = effectiveOptions ? "$effectiveOptions " : ''
-        def cmd = "nix --extra-experimental-features 'nix-command flakes' profile install --profile ${Escape.path(prefixPath)} ${opts}${installables}"
+        def cmd = "nix --extra-experimental-features 'nix-command flakes' profile install --profile ${Escape.path(prefixPath)} ${opts}${Escape.shell(installables)}"
 
         try {
             runCommand( cmd )

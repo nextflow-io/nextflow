@@ -581,21 +581,17 @@ class BashWrapperBuilder {
     private String getPackageActivateSnippet() {
         if (!packageSpec || !PackageManager.isEnabled(Global.session))
             return null
-        
-        try {
-            def packageManager = new PackageManager(Global.session)
-            def envPath = packageManager.createEnvironment(packageSpec)
-            def activationScript = packageManager.getActivationScript(packageSpec, envPath)
-            
-            return """\
-                # ${packageSpec.provider} environment
-                ${activationScript}
-                """.stripIndent()
-        }
-        catch (Exception e) {
-            log.warn "Failed to create package environment: ${e.message}"
-            return null
-        }
+
+        // a failure here must abort the task: silently running without the
+        // requested environment would produce misleading downstream errors
+        def packageManager = new PackageManager(Global.session)
+        def envPath = packageManager.createEnvironment(packageSpec)
+        def activationScript = packageManager.getActivationScript(packageSpec, envPath)
+
+        return """\
+            # ${packageSpec.provider} environment
+            ${activationScript}
+            """.stripIndent()
     }
 
     protected String getTraceCommand(String interpreter) {

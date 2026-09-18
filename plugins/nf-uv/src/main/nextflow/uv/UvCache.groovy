@@ -252,7 +252,8 @@ class UvCache {
         }
         else {
             // space-separated package list e.g. 'numpy pandas matplotlib'
-            cmd += "uv pip install ${opts}--python ${Escape.path(prefixPath.resolve('bin/python'))} $uvEnv"
+            // quote each spec so version constraints such as `numpy>=1.24` are not parsed by the shell
+            cmd += "uv pip install ${opts}--python ${Escape.path(prefixPath.resolve('bin/python'))} ${Escape.shell(uvEnv.tokenize() as String[])}"
         }
 
         try {

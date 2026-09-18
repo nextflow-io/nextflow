@@ -199,7 +199,7 @@ class Install2rCache {
         def repoOpt = repos ? "-r ${Escape.cli(repos)} " : ''
         // --error makes a failed package install exit non-zero (install2.r warns
         // but exits 0 by default), so a broken env is detected instead of cached
-        def cmd = "mkdir -p ${Escape.path(prefixPath)} && install2.r --error ${repoOpt}-l ${Escape.path(prefixPath)} ${opts}${spec}"
+        def cmd = "mkdir -p ${Escape.path(prefixPath)} && install2.r --error ${repoOpt}-l ${Escape.path(prefixPath)} ${opts}${Escape.shell(spec.tokenize() as String[])}"
 
         try {
             runCommand( cmd )

@@ -744,6 +744,11 @@ class TaskRun implements Cloneable {
         // file (e.g. environment.yml, requirements.txt) in the process module
         // directory, analogous to how Wave auto-detects a Dockerfile.
         if (!config.package) {
+            // a process that already declares its own environment (legacy
+            // `conda`/`spack` directive or a `container`) must not also get an
+            // auto-detected package environment layered on top of it
+            if (config.conda || config.spack || config.container)
+                return null
             final autoDetect = processor.session.config.navigate('packages.autoDetect', true) as Boolean
             if (!autoDetect)
                 return null
