@@ -1,7 +1,7 @@
 name: Nextflow CI
 # read more here: https://help.github.com/en/articles/workflow-syntax-for-github-actions#on
 
-# Note: We don't use the `on: path` option for docs,
+# Note: We don't use the `on: paths-ignore` option for docs,
 # because the Build steps are *required* tests.
 # Instead, we trigger + skip the tests if the only changes
 # are in the docs folder. GitHub treats this as passing.
@@ -33,6 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      pull-requests: read
     timeout-minutes: 100
     strategy:
       fail-fast: false
@@ -66,7 +67,27 @@ jobs:
           echo "Commit message=$COMMIT_MESSAGE"
           echo "commit_message=$COMMIT_MESSAGE" >> "$GITHUB_OUTPUT"
 
+      # docs/snippets is exercised by the `test_docs` mode, so a change there
+      # is not docs-only.
+      - name: Check for docs-only changes
+        id: docs_only
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          FILES=$(gh api --paginate "repos/$REPO/pulls/$PR_NUMBER/files" --jq '.[].filename')
+          echo "Changed files:"; echo "$FILES"
+          CODE=$(printf '%s\n' "$FILES" | grep -vE '^docs/' || true)
+          SNIPPETS=$(printf '%s\n' "$FILES" | grep -E '^docs/snippets/' || true)
+          if [ -n "$FILES" ] && [ -z "$CODE$SNIPPETS" ]; then
+            echo "Docs-only change: skipping build and tests"
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Setup env
+        if: steps.docs_only.outputs.skip != 'true'
         run: |
              rm -f $HOME/.gitconfig;
              mkdir -p "$HOME/.nextflow";
@@ -75,6 +96,7 @@ jobs:
           NXF_GITHUB_ACCESS_TOKEN: ${{ secrets.NXF_GITHUB_ACCESS_TOKEN }}
 
       - name: Setup Java ${{ matrix.java_version }}
+        if: steps.docs_only.outputs.skip != 'true'
         uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
         with:
           java-version: ${{matrix.java_version}}
@@ -83,9 +105,11 @@ jobs:
           cache: gradle
 
       - name: Compile
+        if: steps.docs_only.outputs.skip != 'true'
         run: make assemble
 
       - name: Test
+        if: steps.docs_only.outputs.skip != 'true'
         run: |
             # configure test env
             if [ -n "$GOOGLE_SECRET" ]; then
@@ -110,7 +134,7 @@ jobs:
           AZURE_BATCH_ACCOUNT_KEY: ${{ secrets.AZURE_BATCH_ACCOUNT_KEY }}
 
       - name: Publish tests report
-        if: always()
+        if: always() && steps.docs_only.outputs.skip != 'true'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: report-unit-tests-jdk-${{ matrix.java_version }}
@@ -119,9 +143,10 @@ jobs:
 
     outputs:
       commit_message: ${{ steps.get_commit_message.outputs.commit_message }}
+      docs_only: ${{ steps.docs_only.outputs.skip }}
 
   test:
-    if: ${{ !contains(needs.build.outputs.commit_message, '[ci fast]') }}
+    if: ${{ !contains(needs.build.outputs.commit_message, '[ci fast]') && needs.build.outputs.docs_only != 'true' }}
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -185,7 +210,7 @@ jobs:
 
       - name: Tar integration tests
         if: always()
-        run: | 
+        run: |
             tar -cvf integration-tests.tar.gz tests/checks
             tar -cvf validation-tests.tar.gz validation
 
@@ -210,7 +235,7 @@ jobs:
                 fetch-depth: 1
                 submodules: true
                 persist-credentials: false
-                
+
           - name: Setup Java 17
             uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
             with:
@@ -336,7 +361,7 @@ jobs:
         env:
           GRADLE_OPTS: '-Dorg.gradle.daemon=false'
           AWS_JAVA_V1_DISABLE_DEPRECATION_ANNOUNCEMENT: 'true'
-          # credentials to pubslish nextflow assets
+          # credentials to publish nextflow assets
           NXF_AWS_ACCESS: ${{ vars.NXF_AWS_ACCESS }}
           NXF_AWS_SECRET: ${{ secrets.NXF_AWS_SECRET }}
           # credentials to publish maven libraries
