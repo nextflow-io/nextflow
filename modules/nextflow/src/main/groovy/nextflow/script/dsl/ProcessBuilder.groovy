@@ -70,7 +70,6 @@ class ProcessBuilder {
             'module',
             'package',
             'penv',
-            'pixi',
             'pod',
             'publishDir',
             'queue',
