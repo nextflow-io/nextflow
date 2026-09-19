@@ -74,6 +74,7 @@ import nextflow.script.ScriptMeta
 import nextflow.script.ScriptRunner
 import nextflow.script.WorkflowMetadata
 import nextflow.script.dsl.ProcessConfigBuilder
+import nextflow.packages.PackageManager
 import nextflow.spack.SpackConfig
 import nextflow.trace.LogObserver
 import nextflow.trace.TraceObserver
@@ -1277,11 +1278,21 @@ class Session implements ISession {
         return new CondaConfig(opts, getSystemEnv())
     }
 
+    /**
+     * The package manager for the `package` directive. Memoized because its
+     * construction probes every provider plugin for its tool binary.
+     */
+    @Memoized
+    PackageManager getPackageManager() {
+        return new PackageManager(this)
+    }
+
     @Memoized
     SpackConfig getSpackConfig() {
         final opts = config.spack as Map ?: Collections.emptyMap()
         return new SpackConfig(opts, getSystemEnv())
     }
+
 
     /**
      * The resource labels derived from the workflow metadata, as selected by the

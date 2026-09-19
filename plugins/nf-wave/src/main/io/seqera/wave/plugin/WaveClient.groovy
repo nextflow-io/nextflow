@@ -71,6 +71,10 @@ import nextflow.util.SysHelper
 import nextflow.util.Threads
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import static nextflow.util.SysHelper.DEFAULT_DOCKER_PLATFORM
+import nextflow.packages.PackageManager
+import nextflow.packages.PackageSpec
+
 /**
  * Wave client service
  *
@@ -558,6 +562,9 @@ class WaveClient {
         def attrs = new HashMap<String,String>()
         attrs.container = containerImage
         attrs.conda = task.config.conda as String
+        // the resolved spec covers both the explicit directive and manifest auto-detection
+        final packageSpec = PackageManager.isEnabled(session) ? task.getPackageSpec() : null
+        attrs.package = packageSpec?.toString()
         if( bundle!=null && bundle.dockerfile ) {
             attrs.dockerfile = bundle.dockerfile.text
         }
@@ -573,10 +580,10 @@ class WaveClient {
             checkConflicts(attrs, task.lazyName())
 
         //  resolve the wave assets
-        return resolveAssets0(attrs, bundle, singularity, dockerArch)
+        return resolveAssets0(attrs, bundle, singularity, dockerArch, packageSpec)
     }
 
-    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String platform) {
+    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String platform, nextflow.packages.PackageSpec packageSpec = null) {
 
         final scriptType = singularity ? 'singularityfile' : 'dockerfile'
         String containerScript = attrs.get(scriptType)
@@ -619,6 +626,16 @@ class WaveClient {
                 }
 
             }
+        }
+
+        /*
+         * If 'package' directive is specified use it to create a container file
+         * to assemble the target container
+         */
+        if( packageSpec && !packagesSpec ) {
+            if( containerScript )
+                throw new IllegalArgumentException("Unexpected package and $scriptType conflict while resolving wave container")
+            packagesSpec = convertToWavePackagesSpec(packageSpec)
         }
 
         /*
@@ -811,6 +828,10 @@ class WaveClient {
         }
     }
 
+    static protected boolean isPixiManifest(String value) {
+        value && !value.contains('\n') && (value.endsWith('.toml') || value.endsWith('.lock'))
+    }
+
     static protected boolean isCondaLocalFile(String value) {
         if( value.contains('\n') )
             return false
@@ -825,4 +846,87 @@ class WaveClient {
         value.startsWith('http://') || value.startsWith('https://')
     }
 
+    protected HttpResponse<String> httpSend(HttpRequest req)  {
+        try {
+            return httpClient.sendAsString(req)
+        }
+        catch (IOException e) {
+            throw new IllegalStateException("Unable to connect Wave service: $endpoint")
+        }
+    }
+
+    /**
+     * Convert a Nextflow PackageSpec to Wave PackagesSpec
+     */
+    private PackagesSpec convertToWavePackagesSpec(nextflow.packages.PackageSpec spec) {
+        // Map provider to Wave PackagesSpec Type. Wave can only build
+        // conda-based package environments; providers that Wave does not
+        // support (uv, nix, guix, ...) return null here so that Wave is
+        // skipped and the environment is created locally by their own
+        // provider plugin. This keeps mixed pipelines working, e.g. conda
+        // processes built by Wave alongside uv processes created locally.
+        def waveType = mapProviderToWaveType(spec.provider)
+        if( waveType == null ) {
+            log.debug "Package provider '${spec.provider}' is not supported by Wave -- the environment will be created locally by the nf-${spec.provider} provider"
+            return null
+        }
+
+        // a manifest file given either via `environment:` or as the single
+        // entry of the directive, e.g. `package "/path/env.yml", provider: "conda"`
+        final manifest = spec.hasEnvironmentFile()
+            ? spec.environment
+            : (spec.entries?.size() == 1 && isCondaLocalFile(spec.entries[0]) ? spec.entries[0] : null)
+
+        if( spec.provider == 'pixi' && (manifest || spec.entries.any { isPixiManifest(it) }) ) {
+            // a pixi.toml / pixi.lock is not a conda environment file: build locally
+            log.debug "Pixi manifest '${manifest ?: spec.entries}' cannot be built by Wave -- the environment will be created locally by the nf-pixi provider"
+            return null
+        }
+
+        def waveSpec = new PackagesSpec()
+        waveSpec.withType(waveType)
+
+        if( manifest ) {
+            // Wave expects the environment file *content*, base64 encoded, the
+            // same as the legacy `conda` directive hand-off above
+            final condaFile = DockerHelper.condaFileFromPath(manifest, null)
+            waveSpec.withEnvironment(condaFile.bytes.encodeBase64().toString())
+        }
+        else if( spec.hasEntries() ) {
+            waveSpec.withEntries(spec.entries)
+        }
+        
+        // Set channels (conda-specific)
+        if (spec.channels && !spec.channels.empty) {
+            waveSpec.withChannels(spec.channels)
+        }
+        
+        // Set conda options if provider is conda
+        if (spec.provider == 'conda' && config.condaOpts()) {
+            waveSpec.withCondaOpts(config.condaOpts())
+        }
+        
+        return waveSpec
+    }
+    
+    /**
+     * Map provider name to Wave PackagesSpec Type
+     */
+    private PackagesSpec.Type mapProviderToWaveType(String provider) {
+        switch (provider?.toLowerCase()) {
+            case 'conda':
+            case 'mamba':
+            case 'micromamba':
+                return PackagesSpec.Type.CONDA
+            case 'pixi':
+                // pixi resolves conda packages, so Wave builds them as conda
+                return PackagesSpec.Type.CONDA
+            default:
+                // Providers such as uv, nix, guix, pak and install2r create
+                // local environments that Wave cannot build into a container.
+                // Return null so the caller skips Wave and the provider plugin
+                // creates the environment locally instead.
+                return null
+        }
+    }
 }

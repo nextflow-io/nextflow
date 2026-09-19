@@ -506,10 +506,21 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             call.putNodeMetaData(ASTNodeMarker.METHOD_TARGET, methods.get(0));
         else if( !methods.isEmpty() )
             call.putNodeMetaData(ASTNodeMarker.METHOD_OVERLOADS, methods);
-        else
+        else if( !(PROCESS_DIRECTIVE_LABEL.equals(typeLabel) && KEYWORD_DIRECTIVES.contains(name)) )
             vsc.addError("Unrecognized " + typeLabel + " `" + name + "`", node);
         return call;
     }
+
+    // Type label used by `visitProcess` for the process-directive section.
+    private static final String PROCESS_DIRECTIVE_LABEL = "process directive";
+
+    // Directives whose name is a Groovy/Java keyword and therefore cannot be
+    // declared as a method in the `DirectiveDsl` interface -- e.g. the `package`
+    // directive. They are valid at runtime (handled by ProcessConfig) so the
+    // resolver must not flag them as unrecognized. The allowance is scoped to
+    // the process-directive section only, so `package` is still rejected as an
+    // input/output qualifier or in a workflow `output` block.
+    private static final List<String> KEYWORD_DIRECTIVES = List.of("package");
 
     private static final List<String> EMIT_AND_TOPIC = List.of("emit", "topic");
 

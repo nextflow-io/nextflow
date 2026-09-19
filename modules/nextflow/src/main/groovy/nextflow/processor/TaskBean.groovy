@@ -23,6 +23,7 @@ import groovy.transform.PackageScope
 import nextflow.container.ContainerConfig
 import nextflow.executor.BashWrapperBuilder
 import nextflow.executor.TaskArrayExecutor
+import nextflow.packages.PackageSpec
 import nextflow.util.MemoryUnit
 /**
  * Serializable task value object. Holds configuration values required to
@@ -50,6 +51,11 @@ class TaskBean implements Serializable, Cloneable {
     Boolean useMicromamba
 
     Path spackEnv
+
+
+    PackageSpec packageSpec
+
+    Path packageEnv
 
     List<String> moduleNames
 
@@ -142,6 +148,8 @@ class TaskBean implements Serializable, Cloneable {
         this.condaEnv = task.getCondaEnv()
         this.useMicromamba = task.getCondaConfig()?.useMicromamba()
         this.spackEnv = task.getSpackEnv()
+        this.packageSpec = task.getPackageSpec()
+        this.packageEnv = task.getPackageEnv()
         this.moduleNames = task.config.getModule()
         this.shell = task.config.getShell() ?: BashWrapperBuilder.BASH
         this.script = task.getScript()

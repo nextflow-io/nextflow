@@ -42,6 +42,8 @@ import nextflow.secret.SecretsLoader
 import nextflow.util.Escape
 import nextflow.util.MemoryUnit
 import nextflow.util.TestOnly
+import nextflow.packages.PackageManager
+import nextflow.Global
 /**
  * Builder to create the Bash script which is used to
  * wrap and launch the user task
@@ -355,6 +357,7 @@ class BashWrapperBuilder {
         binding.before_script = getBeforeScriptSnippet()
         binding.conda_activate = getCondaActivateSnippet()
         binding.spack_activate = getSpackActivateSnippet()
+        binding.package_activate = getPackageActivateSnippet()
 
         /*
          * add the task environment
@@ -572,6 +575,22 @@ class BashWrapperBuilder {
         result += 'spack env activate -d '
         result += "${Escape.path(spackEnv)}\n"
         return result
+    }
+
+
+    private String getPackageActivateSnippet() {
+        // the environment is resolved by TaskRun.getPackageEnv() at hash time;
+        // it is null when the task runs in a container or has no package spec
+        if( !packageEnv || !packageSpec )
+            return null
+
+        def packageManager = (Global.session as nextflow.Session).getPackageManager()
+        def activationScript = packageManager.getActivationScript(packageSpec, packageEnv)
+
+        return """\
+            # ${packageSpec.provider} environment
+            ${activationScript}
+            """.stripIndent()
     }
 
     protected String getTraceCommand(String interpreter) {

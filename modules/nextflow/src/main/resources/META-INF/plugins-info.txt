@@ -4,9 +4,16 @@ nf-amazon@3.10.2
 nf-azure@1.23.2
 nf-cloudcache@0.6.1
 nf-codecommit@0.6.1
+nf-conda@1.0.0
 nf-console@1.3.1
 nf-google@1.27.5
+nf-guix@0.1.0
+nf-install2r@0.1.0
 nf-k8s@1.5.6
+nf-nix@0.1.0
+nf-pak@0.1.0
+nf-pixi@1.0.0
 nf-seqera@0.24.0
 nf-tower@1.29.2
+nf-uv@0.1.0
 nf-wave@1.22.0

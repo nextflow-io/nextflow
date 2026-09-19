@@ -1,0 +1,14 @@
+nextflow_pipeline {
+
+    name "install2r provider"
+    script "../scripts/install2r.nf"
+    tag "package-providers"
+    tag "install2r"
+
+    test("install2.r resolves a package list and runs the task") {
+        then {
+            assert workflow.success
+            assert workflow.stdout.any { it.contains('Hello install2r') }
+        }
+    }
+}

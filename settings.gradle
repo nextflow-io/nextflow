@@ -51,6 +51,13 @@ include 'plugins:nf-k8s'
 include 'plugins:nf-seqera'
 include 'plugins:nf-agent'
 include 'plugins:nf-agent-pi'
+include 'plugins:nf-conda'
+include 'plugins:nf-pixi'
+include 'plugins:nf-uv'
+include 'plugins:nf-nix'
+include 'plugins:nf-guix'
+include 'plugins:nf-pak'
+include 'plugins:nf-install2r'
 
 //includeBuild('../plugin-registry')
 //includeBuild '../sched'

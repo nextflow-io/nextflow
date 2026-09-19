@@ -17,6 +17,7 @@
 package nextflow.processor
 
 import java.nio.file.Path
+import java.nio.file.Paths
 
 import nextflow.Session
 import nextflow.script.ProcessConfig
@@ -62,6 +63,44 @@ class TaskHasherTest extends Specification {
         ]
         and: 'global vars should not affect task hash'
         uuid1 == uuid2
+    }
+
+    def 'should include the package environment in the task hash' () {
+        given:
+        def session = Mock(Session) {
+            getUniqueId() >> UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c')
+            getBinEntries() >> [:]
+        }
+        def processor = Mock(TaskProcessor) {
+            getName() >> 'hello'
+            getSession() >> session
+            getConfig() >> Mock(ProcessConfig)
+        }
+        def task = { Path env, nextflow.packages.PackageSpec spec ->
+            Mock(TaskRun) {
+                getSource() >> 'hello world'
+                isContainerEnabled() >> false
+                getContainer() >> null
+                getConfig() >> Mock(TaskConfig)
+                getProcessor() >> processor
+                getPackageEnv() >> env
+                getPackageSpec() >> spec
+            }
+        }
+        def spec = new nextflow.packages.PackageSpec('uv', ['numpy'])
+        def hash = { Path env, nextflow.packages.PackageSpec s ->
+            def hasher = Spy(new TaskHasher(task(env, s)))
+            hasher.getTaskGlobalVars() >> [:]
+            hasher.compute()
+        }
+
+        expect: 'a different resolved env path (i.e. different spec or manifest content) changes the hash'
+        hash(Paths.get('/pkg/env-aaa'), spec) != hash(Paths.get('/pkg/env-bbb'), spec)
+        hash(Paths.get('/pkg/env-aaa'), spec) == hash(Paths.get('/pkg/env-aaa'), spec)
+
+        and: 'without a local env (container run) the spec itself is hashed'
+        hash(null, spec) != hash(null, new nextflow.packages.PackageSpec('uv', ['pandas']))
+        hash(null, spec) != hash(null, null)
     }
 
     def 'should include referenced bin files in the task hash' () {

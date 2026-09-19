@@ -121,6 +121,19 @@ class TaskHasher {
             keys.add(conda)
         }
 
+        // add package specification (`package` directive)
+        // the env path is derived from the spec/manifest content by the provider
+        // cache; when the task runs in a container the spec itself is hashed
+        final pkgEnv = task.getPackageEnv()
+        if( pkgEnv ) {
+            keys.add(pkgEnv)
+        }
+        else {
+            final pkg = task.getPackageSpec()
+            if( pkg )
+                keys.add(pkg.toString())
+        }
+
         // add spack packages (`spack` and `arch` directives)
         final spack = task.getSpackEnv()
         final arch = task.getConfig().getArchitecture()
