@@ -165,6 +165,12 @@ class PublishOp {
         cl.setDelegate(dsl)
         final resolvedPath = cl.call(value)
 
+        // if the closure returned a map of source -> target pairs,
+        // treat it the same as a set of publish statements
+        if( resolvedPath instanceof Map )
+            for( final entry : resolvedPath.entrySet() )
+                dsl.publish(entry.key, entry.value as String)
+
         // if the closure contained publish statements, use
         // the resulting mapping to create a saveAs closure
         final mapping = dsl.build()
@@ -177,7 +183,7 @@ class PublishOp {
             return outputDir.resolve(resolvedPath.toString()).normalize()
 
         final invalid = mapping ?: resolvedPath
-        throw new ScriptRuntimeException("Invalid `path` directive for workflow output '${name}' -- expected a string or publish statements, but received: ${invalid} [${invalid.class.simpleName}]")
+        throw new ScriptRuntimeException("Invalid `path` directive for workflow output '${name}' -- expected a string, a map, or publish statements, but received: ${invalid} [${invalid.class.simpleName}]")
     }
 
     private class PublishDsl {
