@@ -41,6 +41,11 @@ class LocalPollingMonitor extends TaskPollingMonitor {
     static private OperatingSystemMXBean OS = { (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean() }()
 
     /**
+     * Guards resource accounting shared by the submitter and polling threads.
+     */
+    private final Object resourceLock = new Object()
+
+    /**
      * Number of `free` CPUs available to execute pending tasks
      */
     private int availCpus
@@ -200,10 +205,17 @@ class LocalPollingMonitor extends TaskPollingMonitor {
         if( acceleratorTracker.name() != null && taskAccelerators > acceleratorTracker.total() )
             throw new ProcessUnrecoverableException("Process requirement exceeds available accelerators -- req: $taskAccelerators; avail: ${acceleratorTracker.total()}")
 
+        final int availableCpus
+        final long availableMemory
+        synchronized(resourceLock) {
+            availableCpus = availCpus
+            availableMemory = availMemory
+        }
+
         final accelOk = acceleratorTracker.name() == null || taskAccelerators <= acceleratorTracker.available()
-        final result = super.canSubmit(handler) && taskCpus <= availCpus && taskMemory <= availMemory && accelOk
+        final result = super.canSubmit(handler) && taskCpus <= availableCpus && taskMemory <= availableMemory && accelOk
         if( !result && log.isTraceEnabled( ) ) {
-            log.trace "Task `${handler.task.name}` cannot be scheduled -- taskCpus: $taskCpus <= availCpus: $availCpus && taskMemory: ${new MemoryUnit(taskMemory)} <= availMemory: ${new MemoryUnit(availMemory)} && taskAccelerators: $taskAccelerators <= availAccelerators: ${acceleratorTracker.name() != null ? acceleratorTracker.available() : 'n/a'}"
+            log.trace "Task `${handler.task.name}` cannot be scheduled -- taskCpus: $taskCpus <= availCpus: $availableCpus && taskMemory: ${new MemoryUnit(taskMemory)} <= availMemory: ${new MemoryUnit(availableMemory)} && taskAccelerators: $taskAccelerators <= availAccelerators: ${acceleratorTracker.name() != null ? acceleratorTracker.available() : 'n/a'}"
         }
         return result
     }
@@ -231,8 +243,13 @@ class LocalPollingMonitor extends TaskPollingMonitor {
             throw e
         }
 
-        availCpus -= cpus(handler)
-        availMemory -= mem(handler)
+        // Evaluate task configuration outside the lock so other tasks can complete.
+        final taskCpus = cpus(handler)
+        final taskMemory = mem(handler)
+        synchronized(resourceLock) {
+            availCpus -= taskCpus
+            availMemory -= taskMemory
+        }
     }
 
     /**
@@ -249,8 +266,12 @@ class LocalPollingMonitor extends TaskPollingMonitor {
     protected boolean remove(TaskHandler handler) {
         final result = super.remove(handler)
         if( result ) {
-            availCpus += cpus(handler)
-            availMemory += mem(handler)
+            final taskCpus = cpus(handler)
+            final taskMemory = mem(handler)
+            synchronized(resourceLock) {
+                availCpus += taskCpus
+                availMemory += taskMemory
+            }
             if( handler instanceof LocalTaskHandler )
                 acceleratorTracker.release(handler.acceleratorIds ?: Collections.<String>emptyList())
         }

@@ -17,6 +17,9 @@
 package nextflow.processor
 
 import java.lang.management.ManagementFactory
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 import com.sun.management.OperatingSystemMXBean
 import nextflow.Session
@@ -30,6 +33,74 @@ import spock.lang.Specification
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 class LocalPollingMonitorTest extends Specification {
+
+    def 'should retain #resource accounting when #operation is paused'() {
+        given:
+        def memory = MemoryUnit.of('26GB')
+        def monitor = new LocalPollingMonitor(cpus: 8, memory: memory.toBytes(),
+                capacity: 8, session: Stub(Session), name: 'local', pollInterval: 100)
+        def testThread = Thread.currentThread()
+        def entered = new CountDownLatch(1)
+        def released = new CountDownLatch(1)
+        def pause = { String name ->
+            if( name == resource && Thread.currentThread() != testThread ) {
+                entered.countDown()
+                assert released.await(10, TimeUnit.SECONDS)
+            }
+        }
+        def config = Stub(TaskConfig) {
+            getCpus() >> { pause('cpus'); 1 }
+            getMemory() >> { pause('memory'); MemoryUnit.of('1GB') }
+        }
+        def first = Stub(TaskHandler) {
+            getTask() >> new TaskRun(config: config)
+        }
+        def second = Stub(TaskHandler) {
+            getTask() >> new TaskRun(config: config)
+        }
+        def fullPool = Stub(TaskHandler) {
+            getTask() >> new TaskRun(config: new TaskConfig(cpus: 8, memory: memory))
+            canForkProcess() >> true
+            isReady() >> true
+        }
+        def executor = Executors.newSingleThreadExecutor()
+
+        when:
+        monitor.submit(first)
+        // Pause one thread's resource evaluation while the other updates the counters.
+        def paused = executor.submit({
+            if( operation == 'submission' )
+                monitor.submit(second)
+            else
+                assert monitor.remove(first)
+        } as Runnable)
+        assert entered.await(10, TimeUnit.SECONDS)
+        if( operation == 'submission' )
+            assert monitor.remove(first)
+        else
+            monitor.submit(second)
+        released.countDown()
+        paused.get(10, TimeUnit.SECONDS)
+        assert monitor.remove(second)
+
+        then:
+        monitor.runningQueue.empty
+        monitor.availCpus == 8
+        monitor.availMemory == memory.toBytes()
+        monitor.canSubmit(fullPool)
+
+        cleanup:
+        released.countDown()
+        executor.shutdownNow()
+        assert executor.awaitTermination(10, TimeUnit.SECONDS)
+
+        where:
+        resource | operation
+        'cpus'   | 'submission'
+        'memory' | 'submission'
+        'cpus'   | 'completion'
+        'memory' | 'completion'
+    }
 
     def 'should allocated and free resources' () {
 
