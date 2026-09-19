@@ -9,21 +9,6 @@ description: Review new features, breaking changes, and deprecations introduced 
 
 ## New features
 
-### Global cache
-
-The global cache is a cross-pipeline cache backed by cloud object storage, where the work directory itself is the shared, content-addressable cache. It is enabled using the `globalCache` config scope:
-
-```groovy
-globalCache.enabled = true
-globalCache.path = 's3://bucket/cache'
-```
-
-When the global cache is enabled, tasks are not isolated by run, allowing them to be reused across different runs.
-
-Read-only secondary caches can be consulted on a primary miss with `globalCache.secondaryPaths`. The first hit is reused in place and nothing is written back.
-
-Supported on Amazon S3, Azure Blob Storage, and Google Cloud Storage.
-
 ### Static typing (out of preview)
 
 [Static typing][static-typing], introduced in Nextflow 25.10 as a preview feature, has been brought out of preview.
