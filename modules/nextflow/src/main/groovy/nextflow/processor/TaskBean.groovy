@@ -55,6 +55,8 @@ class TaskBean implements Serializable, Cloneable {
 
     PackageSpec packageSpec
 
+    Path packageEnv
+
     List<String> moduleNames
 
     Path workDir
@@ -147,6 +149,7 @@ class TaskBean implements Serializable, Cloneable {
         this.useMicromamba = task.getCondaConfig()?.useMicromamba()
         this.spackEnv = task.getSpackEnv()
         this.packageSpec = task.getPackageSpec()
+        this.packageEnv = task.getPackageEnv()
         this.moduleNames = task.config.getModule()
         this.shell = task.config.getShell() ?: BashWrapperBuilder.BASH
         this.script = task.getScript()

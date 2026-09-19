@@ -579,14 +579,13 @@ class BashWrapperBuilder {
 
 
     private String getPackageActivateSnippet() {
-        if (!packageSpec || !PackageManager.isEnabled(Global.session))
+        // the environment is resolved by TaskRun.getPackageEnv() at hash time;
+        // it is null when the task runs in a container or has no package spec
+        if( !packageEnv || !packageSpec )
             return null
 
-        // a failure here must abort the task: silently running without the
-        // requested environment would produce misleading downstream errors
         def packageManager = (Global.session as nextflow.Session).getPackageManager()
-        def envPath = packageManager.createEnvironment(packageSpec)
-        def activationScript = packageManager.getActivationScript(packageSpec, envPath)
+        def activationScript = packageManager.getActivationScript(packageSpec, packageEnv)
 
         return """\
             # ${packageSpec.provider} environment

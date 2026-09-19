@@ -696,7 +696,7 @@ class TaskRun implements Cloneable {
 
         // Show deprecation warning if new package system is enabled
         if (PackageManager.isEnabled(processor.session)) {
-            log.warn "The 'conda' directive is deprecated when preview.package is enabled. Use 'package \"${config.conda}\", provider: \"conda\"' instead"
+            log.warn1 "The 'conda' directive is deprecated when preview.package is enabled. Use 'package \"${config.conda}\", provider: \"conda\"' instead"
         }
 
         final cache = new CondaCache(getCondaConfig())
@@ -761,9 +761,37 @@ class TaskRun implements Cloneable {
         try {
             return PackageManager.parseSpec(packageDef, defaultProvider)
         } catch (Exception e) {
-            log.warn "Failed to parse package specification: ${e.message}"
-            return null
+            // an unparsable directive must fail the task rather than silently
+            // running it without the requested environment
+            throw new IllegalArgumentException("Invalid `package` directive in process '${processor.name}': ${e.message}", e)
         }
+    }
+
+    /**
+     * Resolve (creating it if needed) the local environment for the `package`
+     * directive. Mirrors {@link #getCondaEnv()}: it runs at task-hash time on
+     * the process thread and its path takes part in the task hash, so a change
+     * to the package spec or to the manifest file content invalidates cached
+     * tasks. Returns {@code null} when the task runs in a container, since the
+     * container (possibly built by Wave from the same spec) provides the
+     * environment.
+     */
+    Path getPackageEnv() {
+        // note: use an explicit function instead of a closure or lambda syntax
+        cache0.computeIfAbsent('packageEnv', new Function<String,Path>() {
+            @Override
+            Path apply(String it) {
+                return getPackageEnv0()
+            }})
+    }
+
+    private Path getPackageEnv0() {
+        final spec = getPackageSpec()
+        if( !spec )
+            return null
+        if( isContainerEnabled() )
+            return null
+        return processor.session.getPackageManager().createEnvironment(spec)
     }
 
     /**

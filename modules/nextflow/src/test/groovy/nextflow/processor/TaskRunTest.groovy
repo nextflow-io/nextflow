@@ -1062,6 +1062,21 @@ class TaskRunTest extends Specification {
         spec.entries == ['numpy pandas']
     }
 
+    def 'should fail on an invalid package directive instead of running without an environment' () {
+        given:
+        def task = new TaskRun(config: new TaskConfig(['package': 123]))
+        task.processor = Mock(TaskProcessor) {
+            getName() >> 'foo'
+            getSession() >> Mock(Session) { getConfig() >> [nextflow: [preview: [package: true]]] }
+        }
+
+        when:
+        task.getPackageSpec()
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("Invalid `package` directive in process 'foo'")
+    }
+
     def 'should not auto-detect a manifest when the process declares its own environment' () {
         given:
         def task = new TaskRun(config: new TaskConfig(directive))

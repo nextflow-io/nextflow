@@ -28,7 +28,7 @@ import groovy.transform.ToString
 @CompileStatic
 @ToString(includeNames = true)
 @EqualsAndHashCode
-class PackageSpec {
+class PackageSpec implements Serializable {
 
     /**
      * The package provider type (conda, pixi, mamba, micromamba, etc.)
