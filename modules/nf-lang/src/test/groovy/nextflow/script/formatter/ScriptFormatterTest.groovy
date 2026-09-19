@@ -80,6 +80,31 @@ class ScriptFormatterTest extends Specification {
         return true
     }
 
+    String formatWrapped(String contents, int lineLength) {
+        scriptParser.compiler().getSources().clear()
+        def source = scriptParser.parse('main.nf', contents)
+        new ScriptResolveVisitor(source, scriptParser.compiler().compilationUnit(), Types.DEFAULT_SCRIPT_IMPORTS, Collections.emptyList()).visit()
+        assert !TestUtils.hasSyntaxErrors(source)
+        def formatter = new ScriptFormattingVisitor(source, new FormattingOptions(4, true, false, false, false, lineLength))
+        formatter.visit()
+        assert formatter.getMissingComments().isEmpty()
+        return formatter.toString()
+    }
+
+    boolean checkFormatWrapped(String input, String output, int lineLength = 40) {
+        input = input.stripIndent()
+        output = output.stripIndent()
+        assert formatWrapped(input, lineLength) == output
+        assert formatWrapped(output, lineLength) == output
+        return true
+    }
+
+    boolean checkFormatWrapped(String source, int lineLength = 40) {
+        source = source.stripIndent()
+        assert formatWrapped(source, lineLength) == source
+        return true
+    }
+
     def 'should format a code snippet' () {
         expect:
         checkFormat(
@@ -1540,6 +1565,236 @@ class ScriptFormatterTest extends Specification {
                     }
             }
             '''
+        )
+    }
+
+    // -- line-length wrapping (issue #26)
+
+    def 'should wrap a long function call and leave a short one alone' () {
+        expect:
+        checkFormatWrapped(
+            '''\
+            workflow {
+                ALIGN_AND_SORT(samples_channel, reference_genome, annotation_file, params.threads)
+            }
+            ''',
+            '''\
+            workflow {
+                ALIGN_AND_SORT(
+                    samples_channel,
+                    reference_genome,
+                    annotation_file,
+                    params.threads,
+                )
+            }
+            ''',
+            60
+        )
+        checkFormatWrapped(
+            '''\
+            workflow {
+                x = foo(a, b)
+            }
+            ''',
+            '''\
+            workflow {
+                x = foo(a, b)
+            }
+            ''',
+            60
+        )
+    }
+
+    def 'should wrap a long list literal and leave a short one alone' () {
+        expect:
+        checkFormatWrapped(
+            '''\
+            workflow {
+                x = [alpha, beta, gamma, delta, epsilon, zeta]
+            }
+            ''',
+            '''\
+            workflow {
+                x = [
+                    alpha,
+                    beta,
+                    gamma,
+                    delta,
+                    epsilon,
+                    zeta,
+                ]
+            }
+            '''
+        )
+        checkFormatWrapped(
+            '''\
+            workflow {
+                x = [alpha, beta, gamma]
+            }
+            ''',
+            '''\
+            workflow {
+                x = [alpha, beta, gamma]
+            }
+            '''
+        )
+    }
+
+    def 'should wrap a long map literal' () {
+        expect:
+        checkFormatWrapped(
+            '''\
+            workflow {
+                x = [alpha: 1, beta: 2, gamma: 3, delta: 4]
+            }
+            ''',
+            '''\
+            workflow {
+                x = [
+                    alpha: 1,
+                    beta: 2,
+                    gamma: 3,
+                    delta: 4,
+                ]
+            }
+            '''
+        )
+    }
+
+    def 'should wrap a long process directive' () {
+        expect:
+        checkFormatWrapped(
+            '''\
+            process FOO {
+                publishDir params.outdir, mode: 'copy', overwrite: true
+
+                script:
+                """
+                echo hi
+                """
+            }
+            ''',
+            '''\
+            process FOO {
+                publishDir(
+                    params.outdir,
+                    mode: 'copy',
+                    overwrite: true,
+                )
+
+                script:
+                """
+                echo hi
+                """
+            }
+            '''
+        )
+    }
+
+    def 'should wrap a long structured process input' () {
+        expect:
+        checkFormatWrapped(
+            '''\
+            nextflow.enable.types = true
+
+            process FOO {
+                input:
+                tuple(identifier: String, someInputFile: Path)
+
+                script:
+                'echo hi'
+            }
+            ''',
+            '''\
+            nextflow.enable.types = true
+
+            process FOO {
+                input:
+                tuple(
+                    identifier: String,
+                    someInputFile: Path
+                )
+
+                script:
+                'echo hi'
+            }
+            '''
+        )
+    }
+
+    def 'should escalate to wrapping every construct when the outer wrap alone is not enough' () {
+        expect:
+        checkFormatWrapped(
+            '''\
+            workflow {
+                x = foo(alpha, [nested_one, nested_two, nested_three, nested_four])
+            }
+            ''',
+            '''\
+            workflow {
+                x = foo(
+                    alpha,
+                    [
+                        nested_one,
+                        nested_two,
+                        nested_three,
+                        nested_four,
+                    ],
+                )
+            }
+            '''
+        )
+    }
+
+    def 'should preserve a comment inside a force-wrapped list' () {
+        expect:
+        checkFormatWrapped(
+            '''\
+            workflow {
+                x = [alpha, beta, gamma, delta, epsilon, zeta] // the letters
+            }
+            ''',
+            '''\
+            workflow {
+                x = [
+                    alpha,
+                    beta,
+                    gamma,
+                    delta,
+                    epsilon,
+                    zeta,
+                ] // the letters
+            }
+            '''
+        )
+    }
+
+    def 'should not wrap inside a string interpolation' () {
+        expect:
+        checkFormatWrapped(
+            '''\
+            process FOO {
+                script:
+                "echo ${[alpha, beta, gamma].join(' ')} and some more text past the limit"
+            }
+            '''
+        )
+    }
+
+    def 'should not wrap a long line when maxLineLength is disabled' () {
+        expect:
+        checkFormatWrapped(
+            '''\
+            workflow {
+                ALIGN_AND_SORT(samples_channel, reference_genome, annotation_file, params.threads)
+            }
+            ''',
+            '''\
+            workflow {
+                ALIGN_AND_SORT(samples_channel, reference_genome, annotation_file, params.threads)
+            }
+            ''',
+            0
         )
     }
 
