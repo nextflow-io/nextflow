@@ -553,7 +553,7 @@ class ScriptIncludesTest extends Dsl2Spec {
 
         workflow {
           def str = foo('dlrow')
-          return bar('Hello', str)
+          bar('Hello', str)
         }
         """
 

@@ -71,6 +71,7 @@ import org.codehaus.groovy.ast.expr.VariableExpression;
 import org.codehaus.groovy.ast.stmt.BlockStatement;
 import org.codehaus.groovy.ast.stmt.CatchStatement;
 import org.codehaus.groovy.ast.stmt.ExpressionStatement;
+import org.codehaus.groovy.ast.stmt.ReturnStatement;
 import org.codehaus.groovy.ast.stmt.Statement;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
@@ -709,6 +710,13 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         var name = variable.getName();
         if( inOperatorCall && scope.isReferencedLocalVariable(name) && scope.getDeclaredVariable(name) == null )
             vsc.addWarning("Mutating an external variable in an operator closure can lead to a race condition", target.getName(), target);
+    }
+
+    @Override
+    public void visitReturnStatement(ReturnStatement node) {
+        if( currentDefinition instanceof WorkflowNode && currentClosure == null )
+            vsc.addError("Return statement cannot be used in a workflow body -- use `exit()` instead", node);
+        super.visitReturnStatement(node);
     }
 
     // expressions
