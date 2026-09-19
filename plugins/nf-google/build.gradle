@@ -29,6 +29,8 @@ nextflowPlugin {
     extensionPoints = [
         'nextflow.cloud.google.GoogleOpts',
         'nextflow.cloud.google.batch.GoogleBatchExecutor',
+        'nextflow.cloud.google.util.GsAtomicLockProvider',
+        'nextflow.cloud.google.util.GsObjectStoreReader',
         'nextflow.cloud.google.util.GsPathFactory',
         'nextflow.cloud.google.util.GsPathSerializer',
     ]

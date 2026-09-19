@@ -65,6 +65,13 @@ class FileHelper {
 
     static final private Pattern BASE_URL = ~/(?i)((?:[a-z][a-zA-Z0-9]*)?:\/\/[^:|\/]+(?::\d*)?)(?:$|\/.*)/
 
+    /**
+     * The optional attempt suffix of a task work directory leaf, {@code <30hex>-N}: a cache that
+     * lays the attempts of one task out side by side keeps the two-level {@code <2hex>/<30hex>}
+     * hierarchy and appends the attempt number to the leaf (hex never contains a dash).
+     */
+    static final private Pattern ATTEMPT_SUFFIX = ~/-\d+$/
+
     static final private Path localTempBasePath
 
     static private Random rndGen = new Random()
@@ -1194,6 +1201,13 @@ class FileHelper {
         return null
     }
 
+    /**
+     * The hash of the task whose work directory {@code sourcePath} lives in, parsed from the path:
+     * {@code <workPath>/<2hex>/<30hex>[-N]/...}. The optional {@code -N} attempt suffix is ignored.
+     *
+     * @return The task hash, or {@code null} when {@code sourcePath} is not below a task work
+     *      directory of {@code workPath}.
+     */
     public static HashCode getTaskHashFromPath(Path sourcePath, Path workPath) {
         assert sourcePath
         assert workPath
@@ -1205,7 +1219,10 @@ class FileHelper {
         final bucket = relativePath.getName(0).toString()
         if( bucket.size() != 2 )
             return null
-        final strHash = bucket + relativePath.getName(1).toString()
+        // tolerate an attempt suffix on the leaf (`<30hex>-N`): the hash is the part before it
+        final leaf = relativePath.getName(1).toString()
+        final suffix = ATTEMPT_SUFFIX.matcher(leaf)
+        final strHash = bucket + (suffix.find() ? leaf.substring(0, suffix.start()) : leaf)
         try {
             return HashCode.fromString(strHash)
         } catch (Throwable e) {

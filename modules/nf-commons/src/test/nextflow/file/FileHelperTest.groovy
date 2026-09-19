@@ -1173,4 +1173,25 @@ class FileHelperTest extends Specification {
         's3:///example.com////another///path'               | 's3:///example.com/another/path'
         'ftp://example.com//file//path'                     | 'ftp://example.com/file/path'
     }
+
+    def 'getTaskHashFromPath parses the task hash from a work dir path, with or without an attempt suffix'() {
+        given:
+        def work = Paths.get('/work')
+        def hash = 'abcdef0123456789abcdef0123456789'
+
+        expect: 'the two-level <2hex>/<30hex> layout'
+        FileHelper.getTaskHashFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789/out.bam"), work).toString() == hash
+        FileHelper.getTaskHashFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789"), work).toString() == hash
+
+        and: 'an attempt suffix on the leaf is tolerated -- the attempt is a path segment, not part of the hash'
+        FileHelper.getTaskHashFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789-2/out.bam"), work).toString() == hash
+        FileHelper.getTaskHashFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789-12/sub/out.bam"), work).toString() == hash
+
+        and: 'anything else is not a task work dir'
+        FileHelper.getTaskHashFromPath(Paths.get("/work/ab"), work) == null
+        FileHelper.getTaskHashFromPath(Paths.get("/work/stage-1234/foo"), work) == null
+        FileHelper.getTaskHashFromPath(Paths.get("/work/ab/not-a-hash/out.bam"), work) == null
+        FileHelper.getTaskHashFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789-x/out.bam"), work) == null
+        FileHelper.getTaskHashFromPath(Paths.get("/elsewhere/ab/cdef0123456789abcdef0123456789/out.bam"), work) == null
+    }
 }

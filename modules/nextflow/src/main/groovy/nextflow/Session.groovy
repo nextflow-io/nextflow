@@ -372,6 +372,14 @@ class Session implements ISession {
     CacheDB getCache() { cache }
 
     /**
+     * Open this run's cache. A separate method so a test can substitute a factory that writes back
+     * into the session the way a real one may — see {@link CacheFactory#newInstance}.
+     */
+    protected CacheDB createCache() {
+        return CacheFactory.create(uniqueId, runName).open()
+    }
+
+    /**
      * Creates a new session using the configuration properties provided
      *
      * @param binding
@@ -461,6 +469,30 @@ class Session implements ISession {
      */
     Session init( ScriptFile scriptFile, List<String> args=null, Map<String,?> cliParams=null, Map<String,?> configParams=null ) {
 
+        // -- create the cache FIRST, and do not read `workDir` above this line: a factory may
+        //    resolve a work dir of its own and write it back here (see CacheFactory.newInstance),
+        //    and everything below -- the work dir creation, the observers, the WorkflowMetadata
+        //    snapshot -- must see the effective value, otherwise `workflow.workDir` reports a
+        //    directory the tasks never use. SessionTest locks this ordering.
+        cache = createCache()
+        try {
+            return init0(scriptFile, args, cliParams, configParams)
+        }
+        catch( Throwable t ) {
+            // Everything below createCache() can throw -- the work dir may be unwritable, an observer
+            // factory may abort -- and ScriptRunner calls init() OUTSIDE the try that later closes the
+            // session, so an abort here would leave the cache open. For the default cache that means a
+            // LevelDB index already truncated by open() and never closed; for a plugin cache it means
+            // whatever that cache holds. Close it and let the original failure propagate.
+            try { cache?.close() }
+            catch( Exception e ) { log.debug "Unable to close the cache after a failed session init -- ${e.message}" }
+            cache = null
+            throw t
+        }
+    }
+
+    private Session init0( ScriptFile scriptFile, List<String> args, Map<String,?> cliParams, Map<String,?> configParams ) {
+
         if(!workDir.mkdirs())
             throw new AbortOperationException("Cannot create work-dir '${FilesEx.toUriString(workDir)}' -- Make sure you have write permissions or specify a different directory by using the `-w` command line option")
         log.debug "Work-dir: ${workDir.toUriString()} [${FileHelper.getPathFsType(workDir)}]"
@@ -492,7 +524,6 @@ class Session implements ISession {
         binding.setParams( (Map)config.params )
         binding.setArgs( new ScriptRunner.ArgsList(args) )
 
-        cache = CacheFactory.create(uniqueId,runName).open()
 
         return this
     }

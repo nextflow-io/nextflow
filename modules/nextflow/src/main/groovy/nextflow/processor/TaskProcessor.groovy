@@ -68,6 +68,7 @@ import nextflow.extension.DataflowHelper
 import nextflow.file.FileHelper
 import nextflow.file.FileHolder
 import nextflow.file.FilePorter
+import nextflow.plugin.Plugins
 import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
@@ -101,8 +102,6 @@ import nextflow.script.types.Record
 import nextflow.script.types.Tuple
 import nextflow.trace.TraceRecord
 import nextflow.util.Escape
-import nextflow.util.HashBuilder
-import nextflow.util.LockManager
 import nextflow.util.RecordMap
 import nextflow.util.TestOnly
 import org.codehaus.groovy.control.CompilerConfiguration
@@ -196,6 +195,31 @@ class TaskProcessor {
     private static final AtomicBoolean errorShown = new AtomicBoolean()
 
     /**
+     * The {@link TaskHasherFactory} extensions registered by plugins, in priority order --
+     * resolved once, on the first task hashed by this processor. See {@link #createTaskHasher}.
+     *
+     * <p>This and the three fields below are lazily initialised without a lock and read from every
+     * operator thread that submits a task, plus the retry executor -- so they must be {@code
+     * volatile}: without it a reader may see a non-null reference to a list whose contents are not
+     * yet visible, fall back to the default hasher, and give that ONE task a different cache key
+     * from the rest of the run (a silent miss, not a crash). With it the benign race is correct,
+     * since resolving twice is harmless.
+     */
+    @PackageScope volatile List<TaskHasherFactory> hasherFactories
+
+    /**
+     * The {@link TaskCacheStrategy} extensions registered by plugins, in priority order -- resolved
+     * once, on the first task resolved by this processor. See {@link #getCacheStrategy}.
+     */
+    @PackageScope volatile List<TaskCacheStrategy> cacheStrategies
+
+    /** The strategy chosen among {@link #cacheStrategies} for this run, else the default. */
+    private volatile TaskCacheStrategy cacheStrategy
+
+    /** The {@link TaskResolver} adapter over this processor, created on first use. */
+    private volatile TaskResolver taskResolver
+
+    /**
      * Flag set {@code true} when the processor termination has been invoked
      *
      * See {@code #checkProcessTermination}
@@ -234,7 +258,6 @@ class TaskProcessor {
 
     private static int processCount
 
-    private static LockManager lockManager = new LockManager()
 
     private List<TaskRun> fairBuffers = new ArrayList<>()
 
@@ -682,8 +705,31 @@ class TaskProcessor {
         // -- download foreign files
         session.filePorter.transfer(foreignFiles)
 
-        final hash = new TaskHasher(task).compute()
+        final hash = createTaskHasher(task).compute()
         checkCachedOrLaunchTask(task, hash, resumable)
+    }
+
+    /**
+     * Create the {@link TaskHasher} for the given task.
+     *
+     * The registered {@link TaskHasherFactory} extensions are asked in priority order and the
+     * first hasher returned is used; with none registered, or all abstaining, the default
+     * {@link TaskHasher} is used, exactly as when no plugin takes part in hashing.
+     *
+     * @param task The task to be hashed.
+     * @return The hasher computing the cache key of {@code task}.
+     */
+    protected TaskHasher createTaskHasher(TaskRun task) {
+        if( hasherFactories == null )
+            hasherFactories = Plugins.getPriorityExtensions(TaskHasherFactory) ?: Collections.<TaskHasherFactory>emptyList()
+        for( final factory : hasherFactories ) {
+            final hasher = factory.create(task)
+            if( hasher != null ) {
+                log.trace "Task: ${task.lazyName()} > Using task hasher: ${hasher.getClass().getName()}"
+                return hasher
+            }
+        }
+        return new TaskHasher(task)
     }
 
     /**
@@ -798,67 +844,81 @@ class TaskProcessor {
      * Try to check if exists a previously executed process result in the a cached folder. If it exists
      * use the that result and skip the process execution, otherwise the task is sumitted for execution.
      *
+     * The resolution is delegated to the {@link TaskCacheStrategy} in use for this run -- see
+     * {@link #getCacheStrategy} -- which drives it through the {@link TaskResolver} primitives of
+     * this processor: with no plugin strategy applying, the {@link DefaultTaskCacheStrategy} runs
+     * the per-run resolution loop exactly as before.
+     *
      * @param task
      *      The {@code TaskRun} instance to be executed
      * @param hash
      *      The unique {@code HashCode} for the given task inputs
-     * @param script
-     *      The script to be run (only when it's a merge task)
-     * @return
-     *      {@code false} when a cached result has been found and the execution has skipped,
-     *      or {@code true} if the task has been submitted for execution
-     *
+     * @param shouldTryCache
+     *      Whether a cached execution may be resumed
      */
     @CompileStatic
     final protected void checkCachedOrLaunchTask( TaskRun task, HashCode hash, boolean shouldTryCache ) {
+        getCacheStrategy().resolve(task, hash, shouldTryCache, getTaskResolver())
+    }
 
-        int tries = task.failCount +1
-        while( true ) {
-            hash = HashBuilder.defaultHasher().putBytes(hash.asBytes()).putInt(tries).hash()
-
-            Path resumeDir = null
-            boolean exists = false
-            try {
-                final entry = session.cache.getTaskEntry(hash, this)
-                resumeDir = entry ? FileHelper.asPath(entry.trace.getWorkDir()) : null
-                if( resumeDir )
-                    exists = resumeDir.exists()
-
-                log.trace "[${safeTaskName(task)}] Cacheable folder=${resumeDir?.toUriString()} -- exists=$exists; try=$tries; shouldTryCache=$shouldTryCache; entry=$entry"
-                final cached = shouldTryCache && exists && entry.trace.isCompleted() && checkCachedOutput(task.clone(), resumeDir, hash, entry)
-                if( cached )
-                    break
+    /**
+     * The {@link TaskCacheStrategy} resolving the tasks of this run.
+     *
+     * The registered {@link TaskCacheStrategy} extensions are asked in priority order and the first
+     * one enabled for the session is used; with none registered, or none enabled, the
+     * {@link DefaultTaskCacheStrategy} is used, exactly as when no plugin takes part in the
+     * resolution. Resolved once, on the first task of this processor.
+     */
+    protected TaskCacheStrategy getCacheStrategy() {
+        if( cacheStrategy != null )
+            return cacheStrategy
+        if( cacheStrategies == null )
+            cacheStrategies = Plugins.getPriorityExtensions(TaskCacheStrategy) ?: Collections.<TaskCacheStrategy>emptyList()
+        for( final strategy : cacheStrategies ) {
+            if( strategy.isEnabled(session) ) {
+                log.trace "Process: ${name} > Using task cache strategy: ${strategy.getClass().getName()}"
+                return cacheStrategy = strategy
             }
-            catch (Throwable t) {
-                log.warn1("[${safeTaskName(task)}] Unable to resume cached task -- See log file for details", causedBy: t)
-            }
+        }
+        return cacheStrategy = new DefaultTaskCacheStrategy()
+    }
 
-            if( exists ) {
-                tries++
-                continue
-            }
+    /**
+     * The {@link TaskResolver} a {@link TaskCacheStrategy} resolves the tasks of this processor with.
+     */
+    @CompileStatic
+    protected TaskResolver getTaskResolver() {
+        if( taskResolver == null )
+            taskResolver = new Resolver()
+        return taskResolver
+    }
 
-            final lock = lockManager.acquire(hash)
-            final workDir = task.getWorkDirFor(hash)
-            try {
-                if( resumeDir != workDir )
-                    exists = workDir.exists()
-                if( exists ) {
-                    tries++
-                    continue
-                }
-                else if( !workDir.mkdirs() )
-                    throw new IOException("Unable to create directory=$workDir -- check file system permissions")
-            }
-            finally {
-                lock.release()
-            }
+    /**
+     * Adapts the resume / launch primitives of this processor to the {@link TaskResolver} contract,
+     * so a strategy never touches the processor itself.
+     */
+    @CompileStatic
+    private class Resolver implements TaskResolver {
 
-            // submit task for execution
-            submitTask( task, hash, workDir )
-            break
+        @Override
+        TaskEntry entry(HashCode key) {
+            return session.cache.getTaskEntry(key, TaskProcessor.this)
         }
 
+        @Override
+        boolean resume(TaskRun task, HashCode key, Path workDir, TaskEntry entry) {
+            return checkCachedOutput(task.clone(), workDir, key, entry)
+        }
+
+        @Override
+        void launch(TaskRun task, HashCode key, Path workDir) {
+            submitTask(task, key, workDir)
+        }
+
+        @Override
+        Path workDirFor(HashCode key) {
+            return FileHelper.getWorkFolder(executor.getWorkDir(), key)
+        }
     }
 
     /**

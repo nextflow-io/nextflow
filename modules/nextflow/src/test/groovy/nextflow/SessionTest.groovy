@@ -23,6 +23,10 @@ import java.util.concurrent.CountDownLatch
 import java.util.concurrent.ThreadPoolExecutor
 import java.util.concurrent.TimeUnit
 
+import ch.qos.logback.classic.Level
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import nextflow.cache.CacheDB
 import nextflow.cache.DefaultCacheStore
 import nextflow.config.Manifest
@@ -48,6 +52,7 @@ import nextflow.trace.WorkflowStatsObserver
 import nextflow.util.CacheHelper
 import nextflow.util.Duration
 import nextflow.util.VersionNumber
+import org.slf4j.LoggerFactory
 import spock.lang.Specification
 import spock.lang.Unroll
 import test.TestHelper
@@ -223,6 +228,113 @@ class SessionTest extends Specification {
         cleanup:
         session.classesDir?.deleteDir()
 
+    }
+
+    def 'should create the cache before resolving the work dir' () {
+
+        given: 'a work dir that cannot be created (its parent is a regular file)'
+        def folder = Files.createTempDirectory('test')
+        def blocker = folder.resolve('blocker'); blocker.text = 'not a directory'
+        def db = Mock(CacheDB)
+        def created = false
+        def session = new Session([workDir: blocker.resolve('work').toString()]) {
+            @Override protected CacheDB createCache() { created = true; return db }
+        }
+
+        when:
+        session.init(null)
+
+        then: 'the work dir creation fails'
+        thrown(AbortOperationException)
+
+        and: 'but the cache had already been created -- so a work dir resolved by the cache factory is visible to the work dir creation, the observers and the workflow metadata below it'
+        created
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'a cache factory that resolves its own work dir is visible to everything below it' () {
+
+        given: 'a cache factory that writes back into the session, as the global cloud cache does'
+        def folder = Files.createTempDirectory('test')
+        def shared = folder.resolve('shared-cache/work')
+        def db = Mock(CacheDB)     // created here: a Spock mock cannot be built inside the subclass
+        def session = new Session([workDir: folder.resolve('local-work').toString()]) {
+            @Override protected CacheDB createCache() {
+                this.workDir = shared
+                this.resumeMode = true
+                return db
+            }
+        }
+
+        when:
+        session.init(null)
+
+        then: 'the work dir it resolved is the one that got created, not the one config named'
+        session.workDir == shared
+        Files.isDirectory(shared)
+        !Files.exists(folder.resolve('local-work'))
+        and: 'and the one the workflow reports -- `workflow.workDir` must not name a dir no task uses'
+        session.workflowMetadata.workDir == shared
+        and: 'the resumeMode it forced on survived too'
+        session.resumeMode
+
+        cleanup:
+        session.classesDir?.deleteDir()
+        folder?.deleteDir()
+    }
+
+    def 'an abort after the cache is created still closes it' () {
+
+        given: 'a work dir that cannot be created, so init fails right after createCache()'
+        def folder = Files.createTempDirectory('test')
+        def blocked = folder.resolve('not-a-dir')
+        blocked.text = 'a file, so mkdirs() on it fails'
+        def db = Mock(CacheDB)
+        def session = new Session([workDir: blocked.resolve('work').toString()]) {
+            @Override protected CacheDB createCache() { return db }
+        }
+
+        when:
+        session.init(null)
+
+        then: 'the original failure propagates, unchanged'
+        thrown(AbortOperationException)
+        and: 'but the cache does not leak -- ScriptRunner calls init() outside the try that would'
+        and: 'otherwise close it, and DefaultCacheStore.open() has already truncated the index'
+        1 * db.close()
+        session.cache == null
+
+        cleanup:
+        session.classesDir?.deleteDir()
+        folder?.deleteDir()
+    }
+
+    def 'cleanup returns before opening the cache for a non-file work dir' () {
+
+        given: 'a session with `cleanup = true` whose work dir is on a remote (non-file:) file system, as a cloud work dir is'
+        def logger = (Logger) LoggerFactory.getLogger(Session)
+        def appender = new ListAppender<ILoggingEvent>()
+        appender.start()
+        logger.addAppender(appender)
+        def workDir = TestHelper.createInMemTempDir()
+        def kept = workDir.resolve('ab/cdef0123/out.txt')
+        Files.createDirectories(kept.parent)
+        kept.text = 'data'
+        def session = new Session([cleanup: true])
+        session.workDir = workDir
+
+        when:
+        session.cleanup()
+
+        then: 'it warns and stops -- no cache is opened, nothing under the work dir is touched'
+        Files.exists(kept)
+        appender.list.any { it.level == Level.WARN && it.formattedMessage.contains('not supported for remote work directory') }
+        !appender.list.any { it.formattedMessage.contains('Failed to cleanup work dir') }
+
+        cleanup:
+        logger.detachAppender(appender)
     }
 
     def 'should collect bin executable files' () {

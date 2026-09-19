@@ -31,6 +31,8 @@ nextflowPlugin {
         'nextflow.cloud.aws.config.AwsConfig',
         'nextflow.cloud.aws.fusion.AwsFusionEnv',
         'nextflow.cloud.aws.mail.AwsMailProvider',
+        'nextflow.cloud.aws.nio.S3AtomicLockProvider',
+        'nextflow.cloud.aws.nio.S3ObjectStoreReader',
         'nextflow.cloud.aws.util.S3PathFactory',
         'nextflow.cloud.aws.util.S3PathSerializer',
     ]
