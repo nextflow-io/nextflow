@@ -562,7 +562,9 @@ class WaveClient {
         def attrs = new HashMap<String,String>()
         attrs.container = containerImage
         attrs.conda = task.config.conda as String
-        attrs.package = task.config.package
+        // the resolved spec covers both the explicit directive and manifest auto-detection
+        final packageSpec = PackageManager.isEnabled(session) ? task.getPackageSpec() : null
+        attrs.package = packageSpec?.toString()
         if( bundle!=null && bundle.dockerfile ) {
             attrs.dockerfile = bundle.dockerfile.text
         }
@@ -578,10 +580,10 @@ class WaveClient {
             checkConflicts(attrs, task.lazyName())
 
         //  resolve the wave assets
-        return resolveAssets0(attrs, bundle, singularity, dockerArch)
+        return resolveAssets0(attrs, bundle, singularity, dockerArch, packageSpec)
     }
 
-    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String platform) {
+    protected WaveAssets resolveAssets0(Map<String,String> attrs, ResourcesBundle bundle, boolean singularity, String platform, nextflow.packages.PackageSpec packageSpec = null) {
 
         final scriptType = singularity ? 'singularityfile' : 'dockerfile'
         String containerScript = attrs.get(scriptType)
@@ -630,24 +632,10 @@ class WaveClient {
          * If 'package' directive is specified use it to create a container file
          * to assemble the target container
          */
-        if( attrs.package && !packagesSpec ) {
+        if( packageSpec && !packagesSpec ) {
             if( containerScript )
                 throw new IllegalArgumentException("Unexpected package and $scriptType conflict while resolving wave container")
-
-            // Check if new package system is enabled
-            if( PackageManager.isEnabled(session) ) {
-                try {
-                    def defaultProvider = session.config.navigate('packages.provider', 'conda') as String
-                    PackageSpec spec = PackageManager.parseSpec(attrs.package, defaultProvider)
-                    
-                    if( spec ) {
-                        packagesSpec = convertToWavePackagesSpec(spec)
-                    }
-                }
-                catch( Exception e ) {
-                    log.warn "Failed to parse package specification for Wave: ${e.message}"
-                }
-            }
+            packagesSpec = convertToWavePackagesSpec(packageSpec)
         }
 
         /*
@@ -840,6 +828,10 @@ class WaveClient {
         }
     }
 
+    static protected boolean isPixiManifest(String value) {
+        value && !value.contains('\n') && (value.endsWith('.toml') || value.endsWith('.lock'))
+    }
+
     static protected boolean isCondaLocalFile(String value) {
         if( value.contains('\n') )
             return false
@@ -879,16 +871,29 @@ class WaveClient {
             return null
         }
 
+        // a manifest file given either via `environment:` or as the single
+        // entry of the directive, e.g. `package "/path/env.yml", provider: "conda"`
+        final manifest = spec.hasEnvironmentFile()
+            ? spec.environment
+            : (spec.entries?.size() == 1 && isCondaLocalFile(spec.entries[0]) ? spec.entries[0] : null)
+
+        if( spec.provider == 'pixi' && (manifest || spec.entries.any { isPixiManifest(it) }) ) {
+            // a pixi.toml / pixi.lock is not a conda environment file: build locally
+            log.debug "Pixi manifest '${manifest ?: spec.entries}' cannot be built by Wave -- the environment will be created locally by the nf-pixi provider"
+            return null
+        }
+
         def waveSpec = new PackagesSpec()
         waveSpec.withType(waveType)
 
-        // Set entries or environment
-        if (spec.hasEntries()) {
-            waveSpec.withEntries(spec.entries)
+        if( manifest ) {
+            // Wave expects the environment file *content*, base64 encoded, the
+            // same as the legacy `conda` directive hand-off above
+            final condaFile = DockerHelper.condaFileFromPath(manifest, null)
+            waveSpec.withEnvironment(condaFile.bytes.encodeBase64().toString())
         }
-        
-        if (spec.hasEnvironmentFile()) {
-            waveSpec.withEnvironment(spec.environment)
+        else if( spec.hasEntries() ) {
+            waveSpec.withEntries(spec.entries)
         }
         
         // Set channels (conda-specific)
