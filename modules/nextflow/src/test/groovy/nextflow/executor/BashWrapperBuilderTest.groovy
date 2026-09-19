@@ -227,6 +227,35 @@ class BashWrapperBuilderTest extends Specification {
         builder.mounts == [ Paths.get('/my/bin') ]
     }
 
+    def 'should add the array index variable to the container env' () {
+        given:
+        def bash = Spy(new BashWrapperBuilder(Mock(TaskBean)))
+        and:
+        bash.getEnvironment() >> [:]
+        bash.getBinDirs() >> []
+        bash.getWorkDir() >> Paths.get('/my/work/dir')
+        bash.isStatsEnabled() >> false
+        bash.getStageInMode() >> 'symlink'
+        bash.getInputFiles() >> [:]
+        bash.getContainerConfig() >> new SingularityConfig(envWhitelist: 'FOO,BAR')
+        bash.getContainerImage() >> 'foo/bar'
+        bash.getContainerMount() >> null
+        bash.getContainerMemory() >> null
+        bash.getContainerCpus() >> null
+        bash.getContainerCpuset() >> null
+        bash.getContainerOptions() >> null
+        bash.getContainerPlatform() >> 'amd64'
+        bash.isSecretNative() >> false
+        bash.getSecretNames() >> []
+        and: 'the task is an array child, exposing the array index variable'
+        bash.getArrayIndexName() >> 'SLURM_ARRAY_TASK_ID'
+
+        when:
+        def builder = bash.createContainerBuilder(null)
+        then: 'the array index variable is whitelisted without mutating the container config'
+        builder.env == ['NXF_TASK_WORKDIR', 'FOO', 'BAR', 'SLURM_ARRAY_TASK_ID']
+    }
+
     def 'should add resolved inputs'() {
         given:
         def bash = Spy(new BashWrapperBuilder(Mock(TaskBean)))
