@@ -721,12 +721,23 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                 task.stderr = executor.logging.stderr(uid, taskId) ?: errorFile
             }
             else {
-                // Retried spot instances could keep the 500xx exit code event when the automatic retied succeeds. In this case, we need to read the exit code from .exitcode
+                // Retried spot instances could keep the 500xx exit code event when the automatic retied succeeds.
+                // In this case, we need to read the exit code from .exitcode
                 // https://github.com/nextflow-io/nextflow/issues/6779
                 if( task.exitStatus >= 50000 )
                     task.exitStatus = readExitFile()
-                task.stdout = outputFile
-                task.stderr = errorFile
+                if( task.exitStatus == Integer.MAX_VALUE ) {
+                    // the job is reported as succeeded, but the exit status could not be determined
+                    // e.g. the task was unable to stage/unstage the files due to missing permissions
+                    // therefore fetch the task logs to report a meaningful error message
+                    // https://github.com/nextflow-io/nextflow/issues/4351
+                    task.stdout = executor.logging.stdout(uid, taskId) ?: outputFile
+                    task.stderr = executor.logging.stderr(uid, taskId) ?: errorFile
+                }
+                else {
+                    task.stdout = outputFile
+                    task.stderr = errorFile
+                }
             }
             status = TaskStatus.COMPLETED
             if( isArrayChild )
