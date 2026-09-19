@@ -472,6 +472,7 @@ Like pak, it activates via `R_LIBS_USER` and is configured through the `install2
 // nextflow.config
 install2r {
     cacheDir = "$HOME/.nextflow/install2r"
+    repos = 'https://cloud.r-project.org'   // CRAN mirror passed as `install2.r -r`
     installOptions = ''         // extra install2.r CLI flags, e.g. '--error'
     createTimeout = '20 min'
 }

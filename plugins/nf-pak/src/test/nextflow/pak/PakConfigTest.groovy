@@ -22,24 +22,6 @@ import spock.lang.Unroll
 class PakConfigTest extends Specification {
 
     @Unroll
-    def 'should check enabled flag'() {
-        given:
-        def pak = new PakConfig(CONFIG, ENV)
-        expect:
-        pak.isEnabled() == EXPECTED
-
-        where:
-        EXPECTED    | CONFIG            | ENV
-        false       | [:]               | [:]
-        false       | [enabled: false]  | [:]
-        true        | [enabled: true]   | [:]
-        and:
-        false       | [:]               | [NXF_PAK_ENABLED: 'false']
-        true        | [:]               | [NXF_PAK_ENABLED: 'true']
-        false       | [enabled: false]  | [NXF_PAK_ENABLED: 'true']  // <-- config has priority
-        true        | [enabled: true]   | [NXF_PAK_ENABLED: 'true']
-    }
-
     def 'should check install options'() {
         given:
         def pak = new PakConfig([installOptions: 'dependencies=TRUE'], [:])

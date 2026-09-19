@@ -22,24 +22,6 @@ import spock.lang.Unroll
 class GuixConfigTest extends Specification {
 
     @Unroll
-    def 'should check enabled flag'() {
-        given:
-        def guix = new GuixConfig(CONFIG, ENV)
-        expect:
-        guix.isEnabled() == EXPECTED
-
-        where:
-        EXPECTED    | CONFIG            | ENV
-        false       | [:]               | [:]
-        false       | [enabled: false]  | [:]
-        true        | [enabled: true]   | [:]
-        and:
-        false       | [:]               | [NXF_GUIX_ENABLED: 'false']
-        true        | [:]               | [NXF_GUIX_ENABLED: 'true']
-        false       | [enabled: false]  | [NXF_GUIX_ENABLED: 'true']  // <-- config has priority
-        true        | [enabled: true]   | [NXF_GUIX_ENABLED: 'true']
-    }
-
     def 'should check install options'() {
         given:
         def guix = new GuixConfig([installOptions: '--no-grafts'], [:])

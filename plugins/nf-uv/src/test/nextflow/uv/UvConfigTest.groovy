@@ -22,24 +22,6 @@ import spock.lang.Unroll
 class UvConfigTest extends Specification {
 
     @Unroll
-    def 'should check enabled flag'() {
-        given:
-        def uv = new UvConfig(CONFIG, ENV)
-        expect:
-        uv.isEnabled() == EXPECTED
-
-        where:
-        EXPECTED    | CONFIG            | ENV
-        false       | [:]               | [:]
-        false       | [enabled: false]  | [:]
-        true        | [enabled: true]   | [:]
-        and:
-        false       | [:]               | [NXF_UV_ENABLED: 'false']
-        true        | [:]               | [NXF_UV_ENABLED: 'true']
-        false       | [enabled: false]  | [NXF_UV_ENABLED: 'true']  // <-- config has priority
-        true        | [enabled: true]   | [NXF_UV_ENABLED: 'true']
-    }
-
     def 'should check python version'() {
         given:
         def uv = new UvConfig([pythonVersion: '3.12'], [:])

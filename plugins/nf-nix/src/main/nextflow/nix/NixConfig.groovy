@@ -37,12 +37,6 @@ class NixConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        Execute tasks with Nix environments (default: `false`).
-    """)
-    final boolean enabled
-
-    @ConfigOption
-    @Description("""
         The path where Nix environments are stored. It should be accessible from all compute nodes when using a shared file system.
     """)
     final String cacheDir
@@ -69,18 +63,12 @@ class NixConfig implements ConfigScope {
     NixConfig() {}
 
     NixConfig(Map opts, Map<String, String> env) {
-        enabled = opts.enabled != null
-            ? opts.enabled as boolean
-            : (env.NXF_NIX_ENABLED?.toString() == 'true')
         cacheDir = opts.cacheDir
         installOptions = opts.installOptions
         createTimeout = opts.createTimeout as Duration ?: Duration.of('20min')
         flakeRef = opts.flakeRef ?: 'nixpkgs'
     }
 
-    boolean isEnabled() {
-        enabled
-    }
 
     Duration createTimeout() {
         createTimeout

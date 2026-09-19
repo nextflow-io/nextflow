@@ -37,12 +37,6 @@ class Install2rConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        Execute tasks with install2.r R libraries (default: `false`).
-    """)
-    final boolean enabled
-
-    @ConfigOption
-    @Description("""
         The path where install2.r R libraries are stored. It should be accessible from all compute nodes when using a shared file system.
     """)
     final String cacheDir
@@ -69,18 +63,12 @@ class Install2rConfig implements ConfigScope {
     Install2rConfig() {}
 
     Install2rConfig(Map opts, Map<String, String> env) {
-        enabled = opts.enabled != null
-            ? opts.enabled as boolean
-            : (env.NXF_INSTALL2R_ENABLED?.toString() == 'true')
         cacheDir = opts.cacheDir
         installOptions = opts.installOptions
         createTimeout = opts.createTimeout as Duration ?: Duration.of('20min')
         repos = opts.repos ?: 'https://cloud.r-project.org'
     }
 
-    boolean isEnabled() {
-        enabled
-    }
 
     Duration createTimeout() {
         createTimeout

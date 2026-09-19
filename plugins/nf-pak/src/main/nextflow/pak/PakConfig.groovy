@@ -37,12 +37,6 @@ class PakConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        Execute tasks with R pak environments (default: `false`).
-    """)
-    final boolean enabled
-
-    @ConfigOption
-    @Description("""
         The path where R pak environments are stored. It should be accessible from all compute nodes when using a shared file system.
     """)
     final String cacheDir
@@ -63,17 +57,11 @@ class PakConfig implements ConfigScope {
     PakConfig() {}
 
     PakConfig(Map opts, Map<String, String> env) {
-        enabled = opts.enabled != null
-            ? opts.enabled as boolean
-            : (env.NXF_PAK_ENABLED?.toString() == 'true')
         cacheDir = opts.cacheDir
         installOptions = opts.installOptions
         createTimeout = opts.createTimeout as Duration ?: Duration.of('20min')
     }
 
-    boolean isEnabled() {
-        enabled
-    }
 
     Duration createTimeout() {
         createTimeout

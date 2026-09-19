@@ -39,21 +39,15 @@ class PixiConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        The list of conda channels used to resolve packages given as a package list (default: `['conda-forge']`).
-    """)
-    final List<String> channels
-
-    @ConfigOption
-    @Description("""
-        Execute tasks with Pixi environments (default: `false`).
-    """)
-    final boolean enabled
-
-    @ConfigOption
-    @Description("""
         The path where Pixi environments are stored. It should be accessible from all compute nodes when using a shared file system.
     """)
     final String cacheDir
+
+    @ConfigOption
+    @Description("""
+        The list of conda channels used to resolve packages given as a package list (default: `['conda-forge']`).
+    """)
+    final List<String> channels
 
     @ConfigOption
     @Description("""
@@ -71,18 +65,12 @@ class PixiConfig implements ConfigScope {
     PixiConfig() {}
 
     PixiConfig(Map opts, Map<String, String> env) {
-        enabled = opts.enabled != null
-            ? opts.enabled as boolean
-            : (env.NXF_PIXI_ENABLED?.toString() == 'true')
         cacheDir = opts.cacheDir
         channels = opts.channels != null ? (opts.channels as List).collect { it.toString() } : ['conda-forge']
         createOptions = opts.createOptions
         createTimeout = opts.createTimeout as Duration ?: Duration.of('20min')
     }
 
-    boolean isEnabled() {
-        enabled
-    }
 
     Duration createTimeout() {
         createTimeout

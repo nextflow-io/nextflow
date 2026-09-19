@@ -22,24 +22,6 @@ import spock.lang.Unroll
 class Install2rConfigTest extends Specification {
 
     @Unroll
-    def 'should check enabled flag'() {
-        given:
-        def install2r = new Install2rConfig(CONFIG, ENV)
-        expect:
-        install2r.isEnabled() == EXPECTED
-
-        where:
-        EXPECTED    | CONFIG            | ENV
-        false       | [:]               | [:]
-        false       | [enabled: false]  | [:]
-        true        | [enabled: true]   | [:]
-        and:
-        false       | [:]               | [NXF_INSTALL2R_ENABLED: 'false']
-        true        | [:]               | [NXF_INSTALL2R_ENABLED: 'true']
-        false       | [enabled: false]  | [NXF_INSTALL2R_ENABLED: 'true']  // <-- config has priority
-        true        | [enabled: true]   | [NXF_INSTALL2R_ENABLED: 'true']
-    }
-
     def 'should check install options'() {
         given:
         def install2r = new Install2rConfig([installOptions: '--error'], [:])

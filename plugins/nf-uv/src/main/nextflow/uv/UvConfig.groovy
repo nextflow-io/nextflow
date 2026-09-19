@@ -37,12 +37,6 @@ class UvConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
-        Execute tasks with uv virtual environments (default: `false`).
-    """)
-    final boolean enabled
-
-    @ConfigOption
-    @Description("""
         The path where uv virtual environments are stored. It should be accessible from all compute nodes when using a shared file system.
     """)
     final String cacheDir
@@ -69,18 +63,12 @@ class UvConfig implements ConfigScope {
     UvConfig() {}
 
     UvConfig(Map opts, Map<String, String> env) {
-        enabled = opts.enabled != null
-            ? opts.enabled as boolean
-            : (env.NXF_UV_ENABLED?.toString() == 'true')
         cacheDir = opts.cacheDir
         installOptions = opts.installOptions
         createTimeout = opts.createTimeout as Duration ?: Duration.of('20min')
         pythonVersion = opts.pythonVersion
     }
 
-    boolean isEnabled() {
-        enabled
-    }
 
     Duration createTimeout() {
         createTimeout

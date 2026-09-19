@@ -22,24 +22,6 @@ import spock.lang.Unroll
 class NixConfigTest extends Specification {
 
     @Unroll
-    def 'should check enabled flag'() {
-        given:
-        def nix = new NixConfig(CONFIG, ENV)
-        expect:
-        nix.isEnabled() == EXPECTED
-
-        where:
-        EXPECTED    | CONFIG            | ENV
-        false       | [:]               | [:]
-        false       | [enabled: false]  | [:]
-        true        | [enabled: true]   | [:]
-        and:
-        false       | [:]               | [NXF_NIX_ENABLED: 'false']
-        true        | [:]               | [NXF_NIX_ENABLED: 'true']
-        false       | [enabled: false]  | [NXF_NIX_ENABLED: 'true']  // <-- config has priority
-        true        | [enabled: true]   | [NXF_NIX_ENABLED: 'true']
-    }
-
     def 'should have default flake ref'() {
         given:
         def nix = new NixConfig([:], [:])
