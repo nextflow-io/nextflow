@@ -170,6 +170,21 @@ class CondaCache {
      * @param str The conda environment string
      * @return {@code true} if it's a path to an explicit file, {@code false} otherwise
      */
+    /**
+     * Split a package list on whitespace, honouring one level of single or
+     * double quotes around a token (e.g. {@code bwa "samtools>=1.0"}), so that
+     * specs written for the unquoted legacy command keep working now that each
+     * token is shell-quoted.
+     */
+    @PackageScope
+    static List<String> splitPackages(String spec) {
+        final result = new ArrayList<String>()
+        final m = spec =~ /"([^"]*)"|'([^']*)'|(\S+)/
+        while( m.find() )
+            result.add(m.group(1) != null ? m.group(1) : m.group(2) != null ? m.group(2) : m.group(3))
+        return result
+    }
+
     @PackageScope
     @Memoized // <-- annotate as "Memoized" to avoid parsing multiple time the same file
     boolean isExplicitFile(String str) {
@@ -339,7 +354,7 @@ class CondaCache {
 
         else {
             final channelsOpt = channels.collect(it -> "-c $it ").join('')
-            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} ${channelsOpt}${Escape.shell(condaEnv.tokenize() as String[])}"
+            cmd = "${binaryName} create ${opts}--yes --quiet --prefix ${Escape.path(prefixPath)} ${channelsOpt}${Escape.shell(splitPackages(condaEnv) as String[])}"
         }
 
         try {

@@ -623,6 +623,12 @@ class CondaCacheTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'should keep pre-quoted tokens working in a package list' () {
+        expect:
+        CondaCache.splitPackages('bwa "samtools>=1.0" \'bcftools=1.18\' bioconda::htslib') == ['bwa', 'samtools>=1.0', 'bcftools=1.18', 'bioconda::htslib']
+        nextflow.util.Escape.shell(CondaCache.splitPackages('bwa "samtools>=1.0"') as String[]) == "'bwa' 'samtools>=1.0'"
+    }
+
     def 'should apply a per-process create-options override in the command' () {
         given:
         def folder = Files.createTempDirectory('test')
