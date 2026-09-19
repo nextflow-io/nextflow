@@ -84,8 +84,32 @@ public class Formatter extends CodeVisitorSupport {
 
     private int stringIndentDelta = 0;
 
+    /**
+     * Set immediately after a block or section opener (an indented `{` or a
+     * `label:` line) so that the next blank-line check -- whichever of
+     * {@link #appendBlankLines} or {@link #blankLines} runs first -- emits
+     * none and clears it, stripping a source blank at the start of a block
+     * or section regardless of what the source had there.
+     */
+    private boolean atBlockStart;
+
     public Formatter(FormattingOptions options) {
         this.options = options;
+    }
+
+    /**
+     * Mark that a block or section was just opened, so the next thing
+     * printed inside it starts with no blank line above.
+     *
+     * INVARIANT: every {@code markBlockStart()} must be consumed by the next
+     * {@link #appendBlankLines} / {@link #blankLines} call, or force-cleared by
+     * {@link #appendDanglingComments} (which every block/section calls at close,
+     * covering an empty block). Adding a new block/section opener means routing
+     * its first child's spacing through one of those, or the flag leaks and a
+     * blank line is silently dropped at an unrelated later site.
+     */
+    public void markBlockStart() {
+        atBlockStart = true;
     }
 
     public void setComments(CommentAttacher comments) {
@@ -116,16 +140,37 @@ public class Formatter extends CodeVisitorSupport {
      * lines, and that gap is already part of the text).
      */
     public boolean appendVerbatim(ASTNode node) {
+        return appendVerbatim(node, true);
+    }
+
+    /**
+     * Like {@link #appendVerbatim}, but for a node dispatched from a loop
+     * that already owns the blank line above it (a top-level script
+     * declaration or config statement) -- mirrors the
+     * {@link #appendLeadingComments}/{@link #appendInnerComments} split, so
+     * the loop's policy-driven blank is not doubled by this method's own
+     * source-derived blank before the verbatim text or its first comment.
+     *
+     * @param node
+     */
+    public boolean appendVerbatimInner(ASTNode node) {
+        return appendVerbatim(node, false);
+    }
+
+    private boolean appendVerbatim(ASTNode node, boolean ownsBlankAbove) {
         if( fmtDirectives.isSuppressed(node) )
             return true;
         var text = fmtDirectives.verbatimText(node);
         if( text == null )
             return false;
-        for( var comment : visible(comments.leading(node)) ) {
-            appendBlankLines(comment.line);
-            appendComment(comment);
+        var leading = visible(comments.leading(node));
+        for( int i = 0; i < leading.size(); i++ ) {
+            if( ownsBlankAbove || i > 0 )
+                appendBlankLines(leading.get(i).line);
+            appendComment(leading.get(i));
         }
-        appendBlankLines(fmtDirectives.verbatimStartLine(node));
+        if( ownsBlankAbove || !leading.isEmpty() )
+            appendBlankLines(fmtDirectives.verbatimStartLine(node));
         append(text);
         appendNewLine();
         return true;
@@ -138,6 +183,15 @@ public class Formatter extends CodeVisitorSupport {
      */
     public boolean isVerbatim(ASTNode node) {
         return fmtDirectives.isSuppressed(node) || fmtDirectives.verbatimText(node) != null;
+    }
+
+    /**
+     * Whether a node emits nothing because it is part of a verbatim region
+     * printed by an earlier node. A declaration loop must not emit blank lines
+     * above such a node, since that would inject blanks into the region.
+     */
+    public boolean isSuppressed(ASTNode node) {
+        return fmtDirectives.isSuppressed(node);
     }
 
     public void append(char c) {
@@ -182,11 +236,30 @@ public class Formatter extends CodeVisitorSupport {
      * @param node
      */
     public void appendLeadingComments(ASTNode node) {
-        for( var comment : visible(comments.leading(node)) ) {
-            appendBlankLines(comment.line);
-            appendComment(comment);
+        appendLeading(node, true);
+    }
+
+    /**
+     * Like {@link #appendLeadingComments}, but for a node dispatched from a
+     * loop that already owns the blank line above it (a top-level declaration):
+     * the blank lines between the comments and between the last comment and the
+     * node are preserved, but the blank above the first comment is not, since
+     * the caller places it from policy rather than the source position.
+     *
+     * @param node
+     */
+    public void appendInnerComments(ASTNode node) {
+        appendLeading(node, false);
+    }
+
+    private void appendLeading(ASTNode node, boolean ownsBlankAbove) {
+        var leading = visible(comments.leading(node));
+        for( int i = 0; i < leading.size(); i++ ) {
+            if( ownsBlankAbove || i > 0 )
+                appendBlankLines(leading.get(i).line);
+            appendComment(leading.get(i));
         }
-        if( node != null )
+        if( node != null && (ownsBlankAbove || !leading.isEmpty()) )
             appendBlankLines(node.getLineNumber());
     }
 
@@ -200,40 +273,6 @@ public class Formatter extends CodeVisitorSupport {
     public void appendCommentsBefore(ASTNode node) {
         for( var comment : visible(comments.leading(node)) )
             appendComment(comment);
-    }
-
-    /**
-     * Emit the blank lines that precede a node's leading block, for a node whose
-     * source position no longer matches its output position (e.g. a reordered
-     * declaration). The blank count is taken from the node's first own-line leading
-     * comment if it has one, otherwise from the node itself.
-     *
-     * @param node
-     */
-    public void appendBlankLinesBefore(ASTNode node) {
-        appendBlankLines(comments.leadingLine(node));
-    }
-
-    /**
-     * Append the comments that precede a reordered node, preserving the blank
-     * lines between the comments and between the last comment and the node, but
-     * not the blank lines above the first comment -- those separate the node's
-     * group from what precedes it and are placed by the caller, since the node's
-     * source position no longer matches its output position.
-     *
-     * @param node
-     */
-    public void appendInnerComments(ASTNode node) {
-        var leading = visible(comments.leading(node));
-        for( int i = 0; i < leading.size(); i++ ) {
-            if( i > 0 )
-                appendBlankLines(leading.get(i).line);
-            appendComment(leading.get(i));
-        }
-        // within a group only a comment-to-node blank reaches here; a bare blank
-        // above the node would have started a new group
-        if( !leading.isEmpty() )
-            appendBlankLines(node.getLineNumber());
     }
 
     /**
@@ -251,6 +290,10 @@ public class Formatter extends CodeVisitorSupport {
             appendBlankLines(comment.line);
             appendComment(comment);
         }
+        // a block/section that turned out to have no content to consume the
+        // opener's markBlockStart() (e.g. an empty block) must not leak it
+        // into whatever is printed next
+        atBlockStart = false;
     }
 
     public boolean hasTrailingComment(ASTNode node) {
@@ -266,11 +309,45 @@ public class Formatter extends CodeVisitorSupport {
     }
 
     private void appendBlankLines(int line) {
-        if( builder.length() == 0 )
+        if( skipBlankLines() )
             return;
-        var count = comments.blankLinesBefore(line);
+        // collapse any run of source blank lines to at most one -- this must
+        // stay a stateless re-derivation from the source position given, not
+        // a running count of newlines already emitted, since the coversComment
+        // skip-guards in the comment-printing methods rely on this measuring the
+        // gap from the source even when a comment in between was not printed
+        var count = Math.min(1, comments.blankLinesBefore(line));
         for( int i = 0; i < count; i++ )
             appendNewLine();
+    }
+
+    /**
+     * Emit exactly {@code count} blank lines, for a caller (a top-level
+     * declaration loop) that computes the count itself from policy rather
+     * than measuring it from the source.
+     *
+     * @param count
+     */
+    public void blankLines(int count) {
+        if( skipBlankLines() )
+            return;
+        for( int i = 0; i < count; i++ )
+            appendNewLine();
+    }
+
+    /**
+     * Whether the blank lines a caller is about to emit should be dropped:
+     * at the very start of the output, or at the start of a block/section
+     * (consuming the {@link #markBlockStart} flag).
+     */
+    private boolean skipBlankLines() {
+        if( builder.length() == 0 )
+            return true;
+        if( atBlockStart ) {
+            atBlockStart = false;
+            return true;
+        }
+        return false;
     }
 
     private void appendComment(Comment comment) {
@@ -890,6 +967,7 @@ public class Formatter extends CodeVisitorSupport {
         }
         else {
             appendNewLine();
+            markBlockStart();
             incIndent();
             visit(code);
             appendDanglingComments(node);

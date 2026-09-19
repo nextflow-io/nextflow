@@ -16,6 +16,7 @@
 package nextflow.config.formatter;
 
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 import nextflow.config.ast.ConfigApplyNode;
@@ -24,12 +25,14 @@ import nextflow.config.ast.ConfigAssignNode;
 import nextflow.config.ast.ConfigBlockNode;
 import nextflow.config.ast.ConfigIncludeNode;
 import nextflow.config.ast.ConfigNode;
+import nextflow.config.ast.ConfigStatement;
 import nextflow.config.ast.ConfigVisitorSupport;
 import nextflow.script.formatter.Comment;
 import nextflow.script.formatter.CommentAttacher;
 import nextflow.script.formatter.FmtDirectives;
 import nextflow.script.formatter.FormattingOptions;
 import nextflow.script.formatter.Formatter;
+import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.control.SourceUnit;
 
 import static nextflow.script.ast.ASTUtils.*;
@@ -72,7 +75,7 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
     public void visit() {
         var moduleNode = sourceUnit.getAST();
         if( moduleNode instanceof ConfigNode cn ) {
-            super.visit(cn);
+            visitStatements(cn.getConfigStatements(), (stmt) -> visit(stmt));
             fmt.appendDanglingComments(cn);
         }
     }
@@ -81,20 +84,69 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
         return fmt.toString();
     }
 
+    /**
+     * Emit a list of sibling config statements, with the blank line above
+     * each one owned by this loop rather than by the statement's own
+     * (source-derived) leading-comment logic -- mirrors the top-level
+     * declaration loop in {@code ScriptFormattingVisitor}. Used both for the
+     * top level of the file and for the body of a config block, since config
+     * has no separate "top-level" concept.
+     *
+     * @param statements
+     */
+    private <T extends ASTNode> void visitStatements(List<T> statements, Consumer<T> visit) {
+        T prev = null;
+        for( var stmt : statements ) {
+            // a statement suppressed inside a verbatim region emits nothing,
+            // so it must not get a blank line above it
+            if( !fmt.isSuppressed(stmt) )
+                fmt.blankLines(blankLinesBetween(prev, stmt));
+            visit.accept(stmt);
+            prev = stmt;
+        }
+    }
+
+    /**
+     * The blank lines that belong above a config statement, given its
+     * previous sibling (or {@code null} for the first statement of the file
+     * or block): a config block is set off by exactly 1 blank line (config is
+     * denser than a script's top-level definitions, which get 2); two
+     * statements of the same kind (e.g. consecutive assignments) keep their
+     * source grouping, capped at 1; of different kinds, exactly 1.
+     *
+     * @param prev
+     * @param decl
+     */
+    private int blankLinesBetween(ASTNode prev, ASTNode decl) {
+        if( prev == null )
+            return 0;
+        if( isConfigBlock(prev) || isConfigBlock(decl) )
+            return 1;
+        if( prev.getClass() != decl.getClass() )
+            return 1;
+        var comments = fmt.getComments();
+        return Math.min(1, comments.blankLinesBefore(comments.leadingLine(decl)));
+    }
+
+    private static boolean isConfigBlock(ASTNode node) {
+        return node instanceof ConfigBlockNode || node instanceof ConfigApplyBlockNode;
+    }
+
     // config statements
 
     @Override
     public void visitConfigApplyBlock(ConfigApplyBlockNode node) {
-        if( fmt.appendVerbatim(node) )
+        if( fmt.appendVerbatimInner(node) )
             return;
-        fmt.appendLeadingComments(node);
+        fmt.appendInnerComments(node);
         fmt.appendIndent();
         fmt.append(node.name);
         fmt.append(" {");
         fmt.appendNewLine();
+        fmt.markBlockStart();
 
         fmt.incIndent();
-        super.visitConfigApplyBlock(node);
+        visitStatements(node.statements, (stmt) -> visitConfigApply(stmt));
         fmt.appendDanglingComments(node);
         fmt.decIndent();
 
@@ -106,17 +158,17 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
 
     @Override
     public void visitConfigApply(ConfigApplyNode node) {
-        if( fmt.appendVerbatim(node) )
+        if( fmt.appendVerbatimInner(node) )
             return;
-        fmt.appendLeadingComments(node);
+        fmt.appendInnerComments(node);
         fmt.visitDirective(node);
     }
 
     @Override
     public void visitConfigAssign(ConfigAssignNode node) {
-        if( fmt.appendVerbatim(node) )
+        if( fmt.appendVerbatimInner(node) )
             return;
-        fmt.appendLeadingComments(node);
+        fmt.appendInnerComments(node);
         fmt.emitWrappable(() -> {
             fmt.appendIndent();
             var name = String.join(".", node.names);
@@ -140,9 +192,9 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
 
     @Override
     public void visitConfigBlock(ConfigBlockNode node) {
-        if( fmt.appendVerbatim(node) )
+        if( fmt.appendVerbatimInner(node) )
             return;
-        fmt.appendLeadingComments(node);
+        fmt.appendInnerComments(node);
         fmt.appendIndent();
         if( node.kind != null ) {
             fmt.append(node.kind);
@@ -159,6 +211,7 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
         }
         fmt.append(" {");
         fmt.appendNewLine();
+        fmt.markBlockStart();
 
         int caw = currentAlignmentWidth;
         if( options.harshilAlignment() ) {
@@ -174,7 +227,7 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
         }
 
         fmt.incIndent();
-        super.visitConfigBlock(node);
+        visitStatements(node.statements, (stmt) -> visit(stmt));
         fmt.appendDanglingComments(node);
         fmt.decIndent();
 
@@ -189,9 +242,9 @@ public class ConfigFormattingVisitor extends ConfigVisitorSupport {
 
     @Override
     public void visitConfigInclude(ConfigIncludeNode node) {
-        if( fmt.appendVerbatim(node) )
+        if( fmt.appendVerbatimInner(node) )
             return;
-        fmt.appendLeadingComments(node);
+        fmt.appendInnerComments(node);
         fmt.appendIndent();
         fmt.append("includeConfig ");
         fmt.visit(node.source);

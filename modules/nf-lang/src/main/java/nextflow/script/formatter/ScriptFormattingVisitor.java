@@ -99,8 +99,10 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         if( !(moduleNode instanceof ScriptNode) )
             return;
         var scriptNode = (ScriptNode) moduleNode;
-        if( scriptNode.getShebang() != null ) {
-            fmt.append(scriptNode.getShebang());
+        var shebang = scriptNode.getShebang();
+        hasShebang = shebang != null;
+        if( hasShebang ) {
+            fmt.append(shebang);
             fmt.appendNewLine();
         }
 
@@ -133,8 +135,25 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 .max(Integer::compare).orElse(0);
         }
 
+        ASTNode prevDecl = null;
         for( int i = 0; i < declarations.size(); i++ ) {
             var decl = declarations.get(i);
+            if( decl instanceof IncludeNode in ) {
+                if( options.sortDeclarations() ) {
+                    i = visitIncludeRun(declarations, prevDecl, i);
+                    prevDecl = declarations.get(i);
+                    continue;
+                }
+                if( !fmt.isSuppressed(in) )
+                    fmt.blankLines(blankLinesBetween(prevDecl, in));
+                visitInclude(in);
+                prevDecl = in;
+                continue;
+            }
+            // a declaration suppressed inside a verbatim region emits nothing,
+            // so it must not get a blank line above it
+            if( !fmt.isSuppressed(decl) )
+                fmt.blankLines(blankLinesBetween(prevDecl, decl));
             if( decl instanceof AgentNode an )
                 visitAgent(an);
             else if( decl instanceof ClassNode cn && cn.isEnum() )
@@ -143,13 +162,6 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 visitFeatureFlag(ffn);
             else if( decl instanceof FunctionNode fn )
                 visitFunction(fn);
-            else if( decl instanceof IncludeNode in ) {
-                if( options.sortDeclarations() ) {
-                    i = visitIncludeRun(declarations, i);
-                    continue;
-                }
-                visitInclude(in);
-            }
             else if( decl instanceof OutputBlockNode obn )
                 visitOutputs(obn);
             else if( decl instanceof ParamBlockNode pbn )
@@ -162,9 +174,54 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 visitRecord(rn);
             else if( decl instanceof WorkflowNode wn )
                 visitWorkflow(wn);
+            prevDecl = decl;
         }
 
         fmt.appendDanglingComments(scriptNode);
+    }
+
+    private boolean hasShebang;
+
+    /**
+     * The blank lines that belong above a top-level declaration, given its
+     * previous sibling (or {@code null} for the first declaration): PEP8/Ruff
+     * -style, a block definition (process, workflow, function, ...) is set
+     * off from what surrounds it by exactly 2 blank lines, even when the
+     * neighbor is a simple declaration; two simple declarations of the same
+     * kind (e.g. consecutive includes) keep their source grouping, capped at
+     * 1; of different kinds, exactly 1.
+     *
+     * @param prev
+     * @param decl
+     */
+    private int blankLinesBetween(ASTNode prev, ASTNode decl) {
+        if( prev == null )
+            return hasShebang ? 1 : 0;
+        var pk = declKind(prev);
+        var dk = declKind(decl);
+        if( pk == DeclKind.BLOCK || dk == DeclKind.BLOCK )
+            return 2;
+        if( pk != dk )
+            return 1;
+        var comments = fmt.getComments();
+        return Math.min(1, comments.blankLinesBefore(comments.leadingLine(decl)));
+    }
+
+    private enum DeclKind {
+        BLOCK,
+        INCLUDE,
+        FEATURE_FLAG,
+        PARAM_V1
+    }
+
+    private static DeclKind declKind(ASTNode node) {
+        if( node instanceof IncludeNode )
+            return DeclKind.INCLUDE;
+        if( node instanceof FeatureFlagNode )
+            return DeclKind.FEATURE_FLAG;
+        if( node instanceof ParamNodeV1 )
+            return DeclKind.PARAM_V1;
+        return DeclKind.BLOCK;
     }
 
     public String toString() {
@@ -175,9 +232,9 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitFeatureFlag(FeatureFlagNode node) {
-        if( fmt.appendVerbatim(node) )
+        if( fmt.appendVerbatimInner(node) )
             return;
-        fmt.appendLeadingComments(node);
+        fmt.appendInnerComments(node);
         fmt.append(node.name);
         fmt.append(" = ");
         fmt.visit(node.value);
@@ -187,9 +244,9 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitInclude(IncludeNode node) {
-        if( fmt.appendVerbatim(node) )
+        if( fmt.appendVerbatimInner(node) )
             return;
-        fmt.appendLeadingComments(node);
+        fmt.appendInnerComments(node);
         emitInclude(node);
     }
 
@@ -202,10 +259,11 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
      * move with it.
      *
      * @param declarations
+     * @param prevDecl the declaration preceding the run, for the blank line above it
      * @param start
      * @return the index of the last include in the run
      */
-    private int visitIncludeRun(List<ASTNode> declarations, int start) {
+    private int visitIncludeRun(List<ASTNode> declarations, ASTNode prevDecl, int start) {
         var comments = fmt.getComments();
 
         // -- find the end of the run
@@ -219,8 +277,14 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         // than sorting it
         for( int j = start; j < i; j++ ) {
             if( fmt.isVerbatim(declarations.get(j)) ) {
-                for( int k = start; k < i; k++ )
-                    visitInclude((IncludeNode) declarations.get(k));
+                var prev = prevDecl;
+                for( int k = start; k < i; k++ ) {
+                    var in = (IncludeNode) declarations.get(k);
+                    if( !fmt.isSuppressed(in) )
+                        fmt.blankLines(blankLinesBetween(prev, in));
+                    visitInclude(in);
+                    prev = in;
+                }
                 return i - 1;
             }
         }
@@ -241,11 +305,14 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         var comparator = Comparator.comparing((IncludeNode in) -> in.source.getText(), String.CASE_INSENSITIVE_ORDER)
             .thenComparing(in -> in.source.getText());
 
-        for( var g : groups ) {
+        for( int gi = 0; gi < groups.size(); gi++ ) {
+            var g = groups.get(gi);
             // the blank lines above the group belong to its original first
-            // include's source position, so emit them before sorting moves it
+            // include's source position, so compute them before sorting moves it;
+            // the first group's blank was already emitted by the caller (the blank
+            // above the whole run), a later group is a same-kind separator capped at 1
             var originalFirst = g.get(0);
-            fmt.appendBlankLinesBefore(originalFirst);
+            fmt.blankLines(gi == 0 ? blankLinesBetween(prevDecl, originalFirst) : 1);
 
             g.sort(comparator);
             var newFirst = g.get(0);
@@ -307,10 +374,11 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitParams(ParamBlockNode node) {
-        if( fmt.appendVerbatim(node) )
+        if( fmt.appendVerbatimInner(node) )
             return;
-        fmt.appendLeadingComments(node);
+        fmt.appendInnerComments(node);
         fmt.append("params {\n");
+        fmt.markBlockStart();
         fmt.incIndent();
         for( var param : node.declarations ) {
             fmt.appendLeadingComments(param);
@@ -338,9 +406,9 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitParamV1(ParamNodeV1 node) {
-        if( fmt.appendVerbatim(node) )
+        if( fmt.appendVerbatimInner(node) )
             return;
-        fmt.appendLeadingComments(node);
+        fmt.appendInnerComments(node);
         fmt.emitWrappable(() -> {
             fmt.appendIndent();
             fmt.visit(node.target);
@@ -363,20 +431,22 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitWorkflow(WorkflowNode node) {
-        if( fmt.appendVerbatim(node) )
+        if( fmt.appendVerbatimInner(node) )
             return;
-        fmt.appendLeadingComments(node);
+        fmt.appendInnerComments(node);
         fmt.append("workflow");
         if( !node.isEntry() ) {
             fmt.append(' ');
             fmt.append(node.getName());
         }
         fmt.append(" {\n");
+        fmt.markBlockStart();
         fmt.incIndent();
         var takes = node.getParameters();
         if( takes.length > 0 ) {
             fmt.appendIndent();
             fmt.append("take:\n");
+            fmt.markBlockStart();
             visitTypedInputs(takes);
         }
         if( !node.main.isEmpty() ) {
@@ -384,6 +454,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 fmt.appendNewLine();
                 fmt.appendIndent();
                 fmt.append("main:\n");
+                fmt.markBlockStart();
             }
             fmt.visit(node.main);
         }
@@ -391,24 +462,28 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             fmt.appendNewLine();
             fmt.appendIndent();
             fmt.append("emit:\n");
+            fmt.markBlockStart();
             visitTypedOutputs(asBlockStatements(node.emits));
         }
         if( !node.publishers.isEmpty() ) {
             fmt.appendNewLine();
             fmt.appendIndent();
             fmt.append("publish:\n");
+            fmt.markBlockStart();
             visitWorkflowPublishers(asBlockStatements(node.publishers));
         }
         if( !node.onComplete.isEmpty() ) {
             fmt.appendNewLine();
             fmt.appendIndent();
             fmt.append("onComplete:\n");
+            fmt.markBlockStart();
             fmt.visit(node.onComplete);
         }
         if( !node.onError.isEmpty() ) {
             fmt.appendNewLine();
             fmt.appendIndent();
             fmt.append("onError:\n");
+            fmt.markBlockStart();
             fmt.visit(node.onError);
         }
         fmt.appendDanglingComments(node);
@@ -565,12 +640,13 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitAgent(AgentNode node) {
-        if( fmt.appendVerbatim(node) )
+        if( fmt.appendVerbatimInner(node) )
             return;
-        fmt.appendLeadingComments(node);
+        fmt.appendInnerComments(node);
         fmt.append("agent ");
         fmt.append(node.getName());
         fmt.append(" {\n");
+        fmt.markBlockStart();
         fmt.incIndent();
         if( !node.directives.isEmpty() ) {
             visitDirectives(node.directives);
@@ -580,6 +656,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         if( inputs.length > 0 ) {
             fmt.appendIndent();
             fmt.append("input:\n");
+            fmt.markBlockStart();
             visitTypedInputs(inputs);
             fmt.appendNewLine();
         }
@@ -589,6 +666,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         }
         fmt.appendIndent();
         fmt.append("prompt:\n");
+        fmt.markBlockStart();
         fmt.visit(node.prompt);
         fmt.appendDanglingComments(node);
         fmt.decIndent();
@@ -599,12 +677,13 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitProcessV2(ProcessNodeV2 node) {
-        if( fmt.appendVerbatim(node) )
+        if( fmt.appendVerbatimInner(node) )
             return;
-        fmt.appendLeadingComments(node);
+        fmt.appendInnerComments(node);
         fmt.append("process ");
         fmt.append(node.getName());
         fmt.append(" {\n");
+        fmt.markBlockStart();
         fmt.incIndent();
         if( !node.directives.isEmpty() ) {
             visitDirectives(node.directives);
@@ -614,12 +693,14 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         if( inputs.length > 0 ) {
             fmt.appendIndent();
             fmt.append("input:\n");
+            fmt.markBlockStart();
             visitTypedInputs(inputs);
             fmt.appendNewLine();
         }
         if( !node.stagers.isEmpty() ) {
             fmt.appendIndent();
             fmt.append("stage:\n");
+            fmt.markBlockStart();
             visitDirectives(node.stagers);
             fmt.appendNewLine();
         }
@@ -636,6 +717,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         if( !(node.when instanceof EmptyExpression) ) {
             fmt.appendIndent();
             fmt.append("when:\n");
+            fmt.markBlockStart();
             fmt.appendIndent();
             fmt.visit(node.when);
             fmt.append("\n\n");
@@ -643,11 +725,13 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.appendIndent();
         fmt.append(node.type);
         fmt.append(":\n");
+        fmt.markBlockStart();
         fmt.visit(node.exec);
         if( !node.stub.isEmpty() ) {
             fmt.appendNewLine();
             fmt.appendIndent();
             fmt.append("stub:\n");
+            fmt.markBlockStart();
             fmt.visit(node.stub);
         }
         if( options.maheshForm() ) {
@@ -670,23 +754,26 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
     private void visitProcessOutputs(Statement outputs) {
         fmt.appendIndent();
         fmt.append("output:\n");
+        fmt.markBlockStart();
         visitTypedOutputs(asBlockStatements(outputs));
     }
 
     private void visitProcessTopics(Statement topics) {
         fmt.appendIndent();
         fmt.append("topic:\n");
+        fmt.markBlockStart();
         fmt.visit(topics);
     }
 
     @Override
     public void visitProcessV1(ProcessNodeV1 node) {
-        if( fmt.appendVerbatim(node) )
+        if( fmt.appendVerbatimInner(node) )
             return;
-        fmt.appendLeadingComments(node);
+        fmt.appendInnerComments(node);
         fmt.append("process ");
         fmt.append(node.getName());
         fmt.append(" {\n");
+        fmt.markBlockStart();
         fmt.incIndent();
         if( !node.directives.isEmpty() ) {
             visitDirectives(node.directives);
@@ -695,6 +782,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         if( !node.inputs.isEmpty() ) {
             fmt.appendIndent();
             fmt.append("input:\n");
+            fmt.markBlockStart();
             visitDirectives(node.inputs);
             fmt.appendNewLine();
         }
@@ -705,6 +793,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         if( !(node.when instanceof EmptyExpression) ) {
             fmt.appendIndent();
             fmt.append("when:\n");
+            fmt.markBlockStart();
             fmt.appendIndent();
             fmt.visit(node.when);
             fmt.append("\n\n");
@@ -712,11 +801,13 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
         fmt.appendIndent();
         fmt.append(node.type);
         fmt.append(":\n");
+        fmt.markBlockStart();
         fmt.visit(node.exec);
         if( !node.stub.isEmpty() ) {
             fmt.appendNewLine();
             fmt.appendIndent();
             fmt.append("stub:\n");
+            fmt.markBlockStart();
             fmt.visit(node.stub);
         }
         if( options.maheshForm() && !node.outputs.isEmpty() ) {
@@ -733,14 +824,15 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
     private void visitProcessOutputsV1(Statement outputs) {
         fmt.appendIndent();
         fmt.append("output:\n");
+        fmt.markBlockStart();
         visitDirectives(outputs);
     }
 
     @Override
     public void visitFunction(FunctionNode node) {
-        if( fmt.appendVerbatim(node) )
+        if( fmt.appendVerbatimInner(node) )
             return;
-        fmt.appendLeadingComments(node);
+        fmt.appendInnerComments(node);
         fmt.append("def ");
         fmt.append(node.getName());
         fmt.append('(');
@@ -751,6 +843,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
             fmt.visitTypeAnnotation(node.getReturnType());
         }
         fmt.append(" {\n");
+        fmt.markBlockStart();
         fmt.incIndent();
         fmt.visit(node.getCode());
         fmt.appendDanglingComments(node);
@@ -762,9 +855,9 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitRecord(RecordNode node) {
-        if( fmt.appendVerbatim(node) )
+        if( fmt.appendVerbatimInner(node) )
             return;
-        fmt.appendLeadingComments(node);
+        fmt.appendInnerComments(node);
         fmt.append("record ");
         fmt.append(node.getName());
         visitRecordBody(node);
@@ -774,6 +867,7 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     private void visitRecordBody(RecordNode node) {
         fmt.append(" {\n");
+        fmt.markBlockStart();
         fmt.incIndent();
         for( var fn : node.getFields() ) {
             fmt.appendLeadingComments(fn);
@@ -794,12 +888,13 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitEnum(ClassNode node) {
-        if( fmt.appendVerbatim(node) )
+        if( fmt.appendVerbatimInner(node) )
             return;
-        fmt.appendLeadingComments(node);
+        fmt.appendInnerComments(node);
         fmt.append("enum ");
         fmt.append(node.getName());
         fmt.append(" {\n");
+        fmt.markBlockStart();
         fmt.incIndent();
         for( var fn : node.getFields() ) {
             fmt.appendLeadingComments(fn);
@@ -818,10 +913,11 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitOutputs(OutputBlockNode node) {
-        if( fmt.appendVerbatim(node) )
+        if( fmt.appendVerbatimInner(node) )
             return;
-        fmt.appendLeadingComments(node);
+        fmt.appendInnerComments(node);
         fmt.append("output {\n");
+        fmt.markBlockStart();
         fmt.incIndent();
         super.visitOutputs(node);
         fmt.appendDanglingComments(node);
