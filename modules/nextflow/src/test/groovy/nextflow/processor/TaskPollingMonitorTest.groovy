@@ -16,8 +16,11 @@
 
 package nextflow.processor
 
+import java.util.concurrent.atomic.LongAdder
+import java.util.concurrent.locks.ReentrantLock
 
 import nextflow.Session
+import nextflow.exception.ProcessException
 import nextflow.executor.ExecutorConfig
 import nextflow.util.Duration
 import nextflow.util.RateUnit
@@ -221,6 +224,77 @@ class TaskPollingMonitorTest extends Specification {
         0        | 5             | 10         | true     | true     | true             | true      // Unlimited capacity
         10       | 5             | 3          | false    | true     | false            | false     // Cannot fork
         10       | 5             | 3          | true     | false    | false            | false     // Not ready
+    }
+
+    /**
+     * Initialise the locks/conditions normally created by {@link TaskPollingMonitor#start()},
+     * without spawning the polling and submitter threads.
+     */
+    private static TaskPollingMonitor initLocks(TaskPollingMonitor monitor) {
+        final lock = new ReentrantLock()
+        monitor.@pendingLock = lock
+        monitor.@taskAvail = lock.newCondition()
+        monitor.@slotAvail = lock.newCondition()
+        return monitor
+    }
+
+    def 'should release the forks slot when the task submit throws' () {
+        given:
+        def adder = new LongAdder()
+        def processor = Mock(TaskProcessor) { getForksCount() >> adder }
+        def session = Mock(Session) { canSubmitTasks() >> true }
+        and:
+        def monitor = Spy(new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min')))
+        initLocks(monitor)
+        and:
+        def handler = Spy(TaskHandler) {
+            isReady() >> true
+            canForkProcess() >> true
+            getTraceRecord() >> null
+        }
+        handler.task = Mock(TaskRun) { getProcessor() >> processor }
+        // the submit fails, so the handler is never added to the running queue
+        handler.submit() >> { throw new ProcessException('Cannot submit task') }
+
+        when:
+        monitor.schedule(handler)
+        monitor.submitPendingTasks()
+
+        then:
+        // the slot acquired before the failed submit must be given back
+        adder.intValue() == 0
+        and:
+        monitor.runningQueue.size() == 0
+    }
+
+    def 'should not release the forks slot twice when a running task completes' () {
+        given:
+        def adder = new LongAdder(); adder.increment()
+        def processor = Mock(TaskProcessor) { getForksCount() >> adder }
+        def session = Mock(Session)
+        and:
+        def monitor = Spy(new TaskPollingMonitor(name: 'foo', session: session, pollInterval: Duration.of('1min')))
+        initLocks(monitor)
+        and:
+        def handler = Spy(TaskHandler) {
+            checkIfRunning() >> false
+            checkIfCompleted() >> true
+        }
+        handler.task = Mock(TaskRun) { getProcessor() >> processor }
+        and:
+        monitor.runningQueue.add(handler)
+        // run the finalizer inline instead of on the (unstarted) finalizer pool
+        monitor.@enableAsyncFinalizer = false
+        monitor.finalizeTask(_) >> null
+
+        when:
+        monitor.checkTaskStatus(handler)
+
+        then:
+        // checkTaskStatus already decrements and evicts -- exactly one release
+        adder.intValue() == 0
+        and:
+        monitor.runningQueue.size() == 0
     }
 
 }
