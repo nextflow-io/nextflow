@@ -165,7 +165,7 @@ dependencies {
     // Self-signed certificate construction for the broker's per-run TLS identity: the JDK has no
     // public API for it. Same pinned versions as nf-k8s -- PF4J isolates plugin classloaders, so
     // that copy is not visible here; bump the two together.
-    api 'org.bouncycastle:bcprov-jdk18on:1.84'
+    api 'org.bouncycastle:bcprov-jdk18on:1.85'
     api 'org.bouncycastle:bcpkix-jdk18on:1.84'
 
     testImplementation(testFixtures(project(':nextflow')))
