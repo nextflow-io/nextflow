@@ -35,8 +35,8 @@ The Conda environment feature is not supported by executors that use remote obje
 
 The use of Conda recipes specified using the [conda][process-conda] directive needs to be enabled explicitly in the pipeline configuration file (i.e., `nextflow.config`):
 
-:::{note}
-Nextflow also provides a unified {ref}`package-page` system that supports conda and other package managers through a single interface. This newer system is enabled with the `preview.package` feature flag and provides a more consistent experience across different package managers.
+:::note
+Nextflow also provides a unified [package management][package-page] system that supports conda and other package managers through a single interface. This newer system is enabled with the `preview.package` feature flag and provides a more consistent experience across different package managers.
 :::
 
 ```groovy
@@ -200,7 +200,7 @@ It is also possible to use [mamba](https://github.com/mamba-org/mamba) to speed 
 
 ## Migration to Unified Package Management
 
-The unified {ref}`package-page` system provides a modern alternative to the conda directive. When the `preview.package` feature is enabled, you can use the new syntax:
+The unified [package management][package-page] system provides a modern alternative to the conda directive. When the `preview.package` feature is enabled, you can use the new syntax:
 
 ### Before (conda directive):
 ```nextflow
@@ -269,3 +269,4 @@ Conda advanced configuration settings are described in the [conda][config-conda]
 [config-conda]: ./reference/config/conda
 [config-profiles]: ./config#config-profiles
 [process-conda]: ./reference/process/directives/conda
+[package-page]: ./package
