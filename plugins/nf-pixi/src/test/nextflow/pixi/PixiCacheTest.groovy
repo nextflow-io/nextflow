@@ -75,6 +75,13 @@ class PixiCacheTest extends Specification {
         manifest.contains('cowpy = "*"')
         manifest.contains('numpy = ">=1.20"')
 
+        when: 'a channel-qualified conda spec is used'
+        def prefix2 = folder.resolve('env-chan')
+        cache.createLocalPixiEnv0('bioconda::samtools=1.17', prefix2)
+        then:
+        1 * cache.runCommand(_) >> 0
+        prefix2.resolve('pixi.toml').text.contains('samtools = { version = "1.17", channel = "bioconda" }')
+
         cleanup:
         folder?.deleteDir()
     }
@@ -159,13 +166,12 @@ class PixiCacheTest extends Specification {
         cache.createLocalPixiEnv0(tomlFile.toString(), prefixPath)
         then:
         1 * cache.runCommand({ String cmd ->
-            cmd.contains('pixi install') && cmd.contains(folder.toString())
+            // installs inside the cache prefix, never in the user's module directory
+            cmd.contains('pixi install') && cmd.contains("cd ${prefixPath}") && !cmd.contains("cd ${folder} ")
         }) >> 0
         and:
-        // the .pixi marker file points back to the project dir
-        def marker = prefixPath.resolve('.pixi')
-        Files.isRegularFile(marker)
-        marker.text == folder.toString()
+        // the manifest is copied into the prefix as pixi.toml
+        prefixPath.resolve('pixi.toml').text == tomlFile.text
 
         cleanup:
         folder?.deleteDir()

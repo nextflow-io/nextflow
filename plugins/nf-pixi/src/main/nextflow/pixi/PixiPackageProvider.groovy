@@ -83,25 +83,11 @@ class PixiPackageProvider implements PackageProvider {
 
     @Override
     String getActivationScript(Path envPath) {
+        // every cached env is a pixi project directory (generated or copied manifest)
         def result = ""
-
-        // Check for a `.pixi` marker *file* that points to the project directory
-        // (written for the manifest-file case). Note: `pixi install` also creates
-        // a `.pixi` *directory* for the env itself, so test for a regular file.
-        final pixiFile = envPath.resolve('.pixi')
-        if (Files.isRegularFile(pixiFile)) {
-            // Read the project directory path
-            final projectDir = pixiFile.text.trim()
-            result += "cd ${Escape.path(projectDir as String)} && "
-            result += "eval \"\$(pixi shell-hook --shell bash)\" && "
-            result += "cd \"\$OLDPWD\"\n"
-        } else {
-            // Direct activation from environment directory
-            result += "cd ${Escape.path(envPath)} && "
-            result += "eval \"\$(pixi shell-hook --shell bash)\" && "
-            result += "cd \"\$OLDPWD\"\n"
-        }
-
+        result += "cd ${Escape.path(envPath)} && "
+        result += "eval \"\$(pixi shell-hook --shell bash)\" && "
+        result += "cd \"\$OLDPWD\"\n"
         return result
     }
 

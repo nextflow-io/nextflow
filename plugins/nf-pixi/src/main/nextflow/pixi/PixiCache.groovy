@@ -18,7 +18,9 @@ package nextflow.pixi
 
 import java.nio.file.FileSystems
 import java.nio.file.NoSuchFileException
+import java.nio.file.Files
 import java.nio.file.Path
+import java.nio.file.StandardCopyOption
 import java.nio.file.Paths
 import java.util.concurrent.ConcurrentHashMap
 
@@ -268,13 +270,22 @@ class PixiCache {
         for( String tok : pixiEnv.trim().split(/\s+/) ) {
             if( !tok )
                 continue
+            // conda channel prefix, e.g. `bioconda::samtools=1.17`
+            String channel = null
+            final sep = tok.indexOf('::')
+            if( sep > 0 ) {
+                channel = tok.substring(0, sep)
+                tok = tok.substring(sep + 2)
+            }
             String name = tok.replaceFirst(/[^A-Za-z0-9_.\-].*$/, '')
             String ver = tok.substring(name.length()).trim()
             if( ver.isEmpty() )
                 ver = '*'
             else if( ver.startsWith('=') && !ver.startsWith('==') )
                 ver = ver.substring(1)  // conda exact `=1.17` -> `1.17`
-            lines.add(name + ' = "' + ver + '"')
+            lines.add( channel
+                ? name + ' = { version = "' + ver + '", channel = "' + channel + '" }'
+                : name + ' = "' + ver + '"' )
         }
         return lines.join('\n')
     }
@@ -288,19 +299,17 @@ class PixiCache {
 
         def cmd
         if( isTomlFilePath(pixiEnv) || isLockFilePath(pixiEnv) ) {
-            final target = Escape.path(makeAbsolute(pixiEnv))
-            final projectDir = makeAbsolute(pixiEnv).parent
-
-            // Create environment from project file
-            cmd = "cd ${Escape.path(projectDir)} && pixi install ${opts}"
-
-            // Set up the environment directory
+            // Copy the manifest (and its lock file, if any) into the cache prefix
+            // and install there, so the user's module directory is never written
+            // to (`pixi install` creates a `.pixi/` env next to the manifest)
+            final source = makeAbsolute(pixiEnv)
+            final projectDir = source.parent
             prefixPath.mkdirs()
-            final envLink = prefixPath.resolve('.pixi')
-            if( !envLink.exists() ) {
-                envLink.toFile().createNewFile()
-                envLink.write(projectDir.toString())
-            }
+            Files.copy(source, prefixPath.resolve('pixi.toml'), StandardCopyOption.REPLACE_EXISTING)
+            final lock = projectDir.resolve('pixi.lock')
+            if( Files.isRegularFile(lock) && !isLockFilePath(pixiEnv) )
+                Files.copy(lock, prefixPath.resolve('pixi.lock'), StandardCopyOption.REPLACE_EXISTING)
+            cmd = "cd ${Escape.path(prefixPath)} && pixi install ${opts}"
         }
         else {
             // Create environment from package specification
