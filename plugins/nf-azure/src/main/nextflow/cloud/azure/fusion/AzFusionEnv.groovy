@@ -16,11 +16,13 @@
 
 package nextflow.cloud.azure.fusion
 
+import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.cloud.azure.batch.AzHelper
-import groovy.transform.CompileStatic
 import nextflow.cloud.azure.config.AzConfig
+import nextflow.cloud.azure.nio.AzFileSystemProvider
+import nextflow.cloud.azure.nio.AzPath
 import nextflow.fusion.FusionConfig
 import nextflow.fusion.FusionEnv
 import org.pf4j.Extension
@@ -74,36 +76,41 @@ class AzFusionEnv implements FusionEnv {
             return result
         }
 
-        // If no managed identity, use the standard environment with SAS token
-        result.AZURE_STORAGE_SAS_TOKEN = getOrCreateSasToken()
+        if( cfg.storage().accountKey && cfg.storage().sasToken )
+            throw new IllegalArgumentException("Azure Storage Access key and SAS token detected. Only one is allowed")
+
+        if( cfg.storage().sasToken ) {
+            result.AZURE_STORAGE_SAS_TOKEN = cfg.storage().sasToken
+            return result
+        }
+
+        // If an account key is provided, generate a SAS token for the storage account
+        // This is to preserve backwards compatibility with existing Fusion auth method
+        // It should be replaced by use of Managed Identity and/or container specific SAS where required.
+        if( cfg.storage().accountKey ) {
+            result.AZURE_STORAGE_SAS_TOKEN = generateAccountSas(cfg)
+            return result
+        }
+
+        final provider = azProvider()
+        if( provider ) {
+            for( Map.Entry<String,String> entry : provider.containerSasTokens.entrySet() ) {
+                final envKey = ("AZURE_STORAGE_SAS_TOKEN_${entry.key.toUpperCase().replaceAll('[^A-Z0-9]', '_')}").toString()
+                result.put(envKey, entry.value)
+            }
+        }
 
         return result
     }
 
-    /**
-     * Return the SAS token if it is defined in the configuration, otherwise generate one based on the requested
-     * authentication method.
-     */
-    synchronized String getOrCreateSasToken() {
-        final cfg = AzConfig.config
+    protected AzFileSystemProvider azProvider() {
+        final workDir = Global.session?.workDir
+        if( workDir instanceof AzPath )
+            return (AzFileSystemProvider) (workDir as AzPath).fileSystem.provider()
+        return null
+    }
 
-        // Check for incompatible configuration
-        if (cfg.storage().accountKey && cfg.storage().sasToken) {
-            throw new IllegalArgumentException("Azure Storage Access key and SAS token detected. Only one is allowed")
-        }
-
-        // If a SAS token is already defined in the configuration, just return it
-        if (cfg.storage().sasToken) {
-            return cfg.storage().sasToken
-        }
-
-        // For Active Directory and Managed Identity, we cannot generate an *account* SAS token, but we can generate
-        // a *container* SAS token for the work directory.
-        if (cfg.activeDirectory().isConfigured() || cfg.managedIdentity().isConfigured()) {
-            return AzHelper.generateContainerSasWithActiveDirectory(Global.session.workDir, cfg.storage().tokenDuration)
-        }
-
-        // Shared Key authentication can use an account SAS token
-        return AzHelper.generateAccountSasWithAccountKey(Global.session.workDir, cfg.storage().tokenDuration)
+    protected String generateAccountSas(AzConfig cfg) {
+        AzHelper.generateAccountSasWithAccountKey(Global.session.workDir, cfg.storage().tokenDuration)
     }
 }
