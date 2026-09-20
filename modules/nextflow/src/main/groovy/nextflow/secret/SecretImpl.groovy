@@ -18,22 +18,27 @@ package nextflow.secret
 
 import com.google.common.hash.Hasher
 import groovy.transform.CompileStatic
-import groovy.transform.EqualsAndHashCode
-import groovy.transform.Immutable
 import nextflow.util.CacheFunnel
 import nextflow.util.CacheHelper
 
 /**
  * Basic secret implementation
  *
+ * It is declared as a record so that Gson can deserialize the secrets store file through the
+ * canonical constructor. A regular class holding final fields would instead be created by the
+ * Gson reflective adapter, which assigns the fields by reflection: as of Java 27 (JEP 500) that
+ * emits a runtime warning and it is going to be rejected altogether in a future Java release.
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@EqualsAndHashCode
 @CompileStatic
-@Immutable
-class SecretImpl implements Secret, CacheFunnel {
-    String name
-    String value
+record SecretImpl(String name, String value) implements Secret, CacheFunnel {
+
+    @Override
+    String getName() { name }
+
+    @Override
+    String getValue() { value }
 
     @Override
     Hasher funnel(Hasher hasher, CacheHelper.HashMode mode) {

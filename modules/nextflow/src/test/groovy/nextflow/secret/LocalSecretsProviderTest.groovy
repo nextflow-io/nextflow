@@ -21,6 +21,8 @@ import java.nio.file.StandardOpenOption
 import java.nio.file.attribute.PosixFilePermission
 import java.util.concurrent.atomic.AtomicBoolean
 
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import nextflow.exception.AbortOperationException
 import spock.lang.Specification
 /**
@@ -175,6 +177,41 @@ class LocalSecretsProviderTest extends Specification {
 
         cleanup:
         folder.deleteDir()
+    }
+
+    def 'should deserialize secrets without mutating final fields' () {
+        given:
+        // SecretImpl is a record so that Gson builds it through the canonical constructor: a plain
+        // class with final fields would instead be populated by reflection, which triggers a JEP 500
+        // warning and is going to be rejected by a future Java release
+        expect:
+        SecretImpl.isRecord()
+
+        when:
+        def json = '[ {"name": "foo", "value": "bar"} ]'
+        def type = new TypeToken<ArrayList<SecretImpl>>(){}.getType()
+        def secrets = new Gson().fromJson(json, type)
+
+        then:
+        secrets == [ new SecretImpl('foo','bar') ]
+    }
+
+    def 'should deserialize secrets with missing or null attributes' () {
+        given:
+        def type = new TypeToken<ArrayList<SecretImpl>>(){}.getType()
+
+        when:
+        def secrets = new Gson().fromJson(json, type)
+        then:
+        secrets == [ expected ]
+
+        where:
+        json                                    | expected
+        '[ {"name":"foo","value":"bar"} ]'      | new SecretImpl('foo','bar')
+        '[ {"name":"foo"} ]'                    | new SecretImpl('foo',null)
+        '[ {"name":"foo","value":null} ]'       | new SecretImpl('foo',null)
+        '[ {"value":"bar"} ]'                   | new SecretImpl(null,'bar')
+        '[ {} ]'                                | new SecretImpl(null,null)
     }
 
     def 'should fail with invalid permissions' () {
