@@ -31,7 +31,8 @@ import java.util.regex.Pattern
 @EqualsAndHashCode
 class ModuleReference {
 
-    // Must stay in sync with ModuleResolver.REMOTE_MODULE_PATTERN in nf-lang
+    // The canonical module reference format: an include source that is not a path is
+    // parsed with this pattern, and reported as an invalid module reference if it fails
     private static final Pattern MODULE_NAME_PATTERN = ~/^([a-z0-9][a-z0-9._\-]*)\/([a-z][a-z0-9._\-]*(?:\/[a-z][a-z0-9._\-]*)*)$/
 
     final String scope

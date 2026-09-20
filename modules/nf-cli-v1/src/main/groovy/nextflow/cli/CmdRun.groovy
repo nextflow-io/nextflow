@@ -184,7 +184,7 @@ class CmdRun extends CmdBase implements HubAware {
     @Parameter(names = ['-with-fusion'], hidden = true)
     String withFusion
 
-    @Parameter(names = ['-with-weblog'], description = 'Send workflow status messages via HTTP to target URL')
+    @Parameter(names = ['-with-weblog'], hidden = true)
     String withWebLog
 
     @Parameter(names = ['-with-trace'], description = 'Create processes execution tracing file')

@@ -343,6 +343,7 @@ class CmdModuleSpecTest extends Specification {
         existingMetaYml.text.contains '''\
             $schema: https://raw.githubusercontent.com/nextflow-io/schemas/refs/heads/main/module/v1/schema.json
             name: test-namespace/fastqc
+            kind: Process
             input:
             - - name: meta
                 type: map

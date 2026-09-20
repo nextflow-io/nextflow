@@ -610,6 +610,7 @@ EscapeSequence
     |   UnicodeEscape
     |   DollarEscape
     |   LineEscape
+    |   InvalidEscape
     ;
 
 fragment
@@ -619,7 +620,7 @@ OctalEscape
     |   Backslash ZeroToThree OctalDigit OctalDigit
     ;
 
-// Groovy allows 1 or more u's after the backslash
+// Unlike Java, only one `u` is allowed after the backslash
 fragment
 UnicodeEscape
     :   Backslash 'u' HexDigit HexDigit HexDigit HexDigit
@@ -639,6 +640,11 @@ DollarEscape
 fragment
 LineEscape
     :   Backslash LineTerminator
+    ;
+
+fragment
+InvalidEscape
+    :   Backslash .
     ;
 
 fragment
