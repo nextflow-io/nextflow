@@ -17,17 +17,21 @@
 package nextflow.cloud.aws.fusion
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.SysEnv
 import nextflow.cloud.aws.config.AwsConfig
 import nextflow.fusion.FusionConfig
 import nextflow.fusion.FusionEnv
 import org.pf4j.Extension
+import software.amazon.awssdk.auth.credentials.AwsSessionCredentials
+import software.amazon.awssdk.auth.credentials.ProfileCredentialsProvider
 /**
  * Implements {@link FusionEnv} for AWS cloud
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 @Extension
+@Slf4j
 @CompileStatic
 class AwsFusionEnv implements FusionEnv {
 
@@ -63,6 +67,10 @@ class AwsFusionEnv implements FusionEnv {
         if( result )
             return result
 
+        final profileCreds = awsConfig.profile ? profileCreds(awsConfig.profile) : List.<String>of()
+        if( profileCreds )
+            return profileCreds
+
         if( SysEnv.get('AWS_ACCESS_KEY_ID') && SysEnv.get('AWS_SECRET_ACCESS_KEY') && SysEnv.get('AWS_SESSION_TOKEN') )
             return List.<String>of(SysEnv.get('AWS_ACCESS_KEY_ID'), SysEnv.get('AWS_SECRET_ACCESS_KEY'), SysEnv.get('AWS_SESSION_TOKEN'))
 
@@ -70,5 +78,22 @@ class AwsFusionEnv implements FusionEnv {
             return List.<String>of(SysEnv.get('AWS_ACCESS_KEY_ID'), SysEnv.get('AWS_SECRET_ACCESS_KEY'))
         else
             return List.<String>of()
+    }
+
+    /**
+     * Resolve the credentials of the given AWS profile, so that they can be exported
+     * to the Fusion runtime. Returns an empty list when the profile cannot be resolved.
+     */
+    protected List<String> profileCreds(String profile) {
+        try {
+            final creds = ProfileCredentialsProvider.builder().profileName(profile).build().resolveCredentials()
+            return creds instanceof AwsSessionCredentials
+                    ? List.<String>of(creds.accessKeyId(), creds.secretAccessKey(), ((AwsSessionCredentials)creds).sessionToken())
+                    : List.<String>of(creds.accessKeyId(), creds.secretAccessKey())
+        }
+        catch( Exception e ) {
+            log.warn "Unable to resolve AWS credentials for profile '${profile}' -- Cause: ${e.message}"
+            return List.<String>of()
+        }
     }
 }

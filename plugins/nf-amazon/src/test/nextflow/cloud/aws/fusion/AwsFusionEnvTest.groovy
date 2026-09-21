@@ -16,6 +16,8 @@
 
 package nextflow.cloud.aws.fusion
 
+import java.nio.file.Files
+
 import nextflow.Global
 import nextflow.SysEnv
 import nextflow.fusion.FusionConfig
@@ -99,5 +101,31 @@ class AwsFusionEnvTest extends Specification {
 
         cleanup:
         SysEnv.pop()
+    }
+
+    def 'should export credentials resolved from aws profile' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def creds = folder.resolve('credentials')
+        creds.text = """
+            [my-profile]
+            aws_access_key_id = pk1
+            aws_secret_access_key = sk1
+            """.stripIndent()
+        and:
+        System.setProperty('aws.sharedCredentialsFile', creds.toString())
+        SysEnv.push([AWS_PROFILE: 'my-profile', AWS_REGION: 'eu-west-1'])
+
+        when:
+        def config = Mock(FusionConfig) { exportStorageCredentials() >> true }
+        def env = new AwsFusionEnv().getEnvironment('s3', config)
+        then:
+        env.AWS_ACCESS_KEY_ID == 'pk1'
+        env.AWS_SECRET_ACCESS_KEY == 'sk1'
+
+        cleanup:
+        SysEnv.pop()
+        System.clearProperty('aws.sharedCredentialsFile')
+        folder?.deleteDir()
     }
 }
