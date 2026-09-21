@@ -1119,7 +1119,10 @@ class FileHelper {
             }
             return true
         }
-        catch( IOException e ) {
+        catch( Exception e ) {
+            // a directory that cannot be listed is one that cannot be proven to hold only
+            // placeholders, and the listing may fail with an unchecked provider exception
+            // which would otherwise escape and abort the caller
             log.debug("Unable to list directory: ${FilesEx.toUriString(dir)}", e)
             return false
         }
