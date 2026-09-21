@@ -809,63 +809,16 @@ class ConfigCmdAdapterTest extends Specification {
         config.dag.enabled
     }
 
-    def 'should set session weblog options' () {
+    def 'should reject the weblog option' () {
 
         given:
         def env = [:]
         def builder = [:] as ConfigCmdAdapter
 
         when:
-        def config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun())
+        builder.configRunOptions(new ConfigObject(), env, new CmdRun(withWebLog: 'http://foo.com'))
         then:
-        !config.weblog
-
-        when:
-        config = new ConfigObject()
-        config.weblog.url = 'http://bar.com'
-        builder.configRunOptions(config, env, new CmdRun())
-        then:
-        config.weblog instanceof Map
-        !config.weblog.enabled
-        config.weblog.url == 'http://bar.com'
-
-        when:
-        config = new ConfigObject()
-        builder.configRunOptions(config, env, new CmdRun(withWebLog: 'http://foo.com'))
-        then:
-        config.weblog instanceof Map
-        config.weblog.enabled
-        config.weblog.url == 'http://foo.com'
-
-        when:
-        config = new ConfigObject()
-        config.weblog.enabled = true
-        config.weblog.url = 'http://bar.com'
-        builder.configRunOptions(config, env, new CmdRun(withWebLog: 'http://foo.com'))
-        then:
-        config.weblog instanceof Map
-        config.weblog.enabled
-        config.weblog.url == 'http://foo.com'
-
-        when:
-        config = new ConfigObject()
-        config.weblog.enabled = true
-        config.weblog.url = 'http://bar.com'
-        builder.configRunOptions(config, env, new CmdRun(withWebLog: '-'))
-        then:
-        config.weblog instanceof Map
-        config.weblog.enabled
-        config.weblog.url == 'http://bar.com'
-
-        when:
-        config = new ConfigObject()
-        config.weblog.enabled = true
-        builder.configRunOptions(config, env, new CmdRun(withWebLog: '-'))
-        then:
-        config.weblog instanceof Map
-        config.weblog.enabled
-        config.weblog.url == 'http://localhost'
+        thrown(AbortOperationException)
 
     }
 
