@@ -78,7 +78,7 @@ public class ModuleResolver {
             return null;
 
         var uri = sourceUnit.getSource().getURI();
-        var includeUri = getIncludeUri(uri, source);
+        var includeUri = getIncludeUri(uri, source, projectDir);
         if( compiler.getSource(includeUri) != null )
             return null;
         if( !Files.exists(Path.of(includeUri)) )
@@ -91,23 +91,6 @@ public class ModuleResolver {
         return includeSource;
     }
 
-    private URI getIncludeUri(URI uri, String source) {
-        if( isLocalModule(source) ) {
-            return getLocalIncludeUri(Path.of(uri).getParent(), source);
-        }
-        else {
-            // Resolve a remote module relative to the including module's directory
-            // (context-relative), so a workflow module's own dependencies are found under its
-            // nested `modules/` directory (nested vendoring). Any other script -- the entry
-            // script, or a plain local script -- resolves against the project directory.
-            var base = RemoteModuleResolver.resolveBaseDir(uri, projectDir);
-            return RemoteModuleResolverProvider.getInstance()
-                .resolve(source, base)
-                .normalize()
-                .toUri();
-        }
-    }
-
     /**
      * @return true if the given include source refers to a local module, i.e. it is a path to a
      * script. Any other include source is a remote module reference -- a malformed one is
@@ -117,8 +100,39 @@ public class ModuleResolver {
         return source.startsWith("/") || source.startsWith("./") || source.startsWith("../");
     }
 
-    private static URI getLocalIncludeUri(Path parent, String source) {
-        Path includePath = parent.resolve(source);
+    /**
+     * Resolve an include source to the URI of the included script.
+     *
+     * @param uri the URI of the including script
+     * @param source the include source
+     * @param projectDir the project directory, used to resolve remote modules
+     */
+    public static URI getIncludeUri(URI uri, String source, Path projectDir) {
+        var localUri = getLocalIncludeUri(uri, source);
+        if( localUri != null )
+            return localUri;
+        // Resolve a remote module relative to the including module's directory
+        // (context-relative), so a workflow module's own dependencies are found under its
+        // nested `modules/` directory (nested vendoring). Any other script -- the entry
+        // script, or a plain local script -- resolves against the project directory.
+        var base = RemoteModuleResolver.resolveBaseDir(uri, projectDir);
+        return RemoteModuleResolverProvider.getInstance()
+            .resolve(source, base)
+            .normalize()
+            .toUri();
+    }
+
+    /**
+     * Resolve a local include source to the URI of the included script.
+     *
+     * @param uri the URI of the including script
+     * @param source the include source
+     * @return the include URI, or null if the source is not a local module
+     */
+    public static URI getLocalIncludeUri(URI uri, String source) {
+        if( !isLocalModule(source) )
+            return null;
+        Path includePath = Path.of(uri).getParent().resolve(source);
         if( Files.isDirectory(includePath) )
             includePath = includePath.resolve("main.nf");
         else if( !source.endsWith(".nf") )
