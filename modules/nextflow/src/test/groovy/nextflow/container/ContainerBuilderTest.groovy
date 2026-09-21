@@ -86,6 +86,7 @@ class ContainerBuilderTest extends Specification {
         new ShifterConfig()         | ShifterBuilder
         new CharliecloudConfig()    | CharliecloudBuilder
         new AppleContainerConfig()  | AppleContainerBuilder
+        new SmolVmConfig()          | SmolVmBuilder
 
     }
 

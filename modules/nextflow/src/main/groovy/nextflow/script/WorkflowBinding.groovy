@@ -27,6 +27,7 @@ import nextflow.exception.IllegalInvocationException
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
 import nextflow.extension.OpCall
+import org.codehaus.groovy.runtime.InvokerHelper
 /**
  * Models the execution context of a workflow component
  *
@@ -100,7 +101,7 @@ class WorkflowBinding extends Binding  {
     @Override
     Object invokeMethod(String name, Object args) {
         if( meta ) {
-            log.trace "Trying to invoke component: $name - args=${args}"
+            log.trace "Trying to invoke component: $name - args=${renderArgs(args)}"
             final component = getComponent0(name)
             if( component ) {
                 checkScope0(component)
@@ -113,6 +114,15 @@ class WorkflowBinding extends Binding  {
         }
 
         throw new MissingMethodException(name,this.getClass())
+    }
+
+    private static String renderArgs(Object args) {
+        try {
+            return InvokerHelper.toString(args)
+        }
+        catch( Throwable t ) {
+            return "<unable to render args: ${t.class.simpleName}>"
+        }
     }
 
     private Object invoke0(ComponentDef component, Object args) {

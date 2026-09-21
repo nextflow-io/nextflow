@@ -1134,6 +1134,38 @@ class AwsBatchTaskHandlerTest extends Specification {
         req.propagateTags() == true
     }
 
+    def 'should create an aws submit request with auto resource labels'() {
+        given:
+        def VAR_FOO = KeyValuePair.builder().name('FOO').value('1').build()
+        def config = new TaskConfig(memory: '8GB', cpus: 4, resourceLabels: ['my!label': 'a,b#c'])
+        config.setAutoResourceLabels([
+                'nextflow.io/runName': 'crazy#frog',
+                'seqera.io/platform/workflowId': '4a#bcd' ])
+        def task = Mock(TaskRun)
+        task.getName() >> 'batch-task'
+        task.getConfig() >> config
+
+        def handler = Spy(AwsBatchTaskHandler)
+
+        when:
+        def req = handler.newSubmitRequest(task)
+        then:
+        1 * handler.getSubmitCommand() >> ['sh', '-c', 'hello']
+        1 * handler.maxSpotAttempts() >> 0
+        1 * handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/bin/aws'])) }
+        1 * handler.getJobQueue(task) >> 'queue1'
+        1 * handler.getJobDefinition(task) >> 'job-def:1'
+        1 * handler.getEnvironmentVars() >> [VAR_FOO]
+
+        and:
+        // the auto labels are normalised to the Batch tag syntax, the declared one is untouched
+        req.tags() == [
+                'nextflow.io/runName': 'crazy_frog',
+                'seqera.io/platform/workflowId': '4a_bcd',
+                'my!label': 'a,b#c' ]
+        req.propagateTags() == true
+    }
+
     def 'get fusion submit command' () {
         given:
         def remoteWorkDir = S3PathFactory.parse('s3://my-bucket/work/dir')
@@ -1193,6 +1225,66 @@ class AwsBatchTaskHandlerTest extends Specification {
         16      | 60000     | 65536
         16      | 100000    | 106496
         16      | 200000    | 122880
+    }
+
+    def 'should round task cpus up to the next valid fargate cpu value' () {
+        given:
+        def task = Mock(TaskRun)
+        task.getName() >> 'ingress:minimap2_alignment (1)'
+        task.getConfig() >> new TaskConfig(memory: '16GB', cpus: 12)
+        and:
+        def handler = Spy(AwsBatchTaskHandler)
+
+        when:
+        def req = handler.newSubmitRequest(task)
+        then:
+        1 * handler.getSubmitCommand() >> ['bash', '-c', 'something']
+        1 * handler.maxSpotAttempts() >> 0
+        _ * handler.fusionEnabled() >> false
+        _ * handler.getTask() >> task
+        _ * handler.getAwsOptions() >> { new AwsOptions(awsConfig: new AwsConfig(batch: [cliPath: '/bin/aws', platformType: 'fargate'])) }
+        1 * handler.getJobQueue(task) >> 'queue1'
+        1 * handler.getJobDefinition(task) >> 'job-def:1'
+        and:
+        noExceptionThrown()
+        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.VCPU }.value() == '16'
+        req.containerOverrides().resourceRequirements().find { it.type() == ResourceType.MEMORY }.value() == '32768'
+    }
+
+    @Unroll
+    def 'should normalise fargate cpus' () {
+        given:
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> Mock(TaskRun) { lazyName() >> 'foo' }
+        }
+        expect:
+        handler.normaliseFargateCpus(CPUS) == EXPECTED
+
+        where:
+        CPUS  | EXPECTED
+        1     | 1
+        2     | 2
+        3     | 4
+        4     | 4
+        5     | 8
+        7     | 8
+        8     | 8
+        9     | 16
+        12    | 16
+        16    | 16
+    }
+
+    def 'should throw when fargate cpus exceed the max allowed' () {
+        given:
+        def handler = Spy(AwsBatchTaskHandler) {
+            getTask() >> Mock(TaskRun) { lazyName() >> 'foo' }
+        }
+
+        when:
+        handler.normaliseFargateCpus(17)
+        then:
+        def e = thrown(ProcessUnrecoverableException)
+        e.message == "Requirement of 17 CPUs is not allowed by Fargate -- Check process with name 'foo'"
     }
 
     @Unroll

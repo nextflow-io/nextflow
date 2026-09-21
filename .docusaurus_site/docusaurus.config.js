@@ -53,6 +53,12 @@ export default async function createConfigAsync() {
           routeBasePath: "/nextflow",
           path: "docs",
           sidebarPath: "./sidebars.js",
+          exclude: [
+            "**/_*.{js,jsx,ts,tsx,md,mdx}",
+            "**/_*/**",
+            "**/*.test.{js,jsx,ts,tsx}",
+            "**/__tests__/**",
+          ],
           showLastUpdateAuthor: false,
           showLastUpdateTime: false,
           // For PR Previews we want to see the latest doc-set with expected changes.

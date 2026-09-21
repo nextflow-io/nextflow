@@ -1,0 +1,54 @@
+---
+title: tag
+description: Reference for the `tag` process directive.
+---
+
+# `tag`
+
+The `tag` directive defines a custom identifier for each task execution.
+
+## Usage
+
+For example:
+
+```nextflow
+process hello {
+    tag "$code"
+
+    input:
+    val code
+
+    script:
+    """
+    echo $code
+    """
+}
+
+workflow {
+    ch_codes = channel.of('alpha', 'gamma', 'omega')
+    hello(ch_codes)
+}
+```
+
+This example logs each task with its corresponding tag:
+
+```
+[6e/28919b] Submitted process > hello (alpha)
+[d2/1c6175] Submitted process > hello (gamma)
+[1c/3ef220] Submitted process > hello (omega)
+```
+
+Tags are a useful way to track related tasks in a pipeline run. Tasks can be identified by tag in the [execution log][execution-log] and the [trace report][trace-report].
+
+:::note
+The name of a task in both [reports][tracing-page] and [lineage][data-lineage-page] is defined as `<process> (<tag>)`.
+:::
+
+:::note
+The `tag` directive is not related to the [label](./label) directive. Process labels are only used for shared process configuration, not for tracking.
+:::
+
+[data-lineage-page]: ../../../tutorials/data-lineage
+[execution-log]: ../../../reports#execution-log
+[trace-report]: ../../../reports#trace-file
+[tracing-page]: ../../../reports

@@ -56,6 +56,63 @@ class SeqeraExecutorTest extends Specification {
         config.refreshToken == 'config-refresh-token'
     }
 
+    def 'should bound each attempt with the configured request timeout'() {
+        given:
+        SysEnv.push([:])
+
+        when:
+        def config = buildClientConfig(
+            [endpoint: 'https://sched.example.com', httpClient: [requestTimeout: '5 sec']],
+            [endpoint: 'https://api.platform.example.com', accessToken: 'tok']
+        )
+
+        then:
+        config.requestTimeout == java.time.Duration.ofSeconds(5)
+    }
+
+    def 'should leave responses unbounded when the request timeout is zero'() {
+        given:
+        SysEnv.push([:])
+
+        when:
+        def config = buildClientConfig(
+            [endpoint: 'https://sched.example.com', httpClient: [requestTimeout: '0 sec']],
+            [endpoint: 'https://api.platform.example.com', accessToken: 'tok']
+        )
+
+        then:
+        config.requestTimeout == null
+    }
+
+    def 'should bound the connect phase with the configured connect timeout'() {
+        given:
+        SysEnv.push([:])
+
+        when:
+        def config = buildClientConfig(
+            [endpoint: 'https://sched.example.com', httpClient: [connectTimeout: '3 sec']],
+            [endpoint: 'https://api.platform.example.com', accessToken: 'tok']
+        )
+
+        then:
+        config.connectTimeout == java.time.Duration.ofSeconds(3)
+    }
+
+    def 'should carry the default timeouts when the http client scope is absent'() {
+        given:
+        SysEnv.push([:])
+
+        when:
+        def config = buildClientConfig(
+            [endpoint: 'https://sched.example.com'],
+            [endpoint: 'https://api.platform.example.com', accessToken: 'tok']
+        )
+
+        then:
+        config.connectTimeout == java.time.Duration.ofSeconds(10)
+        config.requestTimeout == java.time.Duration.ofSeconds(45)
+    }
+
     def 'should create client config with env variable settings'() {
         given:
         SysEnv.push([
@@ -145,26 +202,52 @@ class SeqeraExecutorTest extends Specification {
         fusionConfig.targetVersion == null
     }
 
-    def 'should expose run resource labels coerced from config-level process.resourceLabels'() {
+    def 'should be secret-native so Nextflow suppresses the local-store secrets snippet'() {
+        given:
+        SysEnv.push([:])
+
+        expect:
+        new SeqeraExecutor().isSecretNative()
+    }
+
+    def 'should build the run baseline from the auto labels and the config-level process.resourceLabels'() {
         given:
         SysEnv.push([:])
         def executor = new SeqeraExecutor()
         executor.session = Mock(Session) {
+            getAutoResourceLabels() >> ['nextflow.io/runName': 'crazy_darwin']
             getConfig() >> [process: [resourceLabels: [team: 'a', priority: 7]]]
         }
 
         when:
         executor.computeRunResourceLabels()
 
-        then:
-        executor.runResourceLabels == [team: 'a', priority: '7']
+        then: 'the baseline is the complete label set, so the per-task delta can collapse to empty'
+        executor.runResourceLabels == ['nextflow.io/runName': 'crazy_darwin', team: 'a', priority: '7']
     }
 
-    def 'should yield empty run resource labels when process.resourceLabels is absent'() {
+    def 'should let the config-level process.resourceLabels win over an auto label'() {
         given:
         SysEnv.push([:])
         def executor = new SeqeraExecutor()
         executor.session = Mock(Session) {
+            getAutoResourceLabels() >> ['nextflow.io/runName': 'crazy_darwin']
+            getConfig() >> [process: [resourceLabels: ['nextflow.io/runName': 'custom']]]
+        }
+
+        when:
+        executor.computeRunResourceLabels()
+
+        then:
+        executor.runResourceLabels == ['nextflow.io/runName': 'custom']
+    }
+
+    def 'should yield an empty run baseline when neither auto nor config-level labels are given'() {
+        given:
+        SysEnv.push([:])
+        def executor = new SeqeraExecutor()
+        executor.session = Mock(Session) {
+            getAutoResourceLabels() >> [:]
             getConfig() >> [:]
         }
 
@@ -175,12 +258,13 @@ class SeqeraExecutorTest extends Specification {
         executor.runResourceLabels == [:]
     }
 
-    def 'should skip run resource labels when process.resourceLabels is a closure'() {
+    def 'should skip a dynamic process.resourceLabels while keeping the auto labels in the baseline'() {
         given:
         SysEnv.push([:])
         def executor = new SeqeraExecutor()
         def dynamic = { [team: 'a', priority: 7] }
         executor.session = Mock(Session) {
+            getAutoResourceLabels() >> ['nextflow.io/runName': 'crazy_darwin']
             getConfig() >> [process: [resourceLabels: dynamic]]
         }
 
@@ -189,7 +273,7 @@ class SeqeraExecutorTest extends Specification {
 
         then:
         noExceptionThrown()
-        executor.runResourceLabels == [:]
+        executor.runResourceLabels == ['nextflow.io/runName': 'crazy_darwin']
     }
 
     def 'createRun populates CreateRunRequest.labels with config-level resourceLabels merged with auto-labels'() {
@@ -202,33 +286,25 @@ class SeqeraExecutorTest extends Specification {
                 new CreateRunResponse().runId('run-1')
             }
         }
-        def platform = new nextflow.script.PlatformMetadata('wf-abc123')
-        platform.workspace = new nextflow.script.PlatformMetadata.Workspace(workspaceId: '1234')
-        platform.computeEnv = new nextflow.script.PlatformMetadata.ComputeEnv(id: 'ce-abc')
-        def workflowMeta = Mock(WorkflowMetadata) {
-            getProjectName() >> 'my-project'
-            getUserName() >> 'alice'
-            getRunName() >> 'test-run'
-            getSessionId() >> UUID.fromString('00000000-0000-0000-0000-000000000001')
-            getResume() >> false
-            getRevision() >> null
-            getCommitId() >> null
-            getRepository() >> null
-            getManifest() >> null
-            getPlatform() >> platform
-        }
+        def autoLabels = [
+            'nextflow.io/projectName': 'my-project',
+            'nextflow.io/runName': 'test-run',
+            'seqera.io/platform/workspaceId': '1234',
+            'seqera.io/platform/computeEnvId': 'ce-abc'
+        ]
         def sessionConfig = [
             process: [resourceLabels: [team: 'platform', priority: 3]],
-            seqera: [executor: [endpoint: 'https://sched.example.com', provider: 'aws', region: 'us-east-1', autoLabels: true]],
+            seqera: [executor: [endpoint: 'https://sched.example.com', provider: 'aws', region: 'us-east-1']],
             tower: [:]
         ]
         def session = Mock(Session) {
+            getAutoResourceLabels() >> autoLabels
             getConfig() >> sessionConfig
-            getWorkflowMetadata() >> workflowMeta
+            getWorkflowMetadata() >> Mock(WorkflowMetadata) { getPlatform() >> null }
             getWorkDir() >> java.nio.file.Paths.get('/work')
             getRunName() >> 'test-run'
         }
-        def seqeraOpts = new ExecutorOpts(endpoint: 'https://sched.example.com', provider: 'aws', region: 'us-east-1', autoLabels: true)
+        def seqeraOpts = new ExecutorOpts(endpoint: 'https://sched.example.com', provider: 'aws', region: 'us-east-1')
         def executor = new SeqeraExecutor()
         executor.session = session
         executor.@seqeraConfig = seqeraOpts
@@ -245,6 +321,42 @@ class SeqeraExecutorTest extends Specification {
         captured.getLabels()['nextflow.io/runName'] == 'test-run'
         captured.getLabels()['seqera.io/platform/workspaceId'] == '1234'
         captured.getLabels()['seqera.io/platform/computeEnvId'] == 'ce-abc'
+
+        cleanup:
+        executor.batchSubmitter?.shutdown()
+    }
+
+    def 'createRun honours the deprecated seqera.executor.autoLabels over tower.autoLabels'() {
+        given:
+        SysEnv.push([:])
+        CreateRunRequest captured = null
+        def mockClient = Mock(SchedClient) {
+            createRun(_) >> { args ->
+                captured = args[0] as CreateRunRequest
+                new CreateRunResponse().runId('run-1')
+            }
+        }
+        // a real session, so that the label set the executor sends is the one resolved by
+        // `Session#getAutoResourceLabels` out of the two config options
+        def session = new Session([
+            seqera: [executor: [endpoint: 'https://sched.example.com', autoLabels: 'projectName']],
+            tower: [autoLabels: 'runName']
+        ])
+        session.@workflowMetadata = Mock(WorkflowMetadata) {
+            getProjectName() >> 'my-project'
+            getRunName() >> 'test-run'
+        }
+        def executor = new SeqeraExecutor()
+        executor.session = session
+        executor.@seqeraConfig = new ExecutorOpts(endpoint: 'https://sched.example.com', autoLabels: 'projectName')
+        executor.@client = mockClient
+
+        when:
+        executor.createRun()
+
+        then:
+        captured != null
+        captured.getLabels() == ['nextflow.io/projectName': 'my-project']
 
         cleanup:
         executor.batchSubmitter?.shutdown()
@@ -293,6 +405,123 @@ class SeqeraExecutorTest extends Specification {
         executor.batchSubmitter?.shutdown()
     }
 
+    def 'createRun passes maxCpusPerUser to CreateRunRequest.schedulingRequirement'() {
+        given:
+        SysEnv.push([:])
+        CreateRunRequest captured = null
+        def mockClient = Mock(SchedClient) {
+            createRun(_) >> { args ->
+                captured = args[0] as CreateRunRequest
+                new CreateRunResponse().runId('run-1')
+            }
+        }
+        def workflowMeta = Mock(WorkflowMetadata) {
+            getPlatform() >> null
+        }
+        def session = Mock(Session) {
+            getConfig() >> [tower: [:]]
+            getWorkflowMetadata() >> workflowMeta
+            getWorkDir() >> java.nio.file.Paths.get('/work')
+            getRunName() >> 'test-run'
+        }
+        def seqeraOpts = new ExecutorOpts(
+            endpoint: 'https://sched.example.com',
+            schedulingRequirement: [maxCpusPerUser: 16]
+        )
+        def executor = new SeqeraExecutor()
+        executor.session = session
+        executor.@seqeraConfig = seqeraOpts
+        executor.@client = mockClient
+
+        when:
+        executor.createRun()
+
+        then:
+        captured != null
+        captured.getSchedulingRequirement() != null
+        captured.getSchedulingRequirement().getMaxCpusPerUser() == 16
+
+        cleanup:
+        executor.batchSubmitter?.shutdown()
+    }
+
+    def 'createRun omits schedulingRequirement when maxCpusPerUser is not set'() {
+        given:
+        SysEnv.push([:])
+        CreateRunRequest captured = null
+        def mockClient = Mock(SchedClient) {
+            createRun(_) >> { args ->
+                captured = args[0] as CreateRunRequest
+                new CreateRunResponse().runId('run-1')
+            }
+        }
+        def workflowMeta = Mock(WorkflowMetadata) {
+            getPlatform() >> null
+        }
+        def session = Mock(Session) {
+            getConfig() >> [tower: [:]]
+            getWorkflowMetadata() >> workflowMeta
+            getWorkDir() >> java.nio.file.Paths.get('/work')
+            getRunName() >> 'test-run'
+        }
+        def seqeraOpts = new ExecutorOpts(
+            endpoint: 'https://sched.example.com'
+        )
+        def executor = new SeqeraExecutor()
+        executor.session = session
+        executor.@seqeraConfig = seqeraOpts
+        executor.@client = mockClient
+
+        when:
+        executor.createRun()
+
+        then:
+        captured != null
+        captured.getSchedulingRequirement() == null
+
+        cleanup:
+        executor.batchSubmitter?.shutdown()
+    }
+
+    def 'createRun passes providerConfig to CreateRunRequest'() {
+        given:
+        SysEnv.push([:])
+        CreateRunRequest captured = null
+        def mockClient = Mock(SchedClient) {
+            createRun(_) >> { args ->
+                captured = args[0] as CreateRunRequest
+                new CreateRunResponse().runId('run-1')
+            }
+        }
+        def workflowMeta = Mock(WorkflowMetadata) {
+            getPlatform() >> null
+        }
+        def session = Mock(Session) {
+            getConfig() >> [tower: [:]]
+            getWorkflowMetadata() >> workflowMeta
+            getWorkDir() >> java.nio.file.Paths.get('/work')
+            getRunName() >> 'test-run'
+        }
+        def seqeraOpts = new ExecutorOpts(
+            endpoint: 'https://sched.example.com',
+            providerConfig: [subnetId: 'subnet-1', securityGroup: 'sg-2']
+        )
+        def executor = new SeqeraExecutor()
+        executor.session = session
+        executor.@seqeraConfig = seqeraOpts
+        executor.@client = mockClient
+
+        when:
+        executor.createRun()
+
+        then:
+        captured != null
+        captured.getProviderConfig() == [subnetId: 'subnet-1', securityGroup: 'sg-2']
+
+        cleanup:
+        executor.batchSubmitter?.shutdown()
+    }
+
     def 'createRun publishes the run id to the platform metadata'() {
         given:
         SysEnv.push([:])
@@ -329,19 +558,11 @@ class SeqeraExecutorTest extends Specification {
 
 
     /**
-     * Builds a SchedClientConfig using the same logic as {@link SeqeraExecutor#createClient()}
+     * Builds a SchedClientConfig through the same code {@link SeqeraExecutor#createClient()}
+     * uses, so removing a setting from that chain fails these specs rather than passing.
      */
     private SchedClientConfig buildClientConfig(Map executorOpts, Map towerConfig) {
         def seqeraConfig = new SeqeraConfig([executor: executorOpts]).executor
-        def accessToken = PlatformHelper.getAccessToken(towerConfig, SysEnv.get())
-        def refreshToken = PlatformHelper.getRefreshToken(towerConfig, SysEnv.get())
-        def platformUrl = PlatformHelper.getEndpoint(towerConfig, SysEnv.get())
-        return SchedClientConfig.builder()
-                .endpoint(seqeraConfig.endpoint)
-                .platformUrl(platformUrl)
-                .accessToken(accessToken)
-                .refreshToken(refreshToken)
-                .retryConfig(seqeraConfig.retryOpts())
-                .build()
+        return SeqeraExecutor.clientConfig(seqeraConfig, towerConfig)
     }
 }

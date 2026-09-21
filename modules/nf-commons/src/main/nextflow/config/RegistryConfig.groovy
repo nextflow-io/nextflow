@@ -38,7 +38,7 @@ class RegistryConfig implements ConfigScope {
 
     public static final String DEFAULT_REGISTRY_URL = 'https://registry.nextflow.io/api'
 
-    @ConfigOption
+    @ConfigOption(types=[String])
     @Description("Registry URL or list of registry URLs in priority order (primary URL first)")
     private final Collection<String> url
 

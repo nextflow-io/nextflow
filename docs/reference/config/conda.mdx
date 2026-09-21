@@ -1,0 +1,40 @@
+---
+title: conda
+description: Reference for the conda config scope, which controls the creation of Conda environments by the Conda package manager.
+---
+
+# `conda`
+
+The `conda` scope controls the creation of Conda environments by the Conda package manager.
+
+##### `conda.cacheDir`
+
+The path where Conda environments are stored. It should be accessible from all compute nodes when using a shared file system.
+
+##### `conda.channels`
+
+<ChangedInVersion version="26.04">
+The default was changed to `'conda-forge,bioconda'`.
+</ChangedInVersion>
+
+The list of Conda channels that can be used to resolve Conda packages (default: `'conda-forge,bioconda'`). Channel priority decreases from left to right.
+
+##### `conda.createOptions`
+
+Extra command line options for the `conda create` command. See the [Conda documentation](https://docs.conda.io/projects/conda/en/latest/commands/create.html) for more information.
+
+##### `conda.createTimeout`
+
+The amount of time to wait for the Conda environment to be created before failing (default: `20 min`).
+
+##### `conda.enabled`
+
+Execute tasks with Conda environments (default: `false`).
+
+##### `conda.useMamba`
+
+Use [Mamba](https://github.com/mamba-org/mamba) instead of `conda` to create Conda environments (default: `false`).
+
+##### `conda.useMicromamba`
+
+Use [Micromamba](https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html) instead of `conda` to create Conda environments (default: `false`).

@@ -15,22 +15,17 @@
  */
 package nextflow.script.control;
 
-import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 
 import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.ProcessNodeV2;
-import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.TupleParameter;
 import org.codehaus.groovy.ast.ClassHelper;
-import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.CodeVisitorSupport;
 import org.codehaus.groovy.ast.Parameter;
-import org.codehaus.groovy.ast.Variable;
 import org.codehaus.groovy.ast.VariableScope;
 import org.codehaus.groovy.ast.expr.BinaryExpression;
 import org.codehaus.groovy.ast.expr.ClosureExpression;
@@ -72,7 +67,8 @@ public class ProcessToGroovyVisitorV2 {
         visitProcessStagers(node.stagers);
 
         var stagers = node.stagers instanceof BlockStatement block ? block : new BlockStatement();
-        visitProcessInputs(node.inputs, stagers);
+        for( var param : asFlatParams(node.inputs) )
+            ImplicitStagers.visitInputType(param, varX(param.getName()), stagers);
 
         var unstagers = new BlockStatement();
         var unstageVisitor = new ProcessUnstageVisitor(unstagers);
@@ -126,62 +122,17 @@ public class ProcessToGroovyVisitorV2 {
         });
     }
 
-    private void visitProcessInputs(Parameter[] inputs, BlockStatement stagers) {
-        for( var param : asFlatParams(inputs) ) {
-            visitProcessInputType(param, varX(param.getName()), stagers);
-        }
-    }
-
-    /**
-     * Add implicit staging directives that are inferred from
-     * the process input type:
-     *
-     * - Inputs with type Path or a Path collection (e.g. Set<Path>)
-     *   are staged as input files.
-     *
-     * - Inputs with a record type are recursively inspected for nested
-     *   file inputs based on the record type definition.
-     *
-     * @param param
-     * @param target
-     * @param stagers
-     */
-    private void visitProcessInputType(Variable param, Expression target, BlockStatement stagers) {
-        var cn = param.getType();
-        if( isPathType(cn) ) {
-            var stager = stmt(callThisX("stageAs", args(closureX(stmt(target)))));
-            stagers.addStatement(stager);
-        }
-        else if( isRecordType(cn) ) {
-            for( var fn : cn.getFields() )
-                visitProcessInputType(fn, propX(target, fn.getName()), stagers);
-        }
-    }
-
-    private static boolean isPathType(ClassNode cn) {
-        if( !cn.isResolved() )
-            return false;
-        var clazz = cn.getTypeClass();
-        if( Path.class.isAssignableFrom(clazz) ) {
-            return true;
-        }
-        if( Collection.class.isAssignableFrom(clazz) && cn.isUsingGenerics() ) {
-            var elementType = cn.getGenericsTypes()[0].getType();
-            return Path.class.isAssignableFrom(elementType.getTypeClass());
-        }
-        return false;
-    }
-
-    private static boolean isRecordType(ClassNode cn) {
-        return cn.redirect() instanceof RecordNode;
-    }
-
     private void visitProcessUnstagers(Statement outputs, ProcessUnstageVisitor visitor) {
         for( var output : asBlockStatements(outputs) )
             visitor.visit(output);
     }
 
-    private static class ProcessUnstageVisitor extends CodeVisitorSupport {
+    /**
+     * Lowers the unstage directives that appear in an output expression. Package-visible
+     * because an agent output means exactly what a process output means, so
+     * {@link AgentToGroovyVisitor} runs the very same visitor.
+     */
+    static class ProcessUnstageVisitor extends CodeVisitorSupport {
 
         private int evalCount = 0;
 
@@ -189,8 +140,20 @@ public class ProcessToGroovyVisitorV2 {
 
         private BlockStatement unstagers;
 
+        /**
+         * When set, only the {@code file}/{@code files} directives are lowered. An agent has no
+         * task script and no {@code .command.env}, so {@code env}/{@code eval} cannot be served
+         * for it and must not be silently rewritten into unstagers it has no runtime for.
+         */
+        private boolean filesOnly;
+
         public ProcessUnstageVisitor(BlockStatement unstagers) {
+            this(unstagers, false);
+        }
+
+        public ProcessUnstageVisitor(BlockStatement unstagers, boolean filesOnly) {
             this.unstagers = unstagers;
+            this.filesOnly = filesOnly;
         }
 
         @Override
@@ -208,7 +171,7 @@ public class ProcessToGroovyVisitorV2 {
 
             // env(<name>)
             // emit: _unstage_env(<name>)
-            if( "env".equals(name) && arguments.size() == 1 ) {
+            if( !filesOnly && "env".equals(name) && arguments.size() == 1 ) {
                 var key = arguments.get(0);
                 var unstager = stmt(callThisX("_unstage_env", args(key)));
                 unstagers.addStatement(unstager);
@@ -219,7 +182,7 @@ public class ProcessToGroovyVisitorV2 {
 
             // eval(<cmd>) -> eval(<key>)
             // emit: _unstage_eval(<key>, { <cmd> })
-            if( "eval".equals(name) && arguments.size() == 1 ) {
+            if( !filesOnly && "eval".equals(name) && arguments.size() == 1 ) {
                 var key = constX("nxf_out_eval_" + (evalCount++));
                 var cmd = arguments.get(0);
                 var unstager = stmt(callThisX("_unstage_eval", args(key, closureX(stmt(cmd)))));

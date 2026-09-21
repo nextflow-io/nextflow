@@ -1,0 +1,40 @@
+---
+title: podman
+description: Reference for the podman config scope, which controls how Podman containers are executed by Nextflow.
+---
+
+# `podman`
+
+The `podman` scope controls how [Podman](https://podman.io/) containers are executed by Nextflow.
+
+##### `podman.enabled`
+
+Execute tasks with Podman containers (default: `false`).
+
+##### `podman.engineOptions`
+
+Specify additional options supported by the Podman engine i.e. `podman [OPTIONS]`.
+
+##### `podman.envWhitelist`
+
+Comma separated list of environment variable names to be included in the container environment.
+
+##### `podman.mountFlags`
+
+Add the specified flags to the volume mounts e.g. `'ro,Z'`.
+
+##### `podman.registry`
+
+The registry from where container images are pulled. It should be only used to specify a private registry server. It should NOT include the protocol prefix i.e. `http://`.
+
+##### `podman.remove`
+
+Clean-up the container after the execution (default: `true`).
+
+##### `podman.runOptions`
+
+Specify extra command line options supported by the `podman run` command.
+
+##### `podman.temp`
+
+Mounts a path of your choice as the `/tmp` directory in the container. Use the special value `'auto'` to create a temporary directory each time a container is created.

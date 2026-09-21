@@ -1,0 +1,393 @@
+---
+title: channel
+description: Reference for the channel namespace, which contains the built-in channel factories.
+---
+
+# `channel`
+
+The `channel` namespace contains the built-in channel factories.
+
+##### `empty() -> Channel<?>` {#empty}
+
+Create a channel that emits nothing:
+
+```nextflow
+channel.empty().view() // prints nothing
+```
+
+##### `fromFilePairs( pattern: String, [opts] ) -> Channel<?>` {#fromfilepairs}
+
+:::note
+As a best practice, use a samplesheet instead of matching file pairs directly with glob patterns. See [Samplesheets][static-types-samplesheet] for more information.
+:::
+
+Create a channel that emits all file pairs matching a [glob][glob] pattern:
+
+```nextflow
+ch = channel.fromFilePairs('/my/data/SRR*_{1,2}.fastq')
+ch.view()
+```
+
+Each file pair is emitted as a 2-tuple containing the grouping key (from the `*` wildcard) and the list of files (sorted lexicographically):
+
+```
+[SRR493366, [/my/data/SRR493366_1.fastq, /my/data/SRR493366_2.fastq]]
+[SRR493367, [/my/data/SRR493367_1.fastq, /my/data/SRR493367_2.fastq]]
+[SRR493368, [/my/data/SRR493368_1.fastq, /my/data/SRR493368_2.fastq]]
+[SRR493369, [/my/data/SRR493369_1.fastq, /my/data/SRR493369_2.fastq]]
+[SRR493370, [/my/data/SRR493370_1.fastq, /my/data/SRR493370_2.fastq]]
+[SRR493371, [/my/data/SRR493371_1.fastq, /my/data/SRR493371_2.fastq]]
+```
+
+The glob pattern must contain at least one `*` wildcard character.
+
+Available options:
+
+###### `checkIfExists`
+
+When `true`, throws an error if the file path does not exist in the file system (default: `false`).
+
+###### `flat`
+
+When `true`, tuples are emitted with the matching files flattened instead of as a nested list (default: `false`).
+
+###### `followLinks`
+
+When `true`, follows symbolic links when traversing a directory tree, otherwise treats them as files (default: `true`).
+
+###### `hidden`
+
+When `true`, matches hidden files when using a glob pattern (default: `false`).
+
+###### `maxDepth`
+
+Maximum number of directory levels to visit with the `**` wildcard (default: no limit).
+
+###### `size`
+
+The number of expected files for each file pair (default: `2`). Set to `-1` to allow any size.
+
+###### `type`
+
+Whether to return only files (`'file'`), only directories (`'dir'`), or both (`'any'`) when using a glob pattern. By default, only files are returned (`'file'`).
+
+##### `fromLineage( [opts] ) -> Channel<Path>` {#fromlineage}
+
+<AddedInVersion version="25.04" />
+
+:::warning
+*Experimental: may change in a future release.*
+:::
+
+Create a channel that emits files from the [lineage][cli-lineage] store matching the given key-value params:
+
+```nextflow
+ch = channel.fromLineage(
+    workflowRun: 'lid://0d1d1622ced3e4edc690bec768919b45',
+    label: ['alpha', 'beta']
+)
+ch.view()
+```
+
+The above snippet emits files published by the given workflow run that are labeled as `alpha` and `beta`.
+
+Available options:
+
+###### `label`
+
+List of labels associated with the desired files.
+
+###### `taskRun`
+
+LID of the task run that produced the desired files.
+
+###### `workflowRun`
+
+LID of the workflow run that produced the desired files.
+
+##### `fromList( values: Iterable<E> ) -> Channel<E>` {#fromlist}
+
+The `channel.fromList` factory creates a channel that emits each element in a collection:
+
+```nextflow
+ch = channel.fromList( ['a', 'b', 'c', 'd'] )
+ch.view { v -> "value: $v" }
+```
+
+Prints:
+
+```
+value: a
+value: b
+value: c
+value: d
+```
+
+##### `fromPath( pattern: String, [opts] ) -> Channel<Path>` {#frompath}
+
+Create a channel that emits all paths matching a name or [glob][glob] pattern:
+
+```nextflow
+// match single file
+channel.fromPath('data/some/bigfile.txt')
+
+// match `txt` files in `data/bag`
+channel.fromPath('data/big/*.txt')
+
+// match `fa` files in `data` and its subdirectories
+channel.fromPath('data/**.fa')
+
+// match `fa` files with same suffix in any subdirectory of `data`
+channel.fromPath('data/**/*.fa')
+
+// match file pair (`file_1.fq` and `file_2.fq`)
+channel.fromPath('data/file_{1,2}.fq')
+```
+
+By default, glob patterns do not match hidden files (i.e. files with names that start with `.`). Use a glob pattern that explicitly starts with `.` or set `hidden: true` to match hidden files:
+
+```nextflow
+// match hidden files in `data`
+channel.fromPath('data/.*')
+channel.fromPath('data/*', hidden: true)
+
+// match hidden files in `data` with `fa` extension
+channel.fromPath('data/.*.fa')
+```
+
+By default, glob patterns only match regular files, not directories. Use the `type` option to control whether to match files, directories, or both:
+
+```nextflow
+// match only directories
+channel.fromPath('data/*', type: 'dir')
+
+// match files and directories
+channel.fromPath('data/*', type: 'any')
+```
+
+Available options:
+
+###### `checkIfExists`
+
+When `true`, throws an error if the file path does not exist in the file system (default: `false`).
+
+###### `followLinks`
+
+When `true`, follows symbolic links when traversing a directory tree, otherwise treats them as files (default: `true`).
+
+###### `glob`
+
+When `true`, interprets the characters `*`, `?`, `[]`, and `{}` as glob wildcards, otherwise treats them as normal characters (default: `true`).
+
+###### `hidden`
+
+When `true`, matches hidden files when using a glob pattern (default: `false`).
+
+###### `maxDepth`
+
+Maximum number of directory levels to visit with the `**` wildcard (default: no limit).
+
+###### `relative`
+
+When `true`, returns file paths as relative to the top-most common directory (default: `false`).
+
+###### `type`
+
+Whether to return only files (`'file'`), only directories (`'dir'`), or both (`'any'`) when using a glob pattern. By default, only files are returned (`'file'`).
+
+##### `fromSRA( ids: String | List<String>, [opts] ) -> Channel<?>` {#fromsra}
+
+<DeprecatedInVersion version="26.04">
+Use the [Entrez Direct](https://www.ncbi.nlm.nih.gov/books/NBK179288/) command-line tool to query the SRA database.
+</DeprecatedInVersion>
+
+Create a channel that queries the [NCBI SRA](https://www.ncbi.nlm.nih.gov/sra) database and emits the FASTQ files matching the specified criteria (i.e. project or accession numbers).
+
+For example:
+
+```nextflow
+channel.fromSRA('SRP043510').view()
+```
+
+It returns:
+
+```
+[SRR1448794, ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR144/004/SRR1448794/SRR1448794.fastq.gz]
+[SRR1448795, ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR144/005/SRR1448795/SRR1448795.fastq.gz]
+[SRR1448792, ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR144/002/SRR1448792/SRR1448792.fastq.gz]
+[SRR1448793, ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR144/003/SRR1448793/SRR1448793.fastq.gz]
+[SRR1910483, ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR191/003/SRR1910483/SRR1910483.fastq.gz]
+[SRR1910482, ftp://ftp.sra.ebi.ac.uk/vol1/fastq/SRR191/002/SRR1910482/SRR1910482.fastq.gz]
+...
+```
+
+Multiple accession IDs can be specified as a list:
+
+```nextflow
+ids = ['ERR908507', 'ERR908506', 'ERR908505']
+channel.fromSRA(ids).view()
+```
+
+```
+[ERR908507, [ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908507/ERR908507_1.fastq.gz, ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908507/ERR908507_2.fastq.gz]]
+[ERR908506, [ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908506/ERR908506_1.fastq.gz, ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908506/ERR908506_2.fastq.gz]]
+[ERR908505, [ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908505/ERR908505_1.fastq.gz, ftp://ftp.sra.ebi.ac.uk/vol1/fastq/ERR908/ERR908505/ERR908505_2.fastq.gz]]
+```
+
+Each read pair is implicitly managed and returned as a list of files.
+
+This method uses the NCBI [ESearch](https://www.ncbi.nlm.nih.gov/books/NBK25499/#chapter4.ESearch) API behind the scenes, therefore it allows the use of any query term supported by this API.
+
+To access the ESearch API, you must provide your [NCBI API keys](https://ncbiinsights.ncbi.nlm.nih.gov/2017/11/02/new-api-keys-for-the-e-utilities) through one of the following ways:
+
+- The `apiKey` option:
+  ```nextflow
+  channel.fromSRA(ids, apiKey:'0123456789abcdef')
+  ```
+
+- The `NCBI_API_KEY` variable in your environment:
+  ```bash
+  export NCBI_API_KEY=0123456789abcdef
+  ```
+
+Available options:
+
+###### `apiKey`
+
+NCBI user API key.
+
+###### `cache`
+
+Enable or disable caching of API requests (default: `true`).
+
+###### `max`
+
+Maximum number of entries that can be retried (default: unlimited).
+
+###### `protocol`
+
+The protocol for the resulting remote URLs. Available choices: `ftp`, `http`, `https` (default: `ftp`).
+
+###### `retryPolicy`
+
+Set a retry policy in case the SRA request fails with a retriable error.
+
+Available properties:
+
+- `delay`: Delay between attempts (default: `'500ms'`)
+- `jitter`: Jitter value (default: `0.25`)
+- `maxAttempts`: Max attempts (default: `3`)
+- `maxDelay`: Max delay (default: `'30s'`)
+
+##### `interval( interval: String ) -> Channel<Integer>` {#interval}
+
+Create a channel that emits an incrementing index (starting from zero) at a periodic interval.
+
+For example:
+
+```nextflow
+channel.interval('1s').view()
+```
+
+The above snippet emits 0, 1, 2, and so on, every second, forever. You can use an operator such as [take][operator-take] or [until][operator-until] to close the channel based on a stopping condition.
+
+##### `of( values...: E ) -> Channel<E>` {#of}
+
+Create a channel that emits each argument.
+
+For example:
+
+```nextflow
+ch = channel.of( 1, 3, 5, 7 ).view()
+```
+
+Prints:
+
+```
+1
+3
+5
+7
+```
+
+Ranges of values are expanded accordingly:
+
+```nextflow
+channel.of(1..23, 'X', 'Y').view()
+```
+
+Prints:
+
+```
+1
+2
+3
+4
+:
+23
+X
+Y
+```
+
+##### `topic( name: String ) -> Channel<?>` {#topic}
+
+<AddedInVersion version="25.04" />
+
+Get the *topic channel* for the given *topic name*:
+
+```nextflow
+channel.topic('my-topic').view()
+```
+
+See [Collecting values with topic channels][tutorial-topic-channels] for more information.
+
+##### `value( value: V ) -> Value<V>` {#value}
+
+Create a dataflow value bound to the given argument:
+
+```nextflow
+// dataflow value bound to a string
+channel.value( 'Hello there' )
+
+// dataflow value bound to a list
+channel.value( [1,2,3,4,5] )
+```
+
+##### `watchPath( pattern: String, events: String = 'create' ) -> Channel<Path>` {#watchpath}
+
+Create a channel that watches a [glob][glob] pattern and emits matching files as they appear.
+
+For example:
+
+```nextflow
+ch = channel.watchPath('/path/*.fa')
+ch.view { fa -> "Fasta file: $fa" }
+```
+
+The second argument specifies which filesystem events to watch as a comma-separated string:
+
+```nextflow
+ch = channel.watchPath('/path/*.fa', 'create,modify')
+ch.view { fa -> "File created or modified: $fa" }
+```
+
+By default, only new files are watched. The following events are supported:
+
+- `create`: A new file is created
+- `modify`: A file is modified
+- `delete`: A file is deleted
+
+:::warning
+The `watchPath` factory waits endlessly for matching files. This causes your pipeline to run forever. Use the `take` or `until` operator to apply a stopping condition (e.g. receiving 10 files, receiving a file named `DONE`).
+:::
+
+:::note
+The `watchPath` factory only works with local and shared filesystems. It does not support object storage such as S3.
+:::
+
+[cli-lineage]: ../cli/lineage
+[glob]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
+[operator-take]: ../operator#take
+[operator-until]: ../operator#until
+[static-types-samplesheet]: ../../tutorials/static-types#loading-a-samplesheet-input
+[tutorial-topic-channels]: ../../tutorials/topic-channels

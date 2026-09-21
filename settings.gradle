@@ -28,6 +28,7 @@ plugins {
 rootProject.name = 'nextflow-prj'
 
 include 'nextflow'
+include 'nf-cli-v1'
 include 'nf-commons'
 include 'nf-httpfs'
 include 'nf-lang'
@@ -40,6 +41,7 @@ rootProject.children.each { prj ->
 include 'plugins'
 include 'plugins:nf-amazon'
 include 'plugins:nf-google'
+include 'plugins:nf-tower'
 include 'plugins:nf-console'
 include 'plugins:nf-azure'
 include 'plugins:nf-codecommit'
@@ -47,6 +49,9 @@ include 'plugins:nf-wave'
 include 'plugins:nf-cloudcache'
 include 'plugins:nf-k8s'
 include 'plugins:nf-seqera'
+include 'plugins:nf-agent'
+include 'plugins:nf-agent-pi'
 
 //includeBuild('../plugin-registry')
 //includeBuild '../sched'
+//includeBuild('../libseqera')

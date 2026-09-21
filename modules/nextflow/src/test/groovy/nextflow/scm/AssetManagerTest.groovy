@@ -25,7 +25,7 @@ import static nextflow.scm.MultiRevisionRepositoryStrategy.REPOS_SUBDIR
 
 import spock.lang.IgnoreIf
 
-import nextflow.cli.HubOptions
+import nextflow.scm.HubOptions
 import nextflow.exception.AbortOperationException
 import org.eclipse.jgit.api.Git
 import org.eclipse.jgit.lib.Config
@@ -469,6 +469,20 @@ class AssetManagerTest extends Specification {
 
     }
 
+    def 'should pass the scm config http client opts to the provider' () {
+        given:
+        def config = [
+            httpClient: [connectTimeout: '30s', requestTimeout: '90s'],
+            providers: [github: [user: 'foo', password: 'bar']] ]
+
+        when:
+        def manager = new AssetManager().build('nextflow-io/hello', config)
+        def provider = manager.createHubProvider('github')
+        then:
+        provider.getHttpClientOpts().connectTimeout() == java.time.Duration.ofSeconds(30)
+        provider.getHttpClientOpts().requestTimeout() == java.time.Duration.ofSeconds(90)
+    }
+
     def testCreateProviderFor(){
 
         when:
@@ -726,22 +740,22 @@ class AssetManagerTest extends Specification {
 
     def 'should detect local scm for pipelineNames' () {
         when:
-        def manager = new AssetManager('my-repo', Mock(HubOptions))
+        def manager = new AssetManager('my-repo', new HubOptions(null, null))
         then:
         !manager.isLocalScmSource()
 
         when:
-        manager = new AssetManager('my-project/repo',  Mock(HubOptions))
+        manager = new AssetManager('my-project/repo',  new HubOptions(null, null))
         then:
         !manager.isLocalScmSource()
 
         when:
-        manager = new AssetManager('https://github.com/nextflow-io/socks.git',  Mock(HubOptions))
+        manager = new AssetManager('https://github.com/nextflow-io/socks.git',  new HubOptions(null, null))
         then:
         !manager.isLocalScmSource()
 
         when:
-        manager = new AssetManager( 'file:/path/my-project/repo.git', Mock(HubOptions))
+        manager = new AssetManager( 'file:/path/my-project/repo.git', new HubOptions(null, null))
         then:
         manager.isLocalScmSource()
     }

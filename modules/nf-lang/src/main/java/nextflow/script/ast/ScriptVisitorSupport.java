@@ -40,6 +40,8 @@ public abstract class ScriptVisitorSupport extends ClassCodeVisitorSupport imple
             visitWorkflow(workflowNode);
         for( var processNode : script.getProcesses() )
             visitProcess(processNode);
+        for( var agentNode : script.getAgents() )
+            visitAgent(agentNode);
         for( var functionNode : script.getFunctions() )
             visitFunction(functionNode);
         for( var classNode : script.getClasses() ) {
@@ -83,6 +85,13 @@ public abstract class ScriptVisitorSupport extends ClassCodeVisitorSupport imple
         visit(node.publishers);
         visit(node.onComplete);
         visit(node.onError);
+    }
+
+    @Override
+    public void visitAgent(AgentNode node) {
+        visit(node.directives);
+        visit(node.outputs);
+        visit(node.prompt);
     }
 
     @Override

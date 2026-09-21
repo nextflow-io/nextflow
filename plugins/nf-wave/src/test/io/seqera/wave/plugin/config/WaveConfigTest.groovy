@@ -203,7 +203,7 @@ class WaveConfigTest extends Specification {
         given:
         def config = new WaveConfig([enabled: true])
         expect:
-        config.toString() == 'WaveConfig(build:BuildOpts(repository:null, cacheRepository:null, template:null, conda:CondaOpts(mambaImage=mambaorg/micromamba:1.5.10-noble; basePackages=conda-forge::procps-ng, commands=null, baseImage=ubuntu:24.04), compression:null, maxDuration:40m), enabled:true, endpoint:https://wave.seqera.io, freeze:false, httpClient:HttpOpts(), mirror:false, retryPolicy:RetryOpts(delay:450ms, maxDelay:1m 30s, maxAttempts:5, jitter:0.25, multiplier:2.0, delayAsDuration:PT0.45S, maxDelayAsDuration:PT1M30S), scan:ScanOpts(allowedLevels:null, mode:null), strategy:[container, dockerfile, conda], bundleProjectResources:null, containerConfigUrl:[], preserveFileTimestamp:null, tokensCacheMaxDuration:30m)'
+        config.toString() == 'WaveConfig(build:WaveBuildConfig(repository:null, cacheRepository:null, template:null, conda:WaveBuildCondaConfig(mambaImage:null, baseImage:null, basePackages:null, commands:null), compression:WaveBuildCompressionConfig(mode:null, level:null, force:null), maxDuration:40m), enabled:true, endpoint:https://wave.seqera.io, freeze:false, httpClient:HttpOpts(), mirror:false, retryPolicy:RetryOpts(delay:450ms, maxDelay:1m 30s, maxAttempts:5, jitter:0.25, multiplier:2.0, delayAsDuration:PT0.45S, maxDelayAsDuration:PT1M30S), scan:WaveScanConfig(allowedLevels:null, mode:null), strategy:[container, dockerfile, conda], bundleProjectResources:null, containerConfigUrl:[], preserveFileTimestamp:null, tokensCacheMaxDuration:30m)'
     }
 
     def 'should not allow invalid setting' () {
@@ -293,6 +293,64 @@ class WaveConfigTest extends Specification {
         [mode:'gzip', level: 1, force:true]     | new BuildCompression().withMode(BuildCompression.Mode.gzip).withLevel(1).withForce(true)
         [mode:'estargz', level: 2, force:true ] | new BuildCompression().withMode(BuildCompression.Mode.estargz).withLevel(2).withForce(true)
         [mode:'zstd', level: 3,force:true]      | new BuildCompression().withMode(BuildCompression.Mode.zstd).withLevel(3).withForce(true)
+    }
+
+    def 'should expose build compression and conda as nested scopes so their keys are recognized' () {
+        given:
+        def root = nextflow.config.spec.SpecNode.Scope.of(WaveConfig, '')
+        expect:
+        // compression is a nested scope exposing its keys as documented options
+        root.getScope(['build','compression']) != null
+        root.getOption(['build','compression','mode']) != null
+        root.getOption(['build','compression','level']) != null
+        root.getOption(['build','compression','force']) != null
+        and:
+        // conda is a nested scope exposing its keys as documented options
+        root.getScope(['build','conda']) != null
+        root.getOption(['build','conda','mambaImage']) != null
+        root.getOption(['build','conda','baseImage']) != null
+        root.getOption(['build','conda','basePackages']) != null
+        root.getOption(['build','conda','commands']) != null
+        and:
+        // the options carry descriptions (unlike a map option or @NestedScope)
+        root.getOption(['build','compression','mode']).description().contains('compression algorithm')
+        root.getOption(['build','conda','mambaImage']).description().contains('Mamba container image')
+    }
+
+    def 'should adapt config scopes to wave-api domain objects' () {
+        when:
+        def config = new WaveConfig([build: [
+                conda: [mambaImage: 'mambaorg/foo:1', commands: ['USER hola']],
+                compression: [mode: 'estargz', level: 2] ]])
+        then:
+        config.condaOpts() instanceof io.seqera.wave.config.CondaOpts
+        config.condaOpts().mambaImage == 'mambaorg/foo:1'
+        config.condaOpts().commands == ['USER hola']
+        // defaults still applied by the adaptor for unset keys
+        config.condaOpts().baseImage == 'ubuntu:24.04'
+        config.condaOpts().basePackages == 'conda-forge::procps-ng'
+        and:
+        config.buildCompression() == new BuildCompression().withMode(BuildCompression.Mode.estargz).withLevel(2)
+        and:
+        // no compression options -> null domain object, as before
+        new WaveConfig([:]).buildCompression() == null
+    }
+
+    def 'config scopes should mirror every field of their backing wave-api type' () {
+        given:
+        def root = nextflow.config.spec.SpecNode.Scope.of(WaveConfig, '')
+        and:
+        // instance (non-static, non-synthetic) field names of a wave-api type
+        def instanceFields = { Class type -> type.declaredFields
+                .findAll { f -> !java.lang.reflect.Modifier.isStatic(f.modifiers) && !f.synthetic }
+                .collect { f -> f.name } as Set }
+
+        expect:
+        // guards against drift: if a wave-api type gains a field, the mirror scope
+        // must expose it too, otherwise that config key would be flagged again
+        root.getScope(['build','conda']).children().keySet() == instanceFields(io.seqera.wave.config.CondaOpts)
+        and:
+        root.getScope(['build','compression']).children().keySet() == instanceFields(io.seqera.wave.api.BuildCompression)
     }
 
 }

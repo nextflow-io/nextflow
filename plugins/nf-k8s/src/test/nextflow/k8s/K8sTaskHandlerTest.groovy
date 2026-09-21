@@ -489,6 +489,7 @@ class K8sTaskHandlerTest extends Specification {
         and:
         def handler = Spy(new K8sTaskHandler(task: task, podName: POD_NAME, outputFile: OUT_FILE, errorFile: ERR_FILE))
         handler.getClient() >> client
+        handler.isExitFileVisible() >> true
 
         when:
         def result = handler.checkIfCompleted()
@@ -537,6 +538,109 @@ class K8sTaskHandlerTest extends Specification {
 
     }
 
+    def 'should not complete the task until the exit file is visible' () {
+        given:
+        def POD_NAME = 'pod-xyz'
+        def termState = [ reason: "Completed",
+                          startedAt: "2018-01-13T10:09:36Z",
+                          finishedAt: "2018-01-13T10:19:36Z",
+                          exitCode: 0 ]
+        def task = new TaskRun()
+        def handler = Spy(new K8sTaskHandler(task: task, podName: POD_NAME))
+
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+        1 * handler.getState() >> [terminated: termState]
+        1 * handler.isExitFileVisible() >> false
+        0 * handler.updateTimestamps(_)
+        0 * handler.deleteJobIfSuccessful(_)
+        handler.status != TaskStatus.COMPLETED
+        result == false
+    }
+
+    def 'should not wait for the exit file when the pod reports a failure' () {
+        given:
+        def POD_NAME = 'pod-xyz'
+        def client = Mock(K8sClient)
+        // a task killed by the system (e.g. OOMKilled) never writes the exit file,
+        // therefore waiting for it would only delay the error report
+        def termState = [ reason: "OOMKilled",
+                          startedAt: "2018-01-13T10:09:36Z",
+                          finishedAt: "2018-01-13T10:19:36Z",
+                          exitCode: 137 ]
+        def task = new TaskRun()
+        def handler = Spy(new K8sTaskHandler(task: task, podName: POD_NAME))
+        handler.getClient() >> client
+
+        when:
+        def result = handler.checkIfCompleted()
+        then:
+        1 * handler.getState() >> [terminated: termState]
+        0 * handler.isExitFileVisible()
+        1 * handler.deleteJobIfSuccessful(task) >> null
+        1 * handler.saveJobLogOnError(task) >> null
+        handler.task.exitStatus == 137
+        handler.status == TaskStatus.COMPLETED
+        result == true
+    }
+
+    def 'should wait for the exit file on a shared file system' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def exitFile = folder.resolve('.exitcode')
+        def task = new TaskRun(name: 'foo', workDir: folder)
+        def handler = Spy(new K8sTaskHandler(task: task, exitFile: exitFile))
+        handler.isWorkDirSharedFS() >> true
+        handler.getExitReadTimeoutMillis() >> 10_000
+
+        expect: 'the exit file does not exist yet'
+        !handler.isExitFileVisible()
+
+        when: 'the exit file exists but is still empty'
+        Files.createFile(exitFile)
+        then:
+        !handler.isExitFileVisible()
+
+        when: 'the exit file holds the exit status'
+        exitFile.text = '0'
+        then:
+        handler.isExitFileVisible()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should give up waiting for the exit file after the read timeout' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def exitFile = folder.resolve('.exitcode')
+        def task = new TaskRun(name: 'foo', workDir: folder)
+        def handler = Spy(new K8sTaskHandler(task: task, exitFile: exitFile))
+        handler.isWorkDirSharedFS() >> true
+        handler.getExitReadTimeoutMillis() >> 0
+
+        expect:
+        handler.isExitFileVisible()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should not wait for the exit file when the work dir is not a shared file system' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def task = new TaskRun(name: 'foo', workDir: folder)
+        def handler = Spy(new K8sTaskHandler(task: task, exitFile: folder.resolve('.exitcode')))
+        handler.isWorkDirSharedFS() >> false
+
+        expect:
+        handler.isExitFileVisible()
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
     def 'should use K8s exit code when available' () {
         given:
         def ERR_FILE = Paths.get('err.file')
@@ -550,6 +654,7 @@ class K8sTaskHandlerTest extends Specification {
         def task = new TaskRun()
         def handler = Spy(new K8sTaskHandler(task: task, podName: POD_NAME, outputFile: OUT_FILE, errorFile: ERR_FILE))
         handler.getClient() >> client
+        handler.isExitFileVisible() >> true
 
         when:
         def result = handler.checkIfCompleted()
@@ -654,6 +759,31 @@ class K8sTaskHandlerTest extends Specification {
         state == STATE3
     }
 
+    def 'should not query the API once the state is terminated' () {
+        given:
+        def POD_NAME = 'pod-xyz'
+        def client = Mock(K8sClient)
+        def handler = Spy(new K8sTaskHandler(podName: POD_NAME))
+        handler.getClient() >> client
+        and:
+        Map TERMINATED = [terminated: [exitCode: 0]]
+
+        when:
+        def state = handler.getState()
+        then:
+        1 * client.podState(POD_NAME) >> TERMINATED
+        state == TERMINATED
+
+        // the terminated state is final: no further request is made even after
+        // the cache expires, because the pod may have been deleted in the meanwhile
+        when:
+        sleep 1_500
+        state = handler.getState()
+        then:
+        0 * client.podState(POD_NAME)
+        state == TERMINATED
+    }
+
     def 'should return nodeTermination state' () {
         given:
         def POD_NAME = 'pod-xyz'
@@ -734,7 +864,7 @@ class K8sTaskHandlerTest extends Specification {
         task.getName() >> 'hello-world-1'
         task.getProcessor() >> proc
         task.getConfig() >> Mock(TaskConfig) {
-            getResourceLabels() >> [mylabel: 'myvalue']
+            getResourceLabels(_) >> [mylabel: 'myvalue']
         }
         proc.getName() >> 'hello-proc'
         exec.getSession() >> sess
@@ -788,6 +918,126 @@ class K8sTaskHandlerTest extends Specification {
         labels.'nextflow.io/taskName' ==  'hello-world-1'
         labels.'nextflow.io/sessionId' instanceof String
         labels.'nextflow.io/sessionId' == "uuid-${uuid.toString()}".toString()
+    }
+
+    def 'should normalise the auto resource labels only' () {
+        given:
+        def uuid = UUID.randomUUID()
+        def task = Mock(TaskRun)
+        def exec = Mock(K8sExecutor)
+        def proc = Mock(TaskProcessor)
+        def sess = Mock(Session)
+        def handler = Spy(new K8sTaskHandler(executor: exec))
+        and:
+        def config = new TaskConfig(resourceLabels: ['user.io/My Label': 'https://example.com/thing'])
+        config.setAutoResourceLabels([
+                'nextflow.io/repository': 'https://github.com/foo/bar',
+                'seqera.io/platform/workflowId': '1a2b3c',
+                'nextflow.io/revision': '' ])
+
+        when:
+        def labels = handler.getLabels(task)
+        then:
+        handler.getRunName() >> 'pedantic-joe'
+        task.getName() >> 'hello-world-1'
+        task.getProcessor() >> proc
+        task.getConfig() >> config
+        proc.getName() >> 'hello-proc'
+        exec.getSession() >> sess
+        sess.getUniqueId() >> uuid
+        exec.getK8sConfig() >> [:]
+        and:
+        // the auto labels are normalised to comply with the pod label syntax
+        labels.'nextflow.io/repository' == 'github.com_foo_bar'
+        labels.'seqera.io/platform_workflowId' == '1a2b3c'
+        and:
+        // an auto label sanitising to an empty value cannot be applied
+        !labels.containsKey('nextflow.io/revision')
+        and:
+        // the label declared by the process is applied verbatim
+        labels.'user.io/My Label' == 'https://example.com/thing'
+    }
+
+    def 'should keep the executor pod labels on a collision with the resource labels' () {
+        given:
+        def uuid = UUID.randomUUID()
+        def task = Mock(TaskRun)
+        def exec = Mock(K8sExecutor)
+        def proc = Mock(TaskProcessor)
+        def sess = Mock(Session)
+        def handler = Spy(new K8sTaskHandler(executor: exec))
+        and:
+        def config = new TaskConfig(resourceLabels: ['nextflow.io/runName': 'mine'])
+        config.setAutoResourceLabels([
+                'nextflow.io/runName': 'crazy_darwin',
+                'nextflow.io/sessionId': uuid.toString() ])
+
+        when:
+        def labels = handler.getLabels(task)
+        then:
+        handler.getRunName() >> 'pedantic-joe'
+        task.getName() >> 'hello-world-1'
+        task.getProcessor() >> proc
+        task.getConfig() >> config
+        proc.getName() >> 'hello-proc'
+        exec.getSession() >> sess
+        sess.getUniqueId() >> uuid
+        exec.getK8sConfig() >> [:]
+        and:
+        // the pod labels managed by the executor are applied last, therefore they win over
+        // both the auto-derived and the declared resource labels using the same key
+        labels.'nextflow.io/runName' == 'pedantic-joe'
+        labels.'nextflow.io/sessionId' == "uuid-${uuid.toString()}".toString()
+    }
+
+    def 'should submit a pod request with the sanitised auto resource labels' () {
+        given:
+        def WORK_DIR = Paths.get('/some/work/dir')
+        def uuid = UUID.randomUUID()
+        def task = Mock(TaskRun)
+        def exec = Mock(K8sExecutor)
+        def proc = Mock(TaskProcessor)
+        def sess = Mock(Session)
+        def client = Mock(K8sClient)
+        def builder = Mock(K8sWrapperBuilder)
+        def handler = Spy(new K8sTaskHandler(builder: builder, executor: exec))
+        handler.getClient() >> client
+        and:
+        def config = new TaskConfig(resourceLabels: [mylabel: 'myvalue'])
+        config.setAutoResourceLabels([
+                'nextflow.io/repository': 'https://github.com/foo/bar',
+                'seqera.io/platform/workflowId': '1a2b3c' ])
+
+        when:
+        def result = handler.newSubmitRequest(task)
+        then:
+        _ * handler.fusionEnabled() >> false
+        1 * handler.fixOwnership() >> false
+        1 * handler.entrypointOverride() >> false
+        1 * handler.cpuLimitsEnabled() >> false
+        1 * handler.getPodOptions() >> new PodOptions()
+        1 * handler.getSyntheticPodName(task) >> 'nf-123'
+        1 * handler.getAnnotations() >> [:]
+        1 * handler.getContainerMounts() >> []
+        1 * client.getConfig() >> new ClientConfig()
+        _ * handler.getRunName() >> 'pedantic-joe'
+        _ * task.getContainer() >> 'debian:latest'
+        _ * task.getWorkDir() >> WORK_DIR
+        _ * task.getConfig() >> config
+        _ * task.getName() >> 'hello-world-1'
+        _ * task.getProcessor() >> proc
+        _ * proc.getName() >> 'hello-proc'
+        _ * exec.getSession() >> sess
+        _ * exec.getK8sConfig() >> [:]
+        _ * sess.getUniqueId() >> uuid
+        and:
+        // the repository URL is submitted as a legal pod label value, and the two-slash
+        // Platform key as a legal pod label key
+        result.metadata.labels.'nextflow.io/repository' == 'github.com_foo_bar'
+        result.metadata.labels.'seqera.io/platform_workflowId' == '1a2b3c'
+        and:
+        // the label declared by the process is submitted byte-identical
+        result.metadata.labels.mylabel == 'myvalue'
     }
 
     def 'should delete pod if complete' () {
@@ -926,11 +1176,11 @@ class K8sTaskHandlerTest extends Specification {
         when:
         opts = handler.getPodOptions()
         then:
-        1 * k8sConfig.getPodOptions() >> new PodOptions([[env: 'FUSION_BUCKETS', value: 's3://nextflow-ci'], [privileged: true]])
+        1 * k8sConfig.getPodOptions() >> new PodOptions([[env: 'FUSION_BUCKETS', value: 's3://nextflow-ci-oss'], [privileged: true]])
         and:
         1 * handler.taskPodOptions() >> new PodOptions([:])
         and:
-        opts == new PodOptions([[env: 'FUSION_BUCKETS', value: 's3://nextflow-ci'], [privileged: true]])
+        opts == new PodOptions([[env: 'FUSION_BUCKETS', value: 's3://nextflow-ci-oss'], [privileged: true]])
     }
 
     def 'should update startTimeMillis and completeTimeMillis with terminated state' () {

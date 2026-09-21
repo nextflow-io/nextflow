@@ -1,0 +1,66 @@
+---
+title: scratch
+description: Reference for the `scratch` process directive.
+---
+
+# `scratch`
+
+The `scratch` directive executes each task in a temporary directory that is local to the compute node.
+
+## Usage
+
+This is useful when executing tasks on an executor with a shared filesystem, because it decreases the network overhead of reading and writing files. Only the files declared as process outputs are copied to the pipeline work directory.
+
+For example:
+
+```nextflow
+process hello {
+    scratch true
+
+    output:
+    path 'data_out'
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+You can also set it in the Nextflow configuration:
+
+```groovy
+process.scratch = true
+```
+
+By default, the `scratch` directive uses the `$TMPDIR` environment variable in the underlying node as the base scratch directory. If `$TMPDIR` is not defined, then it creates a scratch directory using the `mktemp` command.
+
+Each task creates a subdirectory within the base scratch directory and automatically deletes it upon completion.
+
+:::note
+Cloud-based executors enable `scratch` by default because the pipeline work directory resides in object storage.
+:::
+
+## Options
+
+The following values are available:
+
+##### `false`
+
+Do not use a scratch directory.
+
+##### `true`
+
+Create a scratch directory in the directory defined by the `$TMPDIR` environment variable, or `$(mktemp /tmp)` if `$TMPDIR` is not set.
+
+##### `'$YOUR_VAR'`
+
+Create a scratch directory in the directory defined by the given environment variable, or `$(mktemp /tmp)` if that variable is not set. The value must use single quotes, otherwise the environment variable is evaluated in the pipeline script context.
+
+##### `'/my/tmp/path'`
+
+Create a scratch directory in the specified directory.
+
+##### `'ram-disk'`
+
+Create a scratch directory in the RAM disk `/dev/shm/`.

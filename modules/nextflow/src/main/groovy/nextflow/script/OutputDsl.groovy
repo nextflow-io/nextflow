@@ -110,12 +110,14 @@ class OutputDsl {
             session.printConsole(output.values().first().toString())
             return
         }
-        final outputDir = session.outputDir.toUriString()
+        final outputDir = session.outputDir?.toUriString()
         final sb = new StringBuilder()
         sb.append('\n')
         sb.append("Outputs:\n")
-        sb.append('\n')
-        sb.append("  ${outputDir}\n")
+        if( outputDir ) {
+            sb.append('\n')
+            sb.append("  ${outputDir}\n")
+        }
         for( final outputName : output.keySet() ) {
             final outputValue = output[outputName]
             sb.append('\n')
@@ -141,8 +143,10 @@ class OutputDsl {
     }
 
     private static String normalizeOutput(Object value, String outputDir) {
-        return DumpHelper.prettyPrintYaml(value, style: 'flow')
-            .replace(outputDir + '/', '')
+        final result = DumpHelper.prettyPrintYaml(value, style: 'flow')
+        return outputDir
+            ? result.replace(outputDir + '/', '')
+            : result
     }
 
     Map<String,Object> getOutput() {

@@ -91,6 +91,12 @@ class ApptainerConfig implements ConfigScope, ContainerConfig {
 
     @ConfigOption
     @Description("""
+        Apply the task `cpus` and `memory` directives as container resource limits using the `--cpus` and `--memory` flags (default: `false`).
+    """)
+    final boolean resourceLimits
+
+    @ConfigOption
+    @Description("""
         Specify extra command line options supported by `apptainer exec`.
     """)
     final String runOptions
@@ -109,6 +115,7 @@ class ApptainerConfig implements ConfigScope, ContainerConfig {
         ociAutoPull = opts.ociAutoPull as boolean
         pullTimeout = opts.pullTimeout as Duration ?: Duration.of('20min')
         registry = opts.registry
+        resourceLimits = opts.resourceLimits as boolean
         runOptions = opts.runOptions
     }
 

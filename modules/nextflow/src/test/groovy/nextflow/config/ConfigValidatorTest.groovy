@@ -28,6 +28,63 @@ class ConfigValidatorTest extends Specification {
     @Rule
     OutputCapture capture = new OutputCapture()
 
+    def 'should validate per-executor config options' () {
+        when:
+        new ConfigValidator().validate([
+            executor: [
+                '$local': [
+                    cpus: 8,
+                    memory: '128 GB'
+                ]
+            ]
+        ])
+        then:
+        !capture.toString().contains('Unrecognized config option')
+    }
+
+    def 'should warn about invalid per-executor config options' () {
+        when:
+        new ConfigValidator().validate([
+            executor: [
+                '$local': [
+                    cpu: 8
+                ]
+            ]
+        ])
+        then:
+        capture.toString().contains('Unrecognized config option \'executor.cpu\'')
+    }
+
+    def 'should validate per-executor config options within a profile' () {
+        when:
+        new ConfigValidator().validate([
+            profiles: [
+                test: [
+                    executor: [
+                        '$local': [ cpus: 8 ]
+                    ]
+                ]
+            ]
+        ])
+        then:
+        !capture.toString().contains('Unrecognized config option')
+    }
+
+    def 'should not treat a $ selector outside the executor scope as a selector' () {
+        when:
+        new ConfigValidator().validate([
+            docker: [
+                '$foo': [ enabled: true ]
+            ],
+            process: [
+                '$bar': [ cpus: 2 ]
+            ]
+        ])
+        then:
+        capture.toString().contains('Unrecognized config option \'docker.$foo.enabled\'')
+        capture.toString().contains('Unrecognized config option \'process.$bar.cpus\'')
+    }
+
     def 'should warn about invalid config options' () {
         when:
         new ConfigValidator().validate([
@@ -111,6 +168,38 @@ class ConfigValidatorTest extends Specification {
         !capture.toString().contains('Unrecognized config option')
     }
 
+    def 'should ignore agent selectors and accept process directives in the agent scope' () {
+        when:
+        new ConfigValidator().validate([
+            agent: [
+                disk: '10 GB',
+                publishDir: '/tmp/out',
+                tag: 'x',
+                'withLabel:foobar': [
+                    cpus: 2
+                ],
+                'withName:foobar': [
+                    cpus: 2
+                ],
+                "withName:'.*AGENT.*'": [
+                    cpus: 2
+                ]
+            ]
+        ])
+        then:
+        !capture.toString().contains('Unrecognized config option')
+    }
+
+    def 'should warn for an unknown option in the agent scope' () {
+        when:
+        // `model`/`maxIterations` share the agent body directive names, as `process` does
+        new ConfigValidator().validate([agent: [maxIterations: 40, model: 'openai/gpt-5', fooBar: 1]])
+        then:
+        !capture.toString().contains("Unrecognized config option 'agent.maxIterations'")
+        !capture.toString().contains("Unrecognized config option 'agent.model'")
+        capture.toString().contains("Unrecognized config option 'agent.fooBar'")
+    }
+
     def 'should support map options' () {
         when:
         new ConfigValidator().validate([
@@ -158,6 +247,25 @@ class ConfigValidatorTest extends Specification {
         ])
         then:
         !capture.toString().contains("Unrecognized config option 'cloudcache'")
+    }
+
+    static class MapTypesFixture {
+        Map rawMap
+        Map<String,String> stringMap
+        String notAMap
+    }
+
+    def 'isMapType should recognise raw and parameterized map option types' () {
+        given:
+        def rawMap = MapTypesFixture.getDeclaredField('rawMap').genericType
+        def stringMap = MapTypesFixture.getDeclaredField('stringMap').genericType
+        def notAMap = MapTypesFixture.getDeclaredField('notAMap').genericType
+
+        expect:
+        ConfigValidator.isMapType([rawMap])
+        ConfigValidator.isMapType([stringMap])   // Map<String,String> is a ParameterizedType
+        !ConfigValidator.isMapType([notAMap])
+        !ConfigValidator.isMapType([])
     }
 
 }

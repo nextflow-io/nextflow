@@ -459,8 +459,8 @@ class BashWrapperBuilderTest extends Specification {
                 # stage input files
                 rm -f sample_1.fq
                 rm -f sample_2.fq
-                ln -s /some/data/sample_1.fq sample_1.fq
-                ln -s /some/data/sample_2.fq sample_2.fq
+                ln -sfn /some/data/sample_1.fq sample_1.fq
+                ln -sfn /some/data/sample_2.fq sample_2.fq
                 '''.stripIndent().rightTrim()
 
         when:
@@ -486,8 +486,8 @@ class BashWrapperBuilderTest extends Specification {
         def stageScript = '''\
                 rm -f sample_1.fq
                 rm -f sample_2.fq
-                ln -s /some/data/sample_1.fq sample_1.fq
-                ln -s /some/data/sample_2.fq sample_2.fq
+                ln -sfn /some/data/sample_1.fq sample_1.fq
+                ln -sfn /some/data/sample_2.fq sample_2.fq
                 '''.stripIndent().rightTrim()
         and:
         def builder = newBashWrapperBuilder([
@@ -519,6 +519,23 @@ class BashWrapperBuilderTest extends Specification {
         def binding = newBashWrapperBuilder().makeBinding()
         then:
         binding.sync_cmd == 'sync || true'
+
+        cleanup:
+        SysEnv.pop()
+    }
+
+    def 'should flush the file system before writing the exit file' () {
+        given:
+        SysEnv.push([NXF_ENABLE_FS_SYNC: 'true'])
+
+        when:
+        def wrapper = newBashWrapperBuilder(workDir: Paths.get('/work/dir')).buildNew0()
+        then:
+        // the `.exitcode` file is the completion marker polled by the executors, therefore
+        // it must be written only after all other task writes have been flushed, otherwise
+        // a shared file system may expose the marker before the task outputs
+        wrapper.indexOf('sync || true') > 0
+        wrapper.indexOf('sync || true') < wrapper.indexOf('printf -- $exit_status > /work/dir/.exitcode')
 
         cleanup:
         SysEnv.pop()

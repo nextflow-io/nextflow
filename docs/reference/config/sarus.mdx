@@ -1,0 +1,25 @@
+---
+title: sarus
+description: Reference for the sarus config scope, which controls how Sarus containers are executed by Nextflow.
+---
+
+# `sarus`
+
+The `sarus` scope controls how [Sarus](https://sarus.readthedocs.io) containers are executed by Nextflow.
+
+##### `sarus.enabled`
+
+Execute tasks with Sarus containers (default: `false`).
+
+##### `sarus.envWhitelist`
+
+Comma-separated list of environment variable names to be included in the container environment.
+
+##### `sarus.runOptions`
+
+Specify extra command line options supported by the `sarus run` command.
+See the [Sarus user guide](https://sarus.readthedocs.io/en/stable/user/user_guide.html) for details.
+
+##### `sarus.tty`
+
+Allocates a pseudo-tty (default: `false`).

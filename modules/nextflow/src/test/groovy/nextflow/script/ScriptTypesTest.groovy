@@ -130,6 +130,33 @@ class ScriptTypesTest extends Dsl2Spec {
         samples[2] instanceof RecordMap
         samples[2].id == '3'
         samples[2].fastq == '3.fastq'
+
+        when:
+        def result = runScript(
+            '''\
+            process FOO {
+                output:
+                val sample
+
+                exec:
+                sample = [id: '1', fastq: '1.fastq'] as Sample
+            }
+
+            workflow {
+                FOO()
+            }
+
+            record Sample {
+                id: String
+                fastq: String
+            }
+            '''
+        )
+        then:
+        def sample = result.val
+        sample instanceof RecordMap
+        sample.id == '1'
+        sample.fastq == '1.fastq'
     }
 
     def 'should strip unsupported type annotations' () {

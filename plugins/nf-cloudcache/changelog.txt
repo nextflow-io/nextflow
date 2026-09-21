@@ -1,5 +1,8 @@
 nf-cloudcache changelog
 =======================
+0.6.1 - 20 Aug 2026
+- Bump Groovy 4.0.33 (#7429) [c8800d84a]
+
 0.6.0 - 8 Feb 2026
 - Add CloudCacheConfig to register cloudcache config options (#6774) [ea8fea470]
 

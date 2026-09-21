@@ -65,6 +65,18 @@ import test.OutputCapture
 @Slf4j
 class WaveClientTest extends Specification {
 
+    def 'should retry request timeouts' () {
+        // Retry a request timeout raised after the request was sent - which the httpx default
+        // excludes - so a single transient stall on the Wave/Tower API does not fail the request.
+        expect:
+        WaveClient.retryCondition(new java.net.http.HttpTimeoutException('request timeout'))
+        WaveClient.retryCondition(new java.net.http.HttpConnectTimeoutException('connect timeout'))
+        WaveClient.retryCondition(new SocketTimeoutException('socket timeout'))
+        WaveClient.retryCondition(new IOException('connection reset'))
+        and:
+        !WaveClient.retryCondition(new RuntimeException('not an I/O error'))
+    }
+
     @CompileStatic
     private static List<Path> untar(final InputStream is, final Path outputDir)  {
 

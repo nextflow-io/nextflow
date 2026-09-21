@@ -33,6 +33,7 @@ class SingularityConfigTest extends Specification {
         expect:
         config.envWhitelist == []
         config.pullTimeout.toMillis() == 20 * 60 * 1000 //20 min
+        config.resourceLimits == false
     }
 
     def 'should create config with full map'(){
@@ -48,6 +49,7 @@ class SingularityConfigTest extends Specification {
             ociAutoPull: false,
             pullTimeout: '50s',
             registry: 'http://registry.com',
+            resourceLimits: true,
             runOptions: '--contain --writable'
         ]
         def config = new SingularityConfig(configMap)
@@ -62,6 +64,7 @@ class SingularityConfigTest extends Specification {
         config.noHttps == false
         config.ociAutoPull == false
         config.registry == 'http://registry.com'
+        config.resourceLimits == true
         config.runOptions == '--contain --writable'
         config.pullTimeout.toMillis() == 50_000 // 50s
 

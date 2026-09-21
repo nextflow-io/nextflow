@@ -16,6 +16,7 @@
 
 package io.seqera.config
 
+import nextflow.platform.AutoLabels
 import nextflow.util.Duration
 import spock.lang.Specification
 
@@ -45,6 +46,8 @@ class ExecutorOptsTest extends Specification {
         config.provider == null
         config.keyPairName == null
         config.batchFlushInterval == Duration.of('5 sec')
+        config.httpOpts().requestTimeout() == java.time.Duration.ofSeconds(45)
+        config.httpOpts().connectTimeout() == java.time.Duration.ofSeconds(10)
         config.machineRequirement != null
         config.machineRequirement.provisioning == null
         !config.autoLabels
@@ -115,6 +118,55 @@ class ExecutorOptsTest extends Specification {
         config.retryOpts().delay == Duration.of('2s')
     }
 
+    def 'should bound a single attempt with the configured request timeout' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            httpClient: [requestTimeout: TIMEOUT]
+        ])
+
+        then:
+        config.httpOpts().requestTimeout() == EXPECTED
+
+        where:
+        TIMEOUT                 | EXPECTED
+        '5 sec'                 | java.time.Duration.ofSeconds(5)
+        Duration.of('5 sec')    | java.time.Duration.ofSeconds(5)
+        // zero means "wait indefinitely"; the Duration form is the one Groovy truthiness
+        // would silently swallow, since Duration.asBoolean() is false at zero
+        '0 sec'                 | null
+        Duration.of('0 sec')    | null
+    }
+
+    def 'should reject a connect timeout that bounds nothing' () {
+        when:
+        new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            httpClient: [connectTimeout: TIMEOUT]
+        ])
+
+        then: 'the failure names the option, instead of surfacing from the client builder'
+        def e = thrown(IllegalArgumentException)
+        e.message.contains("'seqera.executor.httpClient.connectTimeout' must be greater than zero")
+
+        where:
+        // zero is unbounded for requestTimeout but meaningless here, so it must not be
+        // silently accepted and handed to a client that rejects it
+        TIMEOUT << ['0 sec', Duration.of('0 sec')]
+    }
+
+    def 'should bound the connect phase separately from the response' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            httpClient: [connectTimeout: '3 sec', requestTimeout: '5 sec']
+        ])
+
+        then: 'the two bound different phases and neither displaces the other'
+        config.httpOpts().connectTimeout() == java.time.Duration.ofSeconds(3)
+        config.httpOpts().requestTimeout() == java.time.Duration.ofSeconds(5)
+    }
+
     def 'should create config with all settings' () {
         when:
         def config = new ExecutorOpts([
@@ -122,6 +174,7 @@ class ExecutorOptsTest extends Specification {
             region: 'eu-west-1',
             keyPairName: 'my-key',
             batchFlushInterval: '2 sec',
+            httpClient: [requestTimeout: '5 sec'],
             machineRequirement: [
                 provisioning: 'spot'
             ]
@@ -132,10 +185,11 @@ class ExecutorOptsTest extends Specification {
         config.region == 'eu-west-1'
         config.keyPairName == 'my-key'
         config.batchFlushInterval == Duration.of('2 sec')
+        config.httpOpts().requestTimeout() == java.time.Duration.ofSeconds(5)
         config.machineRequirement.provisioning == 'spot'
     }
 
-    def 'should enable all auto labels when set to true' () {
+    def 'should parse the auto labels with the runtime helper' () {
         when:
         def config = new ExecutorOpts([
             endpoint: 'https://sched.example.com',
@@ -143,95 +197,7 @@ class ExecutorOptsTest extends Specification {
         ])
 
         then:
-        config.autoLabels == ExecutorOpts.VALID_AUTO_LABELS
-    }
-
-    def 'should disable auto labels when set to false' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            autoLabels: false
-        ])
-
-        then:
-        config.autoLabels.isEmpty()
-    }
-
-    def 'should accept auto labels as a list of short names' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            autoLabels: ['runName', 'projectName']
-        ])
-
-        then:
-        config.autoLabels == ['runName', 'projectName'] as Set
-    }
-
-    def 'should accept workspaceId and computeEnvId in auto labels' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            autoLabels: ['workspaceId', 'computeEnvId']
-        ])
-
-        then:
-        config.autoLabels == ['workspaceId', 'computeEnvId'] as Set
-    }
-
-    def 'should trim whitespace in auto labels list entries' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            autoLabels: [' runName', 'projectName ']
-        ])
-
-        then:
-        config.autoLabels == ['runName', 'projectName'] as Set
-    }
-
-    def 'should accept auto labels as a comma-separated string' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            autoLabels: 'runName,projectName,workflowId'
-        ])
-
-        then:
-        config.autoLabels == ['runName', 'projectName', 'workflowId'] as Set
-    }
-
-    def 'should tolerate whitespace around comma-separated auto labels' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            autoLabels: 'runName, projectName ,workflowId'
-        ])
-
-        then:
-        config.autoLabels == ['runName', 'projectName', 'workflowId'] as Set
-    }
-
-    def 'should treat empty auto labels list as disabled' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            autoLabels: []
-        ])
-
-        then:
-        config.autoLabels.isEmpty()
-    }
-
-    def 'should treat empty auto labels string as disabled' () {
-        when:
-        def config = new ExecutorOpts([
-            endpoint: 'https://sched.example.com',
-            autoLabels: ''
-        ])
-
-        then:
-        config.autoLabels.isEmpty()
+        config.autoLabels == AutoLabels.VALID_NAMES
     }
 
     def 'should reject unknown auto labels name' () {
@@ -269,6 +235,28 @@ class ExecutorOptsTest extends Specification {
         config.predictionModel == null
     }
 
+    def 'should create config with schedulingRequirement.maxCpusPerUser' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            schedulingRequirement: [maxCpusPerUser: 16]
+        ])
+
+        then:
+        config.schedulingRequirement.maxCpusPerUser == 16
+    }
+
+    def 'should default schedulingRequirement.maxCpusPerUser to null' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com'
+        ])
+
+        then:
+        config.schedulingRequirement != null
+        config.schedulingRequirement.maxCpusPerUser == null
+    }
+
     def 'should create config with taskEnvironment' () {
         when:
         def config = new ExecutorOpts([
@@ -299,6 +287,27 @@ class ExecutorOptsTest extends Specification {
 
         then:
         config.taskEnvironment == [:]
+    }
+
+    def 'should create config with providerConfig' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com',
+            providerConfig: [subnetId: 'subnet-1', securityGroup: 'sg-2']
+        ])
+
+        then:
+        config.providerConfig == [subnetId: 'subnet-1', securityGroup: 'sg-2']
+    }
+
+    def 'should handle null providerConfig' () {
+        when:
+        def config = new ExecutorOpts([
+            endpoint: 'https://sched.example.com'
+        ])
+
+        then:
+        config.providerConfig == null
     }
 
     def 'should create config with computeEnvId' () {

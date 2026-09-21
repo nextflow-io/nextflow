@@ -162,8 +162,8 @@ public class ScriptCompiler {
             .get();
 
         var modules = collectModules(unit, classes);
-        var processNames = new ProcessNameResolver(unit.getCallSites()).resolve(su);
-        return new CompileResult(main, modules, processNames);
+        var names = new ProcessNameResolver(unit.getCallSites()).resolve(su);
+        return new CompileResult(main, modules, names.processes(), names.agents());
     }
 
     private Map<Path,Class> collectModules(ScriptCompilationUnit unit, List<Class> classes) {
@@ -185,7 +185,8 @@ public class ScriptCompiler {
     public static record CompileResult(
         Class main,
         Map<Path,Class> modules,
-        Set<String> processNames
+        Set<String> processNames,
+        Set<String> agentNames
     ) {}
 
     private static class ScriptClassLoader extends GroovyClassLoader {

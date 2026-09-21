@@ -48,6 +48,12 @@ public interface ManifestNamespace extends Namespace {
     """)
     String getDescription();
 
+    @Constant("diagram")
+    @Description("""
+        Project workflow diagram location (Relative path or URL).
+    """)
+    String getDiagram();
+
     @Constant("docsUrl")
     @Description("""
         Project documentation URL.

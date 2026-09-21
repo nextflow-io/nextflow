@@ -1,0 +1,301 @@
+---
+title: Channel<E>
+description: Reference for the Channel type, an asynchronous sequence of values.
+---
+
+# Channel\<E\>
+
+A channel (also known as a *dataflow channel* or *queue channel*) is an asynchronous sequence of values of type `E`. It is used to facilitate dataflow logic in a workflow.
+
+The following methods, also known as *operators*, are available for a channel. They are the core operators that are recommended for use with static typing. See [Using operators with static typing][static-types-operators] for best practices when migrating existing code, and [Operators (legacy)][operator-page] for the operators that are not included here.
+
+##### `collect() -> Value<Bag<E>>` {#collect}
+
+Collects all values from the channel into a collection and emits it as a dataflow value:
+
+```nextflow file=../../snippets/collect.nf
+```
+
+```console file=../../snippets/collect.out
+```
+
+##### `combine( other: Channel<R> ) -> Channel<Tuple>` {#combine}
+
+##### `combine( other: Value<R> ) -> Channel<Tuple>`
+
+Emits every pairwise combination of the channel with another channel or dataflow value:
+
+```nextflow file=../../snippets/combine.nf
+```
+
+```console file=../../snippets/combine.out
+```
+
+Tuples in both the left- and right-hand sources are flattened in the combined tuple. For example, `tuple(1, 2)` and `tuple('red', 'blue')` are combined as `tuple(1, 2, 'red', 'blue')`.
+
+##### `combine( [opts] ) -> Channel<Record>`
+
+When the `combine` operator is called on a channel of records with named arguments, the named arguments are appended to each record in the source channel. Each named argument can be a value or dataflow value.
+
+```nextflow
+samples = channel.of( record(id: 1, fastq: file('1.fq')) )
+index = channel.value( file('index.fa') )
+samples.combine(strandedness: 'auto', index: index).view()
+```
+
+```console
+[id:1, fastq:1.fq, strandedness:auto, index:index.fa]
+```
+
+##### `filter( condition: (E) -> Boolean ) -> Channel<E>` {#filter}
+
+Emits the values from the channel that satisfy a condition, discarding all other values:
+
+```nextflow file=../../snippets/filter-closure.nf
+```
+
+```console file=../../snippets/filter-closure.out
+```
+
+##### `flatMap( transform: (E) -> Iterable<R> ) -> Channel<R>` {#flatmap}
+
+Applies a *mapping function* to each value from the channel. The mapping function should return a collection, and each element in the collection is emitted separately.
+
+For example:
+
+```nextflow file=../../snippets/flatmap-list.nf
+```
+
+```console file=../../snippets/flatmap-list.out
+```
+
+##### `groupBy() -> Channel<Tuple<K,Bag<V>>>` {#groupby}
+
+Collects values from the channel into groups based on a grouping key. A tuple is emitted for each group, containing the grouping key and collection of values.
+
+The source channel should supply either 2-tuples of the form `(<key>, <value>)` or 3-tuples of the form `(<key>, <size>, <value>)`.
+
+If the source tuples do not specify a size, `groupBy` will not emit any groups until *all* inputs have been received:
+
+```nextflow file=../../snippets/groupby.nf
+```
+
+```console file=../../snippets/groupby.out
+```
+
+If the source tuples do specify a size, then `groupBy` will emit each group as soon as it is ready:
+
+```nextflow file=../../snippets/groupby-size.nf
+```
+
+```console file=../../snippets/groupby-size.out
+```
+
+:::note
+When specifying the group size, make sure that the number of inputs for a given group matches the specified size for that group. Otherwise, the run will fail.
+:::
+
+##### `join( other: Channel<Record>, [opts] ) -> Channel<Record>` {#join}
+
+Emits the relational join of two channels of records, using a matching key given by the `by` option:
+
+```nextflow file=../../snippets/join-record.nf
+```
+
+```console file=../../snippets/join-record.out
+```
+
+Duplicate matching keys are handled by emitting each matching combination (like a relational join):
+
+```nextflow file=../../snippets/join-record-duplicates.nf
+```
+
+```console file=../../snippets/join-record-duplicates.out
+```
+
+By default, unmatched values are discarded. Use the `remainder` option to emit them at the end:
+
+```nextflow file=../../snippets/join-record-remainder.nf
+```
+
+```console file=../../snippets/join-record-remainder.out
+```
+
+Available options:
+
+###### `by: String`
+
+*This option is required.*
+
+The record field to use as the matching key.
+
+###### `remainder: Boolean`
+
+When `true`, unmatched values are emitted at the end, otherwise they are discarded (default: `false`).
+
+##### `map( transform: (E) -> R ) -> Channel<R>` {#map}
+
+Applies a *mapping function* to each value from the channel:
+
+```nextflow file=../../snippets/map.nf
+```
+
+```console file=../../snippets/map.out
+```
+
+##### `mix( other: Channel<E> ) -> Channel<E>` {#mix}
+
+##### `mix( other: Value<E> ) -> Channel<E>`
+
+Emits the values from the channel and another channel or dataflow value into a single output channel:
+
+```nextflow file=../../snippets/mix.nf
+```
+
+```console file=../../snippets/mix.out
+```
+
+The values in the output channel may be emitted in any order, for example:
+
+```console
+z
+1
+a
+2
+b
+3
+```
+
+##### `reduce( seed: R, accumulator: (R, E) -> R ) -> Value<R>` {#reduce}
+
+##### `reduce( accumulator: (E, E) -> E ) -> Value<E>`
+
+Applies an *accumulator function* sequentially to each value in the channel, and emits the final accumulated value.
+
+The accumulator function takes two parameters -- the accumulated value and the *i*-th emitted value -- and it should return the accumulated result, which is passed to the next invocation with the *i+1*-th value. This process is repeated for each value in the source channel.
+
+For example:
+
+```nextflow file=../../snippets/reduce.nf
+```
+
+```console file=../../snippets/reduce.out
+```
+
+By default, the first value is used as the initial accumulated value (the *seed*). You can optionally specify a different initial value as shown below:
+
+```nextflow file=../../snippets/reduce-with-initial-value.nf
+```
+
+```console file=../../snippets/reduce-with-initial-value.out
+```
+
+##### `subscribe( action: (E) -> () )` {#subscribe}
+
+##### `subscribe( [opts] )`
+
+Invokes a custom function for each value from the channel:
+
+```nextflow file=../../snippets/subscribe.nf
+```
+
+```console file=../../snippets/subscribe.out
+```
+
+The `subscribe` operator supports multiple types of event handlers:
+
+```nextflow file=../../snippets/subscribe-with-on-complete.nf
+```
+
+```console file=../../snippets/subscribe-with-on-complete.out
+```
+
+:::note
+Unlike most operators, `subscribe` does not return anything. It should only be used for *side effects*, such as printing to the console, writing to a file, or making HTTP requests.
+:::
+
+Available options:
+
+###### `onNext: (E) -> ()`
+
+Closure that is invoked when a value is emitted. Equivalent to providing a single closure argument.
+
+###### `onComplete: () -> ()`
+
+Closure that is invoked after the last value is emitted by the channel.
+
+###### `onError: (T) -> ()`
+
+Closure that is invoked when an exception is raised while handling the `onNext` event. It will not make further calls to `onNext` or `onComplete`. The `onError` method takes as its parameter the `Throwable` that caused the error.
+
+##### `unique( transform: (E) -> ? ) -> Channel<E>` {#unique}
+
+##### `unique() -> Channel<E>`
+
+Emits the unique values from the channel:
+
+```nextflow file=../../snippets/unique.nf
+```
+
+```console file=../../snippets/unique.out
+```
+
+An optional closure can be used to transform each value before it is evaluated for uniqueness:
+
+```nextflow file=../../snippets/unique-with-mapper.nf
+```
+
+```console file=../../snippets/unique-with-mapper.out
+```
+
+##### `until( condition: (E) -> Boolean ) -> Channel<E>` {#until}
+
+Emits each value from the channel until a stopping condition is satisfied:
+
+```nextflow file=../../snippets/until.nf
+```
+
+```console file=../../snippets/until.out
+```
+
+##### `view( transform: (E) -> String, [opts] ) -> Channel<E>` {#view}
+
+##### `view( [opts] ) -> Channel<E>`
+
+Prints each value from the channel to standard output:
+
+```nextflow file=../../snippets/view.nf
+```
+
+```console file=../../snippets/view.out
+```
+
+An optional closure can be used to transform each value before it is printed:
+
+```nextflow file=../../snippets/view-with-mapper.nf
+```
+
+```console file=../../snippets/view-with-mapper.out
+```
+
+Use the `tag` option to print the channel only when the `-dump-channels` command-line option is specified with the given tag:
+
+```nextflow file=../../snippets/view-tag.nf
+```
+
+Run this script with `-dump-channels plus1` or `-dump-channels exp2` to print either channel, or `-dump-channels plus1,exp2` to print both.
+
+The `view` operator also emits every value that it receives, allowing it to be chained with other operators.
+
+Available options:
+
+###### `newLine: Boolean`
+
+Print each value to a separate line (default: `true`).
+
+###### `tag: String`
+
+Print the channel values only when `-dump-channels` is specified on the command line with the given tag.
+
+[operator-page]: ../operator
+[static-types-operators]: ../../tutorials/static-types-operators

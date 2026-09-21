@@ -1,4 +1,4 @@
-FROM amazoncorretto:17-al2023
+FROM amazoncorretto:25-al2023
 COPY .nextflow /.nextflow
 COPY nextflow /usr/bin/nextflow
 ENV NXF_HOME=/.nextflow

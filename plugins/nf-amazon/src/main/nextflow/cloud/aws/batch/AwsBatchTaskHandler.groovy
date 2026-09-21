@@ -39,6 +39,7 @@ import nextflow.exception.ProcessUnrecoverableException
 import nextflow.executor.BashWrapperBuilder
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionConfig
+import nextflow.platform.ResourceLabelPolicy
 import nextflow.processor.BatchContext
 import nextflow.processor.BatchHandler
 import nextflow.processor.TaskArrayRun
@@ -830,7 +831,10 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
          * create the request object
          */
         final opts = getAwsOptions()
-        final labels = task.config.getResourceLabels()
+        // the labels are applied as Batch job tags, therefore the auto-derived ones are normalised
+        // to the tag syntax while the user-declared ones are passed through untouched. Note that
+        // Batch allows at most 50 tags per job, which is not enforced here
+        final labels = task.config.getResourceLabels(ResourceLabelPolicy.AWS)
         final builder = SubmitJobRequest.builder()
         builder.jobName(getJobName(task))
         builder.jobQueue(getJobQueue(task))
@@ -878,7 +882,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         final container = ContainerOverrides.builder()
         container.command(getSubmitCommand())
         // set the task memory
-        final cpus = task.config.getCpus()
+        final cpus = opts.fargateMode ? normaliseFargateCpus(task.config.getCpus()) : task.config.getCpus()
         final mem = task.config.getMemory()
         if( mem ) {
             final mega = opts.fargateMode ? normaliseFargateMem(cpus, mem) : mem.toMega()
@@ -889,7 +893,7 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
         }
         // set the task cpus
         if( cpus > 1 )
-            resources << ResourceRequirement.builder().type(ResourceType.VCPU).value(task.config.getCpus().toString()).build()
+            resources << ResourceRequirement.builder().type(ResourceType.VCPU).value(cpus.toString()).build()
 
         final accelerator = task.config.getAccelerator()
         if( accelerator ) {
@@ -1078,6 +1082,22 @@ class AwsBatchTaskHandler extends TaskHandler implements BatchHandler<String,Job
                                                       4 : MemSlot.ofGiga(8, 30, 1),
                                                       8 : MemSlot.ofGiga(16,60, 4),
                                                       16: MemSlot.ofGiga(32, 120, 8) ]
+
+    /**
+     * Round up the given cpus requirement to the closest valid value accepted by Fargate.
+     *
+     * @param cpus The number of cpus requested by the task
+     * @return The closest cpus count equal to or greater than {@code cpus} that Fargate accepts
+     */
+    protected int normaliseFargateCpus(Integer cpus) {
+        final validCpus = FARGATE_MEM.keySet().findAll { it >= cpus }
+        if( !validCpus )
+            throw new ProcessUnrecoverableException("Requirement of $cpus CPUs is not allowed by Fargate -- Check process with name '${task.lazyName()}'")
+        final result = validCpus.min()
+        if( result != cpus )
+            log.warn "Process '${task.lazyName()}' cpus requirement of ${cpus} is not allowed by Fargate and will be rounded up to ${result}"
+        return result
+    }
 
     protected long normaliseFargateMem(Integer cpus, MemoryUnit mem) {
         final mega = mem.toMega()

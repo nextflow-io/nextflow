@@ -24,10 +24,10 @@ import groovy.transform.Memoized
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.SysEnv
+import nextflow.config.RegistryConfig
 import nextflow.exception.AbortOperationException
 import nextflow.extension.Bolts
 import nextflow.extension.FilesEx
-import nextflow.util.VersionNumber
 import org.pf4j.DefaultPluginManager
 import org.pf4j.PluginManager
 import org.pf4j.PluginState
@@ -238,7 +238,7 @@ class PluginsFacade implements PluginStateListener {
             return new DevPluginManager(root)
         }
         if( embedded ) {
-            // use the custom plugin manager to by-pass the creation of a local plugin repository
+            // use the custom plugin manager to bypass the creation of a local plugin repository
             return new EmbeddedPluginManager(root)
         }
         return new LocalPluginManager(root)
@@ -306,7 +306,27 @@ class PluginsFacade implements PluginStateListener {
     void load(Map config) {
         if( !manager )
             throw new IllegalArgumentException("Plugin system has not been initialized")
+        applyRegistryConfig(config)
         start(pluginsRequirement(config))
+    }
+
+    protected void applyRegistryConfig(Map config) {
+        final registryMap = Bolts.navigate(config, 'registry') as Map
+        // only override the plugin repositories when one or more registry URLs are explicitly
+        // configured; the configured registries are authoritative and replace the default one.
+        // An empty or unset `registry.url` counts as "not configured" and leaves the default
+        // registry in place (consistent with module resolution in RegistryClientFactory).
+        if( !registryMap?.url )
+            return
+        // in dev mode plugins are resolved from the development classpath, not downloaded from
+        // any registry, so the `registry` scope has no effect on plugin resolution
+        if( mode==DEV_MODE ) {
+            log.warn "Plugin registry config is ignored in development mode -- plugins are resolved from the development classpath"
+            return
+        }
+        // the updater owns the repositories and guards against re-applying the registry config,
+        // so re-entrant calls are safe by construction
+        updater?.addRegistryRepos(new RegistryConfig(registryMap))
     }
 
     synchronized void stop() {
@@ -451,12 +471,30 @@ class PluginsFacade implements PluginStateListener {
             log.debug "Plugins default=$defSpecs"
         }
 
-        // add seqera plugin when config contains tower options or uses the seqera executor
-        if( (Bolts.navigate(config,'tower.enabled') || Bolts.navigate(config,'fusion.enabled') || env.TOWER_ACCESS_TOKEN || Bolts.navigate(config,'process.executor')=='seqera' ) && !specs.find {it.id == 'nf-seqera' } ) {
-            specs << defaultPlugins.getPlugin('nf-seqera')
+        // add tower plugin when config contains tower options
+        if( (Bolts.navigate(config,'tower.enabled') || Bolts.navigate(config,'fusion.enabled') || env.TOWER_ACCESS_TOKEN ) && !specs.find {it.id == 'nf-tower' } ) {
+            specs << defaultPlugins.getPlugin('nf-tower')
         }
         if( (Bolts.navigate(config,'wave.enabled') || Bolts.navigate(config,'fusion.enabled')) && !specs.find {it.id == 'nf-wave' } ) {
             specs << defaultPlugins.getPlugin('nf-wave')
+        }
+        if( 'seqera' in configuredExecutors(config) ) {
+            specs << defaultPlugins.getPlugin('nf-seqera')
+        }
+
+        // the `agent` scope names the RUNNER; the plugin providing it is loaded automatically, as an
+        // executor or a work-dir scheme is above. Skipped when the user declared an agent plugin
+        // themselves: adding a second one would make the runner ambiguous
+        // (see nextflow.agent.AgentRunnerProvider#get) instead of resolving it.
+        // Keyed on the scope being present, not merely on the runner name: `agentRunnerPlugin(null)`
+        // answers "the default runner", which must not pull nf-agent into every pipeline that
+        // never mentions an agent.
+        final agentScope = Bolts.navigate(config,'agent')
+        final agentPlugin = agentScope
+                ? agentRunnerPlugin(Bolts.navigate(config,'agent.runner') as String)
+                : null
+        if( agentPlugin && !specs.find { it.id in AGENT_RUNNER_PLUGINS.values() } ) {
+            specs << defaultPlugins.getPlugin(agentPlugin)
         }
 
         // add cloudcache plugin when cloudcache is enabled in the config
@@ -464,41 +502,42 @@ class PluginsFacade implements PluginStateListener {
             specs << defaultPlugins.getPlugin('nf-cloudcache')
         }
 
-        // nf-seqera (>=1.0.0) integrates the former standalone nf-tower plugin; when both are
-        // requested (e.g. nf-tower declared in the config while nf-seqera is auto-loaded because
-        // tower is enabled) drop nf-tower to avoid running two Platform observers at the same time
-        specs = dropSupersededTowerPlugin(specs)
-
         log.debug "Plugins resolved requirement=$specs"
         return specs
     }
 
     /**
-     * The {@code nf-tower} plugin has been integrated into {@code nf-seqera} since version 1.0.0.
-     * When both plugins are requested, remove {@code nf-tower} so that the Seqera Platform
-     * integration is provided solely by {@code nf-seqera} and it is not reported twice.
-     *
-     * @param specs The list of resolved plugin requirements
-     * @return The plugin requirements with {@code nf-tower} removed when superseded by {@code nf-seqera}
+     * Maps an {@code agent.runner} name to the plugin that contributes it. The runner name is the
+     * user-facing selector, so the plugin id is an implementation detail they should not have to
+     * repeat in the {@code plugins} scope -- exactly as {@code process.executor = 'k8s'} does not
+     * require declaring {@code nf-k8s}.
      */
-    protected List<PluginRef> dropSupersededTowerPlugin(List<PluginRef> specs) {
-        final tower = specs.find { it.id == 'nf-tower' }
-        final seqera = specs.find { it.id == 'nf-seqera' }
-        if( tower && seqera && isSeqeraSupersedingTower(seqera.version) ) {
-            log.warn "Plugin 'nf-tower' is superseded by 'nf-seqera${seqera.version ? '@'+seqera.version : ''}' and will not be loaded -- Seqera Platform integration is now provided by the nf-seqera plugin"
-            return specs.findAll { it.id != 'nf-tower' }
-        }
-        return specs
+    private static final Map<String,String> AGENT_RUNNER_PLUGINS = Collections.unmodifiableMap(
+            [ 'pi': 'nf-agent-pi', 'langchain4j': 'nf-agent' ] as Map<String,String> )
+
+    /**
+     * The plugin to load for the configured agent runner: the mapped one when the name is known,
+     * and the in-JVM {@code langchain4j} runner when {@code agent.runner} is unset -- it needs
+     * neither a container nor a reachable broker address, so it is the safe default for a bare
+     * {@code agent} scope.
+     *
+     * <p>{@code null} for an unrecognised name: it may come from a third-party plugin the user
+     * declared themselves, and guessing a plugin id from it would replace a clear
+     * "Unknown agent runner" error with a confusing download failure.
+     */
+    protected static String agentRunnerPlugin(String runner) {
+        return runner ? AGENT_RUNNER_PLUGINS.get(runner) : 'nf-agent'
     }
 
     /**
-     * @param version The {@code nf-seqera} plugin version (can be {@code null} when unspecified)
-     * @return {@code true} when the given {@code nf-seqera} version integrates the {@code nf-tower}
-     *      functionality i.e. it's {@code >= 1.0.0} or unspecified (defaulting to the bundled version)
+     * Every executor name a run may need a plugin for. An AGENT resolves its executor from the
+     * {@code agent} scope independently of {@code process} -- it defaults to `local` and never
+     * inherits the global executor -- so an agent offloaded to Kubernetes pulls nf-k8s even when
+     * every process stays local, and the two placements may need different plugins.
      */
-    protected boolean isSeqeraSupersedingTower(String version) {
-        // a missing version implies the default bundled plugin, which is always >= 1.0.0
-        return !version || new VersionNumber(version).matches('>=1.0.0')
+    private static List<String> configuredExecutors(Map config) {
+        return [ Bolts.navigate(config, 'process.executor')?.toString(),
+                 Bolts.navigate(config, 'agent.executor')?.toString() ]
     }
 
     protected List<PluginRef> defaultPluginsConf(Map config) {
@@ -516,22 +555,19 @@ class PluginsFacade implements PluginStateListener {
         final plugins = new ArrayList<PluginRef>()
         final workDir = config.workDir as String
         final bucketDir = config.bucketDir as String
-        final executor = Bolts.navigate(config, 'process.executor')
+        final executors = configuredExecutors(config)
 
-        if( executor == 'awsbatch' || workDir?.startsWith('s3://') || bucketDir?.startsWith('s3://') || env.containsKey('NXF_ENABLE_AWS_SES') )
+        if( 'awsbatch' in executors || workDir?.startsWith('s3://') || bucketDir?.startsWith('s3://') || env.containsKey('NXF_ENABLE_AWS_SES') )
             plugins << defaultPlugins.getPlugin('nf-amazon')
 
-        if( executor == 'google-lifesciences' || executor == 'google-batch' || workDir?.startsWith('gs://') || bucketDir?.startsWith('gs://')  )
+        if( 'google-lifesciences' in executors || 'google-batch' in executors || workDir?.startsWith('gs://') || bucketDir?.startsWith('gs://')  )
             plugins << defaultPlugins.getPlugin('nf-google')
 
-        if( executor == 'azurebatch' || workDir?.startsWith('az://') || bucketDir?.startsWith('az://') )
+        if( 'azurebatch' in executors || workDir?.startsWith('az://') || bucketDir?.startsWith('az://') )
             plugins << defaultPlugins.getPlugin('nf-azure')
 
-        if( executor == 'k8s' )
+        if( 'k8s' in executors )
             plugins << defaultPlugins.getPlugin('nf-k8s')
-
-        if( Bolts.navigate(config, 'weblog.enabled'))
-            plugins << new PluginRef('nf-weblog')
 
         return plugins
     }

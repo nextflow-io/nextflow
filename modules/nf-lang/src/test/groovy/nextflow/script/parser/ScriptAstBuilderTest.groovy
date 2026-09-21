@@ -22,6 +22,10 @@ import spock.lang.Shared
 import spock.lang.Specification
 import test.TestUtils
 
+import static test.TestUtils.deleteDir
+import static test.TestUtils.tempDir
+import static test.TestUtils.tempFile
+
 /**
  * @see nextflow.script.parser.ScriptAstBuilder
  *
@@ -306,6 +310,63 @@ class ScriptAstBuilderTest extends Specification {
         errors[0].getOriginalMessage() == "Invalid workflow emit -- must be a name, assignment, or expression"
     }
 
+    def 'should report an error for an invalid output assignment' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                output:
+                target <<= 'world'
+
+                script:
+                ""
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 5
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Invalid output declaration in typed process -- must be a name, assignment, or expression"
+
+        when:
+        errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                output:
+                target.name = 'world'
+
+                script:
+                ""
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 5
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Invalid output declaration in typed process -- must be a name, assignment, or expression"
+
+        when:
+        errors = check(
+            '''\
+            workflow hello {
+                emit:
+                target <<= 'world'
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 3
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == "Invalid workflow emit -- must be a name, assignment, or expression"
+    }
+
     def 'should report error for defining a typed process without preview flag' () {
         when:
         def errors = check(
@@ -521,6 +582,186 @@ class ScriptAstBuilderTest extends Specification {
         errors[0].getStartLine() == 2
         errors[0].getStartColumn() == 5
         errors[0].getOriginalMessage() == "Missing field type"
+    }
+
+    def 'should report an error for an unexpected character in a gstring' () {
+        when:
+        // bare `$` not followed by an identifier or `{` in a triple-quoted gstring
+        def errors = check(
+            '''\
+            """
+            echo "$/"
+            """
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 2
+        errors[0].getStartColumn() == 7
+        errors[0].getOriginalMessage() == "Unexpected character: '\$'"
+
+        when:
+        // bare `$` in a double-quoted gstring
+        errors = check(
+            '''\
+            "abc $/ def"
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 6
+        errors[0].getOriginalMessage() == "Unexpected character: '\$'"
+
+        when:
+        // invalid escape sequence in a gstring
+        errors = check(
+            '''\
+            "abc \\q def"
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 6
+        errors[0].getOriginalMessage() == "Invalid escape sequence: '\\q'"
+    }
+
+    def 'should report an invalid escape sequence at the exact position' () {
+        when:
+        // an invalid escape should not be reported at the start of the string
+        def errors = check(
+            '''\
+            x = \'\'\'
+                gsub(/\\./, "0")
+            \'\'\'
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 2
+        errors[0].getStartColumn() == 11
+        errors[0].getOriginalMessage() == "Invalid escape sequence: '\\.'"
+
+        when:
+        errors = check(
+            '''\
+            x = \'a\\.b\'
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 7
+        errors[0].getOriginalMessage() == "Invalid escape sequence: '\\.'"
+
+        when:
+        // a unicode escape must be a single `u` followed by four hex digits
+        errors = check(
+            '''\
+            x = \'\\uZZZZ\'
+            y = \'\\uu00e9\'
+            '''
+        )
+        then:
+        errors.size() == 2
+        errors.every { it.getOriginalMessage() == "Invalid escape sequence: '\\u'" }
+
+        when:
+        // an invalid escape in a gstring fragment that starts with a slash
+        errors = check(
+            '''\
+            x = "/opt\\q ${params.foo}"
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 10
+        errors[0].getOriginalMessage() == "Invalid escape sequence: '\\q'"
+
+        when:
+        // an invalid escape in a gstring fragment after an interpolation
+        errors = check(
+            '''\
+            x = "out ${params.foo}/res\\q.txt"
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 27
+        errors[0].getOriginalMessage() == "Invalid escape sequence: '\\q'"
+
+        when:
+        // every invalid escape in a file should be reported
+        errors = check(
+            '''\
+            x = \'a\\.b\'
+            y = \'c\\,d\'
+            '''
+        )
+        then:
+        errors.size() == 2
+        errors[0].getStartLine() == 1
+        errors[0].getStartColumn() == 7
+        errors[1].getStartLine() == 2
+        errors[1].getStartColumn() == 7
+
+        when:
+        // valid escapes and slashy strings should not be flagged
+        errors = check(
+            '''\
+            x = \'a\\n\\t\\\\\\u00e9\\101b\'
+            y = /a\\.b/
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report an invalid escape sequence after a line continuation' () {
+        given:
+        def root = tempDir()
+        // a line continuation followed by CRLF spans only one line
+        def main = tempFile(root, 'main.nf', "x = \'\'\'a\\" + "\r\n" + "b\\.c\'\'\'" + "\r\n")
+
+        when:
+        def errors = TestUtils.check(new ScriptParser(), [main])
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 2
+        errors[0].getStartColumn() == 2
+        errors[0].getOriginalMessage() == "Invalid escape sequence: '\\.'"
+
+        cleanup:
+        deleteDir(root)
+    }
+
+    def 'should allow escaped and interpolated gstring characters' () {
+        when:
+        // escaped `\\$` renders as a literal `$`
+        def errors = check(
+            '''\
+            """
+            echo "\\$/"
+            """
+            '''
+        )
+        then:
+        errors.size() == 0
+
+        when:
+        // normal `${...}` interpolation
+        errors = check(
+            '''\
+            """
+            echo "${'hello'}"
+            """
+            '''
+        )
+        then:
+        errors.size() == 0
     }
 
 }

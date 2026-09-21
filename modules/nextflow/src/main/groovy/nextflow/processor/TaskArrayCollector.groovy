@@ -22,7 +22,6 @@ import java.util.concurrent.locks.ReentrantLock
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
-import nextflow.executor.Executor
 import nextflow.executor.TaskArrayExecutor
 import nextflow.file.FileHelper
 import nextflow.util.CacheHelper
@@ -71,12 +70,9 @@ class TaskArrayCollector {
 
     private boolean closed = false
 
-    TaskArrayCollector(TaskProcessor processor, Executor executor, int arraySize) {
-        if( executor !instanceof TaskArrayExecutor )
-            throw new IllegalArgumentException("Executor '${executor.name}' does not support job arrays")
-
+    TaskArrayCollector(TaskProcessor processor, TaskArrayExecutor executor, int arraySize) {
         this.processor = processor
-        this.executor = (TaskArrayExecutor)executor
+        this.executor = executor
         this.arraySize = arraySize
         this.array = new ArrayList<>(arraySize)
     }
@@ -177,6 +173,9 @@ class TaskArrayCollector {
         taskArray.config.context = taskArray.context
         taskArray.config.process = taskArray.processor.name
         taskArray.config.executor = taskArray.processor.executor.name
+        // the array job is submitted as a task on its own, therefore it needs the auto-derived
+        // resource labels as much as the tasks it wraps -- see TaskProcessor#createTaskRun
+        taskArray.config.setAutoResourceLabels(processor.session?.getAutoResourceLabels())
 
         return taskArray
     }

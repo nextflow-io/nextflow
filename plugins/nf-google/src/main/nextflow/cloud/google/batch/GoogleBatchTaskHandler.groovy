@@ -49,6 +49,7 @@ import nextflow.executor.res.DiskResource
 import nextflow.fusion.FusionAwareTask
 import nextflow.fusion.FusionConfig
 import nextflow.fusion.FusionScriptLauncher
+import nextflow.platform.ResourceLabelPolicy
 import nextflow.processor.TaskArrayRun
 import nextflow.processor.TaskConfig
 import nextflow.processor.TaskHandler
@@ -328,7 +329,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             container.setOptions(containerOptions)
 
         final env = Environment.newBuilder()
-            .putAllVariables(launcher.getEnvironment())
+            .putAllVariables(launcher.getBatchEnvironment())
             .build()
 
         return Runnable.newBuilder()
@@ -535,7 +536,8 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
                     .setEmail(batchConfig.serviceAccountEmail)
             )
 
-        allocationPolicy.putAllLabels(task.config.getResourceLabels())
+        // the labels derived from the workflow metadata are normalised as required by the Google Batch API
+        allocationPolicy.putAllLabels(task.config.getResourceLabels(ResourceLabelPolicy.GOOGLE))
 
         if( batchConfig.networkTags )
             allocationPolicy.addAllTags(batchConfig.networkTags)
@@ -592,7 +594,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
             .addTaskGroups(buildTaskGroup(taskSpec, task))
             .setAllocationPolicy(allocationResult.policy)
             .setLogsPolicy(createLogsPolicy())
-            .putAllLabels(task.config.getResourceLabels())
+            .putAllLabels(task.config.getResourceLabels(ResourceLabelPolicy.GOOGLE))
             .build()
     }
 
@@ -807,7 +809,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         if( isActive() ) {
             log.trace "[GOOGLE BATCH] Process `${task.lazyName()}` - deleting job name=$jobId"
             if( executor.shouldDeleteJob(jobId) )
-                client.deleteJob(jobId)
+                executor.reaper.submit({ client.deleteJob(jobId) })
         }
         else {
             log.debug "[GOOGLE BATCH] Process `${task.lazyName()}` - invalid delete action"

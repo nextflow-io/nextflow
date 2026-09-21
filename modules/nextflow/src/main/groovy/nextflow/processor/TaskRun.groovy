@@ -26,6 +26,7 @@ import com.google.common.hash.HashCode
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
 import nextflow.Session
+import nextflow.agent.AgentTaskScript
 import nextflow.conda.CondaCache
 import nextflow.conda.CondaConfig
 import nextflow.container.ContainerConfig
@@ -417,10 +418,25 @@ class TaskRun implements Cloneable {
         }
     }
 
+    /**
+     * The script as RECORDED, which is not always the script as executed. The value lands in
+     * {@link nextflow.trace.TraceRecord#script}, i.e. in the resume cache database and in whatever
+     * a trace observer forwards -- {@code nf-tower} POSTs it to Seqera Platform.
+     *
+     * <p>For every ordinary task this is exactly {@link #getScript()} (or the template source),
+     * unchanged. The single exception is an AGENT task, whose script is the RPC proxy launch
+     * command and therefore carries the invocation's capability token on argv -- a bearer
+     * credential for the provider API key the driver sends on the start frame. That token is
+     * work-directory-local by design and must not be persisted or transmitted, so it is redacted
+     * here; {@link nextflow.lineage.LinObserver} omits {@code task.script} from the lineage record
+     * for the same reason. {@link nextflow.processor.TaskBean}, which writes {@code .command.sh},
+     * keeps reading {@link #getScript()} and so keeps the real token.
+     */
     String getTraceScript() {
-        return template!=null && body?.source
+        final text = template!=null && body?.source
             ? body.source
             : getScript()
+        return AgentTaskScript.forTrace(config, text)
     }
 
     boolean hasTypedInputsOutputs() {
@@ -433,6 +449,14 @@ class TaskRun implements Cloneable {
     boolean hasCacheableValues() {
 
         if( config?.isDynamic() )
+            return true
+
+        // An `exec` task is the only kind whose context must be persisted: the process body *is*
+        // the task execution, therefore whatever it computed lives only in `task.context` and
+        // cannot be re-derived on a cache hit (this is the in-JVM `agent` body too). A script task
+        // instead re-evaluates its body -- and therefore rebuilds its context -- in
+        // TaskProcessor.invokeTask, before the cache is consulted.
+        if( type == ScriptType.GROOVY )
             return true
 
         for( OutParam it : outputs.keySet() ) {
@@ -829,9 +853,48 @@ class TaskRun implements Cloneable {
      * @param body A {@code BodyDef} object instance
      */
     void resolve(BodyDef body)  {
-        processor.session.stubRun && config.getStubBlock()
-            ? resolveStub(config.getStubBlock())
-            : resolveBody(body)
+        // track the directives accessed while the command is rendered -- see #isDirectiveReferenced
+        // note the null guards are load-bearing -- the access below is behind a short-circuit
+        config?.trackDirectiveAccess(true)
+        try {
+            processor.session.stubRun && config.getStubBlock()
+                ? resolveStub(config.getStubBlock())
+                : resolveBody(body)
+        }
+        finally {
+            config?.trackDirectiveAccess(false)
+        }
+    }
+
+    /**
+     * Report whether the rendered task command depends on the value of the given
+     * {@code task} directive e.g. {@code memory} for a script interpolating
+     * {@code "-Xmx${task.memory.toGiga()}g"}.
+     *
+     * The command is rendered *before* the task is scheduled, therefore an executor that
+     * adjusts the requested resources at schedule time needs to know whether the command
+     * carries a value it is about to change.
+     *
+     * The reference is *observed*, not inferred: rendering the command accesses the directive
+     * off the task config, and {@link #resolve} tracks the accesses while it happens. That
+     * covers every path the command can be rendered through -- the script, a {@code shell}
+     * block, a {@code template} file, and a dynamic directive value the command interpolates,
+     * whether declared in the process or in the config file -- without any of them being
+     * known here.
+     *
+     * Note it reports the *last* rendering of this task, hence {@code false} until
+     * {@link #resolve} has run, for an {@code exec} task, and for a task array -- which
+     * {@code TaskArrayCollector} assembles without resolving it.
+     *
+     * ponytail: a directive resolved *after* the command has been rendered is not observed
+     * e.g. `beforeScript = { "-Xmx${task.memory}" }`, which the wrapper builder resolves at
+     * submit time. Widen the tracked action to cover the wrapper if that case shows up.
+     *
+     * @param directive The directive name e.g. {@code memory}
+     * @return {@code true} when rendering the command accessed the given directive
+     */
+    boolean isDirectiveReferenced(String directive) {
+        return config != null && config.isDirectiveAccessed(directive)
     }
 
     protected void resolveBody(BodyDef body) {

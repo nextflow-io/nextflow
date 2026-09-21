@@ -1,5 +1,9 @@
 nf-codecommit changelog
 =======================
+0.6.1 - 20 Aug 2026
+- Bump netty and Apache HttpComponents to patched releases (#7484) [3aef1da9a]
+- Bump Groovy 4.0.33 (#7429) [c8800d84a]
+
 0.6.0 - 19 Jun 2026
 - Fix netty CVE-2026-44249 via AWS SDK bump and azure-core-http-netty pin (#7223) [ab6a6e65e]
 

@@ -36,4 +36,11 @@ class LinPropertyValidationTest extends Specification{
         then:
         noExceptionThrown()
     }
+
+    def 'should accept agent run properties'(){
+        when: 'the fields that only exist on AgentRun are queryable, e.g. `lineage find -q model=...`'
+        new LinPropertyValidator().validate(['runner', 'model', 'resolvedModel', 'promptTemplate', 'maxIterations', 'skills'])
+        then:
+        noExceptionThrown()
+    }
 }

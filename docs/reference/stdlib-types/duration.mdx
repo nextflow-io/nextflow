@@ -1,0 +1,73 @@
+---
+title: Duration
+description: Reference for the Duration type, a duration of time.
+---
+
+# Duration
+
+A Duration represents a duration of time with millisecond precision.
+
+A Duration can be created by adding a unit suffix to an integer (e.g. `1.h`), or by explicitly casting to `Duration`:
+
+```nextflow
+// integer with suffix
+oneDay = 24.h
+
+// integer value (milliseconds)
+oneSecond = 1000 as Duration
+
+// simple string value
+oneHour = '1h' as Duration
+
+// complex string value
+complexDuration = '1day 6hours 3minutes 30seconds' as Duration
+```
+
+The following suffixes are available:
+
+| Unit                            | Description  |
+| ------------------------------- | ------------ |
+| `ms`, `milli`, `millis`         | Milliseconds |
+| `s`, `sec`, `second`, `seconds` | Seconds      |
+| `m`, `min`, `minute`, `minutes` | Minutes      |
+| `h`, `hour`, `hours`            | Hours        |
+| `d`, `day`, `days`              | Days         |
+
+Durations can be compared like numbers, and they support basic arithmetic operations:
+
+```nextflow
+a = 1.h
+b = 2.h
+
+assert a < b
+assert a + a == b
+assert b - a == a
+assert a * 2 == b
+assert b / 2 == a
+```
+
+The following methods are available for a Duration:
+
+##### `toDays() -> Integer`
+
+Get the duration value in days (rounded down).
+
+##### `toHours() -> Integer`
+
+Get the duration value in hours (rounded down).
+
+##### `toMillis() -> Integer`
+
+Get the duration value in milliseconds.
+
+##### `toMinutes() -> Integer`
+
+Get the duration value in minutes (rounded down).
+
+##### `toSeconds() -> Integer`
+
+Get the duration value in seconds (rounded down).
+
+:::note
+These methods are also available as `getDays()`, `getHours()`, `getMillis()`, `getMinutes()`, and `getSeconds()`.
+:::

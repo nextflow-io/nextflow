@@ -167,7 +167,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
      * to the shared working directory
      */
     @Override
-    String getUnstageOutputFilesScript(List<String> outputFiles, Path targetDir) {
+    String getUnstageOutputFilesScript(List<String> outputFiles, Path unstageDir) {
         final patterns = normalizeGlobStarPaths(outputFiles)
         // create a bash script that will copy the out file to the working directory
         log.trace "Unstaging file path: $patterns"
@@ -179,11 +179,11 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
         for( String it : patterns )
             escape.add( Escape.path(it) )
 
-        final mode = stageoutMode ?: ( workDir==targetDir ? 'copy' : 'move' )
+        final mode = stageoutMode ?: ( this.targetDir==null || this.workDir==this.targetDir ? 'copy' : 'move' )
         return """\
             IFS=\$'\\n'
             for name in \$(eval "ls -1d ${escape.join(' ')}" | sort | uniq); do
-                ${stageOutCommand('$name', targetDir, mode)}
+                ${stageOutCommand('$name', unstageDir, mode)}
             done
             unset IFS""".stripIndent(true)
     }
@@ -214,7 +214,7 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
             throw new IllegalArgumentException("Process input file target path must be relative: $target")
 
         if( mode == 'symlink' || !mode )
-            return "ln -s ${Escape.path(source)} ${Escape.path(target)}"
+            return "ln -sfn ${Escape.path(source)} ${Escape.path(target)}"
 
         if( mode == 'rellink' ) {
             // GNU ln has the '-r' flag, but BSD ln doesn't, so we have to
@@ -224,11 +224,11 @@ class SimpleFileCopyStrategy implements ScriptFileCopyStrategy {
             def sourcePath = workDir.resolve(source)
             source = targetPath.getParent().relativize(sourcePath).toString()
 
-            return "ln -s ${Escape.path(source)} ${Escape.path(target)}"
+            return "ln -sfn ${Escape.path(source)} ${Escape.path(target)}"
         }
 
         if( mode == 'link' )
-            return "ln ${Escape.path(source)} ${Escape.path(target)}"
+            return "ln -f ${Escape.path(source)} ${Escape.path(target)}"
 
         if( mode == 'copy' || !mode )
             return "cp -fRL ${Escape.path(source)} ${Escape.path(target)}"

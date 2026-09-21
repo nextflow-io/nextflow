@@ -1,0 +1,35 @@
+---
+title: Google Cloud Batch
+description: Reference for the google-batch executor, which submits tasks to Google Cloud Batch.
+---
+
+# Google Cloud Batch
+
+The `google-batch` executor runs pipeline tasks using [Google Cloud Batch](https://cloud.google.com/batch), a managed compute service that runs containerized workloads in Google Cloud. It submits each task as a Cloud Batch job.
+
+To enable this executor, set `process.executor = 'google-batch'` in the `nextflow.config` file. You can launch the pipeline from a local machine or a Google Compute Engine VM. Every pipeline process must specify a Docker image using the `container` directive. The pipeline work directory must be located in a Google Cloud Storage bucket.
+
+Use the following process directives to control resource requests and other job characteristics:
+
+- [accelerator][process-accelerator]
+- [container][process-container]
+- [containerOptions][process-containeroptions]
+- [cpus][process-cpus]
+- [disk][process-disk]
+- [machineType][process-machinetype]
+- [memory][process-memory]
+- [resourcelabels][process-resourcelabels]
+- [time][process-time]
+
+See [Cloud Batch][google-batch] for further configuration details.
+
+[google-batch]: ../google#cloud-batch
+[process-accelerator]: ../reference/process/directives/accelerator
+[process-container]: ../reference/process/directives/container
+[process-containeroptions]: ../reference/process/directives/container-options
+[process-cpus]: ../reference/process/directives/cpus
+[process-disk]: ../reference/process/directives/disk
+[process-machinetype]: ../reference/process/directives/machine-type
+[process-memory]: ../reference/process/directives/memory
+[process-resourcelabels]: ../reference/process/directives/resource-labels
+[process-time]: ../reference/process/directives/time

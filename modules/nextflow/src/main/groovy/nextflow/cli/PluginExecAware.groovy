@@ -25,6 +25,6 @@ interface PluginExecAware {
 
     static final String CMD_SEP = ':'
 
-    int exec(Launcher launcher, String pluginId, String cmd, List<String> args)
+    int exec(String pluginId, String cmd, List<String> args)
 
 }

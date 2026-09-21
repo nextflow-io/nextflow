@@ -1,0 +1,99 @@
+---
+title: nextflow kuberun
+description: Reference for the nextflow kuberun command. Launch a Nextflow pipeline on a Kubernetes cluster.
+---
+
+# `nextflow kuberun`
+
+Launch a Nextflow pipeline on a Kubernetes cluster.
+
+## Usage
+
+```console
+$ nextflow kuberun [options] [project]
+```
+
+## Description
+
+The `kuberun` command extends the `run` command with a Kubernetes integration. It deploys the Nextflow runtime as a Kubernetes pod and requires the `kubectl` CLI. The `kuberun` command cannot run local Nextflow scripts. See [Kubernetes][k8s-page] for more information.
+
+## Options
+
+The `kuberun` command supports the following options from [`run`](./run):
+
+- `-cache`
+- `-disable-jobs-cancellation`
+- `-dump-channels`
+- `-dump-hashes`
+- `-e.<key>=<value>`
+- `-entry`
+- `-h, -help`
+- `-hub`
+- `-latest`
+- `-main-script`
+- `-name`
+- `-offline`
+- `-params-file`
+- `-plugins`
+- `-preview`
+- `-profile`
+- `-qs, -queue-size`
+- `-resume`
+- `-r, -revision`
+- `-stub, -stub-run`
+- `-user`
+- `-with-conda`
+- `-with-dag`
+- `-N, -with-notification`
+- `-with-report`
+- `-with-spack`
+- `-with-timeline`
+- `-with-tower`
+- `-with-trace`
+- `-with-wave`
+- `-with-weblog`
+- `-w, -work-dir`
+
+The following new options are also available:
+
+##### `-head-cpus`
+
+Number of CPUs requested for the Nextflow pod.
+
+##### `-head-image`
+
+Container image for the Nextflow driver pod.
+
+##### `-head-memory`
+
+Amount of memory requested for the Nextflow pod.
+
+##### `-head-prescript`
+
+Script to run before the Nextflow pod starts.
+
+##### `-n, -namespace`
+
+Kubernetes namespace to use.
+
+##### `-remoteConfig`
+
+Add the specified file from the Kubernetes cluster to the configuration set.
+
+##### `-remoteProfile`
+
+Configuration profile to use from `-remoteConfig`.
+
+##### `-v, -volume-mount`
+
+Volume claim mounts. For example, `my-pvc:/mnt/path`.
+
+## Examples
+
+Run a pipeline on a Kubernetes cluster:
+
+```console
+$ nextflow kuberun nextflow-io/hello
+```
+
+[k8s-page]: ../../kubernetes

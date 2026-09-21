@@ -1,0 +1,123 @@
+---
+title: publishDir
+description: Reference for the `publishDir` process directive.
+---
+
+# `publishDir`
+
+:::note
+You can use [workflow outputs][workflow-output-def] instead of `publishDir`. See [Migrating to workflow outputs][migrating-workflow-outputs] to learn how to migrate existing code.
+:::
+
+The `publishDir` directive publishes matching process output files to a target directory.
+
+## Usage
+
+For example:
+
+```nextflow
+process hello {
+    publishDir '/data/chunks'
+
+    output:
+    path 'chunk_*'
+
+    script:
+    """
+    printf 'Hola' | split -b 1 - chunk_
+    """
+}
+```
+
+This example publishes the `chunk_*` output files into the `/data/chunks` directory.
+
+Only files that match the declaration in the `output` block are published, not all the outputs of the process.
+
+Specify the `publishDir` directive more than once to publish output files to different target directories based on different rules.
+
+By default, files are published as a *symbolic link* from the task directory to the target directory. Use the `mode` option to control this behavior:
+
+```nextflow
+process hello {
+    publishDir '/data/chunks', mode: 'copy', overwrite: false
+
+    output:
+    path 'chunk_*'
+
+    script:
+    """
+    printf 'Hola' | split -b 1 - chunk_
+    """
+}
+```
+
+:::warning
+Output files are published *asynchronously* after the task execution. They may not be immediately available in the publish directory during the pipeline run. Downstream processes should access output files through the declared process outputs, not the publish directory.
+:::
+
+## Options
+
+The following options are available:
+
+##### `contentType`
+
+*Experimental: only supported for S3.*
+
+Specifies the media content type, or [MIME type](https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_Types), of the published file. If set to `true`, the content type is inferred from the file extension (default: `false`).
+
+##### `enabled`
+
+Enables or disables the publish rule depending on the boolean value specified (default: `true`).
+
+##### `failOnError`
+
+<ChangedInVersion version="24.04">
+The default value was changed from `false` to `true`
+</ChangedInVersion>
+
+When `true`, the run is aborted if a file cannot be published to the specified target directory or bucket (default: `true`).
+
+##### `mode`
+
+The file publishing method. Can be one of the following values:
+
+- `'copy'`: Copies the output files into the publish directory.
+- `'copyNoFollow'`: Copies the output files into the publish directory without following symlinks, that is, the links themselves are copied.
+- `'link'`: Creates a hard link in the publish directory for each output file.
+- `'move'`: Moves the output files into the publish directory. Use only for a *terminal* process, that is, a process whose output is not consumed by any other downstream process.
+- `'rellink'`: Creates a relative symbolic link in the publish directory for each output file.
+- `'symlink'`: Creates an absolute symbolic link in the publish directory for each output file (default).
+
+##### `overwrite`
+
+When `true`, any existing file in the target directory is overridden (default: `true` during normal pipeline execution and `false` when pipeline execution is `resumed`).
+
+##### `path`
+
+Specifies the directory where files are published. The syntax `publishDir '/some/dir'` is a shortcut for `publishDir path: '/some/dir'`.
+
+##### `pattern`
+
+Specifies a [glob][glob] file pattern that selects which files to publish from the overall set of output files.
+
+##### `saveAs`
+
+A closure that receives the name of each file being published and returns the actual file name or a full path where the file is stored. Use it to dynamically rename published files or change their destination directory. Return `null` from the closure to *not* publish a file. This is useful when the process has multiple output files, but you want to publish only some of them.
+
+##### `storageClass`
+
+<AddedInVersion version="23.04" />
+
+*Experimental: only supported for S3.*
+
+Specifies the storage class for the published file.
+
+##### `tags`
+
+*Experimental: only supported for S3.*
+
+Associates arbitrary tags with the published file, for example, `tags: [MESSAGE: 'Hello world']`.
+
+[glob]: https://docs.oracle.com/javase/tutorial/essential/io/fileOps.html#glob
+[migrating-workflow-outputs]: ../../../tutorials/workflow-outputs
+[workflow-output-def]: ../../../workflow#outputs

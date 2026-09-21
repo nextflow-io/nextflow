@@ -41,6 +41,7 @@ class InstalledModule {
     Path manifestFile
     Path moduleInfoFile
     String installedVersion
+    String kind
     String expectedChecksum
     String registryUrl
 

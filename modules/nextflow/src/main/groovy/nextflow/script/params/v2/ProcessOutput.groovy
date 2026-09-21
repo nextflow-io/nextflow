@@ -63,6 +63,10 @@ class ProcessOutput implements OutParam {
         return name
     }
 
+    Class getType() {
+        return type
+    }
+
     Object getLazyValue() {
         return value
     }

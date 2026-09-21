@@ -41,6 +41,8 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
     private Boolean ociMode
 
+    protected boolean resourceLimits
+
     SingularityBuilder(String name) {
         this.image = name
         this.homeMount = defaultHomeMount()
@@ -84,6 +86,7 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
             this.addEngineOptions(config.engineOptions)
 
         this.ociMode = config.ociMode
+        this.resourceLimits = config.resourceLimits
 
         if( config.runOptions )
             this.addRunOptions(config.runOptions)
@@ -131,6 +134,13 @@ class SingularityBuilder extends ContainerBuilder<SingularityBuilder> {
 
         if( ociMode != null )
             result << (ociMode ? '--oci ' : '--no-oci ')
+
+        if( resourceLimits ) {
+            if( cpus )
+                result << "--cpus ${cpus} "
+            if( memory )
+                result << "--memory ${memory} "
+        }
 
         if( autoMounts ) {
             makeVolumes(mounts, result)

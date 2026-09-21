@@ -25,6 +25,7 @@ import java.time.ZoneId
 
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
+import nextflow.lineage.model.v1beta1.AgentRun
 import nextflow.lineage.model.v1beta1.TaskRun
 import nextflow.lineage.model.v1beta1.WorkflowRun
 import nextflow.lineage.serde.LinEncoder
@@ -103,7 +104,7 @@ class LinUtils {
      * @return return 'true' if the parent is a Task/Workflow run and the first element in fragment is 'output'. Otherwise 'false'
      */
     static boolean isSearchingOutputs(LinSerializable record, String fragment) {
-        return (record instanceof WorkflowRun || record instanceof TaskRun) && fragment && fragment.tokenize('.')[0] == 'output'
+        return (record instanceof WorkflowRun || record instanceof TaskRun || record instanceof AgentRun) && fragment && fragment.tokenize('.')[0] == 'output'
     }
 
     /**
@@ -212,7 +213,7 @@ class LinUtils {
             log.trace("No property found for $key")
             return null
         }
-        // Return a single record if only ine results is found.
+        // Return a single record if only one result is found.
         return results.size() == 1 ? results[0] : results
     }
 
@@ -232,7 +233,7 @@ class LinUtils {
     /**
      * Helper function to convert from String ISO 8601 to FileTime.
      *
-     * @param date ISO formated time
+     * @param date ISO formatted time
      * @return Converted FileTime or null if date is not available (null or 'N/A')
      */
     static FileTime toFileTime(OffsetDateTime date) {

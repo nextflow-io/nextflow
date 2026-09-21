@@ -1,0 +1,69 @@
+---
+title: nextflow info
+description: Reference for the nextflow info command. Print project or system runtime information.
+---
+
+# `nextflow info`
+
+Print project or system runtime information.
+
+## Usage
+
+```console
+$ nextflow info [options] [project]
+```
+
+## Description
+
+The `info` command prints runtime information about the hardware and software: the Nextflow version and build, the operating system, and the Groovy and Java runtimes. It can also print information about a specific project.
+
+If no run name or session id is provided, it will clean the latest run.
+
+## Options
+
+##### `-u, -check-updates`
+
+Check for remote updates.
+
+##### `-d`
+
+Show detailed information.
+
+##### `-h, -help`
+
+Print the command usage.
+
+##### `-o` (`text`)
+
+Output format, either `text`, `json`, or `yaml`.
+
+## Examples
+
+Display Nextflow runtime and system info:
+
+```console
+$ nextflow info
+
+  Version: 20.07.1 build 5412
+  Created: 24-07-2020 15:18 UTC (20:48 IDT)
+  System: Mac OS X 10.15.6
+  Runtime: Groovy 2.5.11 on OpenJDK 64-Bit Server VM 1.8.0_192-b01
+  Encoding: UTF-8 (UTF-8)
+```
+
+Display information about a specific project:
+
+```console
+$ nextflow info nextflow-io/hello
+
+  project name: nextflow-io/hello
+  repository  : https://github.com/nextflow-io/hello
+  local path  : /Users/evanfloden/.nextflow/assets/.repos/nextflow-io/hello
+  main script : main.nf
+  revisions   :
+  * master (default)
+    mybranch
+    testing
+  * v1.1 [t]
+    v1.2 [t]
+```

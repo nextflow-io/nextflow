@@ -18,6 +18,8 @@ package nextflow.executor
 
 import java.nio.file.Path
 
+import java.util.concurrent.ExecutorService
+
 import groovy.transform.CompileStatic
 import groovy.transform.Memoized
 import groovy.util.logging.Slf4j
@@ -225,6 +227,19 @@ abstract class Executor {
      */
     boolean isFusionEnabled() {
         return false
+    }
+
+    /**
+     * The thread pool this executor's task handlers run their work on.
+     *
+     * <p>Defaults to the session's execution pool, sized against
+     * {@link nextflow.processor.LocalPollingMonitor}'s cpu gate. An executor whose tasks BLOCK on
+     * other tasks -- an orchestrator such as {@link nextflow.executor.local.AgentExecutor} -- must
+     * override this with a pool of its own, or its blocked tasks will starve the very sub-tasks
+     * they are waiting for.
+     */
+    ExecutorService getExecService() {
+        return session.execService
     }
 
     /**

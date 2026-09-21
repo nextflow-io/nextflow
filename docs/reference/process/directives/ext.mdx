@@ -1,0 +1,46 @@
+---
+title: ext
+description: Reference for the `ext` process directive.
+---
+
+# `ext`
+
+The `ext` directive defines user-defined properties.
+
+## Usage
+
+For example:
+
+```nextflow
+process star {
+    container "biocontainers/star:${task.ext.version}"
+
+    input:
+    path genome
+    tuple val(sampleId), path(reads)
+
+    script:
+    """
+    STAR --genomeDir $genome --readFilesIn $reads ${task.ext.args ?: ''}
+    """
+}
+```
+
+In this example, the process container version is controlled by `ext.version`, and the script supports additional command line arguments through `ext.args`.
+
+The `ext` directive can be set in the process definition:
+
+```nextflow
+process hello {
+    ext version: '2.5.3', args: '--alpha --beta'
+
+    // ...
+}
+```
+
+You can also set it in the Nextflow configuration:
+
+```groovy
+process.ext.version = '2.5.3'
+process.ext.args = '--alpha --beta'
+```

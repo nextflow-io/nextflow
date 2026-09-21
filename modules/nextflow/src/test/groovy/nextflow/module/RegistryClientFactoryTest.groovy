@@ -19,6 +19,7 @@ package nextflow.module
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock
 import groovy.json.JsonOutput
+import nextflow.SysEnv
 import nextflow.config.RegistryConfig
 import io.seqera.npr.client.RegistryException
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry
@@ -47,6 +48,9 @@ class RegistryClientFactoryTest extends Specification {
     String url
     static final String MODULES_API_PATH = "/api/v1/modules"
     def setup() {
+        // isolate from the host environment, otherwise `NXF_REGISTRY_TOKEN`
+        // leaks into the client via `RegistryConfig.getApiKey()`
+        SysEnv.push([:])
         wireMock = new WireMockServer(wireMockConfig().dynamicPort())
         wireMock.start()
         WireMock.configureFor("localhost", wireMock.port())
@@ -55,6 +59,7 @@ class RegistryClientFactoryTest extends Specification {
 
     def cleanup() {
         wireMock?.stop()
+        SysEnv.pop()
     }
 
     def 'should fetch module metadata from registry'() {
@@ -92,6 +97,72 @@ class RegistryClientFactoryTest extends Specification {
 
         and: 'verify request was made'
         verify(getRequestedFor(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc')))
+    }
+
+    def 'should query the configured registries in the order listed'() {
+        given:
+        def moduleResponse = [
+            module: [
+                name: 'nf-core/fastqc',
+                latest: [
+                    version: '1.0.0',
+                    createdAt: '2024-02-01T00:00:00Z'
+                ]
+            ]
+        ]
+        and: 'two registries are configured; the first misses and the second serves the module'
+        String first = "http://localhost:${wireMock.port()}/first"
+        String second = "http://localhost:${wireMock.port()}/second"
+        stubFor(get(urlEqualTo('/first/v1/modules/nf-core%2Ffastqc'))
+            .willReturn(aResponse().withStatus(404).withBody('Module not found')))
+        stubFor(get(urlEqualTo('/second/v1/modules/nf-core%2Ffastqc'))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader('Content-Type', 'application/json')
+                .withBody(JsonOutput.toJson(moduleResponse))))
+        and:
+        def config = new RegistryConfig([url: [first, second]])
+        def client = RegistryClientFactory.forConfig(config)
+
+        when:
+        def result = client.getModule('nf-core/fastqc')
+
+        then: 'the module is resolved from the second registry after the first misses'
+        result != null
+        result.name == 'nf-core/fastqc'
+
+        and: 'only the configured registries are queried, in order'
+        verify(getRequestedFor(urlEqualTo('/first/v1/modules/nf-core%2Ffastqc')))
+        verify(getRequestedFor(urlEqualTo('/second/v1/modules/nf-core%2Ffastqc')))
+    }
+
+    def 'should query only the configured registry, without a default fallback'() {
+        given:
+        def moduleResponse = [
+            module: [
+                name: 'nf-core/fastqc',
+                latest: [
+                    version: '1.0.0',
+                    createdAt: '2024-02-01T00:00:00Z'
+                ]
+            ]
+        ]
+        stubFor(get(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc'))
+            .willReturn(aResponse()
+                .withStatus(200)
+                .withHeader('Content-Type', 'application/json')
+                .withBody(JsonOutput.toJson(moduleResponse))))
+        and:
+        def config = new RegistryConfig([url: url])
+        def client = RegistryClientFactory.forConfig(config)
+
+        when:
+        def result = client.getModule('nf-core/fastqc')
+
+        then:
+        result.name == 'nf-core/fastqc'
+        and: 'the registry is queried exactly once (no default fallback appended)'
+        verify(1, getRequestedFor(urlEqualTo(MODULES_API_PATH + '/nf-core%2Ffastqc')))
     }
 
     def 'should search modules in registry'() {

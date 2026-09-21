@@ -1,0 +1,33 @@
+---
+title: executor
+description: Reference for the `executor` process directive.
+---
+
+# `executor`
+
+The `executor` directive defines the underlying system where tasks are executed.
+
+## Usage
+
+For example:
+
+```nextflow
+process hello {
+    executor 'slurm'
+
+    // ...
+}
+```
+
+Commonly used executors include:
+
+- `awsbatch`: [AWS Batch](https://aws.amazon.com/batch/)
+- `azurebatch`: [Azure Batch](https://azure.microsoft.com/en-us/services/batch/)
+- `google-batch`: [Google Cloud Batch](https://cloud.google.com/batch)
+- `local`: local machine
+- `lsf`: [Platform LSF](http://en.wikipedia.org/wiki/Platform_LSF) job scheduler
+- `slurm`: [SLURM](https://en.wikipedia.org/wiki/Slurm_Workload_Manager) workload manager
+
+Each executor supports additional configuration options under the `executor` config scope. See [Executors][executor-page] for more information.
+
+[executor-page]: ../../../executor

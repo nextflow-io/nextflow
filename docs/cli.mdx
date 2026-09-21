@@ -263,20 +263,6 @@ See [drop][cli-drop] for more information.
 
 The `module` command allows you to discover, install, and run modules through a centralized module registry. See [Using modules][using-modules-page] and the [`module`][cli-module] command reference for more information.
 
-### Secret management
-
-The `secrets` command manages secure pipeline secrets.
-
-Use this to store credentials securely, reference them in pipelines without exposing values, and manage sensitive data centrally across your organization:
-
-```bash
-nextflow secrets list
-nextflow secrets set AWS_ACCESS_KEY_ID
-nextflow secrets delete AWS_ACCESS_KEY_ID
-```
-
-See [secrets][cli-secrets] for more information.
-
 ## Configuration and validation
 
 Configuration and validation options and commands help you control and verify pipeline settings. Configuration options supplement pipeline configuration at runtime, while validation commands inspect how Nextflow interprets your configuration files, process definitions, and scripts.
@@ -461,10 +447,10 @@ The `fs` command performs filesystem operations on remote storage systems suppor
 Use this to manage remote data, test cloud storage access, or perform bulk file operations without additional tools:
 
 ```bash
-nextflow fs list s3://my-bucket/data/
+nextflow fs ls 's3://my-bucket/data/*'
 nextflow fs cat s3://my-bucket/data/file.txt
 nextflow fs cp s3://my-bucket/data/file.txt s3://dest/
-nextflow fs delete s3://my-bucket/data/file.txt
+nextflow fs rm s3://my-bucket/data/file.txt
 ```
 
 See [fs][cli-fs] for more information.
@@ -502,6 +488,20 @@ nextflow plugin my-plugin:hello --alpha --beta
 ```
 
 See individual plugin documentation for plugin specific commands.
+
+### Secrets
+
+The `secrets` command manages secure pipeline secrets.
+
+Use this to store credentials securely, reference them in pipelines without exposing values, and manage sensitive data centrally across your organization:
+
+```bash
+nextflow secrets list
+nextflow secrets set AWS_ACCESS_KEY_ID
+nextflow secrets delete AWS_ACCESS_KEY_ID
+```
+
+See [secrets][cli-secrets] for more information.
 
 ### Nextflow updates
 
@@ -559,39 +559,39 @@ cite doi:10.1038/nbt.3820
 http://nextflow.io
 ```
 
-[cli-auth]: ./reference/cli#auth
-[cli-clean]: ./reference/cli#clean
-[cli-clone]: ./reference/cli#clone
-[cli-config]: ./reference/cli#config
-[cli-drop]: ./reference/cli#drop
-[cli-fs]: ./reference/cli#fs
-[cli-inspect]: ./reference/cli#inspect
-[cli-kuberun]: ./reference/cli#kuberun
-[cli-launch]: ./reference/cli#launch
-[cli-lineage]: ./reference/cli#lineage
-[cli-lint]: ./reference/cli#lint
-[cli-log]: ./reference/cli#log
-[cli-module]: ./reference/cli#module
-[cli-module-install]: ./reference/cli#module-install
-[cli-module-list]: ./reference/cli#module-list
-[cli-module-view]: ./reference/cli#module-view
-[cli-module-run]: ./reference/cli#module-run
-[cli-module-spec]: ./reference/cli#module-spec
-[cli-module-validate]: ./reference/cli#module-validate
-[cli-module-remove]: ./reference/cli#module-remove
-[cli-module-publish]: ./reference/cli#module-publish
-[cli-module-search]: ./reference/cli#module-search
+[cli-auth]: ./reference/cli/auth
+[cli-clean]: ./reference/cli/clean
+[cli-clone]: ./reference/cli/clone
+[cli-config]: ./reference/cli/config
+[cli-drop]: ./reference/cli/drop
+[cli-fs]: ./reference/cli/fs
+[cli-inspect]: ./reference/cli/inspect
+[cli-kuberun]: ./reference/cli/kuberun
+[cli-launch]: ./reference/cli/launch
+[cli-lineage]: ./reference/cli/lineage
+[cli-lint]: ./reference/cli/lint
+[cli-log]: ./reference/cli/log
+[cli-module]: ./reference/cli/module
+[cli-module-install]: ./reference/cli/module#module-install
+[cli-module-list]: ./reference/cli/module#module-list
+[cli-module-view]: ./reference/cli/module#module-view
+[cli-module-run]: ./reference/cli/module#module-run
+[cli-module-spec]: ./reference/cli/module#module-spec
+[cli-module-validate]: ./reference/cli/module#module-validate
+[cli-module-remove]: ./reference/cli/module#module-remove
+[cli-module-publish]: ./reference/cli/module#module-publish
+[cli-module-search]: ./reference/cli/module#module-search
 [cli-params]: ./cli#pipeline-parameters
-[cli-plugin]: ./reference/cli#plugin
-[cli-pull]: ./reference/cli#pull
+[cli-plugin]: ./reference/cli/plugin
+[cli-pull]: ./reference/cli/pull
 [cli-reference]: ./reference/cli
-[cli-run]: ./reference/cli#run
-[cli-secrets]: ./reference/cli#secrets
-[cli-view]: ./reference/cli#view
+[cli-run]: ./reference/cli/run
+[cli-secrets]: ./reference/cli/secrets
+[cli-view]: ./reference/cli/view
 [config-constants]: ./config#constants-and-functions
 [config-env-vars]: ./reference/env-vars
 [config-page]: ./config
 [config-params]: ./config#parameters
 [data-lineage-page]: ./tutorials/data-lineage
-[git-page]: ./cli
+[git-page]: ./git
 [using-modules-page]: ./modules/using-modules

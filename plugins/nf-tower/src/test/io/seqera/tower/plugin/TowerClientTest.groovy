@@ -1,0 +1,430 @@
+/*
+ * Copyright 2013-2026, Seqera Labs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package io.seqera.tower.plugin
+
+import java.net.http.HttpConnectTimeoutException
+import java.net.http.HttpResponse
+import java.net.http.HttpTimeoutException
+import java.time.Instant
+
+import com.github.tomakehurst.wiremock.WireMockServer
+import com.github.tomakehurst.wiremock.client.WireMock
+import io.seqera.http.HxClient
+import nextflow.exception.AbortRunException
+import nextflow.util.Duration
+import spock.lang.Specification
+/**
+ *
+ * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
+ */
+class TowerClientTest extends Specification {
+
+    protected boolean aroundNow(value) {
+        def now = Instant.now().toEpochMilli()
+        value > now-1_000 && value <= now
+    }
+
+    def 'should retry request timeouts' () {
+        // The trace calls are idempotent telemetry, so - unlike the httpx default, which
+        // excludes a request timeout raised after the request was sent - a stalled request
+        // is safe to re-send and must be retried rather than aborting the run.
+        expect:
+        TowerClient.retryCondition(new HttpTimeoutException('request timeout'))
+        TowerClient.retryCondition(new HttpConnectTimeoutException('connect timeout'))
+        TowerClient.retryCondition(new SocketTimeoutException('socket timeout'))
+        TowerClient.retryCondition(new IOException('connection reset'))
+        and:
+        !TowerClient.retryCondition(new RuntimeException('not an I/O error'))
+    }
+
+    def 'should parse response' () {
+        given:
+        def tower = new TowerClient()
+
+        when:
+        def resp = new TowerClient.Response(200, '{"status":"OK", "workflowId":"12345", "watchUrl": "http://foo.com/watch/12345"}')
+        def result = tower.parseTowerResponse(resp)
+        then:
+        result.workflowId == '12345'
+        result.watchUrl == 'http://foo.com/watch/12345'
+
+        when:
+        resp = new TowerClient.Response(500, '{"status":"OK", "workflowId":"12345"}')
+        tower.parseTowerResponse(resp)
+        then:
+        thrown(Exception)
+    }
+
+    def 'should validate URL' () {
+        given:
+        def observer = new TowerClient()
+
+        expect:
+        observer.checkUrl('http://localhost') == 'http://localhost'
+        observer.checkUrl('http://google.com') == 'http://google.com'
+        observer.checkUrl('https://google.com') == 'https://google.com'
+        observer.checkUrl('http://google.com:8080') == 'http://google.com:8080'
+        observer.checkUrl('http://google.com:8080/') == 'http://google.com:8080'
+        observer.checkUrl('http://google.com:8080/foo/bar') == 'http://google.com:8080/foo/bar'
+        observer.checkUrl('http://google.com:8080/foo/bar/') == 'http://google.com:8080/foo/bar'
+        observer.checkUrl('http://google.com:8080/foo/bar///') == 'http://google.com:8080/foo/bar'
+
+        when:
+        observer.checkUrl('ftp://localhost')
+        then:
+        def e = thrown(IllegalArgumentException)
+        e.message == 'Only http and https are supported -- The given URL was: ftp://localhost'
+    }
+
+    def 'should get watch url' () {
+        given:
+        def observer = new TowerClient()
+        expect:
+        observer.getHostUrl(STR) == EXPECTED
+        where:
+        STR                             | EXPECTED
+        'http://foo.com'                | 'http://foo.com'
+        'http://foo.com:800/'           | 'http://foo.com:800'
+        'https://foo.com:800/'          | 'https://foo.com:800'
+        'http://foo.com:8000/this/that' | 'http://foo.com:8000'
+    }
+
+    def 'should get access token' () {
+        when:
+        def config = new TowerConfig([accessToken: 'abc'], [TOWER_ACCESS_TOKEN: 'xyz'])
+        def client = new TowerClient(config)
+        then:
+        // the token in the config overrides the one in the env
+        client.getAccessToken() == 'abc'
+
+        when:
+        config = new TowerConfig([accessToken: 'abc'], [TOWER_ACCESS_TOKEN: 'xyz', TOWER_WORKFLOW_ID: '111222333'])
+        client = new TowerClient(config)
+        then:
+        // the token from the env is taken because is a tower launch aka TOWER_WORKFLOW_ID is set
+        client.getAccessToken() == 'xyz'
+
+        when:
+        config = new TowerConfig([:], [TOWER_ACCESS_TOKEN: 'xyz'])
+        client = new TowerClient(config)
+        then:
+        client.getAccessToken() == 'xyz'
+
+        when:
+        def c = new TowerClient()
+        c.getAccessToken()
+        then:
+        thrown(AbortRunException)
+    }
+
+    def 'should set the auth token' () {
+        given:
+        def http = Mock(HxClient.Builder)
+        def client = new TowerClient()
+        and:
+        def SIMPLE = '4ffbf1009ebabea77db3d72efefa836dfbb71271'
+        def BEARER = 'eyJ0aWQiOiA1fS5jZmM1YjVhOThjZjM2MTk1NjBjZWU1YmMwODUxYzA1ZjkzMDdmN2Iz'
+
+        when:
+        client.setupClientAuth(http, SIMPLE)
+        then:
+        1 * http.basicAuth('@token:' + SIMPLE) >> http
+
+        when:
+        client.setupClientAuth(http, SIMPLE)
+        then:
+        1 * http.basicAuth('@token:' + SIMPLE) >> http
+
+        when:
+        client.setupClientAuth(http, BEARER)
+        then:
+        1 * http.bearerToken(BEARER) >> http
+        1 * http.refreshToken(_) >> http
+        1 * http.refreshTokenUrl(_) >> http
+    }
+
+    def 'should get trace endpoint' () {
+        given:
+        def client = new TowerClient()
+        client.@endpoint = TowerClient.DEF_ENDPOINT_URL
+
+        expect:
+        client.getUrlTraceCreate(null) == 'https://api.cloud.seqera.io/trace/create'
+        client.getUrlTraceBegin(null, '12345') == 'https://api.cloud.seqera.io/trace/12345/begin'
+        client.getUrlTraceProgress(null, '12345') == 'https://api.cloud.seqera.io/trace/12345/progress'
+        client.getUrlTraceHeartbeat(null, '12345') == 'https://api.cloud.seqera.io/trace/12345/heartbeat'
+        client.getUrlTraceComplete(null, '12345') == 'https://api.cloud.seqera.io/trace/12345/complete'
+        client.getUrlWorkflowUpdate(null, '12345') == 'https://api.cloud.seqera.io/workflow/12345'
+    }
+
+    def 'should get trace endpoint with workspace' () {
+        given:
+        def client = new TowerClient()
+        client.@endpoint = TowerClient.DEF_ENDPOINT_URL
+
+        expect:
+        client.getUrlTraceCreate('300') == 'https://api.cloud.seqera.io/trace/create?workspaceId=300'
+        client.getUrlTraceBegin('300', '12345') == 'https://api.cloud.seqera.io/trace/12345/begin?workspaceId=300'
+        client.getUrlTraceProgress('300', '12345') == 'https://api.cloud.seqera.io/trace/12345/progress?workspaceId=300'
+        client.getUrlTraceHeartbeat('300', '12345') == 'https://api.cloud.seqera.io/trace/12345/heartbeat?workspaceId=300'
+        client.getUrlTraceComplete('300', '12345') == 'https://api.cloud.seqera.io/trace/12345/complete?workspaceId=300'
+        client.getUrlWorkflowUpdate('300', '12345') == 'https://api.cloud.seqera.io/workflow/12345?workspaceId=300'
+    }
+
+    def 'should load schema col len' () {
+        given:
+        def tower = new TowerClient()
+
+        when:
+        def schema = tower.loadSchema()
+        then:
+        schema.get('workflow.start')  == null
+        schema.get('workflow.profile') == 100
+        schema.get('workflow.projectDir') == 255
+    }
+
+    def 'should handle HTTP request with content'() {
+        given: 'a TowerClient'
+        def tower = new TowerClient()
+        def content = '{"test": "data"}'
+        def request = tower.makeRequest('http://example.com/test', content, 'POST')
+
+        expect: 'the request should be created with the content'
+        request != null
+        request.method() == 'POST'
+        request.uri().toString() == 'http://example.com/test'
+    }
+
+    def 'should build a PATCH request with content'() {
+        given:
+        def tower = new TowerClient()
+        def content = '{"schedRunId": "run-xyz"}'
+
+        when:
+        def request = tower.makeRequest('http://example.com/workflow/123', content, 'PATCH')
+
+        then:
+        request.method() == 'PATCH'
+        request.uri().toString() == 'http://example.com/workflow/123'
+    }
+
+    def 'should send http message' () {
+        given:
+        def client = Mock(HxClient)
+        def tower = new TowerClient()
+        tower.@httpClient = client
+
+        when:
+        def resp = tower.sendHttpMessage('http://foo.com', [foo: 'bar'], 'POST')
+        then:
+        1 * client.sendAsString(_) >> Mock(HttpResponse) { statusCode() >> 200; body() >> '{}' }
+        and:
+        !resp.error
+        resp.code == 200
+    }
+
+    def 'should return error response on http request timeout' () {
+        given: 'a WireMock server that hangs for 5 seconds'
+        def wireMock = new WireMockServer(0)
+        wireMock.start()
+        wireMock.stubFor(
+            WireMock.post(WireMock.anyUrl())
+                .willReturn(WireMock.aResponse()
+                    .withFixedDelay(5_000)
+                    .withStatus(200)
+                    .withBody('{}'))
+        )
+
+        and: 'a TowerClient whose requests carry a 200ms timeout'
+        TowerConfig config = Mock(TowerConfig) {
+            getHttpReadTimeout() >> Duration.of('200 ms')
+            getHttpConnectTimeout() >> Duration.of('5 s')
+            getEndpoint() >> wireMock.baseUrl()
+            getAccessToken() >> 'token'
+        }
+        TowerClient client = new TowerClient(config)
+
+        when:
+        def response = client.sendHttpMessage("${wireMock.baseUrl()}/trace/create", [runName: 'test'], 'POST')
+
+        then: 'a timeout produces an error response with code 0'
+        response.code == 0
+        response.message.contains('Unable to connect')
+
+        cleanup:
+        wireMock.stop()
+    }
+
+    def 'should build URL without query params'() {
+        given:
+        def client = new TowerClient()
+        client.@endpoint = 'https://api.cloud.seqera.io'
+
+        when:
+        def url = client.buildUrl( '/workflow/launch', [:])
+
+        then:
+        url == 'https://api.cloud.seqera.io/workflow/launch'
+    }
+
+    def 'should build URL with query params'() {
+        given:
+        def client = new TowerClient()
+        client.@endpoint = 'https://api.cloud.seqera.io'
+
+        when:
+        def url = client.buildUrl( '/workflow/launch', [workspaceId: '12345'])
+
+        then:
+        url.contains('https://api.cloud.seqera.io/workflow/launch?')
+        url.contains('workspaceId=12345')
+    }
+
+    def 'should URL encode query params'() {
+        given:
+        def client = new TowerClient()
+        client.@endpoint = 'https://api.cloud.seqera.io'
+
+        when:
+        def url = client.buildUrl( '/workflow', [name: 'test workflow'])
+
+        then:
+        url.contains('name=test+workflow')
+    }
+
+    def 'should extract a concise reason from an HTML error body' () {
+        given:
+        def tower = new TowerClient()
+        def html = '''\
+            <html>
+            <head><title>502 Bad Gateway</title></head>
+            <body>
+            <center><h1>502 Bad Gateway</h1></center>
+            </body>
+            </html>
+            '''.stripIndent()
+
+        expect: 'an HTML gateway error page is reduced to its title reason'
+        tower.parseCause(html) == '502 Bad Gateway'
+
+        and: 'a JSON error object still returns its message'
+        tower.parseCause('{"message":"Boom"}') == 'Boom'
+
+        and: 'a plain text cause is returned as-is'
+        tower.parseCause('plain error') == 'plain error'
+
+        and: 'a null cause returns null'
+        tower.parseCause(null) == null
+    }
+
+    def 'should reduce HTML error bodies to a concise reason' () {
+        given:
+        def tower = new TowerClient()
+
+        expect:
+        tower.parseCause(BODY) == EXPECTED
+
+        where:
+        BODY                                                                | EXPECTED
+        '<html><head><title>502 Bad Gateway</title></head></html>'          | '502 Bad Gateway'
+        '<html><head><title lang="en">503 Unavailable</title></head></html>'| '503 Unavailable'
+        '<html><head><title>504\n  Gateway\n  Timeout</title></head></html>'| '504 Gateway Timeout'
+        '<html><head><title>  504 Spaces  </title></head></html>'           | '504 Spaces'
+        '<html><body>no title here</body></html>'                           | '<html><body>no title here</body></html>'
+        '<html><head><title></title></head></html>'                         | '<html><head><title></title></head></html>'
+        '{"message":"Boom"}'                                                | 'Boom'
+        'plain error'                                                       | 'plain error'
+        null                                                                | null
+    }
+
+    def 'should surface a concise reason for an HTML error response' () {
+        given:
+        def client = Mock(HxClient)
+        def tower = new TowerClient()
+        tower.@httpClient = client
+        and:
+        def html = '''\
+            <html>
+            <head><title>502 Bad Gateway</title></head>
+            <body>
+            <center><h1>502 Bad Gateway</h1></center>
+            </body>
+            </html>
+            '''.stripIndent()
+
+        when:
+        def resp = tower.sendHttpMessage('http://foo.com/trace/123/progress', [foo: 'bar'], 'PUT')
+        then:
+        1 * client.sendAsString(_) >> Mock(HttpResponse) { statusCode() >> 502; body() >> html }
+        and: 'the response surfaces the concise reason without raw HTML'
+        resp.error
+        resp.code == 502
+        resp.message == '502 Bad Gateway'
+        !resp.message.contains('<html')
+    }
+
+    def 'should abort progress with a concise reason on a 502 gateway error' () {
+        given:
+        def html = '<html>\n<head><title>502 Bad Gateway</title></head>\n<body></body>\n</html>\n'
+        def client = Mock(HxClient)
+        def tower = new TowerClient()
+        tower.@httpClient = client
+        tower.@endpoint = 'http://foo.com'
+
+        when:
+        tower.traceProgress([:], '1234', '5678')
+        then:
+        1 * client.sendAsString(_) >> Mock(HttpResponse) { statusCode() >> 502; body() >> html }
+        and:
+        def e = thrown(AbortRunException)
+        e.message.contains('502 Bad Gateway')
+        e.message.contains('status code : 502')
+        !e.message.contains('<html')
+    }
+
+    def 'should send AbortRunException in selected client calls'() {
+        given:
+        def client = Spy(new TowerClient(new TowerConfig([:], [TOWER_ACCESS_TOKEN: 'token']))){
+            sendHttpMessage(_,_,_) >> new TowerClient.Response(401)
+        }
+
+        when:
+        client.traceCreate([:], '1234')
+        then:
+        thrown(AbortRunException)
+
+        when:
+        client.traceBegin([:], '1234', '5678')
+        then:
+        thrown(AbortRunException)
+
+        when:
+        client.traceProgress([:], '1234', '5678')
+        then:
+        thrown(AbortRunException)
+
+        when:
+        client.traceComplete([:], '1234', '5678')
+        then:
+        notThrown(AbortRunException)
+
+        when:
+        client.traceHeartbeat([:], '1234', '5678')
+        then:
+        notThrown(AbortRunException)
+    }
+}

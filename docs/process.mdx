@@ -23,6 +23,10 @@ process hello {
 
 See [Process][syntax-process] for a full description of the process syntax.
 
+:::note
+This page describes the original process syntax. Nextflow also supports a [typed process syntax][process-typed-page] with statically typed inputs and outputs. See [Static typing][static-typing-page] for an overview.
+:::
+
 ## Script
 
 The `script` section defines, as a string expression, the script that is executed by the process.
@@ -764,7 +768,7 @@ The above example executes the `echo` process three times. The dataflow value `x
 ```
 
 :::note
-In general, multiple input channels should be used to process *combinations* of different inputs, using the `each` qualifier or value channels. Having multiple queue channels as inputs is equivalent to using the [`merge`][operator-merge] operator, which is not recommended as it may lead to [non-deterministic process inputs][cache-nondeterministic-inputs].
+Multiple inputs should only be used to process *combinations* of different inputs, using the `each` qualifier or dataflow values. Having multiple queue channels as inputs is equivalent to using the [`merge`][operator-merge] operator, which is not recommended as it may lead to [non-deterministic process inputs][cache-nondeterministic-inputs].
 :::
 
 See also: [Singleton outputs](#singleton-outputs).
@@ -1315,7 +1319,7 @@ process hello {
 ```
 
 [cache-nondeterministic-inputs]: ./cache-and-resume#non-deterministic-process-inputs
-[channel-value]: ./reference/channel#value
+[channel-value]: ./reference/stdlib-namespaces/channel#value
 [executor-page]: ./executor
 [glob]: http://docs.oracle.com/javase/tutorial/essential/io/fileOps.html.mdx#glob
 [operator-combine]: ./reference/operator#combine
@@ -1323,31 +1327,33 @@ process hello {
 [operator-flatten]: ./reference/operator#flatten
 [operator-cross]: ./reference/operator#cross
 [operator-merge]: ./reference/operator#merge
-[process-conda]: ./reference/process#conda
-[process-container]: ./reference/process#container
-[process-cpus]: ./reference/process#cpus
-[process-error-strategy]: ./reference/process#errorstrategy
-[process-executor]: ./reference/process#executor
+[process-conda]: ./reference/process/directives/conda
+[process-container]: ./reference/process/directives/container
+[process-cpus]: ./reference/process/directives/cpus
+[process-error-strategy]: ./reference/process/directives/error-strategy
+[process-executor]: ./reference/process/directives/executor
 [process-input-path]: ./process#input-files-path
-[process-label]: ./reference/process#label
-[process-maxforks]: ./reference/process#maxforks
-[process-maxretries]: ./reference/process#maxretries
-[process-memory]: ./reference/process#memory
+[process-label]: ./reference/process/directives/label
+[process-maxforks]: ./reference/process/directives/max-forks
+[process-maxretries]: ./reference/process/directives/max-retries
+[process-memory]: ./reference/process/directives/memory
 [process-out-singleton]: ./process#singleton-outputs
 [process-out-tuple]: ./process#output-tuples-tuple
-[process-queue]: ./reference/process#queue
-[process-tag]: ./reference/process#tag
-[process-time]: ./reference/process#time
-[process-secret]: ./reference/process#secret
+[process-queue]: ./reference/process/directives/queue
+[process-tag]: ./reference/process/directives/tag
+[process-time]: ./reference/process/directives/time
+[process-secret]: ./reference/process/directives/secret
 [process-script]: ./process#script
 [process-multiple-inputs]: ./process#multiple-inputs
-[process-reference-directives]: ./reference/process#directives
-[process-reference-inputs]: ./reference/process#inputs
-[process-reference-outputs]: ./reference/process#outputs
+[process-reference-directives]: ./reference/process/directives
+[process-reference-inputs]: ./reference/process/inputs-outputs#inputs
+[process-reference-outputs]: ./reference/process/inputs-outputs#outputs
 [process-template]: ./process#template
+[process-typed-page]: ./process-typed
 [script-closure]: ./script#closures
 [script-tuples]: ./script#tuples
-[stdlib-types-path]: ./reference/stdlib-types#path
+[static-typing-page]: ./static-typing
+[stdlib-types-path]: ./reference/stdlib-types/path
 [strict-syntax-page]: ./strict-syntax
 [string-interpolation]: ./script#string-interpolation
 [syntax-function]: ./reference/syntax#function

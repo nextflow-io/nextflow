@@ -15,6 +15,9 @@
  */
 package nextflow.script.control;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.HashSet;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.IdentityHashMap;
@@ -22,11 +25,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import nextflow.script.ast.AgentNode;
 import nextflow.script.ast.ASTNodeMarker;
-import nextflow.script.dsl.Constant;
-import nextflow.script.dsl.Operator;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.WorkflowNode;
+import nextflow.script.dsl.Constant;
+import nextflow.script.dsl.Operator;
+import nextflow.script.dsl.WorkflowDsl;
 import org.codehaus.groovy.ast.AnnotatedNode;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
@@ -187,7 +192,15 @@ public class VariableScopeChecker {
      * @param node
      */
     private Variable findDslVariable(ClassNode cn, String name, ASTNode node) {
-        while( cn != null ) {
+        var classScope = cn;
+        var queue = new ArrayDeque<ClassNode>();
+        var seen = new HashSet<ClassNode>();
+        // ArrayDeque rejects null elements, and this is reached with a null class scope
+        if( cn != null ) {
+            queue.add(cn);
+            seen.add(cn);
+        }
+        while( (cn = queue.poll()) != null ) {
             for( var mn : cn.getMethods() ) {
                 // processes, workflows, and operators can be accessed as variables, e.g. with pipes
                 if( isDataflowMethod(mn) && name.equals(mn.getName()) ) {
@@ -204,19 +217,23 @@ public class VariableScopeChecker {
                 return wrapMethodAsVariable(mn, name);
             }
 
-            cn = cn.getInterfaces().length > 0
-                ? cn.getInterfaces()[0]
-                : null;
+            enqueueSupertypes(cn, queue, seen);
         }
 
-        if( includes.get(name) instanceof MethodNode mn )
+        // an included definition can be accessed as a variable in a workflow
+        // (less strict here since plugin includes aren't resolved at this point)
+        if( isWorkflowScope(classScope) && includes.get(name) instanceof MethodNode mn )
             return wrapMethodAsVariable(mn, name);
 
         return null;
     }
 
+    private static boolean isWorkflowScope(ClassNode cn) {
+        return cn != null && WorkflowDsl.class.isAssignableFrom(cn.getTypeClass());
+    }
+
     public static boolean isDataflowMethod(MethodNode mn) {
-        return mn instanceof ProcessNode || mn instanceof WorkflowNode || isOperator(mn);
+        return mn instanceof ProcessNode || mn instanceof WorkflowNode || mn instanceof AgentNode || isOperator(mn);
     }
 
     public static boolean isOperator(MethodNode mn) {
@@ -236,7 +253,7 @@ public class VariableScopeChecker {
     }
 
     private static ClassNode methodOutputType(MethodNode mn) {
-        if( mn instanceof ProcessNode || mn instanceof WorkflowNode )
+        if( mn instanceof ProcessNode || mn instanceof WorkflowNode || mn instanceof AgentNode )
             return ClassHelper.dynamicType();
         return mn.getReturnType();
     }
@@ -252,7 +269,13 @@ public class VariableScopeChecker {
         VariableScope scope = currentScope;
         while( scope != null ) {
             ClassNode cn = scope.getClassScope();
-            while( cn != null ) {
+            var queue = new ArrayDeque<ClassNode>();
+            var seen = new HashSet<ClassNode>();
+            if( cn != null ) {
+                queue.add(cn);
+                seen.add(cn);
+            }
+            while( (cn = queue.poll()) != null ) {
                 // built-in functions are methods not annotated as @Constant
                 var methods = cn.getDeclaredMethods(name).stream()
                     .filter(mn -> !findAnnotation(mn, Constant.class).isPresent())
@@ -268,9 +291,7 @@ public class VariableScopeChecker {
                 if( directive && scope == currentScope )
                     return Collections.emptyList();
 
-                cn = cn.getInterfaces().length > 0
-                    ? cn.getInterfaces()[0]
-                    : null;
+                enqueueSupertypes(cn, queue, seen);
             }
             scope = scope.getParent();
         }
@@ -353,6 +374,25 @@ public class VariableScopeChecker {
         @Override
         public ASTNode getOtherNode() {
             return otherNode;
+        }
+    }
+
+
+    /**
+     * The next DSL scope to search, walking the interface graph breadth-first.
+     *
+     * <p>A DSL scope is an interface, and an interface may extend several. Following only
+     * {@code getInterfaces()[0]} made resolution depend on DECLARATION ORDER: a scope written
+     * {@code extends A, B} resolved everything A inherits and nothing B does, silently, so adding a
+     * second parent to a shared scope such as {@code ProcessDsl.OutputDslV2} would have stopped
+     * `file()` resolving in every process output block in every pipeline with no error and no test
+     * to catch it. Breadth-first over all parents removes the ordering rule; the {@code seen} set
+     * keeps a diamond from being searched twice.
+     */
+    private static void enqueueSupertypes(ClassNode cn, Deque<ClassNode> queue, Set<ClassNode> seen) {
+        for( var itf : cn.getInterfaces() ) {
+            if( seen.add(itf) )
+                queue.add(itf);
         }
     }
 
