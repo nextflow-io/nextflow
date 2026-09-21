@@ -36,19 +36,18 @@ class CsvWriter {
     }
 
     void apply(List records, Path path) {
-        path.delete()
-
         final columns = columnHeaders(header, records)
-        if( columns )
-            path << columns.collect(column -> "\"${column}\"").join(sep) << '\n'
+        final result = new StringBuilder()
 
-        if( records.isEmpty() )
-            path << ''
+        if( columns )
+            result << columns.collect(column -> "\"${column}\"").join(sep) << '\n'
 
         for( final record : records ) {
             final values = rowValues(record, columns)
-            path << values.collect(v -> "\"${toCsvString(v)}\"").join(sep) << '\n'
+            result << values.collect(v -> "\"${toCsvString(v)}\"").join(sep) << '\n'
         }
+
+        path.text = result.toString()
     }
 
     private static Collection columnHeaders(Object header, List records) {
