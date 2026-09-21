@@ -116,4 +116,11 @@ class EscapeTest extends Specification {
         and:
         '$foo'      | '\\$foo'
     }
+
+    def 'should quote a shell word' () {
+        expect:
+        Escape.shell('numpy>=1.24') == "'numpy>=1.24'"
+        Escape.shell("it's") == "'it'\\''s'"
+        Escape.shell(['a b', 'c;d'] as String[]) == "'a b' 'c;d'"
+    }
 }

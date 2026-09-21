@@ -245,7 +245,7 @@ class CondaCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand( "conda create --yes --quiet --prefix $PREFIX $ENV" ) >> null
+        1 * cache.runCommand( "conda create --yes --quiet --prefix $PREFIX '$ENV'" ) >> null
         result == PREFIX
     }
 
@@ -269,7 +269,7 @@ class CondaCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand("mamba create --yes --quiet --prefix $PREFIX $ENV") >> null
+        1 * cache.runCommand("mamba create --yes --quiet --prefix $PREFIX '$ENV'") >> null
         result == PREFIX
     }
 
@@ -293,7 +293,7 @@ class CondaCacheTest extends Specification {
         then:
         1 * cache.isYamlFilePath(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand("micromamba create --yes --quiet --prefix $PREFIX $ENV") >> null
+        1 * cache.runCommand("micromamba create --yes --quiet --prefix $PREFIX '$ENV'") >> null
         result == PREFIX
     }
 
@@ -358,7 +358,7 @@ class CondaCacheTest extends Specification {
         1 * cache.isYamlFilePath(ENV)
         1 * cache.isExplicitFile(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand( "conda create --this --that --yes --quiet --prefix $PREFIX $ENV" ) >> null
+        1 * cache.runCommand( "conda create --this --that --yes --quiet --prefix $PREFIX '$ENV'" ) >> null
         result == PREFIX
     }
 
@@ -375,7 +375,7 @@ class CondaCacheTest extends Specification {
         1 * cache.isYamlFilePath(ENV)
         1 * cache.isExplicitFile(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand("mamba create --this --that --yes --quiet --prefix $PREFIX $ENV") >> null
+        1 * cache.runCommand("mamba create --this --that --yes --quiet --prefix $PREFIX '$ENV'") >> null
         result == PREFIX
     }
 
@@ -392,7 +392,7 @@ class CondaCacheTest extends Specification {
         1 * cache.isYamlFilePath(ENV)
         1 * cache.isExplicitFile(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand("micromamba create --this --that --yes --quiet --prefix $PREFIX $ENV") >> null
+        1 * cache.runCommand("micromamba create --this --that --yes --quiet --prefix $PREFIX '$ENV'") >> null
         result == PREFIX
     }
 
@@ -409,7 +409,7 @@ class CondaCacheTest extends Specification {
         1 * cache.isYamlFilePath(ENV)
         1 * cache.isExplicitFile(ENV)
         0 * cache.makeAbsolute(_)
-        1 * cache.runCommand("conda create --yes --quiet --prefix /foo/bar -c bioconda -c defaults bwa=1.1.1") >> null
+        1 * cache.runCommand("conda create --yes --quiet --prefix /foo/bar -c bioconda -c defaults 'bwa=1.1.1'") >> null
         result == PREFIX
     }
 
@@ -621,5 +621,110 @@ class CondaCacheTest extends Specification {
 
         cleanup:
         folder?.deleteDir()
+    }
+
+    def 'should keep pre-quoted tokens working in a package list' () {
+        expect:
+        CondaCache.splitPackages('bwa "samtools>=1.0" \'bcftools=1.18\' bioconda::htslib') == ['bwa', 'samtools>=1.0', 'bcftools=1.18', 'bioconda::htslib']
+        nextflow.util.Escape.shell(CondaCache.splitPackages('bwa "samtools>=1.0"') as String[]) == "'bwa' 'samtools>=1.0'"
+    }
+
+    def 'should apply a per-process create-options override in the command' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def prefixPath = folder.resolve('env-ovr')
+        def cache = Spy(CondaCache)
+        cache.@createOptions = '--from-config'   // config-level default
+        cache.@createTimeout = nextflow.util.Duration.of('20min')
+
+        when:
+        cache.createLocalCondaEnv0('samtools', prefixPath, '--override-channels')
+        then:
+        1 * cache.runCommand({ String cmd ->
+            cmd.contains('--override-channels') && !cmd.contains('--from-config')
+        }) >> 0
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should include the create-options override in the env hash' () {
+        given:
+        def base = Spy(CondaCache); base.@createOptions = null
+        def ovr  = Spy(CondaCache); ovr.@createOptions = null
+        def BASE = Paths.get('/conda/envs')
+
+        when:
+        def p1 = base.condaPrefixPath('samtools')
+        def p2 = ovr.condaPrefixPath('samtools', '--override-channels')
+        then:
+        _ * base.getCacheDir() >> BASE
+        _ * ovr.getCacheDir() >> BASE
+        p1 != p2
+    }
+
+    def 'should build an env-create command for a custom-named YAML file' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def envFile = folder.resolve('env.yml')
+        Files.write(envFile, 'name: foo\ndependencies:\n  - samtools\n'.bytes)
+        def prefixPath = folder.resolve('env-yaml')
+        def cache = Spy(CondaCache)
+        cache.@createTimeout = nextflow.util.Duration.of('20min')
+
+        when:
+        cache.createLocalCondaEnv0(envFile.toString(), prefixPath)
+        then:
+        1 * cache.runCommand({ String cmd ->
+            cmd.contains('conda env create ') &&
+            cmd.contains('--file ') &&
+            cmd.contains('env.yml')
+        }) >> 0
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should build a plain create command for a custom-named text file' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def envFile = folder.resolve('deps.txt')
+        Files.write(envFile, '@EXPLICIT\nhttps://conda.anaconda.org/bioconda/noarch/samtools-1.17-0.tar.bz2\n'.bytes)
+        def prefixPath = folder.resolve('env-text')
+        def cache = Spy(CondaCache)
+        cache.@createTimeout = nextflow.util.Duration.of('20min')
+
+        when:
+        cache.createLocalCondaEnv0(envFile.toString(), prefixPath)
+        then:
+        1 * cache.runCommand({ String cmd ->
+            cmd.contains('conda create ') &&
+            !cmd.contains('env create') &&
+            cmd.contains('--file ') &&
+            cmd.contains('deps.txt')
+        }) >> 0
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should reject a path-with-slash that is not an existing directory' () {
+        given:
+        def cache = Spy(CondaCache)
+
+        when:
+        cache.condaPrefixPath('/no/such/conda/prefix')
+        then:
+        thrown(IllegalArgumentException)
+    }
+
+    def 'should reject a multi-line invalid environment definition' () {
+        given:
+        def cache = Spy(CondaCache)
+
+        when:
+        cache.condaPrefixPath('samtools\nbcftools')
+        then:
+        thrown(IllegalArgumentException)
     }
 }

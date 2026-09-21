@@ -51,6 +51,9 @@ import nextflow.script.params.FileOutParam
 import nextflow.script.params.InParam
 import nextflow.script.params.OutParam
 import nextflow.script.params.ValueOutParam
+import nextflow.packages.PackageManager
+import nextflow.packages.PackageSpec
+import nextflow.script.ScriptMeta
 import nextflow.spack.SpackCache
 import nextflow.util.ArrayBag
 /**
@@ -691,9 +694,15 @@ class TaskRun implements Cloneable {
         if( !config.conda || !getCondaConfig().isEnabled() )
             return null
 
+        // Show deprecation warning if new package system is enabled
+        if (PackageManager.isEnabled(processor.session)) {
+            log.warn1 "The 'conda' directive is deprecated when preview.package is enabled. Use 'package \"${config.conda}\", provider: \"conda\"' instead"
+        }
+
         final cache = new CondaCache(getCondaConfig())
         cache.getCachePathFor(config.conda as String)
     }
+
 
     Path getSpackEnv() {
         // note: use an explicit function instead of a closure or lambda syntax, otherwise
@@ -714,6 +723,87 @@ class TaskRun implements Cloneable {
 
         final cache = new SpackCache(processor.session.getSpackConfig())
         cache.getCachePathFor(config.spack as String, arch)
+    }
+
+    PackageSpec getPackageSpec() {
+        // note: use an explicit function instead of a closure or lambda syntax
+        cache0.computeIfAbsent('packageSpec', new Function<String,PackageSpec>() {
+            @Override
+            PackageSpec apply(String it) {
+                return getPackageSpec0()
+            }})
+    }
+
+    private PackageSpec getPackageSpec0() {
+        if (!PackageManager.isEnabled(processor.session))
+            return null
+
+        // No explicit `package` directive: optionally auto-detect a manifest
+        // file (e.g. environment.yml, requirements.txt) in the process module
+        // directory, analogous to how Wave auto-detects a Dockerfile.
+        if (!config.package) {
+            // a process that already declares its own environment (legacy
+            // `conda`/`spack` directive or a `container`) must not also get an
+            // auto-detected package environment layered on top of it
+            if (config.conda || config.spack || config.container)
+                return null
+            final autoDetect = processor.session.config.navigate('packages.autoDetect', true) as Boolean
+            if (!autoDetect)
+                return null
+            final moduleDir = getModuleDir()
+            return moduleDir ? processor.session.getPackageManager().detectSpec(moduleDir) : null
+        }
+
+        // Parse the explicit package configuration
+        def packageDef = config.package
+        def defaultProvider = processor.session.config.navigate('packages.provider', 'conda') as String
+
+        try {
+            return PackageManager.parseSpec(packageDef, defaultProvider)
+        } catch (Exception e) {
+            // an unparsable directive must fail the task rather than silently
+            // running it without the requested environment
+            throw new IllegalArgumentException("Invalid `package` directive in process '${processor.name}': ${e.message}", e)
+        }
+    }
+
+    /**
+     * Resolve (creating it if needed) the local environment for the `package`
+     * directive. Mirrors {@link #getCondaEnv()}: it runs at task-hash time on
+     * the process thread and its path takes part in the task hash, so a change
+     * to the package spec or to the manifest file content invalidates cached
+     * tasks. Returns {@code null} when the task runs in a container, since the
+     * container (possibly built by Wave from the same spec) provides the
+     * environment.
+     */
+    Path getPackageEnv() {
+        // note: use an explicit function instead of a closure or lambda syntax
+        cache0.computeIfAbsent('packageEnv', new Function<String,Path>() {
+            @Override
+            Path apply(String it) {
+                return getPackageEnv0()
+            }})
+    }
+
+    private Path getPackageEnv0() {
+        final spec = getPackageSpec()
+        if( !spec )
+            return null
+        if( isContainerEnabled() )
+            return null
+        return processor.session.getPackageManager().createEnvironment(spec)
+    }
+
+    /**
+     * The directory of the module script that defines this process, used for
+     * manifest auto-detection. Processes defined in the entry script return
+     * {@code null}: the project root commonly holds unrelated manifests
+     * (e.g. a `requirements.txt` for tooling) that must not be picked up.
+     */
+    private Path getModuleDir() {
+        final script = processor.getOwnerScript()
+        final meta = script ? ScriptMeta.get(script) : null
+        return meta?.isModule() ? meta.getModuleDir() : null
     }
 
     protected ContainerInfo containerInfo() {
@@ -1081,6 +1171,7 @@ class TaskRun implements Cloneable {
     CondaConfig getCondaConfig() {
         return processor.session.getCondaConfig()
     }
+
 
     String getStubSource() {
         return config?.getStubBlock()?.getSource()

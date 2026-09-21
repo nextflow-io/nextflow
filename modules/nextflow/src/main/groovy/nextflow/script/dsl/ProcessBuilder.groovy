@@ -68,6 +68,7 @@ class ProcessBuilder {
             'maxSubmitAwait',
             'memory',
             'module',
+            'package',
             'penv',
             'pod',
             'publishDir',

@@ -1,0 +1,34 @@
+---
+title: package
+description: Reference for the `package` process directive.
+---
+
+# `package`
+
+<AddedInVersion version="26.08" />
+
+*Preview feature: the syntax and behavior may change in future releases. Requires the `nextflow.preview.package` [feature flag][feature-flags] and the [strict parser][strict-syntax-page].*
+
+The `package` directive defines the process dependencies using a pluggable package provider, e.g. Conda, Pixi, uv, Nix, Guix, or an R package manager.
+
+## Usage
+
+For example:
+
+```nextflow
+process hello {
+    package 'numpy pandas', provider: 'uv'
+
+    script:
+    """
+    your_command --here
+    """
+}
+```
+
+When no `provider` is specified, the default provider from the [`packages`][config-packages] config scope is used. See [Package management][package-page] for the supported providers and further details.
+
+[config-packages]: ../../config/packages
+[feature-flags]: ../../feature-flags
+[package-page]: ../../../package
+[strict-syntax-page]: ../../../strict-syntax

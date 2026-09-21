@@ -1523,4 +1523,79 @@ class WaveClientTest extends Specification {
         server?.stop(0)
     }
 
+    @Unroll
+    def 'should map package provider #provider to wave type #type' () {
+        given:
+        def wave = new WaveClient(Mock(Session) { getConfig() >> [wave:[:]] })
+
+        expect:
+        wave.mapProviderToWaveType(provider) == type
+
+        where:
+        provider     | type
+        'conda'      | PackagesSpec.Type.CONDA
+        'mamba'      | PackagesSpec.Type.CONDA
+        'micromamba' | PackagesSpec.Type.CONDA
+        'CONDA'      | PackagesSpec.Type.CONDA
+        'pixi'       | PackagesSpec.Type.CONDA
+        'uv'         | null
+        'nix'        | null
+        'guix'       | null
+        'pak'        | null
+        'install2r'  | null
+        null         | null
+    }
+
+    def 'should send the conda environment file content to wave for file-based package specs' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def envFile = folder.resolve('env.yml')
+        envFile.text = 'dependencies:\n  - samtools=1.17\n'
+        def wave = new WaveClient(Mock(Session) { getConfig() >> [wave:[:]] })
+
+        when: 'the file is given as the single directive value'
+        def spec = wave.convertToWavePackagesSpec(new nextflow.packages.PackageSpec('conda', [envFile.toString()]))
+        then:
+        spec.type == PackagesSpec.Type.CONDA
+        spec.entries == null
+        new String(spec.environment.decodeBase64()) == envFile.text
+
+        when: 'the file is given via environment:'
+        spec = wave.convertToWavePackagesSpec(new nextflow.packages.PackageSpec('conda').withEnvironment(envFile.toString()))
+        then:
+        new String(spec.environment.decodeBase64()) == envFile.text
+
+        when: 'a pixi manifest cannot be built as a conda environment'
+        def pixiFile = folder.resolve('pixi.toml'); pixiFile.text = '[dependencies]\n'
+        spec = wave.convertToWavePackagesSpec(new nextflow.packages.PackageSpec('pixi', [pixiFile.toString()]))
+        then:
+        spec == null
+
+        when: 'a pixi package list is built as conda'
+        spec = wave.convertToWavePackagesSpec(new nextflow.packages.PackageSpec('pixi', ['samtools']))
+        then:
+        spec.type == PackagesSpec.Type.CONDA
+        spec.entries == ['samtools']
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    def 'should skip wave for local-only package providers' () {
+        given:
+        def wave = new WaveClient(Mock(Session) { getConfig() >> [wave:[:]] })
+
+        when: 'a local-only provider is used, wave is skipped (null spec)'
+        def local = wave.convertToWavePackagesSpec(new nextflow.packages.PackageSpec('uv', ['numpy']))
+        then:
+        local == null
+
+        when: 'a conda provider is converted to a conda wave spec'
+        def conda = wave.convertToWavePackagesSpec(new nextflow.packages.PackageSpec('conda', ['samtools']))
+        then:
+        conda != null
+        conda.type == PackagesSpec.Type.CONDA
+        conda.entries == ['samtools']
+    }
+
 }

@@ -1,0 +1,14 @@
+nextflow_pipeline {
+
+    name "pak provider"
+    script "../scripts/pak.nf"
+    tag "package-providers"
+    tag "pak"
+
+    test("pak resolves a package list and runs the task") {
+        then {
+            assert workflow.success
+            assert workflow.stdout.any { it.contains('Hello pak') }
+        }
+    }
+}

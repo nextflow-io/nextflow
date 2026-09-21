@@ -21,6 +21,7 @@ import java.nio.file.Files
 import java.nio.file.Path
 import java.nio.file.Paths
 
+import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
 import nextflow.container.DockerBuilder
@@ -1512,5 +1513,28 @@ class BashWrapperBuilderTest extends Specification {
         new FileSystemException('foo')      | true
         new IOException()                   | false
         new Exception()                     | false
+    }
+
+    def 'should add the package activation snippet only for a resolved environment' () {
+        given:
+        def spec = new nextflow.packages.PackageSpec('uv', ['numpy'])
+        def manager = Mock(nextflow.packages.PackageManager) {
+            getActivationScript(spec, Paths.get('/pkg/env-1')) >> 'source /pkg/env-1/bin/activate\n'
+        }
+        def previous = Global.session
+        Global.session = Mock(Session) { getPackageManager() >> manager }
+
+        when: 'the env was resolved by TaskRun'
+        def binding = newBashWrapperBuilder(packageSpec: spec, packageEnv: Paths.get('/pkg/env-1')).makeBinding()
+        then:
+        binding.package_activate == "# uv environment\nsource /pkg/env-1/bin/activate\n\n"
+
+        when: 'no env was resolved, e.g. the task runs in a container'
+        binding = newBashWrapperBuilder(packageSpec: spec, packageEnv: null).makeBinding()
+        then:
+        binding.package_activate == null
+
+        cleanup:
+        Global.session = previous
     }
 }
