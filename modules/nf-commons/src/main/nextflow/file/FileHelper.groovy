@@ -18,6 +18,7 @@ package nextflow.file
 
 import java.lang.reflect.Field
 import java.nio.file.CopyOption
+import java.nio.file.DirectoryStream
 import java.nio.file.FileSystem
 import java.nio.file.FileSystemLoopException
 import java.nio.file.FileSystemNotFoundException
@@ -1080,10 +1081,13 @@ class FileHelper {
      *
      * Google Cloud Storage keeps a zero-byte placeholder object for every directory created
      * through gcsfuse, and the NIO provider refuses to delete it. It reports this either as a
-     * {@link NoSuchFileException}, or as a {@code CloudStoragePseudoDirectoryException} once a
-     * placeholder is left behind. The latter is an unchecked {@link InvalidPathException} that
-     * would otherwise escape the walk and abort the caller. Neither means the delete failed,
-     * so both are ignored.
+     * {@link NoSuchFileException}, or, when the prefix is not empty, as a
+     * {@code CloudStoragePseudoDirectoryException}, an unchecked {@link InvalidPathException}
+     * that would otherwise escape the walk and abort the caller.
+     *
+     * The provider raises the latter for any non-empty listing, so it is ignored only when
+     * every remaining entry is itself a placeholder. A directory still holding a real object
+     * has not been cleaned and must not be reported as deleted.
      *
      * @param dir The directory to delete
      */
@@ -1091,10 +1095,33 @@ class FileHelper {
         try {
             Files.delete(dir)
         }
-        catch( NoSuchFileException | InvalidPathException e ) {
+        catch( NoSuchFileException e ) {
             if( FilesEx.getScheme(dir) != 'gs' )
                 throw e
+            log.debug "Ignoring missing GCS directory: ${FilesEx.toUriString(dir)}"
+        }
+        catch( InvalidPathException e ) {
+            if( FilesEx.getScheme(dir) != 'gs' || !holdsOnlyPlaceholders(dir) )
+                throw e
             log.debug "Ignoring GCS pseudo-directory that cannot be deleted: ${FilesEx.toUriString(dir)}"
+        }
+    }
+
+    /**
+     * Check that a cloud directory only holds placeholder objects, that is keys ending with a
+     * slash, which the storage provider is unable to delete.
+     */
+    static private boolean holdsOnlyPlaceholders(Path dir) {
+        try( DirectoryStream<Path> stream = Files.newDirectoryStream(dir) ) {
+            for( Path it : stream ) {
+                if( !it.toString().endsWith('/') )
+                    return false
+            }
+            return true
+        }
+        catch( IOException e ) {
+            log.debug("Unable to list directory: ${FilesEx.toUriString(dir)}", e)
+            return false
         }
     }
 

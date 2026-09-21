@@ -25,7 +25,10 @@ import com.google.cloud.storage.BlobId
 import com.google.cloud.storage.BlobInfo
 import com.google.cloud.storage.Storage
 import com.google.cloud.storage.StorageOptions
+import com.google.cloud.storage.contrib.nio.CloudStorageConfiguration
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
+import com.google.cloud.storage.contrib.nio.CloudStoragePseudoDirectoryException
+import com.google.cloud.storage.contrib.nio.testing.LocalStorageHelper
 import nextflow.Global
 import nextflow.Session
 import nextflow.SysEnv
@@ -191,6 +194,46 @@ class FileHelperGsTest extends Specification {
 
         cleanup:
         storage?.list(bucket, Storage.BlobListOption.prefix(prefix))?.iterateAll()?.each { it.delete() }
+    }
+
+    /**
+     * The in-memory storage provided by google-cloud-nio reproduces the pseudo-directory
+     * behaviour faithfully, so these two run on every build with no credentials.
+     */
+    def 'should delete a directory whose only leftover is a gcsfuse placeholder' () {
+        given:
+        def opts = LocalStorageHelper.getOptions()
+        def storage = opts.getService()
+        def fs = CloudStorageFileSystem.forBucket('fake', CloudStorageConfiguration.DEFAULT, opts)
+        def base = fs.getPath('/work/aa/bb')
+        and:
+        Files.write(base.resolve('.command.sh'), 'echo hello'.bytes)
+        Files.write(base.resolve('output/reads.txt'), 'data'.bytes)
+        storage.create(BlobInfo.newBuilder(BlobId.of('fake', 'work/aa/bb/output/')).build(), new byte[0])
+
+        when:
+        FileHelper.deletePath(base)
+
+        then:
+        noExceptionThrown()
+        and:
+        storage.list('fake', Storage.BlobListOption.prefix('work/aa/bb')).iterateAll().count { !it.name.endsWith('/') } == 0
+    }
+
+    def 'should not report a directory still holding a real object as deleted' () {
+        given:
+        def opts = LocalStorageHelper.getOptions()
+        def fs = CloudStorageFileSystem.forBucket('fake', CloudStorageConfiguration.DEFAULT, opts)
+        def dir = fs.getPath('/work/cc/dd')
+        and:
+        // an object the recursive delete failed to remove
+        Files.write(dir.resolve('leftover.txt'), 'data'.bytes)
+
+        when:
+        FileHelper.deleteDirEntry(dir)
+
+        then:
+        thrown(CloudStoragePseudoDirectoryException)
     }
 
 }
