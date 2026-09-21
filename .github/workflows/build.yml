@@ -224,7 +224,7 @@ jobs:
             integration-tests.tar.gz
 
   test-e2e:
-      if: ${{ contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]') }}
+      if: ${{ (contains(needs.build.outputs.commit_message,'[e2e stage]') || contains(needs.build.outputs.commit_message,'[e2e prod]')) && needs.build.outputs.docs_only != 'true' }}
       needs: build
       runs-on: ubuntu-latest
       timeout-minutes: 10
