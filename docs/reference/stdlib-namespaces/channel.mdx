@@ -310,25 +310,6 @@ Prints:
 7
 ```
 
-Ranges of values are expanded accordingly:
-
-```nextflow
-channel.of(1..23, 'X', 'Y').view()
-```
-
-Prints:
-
-```
-1
-2
-3
-4
-:
-23
-X
-Y
-```
-
 ##### `topic( name: String ) -> Channel<?>` {#topic}
 
 <AddedInVersion version="25.04" />

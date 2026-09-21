@@ -24,7 +24,7 @@ process uppercase {
     text: String
 
     output:
-    result: String = stdout()
+    stdout()
 
     script:
     """

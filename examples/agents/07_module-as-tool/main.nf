@@ -41,7 +41,7 @@ workflow {
     // nf-core/skesa runs in a container, so Docker + Wave (or another container
     // runtime) is also required.
     assembler(channel.of(
-        record(sample_id: 'sample1', reads: "${projectDir}/data/sample.fastq")
+        record(sample_id: 'sample1', reads: file("${projectDir}/data/sample.fastq"))
     ))
     .view { path -> "ASSEMBLY=${path}" }
 }
