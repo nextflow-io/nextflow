@@ -31,6 +31,12 @@ class TimelineConfig implements ConfigScope {
 
     @ConfigOption
     @Description("""
+        The directory where the timeline file should be saved, relative to the workflow output directory.
+    """)
+    final String directory
+
+    @ConfigOption
+    @Description("""
         Create the timeline report on workflow completion file (default: `false`).
     """)
     final boolean enabled
@@ -51,6 +57,7 @@ class TimelineConfig implements ConfigScope {
     TimelineConfig() {}
 
     TimelineConfig(Map opts) {
+        directory = opts.directory
         enabled = opts.enabled as boolean
         file = opts.file ?: defaultFileName()
         overwrite = opts.overwrite as boolean
