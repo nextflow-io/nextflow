@@ -27,17 +27,17 @@ import java.nio.file.Path
 import com.google.cloud.storage.BlobId
 import com.google.cloud.storage.BlobInfo
 import com.google.cloud.storage.Storage
-import com.google.cloud.storage.StorageOptions
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import nextflow.Global
 import nextflow.Session
+import nextflow.cloud.google.GsBucketSpec
 
 /**
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-class FilesExTest2 extends Specification {
+class FilesExTest2 extends Specification implements GsBucketSpec {
 
     @Unroll
     def 'should return uri string for #PATH' () {
@@ -71,16 +71,14 @@ class FilesExTest2 extends Specification {
      * See https://github.com/nextflow-io/nextflow/issues/5647
      */
     @IgnoreIf({System.getenv('NXF_SMOKE')})
-    @Requires({System.getenv('GOOGLE_APPLICATION_CREDENTIALS') && System.getenv('NXF_GS_TEST_BUCKET')})
+    @Requires({System.getenv('GOOGLE_APPLICATION_CREDENTIALS')})
     def 'should delete a directory holding a gcsfuse placeholder object' () {
         given:
-        def bucket = System.getenv('NXF_GS_TEST_BUCKET')
-        def storage = StorageOptions.getDefaultInstance().getService()
-        def prefix = "nf-test-${UUID.randomUUID()}"
-        def base = CloudStorageFileSystem.forBucket(bucket).getPath("/$prefix")
+        def bucket = createBucket()
+        def base = CloudStorageFileSystem.forBucket(bucket).getPath('/work/aa/bb')
         and:
         Files.write(base.resolve('output/reads.txt'), 'data'.bytes)
-        storage.create(BlobInfo.newBuilder(BlobId.of(bucket, "$prefix/output/")).build(), new byte[0])
+        storage.create(BlobInfo.newBuilder(BlobId.of(bucket, 'work/aa/bb/output/')).build(), new byte[0])
 
         when:
         def result = FilesEx.deleteDir(base)
@@ -90,10 +88,10 @@ class FilesExTest2 extends Specification {
         result
         and:
         // every real object is gone, only the placeholder may survive
-        storage.list(bucket, Storage.BlobListOption.prefix(prefix)).iterateAll().count { !it.name.endsWith('/') } == 0
+        storage.list(bucket, Storage.BlobListOption.prefix('work/aa/bb')).iterateAll().count { !it.name.endsWith('/') } == 0
 
         cleanup:
-        storage?.list(bucket, Storage.BlobListOption.prefix(prefix))?.iterateAll()?.each { it.delete() }
+        deleteBucket(bucket)
     }
 
 }
