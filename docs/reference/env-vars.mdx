@@ -88,13 +88,7 @@ Defines the base cache path when using the cloud cache store. See [Cache stores]
 
 <DeprecatedInVersion version="26.10" />
 
-When `false`, disable the use of the Seqera Cloud Info service to select the machine type for Google Batch tasks, and
-let Google Batch select it instead (default: `true`). Price-based machine type selection will be removed in version
-27.04, along with this variable.
-
-##### `NXF_CLOUD_DRIVER`
-
-Defines the default cloud driver to be used if not specified in the config file or as command line option, either `aws` or `google`.
+When `true`, use the Seqera Cloud Info service to select the machine type for Google Batch tasks (default: `true`).
 
 ##### `NXF_CONDA_CACHEDIR`
 
