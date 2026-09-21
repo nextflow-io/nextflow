@@ -16,14 +16,11 @@
 package nextflow.script.control;
 
 import java.net.URI;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import nextflow.module.spi.RemoteModuleResolver;
-import nextflow.module.spi.RemoteModuleResolverProvider;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.ScriptNode;
@@ -93,7 +90,7 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
 
         URI includeUri;
         try {
-            includeUri = getIncludeUri(source);
+            includeUri = ModuleResolver.getIncludeUri(uri, source, projectDir);
         }
         catch( Exception e ) {
             addError(e.getMessage(), node);
@@ -135,32 +132,6 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
                 entry.setTarget(target);
             }
         }
-    }
-
-    private URI getIncludeUri(String source) {
-        if( ModuleResolver.isLocalModule(source) ) {
-            return getLocalIncludeUri(Path.of(uri).getParent(), source);
-        }
-        else {
-            // Resolve a remote module relative to the including module's directory
-            // (context-relative), so a workflow module's own dependencies are found under its
-            // nested `modules/` directory (nested vendoring). Any other script -- the entry
-            // script, or a plain local script -- resolves against the project directory.
-            var base = RemoteModuleResolver.resolveBaseDir(uri, projectDir);
-            return RemoteModuleResolverProvider.getInstance()
-                .resolve(source, base)
-                .normalize()
-                .toUri();
-        }
-    }
-
-    private static URI getLocalIncludeUri(Path parent, String source) {
-        Path includePath = parent.resolve(source);
-        if( Files.isDirectory(includePath) )
-            includePath = includePath.resolve("main.nf");
-        else if( !source.endsWith(".nf") )
-            includePath = Path.of(includePath.toString() + ".nf");
-        return includePath.normalize().toUri();
     }
 
     private boolean isIncludeStale(IncludeNode node, URI includeUri) {
