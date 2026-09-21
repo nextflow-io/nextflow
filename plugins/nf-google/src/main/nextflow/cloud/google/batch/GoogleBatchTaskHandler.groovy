@@ -931,6 +931,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
 
         try {
             if( executor.isCloudinfoEnabled() ) {
+                log.warn1 "Google Batch machine type selection via the Cloud Info service is deprecated and will be removed in version 27.04 -- Specify the `machineType` directive to choose a machine type, or set NXF_CLOUDINFO_ENABLED=false to let Google Batch choose one"
                 return bestMachineType0(cpus, memory, location, spot, localSSD, families)
             }
         }

@@ -37,6 +37,11 @@ import nextflow.util.MemoryUnit
  * the user provided machine type or default to Google Batch automatic
  * selection from the requested resource.
  *
+ * DEPRECATED: price-based machine type selection is deprecated since version 26.10
+ * and will be removed in version 27.04, along with the machine type pattern syntax
+ * that depends on the cloud info product list. The disk and GPU helpers in this class
+ * do not use the service and will be retained.
+ *
  * @author Jordi Deu-Pons <jordi@jordeu.net>
  */
 @CompileStatic
