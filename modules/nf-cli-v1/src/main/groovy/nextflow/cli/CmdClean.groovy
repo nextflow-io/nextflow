@@ -80,9 +80,6 @@ class CmdClean extends CmdBase implements CacheBase {
 
     private Map<HashCode, Short> dryHash = new HashMap<>()
 
-    /** Whether every work dir of the run being cleaned was removed */
-    private boolean allRemoved = true
-
     /**
      * @return The name of this command {@code clean}
      */
@@ -136,7 +133,6 @@ class CmdClean extends CmdBase implements CacheBase {
      *      A {@link Record} object representing a row in the history log file
      */
     private void cleanup(Record entry) {
-        allRemoved = true
         currentCacheDb = cacheFor(entry).openForRead()
         // -- remove each entry and work dir
         currentCacheDb.eachRecord(this.&removeRecord)
@@ -145,13 +141,6 @@ class CmdClean extends CmdBase implements CacheBase {
 
         // -- STOP HERE !
         if( dryRun || keepLogs ) return
-
-        // -- keep the index and the history entry when a work dir could not be removed,
-        //    otherwise the run is no longer known and the clean up cannot be retried
-        if( !allRemoved ) {
-            log.debug "Preserving cache index and history entry -- one or more work directories could not be removed"
-            return
-        }
 
         // -- remove the index file
         currentCacheDb.deleteIndex()
@@ -205,28 +194,15 @@ class CmdClean extends CmdBase implements CacheBase {
             return
         }
 
-        // with -keep-logs the cache entry is preserved, only the temp files are removed
-        if( keepLogs ) {
-            if( deleteFolder(FileHelper.asPath(record.workDir), true) && !quiet )
-                printMessage(record.workDir,false)
-            return
-        }
+        // decrement the ref count in the db
+        def proceed = keepLogs || currentCacheDb.removeTaskEntry(hash)
+        if( proceed ) {
+            // delete folder
+            if( deleteFolder(FileHelper.asPath(record.workDir), keepLogs)) {
+                if(!quiet) printMessage(record.workDir,false)
+            }
 
-        // the work dir belongs to another run as well, only decrement the ref count
-        if( refCount != 1 ) {
-            currentCacheDb.removeTaskEntry(hash)
-            return
         }
-
-        // delete the work dir before dropping the cache entry, so that a failed deletion
-        // leaves the entry in place and the clean up can be retried
-        if( !deleteFolder(FileHelper.asPath(record.workDir), false) ) {
-            allRemoved = false
-            return
-        }
-        currentCacheDb.removeTaskEntry(hash)
-        if( !quiet )
-            printMessage(record.workDir,false)
     }
 
     private printMessage(String path, boolean dryRun) {
@@ -270,7 +246,7 @@ class CmdClean extends CmdBase implements CacheBase {
 
             @Override
             FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-                // a file that cannot be visited cannot be deleted either, the work dir
+                // a file that cannot be visited cannot be deleted either, so the work dir
                 // is not empty and must not be reported as removed
                 result = false
                 if(!quiet) System.err.println "Failed to visit ${file.toUriString()}"

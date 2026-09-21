@@ -19,10 +19,7 @@ package nextflow.cli
 import spock.lang.Specification
 
 import java.nio.file.Files
-
-import nextflow.cache.CacheDB
-import nextflow.trace.TraceRecord
-import nextflow.util.CacheHelper
+import java.nio.file.Path
 
 /**
  *
@@ -96,69 +93,16 @@ class CmdCleanTest extends Specification {
             folder?.deleteDir()
     }
 
-    def 'should drop the cache entry only after the work dir was removed' () {
+    def 'should not report a work dir as removed when it cannot be visited' () {
         given:
-        def folder = Files.createTempDirectory('test')
-        def cacheDb = Mock(CacheDB)
-        def cleaner = new CmdClean(force: true, quiet: true)
-        cleaner.currentCacheDb = cacheDb
-        and:
-        def hash = CacheHelper.hasher('x').hash()
-        def record = new TraceRecord([workdir: folder.toString()])
+        def cleaner = new CmdClean(quiet: true)
 
         when:
-        cleaner.removeRecord(hash, record, 1)
+        // a missing work dir reaches visitFileFailed, which must record the failure
+        def result = cleaner.deleteFolder(Path.of('/missing/work/dir'), false)
 
         then:
-        1 * cacheDb.removeTaskEntry(hash) >> true
-        and:
-        !folder.exists()
-        cleaner.allRemoved
-
-        cleanup:
-        folder?.deleteDir()
-    }
-
-    def 'should keep the cache entry when the work dir cannot be removed' () {
-        given:
-        def cacheDb = Mock(CacheDB)
-        def cleaner = new CmdClean(force: true, quiet: true)
-        cleaner.currentCacheDb = cacheDb
-        and:
-        def hash = CacheHelper.hasher('x').hash()
-        def record = new TraceRecord([workdir: '/missing/work/dir'])
-
-        when:
-        cleaner.removeRecord(hash, record, 1)
-
-        then:
-        // the entry must survive, otherwise the run can never be cleaned again
-        0 * cacheDb.removeTaskEntry(_)
-        and:
-        !cleaner.allRemoved
-    }
-
-    def 'should only decrement the ref count when the task is shared with another run' () {
-        given:
-        def folder = Files.createTempDirectory('test')
-        def cacheDb = Mock(CacheDB)
-        def cleaner = new CmdClean(force: true, quiet: true)
-        cleaner.currentCacheDb = cacheDb
-        and:
-        def hash = CacheHelper.hasher('x').hash()
-        def record = new TraceRecord([workdir: folder.toString()])
-
-        when:
-        cleaner.removeRecord(hash, record, 2)
-
-        then:
-        1 * cacheDb.removeTaskEntry(hash) >> false
-        and:
-        folder.exists()
-        cleaner.allRemoved
-
-        cleanup:
-        folder?.deleteDir()
+        !result
     }
 
 }
