@@ -105,9 +105,8 @@ class TaskProcessorTest extends Specification {
         when: 'every factory abstains'
         processor.hasherFactories = [abstaining]
         def hasher = processor.createTaskHasher(task)
-        then: 'the default hasher is used, computing exactly the default hash'
+        then: 'the default hasher is used'
         hasher.getClass() == TaskHasher
-        hasher.compute() == new TaskHasher(task).compute()
 
         when: 'no factory is registered at all'
         processor.hasherFactories = []

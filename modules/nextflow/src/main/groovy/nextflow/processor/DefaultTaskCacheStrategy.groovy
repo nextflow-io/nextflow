@@ -20,11 +20,12 @@ import java.nio.file.Path
 
 import com.google.common.hash.HashCode
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.file.FileHelper
 import nextflow.util.HashBuilder
 import nextflow.util.LockManager
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 /**
  * The default {@link TaskCacheStrategy}: the per-run, local resolution loop as it has always been in
@@ -41,9 +42,18 @@ import nextflow.util.LockManager
  *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
-@Slf4j
 @CompileStatic
 class DefaultTaskCacheStrategy implements TaskCacheStrategy {
+
+    /**
+     * Deliberately {@link TaskProcessor}'s logger rather than this class's. The two lines below --
+     * the {@code Cacheable folder=…} trace and the {@code Unable to resume cached task} warning --
+     * were emitted from {@code TaskProcessor.checkCachedOrLaunchTask} before this strategy was split
+     * out of it, and the usual support instruction for a resume problem is
+     * {@code -trace nextflow.processor.TaskProcessor}. Moving them to a new logger would silently
+     * drop them from every log collected that way.
+     */
+    private static final Logger log = LoggerFactory.getLogger(TaskProcessor)
 
     private static LockManager lockManager = new LockManager()
 

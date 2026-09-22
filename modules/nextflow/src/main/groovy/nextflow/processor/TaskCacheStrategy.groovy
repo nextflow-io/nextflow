@@ -33,6 +33,11 @@ import org.pf4j.ExtensionPoint
  * is not the one in use for the session: the plugin registry is process-wide, while the choice of
  * strategy belongs to the run.
  *
+ * <p><b>Implementations must be stateless / thread-safe.</b> Extensions are resolved through pf4j's
+ * {@code SingletonExtensionFactory}, so a single instance is shared by every processor of every run
+ * in the JVM, and {@link #resolve} is called concurrently from every operator thread plus the retry
+ * executor.
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 interface TaskCacheStrategy extends ExtensionPoint {
@@ -52,7 +57,14 @@ interface TaskCacheStrategy extends ExtensionPoint {
      * {@link TaskResolver#launch resolver.launch}.
      *
      * @param task The task to resolve.
-     * @param hash The task hash, as computed by its {@link TaskHasher}.
+     * @param hash On a first attempt, the task hash as computed by its {@link TaskHasher}. On a
+     *      <b>retry</b> ({@code tryCache == false} and {@code task.failCount > 0}) it is instead the
+     *      key this strategy passed to {@link TaskResolver#launch launch} for the previous attempt:
+     *      {@code TaskProcessor} retries with {@code taskCopy.hash}, which {@code submitTask} set
+     *      from that key. For {@link DefaultTaskCacheStrategy} that is the per-attempt folded hash,
+     *      which is why its chain is {@code H(H(h,1),2)}. A strategy that recomputes the retry key
+     *      from {@code failCount} instead would land in a different work directory than the one
+     *      Nextflow later resumes from.
      * @param tryCache Whether a cached execution may be resumed; {@code false} on a retry, and when
      *      the run is not resuming.
      * @param resolver The processor's primitives to resume or launch the task with.

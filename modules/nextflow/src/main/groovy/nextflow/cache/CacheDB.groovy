@@ -90,11 +90,16 @@ class CacheDB implements Closeable {
     }
 
     /**
-     * Dispatch an asynchronous cache write on the {@link #writer} agent, logging any failure
-     * instead of letting the agent swallow it. A dropped entry / index write
-     * would otherwise leave a successfully executed task non-resumable with no trace: the run still
-     * succeeds, but the task re-executes on the next resume. Surfacing the error makes that visible
-     * (and is the natural hook for a future retry at the store level).
+     * Dispatch an asynchronous cache write on the {@link #writer} agent, logging any failure instead
+     * of letting the agent swallow it. Without this the run still succeeds while the cache is
+     * silently incomplete, with no trace of why.
+     *
+     * <p>What a dropped write costs depends on which one it was, so the message stays neutral:
+     * a failed {@code putTaskAsync} leaves the task non-resumable, so it re-executes on the next
+     * resume; a failed {@code putIndexAsync} only affects {@code nextflow log} and {@code clean},
+     * since resume reads the entry through {@link #getTaskEntry}; a failed {@code cacheTaskAsync}
+     * leaves the reference count stale. Surfacing the error makes all three visible (and is the
+     * natural hook for a future retry at the store level).
      *
      * @param what   short description of the write for the log message (typically the task hash)
      * @param action the store mutation to run on the writer thread
@@ -105,7 +110,7 @@ class CacheDB implements Closeable {
                 action.call()
             }
             catch( Throwable e ) {
-                log.warn("Unable to persist cache record for ${what} -- the task will re-execute on the next resume", e)
+                log.warn("Unable to persist cache record for ${what}", e)
             }
         }
     }

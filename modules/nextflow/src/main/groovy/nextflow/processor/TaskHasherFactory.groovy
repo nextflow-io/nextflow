@@ -31,6 +31,11 @@ import org.pf4j.ExtensionPoint
  * use for the session: the plugin registry is process-wide, while the choice of hasher belongs to
  * the run.
  *
+ * <p><b>Implementations must be stateless / thread-safe.</b> Extensions are resolved through pf4j's
+ * {@code SingletonExtensionFactory}, so a single instance is shared by every processor of every run
+ * in the JVM, and {@link #create} is called concurrently from every operator thread plus the retry
+ * executor.
+ *
  * @author Paolo Di Tommaso <paolo.ditommaso@gmail.com>
  */
 interface TaskHasherFactory extends ExtensionPoint {

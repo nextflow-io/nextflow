@@ -719,6 +719,7 @@ class TaskProcessor {
      * @param task The task to be hashed.
      * @return The hasher computing the cache key of {@code task}.
      */
+    @CompileStatic
     protected TaskHasher createTaskHasher(TaskRun task) {
         if( hasherFactories == null )
             hasherFactories = Plugins.getPriorityExtensions(TaskHasherFactory) ?: Collections.<TaskHasherFactory>emptyList()
@@ -869,6 +870,7 @@ class TaskProcessor {
      * {@link DefaultTaskCacheStrategy} is used, exactly as when no plugin takes part in the
      * resolution. Resolved once, on the first task of this processor.
      */
+    @CompileStatic
     protected TaskCacheStrategy getCacheStrategy() {
         if( cacheStrategy != null )
             return cacheStrategy

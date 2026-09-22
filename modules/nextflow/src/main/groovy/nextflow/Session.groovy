@@ -243,7 +243,13 @@ class Session implements ISession {
     boolean debug
 
     /**
-     * Defines the cloud path where store cache meta-data
+     * Defines the cloud path where store cache meta-data.
+     *
+     * Resolved in the constructor, i.e. BEFORE {@link #init}, because {@code CloudCacheFactory}
+     * reads it while building the cache -- so it cannot be deferred past {@code createCache()} the
+     * way the work dir is. It therefore derives from the CONFIGURED work dir: a cache factory that
+     * writes a work dir back into the session (see {@code CacheFactory.newInstance}) does not change
+     * it. That is consistent, since such a factory IS the cloud cache and does not also read this.
      */
     Path cloudCachePath
 

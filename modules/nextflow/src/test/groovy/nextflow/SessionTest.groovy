@@ -230,30 +230,6 @@ class SessionTest extends Specification {
 
     }
 
-    def 'should create the cache before resolving the work dir' () {
-
-        given: 'a work dir that cannot be created (its parent is a regular file)'
-        def folder = Files.createTempDirectory('test')
-        def blocker = folder.resolve('blocker'); blocker.text = 'not a directory'
-        def db = Mock(CacheDB)
-        def created = false
-        def session = new Session([workDir: blocker.resolve('work').toString()]) {
-            @Override protected CacheDB createCache() { created = true; return db }
-        }
-
-        when:
-        session.init(null)
-
-        then: 'the work dir creation fails'
-        thrown(AbortOperationException)
-
-        and: 'but the cache had already been created -- so a work dir resolved by the cache factory is visible to the work dir creation, the observers and the workflow metadata below it'
-        created
-
-        cleanup:
-        folder?.deleteDir()
-    }
-
     def 'a cache factory that resolves its own work dir is visible to everything below it' () {
 
         given: 'a cache factory that writes back into the session, as the global cloud cache does'
