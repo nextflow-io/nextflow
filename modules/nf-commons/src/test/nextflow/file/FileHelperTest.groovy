@@ -1194,4 +1194,29 @@ class FileHelperTest extends Specification {
         FileHelper.getTaskHashFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789-x/out.bam"), work) == null
         FileHelper.getTaskHashFromPath(Paths.get("/elsewhere/ab/cdef0123456789abcdef0123456789/out.bam"), work) == null
     }
+
+    def 'getTaskDirFromPath returns the directory the file is really in, attempt suffix included'() {
+        given:
+        def work = Paths.get('/work')
+
+        expect: 'the unsuffixed layout'
+        FileHelper.getTaskDirFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789/out.bam"), work) ==
+                Paths.get("/work/ab/cdef0123456789abcdef0123456789")
+
+        and: 'an attempt dir resolves to ITSELF, not to the unsuffixed sibling getWorkFolder builds'
+        FileHelper.getTaskDirFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789-2/out.bam"), work) ==
+                Paths.get("/work/ab/cdef0123456789abcdef0123456789-2")
+        FileHelper.getTaskDirFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789-12/sub/out.bam"), work) ==
+                Paths.get("/work/ab/cdef0123456789abcdef0123456789-12")
+
+        and: 'so relativizing an output against it never yields a `..` segment'
+        def src = Paths.get("/work/ab/cdef0123456789abcdef0123456789-2/sub/out.bam")
+        FileHelper.getTaskDirFromPath(src, work).relativize(src).toString() == 'sub/out.bam'
+
+        and: 'anything that is not a task work dir has none'
+        FileHelper.getTaskDirFromPath(Paths.get("/work/ab"), work) == null
+        FileHelper.getTaskDirFromPath(Paths.get("/work/stage-1234/foo"), work) == null
+        FileHelper.getTaskDirFromPath(Paths.get("/work/ab/not-a-hash/out.bam"), work) == null
+        FileHelper.getTaskDirFromPath(Paths.get("/elsewhere/ab/cdef0123456789abcdef0123456789/out.bam"), work) == null
+    }
 }

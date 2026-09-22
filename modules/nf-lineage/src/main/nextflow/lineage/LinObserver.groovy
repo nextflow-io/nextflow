@@ -473,7 +473,13 @@ class LinObserver implements TraceObserverV2 {
     String getSourceReference(Path source) {
         final hash = FileHelper.getTaskHashFromPath(source, session.workDir)
         if (hash) {
-            final target = FileHelper.getWorkFolder(session.workDir, hash).relativize(source).toString()
+            // relativize against the directory the file is really in, NOT one rebuilt from the hash:
+            // getWorkFolder always yields the unsuffixed `<2hex>/<30hex>`, so for an output of a
+            // retried attempt (`<30hex>-N`) that would produce `../<30hex>-N/out`, which LinPath does
+            // not collapse -- a reference to a LID that was never stored. The producing side
+            // (getTaskRelative) already relativizes against the real `task.workDir`, so this keeps
+            // the two halves emitting the same `lid://<hash>/<rel>`.
+            final target = FileHelper.getTaskDirFromPath(source, session.workDir).relativize(source).toString()
             return asUriString(hash.toString(), target)
         }
         final storeDirReference = outputsStoreDirLid.get(source.toString())

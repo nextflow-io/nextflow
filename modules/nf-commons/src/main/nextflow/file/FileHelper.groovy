@@ -1202,13 +1202,10 @@ class FileHelper {
     }
 
     /**
-     * The hash of the task whose work directory {@code sourcePath} lives in, parsed from the path:
-     * {@code <workPath>/<2hex>/<30hex>[-N]/...}. The optional {@code -N} attempt suffix is ignored.
-     *
-     * @return The task hash, or {@code null} when {@code sourcePath} is not below a task work
-     *      directory of {@code workPath}.
+     * The {@code <2hex>/<30hex>[-N]} leading segments of {@code sourcePath} relative to
+     * {@code workPath}, or {@code null} when it is not shaped like a task work directory.
      */
-    public static HashCode getTaskHashFromPath(Path sourcePath, Path workPath) {
+    private static Path taskDirRelative(Path sourcePath, Path workPath) {
         assert sourcePath
         assert workPath
         if( !sourcePath.startsWith(workPath) )
@@ -1216,9 +1213,23 @@ class FileHelper {
         final relativePath = workPath.relativize(sourcePath)
         if( relativePath.getNameCount() < 2 )
             return null
-        final bucket = relativePath.getName(0).toString()
-        if( bucket.size() != 2 )
+        if( relativePath.getName(0).toString().size() != 2 )
             return null
+        return relativePath.subpath(0, 2)
+    }
+
+    /**
+     * The hash of the task whose work directory {@code sourcePath} lives in, parsed from the path:
+     * {@code <workPath>/<2hex>/<30hex>[-N]/...}. The optional {@code -N} attempt suffix is ignored.
+     *
+     * @return The task hash, or {@code null} when {@code sourcePath} is not below a task work
+     *      directory of {@code workPath}.
+     */
+    static HashCode getTaskHashFromPath(Path sourcePath, Path workPath) {
+        final relativePath = taskDirRelative(sourcePath, workPath)
+        if( relativePath == null )
+            return null
+        final bucket = relativePath.getName(0).toString()
         // tolerate an attempt suffix on the leaf (`<30hex>-N`): the hash is the part before it
         final leaf = relativePath.getName(1).toString()
         final suffix = ATTEMPT_SUFFIX.matcher(leaf)
@@ -1229,5 +1240,27 @@ class FileHelper {
             log.debug("String '${strHash}' is not a valid hash", e)
             return null
         }
+    }
+
+    /**
+     * The work directory of the task {@code sourcePath} lives in, i.e. the
+     * {@code <workPath>/<2hex>/<30hex>[-N]} prefix of it, <b>attempt suffix included</b>.
+     *
+     * <p>Exists because the directory cannot be rebuilt from the hash: {@link #getWorkFolder} always
+     * produces the unsuffixed {@code <2hex>/<30hex>}, so relativizing an output of attempt {@code N}
+     * against it yields a path starting with {@code ..}. A caller that has only the {@code Path} --
+     * lineage resolving a task input back to its producer -- needs the directory the file is really
+     * in.
+     *
+     * @return The task work directory, or {@code null} when {@code sourcePath} is not below one.
+     */
+    static Path getTaskDirFromPath(Path sourcePath, Path workPath) {
+        final relativePath = taskDirRelative(sourcePath, workPath)
+        if( relativePath == null )
+            return null
+        // only a leaf that parses as a task hash names a work directory
+        if( getTaskHashFromPath(sourcePath, workPath) == null )
+            return null
+        return workPath.resolve(relativePath)
     }
 }
