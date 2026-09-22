@@ -48,7 +48,7 @@ configurations {
 
 dependencies {
     compileOnly project(':nextflow')
-    compileOnly 'org.slf4j:slf4j-api:2.0.17'
+    compileOnly 'org.slf4j:slf4j-api:2.0.19'
     compileOnly 'org.pf4j:pf4j:3.14.1'
 
     api 'org.bouncycastle:bcprov-jdk18on:1.84'
