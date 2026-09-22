@@ -70,6 +70,7 @@ class S3AtomicLockProviderAwsTest extends Specification implements AwsS3BaseSpec
         // the SPI has no release: in production the marker is never removed, so a test that
         // needs the object gone deletes it directly (what the dropped impls did anyway)
         Files.deleteIfExists(lock)
+        tryDeleteBucket(bucket)
     }
 
 }

@@ -250,8 +250,8 @@ public class S3Client {
      * conditional PUT ({@code If-None-Match: *}). Used as a cross-run lock primitive by
      * the global cloud cache.
      *
-     * @return {@code true} if this caller created the object; {@code false} if it already
-     *         existed (HTTP 412 Precondition Failed).
+     * @return {@code true} if this caller created the object; {@code false} if it did not --
+     *         see the error mapping below for the two cases that produce it.
      */
     public boolean putObjectIfAbsent(String bucket, String key) throws IOException {
         // The marker is an object in the user's bucket like any other, so it must carry the same
@@ -260,10 +260,7 @@ public class S3Client {
         // a 403, which `tryCreate` correctly refuses to read as "lost the race", so the run fails
         // with an error pointing nowhere near the cause. Tags and content type are deliberately not
         // applied: the marker carries no payload to describe, and it is cache infrastructure rather
-        // than pipeline data, so a user's output tagging does not belong on it. Nor is a storage
-        // class: that one is a property of the object a caller is writing (`S3Path.getStorageClass`),
-        // and this PUT has only a bucket and a key -- and a marker in a restore-on-read class could
-        // not be probed by the claim itself.
+        // than pipeline data, so a user's output tagging does not belong on it.
         PutObjectRequest.Builder builder = PutObjectRequest.builder()
                 .bucket(bucket)
                 .key(key)
@@ -280,13 +277,34 @@ public class S3Client {
         if( storageEncryption != null ) {
             builder.serverSideEncryption(storageEncryption);
         }
+        // The storage class is a CLIENT-level default, not a property of the object being written:
+        // `aws.client.storageClass` becomes `upload_storage_class`, which S3FileSystemProvider
+        // applies to every other upload this client makes. A bucket policy conditioned on
+        // s3:x-amz-storage-class -- the same class of policy the encryption note above is about --
+        // would otherwise 403 every claim.
+        final String storageClass = props.getProperty("upload_storage_class");
+        if( storageClass != null ) {
+            builder.storageClass(storageClass);
+        }
         try {
             runWithPermit(() -> client.putObject(builder.build(), RequestBody.empty()));
             return true;
         } catch (AwsServiceException e) {
-            // 412 (PreconditionFailed): the object already exists.
-            // 409 (ConditionalRequestConflict): a concurrent conditional write is in progress.
-            // Both mean this caller lost the race -> report "not created".
+            // 412 (PreconditionFailed): the object exists. Definitive -- this caller lost the race.
+            //
+            // 409 (ConditionalRequestConflict, or OperationAborted): a concurrent conditional write
+            // to this key was in flight. NOT the same answer: S3 documents it as retryable, and
+            // nothing retries it -- the SDK's RETRYABLE_STATUS_CODES is {500,502,503,504}, and
+            // ConditionalRequestConflict is not even a modelled exception type. After a 409 the
+            // outcome is UNDETERMINED: the competing PUT may have landed, may still be in flight,
+            // or may itself have conflicted, so the object may not exist at all.
+            //
+            // It is reported as a lost claim regardless, deliberately. Propagating it would abort a
+            // task on a condition AWS calls transient; retrying the PUT here would resolve the
+            // ambiguity properly but costs a backoff and interrupt handling to save, at worst, one
+            // duplicated task execution: the caller claims the next key and runs there, and if
+            // neither racer's PUT landed then this key is simply claimed by a later run. That is
+            // self-healing, and the race needs two claims on one hash within a few milliseconds.
             if( e.statusCode() == 412 || e.statusCode() == 409 )
                 return false;
             throw convertAwsException(e, "putObjectIfAbsent", bucket, key);
@@ -459,10 +477,17 @@ public class S3Client {
      * @see software.amazon.awssdk.services.s3.S3Client#listObjectsV2Paginator
      */
     public ListObjectsV2Iterable listObjectsV2Paginator(ListObjectsV2Request request) throws IOException {
+        // applied here rather than at the call site, as in getObject/getObjectRange:
+        // `isRequesterPaysEnabled` is this client's setting, and a caller building a request has no
+        // business knowing about it. Without it a requester-pays bucket answers AccessDenied to
+        // every listing this client makes.
+        if( this.isRequesterPaysEnabled )
+            request = request.toBuilder().requestPayer(RequestPayer.REQUESTER).build();
+        final ListObjectsV2Request req = request;
         try {
-            return runWithPermit(() -> client.listObjectsV2Paginator(request));
+            return runWithPermit(() -> client.listObjectsV2Paginator(req));
         } catch (SdkException e) {
-            throw convertAwsException(e, "listObjects", request.bucket(), request.prefix());
+            throw convertAwsException(e, "listObjects", req.bucket(), req.prefix());
         }
     }
 

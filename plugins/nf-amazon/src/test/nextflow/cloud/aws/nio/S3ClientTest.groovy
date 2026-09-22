@@ -28,6 +28,7 @@ import nextflow.cloud.aws.AwsClientFactory
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest
 import software.amazon.awssdk.services.s3.model.GetObjectRequest
 import software.amazon.awssdk.services.s3.model.GetObjectResponse
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request
 import software.amazon.awssdk.services.s3.model.RequestPayer
 import software.amazon.awssdk.services.s3.model.PutObjectRequest
 import software.amazon.awssdk.services.s3.model.PutObjectResponse
@@ -69,6 +70,82 @@ class S3ClientTest extends Specification {
         and: 'and SSE/KMS are applied, so a `deny unless encrypted` policy cannot 403 every claim'
         captured.serverSideEncryption() == ServerSideEncryption.AWS_KMS
         captured.ssekmsKeyId() == 'key-123'
+    }
+
+    def 'the claim PUT carries the client-level storage class, as every other upload does'() {
+        given: 'a client whose `aws.client.storageClass` resolved to upload_storage_class'
+        def props = new Properties()
+        props.setProperty('upload_storage_class', 'STANDARD_IA')
+        def sdk = Mock(software.amazon.awssdk.services.s3.S3Client)
+        def factory = Mock(AwsClientFactory) { getS3Client(_, _) >> sdk }
+        def client = new S3Client(factory, props, false)
+        and:
+        PutObjectRequest captured = null
+
+        when:
+        client.putObjectIfAbsent('bkt', 'work/aa/bb/.command.claim')
+
+        then:
+        1 * sdk.putObject(_ as PutObjectRequest, _) >> { PutObjectRequest r, def body ->
+            captured = r; return PutObjectResponse.builder().build()
+        }
+        and: 'a bucket policy conditioned on s3:x-amz-storage-class must not 403 the claim alone'
+        captured.storageClassAsString() == 'STANDARD_IA'
+    }
+
+    def 'both 412 and 409 are reported as a lost claim'() {
+        given:
+        def sdk = Mock(software.amazon.awssdk.services.s3.S3Client)
+        def factory = Mock(AwsClientFactory) { getS3Client(_, _) >> sdk }
+        def client = new S3Client(factory, new Properties(), false)
+
+        when: 'the object already exists -- definitive'
+        def r412 = client.putObjectIfAbsent('bkt', 'k')
+        then:
+        1 * sdk.putObject(_ as PutObjectRequest, _) >> { throw awsError(412, 'PreconditionFailed') }
+        !r412
+
+        when: 'a concurrent conditional write was in flight -- the outcome is undetermined, but it'
+        and: 'is accepted as a lost claim rather than aborting the task: see putObjectIfAbsent'
+        def r409 = client.putObjectIfAbsent('bkt', 'k')
+        then:
+        1 * sdk.putObject(_ as PutObjectRequest, _) >> { throw awsError(409, 'ConditionalRequestConflict') }
+        !r409
+
+        when: 'anything else still propagates -- a 403 must never read as "lost the race"'
+        client.putObjectIfAbsent('bkt', 'k')
+        then:
+        1 * sdk.putObject(_ as PutObjectRequest, _) >> { throw awsError(403, 'AccessDenied') }
+        thrown(AccessDeniedException)
+    }
+
+    def 'requester-pays reaches the flat listing too, not only the claim PUT and the ranged GET'() {
+        given: 'a client on a requester-pays bucket'
+        def sdk = Mock(software.amazon.awssdk.services.s3.S3Client)
+        def factory = Mock(AwsClientFactory) { getS3Client(_, _) >> sdk }
+        def client = new S3Client(factory, new Properties(), false)
+        client.setRequesterPaysEnabled('true')
+        and:
+        ListObjectsV2Request listed = null
+
+        when: 'the flat listing behind the directory identity -- without the payer this throws'
+        and: 'AccessDenied, so there is no fallback to the hierarchical walk'
+        client.listObjectsV2Paginator(ListObjectsV2Request.builder().bucket('bkt').prefix('dir/').build())
+
+        then:
+        1 * sdk.listObjectsV2Paginator(_ as ListObjectsV2Request) >> { ListObjectsV2Request r ->
+            listed = r; return null
+        }
+        listed.requestPayer() == RequestPayer.REQUESTER
+        and: 'the prefix the caller built is preserved'
+        listed.prefix() == 'dir/'
+    }
+
+    private static AwsServiceException awsError(int status, String code) {
+        return AwsServiceException.builder()
+                .statusCode(status)
+                .awsErrorDetails(AwsErrorDetails.builder().errorCode(code).build())
+                .build()
     }
 
     def 'requester-pays reaches the claim PUT and the ranged GET, not only getObject'() {
