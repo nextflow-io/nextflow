@@ -24,6 +24,8 @@ import java.util.concurrent.ExecutorService
 import com.google.common.hash.HashCode
 import groovyx.gpars.agent.Agent
 import nextflow.Session
+import nextflow.cache.CacheDB
+import nextflow.trace.TraceRecord
 import nextflow.exception.IllegalArityException
 import nextflow.exception.ProcessException
 import nextflow.exception.ProcessUnrecoverableException
@@ -35,6 +37,7 @@ import nextflow.script.BaseScript
 import nextflow.script.BodyDef
 import nextflow.script.ProcessConfig
 import nextflow.script.ProcessConfigV1
+import nextflow.script.ScriptBinding
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.bundle.ResourcesBundle
@@ -62,6 +65,68 @@ class TaskProcessorTest extends Specification {
 
         @Override
         protected void createOperator() { }
+    }
+
+    /** A task hashable by the default {@link TaskHasher} without touching the file system. */
+    private TaskRun hashableTask() {
+        def session = Mock(Session) {
+            getUniqueId() >> UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c')
+            getBinEntries() >> [:]
+        }
+        def processor = Mock(TaskProcessor) {
+            getName() >> 'hello'
+            getSession() >> session
+            getConfig() >> Mock(ProcessConfig)
+            getOwnerScript() >> Mock(BaseScript) { getBinding() >> new ScriptBinding() }
+        }
+        return Mock(TaskRun) {
+            getSource() >> 'hello world'
+            isContainerEnabled() >> false
+            getConfig() >> Mock(TaskConfig)
+            getProcessor() >> processor
+            getGlobalVars(_) >> [:]
+            getVariableNames() >> ([] as Set)
+        }
+    }
+
+    def 'uses the hasher of the first TaskHasherFactory that answers, and TaskHasher when all abstain'() {
+        given:
+        def processor = new TaskProcessor(session: Mock(Session), executor: Mock(Executor))
+        def task = hashableTask()
+        def custom = Mock(TaskHasher)
+        def abstaining = Mock(TaskHasherFactory) { create(_) >> null }
+        def answering = Mock(TaskHasherFactory) { create(task) >> custom }
+
+        when: 'factories are asked in order; the first non-null answer wins'
+        processor.hasherFactories = [abstaining, answering]
+        then:
+        processor.createTaskHasher(task).is(custom)
+
+        when: 'every factory abstains'
+        processor.hasherFactories = [abstaining]
+        def hasher = processor.createTaskHasher(task)
+        then: 'the default hasher is used'
+        hasher.getClass() == TaskHasher
+
+        when: 'no factory is registered at all'
+        processor.hasherFactories = []
+        then:
+        processor.createTaskHasher(task).getClass() == TaskHasher
+    }
+
+    def 'resolves the hasher factories lazily and defaults to TaskHasher when none is registered'() {
+        given: 'a processor that has not hashed anything yet, in a JVM with no plugin system initialised'
+        def processor = new TaskProcessor(session: Mock(Session), executor: Mock(Executor))
+        def task = hashableTask()
+
+        expect:
+        processor.hasherFactories == null
+
+        when:
+        def hasher = processor.createTaskHasher(task)
+        then: 'the registry was consulted once and yielded the default'
+        processor.hasherFactories != null
+        hasher.getClass() == TaskHasher
     }
 
 
@@ -700,5 +765,90 @@ class TaskProcessorTest extends Specification {
         and:
         0 * collector.collect(task)
         1 * exec.submit(task)
+    }
+
+    def 'dispatches the task resolution to the first enabled TaskCacheStrategy'() {
+        given:
+        def session = Mock(Session)
+        def processor = new TaskProcessor(session: session, executor: Mock(Executor))
+        def task = Mock(TaskRun)
+        def hash = HashCode.fromInt(1)
+        def disabled = Mock(TaskCacheStrategy)
+        def enabled = Mock(TaskCacheStrategy)
+
+        when: 'strategies are asked in priority order; the first one enabled for the session wins'
+        processor.cacheStrategies = [disabled, enabled]
+        processor.checkCachedOrLaunchTask(task, hash, true)
+        then:
+        1 * disabled.isEnabled(session) >> false
+        1 * enabled.isEnabled(session) >> true
+        1 * enabled.resolve(task, hash, true, { it instanceof TaskResolver })
+        0 * disabled.resolve(*_)
+
+        when: 'the choice is made once per processor'
+        processor.checkCachedOrLaunchTask(task, hash, false)
+        then:
+        0 * _.isEnabled(_)
+        1 * enabled.resolve(task, hash, false, processor.getTaskResolver())
+    }
+
+    def 'uses the default strategy when no registered strategy is enabled, and resolves them lazily'() {
+        given: 'a processor that has not resolved anything yet, in a JVM with no plugin system initialised'
+        def processor = new TaskProcessor(session: Mock(Session), executor: Mock(Executor))
+
+        expect:
+        processor.cacheStrategies == null
+
+        when:
+        def strategy = processor.getCacheStrategy()
+        then: 'the registry was consulted once and yielded the default'
+        processor.cacheStrategies != null
+        strategy instanceof DefaultTaskCacheStrategy
+        processor.getCacheStrategy().is(strategy)
+
+        when: 'every registered strategy abstains'
+        def other = new TaskProcessor(session: Mock(Session), executor: Mock(Executor))
+        other.cacheStrategies = [ Mock(TaskCacheStrategy) { isEnabled(_) >> false } ]
+        then:
+        other.getCacheStrategy() instanceof DefaultTaskCacheStrategy
+    }
+
+    def 'the task resolver adapts the primitives of the processor'() {
+        given:
+        def cache = Mock(CacheDB)
+        def session = Mock(Session) { getCache() >> cache }
+        def exec = Mock(Executor) { getWorkDir() >> Paths.get('/work') }
+        def processor = new TaskProcessor(session: session, executor: exec)
+        def resolver = processor.getTaskResolver()
+        def hash = HashCode.fromString('0123456789abcdef')
+        def entry = new TaskEntry(Mock(TraceRecord), null)
+        def task = Mock(TaskRun) { getConfig() >> new TaskConfig() }
+
+        when: 'an entry lookup'
+        def found = resolver.entry(hash)
+        then: 'goes to the session cache, on behalf of this processor'
+        1 * cache.getTaskEntry(hash, processor) >> entry
+        found.is(entry)
+
+        expect: 'the work dir of a hash is the one the executor work root maps it to'
+        resolver.workDirFor(hash) == Paths.get('/work/01/23456789abcdef')
+
+        when: 'a launch'
+        resolver.launch(task, hash, Paths.get('/work/01/23456789abcdef'))
+        then: 'submits the task'
+        1 * exec.submit(task)
+
+        when: 'a resume of a work dir with no exit file'
+        def folder = Files.createTempDirectory('wd')
+        def copy = new TaskRun(type: ScriptType.SCRIPTLET, config: new TaskConfig(), name: 'foo')
+        def cloned = 0
+        def original = Mock(TaskRun) { clone() >> { cloned++; copy } }
+        def resumed = resolver.resume(original, hash, folder, entry)
+        then: 'is the cached-output check on a COPY of the task (the original stays launchable), which reports it as not resumable'
+        cloned == 1
+        !resumed
+
+        cleanup:
+        folder?.deleteDir()
     }
 }

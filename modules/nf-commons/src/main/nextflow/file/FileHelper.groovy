@@ -18,6 +18,7 @@ package nextflow.file
 
 import java.lang.reflect.Field
 import java.nio.file.CopyOption
+import java.nio.file.DirectoryStream
 import java.nio.file.FileSystem
 import java.nio.file.FileSystemLoopException
 import java.nio.file.FileSystemNotFoundException
@@ -25,6 +26,7 @@ import java.nio.file.FileSystems
 import java.nio.file.FileVisitOption
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
+import java.nio.file.InvalidPathException
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -64,6 +66,13 @@ class FileHelper {
     static final public Pattern INVALID_URL_PREFIX = ~/^(?!file)([a-zA-Z][a-zA-Z0-9]*):\\/[^\\/].+/
 
     static final private Pattern BASE_URL = ~/(?i)((?:[a-z][a-zA-Z0-9]*)?:\/\/[^:|\/]+(?::\d*)?)(?:$|\/.*)/
+
+    /**
+     * The optional attempt suffix of a task work directory leaf, {@code <30hex>-N}: a cache that
+     * lays the attempts of one task out side by side keeps the two-level {@code <2hex>/<30hex>}
+     * hierarchy and appends the attempt number to the leaf (hex never contains a dash).
+     */
+    static final private Pattern ATTEMPT_SUFFIX = ~/-\d+$/
 
     static final private Path localTempBasePath
 
@@ -1066,12 +1075,66 @@ class FileHelper {
             }
 
             FileVisitResult postVisitDirectory(Path dir, IOException exc) {
-                Files.delete(dir)
+                deleteDirEntry(dir)
                 FileVisitResult.CONTINUE
             }
 
         })
     }
+
+    /**
+     * Delete a directory while walking a file tree, tolerating object stores where a
+     * directory is only a key prefix and cannot be deleted on its own.
+     *
+     * Google Cloud Storage keeps a zero-byte placeholder object for every directory created
+     * through gcsfuse, and the NIO provider refuses to delete it. It reports this either as a
+     * {@link NoSuchFileException}, or, when the prefix is not empty, as a
+     * {@code CloudStoragePseudoDirectoryException}, an unchecked {@link InvalidPathException}
+     * that would otherwise escape the walk and abort the caller.
+     *
+     * The provider raises the latter for any non-empty listing, so it is ignored only when
+     * every remaining entry is itself a placeholder. A directory still holding a real object
+     * has not been cleaned and must not be reported as deleted.
+     *
+     * @param dir The directory to delete
+     */
+    static void deleteDirEntry(Path dir) {
+        try {
+            Files.delete(dir)
+        }
+        catch( NoSuchFileException e ) {
+            if( FilesEx.getScheme(dir) != 'gs' )
+                throw e
+            log.debug "Ignoring missing GCS directory: ${FilesEx.toUriString(dir)}"
+        }
+        catch( InvalidPathException e ) {
+            if( FilesEx.getScheme(dir) != 'gs' || !holdsOnlyPlaceholders(dir) )
+                throw e
+            log.debug "Ignoring GCS pseudo-directory that cannot be deleted: ${FilesEx.toUriString(dir)}"
+        }
+    }
+
+    /**
+     * Check that a cloud directory only holds placeholder objects, that is keys ending with a
+     * slash, which the storage provider is unable to delete.
+     */
+    static private boolean holdsOnlyPlaceholders(Path dir) {
+        try( DirectoryStream<Path> stream = Files.newDirectoryStream(dir) ) {
+            for( Path it : stream ) {
+                if( !it.toString().endsWith('/') )
+                    return false
+            }
+            return true
+        }
+        catch( Exception e ) {
+            // a directory that cannot be listed is one that cannot be proven to hold only
+            // placeholders, and the listing may fail with an unchecked provider exception
+            // which would otherwise escape and abort the caller
+            log.debug("Unable to list directory: ${FilesEx.toUriString(dir)}", e)
+            return false
+        }
+    }
+
     /**
      * List the content of a file system path
      *
@@ -1194,7 +1257,11 @@ class FileHelper {
         return null
     }
 
-    public static HashCode getTaskHashFromPath(Path sourcePath, Path workPath) {
+    /**
+     * The {@code <2hex>/<30hex>[-N]} leading segments of {@code sourcePath} relative to
+     * {@code workPath}, or {@code null} when it is not shaped like a task work directory.
+     */
+    private static Path taskDirRelative(Path sourcePath, Path workPath) {
         assert sourcePath
         assert workPath
         if( !sourcePath.startsWith(workPath) )
@@ -1202,15 +1269,54 @@ class FileHelper {
         final relativePath = workPath.relativize(sourcePath)
         if( relativePath.getNameCount() < 2 )
             return null
-        final bucket = relativePath.getName(0).toString()
-        if( bucket.size() != 2 )
+        if( relativePath.getName(0).toString().size() != 2 )
             return null
-        final strHash = bucket + relativePath.getName(1).toString()
+        return relativePath.subpath(0, 2)
+    }
+
+    /**
+     * The hash of the task whose work directory {@code sourcePath} lives in, parsed from the path:
+     * {@code <workPath>/<2hex>/<30hex>[-N]/...}. The optional {@code -N} attempt suffix is ignored.
+     *
+     * @return The task hash, or {@code null} when {@code sourcePath} is not below a task work
+     *      directory of {@code workPath}.
+     */
+    static HashCode getTaskHashFromPath(Path sourcePath, Path workPath) {
+        final relativePath = taskDirRelative(sourcePath, workPath)
+        if( relativePath == null )
+            return null
+        final bucket = relativePath.getName(0).toString()
+        // tolerate an attempt suffix on the leaf (`<30hex>-N`): the hash is the part before it
+        final leaf = relativePath.getName(1).toString()
+        final suffix = ATTEMPT_SUFFIX.matcher(leaf)
+        final strHash = bucket + (suffix.find() ? leaf.substring(0, suffix.start()) : leaf)
         try {
             return HashCode.fromString(strHash)
         } catch (Throwable e) {
             log.debug("String '${strHash}' is not a valid hash", e)
             return null
         }
+    }
+
+    /**
+     * The work directory of the task {@code sourcePath} lives in, i.e. the
+     * {@code <workPath>/<2hex>/<30hex>[-N]} prefix of it, <b>attempt suffix included</b>.
+     *
+     * <p>Exists because the directory cannot be rebuilt from the hash: {@link #getWorkFolder} always
+     * produces the unsuffixed {@code <2hex>/<30hex>}, so relativizing an output of attempt {@code N}
+     * against it yields a path starting with {@code ..}. A caller that has only the {@code Path} --
+     * lineage resolving a task input back to its producer -- needs the directory the file is really
+     * in.
+     *
+     * @return The task work directory, or {@code null} when {@code sourcePath} is not below one.
+     */
+    static Path getTaskDirFromPath(Path sourcePath, Path workPath) {
+        final relativePath = taskDirRelative(sourcePath, workPath)
+        if( relativePath == null )
+            return null
+        // only a leaf that parses as a task hash names a work directory
+        if( getTaskHashFromPath(sourcePath, workPath) == null )
+            return null
+        return workPath.resolve(relativePath)
     }
 }
