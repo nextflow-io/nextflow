@@ -16,6 +16,8 @@
 
 package nextflow.processor
 import java.lang.management.ManagementFactory
+import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.AtomicLong
 
 import com.sun.management.OperatingSystemMXBean
 import groovy.transform.CompileStatic
@@ -43,7 +45,7 @@ class LocalPollingMonitor extends TaskPollingMonitor {
     /**
      * Number of `free` CPUs available to execute pending tasks
      */
-    private int availCpus
+    private final AtomicInteger availCpus
 
     /**
      * Total number of CPUs available in the system
@@ -53,7 +55,7 @@ class LocalPollingMonitor extends TaskPollingMonitor {
     /**
      * Amount of `free` memory available to execute pending tasks
      */
-    private long availMemory
+    private final AtomicLong availMemory
 
     /**
      * Total amount of memory available in the system
@@ -80,11 +82,13 @@ class LocalPollingMonitor extends TaskPollingMonitor {
      */
     protected LocalPollingMonitor(Map params) {
         super(params)
-        this.availCpus = maxCpus = params.cpus as int
-        this.availMemory = maxMemory = params.memory as long
+        this.maxCpus = params.cpus as int
+        this.maxMemory = params.memory as long
+        this.availCpus = new AtomicInteger(maxCpus)
+        this.availMemory = new AtomicLong(maxMemory)
         this.acceleratorTracker = AcceleratorTracker.create()
-        assert availCpus>0, "Local avail `cpus` attribute cannot be zero"
-        assert availMemory>0, "Local avail `memory` attribute cannot zero"
+        assert maxCpus>0, "Local avail `cpus` attribute cannot be zero"
+        assert maxMemory>0, "Local avail `memory` attribute cannot zero"
     }
 
     /**
@@ -201,9 +205,11 @@ class LocalPollingMonitor extends TaskPollingMonitor {
             throw new ProcessUnrecoverableException("Process requirement exceeds available accelerators -- req: $taskAccelerators; avail: ${acceleratorTracker.total()}")
 
         final accelOk = acceleratorTracker.name() == null || taskAccelerators <= acceleratorTracker.available()
-        final result = super.canSubmit(handler) && taskCpus <= availCpus && taskMemory <= availMemory && accelOk
+        final freeCpus = availCpus.get()
+        final freeMemory = availMemory.get()
+        final result = super.canSubmit(handler) && taskCpus <= freeCpus && taskMemory <= freeMemory && accelOk
         if( !result && log.isTraceEnabled( ) ) {
-            log.trace "Task `${handler.task.name}` cannot be scheduled -- taskCpus: $taskCpus <= availCpus: $availCpus && taskMemory: ${new MemoryUnit(taskMemory)} <= availMemory: ${new MemoryUnit(availMemory)} && taskAccelerators: $taskAccelerators <= availAccelerators: ${acceleratorTracker.name() != null ? acceleratorTracker.available() : 'n/a'}"
+            log.trace "Task `${handler.task.name}` cannot be scheduled -- taskCpus: $taskCpus <= availCpus: $freeCpus && taskMemory: ${new MemoryUnit(taskMemory)} <= availMemory: ${new MemoryUnit(freeMemory)} && taskAccelerators: $taskAccelerators <= availAccelerators: ${acceleratorTracker.name() != null ? acceleratorTracker.available() : 'n/a'}"
         }
         return result
     }
@@ -231,8 +237,9 @@ class LocalPollingMonitor extends TaskPollingMonitor {
             throw e
         }
 
-        availCpus -= cpus(handler)
-        availMemory -= mem(handler)
+        // note: submit and remove run on different threads, hence atomic updates are required
+        availCpus.addAndGet(-cpus(handler))
+        availMemory.addAndGet(-mem(handler))
     }
 
     /**
@@ -249,8 +256,8 @@ class LocalPollingMonitor extends TaskPollingMonitor {
     protected boolean remove(TaskHandler handler) {
         final result = super.remove(handler)
         if( result ) {
-            availCpus += cpus(handler)
-            availMemory += mem(handler)
+            availCpus.addAndGet(cpus(handler))
+            availMemory.addAndGet(mem(handler))
             if( handler instanceof LocalTaskHandler )
                 acceleratorTracker.release(handler.acceleratorIds ?: Collections.<String>emptyList())
         }

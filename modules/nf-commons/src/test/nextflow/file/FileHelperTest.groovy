@@ -1219,4 +1219,24 @@ class FileHelperTest extends Specification {
         FileHelper.getTaskDirFromPath(Paths.get("/work/ab/not-a-hash/out.bam"), work) == null
         FileHelper.getTaskDirFromPath(Paths.get("/elsewhere/ab/cdef0123456789abcdef0123456789/out.bam"), work) == null
     }
+    def 'should delete a local directory and rethrow when it cannot be deleted' () {
+        given:
+        def folder = Files.createTempDirectory('test')
+        def missing = folder.resolve('missing')
+
+        when:
+        FileHelper.deleteDirEntry(folder)
+        then:
+        !Files.exists(folder)
+
+        when:
+        // the pseudo-directory exemption applies to gs paths only, a local path must still fail
+        FileHelper.deleteDirEntry(missing)
+        then:
+        thrown(NoSuchFileException)
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
 }

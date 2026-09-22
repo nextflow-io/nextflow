@@ -18,7 +18,7 @@ package nextflow.cli
 import java.nio.file.FileVisitResult
 import java.nio.file.FileVisitor
 import java.nio.file.Files
-import java.nio.file.NoSuchFileException
+import java.nio.file.InvalidPathException
 import java.nio.file.Path
 import java.nio.file.attribute.BasicFileAttributes
 
@@ -246,7 +246,11 @@ class CmdClean extends CmdBase implements CacheBase {
 
             @Override
             FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-                FileVisitResult.CONTINUE
+                // a file that cannot be visited cannot be deleted either, so the work dir
+                // is not empty and must not be reported as removed
+                result = false
+                if(!quiet) System.err.println "Failed to visit ${file.toUriString()}"
+                FileVisitResult.TERMINATE
             }
 
             @Override
@@ -266,13 +270,13 @@ class CmdClean extends CmdBase implements CacheBase {
     private static delete0(Path path, boolean dir) {
         try {
             log.trace "Deleting path [dir=$dir]: ${path.toUriString()}"
-            Files.delete(path)
+            if( dir )
+                FileHelper.deleteDirEntry(path)
+            else
+                Files.delete(path)
             return true
         }
-        catch( IOException e ) {
-            // kind of hack: directory deletion
-            if( dir && path.scheme=='gs' && e instanceof NoSuchFileException )
-                return true
+        catch( IOException | InvalidPathException e ) {
             log.debug("Failed to remove path: ${path.toUriString()}", e)
             return false
         }

@@ -18,6 +18,7 @@ package nextflow.file
 
 import java.lang.reflect.Field
 import java.nio.file.CopyOption
+import java.nio.file.DirectoryStream
 import java.nio.file.FileSystem
 import java.nio.file.FileSystemLoopException
 import java.nio.file.FileSystemNotFoundException
@@ -25,6 +26,7 @@ import java.nio.file.FileSystems
 import java.nio.file.FileVisitOption
 import java.nio.file.FileVisitResult
 import java.nio.file.Files
+import java.nio.file.InvalidPathException
 import java.nio.file.LinkOption
 import java.nio.file.NoSuchFileException
 import java.nio.file.Path
@@ -1073,12 +1075,66 @@ class FileHelper {
             }
 
             FileVisitResult postVisitDirectory(Path dir, IOException exc) {
-                Files.delete(dir)
+                deleteDirEntry(dir)
                 FileVisitResult.CONTINUE
             }
 
         })
     }
+
+    /**
+     * Delete a directory while walking a file tree, tolerating object stores where a
+     * directory is only a key prefix and cannot be deleted on its own.
+     *
+     * Google Cloud Storage keeps a zero-byte placeholder object for every directory created
+     * through gcsfuse, and the NIO provider refuses to delete it. It reports this either as a
+     * {@link NoSuchFileException}, or, when the prefix is not empty, as a
+     * {@code CloudStoragePseudoDirectoryException}, an unchecked {@link InvalidPathException}
+     * that would otherwise escape the walk and abort the caller.
+     *
+     * The provider raises the latter for any non-empty listing, so it is ignored only when
+     * every remaining entry is itself a placeholder. A directory still holding a real object
+     * has not been cleaned and must not be reported as deleted.
+     *
+     * @param dir The directory to delete
+     */
+    static void deleteDirEntry(Path dir) {
+        try {
+            Files.delete(dir)
+        }
+        catch( NoSuchFileException e ) {
+            if( FilesEx.getScheme(dir) != 'gs' )
+                throw e
+            log.debug "Ignoring missing GCS directory: ${FilesEx.toUriString(dir)}"
+        }
+        catch( InvalidPathException e ) {
+            if( FilesEx.getScheme(dir) != 'gs' || !holdsOnlyPlaceholders(dir) )
+                throw e
+            log.debug "Ignoring GCS pseudo-directory that cannot be deleted: ${FilesEx.toUriString(dir)}"
+        }
+    }
+
+    /**
+     * Check that a cloud directory only holds placeholder objects, that is keys ending with a
+     * slash, which the storage provider is unable to delete.
+     */
+    static private boolean holdsOnlyPlaceholders(Path dir) {
+        try( DirectoryStream<Path> stream = Files.newDirectoryStream(dir) ) {
+            for( Path it : stream ) {
+                if( !it.toString().endsWith('/') )
+                    return false
+            }
+            return true
+        }
+        catch( Exception e ) {
+            // a directory that cannot be listed is one that cannot be proven to hold only
+            // placeholders, and the listing may fail with an unchecked provider exception
+            // which would otherwise escape and abort the caller
+            log.debug("Unable to list directory: ${FilesEx.toUriString(dir)}", e)
+            return false
+        }
+    }
+
     /**
      * List the content of a file system path
      *
