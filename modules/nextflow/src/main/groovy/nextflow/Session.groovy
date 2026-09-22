@@ -245,11 +245,10 @@ class Session implements ISession {
     /**
      * Defines the cloud path where store cache meta-data.
      *
-     * Resolved in the constructor, i.e. BEFORE {@link #init}, because {@code CloudCacheFactory}
-     * reads it while building the cache -- so it cannot be deferred past {@code createCache()} the
-     * way the work dir is. It therefore derives from the CONFIGURED work dir: a cache factory that
-     * writes a work dir back into the session (see {@code CacheFactory.newInstance}) does not change
-     * it. That is consistent, since such a factory IS the cloud cache and does not also read this.
+     * Resolved in the constructor rather than in {@link #init}, because {@code CloudCacheFactory}
+     * reads it while the cache is being built. It therefore derives from the CONFIGURED work dir and
+     * does not follow a factory that writes a different one back into the session -- consistent,
+     * since such a factory is itself the cloud cache and does not read this.
      */
     Path cloudCachePath
 
@@ -475,11 +474,13 @@ class Session implements ISession {
      */
     Session init( ScriptFile scriptFile, List<String> args=null, Map<String,?> cliParams=null, Map<String,?> configParams=null ) {
 
-        // -- create the cache FIRST, and do not read `workDir` above this line: a factory may
-        //    resolve a work dir of its own and write it back here (see CacheFactory.newInstance),
-        //    and everything below -- the work dir creation, the observers, the WorkflowMetadata
-        //    snapshot -- must see the effective value, otherwise `workflow.workDir` reports a
-        //    directory the tasks never use. SessionTest locks this ordering.
+        // -- create the cache FIRST: a factory may resolve a work dir of its own and write it back
+        //    here (see CacheFactory.newInstance), so whatever is derived from `workDir` has to be
+        //    derived BELOW this line -- the work dir creation, the observers, the WorkflowMetadata
+        //    snapshot -- or `workflow.workDir` reports a directory the tasks never use. The one
+        //    deliberate exception is `cloudCachePath`, which the constructor resolves from the
+        //    CONFIGURED work dir because CloudCacheFactory reads it while the cache is being built;
+        //    see its field. SessionTest locks this ordering.
         cache = createCache()
         try {
             return init0(scriptFile, args, cliParams, configParams)
