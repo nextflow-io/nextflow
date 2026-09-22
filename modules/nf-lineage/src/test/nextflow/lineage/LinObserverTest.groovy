@@ -772,6 +772,84 @@ class LinObserverTest extends Specification {
         folder?.deleteDir()
     }
 
+    def 'onTaskComplete records a completed task but not a failed or aborted one'() {
+        given:
+        def folder = Files.createTempDirectory('test').toRealPath()
+        // `LineageConfig.create` reads `config.lineage`; a `workflow.lineage` key silently falls back
+        // to the default ./.lineage, which would share state with every other spec in this module
+        def config = [lineage:[enabled: true, store:[location:folder.toString()]]]
+        def workDir = folder.resolve('work')
+        def session = Mock(Session) {
+            getConfig() >> config
+            getUniqueId() >> UUID.randomUUID()
+            getRunName() >> 'test_run'
+            getWorkDir() >> workDir
+        }
+        def metadata = Mock(WorkflowMetadata) {
+            getRepository() >> 'https://nextflow.io/nf-test/'
+            getCommitId() >> '123456'
+            getScriptId() >> '78910'
+            getProjectDir() >> folder.resolve('projectDir')
+            getWorkDir() >> workDir
+        }
+        and:
+        def store = new DefaultLinStore()
+        store.open(LineageConfig.create(session))
+        def observer = Spy(new LinObserver(session, store))
+        observer.executionHash = 'hash'
+        observer.normalizer = new PathNormalizer(metadata)
+        observer.getTaskGlobalVars(_) >> [:]
+        observer.getTaskBinEntries(_) >> []
+
+        when: 'a task that completed'
+        def okHash = HashCode.fromString('aa11bb2201')
+        observer.onTaskComplete(new TaskEvent(handlerFor(okHash, workDir, false, false), null))
+
+        then: 'both its records are written, as before'
+        store.load(okHash.toString()) != null
+        store.load("${okHash}#output") != null
+
+        when: 'a task that failed -- which a retried attempt also is, TaskProcessor marks both'
+        def failHash = HashCode.fromString('aa11bb2202')
+        observer.onTaskComplete(new TaskEvent(handlerFor(failHash, workDir, true, false), null))
+
+        then: 'nothing is written: it never reached collectOutputs, so the TaskOutput would be empty,'
+        and: 'and where attempts share a hash that empty record would overwrite a successful sibling'
+        store.load(failHash.toString()) == null
+        store.load("${failHash}#output") == null
+
+        when: 'a task aborted because the run was terminating'
+        def abortHash = HashCode.fromString('aa11bb2203')
+        observer.onTaskComplete(new TaskEvent(handlerFor(abortHash, workDir, false, true), null))
+
+        then:
+        store.load(abortHash.toString()) == null
+        store.load("${abortHash}#output") == null
+
+        cleanup:
+        folder?.deleteDir()
+    }
+
+    /** A handler over a minimal task in one of the three terminal states of getStatusString(). */
+    private TaskHandler handlerFor(HashCode hash, Path workDir, boolean failed, boolean aborted) {
+        final taskWd = workDir.resolve("${hash.toString().substring(0,2)}/${hash.toString().substring(2)}")
+        Files.createDirectories(taskWd)
+        final task = Mock(TaskRun) {
+            getId() >> TaskId.of(100)
+            getName() >> 'foo'
+            getHash() >> hash
+            getSource() >> 'echo task source'
+            getScript() >> 'this is the script'
+            getInputs() >> [:]
+            getOutputs() >> [:]
+            getWorkDir() >> taskWd
+            // @CompileStatic calls isFailed()/isAborted() for a primitive boolean property
+            isFailed() >> failed
+            isAborted() >> aborted
+        }
+        return Mock(TaskHandler) { getTask() >> task }
+    }
+
     def 'should resolve task module from remote module manifest' () {
         given:
         def folder = Files.createTempDirectory('test').toRealPath()

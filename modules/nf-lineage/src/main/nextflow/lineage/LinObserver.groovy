@@ -198,7 +198,16 @@ class LinObserver implements TraceObserverV2 {
 
     @Override
     void onTaskComplete(TaskEvent event) {
-        storeTaskInfo(event.handler.task)
+        final task = event.handler.task
+        // A task that did not complete has no valid results to describe: it never reached
+        // `collectOutputs`, so its TaskOutput would be recorded empty. That is not merely noise --
+        // wherever the attempts of one task share a hash, as a content-addressed cache makes them,
+        // every attempt writes the SAME lineage keys and the last writer wins, so a failed attempt
+        // silently replaces the record of a successful sibling. Matches the terminal states of
+        // `TaskHandler.getStatusString()`: FAILED, ABORTED, else COMPLETED.
+        if( task.failed || task.aborted )
+            return
+        storeTaskInfo(task)
     }
 
     protected void storeTaskInfo(TaskRun task) {
