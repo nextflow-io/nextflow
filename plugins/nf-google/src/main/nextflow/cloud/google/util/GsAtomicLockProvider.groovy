@@ -25,7 +25,6 @@ import com.google.cloud.storage.Storage
 import com.google.cloud.storage.StorageException
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import groovy.transform.CompileStatic
-import groovy.transform.Memoized
 import nextflow.file.AtomicLockProvider
 import org.pf4j.Extension
 
@@ -48,13 +47,16 @@ class GsAtomicLockProvider extends AtomicLockProvider {
     }
 
     /** Carries the configured credentials, project id, timeouts and retry policy -- see {@link GsStorageOptions}. */
-    @Memoized
     protected Storage storage() {
-        return GsStorageOptions.sharedClientFor(GsStorageOptions.sessionOpts())   // one client per JVM, not one per SPI
+        // NOT @Memoized: this extension is instantiated once per JVM (SingletonExtensionFactory) and
+        // lives in the static providers list, so an instance memo would outlive the session and hand
+        // the NEXT one the first session's credentials, project and requester-pays setting -- the
+        // very thing GsStorageOptions.sessionOpts warns about. `sharedClientFor` is memoized keyed by
+        // the options, so the client is still built once per config; this call is a map lookup.
+        return GsStorageOptions.sharedClientFor(GsStorageOptions.sessionOpts())
     }
 
-    /** The project to bill on a requester-pays bucket, or {@code null}. */
-    @Memoized
+    /** The project to bill on a requester-pays bucket, or {@code null}. Not memoized -- see {@link #storage}. */
     protected String userProject() {
         return GsStorageOptions.userProject(GsStorageOptions.sessionOpts())
     }

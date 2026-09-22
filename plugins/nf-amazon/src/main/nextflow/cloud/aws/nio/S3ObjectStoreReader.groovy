@@ -72,7 +72,7 @@ class S3ObjectStoreReader extends ObjectStoreReader {
     }
 
     @Override
-    byte[] readRange(Path path, long offset, int len) {
+    protected byte[] readRange0(Path path, long offset, int len) {
         final s3 = (S3Path) path
         final client = s3.getFileSystem().getClient()
         final req = GetObjectRequest.builder()

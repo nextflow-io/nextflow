@@ -90,6 +90,23 @@ class AzObjectStoreReaderTest extends Specification {
         result == [ Map.entry('a.bin', new ObjectMeta(10, 1000)), Map.entry('sub/b.bin', new ObjectMeta(20, 2000)) ]
     }
 
+    def 'listWithMeta skips an ADLS Gen2 directory blob, which is a real blob but not a member'() {
+        given: 'a hierarchical-namespace account, where a folder IS a blob: hdi_isfolder=true, size 0'
+        def path = Mock(AzPath) { blobName() >> 'dir' }
+        def provider = new Local(items: [
+                blob('dir/sub', 0L, 1500L).setMetadata([hdi_isfolder: 'true']),
+                blob('dir/out.bin', 10L, 1000L),
+                blob('dir/sub/a.bin', 20L, 2000L),
+        ])
+
+        when:
+        def result = provider.listWithMeta(path)
+
+        then: 'the folder blob is not a member -- it has no content, and its mtime moves whenever a'
+        and: 'child is added, so recording it would invalidate the directory guard on every write'
+        result == [ Map.entry('out.bin', new ObjectMeta(10, 1000)), Map.entry('sub/a.bin', new ObjectMeta(20, 2000)) ]
+    }
+
     def 'a task-dir LIST uses a slash-terminated prefix, so `…/<hash>` never matches `…/<hash>-2`'() {
         given: 'the first attempt dir of a task -- its `-2` sibling shares every byte of the blob name'
         def path = Mock(AzPath) { blobName() >> 'cache/work/ab/cdef0123456789abcdef0123456789' }

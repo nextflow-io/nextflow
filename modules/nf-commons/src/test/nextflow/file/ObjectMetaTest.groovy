@@ -33,8 +33,8 @@ class ObjectMetaTest extends Specification {
         new ObjectMeta(10, 1000).hashCode() == new ObjectMeta(10, 1000).hashCode()
     }
 
-    def 'toString is the canonical "size:mtime" wire form folded into a guard digest'() {
-        expect: 'changing this changes the guard of every stored content record'
+    def 'toString renders a compact "size:mtime" for logs -- a debugging aid, not a persisted form'() {
+        expect: 'nothing stored depends on this shape; the guard compares whole values, see above'
         new ObjectMeta(10, 1000).toString() == '10:1000'
         new ObjectMeta(0, 0).toString() == '0:0'
     }

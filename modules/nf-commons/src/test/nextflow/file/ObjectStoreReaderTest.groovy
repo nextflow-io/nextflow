@@ -26,7 +26,7 @@ class ObjectStoreReaderTest extends Specification {
     static class FakeReader extends ObjectStoreReader {
         boolean canHandle(String scheme) { scheme == 'file' }
         List<Map.Entry<String,ObjectMeta>> listWithMeta(Path prefix) { return [Map.entry('a.bin', new ObjectMeta(10, 1))] }
-        byte[] readRange(Path path, long offset, int len) { return [1,2,3] as byte[] }
+        protected byte[] readRange0(Path path, long offset, int len) { return [1,2,3] as byte[] }
     }
 
     def 'lookup resolves a provider by scheme'() {
@@ -58,29 +58,51 @@ class ObjectStoreReaderTest extends Specification {
         provider.readRange(Paths.get('/tmp/x'), 0, 16384) == null
     }
 
-    def 'an empty discovery is never memoized'() {
+    def 'discovery is not memoized, so a provider registered later is seen'() {
         given: 'no provider injected'
         ObjectStoreReader.setProviders(null)
 
-        when: 'a look-up finds nothing -- which it does when the plugins are not up yet'
+        when: 'a look-up happens before the plugins are up and finds nothing'
         def first = ObjectStoreReader.getProviders()
 
-        then: 'the empty result is NOT cached: "nothing implements this" and "not up yet" are'
-        and: 'indistinguishable here, and caching the second would silently disable this identity'
-        and: 'for the rest of the JVM'
+        then: 'nothing is cached -- plugins start lazily per scheme, so the set still grows'
         first.isEmpty()
         cachedProviders() == null
 
-        when: 'the providers become available'
+        when: 'the provider becomes available'
         def provider = Stub(ObjectStoreReader) { canHandle('s3') >> true }
         ObjectStoreReader.setProviders([provider])
 
-        then: 'they resolve, and a non-empty result is memoized'
+        then: 'it resolves; the earlier empty answer did not latch'
         ObjectStoreReader.getProviders() == [provider]
-        cachedProviders() == [provider]
 
         cleanup:
         ObjectStoreReader.setProviders(null)
+    }
+
+    def 'readRange rejects a non-positive length, so no provider can issue an inverted range'() {
+        given: 'a provider whose ranged read would be reached only if the check passed'
+        def provider = new FakeReader()
+
+        when: 'a valid window'
+        def bytes = provider.readRange(Paths.get('/tmp/x'), 100, 3)
+        then:
+        bytes == [1,2,3] as byte[]
+
+        when: 'len is zero -- `bytes=100-99` is inverted, and S3/Azure answer with the WHOLE object'
+        provider.readRange(Paths.get('/tmp/x'), 100, 0)
+        then:
+        thrown(IllegalArgumentException)
+
+        when: 'len is negative'
+        provider.readRange(Paths.get('/tmp/x'), 100, -1)
+        then:
+        thrown(IllegalArgumentException)
+
+        when: 'the offset is negative'
+        provider.readRange(Paths.get('/tmp/x'), -1, 16384)
+        then:
+        thrown(IllegalArgumentException)
     }
 
     def 'normalizePrefix and relativize are shared so every cloud derives the same members'() {
@@ -100,7 +122,7 @@ class ObjectStoreReaderTest extends Specification {
         ObjectStoreReader.relativize('dir/', 'dir/sub/') == null
     }
 
-    /** Read the memoization field directly: what must not be cached is not observable otherwise. */
+    /** Read the injection field directly: that discovery is not cached is not observable otherwise. */
     private static List<ObjectStoreReader> cachedProviders() {
         final field = ObjectStoreReader.getDeclaredField('providers')
         field.setAccessible(true)

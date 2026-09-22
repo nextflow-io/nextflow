@@ -45,27 +45,26 @@ class AtomicLockProviderTest extends Specification {
         AtomicLockProvider.lookup(schemePath('s3')).is(provider)
     }
 
-    def 'an empty discovery is not memoized, so a later look-up retries'() {
+    def 'discovery is not memoized, so a provider registered later is seen'() {
         given: 'no provider has been injected and the plugin system is not started'
         AtomicLockProvider.setProviders(null)
 
         when: 'the very first look-up happens too early and finds nothing'
         def first = AtomicLockProvider.getProviders()
 
-        then: 'the empty result is NOT cached -- caching it would break every later look-up in this JVM'
+        then: 'nothing is cached -- latching it would make lookup throw for a plugin that IS loaded'
         first.isEmpty()
         cachedProviders() == null
 
-        when: 'the providers become available'
+        when: 'the provider becomes available'
         def provider = Stub(AtomicLockProvider) { canHandle('s3') >> true }
         AtomicLockProvider.setProviders([provider])
 
-        then: 'they resolve, and a non-empty result is memoized'
+        then: 'it resolves; the earlier empty answer did not latch'
         AtomicLockProvider.getProviders() == [provider]
-        cachedProviders() == [provider]
     }
 
-    /** Read the memoization field directly: what must not be cached is not observable otherwise. */
+    /** Read the injection field directly: that discovery is not cached is not observable otherwise. */
     private static List<AtomicLockProvider> cachedProviders() {
         final field = AtomicLockProvider.getDeclaredField('providers')
         field.setAccessible(true)

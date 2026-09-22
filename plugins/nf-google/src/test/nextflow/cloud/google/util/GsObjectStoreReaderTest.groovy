@@ -26,6 +26,8 @@ import com.google.cloud.storage.Blob
 import com.google.cloud.storage.BlobId
 import com.google.cloud.storage.Storage
 import com.google.cloud.storage.contrib.nio.CloudStorageFileSystem
+import nextflow.Global
+import nextflow.Session
 import spock.lang.Specification
 import nextflow.file.ObjectMeta
 
@@ -114,11 +116,30 @@ class GsObjectStoreReaderTest extends Specification {
         result == data
     }
 
-    def 'one client serves both halves -- the merge collapsed two memoized caches into one'() {
-        given:
-        def storage = Mock(Storage)
-        def provider = new Local(storage)
-        expect: 'the same instance answers listing and range, so a JVM holds one GCS client, not two'
-        provider.storage().is(provider.storage())
+    def 'the session config is re-read per call, so a second Session does not get the first one\'s'() {
+        given: 'one extension instance, as SingletonExtensionFactory creates it: it lives for the JVM'
+        def provider = new GsObjectStoreReader()
+
+        when: 'the first session bills a requester-pays bucket to project-a'
+        Global.session = Stub(Session) {
+            getConfig() >> [google: [project: 'project-a', enableRequesterPaysBuckets: true]]
+        }
+        then:
+        provider.userProject() == 'project-a'
+
+        when: 'a second session replaces it -- tests, or embedded use'
+        Global.session = Stub(Session) {
+            getConfig() >> [google: [project: 'project-b', enableRequesterPaysBuckets: true]]
+        }
+        then: 'the new config wins; an instance memo here would have pinned project-a for the JVM'
+        provider.userProject() == 'project-b'
+
+        when: 'requester-pays is off, nothing is billed'
+        Global.session = Stub(Session) { getConfig() >> [google: [project: 'project-c']] }
+        then:
+        provider.userProject() == null
+
+        cleanup:
+        Global.session = null
     }
 }

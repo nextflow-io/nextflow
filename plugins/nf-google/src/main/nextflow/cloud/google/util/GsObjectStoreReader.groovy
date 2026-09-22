@@ -25,7 +25,6 @@ import com.google.cloud.storage.BlobId
 import com.google.cloud.storage.Storage
 import com.google.cloud.storage.contrib.nio.CloudStoragePath
 import groovy.transform.CompileStatic
-import groovy.transform.Memoized
 import nextflow.file.ObjectMeta
 import nextflow.file.ObjectStoreReader
 import org.pf4j.Extension
@@ -63,13 +62,16 @@ class GsObjectStoreReader extends ObjectStoreReader {
      * policy — see {@link GsStorageOptions}. One per instance, and this class is one extension, so
      * merging the listing and range halves also merged their two independent caches into one client.
      */
-    @Memoized
     protected Storage storage() {
-        return GsStorageOptions.sharedClientFor(GsStorageOptions.sessionOpts())   // one client per JVM, not one per SPI
+        // NOT @Memoized: this extension is instantiated once per JVM (SingletonExtensionFactory) and
+        // lives in the static providers list, so an instance memo would outlive the session and hand
+        // the NEXT one the first session's credentials, project and requester-pays setting -- the
+        // very thing GsStorageOptions.sessionOpts warns about. `sharedClientFor` is memoized keyed by
+        // the options, so the client is still built once per config; this call is a map lookup.
+        return GsStorageOptions.sharedClientFor(GsStorageOptions.sessionOpts())
     }
 
-    /** The project to bill on a requester-pays bucket, or {@code null}. */
-    @Memoized
+    /** The project to bill on a requester-pays bucket, or {@code null}. Not memoized -- see {@link #storage}. */
     protected String userProject() {
         return GsStorageOptions.userProject(GsStorageOptions.sessionOpts())
     }
@@ -107,7 +109,7 @@ class GsObjectStoreReader extends ObjectStoreReader {
     }
 
     @Override
-    byte[] readRange(Path path, long offset, int len) {
+    protected byte[] readRange0(Path path, long offset, int len) {
         final gs = (CloudStoragePath) path
         final bucket = gs.getFileSystem().bucket()
         // not try-with-resources: `limit` may return a DIFFERENT channel per its contract, and the
@@ -130,10 +132,8 @@ class GsObjectStoreReader extends ObjectStoreReader {
             //  - `setChunkSize` bounds the buffer the channel allocates.
             // Either one alone leaves half the waste: limit still allocates 2 MiB locally,
             // setChunkSize still leaves the request open to the end of the object.
-            if( len >= 1 ) {
-                reader = reader.limit(offset + (long) len)
-                reader.setChunkSize(len)
-            }
+            reader = reader.limit(offset + (long) len)
+            reader.setChunkSize(len)
             final buf = ByteBuffer.allocate(len)
             while( buf.hasRemaining() && reader.read(buf) > 0 ) { }
             return Arrays.copyOf(buf.array(), buf.position())

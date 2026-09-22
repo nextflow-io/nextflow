@@ -22,7 +22,6 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.plugin.Plugins
 import org.pf4j.ExtensionPoint
-import org.pf4j.PluginManager
 
 /**
  * Scheme-keyed SPI for the two <b>read</b> operations an object store supports natively but the NIO
@@ -57,14 +56,17 @@ import org.pf4j.PluginManager
 @CompileStatic
 abstract class ObjectStoreReader implements ExtensionPoint {
 
-    private static volatile List<ObjectStoreReader> providers
-
     /**
-     * The manager the memo above was resolved against. Comparing it makes a stop/init cycle
-     * invalidate the memo by itself: without it, an empty list cached while the system was up would
-     * survive a restart and hide extensions the new manager does have.
+     * Providers injected by a test, bypassing plugin discovery; {@code null} leaves discovery in
+     * charge. Deliberately NOT a memo of the discovery: plugins start lazily per scheme
+     * ({@code FileHelper} -> {@code Plugins.startIfMissing}), so the registered set GROWS during a
+     * run. A multi-cloud run whose first look-up happens with only the work dir's plugin up would
+     * latch that answer and never see the others -- with a {@code gs://} work dir and {@code s3://}
+     * inputs, {@code lookup(s3Path)} would return {@code null} for the rest of the run although
+     * nf-amazon is loaded by then. {@link FileSystemPathFactory#factories0} re-queries on every call
+     * for exactly this reason.
      */
-    private static volatile PluginManager resolvedWith
+    private static volatile List<ObjectStoreReader> providers
 
     /** @return {@code true} if this provider handles the given URI scheme (e.g. {@code s3}). */
     abstract boolean canHandle(String scheme)
@@ -80,10 +82,30 @@ abstract class ObjectStoreReader implements ExtensionPoint {
 
     /**
      * Read exactly {@code len} bytes starting at {@code offset} from the object at {@code path} as a
-     * single ranged GET. Returns {@code null} by default (not implemented); callers then fall back to
-     * a full (non-ranged) read.
+     * single ranged GET. Returns {@code null} when the provider does not implement it; callers then
+     * fall back to a full (non-ranged) read.
+     *
+     * <p>Deliberately {@code final}, so the check below holds for every provider rather than being
+     * repeated in each: a non-positive {@code len} builds an INVERTED range header
+     * ({@code bytes=100-99}), which RFC 7233 says to ignore -- and S3 and Azure then answer with the
+     * WHOLE object, turning the one guarantee this method makes into its opposite on a large file.
+     * Providers implement {@link #readRange0}.
+     *
+     * @throws IllegalArgumentException if {@code offset} is negative or {@code len} is not positive.
      */
-    byte[] readRange(Path path, long offset, int len) { return null }
+    final byte[] readRange(Path path, long offset, int len) {
+        if( offset < 0 )
+            throw new IllegalArgumentException("Range offset cannot be negative -- offset=${offset}; path=${path}")
+        if( len <= 0 )
+            throw new IllegalArgumentException("Range length must be positive -- len=${len}; path=${path}")
+        return readRange0(path, offset, len)
+    }
+
+    /**
+     * The provider's ranged read, called by {@link #readRange} with {@code offset} and {@code len}
+     * already validated. Returns {@code null} by default (not implemented).
+     */
+    protected byte[] readRange0(Path path, long offset, int len) { return null }
 
     /**
      * Normalize a directory prefix so it ends with a single {@code '/'} (empty stays empty, i.e. the
@@ -110,26 +132,14 @@ abstract class ObjectStoreReader implements ExtensionPoint {
      * Test/registration seam: inject the set of providers (bypasses plugin discovery). Public, not
      * package-scoped: the consumers that need to inject a fake live in other modules.
      */
-    static void setProviders(List<ObjectStoreReader> it) { providers = it; resolvedWith = Plugins.getManager() }
+    static void setProviders(List<ObjectStoreReader> it) { providers = it }
 
     static List<ObjectStoreReader> getProviders() {
-        final cached = providers
-        if( cached != null && resolvedWith === Plugins.getManager() )
-            return cached
+        final injected = providers
+        if( injected != null )
+            return injected
         try {
-            final result = new ArrayList<ObjectStoreReader>(Plugins.getPriorityExtensions(ObjectStoreReader))
-            // Memoize a NON-EMPTY discovery only. An empty one is ambiguous -- "no plugin implements
-            // this" and "the plugins are not up yet" look identical -- and caching the second would
-            // poison the JVM for the rest of the run, silently disabling the identity, since `lookup`
-            // degrades to null. Re-querying instead costs nothing where it matters: the readers ship
-            // in the cloud plugins, and a cache addressed by a cloud URI has one loaded, so the
-            // answer is non-empty from the first task and latches there. A FAILED lookup (the catch
-            // below) is likewise never cached: it can still resolve later.
-            if( result ) {
-                providers = result
-                resolvedWith = Plugins.getManager()
-            }
-            return result
+            return new ArrayList<ObjectStoreReader>(Plugins.getPriorityExtensions(ObjectStoreReader))
         }
         catch( Throwable e ) {
             log.debug "Unable to load the object-store readers -- ${e.message}"

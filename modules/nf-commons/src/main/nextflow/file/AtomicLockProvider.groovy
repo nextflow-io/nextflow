@@ -22,7 +22,6 @@ import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.plugin.Plugins
 import org.pf4j.ExtensionPoint
-import org.pf4j.PluginManager
 
 /**
  * Scheme-keyed SPI for an atomic create-if-absent of a lock object in cloud storage.
@@ -52,12 +51,30 @@ abstract class AtomicLockProvider implements ExtensionPoint {
     /**
      * Create the lock object, if it does not exist yet.
      *
-     * A {@code false} return means one thing only: the object already existed, i.e. this caller
-     * lost the race for the lock. Any condition under which the lock <b>cannot</b> be attempted --
-     * a path belonging to another file system provider, a storage error -- must be reported by
-     * throwing (see {@link java.nio.file.ProviderMismatchException}), never by returning
-     * {@code false}: the caller bumps the key and retries on a lost race, so a silent failure
-     * turns into an endless retry loop.
+     * A {@code false} return means this caller did not create the object, i.e. it lost the race for
+     * the lock. Any condition under which the lock <b>cannot</b> be attempted -- a path belonging to
+     * another file system provider, a storage error -- must be reported by throwing (see
+     * {@link java.nio.file.ProviderMismatchException}), never by returning {@code false}: the caller
+     * bumps the key and retries on a lost race, so a silent failure turns into an endless retry loop.
+     *
+     * <p>{@code false} is nonetheless <b>best-effort</b>, in two ways a caller has to live with:
+     * <ul>
+     *   <li>All three SDKs retry a lost response by default. A conditional PUT that <i>succeeded</i>
+     *       server-side but whose response never arrived is re-sent, and the store then answers
+     *       "exists" (412 / {@code BlobAlreadyExists}) -- so this caller sees {@code false} although
+     *       it did create the object. It bumps to the next key; the first one stays claimed and
+     *       unused.</li>
+     *   <li>S3 alone can also answer with a concurrent-write conflict, where the outcome is
+     *       genuinely undetermined -- see {@code S3Client.putObjectIfAbsent}, which accepts it as a
+     *       lost claim rather than aborting the task.</li>
+     * </ul>
+     * Both cost at most a bumped key, never a wrong "won the race".
+     *
+     * <p>The atomicity itself holds on AWS S3, Azure Blob Storage and Google Cloud Storage proper.
+     * It is <b>not</b> guaranteed against an S3-compatible endpoint configured through
+     * {@code aws.client.endpoint} (MinIO, Ceph, Wasabi and the like): one that ignores
+     * {@code If-None-Match: *} lets both racers believe they won, and one that rejects the header
+     * outright makes every claim throw. Nothing here detects a custom endpoint.
      *
      * <p>There is deliberately no counterpart that removes the object. The work-dir claim this SPI
      * exists for is <b>never released</b>: the marker is what makes the hash answer "in use" across
@@ -68,44 +85,33 @@ abstract class AtomicLockProvider implements ExtensionPoint {
      */
     abstract boolean tryCreate(Path lockPath)
 
+    /**
+     * Providers injected by a test, bypassing plugin discovery; {@code null} leaves discovery in
+     * charge. Deliberately NOT a memo of the discovery: plugins start lazily per scheme
+     * ({@code FileHelper} -> {@code Plugins.startIfMissing}), so the registered set GROWS during a
+     * run. Latching the first answer would make {@link #lookup} throw for a scheme whose plugin IS
+     * loaded -- a multi-cloud run resolving {@code gs://} first would never see the {@code s3://}
+     * provider again. {@code FileSystemPathFactory.factories0} re-queries on every call for exactly
+     * this reason.
+     */
     private static volatile List<AtomicLockProvider> providers
 
-    /**
-     * The manager the memo above was resolved against. Comparing it makes a stop/init cycle
-     * invalidate the memo by itself: without it, an empty list cached while the system was up would
-     * survive a restart and hide extensions the new manager does have.
-     */
-    private static volatile PluginManager resolvedWith
-
     /** Test/registration seam: inject the set of providers (bypasses plugin discovery). */
-    static void setProviders(List<AtomicLockProvider> list) { providers = list; resolvedWith = Plugins.getManager() }
+    static void setProviders(List<AtomicLockProvider> list) { providers = list }
 
     static List<AtomicLockProvider> getProviders() {
-        final cached = providers
-        if( cached != null && resolvedWith === Plugins.getManager() )
-            return cached
-        List<AtomicLockProvider> result
+        final injected = providers
+        if( injected != null )
+            return injected
         try {
             // priority-ordered, like every other SPI here: no implementation declares @Priority, so
             // the set is unchanged and only the iteration order becomes deterministic
-            result = new ArrayList<AtomicLockProvider>(Plugins.getPriorityExtensions(AtomicLockProvider))
+            return new ArrayList<AtomicLockProvider>(Plugins.getPriorityExtensions(AtomicLockProvider))
         }
         catch( Throwable e ) {
             log.debug "Unable to load AtomicLockProvider extensions -- Cause: ${e.message}"
-            result = Collections.<AtomicLockProvider>emptyList()
+            return Collections.<AtomicLockProvider>emptyList()
         }
-        // Memoize a NON-EMPTY discovery only. An empty one is ambiguous -- "no plugin implements
-        // this" and "the plugins are not up yet" look identical -- and caching the second would
-        // poison the JVM for the rest of the run: every claim would then throw for a scheme whose
-        // provider does exist. Re-querying instead costs nothing where it matters: the providers ship
-        // in the cloud plugins, and only a cache addressed by a cloud URI claims a work dir, so the
-        // answer is non-empty from the first task and latches there. A FAILED lookup (the catch
-        // above) is likewise never cached: that one can still resolve on a retry.
-        if( result ) {
-            providers = result
-            resolvedWith = Plugins.getManager()
-        }
-        return result
     }
 
     /**

@@ -20,6 +20,7 @@ import java.nio.file.Path
 
 import com.azure.storage.blob.models.BlobDownloadContentResponse
 import com.azure.storage.blob.models.BlobItem
+import com.azure.storage.blob.models.BlobListDetails
 import com.azure.storage.blob.models.BlobRange
 import com.azure.storage.blob.models.DownloadRetryOptions
 import com.azure.storage.blob.models.ListBlobsOptions
@@ -74,6 +75,13 @@ class AzObjectStoreReader extends ObjectStoreReader {
             if( rel == AzFileSystem.EMPTY_DIR_MARKER || rel.endsWith('/' + AzFileSystem.EMPTY_DIR_MARKER) )
                 continue
             final size = item.getProperties().getContentLength()
+            // On a hierarchical-namespace (ADLS Gen2) account a directory is a REAL blob, carrying
+            // `hdi_isfolder=true` with size 0 -- so it comes back from this flat listing as an extra
+            // member whose mtime moves whenever a child is added. The NIO layer filters it in
+            // AzFileAttributes; this listing has to do the same, or the per-cloud equality above
+            // fails on exactly the accounts that store data in folders.
+            if( AzFileAttributes.isDirectoryMarker(item.getMetadata(), size) )
+                continue
             final mtime = item.getProperties().getLastModified().toInstant().toEpochMilli()
             out.add(Map.entry(rel, new ObjectMeta(size, mtime)))
         }
@@ -81,7 +89,7 @@ class AzObjectStoreReader extends ObjectStoreReader {
     }
 
     @Override
-    byte[] readRange(Path path, long offset, int len) {
+    protected byte[] readRange0(Path path, long offset, int len) {
         final az = (AzPath) path
         final range = new BlobRange(offset, len as Long)
         final resp = downloadContent(az, range)
@@ -94,7 +102,12 @@ class AzObjectStoreReader extends ObjectStoreReader {
      * {@code PagedIterable}) so a test can inject a plain list.
      */
     protected Iterable<BlobItem> listBlobs(AzPath dir, String base) {
-        return dir.containerClient().listBlobs(new ListBlobsOptions().setPrefix(base), null)
+        // metadata is required to recognise an ADLS Gen2 directory blob (`hdi_isfolder`); the NIO
+        // walk requests it for the same reason (see AzFileSystem)
+        final opts = new ListBlobsOptions()
+                .setPrefix(base)
+                .setDetails(new BlobListDetails().setRetrieveMetadata(true))
+        return dir.containerClient().listBlobs(opts, null)
     }
 
     /**
