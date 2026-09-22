@@ -41,6 +41,18 @@ interface CacheStore {
     void putEntry(HashCode key, byte[] value)
     void deleteEntry(HashCode key)
 
+    /**
+     * Update an entry that already exists in this store, i.e. the read-modify-write of the
+     * reference count / last-used stamp in {@link CacheDB#incTaskEntry}, whose value is a record
+     * just read back through {@link #getEntry}.
+     *
+     * This is deliberately distinct from {@link #putEntry}, which stores a <b>new</b> entry: a
+     * composite store has to send an update to the member that served the read — and may have to
+     * drop it when that member is read-only — while a new entry must always go to the writable
+     * one. Defaults to {@link #putEntry}, which is the correct behaviour for a single store.
+     */
+    default void updateEntry(HashCode key, byte[] value) { putEntry(key, value) }
+
     void writeIndex(HashCode key, boolean cached)
     Iterator<Index> iterateIndex()
     void deleteIndex()

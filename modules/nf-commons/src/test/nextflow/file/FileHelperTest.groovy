@@ -1174,6 +1174,51 @@ class FileHelperTest extends Specification {
         'ftp://example.com//file//path'                     | 'ftp://example.com/file/path'
     }
 
+    def 'getTaskHashFromPath parses the task hash from a work dir path, with or without an attempt suffix'() {
+        given:
+        def work = Paths.get('/work')
+        def hash = 'abcdef0123456789abcdef0123456789'
+
+        expect: 'the two-level <2hex>/<30hex> layout'
+        FileHelper.getTaskHashFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789/out.bam"), work).toString() == hash
+        FileHelper.getTaskHashFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789"), work).toString() == hash
+
+        and: 'an attempt suffix on the leaf is tolerated -- the attempt is a path segment, not part of the hash'
+        FileHelper.getTaskHashFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789-2/out.bam"), work).toString() == hash
+        FileHelper.getTaskHashFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789-12/sub/out.bam"), work).toString() == hash
+
+        and: 'anything else is not a task work dir'
+        FileHelper.getTaskHashFromPath(Paths.get("/work/ab"), work) == null
+        FileHelper.getTaskHashFromPath(Paths.get("/work/stage-1234/foo"), work) == null
+        FileHelper.getTaskHashFromPath(Paths.get("/work/ab/not-a-hash/out.bam"), work) == null
+        FileHelper.getTaskHashFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789-x/out.bam"), work) == null
+        FileHelper.getTaskHashFromPath(Paths.get("/elsewhere/ab/cdef0123456789abcdef0123456789/out.bam"), work) == null
+    }
+
+    def 'getTaskDirFromPath returns the directory the file is really in, attempt suffix included'() {
+        given:
+        def work = Paths.get('/work')
+
+        expect: 'the unsuffixed layout'
+        FileHelper.getTaskDirFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789/out.bam"), work) ==
+                Paths.get("/work/ab/cdef0123456789abcdef0123456789")
+
+        and: 'an attempt dir resolves to ITSELF, not to the unsuffixed sibling getWorkFolder builds'
+        FileHelper.getTaskDirFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789-2/out.bam"), work) ==
+                Paths.get("/work/ab/cdef0123456789abcdef0123456789-2")
+        FileHelper.getTaskDirFromPath(Paths.get("/work/ab/cdef0123456789abcdef0123456789-12/sub/out.bam"), work) ==
+                Paths.get("/work/ab/cdef0123456789abcdef0123456789-12")
+
+        and: 'so relativizing an output against it never yields a `..` segment'
+        def src = Paths.get("/work/ab/cdef0123456789abcdef0123456789-2/sub/out.bam")
+        FileHelper.getTaskDirFromPath(src, work).relativize(src).toString() == 'sub/out.bam'
+
+        and: 'anything that is not a task work dir has none'
+        FileHelper.getTaskDirFromPath(Paths.get("/work/ab"), work) == null
+        FileHelper.getTaskDirFromPath(Paths.get("/work/stage-1234/foo"), work) == null
+        FileHelper.getTaskDirFromPath(Paths.get("/work/ab/not-a-hash/out.bam"), work) == null
+        FileHelper.getTaskDirFromPath(Paths.get("/elsewhere/ab/cdef0123456789abcdef0123456789/out.bam"), work) == null
+    }
     def 'should delete a local directory and rethrow when it cannot be deleted' () {
         given:
         def folder = Files.createTempDirectory('test')
