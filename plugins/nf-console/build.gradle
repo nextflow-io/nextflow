@@ -47,7 +47,7 @@ configurations {
 
 dependencies {
     compileOnly project(':nf-cli-v1')
-    compileOnly 'org.slf4j:slf4j-api:2.0.17'
+    compileOnly 'org.slf4j:slf4j-api:2.0.19'
     compileOnly 'org.pf4j:pf4j:3.14.1'
 
     api("org.apache.groovy:groovy-console:4.0.21-patch.2") { transitive=false }
