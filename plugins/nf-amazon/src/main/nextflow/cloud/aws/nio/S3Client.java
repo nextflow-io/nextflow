@@ -42,6 +42,7 @@ import nextflow.util.ThreadPoolManager;
 import nextflow.util.Threads;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.awscore.AwsRequestOverrideConfiguration;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkException;
@@ -246,6 +247,20 @@ public class S3Client {
     }
 
     /**
+     * Makes the SDK retry a 409 on the conditional PUT below, which it does not do by default (its
+     * retryable set is {@code {500,502,503,504}}). A 409 there is a concurrent conditional write:
+     * S3 documents it as retryable, and it leaves the outcome undetermined. Retrying resolves that,
+     * so the claim ends on a definitive 200 or 412 rather than a guess.
+     *
+     * <p>Scoped to this one request, and added to the strategy the client was built with, so the
+     * configured {@code aws.client} retry settings and backoff are preserved.
+     */
+    private static final AwsRequestOverrideConfiguration RETRY_ON_CONFLICT = AwsRequestOverrideConfiguration.builder()
+            .addPlugin(cfg -> cfg.overrideConfiguration(c -> c.retryStrategy(
+                    r -> r.retryOnException(t -> t instanceof AwsServiceException && ((AwsServiceException) t).statusCode() == 409))))
+            .build();
+
+    /**
      * Atomically create an (empty) object only if it does not already exist, using a
      * conditional PUT ({@code If-None-Match: *}). Used as a cross-run lock primitive by
      * the global cloud cache.
@@ -286,25 +301,15 @@ public class S3Client {
         if( storageClass != null ) {
             builder.storageClass(storageClass);
         }
+        builder.overrideConfiguration(RETRY_ON_CONFLICT);
         try {
             runWithPermit(() -> client.putObject(builder.build(), RequestBody.empty()));
             return true;
         } catch (AwsServiceException e) {
-            // 412 (PreconditionFailed): the object exists. Definitive -- this caller lost the race.
-            //
-            // 409 (ConditionalRequestConflict, or OperationAborted): a concurrent conditional write
-            // to this key was in flight. NOT the same answer: S3 documents it as retryable, and
-            // nothing retries it -- the SDK's RETRYABLE_STATUS_CODES is {500,502,503,504}, and
-            // ConditionalRequestConflict is not even a modelled exception type. After a 409 the
-            // outcome is UNDETERMINED: the competing PUT may have landed, may still be in flight,
-            // or may itself have conflicted, so the object may not exist at all.
-            //
-            // It is reported as a lost claim regardless, deliberately. Propagating it would abort a
-            // task on a condition AWS calls transient; retrying the PUT here would resolve the
-            // ambiguity properly but costs a backoff and interrupt handling to save, at worst, one
-            // duplicated task execution: the caller claims the next key and runs there, and if
-            // neither racer's PUT landed then this key is simply claimed by a later run. That is
-            // self-healing, and the race needs two claims on one hash within a few milliseconds.
+            // 412: the object exists -- this caller lost the race. A 409 reaches here only after
+            // the retries above were exhausted, so its outcome is still undetermined; it is taken
+            // as a lost claim rather than aborting the task, costing at worst one duplicated
+            // execution that a later run heals.
             if( e.statusCode() == 412 || e.statusCode() == 409 )
                 return false;
             throw convertAwsException(e, "putObjectIfAbsent", bucket, key);

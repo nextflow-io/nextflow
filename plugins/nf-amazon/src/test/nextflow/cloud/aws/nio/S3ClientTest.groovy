@@ -93,7 +93,7 @@ class S3ClientTest extends Specification {
         captured.storageClassAsString() == 'STANDARD_IA'
     }
 
-    def 'both 412 and 409 are reported as a lost claim'() {
+    def 'both 412 and a 409 that outlived the SDK retries are reported as a lost claim'() {
         given:
         def sdk = Mock(software.amazon.awssdk.services.s3.S3Client)
         def factory = Mock(AwsClientFactory) { getS3Client(_, _) >> sdk }
@@ -105,8 +105,8 @@ class S3ClientTest extends Specification {
         1 * sdk.putObject(_ as PutObjectRequest, _) >> { throw awsError(412, 'PreconditionFailed') }
         !r412
 
-        when: 'a concurrent conditional write was in flight -- the outcome is undetermined, but it'
-        and: 'is accepted as a lost claim rather than aborting the task: see putObjectIfAbsent'
+        when: 'a 409 still standing after the SDK exhausted the retries configured above -- the'
+        and: 'outcome is undetermined, but it is accepted as a lost claim rather than aborting'
         def r409 = client.putObjectIfAbsent('bkt', 'k')
         then:
         1 * sdk.putObject(_ as PutObjectRequest, _) >> { throw awsError(409, 'ConditionalRequestConflict') }
