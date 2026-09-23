@@ -19,10 +19,12 @@ import java.nio.file.Path
 
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
+import nextflow.SysEnv
 import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
 import nextflow.exception.AbortOperationException
 import nextflow.util.HistoryFile
+import org.slf4j.LoggerFactory
 
 /**
  * Common cache operations shared by {@link CmdLog} and {@link CmdClean}
@@ -46,7 +48,12 @@ trait CacheBase {
 
     abstract List<String> getArgs()
 
+    abstract String getName()
+
     void init() {
+
+        if( SysEnv.get('NXF_CLOUDCACHE_PATH') )
+            LoggerFactory.getLogger(CacheBase).warn "The `${getName()}` command does not support the cloud cache -- NXF_CLOUDCACHE_PATH will be ignored"
 
         if( !history ) {
             history = !basePath ? HistoryFile.DEFAULT : new HistoryFile(basePath.resolve(HistoryFile.defaultFileName()))
