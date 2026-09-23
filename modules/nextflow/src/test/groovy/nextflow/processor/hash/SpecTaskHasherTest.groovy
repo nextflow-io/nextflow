@@ -29,7 +29,7 @@ import nextflow.script.bundle.ResourcesBundle
 import nextflow.script.params.InParam
 import spock.lang.Specification
 
-class BaseTaskHasherTest extends Specification {
+class SpecTaskHasherTest extends Specification {
 
     /**
      * A task exercising every key the unit level can reach.
@@ -171,7 +171,7 @@ class BaseTaskHasherTest extends Specification {
 
         when:
         def expected = legacy.compute()
-        def actual = new BaseTaskHasher(ctx, StdSpecs.STD_V4).compute()
+        def actual = new SpecTaskHasher(ctx, StdSpecs.STD_V4).compute()
 
         then:
         actual == expected
@@ -185,7 +185,7 @@ class BaseTaskHasherTest extends Specification {
 
         when:
         def expected = legacy.compute()
-        def actual = new BaseTaskHasher(ctx, StdSpecs.STD_V4).compute()
+        def actual = new SpecTaskHasher(ctx, StdSpecs.STD_V4).compute()
 
         then:
         actual == expected
@@ -199,7 +199,7 @@ class BaseTaskHasherTest extends Specification {
 
         when:
         def expected = legacy.compute()
-        def actual = new BaseTaskHasher(ctx, StdSpecs.STD_V4).compute()
+        def actual = new SpecTaskHasher(ctx, StdSpecs.STD_V4).compute()
 
         then:
         actual == expected
@@ -211,7 +211,7 @@ class BaseTaskHasherTest extends Specification {
         def ctx = new HashContext(f.task as TaskRun, f.helper as TaskHasher)
 
         expect:
-        new BaseTaskHasher(ctx, StdSpecs.STD_V4).collectKeys() == [
+        new SpecTaskHasher(ctx, StdSpecs.STD_V4).collectKeys() == [
             UUID.fromString('b69b6eeb-b332-4d2c-9957-c291b15f498c'),
             'PIPE:FOO',
             'echo hello',
