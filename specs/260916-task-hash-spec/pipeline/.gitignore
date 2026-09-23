@@ -1,0 +1,5 @@
+# Run artifacts from the validation runbook. The repo-root `work/*` rule is anchored
+# to the root, so it does not cover this nested work dir -- and a single full run of
+# this pipeline leaves ~600MB here (the resolved conda env, plus one dir per task).
+work/
+.nextflow*
