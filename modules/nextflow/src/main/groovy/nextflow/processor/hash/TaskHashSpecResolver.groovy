@@ -17,34 +17,29 @@ package nextflow.processor.hash
 
 import groovy.transform.CompileStatic
 import nextflow.SysEnv
-import nextflow.plugin.Plugins
-import nextflow.processor.TaskRun
 
 /**
- * Chooses the spec for a task: plugin factories first, then NXF_TASK_HASH_VER, then
- * the current default.
+ * Resolves the task hash version a run asked for.
+ *
+ * Returning {@code null} is the normal case and means "no version requested", which
+ * leaves the run on the inherited {@link nextflow.processor.TaskHasher}. An unknown id
+ * is an error rather than a silent fallback: a run that asked to be hashed under a
+ * particular version and was quietly hashed under another would produce a cache whose
+ * keys nobody can account for.
  */
 @CompileStatic
 class TaskHashSpecResolver {
 
-    static TaskHashSpec resolve(TaskRun task) {
-        return resolve(task, Plugins.getPriorityExtensions(TaskHashSpecFactory) ?: Collections.<TaskHashSpecFactory>emptyList())
-    }
+    static final String ENV_VAR = 'NXF_TASK_HASH_VER'
 
-    static TaskHashSpec resolve(TaskRun task, List<TaskHashSpecFactory> factories) {
-        for( TaskHashSpecFactory factory : factories ) {
-            final spec = factory.create(task)
-            if( spec != null ) {
-                return spec
-            }
-        }
-        return defaultSpec()
-    }
-
-    static TaskHashSpec defaultSpec() {
-        final id = SysEnv.get('NXF_TASK_HASH_VER')
+    /**
+     * @return the requested spec, or {@code null} when none was requested.
+     * @throws IllegalArgumentException if a version was requested but is not known.
+     */
+    static TaskHashSpec requestedSpec() {
+        final id = SysEnv.get(ENV_VAR)
         if( !id ) {
-            return StdSpecs.DEFAULT
+            return null
         }
         return StdSpecs.byId(id)
     }

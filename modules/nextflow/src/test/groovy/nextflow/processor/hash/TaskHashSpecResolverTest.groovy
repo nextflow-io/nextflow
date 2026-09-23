@@ -16,7 +16,6 @@
 package nextflow.processor.hash
 
 import nextflow.SysEnv
-import nextflow.processor.TaskRun
 import spock.lang.Specification
 
 class TaskHashSpecResolverTest extends Specification {
@@ -25,56 +24,37 @@ class TaskHashSpecResolverTest extends Specification {
         SysEnv.pop()
     }
 
-    def 'defaults to std/v4 when nothing selects a spec'() {
+    def 'no version requested means no spec, so the run keeps the inherited hasher'() {
         given:
         SysEnv.push([:])
 
         expect:
-        TaskHashSpecResolver.defaultSpec().is(StdSpecs.STD_V4)
+        TaskHashSpecResolver.requestedSpec() == null
     }
 
-    def 'NXF_TASK_HASH_VER selects a spec by id'() {
+    def 'a requested version resolves to its spec'() {
         given:
         SysEnv.push([NXF_TASK_HASH_VER: 'std/v2'])
 
         expect:
-        TaskHashSpecResolver.defaultSpec().is(StdSpecs.STD_V2)
+        TaskHashSpecResolver.requestedSpec().is(StdSpecs.STD_V2)
     }
 
-    def 'an unknown id fails loudly rather than silently falling back'() {
+    def 'an unknown version fails loudly rather than falling back'() {
         given:
         SysEnv.push([NXF_TASK_HASH_VER: 'std/nope'])
 
         when:
-        TaskHashSpecResolver.defaultSpec()
+        TaskHashSpecResolver.requestedSpec()
         then:
         thrown(IllegalArgumentException)
     }
 
-    def 'a plugin factory takes precedence over the default'() {
+    def 'the factory abstains when no version is requested'() {
         given:
         SysEnv.push([:])
-        def custom = new TaskHashSpec('plugin/v1', StdSpecs.STD_V4.bindings, StdSpecs.STD_V4.encoding)
-        def factory = Mock(TaskHashSpecFactory)
-        def task = Mock(TaskRun)
 
-        when:
-        def result = TaskHashSpecResolver.resolve(task, [factory])
-        then:
-        1 * factory.create(task) >> custom
-        result.is(custom)
-    }
-
-    def 'a factory that abstains falls through to the next, then to the default'() {
-        given:
-        SysEnv.push([:])
-        def abstaining = Mock(TaskHashSpecFactory)
-        def task = Mock(TaskRun)
-
-        when:
-        def result = TaskHashSpecResolver.resolve(task, [abstaining])
-        then:
-        1 * abstaining.create(task) >> null
-        result.is(StdSpecs.STD_V4)
+        expect:
+        new SpecTaskHasherFactory().create(Mock(nextflow.processor.TaskRun)) == null
     }
 }
