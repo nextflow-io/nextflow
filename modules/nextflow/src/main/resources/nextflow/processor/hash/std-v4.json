@@ -1,0 +1,63 @@
+{
+  "id": "std/v4",
+  "note": "#7575 (2026-09-03) onwards: eval outputs hashed as the raw map. Matches current master.",
+  "function": "murmur3_128",
+  "encoding": {
+    "orderIndependentMaps": true,
+    "cacheFunnelFirst": true
+  },
+  "keys": [
+    {
+      "key": "SESSION_ID",
+      "extractor": "sessionId"
+    },
+    {
+      "key": "PROCESS_NAME",
+      "extractor": "processName"
+    },
+    {
+      "key": "TASK_SOURCE",
+      "extractor": "taskSource"
+    },
+    {
+      "key": "CONTAINER",
+      "extractor": "containerFingerprint"
+    },
+    {
+      "key": "INPUTS",
+      "extractor": "inputs.raw"
+    },
+    {
+      "key": "EVAL_OUTPUTS",
+      "extractor": "evalOutputs.rawMap"
+    },
+    {
+      "key": "SCRIPT_VARS",
+      "extractor": "scriptVars"
+    },
+    {
+      "key": "BIN_ENTRIES",
+      "extractor": "binEntries"
+    },
+    {
+      "key": "MODULE_BUNDLE",
+      "extractor": "moduleBundleFingerprint"
+    },
+    {
+      "key": "ENV_MODULES",
+      "extractor": "envModules"
+    },
+    {
+      "key": "CONDA",
+      "extractor": "condaEnv"
+    },
+    {
+      "key": "SPACK",
+      "extractor": "spackEnvAndArch"
+    },
+    {
+      "key": "STUB_MARKER",
+      "extractor": "stubMarker"
+    }
+  ]
+}
