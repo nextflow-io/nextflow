@@ -9,51 +9,51 @@
   "keys": [
     {
       "key": "SESSION_ID",
-      "extractor": "sessionId"
+      "contributor": "sessionId"
     },
     {
       "key": "PROCESS_NAME",
-      "extractor": "processName"
+      "contributor": "processName"
     },
     {
       "key": "TASK_SOURCE",
-      "extractor": "taskSource"
+      "contributor": "taskSource"
     },
     {
       "key": "CONTAINER",
-      "extractor": "containerFingerprint"
+      "contributor": "containerFingerprint"
     },
     {
       "key": "INPUTS",
-      "extractor": "inputs.raw"
+      "contributor": "inputs.raw"
     },
     {
       "key": "EVAL_OUTPUTS",
-      "extractor": "evalOutputs.derivedString"
+      "contributor": "evalOutputs.derivedString"
     },
     {
       "key": "SCRIPT_VARS",
-      "extractor": "scriptVars"
+      "contributor": "scriptVars"
     },
     {
       "key": "BIN_ENTRIES",
-      "extractor": "binEntries"
+      "contributor": "binEntries"
     },
     {
       "key": "ENV_MODULES",
-      "extractor": "envModules"
+      "contributor": "envModules"
     },
     {
       "key": "CONDA",
-      "extractor": "condaEnv"
+      "contributor": "condaEnv"
     },
     {
       "key": "SPACK",
-      "extractor": "spackEnvAndArch"
+      "contributor": "spackEnvAndArch"
     },
     {
       "key": "STUB_MARKER",
-      "extractor": "stubMarker"
+      "contributor": "stubMarker"
     }
   ]
 }
