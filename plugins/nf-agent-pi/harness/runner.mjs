@@ -356,8 +356,7 @@ async function runJev(start, modelId) {
       type: "trace",
       invocationId: activeInvocation,
       event: "decision",
-      name,
-      text: JSON.stringify(answer),
+      text: `${name} ${JSON.stringify(answer)}`,
     });
   }
   terminal = true;

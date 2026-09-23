@@ -74,7 +74,7 @@ class RecordSchema {
      */
     static Map scalarFragment(Class raw) {
         if( raw?.isEnum() )
-            return [type: 'string', enum: raw.getEnumConstants()*.name()]
+            return [type: 'string', enum: raw.getEnumConstants().collect { Object value -> ((Enum)value).name() }]
 
         if( raw == String )
             return [type: 'string']

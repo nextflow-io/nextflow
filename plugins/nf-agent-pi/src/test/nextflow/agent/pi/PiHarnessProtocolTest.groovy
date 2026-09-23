@@ -291,8 +291,9 @@ class PiHarnessProtocolTest extends Specification {
         request.get().questions.urgent.type == 'noul'
 
         and: 'the calibrated answer details remain available to agent tracing'
-        harness.traces*.name == ['route', 'severity', 'urgent']
         harness.traces*.event.unique() == ['decision']
+        harness.traces*.text.every { it.contains('"type":') }
+        harness.traces[0].text.contains('"confidence":0.8')
     }
 
     def 'should attribute an empty answer to the provider failure that caused it'() {
