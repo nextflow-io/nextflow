@@ -512,7 +512,13 @@ public class Formatter extends CodeVisitorSupport {
                 incIndent();
             else
                 append(' ');
+            var start = builder.length();
             visitArguments(arguments, wrap);
+            // `name [...]` would be parsed as an index expression
+            if( !wrap && builder.charAt(start) == '[' ) {
+                builder.setCharAt(start - 1, '(');
+                append(')');
+            }
             if( wrap ) {
                 appendNewLine();
                 appendDanglingComments(call);
