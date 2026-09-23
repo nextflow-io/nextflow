@@ -35,7 +35,7 @@ import nextflow.script.types.Record
  * (declared with the {@code ?} suffix) carry a {@link Nullable} annotation and are
  * omitted from the {@code required} list.
  *
- * Supported field types (v1): String, integer/long, floating point/decimal,
+ * Supported field types (v1): enum, String, integer/long, floating point/decimal,
  * boolean, nested record types, and List/Collection/Set of those. {@link Path}
  * and any other unmapped type are rejected with an {@link IllegalArgumentException}.
  *
@@ -69,10 +69,13 @@ class RecordSchema {
 
     /**
      * Map a scalar type to its JSON-schema fragment, or {@code null} if the type
-     * is not a supported scalar (String / integer / number / boolean). Shared
+     * is not a supported scalar (enum / String / integer / number / boolean). Shared
      * with {@link ProcessToolSchema} so the scalar mapping stays in one place.
      */
     static Map scalarFragment(Class raw) {
+        if( raw?.isEnum() )
+            return [type: 'string', enum: raw.getEnumConstants()*.name()]
+
         if( raw == String )
             return [type: 'string']
 
@@ -106,7 +109,7 @@ class RecordSchema {
             return [type: 'array', items: fragmentFor("${fieldName}[]".toString(), elementType)]
         }
 
-        throw new IllegalArgumentException("Unsupported agent output field `${fieldName}` of type ${raw.getName()} - supported types are String, integer, number, boolean, nested record and list of those")
+        throw new IllegalArgumentException("Unsupported agent output field `${fieldName}` of type ${raw.getName()} - supported types are enum, String, integer, number, boolean, nested record and list of those")
     }
 
     private static Class rawClass(Type type) {

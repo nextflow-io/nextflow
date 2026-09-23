@@ -242,6 +242,133 @@ function structuredOutputTool(spec, state) {
   ];
 }
 
+function jevQuestions(spec) {
+  const schema = spec.outputSchema;
+  if (schema?.type !== "object" || !schema.properties || Object.keys(schema.properties).length === 0)
+    throw new Error("TypeSafe Jev requires at least one typed agent output");
+
+  const commonInstructions = [spec.instruction, spec.goal, spec.prompt].filter(Boolean).join("\n\n");
+  return Object.fromEntries(
+    Object.entries(schema.properties).map(([name, property]) => {
+      const instructions = [
+        commonInstructions,
+        Object.keys(schema.properties).length > 1 ? `Decide the value of output "${name}".` : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n");
+      if (property.type === "boolean")
+        return [name, { type: "noul", instructions }];
+      if (property.type === "string" && Array.isArray(property.enum) && property.enum.length > 0)
+        return [
+          name,
+          {
+            type: "choice",
+            instructions,
+            criteria: Object.fromEntries(property.enum.map((option) => [option, null])),
+          },
+        ];
+      if (property.type === "number")
+        return [
+          name,
+          {
+            type: "score",
+            instructions,
+            criteria: property["x-jev-criteria"] ?? ["Low (0)", "High (1)"],
+          },
+        ];
+      throw new Error(
+        `TypeSafe Jev output "${name}" must be a boolean, an enum, or a number; received ${property.type ?? "unknown"}`,
+      );
+    }),
+  );
+}
+
+function jevOutput(questions, response) {
+  if (!response?.answers || typeof response.answers !== "object")
+    throw new Error("TypeSafe Jev returned no answers");
+  const output = {};
+  for (const [name, question] of Object.entries(questions)) {
+    const answer = response.answers[name];
+    if (!answer || answer.type !== question.type)
+      throw new Error(`TypeSafe Jev returned an invalid answer for "${name}"`);
+    switch (question.type) {
+      case "choice":
+        if (!Object.hasOwn(question.criteria, answer.choice))
+          throw new Error(`TypeSafe Jev returned an unknown choice for "${name}": ${answer.choice}`);
+        output[name] = answer.choice;
+        break;
+      case "score":
+        if (typeof answer.score !== "number")
+          throw new Error(`TypeSafe Jev returned a non-numeric score for "${name}"`);
+        output[name] = answer.score;
+        break;
+      case "noul":
+        if (typeof answer.noul !== "number" || answer.noul < 0 || answer.noul > 1)
+          throw new Error(`TypeSafe Jev returned an invalid Noul probability for "${name}"`);
+        output[name] = answer.noul >= 0.5;
+        break;
+      default:
+        throw new Error(`Unsupported TypeSafe Jev question type: ${question.type}`);
+    }
+  }
+  return output;
+}
+
+async function runJev(start, modelId) {
+  const spec = start.spec;
+  const apiKey = start.apiKey || process.env.TYPESAFE_API_KEY;
+  if (!apiKey)
+    throw new Error(
+      "TypeSafe Jev requires agent.apiKey, NXF_AGENT_API_KEY, or TYPESAFE_API_KEY in the runner container",
+    );
+  const questions = jevQuestions(spec);
+  let input;
+  try {
+    input = spec.inputJson ? JSON.parse(spec.inputJson) : null;
+  } catch (error) {
+    throw new Error(`TypeSafe Jev could not parse agent input JSON: ${error.message}`);
+  }
+  const baseUrl = (spec.baseUrl || "https://api.typesafe.ai/v1").replace(/\/+$/, "");
+  const response = await fetch(`${baseUrl}/systemone`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: modelId,
+      state: { input },
+      questions,
+    }),
+  });
+  const body = await response.text();
+  if (!response.ok)
+    throw new Error(`TypeSafe Jev request failed with HTTP ${response.status}: ${body}`);
+  let result;
+  try {
+    result = JSON.parse(body);
+  } catch (error) {
+    throw new Error(`TypeSafe Jev returned invalid JSON: ${error.message}`);
+  }
+  const output = jevOutput(questions, result);
+  for (const [name, answer] of Object.entries(result.answers)) {
+    send({
+      type: "trace",
+      invocationId: activeInvocation,
+      event: "decision",
+      name,
+      text: JSON.stringify(answer),
+    });
+  }
+  terminal = true;
+  send({
+    type: "complete",
+    invocationId: activeInvocation,
+    output: JSON.stringify(output),
+    resolvedModel: `typesafe/${result.model || modelId}`,
+  });
+}
+
 async function run(start) {
   const spec = start.spec;
   activeInvocation = start.invocationId;
@@ -254,6 +381,10 @@ async function run(start) {
     throw new Error(`Invalid model identifier: ${spec.model}; expected provider/model`);
   const provider = spec.model.slice(0, slash);
   const modelId = spec.model.slice(slash + 1);
+  if (provider === "typesafe") {
+    await runJev(start, modelId);
+    return;
+  }
   const modelRuntime = await ModelRuntime.create({ allowModelNetwork: false });
   // A resolved endpoint RETARGETS the provider catalog: registerProvider with no `models`
   // rewrites baseUrl on every built-in model of the provider, and is the only seam the SDK

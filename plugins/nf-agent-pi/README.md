@@ -97,6 +97,43 @@ agent {
 }
 ```
 
+### TypeSafe Jev decisions
+
+Use the `typesafe` provider with a Jev model to call TypeSafe's System One endpoint instead of a
+chat model. Configure the API key through `agent.apiKey` (or `NXF_AGENT_API_KEY`):
+
+```groovy
+agent {
+    runner = 'pi'
+    model = 'typesafe/jev-latest'
+    apiKey = secrets.TYPESAFE_API_KEY
+}
+```
+
+Jev derives one typed question per agent output and evaluates all questions against the same input
+state in one request. Enum outputs become Choice questions, `Double` outputs become normalized
+Score questions from 0 (low) to 1 (high), and `Boolean` outputs become Noul questions (probability
+at least 0.5 is `true`). For example:
+
+```nextflow
+enum Route { BILLING, TECHNICAL }
+record Decision { route: Route; severity: Double; urgent: Boolean }
+
+agent triage {
+    input:
+    message: String
+
+    output:
+    decision: Decision
+
+    prompt:
+    "Classify the support request, score its severity, and decide whether it is urgent: ${message}"
+}
+```
+
+Set `agent.baseUrl` to override the default `https://api.typesafe.ai/v1` endpoint. A
+`TYPESAFE_API_KEY` variable already present inside the runner container is also recognized.
+
 ### Reaching the driver from the container
 
 Tool calls travel back to the driver over RPC. The driver host is inferred where possible; override it when the inferred address is not reachable from the container:

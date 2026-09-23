@@ -59,6 +59,9 @@ class PiAgentRunner implements AgentRunner {
     @Override
     String getDefaultContainer() { IMAGE }
 
+    @Override
+    boolean requiresStructuredScalarOutput() { true }
+
     /** Read the {@code image} entry, or null if there is nothing usable to read. */
     @PackageScope
     static String parseImageCoordinate(InputStream stream) {

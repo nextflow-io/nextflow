@@ -105,6 +105,20 @@ class RecordSchemaTest extends Dsl2Spec {
         schema.properties.note == [type: 'string']
     }
 
+    def 'should preserve enum choices in the portable schema'() {
+        given:
+        def cls = loadOutputType('''
+            enum Route { BILLING, TECHNICAL }
+            record Question { text: String }
+            record Decision { route: Route }
+            ''', 'a: Decision')
+
+        expect:
+        RecordSchema.of(cls).properties.route == [
+            type: 'string',
+            enum: ['BILLING', 'TECHNICAL'] ]
+    }
+
     def 'should reject a Path output field'() {
         given:
         def cls = loadOutputType('''

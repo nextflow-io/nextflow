@@ -458,7 +458,7 @@ class AgentDef extends BindableDef implements ChainableDef {
      *        {@link #buildAgentTaskWithBridge}); an output with an explicit right-hand side is
      *        not part of the contract the model is given.
      */
-    private static AgentOutputPlan resolveOutputPlan(String agentName, List<AgentOutput> outputs, List tools) {
+    private static AgentOutputPlan resolveOutputPlan(String agentName, List<AgentOutput> outputs, List tools, AgentRunner runner) {
         // an agent whose every output is a work-dir collection asks the model for nothing: its
         // observable result is the files it wrote, and its final text is discarded
         if( !outputs )
@@ -468,7 +468,7 @@ class AgentDef extends BindableDef implements ChainableDef {
         final output = outputs[0]
         if( Record.isAssignableFrom(output.type as Class) )
             return new AgentOutputPlan(AgentOutputMode.RECORD, RecordSchema.of(output.type as Class))
-        if( tools )
+        if( tools || runner.requiresStructuredScalarOutput() )
             return new AgentOutputPlan(AgentOutputMode.SCALAR_CONTRACT, scalarOutputSchema(output))
         return new AgentOutputPlan(AgentOutputMode.TEXT, null)
     }
@@ -622,7 +622,7 @@ class AgentDef extends BindableDef implements ChainableDef {
         //    `file(...)`/`files(...)` call inside that expression ADDITIONALLY registered an
         //    unstager, which is what makes it a work-dir collection
         final List<AgentOutput> modelOuts = outputs.findAll { it.value == null }
-        final AgentOutputPlan outputPlan = resolveOutputPlan(name, modelOuts, agentTools)
+        final AgentOutputPlan outputPlan = resolveOutputPlan(name, modelOuts, agentTools, selected.runner)
 
         // -- capture read-only locals for the body closure (resolve lexically under
         //    DELEGATE_ONLY; do NOT reference `this.name`/`this.inputs`/etc. in the body)
@@ -1150,7 +1150,7 @@ class AgentDef extends BindableDef implements ChainableDef {
                 ? RecordSchema.of(t)
                 : RecordSchema.scalarFragment(t)
             if( frag == null )
-                throw new ScriptRuntimeException("Agent `${agentName}` output `${o.name}` has unsupported type ${t?.name} - supported: String, integer, number, boolean, or a record type")
+                throw new ScriptRuntimeException("Agent `${agentName}` output `${o.name}` has unsupported type ${t?.name} - supported: enum, String, integer, number, boolean, or a record type")
             props.put(o.name, frag)
             required.add(o.name)
         }

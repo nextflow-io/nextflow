@@ -58,6 +58,15 @@ interface AgentRunner {
     default String getDefaultContainer() { null }
 
     /**
+     * Whether a bare scalar output must be sent to this runner as a JSON-schema contract.
+     *
+     * Most chat runners can return a scalar as assistant text. Decision-model runners need the
+     * declared type before invocation, so they opt in and receive the same one-property contract
+     * already used for tool-enabled scalar agents.
+     */
+    default boolean requiresStructuredScalarOutput() { false }
+
+    /**
      * Issue the connection material a canonical agent task needs to call back into
      * the driver, i.e. the broker endpoint plus a single-use capability token.
      *

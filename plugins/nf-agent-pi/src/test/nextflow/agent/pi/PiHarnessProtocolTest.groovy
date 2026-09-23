@@ -15,9 +15,12 @@
  */
 package nextflow.agent.pi
 
+import com.sun.net.httpserver.HttpServer
+import java.net.InetSocketAddress
 import java.nio.file.Files
 import java.nio.file.Path
 import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 import groovy.json.JsonOutput
 import groovy.json.JsonSlurper
@@ -63,6 +66,7 @@ class PiHarnessProtocolTest extends Specification {
     @TempDir Path folder
 
     private Harness harness
+    private HttpServer server
     private Path workDir
 
     static boolean nodeAvailable() {
@@ -80,6 +84,7 @@ class PiHarnessProtocolTest extends Specification {
 
     def cleanup() {
         harness?.close()
+        server?.stop(0)
     }
 
     def 'should announce the protocol version before anything else'() {
@@ -217,6 +222,77 @@ class PiHarnessProtocolTest extends Specification {
         then: 'the prose is discarded - only the schema-bound arguments are the output'
         frame.type == 'complete'
         new JsonSlurper().parseText(frame.output as String) == [capital: 'Paris', country: 'France']
+    }
+
+    def 'should map typed outputs through TypeSafe Jev in one decision request'() {
+        given:
+        final request = new AtomicReference<Map>()
+        server = HttpServer.create(new InetSocketAddress('127.0.0.1', 0), 0)
+        server.createContext('/v1/systemone') { exchange ->
+            request.set(new JsonSlurper().parse(exchange.requestBody) as Map)
+            assert exchange.requestHeaders.getFirst('Authorization') == 'Bearer typesafe-test-key'
+            final response = JsonOutput.toJson([
+                model: 'jev-1.13.0',
+                answers: [
+                    route: [
+                        type: 'choice',
+                        choice: 'billing',
+                        probabilities: [billing: 0.9, technical: 0.1],
+                        confidence: 0.8 ],
+                    severity: [
+                        type: 'score',
+                        score: 0.75,
+                        legend: ['0': 'Low (0)', '1': 'High (1)'],
+                        probabilities: ['0': 0.25, '1': 0.75],
+                        confidence: 0.5 ],
+                    urgent: [type: 'noul', noul: 0.91] ],
+                usage: [input_tokens: 20, output_tokens: 8] ]).bytes
+            exchange.responseHeaders.set('Content-Type', 'application/json')
+            exchange.sendResponseHeaders(200, response.length)
+            exchange.responseBody.withCloseable { it.write(response) }
+        }
+        server.start()
+        harness = start()
+        harness.next()
+        final schema = [
+            type: 'object',
+            properties: [
+                route: [type: 'string', enum: ['billing', 'technical']],
+                severity: [type: 'number'],
+                urgent: [type: 'boolean'] ],
+            required: ['route', 'severity', 'urgent'],
+            additionalProperties: false ]
+
+        when:
+        harness.send(startFrame(specOf(
+            model: 'typesafe/jev-latest',
+            baseUrl: "http://127.0.0.1:${server.address.port}/v1",
+            inputJson: '{"message":"production is down"}',
+            outputSchema: schema )) + [apiKey: 'typesafe-test-key'])
+        final frame = harness.nextFrame()
+
+        then: 'choice, score, and Noul are converted to the declared Nextflow output types'
+        frame.type == 'complete'
+        frame.resolvedModel == 'typesafe/jev-1.13.0'
+        new JsonSlurper().parseText(frame.output as String) == [
+            route: 'billing',
+            severity: 0.75,
+            urgent: true ]
+
+        and: 'all decisions share one state and preserve the official TypeSafe question shapes'
+        request.get().model == 'jev-latest'
+        request.get().state == [input: [message: 'production is down']]
+        request.get().questions.route == [
+            type: 'choice',
+            instructions: 'What is the capital of France?\n\nDecide the value of output "route".',
+            criteria: [billing: null, technical: null] ]
+        request.get().questions.severity.type == 'score'
+        request.get().questions.severity.criteria == ['Low (0)', 'High (1)']
+        request.get().questions.urgent.type == 'noul'
+
+        and: 'the calibrated answer details remain available to agent tracing'
+        harness.traces*.name == ['route', 'severity', 'urgent']
+        harness.traces*.event.unique() == ['decision']
     }
 
     def 'should attribute an empty answer to the provider failure that caused it'() {

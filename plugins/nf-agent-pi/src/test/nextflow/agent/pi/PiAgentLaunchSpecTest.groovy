@@ -43,6 +43,11 @@ class PiAgentLaunchSpecTest extends Specification {
         e.message.contains('container task')
     }
 
+    def 'the runner requests schemas for scalar outputs'() {
+        expect:
+        new PiAgentRunner().requiresStructuredScalarOutput()
+    }
+
     def 'proxy arguments are composed without parsing the command separator'() {
         given:
         def spec = new AgentLaunchSpec(
