@@ -42,6 +42,7 @@ import nextflow.util.ThreadPoolManager;
 import nextflow.util.Threads;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import software.amazon.awssdk.awscore.AwsRequestOverrideConfiguration;
 import software.amazon.awssdk.awscore.exception.AwsServiceException;
 import software.amazon.awssdk.core.ResponseInputStream;
 import software.amazon.awssdk.core.exception.SdkException;
@@ -211,6 +212,25 @@ public class S3Client {
     }
 
     /**
+     * Read a byte range (as carried by the request's {@code Range} header, e.g. {@code bytes=0-16383})
+     * as a single ranged GET, returning the body bytes directly (no streaming).
+     *
+     * @see software.amazon.awssdk.services.s3.S3Client#getObjectAsBytes(GetObjectRequest)
+     */
+    public byte[] getObjectRange(GetObjectRequest request) throws IOException {
+        // applied here rather than at the call site: `isRequesterPaysEnabled` is this client's
+        // setting, and a caller building a request has no business knowing about it
+        if( this.isRequesterPaysEnabled )
+            request = request.toBuilder().requestPayer(RequestPayer.REQUESTER).build();
+        final GetObjectRequest req = request;
+        try {
+            return runWithPermit(() -> client.getObjectAsBytes(req)).asByteArray();
+        } catch (SdkException e) {
+            throw convertAwsException(e, "getObjectRange", request.bucket(), request.key());
+        }
+    }
+
+    /**
      * @see software.amazon.awssdk.services.s3.S3Client#putObject
      */
     public PutObjectResponse putObject(String bucket, String key, File file) throws IOException {
@@ -223,6 +243,78 @@ public class S3Client {
             return runWithPermit(() -> client.putObject(builder.build(), file.toPath()));
         } catch (SdkException e) {
             throw convertAwsException(e, "putObject", bucket, key);
+        }
+    }
+
+    /**
+     * Makes the SDK retry a 409 on the conditional PUT below, which it does not do by default (its
+     * retryable set is {@code {500,502,503,504}}). A 409 there is a concurrent conditional write:
+     * S3 documents it as retryable, and it leaves the outcome undetermined. Retrying resolves that,
+     * so the claim ends on a definitive 200 or 412 rather than a guess.
+     *
+     * <p>Scoped to this one request, and added to the strategy the client was built with, so the
+     * configured {@code aws.client} retry settings and backoff are preserved.
+     */
+    private static final AwsRequestOverrideConfiguration RETRY_ON_CONFLICT = AwsRequestOverrideConfiguration.builder()
+            .addPlugin(cfg -> cfg.overrideConfiguration(c -> c.retryStrategy(
+                    r -> r.retryOnException(t -> t instanceof AwsServiceException && ((AwsServiceException) t).statusCode() == 409))))
+            .build();
+
+    /**
+     * Atomically create an (empty) object only if it does not already exist, using a
+     * conditional PUT ({@code If-None-Match: *}). Used as a cross-run lock primitive by
+     * the global cloud cache.
+     *
+     * @return {@code true} if this caller created the object; {@code false} if it did not --
+     *         see the error mapping below for the two cases that produce it.
+     */
+    public boolean putObjectIfAbsent(String bucket, String key) throws IOException {
+        // The marker is an object in the user's bucket like any other, so it must carry the same
+        // bucket-policy-relevant settings as every other write this client makes -- a policy of the
+        // `deny unless s3:x-amz-server-side-encryption` kind would otherwise reject EVERY claim with
+        // a 403, which `tryCreate` correctly refuses to read as "lost the race", so the run fails
+        // with an error pointing nowhere near the cause. Tags and content type are deliberately not
+        // applied: the marker carries no payload to describe, and it is cache infrastructure rather
+        // than pipeline data, so a user's output tagging does not belong on it.
+        PutObjectRequest.Builder builder = PutObjectRequest.builder()
+                .bucket(bucket)
+                .key(key)
+                .ifNoneMatch("*");
+        if( this.isRequesterPaysEnabled ) {
+            builder.requestPayer(RequestPayer.REQUESTER);
+        }
+        if( cannedAcl != null ) {
+            builder.acl(cannedAcl);
+        }
+        if( kmsKeyId != null ) {
+            builder.ssekmsKeyId(kmsKeyId);
+        }
+        if( storageEncryption != null ) {
+            builder.serverSideEncryption(storageEncryption);
+        }
+        // The storage class is a CLIENT-level default, not a property of the object being written:
+        // `aws.client.storageClass` becomes `upload_storage_class`, which S3FileSystemProvider
+        // applies to every other upload this client makes. A bucket policy conditioned on
+        // s3:x-amz-storage-class -- the same class of policy the encryption note above is about --
+        // would otherwise 403 every claim.
+        final String storageClass = props.getProperty("upload_storage_class");
+        if( storageClass != null ) {
+            builder.storageClass(storageClass);
+        }
+        builder.overrideConfiguration(RETRY_ON_CONFLICT);
+        try {
+            runWithPermit(() -> client.putObject(builder.build(), RequestBody.empty()));
+            return true;
+        } catch (AwsServiceException e) {
+            // 412: the object exists -- this caller lost the race. A 409 reaches here only after
+            // the retries above were exhausted, so its outcome is still undetermined; it is taken
+            // as a lost claim rather than aborting the task, costing at worst one duplicated
+            // execution that a later run heals.
+            if( e.statusCode() == 412 || e.statusCode() == 409 )
+                return false;
+            throw convertAwsException(e, "putObjectIfAbsent", bucket, key);
+        } catch (SdkException e) {
+            throw convertAwsException(e, "putObjectIfAbsent", bucket, key);
         }
     }
 
@@ -390,10 +482,17 @@ public class S3Client {
      * @see software.amazon.awssdk.services.s3.S3Client#listObjectsV2Paginator
      */
     public ListObjectsV2Iterable listObjectsV2Paginator(ListObjectsV2Request request) throws IOException {
+        // applied here rather than at the call site, as in getObject/getObjectRange:
+        // `isRequesterPaysEnabled` is this client's setting, and a caller building a request has no
+        // business knowing about it. Without it a requester-pays bucket answers AccessDenied to
+        // every listing this client makes.
+        if( this.isRequesterPaysEnabled )
+            request = request.toBuilder().requestPayer(RequestPayer.REQUESTER).build();
+        final ListObjectsV2Request req = request;
         try {
-            return runWithPermit(() -> client.listObjectsV2Paginator(request));
+            return runWithPermit(() -> client.listObjectsV2Paginator(req));
         } catch (SdkException e) {
-            throw convertAwsException(e, "listObjects", request.bucket(), request.prefix());
+            throw convertAwsException(e, "listObjects", req.bucket(), req.prefix());
         }
     }
 

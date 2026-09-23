@@ -32,6 +32,20 @@ import org.pf4j.ExtensionPoint
 @CompileStatic
 abstract class CacheFactory implements ExtensionPoint {
 
+    /**
+     * Build the cache instance.
+     *
+     * <p>A factory MAY write back into the current session while resolving its cache — a
+     * content-addressable cache whose work directory <b>is</b> the cache assigns
+     * {@code session.workDir}, and turns {@code resumeMode} on because its hits are keyed by task
+     * hash rather than by session id. This is why {@code Session.init} creates the cache before it
+     * reads {@code workDir}: everything downstream of that point (the work-dir creation, the
+     * observers, the {@code WorkflowMetadata} snapshot) must see the effective value, or
+     * {@code workflow.workDir} reports a directory the tasks never use.
+     *
+     * <p>{@code SessionTest} locks that ordering, so a reorder fails a test rather than silently
+     * producing a run whose reported work dir is not the one in use.
+     */
     protected abstract CacheDB newInstance(UUID uniqueId, String runName, Path home=null)
 
     static CacheDB create(UUID uniqueId, String runName, Path home=null) {

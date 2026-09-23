@@ -117,6 +117,37 @@ class LinObserverTest extends Specification {
         ScriptMeta.reset()
         folder?.deleteDir()
     }
+    def 'getSourceReference resolves an output to its producing task, attempt dir included'() {
+        given:
+        def config = [workflow:[lineage:[enabled: true, store:[location:lidFolder.toString()]]]]
+        def workDir = Path.of('/work')
+        def session = Mock(Session) {
+            getConfig() >> config
+            getWorkDir() >> workDir
+        }
+        def store = new DefaultLinStore()
+        store.open(LineageConfig.create(session))
+        def observer = new LinObserver(session, store)
+        def hash = 'abcdef0123456789abcdef0123456789'
+
+        expect: 'a first-attempt output'
+        observer.getSourceReference(Path.of('/work/ab/cdef0123456789abcdef0123456789/out.bam')) ==
+                "lid://${hash}/out.bam"
+
+        and: 'an output of a retried attempt resolves to the SAME shape -- the `-N` is a directory'
+        and: 'name, not part of the reference, and this is the key `storeTaskOutput` wrote it under'
+        observer.getSourceReference(Path.of('/work/ab/cdef0123456789abcdef0123456789-2/out.bam')) ==
+                "lid://${hash}/out.bam"
+
+        and: 'nested outputs keep their sub-path'
+        observer.getSourceReference(Path.of('/work/ab/cdef0123456789abcdef0123456789-2/sub/out.bam')) ==
+                "lid://${hash}/sub/out.bam"
+
+        and: 'a path outside any task work dir has no source reference'
+        observer.getSourceReference(Path.of('/work/ab/not-a-hash/out.bam')) == null
+        observer.getSourceReference(Path.of('/elsewhere/data.txt')) == null
+    }
+
     def 'should collect script files' () {
         given:
         def folder = Files.createTempDirectory('test')

@@ -126,11 +126,62 @@ $ nextflow module run ./modules/local/fastqc/main.nf \
     -with-docker
 ```
 
-:::note
-The local module should define a single process or a single named workflow, or else the command will fail.
-:::
+The local module must define a single process or named workflow.
 
 See [module run][cli-module-run] for the full command reference.
+
+### Module parameters
+
+Parameters are inferred from the module's declared inputs: the `input:` section for a process, or the `take:` section for a named workflow.
+
+Type conversions are handled the same way as [typed parameters][typed-params]. Workflow modules use the following additional rules for dataflow types:
+
+- A `Channel<E>` input accepts a samplesheet path, which Nextflow loads as a channel of records. The samplesheet file can be CSV, JSON, or YAML. The element type must be `Map`, `Record`, or a record type. Each row is validated against and converted to the declared type.
+
+- A `Value<V>` input accepts a value of type `V`, which Nextflow wraps in a value channel.
+
+Consider the following workflow:
+
+```nextflow
+nextflow.enable.types = true
+
+workflow RNASEQ {
+    take:
+    samples: Channel<Sample>
+    index: Value<Path>
+    strandedness: String?
+
+    main:
+    // ...
+
+    emit:
+    aligned: Channel<AlignedSample> = ch_aligned
+}
+
+record Sample {
+    id: String
+    fastq_1: Path
+    fastq_2: Path
+}
+
+record AlignedSample { /* ... */ }
+```
+
+It can be run directly:
+
+```console
+$ nextflow module run ./rnaseq.nf \
+    --samples samples.csv \
+    --index genome.fa
+```
+
+:::note
+Workflow modules must be typed in order to be executed directly. Process modules do not need to be typed.
+:::
+
+### Module outputs
+
+Each declared output is reported as a workflow output. Output files are reported by their work directory path; they are not published to an output directory.
 
 ## Updating modules
 
@@ -147,6 +198,16 @@ Use the `-force` flag to overwrite local changes:
 ```console
 $ nextflow module install nf-core/fastqc -version 0.0.0-c9h0bv4 -force
 ```
+
+### Updating a workflow module's dependencies
+
+A workflow module declares its dependencies in `meta.yml` (`requires.modules`), and they are vendored under the module's own `modules/` directory. If you edit the declared dependency versions of an already-installed module by hand, use `-update-deps` to re-vendor them to match the edited `meta.yml`, without reinstalling the module itself:
+
+```console
+$ nextflow module install nf-core/my-workflow -update-deps
+```
+
+This installs newly declared dependencies, updates changed versions, and removes dependencies that are no longer declared. A vendored dependency with local modifications is not overwritten or removed; an error is raised instead. The module itself is left untouched, so its local (unpublished) modification status is preserved.
 
 ## Removing modules
 
@@ -171,3 +232,4 @@ See [module remove][cli-module-remove] for the full command reference.
 [cli-module-search]: ../reference/cli/module#module-search
 [cli-module-view]: ../reference/cli/module#module-view
 [syntax-include]: ../reference/syntax#include
+[typed-params]: ../typed-parameters

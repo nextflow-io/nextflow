@@ -153,7 +153,7 @@ configurations {
 
 dependencies {
     compileOnly project(':nextflow')
-    compileOnly 'org.slf4j:slf4j-api:2.0.17'
+    compileOnly 'org.slf4j:slf4j-api:2.0.19'
     compileOnly 'org.pf4j:pf4j:3.14.1'
 
     // Driver-side RPC broker for canonical agent tasks. Bundled with the runner
@@ -165,8 +165,8 @@ dependencies {
     // Self-signed certificate construction for the broker's per-run TLS identity: the JDK has no
     // public API for it. Same pinned versions as nf-k8s -- PF4J isolates plugin classloaders, so
     // that copy is not visible here; bump the two together.
-    api 'org.bouncycastle:bcprov-jdk18on:1.84'
-    api 'org.bouncycastle:bcpkix-jdk18on:1.84'
+    api 'org.bouncycastle:bcprov-jdk18on:1.85'
+    api 'org.bouncycastle:bcpkix-jdk18on:1.85'
 
     testImplementation(testFixtures(project(':nextflow')))
     testImplementation 'org.apache.groovy:groovy:4.0.33'
