@@ -928,10 +928,12 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         final machineType = config.getMachineType()
         final families = machineType ? machineType.tokenize(',') : List.<String>of()
         final priceModel = spot ? PriceModel.spot : PriceModel.standard
+        final exactType = machineType && !machineType.contains(',') && !machineType.contains('*')
 
         try {
             if( executor.isCloudinfoEnabled() ) {
-                log.warn1 "Google Batch machine type selection via the Cloud Info service is deprecated -- use the `machineType` directive to choose a machine type"
+                if( !exactType )
+                    log.warn1 "Google Batch machine type selection via the Cloud Info service is deprecated -- use the `machineType` directive to choose a machine type, or set NXF_CLOUDINFO_ENABLED=false to let Google Batch choose one"
                 return bestMachineType0(cpus, memory, location, spot, localSSD, families)
             }
         }
@@ -940,7 +942,7 @@ class GoogleBatchTaskHandler extends TaskHandler implements FusionAwareTask {
         }
 
         // Check if a specific machine type was provided by the user
-        if( machineType && !machineType.contains(',') && !machineType.contains('*') )
+        if( exactType )
             return new GoogleBatchMachineTypeSelector.MachineType(
                 type: machineType,
                 location: location,
