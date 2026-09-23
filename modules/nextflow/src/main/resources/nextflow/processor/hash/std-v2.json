@@ -1,0 +1,59 @@
+{
+  "id": "std/v2",
+  "note": "#6679 (2026-03-09) to #6914 (029e52eef, 2026-07-17): record-types encoding, still no module-bundle key.",
+  "function": "murmur3_128",
+  "encoding": {
+    "orderIndependentMaps": true,
+    "cacheFunnelFirst": true
+  },
+  "keys": [
+    {
+      "key": "SESSION_ID",
+      "extractor": "sessionId"
+    },
+    {
+      "key": "PROCESS_NAME",
+      "extractor": "processName"
+    },
+    {
+      "key": "TASK_SOURCE",
+      "extractor": "taskSource"
+    },
+    {
+      "key": "CONTAINER",
+      "extractor": "containerFingerprint"
+    },
+    {
+      "key": "INPUTS",
+      "extractor": "inputs.raw"
+    },
+    {
+      "key": "EVAL_OUTPUTS",
+      "extractor": "evalOutputs.derivedString"
+    },
+    {
+      "key": "SCRIPT_VARS",
+      "extractor": "scriptVars"
+    },
+    {
+      "key": "BIN_ENTRIES",
+      "extractor": "binEntries"
+    },
+    {
+      "key": "ENV_MODULES",
+      "extractor": "envModules"
+    },
+    {
+      "key": "CONDA",
+      "extractor": "condaEnv"
+    },
+    {
+      "key": "SPACK",
+      "extractor": "spackEnvAndArch"
+    },
+    {
+      "key": "STUB_MARKER",
+      "extractor": "stubMarker"
+    }
+  ]
+}

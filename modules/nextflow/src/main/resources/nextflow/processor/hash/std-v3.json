@@ -1,0 +1,63 @@
+{
+  "id": "std/v3",
+  "note": "#6914 (2026-07-17) to #7575 (9e7a492a3, 2026-09-03): module-bundle key added.",
+  "function": "murmur3_128",
+  "encoding": {
+    "orderIndependentMaps": true,
+    "cacheFunnelFirst": true
+  },
+  "keys": [
+    {
+      "key": "SESSION_ID",
+      "extractor": "sessionId"
+    },
+    {
+      "key": "PROCESS_NAME",
+      "extractor": "processName"
+    },
+    {
+      "key": "TASK_SOURCE",
+      "extractor": "taskSource"
+    },
+    {
+      "key": "CONTAINER",
+      "extractor": "containerFingerprint"
+    },
+    {
+      "key": "INPUTS",
+      "extractor": "inputs.raw"
+    },
+    {
+      "key": "EVAL_OUTPUTS",
+      "extractor": "evalOutputs.derivedString"
+    },
+    {
+      "key": "SCRIPT_VARS",
+      "extractor": "scriptVars"
+    },
+    {
+      "key": "BIN_ENTRIES",
+      "extractor": "binEntries"
+    },
+    {
+      "key": "MODULE_BUNDLE",
+      "extractor": "moduleBundleFingerprint"
+    },
+    {
+      "key": "ENV_MODULES",
+      "extractor": "envModules"
+    },
+    {
+      "key": "CONDA",
+      "extractor": "condaEnv"
+    },
+    {
+      "key": "SPACK",
+      "extractor": "spackEnvAndArch"
+    },
+    {
+      "key": "STUB_MARKER",
+      "extractor": "stubMarker"
+    }
+  ]
+}

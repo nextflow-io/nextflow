@@ -23,13 +23,13 @@ class StdSpecsTest extends Specification {
     def 'adjacent specs differ in exactly the documented place'() {
         expect: 'v1 to v2 differs only in encoding'
         StdSpecs.STD_V1.keys() == StdSpecs.STD_V2.keys()
-        StdSpecs.STD_V1.encoding.is(EncodingRules.LEGACY)
-        StdSpecs.STD_V2.encoding.is(EncodingRules.RECORD_TYPES)
+        StdSpecs.STD_V1.encoding.canonicalForm() == EncodingRules.LEGACY.canonicalForm()
+        StdSpecs.STD_V2.encoding.canonicalForm() == EncodingRules.RECORD_TYPES.canonicalForm()
 
         and: 'v2 to v3 differs only by the module bundle key'
         StdSpecs.STD_V3.keys() - StdSpecs.STD_V2.keys() == [HashKey.MODULE_BUNDLE]
         StdSpecs.STD_V2.keys() - StdSpecs.STD_V3.keys() == []
-        StdSpecs.STD_V3.encoding.is(StdSpecs.STD_V2.encoding)
+        StdSpecs.STD_V3.encoding.canonicalForm() == StdSpecs.STD_V2.encoding.canonicalForm()
 
         and: 'v3 to v4 differs only in the eval extraction'
         StdSpecs.STD_V3.keys() == StdSpecs.STD_V4.keys()
