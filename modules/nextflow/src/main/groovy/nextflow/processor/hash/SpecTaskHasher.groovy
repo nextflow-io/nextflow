@@ -20,24 +20,37 @@ import groovy.json.JsonOutput
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.exception.UnexpectedException
+import nextflow.processor.TaskHasher
+import nextflow.processor.TaskRun
 import nextflow.util.CacheHelper
 import nextflow.util.HashBuilder
 
 /**
- * Executes any TaskHashSpec. There are no subclasses: a different hash version, or
- * a plugin's own hasher, is a different spec value.
+ * A {@link TaskHasher} that computes the task hash from a {@link TaskHashSpec} — an
+ * ordered list of named key bindings plus encoding rules — rather than from a hard-coded
+ * key sequence.
+ *
+ * It is opt-in: {@link SpecTaskHasherFactory} returns one only when a task hash version
+ * is configured, so a run that asks for nothing keeps the inherited {@link TaskHasher}
+ * behaviour byte for byte. There are no subclasses of this class — a different hash
+ * version, or a plugin's own hashing, is a different spec value, not a new type.
  */
 @Slf4j
 @CompileStatic
-class BaseTaskHasher {
+class SpecTaskHasher extends TaskHasher {
 
     private final HashContext ctx
 
     private final TaskHashSpec spec
 
-    BaseTaskHasher(HashContext ctx, TaskHashSpec spec) {
+    SpecTaskHasher(HashContext ctx, TaskHashSpec spec) {
+        super(ctx.task)
         this.ctx = ctx
         this.spec = spec
+    }
+
+    SpecTaskHasher(TaskRun task, TaskHashSpec spec) {
+        this(new HashContext(task), spec)
     }
 
     TaskHashSpec getSpec() {
@@ -53,6 +66,7 @@ class BaseTaskHasher {
         return keys
     }
 
+    @Override
     HashCode compute() {
         final keys = collectKeys()
         final mode = ctx.task.processor.getConfig().getHashMode()

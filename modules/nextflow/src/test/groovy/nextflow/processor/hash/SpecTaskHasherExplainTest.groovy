@@ -26,7 +26,7 @@ import nextflow.script.ProcessConfig
 import nextflow.util.CacheHelper
 import spock.lang.Specification
 
-class BaseTaskHasherExplainTest extends Specification {
+class SpecTaskHasherExplainTest extends Specification {
 
     private HashContext ctx(String source, String conda) {
         def session = Mock(Session) {
@@ -65,7 +65,7 @@ class BaseTaskHasherExplainTest extends Specification {
 
     def 'explain reports one digest per emitting key, in spec order'() {
         when:
-        def explained = new BaseTaskHasher(ctx('echo a', 'env.yml'), StdSpecs.STD_V4).explain()
+        def explained = new SpecTaskHasher(ctx('echo a', 'env.yml'), StdSpecs.STD_V4).explain()
 
         then: 'keys that emitted nothing are absent'
         explained.keySet() as List == [
@@ -75,8 +75,8 @@ class BaseTaskHasherExplainTest extends Specification {
 
     def 'only the differing key changes digest between two tasks'() {
         given:
-        def a = new BaseTaskHasher(ctx('echo a', 'env.yml'), StdSpecs.STD_V4).explain()
-        def b = new BaseTaskHasher(ctx('echo CHANGED', 'env.yml'), StdSpecs.STD_V4).explain()
+        def a = new SpecTaskHasher(ctx('echo a', 'env.yml'), StdSpecs.STD_V4).explain()
+        def b = new SpecTaskHasher(ctx('echo CHANGED', 'env.yml'), StdSpecs.STD_V4).explain()
 
         expect:
         a[HashKey.TASK_SOURCE] != b[HashKey.TASK_SOURCE]
@@ -86,7 +86,7 @@ class BaseTaskHasherExplainTest extends Specification {
 
     def 'explain does not change the computed hash'() {
         given:
-        def hasher = new BaseTaskHasher(ctx('echo a', 'env.yml'), StdSpecs.STD_V4)
+        def hasher = new SpecTaskHasher(ctx('echo a', 'env.yml'), StdSpecs.STD_V4)
         def before = hasher.compute()
 
         when:
