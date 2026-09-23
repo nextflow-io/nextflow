@@ -24,7 +24,6 @@ import nextflow.cache.CacheDB
 import nextflow.cache.CacheFactory
 import nextflow.exception.AbortOperationException
 import nextflow.util.HistoryFile
-import org.slf4j.LoggerFactory
 
 /**
  * Common cache operations shared by {@link CmdLog} and {@link CmdClean}
@@ -52,15 +51,12 @@ trait CacheBase {
 
     void init() {
 
-        if( SysEnv.get('NXF_CLOUDCACHE_PATH') )
-            LoggerFactory.getLogger(CacheBase).warn "The `${getName()}` command does not support the cloud cache -- NXF_CLOUDCACHE_PATH will be ignored"
-
         if( !history ) {
             history = !basePath ? HistoryFile.DEFAULT : new HistoryFile(basePath.resolve(HistoryFile.defaultFileName()))
         }
 
         if( !history.exists() || history.empty() )
-            throw new AbortOperationException("It looks like no pipeline was executed in this folder (or execution history is empty)")
+            throw new AbortOperationException("It looks like no pipeline was executed in this folder (or execution history is empty)" + cloudCacheHint())
 
         if( after && before )
             throw new AbortOperationException("Options `after` and `before` cannot be used in the same command")
@@ -73,8 +69,23 @@ trait CacheBase {
 
     }
 
-    CacheDB cacheFor(HistoryFile.Record entry) {
-        CacheFactory.create(entry.sessionId, entry.runName, basePath)
+    CacheDB openCache(HistoryFile.Record entry) {
+        try {
+            return CacheFactory.create(entry.sessionId, entry.runName, basePath).openForRead()
+        }
+        catch( AbortOperationException e ) {
+            throw new AbortOperationException(e.message + cloudCacheHint(), e)
+        }
+    }
+
+    /**
+     * Explain the failure when the cloud cache is enabled, since
+     * this command can only read the local cache
+     */
+    private String cloudCacheHint() {
+        return SysEnv.get('NXF_CLOUDCACHE_PATH')
+            ? "\n\nNote: the `${getName()}` command does not support the cloud cache"
+            : ''
     }
 
     List<HistoryFile.Record> listIds() {
