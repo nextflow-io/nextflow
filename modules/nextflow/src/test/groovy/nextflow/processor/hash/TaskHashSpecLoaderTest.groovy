@@ -32,8 +32,8 @@ class TaskHashSpecLoaderTest extends Specification {
     def 'loads a well-formed spec'() {
         when:
         def result = TaskHashSpecLoader.load(spec('''[
-            {"key":"SESSION_ID","extractor":"sessionId"},
-            {"key":"CONDA","extractor":"condaEnv"}]'''), 'test')
+            {"key":"SESSION_ID","contributor":"sessionId"},
+            {"key":"CONDA","contributor":"condaEnv"}]'''), 'test')
 
         then:
         result.id == 'test/v1'
@@ -50,17 +50,17 @@ class TaskHashSpecLoaderTest extends Specification {
 
         where:
         reason                  | json
-        'an unknown extractor'  | spec('[{"key":"SESSION_ID","extractor":"nope"}]')
-        'an unknown hash key'   | spec('[{"key":"NOT_A_KEY","extractor":"sessionId"}]')
-        'a duplicated key'      | spec('''[{"key":"CONDA","extractor":"condaEnv"},
-                                           {"key":"CONDA","extractor":"condaEnv"}]''')
-        'an entry missing its extractor' | spec('[{"key":"CONDA"}]')
-        'an unsupported function'| spec('[{"key":"CONDA","extractor":"condaEnv"}]', 'sha256')
+        'an unknown contributor'  | spec('[{"key":"SESSION_ID","contributor":"nope"}]')
+        'an unknown hash key'   | spec('[{"key":"NOT_A_KEY","contributor":"sessionId"}]')
+        'a duplicated key'      | spec('''[{"key":"CONDA","contributor":"condaEnv"},
+                                           {"key":"CONDA","contributor":"condaEnv"}]''')
+        'an entry missing its contributor' | spec('[{"key":"CONDA"}]')
+        'an unsupported function'| spec('[{"key":"CONDA","contributor":"condaEnv"}]', 'sha256')
         'empty keys'            | spec('[]')
         'a non-object document' | '[]'
     }
 
-    def 'every shipped std spec loads and every extractor it names is registered'() {
+    def 'every shipped std spec loads and every contributor it names is registered'() {
         expect:
         StdSpecs.all().size() == 4
         and:

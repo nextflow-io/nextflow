@@ -69,15 +69,15 @@ class TaskHashSpecLoader {
             }
             final e = entry as Map
             final keyName = e.get('key') as String
-            final extractor = e.get('extractor') as String
-            if( !keyName || !extractor ) {
-                throw new IllegalArgumentException("Task hash spec ${id} has an entry missing 'key' or 'extractor'")
+            final contributor = e.get('contributor') as String
+            if( !keyName || !contributor ) {
+                throw new IllegalArgumentException("Task hash spec ${id} has an entry missing 'key' or 'contributor'")
             }
             final key = parseKey(keyName, id)
             if( !seen.add(key) ) {
                 throw new IllegalArgumentException("Task hash spec ${id} binds ${keyName} more than once")
             }
-            bindings.add(new KeyBinding(key, ContributorRegistry.get(extractor)))
+            bindings.add(new KeyBinding(key, ContributorRegistry.get(contributor)))
         }
 
         return new TaskHashSpec(id, bindings, encoding)

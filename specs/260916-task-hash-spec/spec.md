@@ -247,19 +247,19 @@ the *extraction* is code. So a spec is a JSON resource:
 { "id": "std/v3",
   "function": "murmur3_128",
   "encoding": { "orderIndependentMaps": true, "cacheFunnelFirst": true },
-  "keys": [ { "key": "SESSION_ID", "extractor": "sessionId" },
-            { "key": "EVAL_OUTPUTS", "extractor": "evalOutputs.derivedString" } ] }
+  "keys": [ { "key": "SESSION_ID", "contributor": "sessionId" },
+            { "key": "EVAL_OUTPUTS", "contributor": "evalOutputs.derivedString" } ] }
 ```
 
-`ContributorRegistry` resolves `extractor` names; plugins register their own so a plugin spec can
-name extractors core does not know about. `TaskHashSpecLoader` validates strictly — unknown key,
-unknown extractor, duplicate binding, unsupported function, malformed document all fail at load,
+`ContributorRegistry` resolves `contributor` names; plugins register their own so a plugin spec can
+name contributors core does not know about. `TaskHashSpecLoader` validates strictly — unknown key,
+unknown contributor, duplicate binding, unsupported function, malformed document all fail at load,
 because a spec silently resolving to something else produces cache keys nobody can account for.
 
 Two consequences worth stating:
 
 - **A version that only adds, removes or reorders keys, or flips an encoding flag, needs no Nextflow
-  release.** #6914 and #6679 would each have been one new file. A version needing a *new extractor*
+  release.** #6914 and #6679 would each have been one new file. A version needing a *new contributor*
   still needs code, as #7575 did — JSON covers composition, not derivation.
 - **Diffing two spec files answers "what changed between these hash versions"**, which is the same
   artifact `adr/20260901-task-hash-key-fields.md` calls the hash-relevant field list. One artifact,
