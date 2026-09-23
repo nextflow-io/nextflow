@@ -316,6 +316,8 @@ function jevOutput(questions, response) {
 
 async function runJev(start, modelId) {
   const spec = start.spec;
+  if (spec.toolSpecs?.length || spec.nativeToolNames?.length || spec.skills?.length)
+    throw new Error("TypeSafe Jev decision models do not support agent tools or skills");
   const apiKey = start.apiKey || process.env.TYPESAFE_API_KEY;
   if (!apiKey)
     throw new Error(

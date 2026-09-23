@@ -296,6 +296,25 @@ class PiHarnessProtocolTest extends Specification {
         harness.traces[0].text.contains('"confidence":0.8')
     }
 
+    def 'should reject tools for a TypeSafe Jev decision model'() {
+        given:
+        harness = start()
+        harness.next()
+
+        when:
+        harness.send(startFrame(specOf(
+            model: 'typesafe/jev-latest',
+            outputSchema: [
+                type: 'object',
+                properties: [urgent: [type: 'boolean']] ],
+            toolSpecs: [toolSpec('word_stats')] )))
+        final frame = harness.nextFrame()
+
+        then:
+        frame.type == 'error'
+        frame.message == 'TypeSafe Jev decision models do not support agent tools or skills'
+    }
+
     def 'should attribute an empty answer to the provider failure that caused it'() {
         given: 'the SDK reports a failed model call as an assistant message with no content'
         harness = start([[[providerError: 'HTTP 500 (request id req_abc123)']]])
