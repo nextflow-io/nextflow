@@ -478,7 +478,7 @@ class ScriptDslTest extends Dsl2Spec {
 
         then:
         def err = thrown(ScriptCompilationException)
-        err.cause.message.contains "Invalid workflow definition -- check for missing or out-of-order section labels"
+        err.cause.message.contains "Unexpected input: ':' @ line 9, column 16"
     }
 
 
