@@ -23,7 +23,7 @@ import groovy.transform.CompileStatic
  * A spec file describes composition — which keys, in what order, under which encoding —
  * but the extraction itself is code. This registry is the seam between the two, and the
  * reason a version that only adds, removes or reorders keys needs no Nextflow release
- * while one that needs a new extractor does.
+ * while one that needs a new contributor does.
  *
  * An unknown name is always an error. Falling back to a default would hash a task under
  * a spec nobody wrote.
@@ -55,7 +55,7 @@ class ContributorRegistry {
 
     /**
      * Register a contributor under its canonical name. Plugins call this at startup to
-     * make their own extractors referable from a spec file.
+     * make their own contributors referable from a spec file.
      */
     static void register(Contributor contributor) {
         final name = contributor.canonicalName()
