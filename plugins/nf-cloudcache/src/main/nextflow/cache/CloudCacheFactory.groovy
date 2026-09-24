@@ -19,6 +19,7 @@ package nextflow.cache
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import groovy.util.logging.Slf4j
 import nextflow.Global
 import nextflow.Session
 import nextflow.exception.AbortOperationException
@@ -30,6 +31,7 @@ import nextflow.plugin.Priority
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
+@Slf4j
 @CompileStatic
 @Priority(-10)
 class CloudCacheFactory extends CacheFactory {
@@ -39,10 +41,18 @@ class CloudCacheFactory extends CacheFactory {
      * this plugin to the run (see {@code PluginsFacade.defaultPluginsConf}), so in a configured run
      * nothing changes; what it covers is the plugin being loaded some other way — listed explicitly
      * in {@code plugins}, or injected — where taking over the cache was never the intent.
+     *
+     * <p>A path without {@code enabled} is warned about rather than silently ignored: that run used
+     * to fail with "Cloud-cache path not defined", and handing the run to the next factory without a
+     * word would turn a loud misconfiguration into a quiet one.
      */
     @Override
     protected boolean isEnabled(Map config) {
-        return config?.navigate('cloudcache.enabled') == true
+        if( config?.navigate('cloudcache.enabled') == true )
+            return true
+        if( config?.navigate('cloudcache.path') )
+            log.warn "Cloud cache is NOT enabled — `cloudcache.path` is set but `cloudcache.enabled` is not `true`, so this run uses the default cache"
+        return false
     }
 
     @Override

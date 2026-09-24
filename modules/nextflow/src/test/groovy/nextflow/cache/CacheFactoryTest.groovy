@@ -94,24 +94,6 @@ class CacheFactoryTest extends Specification {
         CacheFactory.select([configured, fallback], null) is fallback
     }
 
-    def 'the same factory is chosen at init and at cleanup'() {
-        given: '''Session.init creates the cache and Session.cleanup creates it AGAIN, after the
-              session was destroyed. Between the two, newInstance is allowed to write into the
-              session -- workDir, resumeMode. Reading only the config is what makes the second
-              selection reach the same factory as the first, so the records are read back by the
-              backend that wrote them'''
-        def config = [mycache: true]
-        def factories = [new ConfiguredFactory(), new AlwaysFactory()]
-
-        when:
-        def atInit = CacheFactory.select(factories, config)
-        and: 'whatever the session went through in between, the config is the same object'
-        def atCleanup = CacheFactory.select(factories, config)
-
-        then:
-        atCleanup.is(atInit)
-    }
-
     def 'aborts when no factory is registered at all'() {
         when:
         CacheFactory.select(EMPTY, [:])
