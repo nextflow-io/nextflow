@@ -16,6 +16,7 @@
 package nextflow.processor.hash
 
 import groovy.transform.CompileStatic
+import nextflow.SysEnv
 import groovy.util.logging.Slf4j
 import nextflow.processor.TaskHasher
 import nextflow.processor.TaskHasherFactory
@@ -34,9 +35,24 @@ import nextflow.processor.TaskRun
 @CompileStatic
 class SpecTaskHasherFactory implements TaskHasherFactory {
 
+    static final String ENV_VAR = 'NXF_TASK_HASH_VER'
+
+    /**
+     * @return the requested spec, or {@code null} when none was requested. An unknown id
+     *      is an error rather than a silent fallback: a run hashed under a version other
+     *      than the one it asked for produces cache keys nobody can account for.
+     */
+    static TaskHashSpec requestedSpec() {
+        final id = SysEnv.get(ENV_VAR)
+        if( !id ) {
+            return null
+        }
+        return StdSpecs.byId(id)
+    }
+
     @Override
     TaskHasher create(TaskRun task) {
-        final spec = TaskHashSpecResolver.requestedSpec()
+        final spec = requestedSpec()
         if( spec == null ) {
             return null
         }

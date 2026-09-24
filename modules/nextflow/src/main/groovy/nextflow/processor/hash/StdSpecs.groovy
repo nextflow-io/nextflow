@@ -57,7 +57,7 @@ class StdSpecs {
             throw new IllegalStateException("Missing task hash spec resource: ${path}")
         }
         try {
-            return TaskHashSpecLoader.load(stream.getText('UTF-8'), path)
+            return TaskHashSpec.fromJson(stream.getText('UTF-8'), path)
         }
         finally {
             stream.close()

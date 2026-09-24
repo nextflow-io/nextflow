@@ -30,8 +30,17 @@ import nextflow.script.bundle.ResourcesBundle
 @CompileStatic
 class Contributors {
 
+    private static final Map<String,Contributor> REGISTRY = new LinkedHashMap<String,Contributor>()
+
+    /**
+     * Declare a contributor and make it referable from a spec file by {@code name}.
+     *
+     * Registration happens here rather than in a separate list, so a new constant cannot
+     * be added and then silently left out of the registry -- which would surface only as
+     * "Unknown task hash contributor" when a spec that names it is loaded.
+     */
     static Contributor of(String name, Closure<List<Object>> fn) {
-        return new Contributor() {
+        final result = new Contributor() {
             @Override
             String canonicalName() {
                 return name
@@ -42,6 +51,50 @@ class Contributors {
                 return (List<Object>) fn.call(ctx)
             }
         }
+        register(result)
+        return result
+    }
+
+    /**
+     * Register a contributor under its canonical name. Plugins call this at startup to
+     * make their own contributors referable from a spec file.
+     */
+    static void register(Contributor contributor) {
+        final name = contributor.canonicalName()
+        final existing = REGISTRY.get(name)
+        if( existing != null && !existing.is(contributor) ) {
+            throw new IllegalArgumentException("Duplicate task hash contributor name: ${name}")
+        }
+        REGISTRY.put(name, contributor)
+    }
+
+    /**
+     * Resolve the contributor a spec file refers to by name.
+     *
+     * An unknown name is always an error -- falling back to a default would hash a task
+     * under a spec nobody wrote.
+     */
+    static Contributor get(String name) {
+        ensureInitialised()
+        final result = REGISTRY.get(name)
+        if( result == null ) {
+            throw new IllegalArgumentException("Unknown task hash contributor: ${name} -- available: ${REGISTRY.keySet().join(', ')}")
+        }
+        return result
+    }
+
+    static Set<String> names() {
+        ensureInitialised()
+        return Collections.unmodifiableSet(REGISTRY.keySet())
+    }
+
+    /**
+     * Touch a constant so this class's static initialiser has run before the registry is
+     * read. Without it a lookup arriving before any constant is referenced would see an
+     * empty map and reject a perfectly valid spec.
+     */
+    private static void ensureInitialised() {
+        SESSION_ID.canonicalName()
     }
 
     static final Contributor SESSION_ID = of('sessionId') { HashContext ctx ->

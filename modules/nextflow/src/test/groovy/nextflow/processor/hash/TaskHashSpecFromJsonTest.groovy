@@ -18,7 +18,7 @@ package nextflow.processor.hash
 import spock.lang.Specification
 import spock.lang.Unroll
 
-class TaskHashSpecLoaderTest extends Specification {
+class TaskHashSpecFromJsonTest extends Specification {
 
     private static String spec(String keys, String function = 'murmur3_128') {
         return """{
@@ -31,7 +31,7 @@ class TaskHashSpecLoaderTest extends Specification {
 
     def 'loads a well-formed spec'() {
         when:
-        def result = TaskHashSpecLoader.load(spec('''[
+        def result = TaskHashSpec.fromJson(spec('''[
             {"key":"SESSION_ID","contributor":"sessionId"},
             {"key":"CONDA","contributor":"condaEnv"}]'''), 'test')
 
@@ -44,7 +44,7 @@ class TaskHashSpecLoaderTest extends Specification {
     @Unroll
     def 'rejects #reason rather than loading a spec nobody wrote'() {
         when:
-        TaskHashSpecLoader.load(json, 'test')
+        TaskHashSpec.fromJson(json, 'test')
         then:
         thrown(IllegalArgumentException)
 
@@ -64,6 +64,6 @@ class TaskHashSpecLoaderTest extends Specification {
         expect:
         StdSpecs.all().size() == 4
         and:
-        StdSpecs.all().every { s -> s.bindings.every { b -> b.contributor.canonicalName() in ContributorRegistry.names() } }
+        StdSpecs.all().every { s -> s.bindings.values().every { c -> c.canonicalName() in Contributors.names() } }
     }
 }

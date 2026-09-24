@@ -50,7 +50,12 @@ class SpecTaskHasher extends TaskHasher {
     }
 
     SpecTaskHasher(TaskRun task, TaskHashSpec spec) {
-        this(new HashContext(task), spec)
+        super(task)
+        this.spec = spec
+        // reuse this hasher as the context's helper: it already inherits
+        // getTaskGlobalVars()/getTaskBinEntries(), so delegating to a second
+        // TaskHasher would allocate one throwaway object per task
+        this.ctx = new HashContext(task, this)
     }
 
     TaskHashSpec getSpec() {
@@ -60,8 +65,8 @@ class SpecTaskHasher extends TaskHasher {
     /** The flat, ordered value list the spec produces for this task. */
     List<Object> collectKeys() {
         final keys = new ArrayList<Object>()
-        for( KeyBinding binding : spec.bindings ) {
-            keys.addAll(binding.contributor.emit(ctx))
+        for( Contributor contributor : spec.bindings.values() ) {
+            keys.addAll(contributor.emit(ctx))
         }
         return keys
     }
@@ -70,6 +75,22 @@ class SpecTaskHasher extends TaskHasher {
     HashCode compute() {
         final keys = collectKeys()
         final mode = ctx.task.processor.getConfig().getHashMode()
+        final hash = computeHash(keys, mode)
+        // mirror TaskHasher.compute()'s dump gating: overriding compute() takes this
+        // class off the base class's dump path, so `-dump-hashes` would otherwise print
+        // nothing at all for a run that opted into a spec
+        if( ctx.session.dumpHashes ) {
+            if( ctx.session.dumpHashes == 'json' ) {
+                log.info "[${ctx.task.lazyName()}] cache hash: ${hash}; spec: ${spec.id}; entries: ${dumpJson()}"
+            }
+            else {
+                log.info(dumpLegacy(hash))
+            }
+        }
+        return hash
+    }
+
+    private HashCode computeHash(List<Object> keys, CacheHelper.HashMode mode) {
         try {
             return spec.encoding
                 .apply(new HashBuilder().withHasher(HashBuilder.defaultHasher()).withMode(mode))
@@ -92,8 +113,8 @@ class SpecTaskHasher extends TaskHasher {
     Map<HashKey,HashCode> explain() {
         final mode = ctx.task.processor.getConfig().getHashMode()
         final result = new LinkedHashMap<HashKey,HashCode>()
-        for( KeyBinding binding : spec.bindings ) {
-            final values = binding.contributor.emit(ctx)
+        for( Map.Entry<HashKey,Contributor> binding : spec.bindings.entrySet() ) {
+            final values = binding.value.emit(ctx)
             if( !values ) {
                 continue
             }

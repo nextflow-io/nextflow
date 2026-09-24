@@ -33,9 +33,9 @@ class StdSpecsTest extends Specification {
 
         and: 'v3 to v4 differs only in the eval extraction'
         StdSpecs.STD_V3.keys() == StdSpecs.STD_V4.keys()
-        StdSpecs.STD_V3.bindings.find { it.key == HashKey.EVAL_OUTPUTS }.contributor.canonicalName() ==
+        StdSpecs.STD_V3.bindings[HashKey.EVAL_OUTPUTS].canonicalName() ==
             'evalOutputs.derivedString'
-        StdSpecs.STD_V4.bindings.find { it.key == HashKey.EVAL_OUTPUTS }.contributor.canonicalName() ==
+        StdSpecs.STD_V4.bindings[HashKey.EVAL_OUTPUTS].canonicalName() ==
             'evalOutputs.rawMap'
     }
 
