@@ -35,9 +35,11 @@ import groovy.lang.GroovyCodeSource;
 import com.google.common.hash.Hashing;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.WorkflowNode;
+import nextflow.script.control.CallArityVisitor;
 import nextflow.script.control.CallSiteCollector;
 import nextflow.script.control.Compiler;
 import nextflow.script.control.GStringToStringVisitor;
+import nextflow.script.control.LazyErrorCollector;
 import nextflow.script.control.ModuleResolver;
 import nextflow.script.control.OpCriteriaVisitor;
 import nextflow.script.control.PathCompareVisitor;
@@ -47,6 +49,7 @@ import nextflow.script.control.ScriptResolveVisitor;
 import nextflow.script.control.ScriptToGroovyVisitor;
 import nextflow.script.control.StripTypesVisitor;
 import nextflow.script.control.TypeCheckingVisitor;
+import nextflow.script.control.TypeError;
 import nextflow.script.parser.ScriptParserPluginFactory;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassHelper;
@@ -63,6 +66,8 @@ import org.codehaus.groovy.control.io.FileReaderSource;
 import org.codehaus.groovy.control.io.ReaderSource;
 import org.codehaus.groovy.control.io.StringReaderSource;
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Compile a Nextflow script into a Groovy class.
@@ -74,6 +79,8 @@ import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
  */
 public class ScriptCompiler {
 
+    private static final Logger log = LoggerFactory.getLogger(ScriptCompiler.class);
+
     private static final String DEFAULT_CODE_BASE = "/groovy/shell";
     private static final String MAIN_CLASS_NAME = "Main";
     private static final String BASE_CLASS_NAME = "nextflow.script.BaseScript";
@@ -83,6 +90,8 @@ public class ScriptCompiler {
     private final Path projectDir;
 
     private Compiler compiler;
+
+    private List<TypeErrorReport> typeErrors = new ArrayList<>();
 
     public ScriptCompiler(boolean debug, Path targetDirectory, ClassLoader parent, Path projectDir) {
         this(getConfig(debug, targetDirectory), parent, projectDir);
@@ -145,6 +154,8 @@ public class ScriptCompiler {
         unit.setClassgenCallback(collector);
         unit.compile(Phases.CLASS_GENERATION);
 
+        reportTypeErrors();
+
         // collect script classes
         var classes = (List<Class>) collector.getLoadedClasses().stream()
             .map((o) ->
@@ -165,6 +176,24 @@ public class ScriptCompiler {
         var names = new ProcessNameResolver(unit.getCallSites()).resolve(su);
         return new CompileResult(main, modules, names.processes(), names.agents());
     }
+
+    /**
+     * Report the type errors collected during compilation. Type errors do not
+     * fail the run yet. Each one is logged at debug level and only their
+     * number is reported to the user.
+     */
+    private void reportTypeErrors() {
+        var numErrors = 0;
+        for( var te : typeErrors ) {
+            log.debug("Type error in {}:{}:{}: {}", te.source(), te.error().getStartLine(), te.error().getStartColumn(), te.error().getOriginalMessage());
+            if( !te.error().isSoftError() )
+                numErrors++;
+        }
+        if( numErrors > 0 )
+            log.warn("Type checking found {} error(s) -- run `nextflow lint` to inspect them", numErrors);
+    }
+
+    private record TypeErrorReport(String source, TypeError error) {}
 
     private Map<Path,Class> collectModules(ScriptCompilationUnit unit, List<Class> classes) {
         // match each module script class to the source path
@@ -203,8 +232,8 @@ public class ScriptCompiler {
     private class ScriptCompilationUnit extends CompilationUnit {
 
         private static final List<ClassNode> DEFAULT_IMPORTS = List.of(
-            ClassHelper.makeWithoutCaching("java.nio.file.Path"),
-            ClassHelper.makeWithoutCaching("nextflow.script.types.Value"),
+            ClassHelper.makeCached(java.nio.file.Path.class),
+            ClassHelper.makeCached(nextflow.script.types.Value.class),
             ClassHelper.makeWithoutCaching("nextflow.util.Duration"),
             ClassHelper.makeWithoutCaching("nextflow.util.MemoryUnit"),
             ClassHelper.makeWithoutCaching("nextflow.util.VersionNumber")
@@ -216,6 +245,8 @@ public class ScriptCompiler {
 
         private Set<SourceUnit> analyzed = Collections.newSetFromMap(new IdentityHashMap<>());
 
+        private boolean typeChecked;
+
         private Map<WorkflowNode, Map<String, MethodNode>> callSites = new IdentityHashMap<>();
 
         ScriptCompilationUnit(CompilerConfiguration configuration, GroovyClassLoader loader) {
@@ -225,6 +256,10 @@ public class ScriptCompiler {
             // declare types with the same name.
             this.ast = new ScriptCompileUnit(getClassLoader(), null, getConfiguration());
             super.addPhaseOperation(source -> analyze(source), Phases.CONVERSION);
+            // each phase operation is applied to every source before the next
+            // one begins, so this operation is the first point at which the
+            // whole program has been analyzed
+            super.addPhaseOperation(source -> typeCheck(), Phases.CONVERSION);
             super.addPhaseOperation(source -> convertToGroovy(source), Phases.CONVERSION);
         }
 
@@ -274,7 +309,7 @@ public class ScriptCompiler {
             var imports = new ArrayList<ClassNode>();
             imports.addAll(DEFAULT_IMPORTS);
             var channelType = sn.isTypingEnabled()
-                ? ClassHelper.makeWithoutCaching("nextflow.script.types.Channel")
+                ? ClassHelper.makeCached(nextflow.script.types.Channel.class)
                 : ClassHelper.makeWithoutCaching("nextflow.Channel");
             imports.add(channelType);
 
@@ -286,12 +321,51 @@ public class ScriptCompiler {
             new ScriptResolveVisitor(source, this, imports, Collections.emptyList()).visit();
             if( source.getErrorCollector().hasErrors() )
                 return;
-            new TypeCheckingVisitor(source).visit();
+            new CallArityVisitor(source).visit();
             if( source.getErrorCollector().hasErrors() )
                 return;
 
             // mark script as analyzed so that it proceeds to Groovy compilation
             analyzed.add(source);
+        }
+
+        /**
+         * Type check each script with static typing enabled. A module is checked
+         * before the scripts that include it, so that inferred types are resolved
+         * before a consumer reads them.
+         *
+         * The check is performed once, after every script has been analyzed and
+         * before any of them is converted to Groovy, since that conversion
+         * erases the type annotations.
+         */
+        private void typeCheck() {
+            // on the first pass, the entry script waits for its modules
+            // and nothing has been analyzed yet
+            if( typeChecked || !analyzed.contains(entry) )
+                return;
+            typeChecked = true;
+            var moduleResolver = new ModuleResolver(projectDir, compiler);
+            for( var source : moduleResolver.orderByDependencies(compiler.getSources().values()) ) {
+                if( !analyzed.contains(source) )
+                    continue;
+                if( !(source.getAST() instanceof ScriptNode sn) || !sn.isTypingEnabled() )
+                    continue;
+                typeCheck(source);
+            }
+        }
+
+        private void typeCheck(SourceUnit source) {
+            // report type errors to a separate collector so that they
+            // do not fail the compilation
+            var errorCollector = new LazyErrorCollector(getConfiguration());
+            new TypeCheckingVisitor(source, errorCollector).visit();
+            var errors = errorCollector.getErrors();
+            if( errors == null )
+                return;
+            for( var message : errors ) {
+                if( message instanceof SyntaxErrorMessage sem && sem.getCause() instanceof TypeError te )
+                    typeErrors.add(new TypeErrorReport(source.getName(), te));
+            }
         }
 
         private void convertToGroovy(SourceUnit source) {
