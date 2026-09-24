@@ -248,8 +248,6 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
     public void visitProcessV2(ProcessNodeV2 node) {
         visitProcessDirectives(node.directives);
         visit(node.stagers);
-        if( !(node.when instanceof EmptyExpression) )
-            addError("Process `when` section is not supported with static typing -- use conditional logic in the calling workflow instead", node.when);
         visit(node.when);
         visit(node.exec);
         visit(node.stub);
@@ -852,10 +850,25 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             addError(label + " `" + mn.getName() + "` was called with multiple channel arguments which can lead to non-deterministic behavior -- make sure that at most one argument is a channel and that all other arguments are dataflow values", node);
 
         var dataflowType = numChannelArgs + numDynamicArgs > 0 ? CHANNEL_TYPE : VALUE_TYPE;
+        if( VALUE_TYPE.equals(dataflowType) )
+            checkWhenGuard(mn, node);
         var resultType = processOutputType(dataflowType, outputs);
         node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, resultType);
 
         return true;
+    }
+
+    /**
+     * A process with a `when` section skips any task whose condition
+     * is false. When the process is called with dataflow values, its outputs
+     * are dataflow values that will never be bound in that case.
+     *
+     * @param mn
+     * @param node
+     */
+    private void checkWhenGuard(MethodNode mn, MethodCallExpression node) {
+        if( mn instanceof ProcessNodeV2 pn && !(pn.when instanceof EmptyExpression) )
+            addSoftError("Process `" + mn.getName() + "` has a `when` section and was called with dataflow values -- its outputs will be empty if the condition is false", node);
     }
 
     /**

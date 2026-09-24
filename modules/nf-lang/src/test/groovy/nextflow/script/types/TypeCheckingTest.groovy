@@ -103,26 +103,60 @@ class TypeCheckingTest extends Specification {
         return true
     }
 
-    def 'should report an error for a process `when` section' () {
+    def 'should allow a process `when` section' () {
         when:
         def errors = getErrors(
             '''\
             nextflow.enable.types = true
 
             process hello {
+                input:
+                n: Integer
+
                 when:
-                task.ext.when
+                n > 1
 
                 exec:
-                println 'hello!'
+                println "hello ${n}"
+            }
+
+            workflow {
+                hello(channel.of(1, 2, 3))
+            }
+            '''
+        )
+        then:
+        errors.size() == 0
+    }
+
+    def 'should report a soft error for a process `when` section called with dataflow values' () {
+        when:
+        def errors = getErrors(
+            '''\
+            nextflow.enable.types = true
+
+            process hello {
+                input:
+                n: Integer
+
+                when:
+                n > 1
+
+                exec:
+                println "hello ${n}"
+            }
+
+            workflow {
+                hello(1)
             }
             '''
         )
         then:
         errors.size() == 1
-        errors[0].getStartLine() == 4
+        errors[0].getStartLine() == 15
         errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Process `when` section is not supported with static typing -- use conditional logic in the calling workflow instead"
+        errors[0].isSoftError()
+        errors[0].getOriginalMessage() == "Process `hello` has a `when` section and was called with dataflow values -- its outputs will be empty if the condition is false"
     }
 
     @Unroll
