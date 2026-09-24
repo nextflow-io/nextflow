@@ -218,7 +218,9 @@ When the selector is a qualified process name, it matches only processes invoked
 - `PARENT:sayHello` (different process alias)
 - `PARENT2:hello` (different workflow alias)
 
-In each case, use the fully-qualified process name instead. Alternatively, use a regular expression (e.g. `.*:PARENT:hello`) to match multiple variants. You can also use a negative lookahead to exclude a branch, e.g. `MAIN:(?!QC:).*:hello` matches `hello` in any workflow under `MAIN` except `MAIN:QC`.
+In each case, use the fully-qualified process name instead. 
+
+Selector expressions are [Java regular expressions](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/regex/Pattern.html) and support any construct supported by Java, such as globs (`.*`) or *negative lookahead* `(?!...)` to match multiple process names.
 
 :::tip
 You don't need to enclose label and process names in quotes unless they contain special characters (`-`, `:`, `!`, etc.) or are keywords or built-in type identifiers.
