@@ -21,6 +21,7 @@ import java.nio.file.Path
 import groovy.transform.CompileStatic
 import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
+import nextflow.Global
 import nextflow.plugin.Plugins
 import org.pf4j.ExtensionPoint
 
@@ -61,12 +62,28 @@ abstract class CacheFactory implements ExtensionPoint {
      * <p>Defaults to {@code true}, so a factory that does not override this keeps the behaviour it
      * has always had.
      *
+     * <p><b>Decide from the given config and nothing else.</b> Extensions are instantiated by pf4j's
+     * {@code SingletonExtensionFactory}, so there is one instance per JVM shared by every session —
+     * a lazy field or {@code @Memoized} here would leak one session's answer into the next, which
+     * matters for tests, {@code nf-console} and embedded use. The config is passed rather than read
+     * from {@link Global} for the same reason, and because it is data: unlike the session, it cannot
+     * be written back into. This method must be stateless and free of side effects.
+     *
+     * <p>It is also called more than once per run: {@code Session.init} builds the cache and
+     * {@code Session.cleanup} opens it again after the session is destroyed. Reading only the config
+     * makes those two answers agree, because {@code newInstance} may write into the session
+     * ({@code workDir}, {@code resumeMode}) but never into the config.
+     *
+     * @param config
+     *      The resolved configuration of the current session, or {@code null} outside a session —
+     *      {@code nextflow log} and {@code nextflow clean} reach {@code create} with no config
+     *      loaded. Treat a null config as "not configured for me".
      * @return {@code true} if this factory should be used, {@code false} to defer to the next one.
      */
-    protected boolean isEnabled() { true }
+    protected boolean isEnabled(Map config) { true }
 
     static CacheDB create(UUID uniqueId, String runName, Path home=null) {
-        final factory = select(Plugins.getPriorityExtensions(CacheFactory))
+        final factory = select(Plugins.getPriorityExtensions(CacheFactory), Global.config)
         log.debug "Using Nextflow cache factory: ${factory.getClass().getName()}"
         return factory.newInstance(uniqueId, runName, home)
     }
@@ -75,10 +92,15 @@ abstract class CacheFactory implements ExtensionPoint {
      * The first factory that claims the session, in priority order.
      */
     @PackageScope
-    static CacheFactory select(List<CacheFactory> all) {
+    static CacheFactory select(List<CacheFactory> all, Map config) {
         if( !all )
             throw new IllegalStateException("Unable to find Nextflow cache factory")
-        final factory = all.find { it.isEnabled() }
+        final factory = all.find {
+            final enabled = it.isEnabled(config)
+            if( !enabled )
+                log.debug "Cache factory declined this session: ${it.getClass().getName()}"
+            return enabled
+        }
         if( !factory )
             throw new IllegalStateException("Unable to find an enabled Nextflow cache factory -- tried: ${all.collect { it.getClass().getName() }.join(', ')}")
         return factory

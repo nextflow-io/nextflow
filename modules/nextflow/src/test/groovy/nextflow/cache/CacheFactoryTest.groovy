@@ -33,7 +33,13 @@ class CacheFactoryTest extends Specification {
 
     /** A factory that declines, as one reading its own configuration would. */
     static class DecliningFactory extends CacheFactory {
-        @Override protected boolean isEnabled() { false }
+        @Override protected boolean isEnabled(Map config) { false }
+        @Override protected CacheDB newInstance(UUID uniqueId, String runName, Path home) { null }
+    }
+
+    /** A realistic adopter: enabled by its own config key, and nothing else. */
+    static class ConfiguredFactory extends CacheFactory {
+        @Override protected boolean isEnabled(Map config) { config?.mycache == true }
         @Override protected CacheDB newInstance(UUID uniqueId, String runName, Path home) { null }
     }
 
@@ -42,7 +48,7 @@ class CacheFactoryTest extends Specification {
         def factory = new AlwaysFactory()
 
         expect:
-        CacheFactory.select([factory]) is factory
+        CacheFactory.select([factory], [:]) is factory
     }
 
     def 'a declining factory is skipped and the next one serves'() {
@@ -51,7 +57,7 @@ class CacheFactoryTest extends Specification {
         def serving = new AlwaysFactory()
 
         expect: 'the declining factory is first in priority order, and still not chosen'
-        CacheFactory.select([declining, serving]) is serving
+        CacheFactory.select([declining, serving], [:]) is serving
     }
 
     def 'priority order decides among the factories that claim the session'() {
@@ -60,12 +66,12 @@ class CacheFactoryTest extends Specification {
         def second = new AlwaysFactory()
 
         expect:
-        CacheFactory.select([first, second]) is first
+        CacheFactory.select([first, second], [:]) is first
     }
 
     def 'aborts when every registered factory declines, naming them'() {
         when:
-        CacheFactory.select([new DecliningFactory(), new DecliningFactory()])
+        CacheFactory.select([new DecliningFactory(), new DecliningFactory()], [:])
 
         then:
         def e = thrown(IllegalStateException)
@@ -73,9 +79,42 @@ class CacheFactoryTest extends Specification {
         e.message.contains(DecliningFactory.getName())
     }
 
+    def 'the config decides, and only the config'() {
+        given:
+        def configured = new ConfiguredFactory()
+        def fallback = new AlwaysFactory()
+
+        expect: 'its key is set -- it serves'
+        CacheFactory.select([configured, fallback], [mycache: true]) is configured
+
+        and: 'its key is absent -- the next one serves'
+        CacheFactory.select([configured, fallback], [something: 'else']) is fallback
+
+        and: 'outside a session there is no config at all, which is not a claim'
+        CacheFactory.select([configured, fallback], null) is fallback
+    }
+
+    def 'the same factory is chosen at init and at cleanup'() {
+        given: '''Session.init creates the cache and Session.cleanup creates it AGAIN, after the
+              session was destroyed. Between the two, newInstance is allowed to write into the
+              session -- workDir, resumeMode. Reading only the config is what makes the second
+              selection reach the same factory as the first, so the records are read back by the
+              backend that wrote them'''
+        def config = [mycache: true]
+        def factories = [new ConfiguredFactory(), new AlwaysFactory()]
+
+        when:
+        def atInit = CacheFactory.select(factories, config)
+        and: 'whatever the session went through in between, the config is the same object'
+        def atCleanup = CacheFactory.select(factories, config)
+
+        then:
+        atCleanup.is(atInit)
+    }
+
     def 'aborts when no factory is registered at all'() {
         when:
-        CacheFactory.select(EMPTY)
+        CacheFactory.select(EMPTY, [:])
 
         then:
         def e = thrown(IllegalStateException)

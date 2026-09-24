@@ -34,6 +34,17 @@ import nextflow.plugin.Priority
 @Priority(-10)
 class CloudCacheFactory extends CacheFactory {
 
+    /**
+     * Serve only the sessions that asked for the cloud cache. This is the same condition that adds
+     * this plugin to the run (see {@code PluginsFacade.defaultPluginsConf}), so in a configured run
+     * nothing changes; what it covers is the plugin being loaded some other way — listed explicitly
+     * in {@code plugins}, or injected — where taking over the cache was never the intent.
+     */
+    @Override
+    protected boolean isEnabled(Map config) {
+        return config?.navigate('cloudcache.enabled') == true
+    }
+
     @Override
     protected CacheDB newInstance(UUID uniqueId, String runName, Path home) {
         if( !uniqueId ) throw new AbortOperationException("Missing cache `uuid`")
