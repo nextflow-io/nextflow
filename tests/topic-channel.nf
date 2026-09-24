@@ -26,8 +26,8 @@ process bar {
 }
 
 workflow {
-  channel.of( 1..3 ) | foo
-  channel.of( 1..3 ) | bar
+  channel.fromList( 1..3 ) | foo
+  channel.fromList( 1..3 ) | bar
 
   channel.topic('versions')
   | unique

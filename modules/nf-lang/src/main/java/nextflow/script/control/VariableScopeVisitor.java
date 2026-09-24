@@ -284,8 +284,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         if( node.main instanceof BlockStatement block )
             copyVariableScope(block.getVariableScope());
 
-        visitTypedOutputs(node.emits, "Workflow emit");
-        visitTypedOutputs(node.publishers, "Workflow output");
+        visitTypedOutputs(node.emits, "Workflow emit", true);
+        visitTypedOutputs(node.publishers, "Workflow output", true);
 
         visit(node.onComplete);
         visit(node.onError);
@@ -313,18 +313,22 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         }
     }
 
-    private void visitTypedOutputs(Statement outputs, String typeLabel) {
+    private void visitTypedOutputs(Statement outputs, String typeLabel, boolean hasBody) {
         var declaredOutputs = new HashMap<String,ASTNode>();
         for( var stmt : asBlockStatements(outputs) ) {
             var es = (ExpressionStatement)stmt;
             var output = es.getExpression();
             VariableExpression target;
             if( output instanceof VariableExpression ve ) {
-                // a bare name without a type (e.g. `x`) is an output expression
-                // and should be resolved as a variable reference; a name with a type
-                // (e.g. `x: String`) declares a named output and should not be visited
+                // a bare name refers to a variable assigned in the body -- `x: T` lowers
+                // to the same code as `x = x`. A typed name is resolved here rather than
+                // visited because setting its accessed variable would replace the declared
+                // output type with the variable's own. An agent has no body and the model
+                // answers a typed name, so there it is only a declaration.
                 if( ClassHelper.isDynamicTyped(ve.getOriginType()) )
                     visit(ve);
+                else if( hasBody && vsc.findVariableDeclaration(ve.getName(), ve) == null )
+                    vsc.addError("`" + ve.getName() + "` is not defined", ve);
                 target = ve;
             }
             else if( output instanceof AssignmentExpression assign ) {
@@ -369,7 +373,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         // mirrors visitProcessV2: `file(...)`/`files(...)` in an agent output collect from the
         // task work dir, so they must NOT resolve to the driver-side global ScriptDsl.file
         vsc.pushScope(AgentDsl.AgentOutputDsl.class);
-        visitTypedOutputs(node.outputs, "Agent output");
+        visitTypedOutputs(node.outputs, "Agent output", false);
         vsc.popScope();
 
         currentDefinition = null;
@@ -393,10 +397,6 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         visitDirectives(node.stagers, "stage directive", false);
         vsc.popScope();
 
-        if( !(node.when instanceof EmptyExpression) )
-            vsc.addWarning("Process `when` section will not be supported in a future version", "", node.when);
-        visit(node.when);
-
         visit(node.exec);
         visit(node.stub);
 
@@ -405,7 +405,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         vsc.popScope();
 
         vsc.pushScope(ProcessDsl.OutputDslV2.class);
-        visitTypedOutputs(node.outputs, "Process output");
+        visitTypedOutputs(node.outputs, "Process output", true);
         visit(node.topics);
         vsc.popScope();
 
