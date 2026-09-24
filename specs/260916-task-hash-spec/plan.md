@@ -29,8 +29,8 @@ What the rebase and restructure changed:
 
 Two commits were then added on top, superseding parts of the design below:
 
-- **Opt-in through master's hook.** `BaseTaskHasher` → `SpecTaskHasher extends TaskHasher`;
-  `SpecTaskHasherFactory` abstains unless `NXF_TASK_HASH_VER` names a version; registered in core's
+- **Opt-in through master's hook.** `BaseTaskHasher` → `VersionedTaskHasher extends TaskHasher`;
+  `VersionedTaskHasherFactory` abstains unless `NXF_TASK_HASH_VER` names a version; registered in core's
   `META-INF/extensions.idx`. `TaskProcessor` is byte-identical to master. Task 8's `TaskHashSpecFactory`
   is deleted.
 - **Specs as JSON resources** under `nextflow/processor/hash/`, resolved through `ContributorRegistry`

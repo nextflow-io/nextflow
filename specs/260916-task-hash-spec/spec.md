@@ -212,13 +212,13 @@ described are **superseded and were dropped**. Nothing in this design touches `T
 
 ### Seam: opt in through master's hook
 
-`SpecTaskHasher extends TaskHasher` and overrides `compute()`. `SpecTaskHasherFactory implements
+`VersionedTaskHasher extends TaskHasher` and overrides `compute()`. `VersionedTaskHasherFactory implements
 TaskHasherFactory` returns one **only when a version is requested**, and `null` otherwise:
 
 ```groovy
 TaskHasher create(TaskRun task) {
     final spec = TaskHashSpecResolver.requestedSpec()   // null unless NXF_TASK_HASH_VER is set
-    return spec == null ? null : new SpecTaskHasher(task, spec)
+    return spec == null ? null : new VersionedTaskHasher(task, spec)
 }
 ```
 
@@ -232,7 +232,7 @@ that mattered most:
   `TaskHasher` runs. Opting in is the only way to change a cache key, so the design carries no risk
   of invalidating anyone's cache — which was the single largest objection to it.
 - **`std/v4` becomes a permanent equivalence oracle** rather than the production path. The test
-  asserting `SpecTaskHasher(STD_V4) == TaskHasher` on fixtures is now the drift guard (A2) the ADR
+  asserting `VersionedTaskHasher(STD_V4) == TaskHasher` on fixtures is now the drift guard (A2) the ADR
   asks for, with a standing reason to exist.
 - What the old seam bought — that a plugin cannot bypass `explain()` — is given up. A plugin can
   still subclass `TaskHasher` directly, as `GlobalTaskHasher` does. That is master's call, not this
@@ -277,7 +277,7 @@ a silent fallback.
 | Module | Contents |
 | --- | --- |
 | `nf-commons` | `EncodingRules`; the two `HashBuilder` flags, defaults preserving master |
-| `nextflow.processor.hash` | `HashKey`, `Contributor`, `KeyBinding`, `HashContext`, `TaskHashSpec`, `TaskHashSpecLoader`, `ContributorRegistry`, `Contributors`, `SpecTaskHasher`, `SpecTaskHasherFactory`, `TaskHashSpecResolver`, `StdSpecs` |
+| `nextflow.processor.hash` | `HashKey`, `Contributor`, `KeyBinding`, `HashContext`, `TaskHashSpec`, `TaskHashSpecLoader`, `ContributorRegistry`, `Contributors`, `VersionedTaskHasher`, `VersionedTaskHasherFactory`, `TaskHashSpecResolver`, `StdSpecs` |
 | `nextflow` resources | `nextflow/processor/hash/std-v{1..4}.json`, plus the factory line in `META-INF/extensions.idx` |
 | `nf-cloudcache-global` | the `global/v1` spec |
 

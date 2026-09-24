@@ -18,7 +18,7 @@ package nextflow.processor.hash
 import nextflow.SysEnv
 import spock.lang.Specification
 
-class SpecTaskHasherFactoryTest extends Specification {
+class VersionedTaskHasherFactoryTest extends Specification {
 
     def cleanup() {
         SysEnv.pop()
@@ -29,7 +29,7 @@ class SpecTaskHasherFactoryTest extends Specification {
         SysEnv.push([:])
 
         expect:
-        SpecTaskHasherFactory.requestedSpec() == null
+        VersionedTaskHasherFactory.requestedSpec() == null
     }
 
     def 'a requested version resolves to its spec'() {
@@ -37,7 +37,7 @@ class SpecTaskHasherFactoryTest extends Specification {
         SysEnv.push([NXF_TASK_HASH_VER: 'std/v2'])
 
         expect:
-        SpecTaskHasherFactory.requestedSpec().is(StdSpecs.STD_V2)
+        VersionedTaskHasherFactory.requestedSpec().is(StdSpecs.STD_V2)
     }
 
     def 'an unknown version fails loudly rather than falling back'() {
@@ -45,7 +45,7 @@ class SpecTaskHasherFactoryTest extends Specification {
         SysEnv.push([NXF_TASK_HASH_VER: 'std/nope'])
 
         when:
-        SpecTaskHasherFactory.requestedSpec()
+        VersionedTaskHasherFactory.requestedSpec()
         then:
         thrown(IllegalArgumentException)
     }
@@ -55,6 +55,6 @@ class SpecTaskHasherFactoryTest extends Specification {
         SysEnv.push([:])
 
         expect:
-        new SpecTaskHasherFactory().create(Mock(nextflow.processor.TaskRun)) == null
+        new VersionedTaskHasherFactory().create(Mock(nextflow.processor.TaskRun)) == null
     }
 }
