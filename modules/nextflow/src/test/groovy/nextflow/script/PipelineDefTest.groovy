@@ -185,6 +185,22 @@ class PipelineDefTest extends Dsl2Spec {
         e.message == 'Pipeline `GREET` does not declare a parameter named `foo`'
     }
 
+    def 'should fail when a dataflow value is provided for a param that is not a Channel or Value' () {
+        given:
+        def script = pipeline('''
+            workflow {
+                main:
+                GREET( names: channel.of('World'), greeting: channel.value('Hola') )
+            }
+            ''')
+
+        when:
+        runScript(script)
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message == 'Parameter `greeting` of pipeline `GREET` with type String cannot be assigned to a dataflow value -- declare the param as a Channel or Value to accept it'
+    }
+
     def 'should call an included pipeline with its params record' () {
         given:
         def script = pipeline("""

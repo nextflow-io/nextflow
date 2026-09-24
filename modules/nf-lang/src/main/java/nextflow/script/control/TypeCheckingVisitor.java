@@ -31,6 +31,7 @@ import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
+import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.OutputBlockNode;
 import nextflow.script.ast.OutputNode;
 import nextflow.script.ast.ParamBlockNode;
@@ -139,6 +140,8 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             return;
         for( var featureFlag : sn.getFeatureFlags() )
             visitFeatureFlag(featureFlag);
+        for( var includeNode : sn.getIncludes() )
+            visitInclude(includeNode);
         if( sn.getParams() != null )
             visitParams(sn.getParams());
         for( var functionNode : sn.getFunctions() )
@@ -154,6 +157,24 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
     }
 
     // script declarations
+
+    /**
+     * The output record type of an included pipeline matches the record
+     * returned by a pipeline call, in which each output is a `Channel` or
+     * wrapped in a `Value`. The field types are wrapped here rather than when
+     * the include is resolved, because the included types are resolved by now.
+     */
+    @Override
+    public void visitInclude(IncludeNode node) {
+        for( var entry : node.entries ) {
+            if( !(entry.getTarget() instanceof ClassNode cn) )
+                continue;
+            if( !(ResolveIncludeVisitor.getPipelineBlock(cn) instanceof OutputBlockNode) )
+                continue;
+            for( var fn : cn.getFields() )
+                fn.setType(workflowEmitType(fn.getType()));
+        }
+    }
 
     @Override
     public void visitFeatureFlag(FeatureFlagNode node) {
@@ -819,8 +840,9 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
      * resolve the return type from its output block.
      *
      * A pipeline declares its inputs with a params block rather than a `take:`
-     * section, so it is called with named arguments -- or with a single record
-     * of the params, which is only checked at runtime.
+     * section, so it is called with named arguments or with a single record.
+     * Each argument must be assignable to the declared param type, like a
+     * workflow input -- a dataflow argument requires a `Channel` or `Value` param.
      *
      * The return type is a record of the declared outputs, matching the record
      * that the pipeline returns at runtime.
@@ -839,33 +861,60 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         if( arguments.size() > 1 ) {
             addError("Pipeline `" + node.getMethodAsString() + "` should be called with named arguments, one for each of its params", node);
         }
-        else if( arguments.isEmpty() || arguments.get(0) instanceof MapExpression ) {
-            var args = arguments.isEmpty() ? null : (MapExpression) arguments.get(0);
+        else if( arguments.isEmpty() ) {
+            checkPipelineParams(node, pipeline.getParams(), List.of());
+        }
+        else if( arguments.get(0) instanceof MapExpression me ) {
+            var args = me.getMapEntryExpressions().stream()
+                .map(entry -> new PipelineArgument(entry.getKeyExpression().getText(), getType(entry.getValueExpression()), entry.getValueExpression(), entry))
+                .toList();
             checkPipelineParams(node, pipeline.getParams(), args);
+        }
+        else {
+            var argument = arguments.get(0);
+            var argType = getType(argument);
+            if( Types.isRecordType(argType) && !argType.getFields().isEmpty() ) {
+                var args = argType.getFields().stream()
+                    .map(fn -> new PipelineArgument(fn.getName(), fn.getType(), argument, null))
+                    .toList();
+                checkPipelineParams(node, pipeline.getParams(), args);
+            }
+            else if( !ClassHelper.isDynamicTyped(argType) && !Types.isRecordType(argType) ) {
+                addError("Pipeline `" + node.getMethodAsString() + "` should be called with named arguments or a record, but received a " + Types.getName(argType), argument);
+            }
         }
 
         node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, pipelineOutputType(pipeline.getOutputs()));
         return true;
     }
 
-    private void checkPipelineParams(MethodCallExpression node, ParamBlockNode params, MapExpression args) {
+    /**
+     * A named argument of a pipeline call, or a field of a record argument.
+     *
+     * @param name
+     * @param type
+     * @param node the node to report a type error against
+     * @param entry the named argument, or null for a record field
+     */
+    private record PipelineArgument(String name, ClassNode type, ASTNode node, MapEntryExpression entry) {}
+
+    private void checkPipelineParams(MethodCallExpression node, ParamBlockNode params, List<PipelineArgument> args) {
         var declarations = params != null ? params.declarations : Parameter.EMPTY_ARRAY;
         var byName = Arrays.stream(declarations).collect(Collectors.toMap(Parameter::getName, p -> p, (a, b) -> a));
         var provided = new HashSet<String>();
 
-        for( var entry : args != null ? args.getMapEntryExpressions() : List.<MapEntryExpression>of() ) {
-            var name = entry.getKeyExpression().getText();
-            var declaration = byName.get(name);
+        for( var arg : args ) {
+            var declaration = byName.get(arg.name());
             if( declaration == null ) {
-                addError("Param `" + name + "` is not defined by pipeline `" + node.getMethodAsString() + "`", entry);
+                addError("Param `" + arg.name() + "` is not defined by pipeline `" + node.getMethodAsString() + "`", arg.entry() != null ? arg.entry() : arg.node());
                 continue;
             }
-            provided.add(name);
+            provided.add(arg.name());
             var paramType = declaration.getType();
-            var argType = dataflowElementType(getType(entry.getValueExpression()));
-            if( !Types.isAssignableFrom(paramType, argType) )
-                addSoftError("Param `" + name + "` expects a " + Types.getName(paramType) + " but received a " + Types.getName(argType), entry.getValueExpression());
-            entry.putNodeMetaData("_NAMED_PARAM", declaration);
+            if( !Types.isAssignableFrom(paramType, arg.type()) )
+                addError("Param `" + arg.name() + "` expects a " + Types.getName(paramType) + " but received a " + Types.getName(arg.type()), arg.node());
+            if( arg.entry() != null )
+                arg.entry().putNodeMetaData("_NAMED_PARAM", declaration);
         }
 
         var missing = Arrays.stream(declarations)
@@ -882,7 +931,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             return ClassHelper.VOID_TYPE;
         var cn = new ClassNode(Record.class);
         for( var declaration : outputs.declarations ) {
-            var fn = new FieldNode(declaration.getName(), Modifier.PUBLIC, declaration.getType(), cn, null);
+            var fn = new FieldNode(declaration.getName(), Modifier.PUBLIC, workflowEmitType(declaration.getType()), cn, null);
             fn.setDeclaringClass(cn);
             cn.addField(fn);
         }

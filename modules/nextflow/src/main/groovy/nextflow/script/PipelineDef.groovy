@@ -22,6 +22,10 @@ import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.dataflow.ChannelImpl
 import nextflow.dataflow.ValueImpl
 import nextflow.exception.ScriptRuntimeException
+import nextflow.script.dsl.Types
+import nextflow.script.types.Channel
+import nextflow.script.types.Value
+import nextflow.util.TypeHelper
 import nextflow.util.RecordMap
 
 /**
@@ -122,12 +126,20 @@ class PipelineDef extends BindableDef implements ChainableDef {
             return null
         // a channel is passed through as-is, so that the pipeline
         // participates in the calling workflow's dataflow graph
-        if( isDataflow(value) )
+        if( isDataflow(value) ) {
+            if( !isDataflowType(decl) )
+                throw new ScriptRuntimeException("Parameter `${decl.name}` of pipeline `${this.name}` with type ${Types.getName(decl.type)} cannot be assigned to a dataflow value -- declare the param as a Channel or Value to accept it")
             return DataflowTypeHelper.normalize(value, pipeline.isTypingEnabled())
+        }
 
         final result = ParamsHelper.resolveFromCode(decl, value)
         ParamsHelper.checkAssignable(decl, result)
         return result
+    }
+
+    private static boolean isDataflowType(Param decl) {
+        final type = TypeHelper.getRawType(decl.type)
+        return type == Object || Channel.isAssignableFrom(type) || Value.isAssignableFrom(type)
     }
 
     private static boolean isDataflow(Object value) {
