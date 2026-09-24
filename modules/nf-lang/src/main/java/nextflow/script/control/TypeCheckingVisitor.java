@@ -19,8 +19,10 @@ import java.lang.reflect.Modifier;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -29,7 +31,9 @@ import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
+import nextflow.script.ast.OutputBlockNode;
 import nextflow.script.ast.OutputNode;
+import nextflow.script.ast.ParamBlockNode;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ProcessNodeV2;
 import nextflow.script.ast.RecordNode;
@@ -65,6 +69,7 @@ import org.codehaus.groovy.ast.expr.ElvisOperatorExpression;
 import org.codehaus.groovy.ast.expr.EmptyExpression;
 import org.codehaus.groovy.ast.expr.Expression;
 import org.codehaus.groovy.ast.expr.ListExpression;
+import org.codehaus.groovy.ast.expr.MapEntryExpression;
 import org.codehaus.groovy.ast.expr.MapExpression;
 import org.codehaus.groovy.ast.expr.MethodCallExpression;
 import org.codehaus.groovy.ast.expr.PropertyExpression;
@@ -533,6 +538,10 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             }
         }
 
+        // resolve params and outputs for pipeline calls
+        if( checkPipelineCall(node) )
+            return;
+
         // resolve dataflow inputs and outputs for process calls
         if( checkProcessCall(node) )
             return;
@@ -803,6 +812,81 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             var samParameterTypes = resolveClosureParameterTypes(source, target, resolvedPlaceholders);
             argument.visit(this);
         }
+    }
+
+    /**
+     * Check a call to an included pipeline against its params block, and
+     * resolve the return type from its output block.
+     *
+     * A pipeline declares its inputs with a params block rather than a `take:`
+     * section, so it is called with named arguments -- or with a single record
+     * of the params, which is only checked at runtime.
+     *
+     * The return type is a record of the declared outputs, matching the record
+     * that the pipeline returns at runtime.
+     *
+     * @param node
+     */
+    private boolean checkPipelineCall(MethodCallExpression node) {
+        var mn = (MethodNode) node.getNodeMetaData(ASTNodeMarker.METHOD_TARGET);
+        if( !(mn instanceof WorkflowNode wn) || !wn.isEntry() )
+            return false;
+        var pipeline = ScriptNode.getPipeline(wn);
+        if( pipeline == null )
+            return false;
+
+        var arguments = asMethodCallArguments(node);
+        if( arguments.size() > 1 ) {
+            addError("Pipeline `" + node.getMethodAsString() + "` should be called with named arguments, one for each of its params", node);
+        }
+        else if( arguments.isEmpty() || arguments.get(0) instanceof MapExpression ) {
+            var args = arguments.isEmpty() ? null : (MapExpression) arguments.get(0);
+            checkPipelineParams(node, pipeline.getParams(), args);
+        }
+
+        node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, pipelineOutputType(pipeline.getOutputs()));
+        return true;
+    }
+
+    private void checkPipelineParams(MethodCallExpression node, ParamBlockNode params, MapExpression args) {
+        var declarations = params != null ? params.declarations : Parameter.EMPTY_ARRAY;
+        var byName = Arrays.stream(declarations).collect(Collectors.toMap(Parameter::getName, p -> p, (a, b) -> a));
+        var provided = new HashSet<String>();
+
+        for( var entry : args != null ? args.getMapEntryExpressions() : List.<MapEntryExpression>of() ) {
+            var name = entry.getKeyExpression().getText();
+            var declaration = byName.get(name);
+            if( declaration == null ) {
+                addError("Param `" + name + "` is not defined by pipeline `" + node.getMethodAsString() + "`", entry);
+                continue;
+            }
+            provided.add(name);
+            var paramType = declaration.getType();
+            var argType = dataflowElementType(getType(entry.getValueExpression()));
+            if( !Types.isAssignableFrom(paramType, argType) )
+                addSoftError("Param `" + name + "` expects a " + Types.getName(paramType) + " but received a " + Types.getName(argType), entry.getValueExpression());
+            entry.putNodeMetaData("_NAMED_PARAM", declaration);
+        }
+
+        var missing = Arrays.stream(declarations)
+            .filter(p -> !provided.contains(p.getName()))
+            .filter(p -> !p.hasInitialExpression() && !isNullable(p.getType()))
+            .map(Parameter::getName)
+            .toList();
+        if( !missing.isEmpty() )
+            addError("Pipeline `" + node.getMethodAsString() + "` requires the following params: " + String.join(", ", missing), node);
+    }
+
+    private static ClassNode pipelineOutputType(OutputBlockNode outputs) {
+        if( outputs == null )
+            return ClassHelper.VOID_TYPE;
+        var cn = new ClassNode(Record.class);
+        for( var declaration : outputs.declarations ) {
+            var fn = new FieldNode(declaration.getName(), Modifier.PUBLIC, declaration.getType(), cn, null);
+            fn.setDeclaringClass(cn);
+            cn.addField(fn);
+        }
+        return cn;
     }
 
     /**

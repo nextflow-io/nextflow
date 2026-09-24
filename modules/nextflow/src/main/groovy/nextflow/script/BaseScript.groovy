@@ -73,6 +73,34 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     /**
+     * The entry workflow of this script, or null if it doesn't have one.
+     */
+    WorkflowDef getEntryFlow() {
+        return entryFlow
+    }
+
+    /**
+     * The declared params of this script, keyed by name.
+     */
+    Map<String,Param> getParamDeclarations() {
+        return paramsDef
+            ? paramsDef.getDeclarations()
+            : Collections.<String,Param>emptyMap()
+    }
+
+    /**
+     * The outputs declared in the output block of this script, keyed by
+     * name, with their output directives resolved against the given params.
+     *
+     * @param params
+     */
+    Map<String,Map> getOutputDeclarations(ScriptBinding.ParamsMap params) {
+        return outputDef
+            ? outputDef.getDeclarations(params)
+            : Collections.<String,Map>emptyMap()
+    }
+
+    /**
      * Holds the configuration object which will used to execution the user tasks
      */
     @Deprecated
@@ -124,7 +152,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
         if( ExecutionStack.withinWorkflow() )
             throw new IllegalStateException("Workflow params definition is not allowed within a workflow")
 
-        this.paramsDef = new ParamsDef(clazz, body)
+        this.paramsDef = new ParamsDef(this, clazz, body)
     }
 
     /**
@@ -301,11 +329,14 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
         // invoke the entry workflow
         session.notifyBeforeWorkflowExecution()
-        if( paramsDef )
-            paramsDef.apply(session)
+        // the entry workflow receives the resolved params as an input, so that
+        // `params` refers to a single execution of the pipeline
+        final params = paramsDef?.apply(session)
+        if( params != null )
+            entryFlow.withParams(params)
         final ret = entryFlow.invoke_a(BaseScriptConsts.EMPTY_ARGS)
         if( outputDef )
-            outputDef.apply(session)
+            outputDef.apply(session, params)
         session.notifyAfterWorkflowExecution()
         return ret
     }

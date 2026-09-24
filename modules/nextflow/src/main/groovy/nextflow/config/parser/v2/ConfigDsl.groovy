@@ -154,7 +154,35 @@ class ConfigDsl extends Script {
             if( cliParams.containsKey(name) )
                 value = asDeclaredType(cliParams[name], value)
         }
+        // a nested param (e.g. `params.rnaseq.fasta`) is overridden by the
+        // corresponding nested command-line value
+        else if( names.size() > 2 && names.first() == 'params' ) {
+            final cliValue = navigate0(cliParams, names.subList(1, names.size()))
+            if( cliValue != null )
+                value = asDeclaredType(cliValue, value)
+        }
         navigate(names.init()).put(names.last(), value)
+        // a nested param declares the top-level param with the map
+        // of nested values
+        if( names.size() > 2 && names.first() == 'params' )
+            declareParam(names[1], (target.params as Map).get(names[1]))
+    }
+
+    /**
+     * Look up a nested value in a map of params, returning null if any
+     * segment of the path is missing.
+     *
+     * @param params
+     * @param names
+     */
+    private static Object navigate0(Map params, List<String> names) {
+        Object ctx = params
+        for( final name : names ) {
+            if( ctx !instanceof Map )
+                return null
+            ctx = ((Map)ctx).get(name)
+        }
+        return ctx
     }
 
     /**

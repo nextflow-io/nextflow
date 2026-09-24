@@ -240,6 +240,23 @@ class ScriptMeta {
         definitions.get(name) ?: imports.get(name)
     }
 
+    /**
+     * The name used to include the pipeline (i.e. the `params` / `workflow` /
+     * `output` trio) of a script as a named workflow.
+     */
+    static final String PIPELINE_NAME = 'workflow'
+
+    /**
+     * The pipeline defined by this script, i.e. its entry workflow together
+     * with its params and output blocks.
+     *
+     * It is not a script definition, because it is only meaningful when the
+     * script is included by another script.
+     */
+    PipelineDef getPipeline() {
+        return new PipelineDef(script)
+    }
+
     WorkflowDef getWorkflow(String name) {
         final result = getComponent(name)
         return result instanceof WorkflowDef ? result : null
@@ -380,8 +397,11 @@ class ScriptMeta {
     void addModule(ScriptMeta script, String name, String alias) {
         assert script
         assert name
-        // include a specific
+        // a definition of the module takes precedence over the pipeline of the
+        // module with the same name, matching the compiler
         def item = script.getComponent(name)
+        if( !item && PIPELINE_NAME == name && script.script.getEntryFlow() )
+            item = script.getPipeline()
         if( !item )
             throw new MissingModuleComponentException(script, name)
         addModule0(item, alias)

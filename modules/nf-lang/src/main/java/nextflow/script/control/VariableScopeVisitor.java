@@ -131,7 +131,10 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         for( var entry : node.entries ) {
             if( entry.getTarget() == null )
                 continue;
-            if( entry.getTarget() instanceof ClassNode && entry.alias != null ) {
+            // the params or output block of an included pipeline is a type
+            // synthesized for this include, so it must be aliased
+            if( entry.getTarget() instanceof ClassNode cn && entry.alias != null
+                    && cn.getNodeMetaData(ResolveIncludeVisitor.PIPELINE_BLOCK_TYPE) == null ) {
                 vsc.addError("Included types cannot be aliased", entry);
                 continue;
             }

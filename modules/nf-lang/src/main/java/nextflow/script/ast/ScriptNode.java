@@ -143,6 +143,17 @@ public class ScriptNode extends ModuleNode {
 
     public void setEntry(WorkflowNode entry) {
         this.entry = entry;
+        entry.putNodeMetaData(ASTNodeMarker.PIPELINE_SCRIPT, this);
+    }
+
+    /**
+     * Get the script that declares an entry workflow, i.e. the pipeline that
+     * the workflow belongs to, or null if the workflow is not an entry.
+     *
+     * @param node
+     */
+    public static ScriptNode getPipeline(WorkflowNode node) {
+        return (ScriptNode) node.getNodeMetaData(ASTNodeMarker.PIPELINE_SCRIPT);
     }
 
     public void setOutputs(OutputBlockNode outputs) {
