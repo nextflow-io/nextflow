@@ -20,7 +20,8 @@ process revcomp {
     rc: String
     exec:
         def comp = [A:'T', T:'A', C:'G', G:'C', N:'N']
-        rc = seq.toUpperCase().reverse().collect { comp[it as String] ?: 'N' }.join()
+        def up = seq.toUpperCase().reverse()
+        rc = (0..<up.length()).collect { i -> comp[up[i]] ?: 'N' }.join()
 }
 
 // The agent: for each sequence it validates the input, calls the `revcomp` tool for the

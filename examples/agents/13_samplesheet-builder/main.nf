@@ -43,7 +43,7 @@ process ENA_FETCH {
                      'library_strategy,library_name,scientific_name,fastq_ftp,read_count'
         def url = "https://www.ebi.ac.uk/ena/portal/api/filereport" +
                   "?accession=${accession}&result=read_run&fields=${fields}&format=json"
-        meta = new URL(url).getText('UTF-8')
+        meta = file(url).text
 }
 
 // MAP: one run's messy ENA metadata -> one clean candidate. Structured output, no tools.
@@ -102,7 +102,7 @@ agent consolidate {
         '''.stripIndent()
 
     input:
-    candidates: List<Candidate>
+    candidates: Bag<Candidate>
     output:
     sheet: Samplesheet
 

@@ -29,11 +29,13 @@ process foo {
     message: String
 
     output:
-    upper: String = message.toUpperCase()
-    size: Integer = message.length()
-    out_env: String = env('MESSAGE')
-    out_file: Path = file('message.txt')
-    out_std: String = stdout()
+    record(
+        upper: message.toUpperCase(),
+        size: message.length(),
+        out_env: env('MESSAGE'),
+        out_file: file('message.txt'),
+        out_std: stdout()
+    )
 
     script:
     """
@@ -52,20 +54,20 @@ process bar {
     message: String
 
     output:
-    reversed: String = rev
+    rev
 
     exec:
     rev = message.reverse()
 }
 
 workflow {
-    bar(channel.of('world'))
-    bar.out.reversed.view { v -> "rev=${v}" }
+    reversed = bar(channel.of('world'))
+    reversed.view { v -> "rev=${v}" }
 
-    foo(channel.of('hello'))
-    foo.out.upper.view { v -> "upper=${v}" }
-    foo.out.size.view { v -> "size=${v}" }
-    foo.out.out_env.view { v -> "env=${v}" }
-    foo.out.out_file.view { v -> "file=${v.text.trim()}" }
-    foo.out.out_std.view { v -> "std=${v}" }
+    res = foo(channel.of('hello'))
+    res.view { r -> "upper=${r.upper}" }
+    res.view { r -> "size=${r.size}" }
+    res.view { r -> "env=${r.out_env}" }
+    res.view { r -> "file=${r.out_file.text.trim()}" }
+    res.view { r -> "std=${r.out_std}" }
 }
