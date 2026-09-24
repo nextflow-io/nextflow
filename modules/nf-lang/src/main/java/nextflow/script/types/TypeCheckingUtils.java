@@ -67,6 +67,18 @@ public class TypeCheckingUtils {
     private static final ClassNode TUPLE_TYPE = ClassHelper.makeCached(Tuple.class);
 
     /**
+     * Get the return type of a method, or the inferred return type
+     * of an untyped function.
+     *
+     * @param mn
+     */
+    public static ClassNode getReturnType(MethodNode mn) {
+        if( mn.getNodeMetaData(ASTNodeMarker.INFERRED_RETURN_TYPE) instanceof ClassNode cn )
+            return cn;
+        return mn.getReturnType();
+    }
+
+    /**
      * Get the type (i.e. class node) of a variable.
      *
      * @param variable
@@ -101,7 +113,7 @@ public class TypeCheckingUtils {
 
         if( node instanceof MethodCallExpression mce ) {
             var mn = resolveMethodCall(mce);
-            return mn != null ? mn.getReturnType() : ClassHelper.dynamicType();
+            return mn != null ? getReturnType(mn) : ClassHelper.dynamicType();
         }
 
         if( node instanceof PropertyExpression pe ) {

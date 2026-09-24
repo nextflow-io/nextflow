@@ -339,7 +339,9 @@ public class ScriptCompiler {
          * erases the type annotations.
          */
         private void typeCheck() {
-            if( typeChecked )
+            // on the first pass, the entry script waits for its modules
+            // and nothing has been analyzed yet
+            if( typeChecked || !analyzed.contains(entry) )
                 return;
             typeChecked = true;
             var moduleResolver = new ModuleResolver(projectDir, compiler);

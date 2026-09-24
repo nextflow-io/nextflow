@@ -103,7 +103,7 @@ class TypeCheckingTest extends Specification {
         return true
     }
 
-    def 'should report an error for a process `when` section' () {
+    def 'should warn about a process `when` section' () {
         when:
         def errors = getErrors(
             '''\
@@ -122,7 +122,8 @@ class TypeCheckingTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 4
         errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Process `when` section is not supported with static typing -- use conditional logic in the calling workflow instead"
+        errors[0].isSoftError()
+        errors[0].getOriginalMessage() == "Process `when` section is discouraged with static typing -- use conditional logic in the calling workflow instead"
     }
 
     @Unroll
@@ -310,6 +311,27 @@ class TypeCheckingTest extends Specification {
         )
         then:
         errors.size() == 0
+    }
+
+    def 'should infer the return type of an untyped function' () {
+        when:
+        def source = parse(
+            '''\
+            def make() {
+                return channel.of(1, 2, 3)
+            }
+
+            workflow {
+                make()
+            }
+            '''
+        )
+        def fn = source.getAST().getFunctions().first()
+        def call = source.getAST().getEntry().main.statements.last().expression
+        then:
+        Types.getName(getType(call)) == 'Channel<Integer>'
+        // the function itself stays untyped, since code generation reads it
+        ClassHelper.isDynamicTyped(fn.getReturnType())
     }
 
     def 'should check a return statement' () {

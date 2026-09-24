@@ -249,7 +249,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         visitProcessDirectives(node.directives);
         visit(node.stagers);
         if( !(node.when instanceof EmptyExpression) )
-            addError("Process `when` section is not supported with static typing -- use conditional logic in the calling workflow instead", node.when);
+            addSoftError("Process `when` section is discouraged with static typing -- use conditional logic in the calling workflow instead", node.when);
         visit(node.when);
         visit(node.exec);
         visit(node.stub);
@@ -314,7 +314,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
 
         var inferredReturnType = visitor.getInferredReturnType();
         if( inferredReturnType != null && ClassHelper.isDynamicTyped(node.getReturnType()) )
-            node.setReturnType(inferredReturnType);
+            node.putNodeMetaData(ASTNodeMarker.INFERRED_RETURN_TYPE, inferredReturnType);
     }
 
     @Override
@@ -559,7 +559,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             var dummyMethod = resolveGenericReturnType(receiverType, target, arguments, conflicts);
             checkGenericsConflicts(conflicts);
             node.putNodeMetaData(ASTNodeMarker.METHOD_TARGET, dummyMethod);
-            node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, dummyMethod.getReturnType());
+            node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, getReturnType(dummyMethod));
 
             checkOperatorCall(node);
             checkWorkflowCall(node);
@@ -576,7 +576,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             }
 
             if( !(mn instanceof ProcessNode || mn instanceof WorkflowNode || mn instanceof AgentNode) ) {
-                var dummyMethod = asDummyMethod(receiverType, mn, mn.getParameters(), mn.getReturnType());
+                var dummyMethod = asDummyMethod(receiverType, mn, mn.getParameters(), getReturnType(mn));
                 node.putNodeMetaData(ASTNodeMarker.METHOD_TARGET, dummyMethod);
             }
         }
