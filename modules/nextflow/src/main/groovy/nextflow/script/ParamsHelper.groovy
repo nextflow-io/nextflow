@@ -16,12 +16,20 @@
 
 package nextflow.script
 
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
 import java.nio.file.Path
 
+import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
+import groovy.yaml.YamlSlurper
+import nextflow.dataflow.ChannelNamespace
 import nextflow.exception.ScriptRuntimeException
 import nextflow.script.dsl.Types
+import nextflow.script.types.Channel
 import nextflow.script.types.Record
+import nextflow.script.types.Value
+import nextflow.splitter.CsvSplitter
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import nextflow.util.RecordMap
@@ -38,6 +46,112 @@ import org.codehaus.groovy.runtime.typehandling.GroovyCastException
  */
 @CompileStatic
 class ParamsHelper {
+
+    /**
+     * Resolve a param value against its declared type.
+     *
+     * A {@code Channel<E>} param is loaded from a samplesheet file, with each
+     * record converted to the element type. A {@code Value<V>} param is
+     * converted to {@code V} and wrapped in a dataflow value. Any other param
+     * is converted directly to the declared type.
+     *
+     * @param decl
+     * @param value
+     * @param fromCli whether the value came from the command line (and is
+     *                therefore a string that may need to be parsed)
+     */
+    static Object resolveParam(Param decl, Object value, boolean fromCli) {
+        if( value == null )
+            return null
+
+        final rawType = TypeHelper.getRawType(decl.type)
+
+        if( rawType == Channel )
+            return ChannelNamespace.fromList(loadChannelInput(decl, value))
+
+        if( rawType == Value )
+            return ChannelNamespace.value(resolveParam(elementDecl(decl), value, fromCli))
+
+        final result = fromCli
+            ? resolveFromCli(decl, value)
+            : resolveFromCode(decl, value)
+        checkAssignable(decl, result)
+        return result
+    }
+
+    /**
+     * Load a channel param from a samplesheet file, converting each record
+     * to the declared element type.
+     *
+     * @param decl
+     * @param value
+     */
+    private static List loadChannelInput(Param decl, Object value) {
+        if( value !instanceof CharSequence && value !instanceof Path )
+            throw new ScriptRuntimeException("Parameter `${decl.name}` with type ${Types.getName(decl.type)} should be a samplesheet file, but received: ${value} [${Types.getName(value.getClass())}]")
+
+        final path = value instanceof Path
+            ? (Path)value
+            : TypeHelper.asPathType(value.toString())
+        final elementType = elementDecl(decl).type
+        final elementRawType = TypeHelper.getRawType(elementType)
+
+        if( !Map.isAssignableFrom(elementRawType) && !Record.isAssignableFrom(elementRawType) )
+            throw new ScriptRuntimeException("Parameter `${decl.name}` with type ${Types.getName(decl.type)} cannot be loaded from a samplesheet -- the element type should be Map, Record, or a record type")
+
+        return loadFromFile(decl.name, path).collect { el ->
+            try {
+                TypeHelper.asType(el, elementType)
+            }
+            catch( Exception e ) {
+                throw new ScriptRuntimeException("Invalid record in samplesheet '${path}' for parameter `${decl.name}` -- ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Get the declared param for the element type of a parameterized
+     * type, e.g. {@code Sample} for {@code Channel<Sample>}.
+     *
+     * @param decl
+     */
+    private static Param elementDecl(Param decl) {
+        final elementType = decl.type instanceof ParameterizedType
+            ? ((ParameterizedType)decl.type).getActualTypeArguments()[0]
+            : (Type)Object
+        return new Param(decl.name, elementType, decl.optional, null)
+    }
+
+    /**
+     * Load the contents of a samplesheet file as a list of records.
+     *
+     * Supported formats:
+     * - CSV: header row required, comma-separated
+     * - JSON: must be a top-level array
+     * - YAML / YML: must be a top-level sequence
+     *
+     * @param name the param name (for error messages)
+     * @param file the samplesheet file to load
+     */
+    static List loadFromFile(String name, Path file) {
+        final ext = file.getExtension()
+        final value = switch( ext ) {
+            case 'csv'         -> loadFromCsv(file)
+            case 'json'        -> new JsonSlurper().parse(file)
+            case 'yaml', 'yml' -> new YamlSlurper().parse(file)
+            default -> throw new ScriptRuntimeException("Unrecognized file format '${ext}' for input file '${file}' for parameter `${name}` -- should be CSV, JSON, or YAML")
+        }
+        if( value !instanceof List )
+            throw new ScriptRuntimeException("Input file '${file}' for parameter `${name}` must contain a list of records, but got: ${value.class.simpleName}")
+        return (List)value
+    }
+
+    private static List loadFromCsv(Path file) {
+        final rows = new CsvSplitter().options(header: true, sep: ',').target(file).list()
+        return rows.collect { row ->
+            ((Map)row).collectEntries { k, v -> [ k, v != '' ? v : null ] }
+        }
+    }
 
     /**
      * Resolve a value given on the command line. Command-line values are

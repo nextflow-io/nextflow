@@ -30,7 +30,42 @@ The `params` block does not require the `nextflow.enable.types` feature flag. Fo
 
 ## Supported types
 
-Parameters can use any [standard type][stdlib-types] except the dataflow types (`Channel` and `Value`). This includes primitive types such as `Path`, `String`, `Integer`, and `Boolean`, as well as collections and records.
+Parameters can use any [standard type][stdlib-types]. This includes primitive types such as `Path`, `String`, `Integer`, and `Boolean`, as well as collections, records, and the dataflow types (`Channel` and `Value`).
+
+<AddedInVersion version="26.10" />
+
+A parameter can be declared with a dataflow type:
+
+- A `Channel<E>` parameter accepts a samplesheet path, which Nextflow loads as a channel of records. The samplesheet file can be CSV, JSON, or YAML. The element type must be `Map`, `Record`, or a record type. Each row is validated against and converted to the declared type.
+
+- A `Value<V>` parameter accepts a value of type `V`, which Nextflow wraps in a value channel.
+
+For example:
+
+```nextflow
+params {
+    samples: Channel<Sample>
+    index: Value<Path>
+}
+
+workflow {
+    RNASEQ(params.samples, params.index)
+}
+
+record Sample {
+    id: String
+    fastq_1: Path
+    fastq_2: Path
+}
+```
+
+The pipeline can be run with a samplesheet and an index file:
+
+```console
+$ nextflow run main.nf --samples samples.csv --index genome.fa
+```
+
+Dataflow types are useful when a pipeline is [included by another pipeline][pipeline-composition], because they allow the calling pipeline to provide a parameter from dataflow logic. A parameter that is not declared as a `Channel` or `Value` can only receive a regular value.
 
 ## Default and required parameters
 
@@ -66,6 +101,7 @@ The language server validates each parameter reference against its declared type
 - [Pipeline parameters][cli-params]: How parameter values are resolved across sources.
 
 [cli-params]: ./cli#pipeline-parameters
+[pipeline-composition]: ./workflow-typed#pipeline-composition
 [static-typing-page]: ./static-typing
 [stdlib-types]: ./reference/stdlib-types
 [syntax-params-block]: ./reference/syntax#params-block

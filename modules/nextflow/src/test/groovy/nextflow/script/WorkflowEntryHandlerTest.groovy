@@ -62,7 +62,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         file.text = TEXT
 
         when:
-        def result = makeHandler().loadFromFile('samples', file.toAbsolutePath())
+        def result = ParamsHelper.loadFromFile('samples', file.toAbsolutePath())
 
         then:
         result == EXPECTED
@@ -84,7 +84,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         txtFile.text = 'some text'
 
         when:
-        makeHandler().loadFromFile('items', txtFile.toAbsolutePath())
+        ParamsHelper.loadFromFile('items', txtFile.toAbsolutePath())
 
         then:
         def e = thrown(ScriptRuntimeException)
@@ -100,7 +100,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         jsonFile.text = '{"key":"value"}'   // object, not array
 
         when:
-        makeHandler().loadFromFile('samples', jsonFile.toAbsolutePath())
+        ParamsHelper.loadFromFile('samples', jsonFile.toAbsolutePath())
 
         then:
         def e = thrown(ScriptRuntimeException)
@@ -676,7 +676,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
         then: 'the param and file are named, rather than a bare NumberFormatException'
         def e = thrown(ScriptRuntimeException)
         e.message.contains('Invalid record in samplesheet')
-        e.message.contains('workflow input `samples`')
+        e.message.contains('parameter `samples`')
 
         cleanup:
         file?.delete()

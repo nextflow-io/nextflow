@@ -238,6 +238,45 @@ class ParamsDslTest extends Specification {
         result[2].id == 3
     }
 
+    def 'should load dataflow params from the command line'() {
+        given:
+        def samplesheet = Files.createTempFile('test', '.csv')
+        samplesheet.text = 'id,count\na,1\nb,2\n'
+        def cliParams = [samples: samplesheet.toString(), limit: '5']
+
+        when:
+        def result = runScript(
+            '''\
+            nextflow.enable.types = true
+
+            params {
+                samples: Channel<Sample>
+                limit: Value<Integer>
+            }
+
+            record Sample {
+                id: String
+                count: Integer
+            }
+
+            workflow {
+                params.samples
+                    .map { s -> s.count }
+                    .collect()
+                    .combine(params.limit)
+            }
+            ''',
+            params: cliParams
+        )
+        then:
+        def (counts, limit) = result.val
+        counts.toSorted() == [1, 2]
+        limit == 5
+
+        cleanup:
+        samplesheet?.delete()
+    }
+
     def 'should validate record param from nested map'() {
         when: 'a script is invoked as `nextflow run module.nf --sample.id a --sample.greeting hola`'
         def result = runScript(

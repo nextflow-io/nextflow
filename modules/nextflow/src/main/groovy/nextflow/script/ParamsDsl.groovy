@@ -78,13 +78,13 @@ class ParamsDsl {
                 final value = cliParams[name] instanceof Map && configParams[name] instanceof Map
                     ? Bolts.deepMerge((Map)configParams[name], (Map)cliParams[name])
                     : cliParams[name]
-                params[name] = ParamsHelper.resolveFromCli(decl, value)
+                params[name] = ParamsHelper.resolveParam(decl, value, true)
             }
             else if( configParams.containsKey(name) ) {
-                params[name] = ParamsHelper.resolveFromCode(decl, configParams[name])
+                params[name] = ParamsHelper.resolveParam(decl, configParams[name], false)
             }
             else if( decl.defaultValue != null ) {
-                params[name] = ParamsHelper.resolveFromCode(decl, decl.defaultValue)
+                params[name] = ParamsHelper.resolveParam(decl, decl.defaultValue, false)
             }
             else {
                 params[name] = ParamsHelper.emptyRecord(decl)
@@ -93,8 +93,6 @@ class ParamsDsl {
             if( params[name] == null && !decl.optional ) {
                 throw new ScriptRuntimeException("Parameter `$name` is required but no value was provided")
             }
-
-            ParamsHelper.checkAssignable(decl, params[name])
         }
 
         // propagate resolved params to all scripts for legacy compatibility

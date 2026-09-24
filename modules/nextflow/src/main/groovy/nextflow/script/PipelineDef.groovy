@@ -96,7 +96,7 @@ class PipelineDef extends BindableDef implements ChainableDef {
             // value of the corresponding param is applied
             final value =
                 given.get(name) != null ? resolveArgument(decl, given.get(name)) :
-                decl.defaultValue != null ? ParamsHelper.resolveFromCode(decl, decl.defaultValue) :
+                decl.defaultValue != null ? ParamsHelper.resolveParam(decl, decl.defaultValue, false) :
                 ParamsHelper.emptyRecord(decl)
 
             if( value == null && !decl.optional )
@@ -132,9 +132,7 @@ class PipelineDef extends BindableDef implements ChainableDef {
             return DataflowTypeHelper.normalize(value, pipeline.isTypingEnabled())
         }
 
-        final result = ParamsHelper.resolveFromCode(decl, value)
-        ParamsHelper.checkAssignable(decl, result)
-        return result
+        return ParamsHelper.resolveParam(decl, value, false)
     }
 
     private static boolean isDataflowType(Param decl) {
