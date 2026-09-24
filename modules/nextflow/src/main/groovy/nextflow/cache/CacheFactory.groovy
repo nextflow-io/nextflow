@@ -19,6 +19,7 @@ package nextflow.cache
 import java.nio.file.Path
 
 import groovy.transform.CompileStatic
+import groovy.transform.PackageScope
 import groovy.util.logging.Slf4j
 import nextflow.plugin.Plugins
 import org.pf4j.ExtensionPoint
@@ -48,13 +49,39 @@ abstract class CacheFactory implements ExtensionPoint {
      */
     protected abstract CacheDB newInstance(UUID uniqueId, String runName, Path home=null)
 
+    /**
+     * Whether this factory can serve the current session.
+     *
+     * <p>Selection is by {@link nextflow.plugin.Priority} alone, so the highest-priority factory on
+     * the classpath serves every session whether or not it was configured. A factory that a plugin
+     * contributes for one feature therefore cannot be loaded without taking over the cache: its only
+     * options are to serve a cache it was not asked for, or to abort the run. Returning {@code false}
+     * is the third one — decline, and let the next factory serve.
+     *
+     * <p>Defaults to {@code true}, so a factory that does not override this keeps the behaviour it
+     * has always had.
+     *
+     * @return {@code true} if this factory should be used, {@code false} to defer to the next one.
+     */
+    protected boolean isEnabled() { true }
+
     static CacheDB create(UUID uniqueId, String runName, Path home=null) {
-        final all = Plugins.getPriorityExtensions(CacheFactory)
-        if( !all )
-            throw new IllegalStateException("Unable to find Nextflow cache factory")
-        final factory = all.first()
+        final factory = select(Plugins.getPriorityExtensions(CacheFactory))
         log.debug "Using Nextflow cache factory: ${factory.getClass().getName()}"
         return factory.newInstance(uniqueId, runName, home)
+    }
+
+    /**
+     * The first factory that claims the session, in priority order.
+     */
+    @PackageScope
+    static CacheFactory select(List<CacheFactory> all) {
+        if( !all )
+            throw new IllegalStateException("Unable to find Nextflow cache factory")
+        final factory = all.find { it.isEnabled() }
+        if( !factory )
+            throw new IllegalStateException("Unable to find an enabled Nextflow cache factory -- tried: ${all.collect { it.getClass().getName() }.join(', ')}")
+        return factory
     }
 
 }
