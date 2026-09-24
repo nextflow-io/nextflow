@@ -218,7 +218,7 @@ When the selector is a qualified process name, it matches only processes invoked
 - `PARENT:sayHello` (different process alias)
 - `PARENT2:hello` (different workflow alias)
 
-In each case, use the fully-qualified process name instead. Alternatively, use a regular expression (e.g. `.*:PARENT:hello`) to match multiple variants.
+In each case, use the fully-qualified process name instead. Alternatively, use a regular expression (e.g. `.*:PARENT:hello`) to match multiple variants. You can also use a negative lookahead to exclude a branch, e.g. `MAIN:(?!QC:).*:hello` matches `hello` in any workflow under `MAIN` except `MAIN:QC`.
 
 :::tip
 You don't need to enclose label and process names in quotes unless they contain special characters (`-`, `:`, `!`, etc.) or are keywords or built-in type identifiers.
@@ -252,18 +252,6 @@ process {
 ```
 
 This configuration requests 2 CPUs for processes labeled as `hello` and 4 CPUs for all processes *not* labeled as `hello`. It also specifies the `long` queue for processes whose name does *not* start with `align`.
-
-Selector expressions are [Java regular expressions](https://docs.oracle.com/en/java/javase/17/docs/api/java.base/java/util/regex/Pattern.html) and must match the entire process name or label. This means you can use any construct supported by Java, such as a *negative lookahead* `(?!...)`, to exclude part of a fully qualified name while still matching the rest. The `!` operator negates the whole expression, whereas a lookahead lets you exclude a specific branch of the workflow:
-
-```groovy
-process {
-    withName: 'MAIN:(?!QC:).*:SAMTOOLS_SORT' {
-        memory = 16.GB
-    }
-}
-```
-
-This configuration applies to `SAMTOOLS_SORT` when invoked by any workflow under `MAIN` (e.g. `MAIN:ALIGN:SAMTOOLS_SORT`), *except* when invoked by `MAIN:QC` (e.g. `MAIN:QC:SAMTOOLS_SORT` or `MAIN:QC:DEDUP:SAMTOOLS_SORT`).
 
 ### Selector priority
 
