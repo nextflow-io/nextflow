@@ -151,4 +151,3 @@ Follow these actions to make a new release:
     git commit -m "[release] Nextflow version 25.09.0-edge"
     git push origin master
     ```
-- The release job builds, tags, and publishes the release commit itself, not the tip of master, so other commits can be pushed to master while the release is running.
