@@ -34,8 +34,8 @@ class TaskHashSpecTest extends Specification {
     def 'canonical form names the id, the ordered keys with their extraction, and the encoding'() {
         given:
         def spec = new TaskHashSpec('std/test', [
-            new KeyBinding(HashKey.SESSION_ID, contrib('sessionId')),
-            new KeyBinding(HashKey.TASK_SOURCE, contrib('taskSource'))
+            (HashKey.SESSION_ID): contrib('sessionId'),
+            (HashKey.TASK_SOURCE): contrib('taskSource')
         ], EncodingRules.RECORD_TYPES)
 
         expect:
@@ -51,37 +51,37 @@ function=murmur3_128
     def 'fingerprint is stable, and moves when any part of the canonical form moves'() {
         given:
         def base = new TaskHashSpec('std/test',
-            [new KeyBinding(HashKey.SESSION_ID, contrib('sessionId'))], EncodingRules.RECORD_TYPES)
+            [(HashKey.SESSION_ID): contrib('sessionId')], EncodingRules.RECORD_TYPES)
 
         expect: 'stable across calls and across equal specs'
         base.fingerprint() == base.fingerprint()
         and:
         base.fingerprint() == new TaskHashSpec('std/test',
-            [new KeyBinding(HashKey.SESSION_ID, contrib('sessionId'))], EncodingRules.RECORD_TYPES).fingerprint()
+            [(HashKey.SESSION_ID): contrib('sessionId')], EncodingRules.RECORD_TYPES).fingerprint()
 
         and: 'a different extraction for the same key moves it'
         base.fingerprint() != new TaskHashSpec('std/test',
-            [new KeyBinding(HashKey.SESSION_ID, contrib('sessionId.other'))], EncodingRules.RECORD_TYPES).fingerprint()
+            [(HashKey.SESSION_ID): contrib('sessionId.other')], EncodingRules.RECORD_TYPES).fingerprint()
 
         and: 'different encoding moves it'
         base.fingerprint() != new TaskHashSpec('std/test',
-            [new KeyBinding(HashKey.SESSION_ID, contrib('sessionId'))], EncodingRules.LEGACY).fingerprint()
+            [(HashKey.SESSION_ID): contrib('sessionId')], EncodingRules.LEGACY).fingerprint()
 
         and: 'different key order moves it'
         new TaskHashSpec('std/test', [
-            new KeyBinding(HashKey.SESSION_ID, contrib('a')),
-            new KeyBinding(HashKey.TASK_SOURCE, contrib('b'))
+            (HashKey.SESSION_ID): contrib('a'),
+            (HashKey.TASK_SOURCE): contrib('b')
         ], EncodingRules.RECORD_TYPES).fingerprint() != new TaskHashSpec('std/test', [
-            new KeyBinding(HashKey.TASK_SOURCE, contrib('b')),
-            new KeyBinding(HashKey.SESSION_ID, contrib('a'))
+            (HashKey.TASK_SOURCE): contrib('b'),
+            (HashKey.SESSION_ID): contrib('a')
         ], EncodingRules.RECORD_TYPES).fingerprint()
     }
 
     def 'keys() reports the declared keys in order'() {
         given:
         def spec = new TaskHashSpec('std/test', [
-            new KeyBinding(HashKey.TASK_SOURCE, contrib('a')),
-            new KeyBinding(HashKey.CONDA, contrib('b'))
+            (HashKey.TASK_SOURCE): contrib('a'),
+            (HashKey.CONDA): contrib('b')
         ], EncodingRules.RECORD_TYPES)
 
         expect:

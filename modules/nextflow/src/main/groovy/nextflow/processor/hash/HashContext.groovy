@@ -39,25 +39,18 @@ class HashContext {
 
     final Session session
 
-    /** Services injected by a plugin-supplied spec, keyed by name. */
-    final Map<String,Object> services
 
     private final TaskHasher helper
 
     HashContext(TaskRun task) {
-        this(task, new TaskHasher(task), [:])
+        this(task, new TaskHasher(task))
     }
 
     HashContext(TaskRun task, TaskHasher helper) {
-        this(task, helper, [:])
-    }
-
-    HashContext(TaskRun task, TaskHasher helper, Map<String,Object> services) {
         this.task = task
         this.processor = task.processor
         this.session = task.processor.session
         this.helper = helper
-        this.services = services
     }
 
     Map<String,Object> globalVars() {
