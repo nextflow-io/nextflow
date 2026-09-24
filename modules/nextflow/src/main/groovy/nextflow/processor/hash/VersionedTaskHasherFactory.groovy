@@ -23,7 +23,7 @@ import nextflow.processor.TaskHasherFactory
 import nextflow.processor.TaskRun
 
 /**
- * Supplies a {@link SpecTaskHasher} when the run asked for a task hash version, and
+ * Supplies a {@link VersionedTaskHasher} when the run asked for a task hash version, and
  * abstains otherwise.
  *
  * Abstaining is the whole point: with no version requested this returns {@code null},
@@ -33,7 +33,7 @@ import nextflow.processor.TaskRun
  */
 @Slf4j
 @CompileStatic
-class SpecTaskHasherFactory implements TaskHasherFactory {
+class VersionedTaskHasherFactory implements TaskHasherFactory {
 
     static final String ENV_VAR = 'NXF_TASK_HASH_VER'
 
@@ -57,6 +57,6 @@ class SpecTaskHasherFactory implements TaskHasherFactory {
             return null
         }
         log.debug "Task: ${task.lazyName()} > hashing under spec ${spec.id} (${spec.fingerprint()})"
-        return new SpecTaskHasher(task, spec)
+        return new VersionedTaskHasher(task, spec)
     }
 }

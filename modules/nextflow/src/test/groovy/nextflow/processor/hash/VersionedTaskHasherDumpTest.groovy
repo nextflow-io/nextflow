@@ -25,7 +25,7 @@ import nextflow.script.ProcessConfig
 import nextflow.util.CacheHelper
 import spock.lang.Specification
 
-class SpecTaskHasherDumpTest extends Specification {
+class VersionedTaskHasherDumpTest extends Specification {
 
     def 'dumpJson names every entry and identifies the spec'() {
         given:
@@ -62,7 +62,7 @@ class SpecTaskHasherDumpTest extends Specification {
 
         when:
         def json = new JsonSlurper().parseText(
-            new SpecTaskHasher(new HashContext(task, helper), StdSpecs.STD_V4).dumpJson()) as List
+            new VersionedTaskHasher(new HashContext(task, helper), StdSpecs.STD_V4).dumpJson()) as List
 
         then:
         json[0].spec == 'std/v4'
@@ -108,7 +108,7 @@ class SpecTaskHasherDumpTest extends Specification {
         helper.getTaskBinEntries(_) >> []
 
         when:
-        def hasher = new SpecTaskHasher(new HashContext(task, helper), StdSpecs.STD_V4)
+        def hasher = new VersionedTaskHasher(new HashContext(task, helper), StdSpecs.STD_V4)
         def hash = hasher.compute()
         def output = hasher.dumpLegacy(hash)
 

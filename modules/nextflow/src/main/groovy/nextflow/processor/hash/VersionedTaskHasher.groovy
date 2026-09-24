@@ -30,26 +30,26 @@ import nextflow.util.HashBuilder
  * ordered list of named key bindings plus encoding rules — rather than from a hard-coded
  * key sequence.
  *
- * It is opt-in: {@link SpecTaskHasherFactory} returns one only when a task hash version
+ * It is opt-in: {@link VersionedTaskHasherFactory} returns one only when a task hash version
  * is configured, so a run that asks for nothing keeps the inherited {@link TaskHasher}
  * behaviour byte for byte. There are no subclasses of this class — a different hash
  * version, or a plugin's own hashing, is a different spec value, not a new type.
  */
 @Slf4j
 @CompileStatic
-class SpecTaskHasher extends TaskHasher {
+class VersionedTaskHasher extends TaskHasher {
 
     private final HashContext ctx
 
     private final TaskHashSpec spec
 
-    SpecTaskHasher(HashContext ctx, TaskHashSpec spec) {
+    VersionedTaskHasher(HashContext ctx, TaskHashSpec spec) {
         super(ctx.task)
         this.ctx = ctx
         this.spec = spec
     }
 
-    SpecTaskHasher(TaskRun task, TaskHashSpec spec) {
+    VersionedTaskHasher(TaskRun task, TaskHashSpec spec) {
         super(task)
         this.spec = spec
         // reuse this hasher as the context's helper: it already inherits
