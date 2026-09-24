@@ -74,7 +74,10 @@ trait CacheBase {
             return CacheFactory.create(entry.sessionId, entry.runName, basePath).openForRead()
         }
         catch( AbortOperationException e ) {
-            throw new AbortOperationException(e.message + cloudCacheHint(), e)
+            final hint = cloudCacheHint()
+            if( !hint )
+                throw e
+            throw new AbortOperationException(e.message + hint, e)
         }
     }
 
