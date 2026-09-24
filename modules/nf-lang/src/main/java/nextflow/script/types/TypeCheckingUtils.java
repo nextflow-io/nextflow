@@ -209,7 +209,11 @@ public class TypeCheckingUtils {
             return methods;
 
         if( !node.isImplicitThis() ) {
-            var receiverType = Types.normalize(getType(node.getObjectExpression()));
+            // static methods are declared on the class itself, not its standard type
+            var receiver = node.getObjectExpression();
+            var receiverType = receiver instanceof ClassExpression
+                ? receiver.getType()
+                : Types.normalize(getType(receiver));
             if( receiverType != null ) {
                 methods = methodsForType(receiverType, node.getMethodAsString());
                 if( methods.size() == 1 )

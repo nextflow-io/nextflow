@@ -140,6 +140,20 @@ class TypeCheckingTest extends Specification {
         "def hello(x: String) { return x }"             | null
     }
 
+    @Unroll
+    def 'should resolve a static method call' () {
+        expect:
+        check(SOURCE, ERROR)
+
+        where:
+        SOURCE                                          | ERROR
+        "String.format('%d', 1)"                        | null
+        "Integer.parseInt('1')"                         | null
+        "Math.max(1, 2)"                                | null
+        "groovy.json.JsonOutput.toJson([1, 2])"         | null
+        "String.nope()"                                 | "Unrecognized method `nope` for type String"
+    }
+
     def 'should check a parameter declaration' () {
         when:
         def errors = getErrors(
