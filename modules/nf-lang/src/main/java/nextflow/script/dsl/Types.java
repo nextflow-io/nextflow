@@ -36,6 +36,7 @@ import nextflow.script.types.Duration;
 import nextflow.script.types.MemoryUnit;
 import nextflow.script.types.ParamsMap;
 import nextflow.script.types.Record;
+import nextflow.script.types.TypeCheckingUtils;
 import nextflow.script.types.Value;
 import nextflow.script.types.VersionNumber;
 import org.codehaus.groovy.ast.ClassHelper;
@@ -84,7 +85,7 @@ public class Types {
      * @param node
      */
     public static boolean hasReturnType(MethodNode node) {
-        var returnType = node.getReturnType();
+        var returnType = TypeCheckingUtils.getReturnType(node);
         if( returnType.isGenericsPlaceHolder() )
             return true;
         return !ClassHelper.isObjectType(returnType) && !ClassHelper.isPrimitiveVoid(returnType);
