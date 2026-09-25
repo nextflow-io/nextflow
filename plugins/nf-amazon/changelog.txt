@@ -1,5 +1,9 @@
 nf-amazon changelog
 ===================
+3.11.1 - 25 Sep 2026
+- Make ByteBufferInputStream resettable so an S3 upload can be retried (#7577) [4e9ea7cff]
+- Bump slf4j to 2.0.19 (#7661) [90c789759]
+
 3.10.2 - 20 Aug 2026
 - Bump netty and Apache HttpComponents to patched releases (#7484) [3aef1da9a]
 - Bump Groovy 4.0.33 (#7429) [c8800d84a]
