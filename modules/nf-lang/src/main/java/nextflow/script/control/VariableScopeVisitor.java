@@ -853,11 +853,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         var name = node.getName();
         Variable variable = vsc.findVariableDeclaration(name, node);
         if( variable == null ) {
-            if( "args".equals(name) ) {
-                vsc.addParanoidWarning("The use of `args` outside the entry workflow will not be supported in a future version", node);
-            }
-            else if( "params".equals(name) ) {
-                vsc.addParanoidWarning("The use of `params` outside the entry workflow will not be supported in a future version", node);
+            if( "args".equals(name) || "params".equals(name) ) {
+                vsc.addWarning("The use of `" + name + "` outside the entry workflow is discouraged", name, node);
             }
             else if( isStdinStdout(name) ) {
                 // stdin, stdout can be declared without parentheses

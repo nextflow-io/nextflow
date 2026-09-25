@@ -537,58 +537,6 @@ class PipelineDefTest extends Dsl2Spec {
         e.message.contains("has been already used")
     }
 
-    def 'should reject a pipeline that refers to params outside its entry workflow' () {
-        given:
-        folder.resolve('greet.nf').text = '''
-            nextflow.enable.types = true
-
-            params {
-                names: Channel<String>
-                greeting: String = 'Hello'
-            }
-
-            workflow {
-                main:
-                messages = FOO(params.names)
-
-                publish:
-                messages = messages
-            }
-
-            output {
-                messages: Channel<String> {}
-            }
-
-            process FOO {
-                input:
-                name: String
-
-                output:
-                message: String
-
-                exec:
-                message = "${params.greeting}, ${name}!"
-            }
-            '''
-
-        folder.resolve('main.nf').text = '''
-            nextflow.enable.types = true
-
-            include { workflow as GREET } from './greet.nf'
-
-            workflow {
-                main:
-                GREET( names: channel.of('World') )
-            }
-            '''
-
-        when:
-        runScript(folder.resolve('main.nf'))
-        then:
-        def e = thrown(ScriptCompilationException)
-        e.cause.message.contains('An included pipeline cannot refer to `params` outside of its entry workflow and output block')
-    }
-
     def 'should resolve the output directives of a pipeline against its params' () {
         when:
         def script = loadScript(module: true, GREET_PIPELINE)
@@ -695,63 +643,6 @@ class PipelineDefTest extends Dsl2Spec {
         def result = runScript(script)
         then:
         [result.val, result.val].sort() == ['Ciao, Nextflow!', 'Hola, World!']
-    }
-
-    def 'should reject a pipeline whose module refers to params' () {
-        given:
-        folder.resolve('greet.nf').text = '''
-            nextflow.enable.types = true
-
-            include { SUB } from './sub.nf'
-
-            params {
-                names: Channel<String>
-            }
-
-            workflow {
-                main:
-                messages = SUB( params.names )
-
-                publish:
-                messages = messages
-            }
-
-            output {
-                messages: Channel<String> {}
-            }
-            '''
-        folder.resolve('sub.nf').text = '''
-            nextflow.enable.types = true
-
-            workflow SUB {
-                take:
-                names: Channel<String>
-
-                main:
-                messages = names.map { name -> "${params.greeting}, ${name}!" }
-
-                emit:
-                messages
-            }
-            '''
-        folder.resolve('main.nf').text = '''
-            nextflow.enable.types = true
-
-            include { workflow as GREET } from './greet.nf'
-
-            workflow {
-                main:
-                GREET( names: channel.of('World') )
-            }
-            '''
-
-        when:
-        // a `params` reference in a module of the pipeline would resolve
-        // against the calling pipeline, so it is rejected as well
-        runScript(folder.resolve('main.nf'))
-        then:
-        def e = thrown(ScriptCompilationException)
-        e.cause.message.contains('An included pipeline cannot refer to `params` outside of its entry workflow and output block')
     }
 
     def 'should allow a pipeline that binds a local variable named params' () {

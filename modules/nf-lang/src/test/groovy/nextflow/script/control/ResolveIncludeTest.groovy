@@ -140,6 +140,33 @@ class ResolveIncludeTest extends Specification {
         deleteDir(root)
     }
 
+    def 'should report an error for an included pipeline with legacy params' () {
+        given:
+        def root = tempDir()
+        def main = tempFile(root, 'main.nf',
+            '''\
+            include { workflow as GREET } from './greet.nf'
+            ''')
+        def module = tempFile(root, 'greet.nf',
+            '''\
+            params.greeting = 'Hello'
+
+            workflow {
+                println params.greeting
+            }
+            ''')
+
+        when:
+        def errors = check(root, [main, module])
+        then:
+        errors.size() == 1
+        errors[0].getSourceLocator().endsWith('main.nf')
+        errors[0].getOriginalMessage() == 'An included pipeline cannot use legacy parameter declarations -- use the `params` block instead'
+
+        cleanup:
+        deleteDir(root)
+    }
+
     def 'should resolve an include' () {
         given:
         def root = tempDir()
