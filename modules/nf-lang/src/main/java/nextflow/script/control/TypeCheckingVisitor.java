@@ -170,7 +170,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         for( var entry : node.entries ) {
             if( !(entry.getTarget() instanceof ClassNode cn) )
                 continue;
-            var block = ResolveIncludeVisitor.getPipelineBlock(cn);
+            var block = ScriptNode.getPipelineBlock(cn);
             if( block instanceof ParamBlockNode ) {
                 for( var fn : cn.getFields() )
                     fn.setType(nullableType(fn.getType()));
@@ -824,7 +824,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             var argType = getType(value);
             if( !Types.isAssignableFrom(namedParam.getType(), argType) )
                 addError("Named param `" + name + "` expects a " + Types.getName(namedParam.getType()) + " but received a " + Types.getName(argType), value);
-            entry.putNodeMetaData("_NAMED_PARAM", namedParam);
+            entry.putNodeMetaData(ASTNodeMarker.NAMED_PARAM, namedParam);
         }
     }
 
@@ -866,40 +866,40 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
      */
     private boolean checkPipelineCall(MethodCallExpression node) {
         var mn = (MethodNode) node.getNodeMetaData(ASTNodeMarker.METHOD_TARGET);
-        if( !(mn instanceof WorkflowNode wn) || !wn.isEntry() )
-            return false;
-        var pipeline = ScriptNode.getPipeline(wn);
+        var pipeline = mn instanceof WorkflowNode wn ? ScriptNode.getPipeline(wn) : null;
         if( pipeline == null )
             return false;
+        node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, pipelineOutputType(pipeline.getOutputs()));
 
         var arguments = asMethodCallArguments(node);
+        List<PipelineArgument> args;
         if( arguments.size() > 1 ) {
             addError("Pipeline `" + node.getMethodAsString() + "` should be called with named arguments, one for each of its params", node);
+            return true;
         }
         else if( arguments.isEmpty() ) {
-            checkPipelineParams(node, pipeline.getParams(), List.of());
+            args = List.of();
         }
         else if( arguments.get(0) instanceof MapExpression me ) {
-            var args = me.getMapEntryExpressions().stream()
+            args = me.getMapEntryExpressions().stream()
                 .map(entry -> new PipelineArgument(entry.getKeyExpression().getText(), getType(entry.getValueExpression()), entry.getValueExpression(), entry))
                 .toList();
-            checkPipelineParams(node, pipeline.getParams(), args);
         }
         else {
             var argument = arguments.get(0);
             var argType = getType(argument);
-            if( Types.isRecordType(argType) && !argType.getFields().isEmpty() ) {
-                var args = argType.getFields().stream()
-                    .map(fn -> new PipelineArgument(fn.getName(), fn.getType(), argument, null))
-                    .toList();
-                checkPipelineParams(node, pipeline.getParams(), args);
+            if( !Types.isRecordType(argType) ) {
+                if( !ClassHelper.isDynamicTyped(argType) )
+                    addError("Pipeline `" + node.getMethodAsString() + "` should be called with named arguments or a record, but received a " + Types.getName(argType), argument);
+                return true;
             }
-            else if( !ClassHelper.isDynamicTyped(argType) && !Types.isRecordType(argType) ) {
-                addError("Pipeline `" + node.getMethodAsString() + "` should be called with named arguments or a record, but received a " + Types.getName(argType), argument);
-            }
+            if( argType.getFields().isEmpty() )
+                return true;
+            args = argType.getFields().stream()
+                .map(fn -> new PipelineArgument(fn.getName(), fn.getType(), argument, null))
+                .toList();
         }
-
-        node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, pipelineOutputType(pipeline.getOutputs()));
+        checkPipelineParams(node, pipeline.getParams(), args);
         return true;
     }
 
@@ -929,7 +929,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             if( !Types.isAssignableFrom(paramType, arg.type()) )
                 addError("Param `" + arg.name() + "` expects a " + Types.getName(paramType) + " but received a " + Types.getName(arg.type()), arg.node());
             if( arg.entry() != null )
-                arg.entry().putNodeMetaData("_NAMED_PARAM", declaration);
+                arg.entry().putNodeMetaData(ASTNodeMarker.NAMED_PARAM, declaration);
         }
 
         var missing = Arrays.stream(declarations)

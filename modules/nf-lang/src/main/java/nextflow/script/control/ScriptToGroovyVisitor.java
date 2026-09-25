@@ -16,17 +16,15 @@
 package nextflow.script.control;
 
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AgentNode;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
-import nextflow.script.ast.IncludeEntryNode;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.OutputBlockNode;
 import nextflow.script.ast.ParamBlockNode;
@@ -148,43 +146,28 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     public void visitInclude(IncludeNode node) {
         // an included params or output block is only a type -- add it to this
         // script so that it is compiled, and don't include it at runtime
+        var entries = new ArrayList<Expression>();
         for( var entry : node.entries ) {
-            if( isPipelineBlockType(entry) ) {
-                var cn = (ClassNode) entry.getTarget();
+            if( entry.getTarget() instanceof ClassNode cn && ScriptNode.getPipelineBlock(cn) != null ) {
                 // the type is qualified by the including script, so that two
                 // scripts can include the same block
                 if( cn.getName().indexOf('.') == -1 )
                     cn.setName(sgh.packageName(moduleNode) + "." + cn.getName());
                 moduleNode.addClass(cn);
+                continue;
             }
+            var name = constX(entry.name);
+            entries.add(entry.alias != null
+                ? createX("nextflow.script.IncludeDef.Module", args(name, constX(entry.alias)))
+                : createX("nextflow.script.IncludeDef.Module", args(name)));
         }
 
-        var entries = (List<Expression>) node.entries.stream()
-            .filter((entry) -> !isPipelineBlockType(entry))
-            .map((entry) -> {
-                var name = constX(entry.name);
-                return entry.alias != null
-                    ? createX("nextflow.script.IncludeDef.Module", args(name, constX(entry.alias)))
-                    : createX("nextflow.script.IncludeDef.Module", args(name));
-            })
-            .collect(Collectors.toList());
-
+        if( entries.isEmpty() )
+            return;
         var include = callThisX("include", args(createX("nextflow.script.IncludeDef", args(listX(entries)))));
         var from = callX(include, "from", args(node.source));
         var result = stmt(callX(from, "load0", args(varX("params"))));
         moduleNode.addStatement(result);
-    }
-
-    /**
-     * Whether an include entry refers to the `params` or `output` block of an
-     * included pipeline, rather than a definition of the module that happens
-     * to have the same name.
-     *
-     * @param entry
-     */
-    private static boolean isPipelineBlockType(IncludeEntryNode entry) {
-        return entry.getTarget() instanceof ClassNode cn
-            && cn.getNodeMetaData(ResolveIncludeVisitor.PIPELINE_BLOCK_TYPE) != null;
     }
 
     @Override

@@ -15,12 +15,14 @@
  */
 package nextflow.script.control;
 
+import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.FunctionNode;
 import nextflow.script.ast.IncludeEntryNode;
 import nextflow.script.ast.IncludeNode;
@@ -124,39 +126,22 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
         var hasPipeline = false;
         for( var entry : node.entries ) {
             var includedName = entry.name;
-            var definitionNode = definitions.stream()
-                .filter(defNode -> includedName.equals(definitionName(defNode)))
-                .findFirst()
-                .orElse(null);
             // a `params` or `output` entry that doesn't match a definition of the
             // module refers to the corresponding block of the pipeline
-            var blockNode = definitionNode == null ? pipelineBlockType(scriptNode, entry) : null;
-            var includedNode = definitionNode != null ? (AnnotatedNode) definitionNode : blockNode;
-            if( includedNode == null ) {
+            var target = definitions.stream()
+                .filter(defNode -> includedName.equals(definitionName(defNode)))
+                .findFirst()
+                .orElseGet(() -> pipelineBlockType(scriptNode, entry));
+            if( target == null ) {
                 addError("Included name '" + includedName + "' is not defined in module '" + includeUri.getPath() + "'", node);
                 continue;
             }
-            // a definition that happens to be named `params`, `workflow` or
-            // `output` is included as itself, not as a block of the pipeline
-            var isPipelineBlock = blockNode != null || isEntryWorkflow(includedName, definitionNode);
-            if( isPipelineBlock ) {
-                if( entry.alias == null ) {
-                    addError("An included pipeline must be aliased, e.g. `" + includedName + " as MY_PIPELINE`", node);
-                    continue;
-                }
-                hasPipeline |= PIPELINE_NAME.equals(includedName);
-            }
-            entry.setTarget(includedNode);
+            hasPipeline |= target instanceof WorkflowNode wn && wn.isEntry();
+            entry.setTarget(target);
         }
         if( hasPipeline && !scriptNode.getParamsV1().isEmpty() )
             addError("An included pipeline cannot use legacy parameter declarations -- use the `params` block instead", node);
     }
-
-    private static boolean isEntryWorkflow(String name, AnnotatedNode node) {
-        return PIPELINE_NAME.equals(name) && node instanceof WorkflowNode wn && wn.isEntry();
-    }
-
-    private static final String PIPELINE_NAME = "workflow";
 
     /**
      * The `params` and `output` blocks of an included pipeline can be included
@@ -177,30 +162,11 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
 
     private static final ClassNode NULLABLE = ClassHelper.makeCached(Nullable.class);
 
-    /**
-     * Marks a record type synthesized for the `params` or `output` block of an
-     * included pipeline, so that it can be distinguished from a definition of
-     * the module with the same name. The metadata value is the block that the
-     * type was synthesized from, so that tooling can navigate to it.
-     */
-    public static final String PIPELINE_BLOCK_TYPE = "nextflow.pipelineBlockType";
-
-    /**
-     * Get the `params` or `output` block that a record type was synthesized
-     * from, or null if the type is a definition of the module.
-     *
-     * @param cn
-     */
-    public static ASTNode getPipelineBlock(ClassNode cn) {
-        return (ASTNode) cn.getNodeMetaData(PIPELINE_BLOCK_TYPE);
-    }
-
     private static ClassNode recordType(String name, ASTNode block, List<? extends Parameter> declarations, boolean nullable) {
         var cn = new RecordNode(name);
-        cn.putNodeMetaData(PIPELINE_BLOCK_TYPE, block);
+        cn.putNodeMetaData(ASTNodeMarker.PIPELINE_BLOCK, block);
         for( var declaration : declarations ) {
-            var fn = new FieldNode(declaration.getName(), java.lang.reflect.Modifier.PUBLIC, declaration.getType(), cn, null);
-            fn.setDeclaringClass(cn);
+            var fn = new FieldNode(declaration.getName(), Modifier.PUBLIC, declaration.getType(), cn, null);
             if( nullable )
                 fn.addAnnotation(new AnnotationNode(NULLABLE));
             cn.addField(fn);
