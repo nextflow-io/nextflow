@@ -1,12 +1,12 @@
-nf-agent-pi@0.5.2
+nf-agent-pi@0.5.3
 nf-agent@0.1.1
-nf-amazon@3.11.0
+nf-amazon@3.11.1
 nf-azure@1.24.0
-nf-cloudcache@0.6.1
+nf-cloudcache@0.6.2
 nf-codecommit@0.6.1
 nf-console@1.3.1
-nf-google@1.28.0
-nf-k8s@1.6.0
+nf-google@1.28.1
+nf-k8s@1.6.1
 nf-seqera@0.25.0
 nf-tower@1.30.0
 nf-wave@1.22.1
