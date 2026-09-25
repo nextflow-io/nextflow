@@ -309,11 +309,13 @@ abstract class BaseScript extends Script implements ExecutionContext {
                 // Execute a single named workflow directly
                 final handler = new WorkflowEntryHandler(this, session, meta)
                 this.entryFlow = handler.createEntryWorkflow()
+                this.outputDef = handler.createOutputDef()
             }
             else if( moduleRun && meta.hasExecutableProcesses() ) {
                 // Execute a single process directly
                 final handler = new ProcessEntryHandler(this, session, meta)
                 this.entryFlow = handler.createEntryWorkflow()
+                this.outputDef = handler.createOutputDef()
             }
             else if( meta.getLocalProcessNames() || meta.getLocalWorkflowNames() ) {
                 throw new AbortOperationException("No entry workflow specified -- script must define an entry workflow, a single process or named workflow, or be a code snippet")
@@ -328,9 +330,9 @@ abstract class BaseScript extends Script implements ExecutionContext {
         session.notifyBeforeWorkflowExecution()
         if( paramsDef )
             paramsDef.apply(session)
-        final ret = entryFlow.invoke_a(BaseScriptConsts.EMPTY_ARGS)
+        final ret = entryFlow.run(BaseScriptConsts.EMPTY_ARGS)
         if( outputDef )
-            outputDef.apply(session)
+            outputDef.apply(session, entryFlow.getOutput().asMap())
         session.notifyAfterWorkflowExecution()
         return ret
     }

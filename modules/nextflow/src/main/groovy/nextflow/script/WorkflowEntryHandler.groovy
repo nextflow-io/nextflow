@@ -84,8 +84,7 @@ class WorkflowEntryHandler {
                 // Execute the named workflow
                 final output = workflowDef.run(inputs as Object[]) as ChannelOut
                 // Publish workflow emits as pipeline outputs
-                assignOutputs(output)
-                publishOutputs()
+                assignOutputs((WorkflowBinding)(Object)getDelegate(), output)
                 return output
             }
             final sourceCode = "    // Auto-generated workflow entry\n    ${workflowName}(...)"
@@ -94,9 +93,8 @@ class WorkflowEntryHandler {
         return new WorkflowDef(script, entryBody)
     }
 
-    private void assignOutputs(ChannelOut output) {
+    private void assignOutputs(WorkflowBinding dsl, ChannelOut output) {
         final outputNames = workflowDef.getDeclaredOutputs()
-        final dsl = script.getBinding()
         if( output.size() == 1 && outputNames.size() == 1 ) {
             dsl._publish_(outputNames.first(), output[0])
         }
@@ -106,15 +104,20 @@ class WorkflowEntryHandler {
         }
     }
 
-    private void publishOutputs() {
+    /**
+     * Creates an output definition that declares each output of the
+     * entry workflow, without creating an output directory.
+     */
+    OutputDef createOutputDef() {
         final outputNames = workflowDef.getDeclaredOutputs()
-        final dsl = new OutputDsl()
-        for( final name : outputNames )
-            dsl.declare(name, { -> })
         // disable the output directory -- report output files by
         // their work directory path instead of publishing them
         session.outputDir = null
-        dsl.apply(session)
+        return new OutputDef({ ->
+            final dsl = (OutputDsl)(Object)getDelegate()
+            for( final name : outputNames )
+                dsl.declare(name, { -> })
+        })
     }
 
     /**

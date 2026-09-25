@@ -108,6 +108,9 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 
     WorkflowBinding getBinding() { binding }
 
+    @PackageScope
+    ChannelOut getOutput() { output }
+
     ChannelOut getOut() {
         if( output==null )
             throw new ScriptRuntimeException("Access to '${name}.out' is undefined since the workflow '$name' has not been invoked before accessing the output attribute")
@@ -122,8 +125,6 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
     @PackageScope List<Param> getDeclaredInputs() { declaredInputs }
 
     @PackageScope List<String> getDeclaredOutputs() { declaredOutputs }
-
-    @PackageScope Map<String,Map> getDeclaredPublish() { declaredPublish }
 
     @PackageScope List<String> getDeclaredVariables() { new ArrayList<String>(variableNames) }
 
@@ -224,15 +225,12 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
         closure.setDelegate(binding)
         closure.setResolveStrategy(Closure.DELEGATE_FIRST)
         final result = closure.call()
-        if( name == null ) {
-            // return the last statement if entry workflow (used for testing)
-            return result
-        }
-        else {
-            // otherwise collect the outputs from the workflow binding
-            output = collectOutputs(declaredOutputs)
-            return output
-        }
+        // the outputs of an entry workflow are its published outputs
+        this.output = declaredOutputs
+            ? collectOutputs(declaredOutputs)
+            : new ChannelOut(binding.getPublished())
+        // return the last statement if entry workflow (used for testing)
+        return name == null ? result : output
     }
 
 }

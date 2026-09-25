@@ -66,9 +66,10 @@ class OutputDslTest extends Specification {
 
         when:
         def session = Spy(createSession(config))
+        def outputs = [:]
 
-        session.outputs.put('foo', Channel.of(file1))
-        session.outputs.put('bar', Channel.of(file2))
+        outputs.put('foo', Channel.of(file1))
+        outputs.put('bar', Channel.of(file2))
 
         def dsl = new OutputDsl()
         dsl.declare('foo') {
@@ -82,7 +83,7 @@ class OutputDslTest extends Specification {
                 path 'index.csv'
             }
         }
-        dsl.apply(session)
+        dsl.apply(session, outputs)
         session.fireDataflowNetwork()
         dsl.getOutput()
 
@@ -121,13 +122,14 @@ class OutputDslTest extends Specification {
 
         when:
         def session = Spy(createSession(config))
+        def outputs = [:]
 
-        session.outputs.put('foo', Channel.of(file1))
+        outputs.put('foo', Channel.of(file1))
 
         def dsl = new OutputDsl()
         dsl.declare('foo') {
         }
-        dsl.apply(session)
+        dsl.apply(session, outputs)
         session.fireDataflowNetwork()
         dsl.getOutput()
 
@@ -159,15 +161,16 @@ class OutputDslTest extends Specification {
 
         when:
         def session = Spy(createSession(config))
+        def outputs = [:]
         // the output directory is disabled when a named workflow is executed directly
         session.outputDir = null
 
-        session.outputs.put('foo', Channel.of(file1))
+        outputs.put('foo', Channel.of(file1))
 
         def dsl = new OutputDsl()
         dsl.declare('foo') {
         }
-        dsl.apply(session)
+        dsl.apply(session, outputs)
         session.fireDataflowNetwork()
         def output = dsl.getOutput()
 
@@ -220,13 +223,14 @@ class OutputDslTest extends Specification {
 
         when:
         def session = Spy(createSession(config))
+        def outputs = [:]
 
-        session.outputs.put('foo', Channel.of(record))
+        outputs.put('foo', Channel.of(record))
 
         def dsl = new OutputDsl()
         dsl.declare('foo') {
         }
-        dsl.apply(session)
+        dsl.apply(session, outputs)
         session.fireDataflowNetwork()
         dsl.getOutput()
 
@@ -290,14 +294,15 @@ class OutputDslTest extends Specification {
     def 'should report error for invalid path directive' () {
         when:
         def session = createSession(outputDir: Path.of('results'))
+        def outputs = [:]
 
-        session.outputs.put('foo', Channel.of(1, 2, 3))
+        outputs.put('foo', Channel.of(1, 2, 3))
 
         def dsl = new OutputDsl()
         dsl.declare('foo') {
             path { v -> 42 }
         }
-        dsl.apply(session)
+        dsl.apply(session, outputs)
         session.fireDataflowNetwork()
         dsl.getOutput()
 
@@ -310,15 +315,16 @@ class OutputDslTest extends Specification {
     def 'should report error for invalid publish target' () {
         when:
         def session = createSession(outputDir: Path.of('results'))
+        def outputs = [:]
         def file = Path.of('output.txt')
 
-        session.outputs.put('foo', Channel.of([file, file, file]))
+        outputs.put('foo', Channel.of([file, file, file]))
 
         def dsl = new OutputDsl()
         dsl.declare('foo') {
             path { files -> publish(files, 'foo.txt') }
         }
-        dsl.apply(session)
+        dsl.apply(session, outputs)
         session.fireDataflowNetwork()
         dsl.getOutput()
 
@@ -330,14 +336,15 @@ class OutputDslTest extends Specification {
     def 'should report error for invalid publish source' () {
         when:
         def session = createSession(outputDir: Path.of('results'))
+        def outputs = [:]
 
-        session.outputs.put('foo', Channel.of(42))
+        outputs.put('foo', Channel.of(42))
 
         def dsl = new OutputDsl()
         dsl.declare('foo') {
             path { v -> publish(v, 'foo') }
         }
-        dsl.apply(session)
+        dsl.apply(session, outputs)
         session.fireDataflowNetwork()
         dsl.getOutput()
 
@@ -350,8 +357,9 @@ class OutputDslTest extends Specification {
     def 'should report error for invalid index file extension' () {
         when:
         def session = createSession(outputDir: Path.of('results'))
+        def outputs = [:]
 
-        session.outputs.put('foo', Channel.empty())
+        outputs.put('foo', Channel.empty())
 
         def dsl = new OutputDsl()
         dsl.declare('foo') {
@@ -359,7 +367,7 @@ class OutputDslTest extends Specification {
                 path 'index.txt'
             }
         }
-        dsl.apply(session)
+        dsl.apply(session, outputs)
         session.fireDataflowNetwork()
         dsl.getOutput()
 

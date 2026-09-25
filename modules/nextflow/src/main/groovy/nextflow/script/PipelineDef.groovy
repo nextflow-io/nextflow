@@ -158,26 +158,18 @@ class PipelineDef extends BindableDef {
      * Execute the entry workflow of the included pipeline and return
      * the outputs that it published.
      *
-     * The published outputs are captured from the session rather than
-     * being published, because an included pipeline emits its outputs
+     * The published outputs are returned by the entry workflow rather
+     * than being published, because an included pipeline emits its outputs
      * to the calling workflow -- only the calling pipeline decides what
      * is published.
      */
     protected Map<String,DataflowWriteChannel> runEntryWorkflow(ScriptBinding.ParamsMap params) {
-        final outputs = script.session.outputs
-        final saved = new LinkedHashMap<String,DataflowWriteChannel>(outputs)
-        outputs.clear()
-        try {
-            // the entry workflow is invoked with the pipeline name, so that
-            // processes are scoped by it (e.g. `RNASEQ:STAR_ALIGN`), and with
-            // the resolved params, so that `params` refers to this call
-            script.getEntryFlow().cloneWithName(name).withParams(params).run(BaseScriptConsts.EMPTY_ARGS)
-            return new LinkedHashMap<String,DataflowWriteChannel>(outputs)
-        }
-        finally {
-            outputs.clear()
-            outputs.putAll(saved)
-        }
+        // the entry workflow is invoked with the pipeline name, so that
+        // processes are scoped by it (e.g. `RNASEQ:STAR_ALIGN`), and with
+        // the resolved params, so that `params` refers to this call
+        final workflow = script.getEntryFlow().cloneWithName(name).withParams(params)
+        workflow.run(BaseScriptConsts.EMPTY_ARGS)
+        return workflow.getOutput().asMap()
     }
 
     /**

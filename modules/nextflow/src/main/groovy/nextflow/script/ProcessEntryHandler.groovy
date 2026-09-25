@@ -85,8 +85,7 @@ class ProcessEntryHandler {
                 // Execute the process
                 final output = processDef.run(inputArgs as Object[]) as ChannelOut
                 // Publish process outputs as workflow outputs
-                assignOutputs(output)
-                publishOutputs()
+                assignOutputs((WorkflowBinding)(Object)getDelegate(), output)
                 return output
             }
 
@@ -98,10 +97,9 @@ class ProcessEntryHandler {
         return new WorkflowDef(script, workflowBody)
     }
 
-    private void assignOutputs(ChannelOut output) {
+    private void assignOutputs(WorkflowBinding dsl, ChannelOut output) {
         final config = processDef.getProcessConfig()
         final outputNames = getProcessOutputs(config)
-        final dsl = script.getBinding()
         if( output.size() != outputNames.size() )
             log.warn("Process ${processDef.name} is missing emit names for one or more outputs -- unnamed outputs will be omitted")
         if( output.size() == 1 && outputNames.size() == 1 ) {
@@ -113,16 +111,19 @@ class ProcessEntryHandler {
         }
     }
 
-    private void publishOutputs() {
-        final config = processDef.getProcessConfig()
-        final outputNames = getProcessOutputs(config)
-        final dsl = new OutputDsl()
-        for( final name : outputNames )
-            dsl.declare(name, { -> })
+    /**
+     * Creates an output definition that declares each output of the
+     * entry workflow, without creating an output directory.
+     */
+    OutputDef createOutputDef() {
         // disable the output directory -- report output files by
         // their work directory path instead of publishing them
         session.outputDir = null
-        dsl.apply(session)
+        return new OutputDef({ ->
+            final dsl = (OutputDsl)(Object)getDelegate()
+            for( final name : getProcessOutputs(processDef.getProcessConfig()) )
+                dsl.declare(name, { -> })
+        })
     }
 
     private List<String> getProcessOutputs(ProcessConfig config) {

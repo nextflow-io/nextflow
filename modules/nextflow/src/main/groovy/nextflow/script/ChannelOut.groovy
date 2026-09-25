@@ -71,6 +71,8 @@ class ChannelOut implements List<DataflowWriteChannel> {
         target = Collections.unmodifiableList(onlyWithName)
     }
 
+    Map<String,DataflowWriteChannel> asMap() { channels }
+
     Set<String> getNames() { channels.keySet().findAll { !it.startsWith(OUT_PREFIX) }  }
 
     @Override
