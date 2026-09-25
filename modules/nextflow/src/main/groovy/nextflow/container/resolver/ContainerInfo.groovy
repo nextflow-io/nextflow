@@ -31,6 +31,10 @@ class ContainerInfo {
     final String source
     final String target
     final String hashKey
+    /**
+     * The key used to track the container request in the resolver, when not provided {@link #hashKey} is used
+     */
+    final String requestKey
 
     boolean asBoolean() {
         source || target || hashKey
