@@ -53,7 +53,7 @@ Run a Nextflow pipeline to generate some lineage metadata. For example:
 $ nextflow run rnaseq-nf -profile conda
 ```
 
-Nextflow will automatically record the workflow run, task executions, and output files in the lineage store.
+Nextflow will automatically record the workflow run, successful task executions, and output files in the lineage store.
 
 ## Explore lineage
 
@@ -239,7 +239,9 @@ $ nextflow lineage view lid://862df53160e07cd823c0c3960545e747
 }
 ```
 
-Every task run is represented in the lineage store as a `TaskRun`, which includes information such as the name, script, inputs, and software dependencies. From here, you can continue traversing through the file inputs to view upstream tasks.
+Every successful task run is represented in the lineage store as a `TaskRun`, which includes information such as the name, script, inputs, and software dependencies. From here, you can continue traversing through the file inputs to view upstream tasks.
+
+Tasks that failed or were aborted are not recorded. A task that did not complete never produced its outputs, so it has nothing to describe; when such a task is retried, the lineage store describes the attempt that succeeded.
 
 ### Task outputs
 
