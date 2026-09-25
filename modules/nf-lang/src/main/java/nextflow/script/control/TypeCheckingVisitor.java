@@ -158,7 +158,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         var expectedType = fn.getType();
         var actualType = node.value.getType();
         if( !Types.isAssignableFrom(expectedType, actualType) )
-            addError("Feature flag '" + node.name + "' expects a " + Types.getName(expectedType) + " but received a " + Types.getName(actualType), node);
+            addError("Feature flag '" + node.name + "' expects a `" + Types.getName(expectedType) + "` but received a `" + Types.getName(actualType) + "`", node);
     }
 
     private boolean hasParamsBlock;
@@ -178,7 +178,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             return;
         if( allowPathCoercion && Types.isEqual(expectedType, PATH_TYPE) && Types.isEqual(actualType, ClassHelper.STRING_TYPE) )
             return;
-        addError("Parameter '" + node.getName() + "' with type " + Types.getName(expectedType) + " cannot be assigned to default value with type " + Types.getName(actualType), node);
+        addError("Parameter '" + node.getName() + "' with type `" + Types.getName(expectedType) + "` cannot be assigned to default value with type `" + Types.getName(actualType) + "`", node);
     }
 
     private WorkflowNode currentWorkflow;
@@ -232,7 +232,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             var sourceType = getType(source);
             var targetType = asDataflowType(target.getType(), sourceType);
             if( !Types.isAssignableFrom(targetType, sourceType) )
-                addError("Workflow output '" + target.getName() + "' with type " + Types.getName(targetType) + " cannot be assigned to value with type " + Types.getName(sourceType), ae);
+                addError("Workflow output '" + target.getName() + "' with type `" + Types.getName(targetType) + "` cannot be assigned to value with type `" + Types.getName(sourceType) + "`", ae);
         }
     }
 
@@ -295,7 +295,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             visit(target);
             var targetType = getType(target);
             if( !Types.isEqual(ClassHelper.STRING_TYPE, targetType) )
-                addError("Topic name should be a String but was specified as a " + Types.getName(targetType), target);
+                addError("Topic name should be a `String` but was specified as a `" + Types.getName(targetType) + "`", target);
         }
     }
 
@@ -365,10 +365,10 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         visit(target);
         var sourceType = getType(source);
         if( !isPathOrCollection(sourceType) )
-            addError("Publish source should be a Path or Iterable<Path> but was specified as a " + Types.getName(sourceType), source);
+            addError("Publish source should be a `Path` or `Iterable<Path>` but was specified as a `" + Types.getName(sourceType) + "`", source);
         var targetType = getType(target);
         if( !Types.isAssignableFrom(ClassHelper.STRING_TYPE, targetType) )
-            addError("Publish target should be a String but was specified as a " + Types.getName(targetType), target);
+            addError("Publish target should be a `String` but was specified as a `" + Types.getName(targetType) + "`", target);
     }
 
     private BinaryExpression asPublishStatement(Statement node) {
@@ -445,7 +445,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             var rhsOps = resolveOpsType(sourceType);
             var resultType = resolveOpResultType(targetType, sourceType, lhsOps, rhsOps, opMethod);
             if( resultType == null ) {
-                addError(String.format("The `%s` operator is not defined for operands with types %s and %s", node.getOperation().getText(), Types.getName(targetType), Types.getName(sourceType)), node);
+                addError(String.format("The `%s` operator is not defined for operands with types `%s` and `%s`", node.getOperation().getText(), Types.getName(targetType), Types.getName(sourceType)), node);
                 return;
             }
             sourceType = resultType;
@@ -458,7 +458,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
                 applyTupleAssignment(te, sourceType);
         }
         else {
-            addError("Assignment target with type " + Types.getName(targetType) + " cannot be assigned to value with type " + Types.getName(sourceType), node);
+            addError("Assignment target with type `" + Types.getName(targetType) + "` cannot be assigned to value with type `" + Types.getName(sourceType) + "`", node);
         }
     }
 
@@ -490,7 +490,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
 
     private void applyTupleAssignment(TupleExpression target, ClassNode sourceType) {
         if( !TUPLE_TYPE.equals(sourceType) ) {
-            addError("Tuple assignment is not compatible with type " + Types.getName(sourceType), target);
+            addError("Tuple assignment is not compatible with type `" + Types.getName(sourceType) + "`", target);
             return;
         }
 
@@ -632,7 +632,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, resultType);
         }
         else {
-            addError(String.format("Unrecognized method `%s` for element type %s", name, Types.getName(elementType)), node);
+            addError(String.format("Unrecognized method `%s` for element type `%s`", name, Types.getName(elementType)), node);
         }
     }
 
@@ -727,7 +727,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
                     .map(p -> p.getType())
                     .toArray(ClassNode[]::new);
                 var returnType = ClassHelper.dynamicType();
-                addError("Closure with signature " + Types.getName(parameterTypes, returnType) + " is not compatible with expected signature: " + Types.getName(paramType), argument);
+                addError("Closure with signature `" + Types.getName(parameterTypes, returnType) + "` is not compatible with expected signature: `" + Types.getName(paramType) + "`", argument);
             }
             else {
                 addArgumentTypeError(argument, argType, paramType);
@@ -748,7 +748,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
     }
 
     private void addArgumentTypeError(Expression argument, ClassNode argType, ClassNode paramType) {
-        addError("Argument with type " + Types.getName(argType) + " is not compatible with parameter of type " + Types.getName(paramType), argument);
+        addError("Argument with type `" + Types.getName(argType) + "` is not compatible with parameter of type `" + Types.getName(paramType) + "`", argument);
     }
 
     /**
@@ -778,7 +778,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             var namedParam = asNamedParam(namedParams.get(name));
             var argType = getType(value);
             if( !Types.isAssignableFrom(namedParam.getType(), argType) )
-                addError("Named param `" + name + "` expects a " + Types.getName(namedParam.getType()) + " but received a " + Types.getName(argType), value);
+                addError("Named param `" + name + "` expects a `" + Types.getName(namedParam.getType()) + "` but received a `" + Types.getName(argType) + "`", value);
             entry.putNodeMetaData("_NAMED_PARAM", namedParam);
         }
     }
@@ -843,7 +843,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             var argType = getType(arguments.get(i));
             var elementType = dataflowElementType(argType);
             if( !Types.isAssignableFrom(paramType, elementType) )
-                addError("Argument with type " + Types.getName(elementType) + " is not compatible with " + label.toLowerCase() + " input of type " + Types.getName(paramType), arguments.get(i));
+                addError("Argument with type `" + Types.getName(elementType) + "` is not compatible with " + label.toLowerCase() + " input of type `" + Types.getName(paramType) + "`", arguments.get(i));
         }
 
         var numChannelArgs = arguments.stream().filter((arg) -> CHANNEL_TYPE.equals(getType(arg))).count();
@@ -924,7 +924,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         var receiverType = getType(node);
         return receiverType != null && receiverType.implementsInterface(ClassHelper.makeCached(Namespace.class))
             ? "namespace `" + node.getText() + "`"
-            : "type " + Types.getName(receiverType);
+            : "type `" + Types.getName(receiverType) + "`";
     }
 
     /**
@@ -994,7 +994,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
     public void visitConstructorCallExpression(ConstructorCallExpression node) {
         var type = node.getType();
         if( Types.isRecordType(type) )
-            addError("Record type " + Types.getName(type) + " cannot be used as a constructor -- use `record()` instead", node);
+            addError("Record type `" + Types.getName(type) + "` cannot be used as a constructor -- use `record()` instead", node);
         super.visitConstructorCallExpression(node);
     }
 
@@ -1113,7 +1113,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         if( resultType != null )
             node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, resultType);
         else
-            addError(String.format("The `%s` operator is not defined for operands with types %s and %s", op.getText(), Types.getName(lhsType), Types.getName(rhsType)), node);
+            addError(String.format("The `%s` operator is not defined for operands with types `%s` and `%s`", op.getText(), Types.getName(lhsType), Types.getName(rhsType)), node);
     }
 
     /**
@@ -1211,7 +1211,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             nullable = isNullable(falseType);
         }
         else {
-            addError(String.format("Conditional expression has inconsistent types -- true branch has type %s but false branch has type %s", Types.getName(trueType), Types.getName(falseType)), node);
+            addError(String.format("Conditional expression has inconsistent types -- true branch has type `%s` but false branch has type `%s`", Types.getName(trueType), Types.getName(falseType)), node);
             return;
         }
 
@@ -1263,7 +1263,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
                 elementType = type;
             }
             else if( !Types.isEqual(elementType, type) ) {
-                addError(String.format("List expression has inconsistent element types -- some elements have type %s while others have type %s", Types.getName(elementType), Types.getName(type)), node);
+                addError(String.format("List expression has inconsistent element types -- some elements have type `%s` while others have type `%s`", Types.getName(elementType), Types.getName(type)), node);
                 break;
             }
         }
@@ -1320,7 +1320,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, resultType);
         }
         else {
-            addError("Range expression with elements of type " + Types.getName(lhsType) + " is not supported", node);
+            addError("Range expression with elements of type `" + Types.getName(lhsType) + "` is not supported", node);
             node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, ClassHelper.dynamicType());
         }
     }
@@ -1352,7 +1352,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         if( resultType != null )
             node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, resultType);
         else
-            addError(String.format("The `%s` operator is not defined for an operand with type %s", op, Types.getName(type)), node);
+            addError(String.format("The `%s` operator is not defined for an operand with type `%s`", op, Types.getName(type)), node);
     }
 
     @Override
@@ -1366,7 +1366,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             return;
         var opsType = resolveOpsType(targetType);
         if( resolveOpResultType(sourceType, opsType, "ofType") == null )
-            addError(String.format("Value of type %s cannot be cast to %s", Types.getName(sourceType), Types.getName(targetType)), node);
+            addError(String.format("Value of type `%s` cannot be cast to `%s`", Types.getName(sourceType), Types.getName(targetType)), node);
     }
 
     private boolean checkRecordCast(ClassNode targetType, ClassNode sourceType, ASTNode node) {
@@ -1379,11 +1379,11 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
                 continue;
             var source = sourceType.getDeclaredField(target.getName());
             if( source == null ) {
-                addError(String.format("Record mismatch -- source record is missing field `%s` required by %s", target.getName(), Types.getName(targetType)), node);
+                addError(String.format("Record mismatch -- source record is missing field `%s` required by `%s`", target.getName(), Types.getName(targetType)), node);
                 continue;
             }
             if( !Types.isAssignableFrom(target.getType(), source.getType()) ) {
-                addError(String.format("Record mismatch -- field `%s` of %s expects a %s but received a %s", target.getName(), Types.getName(targetType), Types.getName(target.getType()), Types.getName(source.getType())), node);
+                addError(String.format("Record mismatch -- field `%s` of `%s` expects a `%s` but received a `%s`", target.getName(), Types.getName(targetType), Types.getName(target.getType()), Types.getName(source.getType())), node);
                 continue;
             }
         }
@@ -1464,7 +1464,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, resultType);
         }
         else {
-            addError(String.format("Unrecognized property `%s` for element type %s", property, Types.getName(elementType)), node);
+            addError(String.format("Unrecognized property `%s` for element type `%s`", property, Types.getName(elementType)), node);
         }
     }
 
