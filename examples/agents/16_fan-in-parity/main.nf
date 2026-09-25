@@ -18,7 +18,7 @@ process reduce_with_process {
     output:
     report: String
     exec:
-        report = "combined ${findings.size()} findings [${findings.collect { it.id }.sort().join(', ')}]"
+        report = "combined ${findings.size()} findings [${findings.collect { f -> f.id }.toSorted().join(', ')}]"
 }
 
 // Agent reducer: SAME input shape (Bag<Finding>) -> also runs ONCE (same isSingleton rule).
@@ -33,7 +33,7 @@ agent reduce_with_agent {
     """
     Combine these ${findings.size()} findings into one short sentence:
 
-    ${findings.collect { "- ${it.id}: ${it.summary}" }.join('\n')}
+    ${findings.collect { f -> "- ${f.id}: ${f.summary}" }.join('\n')}
     """
 }
 
