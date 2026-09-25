@@ -151,8 +151,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
             if( entry.getTarget() instanceof ClassNode cn && ScriptNode.getPipelineBlock(cn) != null ) {
                 // the type is qualified by the including script, so that two
                 // scripts can include the same block
-                if( cn.getName().indexOf('.') == -1 )
-                    cn.setName(sgh.packageName(moduleNode) + "." + cn.getName());
+                cn.setName(sgh.packageName(moduleNode) + "." + cn.getName());
                 moduleNode.addClass(cn);
                 continue;
             }

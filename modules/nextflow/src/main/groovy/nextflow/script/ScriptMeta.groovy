@@ -380,11 +380,11 @@ class ScriptMeta {
     void addModule(ScriptMeta script, String name, String alias) {
         assert script
         assert name
-        // a definition of the module takes precedence over the pipeline of the
-        // module with the same name, matching the compiler
-        def item = script.getComponent(name)
-        if( !item && name == 'workflow' && script.script.getEntryFlow() )
-            item = new PipelineDef(script.script)
+        // the pipeline of the module takes precedence over a definition
+        // with the same name, matching the compiler
+        final item = name == 'workflow' && NF.isSyntaxParserV2() && script.script.getEntryFlow()
+            ? new PipelineDef(script.script, alias)
+            : script.getComponent(name)
         if( !item )
             throw new MissingModuleComponentException(script, name)
         addModule0(item, alias)

@@ -41,13 +41,13 @@ import nextflow.util.RecordMap
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @CompileStatic
-class PipelineDef extends BindableDef implements ChainableDef {
+class PipelineDef extends BindableDef {
 
     private BaseScript script
 
     private String name
 
-    PipelineDef(BaseScript script, String name='workflow') {
+    PipelineDef(BaseScript script, String name) {
         this.script = script
         this.name = name
     }
