@@ -54,13 +54,14 @@ class PipelineTypeCheckingTest extends Specification {
         }
         '''
 
-    List<String> check(String main) {
+    List<String> check(String main, Map<String,String> modules = [:]) {
         def root = tempDir()
         try {
             def mainFile = tempFile(root, 'main.nf', "nextflow.enable.types = true\n" + main.stripIndent())
             def pipelineFile = tempFile(root, 'rnaseq.nf', PIPELINE)
+            def moduleFiles = modules.collect { name, text -> tempFile(root, name, "nextflow.enable.types = true\n" + text.stripIndent()) }
             def parser = new ScriptParser(root)
-            return TestUtils.check(parser, [mainFile, pipelineFile])
+            return TestUtils.check(parser, [mainFile, pipelineFile] + moduleFiles)
                 .findAll { e -> e.getSourceLocator().endsWith('main.nf') }
                 .collect { e -> e.getOriginalMessage() }
         }
@@ -148,6 +149,73 @@ class PipelineTypeCheckingTest extends Specification {
 
                 main:
                 p.aligner
+            }
+            ''') == []
+    }
+
+    def 'should report an invalid pipeline call' () {
+        expect:
+        check('''\
+            include { workflow as RNASEQ } from './rnaseq.nf'
+
+            workflow {
+                ''' + CALL + '''
+            }
+            ''') == [ ERROR ]
+
+        where:
+        CALL                                                                    | ERROR
+        "RNASEQ( input: channel.of('a'), fasta: file('x'), foo: 1 )"            | 'Param `foo` is not defined by pipeline `RNASEQ`'
+        "RNASEQ( input: channel.of('a') )"                                      | 'Pipeline `RNASEQ` requires the following params: fasta'
+        "RNASEQ()"                                                              | 'Pipeline `RNASEQ` requires the following params: input, fasta'
+        "RNASEQ( channel.of('a'), file('x') )"                                  | 'Pipeline `RNASEQ` should be called with named arguments, one for each of its params'
+        "RNASEQ( 'a' )"                                                         | 'Pipeline `RNASEQ` should be called with named arguments or a record, but received a String'
+    }
+
+    def 'should report an included pipeline that is not aliased' () {
+        expect:
+        check('''\
+            include { workflow ; params as RnaseqParams } from './rnaseq.nf'
+            include { output } from './rnaseq.nf'
+            ''') == [
+                'An included pipeline must be aliased, e.g. `workflow as MY_PIPELINE`',
+                'An included pipeline must be aliased, e.g. `output as MY_PIPELINE`'
+            ]
+    }
+
+    def 'should return nothing from a pipeline without an output block' () {
+        expect:
+        check('''\
+            include { workflow as HELLO } from './hello.nf'
+
+            workflow {
+                HELLO().foo
+            }
+            ''', [
+            'hello.nf': '''\
+            workflow {
+                println 'Hello'
+            }
+            '''
+        ]) == [ 'Unrecognized property `foo` for type void' ]
+    }
+
+    def 'should not wrap channel outputs' () {
+        expect:
+        check('''\
+            include { workflow as RNASEQ } from './rnaseq.nf'
+
+            workflow {
+                r = RNASEQ( input: channel.of('a'), fasta: file('genome.fa') )
+                BAMS( r.bams )
+            }
+
+            workflow BAMS {
+                take:
+                bams: Channel<Path>
+
+                main:
+                bams.view()
             }
             ''') == []
     }

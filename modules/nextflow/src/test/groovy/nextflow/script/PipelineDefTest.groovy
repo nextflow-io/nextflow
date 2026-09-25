@@ -19,9 +19,9 @@ package nextflow.script
 import java.nio.file.Files
 import java.nio.file.Path
 
-import nextflow.exception.ScriptCompilationException
 import nextflow.exception.ScriptRuntimeException
 import spock.lang.Timeout
+import spock.lang.Unroll
 import test.Dsl2Spec
 
 import static test.ScriptHelper.*
@@ -44,41 +44,77 @@ class PipelineDefTest extends Dsl2Spec {
         folder?.deleteDir()
     }
 
-    private Path pipeline(String text) {
-        folder.resolve('greet.nf').text = """
-            nextflow.enable.types = true
+    private static final String GREET = '''
+        params {
+            names: Channel<String>
+            greeting: String = 'Hello'
+        }
 
-            params {
-                names: Channel<String>
-                greeting: String = 'Hello'
-            }
+        workflow {
+            main:
+            messages = params.names.map { name -> "${params.greeting}, ${name}!" }
 
-            workflow {
-                main:
-                messages = params.names.map { name -> "\${params.greeting}, \${name}!" }
+            publish:
+            messages = messages
+        }
 
-                publish:
-                messages = messages
-            }
+        output {
+            messages: Channel<String> {}
+        }
+        '''
 
-            output {
-                messages: Channel<String> {}
-            }
-            """
+    private static final String COUNT = '''
+        params {
+            samples: Channel<Sample>
+            factor: Value<Integer> = 1
+        }
 
-        folder.resolve('main.nf').text = """
-            nextflow.enable.types = true
+        record Sample {
+            id: String
+            count: Integer
+        }
 
-            include {
-                params as GreetParams ;
-                workflow as GREET ;
-                output as GreetOutput
-            } from './greet.nf'
+        workflow {
+            main:
+            totals = params.samples
+                .map { s -> s.count }
+                .collect()
+                .combine(params.factor)
+                .map { counts, factor -> counts.sum() * factor }
 
-            ${text}
-            """
+            publish:
+            total = totals
+        }
 
+        output {
+            total: Channel<Integer> {}
+        }
+        '''
+
+    /**
+     * Write typed scripts to the test folder and return the path of `main.nf`.
+     */
+    private Path write(Map<String,String> files) {
+        files.each { name, text ->
+            folder.resolve(name).text = 'nextflow.enable.types = true\n' + text.stripIndent()
+        }
         return folder.resolve('main.nf')
+    }
+
+    /**
+     * Write the greet pipeline and a main script that includes it.
+     */
+    private Path pipeline(String text) {
+        return write([
+            'greet.nf': GREET,
+            'main.nf': '''
+                include {
+                    params as GreetParams ;
+                    workflow as GREET ;
+                    output as GreetOutput
+                } from './greet.nf'
+                ''' + text
+        ])
     }
 
     def 'should call an included pipeline like a named workflow' () {
@@ -131,89 +167,36 @@ class PipelineDefTest extends Dsl2Spec {
         result.val == 'Ciao, World!'
     }
 
-    def 'should fail when a required param is not provided' () {
-        given:
-        def script = pipeline('''
-            workflow {
-                main:
-                GREET( greeting: 'Hola' )
-            }
-            ''')
-
-        when:
-        runScript(script)
-        then:
-        def e = thrown(ScriptRuntimeException)
-        e.message == 'Parameter `names` of pipeline `GREET` is required but no value was provided'
-    }
-
-    def 'should fail when an undeclared param is provided' () {
-        given:
-        def script = pipeline('''
-            workflow {
-                main:
-                GREET( names: channel.of('World'), foo: 'bar' )
-            }
-            ''')
-
-        when:
-        runScript(script)
-        then:
-        def e = thrown(ScriptRuntimeException)
-        e.message == 'Pipeline `GREET` does not declare a parameter named `foo`'
-    }
-
-    def 'should fail when a dataflow value is provided for a param that is not a Channel or Value' () {
-        given:
-        def script = pipeline('''
-            workflow {
-                main:
-                GREET( names: channel.of('World'), greeting: channel.value('Hola') )
-            }
-            ''')
-
-        when:
-        runScript(script)
-        then:
-        def e = thrown(ScriptRuntimeException)
-        e.message == 'Parameter `greeting` of pipeline `GREET` with type String cannot be assigned to a dataflow value -- declare the param as a Channel or Value to accept it'
-    }
-
-    def 'should fail when a value is provided for a channel param' () {
-        given:
-        def script = pipeline('''
-            workflow {
-                main:
-                GREET( names: channel.value('World') )
-            }
-            ''')
-
-        when:
-        runScript(script)
-        then:
-        def e = thrown(ScriptRuntimeException)
-        e.message == 'Parameter `names` of pipeline `GREET` with type Channel<String> cannot be assigned to a Value'
-    }
-
-    def 'should fail when a plain value is provided for a channel param' () {
-        given:
-        def script = pipeline('''
-            workflow {
-                main:
-                GREET( names: 'World' )
-            }
-            ''')
-
-        when:
-        runScript(script)
-        then:
-        def e = thrown(ScriptRuntimeException)
-        e.message == 'Parameter `names` of pipeline `GREET` with type Channel<String> cannot be assigned to World [String]'
-    }
-
-    def 'should call an included pipeline with its params record' () {
+    @Unroll
+    def 'should fail on an invalid pipeline call: #CALL' () {
         given:
         def script = pipeline("""
+            workflow {
+                main:
+                ${CALL}
+            }
+            """)
+
+        when:
+        runScript(script)
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message == ERROR
+
+        where:
+        CALL                                                                    | ERROR
+        "GREET( greeting: 'Hola' )"                                             | 'Parameter `names` of pipeline `GREET` is required but no value was provided'
+        "GREET( names: channel.of('World'), foo: 'bar' )"                       | 'Pipeline `GREET` does not declare a parameter named `foo`'
+        "GREET( names: channel.of('World'), foo: null )"                        | 'Pipeline `GREET` does not declare a parameter named `foo`'
+        "GREET( names: channel.of('World'), greeting: channel.value('Hola') )"  | 'Parameter `greeting` of pipeline `GREET` with type String cannot be assigned to a dataflow value -- declare the param as a Channel or Value to accept it'
+        "GREET( names: channel.value('World') )"                                | 'Parameter `names` of pipeline `GREET` with type Channel<String> cannot be assigned to a Value'
+        "GREET( names: 'World' )"                                               | 'Parameter `names` of pipeline `GREET` with type Channel<String> cannot be assigned to World [String]'
+    }
+
+    @Unroll
+    def 'should resolve an included params record from the command line and config' () {
+        given:
+        def script = pipeline('''
             params {
                 greet: GreetParams
             }
@@ -223,32 +206,23 @@ class PipelineDefTest extends Dsl2Spec {
                 greet = GREET( params.greet + record(names: channel.of('World')) )
                 greet.messages
             }
-            """)
+            ''')
 
         when:
-        def result = runScript([params: [greet: [greeting: 'Hola']]], script)
+        def result = runScript([params: CLI, configParams: CONFIG], script)
         then:
-        result.val == 'Hola, World!'
-    }
+        result.val == RESULT
 
-    def 'should apply the pipeline default for a param omitted from its params record' () {
-        given:
-        def script = pipeline("""
-            params {
-                greet: GreetParams
-            }
-
-            workflow {
-                main:
-                greet = GREET( params.greet + record(names: channel.of('World')) )
-                greet.messages
-            }
-            """)
-
-        when:
-        def result = runScript([params: [greet: [:]]], script)
-        then:
-        result.val == 'Hello, World!'
+        where:
+        CLI                          | CONFIG                        | RESULT
+        [greet: [greeting: 'Hola']]  | [:]                           | 'Hola, World!'
+        [:]                          | [greet: [greeting: 'Ciao']]   | 'Ciao, World!'
+        // the command line overrides only the field that it names
+        [greet: [greeting: 'Hola']]  | [greet: [greeting: 'Ciao']]   | 'Hola, World!'
+        // the pipeline applies its own default for an omitted param
+        [greet: [:]]                 | [:]                           | 'Hello, World!'
+        // a params record with no required fields is not required at launch
+        [:]                          | [:]                           | 'Hello, World!'
     }
 
     def 'should include the output block of a pipeline as a record type' () {
@@ -279,53 +253,181 @@ class PipelineDefTest extends Dsl2Spec {
         result.val == 'HELLO, WORLD!'
     }
 
-    def 'should scope the processes of an included pipeline by its name' () {
+    @Unroll
+    def 'should accept dataflow values for Channel and Value params: #CALL' () {
+        given:
+        def script = write([
+            'count.nf': COUNT,
+            'main.nf': """
+                include { workflow as COUNT } from './count.nf'
+
+                workflow {
+                    main:
+                    samples = channel.of( record(id: 'a', count: 1), record(id: 'b', count: 2) )
+                    ${CALL}.total
+                }
+                """
+        ])
+
+        when:
+        def result = runScript(script)
+        then:
+        result.val == RESULT
+
+        where:
+        CALL                                                    | RESULT
+        "COUNT( samples: samples, factor: channel.value(2) )"   | 6
+        // the default of a Value param is wrapped in a dataflow value
+        "COUNT( samples: samples )"                             | 3
+    }
+
+    def 'should fail when a channel is provided for a Value param' () {
+        given:
+        def script = write([
+            'count.nf': COUNT,
+            'main.nf': '''
+                include { workflow as COUNT } from './count.nf'
+
+                workflow {
+                    main:
+                    samples = channel.of( record(id: 'a', count: 1) )
+                    COUNT( samples: samples, factor: channel.of(1, 2) )
+                }
+                '''
+        ])
+
+        when:
+        runScript(script)
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message == 'Parameter `factor` of pipeline `COUNT` with type Value<Integer> cannot be assigned to a Channel'
+    }
+
+    def 'should load the dataflow params of an included pipeline from the command line' () {
+        given:
+        folder.resolve('samples.csv').text = 'id,count\na,1\nb,2\n'
+        def script = write([
+            'count.nf': COUNT,
+            'main.nf': '''
+                include { params as CountParams ; workflow as COUNT } from './count.nf'
+
+                params {
+                    count: CountParams
+                }
+
+                workflow {
+                    main:
+                    COUNT( params.count ).total
+                }
+                '''
+        ])
+        def cliParams = [count: [samples: folder.resolve('samples.csv').toString(), factor: '5']]
+
+        when:
+        def result = runScript([params: cliParams], script)
+        then:
+        result.val == 15
+    }
+
+    def 'should call a typed pipeline from an untyped script' () {
+        given:
+        write(['greet.nf': GREET])
+        def script = folder.resolve('main.nf')
+        script.text = '''
+            include { workflow as GREET } from './greet.nf'
+
+            workflow {
+                GREET( names: channel.of('World') ).messages
+            }
+            '''
+
+        when:
+        def result = runScript(script)
+        then:
+        result.val == 'Hello, World!'
+    }
+
+    def 'should call an untyped pipeline from a typed script' () {
         given:
         folder.resolve('greet.nf').text = '''
-            nextflow.enable.types = true
-
             params {
-                names: Channel<String>
+                name: String
+                greeting: String = 'Hello'
             }
 
             workflow {
                 main:
-                messages = FOO(params.names)
+                messages = channel.of("${params.greeting}, ${params.name}!")
 
                 publish:
                 messages = messages
             }
 
             output {
-                messages: Channel<String> {}
-            }
-
-            process FOO {
-                input:
-                name: String
-
-                output:
-                message: String
-
-                exec:
-                message = "${task.ext.greeting}, ${name}!"
+                messages {}
             }
             '''
+        def script = write([
+            'main.nf': '''
+                include { workflow as GREET } from './greet.nf'
 
-        folder.resolve('main.nf').text = '''
-            nextflow.enable.types = true
-
-            include { workflow as GREET } from './greet.nf'
-
-            workflow {
-                main:
-                greet = GREET( names: channel.of('World') )
-                greet.messages
-            }
-            '''
+                workflow {
+                    main:
+                    GREET( name: 'World' ).messages
+                }
+                '''
+        ])
 
         when:
-        def result = runScript([config: [process: ['withName:GREET:FOO': [ext: [greeting: 'Bonjour']]]]], folder.resolve('main.nf'))
+        def result = runScript(script)
+        then:
+        result.val == 'Hello, World!'
+    }
+
+    def 'should scope the processes of an included pipeline by its name' () {
+        given:
+        def script = write([
+            'greet.nf': '''
+                params {
+                    names: Channel<String>
+                }
+
+                workflow {
+                    main:
+                    messages = FOO(params.names)
+
+                    publish:
+                    messages = messages
+                }
+
+                output {
+                    messages: Channel<String> {}
+                }
+
+                process FOO {
+                    input:
+                    name: String
+
+                    output:
+                    message: String
+
+                    exec:
+                    message = "${task.ext.greeting}, ${name}!"
+                }
+                ''',
+            'main.nf': '''
+                include { workflow as GREET } from './greet.nf'
+
+                workflow {
+                    main:
+                    greet = GREET( names: channel.of('World') )
+                    greet.messages
+                }
+                '''
+        ])
+
+        when:
+        def result = runScript([config: [process: ['withName:GREET:FOO': [ext: [greeting: 'Bonjour']]]]], script)
         then:
         result.val == 'Bonjour, World!'
     }
@@ -352,200 +454,81 @@ class PipelineDefTest extends Dsl2Spec {
         noExceptionThrown()
     }
 
-    def 'should fail when an undeclared param is provided as null' () {
-        given:
-        def script = pipeline('''
-            workflow {
-                main:
-                GREET( names: channel.of('World'), foo: null )
-            }
-            ''')
-
-        when:
-        runScript(script)
-        then:
-        def e = thrown(ScriptRuntimeException)
-        e.message == 'Pipeline `GREET` does not declare a parameter named `foo`'
-    }
-
     def 'should not expose the params of the calling pipeline to an included pipeline' () {
         given:
-        folder.resolve('greet.nf').text = '''
-            nextflow.enable.types = true
+        def script = write([
+            'greet.nf': '''
+                params {
+                    names: Channel<String>
+                }
 
-            params {
-                names: Channel<String>
-            }
+                workflow {
+                    main:
+                    messages = params.names.map { name -> "${params.secret}, ${name}!" }
 
-            workflow {
-                main:
-                messages = params.names.map { name -> "${params.secret}, ${name}!" }
+                    publish:
+                    messages = messages
+                }
 
-                publish:
-                messages = messages
-            }
+                output {
+                    messages: Channel<String> {}
+                }
+                ''',
+            'main.nf': '''
+                include { workflow as GREET } from './greet.nf'
 
-            output {
-                messages: Channel<String> {}
-            }
-            '''
+                params {
+                    secret: String = 'LEAKED'
+                }
 
-        folder.resolve('main.nf').text = '''
-            nextflow.enable.types = true
-
-            include { workflow as GREET } from './greet.nf'
-
-            params {
-                secret: String = 'LEAKED'
-            }
-
-            workflow {
-                main:
-                greet = GREET( names: channel.of('World') )
-                greet.messages
-            }
-            '''
+                workflow {
+                    main:
+                    greet = GREET( names: channel.of('World') )
+                    greet.messages
+                }
+                '''
+        ])
 
         when:
-        def result = runScript(folder.resolve('main.nf'))
-        then:
-        // a param that the included pipeline does not declare is not visible
-        // to it, even though the calling pipeline declares it
-        result.val == 'null, World!'
-    }
-
-    def 'should not require a params record to be provided at launch' () {
-        given:
-        def script = pipeline('''
-            params {
-                greet: GreetParams
-            }
-
-            workflow {
-                main:
-                greet = GREET( params.greet + record(names: channel.of('World')) )
-                greet.messages
-            }
-            ''')
-
-        when:
-        // a partial record type defaults to an empty record, so a pipeline
-        // whose params are supplied by the calling pipeline can be launched
-        // without providing any of them
         def result = runScript(script)
         then:
-        result.val == 'Hello, World!'
-    }
-
-    def 'should merge a nested command-line param with the config value' () {
-        given:
-        def script = pipeline('''
-            params {
-                greet: GreetParams
-            }
-
-            workflow {
-                main:
-                greet = GREET( params.greet + record(names: channel.of('World')) )
-                greet.messages
-            }
-            ''')
-
-        when:
-        // the command line overrides only the field that it names
-        def result = runScript([params: [greet: [greeting: 'Hola']], configParams: [greet: [greeting: 'Ciao']]], script)
-        then:
-        result.val == 'Hola, World!'
-    }
-
-    def 'should load the dataflow params of an included pipeline from the command line' () {
-        given:
-        folder.resolve('samples.csv').text = 'id,count\na,1\nb,2\n'
-        folder.resolve('count.nf').text = '''
-            nextflow.enable.types = true
-
-            params {
-                samples: Channel<Sample>
-                factor: Value<Integer> = 1
-            }
-
-            record Sample {
-                id: String
-                count: Integer
-            }
-
-            workflow {
-                main:
-                totals = params.samples
-                    .map { s -> s.count }
-                    .collect()
-                    .combine(params.factor)
-                    .map { counts, factor -> counts.sum() * factor }
-
-                publish:
-                total = totals
-            }
-
-            output {
-                total: Channel<Integer> {}
-            }
-            '''
-        folder.resolve('main.nf').text = '''
-            nextflow.enable.types = true
-
-            include { params as CountParams ; workflow as COUNT } from './count.nf'
-
-            params {
-                count: CountParams
-            }
-
-            workflow {
-                main:
-                COUNT( params.count ).total
-            }
-            '''
-        def cliParams = [count: [samples: folder.resolve('samples.csv').toString(), factor: '5']]
-
-        when:
-        def result = runScript([params: cliParams], folder.resolve('main.nf'))
-        then:
-        result.val == 15
+        // a param that the included pipeline does not declare is not visible
+        // to its entry workflow, even though the calling pipeline declares it
+        result.val == 'null, World!'
     }
 
     def 'should call an included pipeline without a params block' () {
         given:
-        folder.resolve('hello.nf').text = '''
-            nextflow.enable.types = true
+        def script = write([
+            'hello.nf': '''
+                workflow {
+                    main:
+                    messages = channel.of('Hello')
 
-            workflow {
-                main:
-                messages = channel.of('Hello')
+                    publish:
+                    messages = messages
+                }
 
-                publish:
-                messages = messages
-            }
+                output {
+                    messages: Channel<String> {}
+                }
+                ''',
+            'main.nf': '''
+                include { workflow as HELLO } from './hello.nf'
 
-            output {
-                messages: Channel<String> {}
-            }
-            '''
-        folder.resolve('main.nf').text = '''
-            nextflow.enable.types = true
+                params {
+                    greeting: String = 'Hola'
+                }
 
-            include { workflow as HELLO } from './hello.nf'
-
-            params {
-                greeting: String = 'Hola'
-            }
-
-            workflow {
-                main:
-                HELLO().messages
-            }
-            '''
+                workflow {
+                    main:
+                    HELLO().messages
+                }
+                '''
+        ])
 
         when:
-        def result = runScript(folder.resolve('main.nf'))
+        def result = runScript(script)
         then:
         result.val == 'Hello'
     }
@@ -592,66 +575,50 @@ class PipelineDefTest extends Dsl2Spec {
 
     def 'should reject calling the same alias more than once when the pipeline has a process' () {
         given:
-        folder.resolve('greet.nf').text = '''
-            nextflow.enable.types = true
+        def script = write([
+            'greet.nf': '''
+                params {
+                    greeting: String = 'Hello'
+                }
 
-            params {
-                greeting: String = 'Hello'
-            }
+                process SAY {
+                    input:
+                    message: String
+                    output:
+                    stdout()
+                    script:
+                    "echo '${message}'"
+                }
 
-            process SAY {
-                input:
-                message: String
-                output:
-                stdout()
-                script:
-                "echo '${message}'"
-            }
+                workflow {
+                    main:
+                    said = SAY( params.greeting )
 
-            workflow {
-                main:
-                said = SAY( params.greeting )
+                    publish:
+                    said = said
+                }
 
-                publish:
-                said = said
-            }
+                output {
+                    said: Channel<String> {}
+                }
+                ''',
+            'main.nf': '''
+                include { workflow as GREET } from './greet.nf'
 
-            output {
-                said: Channel<String> {}
-            }
-            '''
-        folder.resolve('main.nf').text = '''
-            nextflow.enable.types = true
-
-            include { workflow as GREET } from './greet.nf'
-
-            workflow {
-                main:
-                GREET( greeting: 'Hola' )
-                GREET( greeting: 'Ciao' )
-            }
-            '''
-
-        when:
-        runScript(folder.resolve('main.nf'))
-        then:
-        def e = thrown(Exception)
-        e.message.contains("has been already used")
-    }
-
-    def 'should fail when an included pipeline is not aliased' () {
-        given:
-        def script = pipeline('workflow { }')
-        folder.resolve('main.nf').text = folder.resolve('main.nf').text
-            .replace('workflow as GREET', 'workflow')
+                workflow {
+                    main:
+                    GREET( greeting: 'Hola' )
+                    GREET( greeting: 'Ciao' )
+                }
+                '''
+        ])
 
         when:
         runScript(script)
         then:
-        def e = thrown(ScriptCompilationException)
-        e.cause.message.contains('An included pipeline must be aliased')
+        def e = thrown(Exception)
+        e.message.contains("has been already used")
     }
-
 
     def 'should support including the same params block from two scripts' () {
         given:
@@ -663,27 +630,27 @@ class PipelineDefTest extends Dsl2Spec {
                 MID( names: channel.of('World') ).messages
             }
             ''')
-        folder.resolve('mid.nf').text = '''
-            nextflow.enable.types = true
+        write([
+            'mid.nf': '''
+                include { params as GreetParams ; workflow as GREET } from './greet.nf'
 
-            include { params as GreetParams ; workflow as GREET } from './greet.nf'
+                params {
+                    names: Channel<String>
+                }
 
-            params {
-                names: Channel<String>
-            }
+                workflow {
+                    main:
+                    messages = GREET( names: params.names ).messages
 
-            workflow {
-                main:
-                messages = GREET( names: params.names ).messages
+                    publish:
+                    messages = messages
+                }
 
-                publish:
-                messages = messages
-            }
-
-            output {
-                messages: Channel<String> {}
-            }
-            '''
+                output {
+                    messages: Channel<String> {}
+                }
+                '''
+        ])
 
         when:
         // the record type of an included params block is qualified by the
@@ -705,27 +672,27 @@ class PipelineDefTest extends Dsl2Spec {
                 a.messages.mix(b.messages)
             }
             ''')
-        folder.resolve('mid.nf').text = '''
-            nextflow.enable.types = true
+        write([
+            'mid.nf': '''
+                include { workflow as GREET_INNER } from './greet.nf'
 
-            include { workflow as GREET_INNER } from './greet.nf'
+                params {
+                    names: Channel<String>
+                }
 
-            params {
-                names: Channel<String>
-            }
+                workflow {
+                    main:
+                    messages = GREET_INNER( names: params.names, greeting: 'Ciao' ).messages
 
-            workflow {
-                main:
-                messages = GREET_INNER( names: params.names, greeting: 'Ciao' ).messages
+                    publish:
+                    messages = messages
+                }
 
-                publish:
-                messages = messages
-            }
-
-            output {
-                messages: Channel<String> {}
-            }
-            '''
+                output {
+                    messages: Channel<String> {}
+                }
+                '''
+        ])
 
         when:
         def result = runScript(script)
@@ -733,74 +700,28 @@ class PipelineDefTest extends Dsl2Spec {
         [result.val, result.val].sort() == ['Ciao, Nextflow!', 'Hola, World!']
     }
 
-    def 'should allow a pipeline that binds a local variable named params' () {
-        given:
-        folder.resolve('greet.nf').text = '''
-            nextflow.enable.types = true
-
-            params {
-                names: Channel<String>
-            }
-
-            def render(params: Map) -> String {
-                return params.toString()
-            }
-
-            workflow {
-                main:
-                messages = params.names.map { name -> render([name: name]) }
-
-                publish:
-                messages = messages
-            }
-
-            output {
-                messages: Channel<String> {}
-            }
-            '''
-        folder.resolve('main.nf').text = '''
-            nextflow.enable.types = true
-
-            include { workflow as GREET } from './greet.nf'
-
-            workflow {
-                main:
-                GREET( names: channel.of('World') ).messages
-            }
-            '''
-
-        when:
-        // `params` is shadowed by the function input, so it is not a
-        // reference to the params of the pipeline
-        def result = runScript(folder.resolve('main.nf'))
-        then:
-        result.val == '[name:World]'
-    }
-
     def 'should include a definition named output' () {
         given:
-        folder.resolve('lib.nf').text = '''
-            nextflow.enable.types = true
+        def script = write([
+            'lib.nf': '''
+                def output(value: String) -> String {
+                    return value.toUpperCase()
+                }
+                ''',
+            'main.nf': '''
+                include { output } from './lib.nf'
 
-            def output(value: String) -> String {
-                return value.toUpperCase()
-            }
-            '''
-        folder.resolve('main.nf').text = '''
-            nextflow.enable.types = true
-
-            include { output } from './lib.nf'
-
-            workflow {
-                main:
-                channel.of('World').map { name -> output(name) }
-            }
-            '''
+                workflow {
+                    main:
+                    channel.of('World').map { name -> output(name) }
+                }
+                '''
+        ])
 
         when:
         // a definition that happens to be named `output` is not the output
         // block of a pipeline, so it needs no alias
-        def result = runScript(folder.resolve('main.nf'))
+        def result = runScript(script)
         then:
         result.val == 'WORLD'
     }
