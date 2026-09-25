@@ -148,4 +148,49 @@ class GridTaskHandlerTest extends Specification {
                 LAUNCH_COMMAND_EOF
                 '''.stripIndent()
     }
+
+    def 'should propagate the array index variable to a containerised array child launcher' () {
+        given: 'a plain child builder built from a non-array TaskRun (arrayIndexName not set - the problematic state)'
+        def childBuilder = new BashWrapperBuilder(new TaskBean(name: 'foo', workDir: Paths.get('/work/dir'), inputFiles: [:]))
+        and:
+        def task = Mock(TaskRun) { getWorkDir() >> Paths.get('/work/dir') }
+        def exec = Mock(SlurmExecutor) {
+            getConfig() >> new ExecutorConfig([:])
+            getName() >> 'slurm'
+            getArrayIndexName() >> 'SLURM_ARRAY_TASK_ID'
+            createBashWrapperBuilder(task) >> childBuilder
+        }
+        def handler = Spy(new GridTaskHandler(task, exec))
+        handler.withArrayChild(true)
+        handler.fusionEnabled() >> false
+
+        expect: 'the child bean does not carry the array index variable on its own'
+        childBuilder.arrayIndexName == null
+
+        when:
+        def builder = handler.createTaskWrapper(task)
+        then: 'the handler injects the executor array index name so the container env can expose it'
+        builder.arrayIndexName == 'SLURM_ARRAY_TASK_ID'
+    }
+
+    def 'should not add the array index variable for a non-array task' () {
+        given:
+        def childBuilder = new BashWrapperBuilder(new TaskBean(name: 'foo', workDir: Paths.get('/work/dir'), inputFiles: [:]))
+        and:
+        def task = Mock(TaskRun) { getWorkDir() >> Paths.get('/work/dir') }
+        def exec = Mock(SlurmExecutor) {
+            getConfig() >> new ExecutorConfig([:])
+            getName() >> 'slurm'
+            createBashWrapperBuilder(task) >> childBuilder
+        }
+        def handler = Spy(new GridTaskHandler(task, exec))   // isArrayChild == false
+        handler.fusionEnabled() >> false
+
+        when:
+        def builder = handler.createTaskWrapper(task)
+        then:
+        builder.arrayIndexName == null
+        and: 'the executor array index name is never requested for a non-array task'
+        0 * exec.getArrayIndexName()
+    }
 }
