@@ -1008,6 +1008,25 @@ class TaskRunTest extends Specification {
         result2 == meta
     }
 
+    def 'should use request key to track the container when provided' () {
+        given:
+        def image = 'my/container:latest'
+        def info = new ContainerInfo(image, image, 'hash-key', 'request-key')
+        def resolver = Mock(ContainerResolver)
+        def config = Mock(TaskConfig) { getContainer() >> image }
+        def task = Spy(new TaskRun(config:config))
+        task.containerResolver() >> resolver
+
+        when:
+        def fingerprint = task.getContainerFingerprint()
+        task.containerMeta()
+        then:
+        resolver.resolveImage(task,image) >> info
+        1 * resolver.getContainerMeta('request-key') >> null
+        and:
+        fingerprint == 'hash-key'
+    }
+
     def 'should resolve task stub from template' () {
 
         given:
