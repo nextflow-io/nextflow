@@ -364,6 +364,8 @@ In practice, the meta-pipeline will likely need to recreate the configuration sh
 - Manifest (name, authors, description, etc)
 - Plugins
 
+The meta-pipeline can reuse config files by including them, which is useful for process config. However, process selectors written in a way that is correct both when a pipeline is executed directly *and* when it is called by a meta-pipeline.
+
 ### Reducing params boilerplate
 
 In the example above, the meta-pipeline redeclares the params from each included pipeline. This boilerplate can be avoided by importing each pipeline's `params` block as a *record type*:

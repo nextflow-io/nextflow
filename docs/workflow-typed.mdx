@@ -115,7 +115,7 @@ The included pipeline must be aliased to a specific name (`RNASEQ`), which is al
 
 ```nextflow
 process {
-    withName: 'RNASEQ:.*:STAR_ALIGN' {
+    withName: 'RNASEQ:STAR_ALIGN' {
         cpus   = 12
         memory = 72.GB
     }
