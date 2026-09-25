@@ -18,8 +18,13 @@ package nextflow.script.control;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -70,6 +75,41 @@ public class ModuleResolver {
             }
         }
         return modules;
+    }
+
+    /**
+     * Order the given sources so that a script appears after every module
+     * it includes, via depth-first post-order traversal. Only includes
+     * among the given sources are considered.
+     *
+     * @param sources
+     */
+    public List<SourceUnit> orderByDependencies(Collection<SourceUnit> sources) {
+        var byUri = new HashMap<URI,SourceUnit>();
+        for( var source : sources )
+            byUri.put(source.getSource().getURI(), source);
+        var ordered = new ArrayList<SourceUnit>(sources.size());
+        var visited = new HashSet<URI>();
+        for( var source : sources )
+            visitDependencies(source, byUri, visited, ordered);
+        return ordered;
+    }
+
+    private void visitDependencies(SourceUnit source, Map<URI,SourceUnit> byUri, Set<URI> visited, List<SourceUnit> ordered) {
+        var uri = source.getSource().getURI();
+        if( !visited.add(uri) )
+            return;
+        if( source.getAST() instanceof ScriptNode sn ) {
+            for( var in : sn.getIncludes() ) {
+                var include = in.source.getText();
+                if( include.startsWith("plugin/") )
+                    continue;
+                var dep = byUri.get(getIncludeUri(uri, include, projectDir));
+                if( dep != null )
+                    visitDependencies(dep, byUri, visited, ordered);
+            }
+        }
+        ordered.add(source);
     }
 
     private SourceUnit resolveInclude(IncludeNode node, SourceUnit sourceUnit, Function<URI,SourceUnit> sourceResolver) {

@@ -109,7 +109,6 @@ abstract class BaseScript extends Script implements ExecutionContext {
      * Enable static typing for the script.
      */
     protected void enableTyping() {
-        log.warn1 "Static typing is a preview feature -- syntax and behavior may change in future releases"
         this.typingEnabled = true
     }
 

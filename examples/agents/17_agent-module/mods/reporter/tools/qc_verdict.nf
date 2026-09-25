@@ -13,7 +13,7 @@ process qc_verdict {
     completeness_pct: Float
 
     output:
-    verdict: String = stdout()
+    stdout()
 
     script:
     """

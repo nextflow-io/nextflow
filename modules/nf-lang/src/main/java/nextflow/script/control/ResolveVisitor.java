@@ -161,8 +161,11 @@ public class ResolveVisitor extends ClassCodeExpressionTransformer {
             return true;
         if( !type.hasPackageName() && resolveFromGroovyImports(type) )
             return true;
-        if( resolveFromClassResolver(type.getName()) != null )
+        var redirect = resolveFromClassResolver(type.getName());
+        if( redirect != null ) {
+            type.setRedirect(redirect);
             return true;
+        }
         if( resolveAsInnerClass(type) )
             return true;
         return false;

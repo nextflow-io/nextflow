@@ -84,9 +84,11 @@ Directory where remote Charliecloud images are stored. When using a computing cl
 
 Defines the base cache path when using the cloud cache store. See [Cache stores][cache-stores] for more information.
 
-##### `NXF_CLOUD_DRIVER`
+##### `NXF_CLOUDINFO_ENABLED`
 
-Defines the default cloud driver to be used if not specified in the config file or as command line option, either `aws` or `google`.
+<DeprecatedInVersion version="26.10" />
+
+When `true`, use the Seqera Cloud Info service to select the machine type for Google Batch tasks (default: `true`).
 
 ##### `NXF_CONDA_CACHEDIR`
 

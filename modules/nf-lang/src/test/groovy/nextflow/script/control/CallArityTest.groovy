@@ -22,11 +22,11 @@ import spock.lang.Specification
 import test.TestUtils
 
 /**
- * @see nextflow.script.control.TypeCheckingVisitor
+ * @see nextflow.script.control.CallArityVisitor
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-class TypeCheckingTest extends Specification {
+class CallArityTest extends Specification {
 
     @Shared
     ScriptParser scriptParser
@@ -85,15 +85,10 @@ class TypeCheckingTest extends Specification {
         errors[0].getOriginalMessage() == 'Incorrect number of call arguments, expected 2 but received 1'
     }
 
-    // -- a wrong-arity call to an `agent` must be a COMPILE error, like a process call. It used to
-    //    be deferred to AgentDef.buildAgentTask at run time, i.e. invisible to `nextflow lint`
-    //    and the LSP -- unacceptable for a module agent, whose consumer cannot edit the module.
     def 'should report an error for an agent call with the wrong number of arguments' () {
         when:
         def errors = check(
             '''\
-            nextflow.enable.types = true
-
             agent reporter {
                 model 'openai/gpt-4o'
                 instruction 'i'
@@ -123,8 +118,6 @@ class TypeCheckingTest extends Specification {
         when: 'the call arity matches the declared inputs'
         errors = check(
             '''\
-            nextflow.enable.types = true
-
             agent reporter {
                 model 'openai/gpt-4o'
                 instruction 'i'

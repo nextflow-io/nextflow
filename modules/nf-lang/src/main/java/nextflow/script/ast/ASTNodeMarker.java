@@ -33,7 +33,7 @@ public enum ASTNodeMarker {
     // denotes that an assignment is an implicit declaration
     IMPLICIT_DECLARATION,
 
-    // the inferred return type of a closure expression
+    // the inferred return type of a closure expression or untyped function
     INFERRED_RETURN_TYPE,
 
     // the inferred type of an expression
