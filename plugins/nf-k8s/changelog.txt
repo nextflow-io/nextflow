@@ -1,5 +1,9 @@
 nf-k8s changelog
 ===================
+1.6.1 - 25 Sep 2026
+- Bump Bouncy Castle to 1.85 to fix critical CVEs (#7658) [ad5cb26f5]
+- Bump slf4j to 2.0.19 (#7661) [90c789759]
+
 1.5.6 - 20 Aug 2026
 - Treat a missing `k8s` config scope as an empty one (#7452) [568680fd9]
 - Separate CLI from runtime (#5971) [1dc8cf68f]
