@@ -208,4 +208,31 @@ class DataflowTypesTest extends Dsl2Spec {
         folder?.deleteDir()
     }
 
+    def 'should validate record fields of process record input' () {
+        when:
+        runScript('''
+            nextflow.enable.types = true
+
+            record Sample {
+                id: String
+                fastq: Path?
+            }
+
+            process foo {
+                input:
+                sample: Sample
+
+                exec:
+                true
+            }
+
+            workflow {
+                foo(record(fastq: null))
+            }
+            ''')
+        then:
+        def e = thrown(Exception)
+        e.message.contains('input field `id` at index 0 cannot be null')
+    }
+
 }
