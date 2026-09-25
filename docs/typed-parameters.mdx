@@ -65,7 +65,7 @@ The pipeline can be run with a samplesheet and an index file:
 $ nextflow run main.nf --samples samples.csv --index genome.fa
 ```
 
-Dataflow types are useful when a pipeline is [included by another pipeline][pipeline-composition], because they allow the calling pipeline to provide a parameter from dataflow logic. A parameter that is not declared as a `Channel` or `Value` can only receive a regular value.
+Dataflow types are useful when a pipeline is [included by another pipeline][pipeline-composition], because they allow the calling pipeline to provide a parameter from dataflow logic.
 
 ## Default and required parameters
 

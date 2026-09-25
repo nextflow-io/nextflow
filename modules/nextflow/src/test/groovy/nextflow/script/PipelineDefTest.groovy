@@ -201,6 +201,38 @@ class PipelineDefTest extends Dsl2Spec {
         e.message == 'Parameter `greeting` of pipeline `GREET` with type String cannot be assigned to a dataflow value -- declare the param as a Channel or Value to accept it'
     }
 
+    def 'should fail when a value is provided for a channel param' () {
+        given:
+        def script = pipeline('''
+            workflow {
+                main:
+                GREET( names: channel.value('World') )
+            }
+            ''')
+
+        when:
+        runScript(script)
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message == 'Parameter `names` of pipeline `GREET` with type Channel<String> cannot be assigned to a Value'
+    }
+
+    def 'should fail when a plain value is provided for a channel param' () {
+        given:
+        def script = pipeline('''
+            workflow {
+                main:
+                GREET( names: 'World' )
+            }
+            ''')
+
+        when:
+        runScript(script)
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message == 'Parameter `names` of pipeline `GREET` with type Channel<String> cannot be assigned to World [String]'
+    }
+
     def 'should call an included pipeline with its params record' () {
         given:
         def script = pipeline("""
@@ -500,6 +532,44 @@ class PipelineDefTest extends Dsl2Spec {
         def result = runScript([params: cliParams], folder.resolve('main.nf'))
         then:
         result.val == 15
+    }
+
+    def 'should call an included pipeline without a params block' () {
+        given:
+        folder.resolve('hello.nf').text = '''
+            nextflow.enable.types = true
+
+            workflow {
+                main:
+                messages = channel.of('Hello')
+
+                publish:
+                messages = messages
+            }
+
+            output {
+                messages: Channel<String> {}
+            }
+            '''
+        folder.resolve('main.nf').text = '''
+            nextflow.enable.types = true
+
+            include { workflow as HELLO } from './hello.nf'
+
+            params {
+                greeting: String = 'Hola'
+            }
+
+            workflow {
+                main:
+                HELLO().messages
+            }
+            '''
+
+        when:
+        def result = runScript(folder.resolve('main.nf'))
+        then:
+        result.val == 'Hello'
     }
 
     def 'should support multiple aliases of the same pipeline' () {

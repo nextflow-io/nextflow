@@ -129,8 +129,12 @@ class PipelineDef extends BindableDef implements ChainableDef {
         if( isDataflow(value) ) {
             if( !isDataflowType(decl) )
                 throw new ScriptRuntimeException("Parameter `${decl.name}` of pipeline `${this.name}` with type ${Types.getName(decl.type)} cannot be assigned to a dataflow value -- declare the param as a Channel or Value to accept it")
+            checkDataflowType(decl, DataflowTypeHelper.normalizeV2(value))
             return DataflowTypeHelper.normalize(value, pipeline.isTypingEnabled())
         }
+        final type = TypeHelper.getRawType(decl.type)
+        if( type == Channel || type == Value )
+            throw new ScriptRuntimeException("Parameter `${decl.name}` of pipeline `${this.name}` with type ${Types.getName(decl.type)} cannot be assigned to ${value} [${Types.getName(value.getClass())}]")
 
         return ParamsHelper.resolveParam(decl, value, false)
     }
@@ -138,6 +142,14 @@ class PipelineDef extends BindableDef implements ChainableDef {
     private static boolean isDataflowType(Param decl) {
         final type = TypeHelper.getRawType(decl.type)
         return type == Object || Channel.isAssignableFrom(type) || Value.isAssignableFrom(type)
+    }
+
+    private void checkDataflowType(Param decl, Object value) {
+        final type = TypeHelper.getRawType(decl.type)
+        if( type == Channel && value !instanceof ChannelImpl || type == Value && value !instanceof ValueImpl ) {
+            final actual = value instanceof ChannelImpl ? 'a Channel' : value instanceof ValueImpl ? 'a Value' : 'multiple channels'
+            throw new ScriptRuntimeException("Parameter `${decl.name}` of pipeline `${this.name}` with type ${Types.getName(decl.type)} cannot be assigned to ${actual}")
+        }
     }
 
     private static boolean isDataflow(Object value) {

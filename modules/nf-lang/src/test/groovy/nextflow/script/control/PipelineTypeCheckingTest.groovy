@@ -91,6 +91,17 @@ class PipelineTypeCheckingTest extends Specification {
             ''') == [ 'Param `fasta` expects a Path but received a Value<Path>' ]
     }
 
+    def 'should reject a value argument for a channel param' () {
+        expect:
+        check('''\
+            include { workflow as RNASEQ } from './rnaseq.nf'
+
+            workflow {
+                RNASEQ( input: channel.value('a'), fasta: file('genome.fa') )
+            }
+            ''') == [ 'Param `input` expects a Channel<String> but received a Value<String>' ]
+    }
+
     def 'should check the fields of a record argument' () {
         expect:
         check('''\

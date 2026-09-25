@@ -411,7 +411,7 @@ output {
 }
 ```
 
-`RnaseqParams` is a *partial record type* -- all of its fields are nullable and defaulted fields keep their defaults. The user can provide any rnaseq param as `--rnaseq.<name>`, the meta-pipeline can override specific params (`params.rnaseq + record(input: ch_samples)`), and the `NFCORE_RNASEQ()` call validates that all required params are present.
+`RnaseqParams` is a *partial record type*. All of its fields are nullable, and defaults are not pre-filled. A param that is not set (e.g. `params.rnaseq.aligner`) is `null` in the meta-pipeline, and the included pipeline applies its own default when it is called. The user can provide any rnaseq param as `--rnaseq.<name>`, the meta-pipeline can override specific params (`params.rnaseq + record(input: ch_samples)`), and the `NFCORE_RNASEQ()` call validates that all required params are present.
 
 This way, the developer only needs to declare one param for each included pipeline (`fetchngs: FetchngsParams`, `rnaseq: RnaseqParams`).
 
