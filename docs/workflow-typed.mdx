@@ -171,7 +171,7 @@ Note the following:
 
 - A param that the pipeline defaults (`aligner`) can be omitted from the record. The pipeline applies its own default when it is called.
 
-- `rnaseq.input` is supplied by the dataflow, so a user cannot set it.
+- `rnaseq.input` is supplied by the dataflow, which overrides any value given by the user.
 
 - `rnaseq.fasta` must still be provided, but the error surfaces at the `NFCORE_RNASEQ()` call rather than at launch.
 

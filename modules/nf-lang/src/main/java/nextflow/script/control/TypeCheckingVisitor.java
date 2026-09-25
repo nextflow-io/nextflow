@@ -842,7 +842,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
      * A pipeline declares its inputs with a params block rather than a `take:`
      * section, so it is called with named arguments or with a single record.
      * Each argument must be assignable to the declared param type, like a
-     * workflow input -- a dataflow argument requires a `Channel` or `Value` param.
+     * workflow input.
      *
      * The return type is a record of the declared outputs, matching the record
      * that the pipeline returns at runtime.

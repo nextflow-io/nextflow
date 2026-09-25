@@ -25,6 +25,7 @@ import groovy.transform.CompileStatic
 import groovy.yaml.YamlSlurper
 import nextflow.dataflow.ChannelNamespace
 import nextflow.exception.ScriptRuntimeException
+import nextflow.script.dsl.Nullable
 import nextflow.script.dsl.Types
 import nextflow.script.types.Channel
 import nextflow.script.types.Record
@@ -72,11 +73,34 @@ class ParamsHelper {
         if( rawType == Value )
             return ChannelNamespace.value(resolveParam(elementDecl(decl), value, fromCli))
 
+        if( TypeHelper.isRecordType(decl.type) && value instanceof Map )
+            return resolveRecord(decl, (Map)value, fromCli)
+
         final result = fromCli
             ? resolveFromCli(decl, value)
             : resolveFromCode(decl, value)
         checkAssignable(decl, result)
         return result
+    }
+
+    private static RecordMap resolveRecord(Param decl, Map value, boolean fromCli) {
+        final type = (Class)decl.type
+        final result = new LinkedHashMap<String,Object>(value)
+        for( final field : type.getDeclaredFields() ) {
+            if( field.isSynthetic() )
+                continue
+            final name = field.getName()
+            final optional = field.isAnnotationPresent(Nullable)
+            final fieldValue = value.get(name)
+            if( fieldValue == null ) {
+                if( !optional )
+                    throw new ScriptRuntimeException("Parameter `${decl.name}` with type ${type.getSimpleName()} is missing required field `${name}`")
+                continue
+            }
+            final fieldDecl = new Param("${decl.name}.${name}", field.getGenericType(), optional, null)
+            result.put(name, resolveParam(fieldDecl, fieldValue, fromCli))
+        }
+        return new RecordMap(result)
     }
 
     /**

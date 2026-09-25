@@ -419,7 +419,7 @@ The `output` block can be included in the same way (`output as RnaseqOutput`), w
 
 Notes:
 
-- `rnaseq.input` is always overridden by the dataflow, so a user cannot set it.
+- `rnaseq.input` is supplied by the dataflow, which overrides any value given by the user.
 
 - `rnaseq.fasta` must still be provided by the user, but the error surfaces at the `NFCORE_RNASEQ()` call rather than at launch.
 

@@ -302,6 +302,52 @@ class ParamsDslTest extends Specification {
         result.greeting == 'hola'
     }
 
+    def 'should report the field of a record param that cannot be converted'() {
+        when:
+        runScript(
+            '''\
+            params {
+                sample: Sample
+            }
+
+            record Sample {
+                id: String
+                paired: Boolean
+            }
+
+            workflow {
+                params.sample
+            }
+            ''',
+            params: [sample: [id: 'a', paired: 'yes']]
+        )
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message == 'Parameter `sample.paired` with type Boolean cannot be assigned to yes [String]'
+
+        when:
+        runScript(
+            '''\
+            params {
+                sample: Sample
+            }
+
+            record Sample {
+                id: String
+                paired: Boolean
+            }
+
+            workflow {
+                params.sample
+            }
+            ''',
+            params: [sample: [paired: 'true']]
+        )
+        then:
+        e = thrown(ScriptRuntimeException)
+        e.message == 'Parameter `sample` with type Sample is missing required field `id`'
+    }
+
     def 'should report error for invalid record type'() {
         when:
         runScript(

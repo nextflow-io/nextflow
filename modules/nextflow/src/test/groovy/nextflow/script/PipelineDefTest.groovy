@@ -448,6 +448,60 @@ class PipelineDefTest extends Dsl2Spec {
         result.val == 'Hola, World!'
     }
 
+    def 'should load the dataflow params of an included pipeline from the command line' () {
+        given:
+        folder.resolve('samples.csv').text = 'id,count\na,1\nb,2\n'
+        folder.resolve('count.nf').text = '''
+            nextflow.enable.types = true
+
+            params {
+                samples: Channel<Sample>
+                factor: Value<Integer> = 1
+            }
+
+            record Sample {
+                id: String
+                count: Integer
+            }
+
+            workflow {
+                main:
+                totals = params.samples
+                    .map { s -> s.count }
+                    .collect()
+                    .combine(params.factor)
+                    .map { counts, factor -> counts.sum() * factor }
+
+                publish:
+                total = totals
+            }
+
+            output {
+                total: Channel<Integer> {}
+            }
+            '''
+        folder.resolve('main.nf').text = '''
+            nextflow.enable.types = true
+
+            include { params as CountParams ; workflow as COUNT } from './count.nf'
+
+            params {
+                count: CountParams
+            }
+
+            workflow {
+                main:
+                COUNT( params.count ).total
+            }
+            '''
+        def cliParams = [count: [samples: folder.resolve('samples.csv').toString(), factor: '5']]
+
+        when:
+        def result = runScript([params: cliParams], folder.resolve('main.nf'))
+        then:
+        result.val == 15
+    }
+
     def 'should support multiple aliases of the same pipeline' () {
         given:
         def script = pipeline('''
