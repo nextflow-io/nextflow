@@ -151,7 +151,7 @@ class TypeCheckingTest extends Specification {
         "Integer.parseInt('1')"                         | null
         "Math.max(1, 2)"                                | null
         "groovy.json.JsonOutput.toJson([1, 2])"         | null
-        "String.nope()"                                 | "Unrecognized method `nope` for type String"
+        "String.nope()"                                 | "Unrecognized method `nope` for type `String`"
     }
 
     def 'should check a parameter declaration' () {
@@ -171,7 +171,7 @@ class TypeCheckingTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 2
         errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Parameter 'input' with type String cannot be assigned to default value with type Float"
+        errors[0].getOriginalMessage() == "Parameter 'input' with type `String` cannot be assigned to default value with type `Float`"
 
         when:
         def exp = parseExpression(
@@ -208,7 +208,7 @@ class TypeCheckingTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 5
         errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Assignment target with type String cannot be assigned to value with type Integer"
+        errors[0].getOriginalMessage() == "Assignment target with type `String` cannot be assigned to value with type `Integer`"
 
         when:
         errors = getErrors(
@@ -288,10 +288,10 @@ class TypeCheckingTest extends Specification {
         errors.size() == 3
         errors[0].getStartLine() == 14
         errors[0].getStartColumn() == 13
-        errors[0].getOriginalMessage() == "Publish source should be a Path or Iterable<Path> but was specified as a String"
+        errors[0].getOriginalMessage() == "Publish source should be a `Path` or `Iterable<Path>` but was specified as a `String`"
         errors[1].getStartLine() == 14
         errors[1].getStartColumn() == 21
-        errors[1].getOriginalMessage() == "Publish target should be a String but was specified as a Integer"
+        errors[1].getOriginalMessage() == "Publish target should be a `String` but was specified as a `Integer`"
         errors[2].getStartLine() == 15
         errors[2].getStartColumn() == 13
         errors[2].getOriginalMessage().contains "Statement is not a valid publish statement"
@@ -361,7 +361,7 @@ class TypeCheckingTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 2
         errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Return value with type Integer does not match the declared return type (String)"
+        errors[0].getOriginalMessage() == "Return value with type `Integer` does not match the declared return type `String`"
 
         when:
         errors = getErrors(
@@ -386,7 +386,7 @@ class TypeCheckingTest extends Specification {
         errors.size() == 1
         errors[0].getStartLine() == 2
         errors[0].getStartColumn() == 5
-        errors[0].getOriginalMessage() == "Return value with type void does not match the declared return type (String)"
+        errors[0].getOriginalMessage() == "Return value with type `void` does not match the declared return type `String`"
     }
 
     def 'should check an assignment' () {
@@ -395,8 +395,8 @@ class TypeCheckingTest extends Specification {
 
         where:
         SOURCE                              | ERROR
-        'def x: String ; x = 42'            | "Assignment target with type String cannot be assigned to value with type Integer"
-        "def x: List<String> ; x = [42]"    | "Assignment target with type List<String> cannot be assigned to value with type List<Integer>"
+        'def x: String ; x = 42'            | "Assignment target with type `String` cannot be assigned to value with type `Integer`"
+        "def x: List<String> ; x = [42]"    | "Assignment target with type `List<String>` cannot be assigned to value with type `List<Integer>`"
         "def x: List<String> ; x = []"      | null
         "def ch: Channel<Path> = channel.empty()" | null
     }
@@ -414,8 +414,8 @@ class TypeCheckingTest extends Specification {
         'def x = 1 ; x <<= 2'           | null
         "def s = 'a' ; s += 'b'"        | null
         'def d = 1.h ; d *= 2.0'        | null
-        "def s = 'a' ; s *= 'b'"        | "The `*=` operator is not defined for operands with types String and String"
-        "def x = 1 ; x += 'a'"          | "The `+=` operator is not defined for operands with types Integer and String"
+        "def s = 'a' ; s *= 'b'"        | "The `*=` operator is not defined for operands with types `String` and `String`"
+        "def x = 1 ; x += 'a'"          | "The `+=` operator is not defined for operands with types `Integer` and `String`"
     }
 
     def 'should infer the type of a variable declaration or assignment' () {
@@ -471,7 +471,7 @@ class TypeCheckingTest extends Specification {
         where:
         SOURCE          | ERROR
         'env()'         | "Function `env` expects 1 argument(s) but received 0"
-        'env(42)'       | "Argument with type Integer is not compatible with parameter of type String"
+        'env(42)'       | "Argument with type `Integer` is not compatible with parameter of type `String`"
         "env('HELLO')"  | null
     }
 
@@ -496,7 +496,7 @@ class TypeCheckingTest extends Specification {
         where:
         SOURCE                                      | ERROR
         "file('input.txt', checkIfExist: true)"     | "Named param `checkIfExist` is not defined"
-        "file('input.txt', checkIfExists: 'true')"  | "Named param `checkIfExists` expects a Boolean but received a String"
+        "file('input.txt', checkIfExists: 'true')"  | "Named param `checkIfExists` expects a `Boolean` but received a `String`"
         "file('input.txt', checkIfExists: true)"    | null
     }
 
@@ -516,7 +516,7 @@ class TypeCheckingTest extends Specification {
                 hello( record(id: '1') )
             }
             ''',
-            'Argument with type Record {\n    id: String\n} is not compatible with parameter of type Sample'
+            'Argument with type `Record {\n    id: String\n}` is not compatible with parameter of type `Sample`'
         )
         and:
         check(
@@ -544,13 +544,13 @@ class TypeCheckingTest extends Specification {
 
         where:
         SOURCE                          | ERROR
-        "channel.of(1, 'a')"            | "Argument with type String is not compatible with parameter of type Integer"
-        "channel.of('a', 1)"            | "Argument with type Integer is not compatible with parameter of type String"
-        "channel.of(1, 2, 'a')"         | "Argument with type String is not compatible with parameter of type Integer"
-        "channel.of([1], ['a'])"        | "Argument with type List<String> is not compatible with parameter of type List<Integer>"
+        "channel.of(1, 'a')"            | "Argument with type `String` is not compatible with parameter of type `Integer`"
+        "channel.of('a', 1)"            | "Argument with type `Integer` is not compatible with parameter of type `String`"
+        "channel.of(1, 2, 'a')"         | "Argument with type `String` is not compatible with parameter of type `Integer`"
+        "channel.of([1], ['a'])"        | "Argument with type `List<String>` is not compatible with parameter of type `List<Integer>`"
         "channel.of(1, 2)"              | null
         "channel.of([1], [2])"          | null
-        "channel.of(1).reduce(0) { a, b -> 'x' }" | "Return value with type String does not match the declared return type (Integer)"
+        "channel.of(1).reduce(0) { a, b -> 'x' }" | "Return value with type `String` does not match the declared return type `Integer`"
     }
 
     @Unroll
@@ -573,7 +573,7 @@ class TypeCheckingTest extends Specification {
 
         where:
         SOURCE                                  | ERROR
-        'workflow.outputDir.name()'             | "Unrecognized method `name` for type Path"
+        'workflow.outputDir.name()'             | "Unrecognized method `name` for type `Path`"
         'workflow.outputDir.resolve()'          | "Function `resolve` expects 1 argument(s) but received 0"
         "workflow.outputDir.resolve('hello')"   | null
     }
@@ -585,13 +585,13 @@ class TypeCheckingTest extends Specification {
 
         where:
         SOURCE          | ERROR
-        "2 + '2'"       | "The `+` operator is not defined for operands with types Integer and String"
+        "2 + '2'"       | "The `+` operator is not defined for operands with types `Integer` and `String`"
         "2 + 2"         | null
-        "2 == '2'"      | "The `==` operator is not defined for operands with types Integer and String"
+        "2 == '2'"      | "The `==` operator is not defined for operands with types `Integer` and `String`"
         "2 == 2"        | null
-        "2 in ['2']"    | "The `in` operator is not defined for operands with types Integer and List<String>"
+        "2 in ['2']"    | "The `in` operator is not defined for operands with types `Integer` and `List<String>`"
         "2 in [2]"      | null
-        "[2] == ['2']"  | "The `==` operator is not defined for operands with types List<Integer> and List<String>"
+        "[2] == ['2']"  | "The `==` operator is not defined for operands with types `List<Integer>` and `List<String>`"
         "[2] == [2]"    | null
         "['a', 'b', 'c'][0]"        | null
         "['a', 'b', 'c'][0..-2]"    | null
@@ -653,8 +653,8 @@ class TypeCheckingTest extends Specification {
 
         where:
         SOURCE                  | ERROR
-        "true ? 42 : '42'"      | "Conditional expression has inconsistent types -- true branch has type Integer but false branch has type String"
-        "true ? ['v'] : [:]"    | "Conditional expression has inconsistent types -- true branch has type List<String> but false branch has type Map"
+        "true ? 42 : '42'"      | "Conditional expression has inconsistent types -- true branch has type `Integer` but false branch has type `String`"
+        "true ? ['v'] : [:]"    | "Conditional expression has inconsistent types -- true branch has type `List<String>` but false branch has type `Map`"
         "true ? 42 : null"      | null
     }
 
@@ -694,7 +694,7 @@ class TypeCheckingTest extends Specification {
 
         where:
         SOURCE          | ERROR
-        "[1, 2, '3']"   | "List expression has inconsistent element types -- some elements have type Integer while others have type String"
+        "[1, 2, '3']"   | "List expression has inconsistent element types -- some elements have type `Integer` while others have type `String`"
         "[1, 2, 3]"     | null
     }
 
@@ -775,7 +775,7 @@ class TypeCheckingTest extends Specification {
 
         where:
         SOURCE  | ERROR
-        "-'42'" | "The `-` operator is not defined for an operand with type String"
+        "-'42'" | "The `-` operator is not defined for an operand with type `String`"
         "-42"   | null
     }
 
@@ -786,7 +786,7 @@ class TypeCheckingTest extends Specification {
 
         where:
         SOURCE                  | ERROR
-        '42 as List'            | "Value of type Integer cannot be cast to List"
+        '42 as List'            | "Value of type `Integer` cannot be cast to `List`"
         '[] as List<Path>'      | null
         "'24 h' as Duration"    | null
         "'8 GB' as MemoryUnit"  | null
@@ -820,7 +820,7 @@ class TypeCheckingTest extends Specification {
                 fastq_2: Path
             }
             ''',
-            'Record mismatch -- source record is missing field `fastq_2` required by FastqPair'
+            'Record mismatch -- source record is missing field `fastq_2` required by `FastqPair`'
         )
         check(
             '''\
@@ -834,7 +834,7 @@ class TypeCheckingTest extends Specification {
                 fastq_2: Path
             }
             ''',
-            'Record mismatch -- field `fastq_2` of FastqPair expects a Path but received a String'
+            'Record mismatch -- field `fastq_2` of `FastqPair` expects a `Path` but received a `String`'
         )
     }
 
@@ -864,7 +864,7 @@ class TypeCheckingTest extends Specification {
                 fastq: String
             }
             ''',
-            'Assignment target with type Channel<Sample> cannot be assigned to value with type Channel<Record {\n    id: String\n}>'
+            'Assignment target with type `Channel<Sample>` cannot be assigned to value with type `Channel<Record {\n    id: String\n}>`'
         )
     }
 
@@ -877,7 +877,7 @@ class TypeCheckingTest extends Specification {
         SOURCE                          | ERROR
         'workflow.output_dir'           | "Unrecognized property `output_dir` for namespace `workflow`"
         'workflow.outputDir'            | null
-        'workflow.outputDir.fileName'   | "Unrecognized property `fileName` for type Path"
+        'workflow.outputDir.fileName'   | "Unrecognized property `fileName` for type `Path`"
         'workflow.outputDir.name'       | null
     }
 
@@ -1035,7 +1035,7 @@ class TypeCheckingTest extends Specification {
                 hello( messages )
             }
             ''',
-            'Argument with type Integer is not compatible with process input of type String'
+            'Argument with type `Integer` is not compatible with process input of type `String`'
         )
         and:
         check(
@@ -1084,7 +1084,7 @@ class TypeCheckingTest extends Specification {
         and: 'the same call on a known element type is still checked'
         check(
             "channel.of('a').view { v -> v.name }",
-            'Unrecognized property `name` for type String'
+            'Unrecognized property `name` for type `String`'
         )
     }
 
@@ -1149,7 +1149,7 @@ class TypeCheckingTest extends Specification {
                 hello( channel.of(42) )
             }
             ''',
-            'Argument with type Integer is not compatible with agent input of type String'
+            'Argument with type `Integer` is not compatible with agent input of type `String`'
         )
     }
 
@@ -1171,7 +1171,7 @@ class TypeCheckingTest extends Specification {
                 hello( record(id: '1') )
             }
             ''',
-            'Argument with type Record {\n    id: String\n} is not compatible with process input of type Record {\n    id: String\n    fastq: Path\n}'
+            'Argument with type `Record {\n    id: String\n}` is not compatible with process input of type `Record {\n    id: String\n    fastq: Path\n}`'
         )
         and:
         check(
@@ -1388,7 +1388,7 @@ class TypeCheckingTest extends Specification {
                 new Sample()
             }
             ''',
-            'Record type Sample cannot be used as a constructor -- use `record()` instead'
+            'Record type `Sample` cannot be used as a constructor -- use `record()` instead'
         )
     }
 
@@ -1459,10 +1459,10 @@ class TypeCheckingTest extends Specification {
         where:
         SOURCE                          | ERROR
         "'*.txt'*.dirName"              | "Spread-dot is only supported for Iterable types"
-        "files('*.txt')*.dirName"       | "Unrecognized property `dirName` for element type Path"
+        "files('*.txt')*.dirName"       | "Unrecognized property `dirName` for element type `Path`"
         "files('*.txt')*.name"          | null
         "'*.txt'*.getDirName()"         | "Spread-dot is only supported for Iterable types"
-        "files('*.txt')*.getDirName()"  | "Unrecognized method `getDirName` for element type Path"
+        "files('*.txt')*.getDirName()"  | "Unrecognized method `getDirName` for element type `Path`"
         "files('*.txt')*.toUriString()" | null
     }
 

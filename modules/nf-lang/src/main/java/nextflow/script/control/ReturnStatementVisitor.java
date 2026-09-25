@@ -101,13 +101,13 @@ public class ReturnStatementVisitor extends ClassCodeVisitorSupport {
         var sourceType = getType(node.getExpression());
         if( inferredReturnType != null && !ClassHelper.isDynamicTyped(returnType) ) {
             if( !Types.isAssignableFrom(inferredReturnType, sourceType) )
-                addError(String.format("Return value with type %s does not match previous return type (%s)", Types.getName(sourceType), Types.getName(inferredReturnType)), node);
+                addError(String.format("Return value with type `%s` does not match previous return type `%s`", Types.getName(sourceType), Types.getName(inferredReturnType)), node);
         }
         else if( Types.isAssignableFrom(returnType, sourceType) ) {
             inferredReturnType = sourceType;
         }
         else {
-            addError(String.format("Return value with type %s does not match the declared return type (%s)", Types.getName(sourceType), Types.getName(returnType)), node);
+            addError(String.format("Return value with type `%s` does not match the declared return type `%s`", Types.getName(sourceType), Types.getName(returnType)), node);
         }
     }
 

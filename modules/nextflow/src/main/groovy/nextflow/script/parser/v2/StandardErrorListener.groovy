@@ -120,15 +120,14 @@ class StandardErrorListener implements ErrorListener {
     }
 
     private Ansi highlightString(String str, Ansi term) {
-        final matcher = str =~ /^(.*)([`'][^`']+[`'])(.*)$/
-        if( matcher.find() ) {
-            term.a(matcher.group(1))
-                .fg(Ansi.Color.CYAN).a(matcher.group(2)).fg(Ansi.Color.DEFAULT)
-                .a(matcher.group(3))
+        final matcher = str =~ /([`'])[^`']+\1/
+        int last = 0
+        while( matcher.find() ) {
+            term.a(str.substring(last, matcher.start()))
+                .fg(Ansi.Color.CYAN).a(matcher.group()).fg(Ansi.Color.DEFAULT)
+            last = matcher.end()
         }
-        else {
-            term.a(str)
-        }
+        term.a(str.substring(last))
         return term
     }
 
