@@ -55,4 +55,17 @@ class PublishOpTest extends Specification {
         op.getTargetDir(null) == Path.of('/work/results')
     }
 
+    def 'should publish nothing when all publish statements are no-ops' () {
+        given:
+        def session = Mock(Session) { getOutputDir() >> Path.of('/work/results') }
+        def resolver = { v -> publish(v, null) }
+
+        when:
+        def op = new PublishOp(session, 'foo', null, [path: '.', pathResolver: resolver])
+        def saveAs = op.getTargetDir(Path.of('/work/ab/cdef/out.txt'))
+        then:
+        saveAs instanceof Closure
+        saveAs.call('out.txt') == null
+    }
+
 }

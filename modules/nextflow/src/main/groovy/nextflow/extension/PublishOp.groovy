@@ -177,13 +177,17 @@ class PublishOp {
             return outputDir.resolve(resolvedPath.toString()).normalize()
 
         final invalid = mapping ?: resolvedPath
-        throw new ScriptRuntimeException("Invalid `path` directive for workflow output '${name}' -- expected a string or publish statements, but received: ${invalid} [${invalid.class.simpleName}]")
+        throw new ScriptRuntimeException("Invalid `path` directive for workflow output '${name}' -- expected a string or publish statements, but received: ${invalid} [${invalid?.class?.simpleName}]")
     }
 
     private class PublishDsl {
         private Map<String,String> mapping = null
 
         void publish(Object source, String target) {
+            // a no-op publish statement should still publish nothing
+            // instead of falling back to the closure return value
+            if( mapping == null )
+                mapping = [:]
             if( source == null || target == null )
                 return
             if( source instanceof Path ) {
@@ -204,8 +208,6 @@ class PublishOp {
             if( source == null )
                 return
             log.trace "Publishing ${source} to ${target}"
-            if( mapping == null )
-                mapping = [:]
             final filename = getTaskDir(source).relativize(source).toString()
             final resolved = target.endsWith('/')
                 ? target + filename
