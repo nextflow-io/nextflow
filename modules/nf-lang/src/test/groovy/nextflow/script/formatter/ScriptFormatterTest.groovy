@@ -437,6 +437,28 @@ class ScriptFormatterTest extends Specification {
             }
             '''
         )
+        checkFormat(
+            '''\
+            workflow{}
+
+            output{
+            foo{index{header ( ['a','b'] );sep('\\t')}}
+            }
+            ''',
+            '''\
+            workflow {
+            }
+
+            output {
+                foo {
+                    index {
+                        header(['a', 'b'])
+                        sep '\\t'
+                    }
+                }
+            }
+            '''
+        )
     }
 
     def 'should not sort script declarations by default' () {
