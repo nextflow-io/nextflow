@@ -113,7 +113,7 @@ class ScriptResolveTest extends Specification {
                 input:
                 x: String
                 output:
-                report: Path = file('report.md')
+                file('report.md')
                 script:
                 "true"
             }
@@ -286,6 +286,56 @@ class ScriptResolveTest extends Specification {
         then:
         errors.size() == 0
         warnings.size() == 0
+    }
+
+    def 'should not warn when a typed output names a variable from the body' () {
+        given:
+        def source = '''\
+            nextflow.enable.types = true
+
+            process foo {
+                output:
+                message: String
+
+                exec:
+                message = 'hi'
+            }
+
+            workflow example {
+                main:
+                result = foo()
+
+                emit:
+                result: Channel<String>
+            }
+            '''
+        when:
+        def result = scriptParser.parse('main.nf', source.stripIndent())
+        scriptParser.analyze()
+        def errors = TestUtils.getErrors(result)
+        def warnings = TestUtils.getWarnings(result)
+        then:
+        errors.size() == 0
+        warnings.size() == 0
+    }
+
+    def 'should report an error when a typed output names an undefined variable' () {
+        when:
+        def errors = check(
+            '''\
+            nextflow.enable.types = true
+
+            workflow hello {
+                emit:
+                x: Channel<String>
+            }
+            '''
+        )
+        then:
+        errors.size() == 1
+        errors[0].getStartLine() == 5
+        errors[0].getStartColumn() == 5
+        errors[0].getOriginalMessage() == '`x` is not defined'
     }
 
     def 'should report an error for an undefined function' () {

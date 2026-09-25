@@ -40,6 +40,7 @@ import nextflow.util.MemoryUnit
  * @author Jordi Deu-Pons <jordi@jordeu.net>
  */
 @CompileStatic
+@Deprecated
 class GoogleBatchMachineTypeSelector {
 
     static GoogleBatchMachineTypeSelector INSTANCE = new GoogleBatchMachineTypeSelector()

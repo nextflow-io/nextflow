@@ -1,5 +1,9 @@
 nf-cloudcache changelog
 =======================
+0.6.2 - 25 Sep 2026
+- Allow a cache factory to decline a session (#7681) [0d3ab36ac]
+- Bump slf4j to 2.0.19 (#7661) [90c789759]
+
 0.6.1 - 20 Aug 2026
 - Bump Groovy 4.0.33 (#7429) [c8800d84a]
 
