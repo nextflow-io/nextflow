@@ -153,6 +153,40 @@ class PipelineTypeCheckingTest extends Specification {
             ''') == []
     }
 
+    def 'should not require a partial record type param' () {
+        expect:
+        check('''\
+            include { workflow as META } from './meta.nf'
+
+            workflow {
+                META( label: 'x' )
+            }
+            ''', [
+            'meta.nf': '''\
+            include { params as RnaseqParams ; workflow as RNASEQ } from './rnaseq.nf'
+
+            params {
+                rnaseq: RnaseqParams
+                options: Options
+                sample: Sample
+                label: String
+            }
+
+            record Options {
+                verbose: Boolean?
+            }
+
+            record Sample {
+                id: String
+            }
+
+            workflow {
+                RNASEQ( params.rnaseq )
+            }
+            '''
+        ]) == [ 'Pipeline `META` requires the following params: sample' ]
+    }
+
     def 'should report an invalid pipeline call' () {
         expect:
         check('''\

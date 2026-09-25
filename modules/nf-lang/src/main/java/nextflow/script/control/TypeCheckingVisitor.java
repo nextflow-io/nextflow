@@ -42,6 +42,7 @@ import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
 import nextflow.script.dsl.Namespace;
+import nextflow.script.dsl.Nullable;
 import nextflow.script.dsl.Ops;
 import nextflow.script.types.Channel;
 import nextflow.script.types.ParamsMap;
@@ -934,7 +935,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
 
         var missing = Arrays.stream(declarations)
             .filter(p -> !provided.contains(p.getName()))
-            .filter(p -> !p.hasInitialExpression() && !isNullable(p.getType()))
+            .filter(p -> !p.hasInitialExpression() && !isNullable(p.getType()) && !isPartialRecordType(p.getType()))
             .map(Parameter::getName)
             .toList();
         if( !missing.isEmpty() )
@@ -1380,6 +1381,14 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
 
     private static boolean isNullable(ClassNode cn) {
         return cn == null || cn.getNodeMetaData(ASTNodeMarker.NULLABLE) != null;
+    }
+
+    private static final ClassNode NULLABLE_ANNOTATION = ClassHelper.makeCached(Nullable.class);
+
+    private static boolean isPartialRecordType(ClassNode cn) {
+        return cn.redirect() instanceof RecordNode rn && rn.getFields().stream().allMatch(fn ->
+            isNullable(fn.getType()) || !fn.getAnnotations(NULLABLE_ANNOTATION).isEmpty()
+        );
     }
 
     @Override
