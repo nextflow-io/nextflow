@@ -97,22 +97,6 @@ Notes:
 - The workflow is called using named arguments so that defaults can be omitted.
 - All outputs are either a `Channel` or wrapped as `Value<T>`, allowing them to be used in regular dataflow logic.
 
-### Remote pipeline inclusion and storage
-
-Pipelines can be published, installed, and included through the Nextflow registry:
-
-```groovy
-// module
-include { BWA_MEM } from 'nf-core/bwa/mem'
-
-// pipeline
-include { workflow as NFCORE_RNASEQ } from 'nf-core/rnaseq'
-```
-
-When a pipeline is included from the registry, it is vendored into the including project under `pipelines/<scope>/<name>/`. Included pipelines are isolated -- each included pipeline has its own `modules/` directory. This way, two pipelines can use different versions of the same module without compromising reproducibility.
-
-Included pipelines should be committed to the meta-pipeline repository. The pipeline version and checksum should be saved in a helper file (`.pipeline-info`) so that Nextflow can track local changes.
-
 ### Best practices for including pipelines
 
 Pipeline inclusion only captures the pipeline's main script and included modules -- it does not capture external context such as config or the `lib` directory. As a result, the pipeline should be written in a way that works when included in another pipeline:
@@ -133,9 +117,19 @@ None of these constraints are absolute. All of them can be circumvented by manua
 
 ### Pipeline registry and CLI
 
-Sourcing remote pipelines from the Nextflow registry implies a pipeline registry API and a `nextflow pipeline` command group for publishing and installing pipelines. This infrastructure can be largely inferred from existing patterns established for modules.
+A pipeline registry would enable remote pipeline inclusion:
 
-One aspect that remains open is the pipeline spec (`nextflow_spec.json` or `nextflow_schema.json`) which may have a different shape from the module spec (`meta.yml`). A minimal pipeline spec could be introduced to enable remote pipelines without bloating scope. Alternatively, the pipeline version could be managed by a helper file (e.g. `.pipeline-info`) until the pipeline spec is finalized.
+```groovy
+// module
+include { BWA_MEM } from 'nf-core/bwa/mem'
+
+// pipeline
+include { workflow as NFCORE_RNASEQ } from 'nf-core/rnaseq'
+```
+
+This would require a `nextflow pipeline` command group for publishing and installing pipelines, similar to modules.
+
+This effort is deferred, since it is not required for pipeline composition. Users can already compose pipelines by cloning or git submodules.
 
 ### Using plugin functions in included pipeline
 
