@@ -89,15 +89,12 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     /**
-     * The outputs declared in the output block of this script, keyed by
-     * name, with their output directives resolved against the given params.
-     *
-     * @param params
+     * The names of the outputs declared in the output block of this script.
      */
-    Map<String,Map> getOutputDeclarations(ScriptBinding.ParamsMap params) {
+    Set<String> getOutputNames() {
         return outputDef
-            ? outputDef.getDeclarations(params)
-            : Collections.<String,Map>emptyMap()
+            ? outputDef.getNames()
+            : Collections.<String>emptySet()
     }
 
     /**
@@ -152,7 +149,7 @@ abstract class BaseScript extends Script implements ExecutionContext {
         if( ExecutionStack.withinWorkflow() )
             throw new IllegalStateException("Workflow params definition is not allowed within a workflow")
 
-        this.paramsDef = new ParamsDef(this, clazz, body)
+        this.paramsDef = new ParamsDef(clazz, body)
     }
 
     /**
@@ -329,14 +326,11 @@ abstract class BaseScript extends Script implements ExecutionContext {
 
         // invoke the entry workflow
         session.notifyBeforeWorkflowExecution()
-        // the entry workflow receives the resolved params as an input, so that
-        // `params` refers to a single execution of the pipeline
-        final params = paramsDef?.apply(session)
-        if( params != null )
-            entryFlow.withParams(params)
+        if( paramsDef )
+            paramsDef.apply(session)
         final ret = entryFlow.invoke_a(BaseScriptConsts.EMPTY_ARGS)
         if( outputDef )
-            outputDef.apply(session, params)
+            outputDef.apply(session)
         session.notifyAfterWorkflowExecution()
         return ret
     }

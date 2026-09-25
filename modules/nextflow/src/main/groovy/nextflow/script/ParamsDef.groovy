@@ -26,22 +26,19 @@ import nextflow.Session
 @CompileStatic
 class ParamsDef {
 
-    private BaseScript owner
-
     private Class clazz
 
     private Closure closure
 
-    ParamsDef(BaseScript owner, Class clazz, Closure closure) {
-        this.owner = owner
+    ParamsDef(Class clazz, Closure closure) {
         this.clazz = clazz
         this.closure = closure
     }
 
     private Map<String,Param> declarations
 
-    ScriptBinding.ParamsMap apply(Session session) {
-        return dsl().apply(session)
+    void apply(Session session) {
+        dsl().apply(session)
     }
 
     /**
@@ -54,7 +51,7 @@ class ParamsDef {
     }
 
     private ParamsDsl dsl() {
-        final dsl = new ParamsDsl(owner, clazz)
+        final dsl = new ParamsDsl(clazz)
         final cl = (Closure)closure.clone()
         cl.setDelegate(dsl)
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)

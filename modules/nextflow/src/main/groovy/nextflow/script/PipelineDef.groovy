@@ -17,7 +17,6 @@
 package nextflow.script
 
 import groovy.transform.CompileStatic
-import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.dataflow.ChannelImpl
 import nextflow.dataflow.ValueImpl
@@ -41,20 +40,19 @@ import nextflow.util.RecordMap
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
-@Slf4j
 @CompileStatic
 class PipelineDef extends BindableDef implements ChainableDef {
 
-    private BaseScript pipeline
+    private BaseScript script
 
     private String name
 
-    PipelineDef(BaseScript pipeline, String name='workflow') {
-        this.pipeline = pipeline
+    PipelineDef(BaseScript script, String name='workflow') {
+        this.script = script
         this.name = name
     }
 
-    BaseScript getOwner() { pipeline }
+    BaseScript getOwner() { script }
 
     String getName() { name }
 
@@ -70,8 +68,7 @@ class PipelineDef extends BindableDef implements ChainableDef {
     Object run(Object[] args) {
         final params = new ScriptBinding.ParamsMap(resolveParams(args))
         final published = runEntryWorkflow(params)
-        final declarations = pipeline.getOutputDeclarations(params)
-        return collectOutputs(declarations.keySet(), published)
+        return collectOutputs(script.getOutputNames(), published)
     }
 
     /**
@@ -82,7 +79,7 @@ class PipelineDef extends BindableDef implements ChainableDef {
      */
     protected Map<String,Object> resolveParams(Object[] args) {
         final given = namedArguments(args)
-        final declarations = pipeline.getParamDeclarations()
+        final declarations = script.getParamDeclarations()
 
         for( final name : given.keySet() ) {
             if( !declarations.containsKey(name) )
@@ -122,15 +119,13 @@ class PipelineDef extends BindableDef implements ChainableDef {
     }
 
     private Object resolveArgument(Param decl, Object value) {
-        if( value == null )
-            return null
         // a channel is passed through as-is, so that the pipeline
         // participates in the calling workflow's dataflow graph
         if( isDataflow(value) ) {
             if( !isDataflowType(decl) )
                 throw new ScriptRuntimeException("Parameter `${decl.name}` of pipeline `${this.name}` with type ${Types.getName(decl.type)} cannot be assigned to a dataflow value -- declare the param as a Channel or Value to accept it")
             checkDataflowType(decl, DataflowTypeHelper.normalizeV2(value))
-            return DataflowTypeHelper.normalize(value, pipeline.isTypingEnabled())
+            return DataflowTypeHelper.normalize(value, script.isTypingEnabled())
         }
         final type = TypeHelper.getRawType(decl.type)
         if( type == Channel || type == Value )
@@ -169,14 +164,14 @@ class PipelineDef extends BindableDef implements ChainableDef {
      * is published.
      */
     protected Map<String,DataflowWriteChannel> runEntryWorkflow(ScriptBinding.ParamsMap params) {
-        final outputs = pipeline.session.outputs
+        final outputs = script.session.outputs
         final saved = new LinkedHashMap<String,DataflowWriteChannel>(outputs)
         outputs.clear()
         try {
             // the entry workflow is invoked with the pipeline name, so that
             // processes are scoped by it (e.g. `RNASEQ:STAR_ALIGN`), and with
             // the resolved params, so that `params` refers to this call
-            pipeline.getEntryFlow().cloneWithName(name).withParams(params).run(BaseScriptConsts.EMPTY_ARGS)
+            script.getEntryFlow().cloneWithName(name).withParams(params).run(BaseScriptConsts.EMPTY_ARGS)
             return new LinkedHashMap<String,DataflowWriteChannel>(outputs)
         }
         finally {

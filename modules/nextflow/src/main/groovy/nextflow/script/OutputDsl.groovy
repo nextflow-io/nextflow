@@ -33,45 +33,26 @@ import nextflow.extension.PublishOp
 @CompileStatic
 class OutputDsl {
 
-    private ScriptBinding.ParamsMap params
-
-    private Map<String,Map> declarations = [:]
-
-    OutputDsl(ScriptBinding.ParamsMap params=null) {
-        this.params = params
-    }
-
-    /**
-     * The output directives of a pipeline can refer to its params, so the
-     * params of the pipeline are resolved against the output block rather
-     * than against the script that declares it, which is shared by every
-     * execution of the pipeline.
-     *
-     * @param name
-     */
-    @Override
-    Object getProperty(String name) {
-        if( name == 'params' && params != null )
-            return params
-        return super.getProperty(name)
-    }
+    private Map<String,Closure> declarations = [:]
 
     private Map<String,DataflowVariable> dataflowOutputs = [:]
 
     void declare(String name, Closure closure) {
         if( declarations.containsKey(name) )
             throw new ScriptRuntimeException("Workflow output '${name}' is declared more than once in the workflow output block")
+        declarations[name] = closure
+    }
 
+    Set<String> getNames() { declarations.keySet() }
+
+    private static Map options(Closure closure) {
         final dsl = new DeclareDsl()
         final cl = (Closure)closure.clone()
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
         cl.setDelegate(dsl)
         cl.call()
-
-        declarations[name] = dsl.getOptions()
+        return dsl.getOptions()
     }
-
-    Map<String,Map> getDeclarations() { declarations }
 
     void apply(Session session) {
         final outputs = session.outputs
@@ -91,7 +72,7 @@ class OutputDsl {
         // create publish op for each output
         for( final name : outputs.keySet() ) {
             final source = outputs[name]
-            final overrides = declarations[name] ?: Collections.emptyMap()
+            final overrides = options(declarations[name])
             final opts = publishOptions(name, defaults, overrides)
 
             if( opts.enabled == null || opts.enabled )

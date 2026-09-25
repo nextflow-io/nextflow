@@ -372,7 +372,7 @@ class ParamsHelper {
      * @param decl
      * @param value
      */
-    static void checkAssignable(Param decl, Object value) {
+    private static void checkAssignable(Param decl, Object value) {
         final expectedType = TypeHelper.getRawType(decl.type)
         final actualType = value?.getClass()
         if( actualType != null && !isAssignableFrom(expectedType, actualType) )

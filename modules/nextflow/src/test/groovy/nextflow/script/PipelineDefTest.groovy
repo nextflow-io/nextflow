@@ -44,28 +44,6 @@ class PipelineDefTest extends Dsl2Spec {
         folder?.deleteDir()
     }
 
-    private static final String GREET_PIPELINE = """
-            nextflow.enable.types = true
-
-            params {
-                names: Channel<String>
-                greeting: String = 'Hello'
-                subdir: String = 'greetings'
-            }
-
-            workflow {
-                main:
-                messages = params.names.map { name -> "\${params.greeting}, \${name}!" }
-
-                publish:
-                messages = messages
-            }
-
-            output {
-                messages: Channel<String> { path params.subdir }
-            }
-            """
-
     private Path pipeline(String text) {
         folder.resolve('greet.nf').text = """
             nextflow.enable.types = true
@@ -659,20 +637,6 @@ class PipelineDefTest extends Dsl2Spec {
         then:
         def e = thrown(Exception)
         e.message.contains("has been already used")
-    }
-
-    def 'should resolve the output directives of a pipeline against its params' () {
-        when:
-        def script = loadScript(module: true, GREET_PIPELINE)
-        then:
-        // the output block is evaluated per pipeline execution, so its
-        // directives can refer to the params of that execution
-        script.getOutputDeclarations(params(subdir: 'hola')).messages.path == 'hola'
-        script.getOutputDeclarations(params(subdir: 'ciao')).messages.path == 'ciao'
-    }
-
-    private static ScriptBinding.ParamsMap params(Map values) {
-        return new ScriptBinding.ParamsMap(values)
     }
 
     def 'should fail when an included pipeline is not aliased' () {

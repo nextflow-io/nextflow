@@ -34,26 +34,16 @@ class OutputDef {
         this.closure = closure
     }
 
-    void apply(Session session, ScriptBinding.ParamsMap params) {
-        dsl(params).apply(session)
+    void apply(Session session) {
+        dsl().apply(session)
     }
 
-    /**
-     * The declared outputs, keyed by name, with their output directives
-     * resolved against the given params.
-     *
-     * The output block is evaluated on each use, because the output
-     * directives can refer to the params of the pipeline, and a pipeline
-     * can be executed more than once in a run.
-     *
-     * @param params
-     */
-    Map<String,Map> getDeclarations(ScriptBinding.ParamsMap params) {
-        return dsl(params).getDeclarations()
+    Set<String> getNames() {
+        return dsl().getNames()
     }
 
-    private OutputDsl dsl(ScriptBinding.ParamsMap params) {
-        final dsl = new OutputDsl(params)
+    private OutputDsl dsl() {
+        final dsl = new OutputDsl()
         final cl = (Closure)closure.clone()
         cl.setDelegate(dsl)
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)

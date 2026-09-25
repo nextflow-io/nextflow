@@ -23,8 +23,6 @@ import groovy.util.logging.Slf4j
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.Bolts
-import nextflow.script.dsl.Types
-import nextflow.util.TypeHelper
 /**
  * Implements the DSL for defining workflow params
  *
@@ -34,14 +32,11 @@ import nextflow.util.TypeHelper
 @CompileStatic
 class ParamsDsl {
 
-    private BaseScript owner
-
     private Class clazz
 
     private Map<String,Param> declarations = [:]
 
-    ParamsDsl(BaseScript owner, Class clazz) {
-        this.owner = owner
+    ParamsDsl(Class clazz) {
         this.clazz = clazz
     }
 
@@ -54,13 +49,7 @@ class ParamsDsl {
 
     Map<String,Param> getDeclarations() { declarations }
 
-    /**
-     * Resolve the declared params against the command line and config,
-     * and return them.
-     *
-     * @param session
-     */
-    ScriptBinding.ParamsMap apply(Session session) {
+    void apply(Session session) {
         final cliParams = session.cliParams ?: [:]
         final configParams = session.configParams ?: [:]
 
@@ -102,17 +91,8 @@ class ParamsDsl {
             if( !scriptPath )
                 continue
             final script = ScriptMeta.getScriptByPath(scriptPath)
-            // a script that declares its own params block resolves its params
-            // independently -- a pipeline included by this script receives its
-            // params from the pipeline call, not from the calling pipeline
-            if( !script.is(owner) && script.getParamDeclarations() )
-                continue
             script.binding.setParams(params, true)
         }
-
-        // the resolved params of the owner script also include any config
-        // param that the script does not declare
-        return owner.binding.getParams()
     }
 
 }
