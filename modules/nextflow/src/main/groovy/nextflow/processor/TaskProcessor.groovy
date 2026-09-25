@@ -77,6 +77,7 @@ import nextflow.script.ProcessConfigV2
 import nextflow.script.ScriptMeta
 import nextflow.script.ScriptType
 import nextflow.script.bundle.ResourcesBundle
+import nextflow.script.dsl.Nullable
 import nextflow.script.dsl.Types
 import nextflow.script.params.DefaultOutParam
 import nextflow.script.params.EachInParam
@@ -1826,17 +1827,32 @@ class TaskProcessor {
 
     @CompileStatic
     private void assignTaskInput(TaskRun task, ProcessInput param, Object value, int index) {
-        if( value == null && !param.optional ) {
-            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] input at index ${index} cannot be null -- append `?` to the type annotation to mark it as nullable")
-        }
-        if( value != null ) {
-            final expectedType = param.type
-            final actualType = value.getClass()
-            if( expectedType != null && !isAssignableFrom(expectedType, actualType) )
-                log.warn "[${safeTaskName(task)}] invalid argument type at index ${index} -- expected a ${Types.getName(expectedType)} but got a ${Types.getName(actualType)}"
-        }
+        checkTaskInput(task, param.type, param.optional, value, index, '')
         task.context.put(param.getName(), value)
         task.setInput(param, value)
+    }
+
+    @CompileStatic
+    private void checkTaskInput(TaskRun task, Class expectedType, boolean optional, Object value, int index, String field) {
+        final location = field ? "input field `${field}` at index ${index}" : "input at index ${index}"
+        if( value == null && !optional ) {
+            throw new ProcessUnrecoverableException("[${safeTaskName(task)}] ${location} cannot be null -- append `?` to the type annotation to mark it as nullable")
+        }
+        if( value == null || expectedType == null )
+            return
+        final actualType = value.getClass()
+        if( !isAssignableFrom(expectedType, actualType) )
+            log.warn "[${safeTaskName(task)}] invalid argument type for ${location} -- expected a ${Types.getName(expectedType)} but got a ${Types.getName(actualType)}"
+        // record types are not validated by `nextflow run`, so check the fields of named record types here
+        if( expectedType != Record.class && Record.class.isAssignableFrom(expectedType) && value instanceof Map ) {
+            final record = value as Map
+            for( final fn : expectedType.getDeclaredFields() ) {
+                if( fn.isSynthetic() )
+                    continue
+                final name = field ? "${field}.${fn.getName()}".toString() : fn.getName()
+                checkTaskInput(task, fn.getType(), fn.isAnnotationPresent(Nullable.class), record[fn.getName()], index, name)
+            }
+        }
     }
 
     private static boolean isAssignableFrom(Class targetType, Class sourceType) {
