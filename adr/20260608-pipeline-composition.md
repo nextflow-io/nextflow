@@ -332,7 +332,7 @@ output {
 
 Notes:
 
-- **The handoff is a channel, not a file.** rnaseq declares its samplesheet input as `Channel<Sample>` instead of `Path`, so that it can be executed directly from a CSV samplesheet or called by a meta-pipeline with a live channel. This new behavior is described in the [Workflow modules ADR](20260608-workflow-modules.md). It allows rnaseq to begin aligning each sample as soon as it is emitted by fetchngs, whereas a pipeline chain would block until fetchngs finished completely.
+- **The handoff is a channel, not a file.** rnaseq declares its samplesheet input as `Channel<Sample>` instead of `Path`, so that it can be executed directly from a CSV samplesheet or called by a meta-pipeline with a live channel. When rnaseq is launched directly, the `Channel<Sample>` param is loaded from the samplesheet given on the command line. It allows rnaseq to begin aligning each sample as soon as it is emitted by fetchngs, whereas a pipeline chain would block until fetchngs finished completely.
 
 - **Params and outputs are replicated, not inherited.** `--input` and `--strandedness` are declared in the meta-pipeline's own `params` block and passed explicitly into the core workflows. Similarly, any outputs must be declared as such in the meta-pipeline's `output` block. The included pipelines do not contribute any of their own params, entry workflows, or output blocks.
 

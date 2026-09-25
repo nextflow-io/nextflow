@@ -113,7 +113,7 @@ include { bye as goodbye } from './some/module'
 
 <AddedInVersion version="26.10" />
 
-The `workflow` name refers to the entire pipeline defined by the included script, i.e., its params block, entry workflow, and output block. The `params` and `output` names refer to the params block and output block as record types and must be given an alias:
+The `workflow` name refers to the entire pipeline defined by the included script, i.e., its params block, entry workflow, and output block. The `params` and `output` names refer to the params block and output block as record types. Each of these names must be given an alias:
 
 ```nextflow
 include {
