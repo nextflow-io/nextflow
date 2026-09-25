@@ -13,7 +13,7 @@ include { workflow as NFCORE_FETCHNGS } from './pipelines/nf-core/fetchngs'
 
 workflow {
     main:
-    fetchngs = NFCORE_FETCHNGS( ids: params.fetchngs )
+    fetchngs = NFCORE_FETCHNGS( ids: file('data/ids.txt') )
 }
 ```
 

@@ -131,6 +131,27 @@ class PipelineTypeCheckingTest extends Specification {
             ''') == [ 'Param `aligner` expects a String but received a Integer' ]
     }
 
+    def 'should treat the fields of an included params record as nullable' () {
+        expect:
+        check('''\
+            include { params as RnaseqParams } from './rnaseq.nf'
+
+            workflow {
+                main:
+                SUMMARY( record(aligner: 'hisat2') )
+                def p = record(aligner: 'hisat2') as RnaseqParams
+            }
+
+            workflow SUMMARY {
+                take:
+                p: RnaseqParams
+
+                main:
+                p.aligner
+            }
+            ''') == []
+    }
+
     def 'should wrap non-channel outputs in a Value' () {
         expect:
         check('''\

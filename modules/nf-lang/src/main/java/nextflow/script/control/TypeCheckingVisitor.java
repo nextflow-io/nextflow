@@ -159,21 +159,36 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
     // script declarations
 
     /**
-     * The output record type of an included pipeline matches the record
-     * returned by a pipeline call, in which each output is a `Channel` or
-     * wrapped in a `Value`. The field types are wrapped here rather than when
-     * the include is resolved, because the included types are resolved by now.
+     * The params record type of an included pipeline is partial, so each
+     * field is nullable. The output record type matches the record returned
+     * by a pipeline call, in which each output is a `Channel` or wrapped in
+     * a `Value`. The field types are adjusted here rather than when the
+     * include is resolved, because the included types are resolved by now.
      */
     @Override
     public void visitInclude(IncludeNode node) {
         for( var entry : node.entries ) {
             if( !(entry.getTarget() instanceof ClassNode cn) )
                 continue;
-            if( !(ResolveIncludeVisitor.getPipelineBlock(cn) instanceof OutputBlockNode) )
-                continue;
-            for( var fn : cn.getFields() )
-                fn.setType(workflowEmitType(fn.getType()));
+            var block = ResolveIncludeVisitor.getPipelineBlock(cn);
+            if( block instanceof ParamBlockNode ) {
+                for( var fn : cn.getFields() )
+                    fn.setType(nullableType(fn.getType()));
+            }
+            else if( block instanceof OutputBlockNode ) {
+                for( var fn : cn.getFields() )
+                    fn.setType(workflowEmitType(fn.getType()));
+            }
         }
+    }
+
+    private static ClassNode nullableType(ClassNode type) {
+        if( isNullable(type) )
+            return type;
+        var result = type.getPlainNodeReference();
+        result.setGenericsTypes(type.getGenericsTypes());
+        result.putNodeMetaData(ASTNodeMarker.NULLABLE, Boolean.TRUE);
+        return result;
     }
 
     @Override
