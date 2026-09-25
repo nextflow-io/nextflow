@@ -42,7 +42,7 @@ abstract class BindableDef extends ComponentDef {
         final fqName = prefix ? prefix+SCOPE_SEP+name : name
         if( this instanceof ProcessDef && !invocations.add(fqName) ) {
             log.debug "Bindable invocations=$invocations"
-            final msg = "Process '$name' has been already used -- If you need to reuse the same component, include it with a different name or include it in a different workflow context"
+            final msg = "Process '$fqName' was called twice -- include it with a different alias or call it in a different workflow"
             throw new DuplicateProcessInvocation(msg)
         }
 

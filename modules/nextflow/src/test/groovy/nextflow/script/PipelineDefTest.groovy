@@ -617,7 +617,7 @@ class PipelineDefTest extends Dsl2Spec {
         runScript(script)
         then:
         def e = thrown(Exception)
-        e.message.contains("has been already used")
+        e.message.contains("Process 'GREET:SAY' was called twice")
     }
 
     def 'should support including the same params block from two scripts' () {
