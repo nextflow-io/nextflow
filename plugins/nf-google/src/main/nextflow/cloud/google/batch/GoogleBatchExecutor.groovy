@@ -240,6 +240,15 @@ class GoogleBatchExecutor extends Executor implements ExtensionPoint, TaskArrayE
         }
     }
 
+    /**
+     * @return {@code true} when the given job has been deleted by this executor
+     */
+    boolean isJobDeleted(String jobId) {
+        synchronized (deletedJobs) {
+            return deletedJobs.contains(jobId)
+        }
+    }
+
     @Override
     String getArrayIndexName() {
         return 'BATCH_TASK_INDEX'
