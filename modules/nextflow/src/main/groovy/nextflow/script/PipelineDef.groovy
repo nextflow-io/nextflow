@@ -89,12 +89,9 @@ class PipelineDef extends BindableDef {
         final params = new LinkedHashMap<String,Object>(declarations.size())
         for( final decl : declarations.values() ) {
             final name = decl.name
-            // a null argument is treated as absent, so that the default
-            // value of the corresponding param is applied
-            final value =
-                given.get(name) != null ? resolveArgument(decl, given.get(name)) :
-                decl.defaultValue != null ? ParamsHelper.resolveParam(decl, decl.defaultValue, false) :
-                ParamsHelper.emptyRecord(decl)
+            final value = given.containsKey(name)
+                ? resolveArgument(decl, given.get(name))
+                : ParamsHelper.resolveDefault(decl)
 
             if( value == null && !decl.optional )
                 throw new ScriptRuntimeException("Parameter `${name}` of pipeline `${this.name}` is required but no value was provided")
@@ -119,6 +116,8 @@ class PipelineDef extends BindableDef {
     }
 
     private Object resolveArgument(Param decl, Object value) {
+        if( value == null )
+            return null
         // a channel is passed through as-is, so that the pipeline
         // participates in the calling workflow's dataflow graph
         if( isDataflow(value) ) {

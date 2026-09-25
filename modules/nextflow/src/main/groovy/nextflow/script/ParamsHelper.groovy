@@ -347,7 +347,8 @@ class ParamsHelper {
     }
 
     /**
-     * The implicit value of a param for which no value was provided.
+     * The value of a param for which no value was provided: its
+     * default value, if any, otherwise an empty record or null.
      *
      * A param whose type is a record with no required fields -- e.g. the
      * params block of an included pipeline -- defaults to an empty record,
@@ -358,7 +359,9 @@ class ParamsHelper {
      *
      * @param decl
      */
-    static Object emptyRecord(Param decl) {
+    static Object resolveDefault(Param decl) {
+        if( decl.defaultValue != null )
+            return resolveParam(decl, decl.defaultValue, false)
         final type = TypeHelper.getRawType(decl.type)
         return Record.class.isAssignableFrom(type) && TypeHelper.isPartialRecordType(type)
             ? new RecordMap([:])

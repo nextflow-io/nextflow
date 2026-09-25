@@ -186,6 +186,7 @@ class PipelineDefTest extends Dsl2Spec {
         where:
         CALL                                                                    | ERROR
         "GREET( greeting: 'Hola' )"                                             | 'Parameter `names` of pipeline `GREET` is required but no value was provided'
+        "GREET( names: channel.of('World'), greeting: null )"                   | 'Parameter `greeting` of pipeline `GREET` is required but no value was provided'
         "GREET( names: channel.of('World'), foo: 'bar' )"                       | 'Pipeline `GREET` does not declare a parameter named `foo`'
         "GREET( names: channel.of('World'), foo: null )"                        | 'Pipeline `GREET` does not declare a parameter named `foo`'
         "GREET( names: channel.of('World'), greeting: channel.value('Hola') )"  | 'Parameter `greeting` of pipeline `GREET` with type String cannot be assigned to a dataflow value -- declare the param as a Channel or Value to accept it'

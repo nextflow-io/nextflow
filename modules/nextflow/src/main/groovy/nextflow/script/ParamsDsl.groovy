@@ -72,11 +72,8 @@ class ParamsDsl {
             else if( configParams.containsKey(name) ) {
                 params[name] = ParamsHelper.resolveParam(decl, configParams[name], false)
             }
-            else if( decl.defaultValue != null ) {
-                params[name] = ParamsHelper.resolveParam(decl, decl.defaultValue, false)
-            }
             else {
-                params[name] = ParamsHelper.emptyRecord(decl)
+                params[name] = ParamsHelper.resolveDefault(decl)
             }
 
             if( params[name] == null && !decl.optional ) {

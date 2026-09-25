@@ -147,7 +147,7 @@ class WorkflowEntryHandler {
             final value =
                 cliParams.containsKey(name) ? ParamsHelper.resolveParam(decl, cliParams.get(name), true) :
                 configParams.containsKey(name) ? ParamsHelper.resolveParam(decl, configParams.get(name), false) :
-                null
+                ParamsHelper.resolveDefault(decl)
 
             if( value == null && !decl.optional ) {
                 throw new ScriptRuntimeException("Parameter `--${name}` is required but no value was provided")
