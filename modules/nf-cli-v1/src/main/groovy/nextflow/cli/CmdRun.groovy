@@ -342,6 +342,14 @@ class CmdRun extends CmdBase implements HubAware {
 
         // -- load command line params
         final baseDir = scriptFile.parent
+
+        // -- arm the plugins lock file (looked up in the pipeline project directory, so it can be
+        //    committed along with the pipeline code) before anything that may start a plugin, e.g.
+        //    parsing a params file located on a remote store starts the corresponding filesystem
+        //    plugin. Plugins started earlier to resolve the pipeline itself (the SCM provider)
+        //    cannot be covered here, since locating the project dir is what starts them.
+        Plugins.setLockFileDir(baseDir)
+
         final cliParams = parsedParams(ConfigBuilder.getConfigVars(baseDir, null))
 
         /*
