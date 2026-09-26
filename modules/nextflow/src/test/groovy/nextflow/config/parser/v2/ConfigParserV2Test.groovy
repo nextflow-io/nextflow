@@ -445,6 +445,26 @@ class ConfigParserV2Test extends Specification {
         slurper.getDeclaredParams() == [a: 3, b: 2]
     }
 
+    def 'should apply nested CLI params to nested config params' () {
+        given:
+        def cliParams = [rnaseq: [aligner: 'hisat2'], qc: [limit: '5']]
+        def text = '''
+        params {
+            rnaseq.aligner = 'star'
+            rnaseq.fasta = 'genome.fa'
+            qc = [limit: 10, skip: false]
+        }
+        '''
+
+        when:
+        def slurper = new ConfigParserV2().setParams(cliParams)
+        def config = slurper.parse(text)
+        then:
+        config.params.rnaseq == [aligner: 'hisat2', fasta: 'genome.fa']
+        config.params.qc == [limit: '5', skip: false]
+        slurper.getDeclaredParams() == [rnaseq: [aligner: 'hisat2', fasta: 'genome.fa'], qc: [limit: '5', skip: false]]
+    }
+
     def 'should ignore config includes when specified' () {
         given:
         def text = '''

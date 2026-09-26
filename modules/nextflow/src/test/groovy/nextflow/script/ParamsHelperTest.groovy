@@ -19,6 +19,7 @@ package nextflow.script
 import java.nio.file.Files
 import java.nio.file.Path
 
+import nextflow.exception.ScriptRuntimeException
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import nextflow.util.RecordMap
@@ -175,6 +176,60 @@ class ParamsHelperTest extends Specification {
         String  | Integer    | false
         SampleRec | RecordMap  | true
         SampleRec | Map        | false
+    }
+
+    def 'should load records from a samplesheet'() {
+        given:
+        def file = Files.createTempFile('test', ".${EXT}")
+        file.text = TEXT
+
+        when:
+        def result = ParamsHelper.loadFromFile('samples', file.toAbsolutePath())
+
+        then:
+        result == EXPECTED
+
+        cleanup:
+        file?.delete()
+
+        where:
+        EXT    | TEXT                                             | EXPECTED
+        // CSV has no types, so every value is a string
+        'csv'  | 'id,name\n1,sample1\n2,sample2\n'                | [[id: '1', name: 'sample1'], [id: '2', name: 'sample2']]
+        'json' | '[{"id":1,"name":"s1"},{"id":2,"name":"s2"}]'    | [[id: 1, name: 's1'], [id: 2, name: 's2']]
+        'yml'  | '- id: 1\n  name: s1\n- id: 2\n  name: s2\n'     | [[id: 1, name: 's1'], [id: 2, name: 's2']]
+    }
+
+    def 'should throw for unrecognized samplesheet format'() {
+        given:
+        def txtFile = Files.createTempFile('test', '.txt')
+        txtFile.text = 'some text'
+
+        when:
+        ParamsHelper.loadFromFile('items', txtFile.toAbsolutePath())
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains("Unrecognized file format 'txt'")
+
+        cleanup:
+        txtFile?.delete()
+    }
+
+    def 'should throw for a JSON file whose top level is not a list'() {
+        given:
+        def jsonFile = Files.createTempFile('test', '.json')
+        jsonFile.text = '{"key":"value"}'   // object, not array
+
+        when:
+        ParamsHelper.loadFromFile('samples', jsonFile.toAbsolutePath())
+
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message.contains('must contain a list of records')
+
+        cleanup:
+        jsonFile?.delete()
     }
 
     static class SampleRec implements nextflow.script.types.Record {

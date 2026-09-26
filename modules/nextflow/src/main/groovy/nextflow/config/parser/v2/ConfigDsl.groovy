@@ -138,23 +138,40 @@ class ConfigDsl extends Script {
     /**
      * Assign a value to a config option.
      *
-     * When assigning a param, if the param was specified
-     * on the command line, then the command line value takes
-     * precedence. CLI params are applied here in order to ensure
-     * that if the param is referenced later in the config file,
-     * the command line value is used.
+     * When assigning a param (e.g. `params.input` or `params.rnaseq.fasta`),
+     * the corresponding command line value takes precedence. CLI params are
+     * applied here in order to ensure that if the param is referenced later
+     * in the config file, the command line value is used.
      *
      * @param names
      * @param value
      */
     void assign(List<String> names, Object value) {
-        if( names.size() == 2 && names.first() == 'params' ) {
-            final name = names.last()
-            declareParam(name, value)
-            if( cliParams.containsKey(name) )
-                value = asDeclaredType(cliParams[name], value)
-        }
+        final isParam = names.size() > 1 && names.first() == 'params'
+        if( isParam )
+            value = withCliOverride(names.tail(), value)
         navigate(names.init()).put(names.last(), value)
+        if( isParam )
+            declareParam(names[1], (target.params as Map).get(names[1]))
+    }
+
+    /**
+     * Apply the command line value of a param, if any, to its config value.
+     * A map value is merged with the corresponding command line values.
+     *
+     * @param path
+     * @param value
+     */
+    private Object withCliOverride(List<String> path, Object value) {
+        Object cliValue = cliParams
+        for( final name : path ) {
+            if( cliValue !instanceof Map || !((Map)cliValue).containsKey(name) )
+                return value
+            cliValue = ((Map)cliValue).get(name)
+        }
+        return cliValue instanceof Map && value instanceof Map
+            ? Bolts.deepMerge((Map)value, (Map)cliValue)
+            : asDeclaredType(cliValue, value)
     }
 
     /**

@@ -19,8 +19,10 @@ import java.lang.reflect.Modifier;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -29,7 +31,10 @@ import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.FeatureFlagNode;
 import nextflow.script.ast.FunctionNode;
+import nextflow.script.ast.IncludeNode;
+import nextflow.script.ast.OutputBlockNode;
 import nextflow.script.ast.OutputNode;
+import nextflow.script.ast.ParamBlockNode;
 import nextflow.script.ast.ProcessNode;
 import nextflow.script.ast.ProcessNodeV2;
 import nextflow.script.ast.RecordNode;
@@ -37,6 +42,7 @@ import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.WorkflowNode;
 import nextflow.script.dsl.Namespace;
+import nextflow.script.dsl.Nullable;
 import nextflow.script.dsl.Ops;
 import nextflow.script.types.Channel;
 import nextflow.script.types.ParamsMap;
@@ -134,6 +140,8 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             return;
         for( var featureFlag : sn.getFeatureFlags() )
             visitFeatureFlag(featureFlag);
+        for( var includeNode : sn.getIncludes() )
+            visitInclude(includeNode);
         if( sn.getParams() != null )
             visitParams(sn.getParams());
         for( var functionNode : sn.getFunctions() )
@@ -149,6 +157,31 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
     }
 
     // script declarations
+
+    /**
+     * The params record type of an included pipeline is partial, so each
+     * field is nullable.
+     */
+    @Override
+    public void visitInclude(IncludeNode node) {
+        for( var entry : node.entries ) {
+            if( !(entry.getTarget() instanceof ClassNode cn) )
+                continue;
+            if( ScriptNode.getParamsBlock(cn) == null )
+                continue;
+            for( var fn : cn.getFields() )
+                fn.setType(nullableType(fn.getType()));
+        }
+    }
+
+    private static ClassNode nullableType(ClassNode type) {
+        if( isNullable(type) )
+            return type;
+        var result = type.getPlainNodeReference();
+        result.setGenericsTypes(type.getGenericsTypes());
+        result.putNodeMetaData(ASTNodeMarker.NULLABLE, Boolean.TRUE);
+        return result;
+    }
 
     @Override
     public void visitFeatureFlag(FeatureFlagNode node) {
@@ -533,6 +566,10 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             }
         }
 
+        // resolve params and outputs for pipeline calls
+        if( checkPipelineCall(node) )
+            return;
+
         // resolve dataflow inputs and outputs for process calls
         if( checkProcessCall(node) )
             return;
@@ -779,7 +816,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             var argType = getType(value);
             if( !Types.isAssignableFrom(namedParam.getType(), argType) )
                 addError("Named param `" + name + "` expects a " + Types.getName(namedParam.getType()) + " but received a " + Types.getName(argType), value);
-            entry.putNodeMetaData("_NAMED_PARAM", namedParam);
+            entry.putNodeMetaData(ASTNodeMarker.NAMED_PARAM, namedParam);
         }
     }
 
@@ -803,6 +840,91 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
             var samParameterTypes = resolveClosureParameterTypes(source, target, resolvedPlaceholders);
             argument.visit(this);
         }
+    }
+
+    /**
+     * Check a call to an included pipeline against its params block, and
+     * resolve the return type from its output block.
+     *
+     * A pipeline declares its inputs with a params block rather than a `take:`
+     * section, so it is called with a single record (or no arguments). Each
+     * field must be assignable to the declared param type, like a workflow input.
+     *
+     * The return type follows the same rules as a workflow call, with the
+     * declared outputs as the emits.
+     *
+     * @param node
+     */
+    private boolean checkPipelineCall(MethodCallExpression node) {
+        var mn = (MethodNode) node.getNodeMetaData(ASTNodeMarker.METHOD_TARGET);
+        var pipeline = mn instanceof WorkflowNode wn ? ScriptNode.getPipeline(wn) : null;
+        if( pipeline == null )
+            return false;
+        node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, pipelineOutputType(pipeline.getOutputs()));
+
+        var name = node.getMethodAsString();
+        var params = pipeline.getParams();
+        var arguments = asMethodCallArguments(node);
+        if( params == null ) {
+            if( !arguments.isEmpty() )
+                addError("Pipeline `" + name + "` does not declare any params, so it should be called with no arguments", node);
+            return true;
+        }
+        if( arguments.size() != 1 ) {
+            addError("Pipeline `" + name + "` should be called with a record", node);
+            return true;
+        }
+        var argument = arguments.get(0);
+        var argType = getType(argument);
+        if( !Types.isRecordType(argType) ) {
+            if( !ClassHelper.isDynamicTyped(argType) )
+                addError("Pipeline `" + name + "` should be called with a record, but received a " + Types.getName(argType), argument);
+            return true;
+        }
+        if( argType.getFields().isEmpty() )
+            return true;
+        checkPipelineParams(node, argument, params, argType.getFields());
+        return true;
+    }
+
+    private void checkPipelineParams(MethodCallExpression node, ASTNode argument, ParamBlockNode params, List<FieldNode> fields) {
+        var declarations = params.declarations;
+        var byName = Arrays.stream(declarations).collect(Collectors.toMap(Parameter::getName, p -> p, (a, b) -> a));
+        var provided = new HashSet<String>();
+
+        for( var fn : fields ) {
+            var declaration = byName.get(fn.getName());
+            if( declaration == null ) {
+                addError("Param `" + fn.getName() + "` is not defined by pipeline `" + node.getMethodAsString() + "`", argument);
+                continue;
+            }
+            provided.add(fn.getName());
+            var paramType = declaration.getType();
+            if( !Types.isAssignableFrom(paramType, fn.getType()) )
+                addError("Param `" + fn.getName() + "` expects a " + Types.getName(paramType) + " but received a " + Types.getName(fn.getType()), argument);
+        }
+
+        var missing = Arrays.stream(declarations)
+            .filter(p -> !provided.contains(p.getName()))
+            .filter(p -> !p.hasInitialExpression() && !isNullable(p.getType()) && !isPartialRecordType(p.getType()))
+            .map(Parameter::getName)
+            .toList();
+        if( !missing.isEmpty() )
+            addError("Pipeline `" + node.getMethodAsString() + "` requires the following params: " + String.join(", ", missing), node);
+    }
+
+    private static ClassNode pipelineOutputType(OutputBlockNode outputs) {
+        if( outputs == null )
+            return ClassHelper.VOID_TYPE;
+        if( outputs.declarations.size() == 1 )
+            return workflowEmitType(outputs.declarations.get(0).getType());
+        var cn = new ClassNode(Record.class);
+        for( var declaration : outputs.declarations ) {
+            var fn = new FieldNode(declaration.getName(), Modifier.PUBLIC, workflowEmitType(declaration.getType()), cn, null);
+            fn.setDeclaringClass(cn);
+            cn.addField(fn);
+        }
+        return cn;
     }
 
     /**
@@ -1234,15 +1356,24 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         return cn == null || cn.getNodeMetaData(ASTNodeMarker.NULLABLE) != null;
     }
 
+    private static final ClassNode NULLABLE_ANNOTATION = ClassHelper.makeCached(Nullable.class);
+
+    private static boolean isPartialRecordType(ClassNode cn) {
+        return cn.redirect() instanceof RecordNode rn && rn.getFields().stream().allMatch(fn ->
+            isNullable(fn.getType()) || !fn.getAnnotations(NULLABLE_ANNOTATION).isEmpty()
+        );
+    }
+
     @Override
     public void visitClosureExpression(ClosureExpression node) {
         super.visitClosureExpression(node);
 
         // resolve return type and check against declared return type. A closure
         // always returns its last expression, and a void signature discards it,
-        // so there is nothing to check against.
+        // so there is nothing to check against. Likewise, any value can be
+        // coerced to a boolean, so a predicate can return any type.
         var returnType = (ClassNode) node.getNodeMetaData(ASTNodeMarker.INFERRED_RETURN_TYPE);
-        if( returnType != null && !ClassHelper.VOID_TYPE.equals(returnType) ) {
+        if( returnType != null && !returnType.equals(ClassHelper.VOID_TYPE) && !Types.isEqual(returnType, ClassHelper.Boolean_TYPE) ) {
             var visitor = new ReturnStatementVisitor(sourceUnit, errorCollector);
             visitor.visit(returnType, node.getCode());
 

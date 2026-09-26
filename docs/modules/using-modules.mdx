@@ -134,11 +134,7 @@ See [module run][cli-module-run] for the full command reference.
 
 Parameters are inferred from the module's declared inputs: the `input:` section for a process, or the `take:` section for a named workflow.
 
-Type conversions are handled the same way as [typed parameters][typed-params]. Workflow modules use the following additional rules for dataflow types:
-
-- A `Channel<E>` input accepts a samplesheet path, which Nextflow loads as a channel of records. The samplesheet file can be CSV, JSON, or YAML. The element type must be `Map`, `Record`, or a record type. Each row is validated against and converted to the declared type.
-
-- A `Value<V>` input accepts a value of type `V`, which Nextflow wraps in a value channel.
+Type conversions are handled the same way as [typed parameters][typed-params], including the rules for dataflow types (`Channel` and `Value`).
 
 Consider the following workflow:
 

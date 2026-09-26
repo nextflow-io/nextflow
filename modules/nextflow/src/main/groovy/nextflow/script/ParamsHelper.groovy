@@ -16,12 +16,26 @@
 
 package nextflow.script
 
+import java.lang.reflect.ParameterizedType
+import java.lang.reflect.Type
 import java.nio.file.Path
+import java.util.function.BiFunction
 
+import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
+import groovy.yaml.YamlSlurper
+import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.dataflow.ChannelImpl
+import nextflow.dataflow.ChannelNamespace
+import nextflow.dataflow.ValueImpl
 import nextflow.exception.ScriptRuntimeException
+import nextflow.extension.Bolts
+import nextflow.script.dsl.Nullable
 import nextflow.script.dsl.Types
+import nextflow.script.types.Channel
 import nextflow.script.types.Record
+import nextflow.script.types.Value
+import nextflow.splitter.CsvSplitter
 import nextflow.util.Duration
 import nextflow.util.MemoryUnit
 import nextflow.util.RecordMap
@@ -38,6 +52,240 @@ import org.codehaus.groovy.runtime.typehandling.GroovyCastException
  */
 @CompileStatic
 class ParamsHelper {
+
+    /**
+     * Resolve declared params from the command line and config.
+     *
+     * A nested param given on the command line (e.g. `--rnaseq.aligner`)
+     * overrides only the fields it names, keeping the rest of the config value.
+     *
+     * @param declarations
+     * @param cliParams
+     * @param configParams
+     */
+    static Map<String,Object> resolveParams(Collection<Param> declarations, Map cliParams, Map configParams) {
+        final names = declarations*.name as Set<String>
+        for( final name : cliParams.keySet() ) {
+            if( name !in names && !configParams.containsKey(name) )
+                throw new ScriptRuntimeException("Parameter `${name}` was specified on the command line or params file but is not declared in the script or config")
+        }
+
+        final given = new HashMap<String,Object>()
+        for( final name : names ) {
+            if( cliParams.containsKey(name) ) {
+                final value = cliParams[name] instanceof Map && configParams[name] instanceof Map
+                    ? Bolts.deepMerge((Map)configParams[name], (Map)cliParams[name])
+                    : cliParams[name]
+                given.put(name, value)
+            }
+            else if( configParams.containsKey(name) ) {
+                given.put(name, configParams[name])
+            }
+        }
+
+        return resolveParams(declarations, given, '') { Param decl, Object value ->
+            resolveParam(decl, value, cliParams.containsKey(decl.name))
+        }
+    }
+
+    /**
+     * Resolve declared params against the given values. A param
+     * with no given value is given its default value.
+     *
+     * @param declarations
+     * @param given
+     * @param context appended to the param name in error messages
+     * @param resolve resolves a given value against its declared param
+     */
+    static Map<String,Object> resolveParams(Collection<Param> declarations, Map<String,?> given, String context, BiFunction<Param,Object,Object> resolve) {
+        final result = new LinkedHashMap<String,Object>(declarations.size())
+        for( final decl : declarations ) {
+            final name = decl.name
+            final value = given.containsKey(name)
+                ? resolve.apply(decl, given.get(name))
+                : resolveDefault(decl)
+
+            if( value == null && !decl.optional )
+                throw new ScriptRuntimeException("Parameter `${name}`${context} is required but no value was provided")
+
+            result.put(name, value)
+        }
+        return result
+    }
+
+    /**
+     * Resolve the params given to the entry workflow of a pipeline against
+     * the params block of the pipeline. Called by the entry workflow (see
+     * WorkflowToGroovyVisitor).
+     *
+     * The session params of a top-level run are already resolved by the
+     * params block, so they are returned as-is.
+     *
+     * @param script the pipeline script
+     * @param value the params given to the entry workflow
+     */
+    static Map resolveArguments(BaseScript script, Object value) {
+        if( value instanceof ScriptBinding.ParamsMap )
+            return (Map)value
+
+        final pipeline = ExecutionStack.workflow().name
+        if( value !instanceof RecordMap )
+            throw new ScriptRuntimeException("Pipeline `${pipeline}` should be called with a record")
+
+        final given = (RecordMap)value
+        final declarations = script.getParamDeclarations()
+        for( final name : given.keySet() ) {
+            if( !declarations.containsKey(name) )
+                throw new ScriptRuntimeException("Pipeline `${pipeline}` does not declare a parameter named `${name}`")
+        }
+
+        final params = resolveParams(declarations.values(), given, " of pipeline `${pipeline}`") { Param decl, Object v ->
+            resolveArgument(decl, v, script.isTypingEnabled())
+        }
+        return new RecordMap(params)
+    }
+
+    private static Object resolveArgument(Param decl, Object value, boolean typingEnabled) {
+        return isDataflow(value)
+            ? DataflowTypeHelper.normalize(value, typingEnabled)
+            : resolveParam(decl, value, false)
+    }
+
+    private static boolean isDataflow(Object value) {
+        return value instanceof ChannelImpl
+            || value instanceof ValueImpl
+            || value instanceof DataflowWriteChannel
+            || value instanceof ChannelOut
+    }
+
+    /**
+     * Resolve a param value against its declared type.
+     *
+     * A {@code Channel<E>} param is loaded from a samplesheet file, with each
+     * record converted to the element type. A {@code Value<V>} param is
+     * converted to {@code V} and wrapped in a dataflow value. Any other param
+     * is converted directly to the declared type.
+     *
+     * @param decl
+     * @param value
+     * @param fromCli whether the value came from the command line (and is
+     *                therefore a string that may need to be parsed)
+     */
+    static Object resolveParam(Param decl, Object value, boolean fromCli) {
+        if( value == null )
+            return null
+
+        final rawType = TypeHelper.getRawType(decl.type)
+
+        if( rawType == Channel )
+            return ChannelNamespace.fromList(loadChannelInput(decl, value))
+
+        if( rawType == Value )
+            return ChannelNamespace.value(resolveParam(elementDecl(decl), value, fromCli))
+
+        if( TypeHelper.isRecordType(decl.type) && value instanceof Map )
+            return resolveRecord(decl, (Map)value, fromCli)
+
+        final result = fromCli
+            ? resolveFromCli(decl, value)
+            : resolveFromCode(decl, value)
+        checkAssignable(decl, result)
+        return result
+    }
+
+    private static RecordMap resolveRecord(Param decl, Map value, boolean fromCli) {
+        final type = (Class)decl.type
+        final result = new LinkedHashMap<String,Object>(value)
+        for( final field : type.getDeclaredFields() ) {
+            if( field.isSynthetic() )
+                continue
+            final name = field.getName()
+            final optional = field.isAnnotationPresent(Nullable)
+            final fieldValue = value.get(name)
+            if( fieldValue == null ) {
+                if( !optional )
+                    throw new ScriptRuntimeException("Parameter `${decl.name}` with type ${type.getSimpleName()} is missing required field `${name}`")
+                continue
+            }
+            final fieldDecl = new Param("${decl.name}.${name}", field.getGenericType(), optional, null)
+            result.put(name, resolveParam(fieldDecl, fieldValue, fromCli))
+        }
+        return new RecordMap(result)
+    }
+
+    /**
+     * Load a channel param from a samplesheet file, converting each record
+     * to the declared element type.
+     *
+     * @param decl
+     * @param value
+     */
+    private static List loadChannelInput(Param decl, Object value) {
+        if( value !instanceof CharSequence && value !instanceof Path )
+            throw new ScriptRuntimeException("Parameter `${decl.name}` with type ${Types.getName(decl.type)} should be a samplesheet file, but received: ${value} [${Types.getName(value.getClass())}]")
+
+        final path = value instanceof Path
+            ? (Path)value
+            : TypeHelper.asPathType(value.toString())
+        final elementType = elementDecl(decl).type
+        final elementRawType = TypeHelper.getRawType(elementType)
+
+        if( !Map.isAssignableFrom(elementRawType) && !Record.isAssignableFrom(elementRawType) )
+            throw new ScriptRuntimeException("Parameter `${decl.name}` with type ${Types.getName(decl.type)} cannot be loaded from a samplesheet -- the element type should be Map, Record, or a record type")
+
+        return loadFromFile(decl.name, path).collect { el ->
+            try {
+                TypeHelper.asType(el, elementType)
+            }
+            catch( Exception e ) {
+                throw new ScriptRuntimeException("Invalid record in samplesheet '${path}' for parameter `${decl.name}` -- ${e.message}")
+            }
+        }
+    }
+
+    /**
+     * Get the declared param for the element type of a parameterized
+     * type, e.g. {@code Sample} for {@code Channel<Sample>}.
+     *
+     * @param decl
+     */
+    private static Param elementDecl(Param decl) {
+        final elementType = decl.type instanceof ParameterizedType
+            ? ((ParameterizedType)decl.type).getActualTypeArguments()[0]
+            : (Type)Object
+        return new Param(decl.name, elementType, decl.optional, null)
+    }
+
+    /**
+     * Load the contents of a samplesheet file as a list of records.
+     *
+     * Supported formats:
+     * - CSV: header row required, comma-separated
+     * - JSON: must be a top-level array
+     * - YAML / YML: must be a top-level sequence
+     *
+     * @param name the param name (for error messages)
+     * @param file the samplesheet file to load
+     */
+    static List loadFromFile(String name, Path file) {
+        final ext = file.getExtension()
+        final value = switch( ext ) {
+            case 'csv'         -> loadFromCsv(file)
+            case 'json'        -> new JsonSlurper().parse(file)
+            case 'yaml', 'yml' -> new YamlSlurper().parse(file)
+            default -> throw new ScriptRuntimeException("Unrecognized file format '${ext}' for input file '${file}' for parameter `${name}` -- should be CSV, JSON, or YAML")
+        }
+        if( value !instanceof List )
+            throw new ScriptRuntimeException("Input file '${file}' for parameter `${name}` must contain a list of records, but got: ${value.class.simpleName}")
+        return (List)value
+    }
+
+    private static List loadFromCsv(Path file) {
+        final rows = new CsvSplitter().options(header: true, sep: ',').target(file).list()
+        return rows.collect { row ->
+            ((Map)row).collectEntries { k, v -> [ k, v != '' ? v : null ] }
+        }
+    }
 
     /**
      * Resolve a value given on the command line. Command-line values are
@@ -206,6 +454,42 @@ class ParamsHelper {
             final detail = e.message ? " -- ${e.message}" : ''
             throw new ScriptRuntimeException("Parameter `${decl.name}` with type ${Types.getName(decl.type)} cannot be assigned to ${value} [${Types.getName(actualType)}]${detail}")
         }
+    }
+
+    /**
+     * The value of a param for which no value was provided: its
+     * default value, if any, otherwise an empty record or null.
+     *
+     * A param whose type is a record with no required fields -- e.g. the
+     * params block of an included pipeline -- defaults to an empty record,
+     * so that a calling pipeline can supply the pipeline's params by
+     * dataflow instead of requiring the user to provide a value at launch.
+     * Any params that the calling pipeline does not supply either are
+     * reported when the pipeline is called.
+     *
+     * @param decl
+     */
+    static Object resolveDefault(Param decl) {
+        if( decl.defaultValue != null )
+            return resolveParam(decl, decl.defaultValue, false)
+        final type = TypeHelper.getRawType(decl.type)
+        return Record.class.isAssignableFrom(type) && TypeHelper.isPartialRecordType(type)
+            ? new RecordMap([:])
+            : null
+    }
+
+    /**
+     * Check that a resolved value can be assigned to the declared type
+     * of a param.
+     *
+     * @param decl
+     * @param value
+     */
+    private static void checkAssignable(Param decl, Object value) {
+        final expectedType = TypeHelper.getRawType(decl.type)
+        final actualType = value?.getClass()
+        if( actualType != null && !isAssignableFrom(expectedType, actualType) )
+            throw new ScriptRuntimeException("Parameter `${decl.name}` with type ${Types.getName(decl.type)} cannot be assigned to ${value} [${Types.getName(actualType)}]")
     }
 
     static boolean isAssignableFrom(Class target, Class source) {

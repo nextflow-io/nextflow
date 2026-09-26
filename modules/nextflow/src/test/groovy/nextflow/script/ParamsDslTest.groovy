@@ -238,6 +238,45 @@ class ParamsDslTest extends Specification {
         result[2].id == 3
     }
 
+    def 'should load dataflow params from the command line'() {
+        given:
+        def samplesheet = Files.createTempFile('test', '.csv')
+        samplesheet.text = 'id,count\na,1\nb,2\n'
+        def cliParams = [samples: samplesheet.toString(), limit: '5']
+
+        when:
+        def result = runScript(
+            '''\
+            nextflow.enable.types = true
+
+            params {
+                samples: Channel<Sample>
+                limit: Value<Integer>
+            }
+
+            record Sample {
+                id: String
+                count: Integer
+            }
+
+            workflow {
+                params.samples
+                    .map { s -> s.count }
+                    .collect()
+                    .combine(params.limit)
+            }
+            ''',
+            params: cliParams
+        )
+        then:
+        def (counts, limit) = result.val
+        counts.toSorted() == [1, 2]
+        limit == 5
+
+        cleanup:
+        samplesheet?.delete()
+    }
+
     def 'should validate record param from nested map'() {
         when: 'a script is invoked as `nextflow run module.nf --sample.id a --sample.greeting hola`'
         def result = runScript(
@@ -261,6 +300,52 @@ class ParamsDslTest extends Specification {
         result instanceof Record
         result.id == 'a'
         result.greeting == 'hola'
+    }
+
+    def 'should report the field of a record param that cannot be converted'() {
+        when:
+        runScript(
+            '''\
+            params {
+                sample: Sample
+            }
+
+            record Sample {
+                id: String
+                paired: Boolean
+            }
+
+            workflow {
+                params.sample
+            }
+            ''',
+            params: [sample: [id: 'a', paired: 'yes']]
+        )
+        then:
+        def e = thrown(ScriptRuntimeException)
+        e.message == 'Parameter `sample.paired` with type Boolean cannot be assigned to yes [String]'
+
+        when:
+        runScript(
+            '''\
+            params {
+                sample: Sample
+            }
+
+            record Sample {
+                id: String
+                paired: Boolean
+            }
+
+            workflow {
+                params.sample
+            }
+            ''',
+            params: [sample: [paired: 'true']]
+        )
+        then:
+        e = thrown(ScriptRuntimeException)
+        e.message == 'Parameter `sample` with type Sample is missing required field `id`'
     }
 
     def 'should report error for invalid record type'() {

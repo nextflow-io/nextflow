@@ -19,6 +19,7 @@ package nextflow.script
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import groovyx.gpars.dataflow.DataflowVariable
+import groovyx.gpars.dataflow.DataflowWriteChannel
 import nextflow.Session
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.CH
@@ -50,8 +51,7 @@ class OutputDsl {
         declarations[name] = dsl.getOptions()
     }
 
-    void apply(Session session) {
-        final outputs = session.outputs
+    void apply(Session session, Map<String,DataflowWriteChannel> outputs) {
         final defaults = session.config.navigate('workflow.output', Collections.emptyMap()) as Map
 
         // make sure every output was assigned

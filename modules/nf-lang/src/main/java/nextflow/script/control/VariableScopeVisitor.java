@@ -131,7 +131,16 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         for( var entry : node.entries ) {
             if( entry.getTarget() == null )
                 continue;
-            if( entry.getTarget() instanceof ClassNode && entry.alias != null ) {
+            // the parts of an included pipeline must be aliased, whereas other
+            // types cannot be aliased
+            var target = entry.getTarget();
+            var isPipelinePart = target instanceof WorkflowNode wn && wn.isEntry()
+                || target instanceof ClassNode cn && ScriptNode.getParamsBlock(cn) != null;
+            if( isPipelinePart && entry.alias == null ) {
+                vsc.addError("An included pipeline must be aliased, e.g. `" + entry.name + " as MY_PIPELINE`", entry);
+                continue;
+            }
+            if( !isPipelinePart && target instanceof ClassNode && entry.alias != null ) {
                 vsc.addError("Included types cannot be aliased", entry);
                 continue;
             }
@@ -850,11 +859,8 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
         var name = node.getName();
         Variable variable = vsc.findVariableDeclaration(name, node);
         if( variable == null ) {
-            if( "args".equals(name) ) {
-                vsc.addParanoidWarning("The use of `args` outside the entry workflow will not be supported in a future version", node);
-            }
-            else if( "params".equals(name) ) {
-                vsc.addParanoidWarning("The use of `params` outside the entry workflow will not be supported in a future version", node);
+            if( "args".equals(name) || "params".equals(name) ) {
+                vsc.addWarning("The use of `" + name + "` outside the entry workflow is discouraged", name, node);
             }
             else if( isStdinStdout(name) ) {
                 // stdin, stdout can be declared without parentheses

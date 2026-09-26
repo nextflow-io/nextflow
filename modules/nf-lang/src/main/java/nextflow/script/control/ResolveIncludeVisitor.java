@@ -15,19 +15,28 @@
  */
 package nextflow.script.control;
 
+import java.lang.reflect.Modifier;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+import nextflow.script.ast.ASTNodeMarker;
 import nextflow.script.ast.FunctionNode;
+import nextflow.script.ast.IncludeEntryNode;
 import nextflow.script.ast.IncludeNode;
 import nextflow.script.ast.ScriptNode;
+import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.ScriptVisitorSupport;
+import nextflow.script.ast.WorkflowNode;
+import nextflow.script.dsl.Nullable;
 import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.AnnotatedNode;
+import org.codehaus.groovy.ast.AnnotationNode;
+import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
+import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.MethodNode;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
@@ -111,19 +120,52 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
             addError("Module could not be parsed: '" + includeUri.getPath() + "'", node);
             return;
         }
+        var scriptNode = (ScriptNode) includeUnit.getAST();
         var definitions = getDefinitions(includeUri);
+        var hasPipeline = false;
         for( var entry : node.entries ) {
             var includedName = entry.name;
-            var includedNode = definitions.stream()
+            // a `params` entry that doesn't match a definition of the module
+            // refers to the params block of the pipeline
+            var target = definitions.stream()
                 .filter(defNode -> includedName.equals(definitionName(defNode)))
-                .findFirst();
-            if( !includedNode.isPresent() ) {
+                .findFirst()
+                .orElseGet(() -> paramsBlockType(scriptNode, entry));
+            if( target == null ) {
                 addError("Included name '" + includedName + "' is not defined in module '" + includeUri.getPath() + "'", node);
                 continue;
             }
-            entry.setTarget(includedNode.get());
+            hasPipeline |= target instanceof WorkflowNode wn && wn.isEntry();
+            entry.setTarget(target);
         }
+        if( hasPipeline && !scriptNode.getParamsV1().isEmpty() )
+            addError("An included pipeline cannot use legacy parameter declarations -- use the `params` block instead", node);
     }
+
+    /**
+     * The `params` block of an included pipeline can be included as a record
+     * type, so that a calling pipeline can refer to the params of the pipeline
+     * as a whole instead of replicating each one.
+     *
+     * The params record type is *partial* -- every field is nullable, because
+     * a param can be provided by the calling pipeline instead of the user, and
+     * the pipeline validates its params when it is called.
+     */
+    private static ClassNode paramsBlockType(ScriptNode sn, IncludeEntryNode entry) {
+        var block = sn.getParams();
+        if( !"params".equals(entry.name) || block == null )
+            return null;
+        var cn = new RecordNode(entry.getNameOrAlias());
+        cn.putNodeMetaData(ASTNodeMarker.PARAMS_BLOCK, block);
+        for( var declaration : block.declarations ) {
+            var fn = new FieldNode(declaration.getName(), Modifier.PUBLIC, declaration.getType(), cn, null);
+            fn.addAnnotation(new AnnotationNode(NULLABLE));
+            cn.addField(fn);
+        }
+        return cn;
+    }
+
+    private static final ClassNode NULLABLE = ClassHelper.makeCached(Nullable.class);
 
     private static void setPlaceholderTargets(IncludeNode node) {
         for( var entry : node.entries ) {
@@ -155,7 +197,14 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
         return result;
     }
 
+    /**
+     * An entire pipeline -- the `params` / `workflow` / `output` trio of a
+     * script -- can be included as a named workflow, using the `workflow`
+     * keyword to refer to the entry workflow of the included script.
+     */
     private static String definitionName(AnnotatedNode node) {
+        if( node instanceof WorkflowNode wn && wn.isEntry() )
+            return "workflow";
         return
             node instanceof ClassNode cn ? cn.getNameWithoutPackage() :
             node instanceof MethodNode mn ? mn.getName() :
