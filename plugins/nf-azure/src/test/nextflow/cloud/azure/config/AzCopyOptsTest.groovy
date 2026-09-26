@@ -40,4 +40,10 @@ class AzCopyOptsTest extends Specification {
 
     }
 
+    def 'should get extra azcopy opts'() {
+        expect:
+        new AzCopyOpts([:]).opts == ''
+        new AzCopyOpts([opts: '--put-md5 --log-level ERROR']).opts == '--put-md5 --log-level ERROR'
+    }
+
 }
