@@ -1,0 +1,11 @@
+id: no-wildcard-import
+valid:
+  - import javax.swing.JButton
+  - import java.awt.Color
+  - import static java.nio.file.StandardOpenOption.WRITE
+  # static wildcard imports are intentionally not flagged by this rule
+  - import static nextflow.processor.TaskStatus.*
+invalid:
+  - import javax.swing.*
+  - import java.awt.*
+  - import nextflow.processor.*
