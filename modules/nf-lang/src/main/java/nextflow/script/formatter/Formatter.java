@@ -291,6 +291,110 @@ public class Formatter extends CodeVisitorSupport {
         return builder.toString();
     }
 
+    // line-length wrapping
+
+    /**
+     * How aggressively expressions are being wrapped onto multiple lines,
+     * on top of preserving the wrapping in the source:
+     *
+     * NONE -- only expressions that were wrapped in the source are wrapped;
+     * TOP  -- the outermost wrappable construct of the statement is wrapped;
+     * ALL  -- every wrappable construct of the statement is wrapped.
+     */
+    private enum WrapMode {
+        NONE,
+        TOP,
+        ALL
+    }
+
+    private WrapMode wrapMode = WrapMode.NONE;
+
+    private int exprDepth = 0;
+
+    /**
+     * Emit a line of output, and if it exceeds the maximum line length,
+     * roll it back and re-emit it with expressions wrapped onto multiple
+     * lines -- first only the outermost construct, then, if the result
+     * still has an over-long line (e.g. deeply nested arguments), every
+     * construct.
+     */
+    public void emitWrappable(Runnable body) {
+        if( options.maxLineLength() <= 0 || wrapMode != WrapMode.NONE ) {
+            body.run();
+            return;
+        }
+        // wrapping depth is measured from this statement, so reset it for the
+        // outermost wrappable (nested statements inherit this baseline during a
+        // wrap pass, where the guard above makes them run inline)
+        var savedDepth = exprDepth;
+        exprDepth = 0;
+        var mark = builder.length();
+        body.run();
+        if( exceedsMaxLineLength(mark) ) {
+            builder.setLength(mark);
+            wrapMode = WrapMode.TOP;
+            body.run();
+            if( exceedsMaxLineLength(mark) ) {
+                builder.setLength(mark);
+                wrapMode = WrapMode.ALL;
+                body.run();
+            }
+            wrapMode = WrapMode.NONE;
+        }
+        exprDepth = savedDepth;
+    }
+
+    /**
+     * Determine whether any line emitted after the given position exceeds
+     * the maximum line length.
+     */
+    private boolean exceedsMaxLineLength(int from) {
+        var max = options.maxLineLength();
+        var lineStart = builder.lastIndexOf("\n", from - 1) + 1;
+        var col = 0;
+        for( int i = lineStart; i < builder.length(); i++ ) {
+            var c = builder.charAt(i);
+            if( c == '\n' )
+                col = 0;
+            else if( c == '\t' )
+                col += options.tabSize();
+            else
+                col++;
+            if( col > max )
+                return true;
+        }
+        return false;
+    }
+
+    /**
+     * Determine whether the current construct should be wrapped because of
+     * the line-length limit.
+     *
+     * In TOP mode only the outermost wrappable construct of the statement is
+     * broken. "Outermost" is {@code exprDepth <= 2} because a statement reaches
+     * its top construct at depth 0 (a bare directive), 1 (a bare call, return,
+     * throw or config assignment) or 2 (the right-hand side of an assignment,
+     * whose value expression is visited one level deeper).
+     */
+    private boolean forceWrap() {
+        if( wrapMode == WrapMode.ALL )
+            return true;
+        if( wrapMode == WrapMode.TOP )
+            return exprDepth <= 2;
+        return false;
+    }
+
+    /**
+     * Determine whether a collection-like construct with the given number of
+     * elements should be force-wrapped by the line-length limit. A single-element
+     * collection is left inline (there is nothing to gain by breaking it); a
+     * single-argument method call is not, hence {@link #shouldWrapMethodCall}
+     * uses its own threshold.
+     */
+    public boolean forceWrap(int elementCount) {
+        return forceWrap() && elementCount > 1;
+    }
+
     // statements
 
     @Override
@@ -348,17 +452,19 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitExpressionStatement(ExpressionStatement node) {
-        var cre = currentRootExpr;
-        currentRootExpr = node.getExpression();
         appendLeadingComments(node);
-        appendIndent();
-        var sid = beginStatement(node);
-        visitStatementLabels(node);
-        visit(node.getExpression());
-        endStatement(sid);
-        appendTrailingComment(node);
-        appendNewLine();
-        currentRootExpr = cre;
+        emitWrappable(() -> {
+            var cre = currentRootExpr;
+            currentRootExpr = node.getExpression();
+            appendIndent();
+            var sid = beginStatement(node);
+            visitStatementLabels(node);
+            visit(node.getExpression());
+            endStatement(sid);
+            appendTrailingComment(node);
+            appendNewLine();
+            currentRootExpr = cre;
+        });
     }
 
     private void visitStatementLabels(ExpressionStatement node) {
@@ -372,33 +478,37 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitReturnStatement(ReturnStatement node) {
-        var cre = currentRootExpr;
-        currentRootExpr = node.getExpression();
         appendLeadingComments(node);
-        appendIndent();
-        var sid = beginStatement(node);
-        append("return ");
-        visit(node.getExpression());
-        endStatement(sid);
-        appendTrailingComment(node);
-        appendNewLine();
-        currentRootExpr = cre;
+        emitWrappable(() -> {
+            var cre = currentRootExpr;
+            currentRootExpr = node.getExpression();
+            appendIndent();
+            var sid = beginStatement(node);
+            append("return ");
+            visit(node.getExpression());
+            endStatement(sid);
+            appendTrailingComment(node);
+            appendNewLine();
+            currentRootExpr = cre;
+        });
     }
 
     @Override
     public void visitAssertStatement(AssertStatement node) {
         appendLeadingComments(node);
-        appendIndent();
-        var sid = beginStatement(node);
-        append("assert ");
-        visit(node.getBooleanExpression());
-        if( !(node.getMessageExpression() instanceof ConstantExpression ce && ce.isNullExpression()) ) {
-            append(" : ");
-            visit(node.getMessageExpression());
-        }
-        endStatement(sid);
-        appendTrailingComment(node);
-        appendNewLine();
+        emitWrappable(() -> {
+            appendIndent();
+            var sid = beginStatement(node);
+            append("assert ");
+            visit(node.getBooleanExpression());
+            if( !(node.getMessageExpression() instanceof ConstantExpression ce && ce.isNullExpression()) ) {
+                append(" : ");
+                visit(node.getMessageExpression());
+            }
+            endStatement(sid);
+            appendTrailingComment(node);
+            appendNewLine();
+        });
     }
 
     @Override
@@ -421,13 +531,15 @@ public class Formatter extends CodeVisitorSupport {
     @Override
     public void visitThrowStatement(ThrowStatement node) {
         appendLeadingComments(node);
-        appendIndent();
-        var sid = beginStatement(node);
-        append("throw ");
-        visit(node.getExpression());
-        endStatement(sid);
-        appendTrailingComment(node);
-        appendNewLine();
+        emitWrappable(() -> {
+            appendIndent();
+            var sid = beginStatement(node);
+            append("throw ");
+            visit(node.getExpression());
+            endStatement(sid);
+            appendTrailingComment(node);
+            appendNewLine();
+        });
     }
 
     @Override
@@ -536,27 +648,36 @@ public class Formatter extends CodeVisitorSupport {
     }
 
     public void visitDirective(ASTNode owner, MethodCallExpression call) {
-        appendIndent();
-        var sid = beginStatement(owner);
-        append(call.getMethodAsString());
-        var arguments = asMethodCallArguments(call);
-        if( !arguments.isEmpty() ) {
-            var wrap = hasComments(call, arguments);
-            if( wrap )
-                incIndent();
-            else
-                append(' ');
-            visitArguments(arguments, wrap);
-            if( wrap ) {
-                appendNewLine();
-                appendDanglingComments(call);
-                decIndent();
-                appendIndent();
+        emitWrappable(() -> {
+            appendIndent();
+            var sid = beginStatement(owner);
+            append(call.getMethodAsString());
+            var arguments = asMethodCallArguments(call);
+            if( !arguments.isEmpty() ) {
+                var wrap = hasComments(call, arguments) || forceWrap();
+                // a bare directive call has no parens to hold a trailing comma
+                // or a comment on its own line, so wrapping adds them, just
+                // like a regular method call
+                if( wrap ) {
+                    append('(');
+                    incIndent();
+                }
+                else {
+                    append(' ');
+                }
+                visitArguments(arguments, wrap);
+                if( wrap ) {
+                    appendNewLine();
+                    appendDanglingComments(call);
+                    decIndent();
+                    appendIndent();
+                    append(')');
+                }
             }
-        }
-        endStatement(sid);
-        appendTrailingComment(owner);
-        appendNewLine();
+            endStatement(sid);
+            appendTrailingComment(owner);
+            appendNewLine();
+        });
     }
 
     public void visitArguments(List<Expression> args, boolean wrap) {
@@ -717,7 +838,7 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitTupleExpression(TupleExpression node) {
-        var wrap = hasTrailingComma(node) || hasComments(node, node.getExpressions());
+        var wrap = hasTrailingComma(node) || hasComments(node, node.getExpressions()) || forceWrap(node.getExpressions().size());
         append('(');
         if( wrap )
             incIndent();
@@ -733,7 +854,7 @@ public class Formatter extends CodeVisitorSupport {
 
     @Override
     public void visitListExpression(ListExpression node) {
-        var wrap = hasTrailingComma(node) || hasComments(node, node.getExpressions());
+        var wrap = hasTrailingComma(node) || hasComments(node, node.getExpressions()) || forceWrap(node.getExpressions().size());
         append('[');
         if( wrap )
             incIndent();
@@ -771,7 +892,7 @@ public class Formatter extends CodeVisitorSupport {
             append("[:]");
             return;
         }
-        var wrap = hasTrailingComma(node) || hasComments(node, node.getMapEntryExpressions());
+        var wrap = hasTrailingComma(node) || hasComments(node, node.getMapEntryExpressions()) || forceWrap(node.getMapEntryExpressions().size());
         append('[');
         if( wrap )
             incIndent();
@@ -902,7 +1023,13 @@ public class Formatter extends CodeVisitorSupport {
                 append(tripleQuoted ? reindentString(text) : text);
             if( i < vs.size() ) {
                 append("${");
+                // never force-wrap inside a string interpolation: a newline
+                // here would be injected into the string literal itself (e.g. a
+                // process script block). Source-driven wrapping still applies.
+                var savedWrapMode = wrapMode;
+                wrapMode = WrapMode.NONE;
                 visit(vs.get(i));
+                wrapMode = savedWrapMode;
                 append('}');
             }
         }
@@ -914,7 +1041,9 @@ public class Formatter extends CodeVisitorSupport {
         var number = (Number) node.getNodeMetaData(ASTNodeMarker.INSIDE_PARENTHESES_LEVEL);
         if( number != null && number.intValue() > 0 )
             append('(');
+        exprDepth++;
         super.visit(node);
+        exprDepth--;
         if( number != null && number.intValue() > 0 )
             append(')');
     }
@@ -977,11 +1106,13 @@ public class Formatter extends CodeVisitorSupport {
     }
 
     private boolean shouldWrapExpression(Expression node) {
-        return node.getLineNumber() < node.getLastLineNumber();
+        return node.getLineNumber() < node.getLastLineNumber() || forceWrap();
     }
 
     private boolean shouldWrapMethodCall(MethodCallExpression node) {
         if( hasTrailingComma(node.getArguments()) )
+            return true;
+        if( forceWrap() && asMethodCallArguments(node).size() > 0 )
             return true;
         var start = node.getMethod();
         var end = node.getArguments();
@@ -1003,6 +1134,9 @@ public class Formatter extends CodeVisitorSupport {
             root = mce.getObjectExpression();
             depth += 1;
         }
+
+        if( wrapMode != WrapMode.NONE )
+            return depth >= 2;
 
         return shouldWrapExpression(root)
             ? false
