@@ -15,6 +15,7 @@
  */
 package nextflow.script.formatter;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -38,6 +39,7 @@ import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.ScriptVisitorSupport;
 import nextflow.script.ast.TupleParameter;
 import nextflow.script.ast.WorkflowNode;
+import org.codehaus.groovy.ast.ASTNode;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.expr.ClosureExpression;
@@ -129,7 +131,8 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 .max(Integer::compare).orElse(0);
         }
 
-        for( var decl : declarations ) {
+        for( int i = 0; i < declarations.size(); i++ ) {
+            var decl = declarations.get(i);
             if( decl instanceof AgentNode an )
                 visitAgent(an);
             else if( decl instanceof ClassNode cn && cn.isEnum() )
@@ -138,8 +141,13 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
                 visitFeatureFlag(ffn);
             else if( decl instanceof FunctionNode fn )
                 visitFunction(fn);
-            else if( decl instanceof IncludeNode in )
+            else if( decl instanceof IncludeNode in ) {
+                if( options.sortDeclarations() ) {
+                    i = visitIncludeRun(declarations, i);
+                    continue;
+                }
                 visitInclude(in);
+            }
             else if( decl instanceof OutputBlockNode obn )
                 visitOutputs(obn);
             else if( decl instanceof ParamBlockNode pbn )
@@ -175,8 +183,63 @@ public class ScriptFormattingVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitInclude(IncludeNode node) {
-        var wrap = node.getLineNumber() < node.getLastLineNumber();
         fmt.appendLeadingComments(node);
+        emitInclude(node);
+    }
+
+    /**
+     * Emit the contiguous run of includes that starts at {@code start}, sorted
+     * alphabetically by source path within each blank-line-separated group.
+     * Groups are emitted in their original order; only membership within a
+     * group is sorted. When sorting moves a different include to the front of a
+     * group, the original first include's leading comments (the group header)
+     * move with it.
+     *
+     * @param declarations
+     * @param start
+     * @return the index of the last include in the run
+     */
+    private int visitIncludeRun(List<ASTNode> declarations, int start) {
+        var comments = fmt.getComments();
+
+        // -- collect the run, split into blank-line-separated groups
+        var groups = new ArrayList<List<IncludeNode>>();
+        List<IncludeNode> group = null;
+        int i = start;
+        while( i < declarations.size() && declarations.get(i) instanceof IncludeNode in ) {
+            if( group == null || comments.blankLinesBefore(comments.leadingLine(in)) > 0 ) {
+                group = new ArrayList<>();
+                groups.add(group);
+            }
+            group.add(in);
+            i++;
+        }
+
+        // -- sort each group independently and emit
+        var comparator = Comparator.comparing((IncludeNode in) -> in.source.getText(), String.CASE_INSENSITIVE_ORDER)
+            .thenComparing(in -> in.source.getText());
+
+        for( var g : groups ) {
+            // the blank lines above the group belong to its original first
+            // include's source position, so emit them before sorting moves it
+            var originalFirst = g.get(0);
+            fmt.appendBlankLinesBefore(originalFirst);
+
+            g.sort(comparator);
+            var newFirst = g.get(0);
+            if( newFirst != originalFirst )
+                comments.moveLeadingComments(originalFirst, newFirst);
+
+            for( var in : g ) {
+                fmt.appendInnerComments(in);
+                emitInclude(in);
+            }
+        }
+        return i - 1;
+    }
+
+    private void emitInclude(IncludeNode node) {
+        var wrap = node.getLineNumber() < node.getLastLineNumber();
         fmt.append("include {");
         if( wrap )
             fmt.incIndent();
