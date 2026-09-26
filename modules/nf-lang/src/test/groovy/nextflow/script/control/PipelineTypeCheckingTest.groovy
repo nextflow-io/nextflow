@@ -212,11 +212,7 @@ class PipelineTypeCheckingTest extends Specification {
         expect:
         check('''\
             include { workflow ; params as RnaseqParams } from './rnaseq.nf'
-            include { output } from './rnaseq.nf'
-            ''') == [
-                'An included pipeline must be aliased, e.g. `workflow as MY_PIPELINE`',
-                'An included pipeline must be aliased, e.g. `output as MY_PIPELINE`'
-            ]
+            ''') == [ 'An included pipeline must be aliased, e.g. `workflow as MY_PIPELINE`' ]
     }
 
     def 'should call a pipeline without a params block with no arguments' () {
@@ -303,19 +299,10 @@ class PipelineTypeCheckingTest extends Specification {
     def 'should wrap non-channel outputs in a Value' () {
         expect:
         check('''\
-            include { workflow as RNASEQ ; output as RnaseqOutput } from './rnaseq.nf'
+            include { workflow as RNASEQ } from './rnaseq.nf'
 
             workflow {
                 r = RNASEQ( record(input: channel.of('a'), fasta: file('genome.fa')) )
-                r.multiqc.view()
-                SUMMARY( r )
-            }
-
-            workflow SUMMARY {
-                take:
-                r: RnaseqOutput
-
-                main:
                 r.multiqc.map { p -> p.name }.view()
             }
             ''') == []

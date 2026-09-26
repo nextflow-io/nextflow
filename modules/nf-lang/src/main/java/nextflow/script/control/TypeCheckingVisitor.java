@@ -160,24 +160,17 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
 
     /**
      * The params record type of an included pipeline is partial, so each
-     * field is nullable. The output record type matches the record returned
-     * by a pipeline call, in which each output is a `Channel` or wrapped in
-     * a `Value`.
+     * field is nullable.
      */
     @Override
     public void visitInclude(IncludeNode node) {
         for( var entry : node.entries ) {
             if( !(entry.getTarget() instanceof ClassNode cn) )
                 continue;
-            var block = ScriptNode.getPipelineBlock(cn);
-            if( block instanceof ParamBlockNode ) {
-                for( var fn : cn.getFields() )
-                    fn.setType(nullableType(fn.getType()));
-            }
-            else if( block instanceof OutputBlockNode ) {
-                for( var fn : cn.getFields() )
-                    fn.setType(workflowEmitType(fn.getType()));
-            }
+            if( ScriptNode.getParamsBlock(cn) == null )
+                continue;
+            for( var fn : cn.getFields() )
+                fn.setType(nullableType(fn.getType()));
         }
     }
 

@@ -60,9 +60,9 @@ public enum ASTNodeMarker {
     // denotes a nullable type annotation (ClassNode)
     NULLABLE,
 
-    // the params or output block (ASTNode) from which a record type (ClassNode)
+    // the params block (ParamBlockNode) from which a record type (ClassNode)
     // was synthesized for an included pipeline
-    PIPELINE_BLOCK,
+    PARAMS_BLOCK,
 
     // the ScriptNode that declares an entry workflow (WorkflowNode), so that
     // the params and output blocks of a pipeline can be resolved from a call

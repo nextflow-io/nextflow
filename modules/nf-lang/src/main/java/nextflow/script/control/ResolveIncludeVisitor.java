@@ -38,7 +38,6 @@ import org.codehaus.groovy.ast.ClassHelper;
 import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.MethodNode;
-import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.control.SourceUnit;
 import org.codehaus.groovy.control.messages.SyntaxErrorMessage;
 import org.codehaus.groovy.syntax.SyntaxException;
@@ -126,12 +125,12 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
         var hasPipeline = false;
         for( var entry : node.entries ) {
             var includedName = entry.name;
-            // a `params` or `output` entry that doesn't match a definition of the
-            // module refers to the corresponding block of the pipeline
+            // a `params` entry that doesn't match a definition of the module
+            // refers to the params block of the pipeline
             var target = definitions.stream()
                 .filter(defNode -> includedName.equals(definitionName(defNode)))
                 .findFirst()
-                .orElseGet(() -> pipelineBlockType(scriptNode, entry));
+                .orElseGet(() -> paramsBlockType(scriptNode, entry));
             if( target == null ) {
                 addError("Included name '" + includedName + "' is not defined in module '" + includeUri.getPath() + "'", node);
                 continue;
@@ -144,35 +143,29 @@ public class ResolveIncludeVisitor extends ScriptVisitorSupport {
     }
 
     /**
-     * The `params` and `output` blocks of an included pipeline can be included
-     * as record types, so that a calling pipeline can refer to the params or
-     * outputs of the pipeline as a whole instead of replicating each one.
+     * The `params` block of an included pipeline can be included as a record
+     * type, so that a calling pipeline can refer to the params of the pipeline
+     * as a whole instead of replicating each one.
      *
      * The params record type is *partial* -- every field is nullable, because
      * a param can be provided by the calling pipeline instead of the user, and
      * the pipeline validates its params when it is called.
      */
-    private static ClassNode pipelineBlockType(ScriptNode sn, IncludeEntryNode entry) {
-        if( "params".equals(entry.name) && sn.getParams() != null )
-            return recordType(entry.getNameOrAlias(), sn.getParams(), List.of(sn.getParams().declarations), true);
-        if( "output".equals(entry.name) && sn.getOutputs() != null )
-            return recordType(entry.getNameOrAlias(), sn.getOutputs(), List.copyOf(sn.getOutputs().declarations), false);
-        return null;
-    }
-
-    private static final ClassNode NULLABLE = ClassHelper.makeCached(Nullable.class);
-
-    private static ClassNode recordType(String name, ASTNode block, List<? extends Parameter> declarations, boolean nullable) {
-        var cn = new RecordNode(name);
-        cn.putNodeMetaData(ASTNodeMarker.PIPELINE_BLOCK, block);
-        for( var declaration : declarations ) {
+    private static ClassNode paramsBlockType(ScriptNode sn, IncludeEntryNode entry) {
+        var block = sn.getParams();
+        if( !"params".equals(entry.name) || block == null )
+            return null;
+        var cn = new RecordNode(entry.getNameOrAlias());
+        cn.putNodeMetaData(ASTNodeMarker.PARAMS_BLOCK, block);
+        for( var declaration : block.declarations ) {
             var fn = new FieldNode(declaration.getName(), Modifier.PUBLIC, declaration.getType(), cn, null);
-            if( nullable )
-                fn.addAnnotation(new AnnotationNode(NULLABLE));
+            fn.addAnnotation(new AnnotationNode(NULLABLE));
             cn.addField(fn);
         }
         return cn;
     }
+
+    private static final ClassNode NULLABLE = ClassHelper.makeCached(Nullable.class);
 
     private static void setPlaceholderTargets(IncludeNode node) {
         for( var entry : node.entries ) {

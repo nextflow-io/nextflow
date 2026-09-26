@@ -135,7 +135,7 @@ class VariableScopeVisitor extends ScriptVisitorSupport {
             // types cannot be aliased
             var target = entry.getTarget();
             var isPipelinePart = target instanceof WorkflowNode wn && wn.isEntry()
-                || target instanceof ClassNode cn && ScriptNode.getPipelineBlock(cn) != null;
+                || target instanceof ClassNode cn && ScriptNode.getParamsBlock(cn) != null;
             if( isPipelinePart && entry.alias == null ) {
                 vsc.addError("An included pipeline must be aliased, e.g. `" + entry.name + " as MY_PIPELINE`", entry);
                 continue;

@@ -229,57 +229,6 @@ class PipelineCompositionTest extends Dsl2Spec {
         [:]                          | [:]                           | 'Hello, World!'
     }
 
-    def 'should include the output block of a pipeline as a record type' () {
-        given:
-        def script = write([
-            'greet.nf': '''
-                params {
-                    names: Channel<String>
-                }
-
-                workflow {
-                    main:
-                    messages = params.names.map { name -> "Hello, ${name}!" }
-
-                    publish:
-                    messages = messages
-                    count = messages.count()
-                }
-
-                output {
-                    messages: Channel<String> {}
-                    count: Integer {}
-                }
-                ''',
-            'main.nf': '''
-                include { workflow as GREET ; output as GreetOutput } from './greet.nf'
-
-                workflow SHOUT {
-                    take:
-                    greet: GreetOutput
-
-                    main:
-                    messages = greet.messages.map { message -> message.toUpperCase() }
-
-                    emit:
-                    messages: Channel<String> = messages
-                }
-
-                workflow {
-                    main:
-                    SHOUT(GREET( record(names: channel.of('World')) ))
-                }
-                '''
-        ])
-
-        when:
-        // the output block is imported as a record type of the pipeline
-        // outputs -- it declares no outputs of its own
-        def result = runScript(script)
-        then:
-        result.val == 'HELLO, WORLD!'
-    }
-
     @Unroll
     def 'should accept dataflow values for Channel and Value params: #CALL' () {
         given:

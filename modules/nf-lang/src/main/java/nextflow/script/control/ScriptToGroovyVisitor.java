@@ -144,11 +144,11 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
 
     @Override
     public void visitInclude(IncludeNode node) {
-        // an included params or output block is only a type -- add it to this
+        // an included params block is only a type -- add it to this
         // script so that it is compiled, and don't include it at runtime
         var entries = new ArrayList<Expression>();
         for( var entry : node.entries ) {
-            if( entry.getTarget() instanceof ClassNode cn && ScriptNode.getPipelineBlock(cn) != null ) {
+            if( entry.getTarget() instanceof ClassNode cn && ScriptNode.getParamsBlock(cn) != null ) {
                 // the type is qualified by the including script, so that two
                 // scripts can include the same block
                 cn.setName(sgh.packageName(moduleNode) + "." + cn.getName());

@@ -4,9 +4,13 @@
 - Status: proposed
 - Date: 2026-06-08
 - Tags: pipelines, modules, dsl, registry
-- Version: 1.3
+- Version: 1.4
 
 ## Updates
+
+### Version 1.4 (2026-09-25)
+
+- **Remove output block inclusion**: the `output` block of a pipeline can no longer be included. A pipeline call returns its outputs like a workflow call, and the meta-pipeline declares its outputs like any other pipeline.
 
 ### Version 1.3 (2026-09-17)
 
@@ -416,8 +420,6 @@ output {
 `RnaseqParams` is a *partial record type*. All of its fields are nullable, and defaults are not pre-filled. A param that is not set (e.g. `params.rnaseq.aligner`) is `null` in the meta-pipeline, and the included pipeline applies its own default when it is called. The user can provide any rnaseq param as `--rnaseq.<name>`, the meta-pipeline can override specific params (`params.rnaseq + record(input: ch_samples)`), and the `NFCORE_RNASEQ()` call validates that all required params are present.
 
 This way, the developer only needs to declare one param for each included pipeline (`fetchngs: FetchngsParams`, `rnaseq: RnaseqParams`).
-
-The `output` block can be included in the same way (`output as RnaseqOutput`), which gives a record type of the output declarations. It provides only the type -- the meta-pipeline declares its own outputs.
 
 Notes:
 

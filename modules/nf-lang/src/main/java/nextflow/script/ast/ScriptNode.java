@@ -157,13 +157,13 @@ public class ScriptNode extends ModuleNode {
     }
 
     /**
-     * Get the params or output block from which a record type was synthesized
+     * Get the params block from which a record type was synthesized
      * for an included pipeline, or null if the type is a definition.
      *
      * @param node
      */
-    public static ASTNode getPipelineBlock(ClassNode node) {
-        return (ASTNode) node.getNodeMetaData(ASTNodeMarker.PIPELINE_BLOCK);
+    public static ParamBlockNode getParamsBlock(ClassNode node) {
+        return (ParamBlockNode) node.getNodeMetaData(ASTNodeMarker.PARAMS_BLOCK);
     }
 
     public void setOutputs(OutputBlockNode outputs) {
