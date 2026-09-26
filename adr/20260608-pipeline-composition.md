@@ -14,7 +14,7 @@
 
 ### Version 1.2 (2026-07-13)
 
-- **Reframe as pipeline composition**: the core feature is the ability to compose pipelines in a Nextflow-native manner. Meta-pipelines are the artifact. Remote pipelines and workflow modules are largely natural extensions of the module registry.
+- **Reframe as pipeline composition**: the core feature is the ability to compose pipelines in a Nextflow-native manner. Meta-pipelines are the artifact. Remote pipeline inclusion is deferred to future work.
 
 ### Version 1.1 (2026-06-22)
 - **Separate remote pipelines from remote workflows**: Workflows are treated separately by the [Workflow modules ADR](20260608-workflow-modules.md).
@@ -307,10 +307,10 @@ params {
 workflow {
     main:
     // fetch FASTQ samples from NCBI SRA
-    fetchngs = NFCORE_FETCHNGS( record(input: params.input) )
+    samples = NFCORE_FETCHNGS( record(input: params.input) )
 
     // adapt fetchngs output to rnaseq input (add strandedness)
-    ch_samples = fetchngs.samples.map { r ->
+    ch_samples = samples.map { r ->
         r + record(strandedness: params.strandedness)
     }
 
@@ -390,10 +390,10 @@ params {
 workflow {
     main:
     // fetch FASTQ samples from NCBI SRA
-    fetchngs = NFCORE_FETCHNGS( params.fetchngs )
+    samples = NFCORE_FETCHNGS( params.fetchngs )
 
     // adapt fetchngs output to rnaseq input (add strandedness)
-    ch_samples = fetchngs.samples.map { r ->
+    ch_samples = samples.map { r ->
         r + record(strandedness: params.strandedness)
     }
 
@@ -417,7 +417,7 @@ output {
 
 This way, the developer only needs to declare one param for each included pipeline (`fetchngs: FetchngsParams`, `rnaseq: RnaseqParams`).
 
-The `output` block can be included in the same way (`output as RnaseqOutput`), which gives a name to the type of the record returned by the pipeline call, e.g. to declare a workflow input of that type. It provides only the type -- the meta-pipeline declares its own outputs.
+The `output` block can be included in the same way (`output as RnaseqOutput`), which gives a record type of the output declarations. It provides only the type -- the meta-pipeline declares its own outputs.
 
 Notes:
 

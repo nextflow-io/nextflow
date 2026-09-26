@@ -169,9 +169,11 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
         moduleNode.addStatement(result);
     }
 
+    private ClassNode paramsType;
+
     @Override
     public void visitParams(ParamBlockNode node) {
-        var paramsType = new RecordNode(sgh.packageName(moduleNode) + "." + "__Params");
+        paramsType = new RecordNode(sgh.packageName(moduleNode) + "." + "__Params");
         for( var param : node.declarations ) {
             var fn = new FieldNode(
                 param.getName(),
@@ -209,7 +211,7 @@ public class ScriptToGroovyVisitor extends ScriptVisitorSupport {
     public void visitWorkflow(WorkflowNode node) {
         if( !node.isEntry() )
             checkReservedMethodName(node, "workflow");
-        var result = new WorkflowToGroovyVisitor(sourceUnit).transform(node);
+        var result = new WorkflowToGroovyVisitor(sourceUnit).transform(node, node.isEntry() ? paramsType : null);
         moduleNode.addStatement(result);
     }
 

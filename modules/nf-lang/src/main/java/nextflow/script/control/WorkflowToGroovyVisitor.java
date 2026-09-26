@@ -25,6 +25,8 @@ import nextflow.script.ast.AssignmentExpression;
 import nextflow.script.ast.RecordNode;
 import nextflow.script.ast.ScriptNode;
 import nextflow.script.ast.WorkflowNode;
+import org.codehaus.groovy.ast.ClassHelper;
+import org.codehaus.groovy.ast.ClassNode;
 import org.codehaus.groovy.ast.FieldNode;
 import org.codehaus.groovy.ast.Parameter;
 import org.codehaus.groovy.ast.VariableScope;
@@ -49,18 +51,40 @@ public class WorkflowToGroovyVisitor {
 
     private ScriptNode moduleNode;
 
+    private static final ClassNode PARAMS_HELPER = ClassHelper.makeWithoutCaching("nextflow.script.ParamsHelper");
+
     public WorkflowToGroovyVisitor(SourceUnit sourceUnit) {
         this.sourceUnit = sourceUnit;
         this.moduleNode = (ScriptNode) sourceUnit.getAST();
     }
 
-    public Statement transform(WorkflowNode node) {
+    /**
+     * Transform a workflow definition.
+     *
+     * The entry workflow of a script with a params block takes the params
+     * as an input, so that the pipeline can be called like a named workflow.
+     * The params are resolved against the params block when the workflow is
+     * called:
+     *
+     *   params = ParamsHelper.resolveArguments(this, params)
+     *
+     * @param node
+     * @param paramsType the params block record type, or null
+     */
+    public Statement transform(WorkflowNode node, ClassNode paramsType) {
         var main = node.main instanceof BlockStatement block ? block : new BlockStatement();
         visitWorkflowEmits(node.emits, main);
         visitWorkflowPublishers(node.publishers, main);
         visitWorkflowHandler(node.onComplete, "setOnComplete", main);
         visitWorkflowHandler(node.onError, "setOnError", main);
 
+        var takes = node.getParameters();
+        if( paramsType != null ) {
+            takes = new Parameter[] { new Parameter(paramsType.getPlainNodeReference(), "params") };
+            var params = varX("params");
+            var stmt = assignS(params, callX(PARAMS_HELPER, "resolveArguments", args(varX("this"), params)));
+            main.getStatements().add(0, stmt);
+        }
         var bodyDef = stmt(createX(
             "nextflow.script.BodyDef",
             args(
@@ -70,7 +94,7 @@ public class WorkflowToGroovyVisitor {
             )
         ));
         var closure = closureX(null, block(new VariableScope(), List.of(
-            workflowTakes(node.getParameters(), node.isEntry() ? null : node.getName()),
+            workflowTakes(takes, node.isEntry() ? null : node.getName()),
             node.emits,
             bodyDef
         )));

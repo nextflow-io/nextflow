@@ -89,15 +89,6 @@ abstract class BaseScript extends Script implements ExecutionContext {
     }
 
     /**
-     * The names of the outputs declared in the output block of this script.
-     */
-    Set<String> getOutputNames() {
-        return outputDef
-            ? outputDef.getNames()
-            : Collections.<String>emptySet()
-    }
-
-    /**
      * Holds the configuration object which will used to execution the user tasks
      */
     @Deprecated
@@ -330,7 +321,10 @@ abstract class BaseScript extends Script implements ExecutionContext {
         session.notifyBeforeWorkflowExecution()
         if( paramsDef )
             paramsDef.apply(session)
-        final ret = entryFlow.run(BaseScriptConsts.EMPTY_ARGS)
+        final args = paramsDef
+            ? [ binding.getParams() ] as Object[]
+            : BaseScriptConsts.EMPTY_ARGS
+        final ret = entryFlow.run(args)
         if( outputDef )
             outputDef.apply(session, entryFlow.getOutput().asMap())
         session.notifyAfterWorkflowExecution()

@@ -24,7 +24,10 @@ import java.util.function.BiFunction
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.yaml.YamlSlurper
+import groovyx.gpars.dataflow.DataflowWriteChannel
+import nextflow.dataflow.ChannelImpl
 import nextflow.dataflow.ChannelNamespace
+import nextflow.dataflow.ValueImpl
 import nextflow.exception.ScriptRuntimeException
 import nextflow.extension.Bolts
 import nextflow.script.dsl.Nullable
@@ -108,6 +111,51 @@ class ParamsHelper {
             result.put(name, value)
         }
         return result
+    }
+
+    /**
+     * Resolve the params given to the entry workflow of a pipeline against
+     * the params block of the pipeline. Called by the entry workflow (see
+     * WorkflowToGroovyVisitor).
+     *
+     * The session params of a top-level run are already resolved by the
+     * params block, so they are returned as-is.
+     *
+     * @param script the pipeline script
+     * @param value the params given to the entry workflow
+     */
+    static Map resolveArguments(BaseScript script, Object value) {
+        if( value instanceof ScriptBinding.ParamsMap )
+            return (Map)value
+
+        final pipeline = ExecutionStack.workflow().name
+        if( value !instanceof RecordMap )
+            throw new ScriptRuntimeException("Pipeline `${pipeline}` should be called with a record")
+
+        final given = (RecordMap)value
+        final declarations = script.getParamDeclarations()
+        for( final name : given.keySet() ) {
+            if( !declarations.containsKey(name) )
+                throw new ScriptRuntimeException("Pipeline `${pipeline}` does not declare a parameter named `${name}`")
+        }
+
+        final params = resolveParams(declarations.values(), given, " of pipeline `${pipeline}`") { Param decl, Object v ->
+            resolveArgument(decl, v, script.isTypingEnabled())
+        }
+        return new RecordMap(params)
+    }
+
+    private static Object resolveArgument(Param decl, Object value, boolean typingEnabled) {
+        return isDataflow(value)
+            ? DataflowTypeHelper.normalize(value, typingEnabled)
+            : resolveParam(decl, value, false)
+    }
+
+    private static boolean isDataflow(Object value) {
+        return value instanceof ChannelImpl
+            || value instanceof ValueImpl
+            || value instanceof DataflowWriteChannel
+            || value instanceof ChannelOut
     }
 
     /**

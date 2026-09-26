@@ -36,20 +36,13 @@ class OutputDef {
     }
 
     void apply(Session session, Map<String,DataflowWriteChannel> outputs) {
-        dsl().apply(session, outputs)
-    }
-
-    Set<String> getNames() {
-        return dsl().getNames()
-    }
-
-    private OutputDsl dsl() {
         final dsl = new OutputDsl()
         final cl = (Closure)closure.clone()
         cl.setDelegate(dsl)
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
         cl.call()
-        return dsl
+
+        dsl.apply(session, outputs)
     }
 
 }

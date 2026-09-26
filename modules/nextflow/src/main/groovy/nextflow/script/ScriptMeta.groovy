@@ -377,16 +377,16 @@ class ScriptMeta {
        addModule(get(script), name, alias)
     }
 
-    void addModule(ScriptMeta script, String name, String alias) {
-        assert script
+    void addModule(ScriptMeta meta, String name, String alias) {
+        assert meta
         assert name
         // the pipeline of the module takes precedence over a definition
         // with the same name, matching the compiler
-        final item = name == 'workflow' && NF.isSyntaxParserV2() && script.script.getEntryFlow()
-            ? new PipelineDef(script.script, alias)
-            : script.getComponent(name)
+        final item = name == 'workflow' && NF.isSyntaxParserV2() && meta.script.getEntryFlow()
+            ? meta.script.getEntryFlow()
+            : meta.getComponent(name)
         if( !item )
-            throw new MissingModuleComponentException(script, name)
+            throw new MissingModuleComponentException(meta, name)
         addModule0(item, alias)
     }
 

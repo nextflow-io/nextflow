@@ -55,8 +55,6 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
 
     private WorkflowBinding binding
 
-    private ScriptBinding.ParamsMap params
-
     WorkflowDef(BaseScript owner, Closure<BodyDef> rawBody, String name=null) {
         this.owner = owner
         this.name = name
@@ -88,21 +86,6 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
     }
 
     BaseScript getOwner() { owner }
-
-    /**
-     * Declare the params of the pipeline for which this workflow is the
-     * entry workflow.
-     *
-     * The entry workflow of a pipeline receives the params of the pipeline
-     * as an input, so that `params` refers to a single execution of the
-     * pipeline rather than to state shared by every execution of it.
-     *
-     * @param params
-     */
-    WorkflowDef withParams(ScriptBinding.ParamsMap params) {
-        this.params = params
-        return this
-    }
 
     String getName() { name }
 
@@ -217,9 +200,6 @@ class WorkflowDef extends BindableDef implements ChainableDef, IterableDef, Exec
     private Object run0(Object[] args) {
         // add inputs to workflow binding
         collectInputs(binding, args)
-        // the params of the pipeline shadow any params in the script binding
-        if( params != null )
-            binding.setProperty('params', params)
         // execute the workflow
         final closure = body.closure
         closure.setDelegate(binding)

@@ -34,25 +34,21 @@ import nextflow.extension.PublishOp
 @CompileStatic
 class OutputDsl {
 
-    private Map<String,Closure> declarations = [:]
+    private Map<String,Map> declarations = [:]
 
     private Map<String,DataflowVariable> dataflowOutputs = [:]
 
     void declare(String name, Closure closure) {
         if( declarations.containsKey(name) )
             throw new ScriptRuntimeException("Workflow output '${name}' is declared more than once in the workflow output block")
-        declarations[name] = closure
-    }
 
-    Set<String> getNames() { declarations.keySet() }
-
-    private static Map options(Closure closure) {
         final dsl = new DeclareDsl()
         final cl = (Closure)closure.clone()
         cl.setResolveStrategy(Closure.DELEGATE_FIRST)
         cl.setDelegate(dsl)
         cl.call()
-        return dsl.getOptions()
+
+        declarations[name] = dsl.getOptions()
     }
 
     void apply(Session session, Map<String,DataflowWriteChannel> outputs) {
@@ -72,7 +68,7 @@ class OutputDsl {
         // create publish op for each output
         for( final name : outputs.keySet() ) {
             final source = outputs[name]
-            final overrides = options(declarations[name])
+            final overrides = declarations[name] ?: Collections.emptyMap()
             final opts = publishOptions(name, defaults, overrides)
 
             if( opts.enabled == null || opts.enabled )

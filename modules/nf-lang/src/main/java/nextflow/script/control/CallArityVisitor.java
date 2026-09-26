@@ -64,8 +64,7 @@ public class CallArityVisitor extends ScriptVisitorSupport {
     }
 
     private void checkMethodCallArguments(MethodCallExpression node, MethodNode defNode) {
-        // an included pipeline is called with a record, which is
-        // checked against its params block by the type checker
+        // a pipeline call is checked by the type checker
         if( defNode instanceof WorkflowNode wn && wn.isEntry() )
             return;
         var argsCount = asMethodCallArguments(node).size();

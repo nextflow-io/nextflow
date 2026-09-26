@@ -27,12 +27,12 @@ import test.Dsl2Spec
 import static test.ScriptHelper.*
 
 /**
- * Tests for {@link PipelineDef} -- a pipeline included as a named workflow.
+ * Tests for pipeline composition -- a pipeline included as a named workflow.
  *
  * @author Ben Sherman <bentshermann@gmail.com>
  */
 @Timeout(30)
-class PipelineDefTest extends Dsl2Spec {
+class PipelineCompositionTest extends Dsl2Spec {
 
     private Path folder
 
@@ -102,28 +102,24 @@ class PipelineDefTest extends Dsl2Spec {
     }
 
     /**
-     * Write the greet pipeline and a main script that includes it.
+     * Write the greet pipeline and a main script.
      */
     private Path pipeline(String text) {
         return write([
             'greet.nf': GREET,
-            'main.nf': '''
-                include {
-                    params as GreetParams ;
-                    workflow as GREET ;
-                    output as GreetOutput
-                } from './greet.nf'
-                ''' + text
+            'main.nf': text
         ])
     }
 
     def 'should call an included pipeline like a named workflow' () {
         given:
         def script = pipeline('''
+            include { workflow as GREET } from './greet.nf'
+
             workflow {
                 main:
                 greet = GREET( record(names: channel.of('World', 'Nextflow')) )
-                greet.messages
+                greet
             }
             ''')
 
@@ -137,10 +133,12 @@ class PipelineDefTest extends Dsl2Spec {
     def 'should override a param default' () {
         given:
         def script = pipeline('''
+            include { workflow as GREET } from './greet.nf'
+
             workflow {
                 main:
                 greet = GREET( record(names: channel.of('World'), greeting: 'Hola') )
-                greet.messages
+                greet
             }
             ''')
 
@@ -153,11 +151,13 @@ class PipelineDefTest extends Dsl2Spec {
     def 'should accept the params as a record' () {
         given:
         def script = pipeline('''
+            include { workflow as GREET } from './greet.nf'
+
             workflow {
                 main:
                 opts = record( greeting: 'Ciao' )
                 greet = GREET( opts + record( names: channel.of('World') ) )
-                greet.messages
+                greet
             }
             ''')
 
@@ -171,6 +171,8 @@ class PipelineDefTest extends Dsl2Spec {
     def 'should fail on an invalid pipeline call: #CALL' () {
         given:
         def script = pipeline("""
+            include { workflow as GREET } from './greet.nf'
+
             workflow {
                 main:
                 ${CALL}
@@ -189,17 +191,16 @@ class PipelineDefTest extends Dsl2Spec {
         "GREET( record(names: channel.of('World'), greeting: null) )"                   | 'Parameter `greeting` of pipeline `GREET` is required but no value was provided'
         "GREET( record(names: channel.of('World'), foo: 'bar') )"                       | 'Pipeline `GREET` does not declare a parameter named `foo`'
         "GREET( record(names: channel.of('World'), foo: null) )"                        | 'Pipeline `GREET` does not declare a parameter named `foo`'
-        "GREET( record(names: channel.of('World'), greeting: channel.value('Hola')) )"  | 'Parameter `greeting` of pipeline `GREET` with type String cannot be assigned to a dataflow value -- declare the param as a Channel or Value to accept it'
-        "GREET( record(names: channel.value('World')) )"                                | 'Parameter `names` of pipeline `GREET` with type Channel<String> cannot be assigned to a Value'
-        "GREET( record(names: 'World') )"                                               | 'Parameter `names` of pipeline `GREET` with type Channel<String> cannot be assigned to World [String]'
-        "GREET( names: channel.of('World') )"                                           | 'Pipeline `GREET` should be called with a record, e.g. `GREET( record(input: params.input) )`'
-        "GREET( [names: channel.of('World')] )"                                         | 'Pipeline `GREET` should be called with a record, e.g. `GREET( record(input: params.input) )`'
+        "GREET( names: channel.of('World') )"                                           | 'Pipeline `GREET` should be called with a record'
+        "GREET( [names: channel.of('World')] )"                                         | 'Pipeline `GREET` should be called with a record'
     }
 
     @Unroll
     def 'should resolve an included params record from the command line and config' () {
         given:
         def script = pipeline('''
+            include { params as GreetParams ; workflow as GREET } from './greet.nf'
+
             params {
                 greet: GreetParams
             }
@@ -207,7 +208,7 @@ class PipelineDefTest extends Dsl2Spec {
             workflow {
                 main:
                 greet = GREET( params.greet + record(names: channel.of('World')) )
-                greet.messages
+                greet
             }
             ''')
 
@@ -230,23 +231,46 @@ class PipelineDefTest extends Dsl2Spec {
 
     def 'should include the output block of a pipeline as a record type' () {
         given:
-        def script = pipeline('''
-            workflow SHOUT {
-                take:
-                greet: GreetOutput
+        def script = write([
+            'greet.nf': '''
+                params {
+                    names: Channel<String>
+                }
 
-                main:
-                messages = greet.messages.map { message -> message.toUpperCase() }
+                workflow {
+                    main:
+                    messages = params.names.map { name -> "Hello, ${name}!" }
 
-                emit:
-                messages: Channel<String> = messages
-            }
+                    publish:
+                    messages = messages
+                    count = messages.count()
+                }
 
-            workflow {
-                main:
-                SHOUT(GREET( record(names: channel.of('World')) ))
-            }
-            ''')
+                output {
+                    messages: Channel<String> {}
+                    count: Integer {}
+                }
+                ''',
+            'main.nf': '''
+                include { workflow as GREET ; output as GreetOutput } from './greet.nf'
+
+                workflow SHOUT {
+                    take:
+                    greet: GreetOutput
+
+                    main:
+                    messages = greet.messages.map { message -> message.toUpperCase() }
+
+                    emit:
+                    messages: Channel<String> = messages
+                }
+
+                workflow {
+                    main:
+                    SHOUT(GREET( record(names: channel.of('World')) ))
+                }
+                '''
+        ])
 
         when:
         // the output block is imported as a record type of the pipeline
@@ -267,7 +291,7 @@ class PipelineDefTest extends Dsl2Spec {
                 workflow {
                     main:
                     samples = channel.of( record(id: 'a', count: 1), record(id: 'b', count: 2) )
-                    ${CALL}.total
+                    ${CALL}
                 }
                 """
         ])
@@ -284,28 +308,6 @@ class PipelineDefTest extends Dsl2Spec {
         "COUNT( record(samples: samples) )"                             | 3
     }
 
-    def 'should fail when a channel is provided for a Value param' () {
-        given:
-        def script = write([
-            'count.nf': COUNT,
-            'main.nf': '''
-                include { workflow as COUNT } from './count.nf'
-
-                workflow {
-                    main:
-                    samples = channel.of( record(id: 'a', count: 1) )
-                    COUNT( record(samples: samples, factor: channel.of(1, 2)) )
-                }
-                '''
-        ])
-
-        when:
-        runScript(script)
-        then:
-        def e = thrown(ScriptRuntimeException)
-        e.message == 'Parameter `factor` of pipeline `COUNT` with type Value<Integer> cannot be assigned to a Channel'
-    }
-
     def 'should load the dataflow params of an included pipeline from the command line' () {
         given:
         folder.resolve('samples.csv').text = 'id,count\na,1\nb,2\n'
@@ -320,7 +322,7 @@ class PipelineDefTest extends Dsl2Spec {
 
                 workflow {
                     main:
-                    COUNT( params.count ).total
+                    COUNT( params.count )
                 }
                 '''
         ])
@@ -341,6 +343,25 @@ class PipelineDefTest extends Dsl2Spec {
 
             workflow {
                 GREET( record(names: channel.of('World')) ).messages
+            }
+            '''
+
+        when:
+        def result = runScript(script)
+        then:
+        result.val == 'Hello, World!'
+    }
+
+    def 'should access the outputs of a pipeline call from an untyped script' () {
+        given:
+        write(['greet.nf': GREET])
+        def script = folder.resolve('main.nf')
+        script.text = '''
+            include { workflow as GREET } from './greet.nf'
+
+            workflow {
+                GREET( record(names: channel.of('World')) )
+                GREET.out.messages
             }
             '''
 
@@ -376,7 +397,7 @@ class PipelineDefTest extends Dsl2Spec {
 
                 workflow {
                     main:
-                    GREET( record(name: 'World') ).messages
+                    GREET( record(name: 'World') )
                 }
                 '''
         ])
@@ -424,7 +445,7 @@ class PipelineDefTest extends Dsl2Spec {
                 workflow {
                     main:
                     greet = GREET( record(names: channel.of('World')) )
-                    greet.messages
+                    greet
                 }
                 '''
         ])
@@ -438,12 +459,14 @@ class PipelineDefTest extends Dsl2Spec {
     def 'should publish the outputs of the calling pipeline only' () {
         given:
         def script = pipeline('''
+            include { workflow as GREET } from './greet.nf'
+
             workflow {
                 main:
                 greet = GREET( record(names: channel.of('World')) )
 
                 publish:
-                out = greet.messages
+                out = greet
             }
 
             output {
@@ -487,7 +510,7 @@ class PipelineDefTest extends Dsl2Spec {
                 workflow {
                     main:
                     greet = GREET( record(names: channel.of('World')) )
-                    greet.messages
+                    greet
                 }
                 '''
         ])
@@ -525,7 +548,7 @@ class PipelineDefTest extends Dsl2Spec {
 
                 workflow {
                     main:
-                    HELLO().messages
+                    HELLO()
                 }
                 '''
         ])
@@ -539,13 +562,14 @@ class PipelineDefTest extends Dsl2Spec {
     def 'should support multiple aliases of the same pipeline' () {
         given:
         def script = pipeline('''
+            include { workflow as GREET } from './greet.nf'
             include { workflow as GREET_AGAIN } from './greet.nf'
 
             workflow {
                 main:
                 a = GREET( record(names: channel.of('World'), greeting: 'Hola') )
                 b = GREET_AGAIN( record(names: channel.of('Nextflow'), greeting: 'Ciao') )
-                a.messages.mix(b.messages)
+                a.mix(b)
             }
             ''')
 
@@ -560,11 +584,13 @@ class PipelineDefTest extends Dsl2Spec {
     def 'should support calling the same alias more than once when the pipeline has no process' () {
         given:
         def script = pipeline('''
+            include { workflow as GREET } from './greet.nf'
+
             workflow {
                 main:
                 a = GREET( record(names: channel.of('World'), greeting: 'Hola') )
                 b = GREET( record(names: channel.of('Nextflow'), greeting: 'Ciao') )
-                a.messages.mix(b.messages)
+                a.mix(b)
             }
             ''')
 
@@ -626,11 +652,12 @@ class PipelineDefTest extends Dsl2Spec {
     def 'should support including the same params block from two scripts' () {
         given:
         def script = pipeline('''
+            include { params as GreetParams ; workflow as GREET } from './greet.nf'
             include { params as MidParams ; workflow as MID } from './mid.nf'
 
             workflow {
                 main:
-                MID( record(names: channel.of('World')) ).messages
+                MID( record(names: channel.of('World')) )
             }
             ''')
         write([
@@ -643,7 +670,7 @@ class PipelineDefTest extends Dsl2Spec {
 
                 workflow {
                     main:
-                    messages = GREET( record(names: params.names) ).messages
+                    messages = GREET( record(names: params.names) )
 
                     publish:
                     messages = messages
@@ -666,13 +693,14 @@ class PipelineDefTest extends Dsl2Spec {
     def 'should execute a pipeline module only once when it is included by two scripts' () {
         given:
         def script = pipeline('''
+            include { workflow as GREET } from './greet.nf'
             include { workflow as MID } from './mid.nf'
 
             workflow {
                 main:
                 a = GREET( record(names: channel.of('World'), greeting: 'Hola') )
                 b = MID( record(names: channel.of('Nextflow')) )
-                a.messages.mix(b.messages)
+                a.mix(b)
             }
             ''')
         write([
@@ -685,7 +713,7 @@ class PipelineDefTest extends Dsl2Spec {
 
                 workflow {
                     main:
-                    messages = GREET_INNER( record(names: params.names, greeting: 'Ciao') ).messages
+                    messages = GREET_INNER( record(names: params.names, greeting: 'Ciao') )
 
                     publish:
                     messages = messages

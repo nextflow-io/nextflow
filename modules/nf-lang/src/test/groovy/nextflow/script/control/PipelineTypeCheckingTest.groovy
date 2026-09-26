@@ -201,9 +201,9 @@ class PipelineTypeCheckingTest extends Specification {
         CALL                                                                    | ERROR
         "RNASEQ( record(input: channel.of('a'), fasta: file('x'), foo: 1) )"    | 'Param `foo` is not defined by pipeline `RNASEQ`'
         "RNASEQ( record(input: channel.of('a')) )"                              | 'Pipeline `RNASEQ` requires the following params: fasta'
-        "RNASEQ()"                                                              | 'Pipeline `RNASEQ` requires the following params: input, fasta'
-        "RNASEQ( input: channel.of('a'), fasta: file('x') )"                    | 'Pipeline `RNASEQ` should be called with a record'
-        "RNASEQ( [input: channel.of('a'), fasta: file('x')] )"                  | 'Pipeline `RNASEQ` should be called with a record'
+        "RNASEQ()"                                                              | 'Pipeline `RNASEQ` should be called with a record'
+        "RNASEQ( input: channel.of('a'), fasta: file('x') )"                    | 'Pipeline `RNASEQ` should be called with a record, but received a Map<String, ?>'
+        "RNASEQ( [input: channel.of('a'), fasta: file('x')] )"                  | 'Pipeline `RNASEQ` should be called with a record, but received a Map<String, ?>'
         "RNASEQ( channel.of('a'), file('x') )"                                  | 'Pipeline `RNASEQ` should be called with a record'
         "RNASEQ( 'a' )"                                                         | 'Pipeline `RNASEQ` should be called with a record, but received a String'
     }
@@ -217,6 +217,24 @@ class PipelineTypeCheckingTest extends Specification {
                 'An included pipeline must be aliased, e.g. `workflow as MY_PIPELINE`',
                 'An included pipeline must be aliased, e.g. `output as MY_PIPELINE`'
             ]
+    }
+
+    def 'should call a pipeline without a params block with no arguments' () {
+        expect:
+        check('''\
+            include { workflow as HELLO } from './hello.nf'
+
+            workflow {
+                HELLO()
+                HELLO( record() )
+            }
+            ''', [
+            'hello.nf': '''\
+            workflow {
+                println 'Hello'
+            }
+            '''
+        ]) == [ 'Pipeline `HELLO` does not declare any params, so it should be called with no arguments' ]
     }
 
     def 'should return nothing from a pipeline without an output block' () {
@@ -234,6 +252,32 @@ class PipelineTypeCheckingTest extends Specification {
             }
             '''
         ]) == [ 'Unrecognized property `foo` for type void' ]
+    }
+
+    def 'should return the output of a pipeline with a single output' () {
+        expect:
+        check('''\
+            include { workflow as HELLO } from './hello.nf'
+
+            workflow {
+                HELLO().map { s -> s.toUpperCase() }
+                HELLO().messages
+            }
+            ''', [
+            'hello.nf': '''\
+            workflow {
+                main:
+                messages = channel.of('Hello')
+
+                publish:
+                messages = messages
+            }
+
+            output {
+                messages: Channel<String> {}
+            }
+            '''
+        ]) == [ 'Unrecognized property `messages` for type Channel<String>' ]
     }
 
     def 'should not wrap channel outputs' () {

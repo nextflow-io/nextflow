@@ -13,11 +13,11 @@ include { workflow as NFCORE_FETCHNGS } from './pipelines/nf-core/fetchngs'
 
 workflow {
     main:
-    fetchngs = NFCORE_FETCHNGS( record(ids: file('data/ids.txt')) )
+    samples = NFCORE_FETCHNGS( record(ids: file('data/ids.txt')) )
 }
 ```
 
-The `params` block acts as the `take:` section, so the pipeline is called with a record of its params, and params with a default value can be omitted. The `output` block acts as the `emit:` section, so `fetchngs.samples` is a channel that the calling workflow can operate on.
+The `params` block acts as the `take:` section, so the pipeline is called with a record of its params, and params with a default value can be omitted. The `output` block acts as the `emit:` section. `NFCORE_FETCHNGS` has a single output, so the call returns the channel of samples directly to calling workflow.
 
 The `params` and `output` blocks can also be imported as record types, which is what `main.nf` does for `params`. That way the meta-pipeline declares one param per included pipeline instead of replicating every param:
 
@@ -74,7 +74,7 @@ $ nextflow run .
 **The handoff is a channel, not a file.** `rnaseq` declares its samplesheet input as `Channel<Sample>`, so `main.nf` passes it a live channel instead of a CSV file:
 
 ```nextflow
-ch_samples = fetchngs.samples.map { sample ->
+ch_samples = samples.map { sample ->
     sample + record(strandedness: params.strandedness)
 }
 

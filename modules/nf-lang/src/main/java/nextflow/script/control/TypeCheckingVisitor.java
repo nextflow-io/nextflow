@@ -162,8 +162,7 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
      * The params record type of an included pipeline is partial, so each
      * field is nullable. The output record type matches the record returned
      * by a pipeline call, in which each output is a `Channel` or wrapped in
-     * a `Value`. The field types are adjusted here rather than when the
-     * include is resolved, because the included types are resolved by now.
+     * a `Value`.
      */
     @Override
     public void visitInclude(IncludeNode node) {
@@ -858,8 +857,8 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
      * section, so it is called with a single record (or no arguments). Each
      * field must be assignable to the declared param type, like a workflow input.
      *
-     * The return type is a record of the declared outputs, matching the record
-     * that the pipeline returns at runtime.
+     * The return type follows the same rules as a workflow call, with the
+     * declared outputs as the emits.
      *
      * @param node
      */
@@ -871,12 +870,14 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         node.putNodeMetaData(ASTNodeMarker.INFERRED_TYPE, pipelineOutputType(pipeline.getOutputs()));
 
         var name = node.getMethodAsString();
+        var params = pipeline.getParams();
         var arguments = asMethodCallArguments(node);
-        if( arguments.isEmpty() ) {
-            checkPipelineParams(node, node, pipeline.getParams(), List.of());
+        if( params == null ) {
+            if( !arguments.isEmpty() )
+                addError("Pipeline `" + name + "` does not declare any params, so it should be called with no arguments", node);
             return true;
         }
-        if( arguments.size() > 1 || arguments.get(0) instanceof MapExpression ) {
+        if( arguments.size() != 1 ) {
             addError("Pipeline `" + name + "` should be called with a record", node);
             return true;
         }
@@ -889,12 +890,12 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
         }
         if( argType.getFields().isEmpty() )
             return true;
-        checkPipelineParams(node, argument, pipeline.getParams(), argType.getFields());
+        checkPipelineParams(node, argument, params, argType.getFields());
         return true;
     }
 
     private void checkPipelineParams(MethodCallExpression node, ASTNode argument, ParamBlockNode params, List<FieldNode> fields) {
-        var declarations = params != null ? params.declarations : Parameter.EMPTY_ARRAY;
+        var declarations = params.declarations;
         var byName = Arrays.stream(declarations).collect(Collectors.toMap(Parameter::getName, p -> p, (a, b) -> a));
         var provided = new HashSet<String>();
 
@@ -922,6 +923,8 @@ public class TypeCheckingVisitor extends ScriptVisitorSupport {
     private static ClassNode pipelineOutputType(OutputBlockNode outputs) {
         if( outputs == null )
             return ClassHelper.VOID_TYPE;
+        if( outputs.declarations.size() == 1 )
+            return workflowEmitType(outputs.declarations.get(0).getType());
         var cn = new ClassNode(Record.class);
         for( var declaration : outputs.declarations ) {
             var fn = new FieldNode(declaration.getName(), Modifier.PUBLIC, workflowEmitType(declaration.getType()), cn, null);

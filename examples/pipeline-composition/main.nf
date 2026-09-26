@@ -29,10 +29,10 @@ params {
 workflow {
     main:
     // fetch FASTQ samples from NCBI SRA
-    fetchngs = NFCORE_FETCHNGS( params.fetchngs )
+    samples = NFCORE_FETCHNGS( params.fetchngs )
 
     // adapt fetchngs output to rnaseq input (add strandedness)
-    ch_samples = fetchngs.samples.map { sample ->
+    ch_samples = samples.map { sample ->
         sample + record(strandedness: params.strandedness)
     }
 
