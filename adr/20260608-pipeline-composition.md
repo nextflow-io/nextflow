@@ -3,7 +3,7 @@
 - Authors: Ben Sherman
 - Status: proposed
 - Date: 2026-06-08
-- Tags: pipelines, modules, dsl, registry
+- Tags: pipelines, modules, dsl
 - Version: 1.4
 
 ## Updates
@@ -21,6 +21,7 @@
 - **Reframe as pipeline composition**: the core feature is the ability to compose pipelines in a Nextflow-native manner. Meta-pipelines are the artifact. Remote pipeline inclusion is deferred to future work.
 
 ### Version 1.1 (2026-06-22)
+
 - **Separate remote pipelines from remote workflows**: Workflows are treated separately by the [Workflow modules ADR](20260608-workflow-modules.md).
 - **Replace core workflow distinction with pipeline inclusion**: Instead of isolating the *core workflow* of a pipeline, the include syntax is extended to support *pipeline inclusion*, in which the `params` / `workflow` / `output` trio is imported and used like a named workflow.
 
@@ -40,19 +41,17 @@ This ADR defines how a pipeline can be included like a named workflow and compos
 
 - **Preserve reproducibility**: an included pipeline should produce the exact same results as it would when executed directly. Transitive dependencies should not be silently altered to reduce duplication.
 
-- **Reuse existing conventions**: follow the conventions established by the module system (e.g. include syntax) as much as possible rather than introducing parallel conventions.
-
 ## Non-goals
 
 - **Nested pipeline execution**: avoid Nextflow-in-Nextflow execution, which forfeits dataflow composition.
 
-- **Pipeline execution via registry**: out of scope for first iteration. Registry-based execution (e.g. `nextflow pipeline run nf-core/rnaseq@3.0.0`) may be investigated in the future.
+- **Remote pipeline inclusion**: deferred to future work.
+
+- **Remote pipeline execution**: out of scope. Registry-based execution (e.g. `nextflow pipeline run nf-core/rnaseq@3.0.0`) may be investigated in the future.
 
 ## Decision
 
 Provide a way to include an entire pipeline (`params` block, entry workflow, `output` block) as a named workflow to facilitate workflow composition.
-
-Allow pipelines to be published and installed through the Nextflow registry, using the same namespacing conventions as modules. Store the included pipeline in the including repository under `pipelines/<scope>/<name>/` with its own `modules/` directory for transitive dependencies.
 
 ## Core Capabilities
 
@@ -97,13 +96,38 @@ workflow {
 Notes:
 
 - The pipeline must be included using the `workflow` keyword and aliased to a specific name (`RNASEQ`).
-- The `params` block becomes the `take:` section and the `output` block becomes the `emit:` section.
-- The workflow is called with a record of params, so that defaults can be omitted.
+- A pipeline with a `params` block is called with a single record of params, so that params with a default can be omitted. A pipeline without a `params` block is called with no arguments.
+- The `output` block becomes the `emit:` section. As with a workflow call, a pipeline with a single output returns it directly, and a pipeline with multiple outputs returns a record.
 - All outputs are either a `Channel` or wrapped as `Value<T>`, allowing them to be used in regular dataflow logic.
+
+### Including the params block
+
+The `params` block of a pipeline can be included as a *record type*, so that a calling pipeline can declare the params of an included pipeline as a single param instead of redeclaring each one:
+
+```groovy
+// main.nf
+include {
+    params as RnaseqParams ;
+    workflow as RNASEQ
+} from './pipelines/rnaseq.nf'
+
+params {
+    rnaseq: RnaseqParams
+}
+
+workflow {
+    rnaseq = RNASEQ( params.rnaseq )
+}
+```
+
+Notes:
+
+- The included params record type is *partial*: every field is nullable, and defaults are not pre-filled. The included pipeline applies its own defaults and validates its required params when it is called.
+- The user can provide each param of the included pipeline as `--rnaseq.<name>`, and the calling pipeline can override specific params, e.g. `params.rnaseq + record(input: samples)`.
 
 ### Best practices for including pipelines
 
-Pipeline inclusion only captures the pipeline's main script and included modules -- it does not capture external context such as config or the `lib` directory. As a result, the pipeline should be written in a way that works when included in another pipeline:
+Pipeline inclusion only captures the pipeline's main script and included modules. It does not capture external context such as config or the `lib` directory. As a result, the pipeline should be written in a way that works when included in another pipeline:
 
 1. Pipeline parameters should be defined in the script `params` block and referenced only in the entry workflow and `output` block. The config should only declare *config params* (params that only affect config settings).
 
@@ -139,7 +163,7 @@ This effort is deferred, since it is not required for pipeline composition. User
 
 If an included pipeline uses plugins, these plugins must be explicitly declared in the meta-pipeline config since they cannot be inferred from the pipeline inclusion.
 
-Alternatively, these core plugin dependencies could be specified in the pipeline spec under `requires.plugins`. When installing a pipeline, Nextflow could copy these plugin declarations into the meta-pipeline config and/or spec.
+If we introduce a pipeline spec, these plugin dependencies could be specified there under `requires.plugins`. When installing a pipeline, Nextflow could copy these plugin declarations into the meta-pipeline config and/or spec.
 
 ## Alternatives
 
@@ -208,7 +232,7 @@ Pipeline chaining works with any Nextflow pipeline out of the box, because it si
 
 However, there are a number of downsides:
 
-- It forfeits native dataflow composition. The developer must serialize/deserialize samplesheet files instead of passing channels directly between pipelines. Each pipeline must complete before the next pipeline can start.
+- It forfeits dataflow composition. The developer must serialize/deserialize samplesheet files instead of passing channels directly between pipelines. Each pipeline must complete before the next pipeline can start.
 
 - It requires an external workflow system instead of reusing the language that pipeline developers already know. Even the Nextflow-in-Nextflow approach shown above requires many tricks to orchestrate nested pipeline runs via the `NEXTFLOW_RUN` process.
 
@@ -241,12 +265,12 @@ fetchngs-rnaseq/
 └── pipelines/
     └── nf-core/
         ├── fetchngs/
-        │   ├── .pipeline-info
         │   ├── main.nf
+        │   ├── nextflow.config
         │   └── modules/
         └── rnaseq/
-            ├── .pipeline-info
             ├── main.nf
+            ├── nextflow.config
             └── modules/
 ```
 
@@ -295,95 +319,18 @@ output {
 }
 ```
 
-The meta-pipeline includes each pipeline and composes them into a new entry workflow with params and outputs:
-
-```groovy
-include { workflow as NFCORE_FETCHNGS } from 'nf-core/fetchngs'
-include { workflow as NFCORE_RNASEQ } from 'nf-core/rnaseq'
-
-params {
-    input: Path
-    strandedness: String = 'auto'
-    aligner: String = 'star_salmon'
-    fasta: Path
-}
-
-workflow {
-    main:
-    // fetch FASTQ samples from NCBI SRA
-    samples = NFCORE_FETCHNGS( record(input: params.input) )
-
-    // adapt fetchngs output to rnaseq input (add strandedness)
-    ch_samples = samples.map { r ->
-        r + record(strandedness: params.strandedness)
-    }
-
-    // perform RNAseq analysis
-    rnaseq = NFCORE_RNASEQ( record(input: ch_samples, aligner: params.aligner, fasta: params.fasta) )
-
-    publish:
-    multiqc = rnaseq.multiqc
-    bams    = rnaseq.bams
-    counts  = rnaseq.counts
-}
-
-output {
-    multiqc: Path { path 'multiqc' }
-    bams: Channel<Path> { path 'bams' }
-    counts: Channel<Path> { path 'counts' }
-}
-```
-
-Notes:
-
-- **The handoff is a channel, not a file.** rnaseq declares its samplesheet input as `Channel<Sample>` instead of `Path`, so that it can be executed directly from a CSV samplesheet or called by a meta-pipeline with a live channel. When rnaseq is launched directly, the `Channel<Sample>` param is loaded from the samplesheet given on the command line. It allows rnaseq to begin aligning each sample as soon as it is emitted by fetchngs, whereas a pipeline chain would block until fetchngs finished completely.
-
-- **Params and outputs are replicated, not inherited.** `--input` and `--strandedness` are declared in the meta-pipeline's own `params` block and passed explicitly into the core workflows. Similarly, any outputs must be declared as such in the meta-pipeline's `output` block. The included pipelines do not contribute any of their own params, entry workflows, or output blocks.
-
-**Configuration**
-
-Since each included pipeline is just part of the dataflow graph, configuration works like normal. Processes in an included pipeline can be targeted via config selector:
-
-```groovy
-process {
-    withName: 'NFCORE_FETCHNGS:.*:SRATOOLS_FASTERQDUMP' {
-        cpus   = 6
-        memory = 24.GB
-    }
-    withName: 'NFCORE_RNASEQ:.*:STAR_ALIGN' {
-        cpus   = 12
-        memory = 72.GB
-    }
-}
-```
-
-Both the meta-pipeline developer and users can override whatever they want from config.
-
-In practice, the meta-pipeline will likely need to recreate the configuration shell used by the inner pipelines:
-
-- Config params (`outdir`, `publish_dir_mode`, `max_cpus`, etc)
-- Resource settings (`cpus`, `memory`, `time`, etc)
-- Environment profiles (executors, software dependencies, test profiles)
-- Reports (execution, timeline, trace)
-- Manifest (name, authors, description, etc)
-- Plugins
-
-The meta-pipeline can reuse config files by including them, which is useful for process config. However, process selectors written in a way that is correct both when a pipeline is executed directly *and* when it is called by a meta-pipeline.
-
-### Reducing params boilerplate
-
-In the example above, the meta-pipeline redeclares the params from each included pipeline. This boilerplate can be avoided by importing each pipeline's `params` block as a *record type*:
+The meta-pipeline includes each pipeline, along with its `params` block as a record type, and composes them into a new entry workflow:
 
 ```groovy
 include {
-    params as FetchngsParams;
+    params as FetchngsParams ;
     workflow as NFCORE_FETCHNGS
-} from 'nf-core/fetchngs'
+} from './pipelines/nf-core/fetchngs'
 
 include {
-    params as RnaseqParams;
+    params as RnaseqParams ;
     workflow as NFCORE_RNASEQ
-} from 'nf-core/rnaseq'
+} from './pipelines/nf-core/rnaseq'
 
 params {
     fetchngs: FetchngsParams        // input
@@ -417,14 +364,62 @@ output {
 }
 ```
 
-`RnaseqParams` is a *partial record type*. All of its fields are nullable, and defaults are not pre-filled. A param that is not set (e.g. `params.rnaseq.aligner`) is `null` in the meta-pipeline, and the included pipeline applies its own default when it is called. The user can provide any rnaseq param as `--rnaseq.<name>`, the meta-pipeline can override specific params (`params.rnaseq + record(input: ch_samples)`), and the `NFCORE_RNASEQ()` call validates that all required params are present.
-
-This way, the developer only needs to declare one param for each included pipeline (`fetchngs: FetchngsParams`, `rnaseq: RnaseqParams`).
-
 Notes:
+
+- **The handoff is a channel, not a file.** rnaseq declares its samplesheet input as `Channel<Sample>` instead of `Path`, so that it can be executed directly from a CSV samplesheet or called by a meta-pipeline with a live channel. When rnaseq is launched directly, the `Channel<Sample>` param is loaded from the samplesheet given on the command line. It allows rnaseq to begin aligning each sample as soon as it is emitted by fetchngs, whereas a pipeline chain would block until fetchngs finished completely.
+
+- **Included params are partial record types.** All fields of `FetchngsParams` and `RnaseqParams` are nullable, and defaults are not pre-filled. A param that is not set (e.g. `params.rnaseq.aligner`) is `null` in the meta-pipeline, and the included pipeline applies its own default when it is called. The user can provide any rnaseq param as `--rnaseq.<name>`, the meta-pipeline can override specific params (`params.rnaseq + record(input: ch_samples)`), and the `NFCORE_RNASEQ()` call validates that all required params are present. This way, the developer only needs to declare one param for each included pipeline.
 
 - `rnaseq.input` is supplied by the dataflow, which overrides any value given by the user.
 
 - `rnaseq.fasta` must still be provided by the user, but the error surfaces at the `NFCORE_RNASEQ()` call rather than at launch.
 
-- Output directives are not inherited. A meta-pipeline that publishes an output of an included pipeline decides for itself where it is published.
+- **Params and outputs are not inherited.** The meta-pipeline declares its own `params` and `output` blocks and passes params explicitly to each included pipeline. The included pipelines do not contribute any of their own params or outputs. A meta-pipeline decides for itself which outputs to publish and where to publish them.
+
+**Configuration**
+
+Since each included pipeline is just part of the dataflow graph, configuration works like normal. Processes in an included pipeline can be targeted via config selector:
+
+```groovy
+process {
+    withName: 'NFCORE_FETCHNGS:.*:SRATOOLS_FASTERQDUMP' {
+        cpus   = 6
+        memory = 24.GB
+    }
+    withName: 'NFCORE_RNASEQ:.*:STAR_ALIGN' {
+        cpus   = 12
+        memory = 72.GB
+    }
+}
+```
+
+Both the meta-pipeline developer and users can override whatever they want from config.
+
+In practice, the meta-pipeline will likely need to recreate the configuration shell used by the inner pipelines:
+
+- Config params (`outdir`, `publish_dir_mode`, `max_cpus`, etc)
+- Resource settings (`cpus`, `memory`, `time`, etc)
+- Environment profiles (executors, software dependencies, test profiles)
+- Reports (execution, timeline, trace)
+- Manifest (name, authors, description, etc)
+- Plugins
+
+The meta-pipeline can reuse config files by including them, which is useful for process config. Process selectors should be written in a way that is correct both when a pipeline is executed directly *and* when it is called by a meta-pipeline.
+
+**Remote inclusion**
+
+With a pipeline registry (see [Pipeline registry and CLI](#pipeline-registry-and-cli)), the included pipelines would no longer need to be vendored under `pipelines/`. The includes would refer to the remote pipeline instead of the local path:
+
+```groovy
+include {
+    params as FetchngsParams ;
+    workflow as NFCORE_FETCHNGS
+} from 'nf-core/fetchngs'
+
+include {
+    params as RnaseqParams ;
+    workflow as NFCORE_RNASEQ
+} from 'nf-core/rnaseq'
+```
+
+Otherwise, the meta-pipeline would work the same way.
