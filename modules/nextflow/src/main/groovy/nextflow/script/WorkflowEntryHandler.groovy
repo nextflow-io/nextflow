@@ -131,31 +131,8 @@ class WorkflowEntryHandler {
      * @param workflowDef
      */
     protected List getWorkflowArguments(WorkflowDef workflowDef) {
-        final inputs = workflowDef.getDeclaredInputs()
-        final inputNames = inputs*.name
-        final cliParams = session.cliParams ?: [:]
-        final configParams = session.configParams ?: [:]
-
-        for( final name : cliParams.keySet() ) {
-            if( name !in inputNames && !configParams.containsKey(name) )
-                throw new ScriptRuntimeException("Parameter `${name}` was specified on the command line but is not an input of workflow `${workflowDef.name}`")
-        }
-
-        final arguments = []
-        for( final decl : inputs ) {
-            final name = decl.name
-            final value =
-                cliParams.containsKey(name) ? ParamsHelper.resolveParam(decl, cliParams.get(name), true) :
-                configParams.containsKey(name) ? ParamsHelper.resolveParam(decl, configParams.get(name), false) :
-                ParamsHelper.resolveDefault(decl)
-
-            if( value == null && !decl.optional ) {
-                throw new ScriptRuntimeException("Parameter `--${name}` is required but no value was provided")
-            }
-
-            arguments.add(value)
-        }
-        return arguments
+        final params = ParamsHelper.resolveParams(workflowDef.getDeclaredInputs(), session.cliParams ?: [:], session.configParams ?: [:])
+        return new ArrayList(params.values())
     }
 
 }

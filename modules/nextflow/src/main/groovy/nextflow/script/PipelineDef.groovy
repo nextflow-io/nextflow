@@ -86,19 +86,9 @@ class PipelineDef extends BindableDef {
                 throw new ScriptRuntimeException("Pipeline `${this.name}` does not declare a parameter named `${name}`")
         }
 
-        final params = new LinkedHashMap<String,Object>(declarations.size())
-        for( final decl : declarations.values() ) {
-            final name = decl.name
-            final value = given.containsKey(name)
-                ? resolveArgument(decl, given.get(name))
-                : ParamsHelper.resolveDefault(decl)
-
-            if( value == null && !decl.optional )
-                throw new ScriptRuntimeException("Parameter `${name}` of pipeline `${this.name}` is required but no value was provided")
-
-            params.put(name, value)
+        return ParamsHelper.resolveParams(declarations.values(), given, " of pipeline `${this.name}`") { Param decl, Object value ->
+            resolveArgument(decl, value)
         }
-        return params
     }
 
     /**

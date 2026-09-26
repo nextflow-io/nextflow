@@ -21,8 +21,6 @@ import java.lang.reflect.Type
 import groovy.transform.CompileStatic
 import groovy.util.logging.Slf4j
 import nextflow.Session
-import nextflow.exception.ScriptRuntimeException
-import nextflow.extension.Bolts
 /**
  * Implements the DSL for defining workflow params
  *
@@ -50,36 +48,7 @@ class ParamsDsl {
     Map<String,Param> getDeclarations() { declarations }
 
     void apply(Session session) {
-        final cliParams = session.cliParams ?: [:]
-        final configParams = session.configParams ?: [:]
-
-        for( final name : cliParams.keySet() ) {
-            if( !declarations.containsKey(name) && !configParams.containsKey(name) )
-                throw new ScriptRuntimeException("Parameter `$name` was specified on the command line or params file but is not declared in the script or config")
-        }
-
-        final params = new HashMap<String,?>()
-        for( final name : declarations.keySet() ) {
-            final decl = declarations[name]
-            if( cliParams.containsKey(name) ) {
-                // a nested param (e.g. `--rnaseq.aligner`) overrides only the
-                // fields it names, keeping the rest of the config value
-                final value = cliParams[name] instanceof Map && configParams[name] instanceof Map
-                    ? Bolts.deepMerge((Map)configParams[name], (Map)cliParams[name])
-                    : cliParams[name]
-                params[name] = ParamsHelper.resolveParam(decl, value, true)
-            }
-            else if( configParams.containsKey(name) ) {
-                params[name] = ParamsHelper.resolveParam(decl, configParams[name], false)
-            }
-            else {
-                params[name] = ParamsHelper.resolveDefault(decl)
-            }
-
-            if( params[name] == null && !decl.optional ) {
-                throw new ScriptRuntimeException("Parameter `$name` is required but no value was provided")
-            }
-        }
+        final params = ParamsHelper.resolveParams(declarations.values(), session.cliParams ?: [:], session.configParams ?: [:])
 
         // propagate resolved params to all scripts for legacy compatibility
         if( !session.binding.getScriptPath() )

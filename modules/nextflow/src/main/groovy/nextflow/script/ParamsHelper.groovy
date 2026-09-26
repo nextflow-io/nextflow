@@ -19,12 +19,14 @@ package nextflow.script
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.nio.file.Path
+import java.util.function.BiFunction
 
 import groovy.json.JsonSlurper
 import groovy.transform.CompileStatic
 import groovy.yaml.YamlSlurper
 import nextflow.dataflow.ChannelNamespace
 import nextflow.exception.ScriptRuntimeException
+import nextflow.extension.Bolts
 import nextflow.script.dsl.Nullable
 import nextflow.script.dsl.Types
 import nextflow.script.types.Channel
@@ -47,6 +49,66 @@ import org.codehaus.groovy.runtime.typehandling.GroovyCastException
  */
 @CompileStatic
 class ParamsHelper {
+
+    /**
+     * Resolve declared params from the command line and config.
+     *
+     * A nested param given on the command line (e.g. `--rnaseq.aligner`)
+     * overrides only the fields it names, keeping the rest of the config value.
+     *
+     * @param declarations
+     * @param cliParams
+     * @param configParams
+     */
+    static Map<String,Object> resolveParams(Collection<Param> declarations, Map cliParams, Map configParams) {
+        final names = declarations*.name as Set<String>
+        for( final name : cliParams.keySet() ) {
+            if( name !in names && !configParams.containsKey(name) )
+                throw new ScriptRuntimeException("Parameter `${name}` was specified on the command line or params file but is not declared in the script or config")
+        }
+
+        final given = new HashMap<String,Object>()
+        for( final name : names ) {
+            if( cliParams.containsKey(name) ) {
+                final value = cliParams[name] instanceof Map && configParams[name] instanceof Map
+                    ? Bolts.deepMerge((Map)configParams[name], (Map)cliParams[name])
+                    : cliParams[name]
+                given.put(name, value)
+            }
+            else if( configParams.containsKey(name) ) {
+                given.put(name, configParams[name])
+            }
+        }
+
+        return resolveParams(declarations, given, '') { Param decl, Object value ->
+            resolveParam(decl, value, cliParams.containsKey(decl.name))
+        }
+    }
+
+    /**
+     * Resolve declared params against the given values. A param
+     * with no given value is given its default value.
+     *
+     * @param declarations
+     * @param given
+     * @param context appended to the param name in error messages
+     * @param resolve resolves a given value against its declared param
+     */
+    static Map<String,Object> resolveParams(Collection<Param> declarations, Map<String,?> given, String context, BiFunction<Param,Object,Object> resolve) {
+        final result = new LinkedHashMap<String,Object>(declarations.size())
+        for( final decl : declarations ) {
+            final name = decl.name
+            final value = given.containsKey(name)
+                ? resolve.apply(decl, given.get(name))
+                : resolveDefault(decl)
+
+            if( value == null && !decl.optional )
+                throw new ScriptRuntimeException("Parameter `${name}`${context} is required but no value was provided")
+
+            result.put(name, value)
+        }
+        return result
+    }
 
     /**
      * Resolve a param value against its declared type.

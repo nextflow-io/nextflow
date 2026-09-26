@@ -181,7 +181,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
 
         then:
         def e = thrown(ScriptRuntimeException)
-        e.message.contains('Parameter `--name` is required but no value was provided')
+        e.message.contains('Parameter `name` is required but no value was provided')
     }
 
     def 'should convert samplesheet records to the declared element type'() {
@@ -402,7 +402,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
 
         then:
         def e = thrown(ScriptRuntimeException)
-        e.message.contains('Parameter `bogus` was specified on the command line but is not an input of workflow `GREET`')
+        e.message.contains('Parameter `bogus` was specified on the command line or params file but is not declared in the script or config')
     }
 
     def 'should prefer explicit entry workflow over named workflow'() {
@@ -537,7 +537,7 @@ class WorkflowEntryHandlerTest extends Dsl2Spec {
 
         then:
         def e = thrown(ScriptRuntimeException)
-        e.message.contains('Parameter `--name` is required but no value was provided')
+        e.message.contains('Parameter `name` is required but no value was provided')
     }
 
     def 'should pass a null param value to a nullable input'() {
