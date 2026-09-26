@@ -63,7 +63,7 @@ class ExecutorConfig implements ConfigScope {
 
     @ConfigOption
     @Description('''
-        *Used only by grid executors and Google Batch.*
+        *Used only by grid executors, Google Batch, and AWS Batch.*
 
         Determines the name of jobs submitted to the underlying cluster executor:
         ```groovy
