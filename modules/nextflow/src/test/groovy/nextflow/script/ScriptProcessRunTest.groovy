@@ -139,7 +139,7 @@ class ScriptProcessRunTest extends Dsl2Spec {
 
         then:
         def e = thrown(Exception)
-        e.message.contains('Parameter `--requiredParam` is required but no value was provided')
+        e.message.contains('Parameter `requiredParam` is required but no value was provided')
     }
 
     def 'should cast boolean parameter to boolean' () {

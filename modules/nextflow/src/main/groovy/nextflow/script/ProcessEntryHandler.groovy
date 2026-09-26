@@ -328,7 +328,7 @@ class ProcessEntryHandler {
 
         // non-file inputs: a missing value is a hard error (required)
         if( value == null )
-            throw new IllegalArgumentException("Parameter `--${name}` is required but no value was provided")
+            throw new IllegalArgumentException("Parameter `${name}` is required but no value was provided")
 
         // handle env, stdin inputs
         switch( decl ) {
@@ -436,7 +436,7 @@ class ProcessEntryHandler {
         if( result == null ) {
             if( decl.isOptional() )
                 return null
-            throw new IllegalArgumentException("Parameter `--${name}` is required but no value was provided")
+            throw new IllegalArgumentException("Parameter `${name}` is required but no value was provided")
         }
 
         // report a value that could not be converted

@@ -368,11 +368,7 @@ Notes:
 
 - **The handoff is a channel, not a file.** rnaseq declares its samplesheet input as `Channel<Sample>` instead of `Path`, so that it can be executed directly from a CSV samplesheet or called by a meta-pipeline with a live channel. When rnaseq is launched directly, the `Channel<Sample>` param is loaded from the samplesheet given on the command line. It allows rnaseq to begin aligning each sample as soon as it is emitted by fetchngs, whereas a pipeline chain would block until fetchngs finished completely.
 
-- **Included params are partial record types.** All fields of `FetchngsParams` and `RnaseqParams` are nullable, and defaults are not pre-filled. A param that is not set (e.g. `params.rnaseq.aligner`) is `null` in the meta-pipeline, and the included pipeline applies its own default when it is called. The user can provide any rnaseq param as `--rnaseq.<name>`, the meta-pipeline can override specific params (`params.rnaseq + record(input: ch_samples)`), and the `NFCORE_RNASEQ()` call validates that all required params are present. This way, the developer only needs to declare one param for each included pipeline.
-
-- `rnaseq.input` is supplied by the dataflow, which overrides any value given by the user.
-
-- `rnaseq.fasta` must still be provided by the user, but the error surfaces at the `NFCORE_RNASEQ()` call rather than at launch.
+- **Included params are partial record types.** See [Including the params block](#including-the-params-block). `rnaseq.input` is supplied by the dataflow, which overrides any value given by the user. `rnaseq.fasta` must still be provided by the user, but the error surfaces at the `NFCORE_RNASEQ()` call rather than at launch.
 
 - **Params and outputs are not inherited.** The meta-pipeline declares its own `params` and `output` blocks and passes params explicitly to each included pipeline. The included pipelines do not contribute any of their own params or outputs. A meta-pipeline decides for itself which outputs to publish and where to publish them.
 
